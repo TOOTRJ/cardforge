@@ -371,6 +371,13 @@ const TEMPLATES = {
   },
   // Dragon Wing is the Multiverse Legends (MOM 2023) Tarkir frame: MUL #1
   // (W) and #60 (W/U) are its only printings.
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 and
+  // the gilded twins #361–405 (#341–359 are the Golden Age frame). Every
+  // card is three colours: only `m` finds a printing.
+  sncartdeco: {
+    confirm: "SNC Art Deco showcase — confirm the black-and-gold filigree (#296–340, gilded #361–405), not the pale Golden Age frame (#341–359).",
+    q: (k) => `set:snc ((cn>=296 cn<=340) or (cn>=361 cn<=405)) ${spellColor(k)}`,
+  },
   tarkirdragon: {
     q: (k) => `set:mul (cn:1 or cn:60) ${spellColor(k)}`,
   },
@@ -388,6 +395,20 @@ const TEMPLATES = {
   dossier: {
     confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
     q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
+  },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT
+  // #1–63 (#64–103 are the anime-style borderless reprints, another
+  // design). Mono-coloured enchantments only: no colourless or gold print.
+  enchantingtales: {
+    confirm: "WOT showcase — confirm the thumbnail is the swirled Enchanting Tales storybook frame (#1–63), not the anime-style borderless reprint (#64–103).",
+    q: (k) => (k === "c" || k === "m" ? null : `set:wot cn<=63 ${spellColor(k)}`),
+  },
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU
+  // #287–368 and MUL's Dominaria legends (#5 … #59; #135 … #189 their
+  // halo-foil twins). No colourless, artifact or land printing; no mono-green.
+  stainedglass: {
+    confirm: "DMU / MUL stained-glass showcase — confirm the thumbnail is the leaded-glass frame, not DMU #369–371 (the Phyrexian-script Sheoldred, the Ajani walkers) or MUL's etched twins.",
+    q: (k) => `((set:dmu cn>=287 cn<=368) or (set:mul (cn:5 or cn:12 or cn:19 or cn:22 or cn:24 or cn:55 or cn:56 or cn:58 or cn:59))) ${spellColor(k)}`,
   },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",

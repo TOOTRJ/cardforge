@@ -153,10 +153,12 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the arch's tall box, TODO 4.55, as the text box does.)
     // (…and the Prepare frame, TODO 4.27: both boxes, as the adventure's.)
     // (…and the 2015 Expeditions, TODO 4.11 wave 1, as the 2020 look.)
+    // (…and the New Capenna Art Deco, TODO 4.11 wave 2, as every showcase.)
     // (…and the D&D Sourcebook, TODO 4.11 wave 2, as every showcase.)
     // (…and the MKM dossier, TODO 4.11 wave 2, as every showcase.)
-    // (…and the Strixhaven Mystical Archive, TODO 4.11 wave 2, as every showcase.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(76);
+    // (…and the Enchanting Tales, the Dominaria United Stained Glass and the
+    // Strixhaven Mystical Archive, TODO 4.11 wave 2, as every showcase.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(79);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

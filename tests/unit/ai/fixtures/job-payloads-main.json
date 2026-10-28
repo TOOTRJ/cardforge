@@ -1238,7 +1238,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
@@ -1278,7 +1278,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
@@ -1316,7 +1316,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type instant.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type instant."
@@ -1356,7 +1356,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact."
@@ -1396,7 +1396,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact."
@@ -1434,7 +1434,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
    "Card 1: {\"title\":\"Counting Engine\",\"cost\":\"{4}\",\"card_type\":\"artifact\",\"supertype\":null,\"subtypes\":[],\"rarity\":\"rare\",\"color_identity\":[\"colorless\"],\"rules_text\":\"Station\\n3+ | {T}: Draw a card.\\n8+ | {T}: Draw two cards.\",\"flavor_text\":null,\"power\":null,\"toughness\":null,\"loyalty\":null,\"defense\":null,\"art_prompt\":\"A crimson dragon over a caldera at dawn.\"}\nFindings: [rules_text] \"Station\" isn't a known keyword and has no reminder text — add reminder text or use a standard keyword.",
@@ -1476,7 +1476,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
@@ -1594,7 +1594,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type token.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type token."
@@ -1674,7 +1674,7 @@
     "status": "pending"
    }
   ],
-  "lastFrame": "dossier",
+  "lastFrame": "stainedglass",
   "prompts": [
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."

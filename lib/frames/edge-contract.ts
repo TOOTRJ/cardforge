@@ -294,6 +294,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // time (scripts/lib/mse-showcase-borders.mjs), cut at the one card
   // corner. (The white halo-foil run, #409–418, is 4.30's.)
   tarkirghostfire: ALL_BORDER,
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Golden Age (SNC)' pack, frames bucket): the printed black border all
+  // round, cut at the one card corner by the importer — its crowned twins
+  // (`-legendary`) too.
+  sncartdeco: ALL_BORDER,
   // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
   // black border all round, cut at the one card corner by the importer.
   tarkirdragon: ALL_BORDER,
@@ -301,6 +306,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Sourcebook' pack, frames bucket): the printed black border all round the
   // parchment page, cut at the one card corner by the importer.
   dndsourcebook: ALL_BORDER,
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Stained Glass (DMU)' pack, frames bucket): the printed black
+  // border all round the leaded glass, cut at the one card corner.
+  stainedglass: ALL_BORDER,
   // The Tarkir draconic (TDM #292–326), since TODO 4.11 (layout v68): the
   // black border all round on print — painted under the MSE masters below
   // and beside the dragons, cut at the one card corner at the bottom — and
@@ -329,6 +338,21 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the sides between its pieces, the black footer; the importer cuts the
   // one card corner at the bottom only.
   mysticalarchive: MYSTICAL_ARCHIVE_EDGES,
+  // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
+  // it — the swirled frame field to the top edge (design) and down the sides
+  // above the art and beside the text box, the art to the side edges between
+  // them, the dark footer in the colour's own tone to the bottom edge
+  // (design: never held dark at the corner). Measured on all seven masters
+  // in the 2 % band: the art from row 469–470 on the left (the top-left swirl
+  // hangs lower) and 121–122 on the right, to 1382–1384 on both (the text box's
+  // shoulders).
+  enchantingtales: {
+    top: { kind: "design" },
+    right: { kind: "art", except: [[0, 5.8], [65.8, 100]] },
+    bottom: { kind: "design" },
+    left: { kind: "art", except: [[0, 22.4], [65.8, 100]] },
+  },
   // The Avatar elemental (TLA #336–353, TLE #305–317), since TODO 4.11
   // (layout v69): borderless — the art to the top edge and down both sides
   // to the frame (the masters see-through to 918 px on the left, 1101 on the

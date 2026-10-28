@@ -104,6 +104,10 @@ describe("the declared pair masters", () => {
       // frames lerped across print's ramp
       // (tests/unit/frames/mkm-dossier-importer.test.ts).
       dossier: 10,
+      // …and the Dominaria United stained glass's ten (TODO 4.11 wave 2):
+      // the gold frame, the box the pair's two boxes split
+      // (tests/unit/frames/stained-glass-importer.test.ts).
+      stainedglass: 10,
       // …and the Strixhaven Mystical Archive's ten (TODO 4.11 wave 2): the
       // gold frame with the two colours' lines through the pack's Pinline
       // masks (tests/unit/frames/mystical-archive-importer.test.ts).

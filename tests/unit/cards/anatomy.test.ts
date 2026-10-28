@@ -318,10 +318,16 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish, no pairs (one master).
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): the arch in its
+      // crowned twins, no pairs (one gold master: every print is three colours).
+      "sncartdeco",
       // …and the MKM dossier (TODO 4.11 wave 2): the pack's torn colour
       // strip, and its pair masters (the colour frames lerped across print's
       // ramp) with the crown's pairs.
       "dossier",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): the
+      // pack's glass dome, its pair masters the gold frame with the box split.
+      "stainedglass",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -370,7 +376,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
       // way; nor the MUL Tarkir dragon wings, which split the frame itself,
       // twoColorSplit.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -415,6 +421,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Strixhaven Mystical Archive (4.11 wave 2): the gold frame with
       // the two colours' lines, as STA #59–63 print it.
       mysticalarchive: ["split"],
+      // The Dominaria United stained glass (4.11 wave 2): the gold frame, the box split.
+      stainedglass: ["split"],
       // The double-faced spell faces (5.1d): the split on every one — the
       // prints split a back's rings and box over its gold bars too — and the
       // hybrid dress on the modal front alone (MH3 #252–261); never the land
@@ -509,10 +517,17 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "bloomburrow",
     // …and the Bloomburrow anime (4.11, v70): MSE's own, on its footer's well.
     "bloomanime",
+    // …and the New Capenna Art Deco (4.11 wave 2): its own lifted gold rim.
+    "sncartdeco",
     // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
     "dndsourcebook",
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
     "dossier",
+    // …and the Enchanting Tales (4.11 wave 2): the pack's own oval piece per colour.
+    "enchantingtales",
+    // …and the Dominaria United stained glass (4.11 wave 2): the pack's own
+    // arch, split off every master and pair master.
+    "stainedglass",
     // …and the Strixhaven Mystical Archive (4.11 wave 2): our own black arch.
     "mysticalarchive"];
 
@@ -779,6 +794,14 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       const profile = getFrameProfile(template);
       if ((profile.twoColorMasters ?? []).length === 0) {
         expect(profile.twoColorForLands, template).toBeUndefined();
+        continue;
+      }
+      // (The Dominaria United stained glass, TODO 4.11 wave 2, hosts a land
+      // as every IP showcase does, but its pairs are the spells' dress — no
+      // land was printed on it: its pairs are no land frame.)
+      if (template === "stainedglass") {
+        expect(twoColorFits(profile, "land"), template).toBe(false);
+        expect(twoColorFits(profile, "creature"), template).toBe(true);
         continue;
       }
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));

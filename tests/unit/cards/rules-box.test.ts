@@ -136,12 +136,20 @@ describe("the main box on every template", () => {
         // …and the Avatar elemental and Bloomburrow woodland showcases
         // (layout v69): M15's box and margins on their MSE text boxes.
         "avatar", "bloomburrow",
+        // …and the Dominaria United Stained Glass (TODO 4.11 wave 2): M15's
+        // margins on the glass box (the run's lines from x 130–133), the box
+        // 8.5 px shorter at each end on M15's centre.
+        "stainedglass",
         // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): M15's box
         // and margins, the block 3 px up and 2 px left onto print's.
         "mysticalarchive",
         // …and the Bloomburrow anime (layout v70): M15's margins in print's
         // own rect (lines from x 128.5, the rect's 125 + 4).
         "bloomanime",
+        // …and the New Capenna Art Deco (TODO 4.11 wave 2): M15's box and
+        // margins in its translucent box (SNC #296–340 start their lines at
+        // 133 px, ours 132).
+        "sncartdeco",
         // …and the D&D Sourcebook (TODO 4.11 wave 2): M15's margins on the
         // page (the run's lines from x 130, its right ink to 1368 at p90),
         // the box ending above the page's rounded foot.
@@ -150,6 +158,10 @@ describe("the main box on every template", () => {
         // the folder's page (the run's lines from x 133, its short texts
         // centred on M15's middle).
         "dossier",
+        // …and the Enchanting Tales (TODO 4.11 wave 2): M15's margins in
+        // Card Conjurer's rect (the run's lines from x 132–133, the rect's
+        // 129 + 4).
+        "enchantingtales",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

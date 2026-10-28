@@ -150,6 +150,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // frame's text layout on the folder's own bands): a new template, no
   // stored card — the family's sizes — so it joined without a bump.
   "dossier",
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, CC's
+  // 'Stained Glass (DMU)' pack, the M15 frame's text layout on the pack's
+  // own bars): a new template, no stored card — the family's sizes — so it
+  // joined without a bump.
+  "stainedglass",
   // The Tarkir: Dragonstorm showcases (TODO 4.11, MSE masters with their
   // printed border painted; layout v68): the draconic on M15's slots, the
   // ghostfire on its own bars — both at the family's sizes, with their bump.
@@ -164,6 +169,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // layout v70): its own measured layout on M15's slots at the family's
   // sizes, with its bump.
   "bloomanime",
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2, CC's 'Golden Age
+  // (SNC)' pack, M15's text layout on its own bars): a new template, no
+  // stored card — the family's sizes — so it joined without a bump.
+  "sncartdeco",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",
@@ -179,6 +188,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // new template, no stored card — the family's sizes, as the 2020 look —
   // so it joined without a bump.
   "expeditionlandbfz",
+  // The Enchanting Tales showcase (TODO 4.11 wave 2, CC's 'Enchanting Tales'
+  // pack, the M15 frame's text layout on its own bars): a new template, no
+  // stored card — the family's sizes — so it joined without a bump.
+  "enchantingtales",
   "nyx",
   "fullart",
   "m15textless",

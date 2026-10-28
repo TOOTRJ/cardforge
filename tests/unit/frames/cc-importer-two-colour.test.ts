@@ -289,6 +289,14 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): no pair, but every
+      // master's crowned twin — its pack's 'Legendary Frame'
+      // (tests/unit/frames/snc-art-deco-importer.test.ts).
+      if (template === "sncartdeco") {
+        const keys = ["w", "u", "b", "r", "g", "c", "m"];
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual([...keys, ...twins(keys)]);
+        continue;
+      }
       // …and the Vehicle frame's ten (TODO 4.5c): m15artifact's recipe over
       // the bronze frame (tests/unit/creator/vehicle-frame.test.ts).
       if (template === "m15vehicle") {
@@ -338,6 +346,12 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
       // …and the MKM dossier's ten (TODO 4.11 wave 2): the pack's two colour
       // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts).
       if (template === "dossier") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
+      // …and the Dominaria United stained glass's ten (TODO 4.11 wave 2;
+      // tests/unit/frames/stained-glass-importer.test.ts).
+      if (template === "stainedglass") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }

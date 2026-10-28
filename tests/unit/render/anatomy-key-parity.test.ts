@@ -82,11 +82,14 @@ describe("bake path = preview path", () => {
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
     // …and the Prepare frame's 20 (4.26: both dresses with the page).
     // …and the MKM dossier's 10 (4.11 wave 2: the pack's colour frames lerped).
+    // …and the Dominaria United stained glass's 10 (4.11 wave 2).
     // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
-    expect(pairKeys).toBe(430);
+    expect(pairKeys).toBe(440);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
-    expect(crownedKeys).toBe(51 + 4 * 18);
+    // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
+    // 'Legendary Frame' under every colour key).
+    expect(crownedKeys).toBe(51 + 4 * 18 + 7);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -178,12 +181,21 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
+                                    : template === "sncartdeco"
+                                      ? // …and the New Capenna Art Deco's lifted rim (4.11 wave 2).
+                                        "sncartdecoholostamp"
                                     : template === "dndsourcebook"
                                       ? // …and the D&D Sourcebook's oval piece (4.11 wave 2).
                                         "dndsourcebookholostamp"
                                     : template === "dossier"
                                       ? // …and the MKM dossier's oval piece (4.11 wave 2).
                                         "dossierholostamp"
+                                    : template === "enchantingtales"
+                                      ? // …and the Enchanting Tales' (4.11 wave 2).
+                                        "enchantingtalesholostamp"
+                                    : template === "stainedglass"
+                                      ? // …and the Dominaria United stained glass's arch, split off its masters (4.11 wave 2).
+                                        "stainedglass/holostamp"
                                     : template === "mysticalarchive"
                                       ? // …and the Strixhaven Mystical Archive's own arch (4.11 wave 2).
                                         "mysticalarchiveholostamp"
@@ -222,6 +234,9 @@ describe("bake path = preview path", () => {
                                 : template === "dossier"
                                   ? // …and the MKM dossier's torn strip (4.11 wave 2).
                                     "dossiercrown"
+                                : template === "stainedglass"
+                                  ? // …and the Dominaria United stained glass's dome (4.11 wave 2).
+                                    "stainedglasscrown"
                                   : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
@@ -270,10 +285,13 @@ describe("bake path = preview path", () => {
     // woodland's 7 (4.11, v69), the Bloomburrow anime's 7 (4.11, v70), and
     // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
     // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
-    // pack's one oval piece under every key and pair).
-    // every key), and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11
+    // pack's one oval piece under every key and pair), and the Enchanting
+    // Tales' 7 (4.11 wave 2, the pack's piece per colour), and the New Capenna Art Deco's 7
+    // (4.11 wave 2, its lifted gold rim), and the Dominaria United stained
+    // glass's 7 + 10 pairs (4.11 wave 2: the arch split off every master and
+    // pair master), and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11
     // wave 2: one black arch under every key).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + (7 + 10));
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

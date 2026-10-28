@@ -266,8 +266,9 @@ describe("visual-regression matrix", () => {
       expect(style.collector, c.id).toBe(c.id.endsWith("@stamp-collector-hd") ? "2023" : c.id.endsWith("@stamp-collector-2015") ? "2015" : undefined);
       // The crown rides only on the crowned pair case (the split crown and
       // the pair notch on one card) and the borderless crowned mythic (4.9d:
-      // the crowned twin under the same piece).
-      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") || c.id === "m15borderless/r/creature-long@stamp-crown" ? true : undefined);
+      // the crowned twin under the same piece) — and the New Capenna Art
+      // Deco's crowned legend (4.11 wave 2: its twin under the same piece).
+      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") || c.id === "m15borderless/r/creature-long@stamp-crown" || c.id === "sncartdeco/wub/creature-long@stamp-crown" ? true : undefined);
     }
     // The pair notch (the 4.9c follow-up): a rare on auto drawn as its pair
     // master on every template with BOTH pairs and the notch — and on no

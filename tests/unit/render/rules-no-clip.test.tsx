@@ -330,12 +330,21 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
       // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
       "avatar/main", "bloomburrow/main",
+      // 4.11 wave 2's New Capenna Art Deco: M15's box in its translucent one.
+      "sncartdeco/main",
       // 4.11 wave 2's D&D Sourcebook: M15's box ending above the page's
       // rounded foot (1877.5 px) — it holds the level-up card, not 1,200
       // characters.
       "dndsourcebook/main",
       // 4.11 wave 2's MKM dossier: M15's box (a new template).
       "dossier/main",
+      // 4.11 wave 2's Enchanting Tales: Card Conjurer's text rect (604 px,
+      // 1313–1917) — it holds the run's fullest boxes, not 1,200 characters.
+      "enchantingtales/main",
+      // 4.11 wave 2's Dominaria United Stained Glass: M15's box 8.5 px
+      // shorter at each end (the run's own) — it holds the level-up card,
+      // not 1,200 characters.
+      "stainedglass/main",
       // 4.11 wave 2's Strixhaven Mystical Archive: M15's box, 3 px up.
       "mysticalarchive/main",
     ],

@@ -1114,6 +1114,163 @@
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'"
     ]
   },
+  "enchantingtales": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packEnchantingTales.js 'Enchanting Tales' (the Wilds of Eldraine bonus-sheet showcase, WOT #1–63; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px (but tl, tr, bl, br: kept square, design to the corner), webp q90",
+    "shift": {
+      "axis": "y",
+      "blocks": [
+        {
+          "from": 0,
+          "to": 472,
+          "by": 0
+        },
+        {
+          "from": 1163,
+          "to": 1954,
+          "by": -3
+        }
+      ],
+      "zones": [
+        "rows 472–1162 (flat) → 688 px",
+        "rows 1954–2099 (flat) → 149 px"
+      ],
+      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
+    },
+    "colors": {
+      "w": [
+        "img/frames/enchantingTales/w.png"
+      ],
+      "u": [
+        "img/frames/enchantingTales/u.png"
+      ],
+      "b": [
+        "img/frames/enchantingTales/b.png"
+      ],
+      "r": [
+        "img/frames/enchantingTales/r.png"
+      ],
+      "g": [
+        "img/frames/enchantingTales/g.png"
+      ],
+      "c": [
+        "img/frames/enchantingTales/w.png"
+      ],
+      "m": [
+        "img/frames/enchantingTales/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/enchantingTales/pt/w.png",
+      "u": "img/frames/enchantingTales/pt/u.png",
+      "b": "img/frames/enchantingTales/pt/b.png",
+      "r": "img/frames/enchantingTales/pt/r.png",
+      "g": "img/frames/enchantingTales/pt/g.png",
+      "c": "img/frames/enchantingTales/pt/w.png",
+      "m": "img/frames/enchantingTales/pt/m.png"
+    },
+    "sourceFiles": [
+      "img/frames/enchantingTales/b.png",
+      "img/frames/enchantingTales/g.png",
+      "img/frames/enchantingTales/m.png",
+      "img/frames/enchantingTales/pt/b.png",
+      "img/frames/enchantingTales/pt/g.png",
+      "img/frames/enchantingTales/pt/m.png",
+      "img/frames/enchantingTales/pt/r.png",
+      "img/frames/enchantingTales/pt/u.png",
+      "img/frames/enchantingTales/pt/w.png",
+      "img/frames/enchantingTales/r.png",
+      "img/frames/enchantingTales/u.png",
+      "img/frames/enchantingTales/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (enchantingTales/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the Wilds of Eldraine Enchanting Tales showcase prints them (WOT #1–63); gold has no print (the run is mono-coloured)",
+      "c = the pack's WHITE frame (enchantingTales/w.png): the pack draws no colourless, artifact or land frame and no colourless card prints on it; the white page is the pack's own nearest neutral",
+      "borderless as printed: the swirled frame field to the top edge and down the sides above the art and beside the text box, the art to the side edges between them, the dark footer in the colour's own tone to the bottom edge; all four corners are design and kept square (keepCorners) — every round output cuts them at render",
+      "the art under the whole frame from the title bar down: see-through across the card's width to the type bar, and on under the translucent text box (α 204 on w, 222 on the others, as print shows the art through it) to row 1931 — CC's artBounds (0/111, 1500x1821 px)",
+      "plates = the pack's six P/T plates (enchantingTales/pt/<k>.png, 499x276, drawn at the pack's bounds 1535/2458 px, 373x206 of 2010x2814); c = the white one; no print draws one (the run has no creature)",
+      "the pack against print by the ring's rule (raw scan medians over the bars, the footer and the swirled field, ink left out; a region ≥ 9 levels off is toned): within 5 levels on every colour (ETALES_PRINT_TONE) — nothing is toned; the text box is translucent over the art, so it has no raw median to tone by, and keeps the pack's colour",
+      "geometry: the LOWER block (rows 1163–1953 of the master: the type bar, the text box, its rim, the footer's top) moved 3 px UP onto the 63 prints through the flat zones round it (ETALES_LOWER_RECUT: the see-through art rows 472–1162 above, the footer's flat rows 1954–2099 below — every row of each identical across the card on every key; shiftBlocksRgba8, byte for byte, after the downscale); the TOP block (swirls, title bar) kept as drawn, 3.5 px above print's — no flat zone lies above it — so the name and the cost row ride the pack's bar; across, every bar edge registers within a pixel",
+      "the top rows made solid after the downscale (ETALES_SOLID_ROWS: rows 0–80, α ≥ 128 → 255, the colour kept): the pack's translucent crease along its own rounded TOP corners (α 200–254) on every key, and on the gold frame the near-opaque swirls across its whole top band (3,136 px more at α 228–254, x 35–1480; 3,282 made solid in all); no art reaches above row 111",
+      "no legendary crown: the pack draws none and no printing of the run is legendary",
+      "not built: WOT #64–103, the anime-style borderless reprints — another design, not in the pack"
+    ]
+  },
+  "enchantingtalesholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packEnchantingTales.js 'Enchanting Tales' (the Wilds of Eldraine bonus-sheet showcase, WOT #1–63; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "173x101 notch piece (1:1 at 1500x2100, at 665,1897), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/enchantingTales/stamp/w.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/w.png's footer tone 72,71,61 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "u": [
+        "img/frames/enchantingTales/stamp/u.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/u.png's footer tone 8,38,60 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "b": [
+        "img/frames/enchantingTales/stamp/b.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/b.png's footer tone 22,12,21 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "r": [
+        "img/frames/enchantingTales/stamp/r.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/r.png's footer tone 73,25,20 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "g": [
+        "img/frames/enchantingTales/stamp/g.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/g.png's footer tone 49,54,22 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "m": [
+        "img/frames/enchantingTales/stamp/m.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/m.png's footer tone 83,54,8 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ],
+      "c": [
+        "img/frames/enchantingTales/stamp/w.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)",
+        "the well flattened into enchantingtales/c.png's footer tone 72,71,61 (every pixel within 12 levels, alpha kept), and from row 51 of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.86666666666667,
+        "topPct": 91.57142857142857,
+        "widthPct": 8.466666666666667,
+        "heightPct": 3.0476190476190474
+      },
+      "marginPx": 2,
+      "blackoutPx": 0,
+      "what": "the hologram capture inside the pack's oval — never published; no ring painted round the cut"
+    },
+    "sourceFiles": [
+      "img/frames/enchantingTales/stamp/b.png",
+      "img/frames/enchantingTales/stamp/g.png",
+      "img/frames/enchantingTales/stamp/m.png",
+      "img/frames/enchantingTales/stamp/r.png",
+      "img/frames/enchantingTales/stamp/u.png",
+      "img/frames/enchantingTales/stamp/w.png"
+    ],
+    "notes": [
+      "the Enchanting Tales oval stamp notch (TODO 4.11 wave 2): the pack's 'Holo Stamp' per colour (enchantingTales/stamp/<k>.png, 306x176) — the text box's bottom rim arched up over a well in the footer's own tone round the hologram oval — drawn at its stampBounds (890/2548, 229x132 of 2010x2814 = 664.2/1901.5, 170.9x98.5 px at HD): resampled ONCE (Lanczos) to 171x99 and placed on print at 666,1898 px — 3 px up with the master's lower block (ETALES_LOWER_RECUT) and 2 px right (the 45 stamped prints' arch centred on 751.5 px) — cut to its box 173x101 at 665,1897 px (1 px round the piece)",
+      "keys = the masters' w u b r g m and c (the white piece, as the c master is the white frame)",
+      "the hologram: the pack paints a capture of WotC's oval in the well; the prints' oval (127 × 64 at 688, 1923 — the 45 stamped WOT prints) plus 2 px is cut to transparent and the importer holds every lit pixel of the oval's box inside the cut: no pixel of the capture is published; the well round the cut keeps the footer's own tone (no black ring, blackoutPx 0: print draws none); our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
+      "the well flattened into the master's footer tone (ETALES_WELL_TONE: every pixel within 12 levels of the same key's footer, read at 750, 2060 on the master, takes it, alpha kept; from the piece's row 51 — card row 1948, the master's flat footer — every pixel of the piece outside the cut is the footer tone, opaque; what the piece leaves clear stays clear): the pack draws the well's outer ellipse 4–8 levels darker than the footer with a light low-α fringe, a faint line print does not have"
+    ]
+  },
   "expeditionland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -17508,6 +17665,159 @@
       "the chapter badge and the row divider are the saga's published pieces (saga/chapter/badge.png, saga/chapter/divider.png); the pack's masks (Pinline, Title — the transform pack's maskTitle.png — Type, Frame, Banner, Banner (Right), Rules, Rules (Right), Border) and its 'Holo Stamp' are not used and not published"
     ]
   },
+  "sncartdeco": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packSNCGilded.js 'Golden Age (SNC)' — the Streets of New Capenna Art Deco showcase, SNC #296–340 / #361–405 (groupShowcase-5.js; CC's 'Art Deco (SNC)' pack draws the Golden Age cards #341–359)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; the gold toned as the file loads (SNC_DECO_SOURCE_TONES); the translucent bars and box lifted onto print's opacity (title bar α 189, type bar α 207, text box α 209, from 127); the fin's see-through dot filled (SNC_DECO_DOT_FILLS); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "u": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "b": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "r": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "g": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "c": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "m": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "w-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "u-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "b-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "r-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "g-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "c-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "m-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/snc/gilded/pt/m.png",
+      "u": "img/frames/snc/gilded/pt/m.png",
+      "b": "img/frames/snc/gilded/pt/m.png",
+      "r": "img/frames/snc/gilded/pt/m.png",
+      "g": "img/frames/snc/gilded/pt/m.png",
+      "c": "img/frames/snc/gilded/pt/m.png",
+      "m": "img/frames/snc/gilded/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/snc/gilded/legendary/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (gold)",
+        "gold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.144 / 1.154 / 1.620 (181, 156, 71 → 207, 180, 115), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/snc/gilded/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (gold)",
+        "gold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.144 / 1.154 / 1.620 (181, 156, 71 → 207, 180, 115), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/snc/gilded/pt/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (plateGold)",
+        "plateGold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.148 / 1.079 / 1.441 (176, 152, 68 → 202, 164, 98), fading to × 1.108 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/snc/gilded/legendary/m.png",
+      "img/frames/snc/gilded/m.png",
+      "img/frames/snc/gilded/pt/m.png"
+    ],
+    "notes": [
+      "w u b r g c m = the pack's 'Regular Frame' (snc/gilded/m.png, 1500x2100 NATIVE — no resample), byte for byte: the one gold filigree all 90 printings wear (every card of the run is three colours); the pack's 'GildedColored' frames (snc/gilded/colored/<k>.png) are Card Conjurer's own — no printing wears them — and are not imported",
+      "<k>-legendary = the pack's 'Legendary Frame' (snc/gilded/legendary/m.png): the arch over the title bar all 30 legendary printings carry, baked into its own master under every key (the profile's crownMasters) — the arch changes the translucent bar under it, which no overlay can draw",
+      "Card Conjurer's names run the other way round from print: its 'Art Deco (SNC)' pack (snc/artDeco/) is the pale Golden Age frame of SNC #341–359, its 'Golden Age (SNC)' pack this black-and-gold Art Deco frame of #296–340 / #361–405",
+      "a real black border all round, cut at the one card corner (print's border is the black of SNC's own regular printings on the same scans, 22,19,14 both: true black)",
+      "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
+      "the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold 181,156,71 → 207,180,115, the plate's gold rim 176,152,68 → 202,164,98 (the file's pixels of chroma ≥ 45); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read",
+      "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+      "the translucent title bar, type bar and text box as dark as print's (owner, #622 review): the pack's α 0.50 lifted to title bar 0.74, type bar 0.81, text box 0.82 — fitted as out = α·c + (1 − α)·art on pixel pairs across each region's opaque rim on the 45 non-gilded prints (flat art fields only); the layer colour fits black (15–18 against the border's 22 on the same scans), so only α moves; the rims' anti-aliased edges keep their place on the ramp (SNC_DECO_TRANSLUCENCY, liftTranslucency)",
+      "a see-through dot in the right pillar's fin (x 1378–1379 on row 969, the pack's anti-aliasing), inside the window's slot but not the window's, filled opaque from its neighbours — the window layer and the under-frame layer now meet on opaque gold all round (SNC_DECO_DOT_FILLS)"
+    ]
+  },
+  "sncartdecoholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published New Capenna Art Deco masters named per key below (Card Conjurer imports: see \"sncartdeco\")",
+    "output": "188x54 at 656,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of SNC_DECO_ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 35.3 35.3 35.3 35.1 35 35 34.9 34.6 34.3 34.1 33.9 33.7 33.3 33 32.7 32.3 31.8 31.4 30.9 30.4 29.8 29.2 28.6 27.9 27.1 26.2 25.3 24.3 23.4 22.3 20.9 19.6 18.2 16.7 15 13.4 11.9 10.1 7.9 5.9 4.3 3.1 2.1 1.1 0.4 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1950) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "sncartdeco/w.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/w-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "u": [
+        "sncartdeco/u.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/u-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "b": [
+        "sncartdeco/b.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/b-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "r": [
+        "sncartdeco/r.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/r-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "g": [
+        "sncartdeco/g.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/g-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "m": [
+        "sncartdeco/m.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/m-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "c": [
+        "sncartdeco/c.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/c-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "sncartdeco/b-legendary.png",
+      "sncartdeco/b.png",
+      "sncartdeco/c-legendary.png",
+      "sncartdeco/c.png",
+      "sncartdeco/g-legendary.png",
+      "sncartdeco/g.png",
+      "sncartdeco/m-legendary.png",
+      "sncartdeco/m.png",
+      "sncartdeco/r-legendary.png",
+      "sncartdeco/r.png",
+      "sncartdeco/u-legendary.png",
+      "sncartdeco/u.png",
+      "sncartdeco/w-legendary.png",
+      "sncartdeco/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.11 wave 2): the holofoil stamp's notch on the New Capenna Art Deco showcase — the text box's gold foot rim arched over the oval as every stamped print of the run draws it (SNC #296–340 and #361–405: the rares and mythics). Card Conjurer's 'Golden Age (SNC)' pack has no stamp piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram itself, never read); no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, gold rim and black border, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH_LIFT_PX: the 25 stamped plain prints measured 2026-10-27 (the rim lifted 35.3 px at the centre against the straight 1938–1948, rising from x 664 to x 836). Above it the box keeps its own pixels — its brown arcs ride over the arch, as on print.",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at 683–817 × 1924–1988 (SNCARTDECO_HOLO_STAMP_OVAL). Nothing of a hologram is in a piece."
+    ]
+  },
   "split": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -17596,6 +17906,325 @@
       "the pack's 'Top Half' / 'Bottom Half' masks (top.svg, bottom.svg) are plain rectangles cutting the PORTRAIT card at y 1000: after the turn 'Bottom Half' is the LEFT half (x 0–1099) and 'Top Half' the RIGHT half (x 1100–2099), the seam at x 1100 (52.38 %W) inside the pack's spine — importer inputs, checked and recorded (halfMasks), never published; on the master, whose halves moved, the seam is the middle of its spine, x 1093: TODO 4.26's per-half colour is a hard seam between two masters there, no mask asset",
       "gold (m) is the pack's 'Multicolored Frame' on BOTH halves (C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame's 2016 arrangement, its collector line along the bottom border); a mixed split (GRN's hybrid // gold, a mono // mono of two colours) needs TODO 4.26",
       "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built"
+    ]
+  },
+  "stainedglass": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDMUStainedGlass.js 'Stained Glass (DMU)' (the Dominaria United stained-glass showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dmu/stainedGlass/w.png"
+      ],
+      "u": [
+        "img/frames/dmu/stainedGlass/u.png"
+      ],
+      "b": [
+        "img/frames/dmu/stainedGlass/b.png"
+      ],
+      "r": [
+        "img/frames/dmu/stainedGlass/r.png"
+      ],
+      "g": [
+        "img/frames/dmu/stainedGlass/g.png"
+      ],
+      "c": [
+        "img/frames/dmu/stainedGlass/m.png"
+      ],
+      "m": [
+        "img/frames/dmu/stainedGlass/m.png"
+      ],
+      "wu": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/w.png | img/frames/dmu/stainedGlass/u.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "wb": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/w.png | img/frames/dmu/stainedGlass/b.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "ub": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/u.png | img/frames/dmu/stainedGlass/b.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "ur": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/u.png | img/frames/dmu/stainedGlass/r.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "br": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/b.png | img/frames/dmu/stainedGlass/r.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "bg": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/b.png | img/frames/dmu/stainedGlass/g.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "rg": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/r.png | img/frames/dmu/stainedGlass/g.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "rw": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/r.png | img/frames/dmu/stainedGlass/w.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "gw": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/g.png | img/frames/dmu/stainedGlass/w.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "gu": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/g.png | img/frames/dmu/stainedGlass/u.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/dmu/stainedGlass/pt/w.png",
+      "u": "img/frames/dmu/stainedGlass/pt/u.png",
+      "b": "img/frames/dmu/stainedGlass/pt/b.png",
+      "r": "img/frames/dmu/stainedGlass/pt/r.png",
+      "g": "img/frames/dmu/stainedGlass/pt/g.png",
+      "c": "img/frames/dmu/stainedGlass/pt/m.png",
+      "m": "img/frames/dmu/stainedGlass/pt/m.png"
+    },
+    "notch": {
+      "kind": "warp",
+      "mask": "img/frames/dmu/stainedGlass/rules.svg",
+      "centerX": 750,
+      "span": {
+        "x0": 648,
+        "x1": 850
+      },
+      "warpTop": 1780,
+      "barTop": 1922,
+      "edgeRows": 3,
+      "bottom": 2004,
+      "box": {
+        "x": 640,
+        "y": 1776,
+        "width": 220,
+        "height": 230
+      },
+      "oval": {
+        "x": 685,
+        "y": 1928,
+        "width": 130,
+        "height": 63
+      },
+      "cutMarginPx": 2,
+      "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
+      "restored": {
+        "w": "11cb968b7ce49d6fe36fddcf6c5e3f3317e1f7aff81185a9d93a7529798044f5",
+        "u": "887dd9926ca4cb82e09311e88819cc22b5fd0c3cff6184f335a54ec3488bbc85",
+        "b": "375ddf5cac4892bce36e10f8936051551a0c72f7b8cd99fb50766625becd78ff",
+        "r": "83b83c6454a9eb252aabc80083ba069c1f1ccb502787e8b1d05635a982f2a99d",
+        "g": "09086d1d4114d4f676461599fcd4caea41239986878454548efddf758ad02ce8",
+        "c": "c35e8176590cd4ac08678150eaf8b9e32cf83a60234000a4b19735ef4252bf08",
+        "m": "c35e8176590cd4ac08678150eaf8b9e32cf83a60234000a4b19735ef4252bf08",
+        "wu": "6f6dbbd0d98c874b94fcd4430d959108e934af4ae031656becc125418dc209a4",
+        "wb": "abf8e67b30e07d1f7adc2728402a35feee1c5927d4e9e75b91ba3bea961b0939",
+        "ub": "e5155a912a19ed537f9b8860d7b3a9ebc6463c4ac05b3e9aa03958ebfd68109b",
+        "ur": "eb3356e441da26570c1bf95232073b186199aa42d53d57256ee64d8122ab9fcf",
+        "br": "dc3b0130628dabd4686a1bf05421729d817fe7160c830eb9ec0f817480d0033f",
+        "bg": "be24c016d112a134f079cbc9dbf0fe5b1e1a49a22655773030464209c7c9efe7",
+        "rg": "005a503665f798acd181b36af4988367c618b292ed54825e16dbeddffbcd1961",
+        "rw": "c606419e26046ae8ffff3b16f6aca490b3ce18ffe5ef17058bee4052171142ff",
+        "gw": "18c9f598e8b79548e408d5610191862769348e25f48b194ef7c61c1b99ac2adf",
+        "gu": "517eb7d90f2d48acee3f000ea884398c935ccd8df77f144d1becdf7ce54fd9bb",
+        "what": "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)"
+      }
+    },
+    "sourceTones": {
+      "img/frames/dmu/stainedGlass/b.png": {
+        "table": "SG_PRINT_TONES (b)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +17 / +18 / +24 (91, 86, 114 → 108, 104, 138), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +5 / +4 / +14 (74, 61, 84 → 79, 65, 98), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/g.png": {
+        "table": "SG_PRINT_TONES (g)",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +13 / -2 / +14 (31, 73, 32 → 44, 71, 46), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/m.png": {
+        "table": "SG_PRINT_TONES (m)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +10 / +32 / +45 (178, 118, 17 → 188, 150, 62), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +7 / +21 / +39 (173, 116, 20 → 180, 137, 59), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +9 / +3 / +17 (99, 68, 12 → 108, 71, 29), fading to nothing at white",
+        "lead": "on the pixels where img/frames/dmu/stainedGlass/m.png differs from img/frames/dmu/stainedGlass/u.png by 16–40 levels (max channel; full from 40), less where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png: -9 / -10 / +13 (99, 71, 49 → 90, 61, 62), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/b.png": {
+        "table": "SG_PRINT_TONES (b plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): +2 / +3 / +16 (80, 62, 96 → 82, 65, 112), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/m.png": {
+        "table": "SG_PRINT_TONES (m plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): -24 / -9 / +41 (195, 140, 15 → 171, 131, 56), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/r.png": {
+        "table": "SG_PRINT_TONES (r plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): -38 / -22 / -1 (174, 51, 34 → 136, 29, 33), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/u.png": {
+        "table": "SG_PRINT_TONES (u plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): +8 / -18 / +2 (14, 79, 147 → 22, 61, 149), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/r.png": {
+        "table": "SG_PRINT_TONES (r)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: -2 / -2 / +13 (167, 37, 34 → 165, 35, 47), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: -3 / +0 / +14 (147, 29, 23 → 144, 29, 37), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +0 / -3 / +10 (119, 49, 30 → 119, 46, 40), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/u.png": {
+        "table": "SG_PRINT_TONES (u)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +22 / -4 / +10 (19, 108, 171 → 41, 104, 181), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +8 / -17 / +0 (14, 79, 149 → 22, 62, 149), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +2 / +0 / +15 (52, 62, 100 → 54, 62, 115), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/w.png": {
+        "table": "SG_PRINT_TONES (w)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +4 / +8 / +12 (167, 144, 97 → 171, 152, 109), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +9 / +6 / +7 (135, 117, 74 → 144, 123, 81), fading to nothing at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/dmu/stainedGlass/b.png",
+      "img/frames/dmu/stainedGlass/g.png",
+      "img/frames/dmu/stainedGlass/m.png",
+      "img/frames/dmu/stainedGlass/pt/b.png",
+      "img/frames/dmu/stainedGlass/pt/g.png",
+      "img/frames/dmu/stainedGlass/pt/m.png",
+      "img/frames/dmu/stainedGlass/pt/r.png",
+      "img/frames/dmu/stainedGlass/pt/u.png",
+      "img/frames/dmu/stainedGlass/pt/w.png",
+      "img/frames/dmu/stainedGlass/r.png",
+      "img/frames/dmu/stainedGlass/rules.svg",
+      "img/frames/dmu/stainedGlass/u.png",
+      "img/frames/dmu/stainedGlass/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's six frames whole (dmu/stainedGlass/<k>.png, 1500x2100 NATIVE — no resample), as the run prints them (DMU #287–368, MUL #5 / #12 / #19 / #22 / #24 / #55 / #56 / #58 / #59 and their halo-foil and serialized twins): coloured glass in bronze lead, gold bars on every two-colour card",
+      "c = the gold frame (m.png): the pack has no colourless, artifact or land frame (packDMUStainedGlass.js lists none; dmu/stainedGlass/{a,c,l}.png are not in the tree) and no printing of the run is colourless — every one is a legendary creature — so a colourless card has no print to follow; the combo stays unverified",
+      "two-colour pair masters <pair> (the split dress): m.png whole, then the text box — the pair's two colour files lerped (premultiplied) across procedural:ramp(46→57 %W) — through the pack's Rules mask (rules.svg); the bars, rims, panes and plate stay gold, as DMU #292 Aron (W|B), #295 Balmor (U|R), #310 Radha (R|G) and MUL #56 Raff (U|W) print them; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU)",
+      "a real black border all round (the scans read 22,19,14 there, the same as DMU's regular printings #1–6 and MUL #66 / #67 on the same scans: black), cut at the one card corner",
+      "plates = the pack's 'Power/Toughness' plates (dmu/stainedGlass/pt/<k>.png, 262x127 at its ptBounds 1162/1863 px, 1:1); c = the gold plate, as the two-colour cards print it",
+      "the stamp notch split off every master (SG_NOTCH): the arch and its well written as holostamp/<key>.png, the master written with the straight bar under the box and the box's glass the arch hid stretched down onto it (the lead lines that meet on the arch's crown run on to the rim, as the uncommons print them)",
+      "toned onto the prints by one rule, the ring's (raw scan medians; a region ≥ 9 levels off is toned — SG_PRINT_TONES through SG_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters, pairs, crowns, notch pieces and plates drawn from it agree: the glass of the title and type bars and of the text box (where the pack's blue and red files differ), the gold frame's lead, the crowns' domes and panes, the plates' faces; what is within 8 levels, and the green bars, panes and plate (no print), stay as drawn",
+      "geometry as drawn: the bars within 1–2 px of print's, the box's foot 4 px above it, the frame 4 px wider each side (print's frame 0.6 % narrower), the band above the title bar 8 px taller (print's panes from 61 px, the pack's from 52) and the crown's dome rim 8 px higher; the arch over the stamp well is the pack's (taller and narrower than print's, whose rim is thinner) — textured glass, never a flat zone: nothing is re-cut",
+      "no crown in the masters: the crown is its own band (stainedglasscrown), opt-in per card — every printing of the run is legendary and prints it"
+    ]
+  },
+  "stainedglasscrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDMUStainedGlass.js 'Stained Glass (DMU)' (the Dominaria United stained-glass showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x120 overlay band: rows 0–119 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dmu/stainedGlass/crowns/w.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "u": [
+        "img/frames/dmu/stainedGlass/crowns/u.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "b": [
+        "img/frames/dmu/stainedGlass/crowns/b.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "r": [
+        "img/frames/dmu/stainedGlass/crowns/r.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "g": [
+        "img/frames/dmu/stainedGlass/crowns/g.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "m": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "c": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "wu": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/w.png | img/frames/dmu/stainedGlass/crowns/u.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "wb": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/w.png | img/frames/dmu/stainedGlass/crowns/b.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "ub": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/u.png | img/frames/dmu/stainedGlass/crowns/b.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "ur": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/u.png | img/frames/dmu/stainedGlass/crowns/r.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "br": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/b.png | img/frames/dmu/stainedGlass/crowns/r.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "bg": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/b.png | img/frames/dmu/stainedGlass/crowns/g.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "rg": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/r.png | img/frames/dmu/stainedGlass/crowns/g.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "rw": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/r.png | img/frames/dmu/stainedGlass/crowns/w.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "gw": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/g.png | img/frames/dmu/stainedGlass/crowns/w.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "gu": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/g.png | img/frames/dmu/stainedGlass/crowns/u.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/dmu/stainedGlass/crowns/w.png": {
+        "table": "SG_PRINT_TONES (w crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -30 / -21 / -9 (237, 210, 125 → 207, 189, 116), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: +13 / +9 / +3 (68, 54, 47 → 81, 63, 50), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/u.png": {
+        "table": "SG_PRINT_TONES (u crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: +23 / -13 / +1 (12, 91, 171 → 35, 78, 172), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: -9 / -5 / +2 (40, 46, 74 → 31, 41, 76), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/b.png": {
+        "table": "SG_PRINT_TONES (b crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -10 / -9 / +1 (80, 73, 146 → 70, 64, 147), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/r.png": {
+        "table": "SG_PRINT_TONES (r crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -30 / -2 / +19 (151, 33, 25 → 121, 31, 44), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/g.png": {
+        "table": "SG_PRINT_TONES (g crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: +22 / -29 / +15 (27, 121, 53 → 49, 92, 68), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/m.png": {
+        "table": "SG_PRINT_TONES (m crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -14 / -12 / +22 (167, 109, 20 → 153, 97, 42), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: -1 / -4 / +12 (67, 49, 29 → 66, 45, 41), fading to nothing at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/dmu/stainedGlass/crown.svg",
+      "img/frames/dmu/stainedGlass/crowns/b.png",
+      "img/frames/dmu/stainedGlass/crowns/g.png",
+      "img/frames/dmu/stainedGlass/crowns/m.png",
+      "img/frames/dmu/stainedGlass/crowns/r.png",
+      "img/frames/dmu/stainedGlass/crowns/u.png",
+      "img/frames/dmu/stainedGlass/crowns/w.png"
+    ],
+    "notes": [
+      "the stained-glass legendary crown (TODO 4.11 wave 2): the pack's 'Legend Crown' (dmu/stainedGlass/crowns/<k>.png, 1160x55 at its bounds 170/29 px) at 1:1 over a clear card, rows 0–119 kept — the dome of glass over the title bar and the panes either side, in the card's colour, which every printing of the run carries (all 109 are legendary: DMU #287–368, MUL #5 … #59 and twins); drawn over the master's own band",
+      "keys = w u b r g m, c (the gold crown, as the master: no colourless print) and the ten pairs: the GOLD crown, its dome's glass the pair's two domes lerped (premultiplied) across procedural:ramp(47→53 %W) through the pack's Inner Crown mask (crown.svg), as DMU #310 Radha (R|G) and #292 Aron (W|B) print it — gold rim and panes, the dome turning from the first colour to the second",
+      "the domes and panes toned with the masters (SG_PRINT_TONES); the crown's dome rim reaches 8 px higher than print's and its panes start 8 px higher (print's band is shorter): as drawn"
     ]
   },
   "tarkirdragon": {

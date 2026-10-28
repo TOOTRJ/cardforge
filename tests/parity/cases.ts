@@ -336,6 +336,12 @@ const PICKS: readonly Pick[] = [
   // The Bloomburrow anime on one MSE master in print's look (TODO 4.11 / 4.35, layout v70).
   { from: "bloomanime/g/creature-long@crown", why: "v70 Bloomburrow anime: the strokes in print's flat tone, the slate name and text boxes at print's opacity over full-bleed art, its own layout on M15's slots in white, the CC M15 disc on print's row, MSE's flourish (opt-in)" },
   { from: "bloomanime/u/creature-short@stamp", why: "v70 Bloomburrow anime: the footer in print's tone, MSE's P/T outline as the plate, MSE's stamp notch on the footer's well with our oval" },
+  // The New Capenna Art Deco showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "sncartdeco/wub/creature-long@stamp-crown", why: "New Capenna Art Deco: CC's 'Golden Age' gold toned onto print, the art under the translucent bars and box (underFrameArt) beside the window's own layer, the crowned twin (the arch), our lifted-rim notch with our oval, white ink, the CC M15 row 8 px lower" },
+  { from: "sncartdeco/u/creature-short@collector-2015", why: "New Capenna Art Deco: one gold master under a mono colour key, the pack's plate with white digits, the name 1 px up and the type line 4.5 px under the CC baseline, M15's collector line" },
+  // The Enchanting Tales showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "enchantingtales/u/enchantment-long@stamp", why: "Enchanting Tales: the art under the whole frame and its translucent box, white rules in CC's rect 3 px up with the moved lower block, the name riding the pack's bar, the CC M15 row 3 px right, the pack's oval notch per colour with our oval and no black ring" },
+  { from: "enchantingtales/g/creature-long@collector", why: "Enchanting Tales: the matrix's creature row (its primary kind; the renderers draw any card — the kind gate keeps the frame to Enchantment Creatures) on the pack's plate (3 px up), the 2023 collector line on the run's rows (1990 / 2029) in the colour's footer" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },
@@ -352,6 +358,10 @@ const PICKS: readonly Pick[] = [
   // The Strixhaven Mystical Archive from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "mysticalarchive/r/instant-long@stamp", why: "Mystical Archive: CC's 2010 px masters downscaled once and toned onto print, the art under the frame edge to edge, M15's slots on the run's own lines (the name 5 px up, the cost row 6 px up and 4 px right, the type line 1 px down, the rules block 3 px up), our own black arch with the oval in its cut" },
   { from: "mysticalarchive/wu/instant-long@pair", why: "Mystical Archive: the pair master on an instant — the gold frame with the two colours' lines split right of centre — the type pen 5 px left, the set symbol on M15's box" },
+  // The Dominaria United Stained Glass showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "stainedglass/u/creature-short@collector-2015", why: "Stained Glass: CC's leaded-glass master (the arch split off: the box's foot straight), M15's slots on the pack's bars (the name 4.5 px up, the cost row 1 px up and 9.5 px right, the type line 1 px down), the box 8.5 px shorter at each end, white ink, the pack's plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "stainedglass/wu/creature-long@pair-crown", why: "Stained Glass: the pair master (gold frame, the box split across 46→57 %W) under the pair's crown (the gold dome split across 47→53 %W)" },
+  { from: "stainedglass/wub/creature-long@stamp-m", why: "Stained Glass: the arch split off the gold master, laid back over its straight foot, our oval in its cut" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },
