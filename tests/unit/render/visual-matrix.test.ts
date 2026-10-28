@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|flavor-upright(-hd)?|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?|selfname(-(nickname|literal))?|part-(u|b|m|r|w|g|wb|ub|gw-h)(-(foil|etched|hd))?|pair-part-(hybrid|r)|pair-hybrid-part|plain-land(-watermark)?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|flavor-upright(-hd)?|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?|selfname(-(nickname|literal))?|part-(u|b|m|r|w|g|wb|ub|gw-h)(-(foil|etched|hd))?|pair-part-(hybrid|r)|pair-hybrid-part|plain-land(-watermark)?|masthead-(chevron|shift(-(foil|etched))?|past-print)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -408,8 +408,10 @@ describe("visual-regression matrix", () => {
     // (the borderless land draws its pairs and no crown, 4.56: none there).
     const both = crowned.filter((c) => paired.includes(c));
     expect([...new Set(both.map((c) => c.template))].sort()).toEqual(PAIR_TEMPLATES.filter((t) => frameAnatomyOf(t).crown).sort());
-    // …and the old frames' (4.6h): pairs, no crown.
-    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland"]);
+    // …and the old frames' (4.6h): pairs, no crown — and the Strixhaven
+    // Mystical Archive's (4.11 wave 2: no legend prints on it) and the Doctor
+    // Who TARDIS's (4.11 wave 2: its brace is in the masters, on every print).
+    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland", "mysticalarchive", "tardis"]);
   });
 
   it("bakes the two-colour frame (TODO 4.6b) on every template that draws pairs, in each dress it draws", () => {

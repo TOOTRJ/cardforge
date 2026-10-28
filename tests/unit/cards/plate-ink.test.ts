@@ -30,6 +30,7 @@ const manifest = manifestJson as { files: Record<string, { sha256: string; hash:
  * every rules test in CI).
  */
 const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/frames/mysticalarchive/pt/{color}.png": { w: "7a5e94f5fe27", u: "3e33959df670", b: "18d4b9850f97", r: "c30ca59d9873", g: "ba3e8ec9d6d3", c: "0b9eb7c4583b", m: "6556509f1421" },
   "/frames/m15/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "aa94a0984a71", m: "21f2e51b2eac" },
   "/frames/m15artifact/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "82954026d022", m: "21f2e51b2eac" },
   "/frames/m15nyx/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "aa94a0984a71", m: "21f2e51b2eac" },
@@ -54,6 +55,8 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/sncartdeco/pt/{color}.png": { w: "e56682f2f23c", u: "e56682f2f23c", b: "e56682f2f23c", r: "e56682f2f23c", g: "e56682f2f23c", c: "e56682f2f23c", m: "e56682f2f23c" },
   "/frames/dndsourcebook/pt/{color}.png": { w: "c1cf1d543418", u: "c1cf1d543418", b: "c1cf1d543418", r: "c1cf1d543418", g: "c1cf1d543418", c: "c1cf1d543418", m: "c1cf1d543418" },
   "/frames/dossier/pt/{color}.png": { w: "8c9ea69bb5df", u: "8c9ea69bb5df", b: "8c9ea69bb5df", r: "8c9ea69bb5df", g: "8c9ea69bb5df", c: "8c9ea69bb5df", m: "8c9ea69bb5df" },
+  "/frames/tardis/pt/{color}.png": { w: "63ecae34b84a", u: "63ecae34b84a", b: "63ecae34b84a", r: "63ecae34b84a", g: "63ecae34b84a", c: "63ecae34b84a", m: "63ecae34b84a" },
+  "/frames/breakingnews/pt/{color}.png": { w: "704c31e043df", u: "60c2387eaedd", b: "0160148b8c29", r: "47dc439f730a", g: "320ce931734d", c: "1f264195ffde", m: "f838f35a8afe" },
   "/frames/enchantingtales/pt/{color}.png": { w: "2c961d4b54c9", u: "12e32a5d7361", b: "c42ea1b5197b", r: "c1440201173b", g: "eed2b3699d5c", c: "2c961d4b54c9", m: "30ab59fe1985" },
   "/frames/lotr/pt/{color}.png": { w: "caa4db7dc77d", u: "50e582ea8089", b: "ae34f219042a", r: "3e5c61ae9f6a", g: "25fa07910ca3", c: "e577c1bacc6e", m: "3be4849e81cb" },
 };

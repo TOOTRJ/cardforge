@@ -332,13 +332,22 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
         continue;
       }
+      // …and the Strixhaven Mystical Archive's ten (TODO 4.11 wave 2): the
+      // gold frame with the two colours' lines through the pack's Pinline
+      // masks (tests/unit/frames/mystical-archive-importer.test.ts).
+      if (template === "mysticalarchive") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       if (template === "extendedartland") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
       // …and the MKM dossier's ten (TODO 4.11 wave 2): the pack's two colour
-      // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts).
-      if (template === "dossier") {
+      // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts);
+      // …and the Doctor Who TARDIS's ten: its frames and braces lerped
+      // (tests/unit/frames/who-tardis-importer.test.ts).
+      if (template === "dossier" || template === "tardis") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
@@ -346,6 +355,13 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
       // tests/unit/frames/stained-glass-importer.test.ts).
       if (template === "stainedglass") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
+      // …and the OTJ Breaking News' ten (TODO 4.11 wave 2): the pack's two
+      // colour frames lerped across print's split, `a` its artifact frame
+      // (tests/unit/frames/otp-breaking-news-importer.test.ts).
+      if (template === "breakingnews") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;

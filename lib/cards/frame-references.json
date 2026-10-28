@@ -6039,6 +6039,84 @@
       ]
     }
   },
+  "mysticalarchive": {
+    "note": "The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63, the English run — NOT STA #64–126 (the Japanese alternate art, another frame) nor SOA (2026, inverted navy boxes). Every printing is an instant or a sorcery: each colour on two of its own; 'm' the two-colour pair dress (Lightning Helix R|W, Electrolyze U|R — the colour lines split, the bands gold); 'c' has no print.",
+    "colors": {
+      "w": [
+        {
+          "name": "Approach of the Second Sun",
+          "set": "sta",
+          "scryfallId": "e0d18742-d661-4223-8880-9ed995379b2e"
+        },
+        {
+          "name": "Swords to Plowshares",
+          "set": "sta",
+          "scryfallId": "cc9ece2f-7eda-4fc5-a562-3e16e71560e9"
+        }
+      ],
+      "u": [
+        {
+          "name": "Counterspell",
+          "set": "sta",
+          "scryfallId": "ffdf9d2a-c163-43df-9a2f-20b8749c86ae"
+        },
+        {
+          "name": "Brainstorm",
+          "set": "sta",
+          "scryfallId": "11d27509-07c2-4445-a1d5-e56523fb8566"
+        }
+      ],
+      "b": [
+        {
+          "name": "Demonic Tutor",
+          "set": "sta",
+          "scryfallId": "3009ba46-c9f8-46dc-8ffc-2aa4cef7b17c"
+        },
+        {
+          "name": "Doom Blade",
+          "set": "sta",
+          "scryfallId": "7e6c0fe2-a82b-42cb-8629-b9f00b7f08e9"
+        }
+      ],
+      "r": [
+        {
+          "name": "Lightning Bolt",
+          "set": "sta",
+          "scryfallId": "4eaac4fd-95f5-4f38-b593-0101e79a20f9"
+        },
+        {
+          "name": "Chaos Warp",
+          "set": "sta",
+          "scryfallId": "6d0a3996-5a03-481b-9bda-15c6f6e5f9c4"
+        }
+      ],
+      "g": [
+        {
+          "name": "Channel",
+          "set": "sta",
+          "scryfallId": "0e07a16f-d836-40f9-85e3-a78582a97109"
+        },
+        {
+          "name": "Regrowth",
+          "set": "sta",
+          "scryfallId": "af727601-5251-48b6-b5e3-b68ca0608bc9"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Lightning Helix",
+          "set": "sta",
+          "scryfallId": "227ac87a-7196-40d0-ab00-98ebafcca09a"
+        },
+        {
+          "name": "Electrolyze",
+          "set": "sta",
+          "scryfallId": "08a4d142-b98b-4027-94cb-314f67fb1d4a"
+        }
+      ]
+    }
+  },
   "dossier": {
     "note": "The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo type in MKM (#336–389, #433) — NOT the Secret Lair's four dossier legends (SLD #1566–1569: the same page on a navy border) and NOT MKM's round 'magnified' showcase (#287–316). One folder per colour key, the colour on the photo's corners, the bands' rules and the seals; 'c' the colourless artifact creature (#376, the pack's slate artifact frame); 'm' the five-colour Niv-Mizzet (gold) and a two-colour legend (Kylox, U/R — the pair masters, the split dress, ride the gold key).",
     "colors": {
@@ -6119,6 +6197,64 @@
           "name": "Kylox, Visionary Inventor",
           "set": "mkm",
           "scryfallId": "2260036c-cc6f-4016-8d8c-4953ce5b22d3"
+        }
+      ]
+    }
+  },
+  "tardis": {
+    "note": "The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 (the serialized #552z–564z and surge-foil #1126–1155 twins are the same frame under a finish). One police box per colour key, the colour on the stripes down the sides and the brace at the window's top corners (on every print, legendary or not); every printing borderless with the Universes Beyond triangle. 'c' the colourless artifact creature (#550 Cyberman Patrol, the pack's steel artifact frame; #551 TARDIS is left out: its art covers the brace); 'g' has no print (green appears only in pairs); 'm' the three-colour Davros (gold) and a two-colour legend (The War Doctor, R/W — the pair masters, the split dress, ride the gold key).",
+    "colors": {
+      "w": [
+        {
+          "name": "Rose Tyler",
+          "set": "who",
+          "scryfallId": "2f305be6-c51d-423d-8283-39e3ffc2d790"
+        },
+        {
+          "name": "Sarah Jane Smith",
+          "set": "who",
+          "scryfallId": "cb59b2b4-34d8-4add-a187-61677c7a3b0d"
+        }
+      ],
+      "u": [
+        {
+          "name": "K-9, Mark I",
+          "set": "who",
+          "scryfallId": "f51905ce-9146-46e4-8d7f-643843d48edb"
+        }
+      ],
+      "b": [
+        {
+          "name": "Dalek Squadron",
+          "set": "who",
+          "scryfallId": "b34eebf0-36be-4632-8687-cbe35eedcc13"
+        }
+      ],
+      "r": [
+        {
+          "name": "Yasmin Khan",
+          "set": "who",
+          "scryfallId": "2f884ca5-76b7-4eb8-857e-d347f3e70b1c"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Cyberman Patrol",
+          "set": "who",
+          "scryfallId": "63c4675f-1fcc-49ea-a43f-8540140689c8"
+        }
+      ],
+      "m": [
+        {
+          "name": "Davros, Dalek Creator",
+          "set": "who",
+          "scryfallId": "ed3a8776-e1bd-47c0-bdb9-cb120424e76d"
+        },
+        {
+          "name": "The War Doctor",
+          "set": "who",
+          "scryfallId": "ddf2d71d-f662-470d-bd99-68e69ea516d5"
         }
       ]
     }
@@ -7006,6 +7142,95 @@
         }
       ],
       "c": null
+    }
+  },
+  "breakingnews": {
+    "note": "The OTJ Breaking News showcase (TODO 4.11 wave 2): OTJ's bonus sheet OTP #1–65, the front page of 'The Prosperity Post' — NOT the textured-foil reprints OTP #66–80 (another borderless frame), and not #39 (a split card) or #50 (a planeswalker), other bodies. One page per colour key, the colour on the masthead's wash, the bands' rules and the side bars; 'c' the colourless printings — the land (#65, the brown land master) and an artifact (#61, the slate artifact master); 'm' a three-colour card (gold) and a two-colour one (Detention Sphere, W/U — the pair masters, the split dress, ride the gold key).",
+    "colors": {
+      "w": [
+        {
+          "name": "Fell the Mighty",
+          "set": "otp",
+          "scryfallId": "fbd897e0-0f6b-4a35-9f33-a16d85ddfad8"
+        },
+        {
+          "name": "Path to Exile",
+          "set": "otp",
+          "scryfallId": "aa112736-7596-448a-be2f-0798acb3b2ee"
+        }
+      ],
+      "u": [
+        {
+          "name": "Essence Capture",
+          "set": "otp",
+          "scryfallId": "d2bcfba6-fbd8-487c-8a89-2327c3d07870"
+        },
+        {
+          "name": "Mana Drain",
+          "set": "otp",
+          "scryfallId": "4c7f0ea5-a142-4157-b85d-ec49dd79adf6"
+        }
+      ],
+      "b": [
+        {
+          "name": "Murder",
+          "set": "otp",
+          "scryfallId": "6c776ca4-4950-4a27-8ce2-fbe534579d62"
+        },
+        {
+          "name": "Thoughtseize",
+          "set": "otp",
+          "scryfallId": "5e85d5db-ced3-406d-90d2-e506a9332468"
+        }
+      ],
+      "r": [
+        {
+          "name": "Collective Defiance",
+          "set": "otp",
+          "scryfallId": "cbaaa9e0-e5d4-4ae1-8082-cc018eb1fe39"
+        },
+        {
+          "name": "Fling",
+          "set": "otp",
+          "scryfallId": "1cddae19-eb96-475c-9800-17ac57df4c0a"
+        }
+      ],
+      "g": [
+        {
+          "name": "Clear Shot",
+          "set": "otp",
+          "scryfallId": "4f362332-3682-4638-bc8b-6984f48e3464"
+        },
+        {
+          "name": "Force of Vigor",
+          "set": "otp",
+          "scryfallId": "3d98d6a5-36a0-441f-ac64-9d02b2dbb773"
+        }
+      ],
+      "c": [
+        {
+          "name": "Dust Bowl",
+          "set": "otp",
+          "scryfallId": "18d24d9a-a49e-4ce8-9158-03fe4cea39e2"
+        },
+        {
+          "name": "Contagion Engine",
+          "set": "otp",
+          "scryfallId": "fe584bf8-cb71-42b5-b5c0-dea3fec79c9d"
+        }
+      ],
+      "m": [
+        {
+          "name": "Cruel Ultimatum",
+          "set": "otp",
+          "scryfallId": "539e00a6-6cb0-4960-8a45-52d70b575f5a"
+        },
+        {
+          "name": "Detention Sphere",
+          "set": "otp",
+          "scryfallId": "bb049418-44db-4f98-9d53-385c5cd0f5cc"
+        }
+      ]
     }
   }
 }

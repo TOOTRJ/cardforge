@@ -1946,6 +1946,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.36",
     },
   },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2; Card Conjurer's
+  // 'Mystical Archive (STA)' pack): STA #1–63, the English run — 58
+  // mono-colour and 5 two-colour instants and sorceries, every one
+  // borderless, single-faced, on the 2015 frame, none legendary (Scryfall
+  // 2026-10-27). Exact once verified (withVerification). No gap: the five
+  // two-colour printings split their colour lines (the template's pair
+  // masters, the import's two-colour switch), no crown prints, the oval
+  // stamp and the collector line are the template's own. NOT STA #64–126
+  // (the Japanese alternate art: a vertical name panel, no title bar —
+  // another frame) nor SOA (the 2026 archive inverts the boxes: navy, white
+  // text); both stay on the rule below.
+  {
+    key: "borderless/mystical-archive/sta",
+    exactLabel: "Strixhaven Mystical Archive frame",
+    match: { borders: ["borderless"], collectors: { sta: [[1, 63]] } },
+    outcome: { status: "exact", template: "mysticalarchive" },
+  },
   {
     key: "borderless/mystical-archive",
     exactLabel: "Mystical Archive frame",
@@ -2022,6 +2039,27 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2; Card Conjurer's
+  // 'TARDIS' pack): WHO #535–564, their serialized twins #552z–564z (the
+  // "z" reads as its number) and their surge-foil twins #1126–1155 — 73
+  // printings, every one single-faced and borderless on the 2015 frame,
+  // every one a creature but #551 / #1142 TARDIS (an artifact Vehicle), each
+  // with the Universes Beyond triangle stamp (Scryfall 2026-10-28). The
+  // serial and the surge foil are finishes over the same frame. Exact once
+  // verified (withVerification). No gap: the template draws the two-colour
+  // dress (its pair masters — print gives a pair's left stripe and brace its
+  // first colour, the right ones its second; 21 of the 30 base printings),
+  // the triangle stamp and the collector line; the brace the pack calls its
+  // crown is on every print, so the masters draw it. No land prints in the
+  // run (and the pack's Land frame 404s): none can land here. #551 / #1142
+  // TARDIS land here too — their art (the police box's open doors) fills the
+  // window past the brace, which the frame draws, as for every other card.
+  {
+    key: "showcase/who/tardis",
+    exactLabel: "Doctor Who TARDIS showcase",
+    match: { borders: ["borderless"], collectors: { who: [[535, 564], [1126, 1155]] } },
+    outcome: { status: "exact", template: "tardis" },
+  },
   {
     key: "showcase/tdm/clan",
     exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",
@@ -2069,6 +2107,52 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     exactLabel: "Wilds of Eldraine Enchanting Tales showcase",
     match: { borders: ["borderless"], collectors: { wot: [[1, 63]] } },
     outcome: { status: "exact", template: "enchantingtales" },
+  },
+  // The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2;
+  // Card Conjurer's 'Breaking News' pack): OTJ's bonus sheet, OTP #1–65 —
+  // the front page of "The Prosperity Post", borderless on Scryfall, on the
+  // 2015 frame (Scryfall 2026-10-28). 63 of the 65 are single-bodied
+  // spells, artifacts (a legend, a Vehicle) and a land: exact once verified
+  // (withVerification). No gap among them: the template draws the run's
+  // two-colour dress (its pair masters — print splits a two-colour page from
+  // its first colour to its second, 21 printings), its gold page (four
+  // three-colour cards), the crown its one legend wears (#63 Mindslaver:
+  // CROWNED_SHOWCASE_SIGNATURES, its own frame's crown only), the oval
+  // stamp and the Vehicle's P/T on the pack's box (#64: print draws the
+  // same box). Two printings are other bodies on the same page, which the
+  // template doesn't draw — nearest, their own gaps, on the borderless frame
+  // they landed on before (the split, the planeswalker): #39 Crime //
+  // Punishment (a split card, turned) and #50 Oko, Thief of Crowns (a
+  // planeswalker). NOT OTP #66–80, the textured-foil reprints of fifteen of
+  // the run, which print a borderless frame of their own (`borderless/
+  // standard`, unchanged).
+  {
+    key: "showcase/otp/breaking-news/split",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] }, layouts: ["split"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph's Breaking News frame has no split layout yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "showcase/otp/breaking-news/planeswalker",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] }, kinds: ["planeswalker"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph's Breaking News frame has no planeswalker body yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "showcase/otp/breaking-news",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] } },
+    outcome: { status: "exact", template: "breakingnews" },
   },
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
   // station cards on a showcase of their own: they keep this rule's landing

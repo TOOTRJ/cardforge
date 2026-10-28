@@ -127,11 +127,17 @@ const DOCUMENTED_NULLS = new Set([
   "expeditionlandbfz/w", "expeditionlandbfz/u", "expeditionlandbfz/b", "expeditionlandbfz/r", "expeditionlandbfz/g",
   "nyx/c",
   "lotr/c",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63 are every
+  // one an instant or a sorcery with a colour — no colourless print.
+  "mysticalarchive/c",
   "bloomburrow/c",
   "tarkirdragon/u", "tarkirdragon/b", "tarkirdragon/r", "tarkirdragon/g", "tarkirdragon/c",
   // The Enchanting Tales showcase (TODO 4.11 wave 2): WOT #1–63 prints no
   // colourless and no multicoloured card.
   "enchantingtales/c", "enchantingtales/m",
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 prints
+  // no mono-green card (green only in its pairs).
+  "tardis/g",
   "tarkirghostfire/u", "tarkirghostfire/b",
   // The New Capenna Art Deco (TODO 4.11 wave 2): every card of the run is
   // three colours — one gold master, referenced on `m` alone.

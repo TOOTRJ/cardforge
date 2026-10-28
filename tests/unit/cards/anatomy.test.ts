@@ -328,6 +328,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // …and the Dominaria United stained glass (TODO 4.11 wave 2): the
       // pack's glass dome, its pair masters the gold frame with the box split.
       "stainedglass",
+      // …and the OTJ Breaking News (TODO 4.11 wave 2): the pack's notched
+      // rule, and its pair masters (the colour frames lerped across print's
+      // split) with the crown's pairs.
+      "breakingnews",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -361,7 +365,13 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   const PAIRED = FRAME_TEMPLATE_VALUES.filter(
     (t): boolean =>
       t === "m15borderlessland" ||
+      // The Doctor Who TARDIS (4.11 wave 2): its pair masters, and no crown
+      // (its brace is on every print, in the masters).
+      t === "tardis" ||
       OLD_FRAME_PAIRED.includes(t) ||
+      // The Strixhaven Mystical Archive (TODO 4.11 wave 2): its pair masters
+      // and no crown (no legend prints on it).
+      t === "mysticalarchive" ||
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
       // Constellation frame, whose two-colour card is the gold master — nor
@@ -415,6 +425,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       extendedartland: ["split"],
       // The Prepare frame (4.26): m15's two dresses with the page.
       prepare: ["split", "hybrid"],
+      // The Strixhaven Mystical Archive (4.11 wave 2): the gold frame with
+      // the two colours' lines, as STA #59–63 print it.
+      mysticalarchive: ["split"],
       // The Dominaria United stained glass (4.11 wave 2): the gold frame, the box split.
       stainedglass: ["split"],
       // The double-faced spell faces (5.1d): the split on every one — the
@@ -442,6 +455,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The MKM dossier (4.11 wave 2): the pack's two colour frames lerped
       // across print's ramp; no hybrid printing.
       dossier: ["split"],
+      // The Doctor Who TARDIS (4.11 wave 2): the pack's two colour frames
+      // and braces lerped across a span of identical pixels; no hybrid
+      // printing.
+      tardis: ["split"],
+      // The OTJ Breaking News (4.11 wave 2): the same, across print's split.
+      breakingnews: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -521,7 +540,13 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "enchantingtales",
     // …and the Dominaria United stained glass (4.11 wave 2): the pack's own
     // arch, split off every master and pair master.
-    "stainedglass"];
+    "stainedglass",
+    // …and the Strixhaven Mystical Archive (4.11 wave 2): our own black arch.
+    "mysticalarchive",
+    // …and the Doctor Who TARDIS (4.11 wave 2): the pack's one trapezoid, the Universes Beyond hole.
+    "tardis",
+    // …and the OTJ Breaking News (4.11 wave 2): the pack's one oval tab.
+    "breakingnews"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -799,7 +824,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "extendedartland", "retroland", "modernland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "mysticalarchive", "breakingnews", "extendedartland", "retroland", "modernland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

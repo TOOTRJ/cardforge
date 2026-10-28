@@ -116,6 +116,7 @@ import {
   typeRectWithIndicator,
 } from "@/lib/cards/color-indicator";
 import { holoStampArtOf } from "@/lib/cards/holo-stamp-art";
+import { resolveMasthead, type MastheadPiece } from "@/lib/cards/masthead";
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import {
   COLLECTOR_BRUSH_PATH,
@@ -373,6 +374,30 @@ function bakeText(text: string): string {
 /** One half of a two-colour split frame: the full-card PNG shifted inside an
  *  overflow:hidden box spanning columns [x0, x1). Whole-pixel box edges, so
  *  Satori cuts the seam hard — the bake's form of FrameLayer's clip-path. */
+/** One masthead piece (lib/cards/masthead.ts): its image at its own box,
+ *  clipped to its window — every edge on an even HD px, so whole at 750.
+ *  The preview's MastheadPieceLayer twin. */
+function MastheadPieceBake({ piece, href, width, height }: { piece: MastheadPiece; href: string; width: number; height: number }) {
+  const box = (rect: MastheadPiece["rect"]) => ({
+    left: Math.round((rect.leftPct / 100) * width),
+    top: Math.round((rect.topPct / 100) * height),
+    width: Math.round((rect.widthPct / 100) * width),
+    height: Math.round((rect.heightPct / 100) * height),
+  });
+  const win = box(piece.window);
+  const img = box(piece.rect);
+  return (
+    <div style={{ position: "absolute", ...win, overflow: "hidden", display: "flex", zIndex: 5 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={href}
+        alt=""
+        style={{ position: "absolute", left: img.left - win.left, top: img.top - win.top, width: img.width, height: img.height, objectFit: "fill" }}
+      />
+    </div>
+  );
+}
+
 function FrameSlice({
   src,
   x0,
@@ -570,6 +595,17 @@ function CardImage({
   const nicknamePieces = nicknameDrawn ? [nicknameDrawn.plate] : [];
   const showCost =
     !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
+  // A masthead that makes room for the cost row (lib/cards/masthead.ts: the
+  // Breaking News wordmark) — its pieces and the row's slide (even HD px,
+  // so whole at 750); null on every other frame and wherever the row fits.
+  // The preview's twin.
+  const masthead = resolveMasthead(layout, showCost ? card.cost : null, masterKey);
+  const mastheadPieces = masthead ? masthead.pieces.map((piece) => ({ ...piece, href: getFrameOverlayDataUrl(piece.path) })) : [];
+  // …and in both finish masks, first (they are drawn right after the
+  // frame), each clipped to its window as it is drawn: the sheen follows
+  // the wordmark where it now sits, never the master's (the preview's twin).
+  const mastheadMaskOverlays = mastheadPieces.flatMap((piece) => (piece.href ? [{ href: piece.href, rect: piece.rect, window: piece.window }] : []));
+  const costDxPx = (layout.costDx ? fpx(layout.costDx, width) : 0) + (masthead ? Math.round((masthead.costDxPx * width) / 1500) : 0);
   const typeLine = buildTypeLine(card);
   // A two-box type line (TextSlot.split, TODO 3.24): split at the em dash,
   // one size for both halves — the preview's twin.
@@ -980,6 +1016,12 @@ function CardImage({
         <FrameSlice src={splitDataUrl} x0={splitX} x1={splitAxisY ? height : width} width={width} height={height} axisY={splitAxisY} />
       ) : null}
 
+      {/* A masthead's pieces (lib/cards/masthead.ts: the Breaking News
+          wordmark out of a long cost's way) — right after the frame, under
+          its overlays: the preview's MastheadPieceLayer twin. Each image at
+          its own box, clipped to its window; none where the row fits. */}
+      {mastheadPieces.map((piece) => (piece.href ? <MastheadPieceBake key={piece.piece} piece={piece} href={piece.href} width={width} height={height} /> : null))}
+
       {/* Anatomy overlays (the legendary crown band, TODO 4.6.0) — right
           after the frame, before the finishes and every text layer: the
           preview's FrameOverlayLayer twin. Sibling <img>s, never a
@@ -1076,7 +1118,7 @@ function CardImage({
           id="etched"
           frameHref={frameDataUrl}
           split={maskSplit}
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
+          overlays={[...mastheadMaskOverlays, ...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1106,7 +1148,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
+          overlays={[...mastheadMaskOverlays, ...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1121,7 +1163,7 @@ function CardImage({
       {holoStamp && !holoStamp.aboveRows ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={holoStampArtOf(holoStamp.shape, holoStamp.tone).dataUri}
+          src={holoStampArtOf(holoStamp.shape, holoStamp.tone, holoStamp.ring).dataUri}
           alt=""
           width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
           height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
@@ -1229,7 +1271,7 @@ function CardImage({
             overrides={card.pipOverrides}
             symbols={symbols}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
-            dx={layout.costDx ? fpx(layout.costDx, width) : 0}
+            dx={costDxPx}
           />
         </div>
       ) : null}
@@ -1451,7 +1493,7 @@ function CardImage({
       {holoStamp?.aboveRows ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={holoStampArtOf(holoStamp.shape, holoStamp.tone).dataUri}
+          src={holoStampArtOf(holoStamp.shape, holoStamp.tone, holoStamp.ring).dataUri}
           alt=""
           width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
           height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
@@ -4135,6 +4177,15 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
   }
   for (const overlay of resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey })) {
     paths.push(overlay.path);
+  }
+  // A masthead's pieces (lib/cards/masthead.ts) — only where the card's
+  // cost row needs them, keyed by the master CardImage draws.
+  if (layout.masthead) {
+    const showCost = !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
+    const masterKey = frameMasterKey(layout, card.colorIdentity as ColorIdentity[] | undefined, card, card.frameStyle);
+    for (const piece of resolveMasthead(layout, showCost ? card.cost : null, masterKey)?.pieces ?? []) {
+      paths.push(piece.path);
+    }
   }
   if (layout.loyaltyRows && showsLoyalty(card.cardType) && !layout.textless) {
     for (const ability of resolveLoyaltyRows(card.faceContent, card.rulesText)) {

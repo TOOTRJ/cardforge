@@ -110,6 +110,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
+  mysticalarchive: ["992x1056", "1:1", 0.945],
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the art under the
   // whole frame from the title bar down, 1500 × 1821 px.
   enchantingtales: ["928x1120", "3:4", 0.8237],
@@ -132,6 +133,10 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   dossier: ["1264x816", "3:2", 1.5355],
   // The Dominaria United Stained Glass window (TODO 4.11 wave 2): 1382 × 939 px.
   stainedglass: ["1232x832", "3:2", 1.472],
+  // The Card Conjurer TARDIS window (TODO 4.11 wave 2): the police box's window, 1273 × 902 px.
+  tardis: ["1200x848", "4:3", 1.4113],
+  // The Card Conjurer Breaking News window (TODO 4.11 wave 2): 1347 × 850 px.
+  breakingnews: ["1280x800", "3:2", 1.5847],
   fullart: ["896x1168", "3:4", 0.7605],
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],

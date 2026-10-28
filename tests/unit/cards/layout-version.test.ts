@@ -6,6 +6,7 @@ import {
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
+import { costRectSharesTitleRows } from "@/lib/cards/title-band";
 import { getFrameProfile, sameRect, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
@@ -449,6 +450,12 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "enchantingtales",
   // TODO 4.11 wave 2's Dominaria United Stained Glass.
   "stainedglass",
+  // TODO 4.11 wave 2's Strixhaven Mystical Archive.
+  "mysticalarchive",
+  // TODO 4.11 wave 2's Doctor Who TARDIS.
+  "tardis",
+  // TODO 4.11 wave 2's OTJ Breaking News.
+  "breakingnews",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -495,6 +502,12 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "enchantingtales",
   // TODO 4.11 wave 2's Dominaria United Stained Glass.
   "stainedglass",
+  // TODO 4.11 wave 2's Strixhaven Mystical Archive.
+  "mysticalarchive",
+  // TODO 4.11 wave 2's Doctor Who TARDIS.
+  "tardis",
+  // TODO 4.11 wave 2's OTJ Breaking News.
+  "breakingnews",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -882,6 +895,12 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "enchantingtales",
       // …and TODO 4.11 wave 2's Dominaria United Stained Glass: the same, no bump.
       "stainedglass",
+      // …and TODO 4.11 wave 2's Strixhaven Mystical Archive: the same, no bump.
+      "mysticalarchive",
+      // …and TODO 4.11 wave 2's Doctor Who TARDIS: the same, no bump.
+      "tardis",
+      // …and TODO 4.11 wave 2's OTJ Breaking News: the same, no bump.
+      "breakingnews",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -2723,7 +2742,9 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
     expect(
       FRAME_TEMPLATE_VALUES.filter((t) => {
         const p = getFrameProfile(t);
-        return Boolean(p.costRect) && !p.hideCost;
+        // (A cost box off the name's rows takes none of its room — the
+        // OTJ Breaking News masthead, TODO 4.11 wave 2: costRectSharesTitleRows.)
+        return Boolean(p.costRect) && !p.hideCost && costRectSharesTitleRows(p);
       }).sort(),
     ).toEqual([...DETACHED].sort());
     // No second face draws its cost in a detached box: the front's cost alone is read.
@@ -3018,7 +3039,9 @@ describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
     // The Lord of the Rings scroll's triangle notch came with its own bump
     // (layout v62, TODO 4.11): no stored card names a stamp on it.
     // …and the ring's with its own (layout v65).
-    const later = ["lotrscroll", "lotr"];
+    // The Doctor Who TARDIS (TODO 4.11 wave 2) was BORN with its triangle: a
+    // new template, no stored card, no bump.
+    const later = ["lotrscroll", "lotr", "tardis"];
     expect(
       FRAME_TEMPLATE_VALUES.filter((t) => !later.includes(t) && (getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp" && o.stamp.shape === "triangle")).sort(),
     ).toEqual([...lv.UB_STAMP_TONES_TEMPLATES].sort());
@@ -3255,9 +3278,12 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // left with its name band).
     // The Enchanting Tales (TODO 4.11 wave 2) was BORN on its run's own row:
     // a new template, no bump (the CC M15 row 3 px further right) — and so was the Dominaria United
-    // Stained Glass (1 px higher against its bar, 9.5 px further right).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass"];
+    // Stained Glass (1 px higher against its bar, 9.5 px further right) and
+    // the Strixhaven Mystical Archive (6 px higher, 4 px further right), and
+    // the Doctor Who TARDIS (the CC M15 row 4 px lower), and the OTJ Breaking
+    // News (the 70 px disc in a box of its own in the masthead: costRect).
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);

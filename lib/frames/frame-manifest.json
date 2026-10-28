@@ -380,6 +380,1364 @@
       "width": 2100,
       "height": 1500
     },
+    "breakingnews/a.png": {
+      "hash": "72a99fe79f06",
+      "sha256": "72a99fe79f06c74ca368ded201742386cea7b8b158bbf574898d6a644073521f",
+      "bytes": 3870501,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/a.webp": {
+      "hash": "3112a826c58d",
+      "sha256": "3112a826c58d5a035564c587635d5dd595a6555434a510a192e19e8b94755cd0",
+      "bytes": 308750,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/b.png": {
+      "hash": "1a49bfb29d3f",
+      "sha256": "1a49bfb29d3f4086b5c67a4f475a8cfd0a33218a6ec9cf7e271d6f9c8798472d",
+      "bytes": 3898776,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/b.webp": {
+      "hash": "7bd1d53561d8",
+      "sha256": "7bd1d53561d84ddada28a20a0f05a7d7464dcc45111f39f376e20dc19fc64fa3",
+      "bytes": 350164,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/bg.png": {
+      "hash": "38c4ccc07f53",
+      "sha256": "38c4ccc07f53d8974f8e402868517a351bd3bf55e00f9ce6fa425cd10529fa60",
+      "bytes": 3999202,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/bg.webp": {
+      "hash": "64b0d5c1b3c9",
+      "sha256": "64b0d5c1b3c9adef8d9d4cff5cf5208517a71842c54fbec2b18709b45cf7346c",
+      "bytes": 303816,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/br.png": {
+      "hash": "f527bbae3eb7",
+      "sha256": "f527bbae3eb7614426b80d4e74a81930b5a371debafe1d053bb98cba748026ff",
+      "bytes": 4037604,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/br.webp": {
+      "hash": "22acce512230",
+      "sha256": "22acce512230add767d7de300851e1777bdc197425f1863b2a80b982dd75eab8",
+      "bytes": 345882,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/c.png": {
+      "hash": "1bdb45f31e67",
+      "sha256": "1bdb45f31e673761dfba71dd40e4c0ceb10a968b24b1eae2f746bdf7edc81504",
+      "bytes": 3888049,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/c.webp": {
+      "hash": "83d6ab7c326b",
+      "sha256": "83d6ab7c326b29403d03536c0fc90ad6438c5067d9403c4cb77dbed85483fced",
+      "bytes": 347138,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/g.png": {
+      "hash": "9a7f4a323359",
+      "sha256": "9a7f4a323359c6ccd4e7a5b1bde4ec22ac38777ea93900f9c21416e6a28932ed",
+      "bytes": 3900659,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/g.webp": {
+      "hash": "f442d3b2a02e",
+      "sha256": "f442d3b2a02e95d12266065c1859da16e4958637691bfca8fca0d32724da55a0",
+      "bytes": 277104,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/gu.png": {
+      "hash": "443bf772e9ec",
+      "sha256": "443bf772e9ecdcef264415b65d16a53bf31b8e4bebf4f79a3a1c9ee5a3b6c4bb",
+      "bytes": 4079541,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/gu.webp": {
+      "hash": "3fa730ad5ea8",
+      "sha256": "3fa730ad5ea8b6adac10d15d446c1d0a2d32f5a99575ef1457045c04a956686a",
+      "bytes": 314718,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/gw.png": {
+      "hash": "9faa6fbec8ba",
+      "sha256": "9faa6fbec8ba01edfa07da60b30785e3badb20a2c0f34783afd7b69f7aa58f28",
+      "bytes": 4022366,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/gw.webp": {
+      "hash": "b932e3918792",
+      "sha256": "b932e39187925d0c96e9af2e16d4cd8a6001dbdd22d99b9c0f4971ef0921058e",
+      "bytes": 292194,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/m.png": {
+      "hash": "12a84161f3ae",
+      "sha256": "12a84161f3ae3b38c33c1bf57adfe336b5146cf480b3950a811e4650ce061b87",
+      "bytes": 4103859,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/m.webp": {
+      "hash": "af13e4a33162",
+      "sha256": "af13e4a331624533cbedf46bb24bd1e8e0e110dd86b1a2e54f1f35b8630f2e84",
+      "bytes": 349424,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/pt/b.png": {
+      "hash": "0160148b8c29",
+      "sha256": "0160148b8c2904d1dc11904b7943028188392c0a9b4e1462602202db22997eb1",
+      "bytes": 142138,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/b.webp": {
+      "hash": "5083259da04e",
+      "sha256": "5083259da04ea3547be6caa955acac9c4421972e0d4aff8a6d4f90f5df132269",
+      "bytes": 20130,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/c.png": {
+      "hash": "1f264195ffde",
+      "sha256": "1f264195ffdeb1d705f7aa19c46fd7923aa375de7ff2172eb3a4d823c76516fc",
+      "bytes": 151147,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/c.webp": {
+      "hash": "99d9d1196583",
+      "sha256": "99d9d1196583204a8f3173c69a52f065af1eed37bff7060ffd06ad6da2da48c2",
+      "bytes": 20600,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/g.png": {
+      "hash": "320ce931734d",
+      "sha256": "320ce931734d42d860cd4a97265442a50f851deb978215eb7d644b9438a8cc37",
+      "bytes": 147648,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/g.webp": {
+      "hash": "a2917c0e75f7",
+      "sha256": "a2917c0e75f7e25ea74c3d2ff519e35137e46f34788d0cac03b63f0bcca980b8",
+      "bytes": 20396,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/m.png": {
+      "hash": "f838f35a8afe",
+      "sha256": "f838f35a8afea5bea1c034478fba71e8781b2c90711ec0885cc76204344d974b",
+      "bytes": 151845,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/m.webp": {
+      "hash": "3af9cca9d56b",
+      "sha256": "3af9cca9d56b535a70b50c859c9df9b5eb3bf7c690b462f3a67efd3aff27e9bd",
+      "bytes": 21278,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/r.png": {
+      "hash": "47dc439f730a",
+      "sha256": "47dc439f730a15e9828a012ebdb4f5d193c8c66c6ea822bd91dc3e9203f5f032",
+      "bytes": 146706,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/r.webp": {
+      "hash": "b1ff835b2cfd",
+      "sha256": "b1ff835b2cfd7b0a978861ad8d3e899aec9fa55afe036b8512bad5296ec01b27",
+      "bytes": 20564,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/u.png": {
+      "hash": "60c2387eaedd",
+      "sha256": "60c2387eaedd88f233136caaf9f5370bbebfcfc3ab2ee007e9c08c515aad6531",
+      "bytes": 148746,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/u.webp": {
+      "hash": "a838efd0f221",
+      "sha256": "a838efd0f22173a8d8d85f7fb5635c7623676d065a93bb290ec4855a160a4af2",
+      "bytes": 20436,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/w.png": {
+      "hash": "704c31e043df",
+      "sha256": "704c31e043dfc046cf0aab0579bf08d68f41736c7f50822e51e8a2b7e4367f4b",
+      "bytes": 120539,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/pt/w.webp": {
+      "hash": "df5827af235b",
+      "sha256": "df5827af235b7badd60f1f32c8810b81421426e71441611352d3be50c58bcce4",
+      "bytes": 20452,
+      "width": 406,
+      "height": 200
+    },
+    "breakingnews/r.png": {
+      "hash": "c44ec529066b",
+      "sha256": "c44ec529066ba4081774d5084d389b94fe0966d8bf13ff4edff43ab978760625",
+      "bytes": 4048284,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/r.webp": {
+      "hash": "3025094f9830",
+      "sha256": "3025094f98306cabf376808c68d98c0c7879dc9f2e43167d0732b3e215f79b47",
+      "bytes": 358740,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/rg.png": {
+      "hash": "bee662a1e80f",
+      "sha256": "bee662a1e80f63052e5186462968d425fe96d3cf84ef2cec6787cbd32d6e821c",
+      "bytes": 4071303,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/rg.webp": {
+      "hash": "6c101b892646",
+      "sha256": "6c101b89264619b8e4190dece40e914e720bb23879d58a55ab8763e677baf9cf",
+      "bytes": 318146,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/rw.png": {
+      "hash": "cfb2fc378cb9",
+      "sha256": "cfb2fc378cb9f0b013e0ebfcc7baeef84753dc6453ff3d1152720e22bb77957f",
+      "bytes": 4036016,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/rw.webp": {
+      "hash": "fb62ee07c3c4",
+      "sha256": "fb62ee07c3c4aafa1bbfd5ab6374b10096e7eee8c360c693ff25da56d1ac2702",
+      "bytes": 334794,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/u.png": {
+      "hash": "2a121c55fe8a",
+      "sha256": "2a121c55fe8aa25cad4870ce64d2a721ac5f6762768ba2762ba84398d9d18f40",
+      "bytes": 4048063,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/u.webp": {
+      "hash": "13d6f6acd1c9",
+      "sha256": "13d6f6acd1c91ca6531ef243130c2b01239d89382ff1055b25baf533b9d491b5",
+      "bytes": 339022,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/ub.png": {
+      "hash": "5b921bafcc8e",
+      "sha256": "5b921bafcc8efb30b9bb983d58c67f097d341e7970d1cc4d2102b543e92ac1ad",
+      "bytes": 4045477,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/ub.webp": {
+      "hash": "93643f9a0dca",
+      "sha256": "93643f9a0dca2dd08b9697971062b2e81d7c133241f618c3c888f3bb7cb4df36",
+      "bytes": 351270,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/ur.png": {
+      "hash": "7f87bde18b9d",
+      "sha256": "7f87bde18b9d73c0465e8a80406c540fe3f5e7716e1d12bbed4a073f95b216fe",
+      "bytes": 4126018,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/ur.webp": {
+      "hash": "0e006e838da3",
+      "sha256": "0e006e838da33e612d64950cd8123e6d842b4633bd470524603bd72e9c65a982",
+      "bytes": 345560,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/w.png": {
+      "hash": "21344db08245",
+      "sha256": "21344db082452813dd29d50630088773104963c57dab60f433bdb97d3350b9c0",
+      "bytes": 3915502,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/w.webp": {
+      "hash": "903d9b9ab713",
+      "sha256": "903d9b9ab7137de91ac4751886fac3f61f5c5aed1c2bc8f11ad2951b963af1de",
+      "bytes": 309556,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/wb.png": {
+      "hash": "35697969b9b5",
+      "sha256": "35697969b9b53dd36e6fbf56aab609c6c9b51615a6bf5692061e586887922291",
+      "bytes": 4004118,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/wb.webp": {
+      "hash": "1ddee1e99592",
+      "sha256": "1ddee1e995922a6dec3561ebfcab24f2e42f9950ef229115159a21b7b943ff16",
+      "bytes": 341520,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/wu.png": {
+      "hash": "d3676e0c9fe1",
+      "sha256": "d3676e0c9fe125f5d71f231ab61a461c11269521f15e47b112f87b725790b213",
+      "bytes": 4079161,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnews/wu.webp": {
+      "hash": "b19658d1b75f",
+      "sha256": "b19658d1b75fffffa042e7c9f33ae4a17f6be8fa92c94e8302fe5638238c93d4",
+      "bytes": 329098,
+      "width": 1500,
+      "height": 2100
+    },
+    "breakingnewscrown/a.png": {
+      "hash": "9879ab005e0f",
+      "sha256": "9879ab005e0f3b5c43cbbfc5c94109545b961dc9dfccc530fb50e5da99c4ea2d",
+      "bytes": 108080,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/a.webp": {
+      "hash": "b3770a681995",
+      "sha256": "b3770a681995d2ec8a3a5547b674003d25acf97fd448a78d9f41d9286f28c41d",
+      "bytes": 32362,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/b.png": {
+      "hash": "8ad60a24ce65",
+      "sha256": "8ad60a24ce655e86e96d8ad90288c7a51fb27ee3bc46fd25d352025606f89658",
+      "bytes": 112365,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/b.webp": {
+      "hash": "2c375999f559",
+      "sha256": "2c375999f5590551e5d0ca21bdf959db942dbe08e59c70092554d3c42db48e98",
+      "bytes": 37226,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/bg.png": {
+      "hash": "c307cd5bedef",
+      "sha256": "c307cd5bedefa249541b980ddc63aac16c8c306873e14ab0d9e226bf7baccb60",
+      "bytes": 125511,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/bg.webp": {
+      "hash": "38f72d935b32",
+      "sha256": "38f72d935b3244c960a18952786eae5495cc13a40bc61ee36efc3ff821ba81e6",
+      "bytes": 35894,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/br.png": {
+      "hash": "4d29281562de",
+      "sha256": "4d29281562de5088accbf5bb98de44a0afca81fb7d481ab8631306d06adcf965",
+      "bytes": 125849,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/br.webp": {
+      "hash": "c4aa01d57fc7",
+      "sha256": "c4aa01d57fc7e26e58081de8f115e19a5ebf887210399c11fba37fcd2f943f53",
+      "bytes": 37952,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/g.png": {
+      "hash": "49cbb2997643",
+      "sha256": "49cbb299764333d5ac0fee7a4616bd3577bffce169c0ff27e1250dbec7e32298",
+      "bytes": 120842,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/g.webp": {
+      "hash": "25a7538a9dd2",
+      "sha256": "25a7538a9dd2400f1be56ec9423dcb776a0e0ac5c348ce98a3837e2efefee45d",
+      "bytes": 34680,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/gu.png": {
+      "hash": "23517db66025",
+      "sha256": "23517db66025b4e903581b96f9c1ab3ba8fb589cb88ea9d89f9bca8495e12b55",
+      "bytes": 128751,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/gu.webp": {
+      "hash": "8fa1eb6e4b97",
+      "sha256": "8fa1eb6e4b9794c76f97d82e729dda5643afa2a487944748373a832bc1370a07",
+      "bytes": 35344,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/gw.png": {
+      "hash": "4723db37ed30",
+      "sha256": "4723db37ed3059a66ae2fe9c176ab832b976b132a60d5990d9453e7aa74d681c",
+      "bytes": 124026,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/gw.webp": {
+      "hash": "eac19b273920",
+      "sha256": "eac19b2739207e2ebc20e3f5ac0d0831b32c82c6ad5fb7f9027d90c04b262d14",
+      "bytes": 34284,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/l.png": {
+      "hash": "e5a54694f489",
+      "sha256": "e5a54694f489a0b6586baf3b9cd2071f719cf22731cb52495536379e9b1d6013",
+      "bytes": 114369,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/l.webp": {
+      "hash": "46ecc0bf120f",
+      "sha256": "46ecc0bf120f84441e408fce47d55c77265de4e93e4ff485815b11479b96d72e",
+      "bytes": 37792,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/m.png": {
+      "hash": "73f1efae2e8b",
+      "sha256": "73f1efae2e8b57e78fb949c6a13837dae9a9a4d0d36c0f0cec019532d7b28d78",
+      "bytes": 119947,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/m.webp": {
+      "hash": "29ce3e5efba6",
+      "sha256": "29ce3e5efba6ae6e3684e7835c708b0a383eb6a1c08d828050c081554965ca6c",
+      "bytes": 33418,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/r.png": {
+      "hash": "3abe8e1e3aa0",
+      "sha256": "3abe8e1e3aa077163fb03a70a49f5530f54d3529d09c66336e8d3c6cd08f8ae1",
+      "bytes": 121432,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/r.webp": {
+      "hash": "00822fc0bd56",
+      "sha256": "00822fc0bd5606468108e0dba02c0eb04b1754e9ac82bdaa689e30b6ff2137e1",
+      "bytes": 38490,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/rg.png": {
+      "hash": "c4fe312cd63b",
+      "sha256": "c4fe312cd63b5792ac4a539381a48cb63baa29aa1db84ee773b280a986f3c334",
+      "bytes": 129868,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/rg.webp": {
+      "hash": "f570fe4e9c47",
+      "sha256": "f570fe4e9c4771e4cac1a97b557db9474bfc3ca863c78a623c535c8995506610",
+      "bytes": 36904,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/rw.png": {
+      "hash": "ae2abeba80a2",
+      "sha256": "ae2abeba80a2b261af4cc4d228352ecbd3d17b00b1bf7edea4c09caec899ace1",
+      "bytes": 124405,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/rw.webp": {
+      "hash": "b16875014eb4",
+      "sha256": "b16875014eb4b3a26c026285ffe33a6155abb2df0e342eaf0f7196ed296c58c0",
+      "bytes": 35940,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/u.png": {
+      "hash": "7aa76e02fc35",
+      "sha256": "7aa76e02fc35967570860d389e069e8f8c8f84d891bd286f09d88f2e42f4e2a8",
+      "bytes": 121358,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/u.webp": {
+      "hash": "94e155d98eb9",
+      "sha256": "94e155d98eb98d431b4034119535fa998ae5451b5f9a3cb5c73e1dfe30ddd173",
+      "bytes": 36564,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/ub.png": {
+      "hash": "675c103645b6",
+      "sha256": "675c103645b68e4eb129760cf231df28479923fa07b4eb30cccbd6f2e6385b04",
+      "bytes": 126891,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/ub.webp": {
+      "hash": "ba16975b5853",
+      "sha256": "ba16975b5853940a799dd814689bf7833150fb7da70e8fabd5f484f69b5e7c12",
+      "bytes": 36952,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/ur.png": {
+      "hash": "d6e6e372dbe2",
+      "sha256": "d6e6e372dbe22749e6ed531b0c377076a7832ffe18b4682cd00242a05085db90",
+      "bytes": 130321,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/ur.webp": {
+      "hash": "93858aff77f4",
+      "sha256": "93858aff77f4b832900750d765ee229ed1b723fde419913e4baaa8e448acbe28",
+      "bytes": 37376,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/w.png": {
+      "hash": "f1bc6726b1d8",
+      "sha256": "f1bc6726b1d8cba07a7f472df1a0cf48080239c6bdf57ba402813248641f46f1",
+      "bytes": 109554,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/w.webp": {
+      "hash": "56744dcffdd0",
+      "sha256": "56744dcffdd0e2d9c3f790691af576f3c64e51a9f0f1c6218e0787cc74ca28d2",
+      "bytes": 32916,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/wb.png": {
+      "hash": "d7d17ef1a654",
+      "sha256": "d7d17ef1a654b8fa968cd36fe73887df998ba2a4403c294374dd53ea36fed2bf",
+      "bytes": 120580,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/wb.webp": {
+      "hash": "8892d891c8dc",
+      "sha256": "8892d891c8dc8a6547146481bbdf8fee9227a3a5d71aa1fce0f6ed4190fcb709",
+      "bytes": 34806,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/wu.png": {
+      "hash": "0054b4f10dcd",
+      "sha256": "0054b4f10dcdd3ff595e0e583661148ab82a027d84f93a29be4aa8499f34a4e4",
+      "bytes": 123645,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewscrown/wu.webp": {
+      "hash": "b15d4d647e49",
+      "sha256": "b15d4d647e49a0ec393679e9cc276b61d4647412412592c20ab74a58943b2923",
+      "bytes": 34104,
+      "width": 1500,
+      "height": 60
+    },
+    "breakingnewsholostamp/a.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/a.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/b.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/b.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/bg.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/bg.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/br.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/br.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/g.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/g.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/gu.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/gu.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/gw.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/gw.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/l.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/l.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/m.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/m.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/r.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/r.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/rg.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/rg.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/rw.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/rw.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/u.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/u.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/ub.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/ub.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/ur.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/ur.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/w.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/w.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/wb.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/wb.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/wu.png": {
+      "hash": "65f427b430ce",
+      "sha256": "65f427b430ce1d7393bc992d581e25910d5b2c4794436bb4cae07bbd8a29c962",
+      "bytes": 3260,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsholostamp/wu.webp": {
+      "hash": "f9ee8194c824",
+      "sha256": "f9ee8194c824597457fe14f0cad5e62d0497f4ad718e0d03289253dea395e51b",
+      "bytes": 2432,
+      "width": 338,
+      "height": 91
+    },
+    "breakingnewsmasthead/a.png": {
+      "hash": "580137646b4e",
+      "sha256": "580137646b4e587ecbc58effc2db4fdb489b5ae9f7896c690217e0c9b207ef03",
+      "bytes": 292505,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/a.webp": {
+      "hash": "6868b2e728c1",
+      "sha256": "6868b2e728c1561f566e4d5b42124cda3ba5307a205fe4657ee5d0a01232bac8",
+      "bytes": 38576,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/b.png": {
+      "hash": "c694258ec3b0",
+      "sha256": "c694258ec3b0532a0ed2dcf4363195423e609f4f02d7524d69983c44414fa630",
+      "bytes": 291568,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/b.webp": {
+      "hash": "4134ad8011cb",
+      "sha256": "4134ad8011cb7d8939db244a37be02522d8fc4feb1a6e7cbdcc14cb3751a6186",
+      "bytes": 39060,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/bg.png": {
+      "hash": "551b8fe40b4e",
+      "sha256": "551b8fe40b4e119e59dede3ceb61280f946257513ac7bb83798ed9160dcd2adf",
+      "bytes": 300315,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/bg.webp": {
+      "hash": "7ec7f15a3c70",
+      "sha256": "7ec7f15a3c7033768f4d3d86de99d8c0eb796ccd22f8b371178032aea536bbe6",
+      "bytes": 37692,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/br.png": {
+      "hash": "c5b5854cad66",
+      "sha256": "c5b5854cad66ad3a419408219ebce93e3384671756a27442d09a457933bed36b",
+      "bytes": 303092,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/br.webp": {
+      "hash": "0aa781953a23",
+      "sha256": "0aa781953a23b137b8041c34ad56f3719a40764462281c44d9d80b94e93972d9",
+      "bytes": 40416,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/c.png": {
+      "hash": "de4d2fc08371",
+      "sha256": "de4d2fc083713ff4a2aac3c5fa3b38fdd92ac456ea5f9d1af2066e42ec121663",
+      "bytes": 294803,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/c.webp": {
+      "hash": "e92555dfba70",
+      "sha256": "e92555dfba70e2ac39414660e3b9a7471c9f1418248ec0516ecf15bd919da621",
+      "bytes": 39784,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/g.png": {
+      "hash": "60267e2e864e",
+      "sha256": "60267e2e864e5b97d16849e811df63b1580b416c61bab2c9d97c57e7c2f46ecb",
+      "bytes": 297965,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/g.webp": {
+      "hash": "f7c115a7bea1",
+      "sha256": "f7c115a7bea120c59f705c7f79cde093c2cc30cd9d1779d9dc68b87e80ed3b1b",
+      "bytes": 36154,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gu.png": {
+      "hash": "8a72bc7f526e",
+      "sha256": "8a72bc7f526ef279e2ff7713a4a42b1886077644b88a0efa9224008a7a92fe58",
+      "bytes": 304916,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gu.webp": {
+      "hash": "2972ef820b60",
+      "sha256": "2972ef820b60b9e60e368addeb3b9a4266f7c2cf055074687ada33a8d507e225",
+      "bytes": 38210,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gw.png": {
+      "hash": "2db8a6049eed",
+      "sha256": "2db8a6049eed9e7589a522962f960701f82b8318ecc226c3b22232bb107d8067",
+      "bytes": 304310,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gw.webp": {
+      "hash": "7d36e3a68b0d",
+      "sha256": "7d36e3a68b0d5d6d109d45cf11b6f7bf447b4442209b1ba0abae4f9ed2515981",
+      "bytes": 37824,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/m.png": {
+      "hash": "ff7209df9394",
+      "sha256": "ff7209df9394ce5965e015663fe00bfb935777a2f734e9b1095ab86dfd7aac6d",
+      "bytes": 310807,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/m.webp": {
+      "hash": "737abf4a6f56",
+      "sha256": "737abf4a6f568ca64584d0cf58ffb1fa9facfa73113aba28230ecf48b0e35215",
+      "bytes": 41902,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/a.png": {
+      "hash": "5322df4d1b2a",
+      "sha256": "5322df4d1b2a033a6520d0974d515a95eb936b1edf9c514efb2b2d191916bec0",
+      "bytes": 61664,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/a.webp": {
+      "hash": "fb413c48b08b",
+      "sha256": "fb413c48b08b47d945a93a00789d6d068c328e5aef24b0e24d7287787ac79537",
+      "bytes": 40182,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/b.png": {
+      "hash": "de0e9cdd9361",
+      "sha256": "de0e9cdd9361e343c7afaa7f83249621d2b0b7de9f9645cadcfae4c36fb39145",
+      "bytes": 61524,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/b.webp": {
+      "hash": "1b9fa89d9a12",
+      "sha256": "1b9fa89d9a1257c8c496c7ad80dbdde7f60db743c0b40feacac609327f0441ea",
+      "bytes": 44634,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/bg.png": {
+      "hash": "2d9f9edb8d55",
+      "sha256": "2d9f9edb8d5534d58011a62ca5d7ce9e4f3997b07ec5a4f0e397afb2aa63d4a2",
+      "bytes": 166232,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/bg.webp": {
+      "hash": "15004013d527",
+      "sha256": "15004013d527f024a37cccd0908e761b277ba82f6f475fa7b8ec8272aee0af75",
+      "bytes": 39548,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/br.png": {
+      "hash": "a6de95af5afd",
+      "sha256": "a6de95af5afdd6a1ed2e1da6917efe1c9930586fa23561c08cef26b750f30109",
+      "bytes": 170095,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/br.webp": {
+      "hash": "b0b9a2697a90",
+      "sha256": "b0b9a2697a901c2dcc33f4eeafec04446a4dc3293bb3adb6cd3d0f39626eb431",
+      "bytes": 44570,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/c.png": {
+      "hash": "5c4ac161f8aa",
+      "sha256": "5c4ac161f8aa90f633f35b86d49da481c7abec2a5c28e332d533cbd1107c9314",
+      "bytes": 64352,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/c.webp": {
+      "hash": "2dce43256a33",
+      "sha256": "2dce43256a33c842790b98fccf9dde83db6c1b92b1cec1719f6649444c9da523",
+      "bytes": 45344,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/g.png": {
+      "hash": "38b871cb5fda",
+      "sha256": "38b871cb5fda49e468220e31ae19c03568a647a4c83815567f8f8f34f267ae4c",
+      "bytes": 62782,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/g.webp": {
+      "hash": "15cb159be215",
+      "sha256": "15cb159be215be475ef93c7aa57bcec1a8580ca0e7432182ed3ea13ce0e75789",
+      "bytes": 31662,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gu.png": {
+      "hash": "1a63e7734bf0",
+      "sha256": "1a63e7734bf09f8b6cfe949e9d46795351c09b4cc4d56832cb28d942c5aea5d4",
+      "bytes": 171437,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gu.webp": {
+      "hash": "3d8d36e22aac",
+      "sha256": "3d8d36e22aacf9125443e38bd51048ebfaa862efb729fcceb6fd085d1fc8090f",
+      "bytes": 35456,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gw.png": {
+      "hash": "8d00968c5738",
+      "sha256": "8d00968c5738c4deafe4c20febae0f460efd8ffa1eb3617ab876d22087a84cc1",
+      "bytes": 163802,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gw.webp": {
+      "hash": "9b88e34f58c6",
+      "sha256": "9b88e34f58c6780bb30a4f6c244017b71e89b7c2cac070d3562369dd58d71eae",
+      "bytes": 32794,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/m.png": {
+      "hash": "9c37ed294dd1",
+      "sha256": "9c37ed294dd1dcaf7b5e1cf9457d148c99068a73ecd8b971f307b098b150ff4d",
+      "bytes": 67834,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/m.webp": {
+      "hash": "4e00d66699e3",
+      "sha256": "4e00d66699e3d8ded3e8aee168e4bb0af99d7f137419e9570ddba4c52719a514",
+      "bytes": 42406,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/r.png": {
+      "hash": "5227927b5d6c",
+      "sha256": "5227927b5d6c5de7d540adba58ea273173db1434ff1968af318c9b8ad3eb82bb",
+      "bytes": 65853,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/r.webp": {
+      "hash": "011f760ad4d3",
+      "sha256": "011f760ad4d3012dd09b1ea00b251414ec164efa7a5e7c7e76ad073e7415725a",
+      "bytes": 45146,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rg.png": {
+      "hash": "b5afcccda2e4",
+      "sha256": "b5afcccda2e4bfe8a5bf40d3bdb59f9105d06b73b03ba8d8b90af0f0f86a9873",
+      "bytes": 171973,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rg.webp": {
+      "hash": "f14b46f579b2",
+      "sha256": "f14b46f579b2706d3cb67ed007841adb7d82144d9ba1899e115d6d8255619a8b",
+      "bytes": 39028,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rw.png": {
+      "hash": "3e91d0a8b928",
+      "sha256": "3e91d0a8b928498fa589cce64dcf4c35e1704710014d3737152c9cfad229f816",
+      "bytes": 164113,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rw.webp": {
+      "hash": "8abc71435228",
+      "sha256": "8abc71435228432d7212323ff8eedda47305f81d90ffa9ac3b853ad4ce0ab143",
+      "bytes": 40528,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/u.png": {
+      "hash": "523d1341f5ca",
+      "sha256": "523d1341f5ca70f18e76e7c74c5148594e427c14804296447d944078eea6430c",
+      "bytes": 65818,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/u.webp": {
+      "hash": "56c63281b80d",
+      "sha256": "56c63281b80dc22b325840c9dc539c30a8a36a84761c44f381e32de5a6928747",
+      "bytes": 43458,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ub.png": {
+      "hash": "d5fc8964dd3f",
+      "sha256": "d5fc8964dd3f985ba80d6fb63e45aa9c17d75b7570260af8521f3f363dab5b7a",
+      "bytes": 168633,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ub.webp": {
+      "hash": "94a0594bd8b9",
+      "sha256": "94a0594bd8b9360630633b3df337edafe9b750a8edc9872cb053e52b2700c95e",
+      "bytes": 43518,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ur.png": {
+      "hash": "bafec2776b9f",
+      "sha256": "bafec2776b9f8e88b40723adbdf2ed25446252fd9fc8cb24db62edd818ff9d6f",
+      "bytes": 177361,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ur.webp": {
+      "hash": "cc61a28e522d",
+      "sha256": "cc61a28e522de62580f14228a1937625e35d4599999f434b3c275becabf37ef9",
+      "bytes": 43708,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/w.png": {
+      "hash": "85537ee1e754",
+      "sha256": "85537ee1e754015966c898842b13b4a4b2e15ccef541378f7d65e662d3d81c8b",
+      "bytes": 61315,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/w.webp": {
+      "hash": "6aed50ba68ac",
+      "sha256": "6aed50ba68ac5cd4e96e3782f620530811f59fd952770a4f6a75180bbe9816d4",
+      "bytes": 35396,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wb.png": {
+      "hash": "14a462787c90",
+      "sha256": "14a462787c9086d08ec50612fbbd41ab691aa59cb9b73a050f237884bd30c592",
+      "bytes": 163294,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wb.webp": {
+      "hash": "bf89e9a61c60",
+      "sha256": "bf89e9a61c607ff25a0838c7b46a55f9788361e06f177a5f647b01d5ee37fbf8",
+      "bytes": 38156,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wu.png": {
+      "hash": "ff2b285a5ddd",
+      "sha256": "ff2b285a5dddec86780f1395de81eadd88359d06dfa15da7995c1b76d0a54771",
+      "bytes": 171682,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wu.webp": {
+      "hash": "b38004970d35",
+      "sha256": "b38004970d356a8f36c534e4bc53a878047e665656084e181dd3967b97fe18fe",
+      "bytes": 37858,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/r.png": {
+      "hash": "d69c3e854968",
+      "sha256": "d69c3e854968ee1b565ce8f79b12b23db86e2e15958fc3233b27db1d7d5d4c23",
+      "bytes": 304613,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/r.webp": {
+      "hash": "9f49d20486b7",
+      "sha256": "9f49d20486b7d284c33eab56abb672c85fdb6be7a4ee8ff547531c7e1de24702",
+      "bytes": 40510,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rg.png": {
+      "hash": "b828d1ffdff8",
+      "sha256": "b828d1ffdff8d9807903b94b7a798674be83681aec5588084692c21d6aafd37e",
+      "bytes": 306188,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rg.webp": {
+      "hash": "fb575d306234",
+      "sha256": "fb575d3062340ebd9b8a3c29c01bcf09f38bf109e294fb44790b61991b25ec2e",
+      "bytes": 38180,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rw.png": {
+      "hash": "a873994687d0",
+      "sha256": "a873994687d07a8d0e50e5f282ae64a64a017641218f12596eeabcd3762ae116",
+      "bytes": 304625,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rw.webp": {
+      "hash": "70fc1ebddb92",
+      "sha256": "70fc1ebddb9214b9a74afeb1137c7b9f7f22f2a588c9d06ea397bae5573caa90",
+      "bytes": 39618,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/u.png": {
+      "hash": "dc609403febd",
+      "sha256": "dc609403febd60c5d92dd095206e212761be53e771e1b892458bc8197f666041",
+      "bytes": 302616,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/u.webp": {
+      "hash": "84d23a87629e",
+      "sha256": "84d23a87629e36409aa789559af87abb8b9feab539e459b5bbfc8fc7f2493e1c",
+      "bytes": 40888,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ub.png": {
+      "hash": "eb1ec0a8b3f4",
+      "sha256": "eb1ec0a8b3f4e07aa29e68013aaa8dbc4972228eb51a771198df321c09f49ed9",
+      "bytes": 300433,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ub.webp": {
+      "hash": "e38543976297",
+      "sha256": "e38543976297a90d1ad84e75e5b7eafb8e15aff8ef65062d196ef0ae3b2790fd",
+      "bytes": 39368,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ur.png": {
+      "hash": "c1d0572f8ab9",
+      "sha256": "c1d0572f8ab9433078beee2243c2b8495a26b9f5b490200800702f9c4c53441d",
+      "bytes": 309720,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ur.webp": {
+      "hash": "f9e2688de648",
+      "sha256": "f9e2688de64875c01dd71989e0f4c8c037a3023698571b8fddd7ddf6911958ff",
+      "bytes": 40722,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/w.png": {
+      "hash": "854d8a23ba16",
+      "sha256": "854d8a23ba1655036a901e2c3a22931322d7147b028215c7375d1f3ec4bd7181",
+      "bytes": 299963,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/w.webp": {
+      "hash": "031533464faf",
+      "sha256": "031533464fafa3ed77d61a0251762b9631304b4a2900e40cc2bd9a5a9ff00054",
+      "bytes": 39778,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wb.png": {
+      "hash": "65592306e3eb",
+      "sha256": "65592306e3ebdf41bb7813b8265ba6ce6e17c14317639679caa051e46ef116fd",
+      "bytes": 299484,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wb.webp": {
+      "hash": "ae02d5dafbea",
+      "sha256": "ae02d5dafbeac5425c7a532e2d92ae988e1b05793be839a7ee23513c1fa44c6b",
+      "bytes": 39380,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wu.png": {
+      "hash": "952aaa96fd28",
+      "sha256": "952aaa96fd28857aeaa52e100a8bed21eea376928df3db0ea915348bd2965216",
+      "bytes": 306654,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wu.webp": {
+      "hash": "58421cd53781",
+      "sha256": "58421cd53781b2f9fe862460542c42cfe3f085803f8327972e5d03ed8f34ae9d",
+      "bytes": 39578,
+      "width": 764,
+      "height": 146
+    },
     "dfcicon/compass.png": {
       "hash": "2834e04afc6a",
       "sha256": "2834e04afc6ad525354d19ff60fbeb5eda8d6973a1db5cdbccc39afa807b9218",
@@ -23116,6 +24474,594 @@
       "width": 1500,
       "height": 2100
     },
+    "mysticalarchive/a.png": {
+      "hash": "5f19a8f64e7a",
+      "sha256": "5f19a8f64e7aaf54e115d5763199b56697f4c8832edeab194e575dfcc6ef7a02",
+      "bytes": 3208921,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/a.webp": {
+      "hash": "9f1ec5216c66",
+      "sha256": "9f1ec5216c665e24dcf98e486459cba8354c6427bff109aae378a49e712d9888",
+      "bytes": 288610,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/b.png": {
+      "hash": "c43688797069",
+      "sha256": "c43688797069a92a93907202be2f6eb801186f9c6f6166ced72f6f21790aee86",
+      "bytes": 3183830,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/b.webp": {
+      "hash": "ace108854528",
+      "sha256": "ace108854528025396acc22b67b99220773cff38ff1451583093cd1c97da2861",
+      "bytes": 293388,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/bg.png": {
+      "hash": "51ebb804c2f9",
+      "sha256": "51ebb804c2f9e5f9b1d1cdd02637711b7a987573ade7db72eeab9edeaf768b96",
+      "bytes": 3191458,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/bg.webp": {
+      "hash": "f9c16284f2b5",
+      "sha256": "f9c16284f2b524c64f2d335f22d21e86e86f39a38191f8c11fe738847bb6f9d4",
+      "bytes": 291308,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/br.png": {
+      "hash": "aa5cf17f76b5",
+      "sha256": "aa5cf17f76b56753be82c1342766d47fc34240edaf537b92ac8be67ea00543c4",
+      "bytes": 3196313,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/br.webp": {
+      "hash": "9ac82a998a61",
+      "sha256": "9ac82a998a6146bfe43321da910eaceeffb982fb20ad497a76ee79b12975c0ae",
+      "bytes": 292674,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/c.png": {
+      "hash": "364d38afbb31",
+      "sha256": "364d38afbb31a038cb196e70376c5343dde4baa4166f3870f6f965cf048e4fbc",
+      "bytes": 3200017,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/c.webp": {
+      "hash": "099243baa0a8",
+      "sha256": "099243baa0a869668b943ed7fada84993756278b9c86f6bf30fbc577beafccdf",
+      "bytes": 287112,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/g.png": {
+      "hash": "1fe43652548c",
+      "sha256": "1fe43652548cf6fcb25ba380d57f1f7d6bae9e1f5212eb20bbbd8d600a9c1e62",
+      "bytes": 3181508,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/g.webp": {
+      "hash": "7635aa6d1e34",
+      "sha256": "7635aa6d1e342087fb31aca0b8107037136ba530ba6d514a73d56b0b4facb8a6",
+      "bytes": 285316,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/gu.png": {
+      "hash": "396c5a91f4b5",
+      "sha256": "396c5a91f4b5d21a8bf0f51902cdc387df9d749899447878088c2ad3e8be9dab",
+      "bytes": 3195425,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/gu.webp": {
+      "hash": "45b9e9c9ed25",
+      "sha256": "45b9e9c9ed25189166dc6cc470c857b6f3698c6ee9c0597b07c46d467d08a97b",
+      "bytes": 293636,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/gw.png": {
+      "hash": "2b96f4e72b36",
+      "sha256": "2b96f4e72b3600d9845a3921c964fa5910efa2e8baa47f877fdee97d690e48ef",
+      "bytes": 3194900,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/gw.webp": {
+      "hash": "d5f6140e882e",
+      "sha256": "d5f6140e882e00ac4097892cf4b6b5b4c2784fd387751413ec0828a19b37602f",
+      "bytes": 293100,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/m.png": {
+      "hash": "f1319790ad01",
+      "sha256": "f1319790ad015aa356422b3d23baf0177696b1898ab4f3b1e109d392171225e6",
+      "bytes": 3186451,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/m.webp": {
+      "hash": "ed7e737afaca",
+      "sha256": "ed7e737afaca14e1d75dbe4cbe31aec57e827416e481100752e96a526c823c53",
+      "bytes": 297128,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/pt/b.png": {
+      "hash": "18d4b9850f97",
+      "sha256": "18d4b9850f97a597d038ba3d98fdc439a3bd27de9f6305aa0d415cb4e33dd166",
+      "bytes": 100965,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/b.webp": {
+      "hash": "b7334940d34b",
+      "sha256": "b7334940d34b894cebee35eef7bfb9422f84d8c5229e8a265e83042f587f2bd6",
+      "bytes": 16542,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/c.png": {
+      "hash": "0b9eb7c4583b",
+      "sha256": "0b9eb7c4583b2104d750342051830a9ccb9c66a2f2f56e1aec38f44ddf45c528",
+      "bytes": 113186,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/c.webp": {
+      "hash": "d3c0f20a7631",
+      "sha256": "d3c0f20a76313a34d5312d9bfc6c6bf1687586e5bf17fe02804f9b2615e7ac00",
+      "bytes": 18282,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/g.png": {
+      "hash": "ba3e8ec9d6d3",
+      "sha256": "ba3e8ec9d6d3e37c2f8879e8e0dfd081f783b27db76a2bec6e8537077b225f8f",
+      "bytes": 98580,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/g.webp": {
+      "hash": "fd3b46889ab0",
+      "sha256": "fd3b46889ab0ab775878128de92023490347d95de346decf1dc0cb01b47cec45",
+      "bytes": 17284,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/m.png": {
+      "hash": "6556509f1421",
+      "sha256": "6556509f142189a448a24bdda76c0ff55c953e62a3a4a9a57d8dcf9cc48f3361",
+      "bytes": 106477,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/m.webp": {
+      "hash": "ccdc0ed3cee7",
+      "sha256": "ccdc0ed3cee726874d0da23074deaf32e7e4b1418ee74f3fe80234e5cdbb363d",
+      "bytes": 19278,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/r.png": {
+      "hash": "c30ca59d9873",
+      "sha256": "c30ca59d9873bffa497681cf50f406517cf0ce4f9d73cbf23e939800177baac5",
+      "bytes": 103189,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/r.webp": {
+      "hash": "2df00bc4737d",
+      "sha256": "2df00bc4737d0990d5fc8673287ef865b5f6c15f220745feb75758e5e8648a59",
+      "bytes": 17910,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/u.png": {
+      "hash": "3e33959df670",
+      "sha256": "3e33959df67030a78ac1813e36a9a1e7124cad85266aa65d9fc1b36cc935c7a7",
+      "bytes": 103637,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/u.webp": {
+      "hash": "837a325aae6b",
+      "sha256": "837a325aae6b8b0e8fcb5c379e02e73212b4d2fd0f9fc8451a9dcc8a1d8c8710",
+      "bytes": 17912,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/w.png": {
+      "hash": "7a5e94f5fe27",
+      "sha256": "7a5e94f5fe270cf0c760648858dc86c3067b5e78a6f94aafb17bd96fb999b954",
+      "bytes": 106915,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/pt/w.webp": {
+      "hash": "7c412ace534e",
+      "sha256": "7c412ace534edf70472c46a58c52bcec977c659c2c150d39f6a724b5e4ba2054",
+      "bytes": 18654,
+      "width": 424,
+      "height": 213
+    },
+    "mysticalarchive/r.png": {
+      "hash": "e5bcaff658fe",
+      "sha256": "e5bcaff658fe8fdca4605254659c74dd9c31e8b7d16c491e3bfa38692864d6f0",
+      "bytes": 3192165,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/r.webp": {
+      "hash": "e7e696dc8f34",
+      "sha256": "e7e696dc8f34efe303d58e7d91f4f86fbc82731d1b06f300feb336edebd48d3e",
+      "bytes": 295138,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/rg.png": {
+      "hash": "7a283e998b5e",
+      "sha256": "7a283e998b5e5feaf52b842fc733532338efd440ea63f561985bf87c07ca2906",
+      "bytes": 3198730,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/rg.webp": {
+      "hash": "788c8aa44589",
+      "sha256": "788c8aa44589e1926143bb9c207d8a35ea31da3f64c3e99129e280f94af0da48",
+      "bytes": 295390,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/rw.png": {
+      "hash": "8f4b1de8b440",
+      "sha256": "8f4b1de8b4405c8128479910dd52f2a8b709444553e50bf39d27bc896a381f5f",
+      "bytes": 3201892,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/rw.webp": {
+      "hash": "d7623cecb50a",
+      "sha256": "d7623cecb50a90484e4d585d0436fab897d91d8a6a112e60827ca10280bea44e",
+      "bytes": 295996,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/u.png": {
+      "hash": "07131d46a899",
+      "sha256": "07131d46a899fa5f0b404a01acbc11c8deb5c821d819d8804bed4d4894d2cb53",
+      "bytes": 3192260,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/u.webp": {
+      "hash": "da08eee57ac1",
+      "sha256": "da08eee57ac15ea298ca1e2a5c748f3db963a57e7ae56cfe224b3dd74cb1fffa",
+      "bytes": 292730,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/ub.png": {
+      "hash": "f93df782bd03",
+      "sha256": "f93df782bd035b1822acd5f9d57a44801f7f8227b79f2a4749e54952dee5f285",
+      "bytes": 3197128,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/ub.webp": {
+      "hash": "0c6189e2edcb",
+      "sha256": "0c6189e2edcb7207afc7a7484b5f4dc6f1ec25bf9f3bf603a42205f6fd4559c9",
+      "bytes": 293728,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/ur.png": {
+      "hash": "4860f328d084",
+      "sha256": "4860f328d08486a20f66d989962dbfa3e58738b3b822d0c9c4f9564a168a0bde",
+      "bytes": 3201307,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/ur.webp": {
+      "hash": "805d75255dcb",
+      "sha256": "805d75255dcbe013f46a38bc4e9c1d3678d49d0b43912d5ebdc928a1380ef9e3",
+      "bytes": 296590,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/w.png": {
+      "hash": "0aa473a8ba28",
+      "sha256": "0aa473a8ba28c9be4ddc6ebd3ef13ffa73ce9188ff3f46e26032fcb0f38b5740",
+      "bytes": 3195671,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/w.webp": {
+      "hash": "f41de1a73fea",
+      "sha256": "f41de1a73fead920f7006b5a14d346edf0948fb824c7bff103209909a03600b2",
+      "bytes": 301984,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/wb.png": {
+      "hash": "f804fc12869e",
+      "sha256": "f804fc12869e9fa8000647d4a5fc536e8fca6ac1fceb2dbc67d189b3a45149fb",
+      "bytes": 3195592,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/wb.webp": {
+      "hash": "fedaf029942c",
+      "sha256": "fedaf029942cd6abbfd39b9227a6cbf48b9041c4831594e7fa1d193153d8451f",
+      "bytes": 293420,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/wu.png": {
+      "hash": "f3ba53e3b81f",
+      "sha256": "f3ba53e3b81f3f921b7bea27141ce029db5bc752a308da74d9b4eb5cd742e45c",
+      "bytes": 3199812,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchive/wu.webp": {
+      "hash": "49f7049d565f",
+      "sha256": "49f7049d565f99104a1540f1760018b30badd9863f1fa39bea9d2fffa8f022cf",
+      "bytes": 295364,
+      "width": 1500,
+      "height": 2100
+    },
+    "mysticalarchiveholostamp/b.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/b.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/bg.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/bg.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/br.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/br.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/c.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/c.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/g.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/g.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/gu.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/gu.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/gw.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/gw.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/m.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/m.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/r.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/r.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/rg.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/rg.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/rw.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/rw.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/u.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/u.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/ub.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/ub.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/ur.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/ur.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/w.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/w.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/wb.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/wb.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/wu.png": {
+      "hash": "36326f4be1d6",
+      "sha256": "36326f4be1d6961ee0bf88c6143b31e5409dda4cd7191a34b39cb13fa3aca8fd",
+      "bytes": 1076,
+      "width": 204,
+      "height": 94
+    },
+    "mysticalarchiveholostamp/wu.webp": {
+      "hash": "77bef26c3e76",
+      "sha256": "77bef26c3e7631d13555baf5133d514f5cdb20bcd49da3ea4af328bb50af7f3b",
+      "bytes": 770,
+      "width": 204,
+      "height": 94
+    },
     "nyxcrown/a.png": {
       "hash": "bacdc57ffbcd",
       "sha256": "bacdc57ffbcdb00823ffd243f332aec968cb7b22a329e4248e3674b5aa5daccb",
@@ -25929,6 +27875,580 @@
       "bytes": 9274,
       "width": 1500,
       "height": 120
+    },
+    "tardis/b.png": {
+      "hash": "1e2fbe1933b5",
+      "sha256": "1e2fbe1933b5302b7ea4b51719f034bee2470702e8765f3e7ff32e5f9499a690",
+      "bytes": 1188860,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/b.webp": {
+      "hash": "fda80ec719a1",
+      "sha256": "fda80ec719a1da5014ef65bdf7f9e224f7f3df217874cb093e77fac37bb4b786",
+      "bytes": 63488,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/bg.png": {
+      "hash": "02f72d8226f6",
+      "sha256": "02f72d8226f6eea1f6890a06892fcf4ba5e249bd9811984c2d756b00d6c84dbe",
+      "bytes": 1200341,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/bg.webp": {
+      "hash": "a40010272d16",
+      "sha256": "a40010272d16e9392457a206e5c69e7777f3219ff5a09d51bd37d9668bf00c83",
+      "bytes": 64174,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/br.png": {
+      "hash": "2dc7fda7f756",
+      "sha256": "2dc7fda7f756d5f10dbdb74e4277743ec2dc09965763adf75e6897c00d1e1b8c",
+      "bytes": 1201976,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/br.webp": {
+      "hash": "202df0ccf4b1",
+      "sha256": "202df0ccf4b1d1fc7a9852d4900b0c22a04295eae9b2ca8f27c2808df6957e63",
+      "bytes": 64484,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/c.png": {
+      "hash": "13064caaa650",
+      "sha256": "13064caaa6502fef519cdfd8433c93677a1db4e14bdacf3ebb2818f72229aedf",
+      "bytes": 1203233,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/c.webp": {
+      "hash": "d7081f5b45c7",
+      "sha256": "d7081f5b45c7f9f4f9510a28e73b7261d3dfe79047b626fcb017d31e996c1823",
+      "bytes": 65606,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/g.png": {
+      "hash": "b6aab7111f10",
+      "sha256": "b6aab7111f10c666e792b0246ae3c6ddeb136758831986ce7a4bfe471e559953",
+      "bytes": 1204139,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/g.webp": {
+      "hash": "ea3de9e9dc58",
+      "sha256": "ea3de9e9dc5874723f83b778fd8b1035e22c93760c408e36dafddd77f3a2ace6",
+      "bytes": 65050,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/gu.png": {
+      "hash": "919d9d038c1b",
+      "sha256": "919d9d038c1be6c6351bd3340226cf5056f3e01fbdac37ec877740e6b7cf82f9",
+      "bytes": 1212908,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/gu.webp": {
+      "hash": "352058566279",
+      "sha256": "352058566279f9c70bcea3def6b43f41a0d69cf19f9a9ddc2328a91703c18a18",
+      "bytes": 65756,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/gw.png": {
+      "hash": "f8cb44b215fa",
+      "sha256": "f8cb44b215fa0b3d9c8bbf548976e3d64f12a1af59ff10c1230113bb97fc317e",
+      "bytes": 1225393,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/gw.webp": {
+      "hash": "ccd64bc0f4e0",
+      "sha256": "ccd64bc0f4e00f30296af9f7f03d5498915bbd436d8d350db499a4d97cc94fd4",
+      "bytes": 66192,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/m.png": {
+      "hash": "923544f01ef1",
+      "sha256": "923544f01ef158affdb6b87b8b881f8fccfb20bd6a1201a1e1647ec334563964",
+      "bytes": 1227621,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/m.webp": {
+      "hash": "8e6cae03b710",
+      "sha256": "8e6cae03b710557741f4de1b3b8ed46cbffb63b7fd9ac27d49bbdde9c8d7d065",
+      "bytes": 67262,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/pt/b.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/b.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/c.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/c.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/g.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/g.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/m.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/m.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/r.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/r.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/u.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/u.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/w.png": {
+      "hash": "63ecae34b84a",
+      "sha256": "63ecae34b84a327159806031e64ef8017278f33169de32812916efc2af9b0951",
+      "bytes": 36117,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/pt/w.webp": {
+      "hash": "4e20f37ce0ce",
+      "sha256": "4e20f37ce0ce07ebec391da3b2161bb196181bd376321fc30a02a6ecc485137b",
+      "bytes": 4446,
+      "width": 299,
+      "height": 173
+    },
+    "tardis/r.png": {
+      "hash": "676d3689019f",
+      "sha256": "676d3689019fb3b6d56efc3ffa57dcb62a5083c829c1ea8827af37f48e1c3aa7",
+      "bytes": 1208305,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/r.webp": {
+      "hash": "49e9b08988ee",
+      "sha256": "49e9b08988ee4f108931ca4cba15f2730129664722490d5b128917339321ef8e",
+      "bytes": 65924,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/rg.png": {
+      "hash": "0b8cd1a4294a",
+      "sha256": "0b8cd1a4294a4fb9950cf9db148eb9b08dd446c2087de7055e833bccfb897498",
+      "bytes": 1209572,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/rg.webp": {
+      "hash": "9252a1d32355",
+      "sha256": "9252a1d323557698eed433a9248482b5cb7e2617a152ed877c33977b631ff9fa",
+      "bytes": 65560,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/rw.png": {
+      "hash": "ec2a8553854d",
+      "sha256": "ec2a8553854d47dca56e700840b57ce53470634476c5af4eb04fdb516ceb3248",
+      "bytes": 1226771,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/rw.webp": {
+      "hash": "42752018bc49",
+      "sha256": "42752018bc49130801de861dd6636059bc386311bcd2fc2625f25defcaa6c872",
+      "bytes": 66334,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/u.png": {
+      "hash": "58ddba572a39",
+      "sha256": "58ddba572a3937ea0484284e71c44c21267aa9eb5652c354c6c84ea971185625",
+      "bytes": 1214802,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/u.webp": {
+      "hash": "fbc162dc99a5",
+      "sha256": "fbc162dc99a5532df59aea97dce71da610986018969b18a304f2b212b3d7e48b",
+      "bytes": 66878,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/ub.png": {
+      "hash": "e0aa2e6f2c1a",
+      "sha256": "e0aa2e6f2c1a04a86087c18e35c8f3397546ef1d1a105caf61900a5e23f51380",
+      "bytes": 1206550,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/ub.webp": {
+      "hash": "0e8ca752bd68",
+      "sha256": "0e8ca752bd68938bd41bcb0659844c70d190005f09d9fb790b156ff17dda06d9",
+      "bytes": 65748,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/ur.png": {
+      "hash": "4eaa641f44a7",
+      "sha256": "4eaa641f44a7377471447bcfe767d985a973547b8716e79186ed37cccff78f36",
+      "bytes": 1213101,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/ur.webp": {
+      "hash": "9197f95a4e9d",
+      "sha256": "9197f95a4e9d8763c7f33f267f6fa2344df9d505a2f126296a82c7bb3fdfb9c5",
+      "bytes": 66844,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/w.png": {
+      "hash": "9d8242a34f73",
+      "sha256": "9d8242a34f737edd7c03297b8b36d1a9dde3377f21ebd32c80251496ca2d62f0",
+      "bytes": 1233777,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/w.webp": {
+      "hash": "c50cfa6d1da7",
+      "sha256": "c50cfa6d1da7aa02849119aab9dec00cd625798de54f824a3beef3202054d488",
+      "bytes": 66724,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/wb.png": {
+      "hash": "83536fa8bd44",
+      "sha256": "83536fa8bd448b1607b2c4371c9600da4cf9c6127a65a9adc37991e803602ffb",
+      "bytes": 1218410,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/wb.webp": {
+      "hash": "b8552fbd838b",
+      "sha256": "b8552fbd838bfcd295a554da5dae391d1263cd4bedab8643cb92b1789404ec9a",
+      "bytes": 65382,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/wu.png": {
+      "hash": "5e97ff11e73b",
+      "sha256": "5e97ff11e73bad413b1a02228a685819bc95af9ce819ec3afaff615d0e542f0e",
+      "bytes": 1230844,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardis/wu.webp": {
+      "hash": "2f2d35cae252",
+      "sha256": "2f2d35cae252ee711da0d851e88aa2d19829634bc15ab64fa295e012b019477f",
+      "bytes": 66674,
+      "width": 1500,
+      "height": 2100
+    },
+    "tardisholostamp/b.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/b.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/bg.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/bg.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/br.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/br.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/c.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/c.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/g.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/g.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/gu.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/gu.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/gw.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/gw.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/m.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/m.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/r.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/r.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/rg.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/rg.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/rw.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/rw.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/u.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/u.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/ub.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/ub.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/ur.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/ur.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/w.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/w.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/wb.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/wb.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/wu.png": {
+      "hash": "da921b733813",
+      "sha256": "da921b733813f7b237a39945d63cfaf45aefd0db61e14d2a29ae2a46930938c4",
+      "bytes": 914,
+      "width": 178,
+      "height": 90
+    },
+    "tardisholostamp/wu.webp": {
+      "hash": "91e4bf6840f9",
+      "sha256": "91e4bf6840f9022a0297d2da7a1e5b00e4134689c77ed3517af75f3d6d738033",
+      "bytes": 644,
+      "width": 178,
+      "height": 90
     },
     "tarkirdragon/b.png": {
       "hash": "f5dd97475eb6",

@@ -166,6 +166,20 @@ export const DETACHED_COST_GAP_PCT = BAND_GAP_PCT;
 type TitleBandLayout = Pick<FrameProfile, "title" | "costRect" | "costSizePct" | "symbolStyle">;
 
 /**
+ * Whether a detached cost box (FrameProfile.costRect) sits on the name's own
+ * rows — the planeswalkers' and the 2003 frame's, beside the name. A box
+ * clear of the title rect's rows (TODO 4.11 wave 2: the OTJ Breaking News
+ * cost in the masthead, over the name's own band) takes none of the name's
+ * room: the name has its whole band, as with no cost.
+ */
+export function costRectSharesTitleRows(layout: Pick<FrameProfile, "title" | "costRect">): boolean {
+  const cost = layout.costRect;
+  if (!cost) return false;
+  const band = layout.title.rect;
+  return cost.topPct < band.topPct + band.heightPct && band.topPct < cost.topPct + cost.heightPct;
+}
+
+/**
  * The room (fraction of card width) a measured name has in its band:
  *
  * - before a detached cost: up to DETACHED_COST_GAP_PCT before the first
@@ -174,7 +188,8 @@ type TitleBandLayout = Pick<FrameProfile, "title" | "costRect" | "costSizePct" |
  * - beside an inline cost: the band less the band gap and the cost row as
  *   the bake draws it (costRowWidthPct — discs, pip gaps, the hard shadow and
  *   whole-px rounding), so it is room the preview's narrower row leaves too;
- * - alone: the band. The bake draws no filler span in a measured title band
+ * - alone, or with a detached cost off its rows (costRectSharesTitleRows):
+ *   the band. The bake draws no filler span in a measured title band
  *   with no inline cost (the preview never has one), so nothing takes a gap
  *   from it — a start-aligned name runs to the band's end like the print's.
  *
@@ -184,6 +199,7 @@ export function titleBandRoomPct(layout: TitleBandLayout, cost: string | null | 
   const band = layout.title.rect;
   const drawn = cost?.trim() ? cost : null;
   const disc = layout.costSizePct ?? layout.title.sizePct;
+  if (drawn && layout.costRect && !costRectSharesTitleRows(layout)) return band.widthPct / 100;
   if (drawn && layout.costRect) {
     const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(drawn, disc, symbolStyleOf(layout));
     return Math.min(band.widthPct / 100 - HALF_PX_PCT, pipsLeft - band.leftPct / 100 - DETACHED_COST_GAP_PCT);
@@ -235,7 +251,7 @@ export function fitTitleBand(
   const slot = layout.title;
   const name = title.trim();
   const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase, face: slotFace(slot).metricsId };
-  const detached = Boolean(drawn && layout.costRect);
+  const detached = Boolean(drawn && layout.costRect && costRectSharesTitleRows(layout));
   const headroom = detached ? 1 : TITLE_FIT_HEADROOM;
   // A small-caps name (TextSlot.smallCaps, TODO 4.53) is measured as it is
   // drawn: its runs, the lower-case letters as small capitals.

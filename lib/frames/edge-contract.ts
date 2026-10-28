@@ -134,6 +134,26 @@ const RING_EDGES: EdgeContract = {
   left: { kind: "design" },
 };
 
+/** CC's 'Mystical Archive (STA)' pack (TODO 4.11 wave 2; measured on all
+ *  eight masters at 1500 × 2100, the 2 % band): the gold ornament α 1.00 to
+ *  the top edge — design, no border (STA #1–63 are borderless on print);
+ *  the art to the side edges but where the ornament reaches them (rows
+ *  0–298 the title block, 1137–1317 the type bar's ends, 1432–1512 the box's
+ *  side ornament, and from 1707 the footer's shoulders); the black footer
+ *  along the bottom. */
+const MYSTICAL_ARCHIVE_SIDE_EXCEPT: readonly (readonly [number, number])[] = [
+  [0, 14.3],
+  [54.1, 62.8],
+  [68.1, 72.1],
+  [81.2, 100],
+];
+const MYSTICAL_ARCHIVE_EDGES: EdgeContract = {
+  top: { kind: "design" },
+  right: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+  bottom: BORDER,
+  left: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+};
+
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
  * tests/unit/frames/edge-contract.test.ts fails for a template missing
@@ -313,6 +333,18 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the border's black (the folder starts below the top one and ends above
   // the bottom one).
   dossier: { top: BORDER, right: BORDER, bottom: BORDER, left: { kind: "design" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2
+  // (frames bucket): borderless — the ornament to the top edge, the art to
+  // the sides between its pieces, the black footer; the importer cuts the
+  // one card corner at the bottom only.
+  mysticalarchive: MYSTICAL_ARCHIVE_EDGES,
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS' pack, frames bucket): the printed black border at the top and
+  // the bottom (0,0,0 on the pack and on WHO #535–564), cut at the one card
+  // corner by the importer; the police box's blue sides run to the left and
+  // right edges beside the art and the text box (borderless, as print draws
+  // them), black beside the bars — `design`.
+  tardis: { top: BORDER, right: { kind: "design" }, bottom: BORDER, left: { kind: "design" } },
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
   // it — the swirled frame field to the top edge (design) and down the sides
@@ -328,6 +360,14 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
     bottom: { kind: "design" },
     left: { kind: "art", except: [[0, 22.4], [65.8, 100]] },
   },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Breaking News' pack, frames bucket): a borderless newspaper page — the
+  // page to the top and side edges (design: its top corners the pack's
+  // paper) and the charcoal strip under it to the bottom edge (design: print's
+  // own 64,58,60 on every OTP scan, where OTJ's regular black border reads
+  // 0,0,0 on the same scans — a coloured footer, never held dark at the
+  // corner), cut at the one card corner by the importer.
+  breakingnews: { top: { kind: "design" }, right: { kind: "design" }, bottom: { kind: "design" }, left: { kind: "design" } },
   // The Avatar elemental (TLA #336–353, TLE #305–317), since TODO 4.11
   // (layout v69): borderless — the art to the top edge and down both sides
   // to the frame (the masters see-through to 918 px on the left, 1101 on the

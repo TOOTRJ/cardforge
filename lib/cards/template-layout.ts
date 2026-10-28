@@ -112,6 +112,7 @@ import {
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { WhiteBorderSlot } from "@/lib/cards/white-border";
+import type { MastheadSpec } from "@/lib/cards/masthead";
 import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -657,6 +658,11 @@ export type FrameProfile = {
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
   overlays?: readonly FrameOverlaySlot[];
+  /** A masthead painted in the master that makes room for the cost row as
+   *  print does (the OTJ Breaking News showcase: lib/cards/masthead.ts) —
+   *  its pieces drawn right after the frame, the row translated. Nothing
+   *  changes on a card whose row fits. Code-owned; a PROFILES entry's. */
+  masthead?: MastheadSpec;
   /** This template is one FACE of a double-faced card — see DfcProfile.
    *  Code-owned; set only on PROFILES entries (none yet). */
   dfc?: DfcProfile;
@@ -5127,6 +5133,163 @@ const DOSSIER: FrameProfile = {
   },
 };
 
+// The Strixhaven MYSTICAL ARCHIVE showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Mystical Archive (STA)' pack (packMysticalArchive.js, 2010 ×
+// 2814, downscaled once; scripts/lib/cc-frames.mjs MA), the gold ornament
+// over edge-to-edge art of STA #1–63 (2021, English). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's (the pack's
+// own numbers are M15's but for the rules box), each slot measured on the
+// 63 prints against its own line.
+/** The art slot: the masters' see-through region — edge to edge, 0–1500 ×
+ *  253–1822 px on every key (CC's artBounds 0 / 0.1205 / 1 × 0.7539: 253–
+ *  1836 px) — covered with the art-window check's 0.05 % to spare. */
+export const MYSTICALARCHIVE_ART_SLOT: Rect = { topPct: (251 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (1587 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1135 / 1848, 317 × 159 px). */
+const MYSTICALARCHIVE_PLATE_RECT: Rect = { topPct: (1848 / 2100) * 100, leftPct: (1135 / 1500) * 100, widthPct: (317 / 1500) * 100, heightPct: (159 / 2100) * 100 };
+/** The name's pen 2 px left of M15's, the type line's 5 px (print: ink from
+ *  129 / 128 px, the median over the 63 prints; ours from 131 / 133). */
+const MYSTICALARCHIVE_TITLE_LEFT_PCT = (2 / 1500) * 100;
+const MYSTICALARCHIVE_TYPE_LEFT_PCT = (5 / 1500) * 100;
+const MYSTICALARCHIVE: FrameProfile = {
+  ...M15,
+  label: "Mystical Archive",
+  ...CC_M15_COST,
+  // The cost row on print's (the 63 prints: the last symbol's outline ring
+  // 77 px across, centred on 1352.5 / 151.5 px — its right edge 1391, q
+  // 1389–1394; top 113, foot 190): the family's 70 px disc on that centre,
+  // 6 px above and 4 px right of the CC M15 row's (1348 / 157). Print draws
+  // its symbols in Card Conjurer's OUTLINE style (a pale disc, the symbol in
+  // its colour, a dark ring, no shadow) — no symbol style draws that yet:
+  // the discs are the family's.
+  costDy: CC_M15_COST.costDy - 6 / 1500,
+  costDx: CC_M15_COST.costDx + 4 / 1500,
+  artSlot: MYSTICALARCHIVE_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's silver artifact frame; any other
+  // colourless card its 'Land Frame' `c` — the scroll's split, unprinted.
+  artifactMasterKeys: { c: "a" },
+  // The name's baseline 5 px above M15's (print 184, ours 189), its pen 2 px
+  // left; the band's right end — the cost row's room — unchanged.
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, leftPct: M15.title.rect.leftPct - MYSTICALARCHIVE_TITLE_LEFT_PCT, widthPct: M15.title.rect.widthPct + MYSTICALARCHIVE_TITLE_LEFT_PCT },
+    dy: M15.title.dy! - 5 / 1500,
+  },
+  // The type line 1 px below the CC M15 baseline (print 1261, ours 1260),
+  // its pen 5 px left; the band's right end (the set symbol) unchanged.
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, leftPct: M15.type.rect.leftPct - MYSTICALARCHIVE_TYPE_LEFT_PCT, widthPct: M15.type.rect.widthPct + MYSTICALARCHIVE_TYPE_LEFT_PCT },
+    dy: CC_M15_TYPE_DY + 1 / 1500,
+  },
+  // The rules block 3 px higher and 2 px left of M15's (the 63 prints'
+  // blocks against ours of the same text: first ink +4, last +4, first-ink
+  // x +2 — the same breaks and size, the block moved).
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, topPct: M15.rules.rect.topPct - (3 / 2100) * 100, leftPct: M15.rules.rect.leftPct - (2 / 1500) * 100 } },
+  pt: {
+    ...M15.pt!,
+    plateRect: MYSTICALARCHIVE_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/mysticalarchive/pt/{color}.png",
+  },
+};
+
+// The Doctor Who TARDIS showcase (TODO 4.11 wave 2) — Card Conjurer's
+// 'TARDIS' pack (packTARDIS.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs
+// TARDIS), the police box of WHO #535–564, their serialized twins and their
+// surge-foil twins #1126–1155: the blue doors round the art, the black name
+// and type bars, the paneled blue text box, a stripe down each side and a
+// brace at the window's top corners in the card's colour; white ink
+// everywhere (the bars are black, the box dark blue). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's at the
+// family's sizes on the pack's own bars (the title bar 104–223 px, the type
+// bar 1179–1305 — M15's within 1 px), each slot measured on the run's 30
+// base printings (Scryfall PNGs at 1500 × 2100, registered on the pack's
+// drawing: the scans sit 3 px right of it) against our bakes of the same
+// names, types and costs — TARDIS_* below. Print sets the name and the type
+// line in a sans serif's capitals and the P/T in a serif; PipGlyph keeps
+// its faces (no font is added for a frame).
+/** The art slot: the masters' window — see-through (α < 16) on 116–1384 ×
+ *  265–1160 px, its anti-aliased rim (α < 250) on 115–1385 × 264–1161, on
+ *  every key; CC's artBounds 115 / 264 / 1271 × 898 — with the art-window
+ *  check's 0.05 % to spare: 114–1387 × 262–1164. The brace hides the
+ *  rect's top corners. */
+export const TARDIS_ART_SLOT: Rect = { topPct: (262 / 2100) * 100, leftPct: (114 / 1500) * 100, widthPct: (1273 / 1500) * 100, heightPct: (902 / 2100) * 100 };
+/** The set symbol's ring on the type bar: white, 1271–1400 × 1170–1312 px,
+ *  centred on (1335.5, 1241) — print centres the set's symbol in it. */
+const TARDIS_SYMBOL_CENTRE_PX = { x: 1335.5, y: 1241 } as const;
+/** The symbol box, right-aligned in its rect (FrameProfile.symbolRect), so
+ *  the rect's right end is the ring's centre plus half the box: a square
+ *  icon is centred in the ring. */
+const TARDIS_SYMBOL_BOX_PX = SET_SYMBOL_BOX_PCT * 1500;
+export const TARDIS_SYMBOL_RECT: Rect = {
+  topPct: ((TARDIS_SYMBOL_CENTRE_PX.y - TARDIS_SYMBOL_BOX_PX / 2) / 2100) * 100,
+  leftPct: ((TARDIS_SYMBOL_CENTRE_PX.x + TARDIS_SYMBOL_BOX_PX / 2 - 180) / 1500) * 100,
+  widthPct: 12,
+  heightPct: (TARDIS_SYMBOL_BOX_PX / 2100) * 100,
+};
+/** The type line ends 9 px short of the ring's left edge (1271 px). */
+const TARDIS_TYPE_RIGHT_PX = 1262;
+/** The pack's P/T box at its ptBounds (1133 / 1850, 299 × 173 px, 1:1). */
+const TARDIS_PLATE_RECT: Rect = { topPct: (1850 / 2100) * 100, leftPct: (1133 / 1500) * 100, widthPct: (299 / 1500) * 100, heightPct: (173 / 2100) * 100 };
+/** The P/T digits' box: CC's (1193 / 1891, 195 × 78 px) — centred on the
+ *  box's black face (1186–1388 × 1879–1969 px). */
+const TARDIS_PT_RECT: Rect = { topPct: (1891 / 2100) * 100, leftPct: (1193 / 1500) * 100, widthPct: (195 / 1500) * 100, heightPct: (78 / 2100) * 100 };
+const TARDIS_INK = { colorHex: SHOWCASE_WHITE_INK } as const;
+// The measured nudges, HD px (the run's 30 base printings against our bakes
+// of the same names, types and costs; print registered on the pack):
+/** The name's baseline 3 px above M15's: print's 185 on every printing,
+ *  ours sat on 188. Its pen within 3 px of print's (126–131 by the first
+ *  letter; M15's 129–132), kept. */
+const TARDIS_TITLE_DY = -3;
+/** The CC M15 disc row 4 px lower: print centres its discs on 160.5 px (the
+ *  title bar's black is 104–223), where the CC M15 row sits on 156.5; the
+ *  row's right end is print's (1384) and so is its pitch. */
+const TARDIS_COST_DY = 4;
+/** The type line 2 px under the CC baseline: print sets a full-size line on
+ *  1261–1263 px (#535, #538, #549, #550), ours sat on 1259. (Print CENTRES a
+ *  long line it sets smaller — "LEGENDARY CREATURE — TIME LORD DOCTOR" on
+ *  1255 —, where PipGlyph keeps a shrunk line on its band's baseline.) */
+const TARDIS_TYPE_DY = 2;
+/** CC's digit box 2 px left and 1 px up: print's digits' ink centres on
+ *  (1285, 1924) — a serif's, 60 px tall — ours on (1288.5, 1925). */
+const TARDIS_PT_DX = -2;
+const TARDIS_PT_DY = -1;
+/** The collector lines 6 / 5 px above M15's rows (TARDIS_COLLECTOR). */
+const TARDIS_COLL1_DY = -6;
+const TARDIS_COLL2_DY = -5;
+/** The rules box: M15's margins on print's rows — the run's full boxes set
+ *  their first ascenders on 1354–1360 px and their last descenders on
+ *  1877–1897 (registered), 14 px under M15's first line. */
+const TARDIS_RULES_TOP_PX = 1350;
+const TARDIS_RULES_BOTTOM_PX = 1902;
+const TARDIS: FrameProfile = {
+  ...M15,
+  label: "TARDIS",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST_DY + TARDIS_COST_DY / 1500,
+  artSlot: TARDIS_ART_SLOT,
+  symbolRect: TARDIS_SYMBOL_RECT,
+  title: { ...M15.title, dy: M15.title.dy! + TARDIS_TITLE_DY / 1500, ...TARDIS_INK },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: ((TARDIS_TYPE_RIGHT_PX - (M15.type.rect.leftPct / 100) * 1500) / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + TARDIS_TYPE_DY / 1500,
+    ...TARDIS_INK,
+  },
+  rules: {
+    ...M15.rules,
+    rect: { ...M15.rules.rect, topPct: (TARDIS_RULES_TOP_PX / 2100) * 100, heightPct: ((TARDIS_RULES_BOTTOM_PX - TARDIS_RULES_TOP_PX) / 2100) * 100 },
+    ...TARDIS_INK,
+  },
+  pt: {
+    ...M15.pt!,
+    ...TARDIS_INK,
+    rect: { ...TARDIS_PT_RECT, topPct: TARDIS_PT_RECT.topPct + (TARDIS_PT_DY / 2100) * 100, leftPct: TARDIS_PT_RECT.leftPct + (TARDIS_PT_DX / 1500) * 100 },
+    inkSpanPct: { leftPct: (1186 / 1500) * 100, rightPct: (1389 / 1500) * 100 },
+    plateRect: TARDIS_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/tardis/pt/{color}.png",
+  },
+};
+
 // The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2) — Card
 // Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js, 2010 × 2814,
 // downscaled once; scripts/lib/cc-frames.mjs ETALES), the swirled storybook
@@ -5193,6 +5356,110 @@ const ENCHANTINGTALES: FrameProfile = {
     rect: { leftPct: (1605 / 2010) * 100, topPct: (2538 / 2814) * 100 + (ENCHANTINGTALES_LOWER_DY_PX / 2100) * 100, widthPct: 13.67, heightPct: 3.72 },
     plateRect: ENCHANTINGTALES_PLATE_RECT,
     plateAssetPathTemplate: "/frames/enchantingtales/pt/{color}.png",
+  },
+};
+
+// The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2)
+// — Card Conjurer's 'Breaking News' pack (packBreakingNews.js, 2010 × 2814,
+// downscaled once; scripts/lib/cc-frames.mjs BREAKING_NEWS), the front page
+// of "The Prosperity Post" on OTP #1–65: a borderless newspaper page, the
+// cost in the masthead, the name on its own band below it, the picture, the
+// type band with the set symbol in its box, the rules box, a charcoal strip
+// with the collector line. An ADDITION: a new template, no stored card. Its
+// text layout is the M15 family's sizes on the page's own bands, each slot
+// measured on the run's prints (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart)
+// against the pack's own drawing. The pack IS print's drawing at the CARD's
+// proportions (63 × 88 mm, the scans' 745 × 1040): print stretched onto
+// 1500 × 2100 sits 0.22 % lower down the card (the bands' rules on 36 / 188.5
+// / 332 / 1215.5 / 1244 / 1348.5 px of the pack, 36.5 / 189.5 / 333.5 / 1218.5
+// / 1246.5 / 1351.5 on print; the page's foot 1918 / 1922 — horizontally the
+// two agree to the px), so every slot is print's row × 0.9978, on the pack's
+// band where print sets it on its own. The measured nudges, HD px:
+/** Print's rows on the pack's drawing (× 0.9978: the scans are the card's
+ *  63 × 88 mm stretched 0.22 % taller than the pack's 5 : 7 page). */
+const breakingNewsRow = (printPx: number) => printPx * 0.9978;
+/** The name: CENTRED on the page (print's ink centres on 742–755 px; Card
+ *  Conjurer's title box 258–1752 of 2010 is centred too), in capitals as
+ *  printed (print's face is a western display face, Card Conjurer's
+ *  'saloongirl'; ours the family's Beleren, no font is added for a frame).
+ *  The band between the masthead's two boxes: 175–1325 px. Print's
+ *  capitals stand on 298 px (median of the 63 printings) → 297.3 on the
+ *  pack; the M15 title slot, in capitals, sets their foot 24 px under its
+ *  rect's centre (our bakes), so the rect centres on 273.3. */
+const BREAKING_NEWS_TITLE_BASELINE_PX = breakingNewsRow(298);
+const BREAKING_NEWS_TITLE_RECT: Rect = { topPct: ((BREAKING_NEWS_TITLE_BASELINE_PX - 24 - 63) / 2100) * 100, leftPct: (175 / 1500) * 100, widthPct: (1150 / 1500) * 100, heightPct: 6.0 };
+/** The cost row in the masthead's right end: the discs centre on 112 px on
+ *  print (a 70 px disc on 77–147 at the centre column, every printing) and
+ *  the last one ends on 1411 (all 63) — Card Conjurer's mana box ends on
+ *  1891 / 2010 = 1411.2 too. The family's 70 px disc, at the CC M15 pitch
+ *  (print's 79–80). A detached box (costRect): the name keeps its room. */
+const BREAKING_NEWS_COST_RECT: Rect = { topPct: (77 / 2100) * 100, leftPct: (811 / 1500) * 100, widthPct: (600 / 1500) * 100, heightPct: (70 / 2100) * 100 };
+/** The type line: print's first ink on 130 px (M15's pen) and its capitals
+ *  on 1324 → 1321.1 on the pack; the CC M15 type slot, in capitals, sets
+ *  their foot 17.8 px under its rect's centre (our bakes). Capitals as
+ *  printed. */
+const BREAKING_NEWS_TYPE_BASELINE_PX = breakingNewsRow(1324);
+/** The set symbol in the type band's box at its right end: print's OTP
+ *  vault inks 1279–1380 × 1253–1341 (88 px tall, every printing) → centred
+ *  on 1294.1 of the pack, its right end on 1380. A box of its own
+ *  (symbolRect), the family's 86 px box: Keyrune's OTP glyph inks 1.4 px
+ *  above the box's centre and 2 px short of its right end (our bakes), so
+ *  the box centres on 1295.5 and ends on 1382. */
+const BREAKING_NEWS_SYMBOL_RECT: Rect = { topPct: ((breakingNewsRow(1297) + 1.4 - 43) / 2100) * 100, leftPct: (1182 / 1500) * 100, widthPct: (200 / 1500) * 100, heightPct: (86 / 2100) * 100 };
+/** The rules box: the page's box between its rules (the pack's 1366–1901 px
+ *  inside them); print's full boxes ink from 1378 to 1898 → 1374.9–1893.7
+ *  on the pack, its first ink on 132 px. M15's box puts the first ascender
+ *  ≈ 4 px under its top and the last descender ≈ 1.4 px over its bottom. */
+const BREAKING_NEWS_RULES_RECT: Rect = { topPct: ((breakingNewsRow(1378) - 4) / 2100) * 100, leftPct: 8.4, widthPct: 83.2, heightPct: ((breakingNewsRow(1898) - breakingNewsRow(1378) + 5.4) / 2100) * 100 };
+/** The art slot: the masters' window — see-through on 106–1907 × 479–1613
+ *  of 2010 × 2814 (79.1–1423.1 × 357.5–1203.8 px), its rounded corners and
+ *  anti-aliased rim inside — with the art-window check's 0.05 % to spare. */
+const BREAKING_NEWS_ART_SLOT: Rect = { topPct: (356 / 2100) * 100, leftPct: (78 / 1500) * 100, widthPct: (1347 / 1500) * 100, heightPct: (850 / 2100) * 100 };
+/** The pack's P/T box at its ptBounds (1507 / 2464, 406 × 200 of the 2010 ×
+ *  2814 card: 1124.6–1427.6 × 1838.7–1987.9 px at HD), the value in Card
+ *  Conjurer's text box (1599 / 2529, 0.1367 W × 0.0372 H). */
+const BREAKING_NEWS_PLATE_RECT: Rect = { topPct: (2464 / 2814) * 100, leftPct: (1507 / 2010) * 100, widthPct: (406 / 2010) * 100, heightPct: (200 / 2814) * 100 };
+/** Card Conjurer's value box 8 px lower: print's ★/★ on #64 centres on 1925.6
+ *  px (1921.4 on the pack's page), ours sat on 1913.6. */
+const BREAKING_NEWS_PT_DY = 8;
+/** Print's name, type line and P/T ink: 51,46,48 (the median of the run's
+ *  dark ink in those bands; Card Conjurer draws #332e2e). */
+const BREAKING_NEWS_INK = "#332e30";
+const BREAKING_NEWS: FrameProfile = {
+  ...M15,
+  label: "Breaking News",
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costRect: BREAKING_NEWS_COST_RECT,
+  artSlot: BREAKING_NEWS_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's slate artifact frame (OTP
+  // #61–64); any other colourless card the brown land frame `c` — a land on
+  // print (#65 Dust Bowl).
+  artifactMasterKeys: { c: "a" },
+  symbolRect: BREAKING_NEWS_SYMBOL_RECT,
+  title: {
+    ...M15.title,
+    rect: BREAKING_NEWS_TITLE_RECT,
+    align: "center",
+    uppercase: true,
+    colorHex: BREAKING_NEWS_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: { topPct: ((BREAKING_NEWS_TYPE_BASELINE_PX - 17.8 - 54.6) / 2100) * 100, leftPct: 8.5, widthPct: ((1380 - 127.5) / 1500) * 100, heightPct: 5.2 },
+    dy: CC_M15_TYPE_DY,
+    uppercase: true,
+    colorHex: BREAKING_NEWS_INK,
+  },
+  rules: { ...M15.rules, rect: BREAKING_NEWS_RULES_RECT },
+  pt: {
+    ...M15.pt!,
+    rect: { topPct: (2529 / 2814) * 100 + (BREAKING_NEWS_PT_DY / 2100) * 100, leftPct: (1599 / 2010) * 100, widthPct: 13.67, heightPct: 3.72 },
+    plateRect: BREAKING_NEWS_PLATE_RECT,
+    // The box's paper face on the digits' rows: 1172–1400 px (its torn
+    // right end and its brackets past them).
+    inkSpanPct: { leftPct: (1172 / 1500) * 100, rightPct: (1400 / 1500) * 100 },
+    plateAssetPathTemplate: "/frames/breakingnews/pt/{color}.png",
+    colorHex: BREAKING_NEWS_INK,
   },
 };
 
@@ -6544,6 +6811,141 @@ export const DOSSIER_COLLECTOR: CollectorSlot = {
   line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (DOSSIER_COLL2_DY / 2100) * 100,
 };
 
+/** Every key the TARDIS masters and its notch publish: the seven frames and
+ *  the ten pairs. */
+const TARDIS_KEYS = ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
+/** The slot's keep-out (HoloStampArt.keepOut, required): the stamp's black
+ *  trapezoid, 662–838 × 1909–1929 px. It never meets the text: the rules box
+ *  ends at 1902 (TARDIS_RULES_BOTTOM_PX), above the trapezoid's top — print
+ *  sets its last line clear of the stamp too — so no line is held short or
+ *  stepped down for it. */
+export const TARDIS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (662 / 1500) * 100, topPct: (1909 / 2100) * 100, widthPct: (176 / 1500) * 100, heightPct: (20 / 2100) * 100 };
+/**
+ * The Doctor Who TARDIS's TRIANGLE stamp notch (TODO 4.11 wave 2): the
+ * pack's one piece — a black trapezoid over the box's foot round the stamp
+ * — 1:1 at its bounds, a 178 × 90 box at 661, 1908 px (TARDIS_NOTCH_BOX in
+ * scripts/lib/cc-frames.mjs: 1 px round the piece and 9 px past its foot,
+ * so the hole fits), the Universes Beyond stamp's hole cut clear (every
+ * printing of the run wears that physical stamp, `security_stamp:
+ * triangle`) and our triangle art over it: "auto" stamps every rarity (a
+ * triangle frame — the matte face below a rare, as #538 / #550 / #551
+ * print it). Keys: the masters' and the ten pairs' (one piece under every
+ * key). Set on the tardis entry only.
+ */
+export const TARDIS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (661 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (178 / 1500) * 100, heightPct: (90 / 2100) * 100 },
+  assetPathTemplate: "/frames/tardisholostamp/{key}.png",
+  keys: TARDIS_KEYS,
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: TARDIS_HOLO_STAMP_KEEP_OUT },
+};
+/**
+ * The collector line on the TARDIS showcase (TODO 4.11 wave 2): M15's slot
+ * (the pen x, the brush column, the sizes, the © slot's right end) on the
+ * run's own rows, measured on its 30 base printings at 1500 × 2100 (each
+ * line's capitals' foot): line 1 on 1987 px, line 2 on 2026, where M15's
+ * slot bakes 1993 / 2031 — so 6 and 5 px above M15's. The pen: print's
+ * first ink at 96 px, ours 99 — within M15's own measured 96–101, kept.
+ */
+export const TARDIS_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (TARDIS_COLL1_DY / 2100) * 100,
+  line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (TARDIS_COLL2_DY / 2100) * 100,
+};
+
+/**
+ * The OTJ Breaking News legendary crown (TODO 4.11 wave 2):
+ * `breakingnewscrown/<key>.png`, Card Conjurer's Breaking News 'Legendary
+ * Crown' — the coloured rule with its notched V across the page's top edge
+ * that the run's legendary print carries (OTP #63 Mindslaver; #61 / #62
+ * print the plain top) — at the pack's bounds, 1500 × 60 (rows 0–59; the
+ * crown ends at row 55.2). Keys: w u b r g m, a (the artifact's: a
+ * colourless ARTIFACT, `artifactKeyMap`), l (the land's: any other
+ * colourless card, `keyMap`) and the ten pairs, the first colour's crown
+ * left and the second's right across the frame's own ramp (a card drawn as
+ * its pair master: resolveTwoColor). Set on the breakingnews entry only;
+ * opt-in per card like every crown (FrameStyle.crown).
+ */
+export const BREAKING_NEWS_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (60 / 2100) * 100 },
+  assetPathTemplate: "/frames/breakingnewscrown/{key}.png",
+  // BREAKING_NEWS_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test
+  // holds them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+};
+/** The Breaking News stamp's oval (scripts/lib/cc-frames.mjs
+ *  BREAKING_NEWS_STAMP_OVAL_PX: 685–817 × 1921–1988 px) — the PRINTS'
+ *  hologram, 132 × 67, where all 45 stamped OTP prints set it. */
+export const BREAKING_NEWS_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1921 / 2100) * 100, widthPct: (132 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the tab: its top (1908 px at the centre),
+ *  over the tab's 640–860 px — the box ends above it (1895), so nothing
+ *  moves today; declared for the fit. */
+export const BREAKING_NEWS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (640 / 1500) * 100, topPct: (1906 / 2100) * 100, widthPct: (220 / 1500) * 100, heightPct: (10 / 2100) * 100 };
+/**
+ * The OTJ Breaking News OVAL stamp notch (TODO 4.11 wave 2): the pack's one
+ * 'Holo Stamp' — the charcoal strip raised in a tab into the page's foot
+ * round the hologram — placed and downscaled with the card, a 338 × 91 box
+ * at 581, 1905 px (BREAKING_NEWS_NOTCH_BOX in scripts/lib/cc-frames.mjs),
+ * the pack's capture painted the strip's charcoal and the prints' oval cut
+ * clear for our oval art. The rares and mythics of the run print it
+ * (`security_stamp: oval`, 45 of 65), the uncommons don't: "auto" = a rare
+ * or mythic, as on M15. Keys as the crown's (one piece under every key:
+ * every master is the same strip under the tab). Set on the breakingnews
+ * entry only.
+ */
+export const BREAKING_NEWS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (581 / 1500) * 100, topPct: (1905 / 2100) * 100, widthPct: (338 / 1500) * 100, heightPct: (91 / 2100) * 100 },
+  assetPathTemplate: "/frames/breakingnewsholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+  stamp: { shape: "oval", oval: BREAKING_NEWS_HOLO_STAMP_OVAL, keepOut: BREAKING_NEWS_HOLO_STAMP_KEEP_OUT, ring: "strip" },
+};
+/**
+ * The OTJ Breaking News masthead making room for the cost row (owner
+ * decision on #624: FOLLOW PRINT; lib/cards/masthead.ts holds the rule and
+ * what print does, scripts/lib/breaking-news-masthead.mjs the pieces —
+ * a unit test holds this to that recipe). HD px of the 1500 × 2100 card:
+ * the chevron's tip on 1184 (print's three pips start on 1185), the Y's arm
+ * on 1062 + 16 px by the row's estimate (the drawn row is 1–4 px WIDER than
+ * manaCostWidthPct, so 14–16 px drawn against print's 18; 1082 would move the
+ * wordmark at five pips, where print #22 keeps it), the row's furthest slide (print's five pips end
+ * on 1461; even px from the costRect's 1411), the box keeping its colour
+ * tab (its right border then on 132–138, the tab ending on 126) and its
+ * whole self (382 + 2 + 18).
+ */
+export const BREAKING_NEWS_MASTHEAD: MastheadSpec = {
+  chevronClearPx: 1180,
+  wordmarkClearPx: 1078,
+  slideToPx: 1463,
+  maxShiftPx: 244,
+  boxClearPx: 402,
+  rows: [40, 186],
+  wordmark: { x0: 376, x1: 1140, fadeFromPx: 1082, assetPathTemplate: "/frames/breakingnewsmasthead/{key}.png" },
+  paper: { x0: 52, x1: 1228, boxRightPx: 384, assetPathTemplate: "/frames/breakingnewsmasthead/paper/{key}.png" },
+  keys: ["w", "u", "b", "r", "g", "m", "a", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+/**
+ * The collector line on the OTJ Breaking News showcase (TODO 4.11 wave 2):
+ * M15's slot (the pen x — print's first ink on 99 px, the brush column, the
+ * sizes, the © slot's right end — print's on 1395) on the run's own rows in
+ * the charcoal strip, measured on all 63 single-bodied printings at 1500 ×
+ * 2100 (each line's baseline: the last row holding ≥ 35 % of the line's
+ * widest row of ink): line 1 on 1988 px, line 2 on 2027 — 1983.6 / 2022.5
+ * on the pack's page (print's rows × 0.9978, as every slot of the frame);
+ * M15's slot draws a line's foot 1.7 / 1.8 px above its baseline figure by the
+ * same reading (our bakes), so the slot says 1985.3 / 2024.3.
+ */
+export const BREAKING_NEWS_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: ((breakingNewsRow(1988) + 1.7) / 2100) * 100,
+  line2BaselinePct: ((breakingNewsRow(2027) + 1.8) / 2100) * 100,
+};
+
 /**
  * The MUL Tarkir showcase's legendary crown (TODO 4.11):
  * `tarkirdragoncrown/<key>.png`, Card Conjurer's Tarkir 'Legend Crown' — the
@@ -6619,6 +7021,31 @@ export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/dndsourcebookholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The Mystical Archive's stamp oval (scripts/lib/cc-frames.mjs
+ *  MA_STAMP_OVAL_PX: 683–817 × 1932–1996 px) — the PRINTS' hologram, 134 ×
+ *  64 on 750 / 1964 (the 45 stamped STA prints). */
+export const MYSTICALARCHIVE_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1932 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1912 px at the centre)
+ *  down to the master's text box foot (1944), over the arch's 656–848 px. */
+export const MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1912 / 2100) * 100, widthPct: (192 / 1500) * 100, heightPct: (32 / 2100) * 100 };
+/**
+ * The Mystical Archive's OVAL stamp notch (TODO 4.11 wave 2): PipGlyph's own
+ * black arch (the pack draws no stamp; scripts/frame-inputs/mystical-archive-
+ * stamp-arch.svg, measured on the prints), 1:1 in its 204 × 94 box at 650,
+ * 1908 (MA_NOTCH_BOX in scripts/lib/cc-frames.mjs), the hologram oval cut
+ * clear for our oval art. The rares and mythics of the run print it
+ * (`security_stamp: oval`, 45 of 63), the uncommons don't: "auto" = a rare
+ * or mythic, as on M15. One piece under every key, the ten pairs' too.
+ * Set on the mysticalarchive entry only.
+ */
+export const MYSTICALARCHIVE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (650 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (204 / 1500) * 100, heightPct: (94 / 2100) * 100 },
+  assetPathTemplate: "/frames/mysticalarchiveholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", ...OLD_FRAME_PAIR_KEYS],
+  stamp: { shape: "oval", oval: MYSTICALARCHIVE_HOLO_STAMP_OVAL, keepOut: MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The Enchanting Tales oval (scripts/lib/cc-frames.mjs
@@ -8070,14 +8497,45 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // dress (the ten pair masters: print's accents ramp from the first colour
   // to the second).
   dossier: { ...DOSSIER, overlays: [DOSSIER_CROWN, DOSSIER_HOLO_STAMP], collector: DOSSIER_COLLECTOR, twoColorMasters: ["split"] },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the triangle stamp
+  // and the collector line, opt-in per card, and the two-colour "split"
+  // dress (the ten pair masters: print gives a pair's left stripe and brace
+  // its first colour, the right ones its second). No crown: the brace the
+  // pack calls its crown is on every print of the run, so the masters draw
+  // it.
+  tardis: { ...TARDIS, overlays: [TARDIS_HOLO_STAMP], collector: TARDIS_COLLECTOR, twoColorMasters: ["split"] },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints, the pack has
   // none).
   enchantingtales: { ...ENCHANTINGTALES, overlays: [ENCHANTINGTALES_HOLO_STAMP], collector: ENCHANTINGTALES_COLLECTOR },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): the crown, the oval
+  // stamp and the collector line, opt-in per card, and the two-colour
+  // "split" dress (the ten pair masters: print splits a two-colour page
+  // from its first colour to its second). The page is ONE frame for spells
+  // and lands (the pack's land frame is the colourless land's alone, OTP
+  // #65; a coloured land wears its colour's page), so a two-colour land
+  // wears its two colours' split page as well (twoColorForLands; no print
+  // has one).
+  breakingnews: {
+    ...BREAKING_NEWS,
+    overlays: [BREAKING_NEWS_CROWN, BREAKING_NEWS_HOLO_STAMP],
+    collector: BREAKING_NEWS_COLLECTOR,
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+    masthead: BREAKING_NEWS_MASTHEAD,
+  },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).
   dndsourcebook: { ...DNDSOURCEBOOK, overlays: [DNDSOURCEBOOK_HOLO_STAMP], collector: DNDSOURCEBOOK_COLLECTOR },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the two-colour
+  // dress (its pair masters split the colour lines, as the five two-colour
+  // prints do), the stamp and the collector line, opt-in per card; no crown
+  // (no print wears one).
+  // (A land on the frame — none printed — wears the same dress: the pair
+  // masters are the gold frame with the two colours' lines, whatever the
+  // kind.)
+  mysticalarchive: { ...MYSTICALARCHIVE, overlays: [MYSTICALARCHIVE_HOLO_STAMP], collector: M15_COLLECTOR, twoColorMasters: ["split"], twoColorForLands: true },
   // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): the
   // crown, the stamp and the collector line, opt-in per card; the ten
   // two-colour pair masters (the gold frame, the box split), opt-in too.

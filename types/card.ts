@@ -544,6 +544,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Strixhaven Mystical Archive showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Mystical Archive (STA)' pack, frames bucket): the gold
+  // ornament over edge-to-edge art of STA #1–63 (2021, English). An
+  // addition: no stored card sits on it.
+  "mysticalarchive",
   // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2, Card
   // Conjurer's 'Enchanting Tales' pack, frames bucket): the swirled
   // storybook frame of the bonus sheet WOT #1–63 (2023), borderless, the
@@ -589,6 +594,18 @@ export const FRAME_TEMPLATE_VALUES = [
   // #55, #56, #58, #59 and their halo-foil / serialized twins). An
   // addition: no stored card sits on it.
   "stainedglass",
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS' pack, frames bucket): the police box of WHO #535–564, their
+  // serialized twins and their surge-foil twins #1126–1155 (73 printings) —
+  // the blue doors round the art, a stripe and a brace in the card's colour.
+  // An addition: no stored card sits on it.
+  "tardis",
+  // The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2,
+  // Card Conjurer's 'Breaking News' pack, frames bucket): the front page of
+  // "The Prosperity Post" on the bonus sheet OTP #1–65 — a borderless
+  // newspaper page, a colour wash per key. An addition: no stored card sits
+  // on it.
+  "breakingnews",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
@@ -734,6 +751,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Strixhaven — Mystical Archive".
+  mysticalarchive: "Mystical Archive",
   // Set-relative: the picker prints "Wilds of Eldraine — Enchanting Tales".
   enchantingtales: "Enchanting Tales",
   avatar: "Elemental",
@@ -751,6 +770,10 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   dossier: "Dossier",
   // Set-relative: the picker prints "Dominaria United — Stained Glass".
   stainedglass: "Stained Glass",
+  // Set-relative: the picker prints "Doctor Who — TARDIS".
+  tardis: "TARDIS",
+  // Set-relative: the picker prints "Outlaws of Thunder Junction — Breaking News".
+  breakingnews: "Breaking News",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
@@ -795,10 +818,13 @@ export const FRAME_SET_VALUES = [
   "tarkir",
   "dominariaunited",
   "multiverselegends",
+  "strixhaven",
   "newcapenna",
   "zendikarrising",
   "dnd",
   "karlov",
+  "doctorwho",
+  "thunderjunction",
   "extended",
   "fullartset",
   "expeditions",
@@ -822,6 +848,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   // Multiverse Legends Dominaria legends (MUL 2023) print too.
   dominariaunited: "Dominaria United",
   multiverselegends: "Multiverse Legends",
+  // The Strixhaven Mystical Archive (STA 2021).
+  strixhaven: "Strixhaven",
   newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
@@ -829,6 +857,10 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   dnd: "Dungeons & Dragons",
   // Murders at Karlov Manor (MKM 2024): the Dossier showcase.
   karlov: "Murders at Karlov Manor",
+  // Doctor Who (WHO 2023): the TARDIS showcase.
+  doctorwho: "Doctor Who",
+  // Outlaws of Thunder Junction (OTJ 2024): its Breaking News bonus sheet (OTP).
+  thunderjunction: "Outlaws of Thunder Junction",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -902,6 +934,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  mysticalarchive: "strixhaven",
   enchantingtales: "eldraine",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
@@ -912,6 +945,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirdragon: "multiverselegends",
   sncartdeco: "newcapenna",
   dossier: "karlov",
+  tardis: "doctorwho",
+  breakingnews: "thunderjunction",
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
@@ -999,6 +1034,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   // The Stained Glass showcase (DMU #287–368, MUL's Dominaria legends).
   dominariaunited: "showcase",
   multiverselegends: "showcase",
+  // The Strixhaven Mystical Archive (STA #1–63).
+  strixhaven: "showcase",
   // The Art Deco showcase (SNC #296–340, #361–405).
   newcapenna: "showcase",
   zendikarrising: "showcase",
@@ -1006,6 +1043,10 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   dnd: "showcase",
   // The Murders at Karlov Manor Dossier showcase (MKM #336–389, #433).
   karlov: "showcase",
+  // The Doctor Who TARDIS showcase (WHO #535–564, #1126–1155).
+  doctorwho: "showcase",
+  // The Breaking News showcase (OTP #1–65, OTJ's bonus sheet).
+  thunderjunction: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
   // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall

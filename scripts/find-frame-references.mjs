@@ -350,6 +350,14 @@ const TEMPLATES = {
   lotrscroll: {
     q: (k) => `set:ltr is:showcase border:black ${spellColor(k)}`,
   },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63 (#64–126
+  // are the Japanese alternate art, another frame; SOA's 2026 archive is
+  // inverted). Instants and sorceries only: 'c' has no print, 'm' is the
+  // two-colour pair dress.
+  mysticalarchive: {
+    confirm: "STA English Mystical Archive (#1–63) — confirm the thumbnail is the gold ornament with a cream title bar, not the Japanese vertical-title art (#64–126) or SOA's navy boxes.",
+    q: (k) => `set:sta cn<=63 lang:en ${spellColor(k)}`,
+  },
   avatar: {
     q: (k) => `set:tla is:showcase border:borderless ${spellColor(k)}`,
   },
@@ -388,6 +396,14 @@ const TEMPLATES = {
     confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
     q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
   },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 (the
+  // serialized and surge-foil twins are the same frame under a finish), every
+  // one borderless. No mono-green print (green only in pairs); `c` the
+  // colourless artifact creature; `m` a three-colour card or a pair.
+  tardis: {
+    confirm: "WHO showcase — confirm the thumbnail is the TARDIS police-box frame (borderless, #535–564), not the regular, extended-art or etched frame.",
+    q: (k) => (k === "g" ? null : `set:who border:borderless cn>=535 cn<=564 ${spellColor(k)}`),
+  },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT
   // #1–63 (#64–103 are the anime-style borderless reprints, another
   // design). Mono-coloured enchantments only: no colourless or gold print.
@@ -401,6 +417,14 @@ const TEMPLATES = {
   stainedglass: {
     confirm: "DMU / MUL stained-glass showcase — confirm the thumbnail is the leaded-glass frame, not DMU #369–371 (the Phyrexian-script Sheoldred, the Ajani walkers) or MUL's etched twins.",
     q: (k) => `((set:dmu cn>=287 cn<=368) or (set:mul (cn:5 or cn:12 or cn:19 or cn:22 or cn:24 or cn:55 or cn:56 or cn:58 or cn:59))) ${spellColor(k)}`,
+  },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): OTP #1–65 — NOT the
+  // textured-foil reprints #66–80, the split #39 or the walker #50. `c` the
+  // land or an artifact, `m` a three-colour card or a pair (the pair masters
+  // ride the gold key).
+  breakingnews: {
+    confirm: "OTP Breaking News — confirm the thumbnail is the 'Prosperity Post' newspaper page (not the textured-foil reprint, OTP #66–80).",
+    q: (k) => `set:otp cn<=65 -t:planeswalker -is:split ${spellColor(k)}`,
   },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",

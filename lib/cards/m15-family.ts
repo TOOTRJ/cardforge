@@ -130,6 +130,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Lord of the Rings scroll (TODO 4.11, CC's 'Scroll' pack, whose text
   // layout is the M15 pack's; layout v62): it joined WITH its bump.
   "lotrscroll",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2, CC's 'Mystical
+  // Archive (STA)' pack, the M15 pack's text layout on its own bars): a new
+  // template, no stored card — the family's sizes — so it joined without a
+  // bump.
+  "mysticalarchive",
   // …and the ring (TODO 4.11, CC's 'Ring' pack, the M15 pack's text layout
   // under a lower title bar; layout v65): it joined WITH its bump.
   "lotr",
@@ -150,6 +155,16 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // own bars): a new template, no stored card — the family's sizes — so it
   // joined without a bump.
   "stainedglass",
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, CC's 'TARDIS' pack,
+  // the M15 frame's text layout on the police box's own bars): a new
+  // template, no stored card — the family's sizes — so it joined without a
+  // bump.
+  "tardis",
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, CC's 'Breaking News'
+  // pack, the M15 frame's text layout on the page's own bands): a new
+  // template, no stored card — the family's sizes — so it joined without a
+  // bump.
+  "breakingnews",
   // The Tarkir: Dragonstorm showcases (TODO 4.11, MSE masters with their
   // printed border painted; layout v68): the draconic on M15's slots, the
   // ghostfire on its own bars — both at the family's sizes, with their bump.

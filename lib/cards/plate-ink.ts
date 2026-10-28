@@ -68,6 +68,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // scroll P/T (435 × 266), drawn at the pack's ptBounds — the rolled
   // parchment with its curls, none of the soft shadow round it.
   "/frames/lotrscroll/pt/{color}.png": { left: 0.1425, top: 0.1992, right: 0.9472, bottom: 0.9286 },
+  // The Strixhaven Mystical Archive's plates (TODO 4.11 wave 2): Card
+  // Conjurer's 'Mystical Archive (STA)' P/T (424 × 213), drawn at the pack's
+  // ptBounds — the plate fills the image all but its 1–2 px soft rim.
+  "/frames/mysticalarchive/pt/{color}.png": { left: 0.0023, top: 0.0093, right: 0.9977, bottom: 0.9907 },
   // The Lord of the Rings ring's plates (TODO 4.11): Card Conjurer's ring
   // P/T (268 × 134), drawn at the pack's ptBounds — the bevelled plate with
   // its rim, none of the soft shadow left of and under it.
@@ -100,6 +104,16 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // 'Power/Toughness' (262 × 127) per key, drawn at the pack's ptBounds —
   // the bronze-rimmed plate fills the image to every edge.
   "/frames/stainedglass/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The Doctor Who TARDIS showcase's P/T box (TODO 4.11 wave 2): Card
+  // Conjurer's one 'Power/Toughness' (299 × 173) under every key, drawn at
+  // the pack's ptBounds — the box and its side tabs, its drop shadow below
+  // and left left out (α < 128).
+  "/frames/tardis/pt/{color}.png": { left: 0.0501, top: 0.0173, right: 0.9867, bottom: 0.9133 },
+  // The OTJ Breaking News box (TODO 4.11 wave 2): Card Conjurer's
+  // 'Power/Toughness Box' per key (406 × 200), drawn at the pack's ptBounds —
+  // the torn paper box fills the image but for its shadow on the left and
+  // the top.
+  "/frames/breakingnews/pt/{color}.png": { left: 0.0837, top: 0.105, right: 1, bottom: 1 },
   // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/avatar/pt/{color}.png": { left: 0.0037, top: 0.007, right: 0.9963, bottom: 0.993 },
   "/frames/bloomburrow/pt/{color}.png": { left: 0.0022, top: 0.0076, right: 0.9978, bottom: 0.9924 },

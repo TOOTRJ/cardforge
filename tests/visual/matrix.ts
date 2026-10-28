@@ -1368,6 +1368,18 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // Magnetic Snuffler).
   ["dossier", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["dossier", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Construct"], power: "4", toughness: "4" }],
+  // TODO 4.11 wave 2: the OTJ Breaking News' P/T box at its widest, and a
+  // Vehicle on the pack's slate artifact master and its box (OTP #64
+  // Unlicensed Hearse).
+  ["breakingnews", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["breakingnews", "artifact", "c", "@vehicle", { subtypes: ["Vehicle"], power: "*", toughness: "*" }],
+  // …and its masthead making room for the cost row as print does (owner
+  // decision on #624, lib/cards/masthead.ts): four pips drop the chevron
+  // (OTP #25), seven slide the wordmark left over the icon box (OTP #40),
+  // nine — past anything printed — drop the wordmark and keep the box.
+  ["breakingnews", "instant", "r", "@masthead-chevron", { cost: "{X}{R}{R}{R}" }],
+  ["breakingnews", "sorcery", "wub", "@masthead-shift", { cost: "{W}{W}{U}{U}{B}{B}{B}" }],
+  ["breakingnews", "sorcery", "b", "@masthead-past-print", { cost: "{B}{B}{B}{B}{B}{B}{B}{B}{B}" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the New Capenna Art Deco's plate at its widest.
@@ -1381,6 +1393,11 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the Dominaria United stained glass's plate at its widest.
   ["stainedglass", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Doctor Who TARDIS's P/T box at its widest, and a
+  // colourless artifact creature on the pack's steel artifact master (WHO
+  // #550 Cyberman Patrol).
+  ["tardis", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["tardis", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Cyberman"], power: "2", toughness: "2" }],
   [
     "m15artifact",
     "artifact",
@@ -1697,6 +1714,10 @@ export function visualCases(): VisualCase[] {
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pair on an instant,
+  // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
+  // and flavour).
+  add("mysticalarchive", "instant", "wu", "long", { suffix: "@pair", row: pairStyle("mysticalarchive") });
   // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
   // per card — no stored card has the switch, so these are NEW cases, no
   // bump): the second part's colour on back_face.color_identity, its cost
@@ -2079,6 +2100,12 @@ export function visualCases(): VisualCase[] {
   add("dndsourcebook", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dndsourcebook", "auto", { rarity: "common" }) });
   add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
   add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's OVAL notch (our own
+  // black arch) — none on an uncommon (STA prints it on a rare or mythic
+  // only), on an instant and a sorcery as the run prints them, the HD bake.
+  add("mysticalarchive", "instant", "u", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("mysticalarchive", "auto", { rarity: "uncommon" }) });
+  add("mysticalarchive", "instant", "r", "long", { suffix: "@stamp", row: stampRow("mysticalarchive", "auto", { rarity: "rare" }) });
+  add("mysticalarchive", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("mysticalarchive", "auto", { rarity: "mythic" }) });
   // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
   // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
   // HD bake.
@@ -2098,6 +2125,25 @@ export function visualCases(): VisualCase[] {
   add("dossier", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dossier", "auto", { rarity: "uncommon" }) });
   add("dossier", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dossier", "auto", { rarity: "rare" }) });
   add("dossier", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dossier", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Doctor Who TARDIS's TRIANGLE notch — on an
+  // uncommon too (a triangle frame stamps every rarity: the matte face, WHO
+  // #538 Dalek Squadron), a three-colour legend's (WHO #540 Davros: the gold
+  // key's piece), the HD bake.
+  add("tardis", "creature", "b", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("tardis", "auto", { rarity: "uncommon" }) });
+  add("tardis", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("tardis", "auto", { rarity: "mythic" }) });
+  add("tardis", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tardis", "auto", { rarity: "rare" }) });
+  // TODO 4.11 wave 2: the OTJ Breaking News' OVAL tab — none on an uncommon
+  // (OTP prints it on a rare or mythic only), a gold card's (OTP #40 Cruel
+  // Ultimatum: the gold key's piece), the land's (OTP #65 Dust Bowl: `l`),
+  // the HD bake.
+  add("breakingnews", "instant", "u", "short", { suffix: "@stamp-auto-common", row: stampRow("breakingnews", "auto", { rarity: "uncommon" }) });
+  add("breakingnews", "sorcery", "wub", "long", { suffix: "@stamp-m", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
+  add("breakingnews", "land", "c", "short", { suffix: "@stamp-c", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
+  add("breakingnews", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("breakingnews", "auto", { rarity: "mythic" }) });
+  // The masthead's pieces inside both finish masks (lib/cards/masthead.ts):
+  // the sheen follows the wordmark where it slid, never the master's.
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-foil", finish: "foil", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-etched", finish: "etched", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
   // see-through colourless frame and the artifact's silver, a crowned
@@ -2544,11 +2590,18 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "dndsourcebook",
   // …and the MKM dossier's oval (TODO 4.11 wave 2: the pack's one piece).
   "dossier",
+  // …and the Strixhaven Mystical Archive's oval (TODO 4.11 wave 2: our own
+  // black arch, one piece under every key).
+  "mysticalarchive",
   // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
   "enchantingtales",
   // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
   // arch, split off every master).
   "stainedglass",
+  // …and the Doctor Who TARDIS's triangle (TODO 4.11 wave 2: the pack's one trapezoid).
+  "tardis",
+  // …and the OTJ Breaking News' oval (TODO 4.11 wave 2: the pack's one tab).
+  "breakingnews",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2562,9 +2615,17 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
   // one notch piece (a pair draws m's).
   "dossier",
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pairs (its one arch).
+  "mysticalarchive",
   // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
   // own arch over its split box).
   "stainedglass",
+  // …and the Doctor Who TARDIS — its pair masters under the pack's one
+  // trapezoid (a pair draws m's).
+  "tardis",
+  // TODO 4.11 wave 2: the OTJ Breaking News — its pair masters under the
+  // pack's one notch tab.
+  "breakingnews",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -3018,9 +3079,18 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the gold frame with
+  // the two colours' lines.
+  "mysticalarchive",
   // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
   // the box split.
   "stainedglass",
+  // The Doctor Who TARDIS (TODO 4.11 wave 2): its two colour frames and
+  // braces lerped.
+  "tardis",
+  // The OTJ Breaking News (TODO 4.11 wave 2): the same across print's
+  // split, and its crown's pairs.
+  "breakingnews",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

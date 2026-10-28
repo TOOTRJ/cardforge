@@ -65,6 +65,10 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   // the top corners (the importer keeps them square); the bottom is the
   // border black, cut at the one card corner.
   lotr: { kinds: { tl: "frame", tr: "frame" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2:
+  // the gold ornament runs into the top corners (the importer keeps them
+  // square); the bottom is the black footer, cut at the one card corner.
+  mysticalarchive: { kinds: { tl: "frame", tr: "frame" } },
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's pack):
   // borderless — its swirled field in the top corners, its footer in the
   // colour's own tone in the bottom ones; the importer keeps all four.
@@ -73,6 +77,12 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   // run into the top corners (design); the bottom is the border black
   // painted under the MSE masters, cut at the one card corner.
   tarkirdraconic: { kinds: { tl: "frame", tr: "frame" } },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Breaking News' pack): the page runs into the top corners and the
+  // charcoal strip into the bottom ones (design all round: the importer keeps
+  // the four square — the strip's charcoal, and the pack's own corner wedge
+  // at the top), what the render drew.
+  breakingnews: { kinds: "frame" },
 };
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a
