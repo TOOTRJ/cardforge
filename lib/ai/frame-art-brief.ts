@@ -106,6 +106,24 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
     brief: "An old parchment scroll's illustration: warm sepia, hand-inked detail.",
     templates: ["lotrscroll"],
   },
+  // The saga and the two-part cards (the AI dialog, PR 2). Each is ONE
+  // picture: a second part's page or half is text on the card.
+  {
+    brief: "A tall storybook scene that captures the saga's tale in one moment: one strong subject composed for a tall, narrow panel.",
+    templates: ["saga"],
+  },
+  {
+    brief: "ONE picture for the whole card: a single scene that holds both halves' ideas together, the first half's subject in front.",
+    templates: ["split", "aftermath"],
+  },
+  {
+    brief: "Show the creature itself, mid-adventure — the spell on its page is told in words, not in the picture.",
+    templates: ["adventure", "prepare"],
+  },
+  {
+    brief: "Show the creature as it is now, with a hint of what it becomes when it flips.",
+    templates: ["flip"],
+  },
 ];
 
 const BY_TEMPLATE: ReadonlyMap<FrameTemplate, string> = new Map(

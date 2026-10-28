@@ -5,7 +5,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 // ---------------------------------------------------------------------------
 // The AI fill dialog's theme, style, kind and frame (the AI dialog redesign,
 // PR 1; owner, milestone 1). The kinds are the one-faced kinds the AI can
-// make; the frames are EVERY frame of the kind published in some colour —
+// make and, since PR 2, the saga and the one-picture two-part layouts —
+// each only where its one frame is published (the same off-chip rule); the frames are EVERY frame of the kind published in some colour —
 // the dresses too (Nyx and the artifact frame on a creature, the Vehicle,
 // the token's text box and height): the design is made for the frame picked
 // (lib/ai/frame-brief.ts). A colour the card keeps leaves a frame not
@@ -14,6 +15,11 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 // ---------------------------------------------------------------------------
 
 vi.mock("@/components/billing/credit-meter", () => ({ CreditMeter: () => null }));
+const billing = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/billing/flags", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/billing/flags")>()),
+  isBillingEnabled: () => billing.on,
+}));
 
 import { AiFillDialog, type AiFillOptions } from "@/components/creator/ai-fill-dialog";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -31,11 +37,18 @@ const VERIFIED = [
   frameComboKey("m15nyx", "u"),
 ];
 
-afterEach(cleanup);
+/** …with the saga and split frames published (PR 2): saga in green only. */
+const WITH_LAYOUTS = [...VERIFIED, frameComboKey("saga", "g"), ...ALL_COLOURS.map((colour) => frameComboKey("split", colour))];
+
+afterEach(() => {
+  cleanup();
+  billing.on = false;
+});
 
 function open({
   fields = ["card_type", "color_identity", "title", "art"] as CardFillField[],
   colorKey = null as FrameColorKey | null,
+  verified = VERIFIED,
 } = {}) {
   const onGenerate = vi.fn<(options: AiFillOptions) => void>();
   render(
@@ -46,7 +59,7 @@ function open({
       revise={false}
       statsLabel="Power / toughness"
       statsAvailable
-      verifiedFrameKeys={VERIFIED}
+      verifiedFrameKeys={verified}
       colorKey={colorKey}
       generating={false}
       onGenerate={onGenerate}
@@ -66,7 +79,7 @@ const generate = async () => {
 };
 
 describe("AI fill dialog — kinds", () => {
-  it("lists the one-faced kinds the AI can make, never a battle, saga, two-part, double-faced card or emblem", () => {
+  it("lists the kinds the AI can make — the saga and two-part layouts too (PR 2) — never a battle, double-faced card or emblem", () => {
     open();
     const kinds = within(group("Card kind")).getAllByRole("radio").map((chip) => chip.textContent);
     expect(kinds).toEqual([
@@ -79,7 +92,25 @@ describe("AI fill dialog — kinds", () => {
       "LandNo frame published yet",
       "PlaneswalkerNo frame published yet",
       "Token",
+      "SagaNo frame published yet",
+      "AdventureNo frame published yet",
+      "PrepareNo frame published yet",
+      "SplitNo frame published yet",
+      "AftermathNo frame published yet",
+      "FlipNo frame published yet",
     ]);
+  });
+
+  it("a saga or two-part kind lights where its one frame is published (never the double-faced saga front)", () => {
+    open({ verified: [...WITH_LAYOUTS, frameComboKey("sagadfcfront", "w")] });
+    const chip = (name: string) => within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${name}`) });
+    expect(chip("Saga").getAttribute("aria-disabled")).toBeNull();
+    expect(chip("Split").getAttribute("aria-disabled")).toBeNull();
+    expect(chipOff(chip("Adventure"))).toBe(true);
+    pickKind("Saga");
+    openFrames();
+    const frames = within(screen.getByRole("radiogroup", { name: "Frames for a saga" })).getAllByRole("radio");
+    expect(frames.map((frame) => frame.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Surprise meAny frame published for it", expect.stringMatching(/^Saga/)]);
   });
 
   it("a kind with no published frame is an off chip that says why — seen and in its name", () => {
@@ -191,6 +222,24 @@ describe("AI fill dialog — what Generate sends", () => {
     const input = screen.getByLabelText(/Your twist on the style/) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "x".repeat(300) } });
     expect(input.value).toHaveLength(160);
+  });
+
+  it("a saga or two-part kind names its layout, never a card type; a kept colour leaves its frame off with the reason", async () => {
+    billing.on = true;
+    const onGenerate = open({ verified: WITH_LAYOUTS });
+    pickKind("Split");
+    openFrames();
+    fireEvent.click(frameRadio(/^Split/));
+    await generate();
+    expect(onGenerate.mock.calls[0]![0]).toMatchObject({ design_kind: "split", card_type: undefined, frame: "split" });
+    expect(screen.getByText("Uses 1 credit — one picture for both parts")).toBeTruthy();
+    cleanup();
+    open({ verified: WITH_LAYOUTS, fields: ["card_type", "title"], colorKey: "r" });
+    pickKind("Saga");
+    openFrames();
+    const saga = frameRadio(/^Saga/);
+    expect(chipOff(saga)).toBe(true);
+    expect(saga.textContent).toContain("Not published in red yet");
   });
 
   it("a new kind starts its frame on Surprise me", async () => {

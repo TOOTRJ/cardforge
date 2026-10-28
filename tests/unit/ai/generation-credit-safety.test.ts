@@ -145,6 +145,7 @@ vi.mock("@/lib/cards/actions", () => ({
 import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { failedStepMessage } from "@/lib/ai/failure";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
+import { LAYOUT_DESIGNS, WANT_ALL } from "./fixtures/layout-designs";
 
 const EVERY = FRAME_TEMPLATE_VALUES.flatMap((template) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template as FrameTemplate, colour)),
@@ -444,5 +445,42 @@ describe("the same options twice never reuse a design (the owner's two identical
     expect(s.prompts[0]).toContain("card_type: anything but battle.");
     const plan = s.inserted.at(-1)!.plan as { fields: { card_type?: string } };
     expect(plan.fields.card_type).toBe("creature");
+  });
+});
+
+// The AI dialog's sagas and two-part cards (PR 2): one picture, one credit —
+// and every gate the save runs is read at PLAN time, so a design that can't
+// be saved on the kind's frame never reserves anything, and a step that
+// fails after the reserve is refunded once, as every fill's is.
+describe("sagas and two-part cards from the AI dialog", () => {
+  const KINDS = ["saga", "adventure", "prepare", "split", "aftermath", "flip"] as const;
+  const layoutFill = (kind: (typeof KINDS)[number]) =>
+    createCardFillJob({ want: WANT_ALL as never, locked: {}, steer: {}, frame: kind, layout: kind });
+
+  it.each(KINDS)("%s: a design the frame can't take, twice — refused at plan time, nothing reserved", async (kind) => {
+    // No rows / no second part: the autofix never invents one.
+    const broken = kind === "saga" ? { ...LAYOUT_DESIGNS.saga, saga: null, rules_text: "Draw a card." } : { ...LAYOUT_DESIGNS[kind], second_part: null };
+    s.answers = [[structuredClone(broken)], [], [structuredClone(broken)], []];
+    const out = await layoutFill(kind);
+    expect(out).toMatchObject({ ok: false, code: "frame_unfit" });
+    expect(!out.ok && out.error).toContain("No credits were used.");
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.imageCalls).toBe(0);
+  });
+
+  it.each(KINDS)("%s: the step reserves ONE credit for its one picture, and a refused image returns it once", async (kind) => {
+    s.answers = [[structuredClone(LAYOUT_DESIGNS[kind])]];
+    const out = await layoutFill(kind);
+    expect(out.ok).toBe(true);
+    expect(s.spend).not.toHaveBeenCalled();
+    s.image = { ok: false, error: "x", failure: "art_blocked", safetyBlocked: true };
+    job("card_fill", s.inserted.at(-1)!.plan as Record<string, unknown>, "fill:0");
+    const step = await runStep("fill:0");
+    expect(s.spend.mock.calls.map((call) => call[0])).toEqual([1]);
+    expect(step).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1 });
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(s.imageCalls).toBe(1);
+    expect(failedStepMessage(step)).toContain("Your credit was returned.");
   });
 });

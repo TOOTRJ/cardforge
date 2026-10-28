@@ -151,6 +151,7 @@ vi.mock("@/lib/cards/actions", () => ({
 
 import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { LAYOUT_DESIGNS, WANT_ALL } from "./fixtures/layout-designs";
 
 const FIXTURE = join(process.cwd(), "tests/unit/ai/fixtures/job-payloads-main.json");
 const UPDATE = process.env.JOB_PAYLOADS_UPDATE === "1";
@@ -417,6 +418,27 @@ describe("the plans the jobs store, the model mocked", () => {
     expect(result.ok).toBe(true);
     const step = s.patched.at(-1)!;
     pinned(`fill step · ${name}`, { status: step.status, fill: step.fill ?? null, credits: s.spend.mock.calls.map((call) => ({ amount: call[0], reason: call[1] })), refunds: s.refund.mock.calls.length });
+  });
+});
+
+/** The AI dialog's sagas and two-part cards (PR 2, feat/ai-dialog-sagas-
+ *  parts): NEW cases, recorded on that branch — main had no such fill.
+ *  Every entry above is main's, unchanged. What each kind's plan stores,
+ *  the step hands the creator and the credit it takes (one: one picture). */
+describe("the AI dialog's sagas and two-part cards (new cases)", () => {
+  const KINDS = ["saga", "adventure", "prepare", "split", "aftermath", "flip"] as const;
+  it.each(KINDS)("layout fill · %s", async (kind) => {
+    s.answers = [[structuredClone(LAYOUT_DESIGNS[kind])]];
+    const out = await createCardFillJob({ want: WANT_ALL as never, locked: {}, steer: {}, frame: kind, layout: kind });
+    expect(out.ok).toBe(true);
+    const row = s.inserted.at(-1)!;
+    pinned(`layout fill plan · ${kind}`, { kind: row.kind, plan: row.plan, steps: row.steps, prompts: s.prompts });
+    job("card_fill", row.plan as Record<string, unknown>, "fill:0");
+    s.job.steps = row.steps as never;
+    const result = await runNextJobStep("job-1", "fill:0");
+    expect(result.ok).toBe(true);
+    const step = s.patched.at(-1)!;
+    pinned(`layout fill step · ${kind}`, { status: step.status, fill: step.fill ?? null, credits: s.spend.mock.calls.map((call) => ({ amount: call[0], reason: call[1] })), refunds: s.refund.mock.calls.length });
   });
 });
 

@@ -1,7 +1,19 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { ChevronDown, Coins, Dices, Loader2, Sparkles } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  Coins,
+  Columns2,
+  Dices,
+  FlipVertical2,
+  Loader2,
+  Rows2,
+  ScrollText,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { CreditMeter } from "@/components/billing/credit-meter";
@@ -32,13 +44,14 @@ import {
   TWIST_MAX,
 } from "@/lib/ai/presets";
 import {
-  AI_DESIGN_KINDS,
+  AI_DIALOG_KINDS,
   aiFrameOptions,
   aiKindOffReason,
   frameColorWords,
-  type AiDesignKind,
+  type AiDialogKind,
 } from "@/lib/ai/frame-choices";
-import type { FrameColorKey } from "@/lib/creator/card-kinds";
+import { isAiLayoutKind, type AiLayoutKind } from "@/lib/ai/layout-design";
+import { KIND_DEFS, type FrameColorKey } from "@/lib/creator/card-kinds";
 import {
   RARITY_VALUES,
   type CardType,
@@ -77,9 +90,9 @@ export type AiFillOptions = {
   style_preset?: string;
   style_twist?: string;
   /** The kind asked for while the card type is written: "surprise" or one
-   *  the AI can make (lib/ai/frame-choices.ts). The fill is then designed
-   *  frame-first. */
-  design_kind?: AiDesignKind | "surprise";
+   *  the AI can make (lib/ai/frame-choices.ts) — a saga or a two-part
+   *  layout among them (PR 2). The fill is then designed frame-first. */
+  design_kind?: AiDialogKind | "surprise";
   /** Steering for ticked fields. */
   card_type?: CardType;
   rarity?: Rarity;
@@ -146,6 +159,24 @@ const THEME_OPTIONS: ChipOption<string>[] = [
   ...THEME_PRESETS.map((preset) => ({ value: preset.id, label: preset.label })),
 ];
 
+/** The layout kinds' chip icons (the one-faced kinds take the card type
+ *  chips' own). */
+const LAYOUT_KIND_ICONS: Record<AiLayoutKind, LucideIcon> = {
+  saga: ScrollText,
+  adventure: BookOpen,
+  prepare: BookOpen,
+  split: Columns2,
+  aftermath: Rows2,
+  flip: FlipVertical2,
+};
+
+/** The kind's chip label ("Creature", "Saga", "Split"). */
+function kindLabel(kind: AiDialogKind): string {
+  return isAiLayoutKind(kind)
+    ? KIND_DEFS[kind].label
+    : (CARD_TYPE_OPTIONS.find((option) => option.value === kind)?.label ?? kind);
+}
+
 const STYLE_OPTIONS: ChipOption<string>[] = [
   surpriseChip(),
   ...STYLE_PRESETS.map((preset) => ({ value: preset.id, label: preset.label })),
@@ -172,7 +203,7 @@ function AiFillDialogBody({
   const [themeTwist, setThemeTwist] = useState("");
   const [stylePreset, setStylePreset] = useState<string>(SURPRISE);
   const [styleTwist, setStyleTwist] = useState("");
-  const [kind, setKind] = useState<AiDesignKind | Surprise>(SURPRISE);
+  const [kind, setKind] = useState<AiDialogKind | Surprise>(SURPRISE);
   const [frame, setFrame] = useState<FrameTemplate | Surprise>(SURPRISE);
   const [framesOpen, setFramesOpen] = useState(false);
   const [rarity, setRarity] = useState<Rarity | "random">("random");
@@ -199,16 +230,18 @@ function AiFillDialogBody({
   const pinnedColor: FrameColorKey | null =
     revise || !want.has("color_identity") ? colorKey : null;
 
-  const kindOptions = useMemo<ChipOption<AiDesignKind | Surprise>[]>(
+  const kindOptions = useMemo<ChipOption<AiDialogKind | Surprise>[]>(
     () => [
       surpriseChip(),
-      ...AI_DESIGN_KINDS.map((value) => {
-        const base = CARD_TYPE_OPTIONS.find((option) => option.value === value);
+      ...AI_DIALOG_KINDS.map((value) => {
+        const icon = isAiLayoutKind(value)
+          ? LAYOUT_KIND_ICONS[value]
+          : CARD_TYPE_OPTIONS.find((option) => option.value === value)?.icon;
         const reason = aiKindOffReason(value, verified);
         return {
           value,
-          label: base?.label ?? value,
-          icon: base?.icon,
+          label: kindLabel(value),
+          icon,
           disabled: reason !== null,
           // The reason is part of the chip (seen, and in its name): a
           // description only shows on a "md" chip.
@@ -263,7 +296,7 @@ function AiFillDialogBody({
     if (deck?.style) setStyleTwist(deck.style.slice(0, TWIST_MAX));
   };
 
-  const handleKindChange = (next: AiDesignKind | Surprise) => {
+  const handleKindChange = (next: AiDialogKind | Surprise) => {
     setKind(next);
     setFrame(SURPRISE);
     if (next === SURPRISE) setFramesOpen(false);
@@ -279,7 +312,9 @@ function AiFillDialogBody({
       style_preset: styleId,
       style_twist: styleTwist.trim() || undefined,
       design_kind: wantsType ? kind : undefined,
-      card_type: wantsType && kind !== SURPRISE ? kind : undefined,
+      // A saga or a two-part kind names its layout, never a card type: the
+      // server steers the type its frame takes.
+      card_type: wantsType && kind !== SURPRISE && !isAiLayoutKind(kind) ? kind : undefined,
       rarity: wantsRarity && rarity !== "random" ? rarity : undefined,
       frame: wantsType ? (frameValue === SURPRISE ? "random" : frameValue) : undefined,
       deck_id: canDesignForDeck && deckId ? deckId : undefined,
@@ -289,13 +324,16 @@ function AiFillDialogBody({
   const labelFor = (field: CardFillField) =>
     field === "stats" ? statsLabel : FILL_FIELD_LABELS[field];
 
-  const kindWord = kind === SURPRISE ? "" : (CARD_TYPE_OPTIONS.find((o) => o.value === kind)?.label ?? kind).toLowerCase();
+  const kindWord = kind === SURPRISE ? "" : kindLabel(kind).toLowerCase();
+  const kindArticle = /^[aeiou]/.test(kindWord) ? "an" : "a";
+  // A two-part card is still ONE picture (one credit): said beside the price.
+  const onePicture = wantsType && kind !== SURPRISE && isAiLayoutKind(kind) && kind !== "saga" && want.has("art");
   const frameHelper =
     pickedFrame && frameValue !== SURPRISE
       ? pinnedColor || frameColorWords(pickedFrame.colorKeys) === "any color"
         ? `The card is designed for ${pickedFrame.label}.`
         : `The card is designed for ${pickedFrame.label}, in ${frameColorWords(pickedFrame.colorKeys)}: the colors it is published in.`
-      : `Surprise me: any frame published for a ${kindWord}${pinnedColor ? " in this color" : ""}.`;
+      : `Surprise me: any frame published for ${kindArticle} ${kindWord}${pinnedColor ? " in this color" : ""}.`;
 
   return (
     <>
@@ -414,7 +452,7 @@ function AiFillDialogBody({
               {framesOpen ? (
                 <div className="rounded-lg border border-border/60 bg-elevated/20 p-2 sm:max-h-72 sm:overflow-y-auto">
                   <ChipGroup
-                    ariaLabel={`Frames for a ${kindWord}`}
+                    ariaLabel={`Frames for ${kindArticle} ${kindWord}`}
                     keepCase
                     options={frameChips}
                     value={frameValue}
@@ -545,7 +583,7 @@ function AiFillDialogBody({
         {isBillingEnabled() ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-strong">
             <Coins className="h-3.5 w-3.5" aria-hidden />
-            Uses 1 credit
+            {onePicture ? "Uses 1 credit — one picture for both parts" : "Uses 1 credit"}
           </span>
         ) : null}
         <Button

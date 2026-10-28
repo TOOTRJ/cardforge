@@ -71,6 +71,18 @@ import {
 import { frameBrief, frameColorKeysOf, frameFitOf, frameRedoNote } from "@/lib/ai/frame-brief";
 import { frameArtBrief } from "@/lib/ai/frame-art-brief";
 import { isAiDesignKind, type AiDesignKind } from "@/lib/ai/frame-choices";
+import {
+  LAYOUT_TEMPLATE,
+  layoutColorHints,
+  layoutColorKeys,
+  layoutFitOf,
+  layoutFrameBrief,
+  layoutSteerType,
+  mergedSecondPart,
+  type AiLayoutKind,
+  type LayoutFit,
+} from "@/lib/ai/layout-design";
+import { sagaFromRulesText } from "@/lib/cards/face-content";
 import type {
   CardBackFace,
   CardType,
@@ -999,6 +1011,11 @@ export type CreateCardFillJobInput = {
    *  comes back as a kind the dialog can't make (a battle). Absent (an
    *  older client), the fill is what it always was. */
   designKind?: AiDesignKind | "surprise";
+  /** The AI dialog's saga or two-part kind (PR 2): the fill is designed
+   *  for the kind's one frame (lib/ai/layout-design.ts) — its chapter rows
+   *  or its second part with it — and kept there, or refused at plan time.
+   *  Read only with the card type wanted. */
+  layout?: AiLayoutKind;
   /** The theme / style were assembled from the dialog's presets
    *  (lib/ai/presets.ts assemblePrompt): what the painter reads. */
   assembled?: { artStyle?: string; styleArt: string };
@@ -1032,6 +1049,9 @@ export async function createCardFillJob(
 
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
   const wantsType = input.want.includes("card_type");
+  if (input.layout && wantsType) {
+    return createLayoutFillJob(input, input.layout, { userId: user.id, deckContext, deckBrief, verifiedKeys });
+  }
   const wantsColors = input.want.includes("color_identity");
   // Frame-first (the AI dialog's redesign): a kind and a frame picked by
   // name. The design is made FOR the frame and kept on it, or refused.
@@ -1232,10 +1252,21 @@ export async function createCardFillJob(
       .join(" ");
     if (artBrief) plan.art_brief = artBrief;
   }
+  return insertFillJob(user.id, input, deckContext, plan, designed.fields.title ?? input.locked.title ?? "Your card");
+}
+
+/** Write a fill job's row: its plan and its one step. */
+async function insertFillJob(
+  userId: string,
+  input: CreateCardFillJobInput,
+  deckContext: OwnedDeckContext | null,
+  plan: CardFillJobPlan,
+  label: string,
+): Promise<CreateCardJobResult> {
   const steps: JobStep[] = [
     {
       key: "fill:0",
-      label: designed.fields.title ?? input.locked.title ?? "Your card",
+      label,
       status: "pending",
     },
   ];
@@ -1244,7 +1275,7 @@ export async function createCardFillJob(
   const { data: jobRow, error: insertError } = await supabase
     .from("ai_generation_jobs")
     .insert({
-      owner_id: user.id,
+      owner_id: userId,
       kind: "card_fill",
       status: "generating",
       deck_id: deckContext?.deck.id ?? null,
@@ -1265,6 +1296,153 @@ export async function createCardFillJob(
     return { ok: false, error: "Couldn't persist the generation job." };
   }
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
+}
+
+/** A designed field over the pinned one (undefined = not designed). */
+function designedOver<T>(designedValue: T | undefined, lockedValue: T | undefined): T | undefined {
+  return designedValue !== undefined ? designedValue : lockedValue;
+}
+
+/**
+ * PLAN a fill of a saga or a two-part card (the AI dialog, PR 2). The card
+ * is designed for its kind's one frame — the chapter rows, or the second
+ * part with its own name, cost, type line, rules and (a flip side) power /
+ * toughness — and the card AS THE CREATOR WILL HOLD IT (the designed fields
+ * over the pinned ones) must pass every gate the save runs (layoutFitOf: the
+ * rows, the second part, the kind gate, each part's colour, the published
+ * frame). A miss is designed again once with why; a second miss is refused
+ * here with `frame_unfit` — before the job exists, so nothing is reserved.
+ * The price is the one picture's: 1 credit, charged by the step.
+ */
+async function createLayoutFillJob(
+  input: CreateCardFillJobInput,
+  layout: AiLayoutKind,
+  ctx: {
+    userId: string;
+    deckContext: OwnedDeckContext | null;
+    deckBrief: ReturnType<typeof buildDeckBrief> | null;
+    verifiedKeys: ReadonlySet<string>;
+  },
+): Promise<CreateCardJobResult> {
+  const { userId, deckContext, deckBrief, verifiedKeys } = ctx;
+  const unfit = (): CreateCardJobResult => ({ ok: false, error: aiFailureMessage("frame_unfit"), code: "frame_unfit" });
+  const wants = (field: CardFillField) => input.want.includes(field);
+  // A saga keeping its rules text keeps its chapters: with none there is
+  // nothing to design it around — refused before any model call.
+  if (layout === "saga" && !wants("rules_text") && sagaFromRulesText(input.locked.rules_text).chapters.length === 0) {
+    return unfit();
+  }
+  const wantsColors = wants("color_identity");
+  // A free colour is held to the colours the frame is published in.
+  let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
+  if (wantsColors) {
+    const hints = layoutColorHints(layout, verifiedKeys);
+    if (hints.length > 0) colorHint = hints[Math.floor(Math.random() * hints.length)];
+  }
+  const brief = layoutFrameBrief(layout, wantsColors ? layoutColorKeys(layout, verifiedKeys) : undefined);
+
+  await logAiCall(userId, "fill_card");
+  const recent = await recentAiTitles(userId);
+  type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
+  const fitOf = (result: DesignedFill): LayoutFit => {
+    const f = result.fields;
+    return layoutFitOf(
+      layout,
+      {
+        card_type: f.card_type ?? input.locked.card_type ?? "creature",
+        supertype: designedOver(f.supertype, input.locked.supertype),
+        subtypes: f.subtypes ?? input.locked.subtypes,
+        title: f.title ?? input.locked.title,
+        cost: designedOver(f.cost, input.locked.cost),
+        rules_text: f.rules_text ?? input.locked.rules_text,
+        color_identity: f.color_identity ?? input.locked.color_identity ?? [],
+        power: designedOver(f.power, input.locked.power),
+        toughness: designedOver(f.toughness, input.locked.toughness),
+        second_part: mergedSecondPart(layout, result.second_part, input.want, input.locked.back_face),
+      },
+      verifiedKeys,
+    );
+  };
+  let designs = 0;
+  let redoNote: string | null = null;
+  let designed: DesignedFill;
+  try {
+    designed = await designFreshly(
+      recent,
+      (variety) => {
+        designs += 1;
+        return designCardFill({
+          want: input.want,
+          locked: input.locked,
+          steer: { ...input.steer, card_type: layoutSteerType(layout) },
+          theme: input.theme,
+          style: input.style,
+          context: deckBrief?.context,
+          colorHint,
+          variety,
+          frameBrief: designs > 1 && redoNote ? `${brief} ${redoNote}` : brief,
+          layout,
+          ...(input.assembled ? { assembled: true } : {}),
+        });
+      },
+      (result) => (wants("title") ? result.fields.title : null),
+      {
+        acceptable: (result) => {
+          const fit = fitOf(result);
+          if (!fit.ok && designs === 1) {
+            redoNote = `YOUR LAST DESIGN COULD NOT BE PUT ON THIS FRAME: ${fit.reason ?? "it broke a frame rule."} This time follow every frame rule above exactly.`;
+          }
+          return fit.ok;
+        },
+        secondFits: planRedesignFits,
+      },
+    );
+  } catch (error) {
+    if (error instanceof DesignNotUsableError) {
+      console.warn(`[ai:design] card_fill didn't fit ${LAYOUT_TEMPLATE[layout]} twice`);
+      return unfit();
+    }
+    return planDesignFailure(error, "card_fill");
+  }
+
+  const fit = fitOf(designed);
+  const fields: CardFillResult = { ...designed.fields };
+  // Each part in its own colour (TODO 4.26) — on where both parts' colours
+  // are verified on the frame, else off (the whole colour; never a save the
+  // gate refuses). The card's colour_identity stays the WHOLE card's (M2).
+  if (fit.partColour.on !== undefined) {
+    fields.part_color = fit.partColour.on;
+    if (fit.partColour.first) fields.first_part_color = fit.partColour.first;
+    fields.back_face = { ...(fields.back_face ?? {}), color_identity: fit.partColour.second ?? [] };
+  }
+  const template = LAYOUT_TEMPLATE[layout];
+  const plan: CardFillJobPlan = {
+    want: input.want,
+    fields,
+    art_prompt: designed.art_prompt,
+    style: (input.assembled ? input.assembled.artStyle : input.style)?.trim() || null,
+    frame_template: template,
+    ...(wants("art")
+      ? {
+          art_face: {
+            template,
+            color_identity: fields.color_identity ?? input.locked.color_identity ?? [],
+            card_type: fields.card_type ?? input.locked.card_type ?? null,
+            supertype: (fields.supertype !== undefined ? fields.supertype : input.locked.supertype) ?? null,
+            cost: (fields.cost !== undefined ? fields.cost : input.locked.cost) ?? null,
+          },
+        }
+      : {}),
+    deck_id: deckContext?.deck.id ?? null,
+  };
+  if (wants("art")) {
+    const artBrief = [input.assembled?.styleArt ?? "", frameArtBrief(template)].filter(Boolean).join(" ");
+    if (artBrief) plan.art_brief = artBrief;
+  }
+  const label = [fields.title ?? input.locked.title, fields.back_face?.title ?? input.locked.back_face?.title]
+    .filter(Boolean)
+    .join(" // ");
+  return insertFillJob(userId, input, deckContext, plan, label || "Your card");
 }
 
 /** The fill job's single step: paint the art when it was wanted, then hand

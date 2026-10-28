@@ -73,6 +73,7 @@ import {
   type AiFillOptions,
 } from "@/components/creator/ai-fill-dialog";
 import { aiDialogColorKey } from "@/lib/ai/frame-choices";
+import { isAiLayoutKind } from "@/lib/ai/layout-design";
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
@@ -3208,6 +3209,9 @@ export function CardCreatorForm({
   const lockedFieldsFor = (
     values: FormValues,
     want: readonly CardFillField[],
+    /** The dialog's kind: a saga or two-part kind the card already IS
+     *  pins its second part's kept fields (PR 2). */
+    designKind?: string,
   ): CardFillLocked => {
     const has = (f: CardFillField) => want.includes(f);
     const str = (v: string) => (v.trim() ? v.trim() : undefined);
@@ -3251,6 +3255,21 @@ export function CardCreatorForm({
       loyalty: has("stats") || !statVis.loyalty ? undefined : str(values.loyalty),
       defense: has("stats") || !statVis.defense ? undefined : str(values.defense),
       tags: has("tags") ? undefined : parseTags(values.tags_text),
+      // The second part the maker keeps — only on a card already of the
+      // two-part kind asked for (the AI dialog, PR 2); absent otherwise, so
+      // every other fill's request is what it was.
+      ...(() => {
+        if (!isAiLayoutKind(designKind) || designKind === "saga" || kindNow !== designKind || !values.has_back_face) return {};
+        const back = values.back_face;
+        const kept = {
+          title: has("title") ? undefined : str(back.title),
+          cost: has("cost") ? undefined : str(back.cost),
+          rules_text: has("rules_text") ? undefined : str(back.rules_text),
+          power: has("stats") ? undefined : str(back.power),
+          toughness: has("stats") ? undefined : str(back.toughness),
+        };
+        return Object.values(kept).some((value) => value !== undefined) ? { back_face: kept } : {};
+      })(),
     };
   };
 
@@ -3267,8 +3286,14 @@ export function CardCreatorForm({
     // The job picked the frame for the text it wrote (resolveGeneratedFrame:
     // a token's text box included) — that frame stands, below.
     let filledFrame = false;
-    if (fill.card_type && !isRevise) {
-      applyKindProgrammatic(kindFromCard(fill.card_type, undefined));
+    // The kind the fill made: the card type's — or a saga / two-part kind,
+    // whose frame IS the kind (the AI dialog, PR 2; a one-faced fill's
+    // frame is never a layout frame, so its kind is its card type's).
+    const fillKind = fill.card_type
+      ? kindFromCard(fill.card_type, fill.back_face || fill.frame_template === "saga" ? fill.frame_template : undefined)
+      : null;
+    if (fill.card_type && fillKind && !isRevise) {
+      applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) ? fill.card_type : undefined);
       if (fill.frame_template) {
         // The colour the card is about to TAKE (the fill's own, set just
         // below) — never the form's colour before it: a frame the server
@@ -3279,7 +3304,7 @@ export function CardCreatorForm({
           fill.color_identity && !isRevise ? fill.color_identity : getValues("color_identity"),
         ) as FrameColorKey;
         const resolution = resolvePublishedFrame({
-          kind: kindFromCard(fill.card_type, undefined),
+          kind: fillKind,
           candidates: [fill.frame_template as FrameTemplate],
           colorKey,
           verifiedKeys: new Set(verifiedFrameKeys),
@@ -3359,6 +3384,32 @@ export function CardCreatorForm({
     if (fill.deck_id && mode === "create") {
       setValue("deck_id", fill.deck_id, { shouldDirty: true });
     }
+    // A two-part card's second part (the AI dialog, PR 2): into the same
+    // `back_face.*` paths the creator's own fields write, as print sets it
+    // (TODO 6.11) — only the keys the fill holds.
+    if (fill.back_face) {
+      const back = fill.back_face;
+      setValue("has_back_face", true, { shouldDirty: true });
+      if (back.title !== undefined) setValue("back_face.title", printTypography(back.title, "name"), { shouldDirty: true });
+      if (back.cost !== undefined) setValue("back_face.cost", back.cost, { shouldDirty: true });
+      if (back.card_type !== undefined) {
+        setValue("back_face.card_type", back.card_type, { shouldDirty: true });
+        setValue("back_face.printed_types", null, { shouldDirty: true });
+        setValue("back_face.supertype", printTypography(back.supertype ?? "", "type"), { shouldDirty: true });
+        setValue("back_face.subtypes_text", printTypography((back.subtypes ?? []).join(", "), "type"), { shouldDirty: true });
+      }
+      if (back.rules_text !== undefined) setValue("back_face.rules_text", printTypography(back.rules_text, "rules"), { shouldDirty: true });
+      if (back.power !== undefined) setValue("back_face.power", back.power ?? "", { shouldDirty: true });
+      if (back.toughness !== undefined) setValue("back_face.toughness", back.toughness ?? "", { shouldDirty: true });
+      if (back.color_identity !== undefined) setValue("back_face.color_identity", back.color_identity, { shouldDirty: true });
+    }
+    // Each part in its own colour (TODO 4.26): the switch the plan judged —
+    // on where both parts are verified, off where they are not — and a
+    // split / aftermath first half's own colour (M2).
+    if (fill.part_color !== undefined && !isRevise) {
+      setValue("frame_style.partColor", fill.part_color, { shouldDirty: true });
+      setValue("frame_style.firstPartColor", fill.first_part_color, { shouldDirty: true });
+    }
     if (filledFrame) settleTokenTextFollow();
   };
 
@@ -3377,7 +3428,10 @@ export function CardCreatorForm({
         cost: 1,
         title: "Generate with AI?",
         description: wantsArt
-          ? "Writes the ticked fields into this card and paints its artwork. Nothing is saved until you click Save."
+          ? options.design_kind && isAiLayoutKind(options.design_kind) && options.design_kind !== "saga"
+            ? // A two-part card is ONE picture, one credit (PR 2).
+              "Writes the ticked fields into both parts of this card and paints its one picture. Nothing is saved until you click Save."
+            : "Writes the ticked fields into this card and paints its artwork. Nothing is saved until you click Save."
           : "Writes the ticked fields into this card. Nothing is saved until you click Save.",
       }))
     ) {
@@ -3395,7 +3449,7 @@ export function CardCreatorForm({
         body: JSON.stringify({
           kind: "card_fill",
           want: options.want,
-          locked: lockedFieldsFor(getValues(), options.want),
+          locked: lockedFieldsFor(getValues(), options.want, options.design_kind),
           steer: { card_type: options.card_type, rarity: options.rarity },
           theme_preset: options.theme_preset,
           theme_twist: options.theme_twist,

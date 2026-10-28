@@ -24,6 +24,17 @@ import {
 } from "@/lib/ai/station-design";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { varietyPromptLines, type DesignVariety } from "@/lib/ai/design-variety";
+import {
+  autofixLayoutFront,
+  autofixLayoutParts,
+  layoutDesignPart,
+  lintLayoutDesign,
+  normalizeLayoutDesign,
+  sagaDesignSchema,
+  secondPartDesignSchema,
+  type AiLayoutKind,
+  type LayoutDesignFields,
+} from "@/lib/ai/layout-design";
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
@@ -131,14 +142,25 @@ const freshDesignedCardSchema = designedCardSchema.extend({
   card_type: z.enum(DESIGNABLE_CARD_TYPES),
 });
 
-export type DesignedCard = z.infer<typeof designedCardSchema>;
+/** A design — and, for a saga or a two-part card (lib/ai/layout-design.ts),
+ *  its chapter rows or its second part. */
+export type DesignedCard = z.infer<typeof designedCardSchema> & LayoutDesignFields;
 
 /** The `cards` object a design or repair call asks for: an emblem only when
- *  `allowEmblem` (a slot pinned one, or the card under repair is one). */
-export function designedCardsSchema(allowEmblem: boolean) {
+ *  `allowEmblem` (a slot pinned one, or the card under repair is one); a
+ *  saga's rows or a second part only for a slot of that layout (PR 2 of the
+ *  AI dialog) — every other call asks for the one-faced card it always
+ *  did. */
+export function designedCardsSchema(allowEmblem: boolean, layout?: AiLayoutKind | null) {
+  const base = allowEmblem ? designedCardSchema : freshDesignedCardSchema;
+  const card = !layout
+    ? base
+    : layoutDesignPart(layout) === "saga"
+      ? base.extend({ saga: sagaDesignSchema.nullable() })
+      : base.extend({ second_part: secondPartDesignSchema.nullable() });
   return z
     .object({
-      cards: z.array(allowEmblem ? designedCardSchema : freshDesignedCardSchema).min(1),
+      cards: z.array(card).min(1),
     })
     .strict();
 }
@@ -177,13 +199,13 @@ export function fixupDesignedCards(root: unknown): unknown {
 export const DESIGN_STAT_FIELDS: ReadonlySet<string> = new Set(["power", "toughness", "loyalty", "defense"]);
 
 /** The repair for a design / judge answer. */
-export function designRepair(allowEmblem: boolean) {
+export function designRepair(allowEmblem: boolean, layout?: AiLayoutKind | null) {
   // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
   // cost (and the autofix then read it as colourless).
   // A missing STAT is never nulled: the autofix fills a creature's null
   // power / toughness (a planeswalker's loyalty, a battle's defense) with
   // numbers the model never wrote — asked for again instead.
-  return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards, {
+  return repairStructuredText(designedCardsSchema(allowEmblem, layout), fixupDesignedCards, {
     keepWhole: (path) => path[path.length - 1] === "cost",
     neverNull: (path) => DESIGN_STAT_FIELDS.has(String(path[path.length - 1])),
   });
@@ -233,7 +255,26 @@ export type DesignSlot = {
    *  a type with no published frame yet (a battle today) lands on a frame
    *  the creator can't save. */
   avoidTypes?: readonly CardType[];
+  /** A saga or a two-part card (lib/ai/layout-design.ts): the design also
+   *  writes its chapter rows or its second part, and is linted, judged and
+   *  repaired for them. The slot's note carries the shape
+   *  (layoutFrameBrief). Absent on every other slot. */
+  layout?: AiLayoutKind;
 };
+
+/** The lint of one design: the one-faced rules, and its layout's. */
+function lintDesign(card: DesignedCard, layout: AiLayoutKind | undefined) {
+  const lint = lintCardDesign(card);
+  if (!layout) return lint;
+  const own = lintLayoutDesign(card, layout);
+  return { errors: [...lint.errors, ...own.errors], warnings: [...lint.warnings, ...own.warnings] };
+}
+
+/** The last-resort repair of one design, its layout's fields included. */
+function autofixDesign(card: DesignedCard, layout: AiLayoutKind | undefined): DesignedCard {
+  if (!layout) return autofixCard(card);
+  return autofixLayoutParts(autofixCard(autofixLayoutFront(card, layout)), layout);
+}
 
 // ---------------------------------------------------------------------------
 // Prompts
@@ -326,8 +367,13 @@ export function batchPrompt(input: DesignBatchInput): string {
 
 const JUDGE_SYSTEM = `You are the rules editor for a Magic: The Gathering-style card designer. You receive drafted cards plus lint findings. Fix every ERROR exactly (mana-cost grammar, stat slots per card type, color identity). Address WARNINGS with the lightest possible touch: adjust a cost or stat line for balance flags, modernize templating, add reminder text to unknown keywords — keep each card's concept, name, and feel intact. ${STATION_JUDGE_RULE} Return the corrected cards in the SAME order, complete (every field, changed or not).`;
 
+/** What the judge is told about a saga's rows or a second part. */
+const LAYOUT_JUDGE_RULE =
+  "A card with `saga` keeps its chapter rows (numbers I, II, III… in order) and rules_text the same chapters as lines; a card with `second_part` keeps it complete — fix its shape the same way as the first part's.";
+
 async function judgeRepair(
   flawed: Array<{ card: DesignedCard; issues: LintIssue[] }>,
+  layout?: AiLayoutKind,
 ): Promise<DesignedCard[] | null> {
   const prompt = flawed
     .map(({ card, issues }, index) =>
@@ -344,12 +390,12 @@ async function judgeRepair(
     // Best-effort: one call (repaired where a machine can), never a second.
     const { object } = await structuredCall(
       "card-design/judge",
-      designRepair(allowEmblem),
+      designRepair(allowEmblem, layout),
       (experimental_repairText) =>
         generateObject({
           model: judgeModel(),
-          schema: designedCardsSchema(allowEmblem),
-          system: JUDGE_SYSTEM,
+          schema: designedCardsSchema(allowEmblem, layout),
+          system: layout ? `${JUDGE_SYSTEM} ${LAYOUT_JUDGE_RULE}` : JUDGE_SYSTEM,
           prompt,
           temperature: 0.2,
           experimental_repairText,
@@ -357,7 +403,7 @@ async function judgeRepair(
       { attempts: 1 },
     );
     if (object.cards.length !== flawed.length) return null;
-    return object.cards;
+    return object.cards as DesignedCard[];
   } catch {
     // Judge is best-effort — autofix below still guarantees shape validity.
     return null;
@@ -439,13 +485,17 @@ export async function designCards(
 
 async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> {
   const allowEmblem = input.slots.some((slot) => slot.cardType === "emblem");
+  // A saga or a two-part card (one layout per call: the fills design one
+  // card). Every other chunk asks for what it always did.
+  const layout = input.slots.find((slot) => slot.layout)?.layout;
+  const layoutOf = (index: number) => input.slots[index]?.layout;
   // An answer outside the schema is repaired where a machine can, else the
   // design is asked for once more (lib/ai/structured-output.ts); a second
   // miss throws AiOutputError, whose message is the client's.
-  const { object } = await structuredCall("card-design/design", designRepair(allowEmblem), (experimental_repairText) =>
+  const { object } = await structuredCall("card-design/design", designRepair(allowEmblem, layout), (experimental_repairText) =>
     generateObject({
       model: designModel(),
-      schema: designedCardsSchema(allowEmblem),
+      schema: designedCardsSchema(allowEmblem, layout),
       system: SYSTEM_PROMPT,
       prompt: batchPrompt(input),
       temperature: 0.9,
@@ -454,10 +504,13 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   );
 
   // Trim/pad drift: the model occasionally overshoots the requested count.
-  let cards = object.cards.slice(0, input.slots.length);
+  // (A saga's rules text is its rows: written from them before the lint.)
+  let cards = (object.cards as DesignedCard[])
+    .slice(0, input.slots.length)
+    .map((card, index) => normalizeLayoutDesign(card, layoutOf(index)));
 
   // ---- Lint ----
-  let lints = cards.map((card) => lintCardDesign(card));
+  let lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
   const flawedIndexes = lints
     .map((lint, index) => ({ lint, index }))
     .filter(({ lint }) => lint.errors.length > 0 || lint.warnings.length > 0)
@@ -472,13 +525,14 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
         card: cards[index],
         issues: [...lints[index].errors, ...lints[index].warnings],
       })),
+      layout,
     );
     if (repaired) {
       cards = cards.map((card, index) => {
         const repairIndex = flawedIndexes.indexOf(index);
-        return repairIndex === -1 ? card : repaired[repairIndex];
+        return repairIndex === -1 ? card : normalizeLayoutDesign(repaired[repairIndex]!, layoutOf(index));
       });
-      lints = cards.map((card) => lintCardDesign(card));
+      lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
     }
   }
 
@@ -487,10 +541,10 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   cards = cards.map((card, index) => {
     if (lints[index].errors.length === 0) return card;
     autofixed.push(index);
-    return autofixCard(card);
+    return autofixDesign(card, layoutOf(index));
   });
 
-  const finalLints = cards.map((card) => lintCardDesign(card));
+  const finalLints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
   return {
     cards,
     report: {
