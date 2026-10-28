@@ -114,6 +114,8 @@ describe("the switch values", () => {
       "bloomanime",
       // …and the D&D Sourcebook (TODO 4.11 wave 2): its run's rows.
       "dndsourcebook",
+      // …and the MKM dossier (TODO 4.11 wave 2): its run's rows.
+      "dossier",
     ]);
   });
 });

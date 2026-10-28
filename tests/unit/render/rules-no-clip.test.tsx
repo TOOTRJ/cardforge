@@ -334,6 +334,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // rounded foot (1877.5 px) — it holds the level-up card, not 1,200
       // characters.
       "dndsourcebook/main",
+      // 4.11 wave 2's MKM dossier: M15's box (a new template).
+      "dossier/main",
     ],
     ["1200 chars"],
   ],

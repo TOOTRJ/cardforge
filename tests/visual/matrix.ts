@@ -1353,6 +1353,11 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // creature on the artifact master and plate (no print has one).
   ["lotr", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
+  // TODO 4.11 wave 2: the MKM dossier's tag at its widest, and a colourless
+  // artifact creature on the pack's slate artifact master (MKM #376
+  // Magnetic Snuffler).
+  ["dossier", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["dossier", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Construct"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the D&D Sourcebook's plate at its widest, and a
@@ -2038,6 +2043,12 @@ export function visualCases(): VisualCase[] {
   add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
   add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
+  // TODO 4.11 wave 2: the MKM dossier's OVAL notch — none on an uncommon
+  // (MKM prints it on a rare or mythic only), a gold legend's (MKM #368
+  // Niv-Mizzet: the gold key's piece), the HD bake.
+  add("dossier", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dossier", "auto", { rarity: "uncommon" }) });
+  add("dossier", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dossier", "auto", { rarity: "rare" }) });
+  add("dossier", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dossier", "auto", { rarity: "mythic" }) });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
   // see-through colourless frame and the artifact's silver, a crowned
@@ -2480,6 +2491,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomanime",
   // …and the D&D Sourcebook's oval (TODO 4.11 wave 2: the pack's one piece).
   "dndsourcebook",
+  // …and the MKM dossier's oval (TODO 4.11 wave 2: the pack's one piece).
+  "dossier",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2490,6 +2503,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
   "m15borderless", "m15borderlessartifact", "m15borderlessland",
+  // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
+  // one notch piece (a pair draws m's).
+  "dossier",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -2940,6 +2956,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
   "prepare",
+  // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
+  // across print's ramp, and its crown's pairs.
+  "dossier",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

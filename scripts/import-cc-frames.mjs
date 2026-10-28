@@ -1225,6 +1225,10 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
         `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        ...(def.clearAboveY !== undefined ? [`the rows above card row ${def.clearAboveY} cleared (the master's own page shows there)`] : []),
+        ...(def.blackoutCapturePx !== undefined
+          ? [`the pack's capture (luma > ${def.capture.minLuma} in box x ${def.capture.x0}–${def.capture.x1}, rows ${def.capture.y0}–${def.capture.y1}) painted opaque black, grown ${def.blackoutCapturePx} px`]
+          : []),
         `${cutWords}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
       ];
       if (dryRun) {
@@ -1235,15 +1239,30 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // the hole's ring (TODO 4.11: the ring's triangle sits 8–10 px higher
       // than the printed stamp) — then the hole cut and its ring blacked.
       const placedPiece = await placeAndCut(def.pieces[key]);
+      // A piece whose top rows are the master's own page (TODO 4.11 wave 2:
+      // the MKM dossier's parchment above its arch, within 3 levels of the
+      // masters') drops them, card rows above `clearAboveY`: the
+      // downscale's ringing at the piece's top edge drew a light line there.
+      if (def.clearAboveY !== undefined) placedPiece.fill(0, 0, Math.max(0, def.clearAboveY - box.y) * box.width * 4);
       if (def.blackoutStampGrowPx !== undefined) blackoutStampShape(placedPiece, stamp, box.width, box.height, def.blackoutStampGrowPx);
       // A capture painted in the piece itself (TODO 4.11: the MUL Tarkir
       // well) is read off the placed piece before the cut: held inside it.
       const captured = def.capture ? capturePlane(placedPiece, box.width, box.height, def.capture) : null;
+      // A capture painted where print sets no hologram (TODO 4.11 wave 2:
+      // the MKM dossier's, 5–7 px below the prints' oval) is blacked out
+      // whole first, grown `blackoutCapturePx` — the well is black round
+      // the hologram on print — and the prints' oval cut after.
+      const captureBlacked = def.blackoutCapturePx !== undefined;
+      if (captureBlacked) {
+        if (!captured) throw new Error(`${folder}: blackoutCapturePx needs a capture box`);
+        blackoutStampShape(placedPiece, captured, box.width, box.height, def.blackoutCapturePx);
+      }
       const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx);
       // With the shape blacked out, the hologram check is the shape's own
       // (every pixel of it black or clear), not "nothing outside the ring".
-      const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined ? null : (captured ?? stamp));
+      const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined || captureBlacked ? null : (captured ?? stamp));
       if (def.blackoutStampGrowPx !== undefined) findings.failures.push(...stampShapeBlackFindings(piece, stamp, box.width, box.height).failures);
+      if (captureBlacked) findings.failures.push(...stampShapeBlackFindings(piece, captured, box.width, box.height).failures);
       for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });
