@@ -34,9 +34,11 @@ export function GlyphCoverageNotice({
 }) {
   const fields = useMemo(() => findUnrenderableText(cardGlyphFields(values)), [values]);
   if (fields.length === 0) return null;
+  // Not a live region: a box mounted WITH its content is not reliably heard,
+  // and as one it re-read the whole list at every keystroke. The creator's
+  // one polite region says it (`GlyphNoticeAnnouncer`, TODO 6.7).
   return (
     <div
-      role="status"
       data-testid="glyph-coverage-notice"
       className={cn(
         "flex items-start gap-3 rounded-lg border border-gold/50 bg-gold/10 px-4 py-3 text-sm text-foreground",
@@ -93,9 +95,9 @@ export function UndrawableSymbolNotice({
     [values, overrides],
   );
   if (fields.length === 0) return null;
+  // Said by `GlyphNoticeAnnouncer`, as the notice above.
   return (
     <div
-      role="status"
       data-testid="undrawable-symbol-notice"
       className={cn(
         "flex items-start gap-3 rounded-lg border border-gold/50 bg-gold/10 px-4 py-3 text-sm text-foreground",
@@ -119,5 +121,48 @@ export function UndrawableSymbolNotice({
         </p>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// GlyphNoticeAnnouncer — the ONE polite live region that says the two notices
+// above to a screen reader (TODO 6.7). Always mounted (a region that appears
+// with its words in it is often not heard), visually hidden, and its words
+// change only when WHICH fields a notice names changes — never at every
+// keystroke inside a field already named, never an alert, never a second
+// announcement per field.
+// ---------------------------------------------------------------------------
+
+/** The sentence the region holds: the notices' headings and the fields
+ *  they name; "" when the card draws everything. */
+export function glyphNoticeAnnouncement(
+  values: GlyphCheckValues,
+  overrides?: PipOverrides | null,
+): string {
+  const characters = findUnrenderableText(cardGlyphFields(values)).map((field) => field.label);
+  const symbols = findUndrawableSymbols(cardSymbolFields(values), {
+    symbols: cardSymbolStyle(values),
+    overrides,
+  }).map((field) => field.label);
+  const lines: string[] = [];
+  if (characters.length > 0) {
+    lines.push(`Some characters may not show on the card image: ${characters.join(", ")}.`);
+  }
+  if (symbols.length > 0) lines.push(`Some symbols can't be drawn on the card: ${symbols.join(", ")}.`);
+  return lines.join(" ");
+}
+
+export function GlyphNoticeAnnouncer({
+  values,
+  overrides,
+}: {
+  values: GlyphCheckValues;
+  overrides?: PipOverrides | null;
+}) {
+  const message = useMemo(() => glyphNoticeAnnouncement(values, overrides), [values, overrides]);
+  return (
+    <p role="status" aria-live="polite" className="sr-only" data-testid="glyph-notice-announcer">
+      {message}
+    </p>
   );
 }

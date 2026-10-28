@@ -136,11 +136,69 @@ export const DELINQUENT_SUBSCRIPTION_STATUSES: ReadonlySet<string> = new Set([
   "incomplete",
 ]);
 
+// ---------------------------------------------------------------------------
+// The download and print perks AS BUILT (TODO 6.26) — the ONE source the
+// plan cards (/pricing, /dashboard/billing) and the upgrade modal's export
+// reasons say them from; the FAQ (lib/content/faq.ts, "Exports & printing")
+// says the same in longer prose, and tests/unit/billing/print-perks-copy.test.ts
+// holds every surface to PRINT_PERK_FACTS. Each line is a gate that exists:
+//   Plus (a paid viewer — isPaid / removeWatermark / maxExportPreset "hd"):
+//     the clean 1500 × 2100 PNG or JPEG (app/api/cards/[id]/png), the print
+//     files — 800 ppi (PRINT_800_PPI_PAID_ONLY), the 1/8″ bleed and the
+//     MakePlayingCards file (lib/cards/print-export.ts) — and the one-card
+//     PDF at true size, with or without the bleed (app/api/cards/[id]/pdf).
+//   Pro (allowBatchExport): sheets — a card's "Sheet of copies" (the pdf
+//     route's sheet layouts), any cards picked in My Cards (POST
+//     /api/cards/export) and a deck (app/api/decks/[id]/download) — on US
+//     Letter or A4 with the shared options (components/cards/
+//     print-sheet-options.tsx: gap, cut guides, 63 × 88 mm, the bleed), and
+//     the ZIPs of card images (HD, standard, MakePlayingCards) with a deck's
+//     report.
+// Copy only: never a price, a limit or an entitlement.
+// ---------------------------------------------------------------------------
+
+/** Plus's download and print lines, as the plan card lists them. */
+export const PLUS_PRINT_PERKS: readonly string[] = [
+  "Watermark-free downloads — 1500 × 2100 PNG or JPEG",
+  "Print files: 800 ppi, a 1/8″ bleed, or sized for MakePlayingCards",
+  "Print-ready PDF of one card at true size, with or without the bleed",
+];
+
+/** Pro's, on top of Plus's. */
+export const PRO_PRINT_PERKS: readonly string[] = [
+  "Print sheets of any cards you pick — US Letter or A4, gaps, cut guides, 63 × 88 mm, bleed",
+  "Whole-deck & batch export: print PDFs and image ZIPs (MakePlayingCards too)",
+];
+
+/** The same perks as the upgrade modal's sentences, per reason. */
+export const PRINT_PERK_COPY = {
+  /** Asked for a clean image (the download modal's "Remove the mark"). */
+  clean:
+    "Plus and Pro download every card without the PipGlyph mark: a 1500 × 2100 PNG or JPEG, and print files at 800 ppi, with a 1/8″ bleed or sized for MakePlayingCards. The free watermarked image is always available.",
+  /** Asked for a PDF. */
+  pdf: "A print-ready PDF of one card at true size (2.5″ × 3.5″), with or without a 1/8″ bleed and crop marks, is a Plus feature. Pro adds print sheets.",
+  /** Asked for sheets or a selection export. */
+  sheets:
+    "Pro prints any cards you pick onto US Letter or A4 sheets — mixed, with your own copies, gaps, cut guides, 63 × 88 mm cards and the 1/8″ bleed — and exports a whole deck or selection as print PDFs and image ZIPs, MakePlayingCards files included.",
+} as const;
+
+/** The facts each tier's print copy states — every surface that sells the
+ *  print features names each of them (the copy test). */
+export const PRINT_PERK_FACTS: Record<PaidTier, readonly RegExp[]> = {
+  plus: [/1500 × 2100/, /800 ppi/, /1\/8/, /MakePlayingCards/, /PDF/],
+  pro: [/sheet/i, /Letter/, /A4/, /63 × 88 mm/, /cut/i, /ZIP/],
+};
+
+/** The coming-soon print-and-ship service (owner 2026-10-28): PipGlyph prints
+ *  the cards and mails them. Worded so nobody takes it for the print EXPORTS
+ *  above, which exist; never a date or a price. */
+export const PRINTED_CARDS_COMING_SOON = "Printed cards, shipped to you";
+
 // Perks in development that paid tiers will get at no extra cost. Shared by
 // both paid tiers so the storefront can't drift.
 const PAID_COMING_SOON = [
   "Premium custom frames",
-  "Card printing",
+  PRINTED_CARDS_COMING_SOON,
 ];
 // Pro-only teasers (owner, 2026-09-15): the deck-building layer on top of
 // today's deck-aware card design — still a tease, never sold as live.
@@ -172,9 +230,7 @@ export const PLANS: PlanDisplay[] = [
     featured: true,
     features: [
       "30 AI credits every month",
-      "Watermark-free downloads",
-      "High-resolution (1500×2100) PNG",
-      "Print-ready PDF export",
+      ...PLUS_PRINT_PERKS,
       "Up to 500 saved cards",
       "Everything in Free",
     ],
@@ -193,7 +249,7 @@ export const PLANS: PlanDisplay[] = [
     features: [
       "100 AI credits every month — a full Commander deck",
       "AI cards & ideas designed for a specific deck",
-      "Batch & whole-deck export, 3×3 print sheets",
+      ...PRO_PRINT_PERKS,
       "Unlimited saved cards",
       "Everything in Plus",
     ],

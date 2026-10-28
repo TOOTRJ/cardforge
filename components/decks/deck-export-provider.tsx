@@ -43,7 +43,11 @@ import {
 // right, above the generation card when both are up) that is safe to
 // ignore, clickable for stats + time left, with cancel; a toast + auto-save
 // when the file is ready, and a "Save file" fallback in case the browser
-// blocked the automatic download. One export at a time.
+// blocked the automatic download. One export at a time. Each phase is
+// announced ONCE (TODO 6.30): the start by one persistent polite live
+// region (there is no start toast), the finish — ready with the skipped
+// count, failed, cancelled — by its toast alone (Sonner's toaster is a live
+// region of its own), the region falling silent then.
 //
 // It also runs My Cards' "Print / download selected" (TODO 6.15): a
 // CardsExportRequest goes through runCardsExport with the same card, toasts
@@ -99,6 +103,34 @@ function inSentence(label: string): string {
   return label.charAt(0).toLowerCase() + label.slice(1);
 }
 
+/** What the live region says (TODO 6.30): ONLY what no toast says — the
+ *  start (there is no start toast), with the label the progress card shows
+ *  and that a big export can take a few minutes. The finish — ready, failed,
+ *  cancelled — is a toast's alone (Sonner's toaster is a live region of its
+ *  own), so the region falls silent then: each phase is announced once. */
+export function exportAnnouncement(state: DeckExportState | null, label: string): string {
+  if (!state) return "";
+  switch (state.status) {
+    case "preparing":
+    case "rendering":
+    case "packaging":
+      return `${label}. Every card is drawn live at full resolution, so a big export can take a few minutes.`;
+    default:
+      return "";
+  }
+}
+
+/** The ready toast's description: the skipped count when any card was left
+ *  out, and where to look — the toast is that phase's one announcement. */
+export function readyToastDescription(skipped: number): string {
+  return [
+    skipped > 0 ? `${skipped} card${skipped === 1 ? " was" : "s were"} skipped.` : null,
+    "Check your downloads. If nothing appeared, use Save file on the progress card.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function saveBlobUrl(url: string, name: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -138,7 +170,6 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
       abortRef.current = controller;
       const id = Date.now();
       const subject: ExportSubject = isCardsExportRequest(request) ? "cards" : "deck";
-      const file = fileLabel(request.kind, subject);
       setDismissed(false);
       setState({
         id,
@@ -155,11 +186,9 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
         error: null,
         file: null,
       });
-      toast.message(`Building your ${inSentence(file)} in the background`, {
-        description:
-          `Every card renders clean at full resolution, so a big ${subject === "deck" ? "deck" : "selection"} can take a few minutes. Keep browsing — we'll let you know when it's ready.`,
-        duration: 8000,
-      });
+      const file = fileLabel(request.kind, subject);
+      // (No start toast: the start is said by the live region below, once —
+      // TODO 6.30. The finish is the toasts' alone.)
 
       const onProgress = (progress: DeckExportProgress) => {
         setState((prev) => {
@@ -194,16 +223,16 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
                   status: "done",
                   deckTitle: result.title,
                   finishedAt: Date.now(),
+                  // Every card left out: the manifest's skipped ones too.
+                  failed: result.failed,
                   file: { url, name: result.filename, bytes: result.blob.size, cards: result.cardsIncluded },
                 }
               : prev,
           );
           saveBlobUrl(url, result.filename);
+          // The ready phase's ONE announcement (the region is silent now).
           toast.success(`${result.title} — ${inSentence(file)} ready`, {
-            description:
-              result.failed.length > 0
-                ? `${result.failed.length} card${result.failed.length === 1 ? "" : "s"} couldn't render and ${result.failed.length === 1 ? "was" : "were"} skipped. Check your downloads.`
-                : "Check your downloads. If nothing appeared, use Save file on the progress card.",
+            description: readyToastDescription(result.failed.length),
             duration: 10000,
           });
         })
@@ -215,6 +244,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
               ? { ...prev, status: cancelled ? "cancelled" : "failed", finishedAt: Date.now(), error: cancelled ? null : message }
               : prev,
           );
+          // The failed / cancelled phase's ONE announcement.
           if (cancelled) {
             toast.message("Export cancelled.");
             return;
@@ -258,14 +288,21 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
     <DeckExportContext.Provider value={value}>
       {children}
 
+      {/* The export's persistent polite live region (TODO 6.30): always
+          mounted, so its first message is heard. It says ONLY what no toast
+          says — the start, with how long it can take — and never each
+          card's tick, as the whole progress card did when it was the
+          region; the finish is the toasts'. */}
+      <p role="status" aria-live="polite" className="sr-only" data-testid="export-status">
+        {exportAnnouncement(state, label)}
+      </p>
+
       {showWidget && state ? (
         <div
           className={cn(
             "fixed right-4 z-50 w-80 rounded-xl border border-border bg-surface/95 shadow-xl backdrop-blur transition-[bottom]",
             generationActive ? "bottom-[17.5rem] sm:bottom-[18.5rem]" : "bottom-24 sm:bottom-28",
           )}
-          role="status"
-          aria-live="polite"
         >
           <button
             type="button"

@@ -21,6 +21,7 @@
 // ---------------------------------------------------------------------------
 
 import { BAKE_SELECT_COLUMNS } from "@/lib/cards/bake-core";
+import type { ScopeCard } from "@/lib/cards/layout-version";
 
 /** The bake's columns a database may not have yet, newest last. */
 const LATE_COLUMNS = ["printed_types", "nickname"] as const;
@@ -68,4 +69,56 @@ export async function selectBakeColumns<R extends { error: { code?: string | nul
     dropped.push(missing);
     result = await run(columnsWithout(dropped));
   }
+}
+
+// ---------------------------------------------------------------------------
+// The SCOPE readers' columns: the scans that judge stored bakes against the
+// card-scoped bumps (VERSION_SCOPES in lib/cards/layout-version.ts) without
+// baking — the daily "newer look" notification (render-update-notify.ts) and
+// an override save's null stamps (frame-profile-override-actions.ts).
+//
+// A scope function reads a column the row does not carry as "can't judge →
+// affected": a scan that forgets one reads EVERY card as owing that bump.
+// For a sweep bump (v72's kerningGuardsChanged reads the nickname, the typed
+// type words and the artist credit) that silences every opt-in badge
+// (hasNewerLook) and makes an override save null-stamp cards that owe
+// nothing. So both scans select ScopeCard's columns from this ONE list (a
+// test holds it to ScopeCard's keys), and on a database without a late
+// column (missingLateColumn) read again without it and give each row that
+// column as NULL: what such a database holds, and what its bake prints.
+// ---------------------------------------------------------------------------
+
+/** Every column a card's layout scope reads (ScopeCard's keys). */
+export const SCOPE_CARD_COLUMNS = [
+  "rarity", "set_icon_url", "set_icon_code", "frame_style", "color_identity", "art_url",
+  "title", "nickname", "supertype", "printed_types", "artist_credit", "card_type", "subtypes",
+  "power", "toughness", "loyalty", "defense", "back_face", "rules_text", "flavor_text",
+  "face_content", "cost", "art_position",
+] as const satisfies readonly (keyof ScopeCard)[];
+
+/**
+ * Runs a scope scan: `run` is given `leading` (the scan's own columns: id,
+ * stamp, render, visibility) followed by SCOPE_CARD_COLUMNS and, only while
+ * the database answers that one of the late columns does not exist, is run
+ * again without it (each dropped at most once). The rows it then returns
+ * carry every dropped column as null.
+ */
+export async function selectScopeColumns<R extends { data: unknown; error: { code?: string | null; message?: string | null } | null }>(
+  leading: string,
+  run: (columns: string) => PromiseLike<R>,
+): Promise<R> {
+  const dropped: LateColumn[] = [];
+  const columns = () =>
+    [leading, ...SCOPE_CARD_COLUMNS.filter((column) => !(dropped as readonly string[]).includes(column))].join(", ");
+  let result = await run(columns());
+  for (;;) {
+    const missing = missingLateColumn(result.error);
+    if (!missing || dropped.includes(missing) || !(SCOPE_CARD_COLUMNS as readonly string[]).includes(missing)) break;
+    dropped.push(missing);
+    result = await run(columns());
+  }
+  if (dropped.length && !result.error && Array.isArray(result.data)) {
+    for (const row of result.data as Record<string, unknown>[]) for (const column of dropped) row[column] = null;
+  }
+  return result;
 }

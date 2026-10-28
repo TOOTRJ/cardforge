@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { SCOPE_CARD_COLUMNS } from "@/lib/cards/bake-select";
 import { notifyOwnersOfRenderUpdates, staleCountsByOwner } from "@/lib/cards/render-update-notify";
 import { chainClient, called, payloadOf } from "@/tests/stubs/supabase-chain";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
@@ -105,5 +106,16 @@ describe("notifyOwnersOfRenderUpdates — once per owner per opt-in version", ()
     expect(lookups.some((e) => called(e.calls, "insert"))).toBe(false);
     const contains = lookups[0].calls.find((c) => c.method === "contains");
     expect(contains?.args).toEqual(["payload", { version: 22 }]);
+  });
+});
+
+describe("notifyOwnersOfRenderUpdates — the scan reads every scope column", () => {
+  it("selects SCOPE_CARD_COLUMNS (v72's nickname, typed types and credit too): a column left out owes every card the sweep", async () => {
+    const stub = chainClient(() => ({ data: [] }));
+    await notifyOwnersOfRenderUpdates(stub.client as never);
+    const select = stub.forTable("cards")[0].calls.find((c) => c.method === "select");
+    const columns = String(select?.args[0]).split(", ");
+    for (const column of SCOPE_CARD_COLUMNS) expect(columns, column).toContain(column);
+    for (const column of ["owner_id", "layout_version", "rendered_image_url", "visibility"]) expect(columns).toContain(column);
   });
 });

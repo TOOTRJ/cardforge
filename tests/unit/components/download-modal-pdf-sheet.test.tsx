@@ -29,6 +29,9 @@ beforeEach(() => {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => void storage.set(key, value),
   });
+  // A click on a download link fetches its file (TODO 6.30): never the
+  // network from a unit test.
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 503 })));
 });
 afterEach(() => {
   vi.unstubAllGlobals();

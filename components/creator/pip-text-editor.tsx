@@ -56,6 +56,7 @@ import {
   useRef,
 } from "react";
 import { INLINE_PIP_FONT_SIZE } from "@/components/cards/inline-pips";
+import { pipName } from "@/lib/cards/pip-names";
 import {
   canonicalPipCode,
   pipSuffixForCode,
@@ -102,7 +103,10 @@ function makePipNode(code: string, suffix: string): HTMLSpanElement {
   span.setAttribute(PIP_ATTR, code);
   span.contentEditable = "false";
   span.setAttribute("role", "img");
-  span.setAttribute("aria-label", code);
+  // Named by what it is ("tap", "white mana" — TODO 6.7), never its brace
+  // code, which a screen reader spelled out; the code is the tooltip and
+  // `data-pip` (what the value is read from).
+  span.setAttribute("aria-label", pipName(code));
   span.title = code;
   span.className = "inline-block";
   const glyph = document.createElement("i");
