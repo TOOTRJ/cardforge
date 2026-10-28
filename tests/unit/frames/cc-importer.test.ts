@@ -235,6 +235,8 @@ describe("Card Conjurer recipe", () => {
       "saga",
       "sagadfcfront",
       "split",
+      // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2; tests/unit/frames/stained-glass-importer.test.ts).
+      "stainedglass",
       // The MUL Tarkir dragon wings (TODO 4.11, layout v67; tests/unit/frames/tarkir-dragon-importer.test.ts).
       "tarkirdragon",
     ]);

@@ -180,8 +180,14 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 63 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 64 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the Dominaria United Stained Glass showcase (4.11 wave 2, an addition):
+  stainedglass — the 'Stained Glass (DMU)' pack's six frames (`c` the gold
+  one), its ten pair masters (the box split), its plates, the stamp notch
+  split off every master, and its crown band (`stainedglasscrown`)
+  ([The Dominaria United Stained Glass showcase](#the-dominaria-united-stained-glass-showcase-411-wave-2));
 
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
   the 'Zendikar Rising' pack's frames whole with their title ends, each
@@ -4983,6 +4989,138 @@ ticked.
 - **Imports.** `showcase/mul/tarkir` is exact on `tarkirdragon` once a
   colour is verified (the border cap is gone); #60 / #190 Taigam is the
   frame's own split wings, so no two-colour gap.
+
+### The Dominaria United Stained Glass showcase (4.11 wave 2)
+
+`stainedglass` — "Stained Glass" in the Dominaria United set
+(`dominariaunited`, showcase era): the leaded-glass frame of Dominaria
+United #287–368 (41 legends and their 41 textured-foil twins, 2022) and of
+the nine Multiverse Legends Dominaria legends (MUL #5 Kwende, #12 Tetsuko
+Umezawa, #19 Yargle, #22 Squee, #24 Valduk, #55 Radha, #56 Raff, #58 Rona,
+#59 Shanna) with their halo-foil and serialized twins (#135 … #189, the "z"
+printings; 2023) — 109 printings, every one a black-bordered LEGENDARY
+CREATURE on the 2015 frame (checked by eye on Scryfall, 2026-10-27). NOT
+DMU #369 (the Phyrexian-script Sheoldred) or #370 / #371 (the two Ajani
+walkers: another design, no walker in the run) and not MUL's etched twins
+(#70 …): they stay `showcase`. Card Conjurer's 'Stained Glass (DMU)' pack
+(packDMUStainedGlass.js, `img/frames/dmu/stainedGlass/`, 1500 × 2100
+NATIVE: nothing is resampled), frames bucket only, through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.stainedglass`, the band
+`stainedglasscrown`, the `SG` block of `scripts/lib/cc-frames.mjs`). An
+ADDITION: a new template — no layout bump, no sweep, no badge; nobody can
+pick it until a colour is verified.
+
+- **Masters.** The pack's six frames whole — w u b r g m: coloured glass
+  in bronze lead, a real black border all round (the scans read 22,19,14
+  there, the same as DMU's regular printings #1–6 and MUL #66 / #67 on the
+  same scans: black), cut at the one card corner. **No artifact, land or
+  colourless frame** — the pack lists none (`a`, `c`, `l` are not in Card
+  Conjurer's tree) and none is needed by print: every printing of the run
+  is a coloured legendary creature, and none is mono-green. `c` is the
+  gold `m` frame, byte for byte, so the template has a master under every
+  key; the `c` and `g` combos have no print to follow and stay unverified
+  (their references are documented nulls), so nothing imports onto them.
+- **The two-colour dress** (`twoColorMasters: ["split"]`, opt-in like
+  every pair): 72 of the 109 printings are two-colour, and every one prints
+  GOLD bars, a gold plate, gold lead and panes — and a text box that turns
+  from the first colour to the second (DMU #295 Balmor U|R, #292 Aron W|B,
+  #310 Radha R|G, MUL #56 Raff U|W). The pair master `<pair>` is the gold
+  frame with the pair's two boxes lerped across `SG_BOX_RAMP` (46 → 57 %W)
+  through the pack's own 'Rules' mask: the run's two-colour boxes, their
+  text-free top rows 1320–1336 read with each print's two ends as 0 and 1,
+  cross 10 / 50 / 90 % at 47.1 / 51.5 / 55.8 %W (the median of 36 that
+  read). Three colours or more print the gold box (DMU #302 Jodah, #313,
+  #317–319, #327). The registry needs no `two-colour` gap: the frame draws
+  it.
+- **The crown** (`STAINEDGLASS_CROWN`, `stainedglasscrown/<key>`): every
+  printing is legendary and prints the pack's 'Legend Crown' — the dome of
+  glass over the title bar and the panes either side, in the card's colour
+  (1160 × 55 at 170 / 29 px, 1:1, rows 0–119 kept). A pair's crown is the
+  GOLD crown with its dome the pair's two domes lerped across
+  `SG_CROWN_RAMP` (47 → 53 %W: 64 prints cross 47.8 / 50.3 / 52.6) through
+  the pack's 'Inner Crown' mask — DMU #310 Radha's dome red into green
+  under a gold rim. An ADDITION, opt-in per card; imports name it ON
+  (`showcase/dmu/stained-glass` is in `CROWNED_SHOWCASE_SIGNATURES`).
+- **The stamp notch, split OFF every master** (`SG_NOTCH`,
+  `splitWarpNotch`; `stainedglass/holostamp/<key>`, 220 × 230 at 640 /
+  1776): the pack arches the box's foot over a black well on every key; the
+  run arches it only on a rare or mythic (`security_stamp: oval`, 45 of
+  109 — commons and uncommons run the rim straight). Each master (pairs
+  too) is written PLAIN: under the box the arch's columns (648–850) are the
+  straight rim, each row blended between the rim's own two pixels just
+  outside the arch (the rim's shading drifts 30 levels over 50 px — a
+  copied column left a step); above it the box's glass the arch hid is the
+  column's own glass stretched down onto the straight foot (rows 1780 → the
+  arch's top in the Rules mask, less 3 edge rows, re-drawn over 1780 →
+  1922), so the two lead lines that meet on the arch's crown run on down to
+  the rim, as the uncommons print them (DMU #292, #306, MUL #56). The
+  pixels that differ are the piece, which drawn over the plain master
+  gives the pack's master back exactly but for the oval cut (a test holds
+  the published pair to the importer's sha). The oval (`STAINEDGLASS_
+  HOLO_STAMP_OVAL`): print's hologram, 130 × 63 on the pack's well's centre
+  (750, 1959.5 — CC's own 'Rare Stamp' centre; the 45 stamped prints centre
+  it 25.5 px under their straight rim, 1959.5 on the pack's). The pack's
+  well is plain black (no hologram painted); our oval art covers the cut.
+  Keys: the masters' and the ten pairs'. Print's arch is lower and wider
+  with a thinner rim than the pack's: kept as drawn (flagged).
+- **Tones** — the ring's one rule (raw scan medians, Scryfall PNGs at 1500
+  × 2100; a region ≥ 9 levels off is toned), per region: the glass of the
+  title bar, the type bar and the text box (where the pack's blue and red
+  files differ by ≥ 40 levels — the lead and the rims are the same pixels in
+  every mono file — above a luma floor that keeps the lead lines inside the
+  glass as drawn), the gold frame's lead, each crown's dome and panes, each
+  plate's face. Read on the base printings (the textured, halo-foil and
+  serialized twins print other foils), a colour's box and dome also from
+  the two-colour boxes' ends. 28 regions toned (`SG_PRINT_TONES`; the gold
+  bars 45 levels off in blue, the red plate 38 in red …); within 8 levels,
+  and the green bars, panes and plate (no print), as drawn. The tone SHIFTS
+  each channel by (to − from), fading to nothing toward white — not the
+  ring's gain: the gold's blue reads 17 against print's 62, and a gain of
+  × 3.6 turned the glass's light streaks and lead lines violet (built,
+  looked at, dropped).
+- **Geometry as drawn.** The pack's bars sit within 1–2 px of print's
+  (the title bar 2.5 px lower, the type bar 2 px higher), the box's foot
+  2–4 px higher, the frame 4 px wider each side (print's frame is 0.6 %
+  narrower: a scan's scale); the band above the title bar is 8 px taller
+  than print's (print's panes start at 61 px, the pack's at 52) and the
+  crown's dome rim reaches 8 px higher (31 against 39); the plate is CC's
+  rounded one where print's has cut corners, ~10 px further right. All
+  textured glass — never a flat zone: nothing is re-cut.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), measured on the run's 50 base printings
+  against our bakes of the same names, types and costs, each text
+  registered on its own bar:
+  - the name 4.5 px above M15's (its baseline against the title bar;
+    within 0.5 px after);
+  - the type line 1 px under the CC baseline (within 0.5 px after);
+  - the cost row: the CC M15 70 px disc 1 px higher against the bar and its
+    end 9.5 px further right (`costDx` 11.5 px — the last disc's ink ending
+    at 1392–1393 px, as print's);
+  - the rules box M15's margins (the run's lines from x 130–133) on a box
+    8.5 px shorter at each end on M15's centre: 1345.2 → 1914 px (the run's
+    full boxes end their last descenders on 1912–1918 px, 1908–1914 on the
+    pack's foot; the short texts' ink centres agree within 1 px);
+  - the P/T: the pack's plate per key (262 × 127 at its ptBounds 1162 /
+    1863, 1:1; it fills its image, `lib/cards/plate-ink.ts`) with M15's text
+    box on it;
+  - white ink everywhere (print's name, type line, rules and P/T are white
+    on every key: the glass is dark).
+  Flagged, not changed: print's P/T plate is another drawing (cut corners,
+  ~10 px right, ~4 px lower); our MUL set symbol is ~0.75 of print's across
+  (MUL is not in the per-set table), DMU's within 2 px.
+- **Collector line** (`STAINEDGLASS_COLLECTOR`): M15's slot 4 px lower —
+  line 1 on 1997.5, line 2 on 2036 px (the 50 base prints end line 1's ink
+  on 1997, line 2's on 2035; MUL's scans 1–2 px higher). An ADDITION,
+  opt-in per card.
+- **Imports.** `showcase/dmu/stained-glass` (DMU #287–368; MUL #5, #12,
+  #19, #22, #24, #55, #56, #58, #59, #135, #142, #149, #152, #154, #185,
+  #186, #188, #189 and their "z" twins) is exact on `stainedglass` once the
+  card's colour is verified, `nearest` until then (`withVerification`);
+  before this frame DMU's run imported `showcase` and MUL's `showcase/mul`,
+  nearest on M15. No gap. The printing's real colour, the crown ON, a
+  pair's two-colour dress ON (`printsTwoColorFrame`), the stamp on a rare
+  or mythic, the collector line. Every other printing's outcome is
+  unchanged but MUL #5's (the signature fixtures' one Dominaria legend).
 
 ### The Tarkir: Dragonstorm showcases (4.11 / 4.35, layout v68)
 
@@ -9793,12 +9931,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 82 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 83 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.11's 2015 Expeditions, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions and 4.11 wave 2's Dominaria United Stained Glass, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

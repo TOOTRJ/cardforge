@@ -112,6 +112,8 @@ describe("the switch values", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, layout v70).
       "bloomanime",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): its run's rows.
+      "stainedglass",
     ]);
   });
 });

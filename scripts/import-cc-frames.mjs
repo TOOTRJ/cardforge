@@ -85,6 +85,8 @@ import {
   DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
   splitZnrNotch,
+  splitWarpNotch,
+  geomRegionPlane,
   clearZnrOvalCut,
   cutCrownBand,
   cutCrownFindings,
@@ -307,6 +309,13 @@ async function toneLoaded(src, data, w, h) {
   // text box, its wings left out).
   for (const [name, c] of Object.entries(tone.chroma ?? {})) regions[name] = chromaRegionPlane(data, w, h, c);
   for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, b.file ? await rgba(await fetchCached(b.file), w, h) : null, w, h, b);
+  // …or (the Dominaria United stained glass, TODO 4.11 wave 2) where two
+  // OTHER files of the same drawing differ — its glass — kept to rows /
+  // columns, less another such region (geomRegionPlane).
+  for (const [name, g] of Object.entries(tone.geom ?? {})) {
+    const read = async (file) => rgba(await fetchCached(file), w, h);
+    regions[name] = geomRegionPlane(await read(g.a), await read(g.b), w, h, g, g.minus ? await read(g.minus.a) : null, g.minus ? await read(g.minus.b) : null, data);
+  }
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 
@@ -653,7 +662,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     // piece (TODO 4.11: the ZNR hedron frame — scripts/lib/cc-frames.mjs
     // ZNR_NOTCH): the master is written plain, the arch beside it.
     if (def.notch && !isBuiltRecipe(def.colors[key])) {
-      const { plain, piece, findings } = splitZnrNotch(master, outW, outH, def.notch);
+      // …the ZNR hedron's arch, its texture filled along its ridges; the
+      // Stained Glass's (TODO 4.11 wave 2, SG_NOTCH: `kind: "warp"`), the
+      // box's glass stretched down onto the straight foot through the pack's
+      // Rules mask.
+      const { plain, piece, findings } =
+        def.notch.kind === "warp"
+          ? splitWarpNotch(master, outW, outH, await rgba(await fetchCached(def.notch.mask), outW, outH), def.notch)
+          : splitZnrNotch(master, outW, outH, def.notch);
       for (const f of findings.failures) edgeFailures.push(`${template}/${key} notch: ${f}`);
       // What the published pair must draw back: CC's master, its corners
       // cut as the plain one's are, the oval cut cleared (restoredZnrMaster).
@@ -1008,7 +1024,9 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
         // own size, as it loads, before it is placed.
         const load = async (src) => placeOnCanvas(await toneLoaded(src, await rgba(await fetchCached(src), box.width, box.height), box.width, box.height), box, W, H);
         const data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
-        images.push({ data, erase: l.erase });
+        // A layer through a whole-card mask (TODO 4.11 wave 2: the stained
+        // glass pair crown's dome, through the pack's Inner Crown mask).
+        images.push({ data, erase: l.erase, mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined });
       }
       const composite = toRgba8(compositeLayers(images, W, H));
       const full =

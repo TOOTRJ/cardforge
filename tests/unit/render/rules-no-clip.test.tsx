@@ -330,6 +330,10 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
       // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
       "avatar/main", "bloomburrow/main",
+      // 4.11 wave 2's Dominaria United Stained Glass: M15's box 8.5 px
+      // shorter at each end (the run's own) — it holds the level-up card,
+      // not 1,200 characters.
+      "stainedglass/main",
     ],
     ["1200 chars"],
   ],

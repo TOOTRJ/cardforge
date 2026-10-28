@@ -343,6 +343,10 @@ const PICKS: readonly Pick[] = [
   // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
   { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
   { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
+  // The Dominaria United Stained Glass showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "stainedglass/u/creature-short@collector-2015", why: "Stained Glass: CC's leaded-glass master (the arch split off: the box's foot straight), M15's slots on the pack's bars (the name 4.5 px up, the cost row 1 px up and 9.5 px right, the type line 1 px down), the box 8.5 px shorter at each end, white ink, the pack's plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "stainedglass/wu/creature-long@pair-crown", why: "Stained Glass: the pair master (gold frame, the box split across 46→57 %W) under the pair's crown (the gold dome split across 47→53 %W)" },
+  { from: "stainedglass/wub/creature-long@stamp-m", why: "Stained Glass: the arch split off the gold master, laid back over its straight foot, our oval in its cut" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

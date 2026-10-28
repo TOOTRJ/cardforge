@@ -318,6 +318,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish, no pairs (one master).
       "bloomanime",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): the
+      // pack's glass dome, its pair masters the gold frame with the box split.
+      "stainedglass",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -405,6 +408,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       extendedartland: ["split"],
       // The Prepare frame (4.26): m15's two dresses with the page.
       prepare: ["split", "hybrid"],
+      // The Dominaria United stained glass (4.11 wave 2): the gold frame, the box split.
+      stainedglass: ["split"],
       // The double-faced spell faces (5.1d): the split on every one — the
       // prints split a back's rings and box over its gold bars too — and the
       // hybrid dress on the modal front alone (MH3 #252–261); never the land
@@ -495,7 +500,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Bloomburrow woodland (4.11, v69): MSE's own, on the coloured well.
     "bloomburrow",
     // …and the Bloomburrow anime (4.11, v70): MSE's own, on its footer's well.
-    "bloomanime"];
+    "bloomanime",
+    // …and the Dominaria United stained glass (4.11 wave 2): the pack's own
+    // arch, split off every master and pair master.
+    "stainedglass"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -760,6 +768,14 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       const profile = getFrameProfile(template);
       if ((profile.twoColorMasters ?? []).length === 0) {
         expect(profile.twoColorForLands, template).toBeUndefined();
+        continue;
+      }
+      // (The Dominaria United stained glass, TODO 4.11 wave 2, hosts a land
+      // as every IP showcase does, but its pairs are the spells' dress — no
+      // land was printed on it: its pairs are no land frame.)
+      if (template === "stainedglass") {
+        expect(twoColorFits(profile, "land"), template).toBe(false);
+        expect(twoColorFits(profile, "creature"), template).toBe(true);
         continue;
       }
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));

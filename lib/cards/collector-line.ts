@@ -144,6 +144,11 @@ export const COLLECTOR_TEMPLATES = [
   // The Bloomburrow anime (TODO 4.11, layout v70): BLB #343–355 set both
   // lines on M15's rows on the footer its master now paints.
   "bloomanime",
+  // …and the Dominaria United Stained Glass showcase (TODO 4.11 wave 2,
+  // Card Conjurer's 'Stained Glass (DMU)'): DMU #287–368 and MUL's Dominaria
+  // legends set both lines in the black border, 4 px below M15's rows
+  // (STAINEDGLASS_COLLECTOR).
+  "stainedglass",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

@@ -6253,6 +6253,68 @@
       ]
     }
   },
+  "stainedglass": {
+    "note": "The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU #287–368 and the Multiverse Legends Dominaria legends (MUL #5, #12, #19, #22, #24, #55, #56, #58, #59 and twins) — NOT DMU #369–371 or MUL's etched twins. Every printing is a legendary creature and shows the glass dome crown PipGlyph draws as an opt-in (STAINEDGLASS_CROWN). 'm' is checked on a five-colour legend (Jodah: the gold box) and a two-colour one (Radha R|G: gold bars, the box turning from red to green — the pair master); no mono-green, colourless, artifact or land card was printed on the frame, so 'g' and 'c' have no reference.",
+    "colors": {
+      "w": [
+        {
+          "name": "Danitha, Benalia's Hope",
+          "set": "dmu",
+          "scryfallId": "1d9609d8-4dcf-4b70-b947-a4d62275f34a"
+        },
+        {
+          "name": "Kwende, Pride of Femeref",
+          "set": "mul",
+          "scryfallId": "427cf253-71c1-40cf-bdc3-eeb0431ae37f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Tetsuko Umezawa, Fugitive",
+          "set": "mul",
+          "scryfallId": "469beb59-1e57-474e-9dcf-9c13957cbfdd"
+        }
+      ],
+      "b": [
+        {
+          "name": "Braids, Arisen Nightmare",
+          "set": "dmu",
+          "scryfallId": "f2559ff7-a97c-40c6-942f-36998eafb050"
+        },
+        {
+          "name": "Yargle, Glutton of Urborg",
+          "set": "mul",
+          "scryfallId": "e07104c8-3af9-44ff-8f24-ce420333e05b"
+        }
+      ],
+      "r": [
+        {
+          "name": "Squee, Dubious Monarch",
+          "set": "dmu",
+          "scryfallId": "0f39ecc9-0a4c-47e7-b8e6-7e00d4cb61e3"
+        },
+        {
+          "name": "Squee, the Immortal",
+          "set": "mul",
+          "scryfallId": "e5483306-885c-44e1-84ce-b6e2124a6ecc"
+        }
+      ],
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Jodah, the Unifier",
+          "set": "dmu",
+          "scryfallId": "416429e0-4b7e-43d1-8126-16ab679b6e39"
+        },
+        {
+          "name": "Radha, Coalition Warlord",
+          "set": "dmu",
+          "scryfallId": "86a42355-ead5-48b9-813a-1e9be9a45747"
+        }
+      ]
+    }
+  },
   "tarkirdraconic": {
     "note": "Draconic = TDM black-border showcase run (#292–326) — confirm the thumbnail; low-res scans.",
     "confirm": true,

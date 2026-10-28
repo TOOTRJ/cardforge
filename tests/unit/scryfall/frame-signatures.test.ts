@@ -703,7 +703,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // too, the frame's own split wings.
     ["mul-1", "exact", "tarkirdragon", undefined],
     ["mul-60", "exact", "tarkirdragon", undefined],
-    ["mul-5", "nearest", "m15", undefined],
+    // MUL #5 Kwende is one of MUL's Dominaria legends, on the Stained Glass
+    // frame since TODO 4.11 wave 2: exact once verified.
+    ["mul-5", "exact", "stainedglass", undefined],
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],

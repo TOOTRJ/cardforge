@@ -178,6 +178,12 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the Dominaria United Stained Glass showcase (TODO 4.11 wave 2): a
+  // new template in a new showcase set — pinned in
+  // tests/unit/scryfall/stained-glass-imports.test.ts (DMU #287–368 and
+  // MUL's Dominaria legends land there once verified) and
+  // tests/unit/frames/stained-glass-importer.test.ts.
+  "stainedglass",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
@@ -629,6 +635,10 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|ltr-306",
       "all|ltr-482",
       "all|mul-1",
+      // MUL #5 Kwende, a Dominaria legend: on the Stained Glass frame since
+      // TODO 4.11 wave 2 (exact once verified; nearest on it until then) —
+      // tests/unit/scryfall/stained-glass-imports.test.ts.
+      "all|mul-5",
       "all|mul-60",
       "all|takh-1",
       "all|tdm-303",
@@ -637,8 +647,8 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|tla-338", "all|tle-315",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
-      "prodPlusMoved|blb-343", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
-      "prod|blb-343", "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
+      "prodPlusMoved|blb-343", "prodPlusMoved|mul-5", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prod|blb-343", "prod|mul-5", "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
     ]);
     // …and TODO 4.11 wave 1: a two-colour Expedition (ZNE #1 Flooded
     // Strand, white and blue) prints a split pinline the frame doesn't draw

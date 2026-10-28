@@ -1842,6 +1842,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/blb/woodland",
   "showcase/blb/woodland+two-colour",
   "showcase/blb/woodland+two-colour-hybrid",
+  // The Dominaria United stained glass (TODO 4.11 wave 2): all 109
+  // printings are legendary and print the pack's glass dome over the title
+  // bar (DMU #287–368, MUL #5 … #59 and twins).
+  "showcase/dmu/stained-glass",
   // The Bloomburrow anime (TODO 4.11, layout v70): its 12 creatures are
   // legendary and print the flourish above the name box (#353 Ral, the 13th,
   // is a walker: no crown). Its own frame's crown only (OWN_FRAME_CROWN_

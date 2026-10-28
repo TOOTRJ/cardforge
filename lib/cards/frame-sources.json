@@ -16836,6 +16836,325 @@
       "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built"
     ]
   },
+  "stainedglass": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDMUStainedGlass.js 'Stained Glass (DMU)' (the Dominaria United stained-glass showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dmu/stainedGlass/w.png"
+      ],
+      "u": [
+        "img/frames/dmu/stainedGlass/u.png"
+      ],
+      "b": [
+        "img/frames/dmu/stainedGlass/b.png"
+      ],
+      "r": [
+        "img/frames/dmu/stainedGlass/r.png"
+      ],
+      "g": [
+        "img/frames/dmu/stainedGlass/g.png"
+      ],
+      "c": [
+        "img/frames/dmu/stainedGlass/m.png"
+      ],
+      "m": [
+        "img/frames/dmu/stainedGlass/m.png"
+      ],
+      "wu": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/w.png | img/frames/dmu/stainedGlass/u.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "wb": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/w.png | img/frames/dmu/stainedGlass/b.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "ub": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/u.png | img/frames/dmu/stainedGlass/b.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "ur": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/u.png | img/frames/dmu/stainedGlass/r.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "br": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/b.png | img/frames/dmu/stainedGlass/r.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "bg": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/b.png | img/frames/dmu/stainedGlass/g.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "rg": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/r.png | img/frames/dmu/stainedGlass/g.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "rw": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/r.png | img/frames/dmu/stainedGlass/w.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "gw": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/g.png | img/frames/dmu/stainedGlass/w.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ],
+      "gu": [
+        "img/frames/dmu/stainedGlass/m.png",
+        "(img/frames/dmu/stainedGlass/g.png | img/frames/dmu/stainedGlass/u.png across procedural:ramp(46→57 %W)) through img/frames/dmu/stainedGlass/rules.svg"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/dmu/stainedGlass/pt/w.png",
+      "u": "img/frames/dmu/stainedGlass/pt/u.png",
+      "b": "img/frames/dmu/stainedGlass/pt/b.png",
+      "r": "img/frames/dmu/stainedGlass/pt/r.png",
+      "g": "img/frames/dmu/stainedGlass/pt/g.png",
+      "c": "img/frames/dmu/stainedGlass/pt/m.png",
+      "m": "img/frames/dmu/stainedGlass/pt/m.png"
+    },
+    "notch": {
+      "kind": "warp",
+      "mask": "img/frames/dmu/stainedGlass/rules.svg",
+      "centerX": 750,
+      "span": {
+        "x0": 648,
+        "x1": 850
+      },
+      "warpTop": 1780,
+      "barTop": 1922,
+      "edgeRows": 3,
+      "bottom": 2004,
+      "box": {
+        "x": 640,
+        "y": 1776,
+        "width": 220,
+        "height": 230
+      },
+      "oval": {
+        "x": 685,
+        "y": 1928,
+        "width": 130,
+        "height": 63
+      },
+      "cutMarginPx": 2,
+      "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
+      "restored": {
+        "w": "11cb968b7ce49d6fe36fddcf6c5e3f3317e1f7aff81185a9d93a7529798044f5",
+        "u": "6b4bff6bf3a4f9b0eb77ee393cf37bfbc4a759dc50b2ff4174ed863bc1f2dd06",
+        "b": "375ddf5cac4892bce36e10f8936051551a0c72f7b8cd99fb50766625becd78ff",
+        "r": "9cfb7b05454796af03f0806a616fc0b1b69082936caff829c0c2544deb4b7626",
+        "g": "7ef01506b0af80399935a22d6971124cc531acffe9222ecb2cc19f6d03fd8fb2",
+        "c": "79ec62e8cd097856cdafbecf13542664856e3494ee21bffba03c54bbf7776f88",
+        "m": "79ec62e8cd097856cdafbecf13542664856e3494ee21bffba03c54bbf7776f88",
+        "wu": "28d4111b0334211ff7f348a361eb1ae353c68721f48cd308ed9c09d609bc1532",
+        "wb": "1ae5e78a5c55c553142f539452786d990004a4cfd3c8b17a51a6f653f2b2b0f2",
+        "ub": "af066e10f4861410c3e9c2f633bb31d9b9b73602e238ab928a6852f47a1b6445",
+        "ur": "ea7b064b3f41a051e7da3c673d1f10742740bf541a391c9bbd37b4583d0651be",
+        "br": "6affcfc7b82f64a20590e8fca7582098a89d93430018061065823a6c8682107d",
+        "bg": "fdabaa6f01adee62419a50ee5992ace692a5cf08ff3c0ed3d2f876a4e6ba4cb5",
+        "rg": "8966c8988bec8258580225c0ee59cbaa5891ff0481ea2f1acbc0b9692af2fdf2",
+        "rw": "6b7ac0b6b81bccce2c529c165f9fddffbd32d67f942ab59570a52e104dfd888a",
+        "gw": "4f61a38b68ee25d234df06dbc157958f07b8b8670ecdb7aa1fac22f579825e9f",
+        "gu": "24cf477cf17deca12c051a0371ea786f4efc5cc6f83dd24468f9d1aa0a7a2b8f",
+        "what": "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)"
+      }
+    },
+    "sourceTones": {
+      "img/frames/dmu/stainedGlass/b.png": {
+        "table": "SG_PRINT_TONES (b)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +17 / +18 / +24 (91, 86, 114 → 108, 104, 138), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +5 / +4 / +14 (74, 61, 84 → 79, 65, 98), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/g.png": {
+        "table": "SG_PRINT_TONES (g)",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +13 / -2 / +14 (31, 73, 32 → 44, 71, 46), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/m.png": {
+        "table": "SG_PRINT_TONES (m)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +10 / +32 / +45 (178, 118, 17 → 188, 150, 62), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +7 / +21 / +39 (173, 116, 20 → 180, 137, 59), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +9 / +3 / +17 (99, 68, 12 → 108, 71, 29), fading to nothing at white",
+        "lead": "on the pixels where img/frames/dmu/stainedGlass/m.png differs from img/frames/dmu/stainedGlass/u.png by 16–40 levels (max channel; full from 40), less where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png: -9 / -10 / +13 (99, 71, 49 → 90, 61, 62), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/b.png": {
+        "table": "SG_PRINT_TONES (b plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): +2 / +3 / +16 (80, 62, 96 → 82, 65, 112), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/m.png": {
+        "table": "SG_PRINT_TONES (m plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): -24 / -9 / +41 (195, 140, 15 → 171, 131, 56), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/r.png": {
+        "table": "SG_PRINT_TONES (r plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): -38 / -22 / -1 (174, 51, 34 → 136, 29, 33), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/pt/u.png": {
+        "table": "SG_PRINT_TONES (u plate)",
+        "plate": "on the pixels where img/frames/dmu/stainedGlass/pt/u.png differs from img/frames/dmu/stainedGlass/pt/r.png by 16–40 levels (max channel; full from 40): +8 / -18 / +2 (14, 79, 147 → 22, 61, 149), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/r.png": {
+        "table": "SG_PRINT_TONES (r)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: -2 / -2 / +13 (167, 37, 34 → 165, 35, 47), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: -3 / +0 / +14 (147, 29, 23 → 144, 29, 37), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +0 / -3 / +10 (119, 49, 30 → 119, 46, 40), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/u.png": {
+        "table": "SG_PRINT_TONES (u)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +22 / -4 / +10 (19, 108, 171 → 41, 104, 181), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +8 / -17 / +0 (14, 79, 149 → 22, 62, 149), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +2 / +0 / +15 (52, 62, 100 → 54, 62, 115), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/w.png": {
+        "table": "SG_PRINT_TONES (w)",
+        "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +4 / +8 / +12 (167, 144, 97 → 171, 152, 109), fading to nothing at white",
+        "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +9 / +6 / +7 (135, 117, 74 → 144, 123, 81), fading to nothing at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/dmu/stainedGlass/b.png",
+      "img/frames/dmu/stainedGlass/g.png",
+      "img/frames/dmu/stainedGlass/m.png",
+      "img/frames/dmu/stainedGlass/pt/b.png",
+      "img/frames/dmu/stainedGlass/pt/g.png",
+      "img/frames/dmu/stainedGlass/pt/m.png",
+      "img/frames/dmu/stainedGlass/pt/r.png",
+      "img/frames/dmu/stainedGlass/pt/u.png",
+      "img/frames/dmu/stainedGlass/pt/w.png",
+      "img/frames/dmu/stainedGlass/r.png",
+      "img/frames/dmu/stainedGlass/rules.svg",
+      "img/frames/dmu/stainedGlass/u.png",
+      "img/frames/dmu/stainedGlass/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's six frames whole (dmu/stainedGlass/<k>.png, 1500x2100 NATIVE — no resample), as the run prints them (DMU #287–368, MUL #5 / #12 / #19 / #22 / #24 / #55 / #56 / #58 / #59 and their halo-foil and serialized twins): coloured glass in bronze lead, gold bars on every two-colour card",
+      "c = the gold frame (m.png): the pack has no colourless, artifact or land frame (packDMUStainedGlass.js lists none; dmu/stainedGlass/{a,c,l}.png are not in the tree) and no printing of the run is colourless — every one is a legendary creature — so a colourless card has no print to follow; the combo stays unverified",
+      "two-colour pair masters <pair> (the split dress): m.png whole, then the text box — the pair's two colour files lerped (premultiplied) across procedural:ramp(46→57 %W) — through the pack's Rules mask (rules.svg); the bars, rims, panes and plate stay gold, as DMU #292 Aron (W|B), #295 Balmor (U|R), #310 Radha (R|G) and MUL #56 Raff (U|W) print them; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU)",
+      "a real black border all round (the scans read 22,19,14 there, the same as DMU's regular printings #1–6 and MUL #66 / #67 on the same scans: black), cut at the one card corner",
+      "plates = the pack's 'Power/Toughness' plates (dmu/stainedGlass/pt/<k>.png, 262x127 at its ptBounds 1162/1863 px, 1:1); c = the gold plate, as the two-colour cards print it",
+      "the stamp notch split off every master (SG_NOTCH): the arch and its well written as holostamp/<key>.png, the master written with the straight bar under the box and the box's glass the arch hid stretched down onto it (the lead lines that meet on the arch's crown run on to the rim, as the uncommons print them)",
+      "toned onto the prints by one rule, the ring's (raw scan medians; a region ≥ 9 levels off is toned — SG_PRINT_TONES through SG_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters, pairs, crowns, notch pieces and plates drawn from it agree: the glass of the title and type bars and of the text box (where the pack's blue and red files differ), the gold frame's lead, the crowns' domes and panes, the plates' faces; what is within 8 levels, and the green bars, panes and plate (no print), stay as drawn",
+      "geometry as drawn: the bars within 1–2 px of print's, the box's foot 4 px above it, the frame 4 px wider each side (print's frame 0.6 % narrower), the band above the title bar 8 px taller (print's panes from 61 px, the pack's from 52) and the crown's dome rim 8 px higher; the arch over the stamp well is the pack's (taller and narrower than print's, whose rim is thinner) — textured glass, never a flat zone: nothing is re-cut",
+      "no crown in the masters: the crown is its own band (stainedglasscrown), opt-in per card — every printing of the run is legendary and prints it"
+    ]
+  },
+  "stainedglasscrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDMUStainedGlass.js 'Stained Glass (DMU)' (the Dominaria United stained-glass showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x120 overlay band: rows 0–119 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dmu/stainedGlass/crowns/w.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "u": [
+        "img/frames/dmu/stainedGlass/crowns/u.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "b": [
+        "img/frames/dmu/stainedGlass/crowns/b.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "r": [
+        "img/frames/dmu/stainedGlass/crowns/r.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "g": [
+        "img/frames/dmu/stainedGlass/crowns/g.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "m": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "c": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %"
+      ],
+      "wu": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/w.png | img/frames/dmu/stainedGlass/crowns/u.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "wb": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/w.png | img/frames/dmu/stainedGlass/crowns/b.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "ub": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/u.png | img/frames/dmu/stainedGlass/crowns/b.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "ur": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/u.png | img/frames/dmu/stainedGlass/crowns/r.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "br": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/b.png | img/frames/dmu/stainedGlass/crowns/r.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "bg": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/b.png | img/frames/dmu/stainedGlass/crowns/g.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "rg": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/r.png | img/frames/dmu/stainedGlass/crowns/g.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "rw": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/r.png | img/frames/dmu/stainedGlass/crowns/w.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "gw": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/g.png | img/frames/dmu/stainedGlass/crowns/w.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ],
+      "gu": [
+        "img/frames/dmu/stainedGlass/crowns/m.png at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 %",
+        "(img/frames/dmu/stainedGlass/crowns/g.png | img/frames/dmu/stainedGlass/crowns/u.png across procedural:ramp(47→53 %W)) at 11.333333333333332/1.380952380952381/77.33333333333333×2.619047619047619 % through img/frames/dmu/stainedGlass/crown.svg"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/dmu/stainedGlass/crowns/w.png": {
+        "table": "SG_PRINT_TONES (w crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -30 / -21 / -9 (237, 210, 125 → 207, 189, 116), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: +13 / +9 / +3 (68, 54, 47 → 81, 63, 50), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/u.png": {
+        "table": "SG_PRINT_TONES (u crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: +23 / -13 / +1 (12, 91, 171 → 35, 78, 172), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: -9 / -5 / +2 (40, 46, 74 → 31, 41, 76), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/b.png": {
+        "table": "SG_PRINT_TONES (b crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -10 / -9 / +1 (80, 73, 146 → 70, 64, 147), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/r.png": {
+        "table": "SG_PRINT_TONES (r crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -30 / -2 / +19 (151, 33, 25 → 121, 31, 44), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/g.png": {
+        "table": "SG_PRINT_TONES (g crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: +22 / -29 / +15 (27, 121, 53 → 49, 92, 68), fading to nothing at white"
+      },
+      "img/frames/dmu/stainedGlass/crowns/m.png": {
+        "table": "SG_PRINT_TONES (m crown)",
+        "dome": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 264–895: -14 / -12 / +22 (167, 109, 20 → 153, 97, 42), fading to nothing at white",
+        "panes": "on the pixels where img/frames/dmu/stainedGlass/crowns/u.png differs from img/frames/dmu/stainedGlass/crowns/r.png by 16–40 levels (max channel; full from 40) columns 0–263 + 896–1159: -1 / -4 / +12 (67, 49, 29 → 66, 45, 41), fading to nothing at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/dmu/stainedGlass/crown.svg",
+      "img/frames/dmu/stainedGlass/crowns/b.png",
+      "img/frames/dmu/stainedGlass/crowns/g.png",
+      "img/frames/dmu/stainedGlass/crowns/m.png",
+      "img/frames/dmu/stainedGlass/crowns/r.png",
+      "img/frames/dmu/stainedGlass/crowns/u.png",
+      "img/frames/dmu/stainedGlass/crowns/w.png"
+    ],
+    "notes": [
+      "the stained-glass legendary crown (TODO 4.11 wave 2): the pack's 'Legend Crown' (dmu/stainedGlass/crowns/<k>.png, 1160x55 at its bounds 170/29 px) at 1:1 over a clear card, rows 0–119 kept — the dome of glass over the title bar and the panes either side, in the card's colour, which every printing of the run carries (all 109 are legendary: DMU #287–368, MUL #5 … #59 and twins); drawn over the master's own band",
+      "keys = w u b r g m, c (the gold crown, as the master: no colourless print) and the ten pairs: the GOLD crown, its dome's glass the pair's two domes lerped (premultiplied) across procedural:ramp(47→53 %W) through the pack's Inner Crown mask (crown.svg), as DMU #310 Radha (R|G) and #292 Aron (W|B) print it — gold rim and panes, the dome turning from the first colour to the second",
+      "the domes and panes toned with the masters (SG_PRINT_TONES); the crown's dome rim reaches 8 px higher than print's and its panes start 8 px higher (print's band is shorter): as drawn"
+    ]
+  },
   "tarkirdragon": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

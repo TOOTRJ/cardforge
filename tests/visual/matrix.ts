@@ -723,6 +723,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // …and the Bloomburrow anime's flourish (TODO 4.11 / 4.35, layout v70):
   // one master, so one colour and a pair.
   ["bloomanime", ["g", "wu"]],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's dome — each
+  // colour, `c` (the gold crown: no colourless print), a pair's gold crown
+  // with its dome split (its pair master is "@pair-crown") and gold.
+  ["stainedglass", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1355,6 +1359,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's plate at its widest.
+  ["stainedglass", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2027,6 +2033,12 @@ export function visualCases(): VisualCase[] {
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tarkirdragon", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Dominaria United stained glass's arch, split off
+  // its masters — none on a common (DMU / MUL print it on a rare or mythic
+  // only), a three-colour legend's (the gold master's arch), the HD bake.
+  add("stainedglass", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("stainedglass", "auto", { rarity: "common" }) });
+  add("stainedglass", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("stainedglass", "auto", { rarity: "rare" }) });
+  add("stainedglass", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("stainedglass", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2468,6 +2480,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
+  // arch, split off every master).
+  "stainedglass",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2478,6 +2493,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
   "m15borderless", "m15borderlessartifact", "m15borderlessland",
+  // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
+  // own arch over its split box).
+  "stainedglass",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -2928,6 +2946,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
   "prepare",
+  // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
+  // the box split.
+  "stainedglass",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
