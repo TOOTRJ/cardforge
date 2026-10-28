@@ -6482,8 +6482,11 @@ export const DOSSIER_COLLECTOR: CollectorSlot = {
 /** Every key the TARDIS masters and its notch publish: the seven frames and
  *  the ten pairs. */
 const TARDIS_KEYS = ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
-/** The rules box keeps out of the stamp's black trapezoid: its top (1909 px)
- *  down past the rules box, over 662–838 px. */
+/** The slot's keep-out (HoloStampArt.keepOut, required): the stamp's black
+ *  trapezoid, 662–838 × 1909–1929 px. It never meets the text: the rules box
+ *  ends at 1902 (TARDIS_RULES_BOTTOM_PX), above the trapezoid's top — print
+ *  sets its last line clear of the stamp too — so no line is held short or
+ *  stepped down for it. */
 export const TARDIS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (662 / 1500) * 100, topPct: (1909 / 2100) * 100, widthPct: (176 / 1500) * 100, heightPct: (20 / 2100) * 100 };
 /**
  * The Doctor Who TARDIS's TRIANGLE stamp notch (TODO 4.11 wave 2): the

@@ -5787,8 +5787,9 @@ bump, no sweep, no badge; nobody can pick it until a colour is verified.
   (`UB_STAMP_HOLE` — the run's prints set the stamp there: 686–816 px wide
   at row 1925, 708–793 at 1950, the apex on 1990–1991) + 2 px cut clear and
   the 2 px round it painted black — no pixel of the capture is published;
-  our triangle art covers the cut. The trapezoid is a rules keep-out
-  (662–838 × 1909–1929). An ADDITION, opt-in per card.
+  our triangle art covers the cut. The slot's keep-out is the trapezoid
+  (662–838 × 1909–1929), which the text never meets: the rules box ends at
+  1902, above it. An ADDITION, opt-in per card.
 - **Imports.** `showcase/who/tardis` (set `who`, borderless, #535–564 and
   #1126–1155 — the "z" serials read as their numbers) is exact on `tardis`
   once the card's colour is verified, `nearest` until then

@@ -8788,9 +8788,6 @@ export const HOLO_STAMP_NOTCHES = {
       `the hologram: the pack paints a capture of WotC's oval in the well (${TARKIR_CAPTURE_PX.x}–${TARKIR_CAPTURE_PX.x + TARKIR_CAPTURE_PX.width} × ${TARKIR_CAPTURE_PX.y}–${TARKIR_CAPTURE_PX.y + TARKIR_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${TARKIR_STAMP_OVAL_PX.width} × ${TARKIR_STAMP_OVAL_PX.height} at ${TARKIR_STAMP_OVAL_PX.x}, ${TARKIR_STAMP_OVAL_PX.y} — MUL #1 / #60 / #131 / #190, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
-  // TODO 4.11 wave 2: the dossier's OVAL notch — the pack's one piece,
-  // placed and downscaled with the card, its capture blacked out, the
-  // prints' oval cut (DOSSIER_NOTCH).
   // TODO 4.11 wave 2: the Doctor Who TARDIS's triangle notch — the pack's
   // one piece, 1:1, its capture blacked out, the Universes Beyond hole cut
   // (TARDIS_NOTCH).
@@ -8812,6 +8809,9 @@ export const HOLO_STAMP_NOTCHES = {
       "the hologram: the pack paints a capture of WotC's hologram in the trapezoid (its triangle 693–806 × 1922–1985 px) — every lit pixel of it is painted opaque black first (grown 1 px), then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE: the run's prints set the stamp there, 686–816 px wide at row 1925, 708–793 at 1950, the apex on 1990–1991) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's 'Gray Holo Stamp' is not read",
     ],
   },
+  // TODO 4.11 wave 2: the dossier's OVAL notch — the pack's one piece,
+  // placed and downscaled with the card, its capture blacked out, the
+  // prints' oval cut (DOSSIER_NOTCH).
   dossierholostamp: {
     pack: DOSSIER_PACK,
     pieces: DOSSIER_NOTCH.pieces,
