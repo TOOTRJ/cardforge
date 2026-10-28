@@ -1280,6 +1280,14 @@ Rules and gotchas:
   sweep's scope, mirrored by the owner's SQL). Any other star is printed;
   rules text has no markup. Print typography never converts a star and
   reads a quote through them.
+- The display face is Beleren Bold P1.01 with its 21 collision-guard kerns
+  (K→y, R→j, f→l, f→i…) at 0 (layout v72; print sets them tight): the pairs
+  are DATA in `lib/cards/display-kerning.ts`, written into BOTH
+  `public/fonts/Beleren-Bold.ttf` and `.woff2` by
+  `scripts/fix-beleren-kerning.mjs`, then `generate-font-metrics.mjs`. A
+  re-import of the font goes through that script (the unpatched pack file
+  fails `tests/unit/cards/display-kerning.test.ts`); a pair joins the list
+  only with print evidence, as its own bump.
 - An EDIT never changes a field its maker did not touch (#524 + its
   follow-up; `tests/unit/components/creator-clear-fields-save.test.tsx`,
   `creator-footer-and-create-clears.test.tsx`). The editor resends the

@@ -3661,3 +3661,104 @@ describe("v71 — flavour text's upright `*…*` spans (owner 2026-10-28)", () =
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v70 reads as a sweep of every card").toBe(false);
   });
 });
+describe("v72 — the display face's collision-guard kerns at 0", () => {
+  // Renumbered with DISPLAY_KERNING_LAYOUT_VERSION if another bump merges
+  // first (taken as v72 at PR time: v71 is flavour's upright spans, #625).
+  const V = 72;
+  const png = "https://x/y.png";
+  /** A v71 bake: only v72 can be pending. */
+  const at = (over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    ...over,
+  });
+  const AT = { current: V } as const;
+
+  it("is a sweep, never a badge, on ANY template — a card scope alone, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.DISPLAY_KERNING_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBe(lv.kerningGuardsChanged);
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, every template is touched.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("re-bakes a card whose name, nickname, type words or credit — or its back face's — holds a pair, on any template", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      { title: "Kylox, Visionary Inventor" },
+      { title: "Magnetic Snuffler" },
+      { title: "Ryusei, the Falling Star" },
+      { title: "Skyfisher Spider" },
+      { title: "Elfhame Druid" },
+      { title: "Grifín" }, // an accented right letter counts by its base
+      { nickname: "Kytheon's Herald" },
+      { supertype: "Legendary Kyrian" },
+      { subtypes: ["Halfling", "Rogue"] },
+      { printed_types: "Creature Reflection" },
+      { artist_credit: "Kyle Ferrin" },
+      { back_face: { title: "Ryusei" } },
+      { back_face: { title: "Back", subtypes: ["Tiefling"] } },
+      { back_face: { title: "Back", artist_credit: "Rj Ky" } },
+    ]) {
+      for (const template of ["m15", "saga", "split", "retro", "m15borderless", "lotr"]) {
+        const row = at({ ...over, frame_style: { template } });
+        expect(sweep(row), `${template} ${JSON.stringify(over)}`).toBe("rebake");
+        expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
+        expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+        expect(lv.hasNewerLook(row, AT)).toBe(false);
+      }
+    }
+  });
+
+  it("stamps every other card: no pair, a pair in rules or flavour, pairs the font still kerns", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      {},
+      { title: "Serra Angel", subtypes: ["Angel"], artist_credit: "Douglas Shuler" },
+      // Kerned pairs v72 leaves alone: AV, To, Ty, R→A, K→A, r→y, f→u, f→’.
+      { title: "AVATAR of the Tyrant" },
+      { title: "Aardwolf's Advantage" },
+      { title: "Fury of the Very Fabric", supertype: "Legendary" },
+      // Capital K then capital Y: a different pair from K→y.
+      { title: "KYLOX" },
+      // Text the display face never sets.
+      { rules_text: "Kylox gets +1/+1. Draw a card if a Skyfisher died." },
+      { flavor_text: "“Snuffle, snuffle.” —Kytheon" },
+      { back_face: { title: "Back", rules_text: "Fly." } },
+    ]) {
+      const row = at(over);
+      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
+      expect(isRenderStale(V - 1, "m15", undefined, V, row)).toBe(false);
+      expect(lv.hasPendingCorrection(row, AT), JSON.stringify(over)).toBe(false);
+    }
+  });
+
+  it("can't judge a row without one of the texts or the back face → affected", async () => {
+    const { kerningGuardsChanged } = await import("@/lib/cards/layout-version");
+    const full = { title: "Worm", nickname: null, supertype: null, printed_types: null, artist_credit: null, subtypes: [], back_face: null };
+    expect(kerningGuardsChanged(full)).toBe(false);
+    for (const column of Object.keys(full)) {
+      const row: Record<string, unknown> = { ...full };
+      delete row[column];
+      expect(kerningGuardsChanged(row), column).toBe(true);
+    }
+  });
+
+  // v71 is #625's (flavour's upright spans). A version with no rollout and
+  // no scope reads as a SWEEP OF EVERY CARD, so v72 never ships over a gap.
+  it("ships only after v71 (#625): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v71 has no rollout yet").toBeDefined();
+  });
+});
