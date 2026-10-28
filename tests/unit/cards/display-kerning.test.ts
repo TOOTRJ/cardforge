@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { describe, expect, it } from "vitest";
-import { ZEROED_DISPLAY_KERN_PAIRS, hasZeroedKernPair } from "@/lib/cards/display-kerning";
+import {
+  ACCENTED_KERNS_KEPT,
+  ZEROED_ACCENTED_KERN_PAIRS,
+  ZEROED_DISPLAY_KERN_PAIRS,
+  hasZeroedKernPair,
+} from "@/lib/cards/display-kerning";
 
 // ---------------------------------------------------------------------------
 // Layout v72: the committed Beleren Bold carries its collision-guard kerns at
@@ -35,7 +40,29 @@ describe("the zeroed pairs (v72)", () => {
   for (const [name, font] of Object.entries(FACES)) {
     it(`${name}: every listed pair — and with an accented right letter — draws unkerned`, () => {
       for (const pair of ZEROED_DISPLAY_KERN_PAIRS) expect(kern(font, pair), pair).toBe(0);
-      for (const pair of ["fí", "fì", "fî", "fï"]) expect(kern(font, pair), pair).toBe(0);
+      expect(ZEROED_ACCENTED_KERN_PAIRS).toEqual(["fí"]);
+      for (const pair of ZEROED_ACCENTED_KERN_PAIRS) expect(kern(font, pair), pair).toBe(0);
+    });
+
+    it(`${name}: the accented forms kerned far wider than their plain pair keep the font's kern`, () => {
+      // fi was +180; these guard the f's hook off the accent, and no print
+      // shows them set tight.
+      expect(ACCENTED_KERNS_KEPT).toEqual({ "fì": 495, "fî": 451, "fï": 631 });
+      for (const [pair, units] of Object.entries(ACCENTED_KERNS_KEPT)) expect(kern(font, pair), pair).toBe(units);
+    });
+
+    it(`${name}: no other accented right letter of a listed pair is kerned`, () => {
+      // An accented form the font kerns is either zeroed with its plain pair
+      // or kept on purpose — never left out of the data by accident.
+      const listed = new Set([...ZEROED_ACCENTED_KERN_PAIRS, ...Object.keys(ACCENTED_KERNS_KEPT)]);
+      const accented = "àáâãäåāăąçćčďèéêëēėęěìíîïīįñńňòóôõöøōőŕřśšşťùúûüūůűųýÿźżž";
+      for (const pair of ZEROED_DISPLAY_KERN_PAIRS) {
+        for (const ch of accented) {
+          if (ch.normalize("NFD").charAt(0) !== pair[1] || listed.has(pair[0] + ch)) continue;
+          if (font.glyphsForString(ch)[0].id === 0) continue; // not in the font
+          expect(kern(font, pair[0] + ch), pair[0] + ch).toBe(0);
+        }
+      }
     });
 
     it(`${name}: every other pair keeps the font's own kern`, () => {
@@ -52,9 +79,17 @@ describe("the zeroed pairs (v72)", () => {
 });
 
 describe("hasZeroedKernPair", () => {
-  it("finds a pair anywhere in the text, an accented right letter by its base", () => {
+  it("finds a pair anywhere in the text, and the one accented form zeroed with its plain pair (fí)", () => {
     for (const text of ["Kylox", "Magnetic Snuffler", "Skyfisher", "Ryusei", "Elfhame", "Halfling", "Grifín", "of Kjeldor", "Qyst"]) {
       expect(hasZeroedKernPair(text), text).toBe(true);
+    }
+    // A decomposed accent reads as its plain pair (errs wide).
+    expect(hasZeroedKernPair("Grifìn")).toBe(true);
+  });
+
+  it("reads an accented form the font still kerns, or never kerned, as no pair", () => {
+    for (const text of ["Grifìn", "Elfîr", "Grifïn", "Kýlox", "Rýu"]) {
+      expect(hasZeroedKernPair(text), text).toBe(false);
     }
   });
 

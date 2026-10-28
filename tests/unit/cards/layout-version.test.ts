@@ -3726,7 +3726,7 @@ describe("v72 — the display face's collision-guard kerns at 0", () => {
       { title: "Ryusei, the Falling Star" },
       { title: "Skyfisher Spider" },
       { title: "Elfhame Druid" },
-      { title: "Grifín" }, // an accented right letter counts by its base
+      { title: "Grifín" }, // fí: the one accented form the font kerned as fi (+180), zeroed with it
       { nickname: "Kytheon's Herald" },
       { supertype: "Legendary Kyrian" },
       { subtypes: ["Halfling", "Rogue"] },
@@ -3758,6 +3758,9 @@ describe("v72 — the display face's collision-guard kerns at 0", () => {
       { title: "Fury of the Very Fabric", supertype: "Legendary" },
       // Capital K then capital Y: a different pair from K→y.
       { title: "KYLOX" },
+      // fì / fî / fï keep the font's wider kerns (lib/cards/display-kerning.ts).
+      { title: "Grifìn" },
+      { title: "Elfîr", nickname: "Grifïn" },
       // Text the display face never sets.
       { rules_text: "Kylox gets +1/+1. Draw a card if a Skyfisher died." },
       { flavor_text: "“Snuffle, snuffle.” —Kytheon" },

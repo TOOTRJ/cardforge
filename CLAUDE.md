@@ -1287,7 +1287,12 @@ Rules and gotchas:
   `scripts/fix-beleren-kerning.mjs`, then `generate-font-metrics.mjs`. A
   re-import of the font goes through that script (the unpatched pack file
   fails `tests/unit/cards/display-kerning.test.ts`); a pair joins the list
-  only with print evidence, as its own bump.
+  only with print evidence, as its own bump. An accented right letter is its
+  own record, zeroed only where listed (fí; fì / fî / fï keep the font's
+  wider kerns). A scan that judges stored bakes against the card scopes
+  without baking selects `SCOPE_CARD_COLUMNS` through `selectScopeColumns`
+  (`lib/cards/bake-select.ts`): a scope column it leaves out reads as
+  "owes the bump" on every card.
 - An EDIT never changes a field its maker did not touch (#524 + its
   follow-up; `tests/unit/components/creator-clear-fields-save.test.tsx`,
   `creator-footer-and-create-clears.test.tsx`). The editor resends the

@@ -31,6 +31,16 @@ const FRAMES_DIR = process.env.VISUAL_FRAMES_DIR ?? path.join(ROOT, "tmp/visual/
 /** The layout version the baseline was made at: each case records whether
  *  a bake stamped with it is stale now (isRenderStale — the bump's scope). */
 const BASE_VERSION = process.env.VISUAL_BASE_VERSION ? Number(process.env.VISUAL_BASE_VERSION) : null;
+/** The columns a bump's card scope reads that a matrix row leaves out
+ *  (CardRowForBake's OPTIONAL keys — an explicit key would redefine every
+ *  case's input fingerprint, so the rows never carry them). A stored card
+ *  HAS them, NULL when empty, and the renderer draws an absent key as that
+ *  NULL; a scope function reads an absent (undefined) column as "can't
+ *  judge → affected". Judged without these defaults every case reads as
+ *  stale under a bump that reads them (v72's kerningGuardsChanged), and the
+ *  gate's outside-scope check (scripts/lib/visual-gate.mjs) would have
+ *  nothing to catch. The scope only: the row the case bakes is untouched. */
+const SCOPE_COLUMN_DEFAULTS = { nickname: null, printed_types: null } as const;
 /** Comma-separated id prefixes (debugging). */
 const ONLY = (process.env.VISUAL_ONLY ?? "").split(",").filter(Boolean);
 /** Write each bake's PNG here (local inspection only — tmp/ is gitignored;
@@ -168,7 +178,7 @@ it("bakes its shard of the visual-regression matrix", async () => {
       const result: CaseResult = { hash: null, input: c.input, ms: 0 };
       if (c.printOnly) result.printOnly = true;
       if (BASE_VERSION !== null) {
-        result.stale = isRenderStale(BASE_VERSION, c.template, undefined, CARD_LAYOUT_VERSION, c.row);
+        result.stale = isRenderStale(BASE_VERSION, c.template, undefined, CARD_LAYOUT_VERSION, { ...SCOPE_COLUMN_DEFAULTS, ...c.row });
       }
       try {
         // The stored-bake path (lib/cards/bake-render.ts): the row mapped as
