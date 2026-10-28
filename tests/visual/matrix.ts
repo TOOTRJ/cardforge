@@ -181,6 +181,9 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
 const LONG_RULES =
   "Flying, vigilance, lifelink\nWhenever this creature attacks, choose one —\n• Draw a card, then discard a card.\n• Create a 1/1 white Spirit creature token with flying.\n{2}{W/U}, {T}: Scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)";
 const LONG_FLAVOR = "\"The sky remembers every wing that crossed it.\"\n—Captain Sisay";
+/** Flavour with Scryfall's upright markup (layout v71), as stored: the
+ *  stars are never drawn, the marked words print roman. */
+const FLAVOR_UPRIGHT = "“Are *we* the wrong sort of people?”\n—Oracle *en*-Vec, *Heroics: A Book of Fables*";
 
 type Fields = Partial<CardRowForBake>;
 
@@ -1868,6 +1871,18 @@ export function visualCases(): VisualCase[] {
       suffix: "@large-pips-hd",
       preset: "hd",
       row: { cost: "{1}{W/U}{2/W}{W/P}", rules_text: "{W/U}{2/W}, {T}: Draw a card.\n{G/U/P}{W/P}{1}: Scry 1.", flavor_text: null },
+    });
+  }
+  // Layout v71: flavour text's upright `*…*` spans (lib/cards/flavor-markup.ts)
+  // — NEW cases (no case above has a star in its flavour, so every one of
+  // them bakes byte-identical): a stressed word, a span inside a word and a
+  // book's title in the attribution, on M15 at both sizes and on the 1997
+  // frame (another rules face size and ink).
+  for (const [template, preset] of [["m15", "default"], ["m15", "hd"], ["retro", "default"]] as const) {
+    add(template, "creature", "g", "long", {
+      suffix: preset === "hd" ? "@flavor-upright-hd" : "@flavor-upright",
+      ...(preset === "hd" ? { preset } : {}),
+      row: { flavor_text: FLAVOR_UPRIGHT },
     });
   }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —

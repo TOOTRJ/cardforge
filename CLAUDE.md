@@ -1271,6 +1271,15 @@ Rules and gotchas:
   the deck copy-limit names) — the gallery's SQL title search folds the same
   six characters (migration 0136; a test holds the two tables together).
   Never compare a query with a stored title character for character.
+- Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
+  FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
+  italic — stored as typed (no migration), read ONLY through
+  `lib/cards/flavor-markup.ts` (`flavorSegments` → the rules layout's
+  `flavorRuns`, measured in the roman face; the stars never drawn;
+  `stripFlavorMarkup` for a plain-text surface; `hasFlavorMarkup` = the
+  sweep's scope, mirrored by the owner's SQL). Any other star is printed;
+  rules text has no markup. Print typography never converts a star and
+  reads a quote through them.
 - An EDIT never changes a field its maker did not touch (#524 + its
   follow-up; `tests/unit/components/creator-clear-fields-save.test.tsx`,
   `creator-footer-and-create-clears.test.tsx`). The editor resends the

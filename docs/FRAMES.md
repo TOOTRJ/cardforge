@@ -10720,6 +10720,21 @@ How rules text is sized and set:
   (42 px on a frame without one). A lone em dash after a word ("choose one
   —", "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **Upright words in flavour** (layout v71, owner 2026-10-28): flavour is
+  italic, but the prints set a book's title, a ship's name or a stressed
+  word ROMAN inside it ("—*Heroics: A Book of Fables*", "Are *we* the
+  wrong sort of people?"). Scryfall writes those words between stars, an
+  import keeps them, and the stored text holds the stars as the markup
+  (`lib/cards/flavor-markup.ts`): a balanced `*…*` pair on one line (a
+  non-space after the first star, before the second, none between) is set
+  roman — measured with the ROMAN face's advances, so the line breaks are
+  the renderers' own — and its stars are never drawn. Any other star is
+  printed — so `**bold**` is not bold: it prints `*bold*` with "bold"
+  upright (Scryfall's convention: one star each side). A span may start
+  or end inside a word ("Oracle *en*-Vec"): the
+  word is one run of glued pieces, each in its own face. Rules text has
+  no markup. The creator's flavour fields say so under the box; print
+  typography reads a quote through the stars (`*"Red Box"*` opens).
 - **Inline pips** (layout v36, TODO 3.31): a disc `RULES_TEXT.pipDiscEm`
   0.785 em across, centred `pipCentreEm` 0.334 em above the line's baseline
   — on the capitals (half MPlantin's 0.682 em cap height), not on the

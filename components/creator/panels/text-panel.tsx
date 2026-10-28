@@ -29,6 +29,7 @@ import { selfReferenceFor } from "@/lib/cards/self-name";
 import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { RulesAlign } from "@/types/card";
+import { FLAVOR_MARKUP_HINT } from "@/lib/cards/flavor-markup";
 
 /** Said on the Text step when the frame is textless (FrameProfile.textless,
  *  TODO 3.24): the card keeps its text and prints it on any other frame. */
@@ -132,7 +133,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
       <FieldGroup
         label="Flavor text"
         error={errors.flavor_text?.message}
-        helper="Optional — up to 1000 characters."
+        helper={`Optional — up to 1000 characters. ${FLAVOR_MARKUP_HINT}`}
       >
         <textarea
           {...register("flavor_text")}

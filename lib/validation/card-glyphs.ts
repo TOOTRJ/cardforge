@@ -1,4 +1,5 @@
 import { copyrightFace } from "@/lib/cards/copyright-slot";
+import { flavorSegments } from "@/lib/cards/flavor-markup";
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
@@ -43,7 +44,7 @@ import {
  *  so its reminder text and ability words are checked as italic and its
  *  {mana} tokens, which become pips, are skipped — a saga's reminder
  *  block and chapters are rules text too, TODO 4.21c), "italic" (flavor
- *  text) or "body" (plain MPlantin: a collector card's footer
+ *  text — its upright `*…*` spans checked in the roman face) or "body" (plain MPlantin: a collector card's footer
  *  mark in the © slot — TODO 4.9b — read as it is, no tokenizer). */
 export type GlyphFace = "display" | "rules" | "italic" | "body";
 
@@ -133,6 +134,12 @@ export function unrenderableCharacters(
       for (const item of paragraph) {
         if (item.t === "w") collect(found, item.v, item.em ? "italic" : "rules", uppercase);
       }
+    }
+  } else if (face === "italic") {
+    // Flavor text: an upright span (`*…*`, lib/cards/flavor-markup.ts) is
+    // drawn in the roman face and its stars not at all.
+    for (const line of text.split("\n")) {
+      for (const seg of flavorSegments(line)) collect(found, seg.text, seg.upright ? "rules" : "italic", uppercase);
     }
   } else {
     collect(found, text, face, uppercase);
