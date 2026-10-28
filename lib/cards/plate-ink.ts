@@ -82,7 +82,7 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   "/frames/bloomburrow/pt/{color}.png": { left: 0.0022, top: 0.0076, right: 0.9978, bottom: 0.9924 },
   // The anime showcase's P/T outline (TODO 4.11, layout v70): MSE's pt.png
   // in the strokes' tone, one for every key.
-  "/frames/bloomanime/pt/{color}.png": { left: 0.0078, top: 0.0066, right: 0.9882, bottom: 0.9867 },
+  "/frames/bloomanime/pt/{color}.png": { left: 0.0078, top: 0, right: 0.9882, bottom: 0.9868 },
   "/frames/tarkirdraconic/pt/{color}.png": { left: 0.0054, top: 0.0106, right: 0.9973, bottom: 0.9841 },
   "/frames/tarkirghostfire/pt/{color}.png": { left: 0.0051, top: 0.0048, right: 0.9949, bottom: 0.9952 },
 };

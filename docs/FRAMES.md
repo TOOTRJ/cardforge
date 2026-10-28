@@ -5284,11 +5284,23 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
   - the **strokes** in ONE flat tone, 35,31,12: the raw median of every
     stroke's core (2 px eroded) over 75 registered regions, 531,750 px
     (owner 2026-10-27: one flat tone; print's raised foil runs 15–98 per
-    region, with a copper rim the flat tone leaves out — asked, not added).
+    region) — with print's **copper rim** (owner 2026-10-27: add it,
+    `ANIME_RIM`, `copperRimLayer`): a copper edge on the strokes' UPPER
+    edges only (outward normal within ~37° of straight up — the share of
+    copper pixels per 15° bin is 0.41–0.55 within ±15°, 0.25–0.46 at ±30°,
+    0.13–0.26 at ±45°, the background's 0.03–0.09 past 60°), straddling
+    MSE's stroke edge: one ring inside and one outside fully, a half ring
+    past it (print's copper share peaks on the edge's first rings, 0.51
+    inside / 0.55 outside, and fades by the third; a 2 + 3 ring rim read
+    heavier than print's on the sheet), full strength to 30° from up,
+    fading to none at 50°, in 180,103,59 — the median of the copper pixels
+    of those rings within ±45° (68,570 px). The strokes' core stays
+    35,31,12 (the rings past the rim read 34–38, 29–33, 9–16). The P/T
+    outline, the crown and the stamp's arch wear the same rim.
   Every print has a P/T, so the master is MSE's P/T dress: the text box's
   tab under the P/T and the shorter right stroke; the P/T box's outline
-  (`pt.png`) is the plate (`bloomanime/pt/<key>.png`, 1157, 1847, 254 ×
-  150). A card with no P/T keeps the tab without the outline (no print to
+  (`pt.png`, with the rim) is the plate (`bloomanime/pt/<key>.png`,
+  1157, 1846, 254 × 151). A card with no P/T keeps the tab without the outline (no print to
   match).
 - **Full bleed.** The art runs under the whole card (`artSlot` 0 / 0 / 100
   × 100; it was inset 2.5 / 3.5 / 93 × 92 over a #101015 ring). The edge
@@ -5341,8 +5353,6 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
   - the **collector line** (`M15_COLLECTOR`): print's rows within 3 px of
     M15's, its pen ~5 px left.
 - **Flagged, not changed** (TODO 4.11):
-  - the strokes' copper rim (raised foil) — the owner's one flat tone, a
-    rim only if the sheet shows it is needed;
   - the P/T digits print ~25 px wider than ours at the same height, and
     the rules glyphs ~3 % wider (a word breaks earlier on print);
   - #353 Ral, the walker, stays out of scope.

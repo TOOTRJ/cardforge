@@ -152,6 +152,31 @@ export const ANIME_STROKE_RGB = Object.freeze([35, 31, 12]);
 export const ANIME_NAMEBOX = Object.freeze({ alpha: 0.78, rgb: Object.freeze([45, 50, 52]) });
 export const ANIME_TEXTBOX = Object.freeze({ alpha: 0.8, rgb: Object.freeze([39, 40, 35]) });
 export const ANIME_FOOTER_RGB = Object.freeze([15, 20, 16]);
+/** The copper rim of the anime's raised-foil strokes (owner 2026-10-27: add
+ *  it), measured on the same registered regions: a light copper edge on the
+ *  strokes' UPPER edges only — the edges whose outward normal points within
+ *  ~37° of straight up (by the share of copper pixels per 15° bin: 0.41–0.55
+ *  within ±15°, 0.25–0.46 at ±30°, 0.13–0.26 at ±45°, the background's
+ *  0.03–0.09 past 60°) — straddling MSE's stroke edge: its first two pixels
+ *  inside (0.51 / 0.31 copper at 0°) and two to three outside (0.55 / 0.44 /
+ *  0.26) — drawn as one ring in, one out and a half past it (a 2 + 3 ring
+ *  rim read heavier than print's on the 2× sheet). Its tone: the median of the copper pixels of those rings within
+ *  ±45° (68,570 px), 180,103,59; the stroke's core keeps its 35,31,12 (the
+ *  rings past the rim read 34–38, 29–33, 9–16). */
+export const ANIME_RIM = Object.freeze({
+  rgb: Object.freeze([180, 103, 59]),
+  /** Rings inside the edge (4-neighbour, 1 px each), fully copper. */
+  inside: 1,
+  /** Rings outside the edge fully copper, then one at half. */
+  outside: 1,
+  outsideHalf: 1,
+  /** Full strength on edges within this angle of straight up… */
+  fullWithinDeg: 30,
+  /** …fading to none here. */
+  zeroAtDeg: 50,
+  /** The box blur (px) that turns the edge's alpha gradient into its normal. */
+  normalBlurPx: 4,
+});
 
 /** Per template: the border's shape and colour (`rgb`, or `rgbByKey` per
  *  colour key). Kind "mask" is a style's own border mask (the anime's
@@ -322,6 +347,110 @@ export function paintOver(rgba, cov, rgb) {
     for (let k = 0; k < 3; k += 1) rgba[o + k] = Math.round((rgb[k] * c + rgba[o + k] * b * (1 - c)) / outA);
     rgba[o + 3] = Math.round(outA * 255);
   }
+}
+
+/** The copper rim layer (straight RGBA, W×H) for a stroke alpha (0–255,
+ *  W×H): ANIME_RIM's rings around the strokes' upper edges. Composite it
+ *  OVER the strokes. Pure. */
+export function copperRimLayer(alpha, width, height, spec = ANIME_RIM) {
+  const n = width * height;
+  const mask = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) mask[p] = alpha[p] > 128 ? 1 : 0;
+  // 4-neighbour rings: depth inside (1 = the edge pixel) and outside.
+  const ringIn = new Uint8Array(n);
+  const ringOut = new Uint8Array(n);
+  let cur = mask;
+  for (let k = 1; k <= spec.inside; k += 1) {
+    const next = new Uint8Array(n);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const p = y * width + x;
+        if (!cur[p]) continue;
+        const inner = x > 0 && x < width - 1 && y > 0 && y < height - 1 && cur[p - 1] && cur[p + 1] && cur[p - width] && cur[p + width];
+        if (inner) next[p] = 1;
+        else if (!ringIn[p]) ringIn[p] = k;
+      }
+    }
+    cur = next;
+  }
+  let grown = mask;
+  for (let k = 1; k <= spec.outside + spec.outsideHalf; k += 1) {
+    const next = new Uint8Array(grown);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const p = y * width + x;
+        if (grown[p]) continue;
+        if ((x > 0 && grown[p - 1]) || (x < width - 1 && grown[p + 1]) || (y > 0 && grown[p - width]) || (y < height - 1 && grown[p + width])) {
+          next[p] = 1;
+          ringOut[p] = k;
+        }
+      }
+    }
+    grown = next;
+  }
+  // The edge's outward normal: the alpha gradient, box-blurred.
+  const a = new Float32Array(n);
+  for (let p = 0; p < n; p += 1) a[p] = alpha[p] / 255;
+  const gx = new Float32Array(n);
+  const gy = new Float32Array(n);
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const p = y * width + x;
+      gx[p] = (a[p + 1] - a[p - 1]) / 2;
+      gy[p] = (a[p + width] - a[p - width]) / 2;
+    }
+  }
+  const blur = (src) => {
+    const r = spec.normalBlurPx;
+    const tmp = new Float32Array(n);
+    const out = new Float32Array(n);
+    for (let y = 0; y < height; y += 1) {
+      let acc = 0;
+      for (let x = -r; x <= r; x += 1) if (x >= 0 && x < width) acc += src[y * width + x];
+      for (let x = 0; x < width; x += 1) {
+        tmp[y * width + x] = acc;
+        const add = x + r + 1;
+        const sub = x - r;
+        if (add < width) acc += src[y * width + add];
+        if (sub >= 0) acc -= src[y * width + sub];
+      }
+    }
+    for (let x = 0; x < width; x += 1) {
+      let acc = 0;
+      for (let y = -r; y <= r; y += 1) if (y >= 0 && y < height) acc += tmp[y * width + x];
+      for (let y = 0; y < height; y += 1) {
+        out[y * width + x] = acc;
+        const add = y + r + 1;
+        const sub = y - r;
+        if (add < height) acc += tmp[add * width + x];
+        if (sub >= 0) acc -= tmp[sub * width + x];
+      }
+    }
+    return out;
+  };
+  const bx = blur(gx);
+  const by = blur(gy);
+  const layer = new Uint8Array(n * 4);
+  for (let p = 0; p < n; p += 1) {
+    const inR = ringIn[p];
+    const outR = ringOut[p];
+    if (!inR && !outR) continue;
+    // Outward normal = −gradient; its angle from straight up (image y down).
+    const nx = -bx[p];
+    const ny = -by[p];
+    const len = Math.hypot(nx, ny);
+    if (len < 1e-6) continue;
+    const fromUp = (Math.acos(Math.max(-1, Math.min(1, -ny / len))) * 180) / Math.PI;
+    const w = fromUp <= spec.fullWithinDeg ? 1 : fromUp >= spec.zeroAtDeg ? 0 : (spec.zeroAtDeg - fromUp) / (spec.zeroAtDeg - spec.fullWithinDeg);
+    const ring = outR > spec.outside ? 0.5 : 1;
+    const alphaOut = Math.round(255 * w * (inR ? 1 : ring));
+    if (alphaOut <= 0) continue;
+    layer[p * 4] = spec.rgb[0];
+    layer[p * 4 + 1] = spec.rgb[1];
+    layer[p * 4 + 2] = spec.rgb[2];
+    layer[p * 4 + 3] = alphaOut;
+  }
+  return layer;
 }
 
 /** A greyscale mask (0–255) as coverage — cut at the one card corner

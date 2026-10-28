@@ -1669,7 +1669,7 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            frames.mjs `layered`, the numbers in scripts/lib/mse-showcase-
 //            borders.mjs ANIME_*): MSE's recolour template's flat red
 //            strokes in print's flat tone (35,31,12, the raw median of the
-//            registered scans), the dark slate name and text boxes MSE draws
+//            registered scans) with its copper rim on their upper edges, the dark slate name and text boxes MSE draws
 //            at render (the masters had none) at print's opacity (0.78 /
 //            0.80), the footer through MSE's border mask in print's own tone
 //            (15,20,16) and the P/T box's outline as a plate; its own layout

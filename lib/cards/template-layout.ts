@@ -4843,7 +4843,8 @@ const LOTRSCROLL: FrameProfile = {
 // The Bloomburrow anime showcase (BLB #343–355, the raised-foil legends;
 // TODO 4.11 / 4.35, layout v70): ONE master for every key
 // (scripts/build-showcase-frames.mjs `layered`: MSE's recolour template in
-// print's flat stroke tone, the name and text boxes at print's opacity, the
+// print's flat stroke tone with its copper rim on the strokes' upper edges,
+// the name and text boxes at print's opacity, the
 // footer through MSE's border mask — scripts/lib/mse-showcase-borders.mjs
 // ANIME_*). Its own text layout, measured on the 12 creature scans, each
 // registered on MSE's stroke shapes (the raised-foil crops wander 0–12 px;
@@ -4860,7 +4861,7 @@ const BLOOMANIME_TITLE_DX_PX = -6;
 /** The type line's pen 4 px left of M15's (print's ink from 127). */
 const BLOOMANIME_TYPE_DX_PX = -4;
 const BLOOMANIME_ART_SLOT: Rect = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 };
-const BLOOMANIME_PLATE_RECT: Rect = { leftPct: (1157 / 1500) * 100, topPct: (1847 / 2100) * 100, widthPct: (254 / 1500) * 100, heightPct: (150 / 2100) * 100 };
+const BLOOMANIME_PLATE_RECT: Rect = { leftPct: (1157 / 1500) * 100, topPct: (1846 / 2100) * 100, widthPct: (254 / 1500) * 100, heightPct: (151 / 2100) * 100 };
 const BLOOMANIME: FrameProfile = {
   ...M15,
   label: "Anime",
@@ -6213,7 +6214,7 @@ export const BLOOMANIME_HOLO_STAMP_OVAL: Rect = { leftPct: (684 / 1500) * 100, t
 export const BLOOMANIME_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (631 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (240 / 1500) * 100, heightPct: (70 / 2100) * 100 };
 /** The anime's stamp notch: MSE's own (the footer's tone through
  *  border_stamp_mask.png under stamp.png's rim, in the strokes' tone), cut
- *  to its box (494, 1882, 540 × 58). */
+ *  to its box (494, 1882, 540 × 58, the copper rim on its arch). */
 export const BLOOMANIME_HOLO_STAMP: FrameOverlaySlot = {
   anatomy: "holoStamp",
   rect: { leftPct: (494 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (540 / 1500) * 100, heightPct: (58 / 2100) * 100 },

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANIME_FOOTER_RGB,
   ANIME_NAMEBOX,
+  ANIME_RIM,
   ANIME_STROKE_RGB,
   ANIME_TEXTBOX,
   BORDER_BLACK,
@@ -10,6 +11,7 @@ import {
   MSE_SHOWCASE_BORDERS,
   PALETTE_PNG_OPTIONS,
   borderLost,
+  copperRimLayer,
   cutAtCardCorner,
   edgeCoverage,
   maskCoverage,
@@ -80,6 +82,29 @@ describe("the MSE showcase borders as data", () => {
     expect([...ANIME_FOOTER_RGB]).toEqual([15, 20, 16]);
     expect(MSE_SHOWCASE_BORDERS.bloomanime).toMatchObject({ kind: "mask", keepCorners: true });
     for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(showcaseBorderRgb("bloomanime", k), k).toBe(ANIME_FOOTER_RGB);
+  });
+
+  it("draws the anime's copper rim on the strokes' UPPER edges only: one ring in, one out and a half one past it", () => {
+    expect(ANIME_RIM).toMatchObject({ rgb: [180, 103, 59], inside: 1, outside: 1, outsideHalf: 1, fullWithinDeg: 30, zeroAtDeg: 50 });
+    // A wide bar: rows 100–139, columns 100–399.
+    const w = 500;
+    const h = 240;
+    const alpha = new Uint8Array(w * h);
+    for (let y = 100; y < 140; y += 1) for (let x = 100; x < 400; x += 1) alpha[y * w + x] = 255;
+    const rim = copperRimLayer(alpha, w, h);
+    const a = (x: number, y: number) => rim[(y * w + x) * 4 + 3];
+    // The top edge, mid-bar: the edge row inside, the row above it, then half.
+    expect(a(250, 100)).toBe(255);
+    expect([...rim.subarray((100 * w + 250) * 4, (100 * w + 250) * 4 + 3)]).toEqual([180, 103, 59]);
+    expect(a(250, 99)).toBe(255);
+    expect(a(250, 98)).toBe(128);
+    expect(a(250, 97)).toBe(0);
+    expect(a(250, 101)).toBe(0); // the core stays the stroke's
+    // The bottom edge and the sides: no rim.
+    expect(a(250, 139)).toBe(0);
+    expect(a(250, 140)).toBe(0);
+    expect(a(100, 120)).toBe(0);
+    expect(a(399, 120)).toBe(0);
   });
 
   it("paints OVER (the anime's footer above its boxes) and reads a mask as coverage, cut at the corner unless kept", () => {

@@ -48,11 +48,13 @@ import path from "node:path";
 import fs from "node:fs";
 import {
   ANIME_NAMEBOX,
+  ANIME_RIM,
   ANIME_STROKE_RGB,
   ANIME_TEXTBOX,
   BORDERED_PNG_ATTEMPTS,
   MSE_SHOWCASE_BORDERS,
   borderLost,
+  copperRimLayer,
   maskCoverage,
   paintOver,
   paintShowcaseBorder,
@@ -127,6 +129,10 @@ const FRAMES = [
       strokes: ["card.png", "nonptpt.png"],
     },
     tone: ANIME_STROKE_RGB,
+    // …with print's copper rim on the strokes' upper edges (owner
+    // 2026-10-27), on the master's strokes, the P/T outline, the crown and
+    // the stamp's arch alike.
+    rim: ANIME_RIM,
     plate: "pt.png",
     crown: "crown.png",
     stampNotch: { well: "border_stamp_mask.png", rim: "stamp.png" },
@@ -207,6 +213,16 @@ function over(base, top) {
   }
 }
 
+/** `data` (straight RGBA, W×H, one piece in its flat tone) with the
+ *  family's copper rim over it (in place); no rim, untouched. */
+function withRim(frame, data) {
+  if (!frame.rim) return data;
+  const alpha = new Uint8Array(W * H);
+  for (let p = 0; p < W * H; p += 1) alpha[p] = data[p * 4 + 3];
+  over(data, copperRimLayer(alpha, W, H, frame.rim));
+  return data;
+}
+
 /** A `layered` family's ONE master (every key the same bytes), in MSE's z
  *  order: the recoloured boxes, the footer over them through the style's
  *  border mask (cut at the card corner), the strokes in the flat tone. */
@@ -219,7 +235,11 @@ async function layeredMaster(frame) {
   const { data: grey } = await sharp(path.join(base, frame.layered.footer)).resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer({ resolveWithObject: true });
   const cov = maskCoverage(grey, W, H, Boolean(MSE_SHOWCASE_BORDERS[frame.name]?.keepCorners));
   paintOver(data, cov, showcaseBorderRgb(frame.name, "w"));
-  for (const f of frame.layered.strokes) over(data, await layer(path.join(base, f), 1, frame.tone));
+  // The strokes in their flat tone, then the rim over them as ONE drawing
+  // (its rings read off the strokes' combined edge).
+  const strokes = Buffer.alloc(W * H * 4);
+  for (const f of frame.layered.strokes) over(strokes, await layer(path.join(base, f), 1, frame.tone));
+  over(data, withRim(frame, strokes));
   const out = { data, cov };
   layeredCache.set(frame.name, out);
   return out;
@@ -344,7 +364,7 @@ async function convertStampNotch(frame, color) {
     .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))), 1, frame.tone ?? null);
+  const rim = withRim(frame, await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))), 1, frame.tone ?? null));
   // The well in the border's own colour (black, or the woodland's coloured
   // footer: MSE's `colored border` under the rim).
   const rgb = showcaseBorderRgb(frame.name, color) ?? [0, 0, 0];
@@ -393,7 +413,7 @@ async function convertStampNotch(frame, color) {
  *  <name>crown/<c>.png — the profile's crown overlay rect is that box. */
 async function convertCrown(frame, color) {
   const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
-  const data = await layer(path.join(base, frame.crown.replace("{c}", sourceKey(frame, "crown", color))), 1, frame.tone ?? null);
+  const data = withRim(frame, await layer(path.join(base, frame.crown.replace("{c}", sourceKey(frame, "crown", color))), 1, frame.tone ?? null));
   let x0 = W;
   let y0 = H;
   let x1 = -1;
@@ -426,6 +446,7 @@ async function convertPlate(frame, color) {
     .toBuffer({ resolveWithObject: true });
   const ch = info.channels;
   if (frame.tone) for (let i = 0; i < data.length; i += ch) [data[i], data[i + 1], data[i + 2]] = frame.tone;
+  if (frame.rim) withRim(frame, data);
   let x0 = W;
   let y0 = H;
   let x1 = -1;
