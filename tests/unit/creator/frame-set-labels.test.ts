@@ -90,7 +90,9 @@ describe("the hedron frame lives in its own Zendikar Rising set", () => {
     );
     const gallery = framesForKind("creature", everything);
     const showcase = gallery.filter((c) => c.group === "showcase").map((c) => c.template);
-    expect(showcase.indexOf("fullart")).toBe(showcase.indexOf("tarkirdragon") + 1);
+    // (…the New Capenna Art Deco, TODO 4.11 wave 2, between them.)
+    expect(showcase.indexOf("sncartdeco")).toBe(showcase.indexOf("tarkirdragon") + 1);
+    expect(showcase.indexOf("fullart")).toBe(showcase.indexOf("sncartdeco") + 1);
     // Extended art is a treatment of the 2015 frame every set prints: an M15
     // variation since 2026-10-13 (frame-picker-groups.test.ts), listed
     // before every showcase.

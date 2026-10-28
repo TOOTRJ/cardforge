@@ -77,6 +77,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // pack's ptBounds (274 × 150) — the bevelled plate and its
   // coloured ends fill the image to every edge.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The New Capenna Art Deco showcase's plate (TODO 4.11 wave 2): Card
+  // Conjurer's 'Golden Age (SNC)' P/T (254 × 134) under every key, drawn at
+  // the pack's bounds — the gold-rimmed plate fills its image but for its
+  // rounded corners.
+  "/frames/sncartdeco/pt/{color}.png": { left: 0.0039, top: 0.0074, right: 0.9961, bottom: 0.9926 },
   // The D&D Sourcebook showcase's plate (TODO 4.11 wave 2): Card Conjurer's
   // one 'Power/Toughness' (260 × 132) under every key, drawn at the pack's
   // ptBounds — the bevelled parchment plate fills the image to every edge.

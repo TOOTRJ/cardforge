@@ -85,6 +85,8 @@ import {
   DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
   splitZnrNotch,
+  liftTranslucency,
+  fillDots,
   clearZnrOvalCut,
   cutCrownBand,
   cutCrownFindings,
@@ -619,7 +621,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       const toneMasks = Object.fromEntries(
         await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
       );
-      const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
+      const toned = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
+      // A translucent layer lifted onto print's opacity, and a see-through
+      // dot the window's slot must not show filled (TODO 4.11 wave 2: the New
+      // Capenna Art Deco — SNC_DECO_TRANSLUCENCY, SNC_DECO_DOT_FILLS).
+      const lifted = def.translucency ? liftTranslucency(toned, W, H, def.translucency) : toned;
+      const native = def.dotFills ? fillDots(lifted, W, def.dotFills) : lifted;
       if (def.transform === "rotate-cw") {
         // The pack draws the card portrait (split): a quarter turn clockwise,
         // a pixel permutation — nothing is resampled.

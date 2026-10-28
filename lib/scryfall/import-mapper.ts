@@ -1851,6 +1851,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   // is a walker: no crown). Its own frame's crown only (OWN_FRAME_CROWN_
   // SIGNATURES): off on the standard frame its import lands on.
   "showcase/blb/anime",
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its 30 legends
+  // (SNC #301, #306, #307 … and their gilded twins) print the arch over the
+  // title bar — the template's crowned twin.
+  "showcase/snc/art-deco",
 ]);
 
 /** The crowned showcases whose crown is their OWN frame's and which land
@@ -1860,6 +1864,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
  *  frames named here (ImportedAnatomyFacts.printed_crown_frames). */
 const OWN_FRAME_CROWN_SIGNATURES: Readonly<Record<string, readonly FrameTemplate[]>> = {
   "showcase/blb/anime": ["bloomanime"],
+  // The New Capenna Art Deco's arch (TODO 4.11 wave 2) is its own frame's
+  // crowned twin: a legend that lands on the m15 stand-in while the frame
+  // is unverified wears no standard crown there.
+  "showcase/snc/art-deco": ["sncartdeco"],
 };
 
 /** Whether a printing prints the STANDARD legendary crown (see

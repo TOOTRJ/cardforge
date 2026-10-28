@@ -559,6 +559,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Streets of New Capenna (SNC 2022) — the ART DECO showcase of the five
+  // families' three-colour cards (SNC #296–340) and their gilded-foil twins
+  // (#361–405): black and gold filigree, the art under translucent bars and
+  // text box. Card Conjurer's pack for it is 'Golden Age (SNC)'
+  // (packSNCGilded.js; CC's 'Art Deco (SNC)' pack draws the Golden Age
+  // cards #341–359 instead). An addition: no stored card sits on it.
+  "sncartdeco",
   // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
   // art (Scryfall flags none of those printings full_art), but the key keeps
   // its historical name because it is stored in cards.frame_style,
@@ -732,6 +739,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  // Set-relative: the picker prints "Streets of New Capenna — Art Deco".
+  sncartdeco: "Art Deco",
   // Set-relative: the picker prints "Murders at Karlov Manor — Dossier".
   dossier: "Dossier",
   extendedart: "Extended Art",
@@ -777,6 +786,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "multiverselegends",
+  "newcapenna",
   "zendikarrising",
   "dnd",
   "karlov",
@@ -800,6 +810,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
+  newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
   // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
@@ -886,6 +897,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirdraconic: "tarkir",
   tarkirghostfire: "tarkir",
   tarkirdragon: "multiverselegends",
+  sncartdeco: "newcapenna",
   dossier: "karlov",
   extendedart: "extended",
   extendedartland: "extended",
@@ -972,6 +984,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
+  // The Art Deco showcase (SNC #296–340, #361–405).
+  newcapenna: "showcase",
   zendikarrising: "showcase",
   // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
   dnd: "showcase",

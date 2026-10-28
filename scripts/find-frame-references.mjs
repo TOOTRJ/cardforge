@@ -363,6 +363,13 @@ const TEMPLATES = {
   },
   // Dragon Wing is the Multiverse Legends (MOM 2023) Tarkir frame: MUL #1
   // (W) and #60 (W/U) are its only printings.
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 and
+  // the gilded twins #361–405 (#341–359 are the Golden Age frame). Every
+  // card is three colours: only `m` finds a printing.
+  sncartdeco: {
+    confirm: "SNC Art Deco showcase — confirm the black-and-gold filigree (#296–340, gilded #361–405), not the pale Golden Age frame (#341–359).",
+    q: (k) => `set:snc ((cn>=296 cn<=340) or (cn>=361 cn<=405)) ${spellColor(k)}`,
+  },
   tarkirdragon: {
     q: (k) => `set:mul (cn:1 or cn:60) ${spellColor(k)}`,
   },

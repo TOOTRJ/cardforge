@@ -6570,6 +6570,39 @@
       ]
     }
   },
+  "sncartdeco": {
+    "note": "The Streets of New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 and their gilded-foil twins #361–405 — NOT #341–359 / #441–449 (the pale Golden Age frame) or #360 (the Phyrexian Urabrask). Every card of the run is three colours, so only 'm' has printings: the one gold filigree; w u b r g c are the same master and have none. Checked on a plain uncommon creature, a legendary mythic (the arch: the crowned twin), a rare sorcery (the stamp) and its gilded twin.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Brazen Upstart",
+          "set": "snc",
+          "scryfallId": "25fd80c9-e86c-48bd-8c8b-654a29665931"
+        },
+        {
+          "name": "Falco Spara, Pactweaver",
+          "set": "snc",
+          "scryfallId": "17bbac59-da58-49d8-887e-272dd90724b4"
+        },
+        {
+          "name": "Hostile Takeover",
+          "set": "snc",
+          "scryfallId": "8137f134-0148-4df1-b575-ec861192c65c"
+        },
+        {
+          "name": "Hostile Takeover",
+          "set": "snc",
+          "scryfallId": "f2d196a9-25aa-44da-baa7-2a0191ad7609"
+        }
+      ]
+    }
+  },
   "tarkirghostfire": {
     "note": "Ghostfire = the TDM black-bordered run (#399–408; TODO 4.11 / 4.35: the white halo-foil run #409–418 is 4.30's), foil-only prints.",
     "colors": {

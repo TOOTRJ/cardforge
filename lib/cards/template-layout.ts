@@ -4580,6 +4580,96 @@ const BLOOMBURROW: FrameProfile = {
   pt: { ...M15.pt!, plateRect: BLOOMBURROW_PLATE_RECT, plateAssetPathTemplate: "/frames/bloomburrow/pt/{color}.png" },
 };
 
+// The Streets of New Capenna ART DECO showcase (TODO 4.11 wave 2) — SNC
+// #296–340, the five families' three-colour cards, and their gilded-foil
+// twins #361–405: Card Conjurer's 'Golden Age (SNC)' pack
+// (packSNCGilded.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs
+// SNC_DECO), which is the frame these cards print — CC's 'Art Deco (SNC)'
+// pack draws the Golden Age cards #341–359 instead. ONE master under every
+// colour key (print draws one gold filigree for all 90; every card is three
+// colours) and its crowned twin (`-legendary`: the arch over the title bar
+// every legendary printing carries, the pack's 'Legendary Frame' — its bar
+// drawn where the legendary prints draw theirs, 6 px above the plain
+// prints', which no flat zone lets us re-cut). The art runs under the
+// translucent title bar, type bar and text box (underFrameArt): the window
+// is its own slot, the two layers meeting on the opaque gold round it. An
+// ADDITION: a new template, no stored card.
+/** The window (α < 250 on 120–1379 × 238–1167 px on every master: the
+ *  stepped fins narrow it to 143–1356 at its top) with the art-window
+ *  check's 0.05 % to spare: 119–1381 × 236–1170 — every edge on the
+ *  opaque gold (the fins, the title bar's foot rim, the art's foot rim). */
+export const SNCARTDECO_ART_SLOT: Rect = { topPct: (236 / 2100) * 100, leftPct: (119 / 1500) * 100, widthPct: (1262 / 1500) * 100, heightPct: (934 / 2100) * 100 };
+/** The art under the frame: every translucent pixel of both masters (α <
+ *  250 on 98–1399 × 116–1933 px, the crowned twin's arch from 79) with the
+ *  check's spare: 96–1404 × 77–1936 (Card Conjurer's artBounds 96 / 78 /
+ *  1308 × 1857, a row higher for the arch). */
+export const SNCARTDECO_UNDER_RECT: Rect = { topPct: (77 / 2100) * 100, leftPct: (96 / 1500) * 100, widthPct: (1308 / 1500) * 100, heightPct: (1859 / 2100) * 100 };
+/** The pack's plate at its bounds (1156 / 1857, 254 × 134 px, 1:1). */
+const SNCARTDECO_PLATE_RECT: Rect = { topPct: (1857 / 2100) * 100, leftPct: (1156 / 1500) * 100, widthPct: (254 / 1500) * 100, heightPct: (134 / 2100) * 100 };
+/** White ink on the dark bars and box (print's 255,255,255 at the glyphs'
+ *  core), no shadow. */
+const SNCARTDECO_INK = "#ffffff";
+// Measured on all 90 printings at 1500 × 2100, our bake of each card
+// registered on its print region by region (the cost row by normalised
+// cross-correlation over our discs' own pixels; the name and type line by
+// their white ink). The plain printings (60) set their name and cost row ~4
+// px LOWER than the legendary ones (30), under a title bar 6 px lower; one
+// slot serves both (no slot follows the crown), so each takes the mean of
+// the 90: the name 1 px up (plain +1, legendary −5); the cost row 8 px down
+// (plain +9.3, legendary +5.2) and 1.5 px right. Across, the name's pen
+// rides its LEFT ink edge (#622 review): print's first ink column against
+// ours on the same name, all 90 — 2 px right of ours at −3 px (median, plain
+// and legendary alike: print 128–138, e.g. #296 136, #301 131) — so 1 px
+// left of M15's pen.
+const SNCARTDECO_TITLE_DX_PX = -1;
+const SNCARTDECO_TITLE_DY_PX = -1;
+const SNCARTDECO_COST_DY_PX = 8;
+const SNCARTDECO_COST_DX_PX = 1.5;
+/** The type line 4.5 px under the CC baseline (plain +5, legendary +3); the
+ *  band's RECT 3 px wider so the set symbol ends 3 px further right (the
+ *  legendary prints, where its ink registers; its rows within 1 px). */
+const SNCARTDECO_TYPE_DY_PX = 4.5;
+const SNCARTDECO_SYMBOL_DX_PX = 3;
+const SNCARTDECO: FrameProfile = {
+  ...M15,
+  label: "Art Deco",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy + SNCARTDECO_COST_DY_PX / 1500,
+  costDx: CC_M15_COST.costDx + SNCARTDECO_COST_DX_PX / 1500,
+  artSlot: SNCARTDECO_ART_SLOT,
+  underFrameArt: { rect: SNCARTDECO_UNDER_RECT },
+  title: {
+    ...M15.title,
+    rect: {
+      ...M15.title.rect,
+      leftPct: M15.title.rect.leftPct + (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct - (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+    },
+    dy: M15.title.dy! + SNCARTDECO_TITLE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: M15.type.rect.widthPct + (SNCARTDECO_SYMBOL_DX_PX / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + SNCARTDECO_TYPE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  // M15's box: the run's full boxes set their last descender as low as
+  // 1922 px (#335) and their lines from x 133; the arch keeps out.
+  rules: { ...M15.rules, colorHex: SNCARTDECO_INK },
+  // The pack's plate; the digits 4.5 px left of M15's box and 1 px lower,
+  // where the run sets them on it (the 30 creatures registered), white; the
+  // plate's dark face runs 1180–1384 px (its gold rim either side).
+  pt: {
+    ...M15.pt!,
+    rect: { ...M15.pt!.rect, leftPct: M15.pt!.rect.leftPct - (4.5 / 1500) * 100, topPct: M15.pt!.rect.topPct + (1 / 2100) * 100 },
+    inkSpanPct: { leftPct: (1186 / 1500) * 100, rightPct: (1378 / 1500) * 100 },
+    colorHex: SNCARTDECO_INK,
+    plateRect: SNCARTDECO_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/sncartdeco/pt/{color}.png",
+  },
+};
+
 // MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
 // 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
 // scripts/lib/cc-frames.mjs TARKIR), the Multiverse Legends showcase of MUL
@@ -6573,6 +6663,37 @@ export const BLOOMANIME_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "oval", oval: BLOOMANIME_HOLO_STAMP_OVAL, keepOut: BLOOMANIME_HOLO_STAMP_KEEP_OUT },
 };
 
+/** The New Capenna Art Deco showcase's oval (TODO 4.11 wave 2): the prints'
+ *  hologram — its lit pixels 685–815 × 1925–1988 on the 50 stamped plain
+ *  and gilded prints — 134 × 64 at 683, 1924, centred under the arch. */
+export const SNCARTDECO_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1924 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: 2 px above its lifted outline
+ *  (1898.7 at the centre) down to the gold rim's foot (1950), over the
+ *  piece's 656–844 px. */
+export const SNCARTDECO_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 };
+/**
+ * The New Capenna Art Deco showcase's OVAL stamp notch (TODO 4.11 wave 2):
+ * Card Conjurer's pack has no stamp piece, so ours is PipGlyph's own
+ * derivation (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH): the master's own black
+ * outline, gold rim and black border LIFTED along the printed arch (35.3 px
+ * at the centre, rising from x 664 to x 836; the 25 stamped plain prints),
+ * the box above keeping its own pixels. 188 × 54 px at 656, 1896, 1:1 at HD.
+ * The run's rares and mythics print it (`security_stamp: oval`), its commons
+ * and uncommons run the rim straight: "auto" = a rare or mythic, as on M15.
+ * Keys: the masters' (one piece; the crowned twins hold the same pixels
+ * there). Set on the sncartdeco entry only; opt-in per card.
+ */
+export const SNCARTDECO_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // SNC_DECO_NOTCH_BOX in scripts/lib/borderless-stamp.mjs (a unit test
+  // holds them together).
+  rect: { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 },
+  assetPathTemplate: "/frames/sncartdecoholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: SNCARTDECO_HOLO_STAMP_OVAL, keepOut: SNCARTDECO_HOLO_STAMP_KEEP_OUT },
+};
+
 /**
  * The holofoil stamp's notch on the BORDERLESS frames (TODO 4.9d, owner
  * Round 66, 2026-10-14): every stamped borderless print arches the text
@@ -7805,6 +7926,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // stored card changes by them.
   avatar: { ...AVATAR, collector: M15_COLLECTOR },
   bloomburrow: { ...BLOOMBURROW, overlays: [BLOOMBURROW_CROWN, BLOOMBURROW_HOLO_STAMP], collector: M15_COLLECTOR },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its crown baked
+  // into `-legendary` twins (the pack's 'Legendary Frame': the arch reshapes
+  // the translucent title bar under it, which no overlay can draw), the oval
+  // stamp notch (our lifted rim) and the collector line on M15's rows (the
+  // run's within 2 px, as the Tarkir draconic's) — each opt-in per card.
+  sncartdeco: { ...SNCARTDECO, crownMasters: true, overlays: [SNCARTDECO_HOLO_STAMP], collector: M15_COLLECTOR },
   // The six near-black picker tiles that are not art-first get the tile's
   // sample art (pickerSampleArt, 4.45) on their entries here, not on their
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads

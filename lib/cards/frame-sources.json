@@ -17320,6 +17320,159 @@
       "the chapter badge and the row divider are the saga's published pieces (saga/chapter/badge.png, saga/chapter/divider.png); the pack's masks (Pinline, Title — the transform pack's maskTitle.png — Type, Frame, Banner, Banner (Right), Rules, Rules (Right), Border) and its 'Holo Stamp' are not used and not published"
     ]
   },
+  "sncartdeco": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packSNCGilded.js 'Golden Age (SNC)' — the Streets of New Capenna Art Deco showcase, SNC #296–340 / #361–405 (groupShowcase-5.js; CC's 'Art Deco (SNC)' pack draws the Golden Age cards #341–359)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; the gold toned as the file loads (SNC_DECO_SOURCE_TONES); the translucent bars and box lifted onto print's opacity (title bar α 189, type bar α 207, text box α 209, from 127); the fin's see-through dot filled (SNC_DECO_DOT_FILLS); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "u": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "b": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "r": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "g": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "c": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "m": [
+        "img/frames/snc/gilded/m.png"
+      ],
+      "w-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "u-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "b-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "r-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "g-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "c-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ],
+      "m-legendary": [
+        "img/frames/snc/gilded/legendary/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/snc/gilded/pt/m.png",
+      "u": "img/frames/snc/gilded/pt/m.png",
+      "b": "img/frames/snc/gilded/pt/m.png",
+      "r": "img/frames/snc/gilded/pt/m.png",
+      "g": "img/frames/snc/gilded/pt/m.png",
+      "c": "img/frames/snc/gilded/pt/m.png",
+      "m": "img/frames/snc/gilded/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/snc/gilded/legendary/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (gold)",
+        "gold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.144 / 1.154 / 1.620 (181, 156, 71 → 207, 180, 115), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/snc/gilded/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (gold)",
+        "gold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.144 / 1.154 / 1.620 (181, 156, 71 → 207, 180, 115), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/snc/gilded/pt/m.png": {
+        "table": "SNC_DECO_PRINT_TONES (plateGold)",
+        "plateGold": "on the pixels of chroma (max − min channel) 34–45 (full from 45): × 1.148 / 1.079 / 1.441 (176, 152, 68 → 202, 164, 98), fading to × 1.108 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/snc/gilded/legendary/m.png",
+      "img/frames/snc/gilded/m.png",
+      "img/frames/snc/gilded/pt/m.png"
+    ],
+    "notes": [
+      "w u b r g c m = the pack's 'Regular Frame' (snc/gilded/m.png, 1500x2100 NATIVE — no resample), byte for byte: the one gold filigree all 90 printings wear (every card of the run is three colours); the pack's 'GildedColored' frames (snc/gilded/colored/<k>.png) are Card Conjurer's own — no printing wears them — and are not imported",
+      "<k>-legendary = the pack's 'Legendary Frame' (snc/gilded/legendary/m.png): the arch over the title bar all 30 legendary printings carry, baked into its own master under every key (the profile's crownMasters) — the arch changes the translucent bar under it, which no overlay can draw",
+      "Card Conjurer's names run the other way round from print: its 'Art Deco (SNC)' pack (snc/artDeco/) is the pale Golden Age frame of SNC #341–359, its 'Golden Age (SNC)' pack this black-and-gold Art Deco frame of #296–340 / #361–405",
+      "a real black border all round, cut at the one card corner (print's border is the black of SNC's own regular printings on the same scans, 22,19,14 both: true black)",
+      "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
+      "the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold 181,156,71 → 207,180,115, the plate's gold rim 176,152,68 → 202,164,98 (the file's pixels of chroma ≥ 45); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read",
+      "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+      "the translucent title bar, type bar and text box as dark as print's (owner, #622 review): the pack's α 0.50 lifted to title bar 0.74, type bar 0.81, text box 0.82 — fitted as out = α·c + (1 − α)·art on pixel pairs across each region's opaque rim on the 45 non-gilded prints (flat art fields only); the layer colour fits black (15–18 against the border's 22 on the same scans), so only α moves; the rims' anti-aliased edges keep their place on the ramp (SNC_DECO_TRANSLUCENCY, liftTranslucency)",
+      "a see-through dot in the right pillar's fin (x 1378–1379 on row 969, the pack's anti-aliasing), inside the window's slot but not the window's, filled opaque from its neighbours — the window layer and the under-frame layer now meet on opaque gold all round (SNC_DECO_DOT_FILLS)"
+    ]
+  },
+  "sncartdecoholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published New Capenna Art Deco masters named per key below (Card Conjurer imports: see \"sncartdeco\")",
+    "output": "188x54 at 656,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of SNC_DECO_ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 35.3 35.3 35.3 35.1 35 35 34.9 34.6 34.3 34.1 33.9 33.7 33.3 33 32.7 32.3 31.8 31.4 30.9 30.4 29.8 29.2 28.6 27.9 27.1 26.2 25.3 24.3 23.4 22.3 20.9 19.6 18.2 16.7 15 13.4 11.9 10.1 7.9 5.9 4.3 3.1 2.1 1.1 0.4 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1950) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "sncartdeco/w.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/w-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "u": [
+        "sncartdeco/u.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/u-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "b": [
+        "sncartdeco/b.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/b-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "r": [
+        "sncartdeco/r.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/r-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "g": [
+        "sncartdeco/g.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/g-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "m": [
+        "sncartdeco/m.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/m-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ],
+      "c": [
+        "sncartdeco/c.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/c-legendary.png (sha256 ddef6def2389; within 0 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "sncartdeco/b-legendary.png",
+      "sncartdeco/b.png",
+      "sncartdeco/c-legendary.png",
+      "sncartdeco/c.png",
+      "sncartdeco/g-legendary.png",
+      "sncartdeco/g.png",
+      "sncartdeco/m-legendary.png",
+      "sncartdeco/m.png",
+      "sncartdeco/r-legendary.png",
+      "sncartdeco/r.png",
+      "sncartdeco/u-legendary.png",
+      "sncartdeco/u.png",
+      "sncartdeco/w-legendary.png",
+      "sncartdeco/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.11 wave 2): the holofoil stamp's notch on the New Capenna Art Deco showcase — the text box's gold foot rim arched over the oval as every stamped print of the run draws it (SNC #296–340 and #361–405: the rares and mythics). Card Conjurer's 'Golden Age (SNC)' pack has no stamp piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram itself, never read); no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, gold rim and black border, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH_LIFT_PX: the 25 stamped plain prints measured 2026-10-27 (the rim lifted 35.3 px at the centre against the straight 1938–1948, rising from x 664 to x 836). Above it the box keeps its own pixels — its brown arcs ride over the arch, as on print.",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at 683–817 × 1924–1988 (SNCARTDECO_HOLO_STAMP_OVAL). Nothing of a hologram is in a piece."
+    ]
+  },
   "split": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

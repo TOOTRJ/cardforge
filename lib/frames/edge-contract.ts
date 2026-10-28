@@ -274,6 +274,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // time (scripts/lib/mse-showcase-borders.mjs), cut at the one card
   // corner. (The white halo-foil run, #409–418, is 4.30's.)
   tarkirghostfire: ALL_BORDER,
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Golden Age (SNC)' pack, frames bucket): the printed black border all
+  // round, cut at the one card corner by the importer — its crowned twins
+  // (`-legendary`) too.
+  sncartdeco: ALL_BORDER,
   // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
   // black border all round, cut at the one card corner by the importer.
   tarkirdragon: ALL_BORDER,

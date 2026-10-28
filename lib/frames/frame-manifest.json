@@ -24628,6 +24628,398 @@
       "width": 1500,
       "height": 2100
     },
+    "sncartdeco/b-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/pt/b.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/b.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/c.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/c.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/g.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/g.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/m.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/m.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/r.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/r.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/u.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/u.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/w.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/w.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/r-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdecoholostamp/b.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/b.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/c.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/c.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/g.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/g.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/m.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/m.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/r.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/r.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/u.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/u.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/w.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/w.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
     "split/b.png": {
       "hash": "cf588c412c28",
       "sha256": "cf588c412c2800c2147d2432349006e224ae86ca2bc2d86709a36424bf43b77c",

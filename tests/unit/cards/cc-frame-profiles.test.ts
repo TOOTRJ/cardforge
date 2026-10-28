@@ -94,6 +94,16 @@ describe("Card Conjurer frame profiles", () => {
         expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(155.1, 6);
         continue;
       }
+      if (template === "sncartdeco") {
+        // The New Capenna Art Deco (TODO 4.11 wave 2): the CC M15 row 8 px
+        // lower and 1.5 px further right — the mean of its 90 printings, each
+        // registered on our bake (the plain 60 set it 9.3 px lower, the 30
+        // legends 5.2): the discs centred on 165.2 px, 70 px.
+        expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-6.6 / 1500 + 8 / 1500, 2 / 1500 + 1.5 / 1500, 70]);
+        const band = profile.title.rect;
+        expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(165.2, 6);
+        continue;
+      }
       // v24–v60 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
       // prints; June-2023+ prints set them 4.6 px lower (the 2023 pip move,
       // docs/FRAMES.md "The cost row as printed since 2023"): 7 px above the

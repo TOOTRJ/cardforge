@@ -125,6 +125,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tarkirghostfire: ["880x1184", "3:4", 0.7442],
   // The Card Conjurer Tarkir window (TODO 4.11, v67): 1237 × 929 px.
   tarkirdragon: ["1168x880", "4:3", 1.332],
+  // The New Capenna Art Deco window (TODO 4.11 wave 2): 1262 × 934 px — the
+  // under-frame art is its own layer.
+  sncartdeco: ["1184x880", "4:3", 1.351],
   // The Card Conjurer dossier window (TODO 4.11 wave 2): the tilted photo, 1319 × 859 px.
   dossier: ["1264x816", "3:2", 1.5355],
   fullart: ["896x1168", "3:4", 0.7605],
