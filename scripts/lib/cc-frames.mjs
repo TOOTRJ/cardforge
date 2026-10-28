@@ -4578,8 +4578,9 @@ export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma }) {
 //   • the art window is see-through on 133–1399 × 237–1175 px (α < 1) with
 //     torn, half-transparent edges reaching 93–1439 × 227–1180 (α < 250):
 //     the profile's slot covers that with the art-window check's spare.
-//   • plates: the pack's one P/T plate (pt.png, 260 × 132 — its ptBounds
-//     1161 / 1861, 1:1) under every key.
+//   • plates: the pack's one P/T plate (pt.png, 260 × 132, 1:1) under every
+//     key; the profile draws it where print sets it (1167 / 1867), 6 px
+//     right of and below the pack's ptBounds (1161 / 1861).
 //   • geometry kept as drawn: print is the same page with its lines a few px
 //     higher — the title rule 1.5 (AFR) / 5 (CLB) px, the art's foot and
 //     the type rule 4–5 / 7.5 px — and its page's foot 3.5–4.5 px lower; the
@@ -4605,7 +4606,7 @@ const DND_PT = Object.freeze(perColor(() => `${DND}/pt.png`));
 const DND_NOTES = [
   "w u b r g c m = the pack's one 'Frame' (dndSourcebook/frame.png, 1500x2100 NATIVE — no resample), byte for byte: the pack and print draw one parchment page for every colour (a sourcebook card's colour is its art's background), so there is no colour master to draw",
   "a real black border all round, cut at the one card corner; the page's own rounded corners are the pack's drawing",
-  "plates = the pack's one 'Power/Toughness' plate (dndSourcebook/pt.png, 260x132, at its ptBounds 1161/1861 px, 1:1) under every key",
+  "plates = the pack's one 'Power/Toughness' plate (dndSourcebook/pt.png, 260x132, native size) under every key; the profile draws it 1:1 where print sets it (1167/1867 px, the median of 115 creatures), 6 px right of and below the pack's ptBounds (1161/1861)",
   `the parchment against print by the ring's rule (raw scan medians over the title band, type band and text box, ink left out; a region ≥ 9 levels off is toned): the pack ${DND_PRINT_TONE.pack.join(",")}, the 127 sourcebook prints ${DND_PRINT_TONE.print.join(",")} (AFR ${DND_PRINT_TONE.afr.join(",")}, CLB ${DND_PRINT_TONE.clb.join(",")}) — within 5 levels, as drawn: nothing is toned`,
   "geometry as drawn: print's lines sit a few px higher (the title rule 1.5 / 5 px on AFR / CLB, the art's foot and the type rule 4–5 / 7.5 px) and its page's foot 3.5–4.5 px lower; the lines cross textured parchment, never a flat zone, so nothing is re-cut and the slots ride the pack's own lines",
   "no legendary crown: the pack's 'Legend Crown' (dndSourcebook/crown.png) is not on print — none of the run's legendary printings (AFR #303, #304, #317, #323, #333, #335–347 and CLB's legends) prints one — so it is neither built nor published",

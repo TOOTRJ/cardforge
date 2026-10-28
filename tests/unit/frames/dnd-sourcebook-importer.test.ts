@@ -197,7 +197,18 @@ describe("the profile rides the page's own lines", () => {
     // clear of the page's rounded foot.
     expect(((p.rules.rect.topPct + p.rules.rect.heightPct) / 100) * 2100).toBeCloseTo(1877.5, 9);
     expect(p.pt?.plateAssetPathTemplate).toBe("/frames/dndsourcebook/pt/{color}.png");
-    expect(p.pt?.plateRect).toEqual({ topPct: (1861 / 2100) * 100, leftPct: (1161 / 1500) * 100, widthPct: (260 / 1500) * 100, heightPct: (132 / 2100) * 100 });
+    // The plate where PRINT sets it (115 creatures registered: 1167 / 1867),
+    // 6 px right of and below the pack's ptBounds; the digits' box moved
+    // with it (6 right, 5 down), their ink centred 129.5 / 66 px from the
+    // plate's corner as print's; the face the plate's inner outline.
+    expect(p.pt?.plateRect).toEqual({ topPct: (1867 / 2100) * 100, leftPct: (1167 / 1500) * 100, widthPct: (260 / 1500) * 100, heightPct: (132 / 2100) * 100 });
+    expect((p.pt!.rect.leftPct / 100) * 1500).toBeCloseTo((79.28 / 100) * 1500 + 6, 9);
+    expect((p.pt!.rect.topPct / 100) * 2100).toBeCloseTo((90.2 / 100) * 2100 + 5, 9);
+    expect(p.pt?.inkSpanPct).toEqual({ leftPct: (1195 / 1500) * 100, rightPct: (1398 / 1500) * 100 });
+    // The name's pen 2 px left of M15's (the median first-ink offset of the
+    // 127 prints), its right end M15's.
+    expect((p.title.rect.leftPct / 100) * 1500).toBeCloseTo((8.5 / 100) * 1500 - 2, 9);
+    expect(((p.title.rect.leftPct + p.title.rect.widthPct) / 100) * 1500).toBeCloseTo(((8.5 + 83.7) / 100) * 1500, 9);
     expect(PLATE_INK["/frames/dndsourcebook/pt/{color}.png"]).toEqual({ left: 0, top: 0, right: 1, bottom: 1 });
     // Dark ink on the parchment everywhere.
     expect([p.title.colorHex, p.rules.colorHex]).toEqual(["#17120c", "#17120c"]);

@@ -4703,8 +4703,28 @@ const TARKIRDRAGON: FrameProfile = {
  *  231 / 1380 × 949) with the art-window check's 0.05 % to spare:
  *  92–1441 × 226–1183. */
 export const DNDSOURCEBOOK_ART_SLOT: Rect = { topPct: (226 / 2100) * 100, leftPct: (92 / 1500) * 100, widthPct: (1349 / 1500) * 100, heightPct: (957 / 2100) * 100 };
-/** The pack's plate at its ptBounds (1161 / 1861, 260 × 132 px, 1:1). */
-const DNDSOURCEBOOK_PLATE_RECT: Rect = { topPct: (1861 / 2100) * 100, leftPct: (1161 / 1500) * 100, widthPct: (260 / 1500) * 100, heightPct: (132 / 2100) * 100 };
+/** The pack's plate (260 × 132 px, 1:1) where PRINT sets it — not at the
+ *  pack's ptBounds (1161 / 1861): registered on 115 creatures of the run
+ *  (the pack's plate matched to each print's rim and outlines, digits left
+ *  out), its top edge on 1867 in both sets and its left edge on 1158 (AFR,
+ *  50) / 1167 (CLB, 65) — the median of all, 1167 / 1867: 6 px right of and
+ *  6 px below the pack's bounds. */
+export const DNDSOURCEBOOK_PLATE_PX = { x: 1167, y: 1867, width: 260, height: 132 } as const;
+const DNDSOURCEBOOK_PLATE_RECT: Rect = {
+  topPct: (DNDSOURCEBOOK_PLATE_PX.y / 2100) * 100,
+  leftPct: (DNDSOURCEBOOK_PLATE_PX.x / 1500) * 100,
+  widthPct: (DNDSOURCEBOOK_PLATE_PX.width / 1500) * 100,
+  heightPct: (DNDSOURCEBOOK_PLATE_PX.height / 2100) * 100,
+};
+/** The P/T's text box: M15's, moved with the plate (6 px right, 5 px down
+ *  — print sets the digits' ink centre 129.5 / 66 px from the plate's
+ *  top-left corner, the 115 prints' median; M15's box on the pack's bounds
+ *  put ours on 129.5 / 67). */
+/** The name's pen 2 px left of M15's (the median first-ink offset over
+ *  all 127 prints; AFR's alone 5, CLB's 1). */
+const DNDSOURCEBOOK_TITLE_DX_PX = 2;
+const DNDSOURCEBOOK_PT_DX_PX = 6;
+const DNDSOURCEBOOK_PT_DY_PX = 5;
 const DNDSOURCEBOOK: FrameProfile = {
   ...M15,
   label: "D&D Sourcebook",
@@ -4712,11 +4732,30 @@ const DNDSOURCEBOOK: FrameProfile = {
   costDy: CC_M15_COST.costDy - 3 / 1500,
   costDx: 12 / 1500,
   artSlot: DNDSOURCEBOOK_ART_SLOT,
-  title: { ...M15.title, dy: M15.title.dy! - 1.5 / 1500 },
+  // The name 1.5 px up (its baseline 42.5 px above the title rule on the
+  // 127 prints, both sets) and its pen 2 px left (the first ink: ours 5 px
+  // right of AFR's, 1 px right of CLB's — the median of all 127, 2).
+  title: {
+    ...M15.title,
+    rect: {
+      ...M15.title.rect,
+      leftPct: M15.title.rect.leftPct - (DNDSOURCEBOOK_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct + (DNDSOURCEBOOK_TITLE_DX_PX / 1500) * 100,
+    },
+    dy: M15.title.dy! - 1.5 / 1500,
+  },
   type: { ...M15.type, rect: { ...M15.type.rect, topPct: M15.type.rect.topPct + (7 / 2100) * 100 }, dy: CC_M15_TYPE_DY + 3 / 1500 },
   rules: { ...M15.rules, rect: { ...M15.rules.rect, heightPct: ((1877.5 - 1335.6) / 2100) * 100 } },
   pt: {
     ...M15.pt!,
+    rect: {
+      ...M15.pt!.rect,
+      leftPct: M15.pt!.rect.leftPct + (DNDSOURCEBOOK_PT_DX_PX / 1500) * 100,
+      topPct: M15.pt!.rect.topPct + (DNDSOURCEBOOK_PT_DY_PX / 2100) * 100,
+    },
+    // The plate's face on the digits' rows: inside its inner outline
+    // (pt.png's columns 24–27 and 232–235), on the plate as placed.
+    inkSpanPct: { leftPct: ((DNDSOURCEBOOK_PLATE_PX.x + 28) / 1500) * 100, rightPct: ((DNDSOURCEBOOK_PLATE_PX.x + 231) / 1500) * 100 },
     plateRect: DNDSOURCEBOOK_PLATE_RECT,
     plateAssetPathTemplate: "/frames/dndsourcebook/pt/{color}.png",
   },

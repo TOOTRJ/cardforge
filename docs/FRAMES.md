@@ -5039,7 +5039,11 @@ no sweep, no badge; nobody can pick it until a colour is verified.
 - **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
   family joined without a bump):
   - the name 1.5 px above M15's (its baseline 42.5 px above the title rule
-    on the 127 prints, both sets alike; ours 42);
+    on the 127 prints, both sets alike; ours 42) and its pen 2 px left of
+    M15's (`DNDSOURCEBOOK_TITLE_DX_PX`; the right end kept): each name's
+    first ink against the same name's on print, ours sat 5 px right of AFR's
+    and 1 px right of CLB's, the median of all 127 being 2 — now 0 (AFR
+    +3, CLB −1);
   - the cost row: the CC M15 70 px disc 3 px higher (`costDy` −9.6 px —
     the discs 109.5 px above the title rule and their shadow's foot 35.5)
     and its end 10 px further right (`costDx` 12 px: the last disc ending
@@ -5054,11 +5058,19 @@ no sweep, no badge; nobody can pick it until a colour is verified.
     corner curve starts at 1765) would cut a line set lower at the left;
     M15's margins (the run's lines from x 130, its right ink to 1368 at
     p90 and 1377 at most against our 1368.5);
-  - the P/T: the pack's one plate (`pt.png`, 260 × 132 at its ptBounds
-    1161 / 1861, 1:1; it fills its image, `lib/cards/plate-ink.ts`) with
-    M15's text box on it: the digits' box centre 1290.5 / 1928 against
-    print's 1288 / 1932 on 17 creatures, its plate 3 px lower than the
-    pack's;
+  - the P/T: the pack's one plate (`pt.png`, 260 × 132, 1:1; it fills its
+    image, `lib/cards/plate-ink.ts`) where PRINT sets it, NOT at the pack's
+    ptBounds (1161 / 1861): the pack's plate registered on each of the
+    run's 115 creatures (its rim and outlines matched, the digits left out)
+    puts its top edge on 1867 in both sets and its left edge on 1158 (AFR,
+    50) / 1167 (CLB, 65) — so `DNDSOURCEBOOK_PLATE_PX` 1167 / 1867, the
+    median of all, 6 px right of and 6 px below the pack's bounds (an
+    earlier reading on 17 cards' digits had called it 3 px; the plate
+    itself is 6). M15's text box moves with it (6 px right, 5 px down) and
+    the face (`inkSpanPct`) is the plate's inner outline, 1195–1398: the
+    digits' ink centre now sits 129.5 / 66 px from the plate's top-left
+    corner, print's median (AFR 128 / 62.5, CLB 130 / 66.5); the ink 57 px
+    tall against print's 59–60 (the family's size);
   - dark ink everywhere (the page is light).
   Flagged, not changed: print's name, type line and P/T are set in a
   bolder serif display face than Beleren (no font is added for a frame);
@@ -5066,6 +5078,29 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   1365, CLB's shield at 1385; ours ends both at 1377–1380, between); print
   sets short rules texts larger than the family's 76 px ceiling (CLB #401
   Lightning Bolt ~5 % larger) — the rules layout's, not the frame's.
+- **AFR and CLB are not the same page to the pixel.** The two sets were
+  printed a year apart and set a few px apart; ONE profile serves both, on
+  the median of all 127 prints (76 of them CLB), so each set sits a few px
+  off it. Per set, print against ours (px at 1500 × 2100; + = print lower /
+  further right):
+
+  | | AFR (51) | CLB (76) | ours |
+  |---|---|---|---|
+  | title rule (centre) | 229 | 224.5 | 229 (the pack's) |
+  | name baseline − title rule | −42.5 | −42 | −42 |
+  | name first ink vs ours | −3 | +1 | — |
+  | cost discs' top − title rule | −111 | −109.5 | −109 |
+  | cost row's right end | 1383 | 1393 | 1394–1395 |
+  | art-foot rule | 1177.5 | 1174 | 1181.5 |
+  | type baseline − art-foot rule | 92 | 87 | 88 |
+  | set symbol (ink box) | 1291–1365, centre 1245 | 1324–1385, centre 1240.5 | the band's middle, right end 1377–1380 |
+  | type rule | 1313 | 1309.5 | 1317.5 |
+  | P/T plate (left / top) | 1158 / 1867 | 1167 / 1867 | 1167 / 1867 |
+  | digits − plate corner | 128 / 62.5 | 130 / 66.5 | 129.5 / 66 |
+  | collector line 1 / 2 (ink foot) | 1997 / 2035 | 1997 / 2036 | 1997 / 2035 |
+
+  Exact per set would need a per-set slot (TODO 4.11, the owner's call):
+  the profile has no way to tell an AFR card from a CLB one today.
 - **No crown.** None of the run's legends (AFR #303, #304, #317, #323,
   #333, #335–347; most of CLB #375–441) prints one — the pack's 'Legend
   Crown' is Card Conjurer's own — so the template declares none, the
@@ -9906,7 +9941,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 82 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 83 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
