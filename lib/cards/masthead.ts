@@ -137,14 +137,15 @@ export function costRowDrawnPx(layout: Pick<FrameProfile, "costSizePct" | "title
   // A text token ("2BB" typed without braces, "or") is measured by its real
   // advances, as the bake draws it (0.6 × the disc in capitals, 1 px of
   // tracking and half a pixel of rounding per letter — render-tiers
-  // costRowTerms): manaCostWidthPct's 0.42 disc per letter is the name's
-  // room's estimate (shared by every detached-cost frame, never changed
+  // costRowTerms) in the face it is drawn in, MPlantin ("body": Beleren's
+  // advances run ~16 % short on M). manaCostWidthPct's 0.42 disc per
+  // letter is the name's room's estimate (shared by every detached-cost frame, never changed
   // here) and runs short on wide capitals ("WWWWWWWWWW": ~136 px), which
   // would put the cost over a kept wordmark.
   let textExtra = 0;
   for (const token of tokenize(cost.trim())) {
     if (token.kind !== "text") continue;
-    const drawn = displayTextEm(token.value.toUpperCase()) * 0.6 * disc + token.value.length * 3 * (0.5 / 750);
+    const drawn = displayTextEm(token.value.toUpperCase(), "body") * 0.6 * disc + token.value.length * 3 * (0.5 / 750);
     const estimated = token.value.length * 0.6 * 0.7 * disc;
     textExtra += Math.max(0, drawn - estimated);
   }

@@ -69,6 +69,27 @@ describe("the Breaking News masthead rule", () => {
     expect(left - (1062 - m.shiftPx)).toBeGreaterThanOrEqual(16);
   });
 
+  it("measures a text token in MPlantin, the face the bake draws it in (held to drawn widths)", () => {
+    // Ink widths measured on HD bakes of the frame (the check of 482bd97d).
+    // The row is its letters' ink + the hard shadow (0.2 × the 70 px disc):
+    // never narrower than that, and on wide capitals within a few px of it
+    // (Beleren's advances ran 84 px short on 12 M's). Narrow letters keep the
+    // name's room's wider estimate (Math.max): conservative, never under.
+    const SHADOW = 0.2 * 70;
+    const drawn: Array<[string, number, boolean]> = [
+      ["WWWWWWWWWW", 428, true],
+      ["MMMMMMMMMMMM", 518, true],
+      ["MMMMMMMM", 344, true],
+      ["2BBWWUU", 238, true],
+      ["IIIIIIIIIIIIIIIIIIII", 331, false],
+    ];
+    for (const [cost, px, tight] of drawn) {
+      const est = costRowDrawnPx(BN, cost);
+      expect(est, cost).toBeGreaterThanOrEqual(px + SHADOW);
+      if (tight) expect(est - (px + SHADOW), cost).toBeLessThanOrEqual(16);
+    }
+  });
+
   it("reads the row's drawn width, never a pip count", () => {
     // Three large (Phyrexian) pips are wider than three plain ones: the
     // chevron goes for them, stays for the plain ones.
