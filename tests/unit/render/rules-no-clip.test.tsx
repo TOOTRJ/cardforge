@@ -27,6 +27,7 @@ import { sagaRail, sagaRailDrawing, type SagaRail } from "@/lib/cards/saga-rail"
 import { M15_HOLO_STAMP_KEEP_OUT } from "@/lib/cards/holo-stamp";
 import { STATION, parseStationText, type StationText } from "@/lib/cards/station";
 import { stationLayout, type StationLayout } from "@/lib/cards/station-layout";
+import { isFlavorBarArt } from "@/lib/cards/flavor-bar";
 import stationOracle from "@/tests/unit/cards/fixtures/station-oracle.json";
 import { getFrameProfile, profileOffersRulesAlign, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_SIZE_PX } from "@/lib/cards/typography";
@@ -86,8 +87,10 @@ type Svg = { words: (Box | null)[]; ink: Box[]; contours: Box[]; bars: number[] 
 
 /** Satori's SVG, read: its glyph paths (absolute M/L/Q/C/Z — opentype's path
  *  data) in document order, every drawn box (a pip's disc and shadow carry
- *  x / y / width / height) and the flavor bar (a 1 px box in the ink at 44
- *  alpha). Masks, clip paths and defs draw nothing. */
+ *  x / y / width / height) and the flavor bar (since layout v73, TODO 3.19:
+ *  its picture, flavorBarArt — an <image> of the bar's own SVG; until then
+ *  a 1 px box in the ink at 44 alpha). Masks, clip paths and defs draw
+ *  nothing. */
 function readSvg(svg: string): Svg {
   const drawn = svg
     .replace(/<defs>[\s\S]*?<\/defs>/g, "")
@@ -97,6 +100,11 @@ function readSvg(svg: string): Svg {
   for (const m of drawn.matchAll(/<rect ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
     if (attrs.fill === `${SENTINEL}44`) out.bars.push(Number(attrs.y));
+  }
+  for (const m of drawn.matchAll(/<image ([^>]*?)\/?>/g)) {
+    const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+    const href = (attrs.href ?? "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    if (isFlavorBarArt(href)) out.bars.push(Number(attrs.y));
   }
   for (const m of drawn.matchAll(/<path ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
@@ -404,12 +412,14 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art
-  // token's textless height.)
+  // token's textless height.) The four-mode Command fits them at the floor
+  // since layout v73 (TODO 3.16): its modes sit the bullet gap apart, not an
+  // ability's.
   [
     ["aftermath/main", "flip/main", "m15token/main", "m15tokenartifact/main"],
-    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets"],
+    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
   ],
-  [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up", "modal bullets"]],
+  [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up"]],
   // (fullart's box is the CC-framed M15 box since layout v63, TODO 4.11.)
   // "typed, as printed" (TODO 6.11): five paragraphs — an ability word, a
   // modal list with its bullets, quoted abilities — over a quoted flavor

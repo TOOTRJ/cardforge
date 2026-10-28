@@ -2,6 +2,8 @@ import { hasFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { fitTitleBand } from "@/lib/cards/title-band";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { isColorIdentity, type CardType } from "@/types/card";
 
@@ -1699,6 +1701,41 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            never the look of any print. Verification-neutral: no slot,
 //            master or plate moves, and a reference's compare render
 //            changes only in its flavour's words.
+//   v73 — rendering corrections, round 1 (owner 2026-10-28: ONE bump, ONE
+//            before / after sheet, ONE card-scoped sweep — the union of each
+//            part's own scope, v73Changed). RENDERING_CORRECTIONS_1_LAYOUT_
+//            VERSION below — the ONE constant (taken as v73 at PR time: v72
+//            is #626's, Beleren's kerns). A CORRECTION ("sweep"), never a
+//            badge. The parts:
+//            * 3.19 the flavour bar as printed: ≈ 0.2 % of the card's height
+//              (4 HD px, 2 at 750; it was 1 px at every target — a quarter
+//              of the preview's share of the card in the HD bake), 96 % of
+//              the column, centred, its ends faded (lib/cards/flavor-bar.ts:
+//              one SVG for both renderers), on the old hairline's centre
+//              line — no flavour line moves. A card that draws rules and
+//              flavour text (v73FlavorBarChanged).
+//            * 3.16 modal bullets: a "•" mode hangs its wrapped lines where
+//              its first word starts and sits the prints' bullet gap (12 px)
+//              below the line before it, not an ability's 24 (DTK #224, STX,
+//              MH3 #11); the fit counts both. Spree's "+" modes stay as they
+//              are (OTJ #125 hangs nothing). A card with a bullet mode
+//              (v73BulletModesChanged).
+//            * 3.22 the land frames' title band ends at M15's 92.2 %W: m15land
+//              83.8 % (it kept 77.5 when its left edge moved to 8.4), the
+//              snow land 83.1, and the three frames that take M15LAND's band
+//              (extendedartland, m15stationland, m15ubland). A card on them
+//              whose name the old band shrank or cut
+//              (v73TitleBandChanged). The band is a SLOT: those five
+//              templates' ticks are re-verified (VERIFICATION_TEMPLATE_
+//              SCOPES).
+//            * 3.25 / 3.5 shadows in card-width px (cardPx: 1 px at 750, 2 at
+//              HD — the bake drew them at half the preview's share of the
+//              card) and the four-way outline (OUTLINE_SHADOW: the walkers'
+//              starting loyalty, tarkirghostfire's name, type line and P/T)
+//              drawn as copies of its text, where the bake kept only the
+//              outline's last layer (a one-sided up-left shadow). A card on
+//              those frames, or on adventure / prepare / fullart / nyx
+//              (v73ShadowsChanged).
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1974,7 +2011,29 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = FLAVOR_MARKUP_LAYOUT_VERSION;
+/** Rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 / 3.25,
+ *  owner 2026-10-28): ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the card scope, the verification list and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place (this
+ *  constant and the test's `V` move together). v73: v72 is #626's
+ *  (Beleren's kerns). Frozen once it ships. */
+export const RENDERING_CORRECTIONS_1_LAYOUT_VERSION = 73;
+/** v73's title-band part (TODO 3.22): the templates whose title band is
+ *  M15LAND's, and the band's width before v73 (its right edge 85.9 %W on
+ *  m15land, 86.6 on the snow land). Frozen with v73. */
+export const V73_TITLE_BAND_TEMPLATES: readonly string[] = ["m15land", "m15snowland", "extendedartland", "m15stationland", "m15ubland"];
+const V73_OLD_TITLE_BAND_WIDTH_PCT = 77.5;
+/** v73's shadow part (TODO 3.25 / 3.5): every template whose profile
+ *  declared a px shadow — OUTLINE_SHADOW (the walkers' starting loyalty,
+ *  tarkirghostfire's bands and P/T), ADV_SHADOW (the adventure page's name
+ *  and type line), SHOWCASE_SHADOW (fullart's, nyx's). Frozen with v73. */
+export const V73_SHADOW_TEMPLATES: readonly string[] = [
+  "m15pw", "m15borderlesspw", "m15borderlesspwtall", "tarkirghostfire", "adventure", "prepare", "fullart", "nyx",
+];
+/** …of which the walkers draw it on the starting loyalty alone. */
+const V73_LOYALTY_SHADOW_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+
+export const CARD_LAYOUT_VERSION = RENDERING_CORRECTIONS_1_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2321,6 +2380,12 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
   // two transform FRONT bodies' rules layout (the reverse-P/T float); the
   // modal fronts' ticks — none yet — would stay fresh.
   40: V40_VERIFICATION_TEMPLATES,
+  // v73: only the land title band moves a SLOT (TODO 3.22: the band's right
+  // edge, on the five templates that take M15LAND's band). The flavour bar,
+  // the bullets and the shadows move no slot, master or plate — text and
+  // ink inside the slots a tick verified, as v33 / v36 / v49 — so every
+  // other template's ticks stay fresh.
+  [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: V73_TITLE_BAND_TEMPLATES,
 };
 
 /**
@@ -2443,6 +2508,8 @@ export type ScopeCard = {
   art_url?: string | null;
   // v29: the display lines (word spacing) and the printed stats (3.18).
   title?: string | null;
+  /** v73: the name a nickname frame prints in the title bar (TODO 6.3). */
+  nickname?: string | null;
   supertype?: string | null;
   card_type?: string | null;
   subtypes?: readonly string[] | null;
@@ -2718,6 +2785,89 @@ export function flavorMarkupChanged(card: ScopeCard): boolean {
   if (hasFlavorMarkup(card.flavor_text)) return true;
   const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
   return typeof back?.flavor_text === "string" && hasFlavorMarkup(back.flavor_text);
+}
+
+const nonBlank = (v: unknown): boolean => typeof v === "string" && v.trim().length > 0;
+const backFaceOf = (card: ScopeCard): Record<string, unknown> | null =>
+  card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+
+/**
+ * v73's flavour-bar part (TODO 3.19): a card whose front — or back face —
+ * holds a flavour text after rules text (or structured rows), so a frame
+ * that prints the bar draws it. Any template: a frame without the bar
+ * re-bakes to the same pixels (read wider than drawn). A row that doesn't
+ * carry the columns → affected.
+ */
+export function v73FlavorBarChanged(card: ScopeCard): boolean {
+  if (card.rules_text === undefined || card.flavor_text === undefined || card.back_face === undefined || card.face_content === undefined) {
+    return true;
+  }
+  if (nonBlank(card.flavor_text) && (nonBlank(card.rules_text) || (card.face_content != null && typeof card.face_content === "object"))) return true;
+  const back = backFaceOf(card);
+  return Boolean(back && nonBlank(back.flavor_text) && nonBlank(back.rules_text));
+}
+
+/** A rules line that opens a bullet mode (rules-layout.ts isBulletRun): the
+ *  "•" as a word of its own, text after it. */
+const BULLET_MODE_LINE = /(?:^|\n)[^\S\n]*•[^\S\n]+\S/;
+
+/**
+ * v73's bullet part (TODO 3.16): a card whose rules text — or its back
+ * face's, or its structured rows' (a walker's, a saga's, a station's) —
+ * holds a bullet mode. Every other card bakes byte-identical. A row that
+ * doesn't carry the columns → affected.
+ */
+export function v73BulletModesChanged(card: ScopeCard): boolean {
+  if (card.rules_text === undefined || card.back_face === undefined || card.face_content === undefined) return true;
+  if (typeof card.rules_text === "string" && BULLET_MODE_LINE.test(card.rules_text)) return true;
+  const back = backFaceOf(card);
+  if (back && typeof back.rules_text === "string" && BULLET_MODE_LINE.test(back.rules_text)) return true;
+  return card.face_content != null && JSON.stringify(card.face_content).includes("•");
+}
+
+/**
+ * v73's title-band part (TODO 3.22): a card on a template whose band is
+ * M15LAND's (V73_TITLE_BAND_TEMPLATES) whose name the old 77.5 % band set
+ * smaller or cut (fitTitleBand: these bands are `fit: "measured"` and
+ * print no cost) — a name that fits both is drawn at the same place and
+ * size. A card with a nickname is affected whatever it says (the plate's
+ * frames print it in the bar). A row without the columns → affected.
+ */
+export function v73TitleBandChanged(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
+  if (!V73_TITLE_BAND_TEMPLATES.includes(template)) return false;
+  if (card.title === undefined || card.nickname === undefined) return true;
+  if (nonBlank(card.nickname)) return true;
+  const profile = getFrameProfile(template);
+  const name = (typeof card.title === "string" ? card.title.trim() : "") || "Untitled Card";
+  const old = { ...profile, title: { ...profile.title, rect: { ...profile.title.rect, widthPct: V73_OLD_TITLE_BAND_WIDTH_PCT } } };
+  const was = fitTitleBand(old, name, null);
+  const now = fitTitleBand(profile, name, null);
+  return was?.sizePct !== now?.sizePct || was?.text !== now?.text;
+}
+
+/**
+ * v73's shadow part (TODO 3.25 / 3.5): a card on a template that declared
+ * a px shadow (V73_SHADOW_TEMPLATES) — on a walker frame, only one that
+ * prints a starting loyalty (the one value with the outline). A row
+ * without the columns → affected.
+ */
+export function v73ShadowsChanged(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
+  if (!V73_SHADOW_TEMPLATES.includes(template)) return false;
+  if (!V73_LOYALTY_SHADOW_TEMPLATES.includes(template)) return true;
+  return card.loyalty === undefined || nonBlank(card.loyalty);
+}
+
+/**
+ * Whether layout v73 (rendering corrections, round 1) changed a card's
+ * bake: the union of its parts, each scoped as narrowly as its own
+ * predicate allows (owner 2026-10-28).
+ */
+export function v73Changed(card: ScopeCard): boolean {
+  return v73FlavorBarChanged(card) || v73BulletModesChanged(card) || v73TitleBandChanged(card) || v73ShadowsChanged(card);
 }
 
 /**
@@ -3189,6 +3339,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v71 — flavour text's upright spans: on any template, a card whose
   // flavour (or its back face's) holds a `*…*` pair — flavorMarkupChanged.
   [FLAVOR_MARKUP_LAYOUT_VERSION]: flavorMarkupChanged,
+  // v73 — rendering corrections, round 1: the union of its parts —
+  // v73Changed.
+  [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: v73Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -3289,6 +3442,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: "sweep", // rendering corrections round 1 (3.5 / 3.16 / 3.19 / 3.22 / 3.25, owner 2026-10-28): the flavour bar, modal bullets, the land title band, card-relative shadows and the four-way outline — corrections of what both renderers drew against the prints, one sweep, never a badge
   [FLAVOR_MARKUP_LAYOUT_VERSION]: "sweep", // flavour text's upright `*…*` spans (owner 2026-10-28): the words set roman, the stars never drawn — a correction of what both renderers printed, against every print that marks them; card-scoped to the flavours that hold a pair, never a badge
   20: "sweep", // display always watermarked — must not linger
   21: "sweep", // re-do of the v20 sweep with the billing flag set

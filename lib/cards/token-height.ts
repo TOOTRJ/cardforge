@@ -186,6 +186,12 @@ export function tokenTextFitPx(
     flavorText: text.flavorText,
     aspect: 7 / 5,
     show: { pt: text.printsPowerToughness },
+    // A modal text's bullet modes measured as the plain paragraphs they
+    // were before layout v73 (TODO 3.16): the box a text asks for is held
+    // to its old answers — TBLB #5 Warren Warleader prints its two modes on
+    // the TALL box, where the drawn (tighter, hung) modes would fit the
+    // regular box at exactly 72 px.
+    bulletModes: "plain",
   });
   return layout.clipped ? null : layout.sizePx;
 }

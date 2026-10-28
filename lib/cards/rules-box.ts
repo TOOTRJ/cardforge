@@ -13,7 +13,9 @@
 //               line's accented capital), then the blocks;
 //   blocks    — each `marginTop` below the previous one: a paragraph, a blank
 //               source line (its own height), or the flavor block (its gap
-//               split around a 1 px bar on a frame that prints one);
+//               split around the bar on a frame that prints one — layout
+//               v73, TODO 3.19: `barPx` tall, 96 % of the column, centred,
+//               its ends faded: lib/cards/flavor-bar.ts);
 //   lines     — a nowrap flex row `linePx` tall, its runs (the words and pips
 //               that never part, rules-text.ts groupTightRuns) side by side,
 //               each after the first `wordGapPx` to the right, a pip after a
@@ -133,6 +135,8 @@ type BoxInput = {
    *  offers the choice (profileOffersRulesAlign; rulesAlignOf), and nowhere
    *  else, whatever the card says. */
   rulesAlign?: unknown;
+  /** RulesLayoutInput.bulletModes — the token height rule's measure only. */
+  bulletModes?: "plain";
 };
 
 /** The alignment a card's rules boxes are set with on `layout` (TODO
@@ -148,7 +152,7 @@ export function rulesAlignOf(
 
 function fitSlot(
   slot: TextSlot,
-  { layout, rulesText, flavorText, aspect, show, rulesAlign }: BoxInput,
+  { layout, rulesText, flavorText, aspect, show, rulesAlign, bulletModes }: BoxInput,
   defaults: { pad: { x: number; y: number }; rotation: number; sizePct?: number },
 ): RulesLayout {
   return fromTopWhenOverflowing(
@@ -164,6 +168,7 @@ function fitSlot(
       ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
       ...(rulesAlignOf(layout, rulesAlign) ? { align: "center" as const } : {}),
       ...(slot.paragraphGapMinPx !== undefined ? { paragraphGapMinPx: slot.paragraphGapMinPx } : {}),
+      ...(bulletModes ? { bulletModes } : {}),
       divider: layout.flavorDivider !== false,
       // The frame's symbol style: the inline pip's shadow (TODO 4.8.0).
       ...(layout.symbolStyle ? { symbolStyle: layout.symbolStyle } : {}),
@@ -237,9 +242,12 @@ export type RulesDrawBlock =
       kind: "rules" | "flavor";
       /** Space above the block (px at the target). */
       marginTop: number;
-      /** The flavor bar (1 px): the gap above it and below it. The block's
-       *  marginTop is 0 then. */
-      bar: { above: number; below: number; thickness: number } | null;
+      /** The flavor bar (TODO 3.19, layout v73): the gap above it and below
+       *  it, its thickness, and its box across the column — `inset` px in
+       *  from the column's left edge, `width` px wide (the column's
+       *  RULES_TEXT.flavorBarWidth, centred). The block's marginTop is 0
+       *  then. */
+      bar: { above: number; below: number; thickness: number; inset: number; width: number } | null;
       /** Each line's runs. */
       lines: RulesItem[][][];
       /** Each line's indent from the column's left edge (px at the
@@ -294,7 +302,13 @@ export function rulesDraw(layout: RulesLayout, target: RulesTarget): RulesDraw {
     const top = lines[0].top;
     const bar =
       b.kind === "flavor" && bi > 0 && placed.bar
-        ? { above: gap(placed.bar.top, bottom), below: gap(top, placed.bar.top + m.barPx), thickness: m.barPx }
+        ? {
+            above: gap(placed.bar.top, bottom),
+            below: gap(top, placed.bar.top + m.barPx),
+            thickness: m.barPx,
+            inset: placed.bar.left - interior.left,
+            width: placed.bar.width,
+          }
         : null;
     const marginTop = bar ? 0 : gap(top, bottom);
     bottom = lines[lines.length - 1].top + m.linePx;

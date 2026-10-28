@@ -91,9 +91,13 @@ describe("metricsFor — whole px per target", () => {
       pipTopPx: 3, // centre 25 px above the baseline (it sat at 21)
       pipGapPx: 8,
       paragraphGapPx: 24,
-      flavorGapPx: 30,
+      bulletGapPx: 12,
+      // The v33 hairline's 30 + 1 + 30, the v73 bar (TODO 3.19) on its
+      // centre line: the flavor text keeps its place.
+      flavorBarAbovePx: 29,
+      barPx: 4,
+      flavorBarBelowPx: 28,
       flavorGapNoBarPx: 42,
-      barPx: 1,
       blankLinePx: 46,
       baselinePx: { regular: 58, italic: 58 },
     });
@@ -105,9 +109,11 @@ describe("metricsFor — whole px per target", () => {
       pipTopPx: 1,
       pipGapPx: 4,
       paragraphGapPx: 12,
-      flavorGapPx: 15,
+      bulletGapPx: 6,
+      flavorBarAbovePx: 15,
+      barPx: 2,
+      flavorBarBelowPx: 14,
       flavorGapNoBarPx: 21,
-      barPx: 1,
       blankLinePx: 23,
     });
   });
@@ -365,7 +371,7 @@ describe("layoutRulesAt — block height and positions", () => {
     expect(box("default")).toEqual({ left: 64, top: 668, right: 686, bottom: 962, width: 622, height: 294 });
   });
 
-  it("stacks lines at the pitch, a fixed 24 px between abilities, 30 + 1 + 30 around the flavor bar (42 without)", () => {
+  it("stacks lines at the pitch, a fixed 24 px between abilities, 29 + 4 + 28 around the flavor bar (42 without)", () => {
     const rules = "Flying\nVigilance\n\nLifelink";
     const flavor = "Wings of light.";
     for (const target of RULES_TARGETS) {
@@ -374,14 +380,20 @@ describe("layoutRulesAt — block height and positions", () => {
       const noBar = layoutRulesAt(m15(rules, { flavorText: flavor, padPx: PRINT_PAD, divider: false }), 76);
       const lines = 4 * m.linePx;
       const gaps = 3 * m.paragraphGapPx + m.blankLinePx; // Flying | Vigilance | blank | Lifelink
-      expect(blockHeightPx(bar, target), target).toBe(lines + gaps + 2 * m.flavorGapPx + m.barPx);
+      expect(blockHeightPx(bar, target), target).toBe(lines + gaps + m.flavorBarAbovePx + m.barPx + m.flavorBarBelowPx);
+      // The sum is the v33 hairline's (2 × 30 + 1 HD px): no flavor text moved.
+      expect(m.flavorBarAbovePx + m.barPx + m.flavorBarBelowPx, target).toBe(target === "hd" ? 61 : 31);
       expect(blockHeightPx(noBar, target), target).toBe(lines + gaps + m.flavorGapNoBarPx);
       const placed = linePositions(bar, target);
       const [flying, vigilance, lifelink, flavorLine] = placed.lines;
       expect(vigilance.top - flying.top).toBe(m.linePx + m.paragraphGapPx);
       expect(lifelink.top - vigilance.top).toBe(m.linePx + 2 * m.paragraphGapPx + m.blankLinePx);
-      expect(placed.bar!.top - (lifelink.top + m.linePx)).toBe(m.flavorGapPx);
-      expect(flavorLine.top - (placed.bar!.top + m.barPx)).toBe(m.flavorGapPx);
+      expect(placed.bar!.top - (lifelink.top + m.linePx)).toBe(m.flavorBarAbovePx);
+      expect(flavorLine.top - (placed.bar!.top + m.barPx)).toBe(m.flavorBarBelowPx);
+      // 96 % of the column, centred, whole px (TODO 3.19).
+      expect(placed.bar!.height).toBe(m.barPx);
+      expect(placed.bar!.width).toBe(Math.round(placed.interior.width * 0.96));
+      expect(placed.bar!.left - placed.interior.left).toBe(Math.floor((placed.interior.width - placed.bar!.width) / 2));
       expect(placed.blanks).toHaveLength(1);
       expect(linePositions(noBar, target).bar).toBeNull();
     }

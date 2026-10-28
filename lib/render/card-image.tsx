@@ -147,7 +147,9 @@ import {
 } from "@/lib/cards/anatomy";
 import {
   BRAND_MARK_PILL,
+  bakeShadowCss,
   bandTextStyle,
+  shadowDrawsAsCopies,
   brandMarkLayout,
   footerInk,
   textShadowCopies,
@@ -164,6 +166,7 @@ import {
   type FlipsideSlots,
   type TextSlot,
   type TypeLineSplit,
+  type TextShadowCopy,
 } from "@/lib/cards/template-layout";
 import { resolveFrameProfile } from "@/lib/cards/profile-override";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
@@ -183,6 +186,8 @@ import {
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
 import {
+  gapBefore,
+  hangIndentPx,
   rulesTargetFor,
   type RulesBlock,
   type RulesLayout,
@@ -207,6 +212,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
+import { flavorBarArt } from "@/lib/cards/flavor-bar";
 import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl, whiteBorderRgb, type WhiteBorderMedium } from "@/lib/cards/white-border";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
@@ -556,8 +562,8 @@ function CardImage({
   const footerArtist = footerArtistLine(layout.footer, card.artistCredit);
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the preview's bandTextStyle() twins.
-  const titleInk = bandTextStyle(layout.title, masterKey);
-  const typeInk = bandTextStyle(layout.type, masterKey);
+  const titleInk = bakeBandTextStyle(bandTextStyle(layout.title, masterKey), width);
+  const typeInk = bakeBandTextStyle(bandTextStyle(layout.type, masterKey), width);
 
   // No bake-only truncation: titles up to the validated 120 chars ellipsize
   // in the band exactly as the preview does.
@@ -628,6 +634,7 @@ function CardImage({
     ? 0
     : bandWidth(typeSlot, width) -
       (layout.symbolRect ? 0 : fpx(0.02, width) + setSymbolDrawnPx(setSymbol, width));
+
 
   // Same gating as the preview (shared helpers) — and only when the frame
   // actually defines a slot for that stat. The preload reads the same
@@ -823,6 +830,53 @@ function CardImage({
   const focalY2 = clamp(secondArtPos.focalY ?? 0.5, 0, 1) * 100;
   const scale2 = clamp(secondArtPos.scale ?? 1, 0.5, 4);
 
+  // The title band's name span and pips, and the type band's line and set
+  // symbol — built once, so a zero-blur outline's copies (bandTextCopies,
+  // TODO 3.25) lay out exactly as the band they sit under.
+  const titleSpanStyle: React.CSSProperties = {
+    ...(titleSlot.smallCaps
+      ? smallCapsRowBake(titleSlot, fpx(titleSlot.sizePct, width))
+      : alignedText(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width), titleRoom)),
+    ...titleInk,
+    ...textDyBake(layout.title, width, titleSlot.sizePct),
+    ...(titleFit ? { maxWidth: Math.round(titleFit.widthPct * width) } : {}),
+  };
+  const titleSpanText = titleSlot.smallCaps
+    ? smallCapsRunsBake(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width))
+    : displayLine(titleFit ? titleFit.text : title);
+  const titleCostNode =
+    showCost && card.cost && !layout.costRect ? (
+      <CostGlyphs
+        cost={card.cost}
+        fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
+        overrides={card.pipOverrides}
+        symbols={symbols}
+        dy={layout.costDy ? fpx(layout.costDy, width) : 0}
+        dx={layout.costDx ? fpx(layout.costDx, width) : 0}
+      />
+    ) : isAligned(layout.title) || layout.title.fit === "measured" ? null : (
+      <span style={{ display: "flex" }} />
+    );
+  const titleCopies = bandTextCopies(titleSlot, width);
+  const typeSpanStyle: React.CSSProperties = {
+    ...alignedText(typeSlot, displayLine(typeText), fpx(typeSlot.sizePct, width), typeRoom),
+    ...typeInk,
+    ...textDyBake(layout.type, width, typeSlot.sizePct),
+    ...(typeFit?.widthPct != null ? { maxWidth: Math.round(typeFit.widthPct * width) } : {}),
+  };
+  const typeSymbolNode = !layout.symbolRect ? (
+    <SetSymbolGlyph
+      rarity={(card.rarity as Rarity | null) ?? "common"}
+      iconUrl={card.setIconUrl}
+      setCode={card.setIconCode}
+      fontSize={fpx(setSymbol.sizePct, width)}
+      keyline={layout.setSymbolKeyline}
+      wrap={inlineSymbolWrap}
+    />
+  ) : isAligned(typeSlot) ? null : (
+    <span style={{ display: "flex" }} />
+  );
+  const typeCopies = bandTextCopies(typeSlot, width);
   return (
     <div
       style={{
@@ -1184,33 +1238,18 @@ function CardImage({
           the name half a gap left of the preview's. Nor a measured band
           (layout v32) with no inline cost: the preview never draws one, and
           the name's room runs to the band's end (titleBandRoomPct). */}
+      {/* A zero-blur outline on the name (tarkirghostfire, TODO 3.25):
+          one copy of the band per layer under it — the name in the layer's
+          colour and offset, the pips laid out but not drawn. */}
+      {titleCopies?.map((copy, i) => (
+        <Band key={`title-copy-${i}`} slot={titleSlot} cardWidth={width} italic={isShowcase}>
+          {bandTextCopy(titleSpanStyle, titleSpanText, copy)}
+          {bandGhost(titleCostNode)}
+        </Band>
+      ))}
       <Band slot={titleSlot} cardWidth={width} italic={isShowcase}>
-        <span
-          style={{
-            ...(titleSlot.smallCaps
-              ? smallCapsRowBake(titleSlot, fpx(titleSlot.sizePct, width))
-              : alignedText(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width), titleRoom)),
-            ...titleInk,
-            ...textDyBake(layout.title, width, titleSlot.sizePct),
-            ...(titleFit ? { maxWidth: Math.round(titleFit.widthPct * width) } : {}),
-          }}
-        >
-          {titleSlot.smallCaps
-            ? smallCapsRunsBake(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width))
-            : displayLine(titleFit ? titleFit.text : title)}
-        </span>
-        {showCost && card.cost && !layout.costRect ? (
-          <CostGlyphs
-            cost={card.cost}
-            fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
-            overrides={card.pipOverrides}
-            symbols={symbols}
-            dy={layout.costDy ? fpx(layout.costDy, width) : 0}
-            dx={layout.costDx ? fpx(layout.costDx, width) : 0}
-          />
-        ) : isAligned(layout.title) || layout.title.fit === "measured" ? null : (
-          <span style={{ display: "flex" }} />
-        )}
+        <span style={titleCopies ? withoutTextShadow(titleSpanStyle) : titleSpanStyle}>{titleSpanText}</span>
+        {titleCostNode}
       </Band>
       {/* Independent cost box (profile.costRect) — mirrors the live preview:
           right-aligned, vertically centered, movable apart from the name. */}
@@ -1253,30 +1292,19 @@ function CardImage({
       {hidesTypeLine ? null : layout.type.split && typeSplit ? (
         SplitTypeBake({ slot: typeSlot, split: layout.type.split, parts: typeSplit, ink: typeInk, cardWidth: width })
       ) : (
-      <Band slot={typeSlot} cardWidth={width}>
-        <span
-          style={{
-            ...alignedText(typeSlot, displayLine(typeText), fpx(typeSlot.sizePct, width), typeRoom),
-            ...typeInk,
-            ...textDyBake(layout.type, width, typeSlot.sizePct),
-            ...(typeFit?.widthPct != null ? { maxWidth: Math.round(typeFit.widthPct * width) } : {}),
-          }}
-        >
-          {displayLine(typeText)}
-        </span>
-        {!layout.symbolRect ? (
-          <SetSymbolGlyph
-            rarity={(card.rarity as Rarity | null) ?? "common"}
-            iconUrl={card.setIconUrl}
-            setCode={card.setIconCode}
-            fontSize={fpx(setSymbol.sizePct, width)}
-            keyline={layout.setSymbolKeyline}
-            wrap={inlineSymbolWrap}
-          />
-        ) : isAligned(typeSlot) ? null : (
-          <span style={{ display: "flex" }} />
-        )}
-      </Band>
+      [
+        // The type line's outline copies (TODO 3.25), as the name's.
+        ...(typeCopies ?? []).map((copy, i) => (
+          <Band key={`type-copy-${i}`} slot={typeSlot} cardWidth={width}>
+            {bandTextCopy(typeSpanStyle, displayLine(typeText), copy)}
+            {bandGhost(typeSymbolNode)}
+          </Band>
+        )),
+        <Band key="type" slot={typeSlot} cardWidth={width}>
+          <span style={typeCopies ? withoutTextShadow(typeSpanStyle) : typeSpanStyle}>{displayLine(typeText)}</span>
+          {typeSymbolNode}
+        </Band>,
+      ]
       )}
       {layout.symbolRect ? (
         <div
@@ -1734,12 +1762,62 @@ function Band({
         textTransform: slot.uppercase ? "uppercase" : "none",
         color: slot.colorHex,
         zIndex: 20,
-        ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+        // In px at this width (cardPx, layout v73 — TODO 3.5). A zero-blur
+        // outline (OUTLINE_SHADOW) is never the band's: its text draws it
+        // as copies (bandTextCopies, TODO 3.25) and the pips beside it
+        // none — the preview's BandSlot sets it on the text alone too.
+        ...(slot.shadowCss && !shadowDrawsAsCopies(slot.shadowCss) ? { textShadow: bakeShadowCss(slot.shadowCss, cardWidth) } : {}),
       }}
     >
       {children}
     </div>
   );
+}
+
+/** A band's text ink with its shadow in px at this width (bandTextStyle's
+ *  output for the bake: cardPx lengths materialised, layout v73). */
+function bakeBandTextStyle(ink: { color?: string; textShadow?: string }, cardWidth: number): { color?: string; textShadow?: string } {
+  return ink.textShadow ? { ...ink, textShadow: bakeShadowCss(ink.textShadow, cardWidth) } : ink;
+}
+
+/**
+ * The copies a band's TEXT is drawn over when its slot's shadow is a
+ * zero-blur outline (OUTLINE_SHADOW — tarkirghostfire's name and type line;
+ * TODO 3.25, layout v73): one per layer, in the layer's colour and offset,
+ * in px at this width. Satori merges a multi-layer text-shadow into one
+ * filter and the rasteriser keeps only its last layer, so the band baked a
+ * one-sided up-left shadow where the browser draws a ring (the footer's
+ * finding, FooterBake). Null for any other band.
+ */
+function bandTextCopies(slot: TextSlot, cardWidth: number): TextShadowCopy[] | null {
+  if (!slot.shadowCss || !shadowDrawsAsCopies(slot.shadowCss) || slot.smallCaps) return null;
+  return textShadowCopies(slot.shadowCss, fpx(slot.sizePct, cardWidth), cardWidth);
+}
+
+/** One copy of a band's text under it (bandTextCopies): the band's text
+ *  span's style in the copy's colour with no shadow, the text moved by the
+ *  layer's offset INSIDE it — so it clips to the unmoved box, as the
+ *  browser clips a text-shadow to the ellipsizing span. */
+function bandTextCopy(style: React.CSSProperties, text: React.ReactNode, copy: TextShadowCopy): React.ReactNode {
+  return (
+    <span style={{ ...withoutTextShadow(style), color: copy.color }}>
+      <span style={{ ...ELLIPSIS, position: "relative", left: copy.dx, top: copy.dy }}>{text}</span>
+    </span>
+  );
+}
+
+/** A style without its text shadow — the KEY gone, never `undefined`
+ *  (Satori reads every key's value). */
+function withoutTextShadow(style: React.CSSProperties): React.CSSProperties {
+  const { textShadow: _shadow, ...rest } = style;
+  void _shadow;
+  return rest;
+}
+
+/** A band's pips or set symbol in a copy (bandTextCopies): laid out — so
+ *  the copy's text gets the room it gets in the band — and never drawn. */
+function bandGhost(node: React.ReactNode): React.ReactNode {
+  return node ? <span style={{ display: "flex", opacity: 0 }}>{node}</span> : null;
 }
 
 /** A band that centres (or end-aligns) its content — the token title and
@@ -1853,7 +1931,7 @@ function FooterBake({
   aspect: number;
 }) {
   const fontPx = fpx(slot.sizePct, cardWidth);
-  const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, fontPx) : null;
+  const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, fontPx, cardWidth) : null;
   const face = footerFace(slot);
   const line = slotLine(face.id, artist);
   // The footer's alignment is the slot's (TODO 4.8.0): unset = the line at
@@ -1880,7 +1958,7 @@ function FooterBake({
     zIndex: 20,
   });
   const footer = (
-    <div style={box(ink.colorHex, copies ? undefined : ink.shadowCss)}>
+    <div style={box(ink.colorHex, copies || !ink.shadowCss ? undefined : bakeShadowCss(ink.shadowCss, cardWidth))}>
       <span style={lineStyle}>{line}</span>
       {/* Footer-right: the owner's custom mark, or nothing. (The old
           hardcoded "PipGlyph" doubled up with the brand-mark overlay —
@@ -2021,7 +2099,7 @@ function BrandMarkInCollectorSlotBake({
         fontWeight: 600,
         letterSpacing: "0.02em",
         color,
-        ...(ink.kind === "light" ? { textShadow: BRAND_MARK_LIGHT_SHADOW } : {}),
+        ...(ink.kind === "light" ? { textShadow: bakeShadowCss(BRAND_MARK_LIGHT_SHADOW, cardWidth) } : {}),
       }}
     >
       <svg
@@ -2578,7 +2656,9 @@ function RulesLinesBake({
   const lineHeight = m.linePx / m.fontPx;
   const rows: React.ReactNode[] = [];
   blocks.forEach((block, bi) => {
-    const gap = bi === 0 ? 0 : block.kind === "flavor" ? m.flavorGapNoBarPx : m.paragraphGapPx;
+    // The layout's gap (no bar on these rows) and a bullet mode's hang
+    // (TODO 3.16) — the preview's RulesLines reads the same two.
+    const gap = gapBefore(blocks, bi, m, false);
     if (block.kind === "blank") {
       rows.push(
         <div key={`blank-${bi}`} style={{ display: "flex", flexShrink: 0, height: m.blankLinePx, marginTop: gap }} />,
@@ -2586,6 +2666,7 @@ function RulesLinesBake({
       return;
     }
     block.lines.forEach((line, li) => {
+      const hang = hangIndentPx(block, li, m);
       rows.push(
         <div
           key={`${bi}-${li}`}
@@ -2597,6 +2678,7 @@ function RulesLinesBake({
             flexShrink: 0,
             height: m.linePx,
             ...(li === 0 && gap ? { marginTop: gap } : {}),
+            ...(hang > 0 ? { marginLeft: hang } : {}),
           }}
         >
           {line.runs.map((run, ri) => (
@@ -2718,11 +2800,12 @@ export function RulesBoxBake({
           b.kind === "blank"
             ? [<div key={bi} style={{ display: "flex", flexShrink: 0, height: b.height, marginTop: b.marginTop }} />]
             : [
-                // The flavor bar is its own 1 px box, never the block's
-                // border: Satori clips a border with its own clip path, so a
-                // border past the box (text clipped at the floor) drew on the
-                // frame; a box's background stays inside the overflow clip.
-                // Same pixels as the border wherever it is in the box.
+                // The flavor bar (layout v73, TODO 3.19) is its own box,
+                // never the block's border: Satori clips a border with its
+                // own clip path, so a border past the box (text clipped at
+                // the floor) drew on the frame; a box's picture stays inside
+                // the overflow clip. Its picture is the preview's
+                // (flavorBarArt: the faded ends), at this target's px.
                 ...(b.bar
                   ? [
                       <div
@@ -2732,9 +2815,18 @@ export function RulesBoxBake({
                           flexShrink: 0,
                           height: b.bar.thickness,
                           marginTop: b.bar.above,
-                          background: `${colorHex}44`,
+                          ...(b.bar.inset > 0 ? { marginLeft: b.bar.inset } : {}),
                         }}
-                      />,
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- Satori draws an <img>, not next/image */}
+                        <img
+                          src={flavorBarArt(colorHex, b.bar.width, b.bar.thickness)}
+                          width={b.bar.width}
+                          height={b.bar.thickness}
+                          alt=""
+                          style={{ width: b.bar.width, height: b.bar.thickness, flexShrink: 0 }}
+                        />
+                      </div>,
                     ]
                   : []),
                 <div
@@ -3181,6 +3273,51 @@ function StatBake({
   // same slotInk() the preview's StatOverlay resolves.
   const ink = slotInk(slot, masterKey);
   const size = statPx(slot, value, orientation, cardWidth);
+  // A zero-blur outline (OUTLINE_SHADOW — the walkers' starting loyalty,
+  // tarkirghostfire's P/T; TODO 3.25, layout v73) is drawn as one copy of
+  // the value per layer under it, as FooterBake draws the footer's: Satori
+  // merges the layers into one filter and the rasteriser keeps the last
+  // (a one-sided up-left shadow where the browser draws a ring). Any other
+  // shadow stays CSS, in px at this width (cardPx, TODO 3.5).
+  const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, size, cardWidth) : null;
+  const justifyContent = slot.align === "end" ? "flex-end" : slot.align === "start" ? "flex-start" : "center";
+  const valueSpan = (color: string, offset: TextShadowCopy | null, shadow: string | undefined) => (
+    <span
+      style={{
+        position: "relative",
+        ...(offset ? { left: offset.dx, top: offset.dy } : {}),
+        fontFamily: slotFace(slot).bakeFamily,
+        color,
+        fontWeight: slot.weight ?? 700,
+        fontSize: size,
+        // One line, centred, always — like the preview's span: a value wider
+        // than its rect (its face may be wider) overflows it evenly. Satori
+        // shrank the span to the rect instead, so such a value wrapped after
+        // its slash (`X/X+1`) or ran off to the right only (`40/40`).
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        // An end-aligned value whose KERNED run ends on the rect's edge
+        // (StatSlot.endKerned, the 1997 P/T): Satori's box is the advance
+        // sum, so it is moved by the run's kerning — the browser's box is
+        // the kerned run already.
+        ...(slot.align === "end" && slot.endKerned ? { marginRight: statKernEm(value, slot.font) * size } : {}),
+        // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
+        // computed in px here since Satori doesn't resolve em in transforms.
+        ...(slot.valueDxEm || slot.valueDyEm
+          ? {
+              transform: `translate(${Math.round(
+                (slot.valueDxEm ?? 0) * size,
+              )}px, ${Math.round(
+                (slot.valueDyEm ?? 0) * size,
+              )}px)`,
+            }
+          : {}),
+        ...(shadow ? { textShadow: shadow } : {}),
+      }}
+    >
+      {value}
+    </span>
+  );
   return (
     <div
       style={{
@@ -3189,7 +3326,7 @@ function StatBake({
         alignItems: "center",
         // Centred, or set against an edge (StatSlot.align — the transform
         // front's reverse P/T, TODO 5.1a): the preview's statJustify twin.
-        justifyContent: slot.align === "end" ? "flex-end" : slot.align === "start" ? "flex-start" : "center",
+        justifyContent,
         // Above the text layers (z20/21): printed cards draw the P/T plate
         // and the starting-loyalty shield OVER the text box edge.
         zIndex: 22,
@@ -3211,40 +3348,17 @@ function StatBake({
         />
       ) : null}
       {plateFoil(slot.rect, { top: 0, left: 0, width: "100%", height: "100%" })}
-      <span
-        style={{
-          position: "relative",
-          fontFamily: slotFace(slot).bakeFamily,
-          color: ink.colorHex,
-          fontWeight: slot.weight ?? 700,
-          fontSize: size,
-          // One line, centred, always — like the preview's span: a value wider
-          // than its rect (its face may be wider) overflows it evenly. Satori
-          // shrank the span to the rect instead, so such a value wrapped after
-          // its slash (`X/X+1`) or ran off to the right only (`40/40`).
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-          // An end-aligned value whose KERNED run ends on the rect's edge
-          // (StatSlot.endKerned, the 1997 P/T): Satori's box is the advance
-          // sum, so it is moved by the run's kerning — the browser's box is
-          // the kerned run already.
-          ...(slot.align === "end" && slot.endKerned ? { marginRight: statKernEm(value, slot.font) * size } : {}),
-          // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
-          // computed in px here since Satori doesn't resolve em in transforms.
-          ...(slot.valueDxEm || slot.valueDyEm
-            ? {
-                transform: `translate(${Math.round(
-                  (slot.valueDxEm ?? 0) * size,
-                )}px, ${Math.round(
-                  (slot.valueDyEm ?? 0) * size,
-                )}px)`,
-              }
-            : {}),
-          ...(ink.shadowCss ? { textShadow: ink.shadowCss } : {}),
-        }}
-      >
-        {value}
-      </span>
+      {/* The outline's copies, each in a box the slot's size laid out as
+          the value's own (absolute: never beside the value). */}
+      {copies?.map((copy, i) => (
+        <div
+          key={`copy-${i}`}
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent }}
+        >
+          {valueSpan(copy.color, copy, undefined)}
+        </div>
+      ))}
+      {valueSpan(ink.colorHex, null, copies || !ink.shadowCss ? undefined : bakeShadowCss(ink.shadowCss, cardWidth))}
     </div>
   );
 }
@@ -3860,7 +3974,7 @@ function SecondFaceBake({
                   whiteSpace: "nowrap",
                   fontWeight: slot.pt.weight ?? 700,
                   color: slot.pt.colorHex,
-                  ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
+                  ...(slot.pt.shadowCss ? { textShadow: bakeShadowCss(slot.pt.shadowCss, cardWidth) } : {}),
                   zIndex: 20,
                 }}
               >

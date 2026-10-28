@@ -130,7 +130,8 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
             const back = at("agclassic", { back_face: { ...row, title: "Back" } });
             expect(VERSION_SCOPES[V]!(front), label).toBe(lineChanged || ptChanged);
             expect(VERSION_SCOPES[V]!(back), `back ${label}`).toBe(lineChanged || ptChanged);
-            expect(classifyForSweep(front), label).toBe(lineChanged || ptChanged ? "rebake" : "stamp");
+            // At v50 (v73, rendering corrections round 1, re-bakes every card).
+            expect(classifyForSweep(front, undefined, { current: V }), label).toBe(lineChanged || ptChanged ? "rebake" : "stamp");
             expect(hasNewerLook({ ...front, visibility: "public" }), label).toBe(false);
             if (lineChanged || ptChanged) changed += 1;
           }
@@ -177,7 +178,7 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
     ] as const) {
       const row = at("m15", { card_type, supertype, power, toughness: power });
       expect(scope(row), `${card_type} ${supertype}`).toBe(false);
-      expect(classifyForSweep(row), `${card_type} ${supertype}`).toBe("stamp");
+      expect(classifyForSweep(row, undefined, { current: V }), `${card_type} ${supertype}`).toBe("stamp");
     }
   });
 
@@ -188,7 +189,7 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
         const row = at("flip", { card_type, supertype, power: null, toughness: null });
         expect(v49Line({ supertype, cardType: card_type }), supertype).not.toBe(buildTypeLine({ supertype, cardType: card_type }));
         expect(scope(row), `${card_type} ${JSON.stringify(supertype)}`).toBe(true);
-        expect(classifyForSweep(row)).toBe("rebake");
+        expect(classifyForSweep(row, undefined, { current: V })).toBe("rebake");
         expect(scope(at("flip", { back_face: { title: "Back", card_type, supertype } }))).toBe(true);
       }
     }

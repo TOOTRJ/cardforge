@@ -1346,6 +1346,50 @@ scope, and the scope holds no unchanged case. Verification-neutral, the
 walkers included (owner round 18; `VERIFICATION_NEUTRAL_VERSIONS`, see
 [When a tick goes stale](#verifying-a-frame)): no tick goes stale.
 
+### Rendering corrections, round 1 (layout v73)
+
+One bump, one before / after sheet and one card-scoped sweep for five
+small corrections (owner 2026-10-28), `VERSION_SCOPES[73]` = `v73Changed`,
+the union of each part's own scope:
+
+- **The flavor bar** (TODO 3.19, `v73FlavorBarChanged`: a card — or its
+  back face — with rules and flavour text): ≈ 0.2 % of the card's height,
+  96 % of the column, faded ends ([Rules text and the stat
+  plates](#rules-text-and-the-stat-plates)).
+- **Modal bullets** (TODO 3.16, `v73BulletModesChanged`: a bullet mode in
+  the rules, a back face's or the rows'): hung lines and the bullet gap
+  (the same section).
+- **The land title band** (TODO 3.22, `v73TitleBandChanged`): m15land's
+  band kept its 77.5 % width when its left edge moved to 8.4 %W, so it ended
+  at 85.9 %W (the snow land 86.6) and long land names shrank early. It ends
+  at M15's 92.2 %W now (83.8 / 83.1 %), on the five templates that take
+  M15LAND's band (m15land, m15snowland, extendedartland, m15stationland,
+  m15ubland) — a card whose name the old band shrank or cut, or with a
+  nickname. The band is a slot: those five templates' ticks go stale
+  (`VERIFICATION_TEMPLATE_SCOPES[73]`); nothing else in v73 moves a slot.
+- **Card-relative shadows** (TODO 3.5, `v73ShadowsChanged` — every card on
+  the eight templates that declared a px shadow, a walker frame's only with
+  a starting loyalty): a shadow or outline length is written in card-width
+  px (`cardPx(n)`: `n` px of a 750 px card, as `cqw`), which the preview's
+  card container draws natively and the bake materialises in px at its own
+  width (`bakeShadowCss`: 1 px at 750, 2 at HD). Until v73 they were CSS px —
+  the HD bake drew them at half the preview's share of the card. Never
+  write a shadow in px on a profile (a test reads them).
+- **The four-way outline** (TODO 3.25): a text shadow of two or more
+  zero-blur layers (`OUTLINE_SHADOW` — the walkers' starting loyalty,
+  tarkirghostfire's name, type line and P/T) is drawn in the bake as one
+  copy of the text per layer under it (`textShadowCopies`: Band through
+  `bandTextCopies`, StatBake), as the footer's `ON_ART_OUTLINE` already was:
+  Satori merges the layers into one filter and librsvg draws only its last,
+  so these baked a one-sided up-left shadow. Such a shadow belongs to its
+  TEXT in both renderers (`shadowDrawsAsCopies`; `bandTextStyle` sets it on
+  the name / type line, never on the band, whose pips would inherit it). A
+  blurred multi-layer shadow (ADV_SHADOW, SHOWCASE_SHADOW) can't be a copy
+  and stays CSS. Whether librsvg merges its layers is open (TODO 3.37: a
+  probe of SHOWCASE_SHADOW at HD measures the merged bake neither as its
+  last layer alone nor as its first — mean difference 0.59 / 0.68 — so
+  not the outline's one-sided case).
+
 ### Nyx's type bar and text box (layout v37)
 
 TODO 4.17e, owner rounds 13 and 18 (2026-09-29 / 30); its own small bump so
@@ -8015,7 +8059,8 @@ and the one switch a NEW card starts OFF on.
   the box less its padding, not of the column the side headroom leaves, so
   an italic line's overhang never pulls the block off the paper's centre; a
   line that fills the column stays inside it. At one size the line breaks,
-  every vertical position, the flavour bar (still the column's width) and
+  every vertical position, the flavour bar (still the column's — 96 % of it
+  since v73, centred) and
   the block's vertical alignment are exactly the left-aligned layout's —
   the lines only move sideways. The SIZE is the left-aligned one, always
   (next point). Centring reminder text and flavour with the
@@ -11042,10 +11087,34 @@ How rules text is sized and set:
   a full em). Text that doesn't fit at the floor clips, set from the box's
   top so the clip takes the tail, never the first line.
 - **Spacing**: 0.98 em line pitch (rules, flavor and attribution alike), a
-  fixed 24 HD px between abilities, 30 px either side of the 1 px flavor bar
-  (42 px on a frame without one). A lone em dash after a word ("choose one
-  —", "Landfall —") never starts a line: it breaks with its word, as the
+  fixed 24 HD px between abilities, 29 + 4 + 28 px around the flavor bar
+  (42 px on a frame without one) — the v33 hairline's 30 + 1 + 30, the bar
+  on its centre line. A lone em dash after a word ("choose one —",
+  "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **The flavor bar** (layout v73, TODO 3.19): ≈ 0.2 % of the card's height
+  (`RULES_TEXT.flavorBarPx`: 4 HD px, 2 at 750 — it was 1 px at every
+  target, a quarter of the preview's share of the card in the HD bake),
+  96 % of the column, centred, the rules ink at 0.3 fading to nothing over
+  each end's tenth — as DOM #33 and M19 #38 print it (their bars span
+  160–1340 px of a 1230 px column, a 4–5 px core). ONE picture for both
+  renderers, `lib/cards/flavor-bar.ts` (an inline SVG `data:` URL, the
+  station art's pattern), on the box the layout places (`RulesPlacement.bar`).
+- **Modal bullets** (layout v73, TODO 3.16): a paragraph whose first word
+  is the bullet "•" alone is a MODE (`RulesBlock.bullet`, `isBulletRun`):
+  its wrapped lines hang where its first word starts — the bullet's box and
+  a word gap in (`hangIndentPx`; the prints hang 0.52–0.55 em: DTK #224,
+  MH3 #11, TBLB #5) — and break against a column that much narrower; it
+  sits `RULES_TEXT.bulletGapPx` (12 HD px) below a rules paragraph before
+  it, not an ability's 24 (the prints: 10–13 px). Both renderers draw the
+  hang as the line's indent and the gap as its margin (the walker rows'
+  `RulesLines(Bake)` through `gapBefore` / `hangIndentPx`). Spree's "+"
+  modes are NOT modes here: OTJ #125 sets them an ability's gap apart,
+  unhung. A centred block centres each mode's line as any other. The token
+  height rule measures a text with its modes as plain paragraphs
+  (`bulletModes: "plain"`, `tokenTextFitPx`), so which box a token's text
+  asks for keeps its pre-v73 answers (TBLB #5 prints its modes on the tall
+  box).
 - **Upright words in flavour** (layout v71, owner 2026-10-28): flavour is
   italic, but the prints set a book's title, a ship's name or a stressed
   word ROMAN inside it ("—*Heroics: A Book of Fables*", "Are *we* the
