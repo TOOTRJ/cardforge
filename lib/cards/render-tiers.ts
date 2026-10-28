@@ -311,14 +311,6 @@ export function pastFloorText(
  * push it past its room) — but never below the 5 pt floor's own rounded
  * pixel (42 px at HD, 21 at 750), which the fit's "…" is measured with
  * (pastFloorText).
- *
- * A bake SMALLER than the stored HD one (the 750 px bake: OG images, live
- * free downloads) sets a shrunk line at the HD bake's whole px, scaled —
- * a half px at 750 — as the preview draws it (measuredLinePreviewPct;
- * TODO 3.37 (d), layout v74): flooring the fit to its own whole px set a
- * long walker name up to half a px smaller at 750 than the preview, 5 px
- * shorter over the line. Never larger than the fit (the HD px is at most
- * the fit there). The stored HD bake is unchanged.
  */
 export function measuredLinePx(
   fitPct: number,
@@ -328,8 +320,6 @@ export function measuredLinePx(
 ): number {
   const base = Math.round(basePct * cardWidth);
   if (fitPct >= basePct) return base;
-  const stored = STORED_BAKE_WIDTH[orientation];
-  if (cardWidth < stored) return Math.min(base, (measuredLinePx(fitPct, basePct, stored, orientation) * cardWidth) / stored);
   const floorPx = Math.round(measuredLineFloorPct(orientation) * cardWidth);
   return Math.min(base, Math.max(Math.floor(fitPct * cardWidth), floorPx));
 }
@@ -342,9 +332,8 @@ const STORED_BAKE_WIDTH: Readonly<Record<CardOrientation, number>> = { portrait:
  * A measured line's size as the PREVIEW draws it: when the fit shrank it,
  * the stored HD bake's own whole px (measuredLinePx at 1500 — 2100
  * landscape), so the editor shows exactly the size the stored PNG prints;
- * otherwise the slot's size. The 750 px bake draws the same px, scaled
- * (measuredLinePx, layout v74; it floored the fit to its own whole px
- * before — ≤ 1 px of 750 apart). Only for a line the bake sets with
+ * otherwise the slot's size. The 750 px bake floors the same fit to its own
+ * whole px (≤ 1 px of 750 apart). Only for a line the bake sets with
  * measuredLinePx; the old path keeps its continuous size.
  */
 export function measuredLinePreviewPct(

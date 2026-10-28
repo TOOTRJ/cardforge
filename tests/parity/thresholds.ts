@@ -136,10 +136,32 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     cases: /^emblem\//,
     regions: ["cost"],
     metric: "dx",
-    min: -5,
-    max: -4,
+    min: 4,
+    max: 5,
     why:
-      "The emblem's long name (it has no cost: this region is the name band's right end; the fit shrinks it to 57 HD px) ends 4 px further LEFT in the preview at 750 px. Until layout v74 the 750 px bake floored the shrunk name to 28 px while the preview drew the HD bake's 57 ÷ 2 = 28.5, and the line ran 4 px further RIGHT in the preview; since v74 both draw 28.5 px (TODO 3.37 (d)) and the bake's line is the WIDER, by about 4 px over ~600 — so at one size Satori sets this name wider than Chromium at 750 (at HD the two agree, 0). Fable of the Mirror-Breaker and the 1997 type line, also shrunk, end together since v74; this name does not. Not traced (its comma and capitals' kerning at a half-px size are the suspects).",
+      "The emblem's long name (it has no cost: this region is the name band's right end) runs 4 px further RIGHT in the preview at 750 px — the line is that much wider there than in the 750 px bake; the two agree across at HD (0). Like the other 750-only entries it is a width difference of the 750 px bake, seen here on a line that fills its band; not traced to a constant.",
+  },
+  {
+    name: "750-left-well-title-width",
+    size: "750",
+    cases: /^sagadfcfront\/g\/saga-long@fan$/,
+    regions: ["title"],
+    metric: "dx",
+    min: 3,
+    max: 4,
+    why:
+      "On a left-well face (the name band from 16.45 %W) the name \"Fable of the Mirror-Breaker\" beside a three-pip cost is WIDER in the preview at 750 px, by about 5 px over the line (the offset grows letter by letter from its start), so the region reads +3; at HD the two agree (0). Not introduced by the double-faced saga front (TODO 5.5 (b)): the same name and cost on main's transform front (m15dfcfront/g/transform-long with that title and {2}{G}, tried on darwin 2026-10-16) measure the same 3,-1 — a measured-fit band whose 750 px bake sets the line a hair smaller than the preview's HD-derived px. Not traced further.",
+  },
+  {
+    name: "750-retro-type-line-end",
+    size: "750",
+    cases: /^retro\//,
+    regions: ["symbol"],
+    metric: "dx",
+    min: 5,
+    max: 6,
+    why:
+      "On the 1997 frame the type line (MPlantin, white with a hard shadow) ends 5 px further RIGHT in the preview at 750 px; the set symbol beside it does not move. At HD the line's end agrees (0 across, 3 px up — the rise above). A width difference of the 750 px bake's type line, not traced to a constant.",
   },
   {
     name: "750-token-flavour-end",
@@ -192,12 +214,6 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
   // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
   // row and the bake's now agree there, as 750-cost-row-width's did.)
-  // (TODO 3.37 (d)'s fix struck two more at layout v74: 750-left-well-
-  // title-width and 750-retro-type-line-end were a measured line the fit
-  // SHRANK — Fable of the Mirror-Breaker beside its cost, the 1997 type
-  // line — which the 750 px bake floored to its own whole px while the
-  // preview drew the HD bake's px; the 750 bake now draws the HD px halved
-  // (render-tiers.ts measuredLinePx), and the lines end together.)
 ];
 
 /**
