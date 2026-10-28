@@ -2031,7 +2031,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // serial and the surge foil are finishes over the same frame. Exact once
   // verified (withVerification). No gap: the template draws the two-colour
   // dress (its pair masters — print gives a pair's left stripe and brace its
-  // first colour, the right ones its second; 22 of the 30 base printings),
+  // first colour, the right ones its second; 21 of the 30 base printings),
   // the triangle stamp and the collector line; the brace the pack calls its
   // crown is on every print, so the masters draw it. No land prints in the
   // run (and the pack's Land frame 404s): none can land here. #551 / #1142

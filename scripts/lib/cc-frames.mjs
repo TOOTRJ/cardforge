@@ -4204,7 +4204,7 @@ export const DOSSIER_NOTCH = Object.freeze({
 //   • the ten two-colour PAIR masters (the "split" dress, opt-in per card):
 //     print draws a two-colour card's left stripe and wedge in its first
 //     colour and the right ones in its second (pair order; #541–545, #547–
-//     549, #552–564 — 22 of the 30 base printings). The masters differ only
+//     549, #552–564 — 21 of the 30 base printings). The masters differ only
 //     on the stripes and wedges (x 61–346 and 1156–1439, measured on all
 //     seven), so the pair is the two masters lerped across TARDIS_PAIR_RAMP,
 //     a span of identical pixels.

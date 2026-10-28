@@ -5713,7 +5713,7 @@ bump, no sweep, no badge; nobody can pick it until a colour is verified.
   an import of a two-colour printing names it). Print gives a two-colour
   card's LEFT stripe and wedge its first colour and the right ones its
   second (pair order: #548 The War Doctor R|W, #549 Weeping Angel U|B,
-  #543 B|R …; 22 of the 30 base printings). The masters differ only on x
+  #543 B|R …; 21 of the 30 base printings). The masters differ only on x
   61–346 and 1156–1439 (the stripes and the wedges, measured on all seven),
   so the ten pair masters are the two frames and the two braces lerped
   across `TARDIS_PAIR_RAMP` (45 → 55 %W), a span of identical pixels.
