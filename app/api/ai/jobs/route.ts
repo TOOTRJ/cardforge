@@ -30,6 +30,8 @@ import {
   RARITY_VALUES,
 } from "@/types/card";
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
+import { AI_DESIGN_KINDS } from "@/lib/ai/frame-choices";
+import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
@@ -86,6 +88,15 @@ const AI_LOCKED_CARD_TYPE_VALUES = [...AI_CARD_TYPE_VALUES, "emblem"] as const;
 const clipped = (max: number) => z.string().trim().transform((value) => value.slice(0, max));
 const clippedList = (itemMax: number, listMax: number) =>
   z.array(clipped(itemMax)).transform((values) => values.filter(Boolean).slice(0, listMax));
+// The AI dialog's presets (lib/ai/presets.ts): a preset id that isn't text
+// is dropped (an unknown one is dropped by assemblePrompt), a twist is
+// cleaned and clipped (cleanTwist) — never a refusal.
+const presetId = z.string().trim().max(64).optional().catch(undefined);
+const twist = z
+  .string()
+  .optional()
+  .catch(undefined)
+  .transform((value) => (value === undefined ? undefined : cleanTwist(value)));
 
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -173,6 +184,17 @@ const requestSchema = z.discriminatedUnion("kind", [
      *  "remix:<id>") so an unclaimed result is offered back on the right
      *  page (app/api/ai/card-fill). */
     scope: z.string().trim().min(1).max(80).optional(),
+    /** The AI dialog's kind ("surprise" or one it can make): set, the fill
+     *  is designed frame-first (lib/ai/frame-brief.ts). Anything else is
+     *  dropped — the fill is then what it always was. */
+    design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS]).optional().catch(undefined),
+    /** The dialog's theme / style presets and the maker's twists: when any
+     *  is named they are what the designer and the painter read (the twist
+     *  first), in place of `theme` / `style`. */
+    theme_preset: presetId,
+    theme_twist: twist,
+    style_preset: presetId,
+    style_twist: twist,
   }),
 ]);
 
@@ -482,23 +504,31 @@ export async function POST(request: Request) {
         throw error;
       }
     }
+    const fill = parsed.data;
+    const assembled = assemblePrompt(fill);
+    // The dialog's kind is the type it steers (a kind of PR 1 is its own
+    // card type); "surprise" leaves the type to the AI, battles excluded.
+    const designKind = fill.design_kind && fill.want.includes("card_type") ? fill.design_kind : undefined;
     const result = await createCardFillJob({
-      want: parsed.data.want,
-      locked: parsed.data.locked,
-      steer: parsed.data.steer,
-      theme: parsed.data.theme,
-      style: parsed.data.style,
-      frame: parsed.data.frame,
-      artFrame: parsed.data.art_frame,
-      deckId: parsed.data.deck_id,
-      scope: parsed.data.scope,
+      want: fill.want,
+      locked: fill.locked,
+      steer: designKind && designKind !== SURPRISE_PRESET_ID ? { ...fill.steer, card_type: designKind } : fill.steer,
+      theme: assembled ? assembled.theme : fill.theme,
+      style: assembled ? assembled.style : fill.style,
+      frame: fill.frame,
+      artFrame: fill.art_frame,
+      deckId: fill.deck_id,
+      scope: fill.scope,
+      ...(designKind ? { designKind } : {}),
+      ...(assembled ? { assembled: { artStyle: assembled.artStyle, styleArt: assembled.styleArt } } : {}),
     });
     if (!result.ok) {
-      // A station fill whose empty tier came back empty is an expected
-      // outcome (422), not a gateway fault; every other refusal stays 502.
+      // A station fill whose empty tier came back empty, and a design that
+      // didn't fit the frame its maker picked (twice), are expected
+      // outcomes (422), not gateway faults; every other refusal stays 502.
       return NextResponse.json(
         { ok: false, error: result.error, ...(result.code ? { code: result.code } : {}) },
-        { status: result.code === "STATION_TIER_UNFILLED" ? 422 : 502 },
+        { status: result.code === "STATION_TIER_UNFILLED" || result.code === "frame_unfit" ? 422 : 502 },
       );
     }
     await recordGeneration(user.id, parsed.data.kind);

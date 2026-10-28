@@ -40,6 +40,11 @@ export type DesignCardFillInput = {
   variety?: DesignVariety;
   /** Types a generated card type must not be (no published frame yet). */
   avoidTypes?: readonly CardType[];
+  /** Frame-first design (lib/ai/frame-brief.ts): the frame the maker
+   *  picked, as the designer reads it. Absent on every other fill. */
+  frameBrief?: string;
+  /** The theme / style were assembled from the dialog's presets. */
+  assembled?: boolean;
 };
 
 /**
@@ -91,6 +96,7 @@ export async function designCardFill(
     style: input.style,
     context: input.context,
     variety: input.variety,
+    ...(input.assembled ? { assembled: true } : {}),
     slots: [
       {
         cardType: wantsType ? input.steer.card_type : input.locked.card_type,
@@ -99,7 +105,9 @@ export async function designCardFill(
         colorHint:
           input.colorHint ??
           (!wantsColors ? input.locked.color_identity?.[0] : undefined),
-        note: fillPromptNote(input.locked, input.want),
+        note: input.frameBrief
+          ? [fillPromptNote(input.locked, input.want), input.frameBrief].filter(Boolean).join(" ")
+          : fillPromptNote(input.locked, input.want),
       },
     ],
   });

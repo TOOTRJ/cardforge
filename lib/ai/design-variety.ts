@@ -217,6 +217,11 @@ export async function designFreshly<T>(
   titleOf: (result: T) => string | null | undefined,
   options: {
     acceptable?: (result: T) => boolean;
+    /** A looser test, read only when NEITHER answer is `acceptable`: the
+     *  first answer that passes it is kept rather than refused (frame-first
+     *  design: a card that follows its own words onto a dress of the frame
+     *  picked). Without it, no usable answer throws, as before. */
+    fallbackAcceptable?: (result: T) => boolean;
     random?: () => number;
     /** Whether a second design still fits the caller's time budget, given
      *  how long the first took (a sync route: structured-output.ts
@@ -230,18 +235,25 @@ export async function designFreshly<T>(
   const first = await design(designVariety(recentTitles, random));
   const firstTitle = titleOf(first);
   if (usable(first) && !repeatsRecentTitle(firstTitle, recentTitles)) return first;
+  const kept = (...results: T[]): T => {
+    const loose = options.fallbackAcceptable;
+    const found = loose ? results.find((result) => loose(result)) : undefined;
+    if (found !== undefined) return found;
+    throw new DesignNotUsableError();
+  };
   if (options.secondFits && !options.secondFits(Date.now() - startedAt)) {
     if (usable(first)) return first;
-    throw new DesignNotUsableError();
+    return kept(first);
   }
   let second: T;
   try {
     second = await design(designVariety([firstTitle ?? "", ...recentTitles], random));
   } catch (error) {
     if (usable(first)) return first;
+    if (options.fallbackAcceptable?.(first)) return first;
     throw error;
   }
   if (usable(second)) return second;
   if (usable(first)) return first;
-  throw new DesignNotUsableError();
+  return kept(second, first);
 }

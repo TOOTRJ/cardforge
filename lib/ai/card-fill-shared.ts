@@ -141,6 +141,10 @@ export type CardFillResult = {
   art_url?: string;
   artist_credit?: string;
   frame_template?: string | null;
+  /** Frame-first (the AI dialog): the card was kept on another frame than
+   *  the one picked, and why ("Designed as an Enchantment Creature, so it's
+   *  on Nyx.") — the creator tells the maker in its one toast. */
+  frame_notice?: string;
   deck_id?: string | null;
 };
 

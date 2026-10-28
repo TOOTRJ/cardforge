@@ -211,7 +211,16 @@ export type DesignBatchInput = {
    *  the single-card flows pass one so two runs with the same options never
    *  send the same prompt. Decks and remixes don't (their brief varies). */
   variety?: DesignVariety;
+  /** The theme / style were assembled from the AI dialog's presets and the
+   *  maker's twists (lib/ai/presets.ts assemblePrompt): each part is
+   *  already clipped there, so the composed line is read up to
+   *  ASSEMBLED_PROMPT_MAX rather than the free text's 300 / 200. */
+  assembled?: boolean;
 };
+
+/** The longest assembled theme / style line (a 160-character twist and a
+ *  preset's words). */
+export const ASSEMBLED_PROMPT_MAX = 600;
 
 export type DesignSlot = {
   rarity?: Rarity;
@@ -285,10 +294,12 @@ function slotLine(slot: DesignSlot, index: number): string {
 
 export function batchPrompt(input: DesignBatchInput): string {
   const lines: string[] = [];
-  if (input.theme?.trim()) lines.push(`Theme: ${input.theme.trim().slice(0, 300)}`);
+  const themeMax = input.assembled ? ASSEMBLED_PROMPT_MAX : 300;
+  const styleMax = input.assembled ? ASSEMBLED_PROMPT_MAX : 200;
+  if (input.theme?.trim()) lines.push(`Theme: ${input.theme.trim().slice(0, themeMax)}`);
   if (input.style?.trim()) {
     lines.push(
-      `Art & tone style: ${input.style.trim().slice(0, 200)} — every art_prompt must explicitly render in this style, and names/flavor should suit it.`,
+      `Art & tone style: ${input.style.trim().slice(0, styleMax)} — every art_prompt must explicitly render in this style, and names/flavor should suit it.`,
     );
   }
   // A deck brief (single-card, deck-aware) is far longer than a set/deck

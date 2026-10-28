@@ -72,6 +72,7 @@ import {
   AiFillDialog,
   type AiFillOptions,
 } from "@/components/creator/ai-fill-dialog";
+import { aiDialogColorKey } from "@/lib/ai/frame-choices";
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
@@ -3396,8 +3397,11 @@ export function CardCreatorForm({
           want: options.want,
           locked: lockedFieldsFor(getValues(), options.want),
           steer: { card_type: options.card_type, rarity: options.rarity },
-          theme: options.theme,
-          style: options.style,
+          theme_preset: options.theme_preset,
+          theme_twist: options.theme_twist,
+          style_preset: options.style_preset,
+          style_twist: options.style_twist,
+          design_kind: options.design_kind,
           frame: options.frame,
           // The art is painted in the shape of the frame the card is on
           // (TODO 4.48b) — the frame itself is never changed by it.
@@ -3477,7 +3481,12 @@ export function CardCreatorForm({
         return;
       }
       claimFill(jobId);
-      toast.success("Generated — look it over and save when you're happy.");
+      // ONE announcement: a card kept on another frame than the one picked
+      // says why in it (frame-first, lib/ai/frame-brief.ts).
+      toast.success(
+        "Generated — look it over and save when you're happy.",
+        step.fill.frame_notice ? { description: step.fill.frame_notice } : undefined,
+      );
     } catch {
       toast.error(jobStarted ? AI_FILL_NO_ANSWER_MESSAGE : AI_PLAN_NO_ANSWER_MESSAGE);
     } finally {
@@ -3521,6 +3530,7 @@ export function CardCreatorForm({
               onClick: () => {
                 applyFill(result);
                 claimFill(jobId);
+                if (result.frame_notice) toast.info(result.frame_notice);
               },
             },
             cancel: { label: "Discard", onClick: () => claimFill(jobId) },
@@ -5059,6 +5069,7 @@ export function CardCreatorForm({
             statsLabel={statsLabel}
             statsAvailable={hasStats}
             verifiedFrameKeys={publishedFrameKeys}
+            colorKey={aiDialogColorKey(watched.color_identity)}
             generating={fillPhase !== null}
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
