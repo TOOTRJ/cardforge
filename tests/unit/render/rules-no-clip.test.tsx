@@ -330,6 +330,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
       // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
       "avatar/main", "bloomburrow/main",
+      // 4.11 wave 2's MKM dossier: M15's box (a new template).
+      "dossier/main",
     ],
     ["1200 chars"],
   ],

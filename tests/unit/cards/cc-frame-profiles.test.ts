@@ -46,6 +46,14 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 4 / 1500]);
         continue;
       }
+      // The MKM dossier showcase (TODO 4.11 wave 2): its own run's row — the
+      // CC M15 row 19 px lower (the discs centred on 176 px, the median of
+      // the run's prints), its end 38 px further left with the name band's
+      // (the folder's clip covers the band's end), 70 px discs.
+      if (template === "dossier") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 + 19 / 1500, 2 / 1500]);
+        continue;
+      }
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
         expect(profile.costDx, template).toBeUndefined();

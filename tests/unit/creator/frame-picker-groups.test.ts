@@ -178,6 +178,11 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the MKM dossier showcase (TODO 4.11 wave 2): a new template in a
+  // new showcase set — pinned in tests/unit/scryfall/mkm-dossier-imports.test.ts
+  // (MKM's dossier printings land there once verified) and
+  // tests/unit/frames/mkm-dossier-importer.test.ts.
+  "dossier",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

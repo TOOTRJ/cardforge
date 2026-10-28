@@ -366,6 +366,14 @@ const TEMPLATES = {
   tarkirdragon: {
     q: (k) => `set:mul (cn:1 or cn:60) ${spellColor(k)}`,
   },
+  // The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo
+  // type in MKM (#336–389, #433) — NOT the Secret Lair's navy-bordered four
+  // (SLD #1566–1569) and not MKM's 'magnified' showcase. `m` a two-colour
+  // card (the pair masters ride the gold key) and the five-colour Niv-Mizzet.
+  dossier: {
+    confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
+    q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

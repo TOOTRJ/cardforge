@@ -161,6 +161,8 @@ describe("Card Conjurer recipe", () => {
       "aftermath",
       // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
       "battle",
+      // The MKM dossier showcase (TODO 4.11 wave 2; tests/unit/frames/mkm-dossier-importer.test.ts).
+      "dossier",
       "emblem",
       // The Expeditions (TODO 4.11 wave 1; tests/unit/frames/expedition-importer.test.ts).
       "expeditionland",

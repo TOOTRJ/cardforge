@@ -548,6 +548,818 @@
       "width": 220,
       "height": 220
     },
+    "dossier/b.png": {
+      "hash": "f66c04324b4a",
+      "sha256": "f66c04324b4a9fb6430eca30ad4df68b15d20d0eea5958bc4f6de4e35e0fdf90",
+      "bytes": 3065523,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/b.webp": {
+      "hash": "dddeb4907912",
+      "sha256": "dddeb4907912d4de874c2f976b2006ed9bbab6dcdcb0492d035277ed2fa02ad1",
+      "bytes": 162652,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/bg.png": {
+      "hash": "c57bab888cbf",
+      "sha256": "c57bab888cbf6760fa0170879b8fc81c25a506d84154c3a56398827dd40691d2",
+      "bytes": 3058483,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/bg.webp": {
+      "hash": "43a639137d7d",
+      "sha256": "43a639137d7d3bd4a052cd4d531f9c9043d5f519f4a265189f9706be18d4458d",
+      "bytes": 158258,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/br.png": {
+      "hash": "4d12b9080603",
+      "sha256": "4d12b90806038e254dff606e2266380a8ba4acbf58eb76a3f637cd332a645bf9",
+      "bytes": 3072859,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/br.webp": {
+      "hash": "2577e02212bc",
+      "sha256": "2577e02212bc335627fe52308b6bf8dcc9d78f3628aac4c49ded675721020cad",
+      "bytes": 162836,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/c.png": {
+      "hash": "06c3ad97bc8f",
+      "sha256": "06c3ad97bc8fb03dd1e817c341c220bca1edb3bf984378e04c29ebef5d52f173",
+      "bytes": 3030132,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/c.webp": {
+      "hash": "de895c66e500",
+      "sha256": "de895c66e500b935bd04ab1c1e1a9c8324aa61715046f7e6c6394b24e911cf89",
+      "bytes": 155070,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/g.png": {
+      "hash": "262ec5f47b1c",
+      "sha256": "262ec5f47b1c291e1e582506bae32208b741f1c23dc560796fad5c78fe71e7e0",
+      "bytes": 3027973,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/g.webp": {
+      "hash": "65280ba2301d",
+      "sha256": "65280ba2301d3ceed377499fd6b10154f3b6e9322560edc2416ef787da193a2a",
+      "bytes": 150166,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/gu.png": {
+      "hash": "c82fb317d517",
+      "sha256": "c82fb317d517dfd4ca0620e901e705bf185b7f48cd5b57735cfeeac1d42e0564",
+      "bytes": 3043784,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/gu.webp": {
+      "hash": "a3698fa42b0f",
+      "sha256": "a3698fa42b0f9878fcaee1663dbb7bcd4b988992dfd344ff8e2df643025d37e9",
+      "bytes": 153334,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/gw.png": {
+      "hash": "6ed8deda7440",
+      "sha256": "6ed8deda744064cf9437ee4e8d7b949943ac4e72bebc8379c56ca696d20ef0e9",
+      "bytes": 3031792,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/gw.webp": {
+      "hash": "5416ba097757",
+      "sha256": "5416ba097757c7e7775b66ada0a3ec6c47eec83d04544c3cdf585292ea88bd0d",
+      "bytes": 153156,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/m.png": {
+      "hash": "2a08ac6427b4",
+      "sha256": "2a08ac6427b42c40b182f02f22ba5d7327522df79bb2654f532cc161a70ee1f0",
+      "bytes": 3036449,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/m.webp": {
+      "hash": "71637e953c85",
+      "sha256": "71637e953c8566bc9438d4a3d73ed2b25d04764438d0a3b0d2cbbac386ff80c7",
+      "bytes": 163052,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/pt/b.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/b.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/c.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/c.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/g.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/g.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/m.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/m.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/r.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/r.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/u.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/u.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/w.png": {
+      "hash": "8c9ea69bb5df",
+      "sha256": "8c9ea69bb5df69776cd6fc2dd78f1c539abd77ea852f8bec90a29639157a52f8",
+      "bytes": 112342,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/pt/w.webp": {
+      "hash": "4a12f780e9b0",
+      "sha256": "4a12f780e9b04edad1674ec6ea852758c5c95dc6f73bed87d33dd7c490e438c8",
+      "bytes": 7048,
+      "width": 392,
+      "height": 195
+    },
+    "dossier/r.png": {
+      "hash": "989c907a12fa",
+      "sha256": "989c907a12fa18dd72cb5fe9e3e7ba44975f218d2d04b14825b295f35999260a",
+      "bytes": 3053068,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/r.webp": {
+      "hash": "1e2b0fd8b6bd",
+      "sha256": "1e2b0fd8b6bdfe22f02c7fa6bf168bbd2f946fa37ccc1747157a62d224d9369a",
+      "bytes": 162854,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/rg.png": {
+      "hash": "2af1bab01ea1",
+      "sha256": "2af1bab01ea1643143b69ca889ad925c2e32633acc43c0a7f3c92087cabf067f",
+      "bytes": 3044556,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/rg.webp": {
+      "hash": "94c57c98d8cb",
+      "sha256": "94c57c98d8cbb9a04ae8b975c249d53351355fa075b4e59bd40dc99902157f8e",
+      "bytes": 157578,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/rw.png": {
+      "hash": "0566b27f28ce",
+      "sha256": "0566b27f28ce984765936ab972639c693db7f0a9d3229c964b9fbf4518a4b8c8",
+      "bytes": 3041310,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/rw.webp": {
+      "hash": "e71bb928df75",
+      "sha256": "e71bb928df75bd19b6bf88fc911406cb63edb2c51bb66f277a0484b5617b5568",
+      "bytes": 160354,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/u.png": {
+      "hash": "96071329bff7",
+      "sha256": "96071329bff7e75df87988b95102ecb90b240d93292f55d01d4c1dca0b66fc0d",
+      "bytes": 3063126,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/u.webp": {
+      "hash": "f816dd68908f",
+      "sha256": "f816dd68908f3c6671d303758b6bf62fab2abbe049a5aba54b9427adae9a4097",
+      "bytes": 160750,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/ub.png": {
+      "hash": "5d23b5c47093",
+      "sha256": "5d23b5c47093d8c4024a580f5f82ca4ad35aa4a9b186ad5e106041c84eeb5fdf",
+      "bytes": 3068274,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/ub.webp": {
+      "hash": "5a51ad72e971",
+      "sha256": "5a51ad72e971b424b0608df3a2a75c8d45c2aa6a70f7a6cf440cf812d794865c",
+      "bytes": 161326,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/ur.png": {
+      "hash": "a4bba375c70c",
+      "sha256": "a4bba375c70c56b8aa9193b71e5c942f596c45a311e59a3d44b37a331d7e332a",
+      "bytes": 3070654,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/ur.webp": {
+      "hash": "968ff7252241",
+      "sha256": "968ff7252241bc8ed88b3c4bcb670e30b95cf4442c7513f7a9015f2d041510f8",
+      "bytes": 162306,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/w.png": {
+      "hash": "1273b8da2217",
+      "sha256": "1273b8da2217177140e2dec1437236175ff1f76c4dea539b3fd19d1b571319f7",
+      "bytes": 3025990,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/w.webp": {
+      "hash": "58ecd0f8ee77",
+      "sha256": "58ecd0f8ee77457e4aa43990fd93340a01a935918ef55488705ddda1e6d429d4",
+      "bytes": 159764,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/wb.png": {
+      "hash": "f13f6d8a89aa",
+      "sha256": "f13f6d8a89aa565a755d04dc1c232d94a3308459e18835e564a89e959e30b47a",
+      "bytes": 3046786,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/wb.webp": {
+      "hash": "e0bb6a945c92",
+      "sha256": "e0bb6a945c92ce9c9da00d137fd8d40ff7dc40635445f0564cba681ff3632e61",
+      "bytes": 161338,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/wu.png": {
+      "hash": "b2eafe896f19",
+      "sha256": "b2eafe896f19fe835f1afffe5f7c454720cb8e2338ff49112f9ccccf1fa58d52",
+      "bytes": 3045380,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossier/wu.webp": {
+      "hash": "dc873c362746",
+      "sha256": "dc873c362746a778d6fe52d807b9b38ee2fb085a92b420e66dc7412db5644c8a",
+      "bytes": 159970,
+      "width": 1500,
+      "height": 2100
+    },
+    "dossiercrown/b.png": {
+      "hash": "343081874821",
+      "sha256": "34308187482187872649c9d0305c10e5447272e8f6e83086b1859053bf6b28f5",
+      "bytes": 257561,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/b.webp": {
+      "hash": "75cd46465d03",
+      "sha256": "75cd46465d03f672b2fa9e05c36a4149ca670a70618aa68f51f5ff9410517c6b",
+      "bytes": 23748,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/bg.png": {
+      "hash": "353f427e0224",
+      "sha256": "353f427e0224519cca0be059e51b0f6903e4af7fb0339f2d74c3c26719f14b91",
+      "bytes": 252086,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/bg.webp": {
+      "hash": "dcc052747ec9",
+      "sha256": "dcc052747ec9941b6cf218c6b52ccc066be7f37ebfa29ea99e1e5881822ef8ae",
+      "bytes": 24496,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/br.png": {
+      "hash": "d39154fe87c0",
+      "sha256": "d39154fe87c02a0520b2286d094a2a1a285ff9677c8614bc01b7429e0b14111a",
+      "bytes": 271202,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/br.webp": {
+      "hash": "efde552c1241",
+      "sha256": "efde552c1241fa6a41321c1c2f7544675086ae2e731cf361a7c2e00517123f7c",
+      "bytes": 24508,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/c.png": {
+      "hash": "643722364f0c",
+      "sha256": "643722364f0cab266c833e649100392273629a9a29ccb78d2a6e514a50509a57",
+      "bytes": 229262,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/c.webp": {
+      "hash": "03fd966ae34a",
+      "sha256": "03fd966ae34a37fc13807862e9c6786f8b3245b4b6322af3df08f49d8637e953",
+      "bytes": 23880,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/g.png": {
+      "hash": "51cf50d2f94d",
+      "sha256": "51cf50d2f94d5476215b029eadae215494ff08dbfeda8b75184341f52943ee68",
+      "bytes": 224862,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/g.webp": {
+      "hash": "e21c4bc59af3",
+      "sha256": "e21c4bc59af375c031aa9d502bb3eee21cb69c8d7c9bf0c3abb84fbdee9b3559",
+      "bytes": 23932,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/gu.png": {
+      "hash": "ad15238b0aa0",
+      "sha256": "ad15238b0aa02522f8150e736dececa94988f7b92e5b0848baaf4398db4898e2",
+      "bytes": 236378,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/gu.webp": {
+      "hash": "2c995d1826ba",
+      "sha256": "2c995d1826ba553973ad93a9140258e171fd2fd91ebf3f86b7a1fa42f3f7dc88",
+      "bytes": 24336,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/gw.png": {
+      "hash": "276cbb67a03a",
+      "sha256": "276cbb67a03a8af0f2be8fe3936472066db32b0e62fa387a96a26133eda8631a",
+      "bytes": 249785,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/gw.webp": {
+      "hash": "613fd8931fbb",
+      "sha256": "613fd8931fbb0772f00a6cb36c51e3ffc16598af73688845f93ad4cceaf2441f",
+      "bytes": 23022,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/m.png": {
+      "hash": "2e056c4c1ed9",
+      "sha256": "2e056c4c1ed9147abae4c54f703f95f223d2fc8d942f952d1de0819b088daf9c",
+      "bytes": 265736,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/m.webp": {
+      "hash": "f36887a1051f",
+      "sha256": "f36887a1051f3f1d8562edbe20c33a75666973df3297d21e891c54a06f6c80de",
+      "bytes": 24484,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/r.png": {
+      "hash": "a54780b4015c",
+      "sha256": "a54780b4015cb7d69e4d8afbb1720c029e32a9b38dad82fba154db22c80b65f1",
+      "bytes": 262176,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/r.webp": {
+      "hash": "ea6bbc82420f",
+      "sha256": "ea6bbc82420f2475b4b51a0e336eaa4355de46b8b51af648655a82ad82b5c87c",
+      "bytes": 24986,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/rg.png": {
+      "hash": "6962fcb231eb",
+      "sha256": "6962fcb231ebb990440d636898f2275108ed620e3c9fcad8c092c3a52aff9c4b",
+      "bytes": 258673,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/rg.webp": {
+      "hash": "9862909be172",
+      "sha256": "9862909be172e751fdf9d37f7700a7391a89fcbf212990432c3f3ec5500625a5",
+      "bytes": 24338,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/rw.png": {
+      "hash": "5754db76b7a8",
+      "sha256": "5754db76b7a818da67f8a66f9bf8ff18aaae767d1860c1f831b1a250be8fc532",
+      "bytes": 268439,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/rw.webp": {
+      "hash": "4f02f3756dc3",
+      "sha256": "4f02f3756dc3affac04a4a69b759e4028a0af95e16103d5b69e65dc38d05569a",
+      "bytes": 23902,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/u.png": {
+      "hash": "adf684214144",
+      "sha256": "adf684214144c29b57374d4bd0c3697b4065c3dbaf8cd83e65533d9f879d29a5",
+      "bytes": 230221,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/u.webp": {
+      "hash": "a8537b8a40ed",
+      "sha256": "a8537b8a40ed9ef69326083e13167f2ffa0d2bd36005f3a0be7a479b0db6c0db",
+      "bytes": 24740,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/ub.png": {
+      "hash": "6d15819c4b88",
+      "sha256": "6d15819c4b8867a0210bfd3e3c58646b0cc6bf5707a5527354093334a437f217",
+      "bytes": 257548,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/ub.webp": {
+      "hash": "c66012c3a0c4",
+      "sha256": "c66012c3a0c4021691361ed75e4bb24eac92d169c6c58ec349c5d46f309382a2",
+      "bytes": 24044,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/ur.png": {
+      "hash": "091ecd447b07",
+      "sha256": "091ecd447b075aa1ce7aecdf5d0b16762dcad072c92293ce60e4b83101d62362",
+      "bytes": 262823,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/ur.webp": {
+      "hash": "fafdd1456fae",
+      "sha256": "fafdd1456fae1330359088bb5cc0ef0def569d4bf954dc94fc27372ac47e894f",
+      "bytes": 24588,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/w.png": {
+      "hash": "0a975135c875",
+      "sha256": "0a975135c875feac054c2237c5a64af6570b9e9a43c34475211875c07c9d1730",
+      "bytes": 247517,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/w.webp": {
+      "hash": "5a365c4e93d1",
+      "sha256": "5a365c4e93d1e30a7b39a0890786fb24cc91d820329000bd16e42ede1538d9eb",
+      "bytes": 22316,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/wb.png": {
+      "hash": "3639ef82e3bb",
+      "sha256": "3639ef82e3bb42c78bc7abf466274f24d739c9208feff9f9c3e4a0427512ac8b",
+      "bytes": 265817,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/wb.webp": {
+      "hash": "5f11b81cb2c9",
+      "sha256": "5f11b81cb2c99fd5f86348c891457b9b908a54ef8ec23fb900d015d3eeb2598c",
+      "bytes": 22956,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/wu.png": {
+      "hash": "951575714ea9",
+      "sha256": "951575714ea90f7b5b912ef481638dc1e9cc2e9f775e4242a82b0ca8ceedf3e9",
+      "bytes": 252515,
+      "width": 1500,
+      "height": 316
+    },
+    "dossiercrown/wu.webp": {
+      "hash": "1a223f5631ef",
+      "sha256": "1a223f5631efac9fd1f57a68d24f6de0ae4b32d17970d3a7f0d5794856a6b484",
+      "bytes": 23736,
+      "width": 1500,
+      "height": 316
+    },
+    "dossierholostamp/b.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/b.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/bg.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/bg.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/br.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/br.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/c.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/c.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/g.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/g.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/gu.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/gu.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/gw.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/gw.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/m.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/m.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/r.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/r.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/rg.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/rg.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/rw.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/rw.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/u.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/u.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/ub.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/ub.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/ur.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/ur.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/w.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/w.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/wb.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/wb.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/wu.png": {
+      "hash": "bb664ff2e5f4",
+      "sha256": "bb664ff2e5f404f683d574a0d8ed09b4597bacbbb89b148deb70c0aa76c55ab9",
+      "bytes": 12127,
+      "width": 226,
+      "height": 106
+    },
+    "dossierholostamp/wu.webp": {
+      "hash": "b6d28424f87c",
+      "sha256": "b6d28424f87cb111e6ca4e1a6092a024006795c854dbb132c0891dee6ada002f",
+      "bytes": 1868,
+      "width": 226,
+      "height": 106
+    },
     "emblem/b.png": {
       "hash": "2adb45cd9c81",
       "sha256": "2adb45cd9c81e8e31e90639301fb988c029c34faf7d3a491237411d6438c2937",

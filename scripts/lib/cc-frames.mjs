@@ -568,6 +568,8 @@ export function sourceTonesOf(src) {
   // The LOTR ring's files (TODO 4.11, RING_SOURCE_TONES — defined with its
   // recipe below; read at call time).
   if (Object.hasOwn(RING_SOURCE_TONES, src)) return RING_SOURCE_TONES[src];
+  // …the MKM dossier's crowns (TODO 4.11 wave 2, DOSSIER_SOURCE_TONES)…
+  if (Object.hasOwn(DOSSIER_SOURCE_TONES, src)) return DOSSIER_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
   return Object.hasOwn(TARKIR_SOURCE_TONES, src) ? TARKIR_SOURCE_TONES[src] : null;
 }
@@ -3931,6 +3933,244 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
 }
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2): the Murders at Karlov Manor DOSSIER
+// showcase (`dossier`; MKM #336–376, their invisible-ink twins #377–389 and
+// #433 — Scryfall's `dossier` promo type, 55 printings, every one a creature)
+// from Card Conjurer's 'Dossier' pack (packDossier.js, `img/frames/dossier/`,
+// 2010 × 2814). An ADDITION: a new template, no stored card sits on it.
+// Self-contained: the template, its crown band and its stamp notch read only
+// the constants below.
+//   • masters: the pack's seven frames whole, each downscaled ONCE to 1500 ×
+//     2100 (Lanczos) — w u b r g, m (gold: three colours or more) and `c` =
+//     the pack's 'Artifact Frame' (dossier/a.png, the slate accent): the
+//     pack draws no colourless frame, and the run's one colourless printing
+//     is an artifact creature (#376 Magnetic Snuffler, which prints it).
+//   • the ten two-colour PAIR masters (the "split" dress, opt-in per card
+//     like every two-colour dress): print draws a two-colour card's accents
+//     — the photo corners, the rules of the title and type bands, the two
+//     seals — in its first colour on the left and its second on the right
+//     (pair order; 28 of the run's printings), the rules ramping between:
+//     the two masters lerped across DOSSIER_PAIR_RAMP (the pack has no
+//     two-colour dress of its own). The masters differ only on the accents,
+//     the seals and the photo's paper, so the ramp crosses those alone.
+//   • a real black border top, right and bottom, cut at the one card corner;
+//     the folder's tan edge runs to the LEFT edge, as on every print (the
+//     edge contract's `design`).
+//   • plates: the pack's one P/T tag (pt.png, 392 × 195 at its ptBounds
+//     1538 / 2468) under every key.
+//   • tones (the ring's one rule: raw scan medians, a region toned only
+//     where ≥ 9 levels off — DOSSIER_PRINT_TONES): the parchment, the folder
+//     edge, the accents and the tag are within 4 levels of print, as drawn;
+//     the green and blue CROWNS are toned (the pack draws them 11–12 levels
+//     off the frame's own accents, which print uses for the crown too).
+//   • geometry kept as drawn: print is the pack's drawing (the stamp's arch
+//     within 1 px, the parchment's lines within 1–2 px), so nothing is
+//     re-cut. The title and type bands are TILTED (the pack's rules rise
+//     ~1° and ~0.7°, and print sets the name and the type line along them);
+//     PipGlyph draws its text level, on each band's middle.
+// ---------------------------------------------------------------------------
+export const DOSSIER = "img/frames/dossier";
+const DOSSIER_PACK = "packDossier.js 'Dossier' (the Murders at Karlov Manor dossier showcase; groupShowcase-5.js 'Dossier (MKM)')";
+/** A colour key's pack file: `c` draws the pack's artifact frame. */
+const dossierFile = (dir, k) => `${DOSSIER}/${dir}${k === "c" ? "a" : k}.png`;
+/**
+ * The two-colour split, in % of the card's width (scripts/lib/pair-ramp.mjs
+ * blendPair: the second colour's share 0 → 1 between the two): measured on
+ * the MKM two-colour prints (Scryfall PNGs at 1500 × 2100), the colour of
+ * each band's thin rules column by column projected between the same
+ * rule's colour on two mono prints of its two colours, smoothed over 15
+ * px — 10 / 50 / 90 % at 44.7 / 52.2 / 57.6 (the title band's lower rule,
+ * 12 prints), 44.3 / 52.1 / 57.5 (its upper rule, 11), 45.2 / 52.2 / 57.2
+ * and 45.8 / 51.9 / 56.9 (the type band's two rules) → 43.5 → 59.5 (45.1 /
+ * 51.5 / 57.9).
+ */
+export const DOSSIER_PAIR_RAMP = Object.freeze([43.5, 59.5]);
+/**
+ * The two-colour CROWN's split: the crown's colour band (rows 76–84 px,
+ * x 60–1400) on the run's two-colour legends (#356, #359, #360, #362, #363,
+ * #365, #370, #373), the same projection: 10 / 50 / 90 % medians 42.5 /
+ * 49.7 / 55.9 %W (the 10 % point read on the five whose ramp is clean) →
+ * 40.5 → 57.5 (42.2 / 49 / 55.8). A little left of the frame's own rules,
+ * as on print.
+ */
+export const DOSSIER_CROWN_RAMP = Object.freeze([40.5, 57.5]);
+/**
+ * The pack's colours against print by the ring's one rule (raw scan
+ * medians over every MKM dossier print that shows the region, the
+ * invisible-ink twins #377–389 / #433 left out — their scans carry the
+ * ink's cast; Scryfall PNGs at 1500 × 2100; a region ≥ 9 levels off is
+ * toned):
+ *   • parchment (title band, type band, text box; ink left out): pack
+ *     247,240,227 / 248,241,228 / 247,240,228, print 245,240,227 /
+ *     245,240,228 / 244,239,227 — ≤ 3: as drawn;
+ *   • the folder's tan edge (x 8–22): 185,160,112 / 181,158,109 — 4: as drawn;
+ *   • the accents (the photo's corners, 41 mono prints): w 174,158,116 /
+ *     171,157,115, u 42,92,158 / 42,92,157, b 58,49,72 / 58,50,72, r
+ *     141,47,27 / 140,47,27, g 43,96,50 / 43,96,49, m 191,142,50 /
+ *     189,140,48, a 102,124,145 / 102,124,145 — ≤ 3: as drawn;
+ *   • the P/T tag's face: 231,220,197 / 229,220,197 — 2: as drawn;
+ *   • the crowns' colour band: w 170,155,113 / 168,154,112 (#337), b
+ *     59,50,71 / 58,49,72 (#344, #362, #366, #370), r 139,47,27 /
+ *     139,47,27, m 188,140,50 / 187,139,48 (#368) — as drawn; g
+ *     46,107,55 → 43,96,49 (#352 and the green end of #356, #362, #371,
+ *     #372, #373, #375: 11 / 6 off) and u 50,89,168 → 43,92,156 (the blue
+ *     end of #355, #359, #360, #365, #366, #373: 7 / 12 off) — TONED, the
+ *     crown file's own flat fill (nearRegionPlane) as it loads; the
+ *     artifact crown has no print (no colourless legend): as drawn.
+ */
+export const DOSSIER_PRINT_TONES = Object.freeze({
+  crown: Object.freeze({
+    g: Object.freeze({ from: [46, 107, 55], to: [43, 96, 49] }),
+    u: Object.freeze({ from: [50, 89, 168], to: [43, 92, 156] }),
+  }),
+});
+/** The crown's fill region: the file's pixels within `full` levels (max
+ *  channel) of the tone's `from`, none past `none` (the fill's anti-aliased
+ *  edge into the parchment between). */
+export const DOSSIER_CROWN_NEAR = Object.freeze({ full: 12, none: 36 });
+/** The dossier pack's toned files: the green and blue crowns. */
+export const DOSSIER_SOURCE_TONES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(DOSSIER_PRINT_TONES.crown).map(([k, tone]) => [
+      `${DOSSIER}/crown/${k}.png`,
+      Object.freeze({ near: Object.freeze({ crown: DOSSIER_CROWN_NEAR }), tones: Object.freeze({ crown: tone }), table: `DOSSIER_PRINT_TONES.crown.${k}` }),
+    ]),
+  ),
+);
+const DOSSIER_PT = Object.freeze(perColor(() => `${DOSSIER}/pt.png`));
+const DOSSIER_NOTES = [
+  "w u b r g m = the pack's colour frames whole (dossier/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the MKM dossier showcase prints them (MKM #336–389, #433)",
+  "c = the pack's slate 'Artifact Frame' (dossier/a.png): the pack draws no colourless frame, and the run's one colourless printing is an artifact creature that prints it (MKM #376 Magnetic Snuffler)",
+  `the ten pairs (wu wb ub ur br bg rg rw gw gu, the "split" dress) = the pair's two colour frames lerped across ${DOSSIER_PAIR_RAMP[0]} → ${DOSSIER_PAIR_RAMP[1]} %W of the card (scripts/lib/pair-ramp.mjs blendPair) at the pack's size, then downscaled once: print draws a two-colour card's accents — the photo's corners, the title and type bands' rules, the two seals — in the first colour on the left and the second on the right, the rules ramping between (MKM #354–375 but #368, #383–389); the pack has no two-colour dress of its own`,
+  "a real black border top, right and bottom, cut at the one card corner; the folder's tan edge runs to the left edge (design), as on every print",
+  "plates = the pack's one 'Power/Toughness Box' (dossier/pt.png, 392x195 at its ptBounds 1538/2468 px of 2010x2814) under every key",
+  "the parchment, the folder's edge, the accents and the tag against print by the ring's rule (raw scan medians, a region ≥ 9 levels off is toned): within 4 levels, as drawn (DOSSIER_PRINT_TONES)",
+  "geometry as drawn: the pack is print's drawing (the stamp's arch within 1 px, the bands' rules within 1–2 px) — nothing is re-cut; the title and type bands are tilted on the pack as on print",
+];
+/**
+ * The dossier's legendary crown (TODO 4.11): the pack's 'Legendary Crown'
+ * (`dossier/crown/<k>.png`, 1790 × 419 at crownBounds 33 / 0 px of the
+ * 2010 × 2814 card) — the torn paper strip in the card's colour every
+ * legendary print carries above the title band (MKM #337, #344, #350, #352
+ * and every legendary pair and gold card of #354–375; the non-legendary
+ * #336, #343, #358 print none). A generic band: the crown placed at its bounds on
+ * a clear 2010 × 2814 canvas, downscaled once, cropped to rows 0–315 of the
+ * HD card (the crown ends at row 312.7; its strip down the folder's left
+ * edge is the master's own pixels). Keys: the masters' w u b r g m c (c the
+ * artifact crown) and the ten pairs, the first colour's crown left and the
+ * second's right across DOSSIER_CROWN_RAMP (print's two-colour legends
+ * ramp their crown so). The green and blue crowns toned onto print
+ * (DOSSIER_SOURCE_TONES).
+ */
+export const DOSSIER_CROWN_BAND = Object.freeze({
+  source: `${DOSSIER}/crown`,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]),
+  crown: Object.freeze({ leftPct: (33 / 2010) * 100, topPct: 0, widthPct: (1790 / 2010) * 100, heightPct: (419 / 2814) * 100 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  rows: 316,
+});
+/** The dossier crown band's one layer for a key (a pair's two crowns lerped
+ *  across DOSSIER_CROWN_RAMP). */
+export function dossierCrownLayers(key) {
+  if (!DOSSIER_CROWN_BAND.keys.includes(key)) throw new Error(`dossierCrownLayers: no crown for key ${key}`);
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = pairSides(key);
+    return [placed(dossierFile("crown/", a), DOSSIER_CROWN_BAND.crown, { right: dossierFile("crown/", b), ramp: [...DOSSIER_CROWN_RAMP] })];
+  }
+  return [placed(dossierFile("crown/", key), DOSSIER_CROWN_BAND.crown)];
+}
+/**
+ * What the importer checks on the full 1500 × 2100 dossier-crown composite
+ * (pure): nothing at or below the band's last row; the crown (near) opaque
+ * at its top (the black above the strip, α ≥ 250 at row 5 — the pack's
+ * black crown reads 254) — it reaches the card's top edge; and the band clear outside x 22–1363 (the crown's bounds, 24.6–
+ * 1360.4, and the resample's ringing), so it never repaints the master's
+ * clip or its right border.
+ */
+export function dossierCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  let outside = 0;
+  for (let y = 0; y < rows; y += 1) {
+    for (const x of [0, 21, 1364, width - 1]) outside = Math.max(outside, buf[(y * width + x) * 4 + 3]);
+  }
+  const topAlpha = buf[(5 * width + 700) * 4 + 3];
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (topAlpha < 250) failures.push(`the crown's top is α ${topAlpha} at (700, 5), the pack draws it (near) opaque to the card's top edge`);
+  if (outside > 0) failures.push(`α ${outside} outside the crown's bounds and the resample's ringing (x 22–1363)`);
+  return { lastAlphaRow, peakRow: 0, failures, summary: `top α ${topAlpha}, α outside the bounds ${outside}` };
+}
+/**
+ * The dossier's OVAL stamp notch (TODO 4.11): the pack's one 'Holo Stamp'
+ * (`dossier/stamp.png`, 295 × 134 at its bounds 857 / 2540 of 2010 × 2814 —
+ * the black border arched up into the page's foot round the hologram, as
+ * every stamped print draws it: the arch's top on 1909 px at the centre
+ * against the pack's 1908, its feet on the page's foot 1943–1946 against
+ * 1942–1945) composited on the whole card and downscaled with it, then cut
+ * to DOSSIER_NOTCH_BOX — 2 px round the piece (639.7–859.9 × 1895.5–
+ * 1995.5) — and drawn 1:1 there, its rows above the arch cleared (the
+ * master's own page shows there). The pack paints a capture of WotC's oval
+ * in the well 5–7 px BELOW where print sets the hologram (DOSSIER_CAPTURE_PX
+ * against DOSSIER_STAMP_OVAL_PX): the capture is painted opaque black first
+ * (grown 2 px — the well is black round the hologram on print), then the
+ * prints' oval plus 2 px cut clear and the 2 px round it painted black. Our
+ * own oval art covers the cut (lib/cards/holo-stamp-art.ts). One piece for
+ * every key, the ten pairs' too (the masters and the pair masters are the
+ * same page under the arch).
+ */
+export const DOSSIER_NOTCH_BOX = Object.freeze({ x: 637, y: 1893, width: 226, height: 106 });
+/** The stamp's oval, card px: the PRINTS' hologram — lit from 686 to 816
+ *  across its middle row and from 1921 to 1987 down the card's centre on
+ *  29 of the 31 stamped MKM prints without the invisible ink (Scryfall PNGs
+ *  at 1500 × 2100, every one the same within 1 px; #357 / #362 have rules
+ *  ink over the arch and were not read) — 133 × 67 at 685, 1921. */
+export const DOSSIER_STAMP_OVAL_PX = Object.freeze({ x: 685, y: 1921, width: 133, height: 67 });
+/** The pack's capture in the well, card px (its lit pixels once placed and
+ *  downscaled: 684–816 × 1928–1992) — painted black before the cut. */
+export const DOSSIER_CAPTURE_PX = Object.freeze({ x: 684, y: 1928, width: 133, height: 65 });
+export const DOSSIER_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS].map((k) => [k, `${DOSSIER}/stamp.png`]))),
+  placeAt: Object.freeze({ x: 857, y: 2540, width: 295, height: 134 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: DOSSIER_NOTCH_BOX.width, height: DOSSIER_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (DOSSIER_NOTCH_BOX.x / 1500) * 100,
+      topPct: (DOSSIER_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (DOSSIER_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (DOSSIER_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (DOSSIER_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (DOSSIER_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (DOSSIER_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (DOSSIER_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+  /** The capture's pixels in the notch box: the well's lit pixels (luma >
+   *  60) inside the ellipse inscribed in box x 44–182, rows 32–102 — the
+   *  capture's own oval (684–816 × 1928–1992 px) and 3 px round it; the
+   *  arch's parchment shoulders at the box's top corners lie outside it —
+   *  painted black before the cut. */
+  capture: Object.freeze({ x0: 44, x1: 182, y0: 32, y1: 102, minLuma: 60, oval: true }),
+  /** The piece's rows above the arch (card rows 1893–1905; the arch's
+   *  anti-aliased top starts on 1907) are the master's own page — the
+   *  pack's parchment there is within 3 levels of the masters' — and are
+   *  cleared: the downscale rang at the piece's top edge (row 1896 read
+   *  255,255,244, a light line across the page). */
+  clearAboveY: 1906,
+});
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings RING showcase
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
@@ -4543,12 +4783,20 @@ export const TARKIR_NOTCH = Object.freeze({
  * the box's size): α of every pixel inside `capture`'s box whose luma is
  * above `minLuma`, 0 elsewhere — what pieceNotchFindings holds inside the
  * cut and its ring (TODO 4.11: the Tarkir pack paints its capture in the
- * piece itself, with no separate shape file).
+ * piece itself, with no separate shape file). With `oval`, only the pixels
+ * inside the ellipse inscribed in the box count (TODO 4.11 wave 2: the MKM
+ * dossier's well, whose arch shoulders — lit parchment — reach the box's
+ * top corners).
  */
-export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma }) {
+export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma, oval = false }) {
   const plane = new Uint8Array(width * height);
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const rx = (x1 - x0) / 2 + 0.5;
+  const ry = (y1 - y0) / 2 + 0.5;
   for (let y = Math.max(0, y0); y <= Math.min(height - 1, y1); y += 1) {
     for (let x = Math.max(0, x0); x <= Math.min(width - 1, x1); x += 1) {
+      if (oval && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 > 1) continue;
       const o = (y * width + x) * 4;
       if (buf[o + 3] === 0) continue;
       if ((buf[o] + buf[o + 1] + buf[o + 2]) / 3 > minLuma) plane[y * width + x] = buf[o + 3];
@@ -4585,6 +4833,22 @@ export const CC_TEMPLATES = {
     plates: SCROLL_PT,
     pack: SCROLL_PACK,
     notes: SCROLL_NOTES,
+  },
+  // TODO 4.11 wave 2: the Murders at Karlov Manor dossier showcase (see
+  // DOSSIER above) — and its ten two-colour pairs, lerped.
+  dossier: {
+    colors: {
+      ...perColor((k) => [layer(dossierFile("", k))]),
+      ...Object.fromEntries(
+        TWO_COLOR_PAIRS.map((pair) => {
+          const [a, b] = pairSides(pair);
+          return [pair, [{ src: dossierFile("", a), right: dossierFile("", b), ramp: [...DOSSIER_PAIR_RAMP] }]];
+        }),
+      ),
+    },
+    plates: DOSSIER_PT,
+    pack: DOSSIER_PACK,
+    notes: DOSSIER_NOTES,
   },
   m15: {
     colors: {
@@ -7337,6 +7601,20 @@ export const CC_OVERLAY_BANDS = {
       "its field toned with the masters' (RING_SOURCE_TONES)",
     ],
   },
+  // TODO 4.11 wave 2: the dossier's crown — a generic band, the pack's
+  // crown at its own bounds, the pairs lerped (DOSSIER_CROWN_BAND).
+  dossiercrown: {
+    pack: DOSSIER_PACK,
+    band: DOSSIER_CROWN_BAND,
+    keys: DOSSIER_CROWN_BAND.keys,
+    layers: dossierCrownLayers,
+    findings: dossierCrownFindings,
+    notes: [
+      "the dossier showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (dossier/crown/<k>.png, 1790x419) at its crownBounds (33/2010, 0) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–315 — the torn paper strip in the card's colour above the title band that every legendary dossier print carries (MKM #337, #344, #350, #352, #354–375's legends; plain: #336, #343, #358). No cover strip: the crown is drawn over the master's own top",
+      `keys = the pack's seven crowns (w u b r g, m gold, c = the artifact's slate crown/a.png) and the ten pairs, the first colour's crown left and the second's right lerped across ${DOSSIER_CROWN_RAMP[0]} → ${DOSSIER_CROWN_RAMP[1]} %W (print's two-colour legends: #356, #359, #360, #362, #363, #365, #370, #373)`,
+      "the green and blue crowns toned onto print as the file loads (DOSSIER_PRINT_TONES: the pack draws them 11–12 levels off the frame's own accents, which print uses for the crown too)",
+    ],
+  },
   lotrscrollcrown: {
     pack: SCROLL_PACK,
     band: SCROLL_CROWN_BAND,
@@ -7825,6 +8103,28 @@ export const HOLO_STAMP_NOTCHES = {
       `the Tarkir showcase's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (tarkir/stamp.png, 225x101) — the text box's bottom rim arched over a black well round the hologram oval — at its stampBounds (638/1888 px), 1:1 (the pack is 1500 px native), cut to its box ${TARKIR_NOTCH_BOX.width}x${TARKIR_NOTCH_BOX.height} at ${TARKIR_NOTCH_BOX.x},${TARKIR_NOTCH_BOX.y} px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border`,
       "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp for every colour, and the masters' rim under it is the same pixels on every key (they differ only on the wings)",
       `the hologram: the pack paints a capture of WotC's oval in the well (${TARKIR_CAPTURE_PX.x}–${TARKIR_CAPTURE_PX.x + TARKIR_CAPTURE_PX.width} × ${TARKIR_CAPTURE_PX.y}–${TARKIR_CAPTURE_PX.y + TARKIR_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${TARKIR_STAMP_OVAL_PX.width} × ${TARKIR_STAMP_OVAL_PX.height} at ${TARKIR_STAMP_OVAL_PX.x}, ${TARKIR_STAMP_OVAL_PX.y} — MUL #1 / #60 / #131 / #190, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+    ],
+  },
+  // TODO 4.11 wave 2: the dossier's OVAL notch — the pack's one piece,
+  // placed and downscaled with the card, its capture blacked out, the
+  // prints' oval cut (DOSSIER_NOTCH).
+  dossierholostamp: {
+    pack: DOSSIER_PACK,
+    pieces: DOSSIER_NOTCH.pieces,
+    keys: DOSSIER_NOTCH.keys,
+    shape: DOSSIER_NOTCH.shape,
+    placeAt: DOSSIER_NOTCH.placeAt,
+    compositeSize: DOSSIER_NOTCH.compositeSize,
+    oval: DOSSIER_NOTCH.oval,
+    capture: DOSSIER_NOTCH.capture,
+    clearAboveY: DOSSIER_NOTCH.clearAboveY,
+    blackoutCapturePx: 2,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the dossier's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dossier/stamp.png, 295x134) — the black border arched up into the page's foot round the hologram — placed at its bounds (857/2010, 2540/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box ${DOSSIER_NOTCH_BOX.width}x${DOSSIER_NOTCH_BOX.height} at ${DOSSIER_NOTCH_BOX.x},${DOSSIER_NOTCH_BOX.y} px of the 1500x2100 card, drawn 1:1 from there; the arch is print's (its top 1908 px against print's 1909, its feet 1942–1945 against 1943–1946)`,
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (the masters and the pair masters are the same page under the arch)",
+      `the hologram: the pack paints a capture of WotC's oval in the well (${DOSSIER_CAPTURE_PX.x}–${DOSSIER_CAPTURE_PX.x + DOSSIER_CAPTURE_PX.width} × ${DOSSIER_CAPTURE_PX.y}–${DOSSIER_CAPTURE_PX.y + DOSSIER_CAPTURE_PX.height} px once placed and downscaled), 5–7 px below where print sets it — every lit pixel of it is painted opaque black first (grown 2 px; print's well is black round the hologram), then the prints' oval (${DOSSIER_STAMP_OVAL_PX.width} × ${DOSSIER_STAMP_OVAL_PX.height} at ${DOSSIER_STAMP_OVAL_PX.x}, ${DOSSIER_STAMP_OVAL_PX.y} — 29 stamped MKM prints, all within 1 px) plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
   lotrscrollholostamp: {

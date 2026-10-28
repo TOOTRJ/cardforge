@@ -292,6 +292,14 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Card Conjurer's 'Scroll' pack since TODO 4.11 (frames bucket): a real black
   // border all round, cut at the one card corner by the importer.
   lotrscroll: ALL_BORDER,
+  // The MKM dossier showcase (TODO 4.11 wave 2, Card Conjurer's 'Dossier'
+  // pack, frames bucket): the printed black border at the top, right and
+  // bottom, cut at the one card corner by the importer; the folder's tan
+  // edge runs to the LEFT edge (design), as on every print (MKM #336–389:
+  // the folder from x 1, the scan's own edge pixel aside) — its corners are
+  // the border's black (the folder starts below the top one and ends above
+  // the bottom one).
+  dossier: { top: BORDER, right: BORDER, bottom: BORDER, left: { kind: "design" } },
   // The Avatar elemental (TLA #336–353, TLE #305–317), since TODO 4.11
   // (layout v69): borderless — the art to the top edge and down both sides
   // to the frame (the masters see-through to 918 px on the left, 1101 on the
