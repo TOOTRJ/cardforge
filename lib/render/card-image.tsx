@@ -601,6 +601,10 @@ function CardImage({
   // The preview's twin.
   const masthead = resolveMasthead(layout, showCost ? card.cost : null, masterKey);
   const mastheadPieces = masthead ? masthead.pieces.map((piece) => ({ ...piece, href: getFrameOverlayDataUrl(piece.path) })) : [];
+  // …and in both finish masks, first (they are drawn right after the
+  // frame), each clipped to its window as it is drawn: the sheen follows
+  // the wordmark where it now sits, never the master's (the preview's twin).
+  const mastheadMaskOverlays = mastheadPieces.flatMap((piece) => (piece.href ? [{ href: piece.href, rect: piece.rect, window: piece.window }] : []));
   const costDxPx = (layout.costDx ? fpx(layout.costDx, width) : 0) + (masthead ? Math.round((masthead.costDxPx * width) / 1500) : 0);
   const typeLine = buildTypeLine(card);
   // A two-box type line (TextSlot.split, TODO 3.24): split at the em dash,
@@ -1114,7 +1118,7 @@ function CardImage({
           id="etched"
           frameHref={frameDataUrl}
           split={maskSplit}
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
+          overlays={[...mastheadMaskOverlays, ...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1144,7 +1148,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
+          overlays={[...mastheadMaskOverlays, ...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}

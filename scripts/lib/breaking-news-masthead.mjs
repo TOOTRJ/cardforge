@@ -52,6 +52,8 @@
 // it, the wordmark piece covers it (print keeps its crease on top).
 // ---------------------------------------------------------------------------
 
+import { lerpLayers, rampShare } from "./pair-ramp.mjs";
+
 export const BREAKING_NEWS_MASTHEAD_RECIPE = Object.freeze({
   folder: "breakingnewsmasthead",
   from: "breakingnews",
@@ -189,4 +191,27 @@ export function cutMastheadPieces(master, recipe = BREAKING_NEWS_MASTHEAD_RECIPE
     return [Math.round(r), Math.round(g), Math.round(b), Math.round(a * rowAlpha(y, recipe))];
   });
   return { wordmark, paper };
+}
+
+/**
+ * A PAIR key's paper piece: the two colours' own paper pieces lerped across
+ * the pair masters' ramp (`ramp`, scripts/lib/cc-frames.mjs
+ * BREAKING_NEWS_PAIR_RAMP), the way the pair master is its two colour
+ * frames lerped — so a two-colour page keeps its first colour's tint left
+ * of the split where the paper shows (the pair master's own clean run, right
+ * of the chevron, is all the second colour). `left` / `right`: the
+ * cutMastheadPieces(...).paper of the pair's first and second colours.
+ */
+export function pairPaperPiece(left, right, ramp, recipe = BREAKING_NEWS_MASTHEAD_RECIPE) {
+  if (left.width !== right.width || left.height !== right.height || left.x0 !== right.x0) {
+    throw new Error("pairPaperPiece: the two pieces differ in place or size");
+  }
+  const W = recipe.card.width;
+  const mask = Buffer.alloc(left.data.length);
+  for (let y = 0; y < left.height; y++) {
+    for (let x = 0; x < left.width; x++) {
+      mask[(y * left.width + x) * 4 + 3] = Math.round(rampShare(((x + left.x0 + 0.5) / W) * 100, ramp) * 255);
+    }
+  }
+  return { ...left, data: lerpLayers(left.data, right.data, mask) };
 }

@@ -31,8 +31,9 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { WEBP } from "./lib/cc-frames.mjs";
-import { BREAKING_NEWS_MASTHEAD_RECIPE as RECIPE, cutMastheadPieces } from "./lib/breaking-news-masthead.mjs";
+import { BREAKING_NEWS_PAIR_RAMP, WEBP } from "./lib/cc-frames.mjs";
+import { BREAKING_NEWS_MASTHEAD_RECIPE as RECIPE, cutMastheadPieces, pairPaperPiece } from "./lib/breaking-news-masthead.mjs";
+import { pairSides } from "./lib/pair-ramp.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -86,10 +87,17 @@ async function write(rel, piece) {
 }
 
 const colors = {};
+const monoPaper = {};
 for (const key of RECIPE.keys) {
   const src = published(`${from}/${key}`);
   const master = await raw(src.file, card.width, card.height);
-  const { wordmark, paper } = cutMastheadPieces(master, RECIPE);
+  const cut = cutMastheadPieces(master, RECIPE);
+  const { wordmark } = cut;
+  // A pair's paper is its two colours' papers lerped across the pair
+  // masters' own ramp (the monos come first in RECIPE.keys).
+  const sides = key.length === 2 ? pairSides(key) : null;
+  if (!sides) monoPaper[key] = cut.paper;
+  const paper = sides ? pairPaperPiece(monoPaper[sides[0]], monoPaper[sides[1]], BREAKING_NEWS_PAIR_RAMP, RECIPE) : cut.paper;
   // Nothing drawn: the wordmark's colours are the master's at the same px.
   for (let y = 0; y < wordmark.height; y++) {
     for (let x = 0; x < wordmark.width; x++) {
@@ -103,7 +111,9 @@ for (const key of RECIPE.keys) {
   colors[key] = [
     `${from}/${key}.png (published, sha256 ${src.sha.slice(0, 12)})`,
     `wordmark: x ${RECIPE.wordmark.x0}–${RECIPE.wordmark.x1 - 1} × rows ${RECIPE.rows[0]}–${RECIPE.rows[1] - 1}, colours untouched, alpha faded (wordmarkAlpha)`,
-    `paper: x ${RECIPE.paper.x0}–${RECIPE.paper.x1 - 1}, the run ${RECIPE.paper.run[0]}–${RECIPE.paper.run[1] - 1} every ${RECIPE.paper.step} px, 40 px crossfades, the master's own ${RECIPE.paper.handover}–${RECIPE.paper.x1 - 1} at its end (paperSources)`,
+    sides
+      ? `paper: paper/${sides[0]} and paper/${sides[1]} lerped across ${BREAKING_NEWS_PAIR_RAMP[0]} → ${BREAKING_NEWS_PAIR_RAMP[1]} %W (the pair masters' own ramp; pairPaperPiece)`
+      : `paper: x ${RECIPE.paper.x0}–${RECIPE.paper.x1 - 1}, the run ${RECIPE.paper.run[0]}–${RECIPE.paper.run[1] - 1} every ${RECIPE.paper.step} px, 40 px crossfades, the master's own ${RECIPE.paper.handover}–${RECIPE.paper.x1 - 1} at its end (paperSources)`,
   ];
   if (dryRun) {
     console.log(`${folder}/${key}: ${wordmark.width}×${wordmark.height} + paper ${paper.width}×${paper.height} (dry run)`);
@@ -125,7 +135,7 @@ if (!dryRun) {
     recipe: {
       rows: `${RECIPE.rows[0]}–${RECIPE.rows[1] - 1} (the paper between the coloured bars), opaque on ${RECIPE.opaqueRows[0]}–${RECIPE.opaqueRows[1] - 1}, faded to 0 at the edges`,
       wordmark: `x ${RECIPE.wordmark.x0}–${RECIPE.wordmark.x1 - 1}: hard left edge on the box's rows ${RECIPE.boxRows[0]}–${RECIPE.boxRows[1] - 1}, faded over ${RECIPE.wordmark.x0}–${RECIPE.wordmark.leftOpaque - 1} elsewhere; opaque to ${RECIPE.wordmark.chevronOpaque - 1} on the chevron's rows ${RECIPE.chevronRows[0]}–${RECIPE.chevronRows[1] - 1} (0 by ${RECIPE.wordmark.chevronEnd}), to ${RECIPE.wordmark.opaque - 1} elsewhere (0 by ${RECIPE.wordmark.x1})`,
-      paper: `the master's clean run ${RECIPE.paper.run[0]}–${RECIPE.paper.run[1] - 1} laid leftwards every ${RECIPE.paper.step} px with ${RECIPE.paper.run[1] - RECIPE.paper.run[0] - RECIPE.paper.step} px crossfades (never mirrored), handing over to the master's own columns on ${RECIPE.paper.handover}–${RECIPE.paper.x1 - 1}`,
+      paper: `the master's clean run ${RECIPE.paper.run[0]}–${RECIPE.paper.run[1] - 1} laid leftwards every ${RECIPE.paper.step} px with ${RECIPE.paper.run[1] - RECIPE.paper.run[0] - RECIPE.paper.step} px crossfades (never mirrored), handing over to the master's own columns on ${RECIPE.paper.handover}–${RECIPE.paper.x1 - 1}; a pair key's paper is its two colours' papers lerped across the pair masters' ramp ${BREAKING_NEWS_PAIR_RAMP[0]} → ${BREAKING_NEWS_PAIR_RAMP[1]} %W`,
     },
     colors,
     sourceFiles: RECIPE.keys.map((key) => `${from}/${key}.png`).sort(),

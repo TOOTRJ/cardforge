@@ -637,7 +637,7 @@
     "recipe": {
       "rows": "40–185 (the paper between the coloured bars), opaque on 51–176, faded to 0 at the edges",
       "wordmark": "x 376–1139: hard left edge on the box's rows 81–145, faded over 376–414 elsewhere; opaque to 1081 on the chevron's rows 65–158 (0 by 1094), to 1093 elsewhere (0 by 1140)",
-      "paper": "the master's clean run 1188–1387 laid leftwards every 160 px with 40 px crossfades (never mirrored), handing over to the master's own columns on 1188–1227"
+      "paper": "the master's clean run 1188–1387 laid leftwards every 160 px with 40 px crossfades (never mirrored), handing over to the master's own columns on 1188–1227; a pair key's paper is its two colours' papers lerped across the pair masters' ramp 45.7 → 55.6 %W"
     },
     "colors": {
       "w": [
@@ -683,52 +683,52 @@
       "wu": [
         "breakingnews/wu.png (published, sha256 d3676e0c9fe1)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/w and paper/u lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "wb": [
         "breakingnews/wb.png (published, sha256 35697969b9b5)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/w and paper/b lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "ub": [
         "breakingnews/ub.png (published, sha256 5b921bafcc8e)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/u and paper/b lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "ur": [
         "breakingnews/ur.png (published, sha256 7f87bde18b9d)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/u and paper/r lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "br": [
         "breakingnews/br.png (published, sha256 f527bbae3eb7)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/b and paper/r lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "bg": [
         "breakingnews/bg.png (published, sha256 38c4ccc07f53)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/b and paper/g lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "rg": [
         "breakingnews/rg.png (published, sha256 bee662a1e80f)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/r and paper/g lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "rw": [
         "breakingnews/rw.png (published, sha256 cfb2fc378cb9)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/r and paper/w lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "gw": [
         "breakingnews/gw.png (published, sha256 9faa6fbec8ba)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/g and paper/w lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ],
       "gu": [
         "breakingnews/gu.png (published, sha256 443bf772e9ec)",
         "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
-        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+        "paper: paper/g and paper/u lerped across 45.7 → 55.6 %W (the pair masters' own ramp; pairPaperPiece)"
       ]
     },
     "sourceFiles": [

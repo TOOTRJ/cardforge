@@ -986,6 +986,9 @@ function CardFace({
   // other frame and wherever the row fits. The bake's twin.
   const masthead = resolveMasthead(layout, showCost ? face.cost : null, masterKey);
   const costDx = (layout.costDx ?? 0) + (masthead ? masthead.costDxPx / 1500 : 0);
+  // …and in both finish masks, first, each clipped to its window as drawn:
+  // the sheen follows the wordmark where it now sits (the bake's twin).
+  const mastheadMaskOverlays = (masthead?.pieces ?? []).map((piece) => ({ href: frameOverlayImageUrl(piece.path), rect: piece.rect, window: piece.window }));
 
   const showPT = Boolean(layout.pt) && printsPowerToughness(face);
   // In the editor the starting-loyalty shield shows even before a value is
@@ -1419,6 +1422,7 @@ function CardFace({
               : null
           }
           overlays={[
+            ...mastheadMaskOverlays,
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
@@ -1456,6 +1460,7 @@ function CardFace({
             secondArtPosition: secondFace?.artPosition,
           })}
           overlays={[
+            ...mastheadMaskOverlays,
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),

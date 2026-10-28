@@ -7,10 +7,14 @@ import { HOLO_STAMP_STRIP_RING_RGB } from "@/lib/cards/holo-stamp";
 import { costRowDrawnPx, mastheadAssetPaths, resolveMasthead } from "@/lib/cards/masthead";
 import { BREAKING_NEWS_MASTHEAD, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
-import { BREAKING_NEWS_STRIP_RGB } from "@/scripts/lib/cc-frames.mjs";
+import { BREAKING_NEWS_PAIR_RAMP, BREAKING_NEWS_STRIP_RGB } from "@/scripts/lib/cc-frames.mjs";
+import { costRowWidthPct } from "@/lib/cards/render-tiers";
+import { symbolStyleOf } from "@/lib/cards/symbol-style";
+import { manaCostWidthPct } from "@/lib/cards/title-band";
 import {
   BREAKING_NEWS_MASTHEAD_RECIPE as RECIPE,
   cutMastheadPieces,
+  pairPaperPiece,
   paperSources,
   rowAlpha,
   wordmarkAlpha,
@@ -60,7 +64,7 @@ describe("the Breaking News masthead rule", () => {
     expect(Math.round(PX(wordmark.rect.leftPct))).toBe(376 - 156);
     const paper = m.pieces.find((p) => p.piece === "paper")!;
     expect(Math.round(PX(paper.window.leftPct))).toBe(1082 - 156);
-    // The wordmark's last ink (the Y's arm, 1062) stays clear: 16 px by the estimate, print's 18 drawn.
+    // The wordmark's last ink (the Y's arm, 1062) stays clear: 16 px by the estimate (14–16 drawn; print 18).
     const left = 1411 + m.costDxPx - costRowDrawnPx(BN, "{U}{U}{B}{B}{B}{R}{R}");
     expect(left - (1062 - m.shiftPx)).toBeGreaterThanOrEqual(16);
   });
@@ -71,6 +75,25 @@ describe("the Breaking News masthead rule", () => {
     expect(costRowDrawnPx(BN, "{W/P}{W/P}{W/P}")).toBeGreaterThan(costRowDrawnPx(BN, "{W}{W}{W}"));
     expect(resolveMasthead(BN, "{W}{W}{W}", "w")).toBeNull();
     expect(resolveMasthead(BN, "{W/P}{W/P}{W/P}", "w")?.state).toBe("chevron");
+  });
+
+  it("measures a text token by its drawn letters (the check's WWWWWWWWWW), pips as before", () => {
+    const disc = BN.costSizePct!;
+    // A pip-only cost: exactly the name's room's estimate.
+    expect(costRowDrawnPx(BN, "{U}{U}{B}{B}{B}{R}{R}")).toBe(manaCostWidthPct("{U}{U}{B}{B}{B}{R}{R}", disc, symbolStyleOf(BN)) * 1500);
+    for (const cost of ["WWWWWWWWWW", "2BB", "{1}{G} or MMMM"]) {
+      // Never short of the bake's own measure of the row (render-tiers
+      // costRowWidthPct), less its hard shadow.
+      expect(costRowDrawnPx(BN, cost), cost).toBeGreaterThanOrEqual(costRowWidthPct(cost, disc) * 1500 - 0.2 * 70);
+    }
+    // Drawn 430 px wide on the check's bake (981–1411): the estimate is no
+    // narrower, and the wordmark slides clear of it.
+    expect(costRowDrawnPx(BN, "WWWWWWWWWW")).toBeGreaterThanOrEqual(430);
+    const m = resolveMasthead(BN, "WWWWWWWWWW", "w")!;
+    expect(m.state).toBe("chevron");
+    const left = 1411 + m.costDxPx - costRowDrawnPx(BN, "WWWWWWWWWW");
+    expect(m.shiftPx).toBeGreaterThan(0);
+    expect(left - (1062 - m.shiftPx)).toBeGreaterThanOrEqual(16);
   });
 
   it("never draws the wordmark under a cost past anything printed", () => {
@@ -161,6 +184,22 @@ describe("the masthead's pieces", () => {
     }
     // It ends on the master's own columns.
     expect(paperSources(RECIPE.paper.x1 - 1)).toEqual([[RECIPE.paper.x1 - 1, 1]]);
+  });
+
+  it("give a pair's paper its first colour left of the split and its second right of it", () => {
+    const solid = (rgb: [number, number, number]) => {
+      const w = RECIPE.paper.x1 - RECIPE.paper.x0;
+      const h = RECIPE.rows[1] - RECIPE.rows[0];
+      const data = Buffer.alloc(w * h * 4);
+      for (let i = 0; i < w * h; i++) data.set([...rgb, 255], i * 4);
+      return { data, width: w, height: h, x0: RECIPE.paper.x0, y0: RECIPE.rows[0] };
+    };
+    const pair = pairPaperPiece(solid([200, 0, 0]), solid([0, 0, 200]), BREAKING_NEWS_PAIR_RAMP);
+    const at = (x: number) => [...pair.data.subarray((x - RECIPE.paper.x0) * 4, (x - RECIPE.paper.x0) * 4 + 4)];
+    expect(at(600)).toEqual([200, 0, 0, 255]); // left of 45.7 %W (686 px)
+    expect(at(900)).toEqual([0, 0, 200, 255]); // right of 55.6 %W (834 px)
+    expect(at(760)[0]).toBeGreaterThan(0);
+    expect(at(760)[2]).toBeGreaterThan(0);
   });
 
   it("change no colour of the master in the wordmark and only set alpha", () => {

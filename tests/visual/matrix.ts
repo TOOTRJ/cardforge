@@ -2078,6 +2078,10 @@ export function visualCases(): VisualCase[] {
   add("breakingnews", "sorcery", "wub", "long", { suffix: "@stamp-m", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
   add("breakingnews", "land", "c", "short", { suffix: "@stamp-c", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
   add("breakingnews", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("breakingnews", "auto", { rarity: "mythic" }) });
+  // The masthead's pieces inside both finish masks (lib/cards/masthead.ts):
+  // the sheen follows the wordmark where it slid, never the master's.
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-foil", finish: "foil", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-etched", finish: "etched", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
   // see-through colourless frame and the artifact's silver, a crowned

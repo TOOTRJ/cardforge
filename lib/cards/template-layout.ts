@@ -6549,8 +6549,9 @@ export const BREAKING_NEWS_HOLO_STAMP: FrameOverlaySlot = {
  * what print does, scripts/lib/breaking-news-masthead.mjs the pieces —
  * a unit test holds this to that recipe). HD px of the 1500 × 2100 card:
  * the chevron's tip on 1184 (print's three pips start on 1185), the Y's arm
- * on 1062 + 16 px by the row's estimate (manaCostWidthPct runs ~2 px wide of
- * the drawn row: print's 18), the row's furthest slide (print's five pips end
+ * on 1062 + 16 px by the row's estimate (the drawn row is 1–4 px WIDER than
+ * manaCostWidthPct, so 14–16 px drawn against print's 18; 1082 would move the
+ * wordmark at five pips, where print #22 keeps it), the row's furthest slide (print's five pips end
  * on 1461; even px from the costRect's 1411), the box keeping its colour
  * tab (its right border then on 132–138, the tab ending on 126) and its
  * whole self (382 + 2 + 18).

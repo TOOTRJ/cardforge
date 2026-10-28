@@ -5924,7 +5924,7 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   (`manaCostWidthPct`: each pip's own disc through `pipScale`, so a
   Phyrexian pip counts as wide as it is drawn) — never a pip count: the
   row's left end where it sits today below 1180 drops the chevron; below
-  1078 (the Y's arm on 1062 + 16 px by the estimate, print's 18 drawn) the
+  1078 by the estimate (the Y's arm on 1062 + 16 px; the drawn row is 1–4 px wider, so 14–16 px drawn against print's 18 — 1082 would move the wordmark at five pips, where print keeps it) the
   row slides right as far as it needs, up to 1463 (even px); whatever it
   still lacks the wordmark slides left, in even px. Past anything printed
   the same rule never draws ink under the cost: a shift past 244 px (the
@@ -5935,6 +5935,14 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   `breakingnewsmasthead/paper/<key>` (the masthead's paper with no ink, in
   a window whose left end follows the wordmark) — and translate the cost
   row; a card whose row fits draws neither (its bake is unchanged). The
+  pieces go into BOTH finish masks too (foil and etched, first, each clipped
+  to its window — the masks' overlays take an optional `window`), so the
+  sheen follows the wordmark where it slid, never the master's. A TEXT
+  token in the cost ("2BB", "or") is measured by its drawn letters in this
+  rule (`costRowDrawnPx`; the name's room keeps its estimate). A pair key's
+  paper is its two colours' papers lerped across the pair masters' own
+  ramp (`pairPaperPiece`), so the first colour's tint stays left of the
+  split. The
   pieces are PipGlyph's own cut of the published masters
   (`scripts/build-breaking-news-masthead.mjs`, numbers in
   `scripts/lib/breaking-news-masthead.mjs`; bucket only): nothing drawn,

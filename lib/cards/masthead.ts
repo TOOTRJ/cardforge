@@ -42,6 +42,8 @@
 // read it.
 // ---------------------------------------------------------------------------
 
+import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { displayTextEm } from "@/lib/cards/display-metrics";
 import { symbolStyleOf } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 import { manaCostWidthPct } from "@/lib/cards/title-band";
@@ -51,9 +53,13 @@ export type MastheadSpec = {
   /** The leftmost a row may start while the chevron shows (its tip on 1184;
    *  print's three pips start on 1185, the disc's round edge clear of it). */
   chevronClearPx: number;
-  /** The leftmost a row may start while the wordmark stays: the Y's arm at
-   *  the row's rows ends on 1062, and print sets the first disc 18 px on
-   *  (16 by manaCostWidthPct, which runs ~2 px wide of the drawn row). */
+  /** The leftmost a row may start BY THE ESTIMATE (manaCostWidthPct) while
+   *  the wordmark stays: the Y's arm at the row's rows ends on 1062 and
+   *  print sets the first disc 18 px on. The DRAWN row is 1–4 px WIDER than
+   *  the estimate (its first disc 1–2 px further left), so the drawn gap is
+   *  14–16 px, a little under print's 18. Not raised to 1082: that would
+   *  shift the wordmark 4 px at five pips, where print (#22) keeps it — and
+   *  the row cannot slide further right than print's own end (slideToPx). */
   wordmarkClearPx: number;
   /** The furthest right a row slides to clear the wordmark (print's five
    *  pips end on 1461). */
@@ -128,7 +134,21 @@ function pxRect(x0: number, x1: number, rows: readonly [number, number]): Rect {
 /** The cost row's drawn width in HD px on `layout` (manaCostWidthPct). */
 export function costRowDrawnPx(layout: Pick<FrameProfile, "costSizePct" | "title" | "symbolStyle">, cost: string): number {
   const disc = layout.costSizePct ?? layout.title.sizePct;
-  return manaCostWidthPct(cost, disc, symbolStyleOf(layout)) * CARD_W;
+  // A text token ("2BB" typed without braces, "or") is measured by its real
+  // advances, as the bake draws it (0.6 × the disc in capitals, 1 px of
+  // tracking and half a pixel of rounding per letter — render-tiers
+  // costRowTerms): manaCostWidthPct's 0.42 disc per letter is the name's
+  // room's estimate (shared by every detached-cost frame, never changed
+  // here) and runs short on wide capitals ("WWWWWWWWWW": ~136 px), which
+  // would put the cost over a kept wordmark.
+  let textExtra = 0;
+  for (const token of tokenize(cost.trim())) {
+    if (token.kind !== "text") continue;
+    const drawn = displayTextEm(token.value.toUpperCase()) * 0.6 * disc + token.value.length * 3 * (0.5 / 750);
+    const estimated = token.value.length * 0.6 * 0.7 * disc;
+    textExtra += Math.max(0, drawn - estimated);
+  }
+  return (manaCostWidthPct(cost, disc, symbolStyleOf(layout)) + textExtra) * CARD_W;
 }
 
 /**
