@@ -8,7 +8,7 @@ import {
   selectBakeColumns,
   selectScopeColumns,
 } from "@/lib/cards/bake-select";
-import { CARD_LAYOUT_VERSION, FLAVOR_MARKUP_LAYOUT_VERSION, isRenderStale, type ScopeCard } from "@/lib/cards/layout-version";
+import { DISPLAY_KERNING_LAYOUT_VERSION, FLAVOR_MARKUP_LAYOUT_VERSION, isRenderStale, type ScopeCard } from "@/lib/cards/layout-version";
 
 // The deploy window of migration 0137 (TODO 3b.16): the new code live on a
 // database that has no `printed_types` column yet. PostgREST's answers below
@@ -103,16 +103,17 @@ describe("the scope scans' columns (SCOPE_CARD_COLUMNS)", () => {
 
   it("…because a card read without one owes the v72 sweep, and with all of them does not", () => {
     // A bake stamped v71 on m15 whose texts hold no zeroed pair: only v72 is
-    // newer, and it never touched this card.
+    // newer, and it never touched this card. (Judged AT v72: a later bump —
+    // v74, rendering corrections round 1 — is its own block's.)
     const row = Object.fromEntries(SCOPE_CARD_COLUMNS.map((column) => [column, null])) as Record<string, unknown>;
     Object.assign(row, { title: "Serra Angel", card_type: "creature", subtypes: ["Angel"], frame_style: { template: "m15" }, color_identity: ["W"] });
-    expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, CARD_LAYOUT_VERSION, row)).toBe(false);
+    expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, DISPLAY_KERNING_LAYOUT_VERSION, row)).toBe(false);
     for (const column of ["nickname", "printed_types", "artist_credit"]) {
       const without = { ...row };
       delete without[column];
-      expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, CARD_LAYOUT_VERSION, without), column).toBe(true);
+      expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, DISPLAY_KERNING_LAYOUT_VERSION, without), column).toBe(true);
     }
-    expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, CARD_LAYOUT_VERSION, { ...row, title: "Kylox" })).toBe(true);
+    expect(isRenderStale(FLAVOR_MARKUP_LAYOUT_VERSION, "m15", undefined, DISPLAY_KERNING_LAYOUT_VERSION, { ...row, title: "Kylox" })).toBe(true);
   });
 });
 
