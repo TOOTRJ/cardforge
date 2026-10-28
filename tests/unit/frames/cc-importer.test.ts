@@ -2138,8 +2138,16 @@ describe("provenance and hygiene", () => {
         // (scripts/build-prepare-frames.mjs) of the published m15 and
         // adventure masters; its own test: tests/unit/frames/prepare-recipe.test.ts.
         "prepare",
+        // …and the Breaking News masthead pieces (owner decision on #624):
+        // PipGlyph's own cut (scripts/build-breaking-news-masthead.mjs) of
+        // the published breakingnews masters; its own test:
+        // tests/unit/cards/breaking-news-masthead.test.ts.
+        "breakingnewsmasthead",
       ].sort(),
     );
+    expect(provenance.breakingnewsmasthead.source).toBe("pipglyph");
+    expect(provenance.breakingnewsmasthead.converter).toBe("scripts/build-breaking-news-masthead.mjs");
+    expect(provenance.breakingnewsmasthead.commit).toBeUndefined();
     expect(Object.keys(templates)).not.toContain("sagadfcback");
     expect(provenance.sagadfcback.source).toBe("pipglyph");
     expect(provenance.sagadfcback.converter).toBe("scripts/build-saga-back-frames.mjs");

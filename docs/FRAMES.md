@@ -5907,10 +5907,49 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   (Card Conjurer's `manaSymbolsBreakingNews`: a charcoal generic disc with a
   light numeral) where ours are the family's; Keyrune's OTP glyph draws 73
   px tall where print's vault stands 88 (the set's printed size is
-  `set-symbol-prints.ts`' — a bump of its own); our stamp oval wears its 3
-  px black ring (HOLO_STAMP_ART_MARGIN_PX) on the strip's charcoal, where
-  print's hologram sits on the charcoal itself — a stamp-art tone of its
-  own; the two-colour split is our smooth lerp, print's a speckled edge.
+  `set-symbol-prints.ts`' — a bump of its own); the two-colour split is our
+  smooth lerp, print's a speckled edge; the colourless NON-artifact
+  creature (or instant, sorcery…) wears the land page `c` with the slate
+  artifact P/T box — no print of one exists (the run's one colourless
+  non-artifact is #65, a land), so nothing tells what it should be.
+- **The masthead makes room for the cost** (owner decision on #624: FOLLOW
+  PRINT; `lib/cards/masthead.ts`, `BREAKING_NEWS_MASTHEAD`). Print moves
+  the masthead out of a long cost's way: up to three pips everything shows
+  (#7: the discs from 1185, the ">>" chevron's tip on 1184); at four the
+  chevron goes (#25, #51, #58: 1108–1411); at five the row slides right to
+  the masthead's end (#22: 1080–1461), the wordmark stays; at seven the
+  WORDMARK slides left, the icon box cut short with its right border drawn
+  there (#40: the P 427 → 271, the border 382 → 233; print also narrows
+  the wordmark 3 %, we only slide it). ONE rule, from the row's DRAWN width
+  (`manaCostWidthPct`: each pip's own disc through `pipScale`, so a
+  Phyrexian pip counts as wide as it is drawn) — never a pip count: the
+  row's left end where it sits today below 1180 drops the chevron; below
+  1078 (the Y's arm on 1062 + 16 px by the estimate, print's 18 drawn) the
+  row slides right as far as it needs, up to 1463 (even px); whatever it
+  still lacks the wordmark slides left, in even px. Past anything printed
+  the same rule never draws ink under the cost: a shift past 244 px (the
+  box would lose its colour tab) drops the wordmark and keeps the whole
+  box; a row reaching the box (left of 402) drops the box too. Both
+  renderers draw two PIECES right after the frame, under its overlays —
+  `breakingnewsmasthead/<key>` (the wordmark strip at its shift) and
+  `breakingnewsmasthead/paper/<key>` (the masthead's paper with no ink, in
+  a window whose left end follows the wordmark) — and translate the cost
+  row; a card whose row fits draws neither (its bake is unchanged). The
+  pieces are PipGlyph's own cut of the published masters
+  (`scripts/build-breaking-news-masthead.mjs`, numbers in
+  `scripts/lib/breaking-news-masthead.mjs`; bucket only): nothing drawn,
+  only alpha set. No flat zone exists in the masthead (the paper is
+  textured), so every edge a piece adds is a fade of paper onto paper
+  (39 px left of the wordmark off the box's rows, 13 / 46 px right of the
+  Y, 10 / 9 rows above "THE" and below "POST") or lies on a printed edge
+  (the box's border, the coloured bars, the rules' rows); the paper is the
+  master's clean run right of the chevron (1188–1387) laid end to end
+  every 160 px with 40 px crossfades (never mirrored), crossfaded onto the
+  master's own columns where it ends. The crease that crosses the icon box
+  is not carried where the cut box lands on it (print keeps its crease on
+  top); on a legend the crown band's V stays over the wordmark's old place
+  (no long-cost legend prints). An ADDITION's look on the template itself
+  (no stored card is on the frame before #624 merges): no bump, no sweep.
 - **Crown** (`BREAKING_NEWS_CROWN`, `breakingnewscrown/<key>.png`, 1500 ×
   60): the pack's 'Legendary Crown' (`crown/<k>.png`, 1965 × 72 at 4 / 2
   of the 2010 × 2814 card) — the coloured rule with its notched V across
@@ -5938,7 +5977,11 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   64,58,60 — the importer's blackout and its check paint and hold that
   colour instead of black), then the prints' oval + 2 px cut clear and the
   2 px round it painted charcoal — no pixel of the capture is published;
-  our oval art covers the cut. An ADDITION, opt-in per card.
+  our oval art covers the cut — on the strip (`HoloStampArt.ring:
+  "strip"`, `HOLO_STAMP_OVAL_STRIP_ART`): its 3 px margin in the strip's
+  charcoal (`HOLO_STAMP_STRIP_RING_RGB`, the notch's `fillRgb`) and no dark
+  keyline, as print's hologram meets the charcoal directly. An ADDITION,
+  opt-in per card.
 - **Imports.** `showcase/otp/breaking-news` (borderless, OTP #1–65) is exact
   on `breakingnews` once the card's colour is verified, `nearest` until then
   (`withVerification`); before this frame the run imported

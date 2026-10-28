@@ -628,6 +628,135 @@
       "the hologram: the pack paints a capture of WotC's oval in the tab (685–815 × 1928–1991 px once placed and downscaled), 7 px below where print sets its top — every lit pixel of it is painted the strip's opaque charcoal (64,58,60) first (grown 2 px; print's tab is charcoal round the hologram), then the prints' oval (132 × 67 at 685, 1921 — all 45 stamped OTP prints within 1 px) plus 2 px is cut to transparent and the 2 px round it painted charcoal: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
     ]
   },
+  "breakingnewsmasthead": {
+    "source": "pipglyph",
+    "converter": "scripts/build-breaking-news-masthead.mjs",
+    "kind": "overlay",
+    "derivedFrom": "the published breakingnews/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"breakingnews\")",
+    "output": "per key: <key> the wordmark strip 764x146 at card px (376, 40); paper/<key> 1176x146 at (52, 40); webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "rows": "40–185 (the paper between the coloured bars), opaque on 51–176, faded to 0 at the edges",
+      "wordmark": "x 376–1139: hard left edge on the box's rows 81–145, faded over 376–414 elsewhere; opaque to 1081 on the chevron's rows 65–158 (0 by 1094), to 1093 elsewhere (0 by 1140)",
+      "paper": "the master's clean run 1188–1387 laid leftwards every 160 px with 40 px crossfades (never mirrored), handing over to the master's own columns on 1188–1227"
+    },
+    "colors": {
+      "w": [
+        "breakingnews/w.png (published, sha256 21344db08245)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "u": [
+        "breakingnews/u.png (published, sha256 2a121c55fe8a)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "b": [
+        "breakingnews/b.png (published, sha256 1a49bfb29d3f)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "r": [
+        "breakingnews/r.png (published, sha256 c44ec529066b)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "g": [
+        "breakingnews/g.png (published, sha256 9a7f4a323359)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "m": [
+        "breakingnews/m.png (published, sha256 12a84161f3ae)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "a": [
+        "breakingnews/a.png (published, sha256 72a99fe79f06)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "c": [
+        "breakingnews/c.png (published, sha256 1bdb45f31e67)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "wu": [
+        "breakingnews/wu.png (published, sha256 d3676e0c9fe1)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "wb": [
+        "breakingnews/wb.png (published, sha256 35697969b9b5)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "ub": [
+        "breakingnews/ub.png (published, sha256 5b921bafcc8e)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "ur": [
+        "breakingnews/ur.png (published, sha256 7f87bde18b9d)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "br": [
+        "breakingnews/br.png (published, sha256 f527bbae3eb7)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "bg": [
+        "breakingnews/bg.png (published, sha256 38c4ccc07f53)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "rg": [
+        "breakingnews/rg.png (published, sha256 bee662a1e80f)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "rw": [
+        "breakingnews/rw.png (published, sha256 cfb2fc378cb9)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "gw": [
+        "breakingnews/gw.png (published, sha256 9faa6fbec8ba)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ],
+      "gu": [
+        "breakingnews/gu.png (published, sha256 443bf772e9ec)",
+        "wordmark: x 376–1139 × rows 40–185, colours untouched, alpha faded (wordmarkAlpha)",
+        "paper: x 52–1227, the run 1188–1387 every 160 px, 40 px crossfades, the master's own 1188–1227 at its end (paperSources)"
+      ]
+    },
+    "sourceFiles": [
+      "breakingnews/a.png",
+      "breakingnews/b.png",
+      "breakingnews/bg.png",
+      "breakingnews/br.png",
+      "breakingnews/c.png",
+      "breakingnews/g.png",
+      "breakingnews/gu.png",
+      "breakingnews/gw.png",
+      "breakingnews/m.png",
+      "breakingnews/r.png",
+      "breakingnews/rg.png",
+      "breakingnews/rw.png",
+      "breakingnews/u.png",
+      "breakingnews/ub.png",
+      "breakingnews/ur.png",
+      "breakingnews/w.png",
+      "breakingnews/wb.png",
+      "breakingnews/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own cut (owner decision on #624, 2026-10-28: FOLLOW PRINT): print's Breaking News masthead makes room for a long cost — the chevron goes at four pips, the row slides right at five, the wordmark slides left (cutting the icon box short) at seven (OTP #7, #22, #25, #40 measured at 1500 × 2100). The pieces let both renderers draw that at the place lib/cards/masthead.ts computes; nothing is drawn: every colour is a master pixel, the paper's a crossfade of two.",
+      "No flat zone exists in the masthead (the paper is textured): every edge a piece adds is a fade of paper onto paper or lies on a printed edge (the box's border, the coloured bars, the rules' rows). The crease that crosses the icon box is not carried: where the cut box lands on it, the wordmark piece covers it (print keeps its crease on top). Print also narrows the wordmark by 3 % at seven pips (#40); the pieces only slide it.",
+      "The numbers are scripts/lib/breaking-news-masthead.mjs; no scan is read by the build."
+    ]
+  },
   "dfcicon": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

@@ -1234,6 +1234,510 @@
       "width": 338,
       "height": 91
     },
+    "breakingnewsmasthead/a.png": {
+      "hash": "580137646b4e",
+      "sha256": "580137646b4e587ecbc58effc2db4fdb489b5ae9f7896c690217e0c9b207ef03",
+      "bytes": 292505,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/a.webp": {
+      "hash": "6868b2e728c1",
+      "sha256": "6868b2e728c1561f566e4d5b42124cda3ba5307a205fe4657ee5d0a01232bac8",
+      "bytes": 38576,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/b.png": {
+      "hash": "c694258ec3b0",
+      "sha256": "c694258ec3b0532a0ed2dcf4363195423e609f4f02d7524d69983c44414fa630",
+      "bytes": 291568,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/b.webp": {
+      "hash": "4134ad8011cb",
+      "sha256": "4134ad8011cb7d8939db244a37be02522d8fc4feb1a6e7cbdcc14cb3751a6186",
+      "bytes": 39060,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/bg.png": {
+      "hash": "551b8fe40b4e",
+      "sha256": "551b8fe40b4e119e59dede3ceb61280f946257513ac7bb83798ed9160dcd2adf",
+      "bytes": 300315,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/bg.webp": {
+      "hash": "7ec7f15a3c70",
+      "sha256": "7ec7f15a3c7033768f4d3d86de99d8c0eb796ccd22f8b371178032aea536bbe6",
+      "bytes": 37692,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/br.png": {
+      "hash": "c5b5854cad66",
+      "sha256": "c5b5854cad66ad3a419408219ebce93e3384671756a27442d09a457933bed36b",
+      "bytes": 303092,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/br.webp": {
+      "hash": "0aa781953a23",
+      "sha256": "0aa781953a23b137b8041c34ad56f3719a40764462281c44d9d80b94e93972d9",
+      "bytes": 40416,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/c.png": {
+      "hash": "de4d2fc08371",
+      "sha256": "de4d2fc083713ff4a2aac3c5fa3b38fdd92ac456ea5f9d1af2066e42ec121663",
+      "bytes": 294803,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/c.webp": {
+      "hash": "e92555dfba70",
+      "sha256": "e92555dfba70e2ac39414660e3b9a7471c9f1418248ec0516ecf15bd919da621",
+      "bytes": 39784,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/g.png": {
+      "hash": "60267e2e864e",
+      "sha256": "60267e2e864e5b97d16849e811df63b1580b416c61bab2c9d97c57e7c2f46ecb",
+      "bytes": 297965,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/g.webp": {
+      "hash": "f7c115a7bea1",
+      "sha256": "f7c115a7bea120c59f705c7f79cde093c2cc30cd9d1779d9dc68b87e80ed3b1b",
+      "bytes": 36154,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gu.png": {
+      "hash": "8a72bc7f526e",
+      "sha256": "8a72bc7f526ef279e2ff7713a4a42b1886077644b88a0efa9224008a7a92fe58",
+      "bytes": 304916,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gu.webp": {
+      "hash": "2972ef820b60",
+      "sha256": "2972ef820b60b9e60e368addeb3b9a4266f7c2cf055074687ada33a8d507e225",
+      "bytes": 38210,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gw.png": {
+      "hash": "2db8a6049eed",
+      "sha256": "2db8a6049eed9e7589a522962f960701f82b8318ecc226c3b22232bb107d8067",
+      "bytes": 304310,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/gw.webp": {
+      "hash": "7d36e3a68b0d",
+      "sha256": "7d36e3a68b0d5d6d109d45cf11b6f7bf447b4442209b1ba0abae4f9ed2515981",
+      "bytes": 37824,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/m.png": {
+      "hash": "ff7209df9394",
+      "sha256": "ff7209df9394ce5965e015663fe00bfb935777a2f734e9b1095ab86dfd7aac6d",
+      "bytes": 310807,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/m.webp": {
+      "hash": "737abf4a6f56",
+      "sha256": "737abf4a6f568ca64584d0cf58ffb1fa9facfa73113aba28230ecf48b0e35215",
+      "bytes": 41902,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/a.png": {
+      "hash": "5322df4d1b2a",
+      "sha256": "5322df4d1b2a033a6520d0974d515a95eb936b1edf9c514efb2b2d191916bec0",
+      "bytes": 61664,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/a.webp": {
+      "hash": "fb413c48b08b",
+      "sha256": "fb413c48b08b47d945a93a00789d6d068c328e5aef24b0e24d7287787ac79537",
+      "bytes": 40182,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/b.png": {
+      "hash": "de0e9cdd9361",
+      "sha256": "de0e9cdd9361e343c7afaa7f83249621d2b0b7de9f9645cadcfae4c36fb39145",
+      "bytes": 61524,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/b.webp": {
+      "hash": "1b9fa89d9a12",
+      "sha256": "1b9fa89d9a1257c8c496c7ad80dbdde7f60db743c0b40feacac609327f0441ea",
+      "bytes": 44634,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/bg.png": {
+      "hash": "38b871cb5fda",
+      "sha256": "38b871cb5fda49e468220e31ae19c03568a647a4c83815567f8f8f34f267ae4c",
+      "bytes": 62782,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/bg.webp": {
+      "hash": "15cb159be215",
+      "sha256": "15cb159be215be475ef93c7aa57bcec1a8580ca0e7432182ed3ea13ce0e75789",
+      "bytes": 31662,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/br.png": {
+      "hash": "5227927b5d6c",
+      "sha256": "5227927b5d6c5de7d540adba58ea273173db1434ff1968af318c9b8ad3eb82bb",
+      "bytes": 65853,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/br.webp": {
+      "hash": "011f760ad4d3",
+      "sha256": "011f760ad4d3012dd09b1ea00b251414ec164efa7a5e7c7e76ad073e7415725a",
+      "bytes": 45146,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/c.png": {
+      "hash": "5c4ac161f8aa",
+      "sha256": "5c4ac161f8aa90f633f35b86d49da481c7abec2a5c28e332d533cbd1107c9314",
+      "bytes": 64352,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/c.webp": {
+      "hash": "2dce43256a33",
+      "sha256": "2dce43256a33c842790b98fccf9dde83db6c1b92b1cec1719f6649444c9da523",
+      "bytes": 45344,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/g.png": {
+      "hash": "38b871cb5fda",
+      "sha256": "38b871cb5fda49e468220e31ae19c03568a647a4c83815567f8f8f34f267ae4c",
+      "bytes": 62782,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/g.webp": {
+      "hash": "15cb159be215",
+      "sha256": "15cb159be215be475ef93c7aa57bcec1a8580ca0e7432182ed3ea13ce0e75789",
+      "bytes": 31662,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gu.png": {
+      "hash": "523d1341f5ca",
+      "sha256": "523d1341f5ca70f18e76e7c74c5148594e427c14804296447d944078eea6430c",
+      "bytes": 65818,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gu.webp": {
+      "hash": "56c63281b80d",
+      "sha256": "56c63281b80dc22b325840c9dc539c30a8a36a84761c44f381e32de5a6928747",
+      "bytes": 43458,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gw.png": {
+      "hash": "85537ee1e754",
+      "sha256": "85537ee1e754015966c898842b13b4a4b2e15ccef541378f7d65e662d3d81c8b",
+      "bytes": 61315,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/gw.webp": {
+      "hash": "6aed50ba68ac",
+      "sha256": "6aed50ba68ac5cd4e96e3782f620530811f59fd952770a4f6a75180bbe9816d4",
+      "bytes": 35396,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/m.png": {
+      "hash": "9c37ed294dd1",
+      "sha256": "9c37ed294dd1dcaf7b5e1cf9457d148c99068a73ecd8b971f307b098b150ff4d",
+      "bytes": 67834,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/m.webp": {
+      "hash": "4e00d66699e3",
+      "sha256": "4e00d66699e3d8ded3e8aee168e4bb0af99d7f137419e9570ddba4c52719a514",
+      "bytes": 42406,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/r.png": {
+      "hash": "5227927b5d6c",
+      "sha256": "5227927b5d6c5de7d540adba58ea273173db1434ff1968af318c9b8ad3eb82bb",
+      "bytes": 65853,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/r.webp": {
+      "hash": "011f760ad4d3",
+      "sha256": "011f760ad4d3012dd09b1ea00b251414ec164efa7a5e7c7e76ad073e7415725a",
+      "bytes": 45146,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rg.png": {
+      "hash": "38b871cb5fda",
+      "sha256": "38b871cb5fda49e468220e31ae19c03568a647a4c83815567f8f8f34f267ae4c",
+      "bytes": 62782,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rg.webp": {
+      "hash": "15cb159be215",
+      "sha256": "15cb159be215be475ef93c7aa57bcec1a8580ca0e7432182ed3ea13ce0e75789",
+      "bytes": 31662,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rw.png": {
+      "hash": "85537ee1e754",
+      "sha256": "85537ee1e754015966c898842b13b4a4b2e15ccef541378f7d65e662d3d81c8b",
+      "bytes": 61315,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/rw.webp": {
+      "hash": "6aed50ba68ac",
+      "sha256": "6aed50ba68ac5cd4e96e3782f620530811f59fd952770a4f6a75180bbe9816d4",
+      "bytes": 35396,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/u.png": {
+      "hash": "523d1341f5ca",
+      "sha256": "523d1341f5ca70f18e76e7c74c5148594e427c14804296447d944078eea6430c",
+      "bytes": 65818,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/u.webp": {
+      "hash": "56c63281b80d",
+      "sha256": "56c63281b80dc22b325840c9dc539c30a8a36a84761c44f381e32de5a6928747",
+      "bytes": 43458,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ub.png": {
+      "hash": "de0e9cdd9361",
+      "sha256": "de0e9cdd9361e343c7afaa7f83249621d2b0b7de9f9645cadcfae4c36fb39145",
+      "bytes": 61524,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ub.webp": {
+      "hash": "1b9fa89d9a12",
+      "sha256": "1b9fa89d9a1257c8c496c7ad80dbdde7f60db743c0b40feacac609327f0441ea",
+      "bytes": 44634,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ur.png": {
+      "hash": "5227927b5d6c",
+      "sha256": "5227927b5d6c5de7d540adba58ea273173db1434ff1968af318c9b8ad3eb82bb",
+      "bytes": 65853,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/ur.webp": {
+      "hash": "011f760ad4d3",
+      "sha256": "011f760ad4d3012dd09b1ea00b251414ec164efa7a5e7c7e76ad073e7415725a",
+      "bytes": 45146,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/w.png": {
+      "hash": "85537ee1e754",
+      "sha256": "85537ee1e754015966c898842b13b4a4b2e15ccef541378f7d65e662d3d81c8b",
+      "bytes": 61315,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/w.webp": {
+      "hash": "6aed50ba68ac",
+      "sha256": "6aed50ba68ac5cd4e96e3782f620530811f59fd952770a4f6a75180bbe9816d4",
+      "bytes": 35396,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wb.png": {
+      "hash": "de0e9cdd9361",
+      "sha256": "de0e9cdd9361e343c7afaa7f83249621d2b0b7de9f9645cadcfae4c36fb39145",
+      "bytes": 61524,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wb.webp": {
+      "hash": "1b9fa89d9a12",
+      "sha256": "1b9fa89d9a1257c8c496c7ad80dbdde7f60db743c0b40feacac609327f0441ea",
+      "bytes": 44634,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wu.png": {
+      "hash": "523d1341f5ca",
+      "sha256": "523d1341f5ca70f18e76e7c74c5148594e427c14804296447d944078eea6430c",
+      "bytes": 65818,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/paper/wu.webp": {
+      "hash": "56c63281b80d",
+      "sha256": "56c63281b80dc22b325840c9dc539c30a8a36a84761c44f381e32de5a6928747",
+      "bytes": 43458,
+      "width": 1176,
+      "height": 146
+    },
+    "breakingnewsmasthead/r.png": {
+      "hash": "d69c3e854968",
+      "sha256": "d69c3e854968ee1b565ce8f79b12b23db86e2e15958fc3233b27db1d7d5d4c23",
+      "bytes": 304613,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/r.webp": {
+      "hash": "9f49d20486b7",
+      "sha256": "9f49d20486b7d284c33eab56abb672c85fdb6be7a4ee8ff547531c7e1de24702",
+      "bytes": 40510,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rg.png": {
+      "hash": "b828d1ffdff8",
+      "sha256": "b828d1ffdff8d9807903b94b7a798674be83681aec5588084692c21d6aafd37e",
+      "bytes": 306188,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rg.webp": {
+      "hash": "fb575d306234",
+      "sha256": "fb575d3062340ebd9b8a3c29c01bcf09f38bf109e294fb44790b61991b25ec2e",
+      "bytes": 38180,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rw.png": {
+      "hash": "a873994687d0",
+      "sha256": "a873994687d07a8d0e50e5f282ae64a64a017641218f12596eeabcd3762ae116",
+      "bytes": 304625,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/rw.webp": {
+      "hash": "70fc1ebddb92",
+      "sha256": "70fc1ebddb9214b9a74afeb1137c7b9f7f22f2a588c9d06ea397bae5573caa90",
+      "bytes": 39618,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/u.png": {
+      "hash": "dc609403febd",
+      "sha256": "dc609403febd60c5d92dd095206e212761be53e771e1b892458bc8197f666041",
+      "bytes": 302616,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/u.webp": {
+      "hash": "84d23a87629e",
+      "sha256": "84d23a87629e36409aa789559af87abb8b9feab539e459b5bbfc8fc7f2493e1c",
+      "bytes": 40888,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ub.png": {
+      "hash": "eb1ec0a8b3f4",
+      "sha256": "eb1ec0a8b3f4e07aa29e68013aaa8dbc4972228eb51a771198df321c09f49ed9",
+      "bytes": 300433,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ub.webp": {
+      "hash": "e38543976297",
+      "sha256": "e38543976297a90d1ad84e75e5b7eafb8e15aff8ef65062d196ef0ae3b2790fd",
+      "bytes": 39368,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ur.png": {
+      "hash": "c1d0572f8ab9",
+      "sha256": "c1d0572f8ab9433078beee2243c2b8495a26b9f5b490200800702f9c4c53441d",
+      "bytes": 309720,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/ur.webp": {
+      "hash": "f9e2688de648",
+      "sha256": "f9e2688de64875c01dd71989e0f4c8c037a3023698571b8fddd7ddf6911958ff",
+      "bytes": 40722,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/w.png": {
+      "hash": "854d8a23ba16",
+      "sha256": "854d8a23ba1655036a901e2c3a22931322d7147b028215c7375d1f3ec4bd7181",
+      "bytes": 299963,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/w.webp": {
+      "hash": "031533464faf",
+      "sha256": "031533464fafa3ed77d61a0251762b9631304b4a2900e40cc2bd9a5a9ff00054",
+      "bytes": 39778,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wb.png": {
+      "hash": "65592306e3eb",
+      "sha256": "65592306e3ebdf41bb7813b8265ba6ce6e17c14317639679caa051e46ef116fd",
+      "bytes": 299484,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wb.webp": {
+      "hash": "ae02d5dafbea",
+      "sha256": "ae02d5dafbeac5425c7a532e2d92ae988e1b05793be839a7ee23513c1fa44c6b",
+      "bytes": 39380,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wu.png": {
+      "hash": "952aaa96fd28",
+      "sha256": "952aaa96fd28857aeaa52e100a8bed21eea376928df3db0ea915348bd2965216",
+      "bytes": 306654,
+      "width": 764,
+      "height": 146
+    },
+    "breakingnewsmasthead/wu.webp": {
+      "hash": "58421cd53781",
+      "sha256": "58421cd53781b2f9fe862460542c42cfe3f085803f8327972e5d03ed8f34ae9d",
+      "bytes": 39578,
+      "width": 764,
+      "height": 146
+    },
     "dfcicon/compass.png": {
       "hash": "2834e04afc6a",
       "sha256": "2834e04afc6ad525354d19ff60fbeb5eda8d6973a1db5cdbccc39afa807b9218",

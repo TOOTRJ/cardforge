@@ -112,6 +112,7 @@ import {
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { WhiteBorderSlot } from "@/lib/cards/white-border";
+import type { MastheadSpec } from "@/lib/cards/masthead";
 import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -657,6 +658,11 @@ export type FrameProfile = {
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
   overlays?: readonly FrameOverlaySlot[];
+  /** A masthead painted in the master that makes room for the cost row as
+   *  print does (the OTJ Breaking News showcase: lib/cards/masthead.ts) —
+   *  its pieces drawn right after the frame, the row translated. Nothing
+   *  changes on a card whose row fits. Code-owned; a PROFILES entry's. */
+  masthead?: MastheadSpec;
   /** This template is one FACE of a double-faced card — see DfcProfile.
    *  Code-owned; set only on PROFILES entries (none yet). */
   dfc?: DfcProfile;
@@ -6535,7 +6541,30 @@ export const BREAKING_NEWS_HOLO_STAMP: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   keyMap: { c: "l" },
   artifactKeyMap: { c: "a" },
-  stamp: { shape: "oval", oval: BREAKING_NEWS_HOLO_STAMP_OVAL, keepOut: BREAKING_NEWS_HOLO_STAMP_KEEP_OUT },
+  stamp: { shape: "oval", oval: BREAKING_NEWS_HOLO_STAMP_OVAL, keepOut: BREAKING_NEWS_HOLO_STAMP_KEEP_OUT, ring: "strip" },
+};
+/**
+ * The OTJ Breaking News masthead making room for the cost row (owner
+ * decision on #624: FOLLOW PRINT; lib/cards/masthead.ts holds the rule and
+ * what print does, scripts/lib/breaking-news-masthead.mjs the pieces —
+ * a unit test holds this to that recipe). HD px of the 1500 × 2100 card:
+ * the chevron's tip on 1184 (print's three pips start on 1185), the Y's arm
+ * on 1062 + 16 px by the row's estimate (manaCostWidthPct runs ~2 px wide of
+ * the drawn row: print's 18), the row's furthest slide (print's five pips end
+ * on 1461; even px from the costRect's 1411), the box keeping its colour
+ * tab (its right border then on 132–138, the tab ending on 126) and its
+ * whole self (382 + 2 + 18).
+ */
+export const BREAKING_NEWS_MASTHEAD: MastheadSpec = {
+  chevronClearPx: 1180,
+  wordmarkClearPx: 1078,
+  slideToPx: 1463,
+  maxShiftPx: 244,
+  boxClearPx: 402,
+  rows: [40, 186],
+  wordmark: { x0: 376, x1: 1140, fadeFromPx: 1082, assetPathTemplate: "/frames/breakingnewsmasthead/{key}.png" },
+  paper: { x0: 52, x1: 1228, boxRightPx: 384, assetPathTemplate: "/frames/breakingnewsmasthead/paper/{key}.png" },
+  keys: ["w", "u", "b", "r", "g", "m", "a", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 /**
  * The collector line on the OTJ Breaking News showcase (TODO 4.11 wave 2):
@@ -8008,7 +8037,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // #65; a coloured land wears its colour's page), so a two-colour land
   // wears its two colours' split page as well (twoColorForLands; no print
   // has one).
-  breakingnews: { ...BREAKING_NEWS, overlays: [BREAKING_NEWS_CROWN, BREAKING_NEWS_HOLO_STAMP], collector: BREAKING_NEWS_COLLECTOR, twoColorMasters: ["split"], twoColorForLands: true },
+  breakingnews: {
+    ...BREAKING_NEWS,
+    overlays: [BREAKING_NEWS_CROWN, BREAKING_NEWS_HOLO_STAMP],
+    collector: BREAKING_NEWS_COLLECTOR,
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+    masthead: BREAKING_NEWS_MASTHEAD,
+  },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).

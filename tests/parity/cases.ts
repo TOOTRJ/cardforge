@@ -354,7 +354,8 @@ const PICKS: readonly Pick[] = [
   { from: "dossier/wu/creature-long@pair-crown", why: "MKM dossier: a two-colour legend — the pair master lerped across print's ramp under the crown band's lerped pair" },
   // The OTJ Breaking News showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "breakingnews/u/creature-short@collector-2015", why: "OTJ Breaking News: CC's page masters downscaled once, the name CENTRED in capitals on its own band under the masthead, the cost in a box of its own in the masthead (off the name's rows: the name keeps its band), the type line in capitals, the set symbol in its box, the page's rules box, the P/T box, the collector line in the charcoal strip" },
-  { from: "breakingnews/wu/creature-long@pair-crown", why: "OTJ Breaking News: a two-colour legend — the pair master lerped across print's split under the crown band's lerped pair (the notched rule at the page's top)" },
+  { from: "breakingnews/wu/creature-long@pair-crown", why: "OTJ Breaking News: a two-colour legend — the pair master lerped across print's split under the crown band's lerped pair (the notched rule at the page's top); its five-pip cost slides right to the masthead's end, the chevron's paper piece over the chevron (lib/cards/masthead.ts)" },
+  { from: "breakingnews/wub/sorcery-short@masthead-shift", why: "OTJ Breaking News: a seven-pip cost — the row slid right, the wordmark piece slid 156 px left over the cut icon box and the paper piece in a window that follows it (OTP #40; both renderers clip the same images at the same even px)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

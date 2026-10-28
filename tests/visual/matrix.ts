@@ -1363,6 +1363,13 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // Unlicensed Hearse).
   ["breakingnews", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["breakingnews", "artifact", "c", "@vehicle", { subtypes: ["Vehicle"], power: "*", toughness: "*" }],
+  // …and its masthead making room for the cost row as print does (owner
+  // decision on #624, lib/cards/masthead.ts): four pips drop the chevron
+  // (OTP #25), seven slide the wordmark left over the icon box (OTP #40),
+  // nine — past anything printed — drop the wordmark and keep the box.
+  ["breakingnews", "instant", "r", "@masthead-chevron", { cost: "{X}{R}{R}{R}" }],
+  ["breakingnews", "sorcery", "wub", "@masthead-shift", { cost: "{W}{W}{U}{U}{B}{B}{B}" }],
+  ["breakingnews", "sorcery", "b", "@masthead-past-print", { cost: "{B}{B}{B}{B}{B}{B}{B}{B}{B}" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the D&D Sourcebook's plate at its widest, and a
