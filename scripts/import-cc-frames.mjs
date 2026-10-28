@@ -181,6 +181,7 @@ import {
   chromaRegionPlane,
   boxRegionPlane,
   capturePlane,
+  solidifyRowsRgba8,
   toneSourceRegions,
   describeSourceTones,
   describeFileTones,
@@ -635,7 +636,10 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       // Whole blocks moved onto the prints through the flat zones between
       // them (TODO 4.21b: split's halves, battle's lower block) — it throws
       // when a zone isn't flat, so every moved pixel is the pack's.
-      if (def.shift && !landscape && (W !== outW || H !== outH)) {
+      // (A recipe whose shift names the WRITTEN master's rows says so —
+      // `shiftOnOutput`, TODO 4.11 wave 2: the Enchanting Tales pack is 2010
+      // px, its shift in the 1500 × 2100 master's rows, after the downscale.)
+      if (def.shift && !landscape && !def.shiftOnOutput && (W !== outW || H !== outH)) {
         throw new Error(`${template}/${key}: a portrait block shift names the ${outW}×${outH} master's rows; the pack is ${W}×${H}`);
       }
       if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
@@ -664,6 +668,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       const pieceFile = path.join(outDir, template, "holostamp", `${key}.png`);
       await writeCutout(piece, def.notch.box, pieceFile);
       console.log(`wrote ${path.relative(process.cwd(), pieceFile)} (+ .webp) ${def.notch.box.width}×${def.notch.box.height} at ${def.notch.box.x}, ${def.notch.box.y}: ${findings.kept} px kept`);
+    }
+    // Rows the pack leaves nearly solid made solid (TODO 4.11 wave 2: the
+    // Enchanting Tales top corners' translucent crease), before the cut.
+    if (def.solidRows && !isBuiltRecipe(def.colors[key])) {
+      const changed = solidifyRowsRgba8(master, outW, outH, def.solidRows);
+      console.log(`${template}/${key}: ${changed} px of rows ${def.solidRows.y0}–${def.solidRows.y1} made solid (α ≥ ${def.solidRows.minAlpha} → 255)`);
     }
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
@@ -1199,9 +1209,18 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     const placeAndCut = async (src) => {
       const file = await fetchCached(src);
       const meta = await sharp(file).metadata();
-      if (meta.width !== def.placeAt.width || meta.height !== def.placeAt.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${def.placeAt.width}×${def.placeAt.height} (the source moved?)`);
+      // A piece the pack draws at bounds other than its own size (TODO 4.11
+      // wave 2: the Enchanting Tales stamp, 306 × 176 at 229 × 132 of the
+      // 2010 px card) names its `nativeSize` and is resampled ONCE, straight
+      // to its HD box (placeAt, on a card of the HD size).
+      const native = def.nativeSize ?? def.placeAt;
+      if (meta.width !== native.width || meta.height !== native.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${native.width}×${native.height} (the source moved?)`);
+      if (def.nativeSize && (CW !== OUT_W || CH !== OUT_H || sourceTonesOf(src))) throw new Error(`${src}: a resampled piece is placed on the ${OUT_W}×${OUT_H} card, untoned`);
       // A toned piece (the LOTR ring's stamps, TODO 4.11), toned as it loads.
-      const canvas = placeOnCanvas(await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height), def.placeAt, CW, CH);
+      const loaded = def.nativeSize
+        ? await rgba(file, def.placeAt.width, def.placeAt.height)
+        : await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height);
+      const canvas = placeOnCanvas(loaded, def.placeAt, CW, CH);
       // (A pack drawn at HD — the ring, 4.11 — passes through unchanged: a
       // same-size Lanczos resize is the identity.)
       const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
@@ -1224,8 +1243,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     for (const key of def.keys) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
-        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
-        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
+        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${def.nativeSize ? `resampled once from ${def.nativeSize.width}×${def.nativeSize.height} (Lanczos)` : CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent${def.blackoutPx ? `, the ${def.blackoutPx} px round it painted opaque black` : " (no ring painted round it)"}`,
       ];
       if (dryRun) {
         console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -1261,7 +1280,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       kind: "overlay",
       output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the ${def.triangle ? "triangle" : "oval"} region cut to transparent, webp q${WEBP.quality}`,
       colors: recipe,
-      cut: { ...(def.triangle ? { triangle: def.triangle } : { oval: def.oval }), marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: `the hologram capture inside the pack's ${def.triangle ? "triangle" : "oval"} — never published; the ring round the cut painted black` },
+      cut: { ...(def.triangle ? { triangle: def.triangle } : { oval: def.oval }), marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: `the hologram capture inside the pack's ${def.triangle ? "triangle" : "oval"} — never published${def.blackoutPx ? "; the ring round the cut painted black" : "; no ring painted round the cut"}` },
       ...(describeFileTones(notchSourceFiles(def)) ? { sourceTones: describeFileTones(notchSourceFiles(def)) } : {}),
       sourceFiles: notchSourceFiles(def),
       notes: def.notes,

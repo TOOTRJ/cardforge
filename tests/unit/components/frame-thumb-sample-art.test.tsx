@@ -151,7 +151,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 34 of the 83 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 34 of the 90 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -183,7 +183,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the arch token's tall box (TODO 4.55: opaque masters, no sample).
     // + the Prepare frame (TODO 4.27: M15's opaque master, no sample).
     // + the 2015 Expeditions (TODO 4.11 wave 1: no sample, as the 2020 look).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(89);
+    // + the Enchanting Tales (TODO 4.11 wave 2: the art window under the
+    //   whole frame, but not to the top or bottom edge — no sample).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(90);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

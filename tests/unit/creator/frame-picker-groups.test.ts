@@ -178,6 +178,11 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the Enchanting Tales showcase (TODO 4.11 wave 2): a new template in
+  // a new showcase set — pinned in
+  // tests/unit/scryfall/enchanting-tales-imports.test.ts (WOT #1–63 land
+  // there once verified) and tests/unit/frames/enchanting-tales-importer.test.ts.
+  "enchantingtales",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

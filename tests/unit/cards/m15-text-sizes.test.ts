@@ -98,7 +98,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(82);
+    // …and TODO 4.11 wave 2's Enchanting Tales (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(83);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -184,6 +185,7 @@ describe("one M15-era display size (layout v32)", () => {
       // CC M15 row with theirs, v69.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
+        t === "enchantingtales" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -426,6 +428,10 @@ describe("baselines (TextSlot.dy)", () => {
     // the type line the CC baseline (print's 1259–1260, ours 1260).
     ["avatar", base.title, cc],
     ["bloomburrow", base.title, cc],
+    // The Enchanting Tales (TODO 4.11 wave 2, a new template): the name 3.5
+    // px up with the pack's title bar (print's baseline 88 px under its own
+    // bar's top), the type line on the CC baseline (print's 1259–1260).
+    ["enchantingtales", base.title - 3.5 / 1500, cc],
     // The Bloomburrow anime (layout v70): its own layout on M15's slots — the
     // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
     // type line the CC baseline (print's 1261, ours 1260).

@@ -6229,6 +6229,73 @@
       ]
     }
   },
+  "enchantingtales": {
+    "note": "The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT #1–63 — NOT WOT #64–103, the anime-style borderless reprints of twenty of the same cards (another design). Every printing is a mono-coloured enchantment (Auras and Bitterblossom's Kindred Enchantment on the same frame), none legendary, none a creature: each colour is checked on an uncommon (no stamp; an Aura on red and green) and a rare or mythic (the oval stamp). No colourless or gold printing exists ('c' draws the white page, 'm' the pack's gold).",
+    "colors": {
+      "w": [
+        {
+          "name": "Intangible Virtue",
+          "set": "wot",
+          "scryfallId": "bb1bc2f9-d02a-4515-aa07-fcf98a3d194d"
+        },
+        {
+          "name": "Blind Obedience",
+          "set": "wot",
+          "scryfallId": "1cb0ea8e-0707-46a8-9dc6-77c17244fd7b"
+        }
+      ],
+      "u": [
+        {
+          "name": "Spreading Seas",
+          "set": "wot",
+          "scryfallId": "9ad6dfe9-90b6-4582-af77-1355c950a50d"
+        },
+        {
+          "name": "Rhystic Study",
+          "set": "wot",
+          "scryfallId": "043b2d30-a40f-4d47-933b-80544512f9c2"
+        }
+      ],
+      "b": [
+        {
+          "name": "Vampiric Rites",
+          "set": "wot",
+          "scryfallId": "6854dc06-4845-4201-958b-2fdad3f7b64a"
+        },
+        {
+          "name": "Bitterblossom",
+          "set": "wot",
+          "scryfallId": "bdf9661d-b581-4496-9004-f292d9ac03ef"
+        }
+      ],
+      "r": [
+        {
+          "name": "Dragon Mantle",
+          "set": "wot",
+          "scryfallId": "8dc7ea40-f45d-4550-82f5-ded841d8746d"
+        },
+        {
+          "name": "Blood Moon",
+          "set": "wot",
+          "scryfallId": "b0dbdacf-59b5-46fc-9635-fd4fb1527189"
+        }
+      ],
+      "g": [
+        {
+          "name": "Utopia Sprawl",
+          "set": "wot",
+          "scryfallId": "8ee63809-729b-48b1-a06d-3edc2a26208f"
+        },
+        {
+          "name": "Doubling Season",
+          "set": "wot",
+          "scryfallId": "c7d7db76-0a0c-444f-96f1-559838450549"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "tarkirdragon": {
     "note": "Dragon Wing = the Multiverse Legends (MOM 2023) Tarkir frame, not a Tarkir: Dragonstorm frame. Only MUL #1 Anafenza (W) and #60 Taigam (W/U) were printed; 'm' is Taigam, whose two colours split the wings (white left, blue right) with a gold P/T plate, so it tests the two-colour look — the 3+ colour gold-wing look was never printed. Both are legendary and show the frame's legend crown — the row of dragon-wing spikes PipGlyph draws as an opt-in since TODO 4.11 (TARKIRDRAGON_CROWN, layout v67).",
     "colors": {

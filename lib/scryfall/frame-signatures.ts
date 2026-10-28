@@ -2053,6 +2053,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["dfc", "two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'Enchanting Tales' pack): the bonus sheet WOT #1–63 — 63
+  // printings, every one borderless, single-faced, mono-coloured, on the
+  // 2015 frame with the `showcase` effect, every one an enchantment (seven
+  // Auras, Fraying Sanity's an Aura Curse, and Bitterblossom a Kindred
+  // Enchantment — all on the same frame: none needs a body of its own), none
+  // legendary (Scryfall 2026-10-27). NOT WOT #64–83 and their confetti-foil
+  // twins #84–103: the anime-style borderless reprints of twenty of the same
+  // cards (no `showcase` effect) are another design and keep their landing.
+  // Exact once verified (withVerification). No gap: the run prints no
+  // two-colour, double-faced, crowned or creature card.
+  {
+    key: "showcase/wot/enchanting-tales",
+    exactLabel: "Wilds of Eldraine Enchanting Tales showcase",
+    match: { borders: ["borderless"], collectors: { wot: [[1, 63]] } },
+    outcome: { status: "exact", template: "enchantingtales" },
+  },
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
   // station cards on a showcase of their own: they keep this rule's landing
   // and item, and say the station frame is missing too (STATION_SHOWCASE).

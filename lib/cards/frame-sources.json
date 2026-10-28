@@ -697,6 +697,155 @@
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'"
     ]
   },
+  "enchantingtales": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packEnchantingTales.js 'Enchanting Tales' (the Wilds of Eldraine bonus-sheet showcase, WOT #1–63; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px (but tl, tr, bl, br: kept square, design to the corner), webp q90",
+    "shift": {
+      "axis": "y",
+      "blocks": [
+        {
+          "from": 0,
+          "to": 472,
+          "by": 0
+        },
+        {
+          "from": 1163,
+          "to": 1954,
+          "by": -3
+        }
+      ],
+      "zones": [
+        "rows 472–1162 (flat) → 688 px",
+        "rows 1954–2099 (flat) → 149 px"
+      ],
+      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
+    },
+    "colors": {
+      "w": [
+        "img/frames/enchantingTales/w.png"
+      ],
+      "u": [
+        "img/frames/enchantingTales/u.png"
+      ],
+      "b": [
+        "img/frames/enchantingTales/b.png"
+      ],
+      "r": [
+        "img/frames/enchantingTales/r.png"
+      ],
+      "g": [
+        "img/frames/enchantingTales/g.png"
+      ],
+      "c": [
+        "img/frames/enchantingTales/w.png"
+      ],
+      "m": [
+        "img/frames/enchantingTales/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/enchantingTales/pt/w.png",
+      "u": "img/frames/enchantingTales/pt/u.png",
+      "b": "img/frames/enchantingTales/pt/b.png",
+      "r": "img/frames/enchantingTales/pt/r.png",
+      "g": "img/frames/enchantingTales/pt/g.png",
+      "c": "img/frames/enchantingTales/pt/w.png",
+      "m": "img/frames/enchantingTales/pt/m.png"
+    },
+    "sourceFiles": [
+      "img/frames/enchantingTales/b.png",
+      "img/frames/enchantingTales/g.png",
+      "img/frames/enchantingTales/m.png",
+      "img/frames/enchantingTales/pt/b.png",
+      "img/frames/enchantingTales/pt/g.png",
+      "img/frames/enchantingTales/pt/m.png",
+      "img/frames/enchantingTales/pt/r.png",
+      "img/frames/enchantingTales/pt/u.png",
+      "img/frames/enchantingTales/pt/w.png",
+      "img/frames/enchantingTales/r.png",
+      "img/frames/enchantingTales/u.png",
+      "img/frames/enchantingTales/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (enchantingTales/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the Wilds of Eldraine Enchanting Tales showcase prints them (WOT #1–63); gold has no print (the run is mono-coloured)",
+      "c = the pack's WHITE frame (enchantingTales/w.png): the pack draws no colourless, artifact or land frame and no colourless card prints on it; the white page is the pack's own nearest neutral",
+      "borderless as printed: the swirled frame field to the top edge and down the sides above the art and beside the text box, the art to the side edges between them, the dark footer in the colour's own tone to the bottom edge; all four corners are design and kept square (keepCorners) — every round output cuts them at render",
+      "the art under the whole frame from the title bar down: see-through across the card's width to the type bar, and on under the translucent text box (α 204 on w, 222 on the others, as print shows the art through it) to row 1931 — CC's artBounds (0/111, 1500x1821 px)",
+      "plates = the pack's six P/T plates (enchantingTales/pt/<k>.png, 499x276, drawn at the pack's bounds 1535/2458 px, 373x206 of 2010x2814); c = the white one; no print draws one (the run has no creature)",
+      "the pack against print by the ring's rule (raw scan medians over the bars, the footer and the swirled field, ink left out; a region ≥ 9 levels off is toned): within 5 levels on every colour (ETALES_PRINT_TONE) — nothing is toned; the text box is translucent over the art, so it has no raw median to tone by, and keeps the pack's colour",
+      "geometry: the LOWER block (rows 1163–1953 of the master: the type bar, the text box, its rim, the footer's top) moved 3 px UP onto the 63 prints through the flat zones round it (ETALES_LOWER_RECUT: the see-through art rows 472–1162 above, the footer's flat rows 1954–2099 below — every row of each identical across the card on every key; shiftBlocksRgba8, byte for byte, after the downscale); the TOP block (swirls, title bar) kept as drawn, 3.5 px above print's — no flat zone lies above it — so the name and the cost row ride the pack's bar; across, every bar edge registers within a pixel",
+      "the top rows made solid after the downscale (ETALES_SOLID_ROWS: rows 0–80, α ≥ 128 → 255, the colour kept): the pack's translucent crease along its own rounded TOP corners (α 200–254) and a 3 px speck on the gold frame's top edge; no art reaches above row 111",
+      "no legendary crown: the pack draws none and no printing of the run is legendary",
+      "not built: WOT #64–103, the anime-style borderless reprints — another design, not in the pack"
+    ]
+  },
+  "enchantingtalesholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packEnchantingTales.js 'Enchanting Tales' (the Wilds of Eldraine bonus-sheet showcase, WOT #1–63; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "173x101 notch piece (1:1 at 1500x2100, at 665,1897), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/enchantingTales/stamp/w.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "u": [
+        "img/frames/enchantingTales/stamp/u.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "b": [
+        "img/frames/enchantingTales/stamp/b.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "r": [
+        "img/frames/enchantingTales/stamp/r.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "g": [
+        "img/frames/enchantingTales/stamp/g.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "m": [
+        "img/frames/enchantingTales/stamp/m.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ],
+      "c": [
+        "img/frames/enchantingTales/stamp/w.png at 666,1898 171×99 px of a clear 1500×2100 card, resampled once from 306×176 (Lanczos), cut to 173×101 at 665,1897",
+        "the oval 45.8667/91.5714/8.4667×3.0476 %, plus 2 px cut to transparent (no ring painted round it)"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.86666666666667,
+        "topPct": 91.57142857142857,
+        "widthPct": 8.466666666666667,
+        "heightPct": 3.0476190476190474
+      },
+      "marginPx": 2,
+      "blackoutPx": 0,
+      "what": "the hologram capture inside the pack's oval — never published; no ring painted round the cut"
+    },
+    "sourceFiles": [
+      "img/frames/enchantingTales/stamp/b.png",
+      "img/frames/enchantingTales/stamp/g.png",
+      "img/frames/enchantingTales/stamp/m.png",
+      "img/frames/enchantingTales/stamp/r.png",
+      "img/frames/enchantingTales/stamp/u.png",
+      "img/frames/enchantingTales/stamp/w.png"
+    ],
+    "notes": [
+      "the Enchanting Tales oval stamp notch (TODO 4.11 wave 2): the pack's 'Holo Stamp' per colour (enchantingTales/stamp/<k>.png, 306x176) — the text box's bottom rim arched up over a well in the footer's own tone round the hologram oval — drawn at its stampBounds (890/2548, 229x132 of 2010x2814 = 664.2/1901.5, 170.9x98.5 px at HD): resampled ONCE (Lanczos) to 171x99 and placed on print at 666,1898 px — 3 px up with the master's lower block (ETALES_LOWER_RECUT) and 2 px right (the 45 stamped prints' arch centred on 751.5 px) — cut to its box 173x101 at 665,1897 px (1 px round the piece)",
+      "keys = the masters' w u b r g m and c (the white piece, as the c master is the white frame)",
+      "the hologram: the pack paints a capture of WotC's oval in the well; the prints' oval (127 × 64 at 688, 1923 — the 45 stamped WOT prints) plus 2 px is cut to transparent and the importer holds every lit pixel of the oval's box inside the cut: no pixel of the capture is published; the well round the cut keeps the footer's own tone (no black ring, blackoutPx 0: print draws none); our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "expeditionland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

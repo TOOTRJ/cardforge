@@ -79,11 +79,14 @@ function onDisk(rel: string): Buffer | null {
  *  and ring's notches are each pack's own piece per key, and the MUL
  *  Tarkir dragon wings' the pack's one oval piece, TODO 4.11: their own
  *  tests, tests/unit/frames/lotr-scroll-importer.test.ts,
- *  lotr-ring-importer.test.ts and tarkir-dragon-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+ *  lotr-ring-importer.test.ts and tarkir-dragon-importer.test.ts; the
+ *  Enchanting Tales' the pack's piece per colour, TODO 4.11 wave 2:
+ *  enchanting-tales-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, enchantingtalesholostamp: _etalesNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
+void _etalesNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

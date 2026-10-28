@@ -330,6 +330,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
       // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
       "avatar/main", "bloomburrow/main",
+      // 4.11 wave 2's Enchanting Tales: Card Conjurer's text rect (604 px,
+      // 1313–1917) — it holds the run's fullest boxes, not 1,200 characters.
+      "enchantingtales/main",
     ],
     ["1200 chars"],
   ],

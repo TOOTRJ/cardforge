@@ -550,6 +550,12 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m15borderlesspw: ["planeswalker"],
   m15borderlesspwtall: ["planeswalker"],
   nyx: ["enchantment", "creature"],
+  // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2) is
+  // enchantment dress like the constellation frame: WOT #1–63 are all
+  // enchantments (Auras and a Kindred Enchantment among them), and an
+  // Enchantment Creature borrows it — Card Conjurer's pack draws the P/T
+  // plates for one; no print has one.
+  enchantingtales: ["enchantment", "creature"],
   emblem: ["emblem"],
   // The Vehicle frame (TODO 4.5c) is new — no legacy card sits on it — and
   // dresses an artifact whose subtype says Vehicle (SUBTYPE_DRESSES, below,

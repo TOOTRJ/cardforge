@@ -264,6 +264,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "tarkirdraconic",
     "tarkirghostfire",
     "tarkirdragon",
+    // The Enchanting Tales (TODO 4.11 wave 2): enchantment dress, P/T only.
+    "enchantingtales",
   ] as const;
   const everyColour = (...templates: string[]) =>
     keys(...templates.flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((c) => [t, c] as [string, string])));

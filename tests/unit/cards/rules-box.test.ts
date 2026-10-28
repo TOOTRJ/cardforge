@@ -139,6 +139,10 @@ describe("the main box on every template", () => {
         // …and the Bloomburrow anime (layout v70): M15's margins in print's
         // own rect (lines from x 128.5, the rect's 125 + 4).
         "bloomanime",
+        // …and the Enchanting Tales (TODO 4.11 wave 2): M15's margins in
+        // Card Conjurer's rect (the run's lines from x 132–133, the rect's
+        // 129 + 4).
+        "enchantingtales",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

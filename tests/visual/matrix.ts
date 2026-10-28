@@ -1355,6 +1355,9 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Enchanting Tales plate at its widest (an
+  // Enchantment Creature borrows the frame; no print has one).
+  ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2027,6 +2030,12 @@ export function visualCases(): VisualCase[] {
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tarkirdragon", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
+  // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
+  // HD bake.
+  add("enchantingtales", "enchantment", "g", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("enchantingtales", "auto", { rarity: "uncommon" }) });
+  add("enchantingtales", "enchantment", "u", "long", { suffix: "@stamp", row: stampRow("enchantingtales", "auto", { rarity: "rare" }) });
+  add("enchantingtales", "enchantment", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("enchantingtales", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2468,6 +2477,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
+  "enchantingtales",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
