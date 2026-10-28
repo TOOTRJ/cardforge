@@ -569,7 +569,9 @@ export function sourceTonesOf(src) {
   // recipe below; read at call time).
   if (Object.hasOwn(RING_SOURCE_TONES, src)) return RING_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
-  return Object.hasOwn(TARKIR_SOURCE_TONES, src) ? TARKIR_SOURCE_TONES[src] : null;
+  if (Object.hasOwn(TARKIR_SOURCE_TONES, src)) return TARKIR_SOURCE_TONES[src];
+  // …and the Mystical Archive (TODO 4.11 wave 2, MA_SOURCE_TONES).
+  return Object.hasOwn(MA_SOURCE_TONES, src) ? MA_SOURCE_TONES[src] : null;
 }
 /** The toned files a recipe draws, as provenance prints them: file → the
  *  table's name, each region's mask and its gain (describeSourceToneTable). */
@@ -590,7 +592,18 @@ export function describeFileTones(files) {
     // differs from another file (diffRegionPlane).
     // …or the file's coloured pixels (chromaRegionPlane), or the dark ground
     // inside a box where the file is the same as another (boxRegionPlane).
-    const where = (region) => {
+    // …and a clipped region (TODO 4.11 wave 2, the Mystical Archive): kept
+    // inside / outside a mask, where the file is the same as another.
+    const clipOf = (region) => {
+      const c = tone.clip?.[region];
+      if (!c) return "";
+      return [
+        c.mask ? `, inside ${c.mask}` : "",
+        c.notMask ? `, outside ${c.notMask}` : "",
+        c.notDiff ? `, where the file is the same as ${c.notDiff.file} (max channel ≤ ${c.notDiff.none}; none from ${c.notDiff.full})` : "",
+      ].join("");
+    };
+    const whereBase = (region) => {
       if (tone.masks?.[region]) return `through ${tone.masks[region]}`;
       const d = tone.diff?.[region];
       if (d) return `on the pixels that differ from ${d.file} by ${d.none}–${d.full} levels (max channel; full from ${d.full})`;
@@ -601,6 +614,7 @@ export function describeFileTones(files) {
         return `inside ${b.rect.x},${b.rect.y} ${b.rect.width}×${b.rect.height} px${b.at ? ` (the piece drawn at ${b.at.x},${b.at.y})` : ""} on the dark ground (luma ≤ ${b.luma[0]}, none from ${b.luma[1]})${b.file ? ` where the file is the same as ${b.file} (max channel ≤ ${b.same.full}, none from ${b.same.none})` : ""}`;
       return `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
     };
+    const where = (region) => `${whereBase(region)}${clipOf(region)}`;
     out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `${where(region)}: ${gains[region]}`])) };
   }
   return Object.keys(out).length ? out : null;
@@ -3737,6 +3751,229 @@ export function znrCrownFindings(buf, width, height, rows) {
   return { failures, lastAlphaRow, peakRow, summary: `first drawn row ${peakRow}` };
 }
 
+// ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2 item 2): the Strixhaven MYSTICAL
+// ARCHIVE showcase (`mysticalarchive`; STA #1–63, the English run, 2021 —
+// 58 mono-colour and 5 two-colour instants and sorceries) from Card
+// Conjurer's 'Mystical Archive (STA)' pack (packMysticalArchive.js,
+// `img/frames/mysticalArchive/`, 2010 × 2814 — red.png 2693 × 3770 — each
+// downscaled ONCE to 1500 × 2100). An ADDITION: a new template, no stored
+// card sits on it. Self-contained: the template and its stamp notch read
+// only the constants below.
+//   NOT this frame: the Japanese run STA #64–126 (CC's separate SVG pack
+//   'Japanese Mystical Archive': a vertical name panel over the art's left
+//   side, no title bar) and the 2026 Secrets of Strixhaven archive SOA
+//   #1–195 (`frame_effects ∋ inverted`: the same ornament with NAVY title
+//   and text boxes set in WHITE, and its Japanese and 'silverscroll' runs);
+//   both stay on the borderless family's `borderless/mystical-archive` rule.
+//   • masters: the pack's frames whole — w u b r g, m (gold: no print; a
+//     card of three colours or more, or a pair with the two-colour switch
+//     off), `a` the pack's silver 'Artifact Frame' (FrameProfile.
+//     artifactMasterKeys { c: "a" }) and `c` the pack's 'Land Frame' (its
+//     c.png) — the scroll's split (#604), unprinted: the run is every one
+//     an instant or a sorcery.
+//   • two colours (FrameProfile.twoColorMasters ["split"], opt-in per card):
+//     <pair> = the GOLD master with the first colour's lines through the
+//     pack's 'Pinline' mask and the second's through its 'Pinline (Right)'
+//     mask — Card Conjurer's masks, and the prints' look (STA #59 Despark
+//     w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix
+//     r|w, #63 Putrefy b|g): the colour LINES split right of centre (x ≥
+//     827, a diagonal through the type bar's foot), the wide BANDS a mono
+//     card wears in its colour (above and below the title bar, between the
+//     art and the type bar, the box's outer sides) the gold master's pale
+//     gold on both halves. Every pack file is one drawing: the masters
+//     differ only where the colour is (the lines and the bands).
+//   • borderless (Scryfall `border_color: borderless`): the art runs under
+//     the frame from edge to edge (CC's artBounds 0 / 0.1205 / 1 × 0.7539),
+//     the ornament to the card's TOP edge (design), beside the art the side
+//     edges clear, the footer black: lib/frames/edge-contract.ts
+//     MYSTICAL_ARCHIVE_EDGES. The importer cuts the one card corner at the
+//     two BOTTOM corners only (`keepCorners`, as the LOTR ring's): the top
+//     corners are the ornament's — square-corners.ts "frame".
+//   • plates: the pack's eight P/T plates (424 × 213 at its ptBounds 1135 /
+//     1848, 317 × 159 px of 1500 × 2100): no print (the run has no
+//     creature); the colourless key the artifact's, as the scroll's.
+//   • toned onto print (MA_PRINT_TONES, the ring's one rule: raw scan
+//     medians, a region ≥ 9 levels off toned): the paper, the gold and each
+//     colour's lines and bands. The footer stays TRUE black (print 6,7,4:
+//     within 8 levels of the pack's 0,0,0).
+//   • geometry as drawn: print's title bar sits 3–5 px higher than the
+//     pack's, its type bar 1 px lower, its text box 2–4 px lower with its
+//     foot 7 px lower (row 1950 against the pack's 1943) — every line runs
+//     across textured paper or ornament, never a flat zone, so nothing is
+//     re-cut; the slots are measured on print, each against its own line.
+//   • not built: the pack's 'Crown' band (crowns/<k>.png) — no print wears
+//     it (the run has no legendary card; Card Conjurer's own drawing).
+// ---------------------------------------------------------------------------
+export const MA = "img/frames/mysticalArchive";
+const MA_PACK = "packMysticalArchive.js 'Mystical Archive (STA)' (the Strixhaven Mystical Archive showcase; groupShowcase-5.js)";
+/** The pack's 'Pinline' and 'Pinline (Right)' masks (1500 × 2100 SVGs). */
+export const MA_PINLINE = `${MA}/pinline.svg`;
+export const MA_PINLINE_RIGHT = `${MA}/pinlineRight.svg`;
+/** The pack's frame file for a colour key (`c` its 'Land Frame', `a` its
+ *  'Artifact Frame'). */
+const maFrameFile = (k) => `${MA}/${k}.png`;
+/** The pack's plates by colour key (the colourless card's is the
+ *  artifact's: the plate follows the colour key, as on the scroll). */
+const MA_PT = Object.freeze(perColor((k) => `${MA}/pt/${k === "c" ? "a" : k}.png`));
+/**
+ * The pack against print by the ring's one rule (raw scan medians; a
+ * region ≥ 9 levels off on any channel is toned), measured on the 58
+ * mono-colour STA prints (Scryfall PNGs at 1500 × 2100, the median of the
+ * per-print medians):
+ *   • paper — the title bar, type bar and text box (130–1370 × 110–210,
+ *     130–1250 × 1195–1290, 130–1370 × 1340–1930 px; ink |Δluma| > 45 from
+ *     a region's median left out): pack 238,220,157, print 240,224,183
+ *     (quartiles 236–240 / 221–226 / 180–184; every colour within 2 / 6 / 2
+ *     of it) — 26 off in blue: toned. Over the file's paper pixels (near
+ *     it: full within 30 levels, none past 50 — so the darker, yellower
+ *     paper of the field above the title bar, 234,207,133, is toned with
+ *     it: 235,211,155 after, print 235,216,163 over the same 14,600 px,
+ *     within 8) where the file is the same as another colour's (the gold
+ *     master's pale colour, 240,228,140, is near the paper);
+ *   • gold — the ornament's flat gold (255,210,15 in every file; its pixels
+ *     eroded 4 px, 44,000 px a master): print 244,206,87 (every colour
+ *     within 1 level) — 72 off in blue: toned, over the pixels near it
+ *     (full within 4 levels, none past 40);
+ *   • the colour — ONE flat colour per pack file in two places, both off
+ *     print: the colour lines inside the pack's 'Pinline' mask (`pinline`)
+ *     and the wide bands outside it (`band`: above and below the title bar,
+ *     between the art and the type bar, the box's outer sides), each the
+ *     pixels where the file differs from another colour's (≥ 16 levels,
+ *     full from 40), eroded 4 px to measure (61,700 / 55,600 px):
+ *       pinline  w 247,246,245 → 240,235,242   band  → 238,233,234
+ *                u 4,119,192   → 30,91,180            → 27,82,159
+ *                b 47,52,48    → 66,61,57             → 66,62,60
+ *                r 234,31,42   → 184,56,37            → 182,51,36
+ *                g 5,113,46    → 50,100,73            → 45,95,70
+ *     every one ≥ 9 off (w's pinline 11 in green, b's 19 in red): toned.
+ *     The gold master (m, 240,228,140) prints only on the two-colour cards'
+ *     bands (their colour lines are the two colours'): 235,218,140 on the
+ *     five (x 600–900, every print within 3) — 10 off in green: its band
+ *     toned, and its pinline (the same flat colour in the pack, printed on
+ *     no card) with it. a and c have no print: as drawn;
+ *   • the footer: pack 0,0,0, print 6,7,4 — within 8: as drawn.
+ */
+export const MA_PRINT_TONES = Object.freeze({
+  paper: Object.freeze({ from: [238, 220, 157], to: [240, 224, 183] }),
+  gold: Object.freeze({ from: [255, 210, 15], to: [244, 206, 87] }),
+  pinline: Object.freeze({
+    w: Object.freeze({ from: [247, 246, 245], to: [240, 235, 242] }),
+    u: Object.freeze({ from: [4, 119, 192], to: [30, 91, 180] }),
+    b: Object.freeze({ from: [47, 52, 48], to: [66, 61, 57] }),
+    r: Object.freeze({ from: [234, 31, 42], to: [184, 56, 37] }),
+    g: Object.freeze({ from: [5, 113, 46], to: [50, 100, 73] }),
+    m: Object.freeze({ from: [240, 228, 140], to: [235, 218, 140] }),
+  }),
+  band: Object.freeze({
+    w: Object.freeze({ from: [247, 246, 245], to: [238, 233, 234] }),
+    u: Object.freeze({ from: [4, 119, 192], to: [27, 82, 159] }),
+    b: Object.freeze({ from: [47, 52, 48], to: [66, 62, 60] }),
+    r: Object.freeze({ from: [234, 31, 42], to: [182, 51, 36] }),
+    g: Object.freeze({ from: [5, 113, 46], to: [45, 95, 70] }),
+    m: Object.freeze({ from: [240, 228, 140], to: [235, 218, 140] }),
+  }),
+});
+/** The paper and the gold: the pixels near the tone's colour. */
+export const MA_PAPER_NEAR = Object.freeze({ full: 30, none: 50 });
+export const MA_GOLD_NEAR = Object.freeze({ full: 4, none: 40 });
+/** The colour region: where a file differs from another colour's file. */
+export const MA_COLOUR_DIFF = Object.freeze({ full: 40, none: 16 });
+/** The other colour's file a master is compared with (u's is g's). */
+const maReferenceOf = (k) => maFrameFile(k === "u" ? "g" : "u");
+/** One pack file's tone entry: paper and gold on every file; on a
+ *  whole-card master the paper only where the file is the same as another
+ *  colour's, and its colour (w u b r g m) inside and outside the Pinline
+ *  mask. A plate (`card: false`) has no colour region to compare: paper and
+ *  gold by their colour alone. */
+function maSourceTone(key, { card }) {
+  const tones = { paper: MA_PRINT_TONES.paper, gold: MA_PRINT_TONES.gold };
+  const near = { paper: MA_PAPER_NEAR, gold: MA_GOLD_NEAR };
+  const diff = {};
+  const clip = {};
+  if (card) {
+    const other = Object.freeze({ file: maReferenceOf(key), ...MA_COLOUR_DIFF });
+    clip.paper = Object.freeze({ notDiff: other });
+    if (MA_PRINT_TONES.pinline[key]) {
+      tones.pinline = MA_PRINT_TONES.pinline[key];
+      tones.band = MA_PRINT_TONES.band[key];
+      diff.pinline = other;
+      diff.band = other;
+      clip.pinline = Object.freeze({ mask: MA_PINLINE });
+      clip.band = Object.freeze({ notMask: MA_PINLINE });
+    }
+  }
+  return Object.freeze({
+    near: Object.freeze(near),
+    ...(Object.keys(diff).length ? { diff: Object.freeze(diff) } : {}),
+    ...(Object.keys(clip).length ? { clip: Object.freeze(clip) } : {}),
+    tones: Object.freeze(tones),
+    table: `MA_PRINT_TONES (${key})`,
+  });
+}
+/** The archive's toned files: the eight masters and the eight plates. */
+export const MA_SOURCE_TONES = Object.freeze(
+  Object.fromEntries(
+    ["w", "u", "b", "r", "g", "m", "a", "c"].flatMap((k) => [
+      [maFrameFile(k), maSourceTone(k, { card: true })],
+      [`${MA}/pt/${k}.png`, maSourceTone(k, { card: false })],
+    ]),
+  ),
+);
+const MA_NOTES = [
+  "w u b r g m = the pack's colour frames whole (mysticalArchive/<k>.png, 2010x2814; r.png 2693x3770), each downscaled ONCE to 1500x2100 (Lanczos) — as the Strixhaven Mystical Archive prints them (STA #1–63, English); m (gold) has no print: a card of three colours or more, or two with the two-colour switch off",
+  "a = the pack's silver 'Artifact Frame' (mysticalArchive/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }); c = the pack's 'Land Frame' (mysticalArchive/c.png) — the scroll's split (#604), unprinted (the run is 63 instants and sorceries)",
+  "two-colour pair masters <pair>.png (FrameProfile.twoColorMasters ['split'], opt-in per card): the gold frame (m.png) with the first colour's frame through the pack's 'Pinline' mask and the second's through its 'Pinline (Right)' mask (pinlineRight.svg, x ≥ 827) — as the prints split them (STA #59 Despark w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix r|w, #63 Putrefy b|g): the colour lines left and right, the wide bands a mono card wears in its colour the gold master's on both halves",
+  "borderless: the art under the frame edge to edge; the ornament runs to the card's top edge (design), the side edges are clear beside the art, the footer black. The one card corner is cut at the two BOTTOM corners only (keepCorners): the top corners are the ornament's (lib/frames/square-corners.ts 'frame'); a round output cuts them at render",
+  "plates = the pack's eight plates (mysticalArchive/pt/<k>.png, 424x213 at its ptBounds 1135/1848, 317x159 px): no print (the run has no creature); c = the artifact's plate (the plate follows the colour key, as on the scroll)",
+  `toned onto the prints (MA_PRINT_TONES, the ring's rule — raw scan medians over the 58 mono-colour prints, a region ≥ 9 levels off toned; recorded under sourceTones): the paper ${MA_PRINT_TONES.paper.from.join(",")} → ${MA_PRINT_TONES.paper.to.join(",")} (26 off in blue), the gold ${MA_PRINT_TONES.gold.from.join(",")} → ${MA_PRINT_TONES.gold.to.join(",")} (72 off in blue), and each colour in its two places — the lines inside the Pinline mask and the bands outside it, where the file differs from another colour's — w u b r g on the mono prints, m's on the two-colour prints' gold bands (a and c have no print: as drawn); the footer stays true black (print 6,7,4)`,
+  "geometry as drawn: print's title bar 3–5 px higher, its type bar 1 px lower, its text box 2–4 px lower and its foot 7 px lower (row 1950 against 1943) — the lines cross textured paper and ornament, never a flat zone, so nothing is re-cut and the slots are measured on print",
+  "not built: the pack's 'Crown' band (mysticalArchive/crowns/<k>.png) — no print wears it (the run has no legendary card)",
+];
+/**
+ * The archive's OVAL stamp notch (TODO 4.11): PipGlyph's own drawing
+ * (scripts/frame-inputs/mystical-archive-stamp-arch.svg — the pack draws
+ * no stamp): the plain black arch the run's 45 rares and mythics raise into
+ * the text box's foot round the hologram — no rim on print — its top edge
+ * measured column by column on the per-pixel median of the 45 stamped
+ * prints (top 1911.7 px on x 746–750, its feet at 658 / 846), 1:1 in its
+ * 204 × 94 box at 650, 1908. The hologram oval (MA_STAMP_OVAL_PX, the
+ * prints': 134 × 64 on 750, 1964) plus 2 px is cut clear and the 2 px round
+ * it painted black; our own oval art covers it. One piece for every key —
+ * the seven and the ten pairs (the arch is black on every colour).
+ */
+export const MA_STAMP_ARCH = `${REPO_SOURCE_PREFIX}scripts/frame-inputs/mystical-archive-stamp-arch.svg`;
+export const MA_NOTCH_BOX = Object.freeze({ x: 650, y: 1908, width: 204, height: 94 });
+/** The stamp's oval, card px: the prints' hologram (687–813 × 1934–1995
+ *  at luma 80 on the 45 stamped prints' median, centred on 750 / 1964.5)
+ *  at the 134 × 64 size of M15's and the sourcebook's ovals. */
+export const MA_STAMP_OVAL_PX = Object.freeze({ x: 683, y: 1932, width: 134, height: 64 });
+/** Every key the masters paint — the seven and the ten pairs (a pair's
+ *  notch is its own key, as every pair-drawing frame's; one piece for all,
+ *  the arch black on every colour). */
+export const MA_NOTCH_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]);
+export const MA_NOTCH = Object.freeze({
+  keys: MA_NOTCH_KEYS,
+  pieces: Object.freeze(Object.fromEntries(MA_NOTCH_KEYS.map((k) => [k, MA_STAMP_ARCH]))),
+  placeAt: Object.freeze({ x: MA_NOTCH_BOX.x, y: MA_NOTCH_BOX.y, width: MA_NOTCH_BOX.width, height: MA_NOTCH_BOX.height }),
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: MA_NOTCH_BOX.width, height: MA_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (MA_NOTCH_BOX.x / 1500) * 100,
+      topPct: (MA_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (MA_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (MA_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (MA_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (MA_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (MA_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (MA_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+});
+
 const ZNR_PACK = "packZendikarRising.js 'Zendikar Rising' (groupShowcase-5.js:42)";
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings SCROLL
 // showcase (`lotrscroll`; LTR #452–730 and LTC #411–490) from Card
@@ -4585,6 +4822,20 @@ export const CC_TEMPLATES = {
     plates: SCROLL_PT,
     pack: SCROLL_PACK,
     notes: SCROLL_NOTES,
+  },
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive showcase (see MA above).
+  mysticalarchive: {
+    colors: {
+      ...perColor((k) => [layer(maFrameFile(k))]),
+      a: [layer(maFrameFile("a"))],
+      ...Object.fromEntries(
+        TWO_COLOR_PAIRS.map((pair) => [pair, [layer(maFrameFile("m")), layer(maFrameFile(pair[0]), MA_PINLINE), layer(maFrameFile(pair[1]), MA_PINLINE_RIGHT)]]),
+      ),
+    },
+    plates: MA_PT,
+    keepCorners: RING_KEEP_CORNERS,
+    pack: MA_PACK,
+    notes: MA_NOTES,
   },
   m15: {
     colors: {
@@ -6634,6 +6885,9 @@ export function sourceFilesFor(def) {
   // A toned file's masks (CC_SOURCE_TONES; the LOTR ring's Rules mask, TODO
   // 4.11): importer inputs too.
   for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
+  // …and a clipped region's masks and reference files (the Mystical
+  // Archive, TODO 4.11 wave 2).
+  for (const file of [...files]) for (const c of Object.values(sourceTonesOf(file)?.clip ?? {})) for (const f of [c.mask, c.notMask, c.notDiff?.file]) if (f) files.add(f);
   // …and a diff region's reference file (the MUL Tarkir wings, TODO 4.11).
   for (const file of [...files]) for (const d of [...Object.values(sourceTonesOf(file)?.diff ?? {}), ...Object.values(sourceTonesOf(file)?.box ?? {})]) if (d.file) files.add(d.file);
   return [...files].sort();
@@ -7806,6 +8060,24 @@ export const HOLO_STAMP_NOTCHES = {
       `the ring showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (lotr/stamp/<k>.png, 212x95) — the text box's rim stepped up round a black trapezoid over the stamp — at its stampBounds (644/1893 px), 1:1 (the pack is 1500 px native), cut to its box ${RING_NOTCH_BOX.width}x${RING_NOTCH_BOX.height} at ${RING_NOTCH_BOX.x},${RING_NOTCH_BOX.y} px — 1 px round the piece and 10 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border`,
       "the pack's OWN piece per key (w u b r g, m gold, a the artifact's blue-grey, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the rim is the text box's own edge in the frame's colour, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
       "the hologram: the pack's 'Gray Holo Stamp' shape (lotr/stamp/gray.png) placed the same way, grown 1 px, painted opaque black — the pack draws its triangle 8–10 px HIGHER than the printed stamp (its top edge at 1915 px against the hole's 1924.6; LTR #302 / #313 print the Universes Beyond stamp, the hole 687–812 × 1924.6–1992.5) — then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
+    ],
+  },
+  // TODO 4.11 wave 2: the Mystical Archive's OVAL notch — PipGlyph's own
+  // black arch (the pack draws none), 1:1, its hologram oval cut (MA_NOTCH).
+  mysticalarchiveholostamp: {
+    pack: `${MA_PACK} — the pack draws no stamp: the arch is PipGlyph's own drawing, measured on the prints`,
+    pieces: MA_NOTCH.pieces,
+    keys: MA_NOTCH.keys,
+    shape: MA_NOTCH.shape,
+    placeAt: MA_NOTCH.placeAt,
+    compositeSize: MA_NOTCH.compositeSize,
+    oval: MA_NOTCH.oval,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the archive's oval stamp notch (TODO 4.11): PipGlyph's own drawing (scripts/frame-inputs/mystical-archive-stamp-arch.svg, ${MA_NOTCH_BOX.width}x${MA_NOTCH_BOX.height} at ${MA_NOTCH_BOX.x},${MA_NOTCH_BOX.y} px, 1:1) — the plain black arch the run's 45 rares and mythics raise into the text box's foot round the hologram (no rim on print), its top edge measured column by column on the per-pixel median of the 45 stamped STA prints (top 1911.7 px, feet at 658 / 846); black down to row 1956, over the master's black footer (from row 1944)`,
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (the arch is black on every colour)",
+      `the hologram: the prints' oval (${MA_STAMP_OVAL_PX.width} × ${MA_STAMP_OVAL_PX.height} at ${MA_STAMP_OVAL_PX.x}, ${MA_STAMP_OVAL_PX.y}, centred on 750 / 1964 — the 45 stamped prints) plus 2 px cut to transparent and the 2 px round it painted opaque black; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
   // TODO 4.11: the MUL Tarkir showcase's OVAL notch — the pack's one piece,

@@ -178,6 +178,11 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): a new template
+  // in a new showcase set — pinned in
+  // tests/unit/scryfall/mystical-archive-imports.test.ts (STA #1–63 land
+  // there once verified) and tests/unit/frames/mystical-archive-importer.test.ts.
+  "mysticalarchive",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
@@ -630,6 +635,7 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|ltr-482",
       "all|mul-1",
       "all|mul-60",
+      "all|sta-1",
       "all|takh-1",
       "all|tdm-303",
       "all|tdm-400",
@@ -637,9 +643,18 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|tla-338", "all|tle-315",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
-      "prodPlusMoved|blb-343", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
-      "prod|blb-343", "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
+      "prodPlusMoved|blb-343", "prodPlusMoved|sta-1", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prod|blb-343", "prod|sta-1", "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
     ]);
+    // …and TODO 4.11 wave 2: the Strixhaven Mystical Archive (STA #1) names
+    // its own frame under every policy — EXACT on it once verified ("all"),
+    // nearest where it isn't ticked (production), and there it lands where
+    // main lands it: the standard frame (frame-switched to m15, the chooser
+    // offering M15).
+    expect(raw.imports["all|sta-1"]).toMatchObject({ frame_template: "mysticalarchive", match: ["exact", null], landing: "exact|mysticalarchive|w", remix: "mysticalarchive|sorcery" });
+    for (const policy of ["prodPlusMoved", "prod"]) {
+      expect(raw.imports[`${policy}|sta-1`], policy).toMatchObject({ frame_template: "mysticalarchive", match: ["nearest", null], landing: "frame-switched|m15|w", remix: "m15|sorcery" });
+    }
     // …and TODO 4.11 wave 1: a two-colour Expedition (ZNE #1 Flooded
     // Strand, white and blue) prints a split pinline the frame doesn't draw
     // yet — on its own frame still, NEAREST through the two-colour gap even

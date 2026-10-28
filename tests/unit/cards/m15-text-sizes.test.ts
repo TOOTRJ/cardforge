@@ -98,7 +98,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(82);
+    // …and TODO 4.11 wave 2's Strixhaven Mystical Archive (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(83);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -182,8 +183,11 @@ describe("one M15-era display size (layout v32)", () => {
       // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
       // with theirs, v68; the Avatar elemental and Bloomburrow woodland the
       // CC M15 row with theirs, v69.)
+      // (…and the Strixhaven Mystical Archive, a new template, the CC M15
+      // disc on its run's row.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
+        t === "mysticalarchive" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -430,6 +434,11 @@ describe("baselines (TextSlot.dy)", () => {
     // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
     // type line the CC baseline (print's 1261, ours 1260).
     ["bloomanime", base.title, cc],
+    // The Strixhaven Mystical Archive (TODO 4.11 wave 2, a new template):
+    // M15's slots on the run's own lines — the name 5 px up (print's
+    // baseline 184, the 63 prints' median), the type line 1 px under the CC
+    // baseline (print's 1261).
+    ["mysticalarchive", base.title - 5 / 1500, cc + 1 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

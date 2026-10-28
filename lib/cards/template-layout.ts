@@ -4837,6 +4837,65 @@ const LOTRSCROLL: FrameProfile = {
   },
 };
 
+// The Strixhaven MYSTICAL ARCHIVE showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Mystical Archive (STA)' pack (packMysticalArchive.js, 2010 ×
+// 2814, downscaled once; scripts/lib/cc-frames.mjs MA), the gold ornament
+// over edge-to-edge art of STA #1–63 (2021, English). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's (the pack's
+// own numbers are M15's but for the rules box), each slot measured on the
+// 63 prints against its own line.
+/** The art slot: the masters' see-through region — edge to edge, 0–1500 ×
+ *  253–1822 px on every key (CC's artBounds 0 / 0.1205 / 1 × 0.7539: 253–
+ *  1836 px) — covered with the art-window check's 0.05 % to spare. */
+export const MYSTICALARCHIVE_ART_SLOT: Rect = { topPct: (251 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (1587 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1135 / 1848, 317 × 159 px). */
+const MYSTICALARCHIVE_PLATE_RECT: Rect = { topPct: (1848 / 2100) * 100, leftPct: (1135 / 1500) * 100, widthPct: (317 / 1500) * 100, heightPct: (159 / 2100) * 100 };
+/** The name's pen 2 px left of M15's, the type line's 5 px (print: ink from
+ *  129 / 128 px, the median over the 63 prints; ours from 131 / 133). */
+const MYSTICALARCHIVE_TITLE_LEFT_PCT = (2 / 1500) * 100;
+const MYSTICALARCHIVE_TYPE_LEFT_PCT = (5 / 1500) * 100;
+const MYSTICALARCHIVE: FrameProfile = {
+  ...M15,
+  label: "Mystical Archive",
+  ...CC_M15_COST,
+  // The cost row on print's (the 63 prints: the last symbol's outline ring
+  // 77 px across, centred on 1352.5 / 151.5 px — its right edge 1391, q
+  // 1389–1394; top 113, foot 190): the family's 70 px disc on that centre,
+  // 6 px above and 4 px right of the CC M15 row's (1348 / 157). Print draws
+  // its symbols in Card Conjurer's OUTLINE style (a pale disc, the symbol in
+  // its colour, a dark ring, no shadow) — no symbol style draws that yet:
+  // the discs are the family's.
+  costDy: CC_M15_COST.costDy - 6 / 1500,
+  costDx: CC_M15_COST.costDx + 4 / 1500,
+  artSlot: MYSTICALARCHIVE_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's silver artifact frame; any other
+  // colourless card its 'Land Frame' `c` — the scroll's split, unprinted.
+  artifactMasterKeys: { c: "a" },
+  // The name's baseline 5 px above M15's (print 184, ours 189), its pen 2 px
+  // left; the band's right end — the cost row's room — unchanged.
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, leftPct: M15.title.rect.leftPct - MYSTICALARCHIVE_TITLE_LEFT_PCT, widthPct: M15.title.rect.widthPct + MYSTICALARCHIVE_TITLE_LEFT_PCT },
+    dy: M15.title.dy! - 5 / 1500,
+  },
+  // The type line 1 px below the CC M15 baseline (print 1261, ours 1260),
+  // its pen 5 px left; the band's right end (the set symbol) unchanged.
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, leftPct: M15.type.rect.leftPct - MYSTICALARCHIVE_TYPE_LEFT_PCT, widthPct: M15.type.rect.widthPct + MYSTICALARCHIVE_TYPE_LEFT_PCT },
+    dy: CC_M15_TYPE_DY + 1 / 1500,
+  },
+  // The rules block 3 px higher and 2 px left of M15's (the 63 prints'
+  // blocks against ours of the same text: first ink +4, last +4, first-ink
+  // x +2 — the same breaks and size, the block moved).
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, topPct: M15.rules.rect.topPct - (3 / 2100) * 100, leftPct: M15.rules.rect.leftPct - (2 / 1500) * 100 } },
+  pt: {
+    ...M15.pt!,
+    plateRect: MYSTICALARCHIVE_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/mysticalarchive/pt/{color}.png",
+  },
+};
+
 // (borderlessShowcase(), the art-forward layout the anime last wore —
 // inset art, a 0.55 scrim on the rules box, the name 44 px — left with TODO
 // 4.11 / 4.35's layout v70.)
@@ -6132,6 +6191,31 @@ export const TARKIRDRAGON_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/tarkirdragonholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: TARKIRDRAGON_HOLO_STAMP_OVAL, keepOut: TARKIRDRAGON_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The Mystical Archive's stamp oval (scripts/lib/cc-frames.mjs
+ *  MA_STAMP_OVAL_PX: 683–817 × 1932–1996 px) — the PRINTS' hologram, 134 ×
+ *  64 on 750 / 1964 (the 45 stamped STA prints). */
+export const MYSTICALARCHIVE_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1932 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1912 px at the centre)
+ *  down to the master's text box foot (1944), over the arch's 656–848 px. */
+export const MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1912 / 2100) * 100, widthPct: (192 / 1500) * 100, heightPct: (32 / 2100) * 100 };
+/**
+ * The Mystical Archive's OVAL stamp notch (TODO 4.11 wave 2): PipGlyph's own
+ * black arch (the pack draws no stamp; scripts/frame-inputs/mystical-archive-
+ * stamp-arch.svg, measured on the prints), 1:1 in its 204 × 94 box at 650,
+ * 1908 (MA_NOTCH_BOX in scripts/lib/cc-frames.mjs), the hologram oval cut
+ * clear for our oval art. The rares and mythics of the run print it
+ * (`security_stamp: oval`, 45 of 63), the uncommons don't: "auto" = a rare
+ * or mythic, as on M15. One piece under every key, the ten pairs' too.
+ * Set on the mysticalarchive entry only.
+ */
+export const MYSTICALARCHIVE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (650 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (204 / 1500) * 100, heightPct: (94 / 2100) * 100 },
+  assetPathTemplate: "/frames/mysticalarchiveholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", ...OLD_FRAME_PAIR_KEYS],
+  stamp: { shape: "oval", oval: MYSTICALARCHIVE_HOLO_STAMP_OVAL, keepOut: MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The Tarkir draconic showcase's oval (TODO 4.11): the prints' hologram
@@ -7469,6 +7553,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the two-colour
+  // dress (its pair masters split the colour lines, as the five two-colour
+  // prints do), the stamp and the collector line, opt-in per card; no crown
+  // (no print wears one).
+  // (A land on the frame — none printed — wears the same dress: the pair
+  // masters are the gold frame with the two colours' lines, whatever the
+  // kind.)
+  mysticalarchive: { ...MYSTICALARCHIVE, overlays: [MYSTICALARCHIVE_HOLO_STAMP], collector: M15_COLLECTOR, twoColorMasters: ["split"], twoColorForLands: true },
   // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
   // draconic's oval stamp notch and both frames' collector line on the black
   // footer the masters now paint (the prints set it on M15's rows: line 1 at

@@ -324,6 +324,13 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
         continue;
       }
+      // …and the Strixhaven Mystical Archive's ten (TODO 4.11 wave 2): the
+      // gold frame with the two colours' lines through the pack's Pinline
+      // masks (tests/unit/frames/mystical-archive-importer.test.ts).
+      if (template === "mysticalarchive") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       if (template === "extendedartland") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;

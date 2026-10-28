@@ -81,7 +81,8 @@ describe("bake path = preview path", () => {
     // …and the full-art tokens' 10 each (4.48's central split: 60), and the
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
     // …and the Prepare frame's 20 (4.26: both dresses with the page).
-    expect(pairKeys).toBe(410);
+    // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
+    expect(pairKeys).toBe(420);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     expect(crownedKeys).toBe(51 + 4 * 18);
@@ -176,7 +177,10 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
-                                    : "m15holostamp"
+                                    : template === "mysticalarchive"
+                                      ? // …and the Strixhaven Mystical Archive's own arch (4.11 wave 2).
+                                        "mysticalarchiveholostamp"
+                                      : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
                   "fullartcrown"
@@ -253,8 +257,10 @@ describe("bake path = preview path", () => {
     // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
     // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
     // MSE's own stamp per key; `c` the steel rim), and the Bloomburrow
-    // woodland's 7 (4.11, v69), and the Bloomburrow anime's 7 (4.11, v70).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7);
+    // woodland's 7 (4.11, v69), and the Bloomburrow anime's 7 (4.11, v70),
+    // and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11 wave 2: one
+    // black arch under every key).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + (7 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

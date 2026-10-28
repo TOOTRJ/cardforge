@@ -136,6 +136,9 @@ describe("the main box on every template", () => {
         // …and the Avatar elemental and Bloomburrow woodland showcases
         // (layout v69): M15's box and margins on their MSE text boxes.
         "avatar", "bloomburrow",
+        // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): M15's box
+        // and margins, the block 3 px up and 2 px left onto print's.
+        "mysticalarchive",
         // …and the Bloomburrow anime (layout v70): M15's margins in print's
         // own rect (lines from x 128.5, the rect's 125 + 4).
         "bloomanime",

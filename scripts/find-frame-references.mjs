@@ -350,6 +350,14 @@ const TEMPLATES = {
   lotrscroll: {
     q: (k) => `set:ltr is:showcase border:black ${spellColor(k)}`,
   },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63 (#64–126
+  // are the Japanese alternate art, another frame; SOA's 2026 archive is
+  // inverted). Instants and sorceries only: 'c' has no print, 'm' is the
+  // two-colour pair dress.
+  mysticalarchive: {
+    confirm: "STA English Mystical Archive (#1–63) — confirm the thumbnail is the gold ornament with a cream title bar, not the Japanese vertical-title art (#64–126) or SOA's navy boxes.",
+    q: (k) => `set:sta cn<=63 lang:en ${spellColor(k)}`,
+  },
   avatar: {
     q: (k) => `set:tla is:showcase border:borderless ${spellColor(k)}`,
   },

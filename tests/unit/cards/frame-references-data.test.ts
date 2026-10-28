@@ -127,6 +127,9 @@ const DOCUMENTED_NULLS = new Set([
   "expeditionlandbfz/w", "expeditionlandbfz/u", "expeditionlandbfz/b", "expeditionlandbfz/r", "expeditionlandbfz/g",
   "nyx/c",
   "lotr/c",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63 are every
+  // one an instant or a sorcery with a colour — no colourless print.
+  "mysticalarchive/c",
   "bloomburrow/c",
   "tarkirdragon/u", "tarkirdragon/b", "tarkirdragon/r", "tarkirdragon/g", "tarkirdragon/c",
   "tarkirghostfire/u", "tarkirghostfire/b",

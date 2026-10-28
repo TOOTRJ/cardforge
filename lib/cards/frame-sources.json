@@ -14761,6 +14761,315 @@
       "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished plain land whole (its body and grey bars: the dual lands' bars read 202/190/182 against the plain land's 196/182/171 and the basics' 40 further off), with the pair's two finished coloured-land masters blended left to right across one straight ramp 42→59 %W inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut). Measured on 36 two-colour lands, Eighth Edition 2003 → Theros 2013, all ten pairs: pinline 41.5→58.5, box 41.8→58.8"
     ]
   },
+  "mysticalarchive": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packMysticalArchive.js 'Mystical Archive (STA)' (the Strixhaven Mystical Archive showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px (but tl, tr: kept square, design to the corner), webp q90",
+    "colors": {
+      "a": [
+        "img/frames/mysticalArchive/a.png"
+      ],
+      "w": [
+        "img/frames/mysticalArchive/w.png"
+      ],
+      "u": [
+        "img/frames/mysticalArchive/u.png"
+      ],
+      "b": [
+        "img/frames/mysticalArchive/b.png"
+      ],
+      "r": [
+        "img/frames/mysticalArchive/r.png"
+      ],
+      "g": [
+        "img/frames/mysticalArchive/g.png"
+      ],
+      "c": [
+        "img/frames/mysticalArchive/c.png"
+      ],
+      "m": [
+        "img/frames/mysticalArchive/m.png"
+      ],
+      "wu": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/w.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/u.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "wb": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/w.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/b.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "ub": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/u.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/b.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "ur": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/u.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/r.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "br": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/b.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/r.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "bg": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/b.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/g.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "rg": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/r.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/g.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "rw": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/r.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/w.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "gw": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/g.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/w.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ],
+      "gu": [
+        "img/frames/mysticalArchive/m.png",
+        "img/frames/mysticalArchive/g.png through img/frames/mysticalArchive/pinline.svg",
+        "img/frames/mysticalArchive/u.png through img/frames/mysticalArchive/pinlineRight.svg"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/mysticalArchive/pt/w.png",
+      "u": "img/frames/mysticalArchive/pt/u.png",
+      "b": "img/frames/mysticalArchive/pt/b.png",
+      "r": "img/frames/mysticalArchive/pt/r.png",
+      "g": "img/frames/mysticalArchive/pt/g.png",
+      "c": "img/frames/mysticalArchive/pt/a.png",
+      "m": "img/frames/mysticalArchive/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/mysticalArchive/a.png": {
+        "table": "MA_PRINT_TONES (a)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/b.png": {
+        "table": "MA_PRINT_TONES (b)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 1.404 / 1.173 / 1.188 (47, 52, 48 → 66, 61, 57), fading to × 1.220 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 1.404 / 1.192 / 1.250 (47, 52, 48 → 66, 62, 60), fading to × 1.238 on every channel at white"
+      },
+      "img/frames/mysticalArchive/c.png": {
+        "table": "MA_PRINT_TONES (c)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/g.png": {
+        "table": "MA_PRINT_TONES (g)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 10.000 / 0.885 / 1.587 (5, 113, 46 → 50, 100, 73), fading to × 1.026 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 9.000 / 0.841 / 1.522 (5, 113, 46 → 45, 95, 70), fading to × 0.969 on every channel at white"
+      },
+      "img/frames/mysticalArchive/m.png": {
+        "table": "MA_PRINT_TONES (m)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 0.979 / 0.956 / 1.000 (240, 228, 140 → 235, 218, 140), fading to × 0.963 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 0.979 / 0.956 / 1.000 (240, 228, 140 → 235, 218, 140), fading to × 0.963 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/a.png": {
+        "table": "MA_PRINT_TONES (a)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/b.png": {
+        "table": "MA_PRINT_TONES (b)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/g.png": {
+        "table": "MA_PRINT_TONES (g)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/m.png": {
+        "table": "MA_PRINT_TONES (m)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/r.png": {
+        "table": "MA_PRINT_TONES (r)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/u.png": {
+        "table": "MA_PRINT_TONES (u)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/pt/w.png": {
+        "table": "MA_PRINT_TONES (w)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157: × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white"
+      },
+      "img/frames/mysticalArchive/r.png": {
+        "table": "MA_PRINT_TONES (r)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 0.786 / 1.806 / 0.881 (234, 31, 42 → 184, 56, 37), fading to × 1.092 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 0.778 / 1.645 / 0.857 (234, 31, 42 → 182, 51, 36), fading to × 1.038 on every channel at white"
+      },
+      "img/frames/mysticalArchive/u.png": {
+        "table": "MA_PRINT_TONES (u)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/g.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/g.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 7.500 / 0.765 / 0.938 (4, 119, 192 → 30, 91, 180), fading to × 0.846 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/g.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 6.750 / 0.689 / 0.828 (4, 119, 192 → 27, 82, 159), fading to × 0.760 on every channel at white"
+      },
+      "img/frames/mysticalArchive/w.png": {
+        "table": "MA_PRINT_TONES (w)",
+        "paper": "on the pixels within 30–50 levels (max channel) of 238, 220, 157, where the file is the same as img/frames/mysticalArchive/u.png (max channel ≤ 16; none from 40): × 1.008 / 1.018 / 1.166 (238, 220, 157 → 240, 224, 183), fading to × 1.024 on every channel at white",
+        "gold": "on the pixels within 4–40 levels (max channel) of 255, 210, 15: × 0.957 / 0.981 / 5.800 (255, 210, 15 → 244, 206, 87), fading to × 1.000 on every channel at white",
+        "pinline": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), inside img/frames/mysticalArchive/pinline.svg: × 0.972 / 0.955 / 0.988 (247, 246, 245 → 240, 235, 242), fading to × 0.961 on every channel at white",
+        "band": "on the pixels that differ from img/frames/mysticalArchive/u.png by 16–40 levels (max channel; full from 40), outside img/frames/mysticalArchive/pinline.svg: × 0.964 / 0.947 / 0.955 (247, 246, 245 → 238, 233, 234), fading to × 0.951 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/mysticalArchive/a.png",
+      "img/frames/mysticalArchive/b.png",
+      "img/frames/mysticalArchive/c.png",
+      "img/frames/mysticalArchive/g.png",
+      "img/frames/mysticalArchive/m.png",
+      "img/frames/mysticalArchive/pinline.svg",
+      "img/frames/mysticalArchive/pinlineRight.svg",
+      "img/frames/mysticalArchive/pt/a.png",
+      "img/frames/mysticalArchive/pt/b.png",
+      "img/frames/mysticalArchive/pt/g.png",
+      "img/frames/mysticalArchive/pt/m.png",
+      "img/frames/mysticalArchive/pt/r.png",
+      "img/frames/mysticalArchive/pt/u.png",
+      "img/frames/mysticalArchive/pt/w.png",
+      "img/frames/mysticalArchive/r.png",
+      "img/frames/mysticalArchive/u.png",
+      "img/frames/mysticalArchive/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (mysticalArchive/<k>.png, 2010x2814; r.png 2693x3770), each downscaled ONCE to 1500x2100 (Lanczos) — as the Strixhaven Mystical Archive prints them (STA #1–63, English); m (gold) has no print: a card of three colours or more, or two with the two-colour switch off",
+      "a = the pack's silver 'Artifact Frame' (mysticalArchive/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }); c = the pack's 'Land Frame' (mysticalArchive/c.png) — the scroll's split (#604), unprinted (the run is 63 instants and sorceries)",
+      "two-colour pair masters <pair>.png (FrameProfile.twoColorMasters ['split'], opt-in per card): the gold frame (m.png) with the first colour's frame through the pack's 'Pinline' mask and the second's through its 'Pinline (Right)' mask (pinlineRight.svg, x ≥ 827) — as the prints split them (STA #59 Despark w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix r|w, #63 Putrefy b|g): the colour lines left and right, the wide bands a mono card wears in its colour the gold master's on both halves",
+      "borderless: the art under the frame edge to edge; the ornament runs to the card's top edge (design), the side edges are clear beside the art, the footer black. The one card corner is cut at the two BOTTOM corners only (keepCorners): the top corners are the ornament's (lib/frames/square-corners.ts 'frame'); a round output cuts them at render",
+      "plates = the pack's eight plates (mysticalArchive/pt/<k>.png, 424x213 at its ptBounds 1135/1848, 317x159 px): no print (the run has no creature); c = the artifact's plate (the plate follows the colour key, as on the scroll)",
+      "toned onto the prints (MA_PRINT_TONES, the ring's rule — raw scan medians over the 58 mono-colour prints, a region ≥ 9 levels off toned; recorded under sourceTones): the paper 238,220,157 → 240,224,183 (26 off in blue), the gold 255,210,15 → 244,206,87 (72 off in blue), and each colour in its two places — the lines inside the Pinline mask and the bands outside it, where the file differs from another colour's — w u b r g on the mono prints, m's on the two-colour prints' gold bands (a and c have no print: as drawn); the footer stays true black (print 6,7,4)",
+      "geometry as drawn: print's title bar 3–5 px higher, its type bar 1 px lower, its text box 2–4 px lower and its foot 7 px lower (row 1950 against 1943) — the lines cross textured paper and ornament, never a flat zone, so nothing is re-cut and the slots are measured on print",
+      "not built: the pack's 'Crown' band (mysticalArchive/crowns/<k>.png) — no print wears it (the run has no legendary card)"
+    ]
+  },
+  "mysticalarchiveholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packMysticalArchive.js 'Mystical Archive (STA)' (the Strixhaven Mystical Archive showcase; groupShowcase-5.js) — the pack draws no stamp: the arch is PipGlyph's own drawing, measured on the prints",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "204x94 notch piece (1:1 at 1500x2100, at 650,1908), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wu": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wb": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ub": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ur": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "br": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "bg": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rg": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rw": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gw": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gu": [
+        "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg at 650,1908 204×94 px of a clear 1500×2100 card, 1:1 (no resample), cut to 204×94 at 650,1908",
+        "the oval 45.5333/92.0000/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.53333333333333,
+        "topPct": 92,
+        "widthPct": 8.933333333333334,
+        "heightPct": 3.0476190476190474
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "repo:scripts/frame-inputs/mystical-archive-stamp-arch.svg"
+    ],
+    "notes": [
+      "the archive's oval stamp notch (TODO 4.11): PipGlyph's own drawing (scripts/frame-inputs/mystical-archive-stamp-arch.svg, 204x94 at 650,1908 px, 1:1) — the plain black arch the run's 45 rares and mythics raise into the text box's foot round the hologram (no rim on print), its top edge measured column by column on the per-pixel median of the 45 stamped STA prints (top 1911.7 px, feet at 658 / 846); black down to row 1956, over the master's black footer (from row 1944)",
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (the arch is black on every colour)",
+      "the hologram: the prints' oval (134 × 64 at 683, 1932, centred on 750 / 1964 — the 45 stamped prints) plus 2 px cut to transparent and the 2 px round it painted opaque black; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "nyxcrown": {
     "source": "pipglyph",
     "converter": "scripts/build-nyx-crown.mjs",

@@ -100,6 +100,10 @@ describe("the declared pair masters", () => {
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,
+      // …and the Strixhaven Mystical Archive's ten (TODO 4.11 wave 2): the
+      // gold frame with the two colours' lines through the pack's Pinline
+      // masks (tests/unit/frames/mystical-archive-importer.test.ts).
+      mysticalarchive: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

@@ -544,6 +544,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Strixhaven Mystical Archive showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Mystical Archive (STA)' pack, frames bucket): the gold
+  // ornament over edge-to-edge art of STA #1–63 (2021, English). An
+  // addition: no stored card sits on it.
+  "mysticalarchive",
   "avatar",
   "bloomburrow",
   "bloomanime",
@@ -703,6 +708,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Strixhaven — Mystical Archive".
+  mysticalarchive: "Mystical Archive",
   avatar: "Elemental",
   bloomburrow: "Woodland",
   bloomanime: "Anime",
@@ -752,6 +759,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "multiverselegends",
+  "strixhaven",
   "zendikarrising",
   "extended",
   "fullartset",
@@ -771,6 +779,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
+  // The Strixhaven Mystical Archive (STA 2021).
+  strixhaven: "Strixhaven",
   zendikarrising: "Zendikar Rising",
   extended: "Extended Art",
   fullartset: "Full Art",
@@ -845,6 +855,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  mysticalarchive: "strixhaven",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   bloomanime: "bloomburrow",
@@ -933,6 +944,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
+  // The Strixhaven Mystical Archive (STA #1–63).
+  strixhaven: "showcase",
   zendikarrising: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",

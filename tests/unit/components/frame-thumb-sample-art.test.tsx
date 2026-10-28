@@ -183,7 +183,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the arch token's tall box (TODO 4.55: opaque masters, no sample).
     // + the Prepare frame (TODO 4.27: M15's opaque master, no sample).
     // + the 2015 Expeditions (TODO 4.11 wave 1: no sample, as the 2020 look).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(89);
+    // + the Strixhaven Mystical Archive (TODO 4.11 wave 2: see below).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(90);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

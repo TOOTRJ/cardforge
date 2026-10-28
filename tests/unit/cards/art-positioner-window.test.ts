@@ -123,6 +123,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
+  mysticalarchive: { front: [1500, 1587] },
   avatar: { front: [1500, 1168] },
   bloomburrow: { front: [1500, 954] },
   bloomanime: { front: [1500, 2100] },

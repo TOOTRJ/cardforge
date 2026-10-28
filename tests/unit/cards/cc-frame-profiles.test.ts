@@ -46,6 +46,14 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 4 / 1500]);
         continue;
       }
+      // The Strixhaven Mystical Archive (TODO 4.11 wave 2): its own run's row
+      // — the CC M15 row 6 px higher and 4 px further right, the 70 px disc
+      // centred on the prints' outlined symbols (1352.5 / 151.5 px, the 63
+      // prints' median).
+      if (template === "mysticalarchive") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 6 / 1500, 2 / 1500 + 4 / 1500]);
+        continue;
+      }
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
         expect(profile.costDx, template).toBeUndefined();

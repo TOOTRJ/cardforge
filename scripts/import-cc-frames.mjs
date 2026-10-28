@@ -307,6 +307,28 @@ async function toneLoaded(src, data, w, h) {
   // text box, its wings left out).
   for (const [name, c] of Object.entries(tone.chroma ?? {})) regions[name] = chromaRegionPlane(data, w, h, c);
   for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, b.file ? await rgba(await fetchCached(b.file), w, h) : null, w, h, b);
+  // A region CLIPPED (TODO 4.11 wave 2, the Mystical Archive): kept only
+  // inside a pack mask (`mask`), only outside one (`notMask`), and/or only
+  // where the file is the SAME as another pack file (`notDiff`, the
+  // complement of diffRegionPlane) — each read at the file's size.
+  for (const [name, c] of Object.entries(tone.clip ?? {})) {
+    const plane = regions[name];
+    if (!plane) throw new Error(`${src}: clip names region ${name}, which the tone has not got`);
+    const keep = new Float64Array(w * h).fill(1);
+    if (c.mask) {
+      const m = await rgba(await fetchCached(c.mask), w, h);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= m[p * 4 + 3] / 255;
+    }
+    if (c.notMask) {
+      const m = await rgba(await fetchCached(c.notMask), w, h);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - m[p * 4 + 3] / 255;
+    }
+    if (c.notDiff) {
+      const d = diffRegionPlane(data, await rgba(await fetchCached(c.notDiff.file), w, h), w, h, c.notDiff);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - d[p] / 255;
+    }
+    for (let p = 0; p < w * h; p += 1) plane[p] = Math.round(plane[p] * keep[p]);
+  }
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 

@@ -117,6 +117,11 @@ export const COLLECTOR_TEMPLATES = [
   // black bottom border is the M15 pack's, and LTR / LTC set both lines
   // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).
   "lotrscroll",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2, Card Conjurer's
+  // 'Mystical Archive (STA)'): its black footer sets both lines on M15's
+  // rows (line 1 at 1993, line 2 at 2032 px, from x 98 — the 63 prints'
+  // medians), so M15's slot.
+  "mysticalarchive",
   // The Expeditions (TODO 4.11 wave 1): both looks print the line in the
   // black border under the stone — M15's slot on each look's printed rows
   // (EXPEDITION_ZNR_COLLECTOR, EXPEDITION_BFZ_COLLECTOR).

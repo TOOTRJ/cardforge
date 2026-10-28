@@ -343,6 +343,9 @@ const PICKS: readonly Pick[] = [
   // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
   { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
   { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
+  // The Strixhaven Mystical Archive from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "mysticalarchive/r/instant-long@stamp", why: "Mystical Archive: CC's 2010 px masters downscaled once and toned onto print, the art under the frame edge to edge, M15's slots on the run's own lines (the name 5 px up, the cost row 6 px up and 4 px right, the type line 1 px down, the rules block 3 px up), our own black arch with the oval in its cut" },
+  { from: "mysticalarchive/wu/instant-long@pair", why: "Mystical Archive: the pair master on an instant — the gold frame with the two colours' lines split right of centre — the type pen 5 px left, the set symbol on M15's box" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

@@ -65,6 +65,10 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   // the top corners (the importer keeps them square); the bottom is the
   // border black, cut at the one card corner.
   lotr: { kinds: { tl: "frame", tr: "frame" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2:
+  // the gold ornament runs into the top corners (the importer keeps them
+  // square); the bottom is the black footer, cut at the one card corner.
+  mysticalarchive: { kinds: { tl: "frame", tr: "frame" } },
   // The Tarkir draconic since TODO 4.11 (layout v68): the dragons' heads
   // run into the top corners (design); the bottom is the border black
   // painted under the MSE masters, cut at the one card corner.

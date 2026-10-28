@@ -1946,6 +1946,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.36",
     },
   },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2; Card Conjurer's
+  // 'Mystical Archive (STA)' pack): STA #1–63, the English run — 58
+  // mono-colour and 5 two-colour instants and sorceries, every one
+  // borderless, single-faced, on the 2015 frame, none legendary (Scryfall
+  // 2026-10-27). Exact once verified (withVerification). No gap: the five
+  // two-colour printings split their colour lines (the template's pair
+  // masters, the import's two-colour switch), no crown prints, the oval
+  // stamp and the collector line are the template's own. NOT STA #64–126
+  // (the Japanese alternate art: a vertical name panel, no title bar —
+  // another frame) nor SOA (the 2026 archive inverts the boxes: navy, white
+  // text); both stay on the rule below.
+  {
+    key: "borderless/mystical-archive/sta",
+    exactLabel: "Strixhaven Mystical Archive frame",
+    match: { borders: ["borderless"], collectors: { sta: [[1, 63]] } },
+    outcome: { status: "exact", template: "mysticalarchive" },
+  },
   {
     key: "borderless/mystical-archive",
     exactLabel: "Mystical Archive frame",

@@ -169,8 +169,10 @@ describe("borderless families (TODO 1.17)", () => {
     // Scryfall doesn't flag `poster` (pinned; a land, so the land frame).
     ["hob-284", "unsupported", "m15borderlessland", "m15land"],
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
-    // Invocations unsupported.
-    ["sta-1", "nearest", "m15borderless", "m15"],
+    // Invocations unsupported. STA #1–63 are the Strixhaven Mystical
+    // Archive frame since 4.11 wave 2 (exact once verified; the Japanese
+    // run and SOA stay nearest: tests/unit/scryfall/mystical-archive-imports.test.ts).
+    ["sta-1", "exact", "mysticalarchive", undefined],
     ["eos-1", "nearest", "m15borderlessland", "m15land"],
     ["mp2-1", "unsupported", "m15borderless", "m15"],
     // Tokens (4.37).

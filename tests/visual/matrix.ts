@@ -1671,6 +1671,10 @@ export function visualCases(): VisualCase[] {
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pair on an instant,
+  // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
+  // and flavour).
+  add("mysticalarchive", "instant", "wu", "long", { suffix: "@pair", row: pairStyle("mysticalarchive") });
   // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
   // per card — no stored card has the switch, so these are NEW cases, no
   // bump): the second part's colour on back_face.color_identity, its cost
@@ -2027,6 +2031,12 @@ export function visualCases(): VisualCase[] {
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tarkirdragon", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's OVAL notch (our own
+  // black arch) — none on an uncommon (STA prints it on a rare or mythic
+  // only), on an instant and a sorcery as the run prints them, the HD bake.
+  add("mysticalarchive", "instant", "u", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("mysticalarchive", "auto", { rarity: "uncommon" }) });
+  add("mysticalarchive", "instant", "r", "long", { suffix: "@stamp", row: stampRow("mysticalarchive", "auto", { rarity: "rare" }) });
+  add("mysticalarchive", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("mysticalarchive", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2468,6 +2478,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the Strixhaven Mystical Archive's oval (TODO 4.11 wave 2: our own
+  // black arch, one piece under every key).
+  "mysticalarchive",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2478,6 +2491,8 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
   "m15borderless", "m15borderlessartifact", "m15borderlessland",
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pairs (its one arch).
+  "mysticalarchive",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -2928,6 +2943,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
   "prepare",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the gold frame with
+  // the two colours' lines.
+  "mysticalarchive",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
