@@ -98,12 +98,13 @@ Where every frame came from, and the rules that follow from it:
   4.10b — the showcase families, the variation treatments and the
   planeswalker loyalty badges; adventure, flip and aftermath left for Card
   Conjurer's masters with TODO 4.21a, split and battle with 4.21b, saga
-  with 4.21c, the textless pair with 4.35 and the Expeditions with 4.11
-  wave 1) are converted from
+  with 4.21c, the textless pair with 4.35, the Expeditions with 4.11
+  wave 1 and the Theros constellation with 4.17f) are converted from
   Magic Set
   Editor's Full-Magic-Pack styles by the builders under `scripts/`
   (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
-  `build-showcase-frames.mjs`, `build-variation-frames.mjs`, …). The pack
+  `build-showcase-frames.mjs`; the variation-frames builder until its last
+  family left with 4.17f, …). The pack
   lives outside the repo on the owner's machine; the builders name its
   path. `scripts/audit-frame-sources.mjs` answers "which pack file was this
   frame built from?", and `docs/mse-profile-report.md` keeps the MSE
@@ -189,8 +190,14 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 71 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the Theros constellation showcase (4.17f, a correction, layout v73): nyx —
+  the 'Nyx Showcase' pack's seven frames (`c` its artifact frame), v37's bar /
+  box darkness and v55's rim tones as the recipe's master pass; the crown
+  band stays `nyxcrown` ([The constellation frame's lower half on
+  print](#the-constellation-frames-lower-half-on-print-417f-layout-v73));
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
   the 'D&D Sourcebook' pack's one parchment frame under every key, its one
@@ -647,8 +654,8 @@ bake's transparent corner mask and the frame masters all read it.
     confined to ceil(r) + 3 = 68 px would leave a grey run on the straight
     edge. A bake-level scope proof compares against 96 px boxes for these
     templates.
-  - The MSE builders (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
-    `build-variation-frames.mjs`) run the same pass AND gate before they
+  - The MSE builders (`convert-mse-frame.mjs`, `build-era-frames.mjs`;
+    the variation-frames builder until 4.17f retired it) run the same pass AND gate before they
     write (`normaliseMasterCorners` throws and restores the master on any
     failure), so a rebuild can't bring the white back. Then `npm run
     assets:frame-webp`. (The adventure, flip and aftermath builders were
@@ -1418,8 +1425,9 @@ strip) the box lets 0.28–0.39 of the art through (mean 0.33) and the bar
 0.36–0.46; ours let 0.50 through both. The seven masters are rebuilt from
 MSE's sources with the box's black at α 171 (0.33 through) and the bar's at
 α 150 (0.41, the range's middle; the prints' bar reads 1.19–1.35 × their box,
-and 150 over 171 gives 1.25): `node scripts/build-variation-frames.mjs --only
-nyx`, which runs `scripts/lib/nyx-tone.mjs` before the corner normalisation
+and 150 over 171 gives 1.25): the variation-frames builder (`--only
+nyx`; retired with 4.17f, which runs the same tone as the importer's master
+pass), which runs `scripts/lib/nyx-tone.mjs` before the corner normalisation
 and refuses a master already toned; then the WebP siblings. Only MSE's black
 changes (122,130 px on the bar, 766,082 in the box) and the frame's
 anti-aliased edge within 3 px of it, which keeps its colour and coverage over
@@ -3452,7 +3460,7 @@ regular M15 pack's geometry) sit on print at the type bar and box bottom
 the owner deferred it (Round 61; TODO.md), as the title bar's and box's
 redraw (print's title bar is the card's colour with sparkles).
 
-**The tone** (`toneNyxRim`, run by `scripts/build-variation-frames.mjs`
+**The tone** (`toneNyxRim`, run by the variation-frames builder — since 4.17f by the importer's master pass,
 after the type bar / box tone): the rim is ONE flat colour in each master,
 drawn over black outlines. Its region is that flat colour in pieces of ≥
 2000 px (a white star in the field is white's rim colour and is left alone)
@@ -3534,6 +3542,77 @@ unless the owner's count says otherwise (`select count(*) from
 public.cards where frame_style->>'template' = 'nyx'`); the cron re-bakes
 whatever it finds and stamps every other card. The visual matrix: the `nyx`
 cases change, nothing else.
+
+### The constellation frame's lower half on print (4.17f, layout v73)
+
+Owner-approved 2026-10-28, with the adventure's paper ([above](#each-part-in-its-own-colour-426))
+in one bump. Round 59 registered the MSE `nyx` masters' type bar 5.2 px
+(top) / 3.7 px (bottom) and the text box's bottom 6.0 px LOW against THB
+#258–268 ([the constellation frame on its prints](#the-constellation-frame-on-its-prints-round-59));
+Card Conjurer's 'Nyx Showcase' (the fork's `js/frames/packM15NyxShowcase.js`,
+`img/frames/m15/nyxShowcase/<k>.png`, 1500 × 2100) is the same drawing on
+the regular M15 pack's geometry and sits on print there (−0.2 / +1.8 /
++2.1).
+
+**The masters** leave git (public/frames, the `nyx` folder) for the frames bucket:
+`CC_TEMPLATES.nyx` in `scripts/lib/cc-frames.mjs` (`NYX_SHOWCASE`), each
+colour the pack's file whole, colourless the pack's 'Artifact Frame'
+(`a.png` — the pack draws no colourless frame). Registered against the MSE
+masters (row and column profiles, median over the text-free columns, every
+key):
+
+| Edge | CC − MSE |
+|---|---|
+| Title bar | −1.2 px |
+| Side rims (left / right) | −0.7 / −0.2 px |
+| Type bar top / bottom | −5.0 / −5.4 px |
+| Text box bottom | −8.1 px |
+
+So the lower half lands on print and the title bar, rims and art window stay
+within the scans' 1.3 px registration of where they were. **No re-cut**:
+nothing is left to move onto print, so no seam exists (the 2× zooms on the
+sheet show the lower half whole). The pack's flat rim colours, title bar
+and side field are MSE's own (the side field within 2 levels on every key,
+x 64–87 / 1412–1435 — print's lighter field is 4.17g's).
+
+**Kept as recipe steps** (`nyxShowcasePass`, the importer's `masterPass`,
+on the native master before the corner cut):
+
+- v37's darkness (`toneNyxMaster`, `scripts/lib/nyx-tone.mjs`) on the
+  pack's rows (`NYX_CC_TYPE_BAR_ROWS` 1175–1304, `NYX_CC_TEXT_BOX_ROWS`
+  1305–2099): the bar's 50 % black → α 150 (~122,100 px), the box's → α 171
+  (~769,100 px);
+- v55's rim (`toneNyxRim`, `scripts/lib/nyx-frame.mjs`): the same `from`s
+  (the pack's rims are MSE's colours) onto the M15 family's tones, blue as
+  drawn — and colourless, now the pack's SILVER artifact rim (246,247,245),
+  onto MSE's bronze 172,148,132 (`NYX_RIM_TONES.c`), the tone the `a` crown
+  band was tinted to in Round 59, so crown and rim stay one metal. The
+  colourless frame's starfield is the pack's blue-grey one where MSE's was
+  brown (no print is colourless; on the sheet for the owner).
+
+**The crown bands** (`nyxcrown/*`) are untouched and still meet the rim:
+the arms fade over rows 372–408 into a rim 11 px wide (x 100–110, MSE's 10)
+in the same tone on every key; the band's corner alpha over the master's
+corner arc now adds the same 78 HD px of black on black as m15 + m15crown.
+
+**Slots** (`lib/cards/template-layout.ts` NYX): the type band follows its
+bar 4 px up (`NYX_TYPE_DOWN_PX` 10 → 6, even: whole px at the 750 bake) —
+its baseline 31.0 px above the bar's bottom outline (print 31.7, v66's
+32.4). The rules box and the P/T plate were already M15's (`M15.rules`,
+`M15.pt`) and the new box IS the M15 pack's box (its bottom 1.5 px above
+m15's): they sat 6–8 px high in MSE's box and sit in this one as on every
+M15 card, unmoved. The art slot still runs under the whole box (1953 px,
+past the box's new bottom at 1937); the title band and the cost row stay.
+
+**Rollout**: layout v73 (`ADVENTURE_NYX_LAYOUT_VERSION`; v72 is
+#626's),
+"sweep", template-scoped to `adventure` and `nyx`. Not
+verification-neutral for `nyx` (its type slot moves): a tick would be
+re-judged — none exists. The variation-frames builder, whose last
+family this was, is retired; the MSE blue-black master the Nyx token dress
+reads its starfield from stays in git as
+`scripts/frame-inputs/nyx-constellation-mse-b.png` (the same bytes,
+`scripts/lib/token-nyx.mjs`).
 
 ### The Station frame (4.27a)
 
@@ -4294,7 +4373,8 @@ page.
   #221 / #223 / #233 / #239) — the Card Conjurer masters' own paper, the
   same on a one-colour adventure (ELD #115 Δ 72–76 for red on red): a tone
   of the masters, not of the page, and out of this change (a correction:
-  TODO 4.26a). Where the creature's own paper sat closer to print's than the
+  TODO 4.26a, since toned — [the left page's paper on print](#each-part-in-its-own-colour-426)
+  below). Where the creature's own paper sat closer to print's than the
   spell colour's does, the look ON reads further from print there (WOE #233:
   a white creature, a green spell — the green master's darker paper). The edges are the
   masters': the page's left edge at x 60 (print 61), its bottom at 1937
@@ -4311,6 +4391,63 @@ mirrors production) — so the look lands on in every colour once the pieces
 are promoted. A tick
 was given against the creature's master; the owner signs the pages off on
 the review sheet (or re-ticks against WOE #221–241).
+
+**The left page's paper on print (TODO 4.26a, layout v73).** Card
+Conjurer's adventure masters painted the storybook's LEFT page — the spell's
+page — far darker than print, on every colour (a one-colour adventure too).
+A correction, in one bump with the Nyx Constellation's lower half
+([below](#the-constellation-frames-lower-half-on-print-417f-layout-v73)).
+Measured 2026-10-28 by the house tone rule — the raw median of the Scryfall
+PNGs (read at 1500 × 2100) against the master's over the same clean
+interior, the paper x 120–699 × y 1540–1899 with its ink (luma 30 under the
+region's median, grown 3 px) left out of both, a region ≥ 9 levels off on a
+channel toned — on the plain 2015-frame printings whose spell is the
+creature's colour (ELD, WOE, HOB; gold: MH3 #196, MKM #212, WOE #220):
+
+| Key | Prints | Print median [min – max] | Master | Off |
+|---|---|---|---|---|
+| w | 12 | 221,214,216 [213,209,202 – 224,218,219] | 179,176,170 | 42 / 38 / 46 |
+| u | 16 | 176,194,207 [166,193,207 – 191,203,224] | 129,160,179 | 47 / 34 / 28 |
+| b | 10 | 175,173,169 [168,168,166 – 194,190,194] | 143,140,139 | 32 / 33 / 30 |
+| r | 11 | 203,179,164 [203,177,154 – 210,191,187] | 172,140,126 | 31 / 39 / 38 |
+| g | 14 | 192,198,201 [178,184,175 – 198,202,206] | 146,153,148 | 46 / 45 / 53 |
+| m | 3 | 196,192,186 [178,190,164 – 204,194,195] | 164,157,135 | 32 / 35 / 51 |
+
+(the paper's lowest rows, y 1800–1904, read the same within 3 levels).
+Every coloured key is toned; `adventure/c` — CC's artifact frame, for the
+colourless creatures — has no print of its own left page (no adventure
+spell is colourless) and stays byte for byte.
+
+- **The tone** (`ADVENTURE_PAPER_TONES` through `ADVENTURE_SOURCE_TONES`,
+  `scripts/lib/cc-frames.mjs`; the `CC_SOURCE_TONES` pattern): applied to
+  the pack FILE as the importer loads it — a per-channel gain at the
+  paper's tone fading to the neutral gain toward white
+  (`toneSourceRegions`), so the paper's mottling keeps its shading — and so
+  to the masters AND the page pieces cut from them
+  (`adventure/page/<key>`, re-cut by the same run). Measured on the
+  published masters afterwards: each key's paper median IS print's.
+- **The region**: the pack's `bookLeft` mask MINUS the bars — only columns
+  97–748 (the paper between the curled page edge's outline and the
+  spine's; the curled edge and the spine are another drawing, which print
+  colours otherwise: tinted on print, one peach on every master) and, per
+  column, only the rows below the type bar's bottom outline (the clip
+  `belowOutline`, `belowOutlinePlane`: the last pixel of luma < 90 in rows
+  1470–1539, read off the file — row 1505–1506 across the page, curving
+  down to 1528 at the bars' rounded end). Its edges therefore run on the
+  page's own outlines; no seam is drawn. 279,571–280,668 px change per
+  master, rows 1506–1937, alpha never.
+- **Prepare does not follow.** Its page box's paper is M15's own paper
+  under its own gain (measured on the Prepare prints), and its bars are read
+  from these masters' BARS (`scripts/lib/prepare-2026.mjs` `barSources`,
+  rows 1323–1493 × columns 100–729), which do not change: re-run against the
+  new adventure masters, `build-prepare-frames.mjs` writes all 108 Prepare
+  objects byte for byte (only its provenance's `adventure/<k>.png` shas
+  move). Not in the bump.
+- **Rollout**: layout v73 (`ADVENTURE_NYX_LAYOUT_VERSION`), "sweep",
+  template-scoped to `adventure` and `nyx`. Verification: no slot, bar,
+  plate or box moves on the adventure, so its seven ticks stay fresh
+  (`VERIFICATION_TEMPLATE_SCOPES[73]` names `nyx` alone) — the owner signs
+  the before / after sheet.
 
 **Not built: flip** (no flip printing on the 2015 frame is two-coloured:
 the 8 print both halves in the card's colour).
@@ -6796,7 +6933,7 @@ stored cards on it before the sweep (production can't be read from here).
   its landing on the modal front body (the showcase frame dresses no modal
   kind).
 - **Gone from the repo:** the git masters under public/frames and their recipe in
-  `scripts/build-variation-frames.mjs`, and its row on Phase B's
+  the variation-frames builder (itself retired with 4.17f), and its row on Phase B's
   allow-list (`CORNER_NORMALISE_TEMPLATES`).
 - **Not built:** the pair masters (a two-colour card draws the gold master,
   as before; #313 Phylath's corner pieces print its two colours), the
@@ -12062,7 +12199,7 @@ artifact slate 74/80/96 — but the white pill prints a mid SILVER
 (166/161/154 and 175/173/164; the plain white pill is near-white,
 236/237/238 on our master), dark ink on it. The stars sit where the
 starfield inside the title bar of Magic Set Editor's constellation master
-(`public/frames/nyx/b.png`) has them (the bright star at x ≈ 205 on every
+(`scripts/frame-inputs/nyx-constellation-mse-b.png`, in the nyx masters' git folder until 4.17f) has them (the bright star at x ≈ 205 on every
 print).
 
 **Masters** (`scripts/build-token-nyx.mjs`, recipe in

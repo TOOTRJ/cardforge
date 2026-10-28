@@ -5907,6 +5907,21 @@ const EXPEDITIONLANDBFZ: FrameProfile = {
 //     on print against its own bar, and 4.17f's re-source moves it again
 //     with the bar. The plate's printed colour (white digits on the card's
 //     colour) is 4.17g's look, not geometry.
+//
+// THE LOWER FRAME ON PRINT (TODO 4.17f, layout v73 — ADVENTURE_NYX_
+// LAYOUT_VERSION). The masters are Card Conjurer's 'Nyx Showcase' (frames
+// bucket; scripts/lib/cc-frames.mjs NYX_SHOWCASE), the same drawing on the
+// regular M15 pack's geometry: the type bar 5.0 / 5.4 px higher than MSE's
+// (top / bottom outline), the box's bottom 8.1 px higher — on print to
+// within 2.1 px — and the title bar, rims and art window within 1.2 px of
+// where they were. So the type band follows its bar 4 px up
+// (NYX_TYPE_DOWN_PX 10 → 6). The rules box and the P/T plate are M15's own
+// (M15.rules, M15.pt — the CC-framed M15 family's) and the new box IS the
+// M15 pack's box (its bottom 1.5 px above m15's): they sat 6–8 px high in
+// MSE's box and sit in this one as on every M15 card, without moving. The
+// art slot keeps running under the whole box (93 % = 1953 px, past the
+// box's new bottom at 1937). The title band and the cost row stay (the
+// title bar moved 1.2 px, under the scans' registration).
 /** The cost row on the constellation prints (see above): the CC-framed M15
  *  family's disc and pitch, lifted 12 px and moved 6 px right on M15's
  *  title band — both WHOLE px at 750 and at HD (6 / 3 at 750), so neither
@@ -5920,9 +5935,13 @@ const NYX_COST = {
 } as const satisfies Pick<FrameProfile, "costSizePct" | "costDy" | "costDx">;
 /** The name 2 px up onto the prints' baseline (see above). */
 const NYX_TITLE_DY = M15_TITLE_DY - 2 / 1500;
-/** The type band 10 px down — its text and the inline set symbol with it —
- *  and 6 px shorter on the right, where the prints end the symbol. */
-const NYX_TYPE_DOWN_PX = 10;
+/** The type band 6 px down — its text and the inline set symbol with it —
+ *  and 6 px shorter on the right, where the prints end the symbol. v66 set
+ *  it 10 px down against the MSE masters' bar; TODO 4.17f's Card Conjurer
+ *  masters draw the bar 5.0 / 5.4 px higher (top / bottom outline), so the
+ *  band follows it 4 px up (even: whole px at the 750 bake) — the baseline
+ *  31.0 px above the bar's bottom outline (print 31.7, v66's 32.4). */
+const NYX_TYPE_DOWN_PX = 6;
 const NYX_TYPE_SHORTER_PX = 6;
 const NYX: FrameProfile = {
   ...M15,

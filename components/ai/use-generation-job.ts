@@ -29,6 +29,11 @@ export type GenerationJobStep = {
    *  double-faced printing paints both faces at two (TODO 5.4, owner Q4).
    *  Absent = one. */
   credits?: number;
+  /** A failed attempt's kind and what its credit did (lib/ai/failure.ts):
+   *  the retry confirm words the credit from these, never by assumption. */
+  failure?: string | null;
+  refunded?: number | null;
+  refund_pending?: boolean | null;
 };
 
 export type GenerationJobPhase = "idle" | "planning" | "stepping" | "done";

@@ -2,9 +2,11 @@
 // The Nyx Constellation frame (template `nyx`) on its prints — the RIM's
 // tone (owner Round 59, decision 1; Round 61: the FAMILY's tones). A
 // correction of a look against its own print: layout bump scoped to `nyx`,
-// "sweep" (lib/cards/layout-version.ts). scripts/build-variation-frames.mjs
-// applies it to the MSE masters after the type bar / text box tone
-// (scripts/lib/nyx-tone.mjs).
+// "sweep" (lib/cards/layout-version.ts). The importer applies it — the
+// `masterPass` of CC_TEMPLATES.nyx (scripts/lib/cc-frames.mjs
+// nyxShowcasePass, TODO 4.17f) — to Card Conjurer's 'Nyx Showcase' masters
+// after the type bar / text box tone (scripts/lib/nyx-tone.mjs); the MSE
+// masters it was first read off took the same pass.
 //
 // WHAT PRINT DOES — the eleven printings, THB #258–268, against the same
 // cards' REGULAR printings (THB #9, #18, #45, #71, #93, #119, #125, #150,
@@ -62,6 +64,12 @@ export const NYX_RIM_TONES = Object.freeze({
   r: Object.freeze({ from: Object.freeze([239, 56, 39]), to: Object.freeze([209, 77, 53]) }),
   g: Object.freeze({ from: Object.freeze([0, 123, 67]), to: Object.freeze([42, 108, 69]) }),
   m: Object.freeze({ from: Object.freeze([246, 210, 98]), to: Object.freeze([233, 212, 125]) }),
+  // Colourless (TODO 4.17f): the masters are Card Conjurer's 'Nyx Showcase'
+  // now, whose colourless frame is its 'Artifact Frame' — a SILVER rim
+  // (246,247,245) where MSE's `c` was bronze. No print is colourless; the
+  // rim takes MSE's bronze, the tone the constellation crown's `a` band was
+  // tinted to (Round 59), so crown and rim stay one metal.
+  c: Object.freeze({ from: Object.freeze([246, 247, 245]), to: Object.freeze([172, 148, 132]) }),
 });
 
 /** How the rim region is found: `flat` = the most a channel may differ from

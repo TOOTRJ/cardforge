@@ -3,16 +3,16 @@
   "bucket": "frames",
   "files": {
     "adventure/b.png": {
-      "hash": "316327a82421",
-      "sha256": "316327a8242125f2ba672f48f5c4269f52659ff752634e6f020f2d752c1c7f2c",
-      "bytes": 2106353,
+      "hash": "50f16eb4bd69",
+      "sha256": "50f16eb4bd6943fa0ee187d5fa0b5dc8c416bbe7c27fcfd7872bb0dbf3b266dc",
+      "bytes": 2106478,
       "width": 1500,
       "height": 2100
     },
     "adventure/b.webp": {
-      "hash": "8aa122c4981b",
-      "sha256": "8aa122c4981bd38f6c7f9366ec8e2a56ab15bf4133d81b879a9645854c2f743a",
-      "bytes": 75282,
+      "hash": "2c70c172030a",
+      "sha256": "2c70c172030adda93d1f115d3f35b1b77e6eb7ea6b1d7e571922e1fdff226527",
+      "bytes": 75854,
       "width": 1500,
       "height": 2100
     },
@@ -31,156 +31,156 @@
       "height": 2100
     },
     "adventure/g.png": {
-      "hash": "57ddcb2bf82f",
-      "sha256": "57ddcb2bf82f14070b3370bbfc65a3fa742f8c82b2bb10b6de775b2b1cf66398",
-      "bytes": 2247008,
+      "hash": "68c72fe0d81a",
+      "sha256": "68c72fe0d81adde3875bbaf7a556ab19e35b9e65fdfb306def5460dc51d68cf8",
+      "bytes": 2250691,
       "width": 1500,
       "height": 2100
     },
     "adventure/g.webp": {
-      "hash": "aceb1efa6ee5",
-      "sha256": "aceb1efa6ee59584fc25e13a1e15e9be16a85c3bd1fda9f49242232c83aaf223",
-      "bytes": 88166,
+      "hash": "fb9ccbf057c1",
+      "sha256": "fb9ccbf057c17a39609d6f856065d85535feeb1b57121a031445de1adc718b4c",
+      "bytes": 89088,
       "width": 1500,
       "height": 2100
     },
     "adventure/m.png": {
-      "hash": "fca06e0cbbfb",
-      "sha256": "fca06e0cbbfb214a9a3fcca193dfce6bcda1216275e1092ff446dd8ab963f75a",
-      "bytes": 2245525,
+      "hash": "288035de28fc",
+      "sha256": "288035de28fce6d43a706d53a3a59a53e8a13ae6bf18c90984c9dd8488bb5cbd",
+      "bytes": 2244443,
       "width": 1500,
       "height": 2100
     },
     "adventure/m.webp": {
-      "hash": "da26643c32b2",
-      "sha256": "da26643c32b2d0094055fe0f9fd798d698bc22ede5efe3d512134764065c51b5",
-      "bytes": 89008,
+      "hash": "23da77fbb508",
+      "sha256": "23da77fbb508bcc276eb5fdd2c332c2f34f1a3b768d7a67fbb0679238add63fb",
+      "bytes": 89514,
       "width": 1500,
       "height": 2100
     },
     "adventure/page/b.png": {
-      "hash": "e6b798744f8c",
-      "sha256": "e6b798744f8c96f2ff51973603086f4791a246114b1dc3df5b985c85a8e4edcd",
-      "bytes": 325309,
+      "hash": "fea36bb90734",
+      "sha256": "fea36bb90734fa1422de409d84eb02ddab9e15ccb4b5e7faaebac311af0213d2",
+      "bytes": 326883,
       "width": 682,
       "height": 626
     },
     "adventure/page/b.webp": {
-      "hash": "ec3b4a33212c",
-      "sha256": "ec3b4a33212cb872b03241245a196f1d5a46b0d319158d951f25960e63d20b16",
-      "bytes": 9954,
+      "hash": "136e7a8f6b30",
+      "sha256": "136e7a8f6b304f165aa9ea8a97364cd99e79f7483351e38953878bedc48e5e3d",
+      "bytes": 10772,
       "width": 682,
       "height": 626
     },
     "adventure/page/g.png": {
-      "hash": "bccca06de4d0",
-      "sha256": "bccca06de4d0b904a3a298e3ca7b2c725a8a5aee246fa2c3eb51fb9531eb27dd",
-      "bytes": 351238,
+      "hash": "8d8bd2c93d5a",
+      "sha256": "8d8bd2c93d5a2ae6ad5518aca451ea4a9a567e5cab4f4d4bff0474b6f3c9955a",
+      "bytes": 354097,
       "width": 682,
       "height": 626
     },
     "adventure/page/g.webp": {
-      "hash": "b23ba21ecfc5",
-      "sha256": "b23ba21ecfc5835db63eab53ef4c098d90f66d36d7a5024989819495824cdc21",
-      "bytes": 10074,
+      "hash": "af61fd8d0ec0",
+      "sha256": "af61fd8d0ec0d756deea9ec8c9194527bc26571d35485d0e3ef724fd64eaad33",
+      "bytes": 11726,
       "width": 682,
       "height": 626
     },
     "adventure/page/m.png": {
-      "hash": "3db9dce38a9e",
-      "sha256": "3db9dce38a9edb5c1d530251e6fc91f3b0d1930544f958cd4864ef233e8a84cc",
-      "bytes": 349257,
+      "hash": "53890fcde28a",
+      "sha256": "53890fcde28ad1df54f7f1099d629f839ed481a39b56931e32e9217fe8e9a87f",
+      "bytes": 351279,
       "width": 682,
       "height": 626
     },
     "adventure/page/m.webp": {
-      "hash": "105ef5e58049",
-      "sha256": "105ef5e58049d8070ae4bad0502b722f46cdea2ad7197352cc3a17220caa281a",
-      "bytes": 10836,
+      "hash": "f9697cc2ef47",
+      "sha256": "f9697cc2ef4782e6dd7cb42e436b97933196157cb6d2c2f0b01b52970b08c2a0",
+      "bytes": 11388,
       "width": 682,
       "height": 626
     },
     "adventure/page/r.png": {
-      "hash": "0aacc703497e",
-      "sha256": "0aacc703497e736bf728c984803d7961ccc02fc7961e5b66a880d5df3ff03b62",
-      "bytes": 332795,
+      "hash": "e08db079489a",
+      "sha256": "e08db079489acececac2f524e8c1436042181fc7dbe579e4f2397ecbbf60df25",
+      "bytes": 335011,
       "width": 682,
       "height": 626
     },
     "adventure/page/r.webp": {
-      "hash": "ebfde03f8823",
-      "sha256": "ebfde03f88230cd66bf074b65d5e4cd8a63ee370ff17fdbcc3a210a37b6f9773",
-      "bytes": 10676,
+      "hash": "6247863a83fb",
+      "sha256": "6247863a83fb71c53fe24efe34127ffd5b65012cab0314b42e3234f9ad9f05ba",
+      "bytes": 11236,
       "width": 682,
       "height": 626
     },
     "adventure/page/u.png": {
-      "hash": "b8af356461ff",
-      "sha256": "b8af356461fff96aff6f3704fbbeffeff59f7e538aeaa9824678a52303d8a62b",
-      "bytes": 408508,
+      "hash": "dc0cc76621e2",
+      "sha256": "dc0cc76621e2cb4b4e939bbb1ef371282bf647490e3aa3860d26e3fe58d7f160",
+      "bytes": 411093,
       "width": 682,
       "height": 626
     },
     "adventure/page/u.webp": {
-      "hash": "0161a003ea24",
-      "sha256": "0161a003ea247357a4c2b5e50a8ebca2c464b8c98aa58b5c7742bfc5ff0f8555",
-      "bytes": 11528,
+      "hash": "27e43208664e",
+      "sha256": "27e43208664ec49e4b5e07d575a7201ed9ec23975197c1a571a1e3412aa31fc0",
+      "bytes": 12534,
       "width": 682,
       "height": 626
     },
     "adventure/page/w.png": {
-      "hash": "043010b01d34",
-      "sha256": "043010b01d34a4212c2b1c74960173352e8a651c61e98ceaabd52b683add0772",
-      "bytes": 381153,
+      "hash": "88eab2abd551",
+      "sha256": "88eab2abd55113358c9d4cb37a7489adac56e1b4778a411644fd898de2c8ae77",
+      "bytes": 379382,
       "width": 682,
       "height": 626
     },
     "adventure/page/w.webp": {
-      "hash": "e9c7b363ab89",
-      "sha256": "e9c7b363ab89cc3aa83921bbfc98e021fbe68fcab40842bfe885b55ebb89a584",
-      "bytes": 10138,
+      "hash": "e29e62da5ac7",
+      "sha256": "e29e62da5ac74313a9f2387efd05f5887b0fdd1e074c63d7571da44872924872",
+      "bytes": 10814,
       "width": 682,
       "height": 626
     },
     "adventure/r.png": {
-      "hash": "928b2581eb2e",
-      "sha256": "928b2581eb2e3a82788c83aa665a69aa4a0c722d21c895ac62272452e6a3bdea",
-      "bytes": 2231107,
+      "hash": "45279e66b275",
+      "sha256": "45279e66b27518a2a6ac765f76f7b1ff6e9a8a5bd5bf2b37d041a124f6d7d221",
+      "bytes": 2229542,
       "width": 1500,
       "height": 2100
     },
     "adventure/r.webp": {
-      "hash": "1bdeb7d7325c",
-      "sha256": "1bdeb7d7325cf21af2afda19fd6c69e3a625a9d0c21b5dd8524574468075918b",
-      "bytes": 109996,
+      "hash": "e48d0fd49485",
+      "sha256": "e48d0fd4948538dabe4b115186add68b3ded0cd99acbbe0aac7153426b9cb1e2",
+      "bytes": 110600,
       "width": 1500,
       "height": 2100
     },
     "adventure/u.png": {
-      "hash": "be5edb0537d4",
-      "sha256": "be5edb0537d4b3fc5a10d3533dca2e61f8279071826c5b60e0cd2e58cba0d8c4",
-      "bytes": 1727937,
+      "hash": "8647abf6e034",
+      "sha256": "8647abf6e03401c90cb8db8b6fa5cacaaa79356413c717b1d0507d8d8e11be5f",
+      "bytes": 1728090,
       "width": 1500,
       "height": 2100
     },
     "adventure/u.webp": {
-      "hash": "c107bed9be13",
-      "sha256": "c107bed9be1301af0d029c24286328d78423d7999495912a00c75e3925dc3b11",
-      "bytes": 50708,
+      "hash": "018cf886f51f",
+      "sha256": "018cf886f51f5d2f537d60ea1ccb4538fbb3d3f356f2620ce688166dcbe83ab5",
+      "bytes": 51484,
       "width": 1500,
       "height": 2100
     },
     "adventure/w.png": {
-      "hash": "ac04d30174d9",
-      "sha256": "ac04d30174d97126e1d3c99d51b081eb6c1762393271711dd6f69c4a71f243da",
-      "bytes": 1889484,
+      "hash": "24bd22134d04",
+      "sha256": "24bd22134d0444349c759c438465c9c8fc5f96a52cfc700358809ec0c300a240",
+      "bytes": 1886250,
       "width": 1500,
       "height": 2100
     },
     "adventure/w.webp": {
-      "hash": "2db9cd81c5ce",
-      "sha256": "2db9cd81c5ce456b07be9cc0b49c2e8d0c48f0a95696c4f1cce78b931a75a4ef",
-      "bytes": 51880,
+      "hash": "e17f8d1d09e4",
+      "sha256": "e17f8d1d09e40fe19da2277020796cc7cafb151267667bf184a94068c1759e97",
+      "bytes": 52664,
       "width": 1500,
       "height": 2100
     },
@@ -25061,6 +25061,104 @@
       "bytes": 770,
       "width": 204,
       "height": 94
+    },
+    "nyx/b.png": {
+      "hash": "5e5c0337e2a1",
+      "sha256": "5e5c0337e2a1193e2c65dfe44d3dccb6b628146e6b9ebdadc6b88cccaeac3f12",
+      "bytes": 782750,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/b.webp": {
+      "hash": "8f3201391293",
+      "sha256": "8f320139129355870193b316039f8ca02f3655c92f5a9a9b7a4435c6d9147682",
+      "bytes": 41662,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/c.png": {
+      "hash": "bee46b0c5815",
+      "sha256": "bee46b0c581553284784aa9505fb4f545d3000b3771bdd4d42ae9e6f74ded2fb",
+      "bytes": 792164,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/c.webp": {
+      "hash": "3734dd139c74",
+      "sha256": "3734dd139c74fd894d27e7caf98db6546045e641ba6aeb865d68cede8bead220",
+      "bytes": 45624,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/g.png": {
+      "hash": "13fdb0f2544d",
+      "sha256": "13fdb0f2544d50867bd0f6b33acfe3af53d8c2a927ccf28922a34fd4f46de347",
+      "bytes": 816914,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/g.webp": {
+      "hash": "638080419a47",
+      "sha256": "638080419a47d08b3f8df7b997889ea1eecc188b03e486e50394a32d8faf808f",
+      "bytes": 45704,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/m.png": {
+      "hash": "35d27a8fbfc2",
+      "sha256": "35d27a8fbfc29c0c8702a22c4975f82a619e81beddaad2a37b9ea4d7443a5432",
+      "bytes": 850490,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/m.webp": {
+      "hash": "80b68e425e7f",
+      "sha256": "80b68e425e7f55af049a79acb696fbed1e7321b7dc86a5d2df4a90e622ccb6ba",
+      "bytes": 52390,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/r.png": {
+      "hash": "2b9a75a4ec0e",
+      "sha256": "2b9a75a4ec0ecb038395fecee9b3c4e7468c332a052b0aacb8f5dbdb51efe87e",
+      "bytes": 827110,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/r.webp": {
+      "hash": "d5faad46daf7",
+      "sha256": "d5faad46daf71e7aa8b7bc58c528bf2757ec03e8478b841f141647bc205f1e40",
+      "bytes": 50374,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/u.png": {
+      "hash": "5ab94d579911",
+      "sha256": "5ab94d5799116d6badc03656b385de34b0358b77ae92712f85a14a05ba85b23a",
+      "bytes": 823063,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/u.webp": {
+      "hash": "d95ff4b2a036",
+      "sha256": "d95ff4b2a036b9acfe55410410c6e36c0c2e2ee00b297b06254d7fb9132ea5cf",
+      "bytes": 53846,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/w.png": {
+      "hash": "aeda137f773d",
+      "sha256": "aeda137f773d05c4de4e36f15497b3697aa1ce9ae997f5a51630cce5e744b34d",
+      "bytes": 748020,
+      "width": 1500,
+      "height": 2100
+    },
+    "nyx/w.webp": {
+      "hash": "b12a6f6001ef",
+      "sha256": "b12a6f6001efafa930a3bae72aa0a75cd1ea12df8498c98986b8b9a9403af036",
+      "bytes": 40688,
+      "width": 1500,
+      "height": 2100
     },
     "nyxcrown/a.png": {
       "hash": "bacdc57ffbcd",

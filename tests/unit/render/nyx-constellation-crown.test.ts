@@ -50,6 +50,11 @@ function published(rel: string): Buffer | null {
 const bands = Object.fromEntries(KEYS.map((k) => [k, published(`nyxcrown/${k}.png`)]));
 const parents = Object.fromEntries(KEYS.map((k) => [k, published(`m15nyxcrown/${k}.png`)]));
 const haveBands = KEYS.every((k) => bands[k] !== null);
+/** The frame's own masters — in the frames bucket since TODO 4.17f (Card
+ *  Conjurer's 'Nyx Showcase'), served beside the bands. */
+const MASTER_KEYS = ["w", "u", "b", "r", "g", "m", "c"];
+const masters = Object.fromEntries(MASTER_KEYS.map((k) => [k, published(`nyx/${k}.png`)]));
+const haveMasters = MASTER_KEYS.every((k) => masters[k] !== null);
 const haveParents = KEYS.every((k) => parents[k] !== null);
 /** The plain crown band each tinted key is told apart from its strip by. */
 const plains = Object.fromEntries(Object.entries(RECIPE.tint).map(([k, t]) => [k, published(`${t.plain}/${k}.png`)]));
@@ -317,11 +322,14 @@ let restore: () => void = () => {};
 const fetched: string[] = [];
 
 beforeAll(async () => {
-  if (!haveBands) return;
+  if (!haveBands || !haveMasters) return;
   const art = await sharp({ create: { width: 1500, height: 1100, channels: 4, background: { r: 40, g: 160, b: 200, alpha: 1 } } }).png().toBuffer();
   artUrl = `data:image/png;base64,${art.toString("base64")}`;
   const { frameObjectKey, setFrameStorageForTests } = await import("@/lib/frames/frame-url");
-  const files = Object.fromEntries(KEYS.map((k) => [`nyxcrown/${k}.png`, bands[k]!]));
+  const files = {
+    ...Object.fromEntries(KEYS.map((k) => [`nyxcrown/${k}.png`, bands[k]!])),
+    ...Object.fromEntries(MASTER_KEYS.map((k) => [`nyx/${k}.png`, masters[k]!])),
+  };
   const manifest = { version: 1 as const, bucket: "frames", files: Object.fromEntries(Object.keys(files).map((key) => [key, REAL[key]])) };
   const byUrl = new Map(Object.entries(files).map(([key, buf]) => [`${ORIGIN}/${frameObjectKey(key, REAL[key].hash)}`, [key, buf] as const]));
   vi.stubGlobal(
@@ -376,6 +384,12 @@ async function bake(data: CardPreviewData, preset: RenderPreset): Promise<Raw> {
   const { data: px, info } = await sharp(Buffer.from(await res.arrayBuffer())).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   return { data: px, width: info.width, height: info.height };
 }
+/** The columns of the pixels that differ in rows [0, toRow). */
+function differingColumnsAbove(a: Raw, b: Raw, toRow: number): number[] {
+  const cols = new Set<number>();
+  for (let i = 0; i < toRow * a.width * 4; i += 1) if (a.data[i] !== b.data[i]) cols.add(Math.floor(i / 4) % a.width);
+  return [...cols].sort((x, y) => x - y);
+}
 function differingRows(a: Raw, b: Raw): number[] {
   const rows = new Set<number>();
   for (let i = 0; i < a.data.length; i += 1) if (a.data[i] !== b.data[i]) rows.add(Math.floor(i / 4 / a.width));
@@ -383,7 +397,10 @@ function differingRows(a: Raw, b: Raw): number[] {
 }
 const plainStyle = { template: "nyx", finish: "regular" } as CardPreviewData["frameStyle"];
 
-describe.skipIf(!haveBands)("the constellation crown in the bake — the real bands (set FRAMES_BUILD_DIR if skipped)", () => {
+/** The bands a bake fetched (the masters it fetches too are not counted). */
+const bandsFetched = () => fetched.filter((key) => key.startsWith("nyxcrown/"));
+
+describe.skipIf(!haveBands || !haveMasters)("the constellation crown in the bake — the real bands and masters (set FRAMES_BUILD_DIR if skipped)", () => {
   const cases: Array<[string, Partial<CardPreviewData>, string]> = [
     ["legendary white", {}, "w"],
     ["legendary green", { colorIdentity: ["green"], cost: "{3}{G}" }, "g"],
@@ -397,14 +414,18 @@ describe.skipIf(!haveBands)("the constellation crown in the bake — the real ba
     resetFrameAssetCacheForTests();
     fetched.length = 0;
     const [a, b] = [await bake(crowned, "default"), await bake({ ...crowned, frameStyle: { ...crowned.frameStyle, crown: false } }, "default")];
-    expect(fetched).toEqual([`nyxcrown/${key}.png`]);
+    expect(bandsFetched()).toEqual([`nyxcrown/${key}.png`]);
     const rows = differingRows(a, b);
     expect(rows.length).toBeGreaterThan(100);
     // The band is rows 0–409 of 2100; its last painted row is 407 (the fade
     // ends on 408): 204 of the 1050-row bake.
     expect(rows.at(-1)!).toBeLessThanOrEqual(Math.ceil((RECIPE.fade.to / 2100) * a.height));
-    // The crown's top edge: the first rows of the card's black border stay.
-    expect(rows[0]).toBeGreaterThanOrEqual(10);
+    // The crown's top edge: the first rows of the card's black border stay —
+    // but for the card corner's anti-aliased arc, where the band's cut alpha
+    // lays over the master's (Card Conjurer's masters since 4.17f, as on
+    // m15 + m15crown: 78 px of the HD arc, black over black).
+    const corner = Math.ceil(a.width * 0.06);
+    for (const x of differingColumnsAbove(a, b, 10)) expect(x < corner || x >= a.width - corner, `column ${x}`).toBe(true);
   }, 120_000);
 
   it("at HD the arms end before row 408 and the name, type line, rules and art below move 0 px", async () => {
@@ -424,7 +445,7 @@ describe.skipIf(!haveBands)("the constellation crown in the bake — the real ba
     expect(differingRows(await bake(card(notLegendary), "default"), await bake(card({ ...notLegendary, frameStyle: plainStyle }), "default"))).toEqual([]);
     const walker = { cardType: "planeswalker" as const, loyalty: "4", power: null, toughness: null };
     expect(differingRows(await bake(card(walker), "default"), await bake(card({ ...walker, frameStyle: plainStyle }), "default"))).toEqual([]);
-    expect(fetched).toEqual([]);
+    expect(bandsFetched()).toEqual([]);
     for (const data of [card({ frameStyle: plainStyle }), card(notLegendary), card(walker)]) {
       expect(frameAssetPathsFor(data).some((p) => p.includes("nyxcrown/"))).toBe(false);
     }

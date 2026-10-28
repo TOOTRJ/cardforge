@@ -128,15 +128,24 @@ describe("refundCredits", () => {
   });
 
   it("does nothing for a non-positive amount or with billing off, and never throws on a failed grant", async () => {
-    await refundCredits(USER, 0, "generate_deck");
+    // true = nothing is owed (nothing to refund, or the refund landed): the
+    // failed step then says "returned" / "not used" (lib/ai/failure.ts).
+    await expect(refundCredits(USER, 0, "generate_deck")).resolves.toBe(true);
     s.billing = false;
-    await refundCredits(USER, 1, "generate_deck");
+    await expect(refundCredits(USER, 1, "generate_deck")).resolves.toBe(true);
     expect(s.adminRpc).toHaveLength(0);
     s.billing = true;
+    // false = the refund did NOT land: the reconcile sweep returns it, and
+    // the step says it comes back automatically instead of claiming it did.
     s.adminRpcError = { message: "grant exploded" };
-    await expect(refundCredits(USER, 1, "generate_deck")).resolves.toBeUndefined();
+    await expect(refundCredits(USER, 1, "generate_deck")).resolves.toBe(false);
     expect(console.error).toHaveBeenCalled();
     s.adminConfigured = false;
-    await expect(refundCredits(USER, 1, "generate_deck")).resolves.toBeUndefined();
+    await expect(refundCredits(USER, 1, "generate_deck")).resolves.toBe(false);
+  });
+
+  it("reports a refund that landed", async () => {
+    s.billing = true;
+    await expect(refundCredits(USER, 1, "generate_deck", "refund:spend:x")).resolves.toBe(true);
   });
 });

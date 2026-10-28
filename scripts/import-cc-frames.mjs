@@ -185,6 +185,7 @@ import {
   nearestRegionPlane,
   chromaRegionPlane,
   boxRegionPlane,
+  belowOutlinePlane,
   capturePlane,
   fillRowsOutsideCut,
   flattenNearToneRgba8,
@@ -363,6 +364,12 @@ async function toneLoaded(src, data, w, h) {
     if (c.nearestIs) {
       const n = nearestRegionPlane(data, w, h, c.nearestIs);
       for (let p = 0; p < w * h; p += 1) keep[p] *= n[p] / 255;
+    }
+    // …and/or only below an outline the file draws, column by column (TODO
+    // 4.26a: the adventure's left-page paper, under its type bar).
+    if (c.belowOutline) {
+      const b = belowOutlinePlane(data, w, h, c.belowOutline);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= b[p] / 255;
     }
     for (let p = 0; p < w * h; p += 1) plane[p] = Math.round(plane[p] * keep[p]);
   }
@@ -719,6 +726,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
         master = recutBattleOntoPrints(master, mask, outW, outH, { shift: def.shift, shield: def.paintedShield, ...def.printRecut });
       }
+      // A recipe's own pass over the native master, before the corner cut
+      // (TODO 4.17f: the Nyx Constellation's type bar / box darkness and its
+      // rim on the M15 family's tones — scripts/lib/nyx-tone.mjs,
+      // scripts/lib/nyx-frame.mjs); it returns what it did, for the log.
+      if (def.masterPass) {
+        if (landscape || outW !== OUT_W || outH !== OUT_H) throw new Error(`${template}: a master pass runs on the ${OUT_W}×${OUT_H} portrait master`);
+        console.log(`${template}/${key}: ${def.masterPass(master, outW, outH, key)}`);
+      }
     }
     const { W, H } = builtFrom;
     // A stamp notch the pack paints on every key, split off into its own
@@ -912,6 +927,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.barRecut ? { barRecut: { ...def.barRecut, effect: describeBarRecut(def.barRecut) } } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),
+    ...(def.masterPass ? { masterPass: def.masterPassNotes } : {}),
     // Per-key tones (a function) are recorded key by key.
     ...(def.tones
       ? { tones: typeof def.tones === "function" ? Object.fromEntries(builtColors(def).map((key) => [key, def.tones(key)])) : def.tones }

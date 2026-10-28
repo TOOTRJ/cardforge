@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { spendCredits, refundCredits } = vi.hoisted(() => ({
   spendCredits: vi.fn(),
-  refundCredits: vi.fn(async () => undefined),
+  refundCredits: vi.fn(async (): Promise<boolean> => true),
 }));
 vi.mock("@/lib/ai/rate-limit", () => ({ spendCredits, refundCredits }));
 
@@ -25,7 +25,7 @@ const REF = /^spend:11111111-1111-4111-8111-111111111111:card:0:[0-9a-f-]{36}$/;
 
 beforeEach(() => {
   spendCredits.mockReset();
-  refundCredits.mockClear();
+  refundCredits.mockClear().mockResolvedValue(true);
 });
 
 describe("withCreditedStep", () => {
@@ -92,5 +92,76 @@ describe("withCreditedStep", () => {
     expect(refundCredits).not.toHaveBeenCalled();
     expect(failed.spend_ref).toBeNull();
     expect(done.spend_ref).toBeNull();
+    // …and says so: nothing was taken, nothing is pending.
+    expect(failed).toMatchObject({ refunded: 0, refund_pending: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What the user is told about the credit (2026-10-28): the step records
+// what its refund DID, and lib/ai/failure.ts words it from that record —
+// never "your credit was refunded" by assumption.
+// ---------------------------------------------------------------------------
+describe("withCreditedStep — the credit outcome on the failed step", () => {
+  it("a charged failure whose refund lands says it was returned (once, under refund:{ref})", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    const result = await withCreditedStep(USER, JOB, 1, "fill_card", STEP, async () => ({
+      ...STEP,
+      status: "failed",
+      failure: "art_blocked",
+    }));
+    expect(result).toMatchObject({ status: "failed", refunded: 1, refund_pending: false, spend_ref: null });
+    expect(refundCredits).toHaveBeenCalledTimes(1);
+    const ref = (spendCredits.mock.calls[0] as [number, string, { ref: string }])[2].ref;
+    expect(refundCredits).toHaveBeenCalledWith(USER, 1, "fill_card", `refund:${ref}`);
+  });
+
+  it("a refund that does NOT land is pending (the sweep returns it under the same key), never claimed", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    refundCredits.mockResolvedValue(false);
+    const result = await withCreditedStep(USER, JOB, 1, "fill_card", STEP, async () => ({
+      ...STEP,
+      status: "failed",
+    }));
+    expect(result).toMatchObject({ refunded: 0, refund_pending: true });
+  });
+
+  it("a throw carries the outcome on the error for runNextJobStep to record", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    const error = await withCreditedStep(USER, JOB, 2, "remix_card", STEP, async () => {
+      throw new Error("boom");
+    }).catch((e: unknown) => e as { refunded?: number; refund_pending?: boolean });
+    expect(error).toMatchObject({ refunded: 2, refund_pending: false });
+    expect(refundCredits).toHaveBeenCalledTimes(1);
+  });
+
+  it("a thrown NON-object (a string, null) still carries the refund outcome", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    for (const thrown of ["plain string", null, 42]) {
+      refundCredits.mockClear();
+      const error = await withCreditedStep(USER, JOB, 1, "fill_card", STEP, async () => {
+        throw thrown;
+      }).then(
+        () => { throw new Error("expected a throw"); },
+        (e: unknown) => e as Error & { refunded?: number; refund_pending?: boolean },
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe(String(thrown));
+      expect(error).toMatchObject({ refunded: 1, refund_pending: false });
+      expect(refundCredits).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("a success clears an earlier attempt's failure and refund notes", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    const result = await withCreditedStep(
+      USER,
+      JOB,
+      1,
+      "fill_card",
+      { ...STEP, failure: "art_timeout", refunded: 1 },
+      async () => ({ ...STEP, status: "done", failure: "art_timeout", refunded: 1 }),
+    );
+    expect(result).toMatchObject({ status: "done", failure: null, refunded: null, refund_pending: null });
   });
 });

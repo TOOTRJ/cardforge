@@ -146,7 +146,7 @@ vi.mock("@/lib/ai/card-design", async (importOriginal) => {
 });
 
 import { createDeckGenerationJob } from "@/lib/ai/generation-jobs";
-import { AI_OUTPUT_ERROR_MESSAGE } from "@/lib/ai/structured-output";
+import { aiFailureMessage } from "@/lib/ai/failure";
 
 const FIXTURE = join(process.cwd(), "tests/unit/ai/fixtures/deck-plan-main.json");
 const UPDATE = process.env.DECK_PLAN_UPDATE === "1";
@@ -311,7 +311,8 @@ describe("an untyped deck plan is main's", () => {
     // plain AiOutputError — no deck, no job, nothing charged.
     s.concepts = [concept([]), concept([])];
     const out = await plan({ theme: "", format: "commander", size: 12 });
-    expect(out.result).toEqual({ ok: false, error: AI_OUTPUT_ERROR_MESSAGE });
+    // Since 2026-10-28 the plan names the failure kind (lib/ai/failure.ts).
+    expect(out.result).toEqual({ ok: false, error: aiFailureMessage("design_unreadable") });
     expect(out.concept).toHaveLength(2);
     expect(out.deck).toEqual([]);
     expect(out.job).toEqual([]);

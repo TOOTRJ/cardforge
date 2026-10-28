@@ -3793,6 +3793,40 @@ describe("v72 — the display face's collision-guard kerns at 0", () => {
   });
 });
 
+describe("v73 — the adventure's left-page paper and the Nyx Constellation's lower half on their prints (TODO 4.26a + 4.17f)", () => {
+  // Renumbered with ADVENTURE_NYX_LAYOUT_VERSION if another bump merges
+  // first (taken as v73 at merge time: v72 is #626's).
+  const V = 73;
+  const SCOPE = ["adventure", "nyx"];
+  it("is a sweep, never a badge, scoped to `adventure` and `nyx`; verification stales `nyx` alone", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ADVENTURE_NYX_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ADVENTURE_NYX_TEMPLATES]).toEqual(SCOPE);
+    // The adventure's masters change their paper only (no slot moves: its
+    // ticks stay fresh); the nyx type band moves (a tick — none yet — re-opens).
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["nyx"]);
+    // A bake one version older owes it on the two templates alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+    // Prepare reads the adventure masters' BARS, which do not change: not in scope.
+    expect(isRenderStale(V - 1, "prepare", undefined, V)).toBe(false);
+  });
+
+  // v72 is #626's (the display face's collision-guard kerns). A version with
+  // no rollout and no scope reads as a SWEEP OF EVERY CARD, so v73 never
+  // ships over a gap. (v72 is card-scoped, so a card-less isRenderStale
+  // across it is true by design: only its rollout is checked.)
+  it("ships only after v72 (#626): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v72 has no rollout yet").toBeDefined();
+  });
+});
+
 describe("v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 / 3.25)", () => {
   // Renumbered with RENDERING_CORRECTIONS_1_LAYOUT_VERSION if another bump
   // merges first (taken as v74 at PR time: v72 is #626's, Beleren's kerns; v73 is #631's).

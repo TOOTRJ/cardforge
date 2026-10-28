@@ -21,6 +21,8 @@ import { GOLD_2003_NARROW_PAIRS, PAIR_RAMPS, TWO_COLOR_PAIRS, pairSides, rampNam
 import { describeRegionTones, regionGain, stretchRange } from "./print-cut.mjs";
 import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
 import { EIGHTH_MASTER_OF, EIGHTH_PLATE_TONES, eighthPrintRecipe } from "./eighth-2003.mjs";
+import { NYX_CC_TEXT_BOX_ROWS, NYX_CC_TYPE_BAR_ROWS, NYX_TEXT_BOX_ALPHA, NYX_TYPE_BAR_ALPHA, toneNyxMaster } from "./nyx-tone.mjs";
+import { NYX_RIM_TONES, toneNyxRim } from "./nyx-frame.mjs";
 
 // The piecewise-linear re-cut and the region tone with an offset (TODO
 // 4.10a): scripts/lib/print-cut.mjs, re-exported for the importer and tests.
@@ -617,6 +619,8 @@ export function sourceTonesOf(src) {
   if (Object.hasOwn(SNC_DECO_SOURCE_TONES, src)) return SNC_DECO_SOURCE_TONES[src];
   // …and the Mystical Archive (TODO 4.11 wave 2, MA_SOURCE_TONES).
   if (Object.hasOwn(MA_SOURCE_TONES, src)) return MA_SOURCE_TONES[src];
+  // …and the adventure's left-page paper (TODO 4.26a, ADVENTURE_SOURCE_TONES).
+  if (Object.hasOwn(ADVENTURE_SOURCE_TONES, src)) return ADVENTURE_SOURCE_TONES[src];
   // …and the Dominaria United stained glass (TODO 4.11 wave 2, SG_SOURCE_TONES).
   return Object.hasOwn(SG_SOURCE_TONES, src) ? SG_SOURCE_TONES[src] : null;
 }
@@ -650,6 +654,7 @@ export function describeFileTones(files) {
         c.diff ? `, where the file differs from ${c.diff.file} (max channel ≥ ${c.diff.full}; none at ${c.diff.none})` : "",
         c.notDiff ? `, where the file is the same as ${c.notDiff.file} (max channel ≤ ${c.notDiff.none}; none from ${c.notDiff.full})` : "",
         c.nearestIs ? `, where the nearest of ${c.nearestIs.among.map((x) => x.join(",")).join(" / ")} is ${c.nearestIs.among[c.nearestIs.index].join(",")}` : "",
+        c.belowOutline ? `, in columns ${c.belowOutline.cols[0]}–${c.belowOutline.cols[1]} below the outline (per column, the last pixel of luma < ${c.belowOutline.dark} in rows ${c.belowOutline.rows[0]}–${c.belowOutline.rows[1] - 1})` : "",
       ].join("");
     };
     const whereBase = (region) => {
@@ -3306,6 +3311,152 @@ export function adventurePageFindings(piece, master, mask, width, height, box) {
   if (opaque === 0) failures.push("the piece is empty");
   return { opaque, partial, alphaOff, colourOff, maskOutsideBox, failures };
 }
+
+// ---------------------------------------------------------------------------
+// The adventure's LEFT page's PAPER toned onto print (TODO 4.26a, owner
+// 2026-10-28: a correction, with Nyx's lower half in one bump). Card
+// Conjurer's 'Adventure' masters paint the storybook's left page — the
+// spell's page — 30–54 levels a channel darker than every print, on every
+// colour (a one-colour adventure too: ELD #115). The house tone rule (the
+// ring's, #607): the raw median of the Scryfall PNGs (745 × 1040, read at
+// 1500 × 2100) against the master's, over the same clean interior — the
+// paper x 120–699 × y 1540–1899, its ink (luma 30 under the region's
+// median, grown 3 px) left out of both — and a region off by ≥ 9 levels on
+// a channel is toned. Measured 2026-10-28 on the plain 2015-frame printings
+// whose spell is the creature's colour (ELD, WOE, HOB; MH3 / MKM / WOE's
+// gold), median [min – max] of the printings:
+//   w 12 prints  221,214,216 [213,209,202 – 224,218,219]   master 179,176,170  (42 / 38 / 46 off)
+//   u 16 prints  176,194,207 [166,193,207 – 191,203,224]   master 129,160,179  (47 / 34 / 28)
+//   b 10 prints  175,173,169 [168,168,166 – 194,190,194]   master 143,140,139  (32 / 33 / 30)
+//   r 11 prints  203,179,164 [203,177,154 – 210,191,187]   master 172,140,126  (31 / 39 / 38)
+//   g 14 prints  192,198,201 [178,184,175 – 198,202,206]   master 146,153,148  (46 / 45 / 53)
+//   m  3 prints  196,192,186 [178,190,164 – 204,194,195]   master 164,157,135  (32 / 35 / 51)
+// (the paper's lowest rows, y 1800–1904, read the same within 3 levels).
+// Every key is toned; `a` — the colourless creatures' artifact frame — has
+// no print of its left page (no adventure spell is colourless) and stays as
+// drawn. Through toneSourceRegions as the FILE loads (the CC_SOURCE_TONES
+// pattern: per-channel gain at the paper's tone, fading to the neutral gain
+// toward white, so the paper's mottling keeps its shading), so the masters
+// AND the page pieces cut from them (adventure/page/<key>) carry the same
+// pixels. The region is the pack's `bookLeft` mask MINUS the page's two
+// bars: inside it, only columns 97–748 (the paper between the curled page
+// edge's outline and the spine's — the curled edge and the spine are
+// another drawing, not paper, and print colours them otherwise) and, per
+// column, only the rows BELOW the type bar's bottom outline (its last
+// pixel of luma < 90 in rows 1470–1539, read off the file: row 1505–1506
+// across the page, curving down to 1528 at the bars' rounded end). The bars
+// — rows 1312–1506 and the round end — are untouched, so Prepare's page
+// bars, read from these masters' bars (scripts/lib/prepare-2026.mjs
+// barSources), are byte for byte what they were.
+// ---------------------------------------------------------------------------
+
+/** The left page's paper, master → print (see above), per colour key. */
+export const ADVENTURE_PAPER_TONES = Object.freeze({
+  w: Object.freeze({ from: [179, 176, 170], to: [221, 214, 216] }),
+  u: Object.freeze({ from: [129, 160, 179], to: [176, 194, 207] }),
+  b: Object.freeze({ from: [143, 140, 139], to: [175, 173, 169] }),
+  r: Object.freeze({ from: [172, 140, 126], to: [203, 179, 164] }),
+  g: Object.freeze({ from: [146, 153, 148], to: [192, 198, 201] }),
+  m: Object.freeze({ from: [164, 157, 135], to: [196, 192, 186] }),
+});
+/** The paper inside bookLeft: the columns between the two outlines, the
+ *  rows below the type bar's bottom outline (found per column in `rows`,
+ *  the last pixel darker than luma `dark`). */
+export const ADVENTURE_PAPER_REGION = Object.freeze({ cols: Object.freeze([97, 748]), rows: Object.freeze([1470, 1540]), dark: 90 });
+
+/**
+ * The pixels BELOW an outline, column by column (TODO 4.26a): for each
+ * column in `cols` (inclusive), the last row in [rows[0], rows[1]) whose
+ * Rec. 601 luma is under `dark` is the outline's bottom; every row below
+ * it is 255, every row at or above it 0, and every column outside `cols`
+ * 0. A column with no dark pixel in the window is refused (the outline the
+ * recipe was read off is not there). Pure; `data` raw RGBA.
+ */
+export function belowOutlinePlane(data, width, height, { cols, rows, dark }) {
+  if (data.length !== width * height * 4) throw new Error(`belowOutlinePlane: the image is not ${width}x${height} RGBA`);
+  const plane = new Uint8Array(width * height);
+  const missing = [];
+  for (let x = cols[0]; x <= cols[1]; x += 1) {
+    let bottom = -1;
+    for (let y = rows[0]; y < rows[1]; y += 1) {
+      const o = (y * width + x) * 4;
+      if (0.299 * data[o] + 0.587 * data[o + 1] + 0.114 * data[o + 2] < dark) bottom = y;
+    }
+    if (bottom < 0) {
+      missing.push(x);
+      continue;
+    }
+    for (let y = bottom + 1; y < height; y += 1) plane[y * width + x] = 255;
+  }
+  if (missing.length) throw new Error(`belowOutlinePlane: no outline darker than ${dark} in rows ${rows[0]}–${rows[1] - 1} at ${missing.length} columns (first ${missing[0]})`);
+  return plane;
+}
+/** The adventure masters' files toned (sourceTonesOf reads it). */
+export const ADVENTURE_SOURCE_TONES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ADVENTURE_PAPER_TONES).map(([key, tone]) => [
+      `${ADVENTURE}/${key}.png`,
+      Object.freeze({
+        masks: Object.freeze({ paper: `${ADVENTURE}/bookLeft.png` }),
+        clip: Object.freeze({ paper: Object.freeze({ belowOutline: ADVENTURE_PAPER_REGION }) }),
+        tones: Object.freeze({ paper: tone }),
+        table: `ADVENTURE_PAPER_TONES.${key}`,
+      }),
+    ]),
+  ),
+);
+
+// ---------------------------------------------------------------------------
+// The Nyx Constellation frame's masters (template `nyx`, TODO 4.17f; owner
+// 2026-10-28, with 4.26a in one bump). Until now MSE's Theros constellation
+// masters, in git (public/frames/nyx), built by build-variation-frames.mjs;
+// registered per card against the same card's regular THB printing
+// (docs/FRAMES.md "The constellation frame on its prints"), their type bar
+// sat 5.2 px (top) / 3.7 px (bottom) and the text box's bottom 6.0 px LOW
+// against THB #258–268 (median of 11). Card Conjurer's 'Nyx Showcase'
+// (packM15NyxShowcase.js, img/frames/m15/nyxShowcase/<k>.png, 1500 × 2100)
+// is the same drawing — the title bar and its starfield the same, the same
+// flat rim colours, the same 50 % black bar and box — on the regular M15
+// pack's geometry. Registered against the MSE masters (row profiles,
+// median over the text-free columns, every key): the type bar's top
+// −5.0 px, its bottom −5.4, the box's bottom −8.1 — print's −5.2 / −3.7 /
+// −6.0 to within 2.1 px (−0.2 / +1.8 / +2.1, Round 59's reading) — and the
+// title bar −1.2, the side rims −0.7 / −0.2 (under the scans' 1.3 px
+// registration: they were on print and stay there). So the masters are the
+// pack's, whole (no re-cut: nothing is left to move onto print), with the
+// two passes the MSE masters had, as recipe steps on the native master
+// (nyxShowcasePass): v37's darkness (the bar's black α 150, the box's α
+// 171; scripts/lib/nyx-tone.mjs on the pack's rows) and v55's rim on the M15
+// family's tones (scripts/lib/nyx-frame.mjs — the pack's flat rims are
+// MSE's colours, so the same `from`s). Colourless: the pack has no
+// colourless frame but its 'Artifact Frame' (a.png: a silver rim over a
+// blue-grey starfield), where MSE's `c` was bronze; its rim is toned onto
+// MSE's bronze (NYX_RIM_TONES.c), the tone the constellation crown's `a`
+// band was tinted to (Round 59), so crown and rim stay one metal. No print
+// is colourless. The P/T plate stays M15's (the pack draws Card Conjurer's
+// nickname plates at M15's bounds; the profile's plate is m15/pt).
+// ---------------------------------------------------------------------------
+const NYX_SHOWCASE = "img/frames/m15/nyxShowcase";
+/** The Nyx Constellation's own pass over a native master (TODO 4.17f):
+ *  v37's bar / box darkness on the pack's rows, then v55's rim tone. */
+function nyxShowcasePass(data, width, height, key) {
+  const dark = toneNyxMaster(data, width, height, { barRows: NYX_CC_TYPE_BAR_ROWS, boxRows: NYX_CC_TEXT_BOX_ROWS });
+  const tone = NYX_RIM_TONES[key];
+  const rim = tone ? toneNyxRim(data, width, height, tone) : null;
+  return `bar ${dark.bar} px / box ${dark.box} px darkened; ${rim ? `rim ${rim.flat} px of ${tone.from.join(",")} → ${tone.to.join(",")} (${rim.changed} px changed)` : "rim as drawn"}`;
+}
+const NYX_SHOWCASE_PASS_NOTES = [
+  `v37's darkness (TODO 4.17e, scripts/lib/nyx-tone.mjs): the pack's 50 % black re-toned to α ${NYX_TYPE_BAR_ALPHA} in the type bar (rows ${NYX_CC_TYPE_BAR_ROWS[0]}–${NYX_CC_TYPE_BAR_ROWS[1] - 1}) and α ${NYX_TEXT_BOX_ALPHA} in the text box (rows ${NYX_CC_TEXT_BOX_ROWS[0]}–${NYX_CC_TEXT_BOX_ROWS[1] - 1}), the frame's edge over it keeping its colour and coverage`,
+  `v55's rim (owner Rounds 59 / 61, scripts/lib/nyx-frame.mjs NYX_RIM_TONES): the flat rim and its edges onto the M15 family's tones — ${Object.entries(NYX_RIM_TONES)
+    .map(([k, t]) => `${k} ${t.from.join(",")} → ${t.to.join(",")}`)
+    .join("; ")}; u as drawn (the family's own)`,
+];
+const NYX_SHOWCASE_NOTES = [
+  "source: CC 'Nyx Showcase' (packM15NyxShowcase.js): the Theros constellation showcase (THB #258–268) on the regular M15 pack's geometry — replaces the MSE masters in git (public/frames/nyx, scripts/build-variation-frames.mjs), whose type bar sat 5.2 / 3.7 px and box bottom 6.0 px low against print (TODO 4.17f); registered against them: title bar −1.2, side rims −0.7 / −0.2, type bar −5.0 / −5.4, box bottom −8.1 px",
+  "colourless = the pack's 'Artifact Frame' (a.png; the pack draws no colourless frame), its rim toned onto MSE's bronze 172,148,132 — the tone the constellation crown's a band carries (Round 59); no print is colourless",
+  "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's nickname plates at M15's bounds, so the NYX profile keeps M15's plate and box",
+  "the crown band is not built here: nyxcrown/<key> (scripts/build-nyx-crown.mjs) fades its arms into this rim over rows 372–408",
+];
 
 const MDFC_STRIP_NOTE =
   "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
@@ -7356,6 +7507,21 @@ export const CC_TEMPLATES = {
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
       "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints",
     ],
+  },
+  // 4.17f — the Theros Beyond Death constellation showcase (template `nyx`,
+  // THB #258–268), re-sourced from Card Conjurer's 'Nyx Showcase': the MSE
+  // masters' drawing on the regular M15 pack's geometry, whose type bar and
+  // text box sit on print where MSE's sat 4–6 px low (see NYX_SHOWCASE).
+  nyx: {
+    colors: {
+      ...perColor((k) => [layer(`${NYX_SHOWCASE}/${k}.png`)], WUBRGM),
+      c: [layer(`${NYX_SHOWCASE}/a.png`)],
+    },
+    pack: "packM15NyxShowcase.js 'Nyx Showcase'",
+    transforms: NATIVE_1500,
+    masterPass: nyxShowcasePass,
+    masterPassNotes: NYX_SHOWCASE_PASS_NOTES,
+    notes: NYX_SHOWCASE_NOTES,
   },
   // 4.21a — the Amonkhet aftermath frame (AKH Insult // Injury and the 27
   // AKH / HOU prints).

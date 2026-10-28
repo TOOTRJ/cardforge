@@ -56,6 +56,62 @@ export function frameChoicesForType(
   return framesForKind(kindFromCard(cardType, undefined), verifiedKeys);
 }
 
+/** The card types a FREE AI design may land on — those the AI may pick by
+ *  itself (never an emblem, never the legacy "spell") — that have no frame
+ *  published in ANY colour. A design left free to pick its type is told to
+ *  avoid them (2026-10-28: with no battle frame published, a random design
+ *  that came back as a battle landed the creator on a frame it can't save). */
+export const FREE_DESIGN_TYPES: readonly CardType[] = [
+  "creature",
+  "instant",
+  "sorcery",
+  "artifact",
+  "enchantment",
+  "land",
+  "planeswalker",
+  "battle",
+  "token",
+];
+
+export function typesWithoutPublishedFrame(verifiedKeys: ReadonlySet<string>): CardType[] {
+  // An empty set is an UNKNOWN set, never "nothing is published":
+  // getVerifiedFrameKeys answers [] when its read fails, and treating that
+  // as truth refused every free design (two design calls paid for nothing).
+  if (verifiedKeys.size === 0) return [];
+  const missing = FREE_DESIGN_TYPES.filter((type) =>
+    frameChoicesForType(type, verifiedKeys).every((choice) => choice.availableColorKeys.length === 0),
+  );
+  // …and so is a set that would leave no type at all.
+  return missing.length >= FREE_DESIGN_TYPES.length ? [] : missing;
+}
+
+/**
+ * True when a FREE design (the AI picked its type) can land on a published
+ * frame in its OWN colour — the colour-aware twin of
+ * typesWithoutPublishedFrame, read at plan time (pure, no I/O). An unknown
+ * (empty) verified set answers true: a failed read never refuses a design.
+ */
+export function designHasPublishedFrame(
+  design: {
+    cardType: CardType;
+    colorIdentity: ColorIdentity[];
+    face?: Parameters<typeof resolveGeneratedFrame>[0]["face"];
+  },
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  if (verifiedKeys.size === 0) return true;
+  return (
+    resolveGeneratedFrame({
+      cardType: design.cardType,
+      requested: "random",
+      colorIdentity: design.colorIdentity,
+      verifiedKeys,
+      face: design.face,
+      random: () => 0,
+    }) !== null
+  );
+}
+
 /**
  * Resolve the frame an AI-generated card should save with.
  *
