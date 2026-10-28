@@ -86,6 +86,9 @@ const EMPTY_ASPECT_RATIO_CLASS = "aspect-[5/4]";
 // Pointer must travel this far before a press becomes a pan — so a plain
 // click (or a tap) never nudges the framing.
 const DRAG_THRESHOLD_PX = 3;
+/** How to use the loaded surface: its DESCRIPTION, never its name (3b.33). */
+export const ART_POSITIONER_INSTRUCTIONS =
+  "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again.";
 
 type ArtUploaderProps = {
   userId: string | null;
@@ -547,6 +550,7 @@ export function ArtUploader({
   const uploaderId = useId();
   const headingId = `${uploaderId}-heading`;
   const dropzoneId = `${uploaderId}-dropzone`;
+  const instructionsId = `${uploaderId}-instructions`;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -558,6 +562,14 @@ export function ArtUploader({
           PNG · JPEG · WebP · GIF · up to {CARD_ART_MAX_LABEL}
         </span>
       </div>
+
+      {/* The loaded surface's description — never shown (the hover hint
+          says it to a mouse), read through aria-describedby. */}
+      {artUrl ? (
+        <span id={instructionsId} hidden>
+          {ART_POSITIONER_INSTRUCTIONS}
+        </span>
+      ) : null}
 
       <input
         ref={inputRef}
@@ -595,18 +607,17 @@ export function ArtUploader({
         // pan, arrow keys nudge, Shift-scroll zoom) — not a static image, so
         // "group" rather than the misleading "img". Empty, it's a picker button.
         role={artUrl ? "group" : "button"}
-        aria-label={
-          artUrl
-            ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again."
-            : undefined
-        }
-        // Empty: named by what it shows — the box's heading ("Artwork",
-        // "Back face — Artwork") and then its own words (the prompt, the
-        // paste hint, the best size). An aria-label in other words hid all
-        // of them from a screen reader, and from voice control ("click drag
-        // art here" found nothing).
+        // Loaded: NAMED by the box's heading ("Artwork", "Back face —
+        // Artwork") and DESCRIBED by how to use it (TODO 3b.33) — the
+        // instructions as its name made a screen reader say a sentence
+        // where a field's name belongs.
+        aria-describedby={artUrl ? instructionsId : undefined}
+        // Empty: named by what it shows — the box's heading and then its own
+        // words (the prompt, the paste hint, the best size). An aria-label in
+        // other words hid all of them from a screen reader, and from voice
+        // control ("click drag art here" found nothing).
         id={dropzoneId}
-        aria-labelledby={artUrl ? undefined : `${headingId} ${dropzoneId}`}
+        aria-labelledby={artUrl ? headingId : `${headingId} ${dropzoneId}`}
         tabIndex={0}
         data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
         style={surfaceStyle}

@@ -16,7 +16,7 @@ import type { ArtPosition, FrameTemplate } from "@/types/card";
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }));
 
-import { ArtUploader } from "@/components/creator/art-uploader";
+import { ART_POSITIONER_INSTRUCTIONS, ArtUploader } from "@/components/creator/art-uploader";
 
 const ART = "https://project.supabase.co/storage/v1/object/public/card-art/u/grid.png";
 const windowOn = (template: FrameTemplate, more: Partial<CardPreviewData> = {}) =>
@@ -268,12 +268,40 @@ describe("keyboard and buttons", () => {
     expect(picture().style.transform).toBe("scale(3.6)");
   });
 
-  it("keeps its labels: a focusable group that says how to use it", () => {
+  it("is a focusable group named by its heading and described by how to use it (3b.33)", () => {
     render(<Harness template="m15" />);
     const el = surface();
     expect(el.getAttribute("role")).toBe("group");
     expect(el.getAttribute("tabindex")).toBe("0");
-    expect(el.getAttribute("aria-label")).toMatch(/Drag to reposition the art/);
+    expect(el.hasAttribute("aria-label")).toBe(false);
+    // The accessible name is the heading alone, never the sentence.
+    const group = screen.getByRole("group", { name: "Artwork" });
+    expect(group).toBe(el);
+    const described = group.getAttribute("aria-describedby")!;
+    expect(document.getElementById(described)?.textContent).toBe(ART_POSITIONER_INSTRUCTIONS);
+    expect(screen.queryByRole("group", { name: /Drag to reposition/ })).toBeNull();
+  });
+
+  it("takes a face's heading as its name", () => {
+    render(
+      <ArtUploader
+        userId="u"
+        heading="Back face — Artwork"
+        artUrl={ART}
+        artPosition={{ focalX: 0.5, focalY: 0.5, scale: 1 }}
+        artWindow={windowOn("m15")}
+        onArtChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole("group", { name: "Back face — Artwork" })).toBe(surface());
+  });
+
+  it("empty, stays a button named by its heading and its own words", () => {
+    render(<Harness template="m15" artUrl={null} />);
+    const el = surface();
+    expect(el.getAttribute("role")).toBe("button");
+    expect(el.hasAttribute("aria-describedby")).toBe(false);
+    expect(screen.getByRole("button", { name: /^Artwork / })).toBe(el);
   });
 });
 

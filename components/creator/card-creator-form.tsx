@@ -363,7 +363,11 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
-import { GlyphCoverageNotice, UndrawableSymbolNotice } from "@/components/creator/glyph-coverage-notice";
+import {
+  GlyphCoverageNotice,
+  GlyphNoticeAnnouncer,
+  UndrawableSymbolNotice,
+} from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import {
   isFramePreviewSave,
@@ -4460,6 +4464,8 @@ export function CardCreatorForm({
       ) : null}
       {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
       {!readOnly ? <UndrawableSymbolNotice values={watched} overrides={pipOverrides} className="mb-6" /> : null}
+      {/* The two notices above, said once to a screen reader (TODO 6.7). */}
+      {!readOnly ? <GlyphNoticeAnnouncer values={watched} overrides={pipOverrides} /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}
