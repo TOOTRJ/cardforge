@@ -66,7 +66,11 @@ import {
   resolveGeneratedFrame,
   designHasPublishedFrame,
   typesWithoutPublishedFrame,
+  FREE_DESIGN_TYPES,
 } from "@/lib/creator/frame-random";
+import { frameBrief, frameColorKeysOf, frameFitOf } from "@/lib/ai/frame-brief";
+import { frameArtBrief } from "@/lib/ai/frame-art-brief";
+import { isAiDesignKind, type AiDesignKind } from "@/lib/ai/frame-choices";
 import type {
   CardBackFace,
   CardType,
@@ -265,6 +269,9 @@ type CardFillJobPlan = {
   };
   /** Deck-aware design (Pro): the client links the card to this deck. */
   deck_id: string | null;
+  /** Art direction appended to the art prompt (the dialog's style preset,
+   *  the frame's look). Absent when there is none, and on older plans. */
+  art_brief?: string;
 };
 
 
@@ -981,6 +988,16 @@ export type CreateCardFillJobInput = {
   deckId?: string;
   /** The creator this fill belongs to — see app/api/ai/card-fill. */
   scope?: string;
+  /** The AI dialog (its PR 1 redesign) names the KIND it asked for —
+   *  "surprise" or one of AI_DESIGN_KINDS. Set, the fill is designed
+   *  frame-first: a frame picked by name gets the frame brief and is kept
+   *  or the fill is refused (never a random draw), and a free design never
+   *  comes back as a kind the dialog can't make (a battle). Absent (an
+   *  older client), the fill is what it always was. */
+  designKind?: AiDesignKind | "surprise";
+  /** The theme / style were assembled from the dialog's presets
+   *  (lib/ai/presets.ts assemblePrompt): what the painter reads. */
+  assembled?: { artStyle?: string; styleArt: string };
 };
 
 /** PLAN a fill job: design the wanted fields around the pinned ones (fast
@@ -1011,21 +1028,63 @@ export async function createCardFillJob(
 
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
   const wantsType = input.want.includes("card_type");
+  const wantsColors = input.want.includes("color_identity");
+  // Frame-first (the AI dialog's redesign): a kind and a frame picked by
+  // name. The design is made FOR the frame and kept on it, or refused.
+  const pickedFrame: FrameTemplate | null =
+    input.designKind && wantsType && input.steer.card_type && input.frame && input.frame !== "random"
+      ? input.frame
+      : null;
   let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
   if (wantsType && input.frame && input.frame !== "random" && input.steer.card_type) {
     const hints = colorHintsForFrame(input.steer.card_type, input.frame, verifiedKeys);
-    if (hints.length > 0) {
+    // A colour the maker keeps (Colors not ticked) is the card's: the frame
+    // was offered only where it is published in it.
+    if (hints.length > 0 && !(pickedFrame && !wantsColors)) {
       colorHint = hints[Math.floor(Math.random() * hints.length)];
     }
   }
+  const brief = pickedFrame
+    ? frameBrief(
+        pickedFrame,
+        input.steer.card_type!,
+        wantsColors ? frameColorKeysOf(input.steer.card_type!, pickedFrame, verifiedKeys) : undefined,
+      )
+    : undefined;
 
   await logAiCall(user.id, "fill_card");
   // Never the same card twice (2026-10-28) — see createCardGenerationJob.
   // Only a fill that WRITES the title is checked against the recent titles
   // (a kept title is the maker's); the spark rides every fill.
   const recent = await recentAiTitles(user.id);
-  const avoidTypes = wantsType && !input.steer.card_type ? typesWithoutPublishedFrame(verifiedKeys) : [];
-  let designed: Awaited<ReturnType<typeof designCardFill>>;
+  const avoidTypes =
+    wantsType && !input.steer.card_type
+      ? input.designKind
+        ? // The dialog's Surprise me: never a kind it can't make (a battle).
+          [...new Set([...typesWithoutPublishedFrame(verifiedKeys), ...FREE_DESIGN_TYPES.filter((type) => !isAiDesignKind(type))])]
+        : typesWithoutPublishedFrame(verifiedKeys)
+      : [];
+  // The design as the card it becomes: the designed fields over the pinned.
+  const faceOf = (fields: CardFillResult) => ({
+    cardType: fields.card_type ?? input.locked.card_type,
+    supertype: fields.supertype !== undefined ? fields.supertype : input.locked.supertype,
+    subtypes: fields.subtypes ?? input.locked.subtypes,
+    title: fields.title ?? input.locked.title,
+    rulesText: fields.rules_text ?? input.locked.rules_text,
+    flavorText: fields.flavor_text ?? input.locked.flavor_text,
+    power: fields.power !== undefined ? fields.power : input.locked.power,
+    toughness: fields.toughness !== undefined ? fields.toughness : input.locked.toughness,
+  });
+  const fitOf = (fields: CardFillResult) =>
+    frameFitOf({
+      template: pickedFrame!,
+      cardType: fields.card_type ?? input.steer.card_type!,
+      colorIdentity: fields.color_identity ?? input.locked.color_identity ?? [],
+      verifiedKeys,
+      face: { ...faceOf(fields), cardType: fields.card_type ?? input.steer.card_type! },
+    });
+  type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
+  let designed: DesignedFill;
   try {
     designed = await designFreshly(
       recent,
@@ -1040,31 +1099,38 @@ export async function createCardFillJob(
           colorHint,
           variety,
           avoidTypes,
+          ...(brief ? { frameBrief: brief } : {}),
+          ...(input.assembled ? { assembled: true } : {}),
         }),
       (result) => (input.want.includes("title") ? result.fields.title : null),
       {
-        // A generated type must land on a published frame in the card's
-        // colour (the generated one, else the pinned one).
-        acceptable: (result) =>
-          !result.fields.card_type ||
-          Boolean(input.steer.card_type) ||
-          designHasPublishedFrame(
-            {
-              cardType: result.fields.card_type,
-              colorIdentity: result.fields.color_identity ?? input.locked.color_identity ?? [],
-              face: {
-                cardType: result.fields.card_type,
-                supertype: result.fields.supertype !== undefined ? result.fields.supertype : input.locked.supertype,
-                subtypes: result.fields.subtypes ?? input.locked.subtypes,
-                title: result.fields.title ?? input.locked.title,
-                rulesText: result.fields.rules_text ?? input.locked.rules_text,
-                flavorText: result.fields.flavor_text ?? input.locked.flavor_text,
-                power: result.fields.power !== undefined ? result.fields.power : input.locked.power,
-                toughness: result.fields.toughness !== undefined ? result.fields.toughness : input.locked.toughness,
-              },
-            },
-            verifiedKeys,
-          ),
+        ...(pickedFrame
+          ? {
+              // Frame-first: the frame picked, in its own shape (a token
+              // height, a walker box, a textless frame as picked) — else
+              // redone once; a design its own words carry onto a dress of
+              // the frame (print's rule: a Vehicle, an Enchantment
+              // Creature's Nyx) is kept when neither answer is the frame
+              // itself; one the frame can't dress at all is refused, before
+              // any charge.
+              acceptable: (result: DesignedFill) => fitOf(result.fields).exact,
+              fallbackAcceptable: (result: DesignedFill) => fitOf(result.fields).frame !== null,
+            }
+          : {
+              // A generated type must land on a published frame in the
+              // card's colour (the generated one, else the pinned one).
+              acceptable: (result: DesignedFill) =>
+                !result.fields.card_type ||
+                Boolean(input.steer.card_type) ||
+                designHasPublishedFrame(
+                  {
+                    cardType: result.fields.card_type,
+                    colorIdentity: result.fields.color_identity ?? input.locked.color_identity ?? [],
+                    face: { ...faceOf(result.fields), cardType: result.fields.card_type },
+                  },
+                  verifiedKeys,
+                ),
+            }),
         secondFits: planRedesignFits,
       },
     );
@@ -1075,13 +1141,20 @@ export async function createCardFillJob(
     if (error instanceof StationGapUnfilledError) {
       return { ok: false, error: error.message, code: error.code };
     }
+    // Two designs that the frame picked can't dress: refused, nothing
+    // reserved (the same plan-time refusal as an unavailable type).
+    if (pickedFrame && error instanceof DesignNotUsableError) {
+      console.warn(`[ai:design] card_fill didn't fit ${pickedFrame} twice`);
+      return { ok: false, error: aiFailureMessage("frame_unfit"), code: "frame_unfit" };
+    }
     return planDesignFailure(error, "card_fill");
   }
 
   // A generated card type needs a frame that can wear it (create only —
   // revise never asks for the type). Colors: generated ones, else pinned.
-  const frameTemplate =
-    wantsType && designed.fields.card_type
+  const frameTemplate = pickedFrame
+    ? fitOf(designed.fields).frame
+    : wantsType && designed.fields.card_type
       ? resolveGeneratedFrame({
           cardType: designed.fields.card_type,
           requested: input.frame ?? "random",
@@ -1110,7 +1183,7 @@ export async function createCardFillJob(
     want: input.want,
     fields: designed.fields,
     art_prompt: designed.art_prompt,
-    style: input.style?.trim() || null,
+    style: (input.assembled ? input.assembled.artStyle : input.style)?.trim() || null,
     frame_template: frameTemplate ?? null,
     // The art's window (TODO 4.48b): the frame this fill picked with the
     // type, else the creator's own — the card as it stands once filled.
@@ -1128,6 +1201,17 @@ export async function createCardFillJob(
       : {}),
     deck_id: deckContext?.deck.id ?? null,
   };
+  // The art direction (the dialog's style preset, then the frame's own
+  // look — lib/ai/frame-art-brief.ts): stored only when there is some.
+  if (input.want.includes("art")) {
+    const artBrief = [
+      input.assembled?.styleArt ?? "",
+      frameArtBrief(plan.art_face?.template ?? null),
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (artBrief) plan.art_brief = artBrief;
+  }
   const steps: JobStep[] = [
     {
       key: "fill:0",
@@ -1185,11 +1269,12 @@ async function runCardFillStep(
       const style = plan.style?.trim()
         ? ` Rendered strictly in ${plan.style.trim()} style.`
         : "";
+      const direction = plan.art_brief?.trim() ? ` ${plan.art_brief.trim()}` : "";
       await logAiCall(userId, "generate_random_art");
       const image = await generateImageWithFallbacks(
         artPromptLadder(
           attempt,
-          `${plan.art_prompt}${style} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+          `${plan.art_prompt}${style}${direction} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
           {
             title: plan.fields.title ?? step.label,
             typeLine: plan.fields.card_type ?? null,

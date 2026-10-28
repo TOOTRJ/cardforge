@@ -3396,8 +3396,11 @@ export function CardCreatorForm({
           want: options.want,
           locked: lockedFieldsFor(getValues(), options.want),
           steer: { card_type: options.card_type, rarity: options.rarity },
-          theme: options.theme,
-          style: options.style,
+          theme_preset: options.theme_preset,
+          theme_twist: options.theme_twist,
+          style_preset: options.style_preset,
+          style_twist: options.style_twist,
+          design_kind: options.design_kind,
           frame: options.frame,
           // The art is painted in the shape of the frame the card is on
           // (TODO 4.48b) — the frame itself is never changed by it.

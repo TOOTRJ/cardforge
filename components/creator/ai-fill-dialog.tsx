@@ -30,8 +30,6 @@ import {
   SURPRISE_PRESET_ID,
   THEME_PRESETS,
   TWIST_MAX,
-  composeStyle,
-  composeTheme,
 } from "@/lib/ai/presets";
 import {
   AI_DESIGN_KINDS,
@@ -71,14 +69,17 @@ import { cn } from "@/lib/utils";
 
 export type AiFillOptions = {
   want: CardFillField[];
-  /** The composed theme / style (preset words + the maker's twist). */
-  theme?: string;
-  style?: string;
-  /** The parts they were composed from, for the server to compose itself. */
+  /** The theme / style presets and the maker's twists: the server
+   *  assembles what the designer and the painter read from them
+   *  (lib/ai/presets.ts assemblePrompt), the twist first. */
   theme_preset?: string;
   theme_twist?: string;
   style_preset?: string;
   style_twist?: string;
+  /** The kind asked for while the card type is written: "surprise" or one
+   *  the AI can make (lib/ai/frame-choices.ts). The fill is then designed
+   *  frame-first. */
+  design_kind?: AiDesignKind | "surprise";
   /** Steering for ticked fields. */
   card_type?: CardType;
   rarity?: Rarity;
@@ -271,12 +272,11 @@ function AiFillDialogBody({
     const styleId = stylePreset === SURPRISE ? undefined : stylePreset;
     onGenerate({
       want: offered.filter((f) => want.has(f)),
-      theme: composeTheme(themeId, themeTwist),
-      style: composeStyle(styleId, styleTwist),
       theme_preset: themeId,
       theme_twist: themeTwist.trim() || undefined,
       style_preset: styleId,
       style_twist: styleTwist.trim() || undefined,
+      design_kind: wantsType ? kind : undefined,
       card_type: wantsType && kind !== SURPRISE ? kind : undefined,
       rarity: wantsRarity && rarity !== "random" ? rarity : undefined,
       frame: wantsType ? (frameValue === SURPRISE ? "random" : frameValue) : undefined,
@@ -317,6 +317,7 @@ function AiFillDialogBody({
         >
           <ChipGroup
             ariaLabel="Theme presets"
+            keepCase
             options={THEME_OPTIONS}
             value={themePreset}
             onChange={setThemePreset}
@@ -337,6 +338,7 @@ function AiFillDialogBody({
         >
           <ChipGroup
             ariaLabel="Art style presets"
+            keepCase
             options={STYLE_OPTIONS}
             value={stylePreset}
             onChange={setStylePreset}
@@ -359,6 +361,7 @@ function AiFillDialogBody({
             {(aria) => (
               <ChipGroup
                 ariaLabel="Card kind"
+                keepCase
                 ariaDescribedBy={aria["aria-describedby"]}
                 options={kindOptions}
                 value={kind}
@@ -410,6 +413,7 @@ function AiFillDialogBody({
                 <div className="rounded-lg border border-border/60 bg-elevated/20 p-2 sm:max-h-72 sm:overflow-y-auto">
                   <ChipGroup
                     ariaLabel={`Frames for a ${kindWord}`}
+                    keepCase
                     options={frameChips}
                     value={frameValue}
                     onChange={setFrame}

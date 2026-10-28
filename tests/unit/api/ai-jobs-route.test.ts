@@ -337,3 +337,75 @@ describe("POST /api/ai/jobs — a fill's pins never refuse the generation", () =
     expect(json).toEqual(s.fillRefusal);
   });
 });
+
+// The AI dialog redesign (PR 1): the theme / style presets and the maker's
+// twists are assembled HERE (lib/ai/presets.ts assemblePrompt), the twist
+// first; the dialog's kind steers the type and makes the fill frame-first.
+// Every one of them is cleaned, clipped or dropped — never a refusal — and a
+// request that names none of them reaches the job exactly as before.
+describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
+  it("assembles the theme and style from presets and twists, the twist first", async () => {
+    const { status } = await post({
+      kind: "card_fill",
+      want: ["card_type", "title", "art"],
+      locked: {},
+      theme_preset: "gothic-horror",
+      theme_twist: "lighthouse keepers",
+      style_preset: "stained-glass",
+      design_kind: "creature",
+      frame: "m15nyx",
+    });
+    expect(status).toBe(200);
+    const input = s.created.at(-1)!.input as Record<string, unknown>;
+    expect(String(input.theme)).toMatch(/^lighthouse keepers \(the maker's own words: they win\) — set in gothic horror/);
+    expect(String(input.style)).toMatch(/^stained glass: /);
+    expect(input.assembled).toEqual({ artStyle: "stained glass", styleArt: expect.stringMatching(/^Art direction: a stained-glass window/) });
+    expect(input.designKind).toBe("creature");
+    expect(input.steer).toEqual({ card_type: "creature" });
+    expect(input.frame).toBe("m15nyx");
+  });
+
+  it("cleans and clips a twist, drops an unknown preset or kind — never refuses", async () => {
+    const { status } = await post({
+      kind: "card_fill",
+      want: ["card_type", "title"],
+      locked: {},
+      theme_preset: "not-a-preset",
+      theme_twist: `  ${"x".repeat(400)}\u0000 `,
+      style_preset: 42,
+      style_twist: ["no"],
+      design_kind: "battle",
+    });
+    expect(status).toBe(200);
+    const input = s.created.at(-1)!.input as Record<string, unknown>;
+    expect(input.theme).toBe("x".repeat(160));
+    expect(input.style).toBeUndefined();
+    expect(input).not.toHaveProperty("designKind");
+  });
+
+  it("Surprise me leaves the type free; a kind is ignored when the type isn't being written", async () => {
+    await post({ kind: "card_fill", want: ["card_type", "title"], locked: {}, design_kind: "surprise" });
+    expect(s.created.at(-1)!.input).toMatchObject({ designKind: "surprise", steer: {} });
+    await post({ kind: "card_fill", want: ["title"], locked: {}, design_kind: "creature" });
+    expect(s.created.at(-1)!.input).not.toHaveProperty("designKind");
+  });
+
+  it("a request that names none of them reaches the job as before (its own theme and style)", async () => {
+    await post({ kind: "card_fill", want: ["title"], locked: {}, theme: "embers", style: "oil" });
+    const input = s.created.at(-1)!.input as Record<string, unknown>;
+    expect(input).toMatchObject({ theme: "embers", style: "oil" });
+    expect(input).not.toHaveProperty("assembled");
+    expect(input).not.toHaveProperty("designKind");
+  });
+
+  it("a design that didn't fit the frame picked is an expected outcome (422), nothing created", async () => {
+    s.fillRefusal = {
+      ok: false,
+      code: "frame_unfit",
+      error: "The AI's design didn't fit the frame you picked. Try again, or let it choose the frame with Surprise me. No credits were used.",
+    };
+    const { status, json } = await post({ kind: "card_fill", want: ["card_type"], locked: {}, design_kind: "creature", frame: "m15nyx" });
+    expect(status).toBe(422);
+    expect(json).toEqual(s.fillRefusal);
+  });
+});

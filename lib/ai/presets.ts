@@ -1,15 +1,17 @@
 // ---------------------------------------------------------------------------
 // The AI dialog's theme and art-style presets — DATA, not code. A new preset
-// is one more entry here: the dialog lists it, the server accepts its id and
-// writes its words into the design prompt (composeTheme / composeStyle).
+// is one more entry here: the dialog lists it, the jobs route accepts its id
+// and assembles the prompt from it (assemblePrompt).
 //
 //   - `id`     — stable, kebab-case; what the request carries. Never rename
 //                one that has shipped (an open dialog may still send it).
-//   - `label`  — the chip's words.
+//   - `label`  — the chip's words, in sentence case.
 //   - `prompt` — the fragment the DESIGNER reads: the world for a theme, the
-//                tone of names and flavour for a style.
-//   - `art`    — styles only: the fragment the PAINTER reads, appended to the
-//                art prompt ("Rendered strictly in …").
+//                tone of names and flavor for a style.
+//   - `art`    — styles only: the look. The designer reads it with the tone
+//                (composeStyle); the painter reads the style's name in
+//                "Rendered strictly in … style." (composeArtStyle) and the
+//                look as "Art direction: …" (styleArtBrief).
 //
 // Original, generic words only: no Wizards-owned or real-world proper nouns,
 // no living artist's name (the art prompt never names one).
@@ -99,7 +101,7 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
   {
     id: "samurai",
     label: "Samurai",
-    prompt: "a samurai epic — honour-bound warriors, kami of river and mountain, ninja clans and cherry-blossom shrines",
+    prompt: "a samurai epic — honor-bound warriors, kami of river and mountain, ninja clans and cherry-blossom shrines",
   },
   {
     id: "post-apocalypse",
@@ -112,68 +114,68 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
   {
     id: "classic-oil",
     label: "Classic oil painting",
-    prompt: "classic painted fantasy — grounded, dramatic, timeless names and flavour",
-    art: "a classic fantasy oil painting with rich brushwork, dramatic lighting and deep colour",
+    prompt: "classic painted fantasy — grounded, dramatic, timeless names and flavor",
+    art: "a classic fantasy oil painting with rich brushwork, dramatic lighting and deep color",
   },
   {
     id: "watercolor",
     label: "Watercolor",
-    prompt: "gentle watercolour — soft, lyrical names and flavour",
-    art: "a watercolour painting with soft washes, bleeding edges and visible paper texture",
+    prompt: "gentle watercolor — soft, lyrical names and flavor",
+    art: "a watercolor painting with soft washes, bleeding edges and visible paper texture",
   },
   {
     id: "ink-wash",
     label: "Ink and wash",
-    prompt: "ink and wash — spare, poetic names and flavour",
+    prompt: "ink and wash — spare, poetic names and flavor",
     art: "an ink-and-wash painting with confident brush strokes, sparse grey washes and generous negative space",
   },
   {
     id: "anime",
     label: "Anime",
-    prompt: "anime — bold, energetic names and flavour",
-    art: "an anime illustration with clean line art, cel shading and vivid colour",
+    prompt: "anime — bold, energetic names and flavor",
+    art: "an anime illustration with clean line art, cel shading and vivid color",
   },
   {
     id: "stained-glass",
     label: "Stained glass",
-    prompt: "stained glass — reverent, iconic names and flavour",
+    prompt: "stained glass — reverent, iconic names and flavor",
     art: "a stained-glass window with jewel-toned glass panes and dark leaded outlines, lit from behind",
   },
   {
     id: "art-nouveau",
     label: "Art nouveau",
-    prompt: "art nouveau — elegant, ornate names and flavour",
+    prompt: "art nouveau — elegant, ornate names and flavor",
     art: "an art nouveau illustration with flowing organic lines, decorative borders of vines and a muted gilded palette",
   },
   {
     id: "pixel-art",
     label: "Pixel art",
-    prompt: "pixel art — playful, retro-game names and flavour",
+    prompt: "pixel art — playful, retro-game names and flavor",
     art: "detailed 16-bit pixel art with a limited palette and crisp hard-edged pixels",
   },
   {
     id: "comic-book",
     label: "Comic book",
-    prompt: "comic book — punchy, heroic names and flavour",
+    prompt: "comic book — punchy, heroic names and flavor",
     art: "a comic-book illustration with bold inks, halftone shading and dynamic action",
   },
   {
     id: "dark-fantasy",
     label: "Dark fantasy",
-    prompt: "dark fantasy — grim, foreboding names and flavour",
+    prompt: "dark fantasy — grim, foreboding names and flavor",
     art: "a dark fantasy painting with heavy shadows, a desaturated palette and an ominous mood",
   },
   {
     id: "storybook",
     label: "Storybook",
-    prompt: "a storybook — warm, whimsical names and flavour",
-    art: "a storybook illustration with warm gouache colour, soft outlines and a whimsical charm",
+    prompt: "a storybook — warm, whimsical names and flavor",
+    art: "a storybook illustration with warm gouache color, soft outlines and a whimsical charm",
   },
   {
     id: "woodcut",
     label: "Woodcut",
-    prompt: "an old woodcut — stark, folkloric names and flavour",
-    art: "a woodcut print with bold carved lines, cross-hatching and two or three flat ink colours",
+    prompt: "an old woodcut — stark, folkloric names and flavor",
+    art: "a woodcut print with bold carved lines, cross-hatching and two or three flat ink colors",
   },
 ];
 
@@ -209,21 +211,70 @@ export function stylePresetById(id: string | null | undefined): StylePreset | nu
 export function composeTheme(presetId: string | null | undefined, twist: string | null | undefined): string | undefined {
   const preset = themePresetById(presetId);
   const own = cleanTwist(twist);
-  if (own && preset) return `${own} (the maker's own words — they win) — set in ${preset.prompt}`;
+  if (own && preset) return `${own} (the maker's own words: they win) — set in ${preset.prompt}`;
   if (own) return own;
   return preset?.prompt;
 }
 
 /**
- * The `style` the designer and the painter read, from a preset and the
- * maker's twist — the same ranking as composeTheme. The ART words of the
- * preset are what the painter needs ("Rendered strictly in … style"), so
- * they are what this returns; the tone of the text follows from them.
+ * The `style` the DESIGNER reads (lib/ai/card-design.ts "Art & tone
+ * style: …"): the look its art prompt must render and the tone of the names
+ * and flavor — the same ranking as composeTheme.
  */
 export function composeStyle(presetId: string | null | undefined, twist: string | null | undefined): string | undefined {
   const preset = stylePresetById(presetId);
   const own = cleanTwist(twist);
-  if (own && preset) return `${own} (the maker's own words — they win), as ${preset.art}`;
-  if (own) return own;
-  return preset?.art;
+  const look = preset ? `${preset.label.toLowerCase()}: ${preset.art}; ${preset.prompt}` : undefined;
+  if (own && look) return `${own} (the maker's own words: they win), over ${look}`;
+  return own || look;
+}
+
+/**
+ * The style the PAINTER reads in "Rendered strictly in … style." (the fill
+ * step): the twist, then the preset's name. The preset's full look goes in
+ * the art brief (`styleArtBrief`), after it.
+ */
+export function composeArtStyle(presetId: string | null | undefined, twist: string | null | undefined): string | undefined {
+  const preset = stylePresetById(presetId);
+  const own = cleanTwist(twist);
+  const label = preset?.label.toLowerCase();
+  if (own && label) return `${own}, ${label}`;
+  return own || label;
+}
+
+/** The preset's look as a sentence of the art prompt, or "" without one. */
+export function styleArtBrief(presetId: string | null | undefined): string {
+  const preset = stylePresetById(presetId);
+  return preset ? `Art direction: ${preset.art}.` : "";
+}
+
+/** What a fill request's preset fields become (the jobs route). */
+export type AssembledPrompt = {
+  theme?: string;
+  style?: string;
+  artStyle?: string;
+  styleArt: string;
+};
+
+/**
+ * The prompt parts of a fill from its preset fields — null when the request
+ * names none of them (an older client: its `theme` / `style` are used as
+ * sent, byte for byte). Unknown preset ids are dropped, twists cleaned and
+ * clipped (cleanTwist): never a refusal.
+ */
+export function assemblePrompt(input: {
+  theme_preset?: string | null;
+  theme_twist?: string | null;
+  style_preset?: string | null;
+  style_twist?: string | null;
+}): AssembledPrompt | null {
+  const named =
+    input.theme_preset != null || input.theme_twist != null || input.style_preset != null || input.style_twist != null;
+  if (!named) return null;
+  return {
+    theme: composeTheme(input.theme_preset, input.theme_twist),
+    style: composeStyle(input.style_preset, input.style_twist),
+    artStyle: composeArtStyle(input.style_preset, input.style_twist),
+    styleArt: styleArtBrief(input.style_preset),
+  };
 }

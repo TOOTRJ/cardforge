@@ -61,6 +61,10 @@ type CommonProps<T extends string> = {
   ariaDescribedBy?: string;
   /** The row's value was refused (a field error). Single-select only. */
   ariaInvalid?: boolean;
+  /** Draw each label as written. By default a label is capitalised word
+   *  by word (CSS `capitalize`, for rows whose labels are lowercase
+   *  values); a row of sentence-case labels ("Ink and wash") passes this. */
+  keepCase?: boolean;
 };
 
 type SingleProps<T extends string> = CommonProps<T> & {
@@ -104,6 +108,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
     ariaLabel,
     ariaDescribedBy,
     ariaInvalid,
+    keepCase = false,
   } = props;
   const multi = props.multiSelect === true;
   // The chip that holds the focus, while the focus is inside a single-select
@@ -223,7 +228,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
               />
             ) : null}
             <span className="flex flex-col">
-              <span className="capitalize">{option.label}</span>
+              <span className={keepCase ? undefined : "capitalize"}>{option.label}</span>
               {option.description && size === "md" ? (
                 <span
                   className={cn(

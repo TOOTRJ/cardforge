@@ -28,6 +28,9 @@ export const AI_FAILURE_KINDS = [
   "ai_unavailable",
   /** The design came back as a card type with no published frame yet. */
   "type_unavailable",
+  /** The design didn't fit the frame its maker picked, twice (frame-first
+   *  design, lib/ai/frame-brief.ts). Plan time: nothing was reserved. */
+  "frame_unfit",
   /** The image provider's safety filter refused every prompt we tried. */
   "art_blocked",
   /** The picture took too long (a quiet refusal looks the same). */
@@ -58,6 +61,8 @@ export const AI_FAILURE_COPY: Record<AiFailureKind, string> = {
   ai_unavailable: "AI generation isn't available right now. Please try again later.",
   type_unavailable:
     "The AI picked a card type that can't be made here yet. Try again, or choose a card type in the options.",
+  frame_unfit:
+    "The AI's design didn't fit the frame you picked. Try again, or let it choose the frame with Surprise me.",
   art_blocked:
     "The image service's safety filter declined this artwork. Try again — each try rewords the art prompt — or change the theme.",
   art_timeout: "The artwork took too long to paint. Try again — each try rewords the art prompt.",
