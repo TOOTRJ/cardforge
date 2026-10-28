@@ -77,16 +77,18 @@ function onDisk(rel: string): Buffer | null {
  *  M15 folder's alone). */
 /** The folders built from ONE tinted piece (the Lord of the Rings scroll's
  *  and ring's notches are each pack's own piece per key, and the MUL
- *  Tarkir dragon wings' and the D&D Sourcebook's the pack's one oval piece,
- *  TODO 4.11: their own tests, tests/unit/frames/lotr-scroll-importer.test.ts,
- *  lotr-ring-importer.test.ts, tarkir-dragon-importer.test.ts and
- *  dnd-sourcebook-importer.test.ts — and the Strixhaven Mystical Archive's,
+ *  Tarkir dragon wings', the D&D Sourcebook's and the MKM dossier's the
+ *  pack's one oval piece, TODO 4.11: their own tests,
+ *  tests/unit/frames/lotr-scroll-importer.test.ts, lotr-ring-importer.test.ts,
+ *  tarkir-dragon-importer.test.ts, dnd-sourcebook-importer.test.ts and
+ *  mkm-dossier-importer.test.ts — and the Strixhaven Mystical Archive's,
  *  PipGlyph's own arch: mystical-archive-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, mysticalarchiveholostamp: _archiveNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, mysticalarchiveholostamp: _archiveNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
 void _dndNotch;
+void _dossierNotch;
 void _archiveNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];

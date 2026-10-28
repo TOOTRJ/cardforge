@@ -70,7 +70,6 @@ function published(rel: string): Buffer | null {
   return createHash("sha256").update(bytes).digest("hex") === MANIFEST[rel].sha256 ? bytes : null;
 }
 
-const MONO = ["w", "u", "b", "r", "g"] as const;
 const MASTER_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 
 describe("the Mystical Archive recipe", () => {

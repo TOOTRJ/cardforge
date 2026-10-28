@@ -6117,6 +6117,90 @@
       ]
     }
   },
+  "dossier": {
+    "note": "The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo type in MKM (#336–389, #433) — NOT the Secret Lair's four dossier legends (SLD #1566–1569: the same page on a navy border) and NOT MKM's round 'magnified' showcase (#287–316). One folder per colour key, the colour on the photo's corners, the bands' rules and the seals; 'c' the colourless artifact creature (#376, the pack's slate artifact frame); 'm' the five-colour Niv-Mizzet (gold) and a two-colour legend (Kylox, U/R — the pair masters, the split dress, ride the gold key).",
+    "colors": {
+      "w": [
+        {
+          "name": "Aurelia's Vindicator",
+          "set": "mkm",
+          "scryfallId": "975b5145-b30e-4ae3-b318-3b245bf12cc3"
+        },
+        {
+          "name": "Delney, Streetwise Lookout",
+          "set": "mkm",
+          "scryfallId": "b6297104-b73c-439c-ac0c-b7fac01d49dc"
+        }
+      ],
+      "u": [
+        {
+          "name": "Conspiracy Unraveler",
+          "set": "mkm",
+          "scryfallId": "0a33f43e-e57e-4d2c-b6f3-c785ab96214e"
+        },
+        {
+          "name": "Forensic Gadgeteer",
+          "set": "mkm",
+          "scryfallId": "aab507e5-7bf2-4fa0-9ac0-a6aaec90de83"
+        }
+      ],
+      "b": [
+        {
+          "name": "Homicide Investigator",
+          "set": "mkm",
+          "scryfallId": "b9106abf-f589-48a2-90f8-d606a7367377"
+        },
+        {
+          "name": "Massacre Girl, Known Killer",
+          "set": "mkm",
+          "scryfallId": "1ab741b3-6230-46c3-9c43-8a0d735e9d49"
+        }
+      ],
+      "r": [
+        {
+          "name": "Frantic Scapegoat",
+          "set": "mkm",
+          "scryfallId": "3ae07b33-dcee-41aa-9886-38336d2aff7a"
+        },
+        {
+          "name": "Krenko, Baron of Tin Street",
+          "set": "mkm",
+          "scryfallId": "7fe8f3c6-934a-4819-8057-b8c80f2a8696"
+        }
+      ],
+      "g": [
+        {
+          "name": "Culvert Ambusher",
+          "set": "mkm",
+          "scryfallId": "82849769-ee1b-4f70-935c-9cb97772ade1"
+        },
+        {
+          "name": "The Pride of Hull Clade",
+          "set": "mkm",
+          "scryfallId": "6f8bdb03-02d0-4b97-b058-959f1fff9118"
+        }
+      ],
+      "c": [
+        {
+          "name": "Magnetic Snuffler",
+          "set": "mkm",
+          "scryfallId": "c5f9a827-b41d-4628-95e1-6546a8140c61"
+        }
+      ],
+      "m": [
+        {
+          "name": "Niv-Mizzet, Guildpact",
+          "set": "mkm",
+          "scryfallId": "02f2fcaf-97d6-441a-bdde-fb105ffad1c5"
+        },
+        {
+          "name": "Kylox, Visionary Inventor",
+          "set": "mkm",
+          "scryfallId": "2260036c-cc6f-4016-8d8c-4953ce5b22d3"
+        }
+      ]
+    }
+  },
   "avatar": {
     "colors": {
       "w": [
