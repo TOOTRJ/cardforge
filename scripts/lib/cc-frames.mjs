@@ -4945,8 +4945,9 @@ export const DND_NOTCH = Object.freeze({
 //     (the combo stays unverified; nothing imports onto it).
 //   • the two-colour PAIR masters (`<pair>`, the split dress): the gold frame
 //     whole, its text box the pair's two boxes lerped across SG_BOX_RAMP
-//     through the pack's own 'Rules' mask (rules.svg) — 34 of the 41 DMU
-//     legends and 4 of the 9 MUL ones are two-colour, and every one prints
+//     through the pack's own 'Rules' mask (rules.svg) — 30 of the 41 DMU
+//     legends and 4 of the 9 MUL ones are two-colour (72 printings with
+//     their twins), and every one prints
 //     gold bars, a gold plate and a box that turns from the first colour to
 //     the second (DMU #295 Balmor U|R, #292 Aron W|B, MUL #55 Radha R|G).
 //   • plates: the pack's six (pt/<k>.png, 262 × 127 at its ptBounds 1162 /
@@ -4978,7 +4979,7 @@ export const SG_CROWN_MASK = `${SG}/crown.svg`;
 /** The two-colour box ramp, % of the card's width: measured on the run's
  *  two-colour prints (Scryfall PNGs at 1500 × 2100), the box's text-free top
  *  rows 1320–1336, each print's left-end and right-end colours taken as 0
- *  and 1 — the median profile of the 36 that read (contrast > 40) crosses
+ *  and 1 — the median profile of the 34 that read (contrast > 40) crosses
  *  10 / 50 / 90 % at 47.1 / 51.5 / 55.8 %W; a straight 46 → 57 gives 47.1 /
  *  51.5 / 55.9. */
 export const SG_BOX_RAMP = Object.freeze([46, 57]);
@@ -4991,7 +4992,8 @@ export const SG_CROWN_RAMP = Object.freeze([47, 53]);
  * The pack's colours toned onto the prints by the ring's ONE rule (#607):
  * raw scan medians (Scryfall PNGs at 1500 × 2100) against the pack's over the
  * same pixels, ink (|Δluma| > 45 from the region's median) left out of both,
- * and a region off by ≥ 9 levels on a channel is toned. The regions are the
+ * and a region off by ≥ 9 levels on a channel is toned — by a per-channel
+ * SHIFT (`shift: true`, a labelled exception to the ring's gain: below). The regions are the
  * pack's own glass — where its blue and red files differ by ≥ 40 levels, the
  * pixels every colour paints in its own glass (the lead and the rims are the
  * same in every mono file), eroded 3 px — by rows: the title bar's glass
@@ -5005,7 +5007,7 @@ export const SG_CROWN_RAMP = Object.freeze([47, 53]);
  * #287 MUL #5; u MUL #12; b DMU #288–290 MUL #19; r DMU #291 MUL #22 / #24;
  * the gold box and dome the six three-colour-or-more legends (DMU #302,
  * #313, #317–319, #327); the gold bars, lead, panes and plate those and the
- * 34 two-colour ones (they print gold bars); a colour's box and dome also
+ * 34 two-colour legends (30 DMU + 4 MUL: they print gold bars); a colour's box and dome also
  * from the two-colour boxes' ends (the first colour left of 46 %W, the second
  * right of 57). Per region, pack → print (off):
  *   • w: title 167,144,97 → 171,152,109 (12) TONED; type 135,117,74 →
@@ -5031,8 +5033,15 @@ export const SG_CROWN_RAMP = Object.freeze([47, 53]);
  *     (39); box 99,68,12 → 108,71,29 (17); lead 99,71,49 → 90,61,62 (13);
  *     dome 167,109,20 → 153,97,42 (22); panes 67,49,29 → 66,45,41 (12);
  *     plate 195,140,15 → 171,131,56 (41) — all TONED.
- * Through toneSourceRegions: a per-channel gain at the region's tone, fading
- * to the neutral (luma) gain toward white.
+ * Through toneSourceRegions' SHIFT (`tone.shift`): each channel moved by
+ * (to − from), fading to nothing toward white — NOT the ring's per-channel
+ * gain, which on the gold (its blue 17 against print's 62: × 3.6) turned the
+ * glass's light streaks and the lead lines violet (built, looked at,
+ * dropped). The gold LEAD is toned wherever the gold frame's lead is (the
+ * frame field's, the bars' and the box's rims alike), not only on the rows
+ * it was read on (1320–1900): it is one metal drawn one way all over the
+ * frame, and toned whole it moves toward print everywhere the independent
+ * check read it (2026-10-28).
  */
 export const SG_PRINT_TONES = Object.freeze({
   title: Object.freeze({
@@ -5089,12 +5098,14 @@ export const SG_GLASS_DIFF = Object.freeze({ full: 40, none: 16 });
 export const SG_GLASS_LUMA = Object.freeze([24, 40]);
 /** The rows of a master's three glass regions (card px): the title bar's
  *  glass (between its dark keylines, 105–107 and 207–210 px, kept 2 px off
- *  them: their anti-aliased edge would take the gain), the type bar's (1188
- *  / 1292–1294), the text box. The frame field's panes about the
- *  window are not toned: they are glass too, but the gold frame's are the
- *  bronze of its lead, and a bar's gain (blue × 3.5 on the gold) would turn
- *  them violet. */
-export const SG_GLASS_ROWS = Object.freeze({ title: Object.freeze([110, 205]), type: Object.freeze([1193, 1289]), box: Object.freeze([1312, 2100]) });
+ *  them: their anti-aliased edge would take the tone), the type bar's (1188
+ *  / 1292–1294), the text box down to its FOOT (1922 px, where the Rules
+ *  mask's straight edge meets the rim: below it the rim's own highlight
+ *  differs between the blue and red files, rows 1932–1949, and is not
+ *  glass). The frame field's panes about the window are not toned: they are
+ *  glass too, but the gold frame's are the bronze of its lead, and a bar's
+ *  tone would carry its colour onto them. */
+export const SG_GLASS_ROWS = Object.freeze({ title: Object.freeze([110, 205]), type: Object.freeze([1193, 1289]), box: Object.freeze([1312, 1922]) });
 /** …and the bars' columns: the glass between the end caps' rims (x 88–1411
  *  on the title bar's middle row). */
 export const SG_BAR_COLS = Object.freeze([Object.freeze([88, 1412])]);

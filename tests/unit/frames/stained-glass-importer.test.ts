@@ -118,6 +118,13 @@ describe("the Stained Glass recipe", () => {
     const m = sourceTonesOf(`${SG}/m.png`) as { geom: Record<string, { a: string; b: string; rows?: number[] }> };
     expect(Object.keys(m.geom).sort()).toEqual(["box", "lead", "title", "type"]);
     expect([m.geom.title.a, m.geom.title.b]).toEqual([`${SG}/u.png`, `${SG}/r.png`]);
+    // The box's glass stops at its FOOT — the Rules mask's straight edge,
+    // 1922 px (SG_NOTCH.barTop) — so the rim's highlight under it (rows
+    // 1932–1949, which the blue and red files draw differently too) is never
+    // toned as glass. The gold lead is toned whole (no rows: one metal, drawn
+    // one way over the frame).
+    expect(m.geom.box.rows).toEqual([1312, SG_NOTCH.barTop]);
+    expect(m.geom.lead.rows).toBeUndefined();
   });
 
   it("a shifted tone moves each channel by (to − from) at the region's tone, nothing at white", () => {

@@ -24447,86 +24447,86 @@
       "height": 2100
     },
     "stainedglass/bg.png": {
-      "hash": "74caddb3ab28",
-      "sha256": "74caddb3ab28a02100bf09de901d8883dead5bdc0cd342e8b0535ebb29a9c02e",
-      "bytes": 2064692,
+      "hash": "3000e5156a03",
+      "sha256": "3000e5156a036d73ae0800fbd023eec2866dc0c79a5f3d22a0de1414d92f6018",
+      "bytes": 2064406,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/bg.webp": {
-      "hash": "b407b239013a",
-      "sha256": "b407b239013a380ce29525ae8d6428f7e7a60c621125d28c3d21a32bdaebeb1a",
-      "bytes": 73608,
+      "hash": "f8462f93282d",
+      "sha256": "f8462f93282d0bcdd3727aa999fa88c8399c9d1c4ee22cc8065f81b251fca859",
+      "bytes": 73594,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/br.png": {
-      "hash": "6dce28217717",
-      "sha256": "6dce282177173f0989afcc38ba4fe2db155e7d9c611d99e24e5d2cdbf6d3d329",
-      "bytes": 2038131,
+      "hash": "69bb2b4ac384",
+      "sha256": "69bb2b4ac384e48fa00f0b558f2435408333f348aeb667f6ac42a47fbac033f1",
+      "bytes": 2037805,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/br.webp": {
-      "hash": "538b494851c1",
-      "sha256": "538b494851c11cae39882ae8dc7a3562d8962d330b616e36376b00e3e87be359",
-      "bytes": 76244,
+      "hash": "11704c885ea4",
+      "sha256": "11704c885ea4c30bf87d54cebb59d94dcb4ed5b49b987da73af4e3e46202a932",
+      "bytes": 76286,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/c.png": {
-      "hash": "eb53a5a8676a",
-      "sha256": "eb53a5a8676af7ba5af0594e0e4b06ff922e69380ec9759fc109ba741129add5",
-      "bytes": 1996013,
+      "hash": "7f03c8257894",
+      "sha256": "7f03c82578944e7499f4ef38b0f1308cd4152e3debf35a5c5315bba43c2040bd",
+      "bytes": 1995747,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/c.webp": {
-      "hash": "1da97ecf4100",
-      "sha256": "1da97ecf41000b30ee9e0d484dee4adc30d32d427e588b8b318ba53cc8dd5334",
-      "bytes": 80896,
+      "hash": "10be14634edb",
+      "sha256": "10be14634edb9b35e049eaf492195238e48c32490521cc5ff1d201886a67d850",
+      "bytes": 80786,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/g.png": {
-      "hash": "2d2141ed4340",
-      "sha256": "2d2141ed43401270618264c48f700fbb6751b6582ccc3d147c388e89b5857d36",
-      "bytes": 1972843,
+      "hash": "9b07a69d5f15",
+      "sha256": "9b07a69d5f150cce99456138c78378a6a17999b4ba2d680e105c58ad8648fd80",
+      "bytes": 1972382,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/g.webp": {
-      "hash": "cf5ef1b87e48",
-      "sha256": "cf5ef1b87e481d9de77554ef5954d98f4748caa17870abf05ac811f918f6e0f0",
-      "bytes": 68430,
+      "hash": "75ad69c89db7",
+      "sha256": "75ad69c89db731bbf24e07b7415283a3a3e39e8dff0d59d04cd9c84eaca2ef21",
+      "bytes": 68264,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/gu.png": {
-      "hash": "70c0d001b4cc",
-      "sha256": "70c0d001b4cc7eb70a88bc61361fe47d3a8438eca91d188de5967045ec5268c0",
-      "bytes": 2184254,
+      "hash": "01fa66004380",
+      "sha256": "01fa66004380fed36e2ac67416e03a1fb278f90554374f347f979596fb1d8907",
+      "bytes": 2183914,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/gu.webp": {
-      "hash": "841bb769cc90",
-      "sha256": "841bb769cc90487db8065d9b7f509dad2a098bfbe584a775c909964c7e9aefa7",
-      "bytes": 78076,
+      "hash": "aa3b5f4f7cbb",
+      "sha256": "aa3b5f4f7cbb29cedb5a99a3eb13c20b228acc4cb606961511acd8e181c5bdc7",
+      "bytes": 78002,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/gw.png": {
-      "hash": "b2f78767f1a7",
-      "sha256": "b2f78767f1a75dec497e9d5793bbc1e7532b45af203a648014ddffba11a92fea",
-      "bytes": 2110388,
+      "hash": "9042388820d4",
+      "sha256": "9042388820d409db9be1365689e0b298312d60ccc369619a1a3092aed9a91e7f",
+      "bytes": 2110330,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/gw.webp": {
-      "hash": "45e30c985023",
-      "sha256": "45e30c985023853fb4129aae15c170a497080b1e3ba7e4b03e3b831a358109bc",
-      "bytes": 76994,
+      "hash": "b49dce220f39",
+      "sha256": "b49dce220f39db0b4a3a633ca84ee085d999eeb7ee2522cc83a90616adb5f7dc",
+      "bytes": 76952,
       "width": 1500,
       "height": 2100
     },
@@ -24545,184 +24545,184 @@
       "height": 230
     },
     "stainedglass/holostamp/bg.png": {
-      "hash": "63e02b5d6fb7",
-      "sha256": "63e02b5d6fb716a836f3c57b29dbde1365030466fe7ba1303f4def925fbc1f2f",
+      "hash": "910da2235f23",
+      "sha256": "910da2235f2399a57a0068e372edc9497c2c99ca9b91686956856c8f56a256ca",
       "bytes": 46985,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/bg.webp": {
-      "hash": "80ed23417739",
-      "sha256": "80ed23417739042ed5fee6ed6be2ff2873b91c79b2117e5d04d6a5a7fc495235",
-      "bytes": 5026,
+      "hash": "a71fe4d85db8",
+      "sha256": "a71fe4d85db87b802747174d6e50f3b590d1f40687e42e95cc6612c60d6cdd8b",
+      "bytes": 5000,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/br.png": {
-      "hash": "667a9dcdfd5b",
-      "sha256": "667a9dcdfd5b10f0c5c91b40a1103fa1b552d834d797f33eb3d9d790a9dc1541",
-      "bytes": 48076,
+      "hash": "9d300601110d",
+      "sha256": "9d300601110d7d3cf22f3adda721c256966b378829dcce9eda71d60cafbfa7c7",
+      "bytes": 48078,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/br.webp": {
-      "hash": "191bff94c1c9",
-      "sha256": "191bff94c1c97b166c16f23959ea0983f42ed8df206692cddf4eb7a97e1314d2",
-      "bytes": 5408,
+      "hash": "9c71c710e640",
+      "sha256": "9c71c710e64011bdabc80e7b9033301a964b6ec32c25db77d683ce7e8c12b2f1",
+      "bytes": 5394,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/c.png": {
-      "hash": "df8dc1034027",
-      "sha256": "df8dc103402776e3c54c01afbb92ca584dae53fad07539c585f41c057a57d9f7",
-      "bytes": 44567,
+      "hash": "a9b546d3211f",
+      "sha256": "a9b546d3211f3ca1186ad9f9254416421501aa7be7c959c2dcd3a86cb8b3dcfa",
+      "bytes": 44570,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/c.webp": {
-      "hash": "d60cb046c796",
-      "sha256": "d60cb046c796998fc838242c3af79335235962e49e3b79216cd50ef0511923f5",
+      "hash": "4df3c4e8d35f",
+      "sha256": "4df3c4e8d35fec2613d500279ecedd7300e9fd05877ad622668537045aea8c7a",
       "bytes": 6202,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/g.png": {
-      "hash": "32488f11e23f",
-      "sha256": "32488f11e23fd0462683d84a615537056d7d1b86b4f900f45e40c9ea10c578f9",
-      "bytes": 44911,
+      "hash": "8a9fb97f2955",
+      "sha256": "8a9fb97f2955c311d3a049059e3c16012be7b7e326dcb60e56adc687a3746a92",
+      "bytes": 44918,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/g.webp": {
-      "hash": "4a3a92aafec0",
-      "sha256": "4a3a92aafec0e5b89d657bda77c0ca806260641c96532a98a965514eda26149b",
-      "bytes": 5334,
+      "hash": "84b2fccf9a6c",
+      "sha256": "84b2fccf9a6ca1bc3fdb63e3db6fd8489e935c230cd4824be5e7d3c7cafe896b",
+      "bytes": 5330,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/gu.png": {
-      "hash": "c30a11969036",
-      "sha256": "c30a11969036d0ca64be5b0958783d706b65921d962ad83b8c69b4520d2fd746",
+      "hash": "10452ca222ae",
+      "sha256": "10452ca222ae13e7de8f70529230d1b5028316fdfbb99cbfcf1815857a428afd",
       "bytes": 53311,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/gu.webp": {
-      "hash": "f3ed5e9e475e",
-      "sha256": "f3ed5e9e475e51ae1aaaa8e38d2d305260efd36a20a69d3e121c368b5668b505",
-      "bytes": 5420,
+      "hash": "1e623b1e0c25",
+      "sha256": "1e623b1e0c2522e20100b749e82eebcfe85d43a209ef72fac6c7e5eac04b749d",
+      "bytes": 5424,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/gw.png": {
-      "hash": "92e2b700322a",
-      "sha256": "92e2b700322a7ba2abf4f5d476728cb516d1021b4873d33d5ee36ce2d7e3f902",
-      "bytes": 50562,
+      "hash": "ab3799c6d304",
+      "sha256": "ab3799c6d304b702b4c3325da5459b88f99a385db1b0bf5427fa0b9c64bbba6a",
+      "bytes": 50567,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/gw.webp": {
-      "hash": "2e807baac8a9",
-      "sha256": "2e807baac8a97d4f8b61a0f7b1c14e5a8322d5b760afebc000b9d48b04186cb6",
-      "bytes": 5326,
+      "hash": "39fca21bd5fe",
+      "sha256": "39fca21bd5fefb85604e632f666b9d548ac302aa51a73b2fe6377c3133f90fbf",
+      "bytes": 5328,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/m.png": {
-      "hash": "df8dc1034027",
-      "sha256": "df8dc103402776e3c54c01afbb92ca584dae53fad07539c585f41c057a57d9f7",
-      "bytes": 44567,
+      "hash": "a9b546d3211f",
+      "sha256": "a9b546d3211f3ca1186ad9f9254416421501aa7be7c959c2dcd3a86cb8b3dcfa",
+      "bytes": 44570,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/m.webp": {
-      "hash": "d60cb046c796",
-      "sha256": "d60cb046c796998fc838242c3af79335235962e49e3b79216cd50ef0511923f5",
+      "hash": "4df3c4e8d35f",
+      "sha256": "4df3c4e8d35fec2613d500279ecedd7300e9fd05877ad622668537045aea8c7a",
       "bytes": 6202,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/r.png": {
-      "hash": "e64979131b3b",
-      "sha256": "e64979131b3bc644cfda7e4227c3729e3b02e02654dfd5a22a0ff69e57757979",
-      "bytes": 41980,
+      "hash": "eff880307b0c",
+      "sha256": "eff880307b0c532b102be2d927c89000e54c6183f65e326cdc7ea407f8242590",
+      "bytes": 41991,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/r.webp": {
-      "hash": "80a1b9d2d67a",
-      "sha256": "80a1b9d2d67ae2c91fd735d674fef10e1c69e249ca8470b737abdd00fbd06ce9",
-      "bytes": 6106,
+      "hash": "126531b29bb7",
+      "sha256": "126531b29bb7ea2ed26f0ee2b15086d9538f04a0cd679171acce713ea7af5720",
+      "bytes": 6114,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/rg.png": {
-      "hash": "90c40eb6a569",
-      "sha256": "90c40eb6a569b79022f6c2eefe11468955d3010f5095af90dcd196de6b039413",
-      "bytes": 50080,
+      "hash": "d75a73d32300",
+      "sha256": "d75a73d32300b2aa063aa1a3ae7d22f659da091449f08be9d9e695120d870a54",
+      "bytes": 50081,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/rg.webp": {
-      "hash": "1b2d679ede79",
-      "sha256": "1b2d679ede797591f71796dcdbee48fd3639d6a4b56c8966ec81e129f29e8093",
-      "bytes": 5918,
+      "hash": "7c8baab351c1",
+      "sha256": "7c8baab351c134ee8e3f87e80ddf04008547fa96ae5fbf653ddf8c0acbb274e4",
+      "bytes": 5886,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/rw.png": {
-      "hash": "16896f407b98",
-      "sha256": "16896f407b98273291c2546c1bd8d3df6dbe82f999199736d59d7b9b9d3bfae0",
-      "bytes": 49275,
+      "hash": "88f1203c5204",
+      "sha256": "88f1203c5204df9f068df2c745c0495dceb7a31b2af83fa825444419c938a9d2",
+      "bytes": 49274,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/rw.webp": {
-      "hash": "e5f87dcc6152",
-      "sha256": "e5f87dcc6152110c73f75eb5142b62f9d1c896aedc9e7ddae59a7255c56a8fa6",
-      "bytes": 5998,
+      "hash": "32ab82a80917",
+      "sha256": "32ab82a8091713602c03647aade12f5f518946aec3ee79a16aa2f31ed92fad9c",
+      "bytes": 6048,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/u.png": {
-      "hash": "382c551a60eb",
-      "sha256": "382c551a60eb908d1a4317c2d029a8c50ccc90cee43c350cce9242f274a6b792",
-      "bytes": 46595,
+      "hash": "949451bb826d",
+      "sha256": "949451bb826d7aaf62a31161952b88fc23ca17012d9e2404a05ceec92bb349fb",
+      "bytes": 46594,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/u.webp": {
-      "hash": "d64492051a2a",
-      "sha256": "d64492051a2acb0a7d889ada153743beaf4239067ab923987257d0c6338ef055",
-      "bytes": 5494,
+      "hash": "423327829ec4",
+      "sha256": "423327829ec4b9771933dec5b4dbb730615a79b1704dd8a44e5c4b664c501b4d",
+      "bytes": 5490,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/ub.png": {
-      "hash": "2e0a966ff097",
-      "sha256": "2e0a966ff09748d31aadf6d38cb86cce5a30111603a1f9535399a9e0a572ba0e",
-      "bytes": 50230,
+      "hash": "ac0b7ee34b97",
+      "sha256": "ac0b7ee34b97fbb4411bddb114258fa5ca78de3e78c9d6617df3bf0d66da5052",
+      "bytes": 50226,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/ub.webp": {
-      "hash": "49395d5771c9",
-      "sha256": "49395d5771c97cbc5714b687725cbbf0370bab1dee1ebd985a7c73a74e7bdb2a",
-      "bytes": 5436,
+      "hash": "48cf2f6f5fed",
+      "sha256": "48cf2f6f5fed6f155b414af45224c14b94222615fb27da6d94897ee529d9962b",
+      "bytes": 5424,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/ur.png": {
-      "hash": "366630c5d4db",
-      "sha256": "366630c5d4db846da8de79ffa7936706ac372efec128382ec29128274f972319",
-      "bytes": 53480,
+      "hash": "2957be9da27a",
+      "sha256": "2957be9da27a87aa66b4b131c778f11455dd1d28ebb4c7d11a0a2a5976010660",
+      "bytes": 53481,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/ur.webp": {
-      "hash": "20feaa5119a3",
-      "sha256": "20feaa5119a37722a13fc25f5de7a427085a42949c3f91cd21b92541be05915d",
-      "bytes": 5718,
+      "hash": "bb140cee12bc",
+      "sha256": "bb140cee12bc096e05a415022bbf61e24afa87c0462a8e675192d3a635ad90f2",
+      "bytes": 5714,
       "width": 220,
       "height": 230
     },
@@ -24741,44 +24741,44 @@
       "height": 230
     },
     "stainedglass/holostamp/wb.png": {
-      "hash": "539b44e30b24",
-      "sha256": "539b44e30b2425f6d89240a264a262dd0a69117507160774931ecd2503e91a00",
-      "bytes": 48817,
+      "hash": "c607c7aa32c4",
+      "sha256": "c607c7aa32c4383d80208808e6501e4c68ad22f06f9cb472c353a54e6f40fb9f",
+      "bytes": 48814,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/wb.webp": {
-      "hash": "c925b4672bfe",
-      "sha256": "c925b4672bfe930efe014ecdad63447dd0d41b291db4e5a3f54d596bf022d014",
-      "bytes": 5426,
+      "hash": "68564585d84e",
+      "sha256": "68564585d84e4f4180403a131c2006295a3d96ac8e63c82a9efd7b179d9ab68c",
+      "bytes": 5430,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/wu.png": {
-      "hash": "a6accbce8145",
-      "sha256": "a6accbce814504ad4f25a185d8ec4b52d873362ce42e85bca7a08b21bd151670",
-      "bytes": 52898,
+      "hash": "b18080af3e0e",
+      "sha256": "b18080af3e0ea21ec7272bcbc93459ca47a4d3867b06831f28063b0d54afe75c",
+      "bytes": 52896,
       "width": 220,
       "height": 230
     },
     "stainedglass/holostamp/wu.webp": {
-      "hash": "f5953ea915f0",
-      "sha256": "f5953ea915f08515e28a0b10a919771d77eb68eb7b96a5dabc40e68339629bed",
-      "bytes": 5462,
+      "hash": "238f7e193cdf",
+      "sha256": "238f7e193cdfd02139572145e9022d21a6bcaa89b8f8231131fed8e0208526e8",
+      "bytes": 5460,
       "width": 220,
       "height": 230
     },
     "stainedglass/m.png": {
-      "hash": "eb53a5a8676a",
-      "sha256": "eb53a5a8676af7ba5af0594e0e4b06ff922e69380ec9759fc109ba741129add5",
-      "bytes": 1996013,
+      "hash": "7f03c8257894",
+      "sha256": "7f03c82578944e7499f4ef38b0f1308cd4152e3debf35a5c5315bba43c2040bd",
+      "bytes": 1995747,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/m.webp": {
-      "hash": "1da97ecf4100",
-      "sha256": "1da97ecf41000b30ee9e0d484dee4adc30d32d427e588b8b318ba53cc8dd5334",
-      "bytes": 80896,
+      "hash": "10be14634edb",
+      "sha256": "10be14634edb9b35e049eaf492195238e48c32490521cc5ff1d201886a67d850",
+      "bytes": 80786,
       "width": 1500,
       "height": 2100
     },
@@ -24881,86 +24881,86 @@
       "height": 127
     },
     "stainedglass/r.png": {
-      "hash": "c759cb1d4c1a",
-      "sha256": "c759cb1d4c1a4c398d54b003ed87a8561ce8543191216e860bd8ed4540eecca8",
-      "bytes": 1864884,
+      "hash": "3e2b95fae829",
+      "sha256": "3e2b95fae829793da06d9eb30db9ff15e189e0e4c274d337524966a0161f4174",
+      "bytes": 1864517,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/r.webp": {
-      "hash": "0fa4edd9d2f3",
-      "sha256": "0fa4edd9d2f37cdb72bf625527733400318d4ef1c373bdaf7dcfacae42d8a2b7",
-      "bytes": 72474,
+      "hash": "4e032bf99a55",
+      "sha256": "4e032bf99a55f028e23d4ebad524521527dfe4f7d3365e94f5f0184cbbec5d2e",
+      "bytes": 72500,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/rg.png": {
-      "hash": "7f9aa74872fe",
-      "sha256": "7f9aa74872fe5f036623b27f7994f8f1f7b2a87fec0eee3f912e52d18948d70b",
-      "bytes": 2095273,
+      "hash": "43a2e0fe007b",
+      "sha256": "43a2e0fe007b2605121b20ad829630596b5f259dee35eb519bcb41cf527d2b4e",
+      "bytes": 2094904,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/rg.webp": {
-      "hash": "5e97c311be15",
-      "sha256": "5e97c311be159ebf2d8946c283acd54985f8ac1083f13237a45f2abf60f6eaca",
-      "bytes": 78268,
+      "hash": "c768d9b1df70",
+      "sha256": "c768d9b1df70496aed4e6b768cf2d68791d7eef5a9e884c652b959abfa88308d",
+      "bytes": 78276,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/rw.png": {
-      "hash": "ee15c58ad62e",
-      "sha256": "ee15c58ad62e3dee0bdd648e30283ce821074d23ce81b4ab86c633983bb68b1e",
-      "bytes": 2074214,
+      "hash": "60945d588ae6",
+      "sha256": "60945d588ae69c0873681d662e240fc9f57cfe1dec766bb7839e940a3e9e69dd",
+      "bytes": 2073882,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/rw.webp": {
-      "hash": "dd0b958bed3e",
-      "sha256": "dd0b958bed3edaca84b0cc8304c345cd5e7409baf721465e836ce1e58457cf63",
-      "bytes": 79948,
+      "hash": "2d5f3c67d260",
+      "sha256": "2d5f3c67d2601c16007884212403275e2f0dba542a932586ac33e41472dae61a",
+      "bytes": 79864,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/u.png": {
-      "hash": "2da0fedeecb9",
-      "sha256": "2da0fedeecb9be7dbb2205ed2b20c1a8eb2a6117d4a82c78fd64648af34cacb0",
-      "bytes": 2065713,
+      "hash": "a7ae88e70f50",
+      "sha256": "a7ae88e70f504c2bd2631848f389a6f51e1d77ab73be38bff3b49f8e626264f7",
+      "bytes": 2064856,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/u.webp": {
-      "hash": "3edcd94406d3",
-      "sha256": "3edcd94406d3cf7d7c25982d80d1efa15907cca5701bac44ddfbab77204edaf9",
-      "bytes": 76332,
+      "hash": "19c1f72c80ee",
+      "sha256": "19c1f72c80ee64005010d0b8af91ce12efd405e271661536d5dd4f82636ccb1c",
+      "bytes": 76298,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/ub.png": {
-      "hash": "d9875f6bbaea",
-      "sha256": "d9875f6bbaeac0f5c98a963c92752aab18135af9728e59c11c805a531bf4819a",
-      "bytes": 2124782,
+      "hash": "53f04a690bc7",
+      "sha256": "53f04a690bc79c7eceb212c580f4c4f947daf9b538df98fefa1c343060dbb2ab",
+      "bytes": 2124509,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/ub.webp": {
-      "hash": "7d63ea94c1e5",
-      "sha256": "7d63ea94c1e5547d725ec07f495fbd73b75b65b2895b384adcdc5ed3bf77c18d",
-      "bytes": 76788,
+      "hash": "da94d6cd221c",
+      "sha256": "da94d6cd221ca277732eab84d000e3c5013049203523de979f5287eac5926519",
+      "bytes": 76764,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/ur.png": {
-      "hash": "2a4f0fb0c933",
-      "sha256": "2a4f0fb0c933f4045ebcae16920ef9231d378ec8690faf6c403603d338189972",
-      "bytes": 2165804,
+      "hash": "911d8882cfbd",
+      "sha256": "911d8882cfbd3c810bbba4fac18ae002128d22d40f1cb0fa8c33d720c0435f83",
+      "bytes": 2165466,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/ur.webp": {
-      "hash": "788311cf13fa",
-      "sha256": "788311cf13faf73cd09c7afeb6b67281e5c7dba780efdddbf3ca5ecfa34b9b46",
-      "bytes": 80514,
+      "hash": "0b7ca27fd7dd",
+      "sha256": "0b7ca27fd7dd048227e76792ee541e9637900ccfcff753b60aa823f9cdd39d1e",
+      "bytes": 80440,
       "width": 1500,
       "height": 2100
     },
@@ -24979,30 +24979,30 @@
       "height": 2100
     },
     "stainedglass/wb.png": {
-      "hash": "a4d8e6f95423",
-      "sha256": "a4d8e6f95423d374d263fd40e8867853054ca6f6fa84a3a9725ace693469cbe4",
-      "bytes": 2055304,
+      "hash": "f707b5ccb950",
+      "sha256": "f707b5ccb950fe182e61091bec2ae562938d2aa8513bc03d86227f62262e29ba",
+      "bytes": 2055102,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/wb.webp": {
-      "hash": "8937a6a7d55d",
-      "sha256": "8937a6a7d55d18aee77e833b12457792871941530e3e189582fb5d69f540c845",
-      "bytes": 76132,
+      "hash": "d2cc667e9d2e",
+      "sha256": "d2cc667e9d2e71e7228b61784adcfbaf26ca976c8b8d3db2c1e6765877c9e84f",
+      "bytes": 75862,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/wu.png": {
-      "hash": "dd9b614707b9",
-      "sha256": "dd9b614707b90229c7439330c7d7f8ec7644c339d864a084086be0de3a991ed3",
-      "bytes": 2176681,
+      "hash": "ac26f51bf330",
+      "sha256": "ac26f51bf33085be6eb1447001164841f85e7d2bcb429311c1a6083d09146ee6",
+      "bytes": 2176389,
       "width": 1500,
       "height": 2100
     },
     "stainedglass/wu.webp": {
-      "hash": "6f29d6646915",
-      "sha256": "6f29d6646915acc0bd14887cdccacf8529f28991056ab58dc7ef8108778f93cf",
-      "bytes": 80026,
+      "hash": "12caaa4b359c",
+      "sha256": "12caaa4b359cea2947da284f9951cbe3a5d54aa939ba65e04d993030fbc6399a",
+      "bytes": 79886,
       "width": 1500,
       "height": 2100
     },

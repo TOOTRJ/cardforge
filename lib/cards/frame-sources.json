@@ -17360,22 +17360,22 @@
       "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
       "restored": {
         "w": "11cb968b7ce49d6fe36fddcf6c5e3f3317e1f7aff81185a9d93a7529798044f5",
-        "u": "6b4bff6bf3a4f9b0eb77ee393cf37bfbc4a759dc50b2ff4174ed863bc1f2dd06",
+        "u": "887dd9926ca4cb82e09311e88819cc22b5fd0c3cff6184f335a54ec3488bbc85",
         "b": "375ddf5cac4892bce36e10f8936051551a0c72f7b8cd99fb50766625becd78ff",
-        "r": "9cfb7b05454796af03f0806a616fc0b1b69082936caff829c0c2544deb4b7626",
-        "g": "7ef01506b0af80399935a22d6971124cc531acffe9222ecb2cc19f6d03fd8fb2",
-        "c": "79ec62e8cd097856cdafbecf13542664856e3494ee21bffba03c54bbf7776f88",
-        "m": "79ec62e8cd097856cdafbecf13542664856e3494ee21bffba03c54bbf7776f88",
-        "wu": "28d4111b0334211ff7f348a361eb1ae353c68721f48cd308ed9c09d609bc1532",
-        "wb": "1ae5e78a5c55c553142f539452786d990004a4cfd3c8b17a51a6f653f2b2b0f2",
-        "ub": "af066e10f4861410c3e9c2f633bb31d9b9b73602e238ab928a6852f47a1b6445",
-        "ur": "ea7b064b3f41a051e7da3c673d1f10742740bf541a391c9bbd37b4583d0651be",
-        "br": "6affcfc7b82f64a20590e8fca7582098a89d93430018061065823a6c8682107d",
-        "bg": "fdabaa6f01adee62419a50ee5992ace692a5cf08ff3c0ed3d2f876a4e6ba4cb5",
-        "rg": "8966c8988bec8258580225c0ee59cbaa5891ff0481ea2f1acbc0b9692af2fdf2",
-        "rw": "6b7ac0b6b81bccce2c529c165f9fddffbd32d67f942ab59570a52e104dfd888a",
-        "gw": "4f61a38b68ee25d234df06dbc157958f07b8b8670ecdb7aa1fac22f579825e9f",
-        "gu": "24cf477cf17deca12c051a0371ea786f4efc5cc6f83dd24468f9d1aa0a7a2b8f",
+        "r": "83b83c6454a9eb252aabc80083ba069c1f1ccb502787e8b1d05635a982f2a99d",
+        "g": "09086d1d4114d4f676461599fcd4caea41239986878454548efddf758ad02ce8",
+        "c": "c35e8176590cd4ac08678150eaf8b9e32cf83a60234000a4b19735ef4252bf08",
+        "m": "c35e8176590cd4ac08678150eaf8b9e32cf83a60234000a4b19735ef4252bf08",
+        "wu": "6f6dbbd0d98c874b94fcd4430d959108e934af4ae031656becc125418dc209a4",
+        "wb": "abf8e67b30e07d1f7adc2728402a35feee1c5927d4e9e75b91ba3bea961b0939",
+        "ub": "e5155a912a19ed537f9b8860d7b3a9ebc6463c4ac05b3e9aa03958ebfd68109b",
+        "ur": "eb3356e441da26570c1bf95232073b186199aa42d53d57256ee64d8122ab9fcf",
+        "br": "dc3b0130628dabd4686a1bf05421729d817fe7160c830eb9ec0f817480d0033f",
+        "bg": "be24c016d112a134f079cbc9dbf0fe5b1e1a49a22655773030464209c7c9efe7",
+        "rg": "005a503665f798acd181b36af4988367c618b292ed54825e16dbeddffbcd1961",
+        "rw": "c606419e26046ae8ffff3b16f6aca490b3ce18ffe5ef17058bee4052171142ff",
+        "gw": "18c9f598e8b79548e408d5610191862769348e25f48b194ef7c61c1b99ac2adf",
+        "gu": "517eb7d90f2d48acee3f000ea884398c935ccd8df77f144d1becdf7ce54fd9bb",
         "what": "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)"
       }
     },
@@ -17387,13 +17387,13 @@
       },
       "img/frames/dmu/stainedGlass/g.png": {
         "table": "SG_PRINT_TONES (g)",
-        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +13 / -2 / +14 (31, 73, 32 → 44, 71, 46), fading to nothing at white"
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +13 / -2 / +14 (31, 73, 32 → 44, 71, 46), fading to nothing at white"
       },
       "img/frames/dmu/stainedGlass/m.png": {
         "table": "SG_PRINT_TONES (m)",
         "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +10 / +32 / +45 (178, 118, 17 → 188, 150, 62), fading to nothing at white",
         "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +7 / +21 / +39 (173, 116, 20 → 180, 137, 59), fading to nothing at white",
-        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +9 / +3 / +17 (99, 68, 12 → 108, 71, 29), fading to nothing at white",
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +9 / +3 / +17 (99, 68, 12 → 108, 71, 29), fading to nothing at white",
         "lead": "on the pixels where img/frames/dmu/stainedGlass/m.png differs from img/frames/dmu/stainedGlass/u.png by 16–40 levels (max channel; full from 40), less where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png: -9 / -10 / +13 (99, 71, 49 → 90, 61, 62), fading to nothing at white"
       },
       "img/frames/dmu/stainedGlass/pt/b.png": {
@@ -17416,13 +17416,13 @@
         "table": "SG_PRINT_TONES (r)",
         "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: -2 / -2 / +13 (167, 37, 34 → 165, 35, 47), fading to nothing at white",
         "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: -3 / +0 / +14 (147, 29, 23 → 144, 29, 37), fading to nothing at white",
-        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +0 / -3 / +10 (119, 49, 30 → 119, 46, 40), fading to nothing at white"
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +0 / -3 / +10 (119, 49, 30 → 119, 46, 40), fading to nothing at white"
       },
       "img/frames/dmu/stainedGlass/u.png": {
         "table": "SG_PRINT_TONES (u)",
         "title": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 110–204 columns 88–1411: +22 / -4 / +10 (19, 108, 171 → 41, 104, 181), fading to nothing at white",
         "type": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1193–1288 columns 88–1411: +8 / -17 / +0 (14, 79, 149 → 22, 62, 149), fading to nothing at white",
-        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–2099: +2 / +0 / +15 (52, 62, 100 → 54, 62, 115), fading to nothing at white"
+        "box": "on the pixels where img/frames/dmu/stainedGlass/u.png differs from img/frames/dmu/stainedGlass/r.png by 16–40 levels (max channel; full from 40) rows 1312–1921: +2 / +0 / +15 (52, 62, 100 → 54, 62, 115), fading to nothing at white"
       },
       "img/frames/dmu/stainedGlass/w.png": {
         "table": "SG_PRINT_TONES (w)",

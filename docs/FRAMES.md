@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 65 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 66 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
@@ -192,7 +192,6 @@ into `.frames-build/` — 65 templates today (`CC_TEMPLATES` in
   one), its ten pair masters (the box split), its plates, the stamp notch
   split off every master, and its crown band (`stainedglasscrown`)
   ([The Dominaria United Stained Glass showcase](#the-dominaria-united-stained-glass-showcase-411-wave-2));
-
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
   the 'Zendikar Rising' pack's frames whole with their title ends, each
   master written with the straight bar and the stamp notch split off as its
@@ -3285,6 +3284,30 @@ fine).
 are not built (#268's red | green). The frame's own correction against
 print followed (Round 59): [the constellation frame on its prints](#the-constellation-frame-on-its-prints-round-59).
 
+### A showcase's crown is its own frame's
+
+A legendary printing of a crowned showcase (`CROWNED_SHOWCASE_SIGNATURES`
+in `lib/scryfall/import-mapper.ts`) imports with the crown switch ON — but
+the crown it prints is its OWN frame's piece (the ring's scallops, the
+scroll's rolled edge, the Tarkir wings, the hedron's pill ends, the
+woodland's leaves, the anime's flourish, the dossier's torn strip, the
+stained glass's dome), never M15's standard crown. So the switch is on only
+where the card lands on — or is switched to, the import chooser's tile
+included — the frame the signature's registry rule names
+(`ownCrownFramesOf` → `printed_crown_frames`, read from the rule by
+`ownFramesOfSignature` in `lib/scryfall/frame-signatures.ts`, never listed
+twice; `importedAnatomy` in `lib/cards/anatomy.ts`). On any other landing —
+the standard frame an import falls back to while the showcase's colour is
+unverified, the anime's full-bleed M15 landing — it is OFF. The Bloomburrow
+anime set the rule (layout v70); the Dominaria United stained glass made it
+every crowned showcase's (2026-10-28: before, the others drew M15's crown on
+their fallback). A CORRECTION of the import only — no stored card changes,
+no bump, no sweep (a stored card keeps its switch). The one exception is
+the Theros constellation (`STANDARD_CROWN_SHOWCASE_SIGNATURES`): its crown
+IS the standard 2015 crown with the starfield inside, and M15's on its
+fallback is fine (owner Round 59) — it follows the printing anywhere.
+`tests/unit/scryfall/crowned-showcase-own-frame.test.ts` holds it.
+
 ### The constellation frame on its prints (Round 59)
 
 Owner Rounds 59 (decision 1: correct the `nyx` masters against the eleven
@@ -5181,7 +5204,7 @@ pick it until a colour is verified.
   frame with the pair's two boxes lerped across `SG_BOX_RAMP` (46 → 57 %W)
   through the pack's own 'Rules' mask: the run's two-colour boxes, their
   text-free top rows 1320–1336 read with each print's two ends as 0 and 1,
-  cross 10 / 50 / 90 % at 47.1 / 51.5 / 55.8 %W (the median of 36 that
+  cross 10 / 50 / 90 % at 47.1 / 51.5 / 55.8 %W (the median of 34 that
   read). Three colours or more print the gold box (DMU #302 Jodah, #313,
   #317–319, #327). The registry needs no `two-colour` gap: the frame draws
   it.
@@ -5193,7 +5216,10 @@ pick it until a colour is verified.
   `SG_CROWN_RAMP` (47 → 53 %W: 64 prints cross 47.8 / 50.3 / 52.6) through
   the pack's 'Inner Crown' mask — DMU #310 Radha's dome red into green
   under a gold rim. An ADDITION, opt-in per card; imports name it ON
-  (`showcase/dmu/stained-glass` is in `CROWNED_SHOWCASE_SIGNATURES`).
+  (`showcase/dmu/stained-glass` is in `CROWNED_SHOWCASE_SIGNATURES`) — on
+  this frame only: an import that falls back to M15 while its colour is
+  unverified lands with the crown OFF ([A showcase's crown is its own
+  frame's](#a-showcases-crown-is-its-own-frames)).
 - **The stamp notch, split OFF every master** (`SG_NOTCH`,
   `splitWarpNotch`; `stainedglass/holostamp/<key>`, 220 × 230 at 640 /
   1776): the pack arches the box's foot over a black well on every key; the
@@ -5218,10 +5244,14 @@ pick it until a colour is verified.
   with a thinner rim than the pack's: kept as drawn (flagged).
 - **Tones** — the ring's one rule (raw scan medians, Scryfall PNGs at 1500
   × 2100; a region ≥ 9 levels off is toned), per region: the glass of the
-  title bar, the type bar and the text box (where the pack's blue and red
-  files differ by ≥ 40 levels — the lead and the rims are the same pixels in
-  every mono file — above a luma floor that keeps the lead lines inside the
-  glass as drawn), the gold frame's lead, each crown's dome and panes, each
+  title bar, the type bar and the text box down to its foot (1922 px: the
+  rim's highlight under it differs between the files too, and is not
+  glass) — where the pack's blue and red files differ by ≥ 40 levels (the
+  lead and the rims are the same pixels in every mono file), above a luma
+  floor that keeps the lead lines inside the glass as drawn — the gold
+  frame's lead (all of it: read on the box's rows, 1320–1900, it is one
+  metal drawn one way over the whole frame, and toned whole it moves toward
+  print wherever the check read it), each crown's dome and panes, each
   plate's face. Read on the base printings (the textured, halo-foil and
   serialized twins print other foils), a colour's box and dome also from
   the two-colour boxes' ends. 28 regions toned (`SG_PRINT_TONES`; the gold
@@ -5230,7 +5260,9 @@ pick it until a colour is verified.
   each channel by (to − from), fading to nothing toward white — not the
   ring's gain: the gold's blue reads 17 against print's 62, and a gain of
   × 3.6 turned the glass's light streaks and lead lines violet (built,
-  looked at, dropped).
+  looked at, dropped). Not toned, flagged: the box's foot-rim HIGHLIGHT
+  is the pack's silver (~165,145,145) where print's is bronze
+  (~110,96,93) — pack art (a TODO line).
 - **Geometry as drawn.** The pack's bars sit within 1–2 px of print's
   (the title bar 2.5 px lower, the type bar 2 px higher), the box's foot
   2–4 px higher, the frame 4 px wider each side (print's frame is 0.6 %
@@ -5637,11 +5669,12 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     box, in the strokes' tone (`BLOOMANIME_CROWN`, 646, 16, 209 × 64). All
     twelve creatures are legendary and print it, so `showcase/blb/anime`
     imports with it on (`CROWNED_SHOWCASE_SIGNATURES`; Ral, the walker,
-    names none) — but ONLY on the anime frame
-    (`printed_crown_frames`, `OWN_FRAME_CROWN_SIGNATURES`): the import lands
-    on the standard frame (1.18), where the printing wears no standard
-    crown, so the switch is off there and on when the card is switched to
-    the anime (the chooser's tile too);
+    names none) — but ONLY on the anime frame (`printed_crown_frames`;
+    since the stained glass the rule of every crowned showcase, [A
+    showcase's crown is its own frame's](#a-showcases-crown-is-its-own-frames)):
+    the import lands on the standard frame (1.18), where the printing wears
+    no standard crown, so the switch is off there and on when the card is
+    switched to the anime (the chooser's tile too);
   - the **stamp** — MSE's own notch, the footer's tone through
     `border_stamp_mask.png` under `stamp.png`'s arch in the strokes' tone
     (`bloomanimeholostamp/<key>.png`, 494, 1882, 540 × 58), our oval at
@@ -5761,7 +5794,9 @@ can pick it until a colour is verified.
   `DOSSIER_CROWN_RAMP`, 40.5 → 57.5 %W (the crown's band on the run's
   two-colour legends: 10 / 50 / 90 % at 42.5 / 49.7 / 55.9 %W). The
   showcase is in `CROWNED_SHOWCASE_SIGNATURES`: a legendary import names
-  the crown ON. An ADDITION, opt-in per card.
+  the crown ON — on this frame only ([A showcase's crown is its own
+  frame's](#a-showcases-crown-is-its-own-frames)). An ADDITION, opt-in per
+  card.
 - **Stamp** (`DOSSIER_HOLO_STAMP`, `dossierholostamp/<key>.png`): the
   run's rares and mythics wear the OVAL (`security_stamp: oval`, 45 of 55),
   its uncommons none — "auto" is a rare or mythic, as on M15. The notch is
@@ -10220,7 +10255,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 84 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 85 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
