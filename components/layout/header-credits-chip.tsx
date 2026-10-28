@@ -23,7 +23,10 @@ export function HeaderCreditsChip({
     >
       <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
       <span>{formatCredits(balance)}</span>
-      <span className="text-subtle">· {creditsUsed} used</span>
+      {/* Below lg the row holds the account controls and the hamburger only
+          (TODO 3b.27): the balance stays, "used" moves to the title and to
+          the drawer's Account line. */}
+      <span className="hidden text-subtle lg:inline">· {creditsUsed} used</span>
     </Link>
   );
 }
