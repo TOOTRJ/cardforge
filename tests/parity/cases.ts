@@ -99,7 +99,7 @@ const PICKS: readonly Pick[] = [
     as: "@three-pips",
     // A three-pip cost: the long card's five-pip row is the M15 cost row's
     // own 750 px difference ("750-cost-row-width", struck at layout v61), not this frame's.
-    why: "Nyx Constellation: the crown band over the MSE starfield master, its arms faded into the master's rim, light ink on the translucent bars",
+    why: "Nyx Constellation: the crown band over the starfield master (Card Conjurer's 'Nyx Showcase' since 4.17f), its arms faded into the master's rim, light ink on the translucent bars",
     row: () => ({ cost: "{2}{G}" }),
   },
   // The constellation's text on its prints (TODO 4.11, layout v66): the

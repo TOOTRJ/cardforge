@@ -14,8 +14,11 @@
 //     1.26 on average, and 0.41 is 1.25 × the box's 0.33).
 // Both keep MSE's black; only their alpha changes.
 //
-// Applied by scripts/build-variation-frames.mjs to the nyx masters before the
-// corner normalisation (both are far from the corners), on the raw
+// Applied by scripts/import-cc-frames.mjs to the nyx masters (Card
+// Conjurer's 'Nyx Showcase' since TODO 4.17f — the same 50 % black as MSE's,
+// on the M15 pack's rows: NYX_CC_*_ROWS; MSE's masters, built by the retired
+// build-variation-frames.mjs, were toned at NYX_*_ROWS) before the corner
+// cut (both are far from the corners), on the raw
 // 1500 × 2100 RGBA buffer, in place. Within each band only MSE's translucent
 // black changes — its pixels (α 127 / 128: 127.5 quantised) become the new
 // alpha, a partial cover of it scales with it — and the frame's anti-aliased
@@ -41,6 +44,13 @@ export const NYX_TEXT_BOX_ALPHA = 171;
  */
 export const NYX_TYPE_BAR_ROWS = [1180, 1310];
 export const NYX_TEXT_BOX_ROWS = [1310, 2100];
+/** The same bands on Card Conjurer's 'Nyx Showcase' masters (TODO 4.17f:
+ *  the masters re-sourced from that pack, the same drawing on the regular
+ *  M15 pack's geometry — the bar's black 1193–1290 between the frame lines
+ *  at 1167–1191 and 1291–1314, the box's 1315–1929 below that line). The
+ *  bands meet inside the opaque rim (rows 1303–1313), as above. */
+export const NYX_CC_TYPE_BAR_ROWS = [1175, 1305];
+export const NYX_CC_TEXT_BOX_ROWS = [1305, 2100];
 
 /** The least 50 % black a band holds before it is toned (the bar has
  *  122,130 px of it, the box 766,082, on every colour). */
@@ -127,10 +137,10 @@ export function toneNyxBand(data, width, height, { top, bottom, alpha, minSeeds,
  * in each; throws, before changing anything, when either still holds too
  * little of MSE's 50 % black.
  */
-export function toneNyxMaster(data, width, height) {
+export function toneNyxMaster(data, width, height, { barRows = NYX_TYPE_BAR_ROWS, boxRows = NYX_TEXT_BOX_ROWS } = {}) {
   const bands = {
-    bar: { top: NYX_TYPE_BAR_ROWS[0], bottom: NYX_TYPE_BAR_ROWS[1], alpha: NYX_TYPE_BAR_ALPHA, minSeeds: MIN_SEEDS.bar, label: "type bar" },
-    box: { top: NYX_TEXT_BOX_ROWS[0], bottom: NYX_TEXT_BOX_ROWS[1], alpha: NYX_TEXT_BOX_ALPHA, minSeeds: MIN_SEEDS.box, label: "text box" },
+    bar: { top: barRows[0], bottom: barRows[1], alpha: NYX_TYPE_BAR_ALPHA, minSeeds: MIN_SEEDS.bar, label: "type bar" },
+    box: { top: boxRows[0], bottom: boxRows[1], alpha: NYX_TEXT_BOX_ALPHA, minSeeds: MIN_SEEDS.box, label: "text box" },
   };
   // Check both before touching either, so a half-toned master is refused whole.
   for (const band of Object.values(bands)) {

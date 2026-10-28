@@ -1717,6 +1717,26 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            never a badge: the gap was never the look of any print.
 //            Verification-neutral: no slot, master or plate moves; only the
 //            letters of those pairs close up.
+//   v73 — two frame corrections against their own prints, in one bump
+//            (owner 2026-10-28): (a) the adventure's LEFT page's paper
+//            toned onto print (TODO 4.26a) — Card Conjurer's masters painted
+//            it 30–54 levels a channel darker than every print, on every
+//            colour; the paper inside `bookLeft`, below the type bar and
+//            between the page's outlines, toned per key to the raw scan
+//            medians (scripts/lib/cc-frames.mjs ADVENTURE_PAPER_TONES), the
+//            page pieces re-cut from the new masters; `adventure/c` (no
+//            print) and every bar unchanged, so Prepare's masters — whose
+//            page bars are read from these — rebuild byte for byte. (b) The
+//            Nyx Constellation's lower half on print (TODO 4.17f) — the
+//            masters re-sourced from Card Conjurer's 'Nyx Showcase' into the
+//            frames bucket (they leave public/frames/nyx), v37's darkness
+//            and v55's rim kept as recipe steps, the type band 4 px up with
+//            its bar (NYX_TYPE_DOWN_PX 10 → 6). ADVENTURE_NYX_LAYOUT_VERSION
+//            below — the ONE constant (taken as v73 at merge time: v72 is
+//            #626's). A CORRECTION ("sweep"), never a badge.
+//            Verification: the adventure's ticks stay fresh (no slot moves:
+//            the masters' paper only — the owner signs the sheet); `nyx`'s
+//            would go stale (its type slot moves) — none exists.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -2000,7 +2020,21 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = DISPLAY_KERNING_LAYOUT_VERSION;
+/** The adventure's left-page paper and the Nyx Constellation's lower half
+ *  on their prints (TODO 4.26a + 4.17f): every card on `adventure` and
+ *  `nyx`. ITS version lives here alone — CARD_LAYOUT_VERSION, the scoped
+ *  tables and the rollout below read this constant — so a bump that merges
+ *  first moves it in one place (this constant, the test's `V` and the docs
+ *  move together). v73: v72 is #626's (the display face's kerns) —
+ *  never shipped over a gap.
+ *  Frozen once it ships. */
+export const ADVENTURE_NYX_LAYOUT_VERSION = 73;
+export const ADVENTURE_NYX_TEMPLATES: readonly string[] = ["adventure", "nyx"];
+/** v73's templates whose SLOTS move (the nyx type band): the ticks it
+ *  stales. The adventure's change is its masters' paper — no slot moves. */
+export const ADVENTURE_NYX_VERIFICATION_TEMPLATES: readonly string[] = ["nyx"];
+
+export const CARD_LAYOUT_VERSION = ADVENTURE_NYX_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2244,6 +2278,11 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // row, the name and the type band; every card on `nyx`. No narrower
   // verification scope: no colour has a tick.
   [NYX_GEOMETRY_LAYOUT_VERSION]: NYX_GEOMETRY_TEMPLATES,
+  // The adventure's left-page paper and the Nyx Constellation's lower half
+  // on their prints (4.26a + 4.17f): the adventure masters and page pieces,
+  // the nyx masters and type band; every card on the two. Verification
+  // narrower (VERIFICATION_TEMPLATE_SCOPES): `nyx` alone.
+  [ADVENTURE_NYX_LAYOUT_VERSION]: ADVENTURE_NYX_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2348,6 +2387,11 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
   // two transform FRONT bodies' rules layout (the reverse-P/T float); the
   // modal fronts' ticks — none yet — would stay fresh.
   40: V40_VERIFICATION_TEMPLATES,
+  // v73: the adventure's masters change their left page's PAPER only (no
+  // slot, bar, plate or text box moves — its seven ticks stay fresh; the
+  // owner signs the before / after sheet); the nyx type band moves, so a
+  // nyx tick (none yet) would be re-judged.
+  [ADVENTURE_NYX_LAYOUT_VERSION]: ADVENTURE_NYX_VERIFICATION_TEMPLATES,
 };
 
 /**
@@ -3365,6 +3409,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [ADVENTURE_NYX_LAYOUT_VERSION]: "sweep", // the adventure's left-page paper toned onto print (4.26a) and the Nyx Constellation's lower half re-sourced from Card Conjurer onto print, its type band with its bar (4.17f) — corrections of two looks against their own prints after the owner's before / after sheet, never a badge
   [DISPLAY_KERNING_LAYOUT_VERSION]: "sweep", // Beleren's collision-guard kerns at 0 (K→y, R→j, f→l, f→i… — 21 pairs): the letters set tight as every print sets them, no more "K ylox" / "Snuff ler" — a correction of what both renderers printed; card-scoped to the names, type words and credits that hold a pair, never a badge
   [FLAVOR_MARKUP_LAYOUT_VERSION]: "sweep", // flavour text's upright `*…*` spans (owner 2026-10-28): the words set roman, the stars never drawn — a correction of what both renderers printed, against every print that marks them; card-scoped to the flavours that hold a pair, never a badge
   20: "sweep", // display always watermarked — must not linger

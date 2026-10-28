@@ -36,8 +36,11 @@
 //     every template and key: Card Conjurer's three token packs share the
 //     name pill, and the textless re-cut moves rows 1687–1844 only;
 //   • the STARFIELD: the luminance of the starfield inside the title bar of
-//     the Nyx Constellation master public/frames/nyx/b.png (Magic Set
-//     Editor's magic-m15-showcase-theros-constellation, in git), at the
+//     the MSE Nyx Constellation master scripts/frame-inputs/nyx-
+//     constellation-mse-b.png (Magic Set Editor's magic-m15-showcase-
+//     theros-constellation as v55 built it, in git — it was
+//     public/frames/nyx/b.png until TODO 4.17f moved the `nyx` template onto
+//     Card Conjurer's masters; the same bytes, sha256 1a34b555290e), at the
 //     same pixel — that bar sits where the token's pill sits (its face rows
 //     112–212, x 94–1396) — centred on its median over the region (a
 //     neutral layer: the stars and the nebula's light, no colour of its own);
@@ -74,7 +77,7 @@ export const TOKEN_NYX_RECIPE = Object.freeze({
   /** The published master whose alpha weighs the region (#576's convention). */
   alpha: Object.freeze({ master: "m20token/w", full: 230, none: 244 }),
   /** The starfield: the MSE constellation master in git, its title bar. */
-  starfield: "public/frames/nyx/b.png",
+  starfield: "scripts/frame-inputs/nyx-constellation-mse-b.png",
   /** The starfield's weight on the master (fitted: print spread ÷ starfield). */
   k: 2.7,
   /** Print's pill medians (rgb) per key — `plain` for the plain templates,

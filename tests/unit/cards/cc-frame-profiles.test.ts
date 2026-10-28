@@ -117,6 +117,14 @@ describe("Card Conjurer frame profiles", () => {
         expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(155.1, 6);
         continue;
       }
+      if (template === "nyx") {
+        // The Theros constellation (a Card Conjurer template since TODO
+        // 4.17f): its own row on its prints (layout v66, NYX_COST) — 70 px
+        // discs 12 px up and 6 px right on M15's band; the pack's title bar
+        // is MSE's within 1.2 px, so the row stays.
+        expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-12 / 1500, 6 / 1500, 70]);
+        continue;
+      }
       if (template === "sncartdeco") {
         // The New Capenna Art Deco (TODO 4.11 wave 2): the CC M15 row 8 px
         // lower and 1.5 px further right — the mean of its 90 printings, each
