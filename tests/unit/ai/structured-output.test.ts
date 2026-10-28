@@ -569,7 +569,9 @@ describe("retry and the route's time budget", () => {
         return max && Number(max[1]) <= 90 && AI_ENTRY.test(source);
       });
     const names = short.map(({ path }) => path.slice(path.indexOf("app/api")));
-    expect(names.sort()).toEqual(["app/api/ai/card-ideas/route.ts", "app/api/ai/deck-ideas/route.ts", "app/api/decks/[id]/guide/route.ts"]);
+    // (card-ideas runs at 120 s since 2026-10-28 — three cards and the judge
+    // ran past 60 — and still wraps its work: card-ideas-route.test.ts.)
+    expect(names.sort()).toEqual(["app/api/ai/deck-ideas/route.ts", "app/api/decks/[id]/guide/route.ts"]);
     for (const { path, source } of short) {
       expect({ path, starts: /POST\([^)]*\)[^{]*\{\s*const startedAt = Date\.now\(\);/.test(source) }).toEqual({ path, starts: true });
       expect({ path, wraps: source.includes("withAiTimeBudget(startedAt, maxDuration,") }).toEqual({ path, wraps: true });

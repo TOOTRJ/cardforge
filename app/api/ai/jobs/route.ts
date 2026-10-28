@@ -39,6 +39,7 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estimate";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
+import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -71,6 +72,20 @@ const AI_CARD_TYPE_VALUES = [
 // A per-field fill pins the open card's own type (`locked`), which may be an
 // emblem (TODO 6.23) — pinned as "Emblem", never offered as a design type.
 const AI_LOCKED_CARD_TYPE_VALUES = [...AI_CARD_TYPE_VALUES, "emblem"] as const;
+
+// The fill's PINNED context (`locked`) and its theme / style are read
+// leniently (2026-10-28): they are the open form's values, which can sit
+// outside these limits while the maker types (a 31-character tag, a 41-
+// character subtype — the form only enforces those on Save), or come from
+// elsewhere (a deck's theme poured into the dialog past its maxLength, a
+// legacy "spell" card type). A strict schema refused the WHOLE generation
+// with "Invalid generation request." for that — intermittent, from the
+// user's side. A pin outside its limit is now clipped (text, lists) or
+// dropped (an unknown type), never a refusal: pins are context for the
+// designer, and a fill never writes an unticked field back.
+const clipped = (max: number) => z.string().trim().transform((value) => value.slice(0, max));
+const clippedList = (itemMax: number, listMax: number) =>
+  z.array(clipped(itemMax)).transform((values) => values.filter(Boolean).slice(0, listMax));
 
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -116,23 +131,24 @@ const requestSchema = z.discriminatedUnion("kind", [
     want: z.array(z.enum(CARD_FILL_FIELDS)).min(1).max(CARD_FILL_FIELDS.length),
     locked: z
       .object({
-        title: z.string().trim().max(CARD_TITLE_MAX).optional(),
-        cost: z.string().trim().max(64).optional(),
-        card_type: z.enum(AI_LOCKED_CARD_TYPE_VALUES).optional(),
-        supertype: z.string().trim().max(64).optional(),
-        subtypes: z.array(z.string().trim().max(40)).max(10).optional(),
-        rarity: z.enum(RARITY_VALUES).optional(),
-        color_identity: z.array(z.enum(COLOR_IDENTITY_VALUES)).max(6).optional(),
-        rules_text: z.string().trim().max(4000).optional(),
-        flavor_text: z.string().trim().max(1000).optional(),
-        power: z.string().trim().max(16).optional(),
-        toughness: z.string().trim().max(16).optional(),
-        loyalty: z.string().trim().max(16).optional(),
-        defense: z.string().trim().max(16).optional(),
-        tags: z.array(z.string().trim().max(30)).max(12).optional(),
+        title: clipped(CARD_TITLE_MAX).optional(),
+        cost: clipped(64).optional(),
+        card_type: z.enum(AI_LOCKED_CARD_TYPE_VALUES).optional().catch(undefined),
+        supertype: clipped(64).optional(),
+        subtypes: clippedList(40, 10).optional(),
+        rarity: z.enum(RARITY_VALUES).optional().catch(undefined),
+        color_identity: z.array(z.enum(COLOR_IDENTITY_VALUES)).max(6).optional().catch(undefined),
+        rules_text: clipped(4000).optional(),
+        flavor_text: clipped(1000).optional(),
+        power: clipped(16).optional(),
+        toughness: clipped(16).optional(),
+        loyalty: clipped(16).optional(),
+        defense: clipped(16).optional(),
+        tags: clippedList(30, 12).optional(),
         // A station card's current text, sent only when its rules text is
-        // being generated and already has tiers (TODO 4.27a, PR 3).
-        station_text: z.string().max(4000).optional(),
+        // being generated and already has tiers (TODO 4.27a, PR 3). Never
+        // clipped: a cut tier would be merged back as written.
+        station_text: z.string().max(4000).optional().catch(undefined),
       })
       .default({}),
     steer: z
@@ -141,8 +157,8 @@ const requestSchema = z.discriminatedUnion("kind", [
         rarity: z.enum(RARITY_VALUES).optional(),
       })
       .default({}),
-    theme: z.string().trim().max(300).optional(),
-    style: z.string().trim().max(200).optional(),
+    theme: clipped(300).optional(),
+    style: clipped(200).optional(),
     frame: z
       .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
       .optional(),
@@ -231,7 +247,7 @@ export async function POST(request: Request) {
   }
   if (!isDesignAiConfigured()) {
     return NextResponse.json(
-      { ok: false, error: "AI generation isn't configured on this deployment." },
+      { ok: false, error: "AI generation isn't available right now. No credits were used." },
       { status: 503 },
     );
   }
@@ -247,8 +263,16 @@ export async function POST(request: Request) {
   }
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
+    // Which fields failed (paths and codes only, never the values) — a
+    // refusal here was invisible in the logs before.
+    console.warn(
+      `[ai:jobs] request refused: ${parsed.error.issues
+        .slice(0, 5)
+        .map((issue) => `${issue.path.join(".") || "(root)"} ${issue.code}`)
+        .join("; ")}`,
+    );
     return NextResponse.json(
-      { ok: false, error: "Invalid generation request." },
+      { ok: false, error: "This generation request couldn't be read — reload the page and try again. No credits were used." },
       { status: 400 },
     );
   }
@@ -354,6 +378,10 @@ export async function POST(request: Request) {
   // Covers are free (owner decision, 2026-09-15) — only the cards cost
   // credits.
   if (isBillingEnabled()) {
+    // First hand back any credit an earlier attempt took and never finished
+    // with (a closed tab, a killed function, a refund that didn't land) —
+    // now, not at tomorrow's cron; the same refund key, so never twice.
+    if (isAdminConfigured()) await reconcileUserSpends(createAdminClient(), user.id);
     // A deck remix needs what its estimate priced: a double-faced card's
     // two pictures cost two (TODO 5.4, owner Q4).
     const needed = remixEstimate?.credits ?? size;
@@ -409,7 +437,12 @@ export async function POST(request: Request) {
       deckId: parsed.data.deck_id,
     });
     if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+      // `code`: the failure's kind (lib/ai/failure.ts); the message already
+      // says no credits were used — nothing is reserved at plan time.
+      return NextResponse.json(
+        { ok: false, error: result.error, ...(result.code ? { code: result.code } : {}) },
+        { status: 502 },
+      );
     }
     await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(

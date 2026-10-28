@@ -18,7 +18,8 @@ import {
   stationGapsLeftEmpty,
   stationWordOf,
 } from "@/lib/ai/station-design";
-import type { ColorIdentity } from "@/types/card";
+import type { DesignVariety } from "@/lib/ai/design-variety";
+import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Per-field card design — the server half of the creator's "fill" flow. The
@@ -35,6 +36,10 @@ export type DesignCardFillInput = {
   /** Deck brief for deck-aware design (Pro). */
   context?: string;
   colorHint?: ColorIdentity;
+  /** A fresh spark + the user's recent titles (lib/ai/design-variety.ts). */
+  variety?: DesignVariety;
+  /** Types a generated card type must not be (no published frame yet). */
+  avoidTypes?: readonly CardType[];
 };
 
 /**
@@ -85,9 +90,11 @@ export async function designCardFill(
     theme: input.theme,
     style: input.style,
     context: input.context,
+    variety: input.variety,
     slots: [
       {
         cardType: wantsType ? input.steer.card_type : input.locked.card_type,
+        avoidTypes: wantsType ? input.avoidTypes : undefined,
         rarity: wantsRarity ? input.steer.rarity : input.locked.rarity,
         colorHint:
           input.colorHint ??

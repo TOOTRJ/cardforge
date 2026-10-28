@@ -388,15 +388,17 @@ export async function refundCredits(
    *  the in-process refund and the reconcile-credits cron can then race
    *  without ever double-refunding one spend. */
   idempotencyKey?: string,
-): Promise<void> {
-  if (amount <= 0) return;
+): Promise<boolean> {
+  // True when the refund landed (or there was nothing to refund); false when
+  // it didn't — the reconcile sweep then returns it under the same key.
+  if (amount <= 0) return true;
   // Billing off → we never charged, so there's nothing to refund.
-  if (!isBillingEnabled()) return;
+  if (!isBillingEnabled()) return true;
   if (!isAdminConfigured()) {
     console.error(
       `[credits] Cannot refund ${amount} credit(s) to ${userId} for ${reason}: admin client not configured.`,
     );
-    return;
+    return false;
   }
   try {
     const admin = createAdminClient();
@@ -415,12 +417,15 @@ export async function refundCredits(
       console.error(
         `[credits] Refund of ${amount} credit(s) to ${userId} for ${reason} failed: ${error.message}`,
       );
+      return false;
     }
+    return true;
   } catch (err) {
     console.error(
       `[credits] Refund of ${amount} credit(s) to ${userId} for ${reason} threw:`,
       err,
     );
+    return false;
   }
 }
 

@@ -4,6 +4,7 @@ import {
   RECONCILE_GRACE_MS,
   RECONCILE_SCAN_LIMIT,
   reconcileOrphanedSpends,
+  reconcileUserSpends,
   type ReconcileClient,
 } from "@/lib/billing/credit-reconcile";
 import { called, chainClient, type ChainCall } from "@/tests/stubs/supabase-chain";
@@ -228,5 +229,40 @@ describe("reconcileOrphanedSpends paging", () => {
     expect(grants).toHaveLength(1203);
     const pages = log.filter((entry) => !isCountRead(entry.calls));
     expect(pages).toHaveLength(Math.ceil(1203 / RECONCILE_SCAN_LIMIT));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reconcileUserSpends (2026-10-28) — the same sweep for ONE user, run at
+// their next AI action so an orphaned credit comes back then, not at the
+// next cron: the same rule and the same refund:{spendRef} key (never twice),
+// scoped by user_id on BOTH reads, and it never throws.
+// ---------------------------------------------------------------------------
+describe("reconcileUserSpends", () => {
+  const scopedToUser = (calls: ChainCall[]) =>
+    calls.some((c) => c.method === "eq" && c.args[0] === "user_id" && c.args[1] === USER);
+
+  it("scopes both reads to the user and refunds under the shared key", async () => {
+    const orphaned = ref("fill:0", "tab-closed");
+    const { admin, grants, log } = stubAdmin({
+      spends: [{ user_id: USER, delta: -1, idempotency_key: orphaned, settled_at: null }],
+    });
+    await reconcileUserSpends(admin, USER);
+    expect(log).toHaveLength(2);
+    expect(log.every((entry) => scopedToUser(entry.calls))).toBe(true);
+    expect(grants).toEqual([
+      { p_user_id: USER, p_amount: 1, p_reason: "refund", p_idempotency_key: `refund:${orphaned}` },
+    ]);
+  });
+
+  it("never throws, whatever the ledger says", async () => {
+    const { admin } = stubAdmin({ spends: [], countError: "permission denied" });
+    await expect(reconcileUserSpends(admin, USER)).resolves.toBeUndefined();
+  });
+
+  it("the cron's sweep stays unscoped", async () => {
+    const { admin, log } = stubAdmin({ spends: [] });
+    await reconcileOrphanedSpends(admin);
+    expect(log.some((entry) => scopedToUser(entry.calls))).toBe(false);
   });
 });

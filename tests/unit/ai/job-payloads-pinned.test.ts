@@ -93,7 +93,17 @@ vi.mock("@/lib/cards/queries", async (importOriginal) => ({
 vi.mock("ai", async (importOriginal) => ({
   ...(await importOriginal<typeof import("ai")>()),
   generateObject: async (args: { prompt: string }) => {
-    s.prompts.push(args.prompt);
+    // The design-variety lines (lib/ai/design-variety.ts, 2026-10-28: a
+    // fresh spark and the user's recent titles, so two runs never send the
+    // same prompt) are left out of the pin ON PURPOSE — they are random by
+    // design and tested in design-variety.test.ts. Everything else in the
+    // prompt, and everything the jobs save, is still main's byte for byte.
+    s.prompts.push(
+      args.prompt
+        .split("\n")
+        .filter((line) => !line.startsWith("Fresh design #") && !line.startsWith("This user already received"))
+        .join("\n"),
+    );
     return { object: { cards: s.answers.shift() ?? [] } };
   },
 }));

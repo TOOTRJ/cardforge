@@ -51,7 +51,6 @@ import {
   type AiActionLabel,
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
-import { aiErrorMessage } from "@/lib/ai/structured-output";
 import { designCardFill } from "@/lib/ai/card-fill";
 import type {
   CardFillField,
@@ -65,6 +64,7 @@ import {
   colorHintsForFrame,
   resolveDeckCardFrame,
   resolveGeneratedFrame,
+  typesWithoutPublishedFrame,
 } from "@/lib/creator/frame-random";
 import type {
   CardBackFace,
@@ -104,6 +104,15 @@ import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationPtChoiceOf } from "@/lib/creator/station-rows";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
+import {
+  AI_FAILURE_COPY,
+  aiFailureMessage,
+  classifyProviderError,
+  designFailureKind,
+  type AiFailureKind,
+} from "@/lib/ai/failure";
+import { DesignNotUsableError, designFreshly } from "@/lib/ai/design-variety";
+import { recentAiTitles } from "@/lib/ai/recent-designs";
 
 // ---------------------------------------------------------------------------
 // AI generation jobs — the batch pipeline behind deck generation, deck
@@ -173,6 +182,18 @@ export type JobStep = {
    *  pictures, two credits). The client's cost projections read it; absent
    *  = one (every older job). */
   credits?: number;
+  /** Why a FAILED step failed, as one of the user-facing kinds
+   *  (lib/ai/failure.ts) — the client words its message from it. Null on a
+   *  step that succeeded (a retry clears it). */
+  failure?: AiFailureKind | null;
+  /** The credits a FAILED attempt returned to the user (withCreditedStep's
+   *  refund) — 0 when nothing was taken (admin, billing off, a reserve that
+   *  never landed). The client says "your credit was returned" only from
+   *  this, never by assumption. */
+  refunded?: number | null;
+  /** A failed attempt's refund that didn't land in-process: the reconcile
+   *  sweep returns it (same idempotency key — never twice). */
+  refund_pending?: boolean | null;
 };
 
 export type GenerationJobRow = {
@@ -373,9 +394,33 @@ export async function runNextJobStep(
   try {
     result = await executeJobStep(user.id, job, step, stepIndex);
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "Generation step crashed.";
-    result = { ...step, status: "failed", error: detail };
+    // The internal text goes to the log, never to the user (it used to be
+    // the step's error verbatim). Any credit was refunded inside the
+    // executor's withCreditedStep before the throw reached here, which
+    // records what it returned on the error (refunded / refund_pending) so
+    // the user is told the truth about it.
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[ai:step] job ${jobId} step ${step.key} threw: ${detail.slice(0, 300)}`);
+    const outcome = (error && typeof error === "object" ? error : {}) as {
+      refunded?: number;
+      refund_pending?: boolean;
+    };
+    result = {
+      ...step,
+      status: "failed",
+      error: AI_FAILURE_COPY.step_failed,
+      failure: "step_failed",
+      spend_ref: null,
+      refunded: outcome.refunded ?? null,
+      refund_pending: outcome.refund_pending ?? null,
+    };
+  }
+  if (result.status === "failed") {
+    console.warn(
+      `[ai:step] job ${jobId} (${job.kind}) step ${step.key} failed: ${result.failure ?? result.error_code ?? "unclassified"}${
+        result.refunded ? `, refunded ${result.refunded}` : ""
+      }`,
+    );
   }
   return patchJobStep(jobId, result);
 }
@@ -571,6 +616,7 @@ async function runGeneratedCardStep(
           ...step,
           status: "failed",
           error: createFailureMessage(result),
+          failure: "save_failed",
           // The DB trigger (migration 0104) can still say no when parallel
           // steps race for the last slot — same code, same client handling.
           error_code: result.reason === "capacity" ? "CARD_CAPACITY" : undefined,
@@ -597,7 +643,14 @@ async function runGeneratedCardStep(
       shape,
     );
     if (!published.ok) {
-      return { ...step, status: "failed", card_id: cardId, attempts: attempt, error: published.error };
+      return {
+        ...step,
+        status: "failed",
+        card_id: cardId,
+        attempts: attempt,
+        error: published.error,
+        failure: published.failure,
+      };
     }
     return { ...step, status: "done", card_id: cardId, attempts: attempt, error: undefined };
   });
@@ -737,9 +790,30 @@ export async function loadOwnedDeckContext(
 
 export type CreateCardJobResult =
   | { ok: true; job: GenerationJobRow }
-  /** `code` only where the client may tell the refusal apart: a station
-   *  fill whose empty tier came back empty (no job, nothing charged). */
-  | { ok: false; error: string; code?: "STATION_TIER_UNFILLED" };
+  /** `code`: a station fill whose empty tier came back empty (no job,
+   *  nothing charged), or the kind of a plan-time design failure
+   *  (lib/ai/failure.ts) — nothing is reserved at plan time, so its message
+   *  always says no credits were used. */
+  | { ok: false; error: string; code?: "STATION_TIER_UNFILLED" | AiFailureKind };
+
+/** A plan-time design failure: its kind, logged with the raw detail
+ *  (server only), and the user's sentence. Nothing was reserved. */
+function planDesignFailure(
+  error: unknown,
+  label: string,
+): { ok: false; error: string; code: AiFailureKind } {
+  const detail = error instanceof Error ? error.message : String(error);
+  const unreadable =
+    (error instanceof Error && error.name === "AiOutputError") ||
+    (error instanceof Error && error.name === "AI_NoObjectGeneratedError");
+  const code: AiFailureKind = error instanceof DesignNotUsableError
+    ? "type_unavailable"
+    : unreadable
+      ? "design_unreadable"
+      : designFailureKind(classifyProviderError(detail));
+  console.error(`[ai:design] ${label} plan failed (${code}): ${detail.replace(/\s+/g, " ").slice(0, 300)}`);
+  return { ok: false, error: aiFailureMessage(code), code };
+}
 
 /** PLAN a single-card job: one fast text call designs the card; the art +
  *  save happen in the job's one step so no HTTP request runs long. */
@@ -782,24 +856,34 @@ export async function createCardGenerationJob(
   }
 
   await logAiCall(user.id, "generate_random_card");
+  // Never the same card twice (2026-10-28): a fresh spark per design and the
+  // user's recent AI titles named as off-limits; a repeat title is designed
+  // again once, here, before anything is reserved (lib/ai/design-variety.ts).
+  const recent = await recentAiTitles();
+  const avoidTypes = typesWithoutPublishedFrame(verifiedKeys);
   let card: DesignedCard;
   try {
-    card = await generateRandomCard({
-      theme: input.theme,
-      style: input.style,
-      cardType: input.cardType,
-      rarity: input.rarity,
-      colorHint,
-      context: deckBrief?.context,
-    });
+    card = await designFreshly(
+      recent,
+      (variety) =>
+        generateRandomCard({
+          theme: input.theme,
+          style: input.style,
+          cardType: input.cardType,
+          rarity: input.rarity,
+          colorHint,
+          context: deckBrief?.context,
+          variety,
+          avoidTypes,
+        }),
+      (designed) => designed.title,
+      // A type the user didn't ask for that has no published frame (the
+      // designer was told to avoid it) is designed again, never saved.
+      { acceptable: (designed) => Boolean(input.cardType) || !avoidTypes.includes(designed.card_type) },
+    );
   } catch (error) {
-    // Plan time: no job row, nothing reserved — nothing to refund. An
-    // unreadable answer reads as plain words (structured-output.ts logged
-    // its zod issues and text server-side).
-    return {
-      ok: false,
-      error: aiErrorMessage(error, (detail) => `AI card design failed: ${detail}`, "Card generation failed."),
-    };
+    // Plan time: no job row, nothing reserved — nothing to refund.
+    return planDesignFailure(error, "card");
   }
 
   const frameTemplate = resolveGeneratedFrame({
@@ -915,17 +999,33 @@ export async function createCardFillJob(
   }
 
   await logAiCall(user.id, "fill_card");
+  // Never the same card twice (2026-10-28) — see createCardGenerationJob.
+  // Only a fill that WRITES the title is checked against the recent titles
+  // (a kept title is the maker's); the spark rides every fill.
+  const recent = await recentAiTitles();
+  const avoidTypes = wantsType && !input.steer.card_type ? typesWithoutPublishedFrame(verifiedKeys) : [];
   let designed: Awaited<ReturnType<typeof designCardFill>>;
   try {
-    designed = await designCardFill({
-      want: input.want,
-      locked: input.locked,
-      steer: input.steer,
-      theme: input.theme,
-      style: input.style,
-      context: deckBrief?.context,
-      colorHint,
-    });
+    designed = await designFreshly(
+      recent,
+      (variety) =>
+        designCardFill({
+          want: input.want,
+          locked: input.locked,
+          steer: input.steer,
+          theme: input.theme,
+          style: input.style,
+          context: deckBrief?.context,
+          colorHint,
+          variety,
+          avoidTypes,
+        }),
+      (result) => (input.want.includes("title") ? result.fields.title : null),
+      {
+        acceptable: (result) =>
+          !result.fields.card_type || !avoidTypes.includes(result.fields.card_type),
+      },
+    );
   } catch (error) {
     // A station card's empty tier came back empty from the model AND the
     // judge: refused here, at PLAN time — no job row, no step, so no credit
@@ -933,10 +1033,7 @@ export async function createCardFillJob(
     if (error instanceof StationGapUnfilledError) {
       return { ok: false, error: error.message, code: error.code };
     }
-    return {
-      ok: false,
-      error: aiErrorMessage(error, (detail) => `AI card design failed: ${detail}`, "Card generation failed."),
-    };
+    return planDesignFailure(error, "card_fill");
   }
 
   // A generated card type needs a frame that can wear it (create only —
@@ -1060,10 +1157,18 @@ async function runCardFillStep(
         ),
         cardFillArtShape(plan),
       );
-      if (!image.ok) return { ...step, status: "failed", attempts: attempt, error: image.error };
+      if (!image.ok) {
+        return { ...step, status: "failed", attempts: attempt, error: image.error, failure: image.failure };
+      }
       const persisted = await persistGeneratedArt(image.bytes, image.contentType);
       if (!persisted.ok) {
-        return { ...step, status: "failed", error: persisted.error };
+        return {
+          ...step,
+          status: "failed",
+          attempts: attempt,
+          error: AI_FAILURE_COPY.art_store,
+          failure: "art_store",
+        };
       }
       fill.art_url = persisted.publicUrl;
       fill.artist_credit = await aiArtistCredit();
@@ -1183,10 +1288,8 @@ export async function createDeckGenerationJob(
       bracket: input.bracket ?? existingDeck?.bracket ?? null,
     });
   } catch (error) {
-    return {
-      ok: false,
-      error: aiErrorMessage(error, (detail) => `AI deck planning failed: ${detail}`, "Generation failed."),
-    };
+    const failed = planDesignFailure(error, "deck");
+    return { ok: false, error: failed.error };
   }
 
   let deckId = existingDeck?.id;
@@ -1444,13 +1547,13 @@ async function paintAndPublishCard(
   cardId: string,
   prompts: readonly string[],
   shape: ArtShape,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string; failure: AiFailureKind }> {
   // Painted in the shape of the card's own art window (TODO 4.48b).
   const image = await generateImageWithFallbacks(prompts, shape);
-  if (!image.ok) return { ok: false, error: image.error };
+  if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) return { ok: false, error: persisted.error };
+  if (!persisted.ok) return { ok: false, error: AI_FAILURE_COPY.art_store, failure: "art_store" };
 
   const updated = await updateCardAction(cardId, {
     art_url: persisted.publicUrl,
@@ -1464,7 +1567,7 @@ async function paintAndPublishCard(
       updated.formError ??
       Object.values(updated.fieldErrors ?? {})[0] ??
       "Couldn't attach the art.";
-    return { ok: false, error: detail };
+    return { ok: false, error: detail, failure: "save_failed" };
   }
   return { ok: true };
 }
@@ -1784,7 +1887,10 @@ async function executeDeckRemixStep(
       theme: plan.theme ?? undefined,
     });
   } catch (error) {
-    return { ...step, status: "failed", error: aiErrorMessage(error, (detail) => detail, "Remix failed.") };
+    // The identity call's raw error goes to the log; the step says what
+    // kind of failure it was (lib/ai/failure.ts).
+    const failed = planDesignFailure(error, `deck_remix step ${step.key}`);
+    return { ...step, status: "failed", error: AI_FAILURE_COPY[failed.code], failure: failed.code };
   }
   // The new names on the card: the rules text follows them (no source name
   // left on a renamed card), and a second half without a new name fails
@@ -1899,7 +2005,7 @@ async function executeDeckRemixStep(
             restyled.contentType,
           );
           if (persisted.ok) artUrl = persisted.publicUrl;
-          else artError = persisted.error;
+          else artError = AI_FAILURE_COPY.art_store;
         } else {
           artError = restyled.error;
         }
@@ -1920,7 +2026,7 @@ async function executeDeckRemixStep(
         generated.contentType,
       );
       if (persisted.ok) artUrl = persisted.publicUrl;
-      else artError = persisted.error;
+      else artError = AI_FAILURE_COPY.art_store;
     } else {
       artError = generated.error;
     }
@@ -1950,7 +2056,7 @@ async function executeDeckRemixStep(
     if (generated.ok) {
       const persisted = await persistGeneratedArt(generated.bytes, generated.contentType);
       if (persisted.ok) backArtUrl = persisted.publicUrl;
-      else artError = persisted.error;
+      else artError = AI_FAILURE_COPY.art_store;
     } else {
       artError = generated.error;
     }
@@ -2115,7 +2221,7 @@ async function runCoverStep(
     const { prompt, aspect } = coverPrompt(job);
     const image = await generateImageWithFallbacks([prompt, softenArtPrompt(prompt)], aspect);
     if (!image.ok) {
-      return { ...step, status: "failed", error: image.error };
+      return { ...step, status: "failed", error: image.error, failure: image.failure };
     }
     let bytes: Uint8Array = image.bytes;
     let contentType = image.contentType;
@@ -2128,7 +2234,7 @@ async function runCoverStep(
     }
     const persisted = await persistGeneratedArt(bytes, contentType);
     if (!persisted.ok) {
-      return { ...step, status: "failed", error: persisted.error };
+      return { ...step, status: "failed", error: AI_FAILURE_COPY.art_store, failure: "art_store" };
     }
 
     if (job.deck_id) {
@@ -2185,6 +2291,11 @@ async function patchJobStep(
     // sent to the client). null keeps the key explicit for other kinds.
     fill: step.fill ?? null,
     attempts: step.attempts ?? null,
+    // Why a failed attempt failed and what its credit did (lib/ai/failure.ts)
+    // — null on a done step, so a retry that succeeds clears them.
+    failure: step.status === "failed" ? (step.failure ?? null) : null,
+    refunded: step.status === "failed" ? (step.refunded ?? null) : null,
+    refund_pending: step.status === "failed" ? (step.refund_pending ?? null) : null,
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
   };

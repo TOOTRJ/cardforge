@@ -56,6 +56,29 @@ export function frameChoicesForType(
   return framesForKind(kindFromCard(cardType, undefined), verifiedKeys);
 }
 
+/** The card types a FREE AI design may land on — those the AI may pick by
+ *  itself (never an emblem, never the legacy "spell") — that have no frame
+ *  published in ANY colour. A design left free to pick its type is told to
+ *  avoid them (2026-10-28: with no battle frame published, a random design
+ *  that came back as a battle landed the creator on a frame it can't save). */
+export const FREE_DESIGN_TYPES: readonly CardType[] = [
+  "creature",
+  "instant",
+  "sorcery",
+  "artifact",
+  "enchantment",
+  "land",
+  "planeswalker",
+  "battle",
+  "token",
+];
+
+export function typesWithoutPublishedFrame(verifiedKeys: ReadonlySet<string>): CardType[] {
+  return FREE_DESIGN_TYPES.filter((type) =>
+    frameChoicesForType(type, verifiedKeys).every((choice) => choice.availableColorKeys.length === 0),
+  );
+}
+
 /**
  * Resolve the frame an AI-generated card should save with.
  *

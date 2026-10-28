@@ -23,6 +23,7 @@ import {
   STATION_JUDGE_RULE,
 } from "@/lib/ai/station-design";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
+import { varietyPromptLines, type DesignVariety } from "@/lib/ai/design-variety";
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
@@ -206,6 +207,10 @@ export type DesignBatchInput = {
   slots: DesignSlot[];
   /** Extra prose context, e.g. the set's title/blurb or deck strategy. */
   context?: string;
+  /** A fresh spark + the user's recent titles (lib/ai/design-variety.ts):
+   *  the single-card flows pass one so two runs with the same options never
+   *  send the same prompt. Decks and remixes don't (their brief varies). */
+  variety?: DesignVariety;
 };
 
 export type DesignSlot = {
@@ -215,6 +220,10 @@ export type DesignSlot = {
   roleHint?: SkeletonSlot["roleHint"];
   /** Freeform per-slot direction, e.g. "the deck's commander". */
   note?: string;
+  /** Card types this slot must NOT come back as when `cardType` is unset —
+   *  a type with no published frame yet (a battle today) lands on a frame
+   *  the creator can't save. */
+  avoidTypes?: readonly CardType[];
 };
 
 // ---------------------------------------------------------------------------
@@ -265,13 +274,16 @@ function slotLine(slot: DesignSlot, index: number): string {
   if (slot.cardType) parts.push(`card_type ${slot.cardType}.`);
   else if (slot.roleHint === "creature") parts.push("prefer a creature.");
   else if (slot.roleHint === "noncreature") parts.push("prefer a noncreature spell or permanent.");
+  if (!slot.cardType && slot.avoidTypes && slot.avoidTypes.length > 0) {
+    parts.push(`card_type: anything but ${slot.avoidTypes.join(" or ")}.`);
+  }
   if (slot.colorHint) parts.push(`color: ${slot.colorHint}.`);
   else if (slot.colorHint === null) parts.push("color: designer's choice (artifact/multicolor welcome).");
   if (slot.note) parts.push(slot.note);
   return parts.join(" ");
 }
 
-function batchPrompt(input: DesignBatchInput): string {
+export function batchPrompt(input: DesignBatchInput): string {
   const lines: string[] = [];
   if (input.theme?.trim()) lines.push(`Theme: ${input.theme.trim().slice(0, 300)}`);
   if (input.style?.trim()) {
@@ -288,6 +300,7 @@ function batchPrompt(input: DesignBatchInput): string {
     `Design exactly ${input.slots.length} card${input.slots.length === 1 ? "" : "s"}:`,
   );
   input.slots.forEach((slot, index) => lines.push(slotLine(slot, index)));
+  if (input.variety) lines.push(...varietyPromptLines(input.variety));
   if (input.slots.length > 1) {
     lines.push(
       "The cards belong together: shared world, recurring names/factions, and at least one mechanical thread connecting them.",
@@ -580,6 +593,10 @@ export type SingleCardOptions = {
   /** Extra prose — the deck brief when the card is designed for a deck
    *  (lib/ai/deck-brief.ts). */
   context?: string;
+  /** A fresh spark + recent titles (lib/ai/design-variety.ts). */
+  variety?: DesignVariety;
+  /** Types the design must not come back as (no published frame yet). */
+  avoidTypes?: readonly CardType[];
 };
 
 /** Design one card. Used by the random-card flow and the options dialog. */
@@ -590,11 +607,13 @@ export async function designSingleCard(
     theme: options.theme,
     style: options.style,
     context: options.context,
+    variety: options.variety,
     slots: [
       {
         cardType: options.cardType,
         rarity: options.rarity,
         colorHint: options.colorHint,
+        avoidTypes: options.avoidTypes,
         note: options.context
           ? "The one card this deck is missing — see the deck brief above."
           : options.theme || options.style || options.cardType

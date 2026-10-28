@@ -14,7 +14,12 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateCardIdeas } from "@/lib/ai/card-ideas";
-import { aiErrorMessage, withAiTimeBudget } from "@/lib/ai/structured-output";
+import { withAiTimeBudget } from "@/lib/ai/structured-output";
+import { recentAiTitles } from "@/lib/ai/recent-designs";
+import { aiFailureMessage, classifyProviderError, designFailureKind, type AiFailureKind } from "@/lib/ai/failure";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { buildDeckBrief } from "@/lib/ai/deck-brief";
 import { loadOwnedDeckContext } from "@/lib/ai/generation-jobs";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
@@ -33,11 +38,16 @@ const IDEA_CARD_TYPES = [
 // design call fails), rate-limited like every AI call. `deck_id` themes the
 // ideas to one of the caller's decks and is Pro-only (owner decision
 // 2026-09-15 — the second tier-gated AI feature after deck-aware cards).
-// Synchronous: no art, ~10–20 s of text.
+// Synchronous: no art, ~10–20 s of text — but three full cards plus the
+// judge's repair pass have run past 60 s, and a function killed at its
+// maxDuration never reaches the refund below (the credit then waited for
+// the daily reconcile). 120 s holds the design, the judge and the tail; a
+// redesign for variety or a second structured call runs only while the
+// budget still holds it (withAiTimeBudget).
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const bodySchema = z.object({
   theme: z.string().trim().max(300).optional(),
@@ -102,6 +112,13 @@ export async function POST(request: Request) {
     }).context;
   }
 
+  // Any credit an earlier attempt took and never finished with comes back
+  // first (lib/billing/credit-reconcile.ts; the same key — never twice).
+  if (isBillingEnabled() && isAdminConfigured()) {
+    await reconcileUserSpends(createAdminClient(), user.id);
+  }
+  const recentTitles = await recentAiTitles();
+
   // One credit for the batch, reserved before the call and refunded if the
   // design fails (same fail-closed posture as job steps).
   const ref = `spend:ideas:${randomUUID()}`;
@@ -128,6 +145,7 @@ export async function POST(request: Request) {
         cardType: parsed.data.card_type,
         rarity: parsed.data.rarity,
         deckContext,
+        recentTitles,
       }),
     );
     // Keep the batch (migration 0092) so a closed tab doesn't waste the
@@ -155,13 +173,22 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true, ideas, credits: await getFreshCreditBalance() });
   } catch (error) {
-    if (spend.charged) {
-      await refundCredits(user.id, 1, "generate_card_ideas", `refund:${ref}`);
-    }
+    const landed = spend.charged
+      ? await refundCredits(user.id, 1, "generate_card_ideas", `refund:${ref}`)
+      : true;
+    // The raw error goes to the log; the user gets the kind's sentence and
+    // the truth about the credit (lib/ai/failure.ts).
+    const detail = error instanceof Error ? error.message : String(error);
+    const code: AiFailureKind =
+      error instanceof Error && (error.name === "AiOutputError" || error.name === "AI_NoObjectGeneratedError")
+        ? "design_unreadable"
+        : designFailureKind(classifyProviderError(detail));
+    console.error(`[ai:design] card ideas failed (${code}): ${detail.replace(/\s+/g, " ").slice(0, 300)}`);
     return NextResponse.json(
       {
         ok: false,
-        error: aiErrorMessage(error, (detail) => `Couldn't generate ideas: ${detail}`, "Idea generation failed."),
+        code,
+        error: aiFailureMessage(code, spend.charged && landed ? 1 : 0, spend.charged && !landed),
         credits: await getFreshCreditBalance(),
       },
       { status: 502 },
