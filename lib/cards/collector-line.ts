@@ -117,6 +117,11 @@ export const COLLECTOR_TEMPLATES = [
   // black bottom border is the M15 pack's, and LTR / LTC set both lines
   // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).
   "lotrscroll",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2, Card Conjurer's
+  // 'Mystical Archive (STA)'): its black footer sets both lines on M15's
+  // rows (line 1 at 1993, line 2 at 2032 px, from x 98 — the 63 prints'
+  // medians), so M15's slot.
+  "mysticalarchive",
   // The Expeditions (TODO 4.11 wave 1): both looks print the line in the
   // black border under the stone — M15's slot on each look's printed rows
   // (EXPEDITION_ZNR_COLLECTOR, EXPEDITION_BFZ_COLLECTOR).
@@ -144,6 +149,10 @@ export const COLLECTOR_TEMPLATES = [
   // The Bloomburrow anime (TODO 4.11, layout v70): BLB #343–355 set both
   // lines on M15's rows on the footer its master now paints.
   "bloomanime",
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 /
+  // #361–405 set both lines on M15's rows within 2 px (line 1's ink ending
+  // 1991, line 2's 2029, as the Tarkir draconic's) in the black border.
+  "sncartdeco",
   // …and the D&D Sourcebook showcase (TODO 4.11 wave 2, Card Conjurer's 'D&D
   // Sourcebook'): AFR #299–349 and CLB #375–450 set both lines in the black
   // border under the page, 4 px below M15's rows (DNDSOURCEBOOK_COLLECTOR).
@@ -156,6 +165,11 @@ export const COLLECTOR_TEMPLATES = [
   // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
   // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).
   "enchantingtales",
+  // …and the Dominaria United Stained Glass showcase (TODO 4.11 wave 2,
+  // Card Conjurer's 'Stained Glass (DMU)'): DMU #287–368 and MUL's Dominaria
+  // legends set both lines in the black border, 4 px below M15's rows
+  // (STAINEDGLASS_COLLECTOR).
+  "stainedglass",
   // …and the Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'TARDIS'): WHO #535–564 / #1126–1155 set both lines in the black border
   // under the box, 6 / 5 px above M15's rows (TARDIS_COLLECTOR).

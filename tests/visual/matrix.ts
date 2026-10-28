@@ -181,6 +181,9 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
 const LONG_RULES =
   "Flying, vigilance, lifelink\nWhenever this creature attacks, choose one —\n• Draw a card, then discard a card.\n• Create a 1/1 white Spirit creature token with flying.\n{2}{W/U}, {T}: Scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)";
 const LONG_FLAVOR = "\"The sky remembers every wing that crossed it.\"\n—Captain Sisay";
+/** Flavour with Scryfall's upright markup (layout v71), as stored: the
+ *  stars are never drawn, the marked words print roman. */
+const FLAVOR_UPRIGHT = "“Are *we* the wrong sort of people?”\n—Oracle *en*-Vec, *Heroics: A Book of Fables*";
 
 type Fields = Partial<CardRowForBake>;
 
@@ -723,6 +726,13 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // …and the Bloomburrow anime's flourish (TODO 4.11 / 4.35, layout v70):
   // one master, so one colour and a pair.
   ["bloomanime", ["g", "wu"]],
+  // …and the New Capenna Art Deco's arch (TODO 4.11 wave 2): its crowned
+  // twin — one gold master, so a three-colour legend and a mono one.
+  ["sncartdeco", ["wub", "r"]],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's dome — each
+  // colour, `c` (the gold crown: no colourless print), a pair's gold crown
+  // with its dome split (its pair master is "@pair-crown") and gold.
+  ["stainedglass", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1360,6 +1370,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["dossier", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Construct"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the New Capenna Art Deco's plate at its widest.
+  ["sncartdeco", "creature", "wub", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the D&D Sourcebook's plate at its widest, and a
   // colourless artifact creature on the one page (AFR #348 Iron Golem).
   ["dndsourcebook", "creature", "r", "@wide", { power: "12", toughness: "12" }],
@@ -1367,6 +1379,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // TODO 4.11 wave 2: the Enchanting Tales plate at its widest (an
   // Enchantment Creature borrows the frame; no print has one).
   ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's plate at its widest.
+  ["stainedglass", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the Doctor Who TARDIS's P/T box at its widest, and a
   // colourless artifact creature on the pack's steel artifact master (WHO
   // #550 Cyberman Patrol).
@@ -1688,6 +1702,10 @@ export function visualCases(): VisualCase[] {
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pair on an instant,
+  // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
+  // and flavour).
+  add("mysticalarchive", "instant", "wu", "long", { suffix: "@pair", row: pairStyle("mysticalarchive") });
   // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
   // per card — no stored card has the switch, so these are NEW cases, no
   // bump): the second part's colour on back_face.color_identity, its cost
@@ -1862,6 +1880,18 @@ export function visualCases(): VisualCase[] {
       suffix: "@large-pips-hd",
       preset: "hd",
       row: { cost: "{1}{W/U}{2/W}{W/P}", rules_text: "{W/U}{2/W}, {T}: Draw a card.\n{G/U/P}{W/P}{1}: Scry 1.", flavor_text: null },
+    });
+  }
+  // Layout v71: flavour text's upright `*…*` spans (lib/cards/flavor-markup.ts)
+  // — NEW cases (no case above has a star in its flavour, so every one of
+  // them bakes byte-identical): a stressed word, a span inside a word and a
+  // book's title in the attribution, on M15 at both sizes and on the 1997
+  // frame (another rules face size and ink).
+  for (const [template, preset] of [["m15", "default"], ["m15", "hd"], ["retro", "default"]] as const) {
+    add(template, "creature", "g", "long", {
+      suffix: preset === "hd" ? "@flavor-upright-hd" : "@flavor-upright",
+      ...(preset === "hd" ? { preset } : {}),
+      row: { flavor_text: FLAVOR_UPRIGHT },
     });
   }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
@@ -2040,6 +2070,14 @@ export function visualCases(): VisualCase[] {
   // TODO 4.11: the MUL Tarkir dragon wings' OVAL notch — "auto" on a rare
   // (every printing), none on a common, the two-colour card's (the split
   // wings: the gold key's piece, `-m`), the HD bake.
+  // TODO 4.11 wave 2: the New Capenna Art Deco's lifted rim — none on a
+  // common (SNC #296–340 arch only a rare's or mythic's), a three-colour
+  // rare, a crowned legend's (the arch on its twin: the same pixels there),
+  // the HD bake.
+  add("sncartdeco", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("sncartdeco", "auto", { rarity: "common" }) });
+  add("sncartdeco", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("sncartdeco", "auto", { rarity: "rare" }) });
+  add("sncartdeco", "creature", "wub", "long", { suffix: "@stamp-crown", row: { ...stampRow("sncartdeco", "auto", { rarity: "mythic" }), supertype: "Legendary", frame_style: { template: "sncartdeco", finish: "regular", stamp: "auto", crown: true } } });
+  add("sncartdeco", "creature", "r", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("sncartdeco", "auto", { rarity: "mythic" }) });
   add("tarkirdragon", "creature", "w", "long", { suffix: "@stamp", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
@@ -2050,12 +2088,24 @@ export function visualCases(): VisualCase[] {
   add("dndsourcebook", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dndsourcebook", "auto", { rarity: "common" }) });
   add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
   add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's OVAL notch (our own
+  // black arch) — none on an uncommon (STA prints it on a rare or mythic
+  // only), on an instant and a sorcery as the run prints them, the HD bake.
+  add("mysticalarchive", "instant", "u", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("mysticalarchive", "auto", { rarity: "uncommon" }) });
+  add("mysticalarchive", "instant", "r", "long", { suffix: "@stamp", row: stampRow("mysticalarchive", "auto", { rarity: "rare" }) });
+  add("mysticalarchive", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("mysticalarchive", "auto", { rarity: "mythic" }) });
   // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
   // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
   // HD bake.
   add("enchantingtales", "enchantment", "g", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("enchantingtales", "auto", { rarity: "uncommon" }) });
   add("enchantingtales", "enchantment", "u", "long", { suffix: "@stamp", row: stampRow("enchantingtales", "auto", { rarity: "rare" }) });
   add("enchantingtales", "enchantment", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("enchantingtales", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Dominaria United stained glass's arch, split off
+  // its masters — none on a common (DMU / MUL print it on a rare or mythic
+  // only), a three-colour legend's (the gold master's arch), the HD bake.
+  add("stainedglass", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("stainedglass", "auto", { rarity: "common" }) });
+  add("stainedglass", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("stainedglass", "auto", { rarity: "rare" }) });
+  add("stainedglass", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("stainedglass", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.11 wave 2: the MKM dossier's OVAL notch — none on an uncommon
   // (MKM prints it on a rare or mythic only), a gold legend's (MKM #368
@@ -2510,12 +2560,20 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the New Capenna Art Deco's (TODO 4.11 wave 2: its own lifted gold rim).
+  "sncartdeco",
   // …and the D&D Sourcebook's oval (TODO 4.11 wave 2: the pack's one piece).
   "dndsourcebook",
   // …and the MKM dossier's oval (TODO 4.11 wave 2: the pack's one piece).
   "dossier",
+  // …and the Strixhaven Mystical Archive's oval (TODO 4.11 wave 2: our own
+  // black arch, one piece under every key).
+  "mysticalarchive",
   // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
   "enchantingtales",
+  // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
+  // arch, split off every master).
+  "stainedglass",
   // …and the Doctor Who TARDIS's triangle (TODO 4.11 wave 2: the pack's one trapezoid).
   "tardis",
 ];
@@ -2531,6 +2589,11 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
   // one notch piece (a pair draws m's).
   "dossier",
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pairs (its one arch).
+  "mysticalarchive",
+  // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
+  // own arch over its split box).
+  "stainedglass",
   // …and the Doctor Who TARDIS — its pair masters under the pack's one
   // trapezoid (a pair draws m's).
   "tardis",
@@ -2987,6 +3050,12 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the gold frame with
+  // the two colours' lines.
+  "mysticalarchive",
+  // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
+  // the box split.
+  "stainedglass",
   // The Doctor Who TARDIS (TODO 4.11 wave 2): its two colour frames and
   // braces lerped.
   "tardis",

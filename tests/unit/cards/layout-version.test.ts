@@ -439,12 +439,18 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
+  // TODO 4.11 wave 2's New Capenna Art Deco.
+  "sncartdeco",
   // TODO 4.11 wave 2's D&D Sourcebook.
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
   // TODO 4.11 wave 2's Enchanting Tales.
   "enchantingtales",
+  // TODO 4.11 wave 2's Dominaria United Stained Glass.
+  "stainedglass",
+  // TODO 4.11 wave 2's Strixhaven Mystical Archive.
+  "mysticalarchive",
   // TODO 4.11 wave 2's Doctor Who TARDIS.
   "tardis",
 ];
@@ -483,12 +489,18 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
+  // TODO 4.11 wave 2's New Capenna Art Deco.
+  "sncartdeco",
   // TODO 4.11 wave 2's D&D Sourcebook.
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
   // TODO 4.11 wave 2's Enchanting Tales.
   "enchantingtales",
+  // TODO 4.11 wave 2's Dominaria United Stained Glass.
+  "stainedglass",
+  // TODO 4.11 wave 2's Strixhaven Mystical Archive.
+  "mysticalarchive",
   // TODO 4.11 wave 2's Doctor Who TARDIS.
   "tardis",
 ];
@@ -868,12 +880,18 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "prepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
       "expeditionlandbfz",
+      // …and TODO 4.11 wave 2's New Capenna Art Deco: the same, no bump.
+      "sncartdeco",
       // …and TODO 4.11 wave 2's D&D Sourcebook: the same, no bump.
       "dndsourcebook",
       // …and TODO 4.11 wave 2's MKM dossier: the same, no bump.
       "dossier",
       // …and TODO 4.11 wave 2's Enchanting Tales: the same, no bump.
       "enchantingtales",
+      // …and TODO 4.11 wave 2's Dominaria United Stained Glass: the same, no bump.
+      "stainedglass",
+      // …and TODO 4.11 wave 2's Strixhaven Mystical Archive: the same, no bump.
+      "mysticalarchive",
       // …and TODO 4.11 wave 2's Doctor Who TARDIS: the same, no bump.
       "tardis",
     ];
@@ -3240,6 +3258,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // with theirs (v69): print's rows lie within its known offsets.
     // The Bloomburrow anime took the 70 px disc on its own prints' row
     // (v70): 8 px under the CC M15 lift, its name band 25 px up.
+    // The New Capenna Art Deco (TODO 4.11 wave 2) was BORN on its run's own
+    // row: a new template, no bump (8 px lower, 1.5 px further right than
+    // the family's).
     // The D&D Sourcebook (TODO 4.11 wave 2) was BORN on its run's own row: a
     // new template, no bump (3 px higher, 10 px further right than the
     // family's).
@@ -3247,11 +3268,12 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // new template, no bump (the CC M15 row 19 px lower, ending 38 px further
     // left with its name band).
     // The Enchanting Tales (TODO 4.11 wave 2) was BORN on its run's own row:
-    // a new template, no bump (the CC M15 row 3 px further right).
-    // The Doctor Who TARDIS (TODO 4.11 wave 2) was BORN on its run's own row:
-    // a new template, no bump (the CC M15 row 4 px lower).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "dossier", "enchantingtales", "tardis"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "dossier", "enchantingtales", "tardis"];
+    // a new template, no bump (the CC M15 row 3 px further right) — and so was the Dominaria United
+    // Stained Glass (1 px higher against its bar, 9.5 px further right) and
+    // the Strixhaven Mystical Archive (6 px higher, 4 px further right), and
+    // the Doctor Who TARDIS (the CC M15 row 4 px lower).
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);
@@ -3564,5 +3586,94 @@ describe("v70 — the Bloomburrow anime showcase on one MSE master in print's lo
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.VERSION_ROLLOUT[V - 1], "v69 (#615) has no rollout yet: merge #615 first, or renumber this bump").toBeDefined();
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v69 reads as a sweep of every card").toBe(false);
+  });
+});
+describe("v71 — flavour text's upright `*…*` spans (owner 2026-10-28)", () => {
+  // Renumbered with FLAVOR_MARKUP_LAYOUT_VERSION if another bump merges
+  // first (taken as v71 at PR time: v70 is the Bloomburrow anime's, #616).
+  const V = 71;
+  const png = "https://x/y.png";
+  /** A v70 bake: only v71 can be pending. */
+  const at = (over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    flavor_text: null,
+    back_face: null,
+    ...over,
+  });
+  const AT = { current: V } as const;
+
+  it("is a sweep, never a badge, on ANY template — a card scope alone, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.FLAVOR_MARKUP_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBe(lv.flavorMarkupChanged);
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, every template is touched.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("re-bakes a card whose flavour — or its back face's — holds a balanced pair, on any template", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const flavor of [
+      "“Her quest began with one small step.”\n—*The Explorer’s Testament*",
+      "Sometimes the closet *is* the monster.",
+      "—Oracle *en*-Vec",
+      "*I*",
+    ]) {
+      for (const template of ["m15", "saga", "split", "retro", "m15borderless", "lotr"]) {
+        const row = at({ flavor_text: flavor, frame_style: { template } });
+        expect(sweep(row), `${template} ${flavor}`).toBe("rebake");
+        expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
+        expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+        expect(lv.hasNewerLook(row, AT)).toBe(false);
+      }
+    }
+    expect(sweep(at({ back_face: { title: "Back", flavor_text: "—*Song of All*, canto 2" } }))).toBe("rebake");
+  });
+
+  it("stamps every other card: no flavour, stars that are not a pair, a pair in the RULES text", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      {},
+      { flavor_text: "Plain italic flavour." },
+      { flavor_text: "A lone * star." },
+      { flavor_text: "2 * 3 * 4" },
+      { flavor_text: "** nothing **" },
+      { flavor_text: "*open\nclose*" },
+      { flavor_text: "* spaced *" },
+      { rules_text: "*Not* markup in rules.", flavor_text: null },
+      { back_face: { title: "Back", flavor_text: "A * star" } },
+      { back_face: { title: "Back" } },
+    ]) {
+      const row = at(over);
+      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
+      expect(isRenderStale(V - 1, "m15", undefined, V, row)).toBe(false);
+      expect(lv.hasPendingCorrection(row, AT), JSON.stringify(over)).toBe(false);
+    }
+  });
+
+  it("can't judge a row without its flavour or back face → affected", async () => {
+    const { flavorMarkupChanged } = await import("@/lib/cards/layout-version");
+    expect(flavorMarkupChanged({ back_face: null })).toBe(true);
+    expect(flavorMarkupChanged({ flavor_text: null })).toBe(true);
+    expect(flavorMarkupChanged({ flavor_text: null, back_face: null })).toBe(false);
+  });
+
+  // v70 is #616's (the Bloomburrow anime). A version with no rollout and no
+  // scope reads as a SWEEP OF EVERY CARD, so v71 never ships over a gap.
+  it("ships only after v70 (#616): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v70 has no rollout yet").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v70 reads as a sweep of every card").toBe(false);
   });
 });

@@ -180,14 +180,23 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 67 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 70 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
   the 'D&D Sourcebook' pack's one parchment frame under every key, its one
   plate and its oval stamp notch (`dndsourcebookholostamp`); no crown
   ([The D&D Sourcebook showcase](#the-dd-sourcebook-showcase-411-wave-2));
-
+- the New Capenna Art Deco showcase (4.11 wave 2, an addition): sncartdeco
+  — the 'Golden Age (SNC)' pack's one gold frame under every key and its
+  'Legendary Frame' as every key's crowned twin, its one plate, the gold
+  toned onto print; its stamp notch is our own lifted rim
+  ([The New Capenna Art Deco showcase](#the-new-capenna-art-deco-showcase-411-wave-2));
+- the Dominaria United Stained Glass showcase (4.11 wave 2, an addition):
+  stainedglass — the 'Stained Glass (DMU)' pack's six frames (`c` the gold
+  one), its ten pair masters (the box split), its plates, the stamp notch
+  split off every master, and its crown band (`stainedglasscrown`)
+  ([The Dominaria United Stained Glass showcase](#the-dominaria-united-stained-glass-showcase-411-wave-2));
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
   the 'Zendikar Rising' pack's frames whole with their title ends, each
   master written with the straight bar and the stamp notch split off as its
@@ -254,6 +263,13 @@ into `.frames-build/` — 67 templates today (`CC_TEMPLATES` in
   its artifact frame, the top corners kept square), its plates, its crown
   band (`lotrcrown`) and its own triangle stamp notch per key
   (`lotrholostamp`) ([The Lord of the Rings ring](#the-lord-of-the-rings-ring-411-layout-v65));
+- the Strixhaven Mystical Archive (4.11 wave 2, an addition):
+  mysticalarchive — the 'Mystical Archive (STA)' pack's eight frames whole
+  (2010 px, downscaled once; `c` its land frame, `a` its artifact frame),
+  toned onto print, its ten pair masters (the gold frame with the two
+  colours' lines), its plates and our own oval stamp notch
+  (`mysticalarchiveholostamp`); no crown ([The Strixhaven Mystical
+  Archive](#the-strixhaven-mystical-archive-411-wave-2));
 - the MUL Tarkir showcase (4.11, layout v67): tarkirdragon — the 'Tarkir'
   pack's six colour frames whole at its native 1500 px (`c` its artifact
   frame), the w and u wings toned onto print, its plates, its crown band
@@ -3292,6 +3308,30 @@ fine).
 are not built (#268's red | green). The frame's own correction against
 print followed (Round 59): [the constellation frame on its prints](#the-constellation-frame-on-its-prints-round-59).
 
+### A showcase's crown is its own frame's
+
+A legendary printing of a crowned showcase (`CROWNED_SHOWCASE_SIGNATURES`
+in `lib/scryfall/import-mapper.ts`) imports with the crown switch ON — but
+the crown it prints is its OWN frame's piece (the ring's scallops, the
+scroll's rolled edge, the Tarkir wings, the hedron's pill ends, the
+woodland's leaves, the anime's flourish, the dossier's torn strip, the
+Art Deco's arch, the stained glass's dome), never M15's standard crown. So the switch is on only
+where the card lands on — or is switched to, the import chooser's tile
+included — the frame the signature's registry rule names
+(`ownCrownFramesOf` → `printed_crown_frames`, read from the rule by
+`ownFramesOfSignature` in `lib/scryfall/frame-signatures.ts`, never listed
+twice; `importedAnatomy` in `lib/cards/anatomy.ts`). On any other landing —
+the standard frame an import falls back to while the showcase's colour is
+unverified, the anime's full-bleed M15 landing — it is OFF. The Bloomburrow
+anime set the rule (layout v70); the Dominaria United stained glass made it
+every crowned showcase's (2026-10-28: before, the others drew M15's crown on
+their fallback). A CORRECTION of the import only — no stored card changes,
+no bump, no sweep (a stored card keeps its switch). The one exception is
+the Theros constellation (`STANDARD_CROWN_SHOWCASE_SIGNATURES`): its crown
+IS the standard 2015 crown with the starfield inside, and M15's on its
+fallback is fine (owner Round 59) — it follows the printing anywhere.
+`tests/unit/scryfall/crowned-showcase-own-frame.test.ts` holds it.
+
 ### The constellation frame on its prints (Round 59)
 
 Owner Rounds 59 (decision 1: correct the `nyx` masters against the eleven
@@ -5150,6 +5190,146 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   `showcase`, nearest on M15 / its artifact frame. No gap: one page for
   every colour, no crown, no double-faced or walker printing in the run.
   Every other printing's outcome is unchanged (the fixtures).
+### The Dominaria United Stained Glass showcase (4.11 wave 2)
+
+`stainedglass` — "Stained Glass" in the Dominaria United set
+(`dominariaunited`, showcase era): the leaded-glass frame of Dominaria
+United #287–368 (41 legends and their 41 textured-foil twins, 2022) and of
+the nine Multiverse Legends Dominaria legends (MUL #5 Kwende, #12 Tetsuko
+Umezawa, #19 Yargle, #22 Squee, #24 Valduk, #55 Radha, #56 Raff, #58 Rona,
+#59 Shanna) with their halo-foil and serialized twins (#135 … #189, the "z"
+printings; 2023) — 109 printings, every one a black-bordered LEGENDARY
+CREATURE on the 2015 frame (checked by eye on Scryfall, 2026-10-27). NOT
+DMU #369 (the Phyrexian-script Sheoldred) or #370 / #371 (the two Ajani
+walkers: another design, no walker in the run) and not MUL's etched twins
+(#70 …): they stay `showcase`. Card Conjurer's 'Stained Glass (DMU)' pack
+(packDMUStainedGlass.js, `img/frames/dmu/stainedGlass/`, 1500 × 2100
+NATIVE: nothing is resampled), frames bucket only, through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.stainedglass`, the band
+`stainedglasscrown`, the `SG` block of `scripts/lib/cc-frames.mjs`). An
+ADDITION: a new template — no layout bump, no sweep, no badge; nobody can
+pick it until a colour is verified.
+
+- **Masters.** The pack's six frames whole — w u b r g m: coloured glass
+  in bronze lead, a real black border all round (the scans read 22,19,14
+  there, the same as DMU's regular printings #1–6 and MUL #66 / #67 on the
+  same scans: black), cut at the one card corner. **No artifact, land or
+  colourless frame** — the pack lists none (`a`, `c`, `l` are not in Card
+  Conjurer's tree) and none is needed by print: every printing of the run
+  is a coloured legendary creature, and none is mono-green. `c` is the
+  gold `m` frame, byte for byte, so the template has a master under every
+  key; the `c` and `g` combos have no print to follow and stay unverified
+  (their references are documented nulls), so nothing imports onto them.
+- **The two-colour dress** (`twoColorMasters: ["split"]`, opt-in like
+  every pair): 72 of the 109 printings are two-colour, and every one prints
+  GOLD bars, a gold plate, gold lead and panes — and a text box that turns
+  from the first colour to the second (DMU #295 Balmor U|R, #292 Aron W|B,
+  #310 Radha R|G, MUL #56 Raff U|W). The pair master `<pair>` is the gold
+  frame with the pair's two boxes lerped across `SG_BOX_RAMP` (46 → 57 %W)
+  through the pack's own 'Rules' mask: the run's two-colour boxes, their
+  text-free top rows 1320–1336 read with each print's two ends as 0 and 1,
+  cross 10 / 50 / 90 % at 47.1 / 51.5 / 55.8 %W (the median of 34 that
+  read). Three colours or more print the gold box (DMU #302 Jodah, #313,
+  #317–319, #327). The registry needs no `two-colour` gap: the frame draws
+  it.
+- **The crown** (`STAINEDGLASS_CROWN`, `stainedglasscrown/<key>`): every
+  printing is legendary and prints the pack's 'Legend Crown' — the dome of
+  glass over the title bar and the panes either side, in the card's colour
+  (1160 × 55 at 170 / 29 px, 1:1, rows 0–119 kept). A pair's crown is the
+  GOLD crown with its dome the pair's two domes lerped across
+  `SG_CROWN_RAMP` (47 → 53 %W: 64 prints cross 47.8 / 50.3 / 52.6) through
+  the pack's 'Inner Crown' mask — DMU #310 Radha's dome red into green
+  under a gold rim. An ADDITION, opt-in per card; imports name it ON
+  (`showcase/dmu/stained-glass` is in `CROWNED_SHOWCASE_SIGNATURES`) — on
+  this frame only: an import that falls back to M15 while its colour is
+  unverified lands with the crown OFF ([A showcase's crown is its own
+  frame's](#a-showcases-crown-is-its-own-frames)).
+- **The stamp notch, split OFF every master** (`SG_NOTCH`,
+  `splitWarpNotch`; `stainedglass/holostamp/<key>`, 220 × 230 at 640 /
+  1776): the pack arches the box's foot over a black well on every key; the
+  run arches it only on a rare or mythic (`security_stamp: oval`, 45 of
+  109 — commons and uncommons run the rim straight). Each master (pairs
+  too) is written PLAIN: under the box the arch's columns (648–850) are the
+  straight rim, each row blended between the rim's own two pixels just
+  outside the arch (the rim's shading drifts 30 levels over 50 px — a
+  copied column left a step); above it the box's glass the arch hid is the
+  column's own glass stretched down onto the straight foot (rows 1780 → the
+  arch's top in the Rules mask, less 3 edge rows, re-drawn over 1780 →
+  1922), so the two lead lines that meet on the arch's crown run on down to
+  the rim, as the uncommons print them (DMU #292, #306, MUL #56). The
+  pixels that differ are the piece, which drawn over the plain master
+  gives the pack's master back exactly but for the oval cut (a test holds
+  the published pair to the importer's sha). The oval (`STAINEDGLASS_
+  HOLO_STAMP_OVAL`): print's hologram, 130 × 63 on the pack's well's centre
+  (750, 1959.5 — CC's own 'Rare Stamp' centre; the 45 stamped prints centre
+  it 25.5 px under their straight rim, 1959.5 on the pack's). The pack's
+  well is plain black (no hologram painted); our oval art covers the cut.
+  Keys: the masters' and the ten pairs'. Print's arch is lower and wider
+  with a thinner rim than the pack's: kept as drawn (flagged).
+- **Tones** — the ring's one rule (raw scan medians, Scryfall PNGs at 1500
+  × 2100; a region ≥ 9 levels off is toned), per region: the glass of the
+  title bar, the type bar and the text box down to its foot (1922 px: the
+  rim's highlight under it differs between the files too, and is not
+  glass) — where the pack's blue and red files differ by ≥ 40 levels (the
+  lead and the rims are the same pixels in every mono file), above a luma
+  floor that keeps the lead lines inside the glass as drawn — the gold
+  frame's lead (all of it: read on the box's rows, 1320–1900, it is one
+  metal drawn one way over the whole frame, and toned whole it moves toward
+  print wherever the check read it), each crown's dome and panes, each
+  plate's face. Read on the base printings (the textured, halo-foil and
+  serialized twins print other foils), a colour's box and dome also from
+  the two-colour boxes' ends. 28 regions toned (`SG_PRINT_TONES`; the gold
+  bars 45 levels off in blue, the red plate 38 in red …); within 8 levels,
+  and the green bars, panes and plate (no print), as drawn. The tone SHIFTS
+  each channel by (to − from), fading to nothing toward white — not the
+  ring's gain: the gold's blue reads 17 against print's 62, and a gain of
+  × 3.6 turned the glass's light streaks and lead lines violet (built,
+  looked at, dropped). Not toned, flagged: the box's foot-rim HIGHLIGHT
+  is the pack's silver (~165,145,145) where print's is bronze
+  (~110,96,93) — pack art (a TODO line).
+- **Geometry as drawn.** The pack's bars sit within 1–2 px of print's
+  (the title bar 2.5 px lower, the type bar 2 px higher), the box's foot
+  2–4 px higher, the frame 4 px wider each side (print's frame is 0.6 %
+  narrower: a scan's scale); the band above the title bar is 8 px taller
+  than print's (print's panes start at 61 px, the pack's at 52) and the
+  crown's dome rim reaches 8 px higher (31 against 39); the plate is CC's
+  rounded one where print's has cut corners, ~10 px further right. All
+  textured glass — never a flat zone: nothing is re-cut.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), measured on the run's 50 base printings
+  against our bakes of the same names, types and costs, each text
+  registered on its own bar:
+  - the name 4.5 px above M15's (its baseline against the title bar;
+    within 0.5 px after);
+  - the type line 1 px under the CC baseline (within 0.5 px after);
+  - the cost row: the CC M15 70 px disc 1 px higher against the bar and its
+    end 9.5 px further right (`costDx` 11.5 px — the last disc's ink ending
+    at 1392–1393 px, as print's);
+  - the rules box M15's margins (the run's lines from x 130–133) on a box
+    8.5 px shorter at each end on M15's centre: 1345.2 → 1914 px (the run's
+    full boxes end their last descenders on 1912–1918 px, 1908–1914 on the
+    pack's foot; the short texts' ink centres agree within 1 px);
+  - the P/T: the pack's plate per key (262 × 127 at its ptBounds 1162 /
+    1863, 1:1; it fills its image, `lib/cards/plate-ink.ts`) with M15's text
+    box on it;
+  - white ink everywhere (print's name, type line, rules and P/T are white
+    on every key: the glass is dark).
+  Flagged, not changed: print's P/T plate is another drawing (cut corners,
+  ~10 px right, ~4 px lower); our MUL set symbol is ~0.75 of print's across
+  (MUL is not in the per-set table), DMU's within 2 px.
+- **Collector line** (`STAINEDGLASS_COLLECTOR`): M15's slot 4 px lower —
+  line 1 on 1997.5, line 2 on 2036 px (the 50 base prints end line 1's ink
+  on 1997, line 2's on 2035; MUL's scans 1–2 px higher). An ADDITION,
+  opt-in per card.
+- **Imports.** `showcase/dmu/stained-glass` (DMU #287–368; MUL #5, #12,
+  #19, #22, #24, #55, #56, #58, #59, #135, #142, #149, #152, #154, #185,
+  #186, #188, #189 and their "z" twins) is exact on `stainedglass` once the
+  card's colour is verified, `nearest` until then (`withVerification`);
+  before this frame DMU's run imported `showcase` and MUL's `showcase/mul`,
+  nearest on M15. No gap. The printing's real colour, the crown ON, a
+  pair's two-colour dress ON (`printsTwoColorFrame`), the stamp on a rare
+  or mythic, the collector line. Every other printing's outcome is
+  unchanged but MUL #5's (the signature fixtures' one Dominaria legend).
 
 ### The Tarkir: Dragonstorm showcases (4.11 / 4.35, layout v68)
 
@@ -5513,11 +5693,12 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     box, in the strokes' tone (`BLOOMANIME_CROWN`, 646, 16, 209 × 64). All
     twelve creatures are legendary and print it, so `showcase/blb/anime`
     imports with it on (`CROWNED_SHOWCASE_SIGNATURES`; Ral, the walker,
-    names none) — but ONLY on the anime frame
-    (`printed_crown_frames`, `OWN_FRAME_CROWN_SIGNATURES`): the import lands
-    on the standard frame (1.18), where the printing wears no standard
-    crown, so the switch is off there and on when the card is switched to
-    the anime (the chooser's tile too);
+    names none) — but ONLY on the anime frame (`printed_crown_frames`;
+    since the stained glass the rule of every crowned showcase, [A
+    showcase's crown is its own frame's](#a-showcases-crown-is-its-own-frames)):
+    the import lands on the standard frame (1.18), where the printing wears
+    no standard crown, so the switch is off there and on when the card is
+    switched to the anime (the chooser's tile too);
   - the **stamp** — MSE's own notch, the footer's tone through
     `border_stamp_mask.png` under `stamp.png`'s arch in the strokes' tone
     (`bloomanimeholostamp/<key>.png`, 494, 1882, 540 × 58), our oval at
@@ -5533,6 +5714,154 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     import chooser) keeps the crown off: only the import names it;
   - #353 Ral, the walker, stays out of scope.
 
+### The New Capenna Art Deco showcase (4.11 wave 2)
+
+`sncartdeco` — "Art Deco" in the Streets of New Capenna set (`newcapenna`,
+showcase era): the black-and-gold filigree of the five families'
+three-colour cards, SNC #296–340 (2022), and their gilded-foil twins
+#361–405 — 90 printings, every one single-faced, black-bordered, on the
+2015 frame, none a walker, token or layout card. An ADDITION: a new
+template — no layout bump, no sweep, no badge; nobody can pick it until a
+colour is verified.
+
+- **Which pack.** Card Conjurer names the two SNC showcase packs the other
+  way round from print: its 'Art Deco (SNC)' pack (packSNCArtDeco.js,
+  `snc/artDeco/`) draws the PALE Golden Age frame of #341–359 (Elspeth,
+  Giada, the angels, the lands — and the walkers #341 / #347 / #348 and
+  #441–449), while its 'Golden Age (SNC)' pack (packSNCGilded.js,
+  `snc/gilded/`, 1500 × 2100 NATIVE: nothing resampled) draws this frame.
+  So the masters come from the 'Golden Age' pack, through
+  `scripts/import-cc-frames.mjs` (`CC_TEMPLATES.sncartdeco`, the `SNC_DECO`
+  block of `scripts/lib/cc-frames.mjs`), frames bucket only. #341–359,
+  #360 (the Phyrexian Urabrask) and #441–449 are other designs and stay
+  `showcase`.
+- **The gilded half.** #361–405 print the SAME frame — the same drawing, bar
+  for bar — in gilded foil: the gold is an embossed foil that Scryfall's
+  scans read near-black (25,24,13), with a copper edge. A finish, not a
+  frame: they land on `sncartdeco` with the plain run, and their gold is
+  never read for a tone.
+- **One master for every key.** All 90 printings are three colours (GRW GUW
+  BRU BGR BUW) and wear one gold filigree, the pack's 'Regular Frame'
+  (`gilded/m.png`), byte for byte under w u b r g c m (as the emblem's and
+  the D&D Sourcebook's single masters). The pack's 'GildedColored' frames
+  (silver for the mono colours) are Card Conjurer's own — no printing wears
+  them — and are not imported. Only `m` has references; the other keys are
+  documented nulls.
+- **The crown is a whole master.** All 30 legends (#301, #306, #307, #312,
+  #313, #314, #315, #320, #325, #326, #327, #329, #332, #336, #339 and their
+  gilded twins) print an arch over the title bar: the pack's 'Legendary
+  Frame' (`gilded/legendary/m.png`), built as `<key>-legendary` under every
+  key (`crownMasters`, like the borderless floating crown) because the arch
+  reshapes the TRANSLUCENT title bar under it (28,300 pixels differ, 10,843
+  of them translucent) — an overlay cannot draw that. Opt-in per card; an
+  import of a legendary printing names it on
+  (`CROWNED_SHOWCASE_SIGNATURES`) — on the Art Deco frame only: until the
+  frame is verified the card lands on the m15 stand-in with the crown OFF
+  ([A showcase's crown is its own frame's](#a-showcases-crown-is-its-own-frames)), on once it lands on, or
+  is switched to, `sncartdeco`.
+- **The art under the frame.** The title bar, type bar and text box are
+  translucent over the art on every printing (the pack's α 127, lifted onto
+  print's — below): the profile's
+  `underFrameArt` covers them (96–1404 × 77–1936 px, every translucent pixel
+  of both masters with the art-window check's spare; Card Conjurer's
+  artBounds 96 / 78 / 1308 × 1857). The window keeps its own slot —
+  `SNCARTDECO_ART_SLOT`, 119–1381 × 236–1170 (α < 250 on 120–1379 ×
+  238–1167; the stepped fins narrow it to 143–1356 at its top), Scryfall's
+  `art_crop` shape (626 × 457) — and the two layers meet on the opaque gold
+  round it (the fins, the title bar's foot rim, the art's foot rim). One
+  see-through dot of the pack's anti-aliasing in the right pillar's fin
+  (x 1378–1379 on row 969) sat inside the slot but outside the window, so
+  the window's layer showed there: it is filled opaque from its gold
+  neighbours (`SNC_DECO_DOT_FILLS`), and every see-through pixel inside the
+  slot is now the window's own (#622 review).
+- **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels
+  off is toned), the 45 non-gilded prints registered block by block on the
+  pack's gold:
+  - the gold (the file's pixels of chroma ≥ 45): 181,156,71 → 207,180,115
+    (quartiles 206–208 / 179–182 / 113–119), 26 / 24 / 44 off: TONED, on
+    `m.png` and `legendary/m.png` as each loads (`SNC_DECO_SOURCE_TONES`);
+  - the plate's gold rim (30 creatures): 176,152,68 → 202,164,98, 26 / 12 /
+    30 off: TONED, on `pt/m.png`; its dark face 20,16,24 → 20,19,21, as
+    drawn;
+  - the black border: as drawn (0,0,0) — the prints read 22,19,14, and so
+    do SNC's own regular black borders on the same scans (16 cards, #1–17):
+    print's true black (the woodland rule);
+  - the translucent bars and box lie over each card's art, so no raw median:
+    their OPACITY is fitted instead (owner, #622 review: print's are
+    near-black with faint art through, the pack's α 0.50 read about twice
+    as bright) — `out = α·c + (1 − α)·art` on pixel pairs across each
+    region's opaque rim (the art seen through the window just outside it
+    against the same column through the region; the box through the type
+    bar's fit), flat art fields only, the 45 non-gilded prints: the title
+    bar α 0.74 (quartiles 0.56–0.80), the type bar 0.81 (0.74–0.88), the
+    text box 0.82 (0.77–0.86), each within 0.03 as the flatness threshold
+    moves; the layer colour fits black (15–18, under the border's 22 on the
+    same scans), so only α moves (`SNC_DECO_TRANSLUCENCY`,
+    `liftTranslucency`: the fill takes the band's α, a rim's anti-aliased
+    pixel keeps its place on the ramp).
+- **Geometry kept as drawn.** Registered on the prints, the pack's pillars,
+  art-foot rim, type bar and box rim sit within 0–2 px of print's. The
+  PLAIN printings draw their title bar 6–7 px lower than the pack does (its
+  rims at 98–111 / 225–238 against the pack's 91–106 / 217–232); the
+  LEGENDARY printings and the pack's twin agree within 1 px. No row from
+  69 to 1949 repeats (the gold pillars run unbroken from the title bar to
+  the box), so there is no flat zone to re-cut through: nothing is moved,
+  and the slots ride the pack's bars.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), measured on all 90 printings, our bake of
+  each registered on its print region by region (the cost row by
+  normalised cross-correlation over our own discs, the name and the type
+  line by their white ink). The plain 60 set the name and the cost row ~4 px
+  LOWER than the 30 legends; no slot follows the crown, so each takes the
+  mean of the 90:
+  - the name 1 px up (plain +1, legendary −5 before) and 1 px left of
+    M15's pen — its LEFT ink edge on print's (#622 review: the first ink
+    column on all 90, print against ours on the same name, median 0 after;
+    print 128–138);
+  - the cost row: the CC M15 70 px disc 8 px lower and 1.5 px further right
+    (`costDy` +1.4 px, `costDx` 3.5 px; plain +9.3, legendary +5.2 before) —
+    after, plain +1.3, legendary −2.9;
+  - the type line 4.5 px under the CC baseline (plain +5, legendary +3),
+    its band 3 px wider so the set symbol ends 3 px further right (its rows
+    within 1 px);
+  - M15's rules box and margins (the run's lines from x 133, its full
+    boxes' last descenders down to 1922 px), WHITE ink;
+  - the P/T: the pack's one plate (`gilded/pt/m.png`, 254 × 134 at its
+    bounds 1156 / 1857, 1:1) with M15's digit box 4.5 px left and 1 px down,
+    white; the plate's dark face runs 1180–1384 (`inkSpanPct`);
+  - white name and type ink, no shadow;
+  - the collector line on M15's rows: the run's line 1 ink ends at 1991
+    and line 2 at 2029, ours 2 px lower — within the offset the Tarkir
+    draconic keeps.
+- **Stamp** (`SNCARTDECO_HOLO_STAMP`, `sncartdecoholostamp/<key>.png`): the
+  run's rares and mythics arch the text box's gold foot rim over the oval
+  (`security_stamp: oval`), its commons and uncommons run it straight —
+  "auto" is a rare or mythic, as on M15. Card Conjurer's pack has no stamp
+  piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram
+  itself, never read), so the notch is PipGlyph's own: the published
+  master's own black outline, gold rim and black border LIFTED along the
+  printed arch (`scripts/build-borderless-stamp.mjs`, `SNC_DECO_ARCH` in
+  `scripts/lib/borderless-stamp.mjs`: 35.3 px at the centre, rising from x
+  664 to x 836 on the 25 stamped plain prints; the box's alpha read on row
+  1931, its brown arcs being opaque over the centre), 188 × 54 px at 656,
+  1896, every key the same piece (the crowned twins hold the same pixels
+  there — checked by the build). The oval is our own art at 683–817 ×
+  1924–1988 (the hologram's lit pixels 685–815 × 1925–1988 on the 50
+  stamped prints). The arch is a rules keep-out. An ADDITION, opt-in per
+  card.
+- **Imports.** `showcase/snc/art-deco` (SNC #296–340, #361–405) is exact on
+  `sncartdeco` once the card's colour is verified, `nearest` until then
+  (`withVerification`); before this frame the run imported `showcase`,
+  nearest on M15. No gap: every card of the run is three colours on the one
+  gold frame. The card keeps its real colour (gold), legends import with the
+  crown on, rares and mythics with the oval stamp, every printing with the
+  2015 collector line. Every other printing's outcome is unchanged (the
+  fixtures).
+- **Flagged, not changed:** the legends' name and cost row sit ~3 px high
+  and the plain cards' ~1–2 px low (the mean of the two); the gilded twins'
+  dark foil gold is a finish the frame doesn't draw; the Golden Age frame
+  (#341–359, Card Conjurer's 'Art Deco' pack) is a frame of its own, not
+  built; the walkers among it stay out of scope (ask first).
 ### The MKM dossier showcase (4.11 wave 2)
 
 `dossier` — "Dossier" in the Murders at Karlov Manor set (`karlov`,
@@ -5637,7 +5966,9 @@ can pick it until a colour is verified.
   `DOSSIER_CROWN_RAMP`, 40.5 → 57.5 %W (the crown's band on the run's
   two-colour legends: 10 / 50 / 90 % at 42.5 / 49.7 / 55.9 %W). The
   showcase is in `CROWNED_SHOWCASE_SIGNATURES`: a legendary import names
-  the crown ON. An ADDITION, opt-in per card.
+  the crown ON — on this frame only ([A showcase's crown is its own
+  frame's](#a-showcases-crown-is-its-own-frames)). An ADDITION, opt-in per
+  card.
 - **Stamp** (`DOSSIER_HOLO_STAMP`, `dossierholostamp/<key>.png`): the
   run's rares and mythics wear the OVAL (`security_stamp: oval`, 45 of 55),
   its uncommons none — "auto" is a rare or mythic, as on M15. The notch is
@@ -5734,7 +6065,7 @@ bump, no sweep, no badge; nobody can pick it until a colour is verified.
   one gain on the whole stripe turned the red's and green's light strips
   lilac and sky blue (their blue channel × 4.5 / × 4), so the body and the
   light strip are two regions of one difference, split by luma
-  (`TARDIS_STRIPE_SPLIT`, `diffRegionPlane`'s `luma`). Toned: every
+  (`TARDIS_STRIPE_SPLIT`, `diffRegionPlane`'s `lumaSplit`). Toned: every
   stripe body but the steel (5 off), every light strip, every wedge but
   the steel (7 off) — the worst the gold light strip (81 off in blue) and
   the white wedge (49). As drawn: the box's blue panels (7), the sides'
@@ -5950,6 +6281,178 @@ verified.
   an uncommon (no stamp; an Aura on red and green) and a rare or mythic
   (the stamp): w #6 / #1, u #26 / #25, b #37 / #27, r #41 / #40, g #63 /
   #52. `c` and `m` have no printing (documented nulls).
+
+### The Strixhaven Mystical Archive (4.11 wave 2)
+
+`mysticalarchive` — "Mystical Archive" in the Strixhaven set (`strixhaven`,
+showcase era): the gold ornament over edge-to-edge art of the Strixhaven
+Mystical Archive, STA #1–63 (2021, English) — 58 mono-colour and 5
+two-colour instants and sorceries, every one borderless, single-faced and
+on the 2015 frame, none legendary. Card Conjurer's 'Mystical Archive
+(STA)' pack (packMysticalArchive.js, `img/frames/mysticalArchive/`, 2010 ×
+2814 — its red frame 2693 × 3770), each master downscaled ONCE to 1500 ×
+2100, frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.mysticalarchive`, the `MA` block of `scripts/lib/cc-frames.mjs`).
+An ADDITION: a new template — no layout bump, no sweep, no badge; nobody
+can pick it until a colour is verified.
+
+**Not this frame** (both stay on `borderless/mystical-archive`, nearest on
+the borderless family, as before):
+
+- STA #64–126, the Japanese alternate art: a vertical name panel over the
+  art's left side and no title bar — another frame (Card Conjurer draws it
+  as its own SVG pack, 'Japanese Mystical Archive');
+- SOA #1–195, Secrets of Strixhaven's 2026 archive: the English run (#1–65)
+  wears the same ornament with the title bar and text box INVERTED — navy
+  boxes, white text (`frame_effects ∋ inverted`) — and #66–195 are its
+  Japanese runs (plain and 'silverscroll'). Card Conjurer has no pack for
+  it; MSE does.
+
+**Masters.** w u b r g m are the pack's colour frames whole; `a` its
+silver 'Artifact Frame' (FrameProfile.artifactMasterKeys { c: "a" }) and
+`c` its 'Land Frame' (c.png) — the scroll's split (#604), unprinted (no
+colourless STA card). Every pack file is ONE drawing: the masters differ
+only where the colour is — the colour lines inside the pack's 'Pinline'
+mask and the wide bands outside it (above and below the title bar,
+between the art and the type bar, the box's outer sides). The ornament
+runs to the card's TOP edge (design: the top corners kept square,
+`keepCorners`, as the ring's; square-corners.ts "frame"), the art shows at
+the side edges between the ornament's pieces, the footer is black: the
+edge contract `MYSTICAL_ARCHIVE_EDGES` (sides clear but rows 0–298, 1137–1317,
+1432–1512 and from 1707). The pack's 'Crown' band is not built: no print
+wears it (the run has no legendary card).
+
+**Two colours** (`twoColorMasters: ["split"]`, opt-in per card, imports
+with it on — `printsTwoColorFrame`, a 2015-frame printing): `<pair>` = the
+GOLD master with the first colour's frame through the 'Pinline' mask and
+the second's through 'Pinline (Right)' (x ≥ 827, a diagonal through the
+type bar's foot). Measured on the five two-colour prints (STA #59 Despark
+w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix r|w,
+#63 Putrefy b|g): the colour LINES split left / right, while the wide
+bands a mono card wears in its colour are the gold master's pale gold on
+both halves (Electrolyze row 82: blue only on the left bracket and arch,
+red on the right, gold between; row 1170: colour only at the bars' ends).
+A pair's stamp notch is its own key (the same black arch). A two-colour
+land (none printed) wears the same dress (`twoColorForLands`).
+
+**Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels off
+toned), the median of per-print medians on Scryfall PNGs at 1500 × 2100
+(≥ 250 ms apart; scans never committed): w on STA #1–11, u #12–23, b
+#24–35, r #36–47, g #48–58, the gold master on the five pairs #59–63. Each
+region is applied as the FILE loads (`MA_PRINT_TONES` through
+`MA_SOURCE_TONES`).
+
+- **Paper** (title bar, type bar, text box; ink left out): pack 238,220,157,
+  print 240,224,183 — toned (26 in blue); the yellower field above the
+  title bar comes with it (235,211,155 after, print 235,216,163).
+- **Gold** (the ornament's flat gold): 255,210,15 → 244,206,87 (72 in blue).
+- **The colour.** Every pack file paints its colour in two or three FLAT
+  SHADES, each in the colour lines (inside the 'Pinline' mask) and the
+  wide bands (outside it). Each shade × place is measured on the pixels of
+  that shade where the file differs from another colour's, eroded 6 px —
+  so a print's own black outlines, up to 5 px off the pack's, stay out (8
+  px moves no median more than 3 levels):
+
+  | Key | Shade (pack) | Line (print) | Band (print) |
+  |---|---|---|---|
+  | w | 247,246,245 / 243,241,231 / 184,177,170 | 241,237,244 / 233,227,225 / — | 241,237,245 / 233,227,225 / 160,139,141 |
+  | u | 4,119,192 / 0,96,144 / 0,72,113 | 32,94,184 / 21,64,136 / — | 30,91,181 / 22,68,144 / 20,53,113 |
+  | b | 47,52,48 / 100,100,101 / 72,71,73 | 61,57,54 / 118,115,124 / — | 60,55,54 / 118,116,126 / as drawn (71,67,74: 4 off) |
+  | r | 234,31,42 / 152,11,22 | 193,62,39 / 126,28,27 | 202,64,40 / 127,30,30 |
+  | g | 5,113,46 / 0,62,11 / 0,27,0 | 56,108,79 / 35,70,50 / — | 53,106,79 / 35,70,50 / 24,47,33 |
+  | m (the pairs' bands) | 240,228,140 / 245,212,80 / 158,128,34 | the band's | 235,218,142 / 203,173,70 / 133,109,42 |
+
+  A shade's region is the file's pixels NEAREST that shade (of its shades,
+  the outlines' black, the paper and the gold: an anti-aliased edge goes to
+  the closer) where the file differs from another colour's file, clipped
+  inside / outside the Pinline mask (the importer's `nearest` region and
+  `clip`). Shades with no zero-free gain (u's 0,96,144, g's 0,62,11 …) are
+  toned by LUMINANCE (`mode: "luma"`: each pixel to the print colour scaled
+  by its luminance against the shade's). A shade the lines never carry
+  takes its band tone there; `a` and `c` have no print and keep their
+  colour as drawn.
+- **The plates** (no print: the run has no creature) are the same shades
+  round the same paper face: each colour plate's shades take its colour's
+  band tones where it differs from another colour's plate, its paper and
+  gold the frame's where it is the same (so the gold plate's pale shade,
+  near the paper, keeps its own tone).
+- **The footer**: pack 0,0,0, print 6,7,4 — within 8: as drawn, true black.
+
+Checked independently (the review's method: our master's pixels at each
+target ± 2, eroded 7 px, against the same prints): every line and band
+within 2 levels of print but r's line, 6 in red — print's red lines are
+lighter on the title pieces than down the box's sides (~204 against ~185),
+one tone between them. (Until the review of #619 each place had ONE tone
+measured on the colour region eroded 4 px: the darker shades and the
+prints' outlines pulled every median 10–25 levels dark.)
+
+**Geometry as drawn.** Print's title bar sits 3–5 px higher than the
+pack's, its type bar 1 px lower, its text box 2–4 px lower with its foot
+7 px lower (row 1950 against 1943) and 4 px wider on the left. Every line
+crosses textured paper or ornament — never a flat zone — so nothing is
+re-cut; the slots are measured on print, each against its own line.
+
+**The art** runs under the frame edge to edge: the masters are see-through
+on 0–1500 × 253–1822 px on every key (CC's artBounds 0 / 0.1205 / 1 ×
+0.7539); the slot covers it with the art-window check's 0.05 % to spare,
+0–1500 × 251–1838 (`MYSTICALARCHIVE_ART_SLOT`; an AI picture asks 992 ×
+1056).
+
+**Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+family joined without a bump). Each measured on all 63 prints against our
+bakes of the same names, costs and texts:
+
+| Slot | Print | Ours before | Profile |
+|---|---|---|---|
+| Name baseline / pen | 184 / 129 | 189 / 131 | `dy` − 5 px, the band 2 px left (its right end kept) |
+| Cost row | outlined symbols 77 px across (a dark ring round a 71 px face), centred 1352.5 / 151.5, the last ring's right edge 1391 (q 1389–1394) | 70 px discs centred 1348 / 157 | the CC M15 disc 6 px higher, 4 px right (`costDy` −12.6, `costDx` 6 px): 1354 / 151 |
+| Type baseline / pen | 1261 / 128 | 1260 / 133 | the CC baseline + 1 px, the band 5 px left |
+| Set symbol | 1281–1383 × 1196–1280 | 1285–1383 × 1202–1280 | as M15 (the family's box) |
+| Rules block | first ink, last ink, first-ink x | +4, +4, +2 against print | M15's box 3 px up, 2 px left (then +1, +1, 0) |
+| Collector line 1 / 2, pen | 1993 / 2032, 98 | — | M15's slot (1994 / 2032, 99) |
+| Stamp | the arch's top 1911.7, its feet 658 / 846; the oval 687–813 × 1934–1995 | — | our arch and the 134 × 64 oval on 750 / 1964 |
+
+The P/T has no print (the run has no creature): the pack's plate at its
+ptBounds (1135 / 1848, 317 × 159), M15's digit box.
+
+**Opt-ins**, each as print shows it: the holofoil stamp (45 of the 63 —
+the rares and mythics — print the oval: "auto" = a rare or mythic, as on
+M15) through our own notch, `mysticalarchiveholostamp` — the pack draws no
+stamp, so the plain black arch print raises into the box's foot round the
+hologram (no rim) is PipGlyph's own drawing,
+`scripts/frame-inputs/mystical-archive-stamp-arch.svg`, its top edge
+measured column by column on the per-pixel median of the 45 stamped
+prints, the oval cut clear and ringed black by the importer; the 2015
+collector line on M15's rows. No crown.
+
+**Registry.** `borderless/mystical-archive/sta` (STA #1–63, borderless):
+`exact` on `mysticalarchive` once the card's colour is verified
+(`withVerification`), `nearest` until then (the request row logged); no
+gap. The import keeps the printing's real colours (a two-colour printing
+keeps both and wears the pair dress), names the stamp from
+`security_stamp` and the 2015 collector line. Every other printing's
+outcome is unchanged (the Japanese run and SOA stay
+`borderless/mystical-archive`).
+
+**Flagged, not built:**
+
+- Print sets its mana symbols in Card Conjurer's OUTLINE style (a pale
+  disc, the symbol in its colour, a dark ring, no shadow); no symbol style
+  draws that yet (`lib/cards/symbol-style.ts`) — the discs are the
+  family's, on print's centres.
+- Print's set symbol carries a black keyline; the keyrune glyph draws
+  none (as on every frame).
+- The picker tile shows the master over the tile's dark ground (no sample
+  art: `pickerSampleArt` is the owner's hand-picked list).
+- The SOA 2026 archive (navy boxes, white text) and the two Japanese runs
+  as frames of their own.
+
+**Combos to tick** (each has two references in `frame-references.json`):
+w (#1 Approach of the Second Sun, #10 Swords to Plowshares), u (#15
+Counterspell, #13 Brainstorm), b (#27 Demonic Tutor, #28 Doom Blade), r
+(#42 Lightning Bolt, #36 Chaos Warp), g (#50 Channel, #56 Regrowth), m
+(#62 Lightning Helix, #60 Electrolyze — the pair dress rides the `m` tick,
+V-A); `c` has no print.
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
@@ -10378,12 +10881,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 86 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 89 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, MKM dossier, Enchanting Tales and Doctor Who TARDIS, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive and Doctor Who TARDIS, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of
@@ -10543,6 +11046,21 @@ How rules text is sized and set:
   (42 px on a frame without one). A lone em dash after a word ("choose one
   —", "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **Upright words in flavour** (layout v71, owner 2026-10-28): flavour is
+  italic, but the prints set a book's title, a ship's name or a stressed
+  word ROMAN inside it ("—*Heroics: A Book of Fables*", "Are *we* the
+  wrong sort of people?"). Scryfall writes those words between stars, an
+  import keeps them, and the stored text holds the stars as the markup
+  (`lib/cards/flavor-markup.ts`): a balanced `*…*` pair on one line (a
+  non-space after the first star, before the second, none between) is set
+  roman — measured with the ROMAN face's advances, so the line breaks are
+  the renderers' own — and its stars are never drawn. Any other star is
+  printed — so `**bold**` is not bold: it prints `*bold*` with "bold"
+  upright (Scryfall's convention: one star each side). A span may start
+  or end inside a word ("Oracle *en*-Vec"): the
+  word is one run of glued pieces, each in its own face. Rules text has
+  no markup. The creator's flavour fields say so under the box; print
+  typography reads a quote through the stars (`*"Red Box"*` opens).
 - **Inline pips** (layout v36, TODO 3.31): a disc `RULES_TEXT.pipDiscEm`
   0.785 em across, centred `pipCentreEm` 0.334 em above the line's baseline
   — on the capitals (half MPlantin's 0.682 em cap height), not on the

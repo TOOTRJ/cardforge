@@ -191,6 +191,15 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
         crownedShowcases += 1;
         continue;
       }
+      // …and MUL's Dominaria legends (TODO 4.11 wave 2): the Stained Glass
+      // dome, which its frame draws — on wherever it lands with one.
+      if (/^mul-(5|12|19|22|24|55|56|58|59|135|142|149|152|154|185|186|188|189)z?$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(patch.printed_crown, key).toBe(true);
+        if (frameAnatomyOf(template).crown) expect(ai.crown, key).toBe(true);
+        crownedShowcases += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(legendary, key).toBe(true);
         expect(template, key).toBe("nyx");
@@ -218,7 +227,8 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
       }
     }
     expect(defaultedOnCrownFrames).toBeGreaterThanOrEqual(4);
-    expect(offOnCrownFrames).toBeGreaterThanOrEqual(3);
+    // (2 since TODO 4.11 wave 2: MUL #5 is a Stained Glass legend, crowned.)
+    expect(offOnCrownFrames).toBeGreaterThanOrEqual(2);
     expect(crownedShowcases).toBeGreaterThanOrEqual(1);
   });
 

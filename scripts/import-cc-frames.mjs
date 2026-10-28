@@ -85,6 +85,10 @@ import {
   DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
   splitZnrNotch,
+  liftTranslucency,
+  fillDots,
+  splitWarpNotch,
+  geomRegionPlane,
   clearZnrOvalCut,
   cutCrownBand,
   cutCrownFindings,
@@ -178,6 +182,7 @@ import {
   sourceTonesOf,
   nearRegionPlane,
   diffRegionPlane,
+  nearestRegionPlane,
   chromaRegionPlane,
   boxRegionPlane,
   capturePlane,
@@ -310,6 +315,57 @@ async function toneLoaded(src, data, w, h) {
   // text box, its wings left out).
   for (const [name, c] of Object.entries(tone.chroma ?? {})) regions[name] = chromaRegionPlane(data, w, h, c);
   for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, b.file ? await rgba(await fetchCached(b.file), w, h) : null, w, h, b);
+  // …or (the Dominaria United stained glass, TODO 4.11 wave 2) where two
+  // OTHER files of the same drawing differ — its glass — kept to rows /
+  // columns, less another such region (geomRegionPlane).
+  for (const [name, g] of Object.entries(tone.geom ?? {})) {
+    const read = async (file) => rgba(await fetchCached(file), w, h);
+    regions[name] = geomRegionPlane(await read(g.a), await read(g.b), w, h, g, g.minus ? await read(g.minus.a) : null, g.minus ? await read(g.minus.b) : null, data);
+  }
+  // A region CLIPPED (TODO 4.11 wave 2, the Mystical Archive): kept only
+  // inside a pack mask (`mask`), only outside one (`notMask`), and/or only
+  // where the file is the SAME as another pack file (`notDiff`, the
+  // complement of diffRegionPlane) — each read at the file's size.
+  // …or the pixels whose NEAREST of a list of colours is one of them (TODO
+  // 4.11 wave 2: the Mystical Archive's colour shades, each pack file
+  // painting two or three flat shades of its colour).
+  for (const [name, n] of Object.entries(tone.nearest ?? {})) regions[name] = nearestRegionPlane(data, w, h, n);
+  // A region CLIPPED (TODO 4.11 wave 2, the Mystical Archive): kept only
+  // inside a pack mask (`mask`), only outside one (`notMask`), only where
+  // the file DIFFERS from another pack file (`diff`) or is the SAME as it
+  // (`notDiff`), and/or only where the nearest of a list of colours is the
+  // one named (`nearestIs`) — each read at the file's size, once a file.
+  const loaded = new Map();
+  const raster = async (file) => {
+    if (!loaded.has(file)) loaded.set(file, await rgba(await fetchCached(file), w, h));
+    return loaded.get(file);
+  };
+  for (const [name, c] of Object.entries(tone.clip ?? {})) {
+    const plane = regions[name];
+    if (!plane) throw new Error(`${src}: clip names region ${name}, which the tone has not got`);
+    const keep = new Float64Array(w * h).fill(1);
+    if (c.mask) {
+      const m = await raster(c.mask);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= m[p * 4 + 3] / 255;
+    }
+    if (c.notMask) {
+      const m = await raster(c.notMask);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - m[p * 4 + 3] / 255;
+    }
+    if (c.diff) {
+      const d = diffRegionPlane(data, await raster(c.diff.file), w, h, c.diff);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= d[p] / 255;
+    }
+    if (c.notDiff) {
+      const d = diffRegionPlane(data, await raster(c.notDiff.file), w, h, c.notDiff);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - d[p] / 255;
+    }
+    if (c.nearestIs) {
+      const n = nearestRegionPlane(data, w, h, c.nearestIs);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= n[p] / 255;
+    }
+    for (let p = 0; p < w * h; p += 1) plane[p] = Math.round(plane[p] * keep[p]);
+  }
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 
@@ -624,7 +680,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       const toneMasks = Object.fromEntries(
         await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
       );
-      const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
+      const toned = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
+      // A translucent layer lifted onto print's opacity, and a see-through
+      // dot the window's slot must not show filled (TODO 4.11 wave 2: the New
+      // Capenna Art Deco — SNC_DECO_TRANSLUCENCY, SNC_DECO_DOT_FILLS).
+      const lifted = def.translucency ? liftTranslucency(toned, W, H, def.translucency) : toned;
+      const native = def.dotFills ? fillDots(lifted, W, def.dotFills) : lifted;
       if (def.transform === "rotate-cw") {
         // The pack draws the card portrait (split): a quarter turn clockwise,
         // a pixel permutation — nothing is resampled.
@@ -664,7 +725,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     // piece (TODO 4.11: the ZNR hedron frame — scripts/lib/cc-frames.mjs
     // ZNR_NOTCH): the master is written plain, the arch beside it.
     if (def.notch && !isBuiltRecipe(def.colors[key])) {
-      const { plain, piece, findings } = splitZnrNotch(master, outW, outH, def.notch);
+      // …the ZNR hedron's arch, its texture filled along its ridges; the
+      // Stained Glass's (TODO 4.11 wave 2, SG_NOTCH: `kind: "warp"`), the
+      // box's glass stretched down onto the straight foot through the pack's
+      // Rules mask.
+      const { plain, piece, findings } =
+        def.notch.kind === "warp"
+          ? splitWarpNotch(master, outW, outH, await rgba(await fetchCached(def.notch.mask), outW, outH), def.notch)
+          : splitZnrNotch(master, outW, outH, def.notch);
       for (const f of findings.failures) edgeFailures.push(`${template}/${key} notch: ${f}`);
       // What the published pair must draw back: CC's master, its corners
       // cut as the plain one's are, the oval cut cleared (restoredZnrMaster).
@@ -1025,7 +1093,9 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
         // own size, as it loads, before it is placed.
         const load = async (src) => placeOnCanvas(await toneLoaded(src, await rgba(await fetchCached(src), box.width, box.height), box.width, box.height), box, W, H);
         const data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
-        images.push({ data, erase: l.erase });
+        // A layer through a whole-card mask (TODO 4.11 wave 2: the stained
+        // glass pair crown's dome, through the pack's Inner Crown mask).
+        images.push({ data, erase: l.erase, mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined });
       }
       const composite = toRgba8(compositeLayers(images, W, H));
       const full =

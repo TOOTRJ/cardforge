@@ -147,6 +147,14 @@ describe("printed_crown", () => {
         crowned += 1;
         continue;
       }
+      // …and MUL's Dominaria legends (TODO 4.11 wave 2): the Stained Glass
+      // dome over the title bar (tests/unit/scryfall/stained-glass-imports.test.ts).
+      if (/^mul-(5|12|19|22|24|55|56|58|59|135|142|149|152|154|185|186|188|189)z?$/.test(key)) {
+        expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/dmu/stained-glass");
+        expect(got, key).toBe(true);
+        crowned += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/thb/constellation");
         expect(got, key).toBe(true);
@@ -165,7 +173,8 @@ describe("printed_crown", () => {
     // (9 since TODO 4.11: MUL #1 / #60 print the Tarkir pack's own crown;
     // 7 since the Bloomburrow anime's layout v70: BLB #343 / #344 print its
     // flourish.)
-    expect(legendary).toBeGreaterThanOrEqual(7);
+    // (6 since TODO 4.11 wave 2: MUL #5 prints the Stained Glass dome.)
+    expect(legendary).toBeGreaterThanOrEqual(6);
     expect(nonlegendary).toBeGreaterThanOrEqual(10);
     expect(crowned).toBeGreaterThanOrEqual(1);
     // The rule itself: the constellation signature follows the printing —

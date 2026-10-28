@@ -316,6 +316,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "dossier",
     // The Enchanting Tales (TODO 4.11 wave 2): enchantment dress, P/T only.
     "enchantingtales",
+    // The Strixhaven Mystical Archive (TODO 4.11 wave 2): P/T only, like the rest.
+    "mysticalarchive",
     // The Doctor Who TARDIS (TODO 4.11 wave 2): P/T only, like the rest.
     "tardis",
   ] as const;

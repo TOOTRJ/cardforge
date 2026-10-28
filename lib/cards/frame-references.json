@@ -6039,6 +6039,84 @@
       ]
     }
   },
+  "mysticalarchive": {
+    "note": "The Strixhaven Mystical Archive (TODO 4.11 wave 2): STA #1–63, the English run — NOT STA #64–126 (the Japanese alternate art, another frame) nor SOA (2026, inverted navy boxes). Every printing is an instant or a sorcery: each colour on two of its own; 'm' the two-colour pair dress (Lightning Helix R|W, Electrolyze U|R — the colour lines split, the bands gold); 'c' has no print.",
+    "colors": {
+      "w": [
+        {
+          "name": "Approach of the Second Sun",
+          "set": "sta",
+          "scryfallId": "e0d18742-d661-4223-8880-9ed995379b2e"
+        },
+        {
+          "name": "Swords to Plowshares",
+          "set": "sta",
+          "scryfallId": "cc9ece2f-7eda-4fc5-a562-3e16e71560e9"
+        }
+      ],
+      "u": [
+        {
+          "name": "Counterspell",
+          "set": "sta",
+          "scryfallId": "ffdf9d2a-c163-43df-9a2f-20b8749c86ae"
+        },
+        {
+          "name": "Brainstorm",
+          "set": "sta",
+          "scryfallId": "11d27509-07c2-4445-a1d5-e56523fb8566"
+        }
+      ],
+      "b": [
+        {
+          "name": "Demonic Tutor",
+          "set": "sta",
+          "scryfallId": "3009ba46-c9f8-46dc-8ffc-2aa4cef7b17c"
+        },
+        {
+          "name": "Doom Blade",
+          "set": "sta",
+          "scryfallId": "7e6c0fe2-a82b-42cb-8629-b9f00b7f08e9"
+        }
+      ],
+      "r": [
+        {
+          "name": "Lightning Bolt",
+          "set": "sta",
+          "scryfallId": "4eaac4fd-95f5-4f38-b593-0101e79a20f9"
+        },
+        {
+          "name": "Chaos Warp",
+          "set": "sta",
+          "scryfallId": "6d0a3996-5a03-481b-9bda-15c6f6e5f9c4"
+        }
+      ],
+      "g": [
+        {
+          "name": "Channel",
+          "set": "sta",
+          "scryfallId": "0e07a16f-d836-40f9-85e3-a78582a97109"
+        },
+        {
+          "name": "Regrowth",
+          "set": "sta",
+          "scryfallId": "af727601-5251-48b6-b5e3-b68ca0608bc9"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Lightning Helix",
+          "set": "sta",
+          "scryfallId": "227ac87a-7196-40d0-ab00-98ebafcca09a"
+        },
+        {
+          "name": "Electrolyze",
+          "set": "sta",
+          "scryfallId": "08a4d142-b98b-4027-94cb-314f67fb1d4a"
+        }
+      ]
+    }
+  },
   "dossier": {
     "note": "The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo type in MKM (#336–389, #433) — NOT the Secret Lair's four dossier legends (SLD #1566–1569: the same page on a navy border) and NOT MKM's round 'magnified' showcase (#287–316). One folder per colour key, the colour on the photo's corners, the bands' rules and the seals; 'c' the colourless artifact creature (#376, the pack's slate artifact frame); 'm' the five-colour Niv-Mizzet (gold) and a two-colour legend (Kylox, U/R — the pair masters, the split dress, ride the gold key).",
     "colors": {
@@ -6551,6 +6629,68 @@
       ]
     }
   },
+  "stainedglass": {
+    "note": "The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU #287–368 and the Multiverse Legends Dominaria legends (MUL #5, #12, #19, #22, #24, #55, #56, #58, #59 and twins) — NOT DMU #369–371 or MUL's etched twins. Every printing is a legendary creature and shows the glass dome crown PipGlyph draws as an opt-in (STAINEDGLASS_CROWN). 'm' is checked on a five-colour legend (Jodah: the gold box) and a two-colour one (Radha R|G: gold bars, the box turning from red to green — the pair master); no mono-green, colourless, artifact or land card was printed on the frame, so 'g' and 'c' have no reference.",
+    "colors": {
+      "w": [
+        {
+          "name": "Danitha, Benalia's Hope",
+          "set": "dmu",
+          "scryfallId": "1d9609d8-4dcf-4b70-b947-a4d62275f34a"
+        },
+        {
+          "name": "Kwende, Pride of Femeref",
+          "set": "mul",
+          "scryfallId": "427cf253-71c1-40cf-bdc3-eeb0431ae37f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Tetsuko Umezawa, Fugitive",
+          "set": "mul",
+          "scryfallId": "469beb59-1e57-474e-9dcf-9c13957cbfdd"
+        }
+      ],
+      "b": [
+        {
+          "name": "Braids, Arisen Nightmare",
+          "set": "dmu",
+          "scryfallId": "f2559ff7-a97c-40c6-942f-36998eafb050"
+        },
+        {
+          "name": "Yargle, Glutton of Urborg",
+          "set": "mul",
+          "scryfallId": "e07104c8-3af9-44ff-8f24-ce420333e05b"
+        }
+      ],
+      "r": [
+        {
+          "name": "Squee, Dubious Monarch",
+          "set": "dmu",
+          "scryfallId": "0f39ecc9-0a4c-47e7-b8e6-7e00d4cb61e3"
+        },
+        {
+          "name": "Squee, the Immortal",
+          "set": "mul",
+          "scryfallId": "e5483306-885c-44e1-84ce-b6e2124a6ecc"
+        }
+      ],
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Jodah, the Unifier",
+          "set": "dmu",
+          "scryfallId": "416429e0-4b7e-43d1-8126-16ab679b6e39"
+        },
+        {
+          "name": "Radha, Coalition Warlord",
+          "set": "dmu",
+          "scryfallId": "86a42355-ead5-48b9-813a-1e9be9a45747"
+        }
+      ]
+    }
+  },
   "tarkirdraconic": {
     "note": "Draconic = TDM black-border showcase run (#292–326) — confirm the thumbnail; low-res scans.",
     "confirm": true,
@@ -6624,6 +6764,39 @@
           "set": "tdm",
           "scryfallId": "f1969dec-4d6b-493a-8233-76faf8fa3cea",
           "tier": 1
+        }
+      ]
+    }
+  },
+  "sncartdeco": {
+    "note": "The Streets of New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 and their gilded-foil twins #361–405 — NOT #341–359 / #441–449 (the pale Golden Age frame) or #360 (the Phyrexian Urabrask). Every card of the run is three colours, so only 'm' has printings: the one gold filigree; w u b r g c are the same master and have none. Checked on a plain uncommon creature, a legendary mythic (the arch: the crowned twin), a rare sorcery (the stamp) and its gilded twin.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Brazen Upstart",
+          "set": "snc",
+          "scryfallId": "25fd80c9-e86c-48bd-8c8b-654a29665931"
+        },
+        {
+          "name": "Falco Spara, Pactweaver",
+          "set": "snc",
+          "scryfallId": "17bbac59-da58-49d8-887e-272dd90724b4"
+        },
+        {
+          "name": "Hostile Takeover",
+          "set": "snc",
+          "scryfallId": "8137f134-0148-4df1-b575-ec861192c65c"
+        },
+        {
+          "name": "Hostile Takeover",
+          "set": "snc",
+          "scryfallId": "f2d196a9-25aa-44da-baa7-2a0191ad7609"
         }
       ]
     }

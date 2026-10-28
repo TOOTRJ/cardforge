@@ -98,11 +98,13 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
+    // …and TODO 4.11 wave 2's New Capenna Art Deco (a new template: no bump).
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
     // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
-    // …and TODO 4.11 wave 2's Enchanting Tales (a new template: no bump).
-    // …and TODO 4.11 wave 2's Doctor Who TARDIS (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(86);
+    // …and TODO 4.11 wave 2's Enchanting Tales and Dominaria United
+    // Stained Glass, the Strixhaven Mystical Archive and the Doctor Who
+    // TARDIS (new templates: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(89);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -186,11 +188,13 @@ describe("one M15-era display size (layout v32)", () => {
       // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
       // with theirs, v68; the Avatar elemental and Bloomburrow woodland the
       // CC M15 row with theirs, v69; the D&D Sourcebook and the MKM dossier,
-      // new templates, the CC M15 disc on their runs' rows.)
+      // new templates, the CC M15 disc on their runs' rows; the Strixhaven
+      // Mystical Archive the same.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "dndsourcebook" ||
         t === "dossier" ||
+        t === "mysticalarchive" ||
         t === "enchantingtales" ||
         t === "tardis" ||
         t === "lotrscroll" ||
@@ -201,6 +205,10 @@ describe("one M15-era display size (layout v32)", () => {
         t === "avatar" ||
         t === "bloomburrow" ||
         t === "bloomanime" ||
+        t === "sncartdeco" ||
+        // …and the Dominaria United Stained Glass, a new template, the CC
+        // M15 disc on its run's row.
+        t === "stainedglass" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -443,6 +451,11 @@ describe("baselines (TextSlot.dy)", () => {
     // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
     // type line the CC baseline (print's 1261, ours 1260).
     ["bloomanime", base.title, cc],
+    // The New Capenna Art Deco (TODO 4.11 wave 2, a new template): M15's
+    // slots on the pack's own bars — the name 1 px up and the type line 4.5
+    // px under the CC baseline, the means of its 90 printings (the plain 60
+    // set both ~4 px lower than the 30 legends).
+    ["sncartdeco", base.title - 1 / 1500, cc + 4.5 / 1500],
     // The D&D Sourcebook (TODO 4.11 wave 2, a new template): M15's slots on
     // the page's own lines — the name 1.5 px up (42.5 px above the title
     // rule, the 127 prints' median), the type line 3 px under the CC
@@ -452,6 +465,16 @@ describe("baselines (TextSlot.dy)", () => {
     // folder's own bands — the name 2 px up (print's baseline 187, the run's
     // median), the type line 4 px under the CC baseline (print's 1264).
     ["dossier", base.title - 2 / 1500, cc + 4 / 1500],
+    // The Dominaria United Stained Glass (TODO 4.11 wave 2, a new template):
+    // M15's slots on the pack's own bars — the name 4.5 px up (its baseline
+    // against the title bar, the 50 base prints' median), the type line 1 px
+    // under the CC baseline (against the type bar).
+    ["stainedglass", base.title - 4.5 / 1500, cc + 1 / 1500],
+    // The Strixhaven Mystical Archive (TODO 4.11 wave 2, a new template):
+    // M15's slots on the run's own lines — the name 5 px up (print's
+    // baseline 184, the 63 prints' median), the type line 1 px under the CC
+    // baseline (print's 1261).
+    ["mysticalarchive", base.title - 5 / 1500, cc + 1 / 1500],
     // The Doctor Who TARDIS (TODO 4.11 wave 2, a new template): M15's slots on
     // the police box's bars — the name 3 px up (print's baseline 185 on
     // every printing), the type line 2 px under the CC baseline (print's

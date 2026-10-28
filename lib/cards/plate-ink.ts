@@ -68,6 +68,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // scroll P/T (435 × 266), drawn at the pack's ptBounds — the rolled
   // parchment with its curls, none of the soft shadow round it.
   "/frames/lotrscroll/pt/{color}.png": { left: 0.1425, top: 0.1992, right: 0.9472, bottom: 0.9286 },
+  // The Strixhaven Mystical Archive's plates (TODO 4.11 wave 2): Card
+  // Conjurer's 'Mystical Archive (STA)' P/T (424 × 213), drawn at the pack's
+  // ptBounds — the plate fills the image all but its 1–2 px soft rim.
+  "/frames/mysticalarchive/pt/{color}.png": { left: 0.0023, top: 0.0093, right: 0.9977, bottom: 0.9907 },
   // The Lord of the Rings ring's plates (TODO 4.11): Card Conjurer's ring
   // P/T (268 × 134), drawn at the pack's ptBounds — the bevelled plate with
   // its rim, none of the soft shadow left of and under it.
@@ -77,6 +81,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // pack's ptBounds (274 × 150) — the bevelled plate and its
   // coloured ends fill the image to every edge.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The New Capenna Art Deco showcase's plate (TODO 4.11 wave 2): Card
+  // Conjurer's 'Golden Age (SNC)' P/T (254 × 134) under every key, drawn at
+  // the pack's bounds — the gold-rimmed plate fills its image but for its
+  // rounded corners.
+  "/frames/sncartdeco/pt/{color}.png": { left: 0.0039, top: 0.0074, right: 0.9961, bottom: 0.9926 },
   // The D&D Sourcebook showcase's plate (TODO 4.11 wave 2): Card Conjurer's
   // one 'Power/Toughness' (260 × 132) under every key, drawn at the pack's
   // ptBounds — the bevelled parchment plate fills the image to every edge.
@@ -91,6 +100,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // the pack's bounds — the plate and its curled tail fill the image to
   // every edge.
   "/frames/enchantingtales/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The Stained Glass showcase's plates (TODO 4.11 wave 2): Card Conjurer's
+  // 'Power/Toughness' (262 × 127) per key, drawn at the pack's ptBounds —
+  // the bronze-rimmed plate fills the image to every edge.
+  "/frames/stainedglass/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // The Doctor Who TARDIS showcase's P/T box (TODO 4.11 wave 2): Card
   // Conjurer's one 'Power/Toughness' (299 × 173) under every key, drawn at
   // the pack's ptBounds — the box and its side tabs, its drop shadow below

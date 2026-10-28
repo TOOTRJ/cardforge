@@ -69,6 +69,7 @@ import {
   rulesTextSideInkEm,
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
+import { flavorSegments } from "@/lib/cards/flavor-markup";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
 import { pipDiscPx, pipRisePx } from "@/lib/cards/mana-gem";
 import { discShadowPx, inlineSymbolStyle, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
@@ -271,12 +272,36 @@ function gluesToWord(run: readonly RulesItem[], before: readonly RulesItem[] | u
   return only?.t === "w" && only.v === "—" && before?.[before.length - 1]?.t === "w";
 }
 
-/** The runs a flavor source line breaks into: its words, italic. */
-function flavorRuns(line: string): RulesItem[][] {
-  return line
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((v) => [{ t: "w", v, em: "flavor" }]);
+/** The runs a flavor source line breaks into: its words, italic — but the
+ *  words of an upright span (`*…*`, lib/cards/flavor-markup.ts) set roman:
+ *  an item with no emphasis, which both renderers draw and every measure
+ *  here reads in the roman face. A word a span starts or ends inside
+ *  ("—*Heroics:", "stalac-*tites*") is ONE run of its pieces, glued (no
+ *  word gap), each piece its own item. A line with no span is exactly the
+ *  runs it always was: one italic item per word. */
+export function flavorRuns(line: string): RulesItem[][] {
+  const runs: RulesItem[][] = [];
+  let run: RulesItem[] = [];
+  for (const seg of flavorSegments(line)) {
+    for (const part of seg.text.split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s/.test(part)) {
+        if (run.length > 0) runs.push(run);
+        run = [];
+        continue;
+      }
+      const last = run[run.length - 1];
+      if (last?.t === "w" && Boolean(last.em) === !seg.upright) {
+        last.v += part;
+        continue;
+      }
+      const item: RulesItem = seg.upright ? { t: "w", v: part } : { t: "w", v: part, em: "flavor" };
+      if (run.length > 0) item.tight = true;
+      run.push(item);
+    }
+  }
+  if (run.length > 0) runs.push(run);
+  return runs;
 }
 
 /** Greedy line breaking over `runs`, checked at every target: a run moves to

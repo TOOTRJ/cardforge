@@ -108,7 +108,7 @@ describe("the TARDIS recipe", () => {
         const d = tone.diff[region];
         expect(d.file, `${k} ${region}`).toBe(`${TARDIS}/${k === "u" || k === "a" ? "w" : "u"}.png`);
         expect([d.full, d.none], `${k} ${region}`).toEqual([TARDIS_ACCENT_DIFF.full, TARDIS_ACCENT_DIFF.none]);
-        expect(d.luma, `${k} ${region}`).toEqual({ split: TARDIS_STRIPE_SPLIT[k as keyof typeof TARDIS_STRIPE_SPLIT], half: TARDIS_STRIPE_SPLIT_HALF, side: region === "stripe" ? "below" : "above" });
+        expect(d.lumaSplit, `${k} ${region}`).toEqual({ split: TARDIS_STRIPE_SPLIT[k as keyof typeof TARDIS_STRIPE_SPLIT], half: TARDIS_STRIPE_SPLIT_HALF, side: region === "stripe" ? "below" : "above" });
       }
     }
     for (const k of ["w", "u", "b", "r", "g", "m"]) {
@@ -133,13 +133,13 @@ describe("the TARDIS recipe", () => {
     const buf = Buffer.from([40, 40, 40, 255, 85, 85, 85, 255, 100, 100, 100, 255, 200, 200, 200, 255]);
     const ref = Buffer.from([0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255]);
     const plain = diffRegionPlane(buf, ref, W, H, TARDIS_ACCENT_DIFF);
-    const below = diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, luma: { split: 85, half: 15, side: "below" } });
-    const above = diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, luma: { split: 85, half: 15, side: "above" } });
+    const below = diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, lumaSplit: { split: 85, half: 15, side: "below" } });
+    const above = diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, lumaSplit: { split: 85, half: 15, side: "above" } });
     expect(Array.from(plain)).toEqual([255, 255, 255, 255]);
     expect(Array.from(below)).toEqual([255, 128, 0, 0]);
     expect(Array.from(above)).toEqual([0, 128, 255, 255]);
     for (let p = 0; p < W; p += 1) expect(Math.abs(below[p] + above[p] - plain[p]), `${p}`).toBeLessThanOrEqual(1);
-    expect(() => diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, luma: { split: 85, half: 0, side: "below" } })).toThrow();
+    expect(() => diffRegionPlane(buf, ref, W, H, { ...TARDIS_ACCENT_DIFF, lumaSplit: { split: 85, half: 0, side: "below" } })).toThrow();
   });
 
   it("the notch publishes the profile's keys at the importer's box, its cut the Universes Beyond hole", () => {

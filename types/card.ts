@@ -544,6 +544,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Strixhaven Mystical Archive showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Mystical Archive (STA)' pack, frames bucket): the gold
+  // ornament over edge-to-edge art of STA #1–63 (2021, English). An
+  // addition: no stored card sits on it.
+  "mysticalarchive",
   // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2, Card
   // Conjurer's 'Enchanting Tales' pack, frames bucket): the swirled
   // storybook frame of the bonus sheet WOT #1–63 (2023), borderless, the
@@ -559,6 +564,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Streets of New Capenna (SNC 2022) — the ART DECO showcase of the five
+  // families' three-colour cards (SNC #296–340) and their gilded-foil twins
+  // (#361–405): black and gold filigree, the art under translucent bars and
+  // text box. Card Conjurer's pack for it is 'Golden Age (SNC)'
+  // (packSNCGilded.js; CC's 'Art Deco (SNC)' pack draws the Golden Age
+  // cards #341–359 instead). An addition: no stored card sits on it.
+  "sncartdeco",
   // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
   // art (Scryfall flags none of those printings full_art), but the key keeps
   // its historical name because it is stored in cards.frame_style,
@@ -576,6 +588,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // photo clipped to the page, a colour accent per key. An addition: no
   // stored card sits on it.
   "dossier",
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Stained Glass (DMU)' pack, frames bucket): DMU #287–368 and
+  // the Multiverse Legends Dominaria legends (MUL #5, #12, #19, #22, #24,
+  // #55, #56, #58, #59 and their halo-foil / serialized twins). An
+  // addition: no stored card sits on it.
+  "stainedglass",
   // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'TARDIS' pack, frames bucket): the police box of WHO #535–564, their
   // serialized twins and their surge-foil twins #1126–1155 (73 printings) —
@@ -727,6 +745,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Strixhaven — Mystical Archive".
+  mysticalarchive: "Mystical Archive",
   // Set-relative: the picker prints "Wilds of Eldraine — Enchanting Tales".
   enchantingtales: "Enchanting Tales",
   avatar: "Elemental",
@@ -738,8 +758,12 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  // Set-relative: the picker prints "Streets of New Capenna — Art Deco".
+  sncartdeco: "Art Deco",
   // Set-relative: the picker prints "Murders at Karlov Manor — Dossier".
   dossier: "Dossier",
+  // Set-relative: the picker prints "Dominaria United — Stained Glass".
+  stainedglass: "Stained Glass",
   // Set-relative: the picker prints "Doctor Who — TARDIS".
   tardis: "TARDIS",
   extendedart: "Extended Art",
@@ -784,7 +808,10 @@ export const FRAME_SET_VALUES = [
   "avatar",
   "bloomburrow",
   "tarkir",
+  "dominariaunited",
   "multiverselegends",
+  "strixhaven",
+  "newcapenna",
   "zendikarrising",
   "dnd",
   "karlov",
@@ -808,7 +835,13 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
+  // Dominaria United (DMU 2022) — its Stained Glass showcase, which the
+  // Multiverse Legends Dominaria legends (MUL 2023) print too.
+  dominariaunited: "Dominaria United",
   multiverselegends: "Multiverse Legends",
+  // The Strixhaven Mystical Archive (STA 2021).
+  strixhaven: "Strixhaven",
+  newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
   // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
@@ -890,13 +923,16 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  mysticalarchive: "strixhaven",
   enchantingtales: "eldraine",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   bloomanime: "bloomburrow",
   tarkirdraconic: "tarkir",
   tarkirghostfire: "tarkir",
+  stainedglass: "dominariaunited",
   tarkirdragon: "multiverselegends",
+  sncartdeco: "newcapenna",
   dossier: "karlov",
   tardis: "doctorwho",
   extendedart: "extended",
@@ -983,7 +1019,13 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",
+  // The Stained Glass showcase (DMU #287–368, MUL's Dominaria legends).
+  dominariaunited: "showcase",
   multiverselegends: "showcase",
+  // The Strixhaven Mystical Archive (STA #1–63).
+  strixhaven: "showcase",
+  // The Art Deco showcase (SNC #296–340, #361–405).
+  newcapenna: "showcase",
   zendikarrising: "showcase",
   // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
   dnd: "showcase",

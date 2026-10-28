@@ -169,8 +169,10 @@ describe("borderless families (TODO 1.17)", () => {
     // Scryfall doesn't flag `poster` (pinned; a land, so the land frame).
     ["hob-284", "unsupported", "m15borderlessland", "m15land"],
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
-    // Invocations unsupported.
-    ["sta-1", "nearest", "m15borderless", "m15"],
+    // Invocations unsupported. STA #1–63 are the Strixhaven Mystical
+    // Archive frame since 4.11 wave 2 (exact once verified; the Japanese
+    // run and SOA stay nearest: tests/unit/scryfall/mystical-archive-imports.test.ts).
+    ["sta-1", "exact", "mysticalarchive", undefined],
     ["eos-1", "nearest", "m15borderlessland", "m15land"],
     ["mp2-1", "unsupported", "m15borderless", "m15"],
     // Tokens (4.37).
@@ -703,7 +705,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // too, the frame's own split wings.
     ["mul-1", "exact", "tarkirdragon", undefined],
     ["mul-60", "exact", "tarkirdragon", undefined],
-    ["mul-5", "nearest", "m15", undefined],
+    // MUL #5 Kwende is one of MUL's Dominaria legends, on the Stained Glass
+    // frame since TODO 4.11 wave 2: exact once verified.
+    ["mul-5", "exact", "stainedglass", undefined],
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],

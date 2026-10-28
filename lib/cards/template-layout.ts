@@ -4580,6 +4580,96 @@ const BLOOMBURROW: FrameProfile = {
   pt: { ...M15.pt!, plateRect: BLOOMBURROW_PLATE_RECT, plateAssetPathTemplate: "/frames/bloomburrow/pt/{color}.png" },
 };
 
+// The Streets of New Capenna ART DECO showcase (TODO 4.11 wave 2) — SNC
+// #296–340, the five families' three-colour cards, and their gilded-foil
+// twins #361–405: Card Conjurer's 'Golden Age (SNC)' pack
+// (packSNCGilded.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs
+// SNC_DECO), which is the frame these cards print — CC's 'Art Deco (SNC)'
+// pack draws the Golden Age cards #341–359 instead. ONE master under every
+// colour key (print draws one gold filigree for all 90; every card is three
+// colours) and its crowned twin (`-legendary`: the arch over the title bar
+// every legendary printing carries, the pack's 'Legendary Frame' — its bar
+// drawn where the legendary prints draw theirs, 6 px above the plain
+// prints', which no flat zone lets us re-cut). The art runs under the
+// translucent title bar, type bar and text box (underFrameArt): the window
+// is its own slot, the two layers meeting on the opaque gold round it. An
+// ADDITION: a new template, no stored card.
+/** The window (α < 250 on 120–1379 × 238–1167 px on every master: the
+ *  stepped fins narrow it to 143–1356 at its top) with the art-window
+ *  check's 0.05 % to spare: 119–1381 × 236–1170 — every edge on the
+ *  opaque gold (the fins, the title bar's foot rim, the art's foot rim). */
+export const SNCARTDECO_ART_SLOT: Rect = { topPct: (236 / 2100) * 100, leftPct: (119 / 1500) * 100, widthPct: (1262 / 1500) * 100, heightPct: (934 / 2100) * 100 };
+/** The art under the frame: every translucent pixel of both masters (α <
+ *  250 on 98–1399 × 116–1933 px, the crowned twin's arch from 79) with the
+ *  check's spare: 96–1404 × 77–1936 (Card Conjurer's artBounds 96 / 78 /
+ *  1308 × 1857, a row higher for the arch). */
+export const SNCARTDECO_UNDER_RECT: Rect = { topPct: (77 / 2100) * 100, leftPct: (96 / 1500) * 100, widthPct: (1308 / 1500) * 100, heightPct: (1859 / 2100) * 100 };
+/** The pack's plate at its bounds (1156 / 1857, 254 × 134 px, 1:1). */
+const SNCARTDECO_PLATE_RECT: Rect = { topPct: (1857 / 2100) * 100, leftPct: (1156 / 1500) * 100, widthPct: (254 / 1500) * 100, heightPct: (134 / 2100) * 100 };
+/** White ink on the dark bars and box (print's 255,255,255 at the glyphs'
+ *  core), no shadow. */
+const SNCARTDECO_INK = "#ffffff";
+// Measured on all 90 printings at 1500 × 2100, our bake of each card
+// registered on its print region by region (the cost row by normalised
+// cross-correlation over our discs' own pixels; the name and type line by
+// their white ink). The plain printings (60) set their name and cost row ~4
+// px LOWER than the legendary ones (30), under a title bar 6 px lower; one
+// slot serves both (no slot follows the crown), so each takes the mean of
+// the 90: the name 1 px up (plain +1, legendary −5); the cost row 8 px down
+// (plain +9.3, legendary +5.2) and 1.5 px right. Across, the name's pen
+// rides its LEFT ink edge (#622 review): print's first ink column against
+// ours on the same name, all 90 — 2 px right of ours at −3 px (median, plain
+// and legendary alike: print 128–138, e.g. #296 136, #301 131) — so 1 px
+// left of M15's pen.
+const SNCARTDECO_TITLE_DX_PX = -1;
+const SNCARTDECO_TITLE_DY_PX = -1;
+const SNCARTDECO_COST_DY_PX = 8;
+const SNCARTDECO_COST_DX_PX = 1.5;
+/** The type line 4.5 px under the CC baseline (plain +5, legendary +3); the
+ *  band's RECT 3 px wider so the set symbol ends 3 px further right (the
+ *  legendary prints, where its ink registers; its rows within 1 px). */
+const SNCARTDECO_TYPE_DY_PX = 4.5;
+const SNCARTDECO_SYMBOL_DX_PX = 3;
+const SNCARTDECO: FrameProfile = {
+  ...M15,
+  label: "Art Deco",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy + SNCARTDECO_COST_DY_PX / 1500,
+  costDx: CC_M15_COST.costDx + SNCARTDECO_COST_DX_PX / 1500,
+  artSlot: SNCARTDECO_ART_SLOT,
+  underFrameArt: { rect: SNCARTDECO_UNDER_RECT },
+  title: {
+    ...M15.title,
+    rect: {
+      ...M15.title.rect,
+      leftPct: M15.title.rect.leftPct + (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct - (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+    },
+    dy: M15.title.dy! + SNCARTDECO_TITLE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: M15.type.rect.widthPct + (SNCARTDECO_SYMBOL_DX_PX / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + SNCARTDECO_TYPE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  // M15's box: the run's full boxes set their last descender as low as
+  // 1922 px (#335) and their lines from x 133; the arch keeps out.
+  rules: { ...M15.rules, colorHex: SNCARTDECO_INK },
+  // The pack's plate; the digits 4.5 px left of M15's box and 1 px lower,
+  // where the run sets them on it (the 30 creatures registered), white; the
+  // plate's dark face runs 1180–1384 px (its gold rim either side).
+  pt: {
+    ...M15.pt!,
+    rect: { ...M15.pt!.rect, leftPct: M15.pt!.rect.leftPct - (4.5 / 1500) * 100, topPct: M15.pt!.rect.topPct + (1 / 2100) * 100 },
+    inkSpanPct: { leftPct: (1186 / 1500) * 100, rightPct: (1378 / 1500) * 100 },
+    colorHex: SNCARTDECO_INK,
+    plateRect: SNCARTDECO_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/sncartdeco/pt/{color}.png",
+  },
+};
+
 // MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
 // 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
 // scripts/lib/cc-frames.mjs TARKIR), the Multiverse Legends showcase of MUL
@@ -4758,6 +4848,64 @@ const DNDSOURCEBOOK: FrameProfile = {
     inkSpanPct: { leftPct: ((DNDSOURCEBOOK_PLATE_PX.x + 28) / 1500) * 100, rightPct: ((DNDSOURCEBOOK_PLATE_PX.x + 231) / 1500) * 100 },
     plateRect: DNDSOURCEBOOK_PLATE_RECT,
     plateAssetPathTemplate: "/frames/dndsourcebook/pt/{color}.png",
+  },
+};
+// The Dominaria United STAINED GLASS showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Stained Glass (DMU)' pack (packDMUStainedGlass.js, 1500 × 2100
+// native; scripts/lib/cc-frames.mjs SG), the leaded-glass frame of DMU
+// #287–368 and the Multiverse Legends Dominaria legends (MUL #5 … #59 and
+// their twins). w u b r g m masters (c the gold one: no colourless print),
+// the ten two-colour pair masters (gold frame, the box turning from the
+// first colour to the second), the pack's plates; white ink everywhere (the
+// glass is dark). An ADDITION: a new template, no stored card. Its text
+// layout is the M15 frame's on the pack's own bars — the slots measured on
+// print, each against its own bar (STAINEDGLASS_* below).
+/** The art slot: the masters' window (α < 250 on 60–1439 × 233–1167 px on
+ *  every key — CC's artBounds 60 / 232 / 1380 × 937) with the art-window
+ *  check's 0.05 % to spare: 59–1441 × 231–1170. */
+export const STAINEDGLASS_ART_SLOT: Rect = { topPct: (231 / 2100) * 100, leftPct: (59 / 1500) * 100, widthPct: (1382 / 1500) * 100, heightPct: (939 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1162 / 1863, 262 × 127 px, 1:1). */
+const STAINEDGLASS_PLATE_RECT: Rect = { topPct: (1863 / 2100) * 100, leftPct: (1162 / 1500) * 100, widthPct: (262 / 1500) * 100, heightPct: (127 / 2100) * 100 };
+const STAINEDGLASS_INK = { colorHex: SHOWCASE_WHITE_INK } as const;
+// Measured on the run's 50 base printings (DMU #287–327, MUL #5 … #59;
+// Scryfall PNGs at 1500 × 2100) against our bakes of the same names, types
+// and costs, each text registered on its own bar (the prints' title bar sits
+// 2.5 px above the pack's, the type bar 2 px below, the box's foot 2 px
+// below): white ink (print's name, type line, rules and P/T are white on
+// every key, the glass being dark).
+/** The name 4.5 px above M15's (its baseline, registered on the title bar:
+ *  the median of the 50, M15's sat 4.5 px low); its pen within 1 px. */
+const STAINEDGLASS_TITLE_DY_PX = -4.5;
+/** The type line 1 px under the CC M15 baseline (registered on the type
+ *  bar); its pen within 1 px. */
+const STAINEDGLASS_TYPE_DY_PX = 1;
+const STAINEDGLASS: FrameProfile = {
+  ...M15,
+  label: "Stained Glass",
+  // The CC M15 disc (70 px, 68–69 px of ink on print, the same pitch) on
+  // the run's row: the last disc's ink ends at 1392–1393 px on print, 9.5
+  // px right of the CC M15 row's 1383 (whose costDx is 2), and its centre
+  // sits 1 px higher against the bar (153.5 under a bar 2.5 px higher than
+  // the pack's, where ours sat on 157).
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy - 1 / 1500,
+  costDx: 11.5 / 1500,
+  artSlot: STAINEDGLASS_ART_SLOT,
+  title: { ...M15.title, dy: M15.title.dy! + STAINEDGLASS_TITLE_DY_PX / 1500, ...STAINEDGLASS_INK },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY + STAINEDGLASS_TYPE_DY_PX / 1500, ...STAINEDGLASS_INK },
+  // M15's margins (the prints' lines from x 130–133, ours within 1 px) on a
+  // box 8.5 px shorter at each end, on M15's centre (1629.6 px: the short
+  // texts' ink centres on print and ours agree within 1 px — DMU #292, #294,
+  // #323, MUL #19): the run's full boxes end their last descenders on
+  // 1912–1918 px (DMU #314, #316, #322, #325, #327, MUL #55), 1908–1914 on
+  // the pack's foot (4 px higher than print's: the pack's box ends at 1922,
+  // M15's at 1949), and start their first ascenders on 1348–1356.
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, topPct: (1345.2 / 2100) * 100, heightPct: ((1914 - 1345.2) / 2100) * 100 }, ...STAINEDGLASS_INK },
+  pt: {
+    ...M15.pt!,
+    ...STAINEDGLASS_INK,
+    plateRect: STAINEDGLASS_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/stainedglass/pt/{color}.png",
   },
 };
 // Tarkir draconic (TODO 4.11, layout v68): the gold Tarkir: Dragonstorm
@@ -4976,6 +5124,65 @@ const DOSSIER: FrameProfile = {
     rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct + (DOSSIER_PT_DY / 2100) * 100, leftPct: M15.pt!.rect.leftPct + (DOSSIER_PT_DX / 1500) * 100 },
     plateRect: DOSSIER_PLATE_RECT,
     plateAssetPathTemplate: "/frames/dossier/pt/{color}.png",
+  },
+};
+
+// The Strixhaven MYSTICAL ARCHIVE showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Mystical Archive (STA)' pack (packMysticalArchive.js, 2010 ×
+// 2814, downscaled once; scripts/lib/cc-frames.mjs MA), the gold ornament
+// over edge-to-edge art of STA #1–63 (2021, English). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's (the pack's
+// own numbers are M15's but for the rules box), each slot measured on the
+// 63 prints against its own line.
+/** The art slot: the masters' see-through region — edge to edge, 0–1500 ×
+ *  253–1822 px on every key (CC's artBounds 0 / 0.1205 / 1 × 0.7539: 253–
+ *  1836 px) — covered with the art-window check's 0.05 % to spare. */
+export const MYSTICALARCHIVE_ART_SLOT: Rect = { topPct: (251 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (1587 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1135 / 1848, 317 × 159 px). */
+const MYSTICALARCHIVE_PLATE_RECT: Rect = { topPct: (1848 / 2100) * 100, leftPct: (1135 / 1500) * 100, widthPct: (317 / 1500) * 100, heightPct: (159 / 2100) * 100 };
+/** The name's pen 2 px left of M15's, the type line's 5 px (print: ink from
+ *  129 / 128 px, the median over the 63 prints; ours from 131 / 133). */
+const MYSTICALARCHIVE_TITLE_LEFT_PCT = (2 / 1500) * 100;
+const MYSTICALARCHIVE_TYPE_LEFT_PCT = (5 / 1500) * 100;
+const MYSTICALARCHIVE: FrameProfile = {
+  ...M15,
+  label: "Mystical Archive",
+  ...CC_M15_COST,
+  // The cost row on print's (the 63 prints: the last symbol's outline ring
+  // 77 px across, centred on 1352.5 / 151.5 px — its right edge 1391, q
+  // 1389–1394; top 113, foot 190): the family's 70 px disc on that centre,
+  // 6 px above and 4 px right of the CC M15 row's (1348 / 157). Print draws
+  // its symbols in Card Conjurer's OUTLINE style (a pale disc, the symbol in
+  // its colour, a dark ring, no shadow) — no symbol style draws that yet:
+  // the discs are the family's.
+  costDy: CC_M15_COST.costDy - 6 / 1500,
+  costDx: CC_M15_COST.costDx + 4 / 1500,
+  artSlot: MYSTICALARCHIVE_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's silver artifact frame; any other
+  // colourless card its 'Land Frame' `c` — the scroll's split, unprinted.
+  artifactMasterKeys: { c: "a" },
+  // The name's baseline 5 px above M15's (print 184, ours 189), its pen 2 px
+  // left; the band's right end — the cost row's room — unchanged.
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, leftPct: M15.title.rect.leftPct - MYSTICALARCHIVE_TITLE_LEFT_PCT, widthPct: M15.title.rect.widthPct + MYSTICALARCHIVE_TITLE_LEFT_PCT },
+    dy: M15.title.dy! - 5 / 1500,
+  },
+  // The type line 1 px below the CC M15 baseline (print 1261, ours 1260),
+  // its pen 5 px left; the band's right end (the set symbol) unchanged.
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, leftPct: M15.type.rect.leftPct - MYSTICALARCHIVE_TYPE_LEFT_PCT, widthPct: M15.type.rect.widthPct + MYSTICALARCHIVE_TYPE_LEFT_PCT },
+    dy: CC_M15_TYPE_DY + 1 / 1500,
+  },
+  // The rules block 3 px higher and 2 px left of M15's (the 63 prints'
+  // blocks against ours of the same text: first ink +4, last +4, first-ink
+  // x +2 — the same breaks and size, the block moved).
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, topPct: M15.rules.rect.topPct - (3 / 2100) * 100, leftPct: M15.rules.rect.leftPct - (2 / 1500) * 100 } },
+  pt: {
+    ...M15.pt!,
+    plateRect: MYSTICALARCHIVE_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/mysticalarchive/pt/{color}.png",
   },
 };
 
@@ -6253,6 +6460,21 @@ export const ENCHANTINGTALES_COLLECTOR: CollectorSlot = {
 };
 
 /**
+ * The collector line on the Stained Glass showcase (TODO 4.11 wave 2):
+ * M15's slot — the pen x (the prints' first ink at 97–101 px), the brush
+ * column, the sizes, the © slot's right end — on the run's own rows,
+ * measured on its 50 base printings at 1500 × 2100 (the foot of the flat-
+ * bottomed digits and capitals): line 1 on 1997 px, line 2 on 2035 (MUL's
+ * scans 1–2 px higher), where M15's slot bakes 1993 / 2031 — so 4 px below
+ * M15's 1993.5 / 2032.
+ */
+export const STAINEDGLASS_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1997.5 / 2100) * 100,
+  line2BaselinePct: (2036 / 2100) * 100,
+};
+
+/**
  * The holofoil stamp's notch on the black-bordered M15 family (TODO 4.9c):
  * Card Conjurer's `m15/holoStamps` arch — the text box's bottom pinline
  * lifted over the stamp with its bevel, 192 × 96 px, 1:1 at HD, 2 px below
@@ -6598,6 +6820,31 @@ export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
 };
 
+/** The Mystical Archive's stamp oval (scripts/lib/cc-frames.mjs
+ *  MA_STAMP_OVAL_PX: 683–817 × 1932–1996 px) — the PRINTS' hologram, 134 ×
+ *  64 on 750 / 1964 (the 45 stamped STA prints). */
+export const MYSTICALARCHIVE_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1932 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1912 px at the centre)
+ *  down to the master's text box foot (1944), over the arch's 656–848 px. */
+export const MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1912 / 2100) * 100, widthPct: (192 / 1500) * 100, heightPct: (32 / 2100) * 100 };
+/**
+ * The Mystical Archive's OVAL stamp notch (TODO 4.11 wave 2): PipGlyph's own
+ * black arch (the pack draws no stamp; scripts/frame-inputs/mystical-archive-
+ * stamp-arch.svg, measured on the prints), 1:1 in its 204 × 94 box at 650,
+ * 1908 (MA_NOTCH_BOX in scripts/lib/cc-frames.mjs), the hologram oval cut
+ * clear for our oval art. The rares and mythics of the run print it
+ * (`security_stamp: oval`, 45 of 63), the uncommons don't: "auto" = a rare
+ * or mythic, as on M15. One piece under every key, the ten pairs' too.
+ * Set on the mysticalarchive entry only.
+ */
+export const MYSTICALARCHIVE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (650 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (204 / 1500) * 100, heightPct: (94 / 2100) * 100 },
+  assetPathTemplate: "/frames/mysticalarchiveholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", ...OLD_FRAME_PAIR_KEYS],
+  stamp: { shape: "oval", oval: MYSTICALARCHIVE_HOLO_STAMP_OVAL, keepOut: MYSTICALARCHIVE_HOLO_STAMP_KEEP_OUT },
+};
+
 /** The Enchanting Tales oval (scripts/lib/cc-frames.mjs
  *  ETALES_STAMP_OVAL_PX: 688–815 × 1923–1987 px) — the PRINTS' hologram,
  *  127 × 64 (the 45 stamped WOT #1–63 prints). */
@@ -6622,6 +6869,53 @@ export const ENCHANTINGTALES_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/enchantingtalesholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: ENCHANTINGTALES_HOLO_STAMP_OVAL, keepOut: ENCHANTINGTALES_HOLO_STAMP_KEEP_OUT },
+};
+/** The stained glass's stamp oval (scripts/lib/cc-frames.mjs SG_NOTCH.oval:
+ *  685–815 × 1928–1991 px) — print's hologram, 130 × 63, on the pack's own
+ *  well (its centre 750, 1959.5: CC's 'Rare Stamp' centre). */
+export const STAINEDGLASS_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1928 / 2100) * 100, widthPct: (130 / 1500) * 100, heightPct: (63 / 2100) * 100 };
+/** The rules box keeps out of the arch: its rim's top (1895 px at the
+ *  centre, the Rules mask's apex) down to the box's straight foot (1922),
+ *  over the arch's span 655–845 px. */
+export const STAINEDGLASS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (655 / 1500) * 100, topPct: (1893 / 2100) * 100, widthPct: (190 / 1500) * 100, heightPct: (30 / 2100) * 100 };
+/** Every key the stained glass's masters and overlays publish: the six
+ *  frames, `c` (the gold one) and the ten pairs. */
+const STAINEDGLASS_KEYS = ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
+/**
+ * The stained glass's holofoil stamp notch (TODO 4.11 wave 2): the pack's
+ * masters arch the box's foot over a black well on every key, the run only
+ * on a rare or mythic (`security_stamp: oval`, 45 of 109), so the importer
+ * writes each master with the straight bar and splits the arch off as this
+ * piece (`stainedglass/holostamp/<key>`, 220 × 230 px at 640, 1776, 1:1 at
+ * HD; SG_NOTCH in scripts/lib/cc-frames.mjs), its oval cut clear for our
+ * oval art. Keys: the masters' and the pairs' (a pair master's arch carries
+ * its blended box). Opt-in per card like every stamp (FrameStyle.stamp:
+ * "auto" = a rare or mythic, as the run prints it). Set only on the
+ * `stainedglass` PROFILES entry.
+ */
+export const STAINEDGLASS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (640 / 1500) * 100, topPct: (1776 / 2100) * 100, widthPct: (220 / 1500) * 100, heightPct: (230 / 2100) * 100 },
+  assetPathTemplate: "/frames/stainedglass/holostamp/{key}.png",
+  keys: STAINEDGLASS_KEYS,
+  stamp: { shape: "oval", oval: STAINEDGLASS_HOLO_STAMP_OVAL, keepOut: STAINEDGLASS_HOLO_STAMP_KEEP_OUT },
+};
+/**
+ * The stained glass's legendary crown (TODO 4.11 wave 2):
+ * `stainedglasscrown/<key>.png`, the pack's 'Legend Crown' — the dome of
+ * glass over the title bar and the panes either side, in the card's colour —
+ * at its bounds 170 / 29 px, rows 0–119 of the card (scripts/lib/cc-frames.mjs
+ * SG_CROWN_BAND). All 109 printings are legendary and print it. Keys: the
+ * masters' and the ten pairs (the gold crown, its dome the pair's two
+ * colours — DMU #310 Radha R|G). An ADDITION on this frame: opt-in per card
+ * (FrameStyle.crown === true — new cards on, imports follow the printing).
+ * Set only on the `stainedglass` PROFILES entry.
+ */
+export const STAINEDGLASS_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (120 / 2100) * 100 },
+  assetPathTemplate: "/frames/stainedglasscrown/{key}.png",
+  keys: STAINEDGLASS_KEYS,
 };
 
 /** The Tarkir draconic showcase's oval (TODO 4.11): the prints' hologram
@@ -6711,6 +7005,37 @@ export const BLOOMANIME_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/bloomanimeholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: BLOOMANIME_HOLO_STAMP_OVAL, keepOut: BLOOMANIME_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The New Capenna Art Deco showcase's oval (TODO 4.11 wave 2): the prints'
+ *  hologram — its lit pixels 685–815 × 1925–1988 on the 50 stamped plain
+ *  and gilded prints — 134 × 64 at 683, 1924, centred under the arch. */
+export const SNCARTDECO_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1924 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: 2 px above its lifted outline
+ *  (1898.7 at the centre) down to the gold rim's foot (1950), over the
+ *  piece's 656–844 px. */
+export const SNCARTDECO_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 };
+/**
+ * The New Capenna Art Deco showcase's OVAL stamp notch (TODO 4.11 wave 2):
+ * Card Conjurer's pack has no stamp piece, so ours is PipGlyph's own
+ * derivation (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH): the master's own black
+ * outline, gold rim and black border LIFTED along the printed arch (35.3 px
+ * at the centre, rising from x 664 to x 836; the 25 stamped plain prints),
+ * the box above keeping its own pixels. 188 × 54 px at 656, 1896, 1:1 at HD.
+ * The run's rares and mythics print it (`security_stamp: oval`), its commons
+ * and uncommons run the rim straight: "auto" = a rare or mythic, as on M15.
+ * Keys: the masters' (one piece; the crowned twins hold the same pixels
+ * there). Set on the sncartdeco entry only; opt-in per card.
+ */
+export const SNCARTDECO_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // SNC_DECO_NOTCH_BOX in scripts/lib/borderless-stamp.mjs (a unit test
+  // holds them together).
+  rect: { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 },
+  assetPathTemplate: "/frames/sncartdecoholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: SNCARTDECO_HOLO_STAMP_OVAL, keepOut: SNCARTDECO_HOLO_STAMP_KEEP_OUT },
 };
 
 /**
@@ -7945,6 +8270,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // stored card changes by them.
   avatar: { ...AVATAR, collector: M15_COLLECTOR },
   bloomburrow: { ...BLOOMBURROW, overlays: [BLOOMBURROW_CROWN, BLOOMBURROW_HOLO_STAMP], collector: M15_COLLECTOR },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its crown baked
+  // into `-legendary` twins (the pack's 'Legendary Frame': the arch reshapes
+  // the translucent title bar under it, which no overlay can draw), the oval
+  // stamp notch (our lifted rim) and the collector line on M15's rows (the
+  // run's within 2 px, as the Tarkir draconic's) — each opt-in per card.
+  sncartdeco: { ...SNCARTDECO, crownMasters: true, overlays: [SNCARTDECO_HOLO_STAMP], collector: M15_COLLECTOR },
   // The six near-black picker tiles that are not art-first get the tile's
   // sample art (pickerSampleArt, 4.45) on their entries here, not on their
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads
@@ -7978,6 +8309,18 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).
   dndsourcebook: { ...DNDSOURCEBOOK, overlays: [DNDSOURCEBOOK_HOLO_STAMP], collector: DNDSOURCEBOOK_COLLECTOR },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the two-colour
+  // dress (its pair masters split the colour lines, as the five two-colour
+  // prints do), the stamp and the collector line, opt-in per card; no crown
+  // (no print wears one).
+  // (A land on the frame — none printed — wears the same dress: the pair
+  // masters are the gold frame with the two colours' lines, whatever the
+  // kind.)
+  mysticalarchive: { ...MYSTICALARCHIVE, overlays: [MYSTICALARCHIVE_HOLO_STAMP], collector: M15_COLLECTOR, twoColorMasters: ["split"], twoColorForLands: true },
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): the
+  // crown, the stamp and the collector line, opt-in per card; the ten
+  // two-colour pair masters (the gold frame, the box split), opt-in too.
+  stainedglass: { ...STAINEDGLASS, overlays: [STAINEDGLASS_CROWN, STAINEDGLASS_HOLO_STAMP], collector: STAINEDGLASS_COLLECTOR, twoColorMasters: ["split"] },
   // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
   // draconic's oval stamp notch and both frames' collector line on the black
   // footer the masters now paint (the prints set it on M15's rows: line 1 at

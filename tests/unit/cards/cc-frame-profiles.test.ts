@@ -63,11 +63,27 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 + 19 / 1500, 2 / 1500]);
         continue;
       }
+      // The Strixhaven Mystical Archive (TODO 4.11 wave 2): its own run's row
+      // — the CC M15 row 6 px higher and 4 px further right, the 70 px disc
+      // centred on the prints' outlined symbols (1352.5 / 151.5 px, the 63
+      // prints' median).
+      if (template === "mysticalarchive") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 6 / 1500, 2 / 1500 + 4 / 1500]);
+        continue;
+      }
       // The Enchanting Tales showcase (TODO 4.11 wave 2): the CC M15 row 3 px
       // further right (registered on all 63 WOT #1–63 prints), its lift
       // kept on the pack's title bar, 70 px discs.
       if (template === "enchantingtales") {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500 + 3 / 1500]);
+        continue;
+      }
+      // The Dominaria United stained glass (TODO 4.11 wave 2): its own run's
+      // row — the CC M15 row 1 px higher against the bar and its end 9.5 px
+      // further right (the last disc's ink ending at 1392–1393 on print), 70
+      // px discs.
+      if (template === "stainedglass") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 1 / 1500, 11.5 / 1500]);
         continue;
       }
       // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the CC M15 row 4 px
@@ -99,6 +115,16 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-1.7 / 1500, 2 / 1500, 70]);
         const band = profile.title.rect;
         expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(155.1, 6);
+        continue;
+      }
+      if (template === "sncartdeco") {
+        // The New Capenna Art Deco (TODO 4.11 wave 2): the CC M15 row 8 px
+        // lower and 1.5 px further right — the mean of its 90 printings, each
+        // registered on our bake (the plain 60 set it 9.3 px lower, the 30
+        // legends 5.2): the discs centred on 165.2 px, 70 px.
+        expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-6.6 / 1500 + 8 / 1500, 2 / 1500 + 1.5 / 1500, 70]);
+        const band = profile.title.rect;
+        expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(165.2, 6);
         continue;
       }
       // v24–v60 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
