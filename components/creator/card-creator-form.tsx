@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useEffect,
   useId,
   useMemo,
@@ -48,6 +49,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
+import { CREATOR_ASIDE_QUERY, useMediaQuery } from "@/components/creator/use-media-query";
+import { useStableValue } from "@/components/creator/use-stable-value";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
@@ -476,6 +479,11 @@ type CardCreatorFormProps = {
 // The URL is read once per render via useSyncExternalStore; it never
 // changes underneath the form, so there is nothing to subscribe to.
 const subscribeToNothing = () => () => {};
+
+/** The live preview, drawn again only when its props say something new
+ *  (TODO 3b.9: `previewProps` is kept by identity while it holds the same
+ *  data — useStableValue). */
+const MemoCardPreview = memo(CardPreview);
 
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
@@ -4167,7 +4175,9 @@ export function CardCreatorForm({
   // Shared live-preview props for the desktop sticky aside + the mobile inline
   // preview, so they never drift. `previewFace` is state (see the sync effect
   // above); `flipOnClick` makes the card itself a flip target with a hover hint.
-  const previewProps = {
+  // Kept by identity while they hold the same data (TODO 3b.9): a keystroke
+  // in a field the card doesn't draw re-renders the form, not the preview.
+  const previewProps = useStableValue({
     staticInEditor: true,
     pipOverrides,
     profileOverrides,
@@ -4274,7 +4284,10 @@ export function CardCreatorForm({
     face: previewFace,
     onFaceChange: setPreviewFace,
     flipOnClick: true,
-  };
+  });
+  // Which of the two live previews shows (TODO 3b.9): the aside from lg up,
+  // the inline one below — null until the window is known (both mount).
+  const asideWide = useMediaQuery(CREATOR_ASIDE_QUERY);
   // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
   // Part 2 — ONE picture, two parts: where each part sits on it (the
   // profile's own rects, the frame-compare overrides included) and whether
@@ -5356,7 +5369,7 @@ export function CardCreatorForm({
             </p>
             {partEditingLabel}
             <div className="relative w-full max-w-md">
-              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
+              <MemoCardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
               {previewOverlays}
               {readOnly ? null : (
                 <CanvasHotspots
@@ -5438,7 +5451,11 @@ export function CardCreatorForm({
             {faceSwitch}
 
             {/* Mobile inline preview — keeps the card visible while editing
-                (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
+                (the desktop sticky aside is hidden below lg). CSS-only toggle.
+                Mounted only where it shows (TODO 3b.9: one preview, not two
+                with one hidden) — both until the window is known (server
+                render, hydration), as the CSS alone decides. */}
+            {asideWide === true ? null : (
             <details
               className="group/preview rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
               open
@@ -5474,12 +5491,13 @@ export function CardCreatorForm({
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 {partEditingLabel ? <div className="mb-2 flex">{partEditingLabel}</div> : null}
                 <div className="relative">
-                  <CardPreview {...previewProps} />
+                  <MemoCardPreview {...previewProps} />
                   {previewOverlays}
                 </div>
               </div>
               )}
             </details>
+            )}
 
             {stepPanels}
           </div>
@@ -5489,7 +5507,9 @@ export function CardCreatorForm({
         </SurfaceCard>
 
         {/* ----- Right: live preview (desktop; mobile uses the inline
-            <details> preview above the step content) ----- */}
+            <details> preview above the step content). Mounted only where it
+            shows, as the inline one (TODO 3b.9). ----- */}
+        {asideWide === false ? null : (
         <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
           <div className="flex flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -5509,7 +5529,7 @@ export function CardCreatorForm({
             <div className="mx-auto w-full max-w-sm">
               {partEditingLabel ? <div className="mb-3 flex">{partEditingLabel}</div> : null}
               <div className="relative">
-                <CardPreview {...previewProps} />
+                <MemoCardPreview {...previewProps} />
                 {previewOverlays}
               </div>
             </div>
@@ -5517,6 +5537,7 @@ export function CardCreatorForm({
             {visibilityNote}
           </div>
         </aside>
+        )}
       </form>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
