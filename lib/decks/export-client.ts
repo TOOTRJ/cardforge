@@ -4,7 +4,7 @@ import { cardPngHref } from "@/lib/cards/output-corners";
 import { BLEED_IN, CARD_TRIM_IN, cardPrintPngHref, printPixelSize } from "@/lib/cards/print-export";
 import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/print-selection";
 import { faceSlug, type CardFace } from "@/lib/cards/card-face";
-import { LIVE_DOWNLOAD_TIMEOUT_MS, timeoutSignal } from "@/lib/cards/live-download";
+import { fetchWithLimits, type LiveFetchLimits } from "@/lib/cards/live-download";
 
 // ---------------------------------------------------------------------------
 // Client-side deck export pipeline — runs in the browser (no server-only
@@ -298,7 +298,7 @@ async function fetchCardPngs(
   signal: AbortSignal | undefined,
   onOne: (title: string, ok: boolean) => void,
   accept?: (bytes: Uint8Array) => boolean,
-  renderTimeoutMs: number = LIVE_DOWNLOAD_TIMEOUT_MS,
+  limits: LiveFetchLimits = {},
 ): Promise<FetchedFaces> {
   const out: FetchedFaces = new Map();
   let cursor = 0;
@@ -306,17 +306,17 @@ async function fetchCardPngs(
     while (cursor < jobs.length) {
       if (signal?.aborted) return;
       const job = jobs[cursor++];
-      // Each render has the live download's time limit (TODO 6.30): one
-      // that hangs is a skipped card the summary names — never an export
-      // whose progress card spins forever.
-      const limit = timeoutSignal(renderTimeoutMs, signal);
+      // Each render reads through the live download's limits (TODO 6.30):
+      // the server's own time to answer, then a stall timer on the body
+      // that restarts on every chunk — a render that hangs is a skipped
+      // card the summary names, a big file on a slow link still arrives.
       try {
-        const response = await fetchImpl(hrefOf(job), { signal: limit.signal });
+        const response = await fetchWithLimits(hrefOf(job), { fetchImpl, signal, ...limits });
         if (!response.ok) {
           onOne(job.title, false);
           continue;
         }
-        const bytes = new Uint8Array(await response.arrayBuffer());
+        const bytes = response.bytes;
         if (accept && !accept(bytes)) {
           onOne(job.title, false);
           continue;
@@ -329,8 +329,6 @@ async function fetchCardPngs(
         if (signal?.aborted) return;
         void error;
         onOne(job.title, false);
-      } finally {
-        limit.clear();
       }
     }
   };
@@ -358,8 +356,8 @@ export async function runDeckExport(
     onProgress: (progress: DeckExportProgress) => void;
     signal?: AbortSignal;
     fetchImpl?: FetchLike;
-    /** One card render's time limit (TODO 6.30); the live download's. */
-    renderTimeoutMs?: number;
+    /** One card render's limits (TODO 6.30); the live download's by default. */
+    renderLimits?: LiveFetchLimits;
   },
 ): Promise<DeckExportResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -395,7 +393,7 @@ export async function runDeckExport(
     // A bleed PDF takes only renders that carry the bleed; an MPC ZIP only
     // MPC's files.
     mpc ? isMpcExportRender : bleed ? carriesPrintBleed : undefined,
-    options.renderTimeoutMs,
+    options.renderLimits,
   );
 
   progress.phase = "packaging";
@@ -529,8 +527,8 @@ export async function runCardsExport(
     onProgress: (progress: DeckExportProgress) => void;
     signal?: AbortSignal;
     fetchImpl?: FetchLike;
-    /** One card render's time limit (TODO 6.30); the live download's. */
-    renderTimeoutMs?: number;
+    /** One card render's limits (TODO 6.30); the live download's by default. */
+    renderLimits?: LiveFetchLimits;
   },
 ): Promise<CardsExportResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -571,7 +569,7 @@ export async function runCardsExport(
     // A bleed export takes only renders that carry the bleed; an MPC ZIP
     // only MPC's files.
     mpc ? isMpcExportRender : bleed ? carriesPrintBleed : undefined,
-    options.renderTimeoutMs,
+    options.renderLimits,
   );
 
   progress.phase = "packaging";

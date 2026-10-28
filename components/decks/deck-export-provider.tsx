@@ -41,12 +41,14 @@ import {
 // the background, at the ROOT layout so navigation never interrupts it.
 // Mirrors the AI generation runner's UX: a floating progress card (bottom
 // right, above the generation card when both are up) that is safe to
-// ignore, clickable for stats + time left, with cancel; a toast + auto-save
-// when the file is ready, and a "Save file" fallback in case the browser
-// blocked the automatic download. One export at a time.
+// ignore, clickable for stats + time left, with cancel; an auto-save when
+// the file is ready, and a "Save file" fallback in case the browser blocked
+// the automatic download. One export at a time. The start, the finish (with
+// the skipped count) and a failure are said ONCE, by one persistent polite
+// live region (TODO 6.30) — no toast says them again.
 //
 // It also runs My Cards' "Print / download selected" (TODO 6.15): a
-// CardsExportRequest goes through runCardsExport with the same card, toasts
+// CardsExportRequest goes through runCardsExport with the same card, region
 // and dialog — named "Card ZIP" instead of "Deck ZIP".
 // ---------------------------------------------------------------------------
 
@@ -109,8 +111,16 @@ export function exportAnnouncement(state: DeckExportState | null, label: string)
     case "rendering":
     case "packaging":
       return `${label}. Every card is drawn live at full resolution, so a big export can take a few minutes.`;
-    case "done":
-      return `${label}${state.deckTitle ? ` — ${state.deckTitle}` : ""}. Check your downloads.`;
+    case "done": {
+      const skipped = state.failed.length;
+      return [
+        `${label}${state.deckTitle ? ` — ${state.deckTitle}` : ""}.`,
+        skipped > 0 ? `${skipped} card${skipped === 1 ? " was" : "s were"} skipped.` : null,
+        "Check your downloads. If nothing appeared, use Save file on the progress card.",
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
     case "failed":
       return `${label}: ${state.error ?? "something went wrong."}`;
     case "cancelled":
@@ -157,7 +167,6 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
       abortRef.current = controller;
       const id = Date.now();
       const subject: ExportSubject = isCardsExportRequest(request) ? "cards" : "deck";
-      const file = fileLabel(request.kind, subject);
       setDismissed(false);
       setState({
         id,
@@ -174,11 +183,9 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
         error: null,
         file: null,
       });
-      toast.message(`Building your ${inSentence(file)} in the background`, {
-        description:
-          `Every card renders clean at full resolution, so a big ${subject === "deck" ? "deck" : "selection"} can take a few minutes. Keep browsing — we'll let you know when it's ready.`,
-        duration: 8000,
-      });
+      // (No toast: the start, the finish and a failure are said ONCE, by
+      // the live region below, and shown by the progress card — TODO 6.30.
+      // Sonner's toasts are a live region of their own and said each twice.)
 
       const onProgress = (progress: DeckExportProgress) => {
         setState((prev) => {
@@ -213,18 +220,13 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
                   status: "done",
                   deckTitle: result.title,
                   finishedAt: Date.now(),
+                  // Every card left out: the manifest's skipped ones too.
+                  failed: result.failed,
                   file: { url, name: result.filename, bytes: result.blob.size, cards: result.cardsIncluded },
                 }
               : prev,
           );
           saveBlobUrl(url, result.filename);
-          toast.success(`${result.title} — ${inSentence(file)} ready`, {
-            description:
-              result.failed.length > 0
-                ? `${result.failed.length} card${result.failed.length === 1 ? "" : "s"} couldn't render and ${result.failed.length === 1 ? "was" : "were"} skipped. Check your downloads.`
-                : "Check your downloads. If nothing appeared, use Save file on the progress card.",
-            duration: 10000,
-          });
         })
         .catch((error: unknown) => {
           const cancelled = error instanceof DeckExportError && error.code === "CANCELLED";
@@ -234,14 +236,10 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
               ? { ...prev, status: cancelled ? "cancelled" : "failed", finishedAt: Date.now(), error: cancelled ? null : message }
               : prev,
           );
-          if (cancelled) {
-            toast.message("Export cancelled.");
-            return;
-          }
+          if (cancelled) return;
           if (error instanceof DeckExportError && error.code === "UPGRADE_REQUIRED") {
             upgrade.open(subject === "deck" ? "deck_export" : "batch_export");
           }
-          toast.error(message);
         })
         .finally(() => {
           if (abortRef.current === controller) abortRef.current = null;

@@ -283,11 +283,39 @@ describe("runCardsExport — a render that hangs (TODO 6.30)", () => {
       url.includes("/api/cards/c2/png") ? hangingRender(init) : base(url, init);
     const result = await runCardsExport(
       { ...request, kind: "pdf", quality: "hd", layout: "pages" },
-      { fetchImpl, onProgress: () => {}, renderTimeoutMs: 30 },
+      { fetchImpl, onProgress: () => {}, renderLimits: { headersTimeoutMs: 30 } },
     );
     // (In the order they finished: the hung one last.)
     expect(result.failed).toEqual(["Old Draft", "Broken One", "Petrifying Glance"]);
     expect(result.cardsIncluded).toBe(1);
+  });
+
+  it("a big render on a slow link is NOT skipped while its bytes keep coming (#628's check)", async () => {
+    const base = await fakeFetch([]);
+    // Every card render answers at once, then sends its PNG in 64-byte
+    // chunks 10 ms apart — far longer in all than the 30 ms the headers may
+    // take, never a 60 ms gap.
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      const response = await base(url, init);
+      if (!url.includes("/png") || !response.ok) return response;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let at = 0;
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          if (at >= bytes.length) return controller.close();
+          controller.enqueue(bytes.slice(at, at + 64));
+          at += 64;
+        },
+      });
+      return new Response(stream, { headers: response.headers });
+    };
+    const result = await runCardsExport(
+      { ...request, kind: "pdf", quality: "hd", layout: "pages" },
+      { fetchImpl, onProgress: () => {}, renderLimits: { headersTimeoutMs: 30, stallTimeoutMs: 60 } },
+    );
+    expect(result.failed).toEqual(["Old Draft", "Broken One"]);
+    expect(result.cardsIncluded).toBe(2);
   });
 
   it("a cancel is still a cancel, never a skipped card", async () => {
