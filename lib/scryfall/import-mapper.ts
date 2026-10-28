@@ -1851,6 +1851,12 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   // is a walker: no crown). Its own frame's crown only (OWN_FRAME_CROWN_
   // SIGNATURES): off on the standard frame its import lands on.
   "showcase/blb/anime",
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): its one legend, OTP
+  // #63 Mindslaver, prints the coloured rule with its notched V across the
+  // page's top (against #61 / #62). Its own frame's crown only
+  // (OWN_FRAME_CROWN_SIGNATURES): off on the standard frame an unverified
+  // import lands on.
+  "showcase/otp/breaking-news",
 ]);
 
 /** The crowned showcases whose crown is their OWN frame's and which land
@@ -1860,6 +1866,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
  *  frames named here (ImportedAnatomyFacts.printed_crown_frames). */
 const OWN_FRAME_CROWN_SIGNATURES: Readonly<Record<string, readonly FrameTemplate[]>> = {
   "showcase/blb/anime": ["bloomanime"],
+  // The OTJ Breaking News rule (TODO 4.11 wave 2) is its own frame's: a
+  // legend that lands on the M15 stand-in while the frame is unverified
+  // wears no standard crown there.
+  "showcase/otp/breaking-news": ["breakingnews"],
 };
 
 /** Whether a printing prints the STANDARD legendary crown (see

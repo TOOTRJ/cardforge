@@ -2053,6 +2053,52 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["dfc", "two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2;
+  // Card Conjurer's 'Breaking News' pack): OTJ's bonus sheet, OTP #1–65 —
+  // the front page of "The Prosperity Post", borderless on Scryfall, on the
+  // 2015 frame (Scryfall 2026-10-28). 63 of the 65 are single-bodied
+  // spells, artifacts (a legend, a Vehicle) and a land: exact once verified
+  // (withVerification). No gap among them: the template draws the run's
+  // two-colour dress (its pair masters — print splits a two-colour page from
+  // its first colour to its second, 21 printings), its gold page (four
+  // three-colour cards), the crown its one legend wears (#63 Mindslaver:
+  // CROWNED_SHOWCASE_SIGNATURES, its own frame's crown only), the oval
+  // stamp and the Vehicle's P/T on the pack's box (#64: print draws the
+  // same box). Two printings are other bodies on the same page, which the
+  // template doesn't draw — nearest, their own gaps, on the borderless frame
+  // they landed on before (the split, the planeswalker): #39 Crime //
+  // Punishment (a split card, turned) and #50 Oko, Thief of Crowns (a
+  // planeswalker). NOT OTP #66–80, the textured-foil reprints of fifteen of
+  // the run, which print a borderless frame of their own (`borderless/
+  // standard`, unchanged).
+  {
+    key: "showcase/otp/breaking-news/split",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] }, layouts: ["split"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph's Breaking News frame has no split layout yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "showcase/otp/breaking-news/planeswalker",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] }, kinds: ["planeswalker"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "borderless" },
+      reason: "PipGlyph's Breaking News frame has no planeswalker body yet",
+      blockedBy: "4.11",
+    },
+  },
+  {
+    key: "showcase/otp/breaking-news",
+    exactLabel: "Outlaws of Thunder Junction Breaking News showcase",
+    match: { borders: ["borderless"], collectors: { otp: [[1, 65]] } },
+    outcome: { status: "exact", template: "breakingnews" },
+  },
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
   // station cards on a showcase of their own: they keep this rule's landing
   // and item, and say the station frame is missing too (STATION_SHOWCASE).

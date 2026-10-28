@@ -381,6 +381,14 @@ const TEMPLATES = {
     confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
     q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
   },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): OTP #1–65 — NOT the
+  // textured-foil reprints #66–80, the split #39 or the walker #50. `c` the
+  // land or an artifact, `m` a three-colour card or a pair (the pair masters
+  // ride the gold key).
+  breakingnews: {
+    confirm: "OTP Breaking News — confirm the thumbnail is the 'Prosperity Post' newspaper page (not the textured-foil reprint, OTP #66–80).",
+    q: (k) => `set:otp cn<=65 -t:planeswalker -is:split ${spellColor(k)}`,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

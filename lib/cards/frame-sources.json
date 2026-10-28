@@ -310,6 +310,324 @@
       "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn"
     ]
   },
+  "breakingnews": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBreakingNews.js 'Breaking News' (the Outlaws of Thunder Junction Breaking News showcase; groupShowcase-5.js 'Breaking News (OTP)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px (but tl, tr, bl, br: kept square, design to the corner), webp q90",
+    "colors": {
+      "a": [
+        "img/frames/breakingNews/a.png"
+      ],
+      "w": [
+        "img/frames/breakingNews/w.png"
+      ],
+      "u": [
+        "img/frames/breakingNews/u.png"
+      ],
+      "b": [
+        "img/frames/breakingNews/b.png"
+      ],
+      "r": [
+        "img/frames/breakingNews/r.png"
+      ],
+      "g": [
+        "img/frames/breakingNews/g.png"
+      ],
+      "c": [
+        "img/frames/breakingNews/l.png"
+      ],
+      "m": [
+        "img/frames/breakingNews/m.png"
+      ],
+      "wu": [
+        "(img/frames/breakingNews/w.png | img/frames/breakingNews/u.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "wb": [
+        "(img/frames/breakingNews/w.png | img/frames/breakingNews/b.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "ub": [
+        "(img/frames/breakingNews/u.png | img/frames/breakingNews/b.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "ur": [
+        "(img/frames/breakingNews/u.png | img/frames/breakingNews/r.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "br": [
+        "(img/frames/breakingNews/b.png | img/frames/breakingNews/r.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "bg": [
+        "(img/frames/breakingNews/b.png | img/frames/breakingNews/g.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "rg": [
+        "(img/frames/breakingNews/r.png | img/frames/breakingNews/g.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "rw": [
+        "(img/frames/breakingNews/r.png | img/frames/breakingNews/w.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "gw": [
+        "(img/frames/breakingNews/g.png | img/frames/breakingNews/w.png across procedural:ramp(45.7→55.6 %W))"
+      ],
+      "gu": [
+        "(img/frames/breakingNews/g.png | img/frames/breakingNews/u.png across procedural:ramp(45.7→55.6 %W))"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/breakingNews/pt/w.png",
+      "u": "img/frames/breakingNews/pt/u.png",
+      "b": "img/frames/breakingNews/pt/b.png",
+      "r": "img/frames/breakingNews/pt/r.png",
+      "g": "img/frames/breakingNews/pt/g.png",
+      "c": "img/frames/breakingNews/pt/a.png",
+      "m": "img/frames/breakingNews/pt/m.png"
+    },
+    "sourceFiles": [
+      "img/frames/breakingNews/a.png",
+      "img/frames/breakingNews/b.png",
+      "img/frames/breakingNews/g.png",
+      "img/frames/breakingNews/l.png",
+      "img/frames/breakingNews/m.png",
+      "img/frames/breakingNews/pt/a.png",
+      "img/frames/breakingNews/pt/b.png",
+      "img/frames/breakingNews/pt/g.png",
+      "img/frames/breakingNews/pt/m.png",
+      "img/frames/breakingNews/pt/r.png",
+      "img/frames/breakingNews/pt/u.png",
+      "img/frames/breakingNews/pt/w.png",
+      "img/frames/breakingNews/r.png",
+      "img/frames/breakingNews/u.png",
+      "img/frames/breakingNews/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (breakingNews/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the OTP Breaking News showcase prints them (OTP #1–65)",
+      "a = the pack's slate 'Artifact Frame' (breakingNews/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }; OTP #61–64)",
+      "c = the pack's brown 'Land Frame' (breakingNews/l.png): the pack draws no colourless frame, and the run's one colourless non-artifact is a land that prints it (OTP #65 Dust Bowl)",
+      "the ten pairs (wu wb ub ur br bg rg rw gw gu, the \"split\" dress) = the pair's two colour frames lerped across 45.7 → 55.6 %W of the card (scripts/lib/pair-ramp.mjs blendPair) at the pack's size, then downscaled once: print draws a two-colour card's page in the first colour on the left and the second on the right, split through one distressed edge (OTP #34–60's pairs); the pack has no two-colour dress of its own",
+      "the page runs to the top and side edges (design); the bottom strip is the pack's charcoal, 64,58,60 as on every print (design: print's own tone, not the regular black border)",
+      "plates = the pack's 'Power/Toughness Box' per key (breakingNews/pt/<k>.png, 406x200 at its ptBounds 1507/2464 px of 2010x2814); c = the artifact's (the pack draws no land plate)",
+      "the page, the accents, the masthead, the side bars, the strip and the plates against print by the ring's rule (raw scan medians on clean interiors, a region ≥ 9 levels off is toned): within 6 levels, as drawn (BREAKING_NEWS_PRINT_TONES)",
+      "geometry as drawn: the pack is print's drawing (the bands' rules and the strip within the scans' own 0.22 % aspect) — nothing is re-cut"
+    ]
+  },
+  "breakingnewscrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBreakingNews.js 'Breaking News' (the Outlaws of Thunder Junction Breaking News showcase; groupShowcase-5.js 'Breaking News (OTP)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x60 overlay band: rows 0–59 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px (but tl, tr: kept square, design to the corner), webp q90",
+    "colors": {
+      "w": [
+        "img/frames/breakingNews/crown/w.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "u": [
+        "img/frames/breakingNews/crown/u.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "b": [
+        "img/frames/breakingNews/crown/b.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "r": [
+        "img/frames/breakingNews/crown/r.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "g": [
+        "img/frames/breakingNews/crown/g.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "m": [
+        "img/frames/breakingNews/crown/m.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "a": [
+        "img/frames/breakingNews/crown/a.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "l": [
+        "img/frames/breakingNews/crown/l.png at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "wu": [
+        "(img/frames/breakingNews/crown/w.png | img/frames/breakingNews/crown/u.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "wb": [
+        "(img/frames/breakingNews/crown/w.png | img/frames/breakingNews/crown/b.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "ub": [
+        "(img/frames/breakingNews/crown/u.png | img/frames/breakingNews/crown/b.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "ur": [
+        "(img/frames/breakingNews/crown/u.png | img/frames/breakingNews/crown/r.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "br": [
+        "(img/frames/breakingNews/crown/b.png | img/frames/breakingNews/crown/r.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "bg": [
+        "(img/frames/breakingNews/crown/b.png | img/frames/breakingNews/crown/g.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "rg": [
+        "(img/frames/breakingNews/crown/r.png | img/frames/breakingNews/crown/g.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "rw": [
+        "(img/frames/breakingNews/crown/r.png | img/frames/breakingNews/crown/w.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "gw": [
+        "(img/frames/breakingNews/crown/g.png | img/frames/breakingNews/crown/w.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ],
+      "gu": [
+        "(img/frames/breakingNews/crown/g.png | img/frames/breakingNews/crown/u.png across procedural:ramp(45.7→55.6 %W)) at 0.1990049751243781/0.07107320540156362/97.76119402985076×2.55863539445629 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/breakingNews/crown/a.png",
+      "img/frames/breakingNews/crown/b.png",
+      "img/frames/breakingNews/crown/g.png",
+      "img/frames/breakingNews/crown/l.png",
+      "img/frames/breakingNews/crown/m.png",
+      "img/frames/breakingNews/crown/r.png",
+      "img/frames/breakingNews/crown/u.png",
+      "img/frames/breakingNews/crown/w.png"
+    ],
+    "notes": [
+      "the Breaking News showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (breakingNews/crown/<k>.png, 1965x72) at its crownBounds (4/2010, 2/2814) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–59 — the coloured rule with its notched V across the page's top edge that the run's legendary print carries (OTP #63 Mindslaver; plain: #61, #62). No cover strip: the crown is drawn over the master's own top",
+      "keys = the pack's eight crowns (w u b r g, m gold, a the artifact's, l the land's — the template's keyMap c → l, artifactKeyMap c → a) and the ten pairs, the first colour's crown left and the second's right lerped across the frame's own 45.7 → 55.6 %W (no two-colour legend of the run prints one)",
+      "nothing toned (BREAKING_NEWS_PRINT_TONES)"
+    ]
+  },
+  "breakingnewsholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBreakingNews.js 'Breaking News' (the Outlaws of Thunder Junction Breaking News showcase; groupShowcase-5.js 'Breaking News (OTP)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "338x91 notch piece (1:1 at 1500x2100, at 581,1905), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "u": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "b": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "r": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "g": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "m": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "a": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "l": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "wu": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "wb": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "ub": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "ur": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "br": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "bg": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "rg": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "rw": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "gw": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ],
+      "gu": [
+        "img/frames/breakingNews/stamp.png at 781,2555 447×116 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 338×91 at 581,1905",
+        "cleared outside card x 590–909, rows to 1989 (the master's own flat ground shows there)",
+        "the pack's capture (luma > 80 in box x 101–236, rows 20–88) painted opaque 64,58,60, grown 2 px",
+        "the oval 45.6667/91.4762/8.8000×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque 64,58,60"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.666666666666664,
+        "topPct": 91.47619047619048,
+        "widthPct": 8.799999999999999,
+        "heightPct": 3.1904761904761907
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/breakingNews/stamp.png"
+    ],
+    "notes": [
+      "the Breaking News oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (breakingNews/stamp.png, 447x116) — the charcoal strip raised in a tab into the page's foot round the hologram — placed at its bounds (781/2010, 2555/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box 338x91 at 581,1905 px of the 1500x2100 card, drawn 1:1 from there; the tab is print's (its top 1908 px at the centre against print's 1912, the scans' own 0.22 % aspect)",
+      "keys = the masters' w u b r g m, a, l and the ten pairs, every one the same piece (every master is the same strip under the tab)",
+      "the hologram: the pack paints a capture of WotC's oval in the tab (685–815 × 1928–1991 px once placed and downscaled), 7 px below where print sets its top — every lit pixel of it is painted the strip's opaque charcoal (64,58,60) first (grown 2 px; print's tab is charcoal round the hologram), then the prints' oval (132 × 67 at 685, 1921 — all 45 stamped OTP prints within 1 px) plus 2 px is cut to transparent and the 2 px round it painted charcoal: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "dfcicon": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
