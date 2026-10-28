@@ -38,6 +38,16 @@ describe("useStableValue", () => {
     rerender({ value: changed });
     expect(result.current).toBe(changed);
   });
+
+  it("a nested object changed IN PLACE still reads as a change (the comparison keeps a snapshot)", () => {
+    const art = { x: 0.5 };
+    const first = { title: "A", art };
+    const { result, rerender } = renderHook(({ value }) => useStableValue(value), { initialProps: { value: first } });
+    art.x = 0.2;
+    const next = { title: "A", art };
+    rerender({ value: next });
+    expect(result.current).toBe(next);
+  });
 });
 
 describe("useMediaQuery", () => {

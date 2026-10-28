@@ -15,7 +15,9 @@
 // fixtures pin round-trips: its fields all present, nothing the form drops);
 // otherwise it is LEFT OUT, and the update action keeps the row's back as it
 // is (an omitted `back_face` is "leave it alone"). A back the maker changed
-// — or switched off — travels as it always did.
+// travels with what the form never holds kept from the row (its colour on a
+// frame that draws none, no invented art position); one switched off is
+// null.
 
 import type { FormValues } from "@/lib/creator/form-types";
 
@@ -58,13 +60,24 @@ export function backFaceRoundTrips(stored: unknown, built: unknown): boolean {
 
 /**
  * The `back_face` an edit sends when it would send `built` for a back the
- * form holds as `values` (the legacy / inline-part path of the submit):
- * `built` itself, unless the back is untouched AND rebuilding it would
- * change the stored row — then `undefined`, which the update action reads as
- * "keep the stored back". `trustOpened` is false once a save of this
- * session has gone out for the card as it opened (until its refresh lands,
- * "untouched" is read against values the row may no longer hold — the
- * footer's and face_content's rule): the built back is sent then.
+ * form holds as `values` (the legacy / inline-part path of the submit).
+ *
+ * - The back switched off (`built` null): null, which clears it.
+ * - UNTOUCHED: `built` where it rebuilds the stored back exactly, else
+ *   `undefined`, which the update action reads as "keep the stored back".
+ * - EDITED (the #629 check): `built` laid over what the form never holds —
+ *   the stored `color_identity` where the frame draws no part colour
+ *   (`ownsColour` false: the form neither shows nor sends it), and no
+ *   default `art_position` added to a back stored without one while the
+ *   picture's position is untouched. Every field the form owns takes the
+ *   form's value; one it emptied is left out of the object, which clears it
+ *   (the back is stored whole).
+ *
+ * `trustOpened` is false once a save of this session SENT a back for the
+ * card as it opened (until its refresh lands the row's back may no longer
+ * be the one the form opened with — the footer's and face_content's rule):
+ * the built back is sent then, as main did. A save that left the back out
+ * does not count — the row's back is still the stored one.
  */
 export function editBackFacePayload<T>(input: {
   stored: unknown;
@@ -72,8 +85,19 @@ export function editBackFacePayload<T>(input: {
   values: Pick<FormValues, "has_back_face" | "back_face">;
   built: T;
   trustOpened: boolean;
+  /** The frame draws the second part's own colour, so the form owns it. */
+  ownsColour?: boolean;
 }): T | undefined {
-  const { stored, opened, values, built, trustOpened } = input;
-  if (!trustOpened || !stored || !backFaceUntouched(opened, values)) return built;
-  return backFaceRoundTrips(stored, built) ? built : undefined;
+  const { stored, opened, values, built, trustOpened, ownsColour = false } = input;
+  if (!trustOpened || !built || typeof built !== "object" || !stored || typeof stored !== "object") return built;
+  if (backFaceUntouched(opened, values)) return backFaceRoundTrips(stored, built) ? built : undefined;
+  const row = stored as Record<string, unknown>;
+  const out: Record<string, unknown> = { ...(built as Record<string, unknown>) };
+  if (!ownsColour && out.color_identity === undefined && Array.isArray(row.color_identity) && row.color_identity.length > 0) {
+    out.color_identity = [...row.color_identity];
+  }
+  const positionUntouched =
+    JSON.stringify(canonical(values.back_face.art_position)) === JSON.stringify(canonical(opened.back_face.art_position));
+  if (positionUntouched && (row.art_position === undefined || row.art_position === null)) delete out.art_position;
+  return out as T;
 }

@@ -1023,6 +1023,12 @@ export function CardCreatorForm({
   // refresh after it arrives, `defaults` and `card` are still the card as it
   // OPENED, not the row (onSubmit: face_content is never left out then).
   const [savedUnderKey, setSavedUnderKey] = useState<string | null>(null);
+  // The card (resetKey) a save of this session SENT a back face for (TODO
+  // 3b.29): until the refresh after it lands, the row's back may no longer
+  // be `card.back_face`. A save that left the back out (an untouched legacy
+  // back) is not counted — the row's back is still the stored one, and a
+  // save that leaves `updated_at` alone never moves resetKey (#629 check).
+  const [backSentUnderKey, setBackSentUnderKey] = useState<string | null>(null);
   if (footerBaseline.key !== resetKey) {
     setFooterBaseline({ key: resetKey, text: defaults.footer_text.trim() });
   }
@@ -3672,7 +3678,8 @@ export function CardCreatorForm({
               opened: defaults,
               values,
               built: backFaceContent,
-              trustOpened: savedUnderKey !== resetKey,
+              trustOpened: backSentUnderKey !== resetKey,
+              ownsColour: drawsPartColor(submitTemplate),
             })
           : backFaceContent;
 
@@ -4049,6 +4056,8 @@ export function CardCreatorForm({
       // …and its rows may no longer be the rows the card opened with (the
       // payload's face_content, above).
       setSavedUnderKey(resetKey);
+      // …and its back face, when this save sent one (see backSentUnderKey).
+      if ("back_face" in payload) setBackSentUnderKey(resetKey);
       // The saved values become the baseline, keeping the on-screen values;
       // the keyed reset swaps in server truth when the refresh lands. Mark
       // clean only if nothing was typed while the request was in flight —

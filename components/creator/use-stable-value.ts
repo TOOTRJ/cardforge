@@ -23,20 +23,36 @@ export function sameData(a: unknown, b: unknown): boolean {
   );
 }
 
+/** A copy of the plain objects and arrays in `value` (everything else kept
+ *  by reference — `sameData`'s own reading), so a later in-place change of
+ *  the original can't make the comparison agree with itself. */
+function snapshotOf<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(snapshotOf) as T;
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(value)) out[key] = snapshotOf((value as Record<string, unknown>)[key]);
+    return out as T;
+  }
+  return value;
+}
+
 /**
  * `value` itself, or the value this hook returned last render when the two
  * hold the same data (`sameData`). The creator's live preview props are
  * rebuilt on every keystroke of every field (TODO 3b.9): kept by identity
  * while they say the same thing, the memoised preview — and the face
  * preview's deferred copy — skip a render that would draw the same card.
+ * The comparison reads a SNAPSHOT of the value it returned (taken only when
+ * the value changes), never the object itself: a nested object changed in
+ * place would otherwise compare equal to its own new state.
  */
 export function useStableValue<T>(value: T): T {
-  const ref = useRef(value);
+  const ref = useRef<{ value: T; snapshot: T } | null>(null);
   // A ref read and written during render is safe here: the value it holds
   // is a pure function of the props compared, never of a past render's
   // effects, and a discarded render's write only keeps an equal object.
   // eslint-disable-next-line react-hooks/refs
-  if (!sameData(ref.current, value)) ref.current = value;
+  if (ref.current === null || !sameData(ref.current.snapshot, value)) ref.current = { value, snapshot: snapshotOf(value) };
   // eslint-disable-next-line react-hooks/refs
-  return ref.current;
+  return ref.current.value;
 }

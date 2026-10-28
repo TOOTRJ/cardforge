@@ -554,6 +554,66 @@ describe("a legacy back on an edit (TODO 3b.29)", () => {
     await type("title", "Another Name");
     expect((await sentUpdate()).back_face).toBeNull();
   });
+
+  // (#629's check) A save that changes nothing leaves `updated_at` alone, so
+  // no refresh moves the form's card key: the guard must not count a save
+  // that never SENT the back as one that changed it.
+  it("two saves with no refresh between: the back is left out both times", async () => {
+    renderForm("edit", sagaWithLegacyBack());
+    // (The card prop never changes here: no refresh lands, as after a save
+    // that leaves updated_at alone.)
+    await type("title", "First Name");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.updateCardAction.mock.calls[0][1]).not.toHaveProperty("back_face");
+    await type("title", "Another Name");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    const second = actions.updateCardAction.mock.calls[1][1] as Record<string, unknown>;
+    expect(second.title).toBe("Another Name");
+    expect(second).not.toHaveProperty("back_face");
+  });
+
+  // (#629's check, LOW) An EDITED back on a frame that draws no part colour
+  // keeps what the form never holds: its stored colour, and no default
+  // picture position it never had. Every field the form owns takes the
+  // form's value — an emptied one leaves the object, which clears it.
+  describe("an edited second part on a frame that draws no part colour (flip)", () => {
+    const FLIP_BACK = {
+      title: "Flipped",
+      card_type: "creature",
+      rules_text: "Flying",
+      power: "2",
+      toughness: "2",
+      color_identity: ["blue"],
+    };
+    const flip = () =>
+      savedCard({ frame_style: { finish: "regular", template: "flip" }, supertype: null, back_face: FLIP_BACK });
+    const flippedSide = async () => {
+      await goTo("Text & stats");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("tab", { name: /^Flipped side/ }));
+      });
+    };
+
+    it("keeps the stored colour and adds no art position", async () => {
+      renderForm("edit", flip());
+      await flippedSide();
+      await typeRich("back_face.rules_text", "Flying, vigilance");
+      // (`subtypes: []` is the form's "none", as the server's own default.)
+      expect((await sentUpdate()).back_face).toEqual({ ...FLIP_BACK, subtypes: [], rules_text: "Flying, vigilance" });
+    });
+
+    it("…and a field it emptied still clears", async () => {
+      renderForm("edit", flip());
+      await flippedSide();
+      await typeRich("back_face.rules_text", "");
+      const back = (await sentUpdate()).back_face as Record<string, unknown>;
+      expect(back.rules_text).toBeUndefined();
+      expect(back.color_identity).toEqual(["blue"]);
+      expect(back.art_position).toBeUndefined();
+    });
+  });
 });
 
 // TODO 3b.21 (owner 2026-10-28): Enter in a single-line field of the creator
