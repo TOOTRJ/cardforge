@@ -372,6 +372,7 @@ const TEMPLATES = {
   dndsourcebook: {
     confirm: "AFR / CLB showcase — confirm the thumbnail is the parchment sourcebook page, not the orange 'Dungeon Module' cover (AFR #350–358).",
     q: (k) => `((set:afr cn>=299 cn<=349) or (set:clb cn>=375 cn<=450)) ${spellColor(k)}`,
+  },
   // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU
   // #287–368 and MUL's Dominaria legends (#5 … #59; #135 … #189 their
   // halo-foil twins). No colourless, artifact or land printing; no mono-green.
