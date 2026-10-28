@@ -106,6 +106,15 @@ function renderForm() {
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: false }), { status: 200 })));
 });
+/** A phone-width window: no `min-width` query matches (happy-dom's own
+ *  window is 1024 px wide — the creator's desktop layout). */
+function phoneWidth() {
+  const real = window.matchMedia.bind(window);
+  vi.stubGlobal("matchMedia", (query: string) =>
+    /min-width/.test(query) ? { ...real(query), matches: false, media: query } : real(query),
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -461,11 +470,43 @@ describe("3 · every kind's second part has its own words", () => {
   });
 
   it("the phone bar over the preview says what it does — it folds the preview, it never turns the card", async () => {
+    // (A phone: since TODO 3b.9 only the preview that shows is mounted.)
+    phoneWidth();
     renderForm();
     expect(screen.queryByText(/tap to toggle/i)).toBeNull();
     const summary = screen.getByText("Hide the preview").closest("summary")!;
     expect(summary.textContent).toContain("Live preview");
     expect(within(summary).getByText("Show the preview")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 3b.9 — ONE live preview: the phone's inline one or the desktop aside,
+// never both with one hidden by CSS (each drew the whole card on every
+// keystroke).
+// ---------------------------------------------------------------------------
+describe("3b.9 one live preview is mounted", () => {
+  it("on a desktop: the aside's, and no phone bar", () => {
+    renderForm();
+    expect(screen.getAllByTestId("card-preview")).toHaveLength(1);
+    expect(screen.queryByText("Hide the preview")).toBeNull();
+    expect(screen.getByTestId("card-preview").closest("aside")).not.toBeNull();
+  });
+
+  it("on a phone: the inline one, under its bar", () => {
+    phoneWidth();
+    renderForm();
+    expect(screen.getAllByTestId("card-preview")).toHaveLength(1);
+    expect(screen.getByTestId("card-preview").closest("details")).not.toBeNull();
+    expect(document.querySelector("aside")).toBeNull();
+  });
+
+  it("a two-faced card's face preview too", async () => {
+    phoneWidth();
+    renderForm();
+    await cardWithSecondPart(/^Transform/, "Insectile Aberration");
+    expect(document.querySelector("aside")).toBeNull();
+    expect(screen.getAllByTestId("card-preview").every((el) => el.closest("details"))).toBe(true);
   });
 });
 

@@ -456,14 +456,43 @@ function arrowTarget(
   return node ? { node, side: key === "ArrowLeft" ? "before" : "after" } : null;
 }
 
-/** The caret right before or right after a child of the box, in the text beside it if any. */
-function placeCaretBeside(root: HTMLElement, node: Node, side: "before" | "after") {
+/** The place right before or right after a child of the box, in the text beside it if any. */
+function placeBeside(root: HTMLElement, node: Node, side: "before" | "after"): { node: Node; offset: number } {
   const text = side === "before" ? node.previousSibling : node.nextSibling;
   if (text && text.nodeType === Node.TEXT_NODE) {
-    placeCaret(text, side === "before" ? (text.nodeValue?.length ?? 0) : 0);
-    return;
+    return { node: text, offset: side === "before" ? (text.nodeValue?.length ?? 0) : 0 };
   }
-  placeCaret(root, Array.prototype.indexOf.call(root.childNodes, node) + (side === "before" ? 0 : 1));
+  return { node: root, offset: Array.prototype.indexOf.call(root.childNodes, node) + (side === "before" ? 0 : 1) };
+}
+
+/** The caret right before or right after a child of the box, in the text beside it if any. */
+function placeCaretBeside(root: HTMLElement, node: Node, side: "before" | "after") {
+  const place = placeBeside(root, node, side);
+  placeCaret(place.node, place.offset);
+}
+
+/**
+ * Where Shift+→ moves the selection's FOCUS when it stands in a caret host
+ * (TODO 3b.22 (3)): past the pip the host fronts, in one press — the
+ * browser's own step crossed the host's invisible character first and
+ * selected nothing. Null = the browser's.
+ */
+function shiftRightTarget(root: HTMLElement, selection: Selection): { node: Node; offset: number } | null {
+  const focus = selection.focusNode;
+  if (!isCaretHost(focus) || focus.parentNode !== root) return null;
+  const pip = focus.nextSibling;
+  return isPip(pip) ? placeBeside(root, pip, "after") : null;
+}
+
+/**
+ * The side of a pip a click lands on (TODO 3b.22 (1)): Chrome puts the caret
+ * of any click on a pip's glyph at the pip's START, so a click on its right
+ * half put the caret in front of it. Read from the click's x against the
+ * pip's box — the half the pointer was on.
+ */
+function clickSideOf(pip: HTMLElement, clientX: number): "before" | "after" {
+  const box = pip.getBoundingClientRect();
+  return clientX > box.left + box.width / 2 ? "after" : "before";
 }
 
 /**
@@ -481,6 +510,24 @@ function selectionInside(root: HTMLElement): Range | null {
   if (!sel || sel.rangeCount === 0) return null;
   const range = sel.getRangeAt(0);
   return root.contains(range.commonAncestorContainer) ? range : null;
+}
+
+// ---------------------------------------------------------------------------
+// Undo history (TODO 3b.22 (2), (5); see the component)
+// ---------------------------------------------------------------------------
+
+/** One step of the history: the value before a change, and its caret. */
+type HistoryStep = { value: string; caret: number };
+/** A run of edits that undo as ONE step while they follow each other. */
+type EditGroup = "type" | "delete";
+const HISTORY_GROUP_MS = 1000;
+const HISTORY_LIMIT = 200;
+
+/** The run a native input belongs to: a word typed, characters deleted. */
+function editGroupOf(event: InputEvent): EditGroup | null {
+  if (event.inputType === "insertText") return event.data && /^\S$/u.test(event.data) ? "type" : null;
+  if (event.inputType === "deleteContentBackward" || event.inputType === "deleteContentForward") return "delete";
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -515,6 +562,30 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
     // never compare against a stale prop.
     const latestRef = useRef(value);
     const composingRef = useRef(false);
+    // The editor's own undo history (TODO 3b.22 (2), (5)). The browser's
+    // could not be used: every edit the editor makes itself — a pip removed
+    // by Backspace, the caret host rewritten under the first character typed
+    // there — is a DOM change by script, which the browser's undo stack never
+    // records (Cmd+Z did not bring a deleted symbol back, nor take a first
+    // character away). So every change of the value is recorded HERE, with
+    // the caret it was made at, and Cmd/Ctrl+Z, Shift+Cmd+Z / Ctrl+Y and the
+    // Edit menu's Undo / Redo (beforeinput `historyUndo` / `historyRedo`)
+    // read it. Typing (and deleting) coalesces into one step per run, as a
+    // browser's does; a value from outside (an AI fill, an import, a reset)
+    // starts a new history.
+    const historyRef = useRef<{ undo: HistoryStep[]; redo: HistoryStep[]; group: EditGroup | null; at: number }>({
+      undo: [],
+      redo: [],
+      group: null,
+      at: 0,
+    });
+    // The edit about to happen: the caret it starts at and its run.
+    const pendingRef = useRef<{ caret: number | null; group: EditGroup | null }>({ caret: null, group: null });
+    const noteEdit = useCallback((group: EditGroup | null = null) => {
+      const root = rootRef.current;
+      if (!root) return;
+      pendingRef.current = { caret: caretOffset(root), group };
+    }, []);
 
     // Normalise the DOM after any edit and tell the form what it reads as.
     const commit = useCallback(() => {
@@ -531,10 +602,41 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       ensureFiller(root, composingRef.current);
       if (converted && offset != null) setCaret(root, offset);
       const next = serializePipDom(root);
+      const pending = pendingRef.current;
+      pendingRef.current = { caret: null, group: null };
       if (next !== latestRef.current) {
+        const history = historyRef.current;
+        const now = Date.now();
+        const continues =
+          pending.group !== null && pending.group === history.group && now - history.at < HISTORY_GROUP_MS;
+        if (!continues || history.undo.length === 0) {
+          history.undo.push({ value: latestRef.current, caret: pending.caret ?? offset ?? latestRef.current.length });
+          if (history.undo.length > HISTORY_LIMIT) history.undo.shift();
+        }
+        history.redo = [];
+        history.group = pending.group;
+        history.at = now;
         latestRef.current = next;
         onChangeRef.current(next);
       }
+    }, []);
+
+    /** Undo (or redo): the value one step back, its caret where the step was made. */
+    const stepHistory = useCallback((direction: "undo" | "redo") => {
+      const root = rootRef.current;
+      const history = historyRef.current;
+      const step = (direction === "undo" ? history.undo : history.redo).pop();
+      if (!root || !step) return;
+      (direction === "undo" ? history.redo : history.undo).push({
+        value: latestRef.current,
+        caret: caretOffset(root) ?? latestRef.current.length,
+      });
+      history.group = null;
+      renderValue(root, step.value);
+      latestRef.current = step.value;
+      if (document.activeElement !== root) root.focus();
+      setCaret(root, Math.min(step.caret, step.value.length));
+      onChangeRef.current(step.value);
     }, []);
 
     // Insert nodes at the caret (replacing any selection), caret after them.
@@ -548,6 +650,8 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         range = selectionInside(root);
         if (!range) return;
       }
+      // (The caret the insert starts at — where an undo puts it back.)
+      pendingRef.current = { caret: caretOffset(root), group: null };
       range.deleteContents();
       // Never land inside a pip span: bump the range out to its parent — in
       // front of the pip for a caret at its start (Home leaves Chrome's there).
@@ -595,6 +699,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         const range = root ? selectionInside(root) : null;
         const target = root && range ? deletionTarget(root, range, side) : null;
         if (!root || !target) return false;
+        noteEdit();
         // Whichever side it was on, the caret belongs where the node stood.
         const index = Array.prototype.indexOf.call(root.childNodes, target);
         target.remove();
@@ -606,7 +711,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         commit();
         return true;
       },
-      [commit],
+      [commit, noteEdit],
     );
 
     useImperativeHandle(
@@ -632,6 +737,23 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       const root = rootRef.current;
       if (!root) return;
       const onBeforeInput = (event: InputEvent) => {
+        // The Edit menu's Undo / Redo (and a soft keyboard's): the editor's
+        // own history, never the browser's (see historyRef).
+        if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
+          event.preventDefault();
+          stepHistory(event.inputType === "historyUndo" ? "undo" : "redo");
+          return;
+        }
+        noteEdit(editGroupOf(event));
+        // A soft keyboard's Backspace / Delete (TODO 3b.22 (4)): Android's
+        // sends no usable keydown (key "Unidentified"), only this — so a pip,
+        // and the break in front of one, are removed here as on a keyboard.
+        if (event.inputType === "deleteContentBackward" || event.inputType === "deleteContentForward") {
+          if (deleteBesideCaret(event.inputType === "deleteContentBackward" ? "before" : "after")) {
+            event.preventDefault();
+          }
+          return;
+        }
         if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
           event.preventDefault();
           insertNodes([makeBreak()]);
@@ -642,7 +764,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       };
       root.addEventListener("beforeinput", onBeforeInput);
       return () => root.removeEventListener("beforeinput", onBeforeInput);
-    }, [insertNodes, insertPlainText]);
+    }, [insertNodes, insertPlainText, deleteBesideCaret, noteEdit, stepHistory]);
 
     // selectionchange is announced a task late; the click and the next key
     // (below) lift the caret themselves so a fast key is never lost.
@@ -663,6 +785,8 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       const focused = document.activeElement === root;
       const offset = focused ? caretOffset(root) : null;
       renderValue(root, value);
+      // A value from outside starts a new history (see historyRef).
+      historyRef.current = { undo: [], redo: [], group: null, at: 0 };
       if (focused) setCaret(root, Math.min(offset ?? value.length, value.length));
     }, [value]);
 
@@ -697,11 +821,30 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         }}
         onBlur={onBlur}
         onFocus={onFocus}
-        onClick={() => {
-          if (rootRef.current) liftCaretOutOfPip(rootRef.current);
+        onClick={(event) => {
+          const root = rootRef.current;
+          if (!root) return;
+          // A click on a pip: the caret on the side of it the click was on
+          // (TODO 3b.22 (1)) — never over a selection the click made.
+          const pip = event.target instanceof Node ? pipHolding(root, event.target) : null;
+          const range = selectionInside(root);
+          if (pip && (!range || range.collapsed)) {
+            placeCaretBeside(root, pip, clickSideOf(pip, event.clientX));
+            return;
+          }
+          liftCaretOutOfPip(root);
         }}
         onKeyDown={(event) => {
           if (rootRef.current) liftCaretOutOfPip(rootRef.current);
+          // Undo / redo: the editor's own history (see historyRef).
+          const key = event.key.toLowerCase();
+          const undoKey = (event.metaKey || event.ctrlKey) && key === "z";
+          const redoKey = event.ctrlKey && !event.metaKey && key === "y";
+          if ((undoKey || redoKey) && !event.altKey && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            stepHistory(undoKey && !event.shiftKey ? "undo" : "redo");
+            return;
+          }
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
             insertNodes([makeBreak()]);
@@ -711,7 +854,15 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
           if (event.nativeEvent.isComposing || event.metaKey) return;
           if (event.key === "Backspace" && deleteBesideCaret("before")) event.preventDefault();
           else if (event.key === "Delete" && deleteBesideCaret("after")) event.preventDefault();
-          else if (
+          else if (event.key === "ArrowRight" && event.shiftKey && !event.altKey && !event.ctrlKey) {
+            // Shift+→ in a caret host selects the pip in one press (see shiftRightTarget).
+            const root = rootRef.current;
+            const selection = window.getSelection();
+            const target = root && selection ? shiftRightTarget(root, selection) : null;
+            if (!target || !selection) return;
+            event.preventDefault();
+            selection.extend(target.node, target.offset);
+          } else if (
             (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
             !event.shiftKey &&
             !event.altKey &&
@@ -748,6 +899,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
           if (!range || range.collapsed) return;
           event.preventDefault();
           event.clipboardData.setData("text/plain", serializePipDom(range.cloneContents()));
+          noteEdit();
           range.deleteContents();
           commit();
         }}

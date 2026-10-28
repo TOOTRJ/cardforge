@@ -7,6 +7,7 @@ import {
   KIND_DEFS,
   LAYOUT_KIND_CARD_TYPES,
   importedCardTypeForKind,
+  layoutKindTypeChoices,
   kindFromCard,
   type CardKind,
 } from "@/lib/creator/card-kinds";
@@ -133,5 +134,30 @@ describe("the save's kind gate accepts a layout card with its printed type", () 
     // createCardAction / updateCardAction run frameKindGateError on the
     // payload; the kind comes from the layout template.
     expect(frameKindGateError(template, { cardType, title: "Any" })).toBeNull();
+  });
+});
+
+// TODO 3b.14 — a HAND-MADE adventure or flip card picks its card type on the
+// Identity step (an import already kept the printed one, 1.21).
+describe("layoutKindTypeChoices — the Identity step's card type chips", () => {
+  it("the adventure offers every type its frame draws; the flip its creature and enchantment", () => {
+    expect(layoutKindTypeChoices("adventure")).toEqual(LAYOUT_KIND_CARD_TYPES.adventure);
+    expect(layoutKindTypeChoices("flip")).toEqual(["creature", "enchantment"]);
+  });
+
+  it("no other kind offers a choice there — the Prepare kind stays a creature", () => {
+    for (const kind of CARD_KIND_VALUES.filter((k) => k !== "adventure" && k !== "flip")) {
+      expect(layoutKindTypeChoices(kind), kind).toBeNull();
+    }
+  });
+
+  it("every choice keeps the kind and passes the server's kind gate", () => {
+    for (const kind of ["adventure", "flip"] as const) {
+      const template = KIND_DEFS[kind].layoutTemplates![0];
+      for (const cardType of layoutKindTypeChoices(kind)!) {
+        expect(kindFromCard(cardType, template), `${kind}/${cardType}`).toBe(kind);
+        expect(frameKindGateError(template, { cardType, title: "Any" }), `${kind}/${cardType}`).toBeNull();
+      }
+    }
   });
 });

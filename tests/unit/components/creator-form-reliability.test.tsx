@@ -549,6 +549,98 @@ describe("3b.3 structured rows fold, empty, and re-seed across kind changes", ()
     // The edited rows survive as the rules text (they used to be dropped).
     expect(preview().rules).toMatch(/^\+2: Draw a card\./);
   });
+
+  // TODO 3b.30 (owner 2026-10-13, #539's check): a row whose marker names a
+  // numeral the editor has no toggle for ("I, XI —") and whose numbers were
+  // changed is HELD by a save (sagaRowsLosingMarker) — but a kind switch
+  // folded it into the rules text as the numbers picked, and the XI went
+  // without a word. It is KEPT now: plain text can say it.
+  it("a held mixed-marker row keeps its unreadable numeral when the kind leaves saga", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Saga/);
+    await applyIdea({ card_type: "enchantment", rules_text: "I, XI — Both.\nII — Two." });
+    const stepTo = async (step: string) => {
+      await act(async () => {
+        fireEvent.click(screen.getAllByTitle(`Go to ${step}`)[0]);
+      });
+    };
+    await stepTo("Text & stats");
+    await act(async () => {
+      fireEvent.click(screen.getAllByLabelText("Chapter III for row 1")[0]);
+    });
+    await stepTo("Card");
+    await pickKind(/^Enchantment/);
+    expect(preview().faceContent).toBeNull();
+    // Was "I, III — Both." — the XI dropped.
+    expect(preview().rules).toBe("I, III, XI — Both.\nII — Two.");
+    // …and back to saga it is the same row, its marker carried.
+    await pickKind(/^Saga/);
+    expect(preview().rules).toBe("I, III, XI — Both.\nII — Two.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b.14 — a hand-made adventure was always a creature (the kind writes its
+// own card type) and a flip card too: the 22 non-creature adventurers (the
+// WOE Virtues…) could not be made. The Identity step offers the types the
+// frame draws; the kind and the frame stay.
+// ---------------------------------------------------------------------------
+
+describe("3b.14 a layout kind's card type on the Identity step", () => {
+  const stepTo = async (step: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle(`Go to ${step}`)[0]);
+    });
+  };
+
+  it("a new adventure picks Enchantment: the frame stays, the P/T goes", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Adventure/);
+    expect(preview().cardType).toBe("creature");
+    await stepTo("Identity");
+    const chips = screen.getByRole("radiogroup", { name: "Adventure card type" });
+    expect(Array.from(chips.querySelectorAll("[role='radio']")).map((el) => el.textContent?.trim())).toEqual([
+      "Creature",
+      "Instant",
+      "Sorcery",
+      "Artifact",
+      "Enchantment",
+      "Land",
+    ]);
+    await act(async () => {
+      fireEvent.click(chipIn("Adventure card type", /^Enchantment/));
+    });
+    expect(preview().cardType).toBe("enchantment");
+    expect(preview().template).toBe("adventure");
+    await stepTo("Text & stats");
+    expect(document.querySelector('[name="power"]')).toBeNull();
+    // The kind is still Adventure.
+    await stepTo("Card");
+    expect(chipIn("Card type", /^Adventure/).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("a new flip card offers Creature and Enchantment", async () => {
+    renderForm({ mode: "create" });
+    await pickKind(/^Flip/);
+    await stepTo("Identity");
+    await act(async () => {
+      fireEvent.click(chipIn("Flip card type", /^Enchantment/));
+    });
+    expect(preview().cardType).toBe("enchantment");
+    expect(preview().template).toBe("flip");
+  });
+
+  it("no chips on another kind, nor on an edit (the card type is locked)", async () => {
+    renderForm({ mode: "create" });
+    await stepTo("Identity");
+    expect(screen.queryByRole("radiogroup", { name: /card type$/ })).toBeNull();
+    cleanup();
+    renderForm({
+      mode: "edit",
+      card: savedCard({ frame_style: { finish: "regular", template: "adventure" }, back_face: { title: "Spell", card_type: "instant" } }),
+    });
+    expect(screen.queryByRole("radiogroup", { name: "Adventure card type" })).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

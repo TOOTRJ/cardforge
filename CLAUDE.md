@@ -1368,7 +1368,8 @@ Rules and gotchas:
   "II —"). The keyed same-card reset keeps field errors (`keepErrors`): the
   refresh of the save before must not wipe a blocked Save's message. Never write a saga
   row's line from its numbers alone — `sagaRowsOut` is the one answer (a
-  kind switch and the AI's context read it too). A walker whose loyalty
+  kind switch and the AI's context read it too; a kind switch keeps a held
+  row's unreadable numeral too, `sagaRowsForKindSwitch`, TODO 3b.30). A walker whose loyalty
   badges touch on its frame gets a note under its rows
   (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
   never a count compared — 9 one-line rows on `m15pw`, 11 on the tall
