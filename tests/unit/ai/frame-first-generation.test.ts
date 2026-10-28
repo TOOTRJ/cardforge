@@ -152,8 +152,43 @@ const fill = (over: Record<string, unknown> = {}) =>
     ...over,
   });
 
+/** Run the fill's one step on the stored plan: what the creator is handed. */
+async function stepOf(stored: Record<string, unknown>) {
+  s.job = { id: "job-1", owner_id: USER, kind: "card_fill", status: "generating", request: {}, deck_id: null, error: null, plan: stored, steps: [{ key: "fill:0", label: "Card", status: "running" }] };
+  const result = await runNextJobStep("job-1", "fill:0");
+  expect(result.ok).toBe(true);
+  return s.patched.at(-1)! as { status: string; fill?: Record<string, unknown> };
+}
+
+const WOLF = designed({
+  title: "Wolf",
+  cost: "",
+  card_type: "token",
+  supertype: "Creature",
+  subtypes: ["Wolf"],
+  color_identity: ["green"],
+  rules_text: "Trample",
+  flavor_text: null,
+});
+const THOPTER = designed({
+  title: "Thopter",
+  cost: "",
+  card_type: "token",
+  supertype: "Artifact Creature",
+  subtypes: ["Thopter"],
+  color_identity: ["colorless"],
+  rules_text: "",
+  flavor_text: null,
+  power: "1",
+  toughness: "1",
+});
+
+// Owner 2026-10-28, "redo, then keep and tell": EXACTLY the frame picked is
+// kept; anywhere else is redone once with a stronger brief, then kept on the
+// frame the creator's own rules give it with a notice for the maker; a
+// design no frame can dress is refused. Every path before any charge.
 describe("a frame picked by name", () => {
-  it("is briefed to the designer and kept", async () => {
+  it("path 1 — exactly the frame: briefed, kept, no notice, one design", async () => {
     s.answers = [[NYX_MUSE]];
     const out = await fill();
     expect(out.ok).toBe(true);
@@ -161,47 +196,75 @@ describe("a frame picked by name", () => {
     expect(designPrompts()[0]).toContain('FRAME (the maker picked it — design the card FOR it): "Nyx"');
     expect(designPrompts()[0]).toContain('supertype must include the word "Enchantment"');
     expect(plan().frame_template).toBe("m15nyx");
+    expect(plan()).not.toHaveProperty("frame_notice");
     expect(s.spend).not.toHaveBeenCalled();
+    const step = await stepOf(plan());
+    expect(step.fill).not.toHaveProperty("frame_notice");
   });
 
-  it("a design that doesn't fit is redone once — the second one kept, nothing reserved", async () => {
+  it("a miss is redone once with a stronger brief — the second, exact, kept with no notice", async () => {
     s.answers = [[designed()], [NYX_MUSE]];
     const out = await fill();
     expect(out.ok).toBe(true);
     expect(designPrompts()).toHaveLength(2);
+    expect(designPrompts()[0]).not.toContain("YOUR LAST DESIGN");
+    expect(designPrompts()[1]).toContain(
+      'YOUR LAST DESIGN MISSED THIS FRAME: Designed without the Enchantment type. This time the card MUST land on "Nyx"',
+    );
     expect(plan().frame_template).toBe("m15nyx");
+    expect(plan()).not.toHaveProperty("frame_notice");
     expect(s.spend).not.toHaveBeenCalled();
   });
 
-  it("two that don't fit are refused before any charge — never a random frame", async () => {
-    s.answers = [[designed()], [designed({ title: "Ashveil Courier" })]];
+  it("path 2 — Standard picked, an Enchantment Creature twice: kept on Nyx, and the maker is told", async () => {
+    s.answers = [[NYX_MUSE], [designed({ title: "Ashveil Courier", supertype: "Enchantment" })]];
+    const out = await fill({ frame: "m15" });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()).toHaveLength(2);
+    expect(plan().frame_template).toBe("m15nyx");
+    expect(plan().frame_notice).toBe("Designed as an Enchantment Creature, so it's on Nyx.");
+    expect(s.spend).not.toHaveBeenCalled();
+    // The notice reaches the creator with the fill, at the one credit.
+    const step = await stepOf(plan());
+    expect(step.status).toBe("done");
+    expect(step.fill).toMatchObject({ frame_template: "m15nyx", frame_notice: "Designed as an Enchantment Creature, so it's on Nyx." });
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.refund).not.toHaveBeenCalled();
+  });
+
+  it("path 2 — the plain full-art token picked, an Artifact Thopter twice: on the Artifact Token, told", async () => {
+    s.answers = [[THOPTER], [THOPTER]];
+    const out = await fill({ steer: { card_type: "token" }, frame: "m20token", designKind: "token" });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()[0]).toContain('must NOT include "Artifact"');
+    expect(plan().frame_template).toBe("m20tokenartifact");
+    expect(plan().frame_notice).toBe("Designed as an Artifact token, so it's on Artifact Token.");
+  });
+
+  it("path 2 — a token height its text doesn't fit: redone, then kept on the text box, told", async () => {
+    s.answers = [[WOLF], [WOLF]];
+    const out = await fill({ steer: { card_type: "token" }, frame: "m20token", designKind: "token" });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()).toHaveLength(2);
+    expect(designPrompts()[0]).toContain("NO text box");
+    expect(designPrompts()[1]).toContain("YOUR LAST DESIGN MISSED THIS FRAME: Its text needs the text box.");
+    expect(plan().frame_template).toBe("m20tokentext");
+    expect(plan().frame_notice).toBe("Its text needs the text box, so it's on Token, text box.");
+  });
+
+  it("path 3 — a design no frame can dress, twice: refused before any charge, never a random frame", async () => {
+    // An instant the creature's Nyx frame can't draw.
+    const spell = designed({ card_type: "instant", subtypes: [], power: null, toughness: null, rules_text: "Draw a card." });
+    s.answers = [[spell], [spell]];
     const out = await fill();
     expect(out).toMatchObject({ ok: false, code: "frame_unfit" });
     expect(!out.ok && out.error).toBe(
       "The AI's design didn't fit the frame you picked. Try again, or let it choose the frame with Surprise me. No credits were used.",
     );
+    expect(designPrompts()[1]).toContain("YOUR LAST DESIGN COULD NOT BE PUT ON THIS FRAME AT ALL");
     expect(s.inserted).toEqual([]);
     expect(s.spend).not.toHaveBeenCalled();
     expect(s.refund).not.toHaveBeenCalled();
-  });
-
-  it("a token height the text doesn't fit is redone, then kept on the height its text needs (same design, no random)", async () => {
-    const wolf = designed({
-      title: "Wolf",
-      cost: "",
-      card_type: "token",
-      supertype: "Creature",
-      subtypes: ["Wolf"],
-      color_identity: ["green"],
-      rules_text: "Trample",
-      flavor_text: null,
-    });
-    s.answers = [[wolf], [wolf]];
-    const out = await fill({ steer: { card_type: "token" }, frame: "m20token", designKind: "token" });
-    expect(out.ok).toBe(true);
-    expect(designPrompts()).toHaveLength(2);
-    expect(designPrompts()[0]).toContain("NO text box");
-    expect(plan().frame_template).toBe("m20tokentext");
   });
 });
 
@@ -237,6 +300,15 @@ describe("the dialog's Surprise me kind", () => {
     expect(designPrompts()[0]).not.toContain("anything but");
   });
 
+  it("a battle that comes back anyway is designed again — the prompt alone is no gate", async () => {
+    s.answers = [[designed({ card_type: "battle", subtypes: ["Siege"], defense: "5", power: null, toughness: null })], [designed()]];
+    const out = await createCardFillJob({ want: WANT_ALL as never, locked: {}, steer: {}, frame: "random", designKind: "surprise" });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()).toHaveLength(2);
+    expect((plan().fields as { card_type?: string }).card_type).toBe("creature");
+    expect(s.spend).not.toHaveBeenCalled();
+  });
+
   it("keeps today's draw when the frame is Surprise me (no brief)", async () => {
     s.answers = [[designed()]];
     await fill({ frame: "random" });
@@ -251,7 +323,7 @@ describe("the presets reach the designer and the painter", () => {
     s.answers = [[NYX_MUSE]];
     await fill({ theme: assembled.theme, style: assembled.style, assembled: { artStyle: assembled.artStyle, styleArt: assembled.styleArt } });
     const prompt = designPrompts()[0]!;
-    expect(prompt).toContain("Theme: lighthouse keepers (the maker's own words: they win) — set in gothic horror");
+    expect(prompt).toContain("Theme: lighthouse keepers (the maker's own words: they outrank the preset and any spark, never the frame or the rules) — set in gothic horror");
     expect(prompt).toContain("Art & tone style: stained glass: a stained-glass window");
     // The spark ranks below the theme (lib/ai/design-variety.ts).
     expect(prompt.indexOf("Theme:")).toBeLessThan(prompt.indexOf("Fresh design #"));
@@ -282,5 +354,36 @@ describe("the presets reach the designer and the painter", () => {
     s.answers = [[designed()]];
     await createCardFillJob({ want: ["title", "art"] as never, locked: { card_type: "creature" }, steer: {}, artFrame: "m15" });
     expect(plan()).not.toHaveProperty("art_brief");
+  });
+});
+
+// PINNED (review of #635): an OLD-SHAPE painting fill — no preset, no kind,
+// the art ticked on a card that keeps its type (create, edit and remix
+// revise alike) — now gets the art direction of the frame the card is on
+// when that frame is in the table (lib/ai/frame-art-brief.ts), and nothing
+// else; on a frame outside the table its art prompt is main's, word for
+// word.
+describe("an old-shape painting fill", () => {
+  const OLD = { want: ["title", "art"] as never, locked: { card_type: "creature" as const, color_identity: ["white" as const] }, steer: {} };
+  const MAIN_PROMPT =
+    "A pale spirit with a lantern on a fog-drowned wall. NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.";
+
+  it("on a frame in the table: the frame's art direction, after the designer's prompt", async () => {
+    s.answers = [[designed()]];
+    await createCardFillJob({ ...OLD, artFrame: "stainedglass" });
+    expect(plan().art_brief).toBe("Paint it as a leaded stained-glass window: jewel-toned glass panes, dark lead lines, light glowing through.");
+    await stepOf(plan());
+    expect(s.imagePrompts.at(-1)![0]).toBe(
+      "A pale spirit with a lantern on a fog-drowned wall. Paint it as a leaded stained-glass window: jewel-toned glass panes, dark lead lines, light glowing through. NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.",
+    );
+  });
+
+  it("on M15: no art brief, main's art prompt word for word", async () => {
+    s.answers = [[designed()]];
+    await createCardFillJob({ ...OLD, artFrame: "m15" });
+    expect(plan()).not.toHaveProperty("art_brief");
+    expect(plan()).not.toHaveProperty("frame_notice");
+    await stepOf(plan());
+    expect(s.imagePrompts.at(-1)![0]).toBe(MAIN_PROMPT);
   });
 });

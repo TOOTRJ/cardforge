@@ -357,7 +357,7 @@ describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
     });
     expect(status).toBe(200);
     const input = s.created.at(-1)!.input as Record<string, unknown>;
-    expect(String(input.theme)).toMatch(/^lighthouse keepers \(the maker's own words: they win\) — set in gothic horror/);
+    expect(String(input.theme)).toMatch(/^lighthouse keepers \(the maker's own words: they outrank the preset and any spark, never the frame or the rules\) — set in gothic horror/);
     expect(String(input.style)).toMatch(/^stained glass: /);
     expect(input.assembled).toEqual({ artStyle: "stained glass", styleArt: expect.stringMatching(/^Art direction: a stained-glass window/) });
     expect(input.designKind).toBe("creature");

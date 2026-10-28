@@ -210,7 +210,9 @@ function AiFillDialogBody({
           label: base?.label ?? value,
           icon: base?.icon,
           disabled: reason !== null,
-          description: reason ?? undefined,
+          // The reason is part of the chip (seen, and in its name): a
+          // description only shows on a "md" chip.
+          badge: reason ? <span className="text-[10px] font-normal text-subtle">{reason}</span> : undefined,
         };
       }),
     ],

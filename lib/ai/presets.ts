@@ -183,9 +183,10 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
  *  clips anything past it — never refuses). */
 export const TWIST_MAX = 160;
 
-// Control characters (a pasted tab, a stray NUL) and the Unicode bidi
-// overrides, which could reorder what the designer reads.
-const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/g;
+// Control characters (a pasted tab, a stray NUL), the zero-width space and
+// the Unicode bidi marks and overrides (U+061C among them), which could hide
+// or reorder what the designer reads.
+const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
 
 /** A twist as the prompt takes it: unsafe characters out, whitespace folded,
  *  trimmed and clipped to TWIST_MAX. "" when nothing is left. */
@@ -211,7 +212,7 @@ export function stylePresetById(id: string | null | undefined): StylePreset | nu
 export function composeTheme(presetId: string | null | undefined, twist: string | null | undefined): string | undefined {
   const preset = themePresetById(presetId);
   const own = cleanTwist(twist);
-  if (own && preset) return `${own} (the maker's own words: they win) — set in ${preset.prompt}`;
+  if (own && preset) return `${own} (the maker's own words: they outrank the preset and any spark, never the frame or the rules) — set in ${preset.prompt}`;
   if (own) return own;
   return preset?.prompt;
 }
@@ -225,7 +226,7 @@ export function composeStyle(presetId: string | null | undefined, twist: string 
   const preset = stylePresetById(presetId);
   const own = cleanTwist(twist);
   const look = preset ? `${preset.label.toLowerCase()}: ${preset.art}; ${preset.prompt}` : undefined;
-  if (own && look) return `${own} (the maker's own words: they win), over ${look}`;
+  if (own && look) return `${own} (the maker's own words: they outrank the preset and any spark, never the frame or the rules), over ${look}`;
   return own || look;
 }
 

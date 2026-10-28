@@ -19,7 +19,7 @@
 // ones the frame has (`frameColorWords`).
 // ---------------------------------------------------------------------------
 
-import { colorWord } from "@/components/cards/frame-layer";
+import { colorWord, pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   FRAME_COLOR_KEYS,
   framesForKind,
@@ -93,6 +93,13 @@ export function aiFrameOptions(
           ? `Not published in ${colorWord(colorKey)} yet`
           : null,
     }));
+}
+
+/** The colour key the dialog holds a KEPT colour to: the card's frame
+ *  colour key — "c" for a card with no colour, as the server reads it (a
+ *  colourless fill is pinned to the colourless frames), never "free". */
+export function aiDialogColorKey(colorIdentity: Parameters<typeof pickFrameColorKey>[0] | null | undefined): FrameColorKey {
+  return pickFrameColorKey(colorIdentity ?? []) as FrameColorKey;
 }
 
 /** "white, blue or red" (or "any color") — the colours a frame is published in, for the

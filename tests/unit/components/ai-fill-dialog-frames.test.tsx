@@ -19,6 +19,7 @@ import { AiFillDialog, type AiFillOptions } from "@/components/creator/ai-fill-d
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { CardFillField } from "@/lib/ai/card-fill-shared";
 import type { FrameColorKey } from "@/lib/creator/card-kinds";
+import { chipOff } from "../helpers/chip";
 
 const ALL_COLOURS = ["w", "u", "b", "r", "g", "c", "m"];
 const VERIFIED = [
@@ -68,13 +69,24 @@ describe("AI fill dialog — kinds", () => {
   it("lists the one-faced kinds the AI can make, never a battle, saga, two-part, double-faced card or emblem", () => {
     open();
     const kinds = within(group("Card kind")).getAllByRole("radio").map((chip) => chip.textContent);
-    expect(kinds).toEqual(["Surprise me", "Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Land", "Planeswalker", "Token"]);
+    expect(kinds).toEqual([
+      "Surprise me",
+      "Creature",
+      "Instant",
+      "Sorcery",
+      "Artifact",
+      "Enchantment",
+      "LandNo frame published yet",
+      "PlaneswalkerNo frame published yet",
+      "Token",
+    ]);
   });
 
-  it("a kind with no published frame is an off chip that says why", () => {
+  it("a kind with no published frame is an off chip that says why — seen and in its name", () => {
     open();
-    const walker = within(group("Card kind")).getByRole("radio", { name: /^Planeswalker/ });
-    expect(walker.getAttribute("aria-disabled")).toBe("true");
+    const walker = within(group("Card kind")).getByRole("radio", { name: "Planeswalker No frame published yet" });
+    expect(chipOff(walker)).toBe(true);
+    expect(within(walker).getByText("No frame published yet")).toBeTruthy();
     fireEvent.click(walker);
     expect(walker.getAttribute("aria-checked")).toBe("false");
   });
@@ -114,7 +126,7 @@ describe("AI fill dialog — frames", () => {
     pickKind("Creature");
     openFrames();
     const nyx = frameRadio(/^Nyx/);
-    expect(nyx.getAttribute("aria-disabled")).toBe("true");
+    expect(chipOff(nyx)).toBe(true);
     expect(nyx.textContent).toContain("Not published in red yet");
     cleanup();
     open({ colorKey: "r" });

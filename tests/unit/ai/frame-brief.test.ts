@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
-import { frameBrief, frameColorKeysOf, frameFitOf } from "@/lib/ai/frame-brief";
+import { frameBrief, frameColorKeysOf, frameFitOf, frameMoveNotice, frameRedoNote } from "@/lib/ai/frame-brief";
 import { ART_BRIEF_TEMPLATES, frameArtBrief } from "@/lib/ai/frame-art-brief";
 import {
   AI_DESIGN_KINDS,
+  aiDialogColorKey,
   aiFrameOptions,
   aiKindOffReason,
   frameColorWords,
@@ -61,6 +62,16 @@ describe("the dialog's kinds and frames", () => {
     expect(free.find((option) => option.template === "m15nyx")).toMatchObject({ offReason: null, colorKeys: ["w", "u"] });
   });
 
+  it("a card with no colour is held to the colourless frames, as the server reads it", () => {
+    expect(aiDialogColorKey([])).toBe("c");
+    expect(aiDialogColorKey(null)).toBe("c");
+    expect(aiDialogColorKey(["red"])).toBe("r");
+    const verified = new Set([...only(["m15"]), ...only(["m15nyx"], ["w", "u"])]);
+    expect(aiFrameOptions("creature", verified, aiDialogColorKey([])).find((option) => option.template === "m15nyx")?.offReason).toBe(
+      "Not published in colorless yet",
+    );
+  });
+
   it("names the colours a frame has, or any colour", () => {
     expect(frameColorWords(["w", "u", "r"])).toBe("white, blue or red");
     expect(frameColorWords(["g"])).toBe("green");
@@ -112,6 +123,8 @@ describe("the frame brief", () => {
   it("a textless frame, a basic land frame and the walker boxes say so", () => {
     expect(frameBrief("m15textless", "creature")).toContain("prints NO rules or flavor text");
     expect(frameBrief("m15fullartland", "land")).toContain("ONE basic land");
+    // No text budget beside "no rules text" on a basic land's frame.
+    expect(frameBrief("m15fullartland", "land")).not.toContain("under about");
     expect(frameBrief("m15borderlesspwtall", "planeswalker")).toContain("FOUR or more loyalty abilities");
     expect(frameBrief("m15borderlesspw", "planeswalker")).toContain("two or three loyalty abilities");
   });
@@ -124,7 +137,7 @@ describe("the frame brief", () => {
   });
 });
 
-describe("the fit check — the frame picked, never a random draw", () => {
+describe("the fit check — the frame picked, never a random draw (owner: redo, then keep and tell)", () => {
   const creature = (over: Record<string, unknown> = {}) => ({
     template: "m15nyx" as FrameTemplate,
     cardType: "creature" as const,
@@ -133,42 +146,83 @@ describe("the fit check — the frame picked, never a random draw", () => {
     face: { cardType: "creature", supertype: "Enchantment", subtypes: ["Spirit"], rulesText: "Vigilance", power: "2", toughness: "2" },
     ...over,
   });
+  const token = (template: FrameTemplate, face: Record<string, unknown>) =>
+    frameFitOf({ template, cardType: "token", colorIdentity: ["green"], verifiedKeys: EVERY, face: { cardType: "token", ...face } as never });
 
-  it("a design that says what the frame needs fits it exactly", () => {
-    expect(frameFitOf(creature())).toEqual({ frame: "m15nyx", exact: true });
+  it("EXACTLY the frame picked: exact, no notice", () => {
+    expect(frameFitOf(creature())).toEqual({ frame: "m15nyx", exact: true, notice: null });
   });
 
-  it("one the frame can't dress fits nothing — no random frame", () => {
-    expect(frameFitOf(creature({ face: { cardType: "creature", supertype: null, subtypes: ["Spirit"], rulesText: "Vigilance" } })).frame).toBeNull();
-    // …nor a colour the frame isn't published in.
+  it("anywhere else the creator's own rules give it: a fit, never exact, with the reason", () => {
+    // Standard M15 asked, an Enchantment Creature designed → Nyx.
+    expect(frameFitOf(creature({ template: "m15" }))).toEqual({
+      frame: "m15nyx",
+      exact: false,
+      notice: "Designed as an Enchantment Creature, so it's on Nyx.",
+    });
+    // Nyx asked, a plain creature designed → the plain frame.
+    expect(frameFitOf(creature({ face: { cardType: "creature", supertype: null, subtypes: ["Spirit"], rulesText: "Vigilance" } }))).toEqual({
+      frame: "m15",
+      exact: false,
+      notice: "Designed without the Enchantment type, so it's on Standard.",
+    });
+    // The plain full-art token asked, an Artifact Thopter designed.
+    expect(token("m20token", { supertype: "Artifact Creature", subtypes: ["Thopter"], rulesText: "", power: "1", toughness: "1" })).toEqual({
+      frame: "m20tokenartifact",
+      exact: false,
+      notice: "Designed as an Artifact token, so it's on Artifact Token.",
+    });
+    // The textless height asked, the design has text → the text box.
+    expect(token("m20token", { supertype: "Creature", subtypes: ["Wolf"], rulesText: "Trample", power: "2", toughness: "2" })).toMatchObject({
+      frame: "m20tokentext",
+      exact: false,
+      notice: "Its text needs the text box, so it's on Token, text box.",
+    });
+    // A Vehicle designed for the Artifact frame → the Vehicle frame.
     expect(
-      frameFitOf(creature({ verifiedKeys: new Set([...only(["m15nyx"], ["u"]), ...only(["m15"])]) })).frame,
-    ).toBeNull();
+      frameFitOf({
+        template: "m15artifact",
+        cardType: "artifact",
+        colorIdentity: ["colorless"],
+        verifiedKeys: EVERY,
+        face: { cardType: "artifact", supertype: null, subtypes: ["Vehicle"], rulesText: "Crew 2", power: "3", toughness: "3" },
+      }),
+    ).toEqual({ frame: "m15vehicle", exact: false, notice: "Designed as a Vehicle, so it's on Vehicle." });
   });
 
-  it("a card its own words carry onto a dress keeps the frame's family, not exact when the SHAPE differs", () => {
-    // A textless full-art token asked for, the design has text: the text
-    // box height — a fit, but not the shape picked (redone once first).
-    const token = frameFitOf({
-      template: "m20token",
-      cardType: "token",
-      colorIdentity: ["green"],
-      verifiedKeys: EVERY,
-      face: { cardType: "token", supertype: "Creature", subtypes: ["Wolf"], rulesText: "Trample", power: "2", toughness: "2" },
+  it("a walker's box follows its rows, and says so", () => {
+    const walker = (template: FrameTemplate, rows: number) =>
+      frameFitOf({
+        template,
+        cardType: "planeswalker",
+        colorIdentity: ["blue"],
+        verifiedKeys: EVERY,
+        face: {
+          cardType: "planeswalker",
+          supertype: "Legendary",
+          subtypes: ["Veyra"],
+          rulesText: Array.from({ length: rows }, (_, i) => `+${i}: Draw a card.`).join("\n"),
+        },
+      });
+    expect(walker("m15borderlesspw", 4)).toMatchObject({ frame: "m15borderlesspwtall", exact: false, notice: "It has four or more loyalty abilities, so it's on Borderless Planeswalker, 4+ abilities." });
+    expect(walker("m15borderlesspwtall", 2)).toMatchObject({ frame: "m15borderlesspw", exact: false, notice: "It has fewer than four loyalty abilities, so it's on Borderless Planeswalker." });
+  });
+
+  it("one no frame can dress fits nothing — no random frame", () => {
+    // …a colour the frame isn't published in.
+    expect(frameFitOf(creature({ verifiedKeys: new Set([...only(["m15nyx"], ["u"]), ...only(["m15"], ["u"])]) }))).toEqual({
+      frame: null,
+      exact: false,
+      notice: null,
     });
-    expect(token.frame).not.toBeNull();
-    expect(token.frame).not.toBe("m20token");
-    expect(token.exact).toBe(false);
-    // A Vehicle on the artifact frame follows onto the Vehicle frame: the
-    // same shape, so it fits (print's rule for a NEW Vehicle).
-    const vehicle = frameFitOf({
-      template: "m15artifact",
-      cardType: "artifact",
-      colorIdentity: ["colorless"],
-      verifiedKeys: EVERY,
-      face: { cardType: "artifact", supertype: null, subtypes: ["Vehicle"], rulesText: "Crew 2", power: "3", toughness: "3" },
-    });
-    expect(vehicle).toEqual({ frame: "m15vehicle", exact: true });
+  });
+
+  it("the redo's brief says why the last design missed", () => {
+    expect(frameRedoNote("m15", "Designed as an Enchantment Creature, so it's on Nyx.")).toBe(
+      'YOUR LAST DESIGN MISSED THIS FRAME: Designed as an Enchantment Creature. This time the card MUST land on "Standard": follow every frame rule above exactly.',
+    );
+    expect(frameRedoNote("m15", null)).toContain("COULD NOT BE PUT ON THIS FRAME AT ALL");
+    expect(frameMoveNotice({ picked: "m15", landed: "m15", cardType: "creature" })).toBeNull();
   });
 });
 

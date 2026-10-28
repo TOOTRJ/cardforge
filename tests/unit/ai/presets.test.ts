@@ -56,7 +56,8 @@ describe("the presets are data", () => {
 describe("the twist", () => {
   it("is cleaned and clipped, never refused", () => {
     expect(cleanTwist("  haunted \n\t keepers  ")).toBe("haunted keepers");
-    expect(cleanTwist("a\u0000b‮c")).toBe("a b c");
+    expect(cleanTwist("a\u0000b\u202ec")).toBe("a b c");
+    expect(cleanTwist("a\u200bb\u061cc")).toBe("a b c");
     expect(cleanTwist("x".repeat(500))).toHaveLength(TWIST_MAX);
     expect(cleanTwist(undefined)).toBe("");
     expect(cleanTwist("   ")).toBe("");
@@ -69,7 +70,7 @@ describe("prompt assembly — the twist outranks the preset, both outrank the sp
     expect(composeTheme("gothic-horror", "")).toBe(gothic.prompt);
     expect(composeTheme(undefined, "lighthouse keepers")).toBe("lighthouse keepers");
     const both = composeTheme("gothic-horror", "lighthouse keepers")!;
-    expect(both.startsWith("lighthouse keepers (the maker's own words: they win)")).toBe(true);
+    expect(both.startsWith("lighthouse keepers (the maker's own words: they outrank the preset and any spark, never the frame or the rules)")).toBe(true);
     expect(both).toContain(gothic.prompt);
     expect(composeTheme(undefined, undefined)).toBeUndefined();
     expect(composeTheme(SURPRISE_PRESET_ID, undefined)).toBeUndefined();
@@ -78,7 +79,7 @@ describe("prompt assembly — the twist outranks the preset, both outrank the sp
   it("style: the designer reads the look and the tone, the painter the twist and the name, then the look", () => {
     const glass = STYLE_PRESETS.find((preset) => preset.id === "stained-glass")!;
     expect(composeStyle("stained-glass", "")).toBe(`stained glass: ${glass.art}; ${glass.prompt}`);
-    expect(composeStyle("stained-glass", "candlelight")!.startsWith("candlelight (the maker's own words: they win), over stained glass")).toBe(true);
+    expect(composeStyle("stained-glass", "candlelight")!.startsWith("candlelight (the maker's own words: they outrank the preset and any spark, never the frame or the rules), over stained glass")).toBe(true);
     expect(composeArtStyle("stained-glass", "")).toBe("stained glass");
     expect(composeArtStyle("stained-glass", "candlelight")).toBe("candlelight, stained glass");
     expect(composeArtStyle(undefined, "candlelight")).toBe("candlelight");

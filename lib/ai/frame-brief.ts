@@ -2,10 +2,14 @@
 // Frame-first design (the AI dialog redesign, PR 1). When the maker picks a
 // frame, the card is designed FOR it: the designer reads a brief of the
 // frame's era wording and its limits — what its type words, subtypes, text
-// and rows must be for the frame to dress the card — and the plan keeps the
-// frame only when the design really fits it (`frameFitOf`, read through
-// resolveGeneratedFrame with no random fallback). A design that does not fit
-// is redone once, then refused, before any credit is reserved.
+// and rows must be for the frame to dress the card. The fit is read through
+// resolveGeneratedFrame with no random fallback (`frameFitOf`). Owner
+// 2026-10-28, "redo, then keep and tell": a design that lands anywhere but
+// EXACTLY the frame picked is redone once with a stronger brief
+// (`frameRedoNote`); still elsewhere, it is kept on the frame the creator's
+// own rules give it and the maker is told why (`frameMoveNotice`); one no
+// frame can dress is refused. All at plan time, before any credit is
+// reserved.
 //
 // Every rule here is READ from the creator's own gates (lib/creator/
 // card-kinds.ts, lib/cards/token-height.ts, the frame profile), never kept
@@ -51,7 +55,7 @@ const ERA_WORDING: Record<FrameEra, string> = {
 function rulesBudget(template: FrameTemplate): number {
   const token = tokenHeightOf(template);
   if (token) return token.height === "textless" ? 0 : token.height === "regular" ? 110 : 330;
-  if (getFrameProfile(template).textless) return 0;
+  if (getFrameProfile(template).textless || templateIsBasicOnly(template)) return 0;
   const era = eraForTemplate(template);
   return era === "m15" || era === "showcase" ? 300 : 200;
 }
@@ -147,44 +151,90 @@ export function frameBrief(
   return parts.join(" ");
 }
 
-/** The SHAPE a frame holds the text in — what a pick of a height or a box
- *  means: a token's height, the walker's tall box, a textless frame. */
-function shapeOf(template: FrameTemplate): string {
-  const token = tokenHeightOf(template);
-  if (token) return `token:${token.height}`;
-  if (template === "m15borderlesspwtall") return "rows:tall";
-  return getFrameProfile(template).textless ? "textless" : "box";
-}
-
-/** The DRESSES a frame stands for — what a pick of it asks the card to
- *  be: a subtype's frame (Vehicle, Spacecraft, Planet), the enchantment
+/** The dress words a frame stands for — what a pick of it asks the card to
+ *  say: a subtype's frame (Vehicle, Spacecraft, Planet), the enchantment
  *  dress, a frame the kind borrows for a type word, a token's Artifact or
  *  Nyx design. A plain frame stands for none. */
-function dressesOf(kind: ReturnType<typeof kindFromCard>, template: FrameTemplate): Set<string> {
+function dressWordsOf(kind: ReturnType<typeof kindFromCard>, template: FrameTemplate): Set<string> {
   const out = new Set<string>();
   const subtype = subtypeDressOf(template);
-  if (subtype) out.add(`subtype:${subtype}`);
-  if (isEnchantmentDress(template)) out.add("word:Enchantment");
+  if (subtype) out.add(subtype);
+  if (isEnchantmentDress(template)) out.add("Enchantment");
   const borrowed = borrowedTypeWord(kind, template);
-  if (borrowed) out.add(`word:${borrowed}`);
+  if (borrowed) out.add(borrowed);
   const token = tokenHeightOf(template);
-  if (token?.artifact) out.add("word:Artifact");
-  if (token?.nyx) out.add("word:Enchantment");
+  if (token?.artifact) out.add("Artifact");
+  if (token?.nyx) out.add("Enchantment");
   return out;
 }
 
+const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a");
+
+/**
+ * The one sentence a maker is told when the card landed on another frame
+ * than the one picked (owner 2026-10-28: redo, then keep and tell) — why,
+ * in the card's own words, and where it is. Null when it is the frame
+ * picked.
+ */
+export function frameMoveNotice(input: {
+  picked: FrameTemplate;
+  landed: FrameTemplate;
+  cardType: CardType;
+}): string | null {
+  const { picked, landed, cardType } = input;
+  if (picked === landed) return null;
+  const kind = kindFromCard(cardType, undefined);
+  const where = `so it's on ${FRAME_TEMPLATE_LABELS[landed]}.`;
+  const kindWord = kind === "token" ? "token" : (cardType[0]!.toUpperCase() + cardType.slice(1));
+  const pickedWords = dressWordsOf(kind, picked);
+  const landedWords = dressWordsOf(kind, landed);
+  const gained = [...landedWords].find((word) => !pickedWords.has(word));
+  if (gained) {
+    const subtype = SUBTYPE_DRESS_WORDS.includes(gained);
+    return subtype
+      ? `Designed as ${article(gained)} ${gained}, ${where}`
+      : `Designed as ${article(gained)} ${gained} ${kindWord}, ${where}`;
+  }
+  const lost = [...pickedWords].find((word) => !landedWords.has(word));
+  if (lost) {
+    return SUBTYPE_DRESS_WORDS.includes(lost)
+      ? `Designed without the ${lost} subtype, ${where}`
+      : `Designed without the ${lost} type, ${where}`;
+  }
+  const pickedToken = tokenHeightOf(picked);
+  const landedToken = tokenHeightOf(landed);
+  if (pickedToken && landedToken && pickedToken.height !== landedToken.height) {
+    return landedToken.height === "textless"
+      ? `It has no text, ${where}`
+      : landedToken.height === "tall"
+        ? `Its text needs the tall text box, ${where}`
+        : `Its text needs the text box, ${where}`;
+  }
+  if (landed === "m15borderlesspwtall") return `It has four or more loyalty abilities, ${where}`;
+  if (picked === "m15borderlesspwtall") return `It has fewer than four loyalty abilities, ${where}`;
+  if (getFrameProfile(picked).textless && !getFrameProfile(landed).textless) return `It has rules text, ${where}`;
+  return `Its words call for another frame, ${where}`;
+}
+
+/** Why the last design missed the frame, for the redo's stronger brief. */
+export function frameRedoNote(picked: FrameTemplate, notice: string | null): string {
+  return notice
+    ? `YOUR LAST DESIGN MISSED THIS FRAME: ${notice.replace(/, so it's on .*$/, "")}. This time the card MUST land on "${FRAME_TEMPLATE_LABELS[picked]}": follow every frame rule above exactly.`
+    : `YOUR LAST DESIGN COULD NOT BE PUT ON THIS FRAME AT ALL. This time follow every frame rule above exactly, the color included.`;
+}
+
 export type FrameFit = {
-  /** The frame the card saves with (resolveGeneratedFrame with no random
-   *  fallback), or null when the design can't be dressed by the frame
-   *  picked at all — or it lands off every dress the pick stands for (a
-   *  plain creature asked onto Nyx lands on the plain frame: not a fit). */
+  /** The frame the card saves with — resolveGeneratedFrame with no random
+   *  fallback: the frame picked, or the one the creator's own rules give
+   *  the card from there (Nyx for an Enchantment Creature, the text box for
+   *  a token with text) — or null when the frame can't dress the design at
+   *  all (a colour it isn't published in, a type it doesn't draw). */
   frame: FrameTemplate | null;
-  /** True when it is the frame picked or a dress the card's own words
-   *  carry it onto from there (a Vehicle on the Artifact frame, an Artifact
-   *  token's frame from the plain one), in the SAME text shape. False for a
-   *  token height, walker box or textless frame the maker didn't pick: the
-   *  design is redone once, and kept only if no answer fits exactly. */
+  /** True only when it is EXACTLY the frame picked. Anything else is
+   *  redone once with a stronger brief, then kept with a notice. */
   exact: boolean;
+  /** What the maker is told when it is kept elsewhere (frameMoveNotice). */
+  notice: string | null;
 };
 
 /** How a designed card fits the frame its maker picked. */
@@ -195,7 +245,7 @@ export function frameFitOf(input: {
   verifiedKeys: ReadonlySet<string>;
   face: Parameters<typeof resolveGeneratedFrame>[0]["face"];
 }): FrameFit {
-  const resolved = resolveGeneratedFrame({
+  const frame = resolveGeneratedFrame({
     cardType: input.cardType,
     requested: input.template,
     colorIdentity: input.colorIdentity,
@@ -204,12 +254,12 @@ export function frameFitOf(input: {
     fallback: "none",
     random: () => 0,
   });
-  if (resolved === null) return { frame: null, exact: false };
-  const kind = kindFromCard(input.cardType, undefined);
-  const landed = dressesOf(kind, resolved);
-  const keepsDresses = [...dressesOf(kind, input.template)].every((dress) => landed.has(dress));
-  if (!keepsDresses) return { frame: null, exact: false };
-  return { frame: resolved, exact: shapeOf(resolved) === shapeOf(input.template) };
+  if (frame === null) return { frame: null, exact: false, notice: null };
+  return {
+    frame,
+    exact: frame === input.template,
+    notice: frameMoveNotice({ picked: input.template, landed: frame, cardType: input.cardType }),
+  };
 }
 
 /** The colour keys `template` is published in for a card of `cardType` —

@@ -68,7 +68,7 @@ import {
   typesWithoutPublishedFrame,
   FREE_DESIGN_TYPES,
 } from "@/lib/creator/frame-random";
-import { frameBrief, frameColorKeysOf, frameFitOf } from "@/lib/ai/frame-brief";
+import { frameBrief, frameColorKeysOf, frameFitOf, frameRedoNote } from "@/lib/ai/frame-brief";
 import { frameArtBrief } from "@/lib/ai/frame-art-brief";
 import { isAiDesignKind, type AiDesignKind } from "@/lib/ai/frame-choices";
 import type {
@@ -272,6 +272,10 @@ type CardFillJobPlan = {
   /** Art direction appended to the art prompt (the dialog's style preset,
    *  the frame's look). Absent when there is none, and on older plans. */
   art_brief?: string;
+  /** Frame-first: the card was kept on another frame than the one picked
+   *  (lib/ai/frame-brief.ts frameMoveNotice) — handed to the creator with
+   *  the fill, which tells the maker. Absent otherwise. */
+  frame_notice?: string;
 };
 
 
@@ -1085,11 +1089,17 @@ export async function createCardFillJob(
     });
   type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
   let designed: DesignedFill;
+  // Frame-first redo (owner 2026-10-28): the second design is told why the
+  // first one missed the frame picked.
+  let designs = 0;
+  let redoNote: string | null = null;
   try {
     designed = await designFreshly(
       recent,
-      (variety) =>
-        designCardFill({
+      (variety) => {
+        designs += 1;
+        const briefNow = brief && designs > 1 && redoNote ? `${brief} ${redoNote}` : brief;
+        return designCardFill({
           want: input.want,
           locked: input.locked,
           steer: input.steer,
@@ -1099,29 +1109,36 @@ export async function createCardFillJob(
           colorHint,
           variety,
           avoidTypes,
-          ...(brief ? { frameBrief: brief } : {}),
+          ...(briefNow ? { frameBrief: briefNow } : {}),
           ...(input.assembled ? { assembled: true } : {}),
-        }),
+        });
+      },
       (result) => (input.want.includes("title") ? result.fields.title : null),
       {
         ...(pickedFrame
           ? {
-              // Frame-first: the frame picked, in its own shape (a token
-              // height, a walker box, a textless frame as picked) — else
-              // redone once; a design its own words carry onto a dress of
-              // the frame (print's rule: a Vehicle, an Enchantment
-              // Creature's Nyx) is kept when neither answer is the frame
-              // itself; one the frame can't dress at all is refused, before
-              // any charge.
-              acceptable: (result: DesignedFill) => fitOf(result.fields).exact,
+              // Frame-first ("redo, then keep and tell"): EXACTLY the frame
+              // picked — else redone once with a stronger brief; a design
+              // still elsewhere is kept on the frame the creator's own rules
+              // give it (Nyx for an Enchantment Creature, the text box for a
+              // token with text) and the maker is told (frame_notice); one
+              // no frame can dress is refused. All before any charge.
+              acceptable: (result: DesignedFill) => {
+                const fit = fitOf(result.fields);
+                if (!fit.exact && designs === 1) redoNote = frameRedoNote(pickedFrame, fit.notice);
+                return fit.exact;
+              },
               fallbackAcceptable: (result: DesignedFill) => fitOf(result.fields).frame !== null,
             }
           : {
               // A generated type must land on a published frame in the
               // card's colour (the generated one, else the pinned one).
+              // …and never a type it was told to avoid (a battle, for the
+              // dialog's Surprise me) — the prompt alone is no gate.
               acceptable: (result: DesignedFill) =>
                 !result.fields.card_type ||
                 Boolean(input.steer.card_type) ||
+                (!avoidTypes.includes(result.fields.card_type) &&
                 designHasPublishedFrame(
                   {
                     cardType: result.fields.card_type,
@@ -1129,7 +1146,7 @@ export async function createCardFillJob(
                     face: { ...faceOf(result.fields), cardType: result.fields.card_type },
                   },
                   verifiedKeys,
-                ),
+                )),
             }),
         secondFits: planRedesignFits,
       },
@@ -1152,8 +1169,9 @@ export async function createCardFillJob(
 
   // A generated card type needs a frame that can wear it (create only —
   // revise never asks for the type). Colors: generated ones, else pinned.
-  const frameTemplate = pickedFrame
-    ? fitOf(designed.fields).frame
+  const pickedFit = pickedFrame ? fitOf(designed.fields) : null;
+  const frameTemplate = pickedFit
+    ? pickedFit.frame
     : wantsType && designed.fields.card_type
       ? resolveGeneratedFrame({
           cardType: designed.fields.card_type,
@@ -1200,6 +1218,8 @@ export async function createCardFillJob(
         }
       : {}),
     deck_id: deckContext?.deck.id ?? null,
+    // Kept on another frame than the one picked: the maker is told why.
+    ...(pickedFit?.notice ? { frame_notice: pickedFit.notice } : {}),
   };
   // The art direction (the dialog's style preset, then the frame's own
   // look — lib/ai/frame-art-brief.ts): stored only when there is some.
@@ -1263,6 +1283,7 @@ async function runCardFillStep(
       ...plan.fields,
       frame_template: plan.frame_template,
       deck_id: plan.deck_id,
+      ...(plan.frame_notice ? { frame_notice: plan.frame_notice } : {}),
     };
     const attempt = (step.attempts ?? 0) + 1;
     if (plan.want.includes("art")) {
