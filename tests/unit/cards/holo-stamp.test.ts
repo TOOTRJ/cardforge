@@ -182,9 +182,10 @@ describe("the notch and the resolved stamp", () => {
       // Tarkir draconic, 4.11, MSE's own stamp per key; the Bloomburrow
       // woodland, 4.11, MSE's own on its coloured well; the Bloomburrow anime,
       // 4.11, MSE's own on its footer's well; the D&D
-      // Sourcebook, 4.11 wave 2, the pack's own oval piece; the Dominaria
+      // Sourcebook, 4.11 wave 2, the pack's own oval piece; the MKM dossier,
+      // 4.11 wave 2, the pack's one oval piece; the Dominaria
       // United stained glass, 4.11 wave 2, its arch split off its masters.)
-      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll", "fullart", "lotr", "tarkirdragon", "tarkirdraconic", "bloomburrow", "bloomanime", "dndsourcebook", "stainedglass"].includes(t)));
+      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll", "fullart", "lotr", "tarkirdragon", "tarkirdraconic", "bloomburrow", "bloomanime", "dndsourcebook", "dossier", "stainedglass"].includes(t)));
     const keyOf = (template: string, colorKey: string, over: Record<string, unknown> = {}) =>
       resolveHoloStamp(getFrameProfile(template), { stamp: "oval" }, facts({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], ...over }))?.notch.path ?? null;
     expect(keyOf("m15", "w")).toBe("/frames/m15holostamp/w.png");

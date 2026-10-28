@@ -100,6 +100,10 @@ describe("the declared pair masters", () => {
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,
+      // …and the MKM dossier's ten (TODO 4.11 wave 2): the pack's two colour
+      // frames lerped across print's ramp
+      // (tests/unit/frames/mkm-dossier-importer.test.ts).
+      dossier: 10,
       // …and the Dominaria United stained glass's ten (TODO 4.11 wave 2):
       // the gold frame, the box the pair's two boxes split
       // (tests/unit/frames/stained-glass-importer.test.ts).

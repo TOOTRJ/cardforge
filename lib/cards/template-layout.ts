@@ -4965,6 +4965,78 @@ const LOTRSCROLL: FrameProfile = {
   },
 };
 
+// The Murders at Karlov Manor DOSSIER showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Dossier' pack (packDossier.js, 2010 × 2814, downscaled once;
+// scripts/lib/cc-frames.mjs DOSSIER), the case-file folder of MKM #336–389
+// and #433: a photo clipped to a parchment page, the colour on its corners,
+// the bands' rules and the two seals. An ADDITION: a new template, no stored
+// card. Its text layout is the M15 frame's at the M15-era family's sizes,
+// each slot measured on the run's prints against the pack's own drawing
+// (print IS the pack's drawing: the stamp's arch within 1 px) — DOSSIER_*
+// below. The title and type bands are tilted on print (their rules rise ~1°
+// and ~0.7° left to right, and print sets the name and the type line along
+// them); PipGlyph draws its text level, each line where print sets it at
+// the band's LEFT end, the cost row where print sets it at the right.
+// The measured nudges, HD px — each slot measured on the 41 MKM prints
+// without the invisible ink (Scryfall PNGs at 1500 × 2100), the ink read as
+// what differs from the built master of the card's colour, and then on our
+// own bakes the same way:
+/** The name band's right end — and with it the cost row's — 38 px left of
+ *  M15's: the folder's clip covers the band's right end, and print ends the
+ *  row at 1345 px (the last disc's ring) where the CC M15 row ends at 1380. */
+const DOSSIER_COST_IN = 38;
+/** The CC M15 disc row 19 px lower: print centres its discs on 176 px (the
+ *  band's middle under the tilted rules), where the CC M15 row sat on 157. */
+const DOSSIER_COST_DY = 19;
+/** The set symbol's right end (the type band's) 17 px left of M15's:
+ *  print's MKM symbol spans 1259–1365 px, centred on (1312, 1240), where
+ *  M15's band set it on 1278–1381. */
+const DOSSIER_SYMBOL_IN = 17;
+/** The name's baseline 2 px above M15's: print's 187, ours sat on 189. */
+const DOSSIER_TITLE_DY = -2;
+/** The type line 4 px under the CC baseline: print's 1264, ours sat on 1260. */
+const DOSSIER_TYPE_DY = 4;
+/** M15's digit box on the pack's tag 7.5 px up and 1 px left: print's digits'
+ *  ink centres on (1289.5, 1914), ours sat on (1290.5, 1921). */
+const DOSSIER_PT_DY = -7.5;
+const DOSSIER_PT_DX = -1;
+/** The collector lines 5 / 4 px above M15's rows (DOSSIER_COLLECTOR). */
+const DOSSIER_COLL1_DY = -5;
+const DOSSIER_COLL2_DY = -4;
+/** The art slot: the masters' tilted photo — see-through (α < 16) on 79–
+ *  1392 × 274–1127 px, its anti-aliased rim (α < 250) on 77–1393 × 273–1128,
+ *  on every key; CC's artBounds 103 / 365 / 1766 × 1149 of 2010 × 2814 =
+ *  76.9–1394.8 × 272.4–1130.0 — with the art-window check's 0.05 % to
+ *  spare: 76–1395 × 272–1131. The frame hides the rect's corners round the
+ *  tilted photo. */
+const DOSSIER_ART_SLOT: Rect = { topPct: (272 / 2100) * 100, leftPct: (76 / 1500) * 100, widthPct: (1319 / 1500) * 100, heightPct: (859 / 2100) * 100 };
+/** The pack's P/T tag at its ptBounds (1538 / 2468, 392 × 195 of the 2010 ×
+ *  2814 card: 1147.6–1440.1 × 1841.9–1987.4 px at HD). */
+const DOSSIER_PLATE_RECT: Rect = { topPct: (2468 / 2814) * 100, leftPct: (1538 / 2010) * 100, widthPct: (392 / 2010) * 100, heightPct: (195 / 2814) * 100 };
+const DOSSIER: FrameProfile = {
+  ...M15,
+  label: "Dossier",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST_DY + DOSSIER_COST_DY / 1500,
+  artSlot: DOSSIER_ART_SLOT,
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, widthPct: M15.title.rect.widthPct - (DOSSIER_COST_IN / 1500) * 100 },
+    dy: M15.title.dy! + DOSSIER_TITLE_DY / 1500,
+  },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: M15.type.rect.widthPct - (DOSSIER_SYMBOL_IN / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + DOSSIER_TYPE_DY / 1500,
+  },
+  pt: {
+    ...M15.pt!,
+    rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct + (DOSSIER_PT_DY / 2100) * 100, leftPct: M15.pt!.rect.leftPct + (DOSSIER_PT_DX / 1500) * 100 },
+    plateRect: DOSSIER_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/dossier/pt/{color}.png",
+  },
+};
+
 // (borderlessShowcase(), the art-forward layout the anime last wore —
 // inset art, a 0.55 scrim on the rules box, the name 44 px — left with TODO
 // 4.11 / 4.35's layout v70.)
@@ -6239,6 +6311,66 @@ export const LOTRSCROLL_HOLO_STAMP: FrameOverlaySlot = {
   keyMap: { c: "l" },
   artifactKeyMap: { c: "a" },
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: LOTRSCROLL_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The MKM dossier's legendary crown (TODO 4.11 wave 2):
+ * `dossiercrown/<key>.png`, Card Conjurer's dossier 'Legendary Crown' — the
+ * torn paper strip in the card's colour above the title band that every
+ * legendary dossier print carries — at the pack's bounds, 1500 × 316 (rows
+ * 0–315; the crown ends at row 312.7). Keys: the masters' w u b r g m c (c
+ * the artifact's slate crown, as the master) and the ten pairs, the first
+ * colour's crown left and the second's right across the prints' ramp (a
+ * card drawn as its pair master: resolveTwoColor). Set on the dossier entry
+ * only; opt-in per card like every crown (FrameStyle.crown).
+ */
+export const DOSSIER_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (316 / 2100) * 100 },
+  assetPathTemplate: "/frames/dossiercrown/{key}.png",
+  // DOSSIER_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+/** The dossier's stamp oval (scripts/lib/cc-frames.mjs DOSSIER_STAMP_OVAL_PX:
+ *  685–818 × 1921–1988 px) — the PRINTS' hologram, 133 × 67, where the
+ *  stamped MKM prints set it (29 of the 31 without the invisible ink, every
+ *  one within 1 px; two with rules ink over the arch were not read). */
+export const DOSSIER_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1921 / 2100) * 100, widthPct: (133 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1908 px at the centre)
+ *  down to the page's foot (1946), over the arch's 645–855 px. */
+export const DOSSIER_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (645 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (210 / 1500) * 100, heightPct: (38 / 2100) * 100 };
+/**
+ * The MKM dossier's OVAL stamp notch (TODO 4.11 wave 2): the pack's one
+ * 'Holo Stamp' — the black border arched up into the page's foot round the
+ * hologram — placed and downscaled with the card, a 226 × 106 box at 637,
+ * 1893 px (DOSSIER_NOTCH_BOX in scripts/lib/cc-frames.mjs), the pack's
+ * capture blacked out and the prints' oval cut clear for our oval art. The
+ * rares and mythics of the run print it (`security_stamp: oval`, 45 of 55),
+ * the uncommons don't: "auto" = a rare or mythic, as on M15. Keys: the
+ * masters' and the ten pairs' (one piece under every key: every master is
+ * the same page under the arch). Set on the dossier entry only.
+ */
+export const DOSSIER_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (637 / 1500) * 100, topPct: (1893 / 2100) * 100, widthPct: (226 / 1500) * 100, heightPct: (106 / 2100) * 100 },
+  assetPathTemplate: "/frames/dossierholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  stamp: { shape: "oval", oval: DOSSIER_HOLO_STAMP_OVAL, keepOut: DOSSIER_HOLO_STAMP_KEEP_OUT },
+};
+/**
+ * The collector line on the MKM dossier showcase (TODO 4.11 wave 2): M15's
+ * slot (the pen x, the brush column, the sizes, the © slot's right end) on
+ * the run's own rows, measured on its 41 prints without the invisible ink
+ * at 1500 × 2100 (each line's baseline: the last row holding ≥ 35 % of the
+ * line's widest row of ink): line 1 on 1989 px, line 2 on 2028, where M15's
+ * slot bakes 1994 / 2032 — so 5 and 4 px above M15's. The pen: print's
+ * first ink at 99 px, ours 101 — within M15's own measured 96–101, kept.
+ */
+export const DOSSIER_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (DOSSIER_COLL1_DY / 2100) * 100,
+  line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (DOSSIER_COLL2_DY / 2100) * 100,
 };
 
 /**
@@ -7700,6 +7832,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // collector line as the prints set it (M15's two lines) — each opt-in per
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
+  // The MKM dossier showcase (TODO 4.11 wave 2): the crown, the oval stamp
+  // and the collector line, opt-in per card, and the two-colour "split"
+  // dress (the ten pair masters: print's accents ramp from the first colour
+  // to the second).
+  dossier: { ...DOSSIER, overlays: [DOSSIER_CROWN, DOSSIER_HOLO_STAMP], collector: DOSSIER_COLLECTOR, twoColorMasters: ["split"] },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).

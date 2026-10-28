@@ -486,6 +486,313 @@
       "the hologram: the pack paints a capture of WotC's oval in the well (685–815 × 1930–1993 px, measured on the piece); the prints' oval (134 × 64 at 683, 1929 — the 49 stamped AFR / CLB prints, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
     ]
   },
+  "dossier": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDossier.js 'Dossier' (the Murders at Karlov Manor dossier showcase; groupShowcase-5.js 'Dossier (MKM)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dossier/w.png"
+      ],
+      "u": [
+        "img/frames/dossier/u.png"
+      ],
+      "b": [
+        "img/frames/dossier/b.png"
+      ],
+      "r": [
+        "img/frames/dossier/r.png"
+      ],
+      "g": [
+        "img/frames/dossier/g.png"
+      ],
+      "c": [
+        "img/frames/dossier/a.png"
+      ],
+      "m": [
+        "img/frames/dossier/m.png"
+      ],
+      "wu": [
+        "(img/frames/dossier/w.png | img/frames/dossier/u.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "wb": [
+        "(img/frames/dossier/w.png | img/frames/dossier/b.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "ub": [
+        "(img/frames/dossier/u.png | img/frames/dossier/b.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "ur": [
+        "(img/frames/dossier/u.png | img/frames/dossier/r.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "br": [
+        "(img/frames/dossier/b.png | img/frames/dossier/r.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "bg": [
+        "(img/frames/dossier/b.png | img/frames/dossier/g.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "rg": [
+        "(img/frames/dossier/r.png | img/frames/dossier/g.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "rw": [
+        "(img/frames/dossier/r.png | img/frames/dossier/w.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "gw": [
+        "(img/frames/dossier/g.png | img/frames/dossier/w.png across procedural:ramp(43.5→59.5 %W))"
+      ],
+      "gu": [
+        "(img/frames/dossier/g.png | img/frames/dossier/u.png across procedural:ramp(43.5→59.5 %W))"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/dossier/pt.png",
+      "u": "img/frames/dossier/pt.png",
+      "b": "img/frames/dossier/pt.png",
+      "r": "img/frames/dossier/pt.png",
+      "g": "img/frames/dossier/pt.png",
+      "c": "img/frames/dossier/pt.png",
+      "m": "img/frames/dossier/pt.png"
+    },
+    "sourceFiles": [
+      "img/frames/dossier/a.png",
+      "img/frames/dossier/b.png",
+      "img/frames/dossier/g.png",
+      "img/frames/dossier/m.png",
+      "img/frames/dossier/pt.png",
+      "img/frames/dossier/r.png",
+      "img/frames/dossier/u.png",
+      "img/frames/dossier/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (dossier/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the MKM dossier showcase prints them (MKM #336–389, #433)",
+      "c = the pack's slate 'Artifact Frame' (dossier/a.png): the pack draws no colourless frame, and the run's one colourless printing is an artifact creature that prints it (MKM #376 Magnetic Snuffler)",
+      "the ten pairs (wu wb ub ur br bg rg rw gw gu, the \"split\" dress) = the pair's two colour frames lerped across 43.5 → 59.5 %W of the card (scripts/lib/pair-ramp.mjs blendPair) at the pack's size, then downscaled once: print draws a two-colour card's accents — the photo's corners, the title and type bands' rules, the two seals — in the first colour on the left and the second on the right, the rules ramping between (MKM #354–375 but #368, #383–389); the pack has no two-colour dress of its own",
+      "a real black border top, right and bottom, cut at the one card corner; the folder's tan edge runs to the left edge (design), as on every print",
+      "plates = the pack's one 'Power/Toughness Box' (dossier/pt.png, 392x195 at its ptBounds 1538/2468 px of 2010x2814) under every key",
+      "the parchment, the folder's edge, the accents and the tag against print by the ring's rule (raw scan medians, a region ≥ 9 levels off is toned): within 4 levels, as drawn (DOSSIER_PRINT_TONES)",
+      "geometry as drawn: the pack is print's drawing (the stamp's arch within 1 px, the bands' rules within 1–2 px) — nothing is re-cut; the title and type bands are tilted on the pack as on print"
+    ]
+  },
+  "dossiercrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDossier.js 'Dossier' (the Murders at Karlov Manor dossier showcase; groupShowcase-5.js 'Dossier (MKM)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x316 overlay band: rows 0–315 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dossier/crown/w.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "u": [
+        "img/frames/dossier/crown/u.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "b": [
+        "img/frames/dossier/crown/b.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "r": [
+        "img/frames/dossier/crown/r.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "g": [
+        "img/frames/dossier/crown/g.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "m": [
+        "img/frames/dossier/crown/m.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "c": [
+        "img/frames/dossier/crown/a.png at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "wu": [
+        "(img/frames/dossier/crown/w.png | img/frames/dossier/crown/u.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "wb": [
+        "(img/frames/dossier/crown/w.png | img/frames/dossier/crown/b.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "ub": [
+        "(img/frames/dossier/crown/u.png | img/frames/dossier/crown/b.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "ur": [
+        "(img/frames/dossier/crown/u.png | img/frames/dossier/crown/r.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "br": [
+        "(img/frames/dossier/crown/b.png | img/frames/dossier/crown/r.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "bg": [
+        "(img/frames/dossier/crown/b.png | img/frames/dossier/crown/g.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "rg": [
+        "(img/frames/dossier/crown/r.png | img/frames/dossier/crown/g.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "rw": [
+        "(img/frames/dossier/crown/r.png | img/frames/dossier/crown/w.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "gw": [
+        "(img/frames/dossier/crown/g.png | img/frames/dossier/crown/w.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ],
+      "gu": [
+        "(img/frames/dossier/crown/g.png | img/frames/dossier/crown/u.png across procedural:ramp(40.5→57.5 %W)) at 1.6417910447761193/0/89.05472636815921×14.889836531627576 %"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/dossier/crown/u.png": {
+        "table": "DOSSIER_PRINT_TONES.crown.u",
+        "crown": "on the pixels within 12–36 levels (max channel) of 50, 89, 168: × 0.860 / 1.034 / 0.929 (50, 89, 168 → 43, 92, 156), fading to × 0.998 on every channel at white"
+      },
+      "img/frames/dossier/crown/g.png": {
+        "table": "DOSSIER_PRINT_TONES.crown.g",
+        "crown": "on the pixels within 12–36 levels (max channel) of 46, 107, 55: × 0.935 / 0.897 / 0.891 (46, 107, 55 → 43, 96, 49), fading to × 0.901 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/dossier/crown/a.png",
+      "img/frames/dossier/crown/b.png",
+      "img/frames/dossier/crown/g.png",
+      "img/frames/dossier/crown/m.png",
+      "img/frames/dossier/crown/r.png",
+      "img/frames/dossier/crown/u.png",
+      "img/frames/dossier/crown/w.png"
+    ],
+    "notes": [
+      "the dossier showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (dossier/crown/<k>.png, 1790x419) at its crownBounds (33/2010, 0) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–315 — the torn paper strip in the card's colour above the title band that every legendary dossier print carries (MKM #337, #344, #350, #352, #354–375's legends; plain: #336, #343, #358). No cover strip: the crown is drawn over the master's own top",
+      "keys = the pack's seven crowns (w u b r g, m gold, c = the artifact's slate crown/a.png) and the ten pairs, the first colour's crown left and the second's right lerped across 40.5 → 57.5 %W (print's two-colour legends: #356, #359, #360, #362, #363, #365, #370, #373)",
+      "the green and blue crowns toned onto print as the file loads (DOSSIER_PRINT_TONES: the pack draws them 11–12 levels off the frame's own accents, which print uses for the crown too)"
+    ]
+  },
+  "dossierholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDossier.js 'Dossier' (the Murders at Karlov Manor dossier showcase; groupShowcase-5.js 'Dossier (MKM)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "226x106 notch piece (1:1 at 1500x2100, at 637,1893), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wu": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wb": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ub": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ur": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "br": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "bg": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rg": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rw": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gw": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gu": [
+        "img/frames/dossier/stamp.png at 857,2540 295×134 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 226×106 at 637,1893",
+        "the rows above card row 1906 cleared (the master's own page shows there)",
+        "the pack's capture (luma > 60 in box x 44–182, rows 32–102) painted opaque black, grown 2 px",
+        "the oval 45.6667/91.4762/8.8667×3.1905 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.666666666666664,
+        "topPct": 91.47619047619048,
+        "widthPct": 8.866666666666667,
+        "heightPct": 3.1904761904761907
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/dossier/stamp.png"
+    ],
+    "notes": [
+      "the dossier's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dossier/stamp.png, 295x134) — the black border arched up into the page's foot round the hologram — placed at its bounds (857/2010, 2540/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box 226x106 at 637,1893 px of the 1500x2100 card, drawn 1:1 from there; the arch is print's (its top 1908 px against print's 1909, its feet 1942–1945 against 1943–1946)",
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (the masters and the pair masters are the same page under the arch)",
+      "the hologram: the pack paints a capture of WotC's oval in the well (684–817 × 1928–1993 px once placed and downscaled), 5–7 px below where print sets it — every lit pixel of it is painted opaque black first (grown 2 px; print's well is black round the hologram), then the prints' oval (133 × 67 at 685, 1921 — 29 stamped MKM prints, all within 1 px) plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "emblem": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

@@ -318,6 +318,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish, no pairs (one master).
       "bloomanime",
+      // …and the MKM dossier (TODO 4.11 wave 2): the pack's torn colour
+      // strip, and its pair masters (the colour frames lerped across print's
+      // ramp) with the crown's pairs.
+      "dossier",
       // …and the Dominaria United stained glass (TODO 4.11 wave 2): the
       // pack's glass dome, its pair masters the gold frame with the box split.
       "stainedglass",
@@ -432,6 +436,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m20tokenartifact: ["split"],
       m20tokenartifacttext: ["split"],
       m20tokenartifacttall: ["split"],
+      // The MKM dossier (4.11 wave 2): the pack's two colour frames lerped
+      // across print's ramp; no hybrid printing.
+      dossier: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -503,6 +510,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "bloomanime",
     // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
     "dndsourcebook",
+    // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
+    "dossier",
     // …and the Dominaria United stained glass (4.11 wave 2): the pack's own
     // arch, split off every master and pair master.
     "stainedglass"];

@@ -199,6 +199,13 @@ into `.frames-build/` — 65 templates today (`CC_TEMPLATES` in
   own piece, the pack's plates and its crown band (`fullartcrown`)
   ([The Zendikar Rising hedron showcase](#the-zendikar-rising-hedron-showcase-411-layout-v63));
 
+- the MKM dossier showcase (4.11 wave 2, an addition): dossier — the
+  'Dossier' pack's seven frames downscaled once (`c` its artifact frame),
+  ten two-colour pairs lerped across print's ramp, its one plate, its crown
+  band (`dossiercrown`, the pairs lerped) and its oval stamp notch
+  (`dossierholostamp`)
+  ([The MKM dossier showcase](#the-mkm-dossier-showcase-411-wave-2));
+
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
   its see-through colourless 'Eldrazi Frame' as `c` and its artifact frame
@@ -5650,6 +5657,142 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     import chooser) keeps the crown off: only the import names it;
   - #353 Ral, the walker, stays out of scope.
 
+### The MKM dossier showcase (4.11 wave 2)
+
+`dossier` — "Dossier" in the Murders at Karlov Manor set (`karlov`,
+showcase era): the case-file folder of MKM #336–376 and their
+invisible-ink twins #377–389 and #433 — every printing Scryfall gives the
+`dossier` promo type in MKM, 55, every one a single-faced, black-bordered
+creature on the 2015 frame. Card Conjurer's 'Dossier' pack
+(packDossier.js, `img/frames/dossier/`, 2010 × 2814, downscaled ONCE to
+1500 × 2100), frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.dossier`, the `DOSSIER` block of `scripts/lib/cc-frames.mjs`).
+An ADDITION: a new template — no layout bump, no sweep, no badge; nobody
+can pick it until a colour is verified.
+
+- **Scope.** NOT MKM's 'magnified' showcase (#287–316: the round
+  magnifying-glass frame, another design, MSE only) and not its Ravnica
+  City legends (#317–323): both stay `showcase`. NOT the Secret Lair's four
+  dossier legends either (SLD #1566–1569 and their rainbow-foil twins, also
+  `dossier` on Scryfall): the same page on a NAVY border — 0,21,34 on every
+  edge of all eight scans, where MKM's reads 0,0,0 — with their own blue
+  (21,100,168) and black (54,44,76) accents; they keep their landing
+  (`showcase`, nearest on M15). The invisible-ink twins print the same
+  frame under a finish PipGlyph does not draw (their scans carry the ink's
+  scribbles and a cast): exact like the rest.
+- **Masters.** The pack's seven frames whole: w u b r g, m (gold — three
+  colours or more: #368 Niv-Mizzet) and `c` = the pack's slate 'Artifact
+  Frame' (`a.png`: the pack draws no colourless frame, and the run's one
+  colourless printing is an artifact creature, #376 Magnetic Snuffler). A
+  real black border top, right and bottom, cut at the one card corner; the
+  folder's tan edge runs to the LEFT edge, as on every print (the edge
+  contract's `design`; its corners are the border's black).
+- **The two-colour dress** (`twoColorMasters: ["split"]`, opt-in per card
+  like every two-colour dress; an import of a two-colour printing names
+  it). Print draws a two-colour card's accents — the photo's corners, the
+  title and type bands' rules, the two seals — in its FIRST colour on the
+  left and its second on the right (pair order: #354 R|W, #355 W|U, #365
+  U|R …; 28 of the 55), the rules ramping between. The pack has no
+  two-colour dress, so the ten pair masters are the two colour frames
+  lerped across `DOSSIER_PAIR_RAMP`, 43.5 → 59.5 %W, at the pack's size,
+  then downscaled once: each band rule's colour, column by column,
+  projected between the same rule's colour on two mono prints, crosses 10
+  / 50 / 90 % at 44.7 / 52.2 / 57.6 %W (the title band's lower rule, 12
+  prints; its upper rule and the type band's two agree within 1 %W).
+- **The window.** The photo is tilted: see-through (α < 16) on 79–1392 ×
+  274–1127 px, its anti-aliased rim (α < 250) on 77–1393 × 273–1128 on every
+  key. The art slot covers it with the art-window check's 0.05 % to spare:
+  76–1395 × 272–1131; the frame hides the slot's corners round the tilt.
+- **Tones** — the ring's one rule (raw scan medians over the 41 MKM prints
+  without the invisible ink; a region ≥ 9 levels off is toned;
+  `DOSSIER_PRINT_TONES`): the parchment (title band, type band, text box,
+  ink left out) pack 247,240,227 / print 245,240,227 — 2 off; the folder's
+  tan edge 185,160,112 / 181,158,109 — 4; the accents (the photo's
+  corners) within 3 on every key; the P/T tag's face 231,220,197 /
+  229,220,197 — 2; the crowns' colour band w / b / r / m within 2. Toned:
+  the GREEN crown (46,107,55 → 43,96,49: #352 and the green end of six
+  two-colour legends, 11 off) and the BLUE crown (50,89,168 → 43,92,156:
+  the blue end of six, 12 off) — the pack draws them off its own frame
+  accents, which print uses for the crown too — through the crown file's
+  own flat fill (`nearRegionPlane`) as the file loads. The artifact crown
+  has no print (no colourless legend): as drawn.
+- **Re-cut: none.** Print is the pack's drawing (the stamp's arch within 1
+  px, the bands' rules within 1–2 px). Nothing is moved.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), each measured on the 41 prints against
+  the built master of its colour (ink = what differs from the frame) and
+  then on our own bakes the same way:
+
+  | | print (median) | ours |
+  |---|---|---|
+  | name baseline / first ink | 187 / 131 | 187 / 132 |
+  | cost discs: centre row / last disc's right end / pitch | 176 / 1345 / 77.5 | 176 / 1344 (+ its shadow) / 78 |
+  | type baseline / first ink | 1264 / 131 | 1264 / 131 |
+  | set symbol (MKM) ink box, centre | 1259–1365 × 1196–1284, (1312, 1240) | (1313.5, 1241.5) |
+  | rules: first ink x / right ink (median) | 133 / 1347 | 132 / 1344 |
+  | P/T digits' ink centre | (1289.5, 1914) | (1289, 1915.5) |
+  | collector line 1 / 2 baseline | 1989 / 2028 | 1989 / 2028 |
+
+  — the name 2 px above M15's (`DOSSIER_TITLE_DY`); the cost row the CC
+  M15 row 19 px lower (`costDy`) and ending 38 px further left with the
+  name band's right end (the folder's clip covers the band's end; print's
+  row ends at 1345); the type band's right end — the set symbol's — 17 px
+  left of M15's, the type line 4 px under the CC baseline; M15's rules box
+  (print's short texts centre on its middle: their ink centres 1615–1630);
+  the P/T on the pack's tag at its ptBounds (1147.6–1440.1 ×
+  1841.9–1987.4 px), M15's digit box 7.5 px up and 1 px left; the
+  collector line 5 / 4 px above M15's rows (`DOSSIER_COLLECTOR`), M15's pen.
+- **Flagged, not changed:** print sets the name, the type line and the
+  P/T along the bands' tilt (Card Conjurer rotates them 1°, −0.5° and
+  −2.5°); PipGlyph draws text level. Print's rules are a TYPEWRITER face
+  (Card Conjurer's 'Special Elite') and its flavour in typewriter capitals;
+  ours MPlantin (no font is added for a frame). Print's cost pips are
+  OUTLINED (Card Conjurer's `manaSymbolsOutlineAlt`: a coloured ring and
+  glyph, no fill, 75 px across) where ours are the family's filled 70 px
+  discs — a symbol style of its own, its own item. Print's P/T digits are
+  52 px tall against our 47 (the family's size).
+- **Crown** (`DOSSIER_CROWN`, `dossiercrown/<key>.png`, 1500 × 316): the
+  pack's 'Legendary Crown' (`crown/<k>.png`, 1790 × 419 at 33 / 0 of the
+  2010 × 2814 card) — the torn paper strip in the card's colour above the
+  title band that every legendary dossier print carries (#337, #344, #350,
+  #352 and every legendary pair and gold card; the plain #336, #343, #358
+  don't). Keys: w u b r g m c (c the artifact's slate crown) and the ten
+  pairs, the first colour's crown left and the second's right across
+  `DOSSIER_CROWN_RAMP`, 40.5 → 57.5 %W (the crown's band on the run's
+  two-colour legends: 10 / 50 / 90 % at 42.5 / 49.7 / 55.9 %W). The
+  showcase is in `CROWNED_SHOWCASE_SIGNATURES`: a legendary import names
+  the crown ON. An ADDITION, opt-in per card.
+- **Stamp** (`DOSSIER_HOLO_STAMP`, `dossierholostamp/<key>.png`): the
+  run's rares and mythics wear the OVAL (`security_stamp: oval`, 45 of 55),
+  its uncommons none — "auto" is a rare or mythic, as on M15. The notch is
+  the pack's one 'Holo Stamp' (`stamp.png`, 295 × 134 at 857 / 2540 of 2010
+  × 2814) — the black border arched up into the page's foot, print's arch
+  (its top on 1908 px against print's 1909) — placed and downscaled with
+  the card, cut to a 226 × 106 box at 637, 1893, its rows above the arch
+  cleared (the master's own page shows there; the downscale rang at the
+  piece's top edge), one piece under every key and pair. The pack paints a
+  capture of the hologram in the well 5–7 px BELOW where print sets it
+  (684–816 × 1928–1992 against the prints' 685–818 × 1921–1988 on 29 of the
+  31 stamped prints without the ink, every one within 1 px): every lit pixel
+  of it inside its ellipse is painted opaque black first (grown 2 px —
+  `blackoutCapturePx`, the importer's capture-blackout; the arch's
+  parchment shoulders lie outside the ellipse), then the prints' oval + 2 px
+  cut clear and the 2 px round it painted black — no pixel of the capture
+  is published; our oval art covers the cut. The arch is a rules keep-out
+  (645–855 × 1908–1946). An ADDITION, opt-in per card.
+- **Imports.** `showcase/mkm/dossier` (set `mkm`, promo type `dossier`) is
+  exact on `dossier` once the card's colour is verified, `nearest` until
+  then (`withVerification`); before this frame the run imported
+  `showcase`, nearest on M15 / its artifact frame. No gap: the template
+  draws the two-colour dress, the crown and the oval stamp. Every
+  printing keeps its real colour (a pair's colours, gold for three or
+  more); every other fixture's outcome is unchanged.
+- **Creator.** In the Showcase & Universes Beyond era as "Murders at
+  Karlov Manor — Dossier", for every kind its body draws but the land
+  (`TREATMENT_KINDS`: the pack has no land frame, and its pair masters are
+  a spell frame's split, which a land never wears); offered only in a
+  ticked colour, and the AI's random pool reaches it only there.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -10082,7 +10225,7 @@ TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions and 4.11 wave 2's D&D Sourcebook and Dominaria United Stained Glass, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, MKM dossier and Dominaria United Stained Glass, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

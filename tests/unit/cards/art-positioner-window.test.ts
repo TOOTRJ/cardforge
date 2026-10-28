@@ -133,6 +133,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1344, 1806] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
+  // The MKM dossier showcase (TODO 4.11 wave 2): the tilted photo's
+  // half-transparent rim covered with the art-window check's spare.
+  dossier: { front: [1319, 859] },
   // The Dominaria United Stained Glass (TODO 4.11 wave 2): the window
   // (60–1439 × 233–1167 px) with the art-window check's spare.
   stainedglass: { front: [1382, 939] },

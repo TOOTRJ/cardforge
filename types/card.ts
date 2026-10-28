@@ -564,6 +564,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // Legends: Battle for Baldur's Gate (CLB #375–450, 2022) — one design for
   // every colour. An addition: no stored card sits on it.
   "dndsourcebook",
+  // The Murders at Karlov Manor DOSSIER showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Dossier' pack, frames bucket): the case-file folder of MKM
+  // #336–389 and #433 (Scryfall's `dossier` promo type, 55 printings) — a
+  // photo clipped to the page, a colour accent per key. An addition: no
+  // stored card sits on it.
+  "dossier",
   // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, Card
   // Conjurer's 'Stained Glass (DMU)' pack, frames bucket): DMU #287–368 and
   // the Multiverse Legends Dominaria legends (MUL #5, #12, #19, #22, #24,
@@ -724,6 +730,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  // Set-relative: the picker prints "Murders at Karlov Manor — Dossier".
+  dossier: "Dossier",
   // Set-relative: the picker prints "Dominaria United — Stained Glass".
   stainedglass: "Stained Glass",
   extendedart: "Extended Art",
@@ -771,6 +779,7 @@ export const FRAME_SET_VALUES = [
   "multiverselegends",
   "zendikarrising",
   "dnd",
+  "karlov",
   "extended",
   "fullartset",
   "expeditions",
@@ -796,6 +805,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
   // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
   dnd: "Dungeons & Dragons",
+  // Murders at Karlov Manor (MKM 2024): the Dossier showcase.
+  karlov: "Murders at Karlov Manor",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -876,6 +887,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirghostfire: "tarkir",
   stainedglass: "dominariaunited",
   tarkirdragon: "multiverselegends",
+  dossier: "karlov",
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
@@ -964,6 +976,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   zendikarrising: "showcase",
   // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
   dnd: "showcase",
+  // The Murders at Karlov Manor Dossier showcase (MKM #336–389, #433).
+  karlov: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
   // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall

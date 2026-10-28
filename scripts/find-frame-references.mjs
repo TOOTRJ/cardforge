@@ -373,6 +373,14 @@ const TEMPLATES = {
     confirm: "AFR / CLB showcase — confirm the thumbnail is the parchment sourcebook page, not the orange 'Dungeon Module' cover (AFR #350–358).",
     q: (k) => `((set:afr cn>=299 cn<=349) or (set:clb cn>=375 cn<=450)) ${spellColor(k)}`,
   },
+  // The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo
+  // type in MKM (#336–389, #433) — NOT the Secret Lair's navy-bordered four
+  // (SLD #1566–1569) and not MKM's 'magnified' showcase. `m` a two-colour
+  // card (the pair masters ride the gold key) and the five-colour Niv-Mizzet.
+  dossier: {
+    confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
+    q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
+  },
   // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU
   // #287–368 and MUL's Dominaria legends (#5 … #59; #135 … #189 their
   // halo-foil twins). No colourless, artifact or land printing; no mono-green.

@@ -19,7 +19,7 @@ import {
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
-import { DNDSOURCEBOOK_COLLECTOR, STAINEDGLASS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15_COLLECTOR, getFrameProfile, type CollectorSlot } from "@/lib/cards/template-layout";
+import { DNDSOURCEBOOK_COLLECTOR, DOSSIER_COLLECTOR, STAINEDGLASS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15_COLLECTOR, getFrameProfile, type CollectorSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -92,9 +92,9 @@ describe("when the line is drawn", () => {
     // The Expeditions (TODO 4.11 wave 1): M15's slot on each look's printed
     // rows — the same layout as M15's with those two baselines.
     // (…and the MUL Tarkir dragon wings, TODO 4.11: the ZNE rows.)
-    // (…and the D&D Sourcebook, TODO 4.11 wave 2: its run's rows; the
-    // Dominaria United stained glass, the same: its own run's rows.)
-    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR };
+    // (…and the D&D Sourcebook, the MKM dossier and the Dominaria United
+    // stained glass, TODO 4.11 wave 2: their runs' rows.)
+    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, dossier: DOSSIER_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR };
     for (const template of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(template);
       if (!profile.collector) continue;
