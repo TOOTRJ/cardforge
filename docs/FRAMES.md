@@ -1374,7 +1374,10 @@ the union of each part's own scope:
   card container draws natively and the bake materialises in px at its own
   width (`bakeShadowCss`: 1 px at 750, 2 at HD). Until v73 they were CSS px —
   the HD bake drew them at half the preview's share of the card. Never
-  write a shadow in px on a profile (a test reads them).
+  write a shadow in px on a profile (a test reads them). The
+  pipglyph.com mark's soft shadow too (`BRAND_MARK_LIGHT_SHADOW`) — it is on
+  every display bake, so that part (`v73BrandMarkShadowChanged`) is every
+  card, and so is the union.
 - **The four-way outline** (TODO 3.25): a text shadow of two or more
   zero-blur layers (`OUTLINE_SHADOW` — the walkers' starting loyalty,
   tarkirghostfire's name, type line and P/T) is drawn in the bake as one

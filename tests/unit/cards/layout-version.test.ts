@@ -3774,25 +3774,17 @@ describe("v73 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 
     expect([...V73_SHADOW_TEMPLATES].sort()).toEqual([...declared].sort());
   });
 
-  it("re-bakes a card in a part's scope and stamps every other", async () => {
+  it("3.5 — the brand mark: every card (the mark is on every display bake), so the union is every card", async () => {
     const lv = await import("@/lib/cards/layout-version");
     const sweep = await sweepAt(V);
-    for (const over of [
-      { rules_text: "Flying", flavor_text: "Up." },
-      { rules_text: "Choose one —\n• Draw a card.\n• Scry 2." },
-      { frame_style: { template: "m15land" }, title: "Training Ground: Waterfall Basin" },
-      { frame_style: { template: "nyx" } },
-    ]) {
-      const row = at(over);
-      expect(lv.v73Changed(row), JSON.stringify(over)).toBe(true);
-      expect(sweep(row), JSON.stringify(over)).toBe("rebake");
+    for (const template of ["m15", "saga", "split", "retro", "m15borderless", "lotr"]) {
+      const row = at({ frame_style: { template } });
+      expect(lv.v73BrandMarkShadowChanged(row)).toBe(true);
+      expect(lv.v73Changed(row)).toBe(true);
+      expect(sweep(row), template).toBe("rebake");
+      expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
       expect(lv.hasPendingCorrection(row, AT)).toBe(true);
       expect(lv.hasNewerLook(row, AT)).toBe(false);
-    }
-    for (const over of [{}, { rules_text: "Flying" }, { frame_style: { template: "m15land" }, title: "Forest" }, { frame_style: { template: "m15pw" } }]) {
-      const row = at(over);
-      expect(lv.v73Changed(row), JSON.stringify(over)).toBe(false);
-      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
     }
   });
 

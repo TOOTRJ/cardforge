@@ -1736,6 +1736,9 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //              outline's last layer (a one-sided up-left shadow). A card on
 //              those frames, or on adventure / prepare / fullart / nyx
 //              (v73ShadowsChanged).
+//            * 3.5 the pipglyph.com mark's soft shadow in card-width px too
+//              — on every display bake, so this part is EVERY card
+//              (v73BrandMarkShadowChanged) and the union is too.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -2862,12 +2865,32 @@ export function v73ShadowsChanged(card: ScopeCard): boolean {
 }
 
 /**
+ * v73's brand-mark part (TODO 3.5): the pipglyph.com mark's soft shadow in
+ * card-width px — on the border or in the collector / © slot, the mark is
+ * on EVERY display bake (the watermark policy), so every card. (A card
+ * whose frame sets the mark flat in a © slot's dark ink bakes to the same
+ * pixels: read wider than drawn.)
+ */
+export function v73BrandMarkShadowChanged(_card: ScopeCard): boolean {
+  void _card;
+  return true;
+}
+
+/**
  * Whether layout v73 (rendering corrections, round 1) changed a card's
  * bake: the union of its parts, each scoped as narrowly as its own
- * predicate allows (owner 2026-10-28).
+ * predicate allows (owner 2026-10-28). The brand-mark part is every card,
+ * so the union is too — the parts stay named for the owner's count and for
+ * the day a part is shipped on its own.
  */
 export function v73Changed(card: ScopeCard): boolean {
-  return v73FlavorBarChanged(card) || v73BulletModesChanged(card) || v73TitleBandChanged(card) || v73ShadowsChanged(card);
+  return (
+    v73FlavorBarChanged(card) ||
+    v73BulletModesChanged(card) ||
+    v73TitleBandChanged(card) ||
+    v73ShadowsChanged(card) ||
+    v73BrandMarkShadowChanged(card)
+  );
 }
 
 /**
@@ -3340,7 +3363,7 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // flavour (or its back face's) holds a `*…*` pair — flavorMarkupChanged.
   [FLAVOR_MARKUP_LAYOUT_VERSION]: flavorMarkupChanged,
   // v73 — rendering corrections, round 1: the union of its parts —
-  // v73Changed.
+  // v73Changed (the brand mark's part is every card).
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: v73Changed,
 };
 
