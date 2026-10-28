@@ -544,6 +544,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Enchanting Tales' pack, frames bucket): the swirled
+  // storybook frame of the bonus sheet WOT #1–63 (2023), borderless, the
+  // art under its translucent text box. An addition: no stored card sits on
+  // it.
+  "enchantingtales",
   "avatar",
   "bloomburrow",
   "bloomanime",
@@ -553,6 +559,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Streets of New Capenna (SNC 2022) — the ART DECO showcase of the five
+  // families' three-colour cards (SNC #296–340) and their gilded-foil twins
+  // (#361–405): black and gold filigree, the art under translucent bars and
+  // text box. Card Conjurer's pack for it is 'Golden Age (SNC)'
+  // (packSNCGilded.js; CC's 'Art Deco (SNC)' pack draws the Golden Age
+  // cards #341–359 instead). An addition: no stored card sits on it.
+  "sncartdeco",
   // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
   // art (Scryfall flags none of those printings full_art), but the key keeps
   // its historical name because it is stored in cards.frame_style,
@@ -721,6 +734,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Wilds of Eldraine — Enchanting Tales".
+  enchantingtales: "Enchanting Tales",
   avatar: "Elemental",
   bloomburrow: "Woodland",
   bloomanime: "Anime",
@@ -730,6 +745,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  // Set-relative: the picker prints "Streets of New Capenna — Art Deco".
+  sncartdeco: "Art Deco",
   // Set-relative: the picker prints "Murders at Karlov Manor — Dossier".
   dossier: "Dossier",
   // Set-relative: the picker prints "Dominaria United — Stained Glass".
@@ -772,11 +789,13 @@ export const FRAME_SET_VALUES = [
   "borderless",
   "alpha",
   "lotr",
+  "eldraine",
   "avatar",
   "bloomburrow",
   "tarkir",
   "dominariaunited",
   "multiverselegends",
+  "newcapenna",
   "zendikarrising",
   "dnd",
   "karlov",
@@ -794,6 +813,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   borderless: "Borderless",
   alpha: "Alpha (1993)",
   lotr: "The Lord of the Rings",
+  // Wilds of Eldraine (WOE 2023) and its bonus sheet, Enchanting Tales (WOT).
+  eldraine: "Wilds of Eldraine",
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
@@ -801,6 +822,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   // Multiverse Legends Dominaria legends (MUL 2023) print too.
   dominariaunited: "Dominaria United",
   multiverselegends: "Multiverse Legends",
+  newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
   // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
@@ -880,6 +902,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  enchantingtales: "eldraine",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   bloomanime: "bloomburrow",
@@ -887,6 +910,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirghostfire: "tarkir",
   stainedglass: "dominariaunited",
   tarkirdragon: "multiverselegends",
+  sncartdeco: "newcapenna",
   dossier: "karlov",
   extendedart: "extended",
   extendedartland: "extended",
@@ -967,12 +991,16 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   extended: "m15",
   fullartset: "m15",
   lotr: "showcase",
+  // The Enchanting Tales showcase (WOT #1–63).
+  eldraine: "showcase",
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",
   // The Stained Glass showcase (DMU #287–368, MUL's Dominaria legends).
   dominariaunited: "showcase",
   multiverselegends: "showcase",
+  // The Art Deco showcase (SNC #296–340, #361–405).
+  newcapenna: "showcase",
   zendikarrising: "showcase",
   // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
   dnd: "showcase",

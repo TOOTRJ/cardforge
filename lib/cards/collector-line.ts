@@ -144,6 +144,10 @@ export const COLLECTOR_TEMPLATES = [
   // The Bloomburrow anime (TODO 4.11, layout v70): BLB #343–355 set both
   // lines on M15's rows on the footer its master now paints.
   "bloomanime",
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): SNC #296–340 /
+  // #361–405 set both lines on M15's rows within 2 px (line 1's ink ending
+  // 1991, line 2's 2029, as the Tarkir draconic's) in the black border.
+  "sncartdeco",
   // …and the D&D Sourcebook showcase (TODO 4.11 wave 2, Card Conjurer's 'D&D
   // Sourcebook'): AFR #299–349 and CLB #375–450 set both lines in the black
   // border under the page, 4 px below M15's rows (DNDSOURCEBOOK_COLLECTOR).
@@ -152,6 +156,10 @@ export const COLLECTOR_TEMPLATES = [
   // MKM #336–389 / #433 set both lines in the black border under the page,
   // 4–5 px above M15's rows and 2 px left of its pen (DOSSIER_COLLECTOR).
   "dossier",
+  // …and the Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
+  // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).
+  "enchantingtales",
   // …and the Dominaria United Stained Glass showcase (TODO 4.11 wave 2,
   // Card Conjurer's 'Stained Glass (DMU)'): DMU #287–368 and MUL's Dominaria
   // legends set both lines in the black border, 4 px below M15's rows

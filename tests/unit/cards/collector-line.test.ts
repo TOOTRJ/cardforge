@@ -112,10 +112,14 @@ describe("the switch values", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, layout v70).
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): M15's slot.
+      "sncartdeco",
       // …and the D&D Sourcebook (TODO 4.11 wave 2): its run's rows.
       "dndsourcebook",
       // …and the MKM dossier (TODO 4.11 wave 2): its run's rows.
       "dossier",
+      // …and the Enchanting Tales (TODO 4.11 wave 2): its run's rows.
+      "enchantingtales",
       // …and the Dominaria United stained glass (TODO 4.11 wave 2): its run's rows.
       "stainedglass",
     ]);

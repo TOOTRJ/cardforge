@@ -123,6 +123,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): CC's artBounds, the
+  // art under the whole frame from the title bar to the text box's foot.
+  enchantingtales: { front: [1500, 1821] },
   avatar: { front: [1500, 1168] },
   bloomburrow: { front: [1500, 954] },
   bloomanime: { front: [1500, 2100] },
@@ -133,6 +136,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1344, 1806] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its window with
+  // the check's spare; the art under the bars is a second layer.
+  sncartdeco: { front: [1262, 934] },
   // The MKM dossier showcase (TODO 4.11 wave 2): the tilted photo's
   // half-transparent rim covered with the art-window check's spare.
   dossier: { front: [1319, 859] },
@@ -268,8 +274,10 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // before its back, 5.5 (b) PR 2: the same column; 39 before the full-art
     // token's Nyx dress, TODO 4.51: six more full-art token windows; 45
     // before the Expeditions' window + panel, TODO 4.11 wave 1: the 2020
-    // look's 1382 × 1500 and the new 2015 look's 1276 × 1471.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(47);
+    // look's 1382 × 1500 and the new 2015 look's 1276 × 1471; 47 before the
+    // Enchanting Tales showcase, TODO 4.11 wave 2: the art under its whole
+    // frame, 1500 × 1821.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(48);
   });
 });
 

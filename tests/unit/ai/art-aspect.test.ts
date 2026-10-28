@@ -110,6 +110,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the art under the
+  // whole frame from the title bar down, 1500 × 1821 px.
+  enchantingtales: ["928x1120", "3:4", 0.8237],
   // TODO 4.11 (layout v69): print's windows, edge to edge across the card.
   avatar: ["1152x896", "4:3", 1.284],
   bloomburrow: ["1280x816", "3:2", 1.572],
@@ -122,6 +125,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tarkirghostfire: ["880x1184", "3:4", 0.7442],
   // The Card Conjurer Tarkir window (TODO 4.11, v67): 1237 × 929 px.
   tarkirdragon: ["1168x880", "4:3", 1.332],
+  // The New Capenna Art Deco window (TODO 4.11 wave 2): 1262 × 934 px — the
+  // under-frame art is its own layer.
+  sncartdeco: ["1184x880", "4:3", 1.351],
   // The Card Conjurer dossier window (TODO 4.11 wave 2): the tilted photo, 1319 × 859 px.
   dossier: ["1264x816", "3:2", 1.5355],
   // The Dominaria United Stained Glass window (TODO 4.11 wave 2): 1382 × 939 px.

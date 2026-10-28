@@ -65,6 +65,9 @@ describe("where the pieces are declared", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish above the name box.
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): the arch baked into
+      // its crowned twins (crownMasters).
+      "sncartdeco",
       // …and the MKM dossier (TODO 4.11 wave 2): the pack's torn colour strip, its pairs lerped.
       "dossier",
       // …and the Dominaria United stained glass (TODO 4.11 wave 2): the

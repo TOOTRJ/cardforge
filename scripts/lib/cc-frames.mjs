@@ -581,6 +581,8 @@ export function sourceTonesOf(src) {
   if (Object.hasOwn(DOSSIER_SOURCE_TONES, src)) return DOSSIER_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
   if (Object.hasOwn(TARKIR_SOURCE_TONES, src)) return TARKIR_SOURCE_TONES[src];
+  // …and the New Capenna Art Deco gold (TODO 4.11 wave 2, SNC_DECO_SOURCE_TONES).
+  if (Object.hasOwn(SNC_DECO_SOURCE_TONES, src)) return SNC_DECO_SOURCE_TONES[src];
   // …and the Dominaria United stained glass (TODO 4.11 wave 2, SG_SOURCE_TONES).
   return Object.hasOwn(SG_SOURCE_TONES, src) ? SG_SOURCE_TONES[src] : null;
 }
@@ -4474,6 +4476,450 @@ export function stampShapeBlackFindings(buf, stamp, width, height) {
 }
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2): the Streets of New Capenna ART DECO
+// showcase (`sncartdeco`; SNC #296–340 — the 45 three-colour cards of the
+// five families, 2022 — and their gilded-foil twins #361–405: 90 printings,
+// every one single-faced, black-bordered, on the 2015 frame) from Card
+// Conjurer's 'Golden Age (SNC)' pack (packSNCGilded.js,
+// `img/frames/snc/gilded/`, 1500 × 2100 NATIVE: nothing is resampled). Card
+// Conjurer names its packs the other way round from the prints: its 'Art
+// Deco (SNC)' pack (packSNCArtDeco.js, snc/artDeco/) draws the pale Golden
+// Age cards SNC #341–359 (Elspeth, Giada, the lands), and its 'Golden Age'
+// pack is the black-and-gold filigree #296–340 print. An ADDITION: a new
+// template, no stored card sits on it.
+//   • ONE master for every key: the pack's 'Regular Frame' (gilded/m.png)
+//     is the one gold filigree all 90 printings wear (every one is three
+//     colours: GRW GUW BRU BGR BUW); the pack's 'GildedColored' frames
+//     (gilded/colored/<k>.png, silver for the mono colours) are Card
+//     Conjurer's own — no printing wears them — and are not imported.
+//   • its crowned twin under every key (`<k>-legendary`, the profile's
+//     crownMasters): the pack's 'Legendary Frame' (gilded/legendary/m.png),
+//     the arch over the title bar every legendary printing of the run carries
+//     (30 of 90). It is a whole master because the arch changes the
+//     translucent bar under it (28,300 pixels differ, 10,843 of them
+//     translucent) — no overlay can draw that.
+//   • a real black border all round (the edge contract's ALL_BORDER), cut at
+//     the one card corner; the prints' border is the black of SNC's own
+//     regular printings on the same scans (22,19,14 both — the woodland rule):
+//     true black, as drawn.
+//   • the art runs under the title bar, the type bar and the text box (α 127
+//     on 98–1399 × 116–1933, the twin's arch from 79): the profile's
+//     underFrameArt; the window (α < 250 on 120–1379 × 238–1167) is its own
+//     slot, the two meeting on the opaque gold round it.
+//   • plates: the pack's one P/T plate (gilded/pt/m.png, 254 × 134 at its
+//     bounds 1156 / 1857, 1:1) under every key.
+//   • geometry kept as drawn: registered on the 45 non-gilded prints, the
+//     pack's pillars, art-foot rim, type bar and box rim sit within 0–2 px of
+//     print's; the plain prints draw their title bar 6–7 px LOWER than the
+//     pack (the legendary prints and the pack's twin within 1 px), but the
+//     pillars run unbroken from the title bar to the box, a gold texture no
+//     row of which repeats (rows 69–1949 hold no two equal rows): no flat
+//     zone, so nothing is re-cut and the slots ride the pack's own bars.
+// ---------------------------------------------------------------------------
+export const SNC_DECO = "img/frames/snc/gilded";
+const SNC_DECO_PACK = "packSNCGilded.js 'Golden Age (SNC)' — the Streets of New Capenna Art Deco showcase, SNC #296–340 / #361–405 (groupShowcase-5.js; CC's 'Art Deco (SNC)' pack draws the Golden Age cards #341–359)";
+/**
+ * The pack's gold against print by the ring's one rule (raw scan medians; a
+ * region ≥ 9 levels off is toned), the 45 non-gilded prints (#296–340;
+ * Scryfall PNGs at 1500 × 2100), each registered block by block (the title
+ * bar, each pillar, the type bars, the box) on the pack's gold, the median
+ * of every print's median:
+ *   • the gold (the pack's pixels of chroma ≥ 45, eroded 2 px for the read —
+ *     the pillars, rims, title and type bars' rings and the box's frame):
+ *     181,156,71 → 207,180,115 (quartiles 206–208 / 179–182 / 113–119) —
+ *     26 / 24 / 44 off: TONED;
+ *   • the plate's gold rim (30 creatures): 176,152,68 → 202,164,98 — 26 / 12
+ *     / 30 off: TONED;
+ *   • the plate's dark face: 20,16,24 → 20,19,21 — 3: as drawn;
+ *   • the black border: 0,0,0, where the prints read 22,19,14 — and SNC's
+ *     own regular black-bordered printings on the same scans read 22,19,14
+ *     too (16 cards, #1–17): print's true black, as drawn.
+ * The translucent bars and box lie over each card's art: no raw median to
+ * tone by — as drawn (α 127). The gilded twins (#361–405) print the gold as
+ * an embossed foil that scans near-black (25,24,13): a finish, not read.
+ * Through toneSourceRegions on the file's own gold (chromaRegionPlane): a
+ * per-channel gain at the region's tone, fading to the neutral gain toward
+ * white.
+ */
+export const SNC_DECO_PRINT_TONES = Object.freeze({
+  gold: Object.freeze({ from: [181, 156, 71], to: [207, 180, 115] }),
+  plateGold: Object.freeze({ from: [176, 152, 68], to: [202, 164, 98] }),
+});
+/** The gold region: the file's pixels of chroma (max − min channel) ≥
+ *  `full`, none at ≤ `none`: the pack's gold reads 40–110, its brown box
+ *  ornaments 31–33 and the dark bars below them — so neither is toned. */
+export const SNC_DECO_GOLD_CHROMA = Object.freeze({ full: 45, none: 34 });
+export const SNC_DECO_SOURCE_TONES = Object.freeze({
+  ...Object.fromEntries(
+    [`${SNC_DECO}/m.png`, `${SNC_DECO}/legendary/m.png`].map((file) => [
+      file,
+      Object.freeze({ chroma: Object.freeze({ gold: SNC_DECO_GOLD_CHROMA }), tones: Object.freeze({ gold: SNC_DECO_PRINT_TONES.gold }), table: "SNC_DECO_PRINT_TONES (gold)" }),
+    ]),
+  ),
+  [`${SNC_DECO}/pt/m.png`]: Object.freeze({ chroma: Object.freeze({ plateGold: SNC_DECO_GOLD_CHROMA }), tones: Object.freeze({ plateGold: SNC_DECO_PRINT_TONES.plateGold }), table: "SNC_DECO_PRINT_TONES (plateGold)" }),
+});
+/**
+ * The translucent title bar, type bar and text box as dark as print's
+ * (owner, #622 review): the pack draws all three black at α 127 (0.50);
+ * print's are near-black with only faint art through. Measured 2026-10-28 on
+ * the 45 non-gilded prints (Scryfall PNGs at 1500 × 2100) by fitting `out =
+ * α·c + (1 − α)·art` on pixel pairs ACROSS each region's opaque rim — the art
+ * seen through the window just outside it against the same column seen
+ * through the region (the title bar: window rows 252–275 against bar rows
+ * 190–198; the type bar: window rows 1142–1165 against bar rows 1205–1212;
+ * the text box: the type bar's foot 1275–1282, the art under it recovered
+ * with the type bar's fit, against the box's top 1331–1337), kept only where
+ * the art is a flat field on both sides (σ < 10–20 levels over the band;
+ * white ink left out). The layer colour fits at 15–18 on every channel, below
+ * the 22 the same scans read on the card's true-black border: black, as the
+ * pack draws it — so only α moves. Per region, the median α of the pairs
+ * (stable within 0.03 as the flatness threshold moves 10 → 20):
+ *   • the title bar: 0.74 (quartiles 0.56–0.80; 2,050 pairs);
+ *   • the type bar:  0.81 (0.74–0.88; 793 pairs, 26 prints);
+ *   • the text box:  0.82 (0.77–0.86; 1,872 pairs, all 45 prints).
+ * The box's mean luma on #297 / #298 agrees: print 44 / 46, ours at α 0.50
+ * 86 / 73 — α 0.82 / 0.77 for the same art.
+ * Applied by `liftTranslucency` to each band's rows: a pixel at the pack's
+ * α (`from`) takes the band's α; one between it and opaque (the rims'
+ * anti-aliased edges) keeps its place on that ramp; below `from` it scales
+ * with it. Colour untouched.
+ */
+export const SNC_DECO_TRANSLUCENCY = Object.freeze({
+  from: 127,
+  bands: Object.freeze([
+    Object.freeze({ name: "title bar", y0: 40, y1: 237, alpha: Math.round(0.74 * 255) }),
+    Object.freeze({ name: "type bar", y0: 1168, y1: 1319, alpha: Math.round(0.81 * 255) }),
+    Object.freeze({ name: "text box", y0: 1320, y1: 1960, alpha: Math.round(0.82 * 255) }),
+  ]),
+});
+/** Pure: a copy of `buf` (8-bit RGBA, `width` wide) with each band's
+ *  translucent pixels re-weighted onto its α (see SNC_DECO_TRANSLUCENCY). */
+export function liftTranslucency(buf, width, height, { from, bands }) {
+  if (buf.length !== width * height * 4) throw new Error(`liftTranslucency: the image is not ${width}x${height} RGBA`);
+  const out = Buffer.from(buf);
+  for (const { y0, y1, alpha } of bands) {
+    if (!(alpha > from && alpha < 255)) throw new Error(`liftTranslucency: α ${alpha} is not between ${from} and 255`);
+    for (let y = Math.max(0, y0); y <= Math.min(height - 1, y1); y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const o = (y * width + x) * 4 + 3;
+        const a = out[o];
+        if (a === 0 || a === 255) continue;
+        out[o] = a >= from ? Math.round(255 - ((255 - a) * (255 - alpha)) / (255 - from)) : Math.round((a * alpha) / from);
+      }
+    }
+  }
+  return out;
+}
+/**
+ * A see-through dot in the right pillar's fin, outside the window (the pack's
+ * anti-aliasing: x 1378–1379 on row 969, α 232 / 143, between opaque gold at
+ * 1377 and 1380): inside the window's slot it showed the WINDOW's art layer
+ * where the under-frame layer belongs (#622 review). Filled opaque from its
+ * two neighbours on the row, interpolated — the gold the pillar draws round
+ * it. Every other see-through pixel inside the slot is the window's own
+ * (tests/unit/frames/snc-art-deco-importer.test.ts holds it).
+ */
+export const SNC_DECO_DOT_FILLS = Object.freeze([Object.freeze({ y: 969, x0: 1378, x1: 1379 })]);
+/** Pure: a copy of `buf` with each run's pixels interpolated, opaque,
+ *  between the opaque pixels either side of it on its row. */
+export function fillDots(buf, width, runs) {
+  const out = Buffer.from(buf);
+  for (const { y, x0, x1 } of runs) {
+    const l = (y * width + x0 - 1) * 4;
+    const r = (y * width + x1 + 1) * 4;
+    if (out[l + 3] !== 255 || out[r + 3] !== 255) throw new Error(`fillDots: the run ${x0}–${x1} on row ${y} has no opaque neighbour on each side`);
+    for (let x = x0; x <= x1; x += 1) {
+      const t = (x - x0 + 1) / (x1 - x0 + 2);
+      const o = (y * width + x) * 4;
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(out[l + c] * (1 - t) + out[r + c] * t);
+      out[o + 3] = 255;
+    }
+  }
+  return out;
+}
+const SNC_DECO_NOTES = [
+  "w u b r g c m = the pack's 'Regular Frame' (snc/gilded/m.png, 1500x2100 NATIVE — no resample), byte for byte: the one gold filigree all 90 printings wear (every card of the run is three colours); the pack's 'GildedColored' frames (snc/gilded/colored/<k>.png) are Card Conjurer's own — no printing wears them — and are not imported",
+  "<k>-legendary = the pack's 'Legendary Frame' (snc/gilded/legendary/m.png): the arch over the title bar all 30 legendary printings carry, baked into its own master under every key (the profile's crownMasters) — the arch changes the translucent bar under it, which no overlay can draw",
+  "Card Conjurer's names run the other way round from print: its 'Art Deco (SNC)' pack (snc/artDeco/) is the pale Golden Age frame of SNC #341–359, its 'Golden Age (SNC)' pack this black-and-gold Art Deco frame of #296–340 / #361–405",
+  "a real black border all round, cut at the one card corner (print's border is the black of SNC's own regular printings on the same scans, 22,19,14 both: true black)",
+  "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
+  `the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold ${SNC_DECO_PRINT_TONES.gold.from.join(",")} → ${SNC_DECO_PRINT_TONES.gold.to.join(",")}, the plate's gold rim ${SNC_DECO_PRINT_TONES.plateGold.from.join(",")} → ${SNC_DECO_PRINT_TONES.plateGold.to.join(",")} (the file's pixels of chroma ≥ ${SNC_DECO_GOLD_CHROMA.full}); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read`,
+  "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+  `the translucent title bar, type bar and text box as dark as print's (owner, #622 review): the pack's α 0.50 lifted to ${SNC_DECO_TRANSLUCENCY.bands.map((b) => `${b.name} ${(b.alpha / 255).toFixed(2)}`).join(", ")} — fitted as out = α·c + (1 − α)·art on pixel pairs across each region's opaque rim on the 45 non-gilded prints (flat art fields only); the layer colour fits black (15–18 against the border's 22 on the same scans), so only α moves; the rims' anti-aliased edges keep their place on the ramp (SNC_DECO_TRANSLUCENCY, liftTranslucency)`,
+  "a see-through dot in the right pillar's fin (x 1378–1379 on row 969, the pack's anti-aliasing), inside the window's slot but not the window's, filled opaque from its neighbours — the window layer and the under-frame layer now meet on opaque gold all round (SNC_DECO_DOT_FILLS)",
+];
+
+// TODO 4.11 (showcase rebuild, wave 2): the Wilds of Eldraine ENCHANTING
+// TALES showcase (`enchantingtales`; the bonus sheet WOT #1–63, 2023 — 63
+// printings, every one a mono-coloured enchantment, Auras and Bitterblossom's
+// Kindred Enchantment among them, none legendary, none a creature) from Card
+// Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js,
+// `img/frames/enchantingTales/`, 2010 × 2814: downscaled ONCE to 1500 ×
+// 2100, Lanczos, as the scroll's). NOT WOT #64–83 (and their confetti-foil
+// twins #84–103): the anime-style borderless reprints of twenty of the same
+// cards, another design (dark translucent boxes, no swirls) the pack does not
+// draw. An ADDITION: a new template, no stored card sits on it.
+//   • masters: the pack's six colour frames whole — w u b r g, and m (gold,
+//     no print: the run is mono-coloured) — and `c` = the WHITE frame: the
+//     pack draws no colourless (or artifact, or land) frame and no
+//     colourless card prints on it; the white page is CC's own nearest
+//     neutral (its swirls 142,138,118, its bars 208,205,183).
+//   • BORDERLESS as printed (Scryfall `border_color: borderless`): the
+//     swirled frame field runs to the top edge and down both sides above
+//     the art and beside the text box (design), the art to the side edges
+//     between them, the dark footer in the colour's own tone (w 72,71,61, u
+//     8,38,60 …) to the bottom edge — the importer cuts the one card corner.
+//   • the art runs under the WHOLE frame from the title bar down: see-
+//     through across the card's width from row 116 (the top-right shoulder)
+//     to the type bar, and on under the translucent text box (α 204 on w,
+//     222 on the others — print shows the art through it) to row 1931 —
+//     CC's artBounds (0 / 111 / 1500 × 1821 px) cover it.
+//   • plates: the pack's six P/T plates (499 × 276, drawn at its bounds
+//     1535 / 2458 of 2010 × 2814 → 1145.5 / 1834.3 px, 278.4 × 153.7) — c the
+//     white one. No print draws one (the run has no creature).
+//   • geometry: the pack's LOWER block (type bar, text box, rim) is 3 px
+//     below print and moved up onto it through the flat zones round it
+//     (ETALES_LOWER_RECUT, lossless); its TOP block (swirls, title bar) is
+//     3.5 px above print and kept as drawn — no flat zone lies above it —
+//     so the name and cost row ride the pack's bar. Across, every bar edge
+//     registers within a pixel.
+//   • tones: nothing toned — every opaque region is within 5 levels of the
+//     raw scan medians (ETALES_PRINT_TONE).
+// ---------------------------------------------------------------------------
+export const ETALES = "img/frames/enchantingTales";
+/**
+ * The pack's top rows made solid (ETALES' masters, before the corner cut):
+ * Card Conjurer leaves a translucent crease (α 200–254, ~12 px wide) along
+ * its own rounded corner at the two TOP corners (466–976 px a key at HD),
+ * and the GOLD frame's swirls are near-opaque across its whole top band —
+ * 3,136 px more at α 228–254 over x 35–1480 of rows 0–79 (one of them the
+ * edge band's α 0.93 at x 1313) — so every pixel of rows 0–80 with α ≥ 128
+ * takes α 255 in its own colour (3,282 px on the gold master). No art reaches above row 111
+ * (the art slot), so nothing there is meant to be seen through — and the
+ * corners are kept square (ETALES_KEEP_CORNERS), so a square output shows
+ * the swirls there solid.
+ */
+export const ETALES_SOLID_ROWS = Object.freeze({ y0: 0, y1: 80, minAlpha: 128 });
+/**
+ * The pack's LOWER block moved onto print (TODO 4.11 wave 2), in the
+ * written 1500 × 2100 master's rows, after the downscale: the type bar, the
+ * text box, its bottom rim and the footer's top — rows 1163–1953 — 3 px up,
+ * through the two FLAT zones round it (shiftBlocksRgba8: every row of each
+ * identical across the card on every key, so nothing is resampled or
+ * blended): the see-through art rows 472–1162 above (3 rows fewer) and the
+ * footer's flat rows 1954–2099 below (3 rows more). Registered on the 63
+ * prints (every edge, each against the pack's): the type bar's outlines at
+ * 1167 / 1188 / 1299 px on print against 1171 / 1191 / 1302, the box's
+ * bottom rim at 1929 against 1932, the footer's top 1947 against 1950 — 3 px
+ * low, every column; across, every bar edge within a pixel. The TOP block
+ * (the swirls and the title bar, rows 0–471) is kept as drawn: print draws
+ * it 3.5 px lower (the bar's outlines 83 / 100.5 / 219.5 / 238.5 against 79
+ * / 97 / 216 / 235) but no flat zone lies above it (the swirls run to the
+ * card's top edge), so the name and the cost row ride the pack's bar.
+ */
+export const ETALES_LOWER_RECUT = Object.freeze({
+  axis: "y",
+  blocks: Object.freeze([Object.freeze({ from: 0, to: 472, by: 0 }), Object.freeze({ from: 1163, to: 1954, by: -3 })]),
+});
+/** Every corner is design (the swirled field at the top, the colour's
+ *  footer at the bottom, opaque to the card's corner on every key): the
+ *  importer keeps all four square, so a square output keeps them
+ *  (lib/frames/square-corners.ts "frame"); every round output cuts them at
+ *  render. */
+export const ETALES_KEEP_CORNERS = Object.freeze(["tl", "tr", "bl", "br"]);
+/**
+ * Every pixel of an 8-bit RGBA image within `within` levels (max channel) of
+ * `tone` — but not exactly it — takes that tone, its alpha kept (in place;
+ * TODO 4.11 wave 2: the Enchanting Tales notch's well and the slightly
+ * darker ring Card Conjurer draws on its outer ellipse, flattened into the
+ * master's footer tone so the piece meets the footer with no line). Returns
+ * how many pixels changed.
+ */
+export function flattenNearToneRgba8(buf, tone, within) {
+  if (buf.length % 4 !== 0) throw new Error("flattenNearToneRgba8: not RGBA");
+  if (!(Array.isArray(tone) && tone.length >= 3 && within >= 0 && within < 32)) throw new Error(`flattenNearToneRgba8: bad tone ${tone} / ${within}`);
+  let changed = 0;
+  for (let o = 0; o < buf.length; o += 4) {
+    if (buf[o + 3] === 0) continue;
+    const d = Math.max(Math.abs(buf[o] - tone[0]), Math.abs(buf[o + 1] - tone[1]), Math.abs(buf[o + 2] - tone[2]));
+    if (d > within || d === 0) continue;
+    buf[o] = tone[0];
+    buf[o + 1] = tone[1];
+    buf[o + 2] = tone[2];
+    changed += 1;
+  }
+  return changed;
+}
+/**
+ * A notch piece's rows from `fromRow` down: every pixel of the piece (α >
+ * 0) outside its cut takes `tone`, opaque (in place; TODO 4.11 wave 2: the Enchanting
+ * Tales piece below the text box's rim, where it lies on the master's flat
+ * footer — the well and the pack's soft outer ellipse there become the
+ * footer itself, so nothing of the piece's edge shows). The cut (`cut` grown
+ * by `marginPx`, cutInside) stays transparent. Returns how many pixels
+ * changed.
+ */
+export function fillRowsOutsideCut(buf, shape, cut, marginPx, fromRow, tone) {
+  const { width, height } = shape.size;
+  if (buf.length !== width * height * 4) throw new Error(`fillRowsOutsideCut: the piece is not ${width}x${height} RGBA`);
+  if (!(fromRow >= 0 && fromRow < height)) throw new Error(`fillRowsOutsideCut: bad row ${fromRow}`);
+  const inside = cutInside(shape, cut, marginPx);
+  let changed = 0;
+  for (let y = fromRow; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (inside(x, y, 0)) continue;
+      const o = (y * width + x) * 4;
+      // The piece's own pixels only: what it leaves clear stays clear (the
+      // master's footer, the same tone, shows there).
+      if (buf[o + 3] === 0) continue;
+      if (buf[o] === tone[0] && buf[o + 1] === tone[1] && buf[o + 2] === tone[2] && buf[o + 3] === 255) continue;
+      buf[o] = tone[0];
+      buf[o + 1] = tone[1];
+      buf[o + 2] = tone[2];
+      buf[o + 3] = 255;
+      changed += 1;
+    }
+  }
+  return changed;
+}
+/**
+ * Make the rows `y0` ≤ y < `y1` of an 8-bit RGBA image solid where they are
+ * nearly so (in place): every pixel with `minAlpha` ≤ α < 255 takes α 255,
+ * its colour kept. Returns how many pixels changed. Pure but for the buffer.
+ */
+export function solidifyRowsRgba8(buf, width, height, { y0, y1, minAlpha }) {
+  if (buf.length !== width * height * 4) throw new Error(`solidifyRowsRgba8: the image is not ${width}x${height} RGBA`);
+  if (!(y0 >= 0 && y1 <= height && y1 > y0 && minAlpha > 0 && minAlpha < 255)) throw new Error(`solidifyRowsRgba8: bad rows ${y0}–${y1} or α ${minAlpha}`);
+  let changed = 0;
+  for (let y = y0; y < y1; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4 + 3;
+      if (buf[o] >= minAlpha && buf[o] < 255) {
+        buf[o] = 255;
+        changed += 1;
+      }
+    }
+  }
+  return changed;
+}
+const ETALES_PACK = "packEnchantingTales.js 'Enchanting Tales' (the Wilds of Eldraine bonus-sheet showcase, WOT #1–63; groupShowcase-5.js)";
+/** The pack's file for a colour key: the white frame stands in for the
+ *  colourless key (the pack draws none; no colourless card prints). */
+const etalesFile = (dir, k) => `${ETALES}/${dir}${k === "c" ? "w" : k}.png`;
+const ETALES_PT = Object.freeze(perColor((k) => etalesFile("pt/", k)));
+/**
+ * The pack against print by the ring's one rule (raw scan medians; a region
+ * ≥ 9 levels off is toned): per colour, the median of the per-print medians
+ * of the 63 WOT #1–63 PNGs at 1500 × 2100 (12–13 a colour; ink — |Δluma| >
+ * 45 from the region's median — left out of the bars, box and footer)
+ * against the pack's over the same pixels. Regions: the title bar (120–1380
+ * × 100–195), the type bar (120–1250 × 1195–1285), the footer (60–1440 ×
+ * 1945–2090) and the swirled frame field (the top band 100–1400 × 0–70, the
+ * lower sides 5–80 / 1420–1495 × 1420–1900):
+ *   w: bars 208,205,183 → 208,204,183; footer 72,71,61 → 72,71,61; field
+ *      142,138,118 → 142,137,117;
+ *   u: bars 150,196,227 → 150,195,227; footer 8,38,60 → 9,39,60; field
+ *      5,75,105 → 4,74,104 (sides 1,67,99 → 5,68,98);
+ *   b: bars 186,180,189 → 186,179,188; footer 22,12,21 → 23,13,22; field
+ *      73,48,61 → 72,48,61;
+ *   r: bars 223,189,179 → 222,188,178; footer 73,25,20 → 72,26,20; field
+ *      98,26,17 → 97,26,16;
+ *   g: bars 215,219,189 → 214,219,190; footer 49,54,22 → 49,55,23; field
+ *      79,88,37 → 78,87,38.
+ * Within 5 levels everywhere: as drawn. The text box is translucent over
+ * the art (print shows the art through it), so it has no raw median to tone
+ * by (the ghostfire's rule); its pack colour is kept. Gold has no print.
+ */
+export const ETALES_PRINT_TONE = Object.freeze({
+  w: Object.freeze({ bars: [[208, 205, 183], [208, 204, 183]], footer: [[72, 71, 61], [72, 71, 61]], field: [[142, 138, 118], [142, 137, 117]] }),
+  u: Object.freeze({ bars: [[150, 196, 227], [150, 195, 227]], footer: [[8, 38, 60], [9, 39, 60]], field: [[5, 75, 105], [4, 74, 104]] }),
+  b: Object.freeze({ bars: [[186, 180, 189], [186, 179, 188]], footer: [[22, 12, 21], [23, 13, 22]], field: [[73, 48, 61], [72, 48, 61]] }),
+  r: Object.freeze({ bars: [[223, 189, 179], [222, 188, 178]], footer: [[73, 25, 20], [72, 26, 20]], field: [[98, 26, 17], [97, 26, 16]] }),
+  g: Object.freeze({ bars: [[215, 219, 189], [214, 219, 190]], footer: [[49, 54, 22], [49, 55, 23]], field: [[79, 88, 37], [78, 87, 38]] }),
+});
+const ETALES_NOTES = [
+  "w u b r g m = the pack's colour frames whole (enchantingTales/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the Wilds of Eldraine Enchanting Tales showcase prints them (WOT #1–63); gold has no print (the run is mono-coloured)",
+  "c = the pack's WHITE frame (enchantingTales/w.png): the pack draws no colourless, artifact or land frame and no colourless card prints on it; the white page is the pack's own nearest neutral",
+  "borderless as printed: the swirled frame field to the top edge and down the sides above the art and beside the text box, the art to the side edges between them, the dark footer in the colour's own tone to the bottom edge; all four corners are design and kept square (keepCorners) — every round output cuts them at render",
+  "the art under the whole frame from the title bar down: see-through across the card's width to the type bar, and on under the translucent text box (α 204 on w, 222 on the others, as print shows the art through it) to row 1931 — CC's artBounds (0/111, 1500x1821 px)",
+  "plates = the pack's six P/T plates (enchantingTales/pt/<k>.png, 499x276, drawn at the pack's bounds 1535/2458 px, 373x206 of 2010x2814); c = the white one; no print draws one (the run has no creature)",
+  `the pack against print by the ring's rule (raw scan medians over the bars, the footer and the swirled field, ink left out; a region ≥ 9 levels off is toned): within 5 levels on every colour (ETALES_PRINT_TONE) — nothing is toned; the text box is translucent over the art, so it has no raw median to tone by, and keeps the pack's colour`,
+  "geometry: the LOWER block (rows 1163–1953 of the master: the type bar, the text box, its rim, the footer's top) moved 3 px UP onto the 63 prints through the flat zones round it (ETALES_LOWER_RECUT: the see-through art rows 472–1162 above, the footer's flat rows 1954–2099 below — every row of each identical across the card on every key; shiftBlocksRgba8, byte for byte, after the downscale); the TOP block (swirls, title bar) kept as drawn, 3.5 px above print's — no flat zone lies above it — so the name and the cost row ride the pack's bar; across, every bar edge registers within a pixel",
+  "the top rows made solid after the downscale (ETALES_SOLID_ROWS: rows 0–80, α ≥ 128 → 255, the colour kept): the pack's translucent crease along its own rounded TOP corners (α 200–254) on every key, and on the gold frame the near-opaque swirls across its whole top band (3,136 px more at α 228–254, x 35–1480; 3,282 made solid in all); no art reaches above row 111",
+  "no legendary crown: the pack draws none and no printing of the run is legendary",
+  "not built: WOT #64–103, the anime-style borderless reprints — another design, not in the pack",
+];
+/**
+ * The Enchanting Tales OVAL stamp notch (TODO 4.11 wave 2): the pack's
+ * per-colour 'Holo Stamp' (`enchantingTales/stamp/<k>.png`, 306 × 176,
+ * drawn at stampBounds 890 / 2548, 229 × 132 of 2010 × 2814 → 664.2 /
+ * 1901.5 px, 170.9 × 98.5 at HD) — the text box's bottom rim arched up over
+ * a well in the footer's own tone round the hologram oval — resampled ONCE
+ * to its HD box, 171 × 99, placed ON PRINT at 666, 1898: 3 px up with the
+ * master's lower block (ETALES_LOWER_RECUT: its ends meet the box's moved
+ * rim) and 2 px right of the pack's bounds (the 45 stamped prints' arch runs
+ * 678–825 px, centre 751.5, where the pack's placed piece ran 674–824,
+ * 749), cut to ETALES_NOTCH_BOX (1 px round it). The prints'
+ * oval (ETALES_STAMP_OVAL_PX) plus 2 px is cut clear; the well round it
+ * stays the footer's own tone, as print draws it (no black ring:
+ * blackoutPx 0). The rares and mythics of the run print it (`security_stamp:
+ * oval`, 45 of 63), the uncommons don't.
+ */
+export const ETALES_NOTCH_BOX = Object.freeze({ x: 665, y: 1897, width: 173, height: 101 });
+/**
+ * The well flattened into the footer (TODO 4.11 wave 2, review of #618):
+ * Card Conjurer draws the piece's well in the footer's tone but its outer
+ * ellipse 4–8 levels darker (w 65,65,53 / 70,69,57 against the footer's
+ * 72,71,61) — a faint oval line round the stamp that print does not have.
+ * Every pixel of the cut piece within `within` levels of the master's
+ * footer (read from the same key's master at `at`, a flat footer pixel)
+ * takes that tone, its alpha kept (flattenNearToneRgba8) — the well inside
+ * the arch — and from `footerFromRow` down (card row 1948: below the box's
+ * rim, where the piece lies on the master's flat footer, rows 1947 on) every
+ * pixel of the piece outside the cut IS the footer, opaque (fillRowsOutsideCut): the
+ * pack's soft outer ellipse there — its 4–8 levels darker ring and its light
+ * low-α fringe — leaves no line. The rim, the box and the cut are untouched.
+ */
+export const ETALES_WELL_TONE = Object.freeze({ master: "enchantingtales", at: Object.freeze({ x: 750, y: 2060 }), within: 12, footerFromRow: 51 });
+/** The stamp's oval, card px: the PRINTS' hologram — the 45 stamped WOT
+ *  prints' bright pixels at 688–814 × 1923–1986 (the median over the dark-
+ *  footed prints, every one within a pixel), 127 × 64. The pack's own
+ *  capture (687–815 × 1921–1983 where the piece is placed) lies inside it
+ *  and the cut's 2 px. */
+export const ETALES_STAMP_OVAL_PX = Object.freeze({ x: 688, y: 1923, width: 127, height: 64 });
+export const ETALES_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, etalesFile("stamp/", k)]))),
+  /** The piece's own size: resampled once to placeAt's. */
+  nativeSize: Object.freeze({ width: 306, height: 176 }),
+  placeAt: Object.freeze({ x: 666, y: 1898, width: 171, height: 99 }),
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: ETALES_NOTCH_BOX.width, height: ETALES_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (ETALES_NOTCH_BOX.x / 1500) * 100,
+      topPct: (ETALES_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (ETALES_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (ETALES_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (ETALES_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (ETALES_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (ETALES_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (ETALES_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+  /** The capture's pixels in the notch box: the ellipse inscribed in x
+   *  20–152, rows 20–92 of the box (the pack's hologram, at card x 687–815 ×
+   *  1921–1983 where the piece is placed, lies inside it; the box's corners
+   *  hold the text box's light rim and the piece's soft outer edge, which
+   *  are no capture), its lit pixels (luma > 120 — the well round the
+   *  hologram is the footer's darker tone, its anti-aliased inner edge
+   *  ≤ 106 on the white piece), which the importer holds inside the cut. */
+  capture: Object.freeze({ x0: 20, x1: 152, y0: 20, y1: 92, minLuma: 120, oval: true }),
+});
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild): the Multiverse Legends TARKIR "Dragon Wing"
 // showcase (`tarkirdragon`; MUL #1 / #131 / #131z Anafenza, Kin-Tree Spirit
 // — white — and #60 / #190 / #190z Taigam, Ojutai Master — white-blue: six
@@ -4806,7 +5252,8 @@ export const TARKIR_NOTCH = Object.freeze({
  * piece itself, with no separate shape file). With `oval`, only the pixels
  * inside the ellipse inscribed in the box count (TODO 4.11 wave 2: the MKM
  * dossier's well, whose arch shoulders — lit parchment — reach the box's
- * top corners).
+ * top corners; the Enchanting Tales piece, whose box corners hold the text
+ * box's light rim and the piece's own soft edge).
  */
 export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma, oval = false }) {
   const plane = new Uint8Array(width * height);
@@ -5461,6 +5908,18 @@ export const CC_TEMPLATES = {
     plates: DOSSIER_PT,
     pack: DOSSIER_PACK,
     notes: DOSSIER_NOTES,
+  },
+  // TODO 4.11 wave 2: the Wilds of Eldraine Enchanting Tales showcase (see
+  // ETALES above) — the pack's six frames, `c` the white one.
+  enchantingtales: {
+    colors: perColor((k) => [layer(etalesFile("", k))]),
+    shift: ETALES_LOWER_RECUT,
+    shiftOnOutput: true,
+    solidRows: ETALES_SOLID_ROWS,
+    keepCorners: ETALES_KEEP_CORNERS,
+    plates: ETALES_PT,
+    pack: ETALES_PACK,
+    notes: ETALES_NOTES,
   },
   m15: {
     colors: {
@@ -6313,6 +6772,20 @@ export const CC_TEMPLATES = {
       "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)",
       OLD_PAIR_NOTE.modernland,
     ],
+  },
+  // TODO 4.11 wave 2: the New Capenna Art Deco showcase (see SNC_DECO
+  // above) — one master and its crowned twin under every key.
+  sncartdeco: {
+    colors: {
+      ...perColor(() => [layer(`${SNC_DECO}/m.png`)]),
+      ...Object.fromEntries(COLORS.map((k) => [legendaryKey(k), [layer(`${SNC_DECO}/legendary/m.png`)]])),
+    },
+    plates: perColor(() => `${SNC_DECO}/pt/m.png`),
+    translucency: SNC_DECO_TRANSLUCENCY,
+    dotFills: SNC_DECO_DOT_FILLS,
+    pack: SNC_DECO_PACK,
+    transforms: `native 1500x2100, no resample; the gold toned as the file loads (SNC_DECO_SOURCE_TONES); the translucent bars and box lifted onto print's opacity (${SNC_DECO_TRANSLUCENCY.bands.map((b) => `${b.name} α ${b.alpha}`).join(", ")}, from ${SNC_DECO_TRANSLUCENCY.from}); the fin's see-through dot filled (SNC_DECO_DOT_FILLS); corners rounded to the importer radius`,
+    notes: SNC_DECO_NOTES,
   },
 };
 
@@ -8774,6 +9247,29 @@ export const HOLO_STAMP_NOTCHES = {
       `the dossier's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dossier/stamp.png, 295x134) — the black border arched up into the page's foot round the hologram — placed at its bounds (857/2010, 2540/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box ${DOSSIER_NOTCH_BOX.width}x${DOSSIER_NOTCH_BOX.height} at ${DOSSIER_NOTCH_BOX.x},${DOSSIER_NOTCH_BOX.y} px of the 1500x2100 card, drawn 1:1 from there; the arch is print's (its top 1908 px against print's 1909, its feet 1942–1945 against 1943–1946)`,
       "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (the masters and the pair masters are the same page under the arch)",
       `the hologram: the pack paints a capture of WotC's oval in the well (${DOSSIER_CAPTURE_PX.x}–${DOSSIER_CAPTURE_PX.x + DOSSIER_CAPTURE_PX.width} × ${DOSSIER_CAPTURE_PX.y}–${DOSSIER_CAPTURE_PX.y + DOSSIER_CAPTURE_PX.height} px once placed and downscaled), 5–7 px below where print sets it — every lit pixel of it is painted opaque black first (grown 2 px; print's well is black round the hologram), then the prints' oval (${DOSSIER_STAMP_OVAL_PX.width} × ${DOSSIER_STAMP_OVAL_PX.height} at ${DOSSIER_STAMP_OVAL_PX.x}, ${DOSSIER_STAMP_OVAL_PX.y} — 29 stamped MKM prints, all within 1 px) plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+    ],
+  },
+  // TODO 4.11 wave 2: the Enchanting Tales OVAL notch — the pack's piece per
+  // colour, resampled once to its HD box, its hologram oval cut
+  // (ETALES_NOTCH).
+  enchantingtalesholostamp: {
+    pack: ETALES_PACK,
+    pieces: ETALES_NOTCH.pieces,
+    keys: ETALES_NOTCH.keys,
+    shape: ETALES_NOTCH.shape,
+    nativeSize: ETALES_NOTCH.nativeSize,
+    placeAt: ETALES_NOTCH.placeAt,
+    compositeSize: ETALES_NOTCH.compositeSize,
+    oval: ETALES_NOTCH.oval,
+    capture: ETALES_NOTCH.capture,
+    cutMarginPx: 2,
+    blackoutPx: 0,
+    wellTone: ETALES_WELL_TONE,
+    notes: [
+      `the Enchanting Tales oval stamp notch (TODO 4.11 wave 2): the pack's 'Holo Stamp' per colour (enchantingTales/stamp/<k>.png, 306x176) — the text box's bottom rim arched up over a well in the footer's own tone round the hologram oval — drawn at its stampBounds (890/2548, 229x132 of 2010x2814 = 664.2/1901.5, 170.9x98.5 px at HD): resampled ONCE (Lanczos) to ${ETALES_NOTCH.placeAt.width}x${ETALES_NOTCH.placeAt.height} and placed on print at ${ETALES_NOTCH.placeAt.x},${ETALES_NOTCH.placeAt.y} px — 3 px up with the master's lower block (ETALES_LOWER_RECUT) and 2 px right (the 45 stamped prints' arch centred on 751.5 px) — cut to its box ${ETALES_NOTCH_BOX.width}x${ETALES_NOTCH_BOX.height} at ${ETALES_NOTCH_BOX.x},${ETALES_NOTCH_BOX.y} px (1 px round the piece)`,
+      "keys = the masters' w u b r g m and c (the white piece, as the c master is the white frame)",
+      `the hologram: the pack paints a capture of WotC's oval in the well; the prints' oval (${ETALES_STAMP_OVAL_PX.width} × ${ETALES_STAMP_OVAL_PX.height} at ${ETALES_STAMP_OVAL_PX.x}, ${ETALES_STAMP_OVAL_PX.y} — the 45 stamped WOT prints) plus 2 px is cut to transparent and the importer holds every lit pixel of the oval's box inside the cut: no pixel of the capture is published; the well round the cut keeps the footer's own tone (no black ring, blackoutPx 0: print draws none); our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+      "the well flattened into the master's footer tone (ETALES_WELL_TONE: every pixel within 12 levels of the same key's footer, read at 750, 2060 on the master, takes it, alpha kept; from the piece's row 51 — card row 1948, the master's flat footer — every pixel of the piece outside the cut is the footer tone, opaque; what the piece leaves clear stays clear): the pack draws the well's outer ellipse 4–8 levels darker than the footer with a light low-α fringe, a faint line print does not have",
     ],
   },
   lotrscrollholostamp: {

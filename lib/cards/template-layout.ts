@@ -4580,6 +4580,96 @@ const BLOOMBURROW: FrameProfile = {
   pt: { ...M15.pt!, plateRect: BLOOMBURROW_PLATE_RECT, plateAssetPathTemplate: "/frames/bloomburrow/pt/{color}.png" },
 };
 
+// The Streets of New Capenna ART DECO showcase (TODO 4.11 wave 2) — SNC
+// #296–340, the five families' three-colour cards, and their gilded-foil
+// twins #361–405: Card Conjurer's 'Golden Age (SNC)' pack
+// (packSNCGilded.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs
+// SNC_DECO), which is the frame these cards print — CC's 'Art Deco (SNC)'
+// pack draws the Golden Age cards #341–359 instead. ONE master under every
+// colour key (print draws one gold filigree for all 90; every card is three
+// colours) and its crowned twin (`-legendary`: the arch over the title bar
+// every legendary printing carries, the pack's 'Legendary Frame' — its bar
+// drawn where the legendary prints draw theirs, 6 px above the plain
+// prints', which no flat zone lets us re-cut). The art runs under the
+// translucent title bar, type bar and text box (underFrameArt): the window
+// is its own slot, the two layers meeting on the opaque gold round it. An
+// ADDITION: a new template, no stored card.
+/** The window (α < 250 on 120–1379 × 238–1167 px on every master: the
+ *  stepped fins narrow it to 143–1356 at its top) with the art-window
+ *  check's 0.05 % to spare: 119–1381 × 236–1170 — every edge on the
+ *  opaque gold (the fins, the title bar's foot rim, the art's foot rim). */
+export const SNCARTDECO_ART_SLOT: Rect = { topPct: (236 / 2100) * 100, leftPct: (119 / 1500) * 100, widthPct: (1262 / 1500) * 100, heightPct: (934 / 2100) * 100 };
+/** The art under the frame: every translucent pixel of both masters (α <
+ *  250 on 98–1399 × 116–1933 px, the crowned twin's arch from 79) with the
+ *  check's spare: 96–1404 × 77–1936 (Card Conjurer's artBounds 96 / 78 /
+ *  1308 × 1857, a row higher for the arch). */
+export const SNCARTDECO_UNDER_RECT: Rect = { topPct: (77 / 2100) * 100, leftPct: (96 / 1500) * 100, widthPct: (1308 / 1500) * 100, heightPct: (1859 / 2100) * 100 };
+/** The pack's plate at its bounds (1156 / 1857, 254 × 134 px, 1:1). */
+const SNCARTDECO_PLATE_RECT: Rect = { topPct: (1857 / 2100) * 100, leftPct: (1156 / 1500) * 100, widthPct: (254 / 1500) * 100, heightPct: (134 / 2100) * 100 };
+/** White ink on the dark bars and box (print's 255,255,255 at the glyphs'
+ *  core), no shadow. */
+const SNCARTDECO_INK = "#ffffff";
+// Measured on all 90 printings at 1500 × 2100, our bake of each card
+// registered on its print region by region (the cost row by normalised
+// cross-correlation over our discs' own pixels; the name and type line by
+// their white ink). The plain printings (60) set their name and cost row ~4
+// px LOWER than the legendary ones (30), under a title bar 6 px lower; one
+// slot serves both (no slot follows the crown), so each takes the mean of
+// the 90: the name 1 px up (plain +1, legendary −5); the cost row 8 px down
+// (plain +9.3, legendary +5.2) and 1.5 px right. Across, the name's pen
+// rides its LEFT ink edge (#622 review): print's first ink column against
+// ours on the same name, all 90 — 2 px right of ours at −3 px (median, plain
+// and legendary alike: print 128–138, e.g. #296 136, #301 131) — so 1 px
+// left of M15's pen.
+const SNCARTDECO_TITLE_DX_PX = -1;
+const SNCARTDECO_TITLE_DY_PX = -1;
+const SNCARTDECO_COST_DY_PX = 8;
+const SNCARTDECO_COST_DX_PX = 1.5;
+/** The type line 4.5 px under the CC baseline (plain +5, legendary +3); the
+ *  band's RECT 3 px wider so the set symbol ends 3 px further right (the
+ *  legendary prints, where its ink registers; its rows within 1 px). */
+const SNCARTDECO_TYPE_DY_PX = 4.5;
+const SNCARTDECO_SYMBOL_DX_PX = 3;
+const SNCARTDECO: FrameProfile = {
+  ...M15,
+  label: "Art Deco",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy + SNCARTDECO_COST_DY_PX / 1500,
+  costDx: CC_M15_COST.costDx + SNCARTDECO_COST_DX_PX / 1500,
+  artSlot: SNCARTDECO_ART_SLOT,
+  underFrameArt: { rect: SNCARTDECO_UNDER_RECT },
+  title: {
+    ...M15.title,
+    rect: {
+      ...M15.title.rect,
+      leftPct: M15.title.rect.leftPct + (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct - (SNCARTDECO_TITLE_DX_PX / 1500) * 100,
+    },
+    dy: M15.title.dy! + SNCARTDECO_TITLE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: M15.type.rect.widthPct + (SNCARTDECO_SYMBOL_DX_PX / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + SNCARTDECO_TYPE_DY_PX / 1500,
+    colorHex: SNCARTDECO_INK,
+  },
+  // M15's box: the run's full boxes set their last descender as low as
+  // 1922 px (#335) and their lines from x 133; the arch keeps out.
+  rules: { ...M15.rules, colorHex: SNCARTDECO_INK },
+  // The pack's plate; the digits 4.5 px left of M15's box and 1 px lower,
+  // where the run sets them on it (the 30 creatures registered), white; the
+  // plate's dark face runs 1180–1384 px (its gold rim either side).
+  pt: {
+    ...M15.pt!,
+    rect: { ...M15.pt!.rect, leftPct: M15.pt!.rect.leftPct - (4.5 / 1500) * 100, topPct: M15.pt!.rect.topPct + (1 / 2100) * 100 },
+    inkSpanPct: { leftPct: (1186 / 1500) * 100, rightPct: (1378 / 1500) * 100 },
+    colorHex: SNCARTDECO_INK,
+    plateRect: SNCARTDECO_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/sncartdeco/pt/{color}.png",
+  },
+};
+
 // MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
 // 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
 // scripts/lib/cc-frames.mjs TARKIR), the Multiverse Legends showcase of MUL
@@ -5034,6 +5124,75 @@ const DOSSIER: FrameProfile = {
     rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct + (DOSSIER_PT_DY / 2100) * 100, leftPct: M15.pt!.rect.leftPct + (DOSSIER_PT_DX / 1500) * 100 },
     plateRect: DOSSIER_PLATE_RECT,
     plateAssetPathTemplate: "/frames/dossier/pt/{color}.png",
+  },
+};
+
+// The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js, 2010 × 2814,
+// downscaled once; scripts/lib/cc-frames.mjs ETALES), the swirled storybook
+// frame of the bonus sheet WOT #1–63. An ADDITION: a new template, no stored
+// card. Borderless: the art runs under the whole frame from the title bar
+// down, to the side edges, and on under the translucent text box; dark name
+// and type ink on the light bars, WHITE rules on the box (print's), the
+// collector line in white on the colour's dark footer. Its text layout is
+// the M15 frame's at the family's sizes, measured on all 63 prints (Scryfall
+// PNGs at 1500 × 2100, each slot against the pack's own lines): the pack's
+// LOWER block is moved onto print by the importer (ETALES_LOWER_RECUT, 3 px
+// up), so the type line, the rules box, the plate, the stamp and the
+// collector line sit where print sets them; its TOP block is kept as drawn,
+// 3.5 px above print's, so the name and the cost row ride the pack's title
+// bar as print sets them on its own.
+/** The art slot: CC's artBounds (0 / 111, 1500 × 1821 px) — the window's
+ *  see-through rows (from 116 at the top-right shoulder) and the
+ *  translucent text box down to row 1928 (the box's moved foot), with the
+ *  art-window check's spare. */
+export const ENCHANTINGTALES_ART_SLOT: Rect = { topPct: (111 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (1821 / 2100) * 100 };
+/** The lower block's move onto print (scripts/lib/cc-frames.mjs
+ *  ETALES_LOWER_RECUT): what the pack places in it rides it. */
+const ENCHANTINGTALES_LOWER_DY_PX = -3;
+/** The pack's plate at its bounds (1535 / 2458, 373 × 206 of the 2010 ×
+ *  2814 card = 1145.5 / 1834.3, 278.4 × 153.7 px), 3 px up with the lower
+ *  block. No print draws one (the run has no creature). */
+const ENCHANTINGTALES_PLATE_RECT: Rect = {
+  topPct: (2458 / 2814) * 100 + (ENCHANTINGTALES_LOWER_DY_PX / 2100) * 100,
+  leftPct: (1535 / 2010) * 100,
+  widthPct: (373 / 2010) * 100,
+  heightPct: (206 / 2814) * 100,
+};
+/** The name 3.5 px above M15's band: print sets its baseline 88 px under
+ *  its title bar's top outline (188.5 against 100.5 px, all 63 prints), and
+ *  the pack draws that bar 3.5 px higher (97). Its pen is M15's (print's
+ *  ink from 132–133 px, ours 132). */
+const ENCHANTINGTALES_TITLE_DY_PX = -3.5;
+const ENCHANTINGTALES: FrameProfile = {
+  ...M15,
+  label: "Enchanting Tales",
+  // The CC M15 row (70 px discs, 78 pitch), 3 px further right: registered
+  // on all 63 prints' cost rows (36 at +3 / +3, 26 at +2 / +2 or +3 / +2,
+  // ours → print), its lift kept — print's row sits 2.5–3 px lower than the
+  // CC M15 row on a bar 3.5 px lower than the pack's.
+  ...CC_M15_COST,
+  costDx: CC_M15_COST_DX + 3 / 1500,
+  artSlot: ENCHANTINGTALES_ART_SLOT,
+  title: { ...M15.title, dy: M15.title.dy! + ENCHANTINGTALES_TITLE_DY_PX / 1500 },
+  // The type line on the CC baseline, where print sets it (1259–1260 px,
+  // all 63, ours 1259; its pen within a pixel), black on the light bar.
+  type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: INK_DARK },
+  // White on the translucent box, Card Conjurer's text rect (129 / 1316,
+  // 1242 × 604 px) 3 px up with the lower block: 1313–1917. Print's lines
+  // start at 132–133 px (ours 133) and its fullest boxes run 1313–1911.
+  rules: {
+    ...M15.rules,
+    rect: { leftPct: 8.6, topPct: ((1316 + ENCHANTINGTALES_LOWER_DY_PX) / 2100) * 100, widthPct: 82.8, heightPct: 28.75 },
+    colorHex: "#ffffff",
+  },
+  pt: {
+    ...M15.pt!,
+    // Card Conjurer's box (1605 / 2538 of 2010 × 2814, 0.1367 × 0.0372),
+    // 3 px up with the plate.
+    rect: { leftPct: (1605 / 2010) * 100, topPct: (2538 / 2814) * 100 + (ENCHANTINGTALES_LOWER_DY_PX / 2100) * 100, widthPct: 13.67, heightPct: 3.72 },
+    plateRect: ENCHANTINGTALES_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/enchantingtales/pt/{color}.png",
   },
 };
 
@@ -6130,6 +6289,18 @@ export const DNDSOURCEBOOK_COLLECTOR: CollectorSlot = {
   line1BaselinePct: (1997.5 / 2100) * 100,
   line2BaselinePct: (2036 / 2100) * 100,
 };
+/**
+ * The collector line on the Enchanting Tales showcase (TODO 4.11 wave 2):
+ * M15's slot — the pen x, the brush column, the sizes, the © slot's right
+ * end — on the run's own rows in the colour's dark footer, registered on
+ * all 63 prints (ours → print, each line's ink): line 1 4 px and line 2 3 px
+ * above M15's slot (1993.5 / 2032) — 1990 / 2029.
+ */
+export const ENCHANTINGTALES_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1990 / 2100) * 100,
+  line2BaselinePct: (2029 / 2100) * 100,
+};
 
 /**
  * The collector line on the Stained Glass showcase (TODO 4.11 wave 2):
@@ -6450,6 +6621,31 @@ export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
 };
 
+/** The Enchanting Tales oval (scripts/lib/cc-frames.mjs
+ *  ETALES_STAMP_OVAL_PX: 688–815 × 1923–1987 px) — the PRINTS' hologram,
+ *  127 × 64 (the 45 stamped WOT #1–63 prints). */
+export const ENCHANTINGTALES_HOLO_STAMP_OVAL: Rect = { leftPct: (688 / 1500) * 100, topPct: (1923 / 2100) * 100, widthPct: (127 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch the piece raises into the box: its
+ *  top (1898 px) down to the box's moved foot (1928), over the piece's
+ *  666–837 px. */
+export const ENCHANTINGTALES_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (666 / 1500) * 100, topPct: (1898 / 2100) * 100, widthPct: (171 / 1500) * 100, heightPct: (30 / 2100) * 100 };
+/**
+ * The Enchanting Tales OVAL stamp notch (TODO 4.11 wave 2): the pack's
+ * 'Holo Stamp' per colour — the text box's bottom rim arched up over a well
+ * in the footer's own tone round the oval — resampled once to its HD box
+ * and placed on print (ETALES_NOTCH in scripts/lib/cc-frames.mjs: 173 × 101
+ * at 665, 1897 — with the master's lower block, 2 px right of CC's), its
+ * hologram oval cut clear for our oval art. The rares and mythics of the run
+ * print it (`security_stamp: oval`, 45 of 63), the uncommons don't: "auto" =
+ * a rare or mythic, as on M15. Keys: the masters' (c the white piece).
+ */
+export const ENCHANTINGTALES_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (665 / 1500) * 100, topPct: (1897 / 2100) * 100, widthPct: (173 / 1500) * 100, heightPct: (101 / 2100) * 100 },
+  assetPathTemplate: "/frames/enchantingtalesholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: ENCHANTINGTALES_HOLO_STAMP_OVAL, keepOut: ENCHANTINGTALES_HOLO_STAMP_KEEP_OUT },
+};
 /** The stained glass's stamp oval (scripts/lib/cc-frames.mjs SG_NOTCH.oval:
  *  685–815 × 1928–1991 px) — print's hologram, 130 × 63, on the pack's own
  *  well (its centre 750, 1959.5: CC's 'Rare Stamp' centre). */
@@ -6585,6 +6781,37 @@ export const BLOOMANIME_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/bloomanimeholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: BLOOMANIME_HOLO_STAMP_OVAL, keepOut: BLOOMANIME_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The New Capenna Art Deco showcase's oval (TODO 4.11 wave 2): the prints'
+ *  hologram — its lit pixels 685–815 × 1925–1988 on the 50 stamped plain
+ *  and gilded prints — 134 × 64 at 683, 1924, centred under the arch. */
+export const SNCARTDECO_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1924 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: 2 px above its lifted outline
+ *  (1898.7 at the centre) down to the gold rim's foot (1950), over the
+ *  piece's 656–844 px. */
+export const SNCARTDECO_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 };
+/**
+ * The New Capenna Art Deco showcase's OVAL stamp notch (TODO 4.11 wave 2):
+ * Card Conjurer's pack has no stamp piece, so ours is PipGlyph's own
+ * derivation (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH): the master's own black
+ * outline, gold rim and black border LIFTED along the printed arch (35.3 px
+ * at the centre, rising from x 664 to x 836; the 25 stamped plain prints),
+ * the box above keeping its own pixels. 188 × 54 px at 656, 1896, 1:1 at HD.
+ * The run's rares and mythics print it (`security_stamp: oval`), its commons
+ * and uncommons run the rim straight: "auto" = a rare or mythic, as on M15.
+ * Keys: the masters' (one piece; the crowned twins hold the same pixels
+ * there). Set on the sncartdeco entry only; opt-in per card.
+ */
+export const SNCARTDECO_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // SNC_DECO_NOTCH_BOX in scripts/lib/borderless-stamp.mjs (a unit test
+  // holds them together).
+  rect: { leftPct: (656 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (54 / 2100) * 100 },
+  assetPathTemplate: "/frames/sncartdecoholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: SNCARTDECO_HOLO_STAMP_OVAL, keepOut: SNCARTDECO_HOLO_STAMP_KEEP_OUT },
 };
 
 /**
@@ -7819,6 +8046,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // stored card changes by them.
   avatar: { ...AVATAR, collector: M15_COLLECTOR },
   bloomburrow: { ...BLOOMBURROW, overlays: [BLOOMBURROW_CROWN, BLOOMBURROW_HOLO_STAMP], collector: M15_COLLECTOR },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its crown baked
+  // into `-legendary` twins (the pack's 'Legendary Frame': the arch reshapes
+  // the translucent title bar under it, which no overlay can draw), the oval
+  // stamp notch (our lifted rim) and the collector line on M15's rows (the
+  // run's within 2 px, as the Tarkir draconic's) — each opt-in per card.
+  sncartdeco: { ...SNCARTDECO, crownMasters: true, overlays: [SNCARTDECO_HOLO_STAMP], collector: M15_COLLECTOR },
   // The six near-black picker tiles that are not art-first get the tile's
   // sample art (pickerSampleArt, 4.45) on their entries here, not on their
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads
@@ -7837,6 +8070,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // dress (the ten pair masters: print's accents ramp from the first colour
   // to the second).
   dossier: { ...DOSSIER, overlays: [DOSSIER_CROWN, DOSSIER_HOLO_STAMP], collector: DOSSIER_COLLECTOR, twoColorMasters: ["split"] },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the stamp and the
+  // collector line, opt-in per card; no crown (none prints, the pack has
+  // none).
+  enchantingtales: { ...ENCHANTINGTALES, overlays: [ENCHANTINGTALES_HOLO_STAMP], collector: ENCHANTINGTALES_COLLECTOR },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).

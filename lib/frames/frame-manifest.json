@@ -1752,6 +1752,300 @@
       "width": 1500,
       "height": 2100
     },
+    "enchantingtales/b.png": {
+      "hash": "70fc3e414bd1",
+      "sha256": "70fc3e414bd1b588460266d398856ca30c972e7810e02ea83b29e8cb5d6b5b00",
+      "bytes": 637130,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/b.webp": {
+      "hash": "e764bc0b75b4",
+      "sha256": "e764bc0b75b49cc04870021b99e1f9a2725d72c01ed41560ad076cc3bdad04d7",
+      "bytes": 57038,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/c.png": {
+      "hash": "c450eff7670f",
+      "sha256": "c450eff7670fa3a90d519fe2a4cb602a564be720d467cb1fd2fc2cd83e3e9a64",
+      "bytes": 640491,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/c.webp": {
+      "hash": "6f67721d5245",
+      "sha256": "6f67721d524574c841aa225d67a8292557c18a8baeb006e7ea8af4b4118b6b98",
+      "bytes": 61588,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/g.png": {
+      "hash": "ffd452ee84a2",
+      "sha256": "ffd452ee84a2d196314e5583c7233a1c767cc4cae238f3eb0ecd441b300965dd",
+      "bytes": 630933,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/g.webp": {
+      "hash": "e92a5eec3aac",
+      "sha256": "e92a5eec3aac39d07d37e2f5df141b07b8d86b81cb92403bca8bf232ee05cb0c",
+      "bytes": 66218,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/m.png": {
+      "hash": "89063e42479e",
+      "sha256": "89063e42479e8f1ac3ac208dfd652e35bf04e3a4f603791ad16b3e870bd76b78",
+      "bytes": 703706,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/m.webp": {
+      "hash": "d62f85c4b95c",
+      "sha256": "d62f85c4b95c860501dcf62384ded2e1334ab69108399bdd6dbcc2f587178d01",
+      "bytes": 101886,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/pt/b.png": {
+      "hash": "c42ea1b5197b",
+      "sha256": "c42ea1b5197bd087fea3e064e83acd735753295ebbc7ddd41d83119bb6598aa7",
+      "bytes": 16042,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/b.webp": {
+      "hash": "5559d7fb8c95",
+      "sha256": "5559d7fb8c950088590e652fa844e9f91d13482f9fe26db69d465847165d9e2c",
+      "bytes": 6330,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/c.png": {
+      "hash": "2c961d4b54c9",
+      "sha256": "2c961d4b54c9576ef688cf47fa1f5a6be293b30afd36953113c0bf39701f31ce",
+      "bytes": 12033,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/c.webp": {
+      "hash": "c54d2cf094e0",
+      "sha256": "c54d2cf094e0b37324584f50f3e4526023a7474e1c2ab1f9f9a5759a51224c49",
+      "bytes": 4032,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/g.png": {
+      "hash": "eed2b3699d5c",
+      "sha256": "eed2b3699d5cd6811b1540ac144fa27ea5fabbb98aff5cd63d66f5881109d74e",
+      "bytes": 15776,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/g.webp": {
+      "hash": "1f4dc7354eb5",
+      "sha256": "1f4dc7354eb52dd5a7ab99d3ab343c8a4c9f4e2783188338353c28ff5d90df39",
+      "bytes": 6136,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/m.png": {
+      "hash": "30ab59fe1985",
+      "sha256": "30ab59fe19858ca1886506807af17118faca2d04558bdaa8380f5f0cb98fa206",
+      "bytes": 13912,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/m.webp": {
+      "hash": "4b5a2dd8e42b",
+      "sha256": "4b5a2dd8e42b304b535c134c81a848028e3144a4b0f69a0001663f55018512c4",
+      "bytes": 5554,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/r.png": {
+      "hash": "c1440201173b",
+      "sha256": "c1440201173bd6e033af354e97c360dc280258268e9b6e3ba8a43bd1b581c356",
+      "bytes": 15819,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/r.webp": {
+      "hash": "fdc70fcce767",
+      "sha256": "fdc70fcce767ca681a4e92c012b198659326b087eb416db5db789c0387e0a01f",
+      "bytes": 7190,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/u.png": {
+      "hash": "12e32a5d7361",
+      "sha256": "12e32a5d73618483817bab82bf0409ce74b78f87f777126df9dfc2db8bfe68ec",
+      "bytes": 16397,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/u.webp": {
+      "hash": "1fc5a8f8ce4c",
+      "sha256": "1fc5a8f8ce4cfacbd3195e04242fe4f8f8b9c6edd89e111fc0961c287e81549c",
+      "bytes": 6766,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/w.png": {
+      "hash": "2c961d4b54c9",
+      "sha256": "2c961d4b54c9576ef688cf47fa1f5a6be293b30afd36953113c0bf39701f31ce",
+      "bytes": 12033,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/pt/w.webp": {
+      "hash": "c54d2cf094e0",
+      "sha256": "c54d2cf094e0b37324584f50f3e4526023a7474e1c2ab1f9f9a5759a51224c49",
+      "bytes": 4032,
+      "width": 499,
+      "height": 276
+    },
+    "enchantingtales/r.png": {
+      "hash": "72dbd929cf91",
+      "sha256": "72dbd929cf9140ffee9c2ab1bbf44aad4bee9b4e47cf21d73c77ae50d9de2d4f",
+      "bytes": 642031,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/r.webp": {
+      "hash": "917dd9f6b6c7",
+      "sha256": "917dd9f6b6c7794f8a1652bbe3d66ac719dcf7d767cd0a886ea6c09b0bd25d08",
+      "bytes": 70628,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/u.png": {
+      "hash": "b1f1a6984adb",
+      "sha256": "b1f1a6984adb35a43ee86d53010b2e8c6f3e5d2af9bdf93f596c4c3598658b9a",
+      "bytes": 753845,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/u.webp": {
+      "hash": "406a0ce938b2",
+      "sha256": "406a0ce938b248ada7c87b0a1eaca1bf82f00fdb13c933dcece337454ccde9ea",
+      "bytes": 82918,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/w.png": {
+      "hash": "c450eff7670f",
+      "sha256": "c450eff7670fa3a90d519fe2a4cb602a564be720d467cb1fd2fc2cd83e3e9a64",
+      "bytes": 640491,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtales/w.webp": {
+      "hash": "6f67721d5245",
+      "sha256": "6f67721d524574c841aa225d67a8292557c18a8baeb006e7ea8af4b4118b6b98",
+      "bytes": 61588,
+      "width": 1500,
+      "height": 2100
+    },
+    "enchantingtalesholostamp/b.png": {
+      "hash": "1c7480a55807",
+      "sha256": "1c7480a55807632f28178d5cfb1293e6a3c2a26758912683e4ecbd40e259b4bf",
+      "bytes": 4646,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/b.webp": {
+      "hash": "04a4c534e2f8",
+      "sha256": "04a4c534e2f8041a6e61f6f38d9845c75bde6dcaa18b131c080bc4a770e4a8bd",
+      "bytes": 3296,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/c.png": {
+      "hash": "60e0bf8ecf64",
+      "sha256": "60e0bf8ecf641cbd4e8d5ae447bfa44c3310825a550b008d5da315a896194507",
+      "bytes": 4382,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/c.webp": {
+      "hash": "73a2f2075ada",
+      "sha256": "73a2f2075ada9660aa9f8c9875c3128e6bad8d087921f8c6129d4da73f06d9cc",
+      "bytes": 2606,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/g.png": {
+      "hash": "5c5c3fe1ac6d",
+      "sha256": "5c5c3fe1ac6dc460dd6754b291865f4266d20d2e3ba6759913268e0ae7a3699b",
+      "bytes": 4819,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/g.webp": {
+      "hash": "90e694ff3287",
+      "sha256": "90e694ff32877c59416346aab2350a58a66327608f1ea89f0de3b21fb6dfce90",
+      "bytes": 3476,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/m.png": {
+      "hash": "fb3785895961",
+      "sha256": "fb37858959612c84a67656e20822424dfdb4befd365924a9c095c9fef7d97d3a",
+      "bytes": 4668,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/m.webp": {
+      "hash": "a96563261074",
+      "sha256": "a96563261074dbb6cfa12ed20de7cf9dd0240fc0574ac57df9231d36c12e97e7",
+      "bytes": 4064,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/r.png": {
+      "hash": "c77377c5cc3e",
+      "sha256": "c77377c5cc3e8c392ffd02a99e67852448fe5b533017ca0ad87a5fb3d8cbf9ec",
+      "bytes": 4845,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/r.webp": {
+      "hash": "d135fdae8171",
+      "sha256": "d135fdae817116c7ca13a991d6cb924e49fea8a2ca2a30e39d85f1433ae51d6d",
+      "bytes": 3924,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/u.png": {
+      "hash": "6da6a7fbc51b",
+      "sha256": "6da6a7fbc51b0c42a323ba19cfdcc125fa3acc394a9bac87663cedfde60efc9b",
+      "bytes": 5065,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/u.webp": {
+      "hash": "c0a063e1e5d8",
+      "sha256": "c0a063e1e5d816a3d30b635464e9389b09e53db44cd4acaa182e2eab30b418cd",
+      "bytes": 3914,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/w.png": {
+      "hash": "60e0bf8ecf64",
+      "sha256": "60e0bf8ecf641cbd4e8d5ae447bfa44c3310825a550b008d5da315a896194507",
+      "bytes": 4382,
+      "width": 173,
+      "height": 101
+    },
+    "enchantingtalesholostamp/w.webp": {
+      "hash": "73a2f2075ada",
+      "sha256": "73a2f2075ada9660aa9f8c9875c3128e6bad8d087921f8c6129d4da73f06d9cc",
+      "bytes": 2606,
+      "width": 173,
+      "height": 101
+    },
     "expeditionland/b.png": {
       "hash": "ad617dd9791a",
       "sha256": "ad617dd9791a227b9ac795f4c8e4681af9ec891f1268ab0702b1397b104969fb",
@@ -24333,6 +24627,398 @@
       "bytes": 55678,
       "width": 1500,
       "height": 2100
+    },
+    "sncartdeco/b-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/b.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/c.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/g.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/m.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/pt/b.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/b.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/c.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/c.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/g.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/g.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/m.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/m.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/r.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/r.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/u.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/u.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/w.png": {
+      "hash": "e56682f2f23c",
+      "sha256": "e56682f2f23c2b3c80c631d10b419d36c8eca3ddffd9cebb207d007a97a64374",
+      "bytes": 16535,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/pt/w.webp": {
+      "hash": "2b400c08c0d0",
+      "sha256": "2b400c08c0d0715a9d5f24386a871220e3535031a12821b24463a0c8b197a861",
+      "bytes": 4820,
+      "width": 254,
+      "height": 134
+    },
+    "sncartdeco/r-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/r.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/u.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w-legendary.png": {
+      "hash": "ddef6def2389",
+      "sha256": "ddef6def23897ce74ffdfe84327eedad5aed3c56f4ccc078099a2f88a575838b",
+      "bytes": 613651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w-legendary.webp": {
+      "hash": "b1fbcf70dd9c",
+      "sha256": "b1fbcf70dd9c83b49793ee8f0d8d71b964475c7173e912275fdaf344ffc95e08",
+      "bytes": 142990,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w.png": {
+      "hash": "c43be36fb528",
+      "sha256": "c43be36fb52836bf696cb4fc11a67758e7464e5651450487b6b90a9e221faa89",
+      "bytes": 598974,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdeco/w.webp": {
+      "hash": "5af5c274ace2",
+      "sha256": "5af5c274ace281351e16f7a4a23dd1a82df033154ac60176d9a7b4fef1812b95",
+      "bytes": 133212,
+      "width": 1500,
+      "height": 2100
+    },
+    "sncartdecoholostamp/b.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/b.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/c.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/c.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/g.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/g.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/m.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/m.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/r.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/r.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/u.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/u.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/w.png": {
+      "hash": "1e833d50c1f3",
+      "sha256": "1e833d50c1f3a482d42ec8754a2ef447b1fc9f983643a277bd66337952c8d5f9",
+      "bytes": 3096,
+      "width": 188,
+      "height": 54
+    },
+    "sncartdecoholostamp/w.webp": {
+      "hash": "2a8efd8a7776",
+      "sha256": "2a8efd8a777697116298874327692e70ba1b786fb3448b3d3b992b3d48c565a0",
+      "bytes": 2154,
+      "width": 188,
+      "height": 54
     },
     "split/b.png": {
       "hash": "cf588c412c28",

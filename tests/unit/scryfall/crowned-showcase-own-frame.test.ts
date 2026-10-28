@@ -91,6 +91,7 @@ describe("a crowned showcase's crown is its own frame's", () => {
         "showcase/ltr/scroll+two-colour-hybrid",
         "showcase/mkm/dossier",
         "showcase/mul/tarkir",
+        "showcase/snc/art-deco",
         "showcase/znr/hedron",
       ].sort(),
     );
@@ -98,6 +99,8 @@ describe("a crowned showcase's crown is its own frame's", () => {
     expect(ownCrownFramesOf("showcase/blb/anime")).toEqual(["bloomanime"]);
     expect(ownCrownFramesOf("showcase/znr/hedron")).toEqual(["fullart"]);
     expect(ownCrownFramesOf("showcase/blb/woodland+two-colour")).toEqual(["bloomburrow"]);
+    // The New Capenna Art Deco's arch (#622 listed it by hand): derived the same.
+    expect(ownCrownFramesOf("showcase/snc/art-deco")).toEqual(["sncartdeco"]);
     // A printing that isn't a crowned showcase names no own frame: its
     // standard crown follows it wherever it lands.
     expect(ownCrownFramesOf("era/2015")).toBeUndefined();

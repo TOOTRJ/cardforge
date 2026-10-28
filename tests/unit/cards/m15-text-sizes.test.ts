@@ -98,10 +98,12 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
+    // …and TODO 4.11 wave 2's New Capenna Art Deco (a new template: no bump).
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
-    // …and TODO 4.11 wave 2's MKM dossier and Dominaria United Stained
-    // Glass (new templates: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(85);
+    // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
+    // …and TODO 4.11 wave 2's Enchanting Tales and Dominaria United
+    // Stained Glass (new templates: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(87);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -190,6 +192,7 @@ describe("one M15-era display size (layout v32)", () => {
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "dndsourcebook" ||
         t === "dossier" ||
+        t === "enchantingtales" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -198,6 +201,7 @@ describe("one M15-era display size (layout v32)", () => {
         t === "avatar" ||
         t === "bloomburrow" ||
         t === "bloomanime" ||
+        t === "sncartdeco" ||
         // …and the Dominaria United Stained Glass, a new template, the CC
         // M15 disc on its run's row.
         t === "stainedglass" ||
@@ -435,10 +439,19 @@ describe("baselines (TextSlot.dy)", () => {
     // the type line the CC baseline (print's 1259–1260, ours 1260).
     ["avatar", base.title, cc],
     ["bloomburrow", base.title, cc],
+    // The Enchanting Tales (TODO 4.11 wave 2, a new template): the name 3.5
+    // px up with the pack's title bar (print's baseline 88 px under its own
+    // bar's top), the type line on the CC baseline (print's 1259–1260).
+    ["enchantingtales", base.title - 3.5 / 1500, cc],
     // The Bloomburrow anime (layout v70): its own layout on M15's slots — the
     // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
     // type line the CC baseline (print's 1261, ours 1260).
     ["bloomanime", base.title, cc],
+    // The New Capenna Art Deco (TODO 4.11 wave 2, a new template): M15's
+    // slots on the pack's own bars — the name 1 px up and the type line 4.5
+    // px under the CC baseline, the means of its 90 printings (the plain 60
+    // set both ~4 px lower than the 30 legends).
+    ["sncartdeco", base.title - 1 / 1500, cc + 4.5 / 1500],
     // The D&D Sourcebook (TODO 4.11 wave 2, a new template): M15's slots on
     // the page's own lines — the name 1.5 px up (42.5 px above the title
     // rule, the 127 prints' median), the type line 3 px under the CC

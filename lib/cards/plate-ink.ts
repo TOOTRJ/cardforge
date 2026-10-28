@@ -77,6 +77,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // pack's ptBounds (274 × 150) — the bevelled plate and its
   // coloured ends fill the image to every edge.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The New Capenna Art Deco showcase's plate (TODO 4.11 wave 2): Card
+  // Conjurer's 'Golden Age (SNC)' P/T (254 × 134) under every key, drawn at
+  // the pack's bounds — the gold-rimmed plate fills its image but for its
+  // rounded corners.
+  "/frames/sncartdeco/pt/{color}.png": { left: 0.0039, top: 0.0074, right: 0.9961, bottom: 0.9926 },
   // The D&D Sourcebook showcase's plate (TODO 4.11 wave 2): Card Conjurer's
   // one 'Power/Toughness' (260 × 132) under every key, drawn at the pack's
   // ptBounds — the bevelled parchment plate fills the image to every edge.
@@ -86,6 +91,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // ptBounds — the paper tag with its string hole fills the image but for
   // 3 px of its shadow on the left and 1 at the top.
   "/frames/dossier/pt/{color}.png": { left: 0.0076, top: 0.0051, right: 1, bottom: 1 },
+  // The Enchanting Tales showcase's plates (TODO 4.11 wave 2): Card
+  // Conjurer's six 'Power/Toughness' (499 × 276; c the white one), drawn at
+  // the pack's bounds — the plate and its curled tail fill the image to
+  // every edge.
+  "/frames/enchantingtales/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // The Stained Glass showcase's plates (TODO 4.11 wave 2): Card Conjurer's
   // 'Power/Toughness' (262 × 127) per key, drawn at the pack's ptBounds —
   // the bronze-rimmed plate fills the image to every edge.
