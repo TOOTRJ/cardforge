@@ -178,7 +178,8 @@ describe("off a card, either typed order draws", () => {
     for (const inner of ["W/W/P", "C/W/P", "2/W/P", "W/U/B", "W/U/PP"]) expect(canonicalPipCode(inner), inner).toBeNull();
     const { container } = render(<InlinePips text="Pay {u/g/p}." />);
     const pip = container.querySelector("i")!;
-    expect(pip.getAttribute("aria-label")).toBe("{U/G/P}");
+    expect(pip.getAttribute("aria-label")).toBe("blue or green Phyrexian mana");
+    expect(pip.getAttribute("title")).toBe("{U/G/P}");
     expect(pip.classList.contains("ms-gup")).toBe(true);
   });
 });

@@ -418,6 +418,14 @@ const TEMPLATES = {
     confirm: "DMU / MUL stained-glass showcase — confirm the thumbnail is the leaded-glass frame, not DMU #369–371 (the Phyrexian-script Sheoldred, the Ajani walkers) or MUL's etched twins.",
     q: (k) => `((set:dmu cn>=287 cn<=368) or (set:mul (cn:5 or cn:12 or cn:19 or cn:22 or cn:24 or cn:55 or cn:56 or cn:58 or cn:59))) ${spellColor(k)}`,
   },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): OTP #1–65 — NOT the
+  // textured-foil reprints #66–80, the split #39 or the walker #50. `c` the
+  // land or an artifact, `m` a three-colour card or a pair (the pair masters
+  // ride the gold key).
+  breakingnews: {
+    confirm: "OTP Breaking News — confirm the thumbnail is the 'Prosperity Post' newspaper page (not the textured-foil reprint, OTP #66–80).",
+    q: (k) => `set:otp cn<=65 -t:planeswalker -is:split ${spellColor(k)}`,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

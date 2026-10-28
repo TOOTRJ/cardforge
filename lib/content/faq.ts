@@ -251,7 +251,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   },
   {
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). Plus and Pro add monthly credits, watermark-free hi-res downloads and print-ready PDFs, and Pro adds deck-aware AI design plus whole-deck export.",
+    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). Plus and Pro add monthly credits, watermark-free hi-res downloads, print files (800 ppi, bleed, MakePlayingCards) and print-ready PDFs, and Pro adds deck-aware AI design, print sheets and whole-deck export.",
   },
 ];
 

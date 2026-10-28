@@ -102,7 +102,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { eraForTemplate, isM15Treatment } from "@/lib/creator/frame-picker";
-import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { normalizeFrameTemplate, typeLineWords } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { tokenFrameText } from "@/lib/creator/token-frame-auto";
 import { archTallStandIn, isArchTallTokenTemplate, m20TokenHeightOf } from "@/lib/cards/token-height";
@@ -240,9 +240,9 @@ export function CardSetupPanel({
   // Basic-only frames (the full-art basic land) can't draw a nonbasic's
   // rules, so their chips are disabled unless the card IS one basic land —
   // the same rule the renderers and the server gate read.
-  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn, dfcIcon, plainLandMaster] = useWatch({
+  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn, dfcIcon, plainLandMaster, printedTypes] = useWatch({
     control,
-    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon", "frame_style.plainLandMaster"],
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon", "frame_style.plainLandMaster", "printed_types"],
   });
   const cardSubtypes = parseSubtypes(subtypesText ?? "");
   const isBasicLand = isSingleBasicLand({
@@ -412,6 +412,7 @@ export function CardSetupPanel({
             },
           }}
           supertype={supertype ?? ""}
+          printedTypes={printedTypes}
           onToggle={(word, on) =>
             setValue("supertype", toggleTokenWord(getValues("supertype"), word, on), {
               shouldDirty: true,
@@ -878,12 +879,17 @@ const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
  *  is on, only it shows. */
 function TokenTypeSection({
   supertype,
+  printedTypes,
   onToggle,
   emblem,
   title = "Token type",
   face = "",
 }: {
   supertype: string;
+  /** The face's Types field as the maker typed it (TODO 3b.16; null = never
+   *  edited): the header lists the words in THAT order, as the card prints
+   *  them (TODO 3b.20 — display only; the chips still read `supertype`). */
+  printedTypes?: string | null;
   onToggle: (word: TokenPickerWord, on: boolean) => void;
   /** The Emblem choice (6.23): a card's, never a back face's. */
   emblem?: { on: boolean; available: boolean; onChange: (on: boolean) => void };
@@ -919,7 +925,10 @@ function TokenTypeSection({
   return (
     <SetupSection
       title={title}
-      value={buildTypeLine({ supertype, cardType: "token" })}
+      // The words the card prints left of its dash, in its order: the typed
+      // order once the Types field was edited (typeLineWords, as the type
+      // line itself).
+      value={typeLineWords({ supertype, cardType: "token", printedTypes }).join(" ")}
       autoClose={false}
     >
       <ChipGroup
@@ -959,12 +968,13 @@ function TokenTypeSection({
  *  front's design. No Emblem choice: an emblem has one face. */
 export function TokenBackTypeSection() {
   const { control, setValue, getValues, clearErrors } = useFormContext<FormValues>();
-  const supertype = useWatch({ control, name: "back_face.supertype" });
+  const [supertype, printedTypes] = useWatch({ control, name: ["back_face.supertype", "back_face.printed_types"] });
   return (
     <TokenTypeSection
       title="Back face type"
       face="Back face "
       supertype={supertype ?? ""}
+      printedTypes={printedTypes}
       onToggle={(word, on) => {
         clearErrors("back_face");
         setValue("back_face.supertype", toggleTokenWord(getValues("back_face.supertype"), word, on), {

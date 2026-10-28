@@ -16,23 +16,18 @@ import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout"
 import type { CardFinish } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
-// Small "Soon" pill for finishes that aren't shippable yet.
-function SoonBadge() {
-  return (
-    <span className="rounded-full border border-border/70 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-subtle">
-      Soon
-    </span>
-  );
-}
-
 // Finish presets. Foil and Etched shipped with TODO 6.5 (owner decision
 // 2026-09-26): the live preview and the saved image draw the same shared SVG
 // (lib/cards/foil-finish.tsx since layout v28, lib/cards/etched-finish.tsx
 // since v26), so what the editor shows is what the card saves as. Every
-// finish is free (PREMIUM_FINISHES in types/card.ts is empty). Showcase stays
-// "Soon": only the preview slants its title (the browser fakes an italic
-// Beleren; the bake has no italic face and prints it upright), and the ornate
-// hairline its description promises is drawn by neither renderer.
+// finish is free (PREMIUM_FINISHES in types/card.ts is empty).
+// Showcase is NOT a finish anyone can pick, and its chip promises nothing
+// (TODO 3b.12): the saved image draws a showcase card exactly as a regular
+// one (only the live preview slants its title — the bake has no italic
+// Beleren), and the ornate hairline it once promised is drawn by neither
+// renderer. The chip stays, off, so a stored "showcase" value still shows
+// as picked, and it points at what IS drawn: the showcase FRAMES, under the
+// Card step's Variations.
 export const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "regular",
@@ -52,9 +47,9 @@ export const FINISH_OPTIONS: ChipOption<CardFinish>[] = [
   {
     value: "showcase",
     label: "Showcase",
-    description: "Italic display title with an ornate hairline.",
+    description:
+      "Not a finish: the showcase looks are frames. Pick one under Variations on the Card step.",
     disabled: true,
-    badge: <SoonBadge />,
   },
 ];
 

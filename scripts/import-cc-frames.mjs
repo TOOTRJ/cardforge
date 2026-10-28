@@ -1322,10 +1322,11 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       recipe[key] = [
         `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${def.nativeSize ? `resampled once from ${def.nativeSize.width}×${def.nativeSize.height} (Lanczos)` : CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
         ...(def.clearAboveY !== undefined ? [`the rows above card row ${def.clearAboveY} cleared (the master's own page shows there)`] : []),
+        ...(def.clearOutside !== undefined ? [`cleared outside card x ${def.clearOutside.x0}–${def.clearOutside.x1}, rows to ${def.clearOutside.y1} (the master's own flat ground shows there)`] : []),
         ...(def.blackoutCapturePx !== undefined
-          ? [`the pack's capture (luma > ${def.capture.minLuma} in box x ${def.capture.x0}–${def.capture.x1}, rows ${def.capture.y0}–${def.capture.y1}) painted opaque black, grown ${def.blackoutCapturePx} px`]
+          ? [`the pack's capture (luma > ${def.capture.minLuma} in box x ${def.capture.x0}–${def.capture.x1}, rows ${def.capture.y0}–${def.capture.y1}) painted opaque ${def.fillRgb ? def.fillRgb.join(",") : "black"}, grown ${def.blackoutCapturePx} px`]
           : []),
-        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent${def.blackoutPx ? `, the ${def.blackoutPx} px round it painted opaque black` : " (no ring painted round it)"}`,
+        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent${def.blackoutPx ? `, the ${def.blackoutPx} px round it painted opaque ${def.fillRgb ? def.fillRgb.join(",") : "black"}` : " (no ring painted round it)"}`,
       ];
       if (dryRun) {
         console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -1340,6 +1341,19 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // masters') drops them, card rows above `clearAboveY`: the
       // downscale's ringing at the piece's top edge drew a light line there.
       if (def.clearAboveY !== undefined) placedPiece.fill(0, 0, Math.max(0, def.clearAboveY - box.y) * box.width * 4);
+      // A piece whose outer columns and foot are the master's own flat ground
+      // (TODO 4.11 wave 2: the Breaking News strip's charcoal over the
+      // master's same charcoal) keeps only `clearOutside`'s card px: the
+      // downscale rang one px inside the piece's bounds there.
+      if (def.clearOutside !== undefined) {
+        const { x0, x1, y1 } = def.clearOutside;
+        for (let y = 0; y < box.height; y += 1) {
+          for (let x = 0; x < box.width; x += 1) {
+            if (box.x + x >= x0 && box.x + x <= x1 && box.y + y <= y1) continue;
+            placedPiece.fill(0, (y * box.width + x) * 4, (y * box.width + x) * 4 + 4);
+          }
+        }
+      }
       if (def.blackoutStampGrowPx !== undefined) blackoutStampShape(placedPiece, stamp, box.width, box.height, def.blackoutStampGrowPx);
       // A capture painted in the piece itself (TODO 4.11: the MUL Tarkir
       // well) is read off the placed piece before the cut: held inside it.
@@ -1351,9 +1365,11 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const captureBlacked = def.blackoutCapturePx !== undefined;
       if (captureBlacked) {
         if (!captured) throw new Error(`${folder}: blackoutCapturePx needs a capture box`);
-        blackoutStampShape(placedPiece, captured, box.width, box.height, def.blackoutCapturePx);
+        blackoutStampShape(placedPiece, captured, box.width, box.height, def.blackoutCapturePx, def.fillRgb);
       }
-      const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx);
+      // (TODO 4.11 wave 2: a notch whose ground round the hologram is not
+      // black — the Breaking News strip's charcoal — names it, `fillRgb`.)
+      const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.fillRgb);
       // A well flattened into its master's footer tone (TODO 4.11 wave 2:
       // the Enchanting Tales piece's darker outer ring), alpha kept.
       let wellNote = "";
@@ -1369,9 +1385,9 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       }
       // With the shape blacked out, the hologram check is the shape's own
       // (every pixel of it black or clear), not "nothing outside the ring".
-      const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined || captureBlacked ? null : (captured ?? stamp));
+      const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined || captureBlacked ? null : (captured ?? stamp), def.fillRgb);
       if (def.blackoutStampGrowPx !== undefined) findings.failures.push(...stampShapeBlackFindings(piece, stamp, box.width, box.height).failures);
-      if (captureBlacked) findings.failures.push(...stampShapeBlackFindings(piece, captured, box.width, box.height).failures);
+      if (captureBlacked) findings.failures.push(...stampShapeBlackFindings(piece, captured, box.width, box.height, def.fillRgb).failures);
       for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });

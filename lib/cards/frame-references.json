@@ -7143,5 +7143,94 @@
       ],
       "c": null
     }
+  },
+  "breakingnews": {
+    "note": "The OTJ Breaking News showcase (TODO 4.11 wave 2): OTJ's bonus sheet OTP #1–65, the front page of 'The Prosperity Post' — NOT the textured-foil reprints OTP #66–80 (another borderless frame), and not #39 (a split card) or #50 (a planeswalker), other bodies. One page per colour key, the colour on the masthead's wash, the bands' rules and the side bars; 'c' the colourless printings — the land (#65, the brown land master) and an artifact (#61, the slate artifact master); 'm' a three-colour card (gold) and a two-colour one (Detention Sphere, W/U — the pair masters, the split dress, ride the gold key).",
+    "colors": {
+      "w": [
+        {
+          "name": "Fell the Mighty",
+          "set": "otp",
+          "scryfallId": "fbd897e0-0f6b-4a35-9f33-a16d85ddfad8"
+        },
+        {
+          "name": "Path to Exile",
+          "set": "otp",
+          "scryfallId": "aa112736-7596-448a-be2f-0798acb3b2ee"
+        }
+      ],
+      "u": [
+        {
+          "name": "Essence Capture",
+          "set": "otp",
+          "scryfallId": "d2bcfba6-fbd8-487c-8a89-2327c3d07870"
+        },
+        {
+          "name": "Mana Drain",
+          "set": "otp",
+          "scryfallId": "4c7f0ea5-a142-4157-b85d-ec49dd79adf6"
+        }
+      ],
+      "b": [
+        {
+          "name": "Murder",
+          "set": "otp",
+          "scryfallId": "6c776ca4-4950-4a27-8ce2-fbe534579d62"
+        },
+        {
+          "name": "Thoughtseize",
+          "set": "otp",
+          "scryfallId": "5e85d5db-ced3-406d-90d2-e506a9332468"
+        }
+      ],
+      "r": [
+        {
+          "name": "Collective Defiance",
+          "set": "otp",
+          "scryfallId": "cbaaa9e0-e5d4-4ae1-8082-cc018eb1fe39"
+        },
+        {
+          "name": "Fling",
+          "set": "otp",
+          "scryfallId": "1cddae19-eb96-475c-9800-17ac57df4c0a"
+        }
+      ],
+      "g": [
+        {
+          "name": "Clear Shot",
+          "set": "otp",
+          "scryfallId": "4f362332-3682-4638-bc8b-6984f48e3464"
+        },
+        {
+          "name": "Force of Vigor",
+          "set": "otp",
+          "scryfallId": "3d98d6a5-36a0-441f-ac64-9d02b2dbb773"
+        }
+      ],
+      "c": [
+        {
+          "name": "Dust Bowl",
+          "set": "otp",
+          "scryfallId": "18d24d9a-a49e-4ce8-9158-03fe4cea39e2"
+        },
+        {
+          "name": "Contagion Engine",
+          "set": "otp",
+          "scryfallId": "fe584bf8-cb71-42b5-b5c0-dea3fec79c9d"
+        }
+      ],
+      "m": [
+        {
+          "name": "Cruel Ultimatum",
+          "set": "otp",
+          "scryfallId": "539e00a6-6cb0-4960-8a45-52d70b575f5a"
+        },
+        {
+          "name": "Detention Sphere",
+          "set": "otp",
+          "scryfallId": "bb049418-44db-4f98-9d53-385c5cd0f5cc"
+        }
+      ]
+    }
   }
 }

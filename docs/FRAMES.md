@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 70 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 71 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
@@ -221,6 +221,14 @@ into `.frames-build/` — 70 templates today (`CC_TEMPLATES` in
   run) drawn in, ten two-colour pairs lerped, its one plate and its
   triangle stamp notch (`tardisholostamp`); no crown ([The Doctor Who TARDIS
   showcase](#the-doctor-who-tardis-showcase-411-wave-2));
+
+- the OTJ Breaking News showcase (4.11 wave 2, an addition): breakingnews —
+  the 'Breaking News' pack's frames downscaled once (`a` its artifact frame,
+  `c` its land frame), ten two-colour pairs lerped across print's split, its
+  P/T boxes, its crown band (`breakingnewscrown`, the pairs lerped) and its
+  oval stamp notch (`breakingnewsholostamp`, the capture painted the strip's
+  charcoal)
+  ([The OTJ Breaking News showcase](#the-otj-breaking-news-showcase-411-wave-2));
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
@@ -6501,6 +6509,199 @@ Counterspell, #13 Brainstorm), b (#27 Demonic Tutor, #28 Doom Blade), r
 (#62 Lightning Helix, #60 Electrolyze — the pair dress rides the `m` tick,
 V-A); `c` has no print.
 
+### The OTJ Breaking News showcase (4.11 wave 2)
+
+`breakingnews` — "Breaking News" in the Outlaws of Thunder Junction set
+(`thunderjunction`, showcase era): the front page of "The Prosperity Post"
+on OTJ's bonus sheet, OTP #1–65 — borderless on Scryfall, on the 2015
+frame. Card Conjurer's 'Breaking News' pack (packBreakingNews.js,
+`img/frames/breakingNews/`, 2010 × 2814, downscaled ONCE to 1500 × 2100),
+frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.breakingnews`, the `BREAKING_NEWS` block of
+`scripts/lib/cc-frames.mjs`). An ADDITION: a new template — no layout bump,
+no sweep, no badge; nobody can pick it until a colour is verified.
+
+- **Scope.** 63 of the 65 are single-bodied: instants, sorceries and
+  enchantments (Auras among them), four artifacts — a legend (#63
+  Mindslaver), a Vehicle (#64 Unlicensed Hearse) — and a land (#65 Dust
+  Bowl); 21 two-colour cards, 4 three-colour (gold), no hybrid, no
+  creature. Two are other bodies on the same page, which the template
+  doesn't draw: #39 Crime // Punishment (a split card, turned) and #50 Oko,
+  Thief of Crowns (a planeswalker) — nearest, each with its own gap
+  (`showcase/otp/breaking-news/split`, `…/planeswalker`), on the borderless
+  frame they landed on before. NOT OTP #66–80, the textured-foil reprints of
+  fifteen of the run: another borderless frame (`borderless/standard`,
+  unchanged).
+- **Masters.** The pack's frames whole: w u b r g, m (gold — three colours
+  or more), `a` = the pack's slate 'Artifact Frame' (a colourless ARTIFACT,
+  `artifactMasterKeys { c: "a" }`: #61–64) and `c` = the pack's brown 'Land
+  Frame' (the pack draws no colourless frame; the run's one colourless
+  non-artifact is a land, #65, which prints it). The page runs to the top
+  and side edges, the charcoal strip under it to the bottom: every edge is
+  `design` (the strip is print's own 64,58,60 on every scan, where OTJ's
+  regular black border reads 0,0,0 on the same scans — print's tone, kept,
+  never held dark at the corner).
+- **The two-colour dress** (`twoColorMasters: ["split"]`, opt-in per card
+  like every two-colour dress; an import of a two-colour printing names
+  it). Print draws a two-colour card's page — the masthead's wash, the
+  bands' rules, the side bars — in its FIRST colour on the left and its
+  second on the right (pair order: #34 B|G, #43 W|U, #52 R|W …), split
+  through one fixed, distressed edge. The pack has no two-colour dress, so
+  the ten pair masters are the two colour frames lerped across
+  `BREAKING_NEWS_PAIR_RAMP`, 45.7 → 55.6 %W, at the pack's size, then
+  downscaled once: each pixel of the bands' six coloured rules on the 21
+  pairs, projected between the same pixel's median on the run's mono prints
+  of its two colours, crosses 10 / 90 % at 46.7 / 54.6 %W on every print
+  (the 50 % point 49.8 or 52.1: print's speckled edge). Ours is the smooth
+  lerp across it.
+- **The window.** See-through on 106–1907 × 479–1613 of 2010 × 2814
+  (79.1–1423.1 × 357.5–1203.8 px), round-cornered; the art slot covers it
+  with the art-window check's 0.05 % to spare: 78–1425 × 356–1206.
+- **Tones** — the ring's one rule (raw scan medians over each key's mono
+  prints, on clean interiors; a region ≥ 9 levels off is toned;
+  `BREAKING_NEWS_PRINT_TONES`): the title band's rule (its middle rows) ≤ 4
+  on every key (w 243,236,203 / 239,234,202 … u 44,105,145 / 48,105,141);
+  the page (title and type bands) ≤ 4; the masthead's wash ≤ 8; the side
+  bars ≤ 6; the strip 0; the artifact P/T box's face (#64) ≤ 6. Nothing
+  toned.
+- **Re-cut: none.** The pack IS print's drawing at the card's own 63 × 88
+  mm: horizontally the two agree to the px, and print stretched onto 1500 ×
+  2100 sits 0.22 % lower down the card (the bands' rules 0.5 → 3 px, the
+  page's foot 4 px) — a resample, not a block, so nothing is moved: every
+  slot is placed on the pack's band where print sets it on its own
+  (print's row × 0.9978, `breakingNewsRow`).
+- **Slots** (the M15-era family's sizes, `fit: "measured"`; the family
+  joined without a bump), each measured on the 63 single-bodied prints and
+  then on our own bakes the same way (pack-page rows):
+
+  | | print (median, × 0.9978) | ours |
+  |---|---|---|
+  | name: capitals' foot / centre | 297.3 / 742–755 px | 297 / centred on 750 |
+  | cost discs: centre row / last disc's right end | 112 / 1411 | 112 / 1410 (+ its shadow) |
+  | type line: capitals' foot / first ink | 1321.1 / 130 | 1321 / 130 |
+  | set symbol (OTP) ink centre / right end | 1294.1 / 1380 | 1295 / 1380 |
+  | rules: first ink / full box's ink | 132 / 1375–1894 | 131 / 1378–1891 |
+  | collector line 1 / 2 (foot) | 1983.6 / 2022.5 | 1984 / 2023 |
+
+  — the name CENTRED on its band between the masthead's two boxes (175–1325
+  px) and set in capitals, as print sets it (Card Conjurer too); the cost
+  in a box of its own in the masthead (`costRect`: the family's 70 px disc,
+  centred on 112, the row ending on 1411 — print's and Card Conjurer's
+  mana box's end); the type line in capitals, its band 1380 px wide; the
+  set symbol in a box of its own (`symbolRect`) on the band's printed box
+  at its right end; the rules box between the page's two rules
+  (1371–1895); the P/T on the pack's box at its ptBounds (1124.6–1427.6 ×
+  1838.7–1987.9 px), the value in Card Conjurer's text box; the collector
+  line 10 / 9.5 px above M15's rows (`BREAKING_NEWS_COLLECTOR`), M15's pen
+  (print's first ink 99, its © ending on 1395). Name, type line and P/T ink
+  `#332e30` (print's median 51,46,48; Card Conjurer draws #332e2e).
+- **Flagged, not changed:** print's name and type line are a western
+  display face (Card Conjurer's 'saloongirl'), its capitals 77 / 55 px tall
+  where the family's Beleren capitals are ~56 / ~47 (no font is added for a
+  frame, never a size literal); print breaks the name band's two thin rules
+  round the name (a gap the width of the name), where the pack — and so
+  ours — runs them under it; print's cost discs are the set's own style
+  (Card Conjurer's `manaSymbolsBreakingNews`: a charcoal generic disc with a
+  light numeral) where ours are the family's; Keyrune's OTP glyph draws 73
+  px tall where print's vault stands 88 (the set's printed size is
+  `set-symbol-prints.ts`' — a bump of its own); the two-colour split is our
+  smooth lerp, print's a speckled edge; the colourless NON-artifact
+  creature (or instant, sorcery…) wears the land page `c` with the slate
+  artifact P/T box — no print of one exists (the run's one colourless
+  non-artifact is #65, a land), so nothing tells what it should be.
+- **The masthead makes room for the cost** (owner decision on #624: FOLLOW
+  PRINT; `lib/cards/masthead.ts`, `BREAKING_NEWS_MASTHEAD`). Print moves
+  the masthead out of a long cost's way: up to three pips everything shows
+  (#7: the discs from 1185, the ">>" chevron's tip on 1184); at four the
+  chevron goes (#25, #51, #58: 1108–1411); at five the row slides right to
+  the masthead's end (#22: 1080–1461), the wordmark stays; at seven the
+  WORDMARK slides left, the icon box cut short with its right border drawn
+  there (#40: the P 427 → 271, the border 382 → 233; print also narrows
+  the wordmark 3 %, we only slide it). ONE rule, from the row's DRAWN width
+  (`manaCostWidthPct`: each pip's own disc through `pipScale`, so a
+  Phyrexian pip counts as wide as it is drawn) — never a pip count: the
+  row's left end where it sits today below 1180 drops the chevron; below
+  1078 by the estimate (the Y's arm on 1062 + 16 px; the drawn row is 1–4 px wider, so 14–16 px drawn against print's 18 — 1082 would move the wordmark at five pips, where print keeps it) the
+  row slides right as far as it needs, up to 1463 (even px); whatever it
+  still lacks the wordmark slides left, in even px. Past anything printed
+  the same rule never draws ink under the cost: a shift past 244 px (the
+  box would lose its colour tab) drops the wordmark and keeps the whole
+  box; a row reaching the box (left of 402) drops the box too. Both
+  renderers draw two PIECES right after the frame, under its overlays —
+  `breakingnewsmasthead/<key>` (the wordmark strip at its shift) and
+  `breakingnewsmasthead/paper/<key>` (the masthead's paper with no ink, in
+  a window whose left end follows the wordmark) — and translate the cost
+  row; a card whose row fits draws neither (its bake is unchanged). The
+  pieces go into BOTH finish masks too (foil and etched, first, each clipped
+  to its window — the masks' overlays take an optional `window`), so the
+  sheen follows the wordmark where it slid, never the master's. A TEXT
+  token in the cost ("2BB", "or") is measured by its drawn letters in this
+  rule (`costRowDrawnPx`; the name's room keeps its estimate). A pair key's
+  paper is its two colours' papers lerped across the pair masters' own
+  ramp (`pairPaperPiece`), so the first colour's tint stays left of the
+  split. The
+  pieces are PipGlyph's own cut of the published masters
+  (`scripts/build-breaking-news-masthead.mjs`, numbers in
+  `scripts/lib/breaking-news-masthead.mjs`; bucket only): nothing drawn,
+  only alpha set. No flat zone exists in the masthead (the paper is
+  textured), so every edge a piece adds is a fade of paper onto paper
+  (39 px left of the wordmark off the box's rows, 13 / 46 px right of the
+  Y, 10 / 9 rows above "THE" and below "POST") or lies on a printed edge
+  (the box's border, the coloured bars, the rules' rows); the paper is the
+  master's clean run right of the chevron (1188–1387) laid end to end
+  every 160 px with 40 px crossfades (never mirrored), crossfaded onto the
+  master's own columns where it ends. The crease that crosses the icon box
+  is not carried where the cut box lands on it (print keeps its crease on
+  top); on a legend the crown band's V stays over the wordmark's old place
+  (no long-cost legend prints). An ADDITION's look on the template itself
+  (no stored card is on the frame before #624 merges): no bump, no sweep.
+- **Crown** (`BREAKING_NEWS_CROWN`, `breakingnewscrown/<key>.png`, 1500 ×
+  60): the pack's 'Legendary Crown' (`crown/<k>.png`, 1965 × 72 at 4 / 2
+  of the 2010 × 2814 card) — the coloured rule with its notched V across
+  the page's top edge that the run's one legend prints (#63 Mindslaver,
+  against #61 / #62). Keys: w u b r g m, a, l (`keyMap c → l`,
+  `artifactKeyMap c → a`) and the ten pairs, lerped across the frame's own
+  ramp (no two-colour legend prints one). The showcase is in
+  `CROWNED_SHOWCASE_SIGNATURES` (its own frame's crown, `CROWN_OWN_FRAMES`): a
+  legendary import names the crown ON on this frame only. An ADDITION,
+  opt-in per card.
+- **Stamp** (`BREAKING_NEWS_HOLO_STAMP`, `breakingnewsholostamp/<key>.png`):
+  the run's rares and mythics wear the OVAL (`security_stamp: oval`, 45 of
+  65), its uncommons none — "auto" is a rare or mythic, as on M15. The notch
+  is the pack's one 'Holo Stamp' (`stamp.png`, 447 × 116 at 781 / 2555 of
+  2010 × 2814) — the charcoal strip raised in a tab into the page's foot,
+  print's tab — placed and downscaled with the card, cut to a 338 × 91 box
+  at 581, 1905 px, one piece under every key and pair. Kept only on x
+  590–909 above row 1990 (`clearOutside`): beyond, the piece is the strip's
+  flat charcoal over the master's same charcoal, and the downscale rang one
+  px inside its bounds (a +6-level line). The pack paints a capture of the
+  hologram in the tab 7 px BELOW where print sets its top (685–814 ×
+  1928–1990 against the prints' 686–816 × 1921–1987 on all 45 stamped
+  prints): every lit pixel of it inside its ellipse is painted the strip's
+  opaque charcoal first (grown 2 px, `blackoutCapturePx`; `fillRgb`
+  64,58,60 — the importer's blackout and its check paint and hold that
+  colour instead of black), then the prints' oval + 2 px cut clear and the
+  2 px round it painted charcoal — no pixel of the capture is published;
+  our oval art covers the cut — on the strip (`HoloStampArt.ring:
+  "strip"`, `HOLO_STAMP_OVAL_STRIP_ART`): its 3 px margin in the strip's
+  charcoal (`HOLO_STAMP_STRIP_RING_RGB`, the notch's `fillRgb`) and no dark
+  keyline, as print's hologram meets the charcoal directly. An ADDITION,
+  opt-in per card.
+- **Imports.** `showcase/otp/breaking-news` (borderless, OTP #1–65) is exact
+  on `breakingnews` once the card's colour is verified, `nearest` until then
+  (`withVerification`); before this frame the run imported
+  `borderless/showcase`, nearest on the borderless frames. #39 and #50
+  keep that landing under their own gaps. Every printing keeps its real
+  colour (a pair's colours, gold for three or more); every other fixture's
+  outcome is unchanged.
+- **Creator.** In the Showcase & Universes Beyond era as "Outlaws of
+  Thunder Junction — Breaking News", for every kind its body draws (no
+  `TREATMENT_KINDS` row, as the scroll and the sourcebook: print dresses
+  spells, artifacts and a land, and its dress is the card's colour, never a
+  type word — a creature wears it outright, on the pack's P/T box as the
+  Vehicle does; no borrowed word); offered only in a ticked colour, and the
+  AI's random pool reaches it only there.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -10929,12 +11130,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 89 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 90 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive and Doctor Who TARDIS, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

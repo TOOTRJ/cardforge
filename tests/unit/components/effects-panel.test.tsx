@@ -10,9 +10,11 @@ import { chipOff } from "../helpers/chip";
 // The Publish step's finish picker (TODO 6.5, owner decision 2026-09-26):
 // Foil and Etched ship — the preview and the saved image draw the same shared
 // SVG — so their chips are selectable and write frame_style.finish. Showcase
-// stays a disabled "Soon" chip: the bake prints nothing for it (a showcase
-// bake is byte-identical to a regular one), so picking it would save a card
-// that doesn't look like its preview.
+// stays a disabled chip: the bake prints nothing for it (a showcase bake is
+// byte-identical to a regular one), so picking it would save a card that
+// doesn't look like its preview. Since TODO 3b.12 it promises nothing — no
+// "Soon", no "ornate hairline" neither renderer draws — and points at the
+// showcase FRAMES, which are drawn.
 // ---------------------------------------------------------------------------
 
 function Harness({ initial = "regular" }: { initial?: CardFinish }) {
@@ -46,7 +48,7 @@ const chip = (name: RegExp): HTMLButtonElement => {
 afterEach(cleanup);
 
 describe("EffectsPanel — finish chips", () => {
-  it("offers Regular, Foil and Etched; Showcase is still 'Soon'", () => {
+  it("offers Regular, Foil and Etched; Showcase is off and promises nothing (TODO 3b.12)", () => {
     render(<Harness />);
     for (const name of [/^Regular/, /^Foil/, /^Etched/]) {
       const button = chip(name);
@@ -55,7 +57,19 @@ describe("EffectsPanel — finish chips", () => {
     }
     const showcase = chip(/^Showcase/);
     expect(chipOff(showcase)).toBe(true);
-    expect(showcase.textContent).toMatch(/Soon/);
+    // No "Soon" and no look neither renderer draws (the old "Italic display
+    // title with an ornate hairline")…
+    expect(showcase.textContent).not.toMatch(/Soon|hairline|italic/i);
+    // …but where the showcase looks ARE: the frames under Variations.
+    expect(showcase.textContent).toMatch(/showcase looks are frames/i);
+    expect(showcase.textContent).toMatch(/Variations on the Card step/);
+  });
+
+  it("no finish chip says 'Soon' or carries a badge", () => {
+    for (const option of FINISH_OPTIONS) {
+      expect(option.badge, option.value).toBeUndefined();
+      expect(option.description ?? "", option.value).not.toMatch(/Soon|hairline/i);
+    }
   });
 
   it("picking Foil, then Etched, writes frame_style.finish and leaves the frame alone", () => {

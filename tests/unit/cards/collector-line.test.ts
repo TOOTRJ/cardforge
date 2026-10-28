@@ -127,6 +127,8 @@ describe("the switch values", () => {
       "stainedglass",
       // …and the Doctor Who TARDIS (TODO 4.11 wave 2): its run's rows.
       "tardis",
+      // …and the OTJ Breaking News (TODO 4.11 wave 2): its run's rows in the strip.
+      "breakingnews",
     ]);
   });
 });

@@ -26,6 +26,7 @@ import {
   partFactsOfBackFace,
   type PartFrameFacts,
   FrameOverlayLayer,
+  MastheadPieceLayer,
   frameOverlayImageUrl,
   pickFrameColorKey,
   webpVariant,
@@ -33,6 +34,7 @@ import {
 import { EtchedSheen } from "@/lib/cards/etched-finish";
 import { plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import { holoStampArtOf } from "@/lib/cards/holo-stamp-art";
+import { resolveMasthead } from "@/lib/cards/masthead";
 import {
   FoilBackdropSheen,
   FoilSheen,
@@ -981,6 +983,14 @@ function CardFace({
   const typeInk = bandTextStyle(layout.type, masterKey);
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
+  // A masthead that makes room for the cost row (lib/cards/masthead.ts: the
+  // Breaking News wordmark) — its pieces and the row's slide; null on every
+  // other frame and wherever the row fits. The bake's twin.
+  const masthead = resolveMasthead(layout, showCost ? face.cost : null, masterKey);
+  const costDx = (layout.costDx ?? 0) + (masthead ? masthead.costDxPx / 1500 : 0);
+  // …and in both finish masks, first, each clipped to its window as drawn:
+  // the sheen follows the wordmark where it now sits (the bake's twin).
+  const mastheadMaskOverlays = (masthead?.pieces ?? []).map((piece) => ({ href: frameOverlayImageUrl(piece.path), rect: piece.rect, window: piece.window }));
 
   const showPT = Boolean(layout.pt) && printsPowerToughness(face);
   // In the editor the starting-loyalty shield shows even before a value is
@@ -1361,6 +1371,9 @@ function CardFace({
       {/* Anatomy overlays (the legendary crown band, TODO 4.6.0) — over the
           master at its z-index, under every text layer: the bake draws them
           right after its frame image. Nothing when the card draws none. */}
+      {/* A masthead's pieces (lib/cards/masthead.ts) — right after the
+          frame, under its overlays; nothing where the cost row fits. */}
+      <MastheadPieceLayer pieces={masthead?.pieces} zIndex={5} />
       <FrameOverlayLayer overlays={overlays} zIndex={5} />
       {/* The white border (TODO 4.30): the white over the master's black
           border and the keyline inside it — right after the frame and its
@@ -1411,6 +1424,7 @@ function CardFace({
               : null
           }
           overlays={[
+            ...mastheadMaskOverlays,
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
@@ -1448,6 +1462,7 @@ function CardFace({
             secondArtPosition: secondFace?.artPosition,
           })}
           overlays={[
+            ...mastheadMaskOverlays,
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
@@ -1580,7 +1595,7 @@ function CardFace({
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
-            offsetX={layout.costDx ? cqw(layout.costDx) : undefined}
+            offsetX={costDx ? cqw(costDx) : undefined}
           />
         </div>
       ) : null}
@@ -2105,7 +2120,7 @@ function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
         // Above the ability rows with its notch on the borderless walkers
         // (AboveRowsStamp, z 20 after the rows), else over the sheens.
         zIndex: stamp.aboveRows ? 20 : 7,
-        backgroundImage: `url("${holoStampArtOf(stamp.shape, stamp.tone).dataUri}")`,
+        backgroundImage: `url("${holoStampArtOf(stamp.shape, stamp.tone, stamp.ring).dataUri}")`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
       }}

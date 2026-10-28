@@ -72,7 +72,7 @@ export function EtchedSheen({
    *  stretched over its card-% rect, added to the mask after the frame, so
    *  the crown etches with the frame it is drawn over. Empty = the mask is
    *  the frame alone, exactly as before. */
-  overlays?: readonly { href: string; rect: Rect }[];
+  overlays?: readonly { href: string; rect: Rect; window?: Rect }[];
 }) {
   const vw = landscape ? 2100 : 1500;
   const vh = landscape ? 1500 : 2100;
@@ -125,6 +125,20 @@ export function EtchedSheen({
             <rect x={seamX} y="0" width={vw - seamX} height={vh} />
           </clipPath>
         ) : null}
+        {/* An overlay drawn only inside its window (a masthead's paper piece,
+            lib/cards/masthead.ts): clipped in the mask as the face clips it. */}
+        {overlays.map((overlay, i) =>
+          overlay.window ? (
+            <clipPath key={`ow${i}`} id={`${id}-ow${i}`} clipPathUnits="userSpaceOnUse">
+              <rect
+                x={(overlay.window.leftPct / 100) * vw}
+                y={(overlay.window.topPct / 100) * vh}
+                width={(overlay.window.widthPct / 100) * vw}
+                height={(overlay.window.heightPct / 100) * vh}
+              />
+            </clipPath>
+          ) : null,
+        )}
         <mask id={`${id}-frame`} maskUnits="userSpaceOnUse" x="0" y="0" width={vw} height={vh}>
           {frameHref === null ? null : split ? (
             <image
@@ -150,17 +164,26 @@ export function EtchedSheen({
               clipPath={`url(#${id}-right)`}
             />
           ) : null}
-          {overlays.map((overlay, i) => (
-            <image
-              key={i}
-              href={overlay.href}
-              x={(overlay.rect.leftPct / 100) * vw}
-              y={(overlay.rect.topPct / 100) * vh}
-              width={(overlay.rect.widthPct / 100) * vw}
-              height={(overlay.rect.heightPct / 100) * vh}
-              preserveAspectRatio="none"
-            />
-          ))}
+          {overlays.map((overlay, i) => {
+            const image = (
+              <image
+                key={i}
+                href={overlay.href}
+                x={(overlay.rect.leftPct / 100) * vw}
+                y={(overlay.rect.topPct / 100) * vh}
+                width={(overlay.rect.widthPct / 100) * vw}
+                height={(overlay.rect.heightPct / 100) * vh}
+                preserveAspectRatio="none"
+              />
+            );
+            return overlay.window ? (
+              <g key={i} clipPath={`url(#${id}-ow${i})`}>
+                {image}
+              </g>
+            ) : (
+              image
+            );
+          })}
         </mask>
       </defs>
       <g mask={`url(#${id}-frame)`}>

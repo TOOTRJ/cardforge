@@ -170,15 +170,22 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
         void onSubmit();
       }}
     >
-      <FieldGroup kind="group" label="What kind of feedback is this?" helper={activeHint}>
-        <ChipGroup
-          ariaLabel="Feedback category"
-          layout="grid-2"
-          size="md"
-          value={category}
-          onChange={setCategory}
-          options={categoryOptions}
-        />
+      {/* ONE control with a role of its own (a radiogroup): `kind="control"`,
+          the row named for the field and described by the hint — a named
+          group round it said the field twice (TODO 3b.36, as 3b.24 in the
+          creator). */}
+      <FieldGroup kind="control" label="What kind of feedback is this?" helper={activeHint}>
+        {(aria) => (
+          <ChipGroup
+            ariaLabel="What kind of feedback is this?"
+            ariaDescribedBy={aria["aria-describedby"]}
+            layout="grid-2"
+            size="md"
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+          />
+        )}
       </FieldGroup>
 
       {showFrameSelect ? (

@@ -85,7 +85,8 @@ describe("bake path = preview path", () => {
     // …and the Dominaria United stained glass's 10 (4.11 wave 2).
     // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
     // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
-    expect(pairKeys).toBe(450);
+    // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
+    expect(pairKeys).toBe(460);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -203,6 +204,9 @@ describe("bake path = preview path", () => {
                                     : template === "tardis"
                                       ? // …and the Doctor Who TARDIS's trapezoid (4.11 wave 2).
                                         "tardisholostamp"
+                                    : template === "breakingnews"
+                                      ? // …and the OTJ Breaking News' oval tab (4.11 wave 2).
+                                        "breakingnewsholostamp"
                                       : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
@@ -241,6 +245,9 @@ describe("bake path = preview path", () => {
                                 : template === "stainedglass"
                                   ? // …and the Dominaria United stained glass's dome (4.11 wave 2).
                                     "stainedglasscrown"
+                                : template === "breakingnews"
+                                  ? // …and the OTJ Breaking News' notched rule (4.11 wave 2).
+                                    "breakingnewscrown"
                                   : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
@@ -296,8 +303,9 @@ describe("bake path = preview path", () => {
     // pair master), and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11
     // wave 2: one black arch under every key), and the Doctor Who TARDIS's
     // 7 + 10 pairs (4.11 wave 2, the pack's one trapezoid under every key
-    // and pair).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10));
+    // and pair), and the OTJ Breaking News' 8 + 10 pairs (4.11 wave 2, the
+    // pack's one oval tab under every key and pair: a and l).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
