@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
+import { selectScopeColumns } from "@/lib/cards/bake-select";
 import {
   CARD_LAYOUT_VERSION,
   hasNewerLook,
@@ -105,25 +106,27 @@ export async function notifyOwnersOfRenderUpdates(
   if (version == null) return { owners: 0, notified: 0, scanned: 0 };
   const rows: StaleCardRow[] = [];
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
-    // Only the columns the scope rules read. The collector fields
-    // (set_code / collector_number / lang, TODO 4.9a) are not among them: a
-    // future correction scoped by set or language adds them here and to the
-    // scope row type.
-    const { data, error } = await admin
-      .from("cards")
-      .select(
-        "owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
-      )
-      .in("visibility", ["public", "unlisted"])
-      // Coarse SQL filter; hasNewerLook decides. Null stamps and missing
-      // renders are never a newer look, so they aren't scanned at all.
-      .not("rendered_image_url", "is", null)
-      .lt("layout_version", CARD_LAYOUT_VERSION)
-      .order("id", { ascending: true })
-      .range(from, from + PAGE - 1);
+    // Only the columns the scope rules read: ScopeCard's, from the ONE list
+    // (lib/cards/bake-select.ts SCOPE_CARD_COLUMNS — a column left out reads
+    // as "owes the bump" on every card). The collector fields (set_code /
+    // collector_number / lang, TODO 4.9a) are not among them: a future
+    // correction scoped by set or language adds them to the scope row type
+    // and that list.
+    const { data, error } = await selectScopeColumns("owner_id, layout_version, rendered_image_url, visibility", (columns) =>
+      admin
+        .from("cards")
+        .select(columns)
+        .in("visibility", ["public", "unlisted"])
+        // Coarse SQL filter; hasNewerLook decides. Null stamps and missing
+        // renders are never a newer look, so they aren't scanned at all.
+        .not("rendered_image_url", "is", null)
+        .lt("layout_version", CARD_LAYOUT_VERSION)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1),
+    );
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) break;
-    rows.push(...(data as StaleCardRow[]));
+    rows.push(...(data as unknown as StaleCardRow[]));
     if (data.length < PAGE) break;
   }
 
