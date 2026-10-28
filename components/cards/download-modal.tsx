@@ -59,8 +59,13 @@
 // watermarked image (PNG or JPEG) — and sees the other formats greyed out
 // (owner decision 2026-09-15); the upgrade CTA sits on the Image panel. Paid
 // tabs are gated by the viewer's plan (enforced server-side too). Available
-// formats are plain anchors with `download` so the browser saves the file
-// without a client-side fetch.
+// formats are real anchors with `download` (a middle-click or "Save link
+// as" is the browser's own), but a plain click fetches the same URL itself
+// (TODO 6.30, components/cards/live-download.tsx): every file here is drawn
+// live and can take many seconds, so the button shows a spinner and
+// "Preparing your image…", the modal's one polite live region says large
+// files can take up to a minute, and a refusal or a time-out is said in
+// words. The bytes and the file name are the link's, unchanged.
 // ---------------------------------------------------------------------------
 
 import { useState, type ReactNode } from "react";
@@ -117,6 +122,12 @@ import {
 } from "@/lib/cards/print-selection";
 import { planSheet } from "@/lib/render/sheet-layout";
 import { PrintBacksCheckbox, PrintBleedCheckbox, SheetOptionsFields } from "@/components/cards/print-sheet-options";
+import {
+  LiveDownloadLink,
+  LiveDownloadStatus,
+  useLiveDownload,
+  type LiveDownload,
+} from "@/components/cards/live-download";
 import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
@@ -222,6 +233,9 @@ export function DownloadModal({
   hasBackFace = false,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
+  // Every file of this modal is drawn live (TODO 6.30): one download at a
+  // time, its progress and its failure said in the modal's one live region.
+  const live = useLiveDownload();
   // PNG first; its corner Rounded first, like the card in the gallery. A
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
@@ -412,6 +426,8 @@ export function DownloadModal({
                   }
                   href={links.png.href}
                   filename={links.png.filename}
+                  live={live}
+                  noun="image"
                 />
               ) : (
                 // The moment of value: the card is done and wanted. Free path
@@ -438,12 +454,15 @@ export function DownloadModal({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button asChild variant="outline">
-                      <a href={links.png.href} download={links.png.filename}>
-                        <Download className="h-4 w-4" aria-hidden /> Download
-                        free {FORMAT_LABEL[imageFormat]}
-                      </a>
-                    </Button>
+                    <LiveDownloadLink
+                      live={live}
+                      href={links.png.href}
+                      filename={links.png.filename}
+                      noun="image"
+                      variant="outline"
+                    >
+                      Download free {FORMAT_LABEL[imageFormat]}
+                    </LiveDownloadLink>
                     <Button
                       type="button"
                       onClick={() => upgrade.open("hi_res_export")}
@@ -534,6 +553,8 @@ export function DownloadModal({
                   href={links.single.href}
                   filename={links.single.filename}
                   onDownload={rememberPdf}
+                  live={live}
+                  noun="PDF"
                 />
               ) : (
                 <DownloadPanel
@@ -548,10 +569,15 @@ export function DownloadModal({
                   locked={!isPaid}
                   onUpgrade={() => upgrade.open("pdf_export")}
                   onDownload={rememberPdf}
+                  live={live}
+                  noun="PDF"
                 />
               )}
             </TabsContent>
           </Tabs>
+          {/* The ONE polite live region of the modal (TODO 6.30): mounted
+              empty under both tabs, so its first message is heard. */}
+          <LiveDownloadStatus live={live} className="mt-3" />
         </div>
       </DialogContent>
     </Dialog>
@@ -769,6 +795,8 @@ function DownloadPanel({
   locked = false,
   onUpgrade,
   onDownload,
+  live,
+  noun,
 }: {
   title: string;
   description: string;
@@ -778,6 +806,9 @@ function DownloadPanel({
   onUpgrade?: () => void;
   /** Runs as the download starts (the PDF remembers its options). */
   onDownload?: () => void;
+  /** The modal's download state (TODO 6.30). */
+  live: LiveDownload;
+  noun: "image" | "PDF";
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -797,11 +828,16 @@ function DownloadPanel({
           <Crown className="h-4 w-4" aria-hidden /> Upgrade to unlock
         </Button>
       ) : (
-        <Button asChild className={cn("self-start")}>
-          <a href={href} download={filename} onClick={onDownload}>
-            <Download className="h-4 w-4" aria-hidden /> Download
-          </a>
-        </Button>
+        <LiveDownloadLink
+          live={live}
+          href={href}
+          filename={filename}
+          noun={noun}
+          onDownload={onDownload}
+          className="self-start"
+        >
+          Download
+        </LiveDownloadLink>
       )}
     </div>
   );

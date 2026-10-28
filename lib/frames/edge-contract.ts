@@ -360,6 +360,14 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
     bottom: { kind: "design" },
     left: { kind: "art", except: [[0, 22.4], [65.8, 100]] },
   },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Breaking News' pack, frames bucket): a borderless newspaper page — the
+  // page to the top and side edges (design: its top corners the pack's
+  // paper) and the charcoal strip under it to the bottom edge (design: print's
+  // own 64,58,60 on every OTP scan, where OTJ's regular black border reads
+  // 0,0,0 on the same scans — a coloured footer, never held dark at the
+  // corner), cut at the one card corner by the importer.
+  breakingnews: { top: { kind: "design" }, right: { kind: "design" }, bottom: { kind: "design" }, left: { kind: "design" } },
   // The Avatar elemental (TLA #336–353, TLE #305–317), since TODO 4.11
   // (layout v69): borderless — the art to the top edge and down both sides
   // to the frame (the masters see-through to 918 px on the left, 1101 on the

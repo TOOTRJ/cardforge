@@ -20,6 +20,7 @@ import { useBillingViewer } from "./use-billing-viewer";
 import {
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   PLANS,
+  PRINT_PERK_COPY,
   SIGNUP_CREDITS,
   TRIAL_CREDITS,
   TRIAL_DAYS,
@@ -58,19 +59,19 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       description:
         "Your forge is full. Upgrade for a much bigger library — up to unlimited saved cards on Pro.",
     },
+    // The print perks are said from ONE source (TODO 6.26,
+    // lib/billing/plans.ts PRINT_PERK_COPY) — the plan cards list the same.
     hi_res_export: {
       title: "Download it clean",
-      description:
-        "Paid plans remove the PipGlyph mark and unlock full-resolution (1500 × 2100) downloads. The free watermarked PNG is always available.",
+      description: PRINT_PERK_COPY.clean,
     },
     pdf_export: {
       title: "Print-ready PDF export",
-      description: "Clean, print-ready PDF export is a Plus feature.",
+      description: PRINT_PERK_COPY.pdf,
     },
     batch_export: {
       title: "Print sheets & batch export",
-      description:
-        "Pro prints any cards you pick onto sheets — mixed, with your own copies, spacing and cut guides — and exports a whole deck in one click.",
+      description: PRINT_PERK_COPY.sheets,
     },
     // AI deck/card generation itself is open to every tier — credits are
     // the only limiter (owner decision 2026-07-28). The ONE tier-gated AI

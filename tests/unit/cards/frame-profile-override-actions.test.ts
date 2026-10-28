@@ -67,6 +67,7 @@ import { staleBackBodyFilter, staleTemplateFilter } from "@/lib/cards/frame-over
 import { isDfcBackBody } from "@/lib/cards/dfc";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
+import { SCOPE_CARD_COLUMNS } from "@/lib/cards/bake-select";
 
 type Candidate = { id: string; layout_version: number | null } & Record<string, unknown>;
 
@@ -406,6 +407,20 @@ describe("a BACK body's save marks the cards whose back face is drawn on it (adm
       const scans = stub.forTable("cards").filter((e) => !called(e.calls, "update"));
       expect(scans).toHaveLength(1);
       expect(called(scans[0].calls, "filter", "back_face->frame_style->>template")).toBe(false);
+    }
+  });
+});
+
+describe("the mark scan reads every scope column", () => {
+  it("selects SCOPE_CARD_COLUMNS (v72's nickname, typed types and credit too): a column left out null-stamps cards that owe nothing", async () => {
+    const stub = db({ existingRow: true });
+    await saveFrameProfileOverrideAction({ template: "saga", overrides: { title: { rect: { topPct: 5 } } } });
+    const scans = stub.forTable("cards").filter((e) => called(e.calls, "select") && !called(e.calls, "update"));
+    expect(scans.length).toBeGreaterThan(0);
+    for (const scan of scans) {
+      const columns = String(scan.calls.find((c) => c.method === "select")?.args[0]).split(", ");
+      for (const column of SCOPE_CARD_COLUMNS) expect(columns, column).toContain(column);
+      for (const column of ["id", "visibility", "layout_version", "rendered_image_url"]) expect(columns).toContain(column);
     }
   });
 });

@@ -920,6 +920,9 @@ export type ResolvedHoloStamp = {
    *  finish masks (notInFrameLayer) and draw it, then the oval, after the
    *  rules layer. */
   aboveRows?: true;
+  /** The oval sits on a painted strip (HoloStampArt.ring): both renderers
+   *  draw holoStampArtOf(shape, tone, ring). */
+  ring?: "strip";
 };
 
 /**
@@ -952,6 +955,7 @@ export function resolveHoloStamp(
     keepOut: art.keepOut,
     ...(art.keepOutShape ? { keepOutShape: art.keepOutShape } : {}),
     ...(art.aboveRows ? { aboveRows: true as const } : {}),
+    ...(art.ring ? { ring: art.ring } : {}),
   };
 }
 

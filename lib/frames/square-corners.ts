@@ -77,6 +77,12 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   // run into the top corners (design); the bottom is the border black
   // painted under the MSE masters, cut at the one card corner.
   tarkirdraconic: { kinds: { tl: "frame", tr: "frame" } },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Breaking News' pack): the page runs into the top corners and the
+  // charcoal strip into the bottom ones (design all round: the importer keeps
+  // the four square — the strip's charcoal, and the pack's own corner wedge
+  // at the top), what the render drew.
+  breakingnews: { kinds: "frame" },
 };
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a

@@ -41,9 +41,7 @@ import { TypesField } from "@/components/creator/types-field";
 import { Controller, useController, useFormContext, useWatch } from "react-hook-form";
 import { selfReferenceFor } from "@/lib/cards/self-name";
 import { parseSubtypes } from "@/lib/creator/card-fields";
-import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SurfaceCard } from "@/components/ui/surface-card";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
@@ -78,52 +76,11 @@ import { FLAVOR_MARKUP_HINT } from "@/lib/cards/flavor-markup";
 export const secondPartArtNotDrawnNote = (partWords: SecondPartWords) =>
   `This card has one picture, shared by ${partWords.both} — artwork set here is saved with the card but not drawn on it.`;
 
-/** The second part is switched off (`has_back_face` false — the form turns
- *  it on by itself for these frames; this is what shows until it has). The
- *  same card the old panel showed, with the same button. */
-export function SecondPartEmpty({
-  isAdventureFrame,
-  partWords,
-  onAdded,
-}: {
-  isAdventureFrame: boolean;
-  partWords: SecondPartWords;
-  onAdded?: () => void;
-}) {
-  const { setValue } = useFormContext<FormValues>();
-  return (
-    <SurfaceCard className="flex flex-col items-center gap-3 border-dashed bg-elevated/40 p-8 text-center">
-      <p className="text-sm leading-6 text-muted">
-        {isAdventureFrame ? (
-          <>
-            The Adventure frame splits the lower card into a storybook: this
-            content becomes the <strong>adventure spell</strong> on the left
-            page, shown alongside the creature&apos;s rules — no flip. Add it
-            to fill the adventure.
-          </>
-        ) : (
-          <>
-            This frame paints {partWords.phrase} on the same card. Add it to
-            give it a name, a cost and rules of its own — it shares the
-            card&apos;s rarity and frame.
-          </>
-        )}
-      </p>
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        onClick={() => {
-          setValue("has_back_face", true, { shouldDirty: true });
-          onAdded?.();
-        }}
-      >
-        <Sparkles className="h-4 w-4" aria-hidden />
-        {`Add ${partWords.phrase}`}
-      </Button>
-    </SurfaceCard>
-  );
-}
+// (No "second part is switched off" state — TODO 3b.11. A frame that paints
+// a second part always has it on: the form's own effect sets
+// `has_back_face` the moment such a frame is current, and every path that
+// switches it off leaves the frame too, so the old empty card with its "Add
+// the right half" button could never be seen.)
 
 // ---------------------------------------------------------------------------
 // Identity step.

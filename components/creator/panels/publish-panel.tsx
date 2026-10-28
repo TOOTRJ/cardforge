@@ -8,7 +8,7 @@
 // (TODO 5.2): a double-faced card is a KIND of the Card step, its back a
 // panel of the Identity step.
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -98,6 +98,9 @@ export function PublishPanel({
   const tagsText = useWatch({ control, name: "tags_text" }) ?? "";
   const visibility = useWatch({ control, name: "visibility" });
   const saveAsDraft = useWatch({ control, name: "save_as_draft" }) ?? false;
+  const draftId = useId();
+  const draftNameId = `${draftId}-name`;
+  const draftNoteId = `${draftId}-note`;
   // The checkbox and the visibility field move together: ticking it forces
   // private; unticking a private card offers public (the default) again.
   const setSaveAsDraft = (next: boolean) => {
@@ -176,19 +179,25 @@ export function PublishPanel({
       <FieldGroup kind="group" label="Publishing">
         <div className="flex flex-col gap-3">
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5">
+            {/* Named by its words alone and DESCRIBED by the line under
+                them — the wrapping <label> alone made the whole label, helper
+                included, its name (TODO 3b.36). The label still makes the
+                whole box a click target. */}
             <input
               type="checkbox"
               checked={saveAsDraft}
               onChange={(event) => setSaveAsDraft(event.target.checked)}
+              aria-labelledby={draftNameId}
+              aria-describedby={draftNoteId}
               className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
               data-testid="save-as-draft"
             />
             <span className="flex flex-col gap-0.5">
-              <span className="inline-flex items-center gap-1.5 font-medium">
+              <span id={draftNameId} className="inline-flex items-center gap-1.5 font-medium">
                 <FileEdit className="h-4 w-4 text-muted" aria-hidden />
                 Save as a draft
               </span>
-              <span className="text-xs leading-5 text-muted">
+              <span id={draftNoteId} className="text-xs leading-5 text-muted">
                 Private — only you can see it, and it needs just a title.
                 Untick it whenever you&apos;re ready to publish.
               </span>

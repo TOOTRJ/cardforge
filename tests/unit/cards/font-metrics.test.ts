@@ -3,6 +3,7 @@ import path from "node:path";
 // @ts-expect-error -- opentype.js (a dev dependency) ships no type declarations.
 import opentype from "opentype.js";
 import { describe, expect, it } from "vitest";
+import { ZEROED_DISPLAY_KERN_PAIRS } from "@/lib/cards/display-kerning";
 import { displayTextEm, displayTextWidthEm, kernWidening } from "@/lib/cards/display-metrics";
 import { BODY_FACE_METRICS, BODY_GLYPH_INK, BODY_INK_PER_MILLE, LINE_FACE_METRICS } from "@/lib/cards/font-metrics";
 import { slotLineEm } from "@/lib/cards/render-tiers";
@@ -96,7 +97,14 @@ describe("the generator reproduces the hand-kept tables it replaced", () => {
     expect(display.unitsPerEm).toBe(HAND.display.unitsPerEm);
     expect([...display.asciiAdvanceUnits]).toEqual(HAND.display.asciiAdvanceUnits);
     expect(display.extraAdvanceUnits).toEqual(HAND.display.extraAdvanceUnits);
-    expect(display.kernWidening).toEqual(HAND.display.kernWidening);
+    // Layout v72 zeroed Beleren's collision-guard kerns (lib/cards/
+    // display-kerning.ts): the hand-kept table less exactly those pairs.
+    const handSinceV72 = Object.fromEntries(
+      Object.entries(HAND.display.kernWidening)
+        .map(([left, entries]) => [left, entries.split(" ").filter((entry) => !ZEROED_DISPLAY_KERN_PAIRS.includes(left + entry[0])).join(" ")])
+        .filter(([, entries]) => entries !== ""),
+    );
+    expect(display.kernWidening).toEqual(handSinceV72);
     expect(Object.values(HAND.display.kernWidening).join(" ").split(" ").length).toBeGreaterThan(200);
   });
 
@@ -138,12 +146,12 @@ describe("the fits take a face", () => {
   const ASCII = Array.from({ length: 0x7f - 0x20 }, (_, i) => String.fromCharCode(0x20 + i));
 
   it("with no face named, every measure is the display face's (what each returned before)", () => {
-    for (const text of ["Miner the Miner, Damned Delver", "Legendary Sorcery — Arcane Lesson", "Ry", "WWWW", "ñandú", "漢"]) {
+    for (const text of ["Miner the Miner, Damned Delver", "Legendary Sorcery — Arcane Lesson", "Ry", "RA", "WWWW", "ñandú", "漢"]) {
       expect(displayTextWidthEm(text), text).toBe(displayTextWidthEm(text, { face: "display" }));
       expect(displayTextEm(text), text).toBe(displayTextEm(text, "display"));
     }
-    expect(kernWidening("Ry")).toBe(309);
-    expect(kernWidening("Ry", "display")).toBe(309);
+    expect(kernWidening("RA")).toBe(144);
+    expect(kernWidening("RA", "display")).toBe(144);
     for (const value of ["10/10", "*/*+1", "40/40", "X/X"]) {
       expect(statWidthEm(value), value).toBe(statWidthEm(value, "display"));
       expect(statInkEm(value), value).toEqual(statInkEm(value, "display"));

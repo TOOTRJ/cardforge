@@ -9,12 +9,13 @@ import {
   staleTemplateFilter,
 } from "@/lib/cards/frame-override-stale";
 import type { CardFaceColumns } from "@/lib/cards/faces";
+import { selectScopeColumns } from "@/lib/cards/bake-select";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { overrideHash } from "@/lib/cards/frame-verification-state";
 import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
-import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
+import { CARD_LAYOUT_VERSION, hasNewerLook, type ScopeCard } from "@/lib/cards/layout-version";
 import { artSlotOverrideRefusal } from "@/lib/frames/art-window-override";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -109,33 +110,44 @@ async function markTemplateRendersStale(
   let alreadyMarked = 0;
   let keptForOwner = 0;
   type ScanQuery = ReturnType<ReturnType<typeof admin.from>["select"]>;
+  type ScanRow = ScopeCard &
+    CardFaceColumns & {
+      id: string;
+      visibility: string | null;
+      layout_version: number | null;
+      rendered_image_url: string | null;
+    };
   const scan = async (
     narrow: (query: ScanQuery) => ScanQuery,
     keep: (card: CardFaceColumns) => boolean,
   ): Promise<void> => {
     for (let from = 0; from < 50 * MARK_PAGE; from += MARK_PAGE) {
-      // Only the columns the scope rules read; the collector fields (TODO
-      // 4.9a) join them only if a correction is ever scoped by set or
-      // language.
-      const query = narrow(
-        admin
-          .from("cards")
-          .select(
-            "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
-          )
-          .in("visibility", ["public", "unlisted"])
-          .not("rendered_image_url", "is", null),
+      // Only the columns the scope rules read: ScopeCard's, from the ONE
+      // list (lib/cards/bake-select.ts SCOPE_CARD_COLUMNS — a column left
+      // out reads as "owes the bump" on every card, which would null-stamp
+      // cards that owe nothing). The collector fields (TODO 4.9a) join them
+      // only if a correction is ever scoped by set or language.
+      const { data, error } = await selectScopeColumns("id, visibility, layout_version, rendered_image_url", (columns) =>
+        narrow(
+          admin
+            .from("cards")
+            .select(columns)
+            .in("visibility", ["public", "unlisted"])
+            .not("rendered_image_url", "is", null),
+        )
+          .order("id", { ascending: true })
+          .range(from, from + MARK_PAGE - 1),
       );
-      const { data, error } = await query.order("id", { ascending: true }).range(from, from + MARK_PAGE - 1);
       if (error || !data) break;
-      for (const card of data) {
+      const rows = data as unknown as ScanRow[];
+      for (const card of rows) {
         if (seen.has(card.id) || !keep(card)) continue;
         seen.add(card.id);
         if (card.layout_version == null) alreadyMarked += 1;
         else if (hasNewerLook(card)) keptForOwner += 1;
         else toMark.push(card.id);
       }
-      if (data.length < MARK_PAGE) break;
+      if (rows.length < MARK_PAGE) break;
     }
   };
   // The cards whose FRONT draws on the template — unchanged since 0.20.

@@ -128,7 +128,6 @@ import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import {
   SecondPartCostField,
-  SecondPartEmpty,
   SecondPartFlavorField,
   SecondPartIdentityFields,
   SecondPartRulesField,
@@ -370,7 +369,11 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
-import { GlyphCoverageNotice, UndrawableSymbolNotice } from "@/components/creator/glyph-coverage-notice";
+import {
+  GlyphCoverageNotice,
+  GlyphNoticeAnnouncer,
+  UndrawableSymbolNotice,
+} from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import {
   isFramePreviewSave,
@@ -4512,6 +4515,8 @@ export function CardCreatorForm({
       ) : null}
       {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
       {!readOnly ? <UndrawableSymbolNotice values={watched} overrides={pipOverrides} className="mb-6" /> : null}
+      {/* The two notices above, said once to a screen reader (TODO 6.7). */}
+      {!readOnly ? <GlyphNoticeAnnouncer values={watched} overrides={pipOverrides} /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}
@@ -4733,9 +4738,10 @@ export function CardCreatorForm({
                           </FaceScope>
                         }
                       />
-                    ) : (
-                      <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-                    )}
+                    ) : // Nothing while `has_back_face` is off (TODO 3b.11):
+                    // on a frame that paints a second part that lasts only
+                    // until the form's effect above turns it on.
+                    null}
                   </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
@@ -4857,9 +4863,7 @@ export function CardCreatorForm({
                     <SecondPartStatsFields shown={secondPartFields.shown} />
                   </FaceScope>
                 </>
-              ) : (
-                <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-              )
+              ) : null // (as on the Identity step: never seen — TODO 3b.11)
             ) : stepKey === "text" ? (
               <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 {!hidesCost(watched.frame_style?.template) ? (
