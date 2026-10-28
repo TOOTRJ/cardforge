@@ -45,6 +45,7 @@ const s = vi.hoisted(() => ({
   createResult: null as null | Record<string, unknown>,
   createThrows: null as Error | null,
   recentLabels: [] as string[],
+  eqs: [] as Array<[string, string, unknown]>,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -58,7 +59,10 @@ vi.mock("@/lib/supabase/server", () => ({
           : { data: [], error: null };
       const chain: Record<string, unknown> = {
         select: () => chain,
-        eq: () => chain,
+        eq: (column: string, value: unknown) => {
+          s.eqs.push([table, column, value]);
+          return chain;
+        },
         in: () => chain,
         order: () => chain,
         limit: () => chain,
@@ -140,6 +144,7 @@ vi.mock("@/lib/cards/actions", () => ({
 
 import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { failedStepMessage } from "@/lib/ai/failure";
+import { frameChoicesForType } from "@/lib/creator/frame-random";
 
 const EVERY = FRAME_TEMPLATE_VALUES.flatMap((template) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template as FrameTemplate, colour)),
@@ -211,6 +216,7 @@ beforeEach(() => {
   s.createResult = null;
   s.createThrows = null;
   s.recentLabels = [];
+  s.eqs = [];
   s.spend.mockReset();
   charged();
   s.refund.mockReset().mockResolvedValue(true);
@@ -354,6 +360,48 @@ describe("the same options twice never reuse a design (the owner's two identical
     expect(s.prompts).toHaveLength(2);
     expect(s.prompts[0]).not.toBe(s.prompts[1]);
     expect(s.prompts[0]).toMatch(/Fresh design #[0-9a-f]{8}/);
+  });
+
+  it("the recent titles are read for the caller only (owner filter beside RLS)", async () => {
+    s.answers = [[designed({ title: "Ashveil Courier" })]];
+    await createCardFillJob({ want: ["title"] as never, locked: {}, steer: {} });
+    expect(s.eqs).toContainEqual(["ai_generation_jobs", "owner_id", USER]);
+    expect(s.eqs).toContainEqual(["card_idea_batches", "owner_id", USER]);
+  });
+
+  it("an unreadable frame list never refuses a free design (an empty set avoids nothing)", async () => {
+    s.verified = [];
+    s.answers = [[designed()]];
+    const out = await createCardFillJob({ want: ["card_type", "title"] as never, locked: {}, steer: {} });
+    expect(out.ok).toBe(true);
+    expect(s.prompts).toHaveLength(1);
+    expect(s.prompts[0]).not.toContain("anything but");
+  });
+
+  it("a free type with no published frame in the design's OWN colour is designed again", async () => {
+    // Every frame published, but no planeswalker frame in red.
+    const walkerFrames = new Set(frameChoicesForType("planeswalker", new Set(EVERY)).map((choice) => choice.template));
+    s.verified = EVERY.filter((key) => {
+      const [template, colour] = key.split("/");
+      return !(walkerFrames.has(template as FrameTemplate) && colour === "r");
+    });
+    const walker = designed({
+      title: "Veyra, Ember Oracle",
+      card_type: "planeswalker",
+      supertype: "Legendary",
+      subtypes: ["Veyra"],
+      rules_text: "+1: Draw a card.\n-3: Veyra deals 3 damage to any target.",
+      flavor_text: null,
+      loyalty: "4",
+      power: null,
+      toughness: null,
+    });
+    s.answers = [[walker], [designed()]];
+    const out = await createCardFillJob({ want: ["card_type", "color_identity", "title", "rules_text"] as never, locked: {}, steer: {} });
+    expect(out.ok).toBe(true);
+    // Two DESIGN calls (each a fresh spark) — the walker was never kept.
+    expect(s.prompts.filter((prompt) => prompt.includes("Fresh design #"))).toHaveLength(2);
+    expect((s.inserted.at(-1)!.plan as { fields: { card_type?: string } }).fields.card_type).toBe("creature");
   });
 
   it("the user's recent AI titles are named as off-limits", async () => {

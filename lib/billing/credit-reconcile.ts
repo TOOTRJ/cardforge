@@ -36,7 +36,7 @@ export type ReconcileClient = ReturnType<typeof createAdminClient>;
  *  could still settle (or refund) on its own. */
 export const RECONCILE_GRACE_MS = 15 * 60_000;
 
-/** How far back one sweep looks. Runs hourly (since 2026-10-28; daily
+/** How far back one sweep looks. Runs every 30 min (since 2026-10-28; daily
  *  before), so each pass overlaps the many before it — redundant passes are
  *  no-ops thanks to the refund key, and a couple of days of cron outage
  *  drops nothing. */
@@ -52,14 +52,17 @@ const RECONCILE_MAX_PAGES = 20;
 export type ReconcileResult =
   | {
       ok: true;
-      /** Aged, unsettled spends examined (each one is refunded or fails). */
+      /** Aged, unsettled spends examined. */
       scanned: number;
+      /** Of those, already refunded before this run (skipped, not resent). */
+      alreadyRefunded: number;
       /** Settled spends in the same window — the health signal that the
        *  executors are still stamping. A run that settles nothing while
        *  refunding plenty means settlement broke, not that users crashed. */
       settled: number;
-      /** Refunds issued — includes idempotent no-ops for spends the
-       *  in-process path already refunded (indistinguishable by design). */
+      /** Refunds this run issued for spends with no refund yet (a refund
+       *  landing between the read and the grant is still an idempotent
+       *  no-op, counted here — a rare race, never a second credit). */
       refunded: number;
       failed: number;
     }
@@ -123,9 +126,37 @@ export async function reconcileOrphanedSpends(
     if (rows.length < RECONCILE_SCAN_LIMIT) break;
   }
 
+  // The refunds that already LANDED for this window (the in-process refund
+  // of a failed step, an earlier sweep): skipped, never sent to
+  // grant_credits again. Its idempotency guard made the resend harmless,
+  // but every failed spend of the 72 h window went out again on every run
+  // and every AI action (cost, a "returned N" log counting no-ops, and the
+  // ideas route's time budget). A refund is written after its spend, so
+  // every refund of a spend in the window was written in the window too.
+  // Read AFTER the spends: a refund landing in between is caught by the
+  // key, as before.
+  const alreadyRefunded = new Set<string>();
+  for (let page = 0; page < RECONCILE_MAX_PAGES; page += 1) {
+    const from = page * RECONCILE_SCAN_LIMIT;
+    const { data, error } = await forUser(
+      admin
+        .from("credit_ledger")
+        .select("idempotency_key")
+        .like("idempotency_key", "refund:spend:%")
+        .gte("created_at", windowStart.toISOString()),
+    )
+      .order("created_at", { ascending: true })
+      .range(from, from + RECONCILE_SCAN_LIMIT - 1);
+    if (error) return { ok: false, error: error.message };
+    const rows = (data ?? []) as Array<{ idempotency_key: string }>;
+    for (const row of rows) alreadyRefunded.add(row.idempotency_key);
+    if (rows.length < RECONCILE_SCAN_LIMIT) break;
+  }
+
   let refunded = 0;
   let failed = 0;
   for (const spend of spends) {
+    if (alreadyRefunded.has(`refund:${spend.idempotency_key}`)) continue;
     // Orphan (crashed attempt, superseded duplicate, failed step, unrecorded
     // sync call). The refund key makes this exactly-once per spend even
     // against the in-process refund path.
@@ -148,6 +179,7 @@ export async function reconcileOrphanedSpends(
   return {
     ok: true,
     scanned: spends.length,
+    alreadyRefunded: spends.filter((spend) => alreadyRefunded.has(`refund:${spend.idempotency_key}`)).length,
     settled: settledCount ?? 0,
     refunded,
     failed,
@@ -159,7 +191,7 @@ export async function reconcileOrphanedSpends(
  * (the jobs and ideas routes, before anything is reserved): a credit taken
  * by an attempt that never finished — a tab closed mid-step, a function
  * killed past its maxDuration, a refund that didn't land — comes back then
- * instead of at the next daily cron. Only spends past RECONCILE_GRACE_MS
+ * instead of at the next cron run. Only spends past RECONCILE_GRACE_MS
  * (15 min: no live attempt can still settle them), the same
  * `refund:{spendRef}` key as the cron and the in-process refund, so nothing
  * is ever returned twice. Best effort: a failure is logged and never blocks

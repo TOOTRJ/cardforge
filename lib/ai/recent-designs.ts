@@ -20,19 +20,24 @@ const PLACEHOLDER_LABELS = new Set(["your card"]);
 type StepLike = { label?: unknown };
 type IdeaLike = { title?: unknown };
 
-export async function recentAiTitles(): Promise<string[]> {
+export async function recentAiTitles(userId: string): Promise<string[]> {
   try {
     const supabase = await createClient();
+    // RLS already scopes both tables to the caller; the owner filter is
+    // defence in depth (a policy change must never hand one user's titles
+    // to another's prompt).
     const [jobs, ideas] = await Promise.all([
       supabase
         .from("ai_generation_jobs")
         .select("steps")
+        .eq("owner_id", userId)
         .in("kind", ["card", "card_fill"])
         .order("created_at", { ascending: false })
         .limit(RECENT_JOBS),
       supabase
         .from("card_idea_batches")
         .select("ideas")
+        .eq("owner_id", userId)
         .order("created_at", { ascending: false })
         .limit(RECENT_IDEA_BATCHES),
     ]);

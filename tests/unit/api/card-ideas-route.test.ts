@@ -38,6 +38,16 @@ vi.mock("@/lib/ai/rate-limit", () => ({
 }));
 vi.mock("@/lib/ai/card-ideas", () => ({ generateCardIdeas: s.ideas }));
 vi.mock("@/lib/ai/generation-jobs", () => ({ loadOwnedDeckContext: async () => null }));
+// Every combo of every template published BUT the battle (production today).
+vi.mock("@/lib/cards/frame-reviews", async () => {
+  const { FRAME_TEMPLATE_VALUES } = await import("@/types/card");
+  return {
+    getVerifiedFrameKeys: async () =>
+      FRAME_TEMPLATE_VALUES.filter((t) => t !== "battle").flatMap((t) =>
+        ["w", "u", "b", "r", "g", "c", "m"].map((k) => `${t}/${k}`),
+      ),
+  };
+});
 
 import { POST } from "@/app/api/ai/card-ideas/route";
 
@@ -99,6 +109,15 @@ describe("POST /api/ai/card-ideas", () => {
     const { json } = await post();
     expect(String(json.error)).toMatch(/No credits were used\.$/);
     expect(s.refund).not.toHaveBeenCalled();
+  });
+
+  it("with no type chosen, the ideas avoid a type no published frame draws (battle today)", async () => {
+    s.ideas.mockResolvedValue([{ title: "Ashveil Courier" }]);
+    await post();
+    expect(s.ideas).toHaveBeenLastCalledWith(expect.objectContaining({ avoidTypes: ["battle"] }));
+    await post({ card_type: "battle" });
+    // A type the user picked is theirs — nothing avoided.
+    expect(s.ideas).toHaveBeenLastCalledWith(expect.objectContaining({ cardType: "battle", avoidTypes: [] }));
   });
 
   it("runs at 120 s and keeps its AI work inside the time budget", () => {

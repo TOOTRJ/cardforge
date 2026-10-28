@@ -225,6 +225,19 @@ export async function GET() {
   return NextResponse.json({ ok: true, job: payload }, { status: 200 });
 }
 
+/**
+ * The job as the client gets it: never its `plan` (2026-10-28, review of
+ * #632). The plan is server-only — the step route and the resume read
+ * already strip it — and for a text-only fill it holds the generated text
+ * BEFORE the step that charges for it has run. No client reads it
+ * (components/ai/generation-provider.tsx JobPayload, the creator's fill).
+ */
+function withoutPlan<T extends Record<string, unknown>>(job: T): Omit<T, "plan"> {
+  const { plan: _plan, ...rest } = job;
+  void _plan;
+  return rest;
+}
+
 /** Funnel: a generation job started (and, once per user, first_ai_generation). */
 async function recordGeneration(userId: string, kind: string): Promise<void> {
   if (!isAdminConfigured()) return;
@@ -446,7 +459,7 @@ export async function POST(request: Request) {
     }
     await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
-      { ok: true, job: result.job, cardLimit: limit, credits },
+      { ok: true, job: withoutPlan(result.job), cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -490,7 +503,7 @@ export async function POST(request: Request) {
     }
     await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
-      { ok: true, job: result.job, cardLimit: limit, credits },
+      { ok: true, job: withoutPlan(result.job), cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -516,7 +529,7 @@ export async function POST(request: Request) {
     }
     await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
-      { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
+      { ok: true, job: withoutPlan(result.job), deckSlug: result.deckSlug, cardLimit: limit, credits },
       { status: 200 },
     );
   }
@@ -535,7 +548,7 @@ export async function POST(request: Request) {
   }
   await recordGeneration(user.id, parsed.data.kind);
   return NextResponse.json(
-    { ok: true, job: result.job, deckSlug: result.deckSlug, cardLimit: limit, credits },
+    { ok: true, job: withoutPlan(result.job), deckSlug: result.deckSlug, cardLimit: limit, credits },
     { status: 200 },
   );
 }

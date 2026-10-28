@@ -28,6 +28,10 @@ export type CardIdeasInput = {
   deckContext?: string;
   /** The user's recent AI titles (lib/ai/recent-designs.ts). */
   recentTitles?: readonly string[];
+  /** Types an idea must not be when no type was chosen — no published frame
+   *  yet (frame-random.ts typesWithoutPublishedFrame): an idea applied as a
+   *  battle would land the creator on a frame it can't save. */
+  avoidTypes?: readonly CardType[];
 };
 
 async function designIdeas(input: CardIdeasInput, variety: DesignVariety): Promise<CardIdea[]> {
@@ -45,6 +49,7 @@ async function designIdeas(input: CardIdeasInput, variety: DesignVariety): Promi
       .join("\n"),
     slots: Array.from({ length: IDEA_COUNT }, (_, i) => ({
       cardType: input.cardType,
+      avoidTypes: input.cardType ? undefined : input.avoidTypes,
       rarity: input.rarity,
       note: `Idea ${i + 1} of ${IDEA_COUNT}.`,
     })),
@@ -73,8 +78,13 @@ export async function generateCardIdeas(input: CardIdeasInput): Promise<CardIdea
     (variety) => designIdeas(input, variety),
     // The first idea whose title repeats a recent one (none → no redesign).
     (ideas) => ideas.find((idea) => repeatsRecentTitle(idea.title, recent))?.title ?? null,
-    // A sync route: the redesign only while its maxDuration still holds it
-    // (a kill past it would skip the in-process refund).
-    { secondFits: (firstMs) => retryFitsBudget(firstMs) },
+    {
+      // A batch with an idea of an avoided type is designed again once.
+      acceptable: (ideas) =>
+        Boolean(input.cardType) || !ideas.some((idea) => input.avoidTypes?.includes(idea.card_type as CardType)),
+      // A sync route: the redesign only while its maxDuration still holds it
+      // (a kill past it would skip the in-process refund).
+      secondFits: (firstMs) => retryFitsBudget(firstMs),
+    },
   );
 }

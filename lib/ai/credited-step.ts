@@ -67,8 +67,14 @@ export async function withCreditedStep(
     const outcome = await refundIfCharged();
     // runNextJobStep turns the throw into a failed step; it reads the
     // outcome off the error so the user hears the truth about the credit.
-    if (error && typeof error === "object") Object.assign(error, outcome);
-    throw error;
+    // A thrown string / number / null can carry nothing: it is wrapped in
+    // an Error first (its text kept as the message, the original as cause).
+    const carrier =
+      error !== null && typeof error === "object"
+        ? error
+        : new Error(String(error), { cause: error });
+    Object.assign(carrier, outcome);
+    throw carrier;
   }
   if (result.status === "failed") {
     return { ...result, spend_ref: null, ...(await refundIfCharged()) };

@@ -16,6 +16,8 @@ import {
 import { generateCardIdeas } from "@/lib/ai/card-ideas";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { recentAiTitles } from "@/lib/ai/recent-designs";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { typesWithoutPublishedFrame } from "@/lib/creator/frame-random";
 import { aiFailureMessage, classifyProviderError, designFailureKind, type AiFailureKind } from "@/lib/ai/failure";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
@@ -117,7 +119,11 @@ export async function POST(request: Request) {
   if (isBillingEnabled() && isAdminConfigured()) {
     await reconcileUserSpends(createAdminClient(), user.id);
   }
-  const recentTitles = await recentAiTitles();
+  const recentTitles = await recentAiTitles(user.id);
+  // With no type chosen, the ideas avoid a type no published frame can draw
+  // (a battle today) — applied, it would land the creator on a frame it
+  // can't save. An unknown (unreadable) frame list avoids nothing.
+  const avoidTypes = parsed.data.card_type ? [] : typesWithoutPublishedFrame(new Set(await getVerifiedFrameKeys()));
 
   // One credit for the batch, reserved before the call and refunded if the
   // design fails (same fail-closed posture as job steps).
@@ -137,8 +143,9 @@ export async function POST(request: Request) {
   await logAiCall(user.id, "generate_card_ideas");
 
   try {
-    // A second design only while the 60 s budget still holds it — a kill
-    // past maxDuration would skip the refund below (structured-output.ts).
+    // A second design (a retry, or a redesign for variety) only while the
+    // route's maxDuration budget still holds it — a kill past maxDuration
+    // would skip the refund below (structured-output.ts).
     const ideas = await withAiTimeBudget(startedAt, maxDuration, () =>
       generateCardIdeas({
         theme: parsed.data.theme,
@@ -146,6 +153,7 @@ export async function POST(request: Request) {
         rarity: parsed.data.rarity,
         deckContext,
         recentTitles,
+        avoidTypes,
       }),
     );
     // Keep the batch (migration 0092) so a closed tab doesn't waste the

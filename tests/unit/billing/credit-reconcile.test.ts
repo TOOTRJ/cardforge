@@ -41,6 +41,10 @@ const isCountRead = (calls: ChainCall[]) =>
     (c) => c.method === "select" && (c.args[1] as { head?: boolean } | undefined)?.head === true,
   );
 
+/** The read of the refunds that already landed (2026-10-28). */
+const isRefundRead = (calls: ChainCall[]) =>
+  calls.some((c) => c.method === "like" && c.args[1] === "refund:spend:%");
+
 /** A ledger the sweep can scan: the count read answers with the settled
  *  rows, the paged scan hands back the UNSETTLED ones slice by slice
  *  (`.range(from, to)` is inclusive, like PostgREST). */
@@ -49,6 +53,9 @@ function stubAdmin(opts: {
   scanError?: string;
   countError?: string;
   refundError?: (key: string) => string | null;
+  /** refund keys already in the ledger (`refund:{spendRef}`). */
+  refunds?: string[];
+  refundReadError?: string;
 }) {
   const grants: GrantCall[] = [];
   const stub = chainClient((table, calls) => {
@@ -63,6 +70,10 @@ function stubAdmin(opts: {
     const range = calls.find((c) => c.method === "range");
     if (!range) throw new Error("scan must page with .range()");
     const [from, to] = range.args as [number, number];
+    if (isRefundRead(calls)) {
+      if (opts.refundReadError) return { error: { message: opts.refundReadError } };
+      return { data: (opts.refunds ?? []).slice(from, to + 1).map((key) => ({ idempotency_key: key })) };
+    }
     return { data: opts.spends.filter((s) => s.settled_at === null).slice(from, to + 1) };
   });
   const admin = {
@@ -91,7 +102,7 @@ describe("reconcileOrphanedSpends", () => {
 
     const result = await reconcileOrphanedSpends(admin);
 
-    expect(result).toEqual({ ok: true, scanned: 1, settled: 1, refunded: 1, failed: 0 });
+    expect(result).toEqual({ ok: true, scanned: 1, alreadyRefunded: 0, settled: 1, refunded: 1, failed: 0 });
     expect(grants).toHaveLength(1);
     expect(grants[0]).toMatchObject({
       p_user_id: USER,
@@ -126,7 +137,7 @@ describe("reconcileOrphanedSpends", () => {
 
     const result = await reconcileOrphanedSpends(admin);
 
-    expect(result).toEqual({ ok: true, scanned: 0, settled: 2, refunded: 0, failed: 0 });
+    expect(result).toEqual({ ok: true, scanned: 0, alreadyRefunded: 0, settled: 2, refunded: 0, failed: 0 });
     expect(grants).toHaveLength(0);
   });
 
@@ -179,7 +190,7 @@ describe("reconcileOrphanedSpends", () => {
 
     const result = await reconcileOrphanedSpends(admin);
 
-    expect(result).toEqual({ ok: true, scanned: 2, settled: 0, refunded: 1, failed: 1 });
+    expect(result).toEqual({ ok: true, scanned: 2, alreadyRefunded: 0, settled: 0, refunded: 1, failed: 1 });
     expect(grants).toHaveLength(2);
   });
 
@@ -227,7 +238,7 @@ describe("reconcileOrphanedSpends paging", () => {
 
     expect(result).toMatchObject({ ok: true, scanned: 1203, refunded: 1203, settled: 0, failed: 0 });
     expect(grants).toHaveLength(1203);
-    const pages = log.filter((entry) => !isCountRead(entry.calls));
+    const pages = log.filter((entry) => !isCountRead(entry.calls) && !isRefundRead(entry.calls));
     expect(pages).toHaveLength(Math.ceil(1203 / RECONCILE_SCAN_LIMIT));
   });
 });
@@ -248,7 +259,7 @@ describe("reconcileUserSpends", () => {
       spends: [{ user_id: USER, delta: -1, idempotency_key: orphaned, settled_at: null }],
     });
     await reconcileUserSpends(admin, USER);
-    expect(log).toHaveLength(2);
+    expect(log).toHaveLength(3); // settled count, spends, refunds already landed
     expect(log.every((entry) => scopedToUser(entry.calls))).toBe(true);
     expect(grants).toEqual([
       { p_user_id: USER, p_amount: 1, p_reason: "refund", p_idempotency_key: `refund:${orphaned}` },
@@ -264,5 +275,47 @@ describe("reconcileUserSpends", () => {
     const { admin, log } = stubAdmin({ spends: [] });
     await reconcileOrphanedSpends(admin);
     expect(log.some((entry) => scopedToUser(entry.calls))).toBe(false);
+  });
+});
+
+// 2026-10-28 (review of #632): a spend whose refund already LANDED (the
+// failed step's in-process refund, an earlier sweep) is skipped — never sent
+// to grant_credits again on every run and every AI action — and the count
+// says only what this run returned.
+describe("reconcileOrphanedSpends — refunds that already landed", () => {
+  it("skips them, grants only the rest, and counts each honestly", async () => {
+    const refundedInProcess = ref("fill:0", "image-blocked");
+    const orphaned = ref("fill:0", "tab-closed");
+    const { admin, grants } = stubAdmin({
+      spends: [
+        { user_id: USER, delta: -1, idempotency_key: refundedInProcess, settled_at: null },
+        { user_id: USER, delta: -1, idempotency_key: orphaned, settled_at: null },
+      ],
+      refunds: [`refund:${refundedInProcess}`],
+    });
+    const result = await reconcileOrphanedSpends(admin);
+    expect(grants.map((g) => g.p_idempotency_key)).toEqual([`refund:${orphaned}`]);
+    expect(result).toEqual({ ok: true, scanned: 2, alreadyRefunded: 1, settled: 0, refunded: 1, failed: 0 });
+  });
+
+  it("a second run over the same ledger grants nothing", async () => {
+    const orphaned = ref("card:0", "killed");
+    const { admin, grants } = stubAdmin({
+      spends: [{ user_id: USER, delta: -1, idempotency_key: orphaned, settled_at: null }],
+      refunds: [`refund:${orphaned}`],
+    });
+    const result = await reconcileOrphanedSpends(admin);
+    expect(grants).toEqual([]);
+    expect(result).toMatchObject({ refunded: 0, alreadyRefunded: 1 });
+  });
+
+  it("a failed read of the landed refunds refunds nothing (never a blind resend)", async () => {
+    const stub = stubAdmin({
+      spends: [{ user_id: USER, delta: -1, idempotency_key: ref("card:0", "x"), settled_at: null }],
+      refundReadError: "boom",
+    });
+    const result = await reconcileOrphanedSpends(stub.admin);
+    expect(result).toEqual({ ok: false, error: "boom" });
+    expect(stub.grants).toEqual([]);
   });
 });

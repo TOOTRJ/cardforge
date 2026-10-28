@@ -189,3 +189,22 @@ export const AI_FILL_NO_ANSWER_MESSAGE =
 /** The PLAN's answer was lost — nothing is reserved at plan time. */
 export const AI_PLAN_NO_ANSWER_MESSAGE =
   "We lost the answer from the AI service. No credits were used. Try again.";
+
+/**
+ * The retry confirm's credit line for a set of FAILED steps, from their own
+ * records (the deck runner; 2026-10-28 review of #632 — it said "The failed
+ * attempt was refunded" whatever had happened): a refund still on its way,
+ * a credit returned, or none taken. Retrying always reserves again.
+ */
+export function retryCreditNote(
+  failed: ReadonlyArray<{ refunded?: number | null; refund_pending?: boolean | null }>,
+): string {
+  const many = failed.length > 1;
+  if (failed.some((step) => step.refund_pending)) {
+    return `A credit a failed attempt took comes back to you automatically within the hour; retrying reserves ${many ? "credits" : "the credit"} again.`;
+  }
+  if (failed.some((step) => (step.refunded ?? 0) > 0)) {
+    return `${many ? "The failed attempts' credits were" : "The failed attempt's credit was"} returned; retrying reserves ${many ? "them" : "it"} again.`;
+  }
+  return `${many ? "The failed attempts" : "The failed attempt"} used no credits; retrying reserves ${many ? "credits" : "a credit"}.`;
+}

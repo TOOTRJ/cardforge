@@ -21,6 +21,7 @@ import {
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { jobStatusOf, openStepKeys, stepsNeedingCards } from "@/lib/ai/job-queue";
+import { retryCreditNote } from "@/lib/ai/failure";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
@@ -534,7 +535,7 @@ export function GenerationJobProvider({
         !(await confirmSpend({
           cost: stepCost,
           title: "Retry this step?",
-          description: "The failed attempt was refunded; retrying reserves the credit again.",
+          description: retryCreditNote(retrying),
           confirmLabel: "Retry",
         }))
       ) {
@@ -580,7 +581,7 @@ export function GenerationJobProvider({
       !(await confirmSpend({
         cost: retryCost,
         title: `Retry ${failedSteps.length} failed step${failedSteps.length === 1 ? "" : "s"}?`,
-        description: "Failed attempts were refunded; retrying reserves the credits again.",
+        description: retryCreditNote(failedSteps),
         confirmLabel: "Retry",
       }))
     ) {

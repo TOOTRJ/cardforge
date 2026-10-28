@@ -14,7 +14,26 @@ import {
   classifyProviderError,
   creditOutcome,
   failedStepMessage,
+  retryCreditNote,
 } from "@/lib/ai/failure";
+import { typesWithoutPublishedFrame } from "@/lib/creator/frame-random";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+
+describe("typesWithoutPublishedFrame", () => {
+  const every = FRAME_TEMPLATE_VALUES.flatMap((template) =>
+    ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template as FrameTemplate, colour)),
+  );
+  it("names a type with no published frame (battle today)", () => {
+    expect(typesWithoutPublishedFrame(new Set(every.filter((key) => !key.startsWith("battle/"))))).toEqual(["battle"]);
+    expect(typesWithoutPublishedFrame(new Set(every))).toEqual([]);
+  });
+
+  it("an empty (unreadable) frame list, or one that leaves no type, avoids nothing", () => {
+    expect(typesWithoutPublishedFrame(new Set())).toEqual([]);
+    expect(typesWithoutPublishedFrame(new Set(["no-such-frame/r"]))).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // lib/ai/design-variety.ts — two AI designs with the same options never
@@ -113,6 +132,14 @@ describe("failure copy", () => {
     expect(creditOutcome(2)).toBe("Your 2 credits were returned.");
     expect(creditOutcome(0, true)).toContain("comes back to you automatically within the hour");
     expect(aiFailureMessage("design_busy")).toBe("The AI service is busy right now. Wait a minute, then try again. No credits were used.");
+  });
+
+  it("the deck runner's retry line says what the credit did, from the records", () => {
+    expect(retryCreditNote([{ refunded: 1 }])).toBe("The failed attempt's credit was returned; retrying reserves it again.");
+    expect(retryCreditNote([{ refunded: 0 }, { refunded: null }])).toBe(
+      "The failed attempts used no credits; retrying reserves credits.",
+    );
+    expect(retryCreditNote([{ refunded: 1 }, { refund_pending: true }])).toContain("within the hour");
   });
 
   it("a failed step falls back to its own error (older steps, plan limits)", () => {

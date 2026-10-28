@@ -64,6 +64,7 @@ import {
   colorHintsForFrame,
   resolveDeckCardFrame,
   resolveGeneratedFrame,
+  designHasPublishedFrame,
   typesWithoutPublishedFrame,
 } from "@/lib/creator/frame-random";
 import type {
@@ -798,6 +799,26 @@ export type CreateCardJobResult =
 
 /** A plan-time design failure: its kind, logged with the raw detail
  *  (server only), and the user's sentence. Nothing was reserved. */
+/** The face a designed card resolves its frame by. */
+function designedFace(card: DesignedCard) {
+  return {
+    cardType: card.card_type,
+    supertype: card.supertype,
+    subtypes: card.subtypes,
+    title: card.title,
+    rulesText: card.rules_text,
+    flavorText: card.flavor_text,
+    power: card.power,
+    toughness: card.toughness,
+  };
+}
+
+/** The plan route runs at 300 s: a redesign (a repeated title, a type with
+ *  no frame) is made only when the first design took under this — the
+ *  second call, the frame resolve and the insert then still fit. */
+const PLAN_REDESIGN_MAX_FIRST_MS = 100_000;
+const planRedesignFits = (firstMs: number) => firstMs < PLAN_REDESIGN_MAX_FIRST_MS;
+
 function planDesignFailure(
   error: unknown,
   label: string,
@@ -859,7 +880,7 @@ export async function createCardGenerationJob(
   // Never the same card twice (2026-10-28): a fresh spark per design and the
   // user's recent AI titles named as off-limits; a repeat title is designed
   // again once, here, before anything is reserved (lib/ai/design-variety.ts).
-  const recent = await recentAiTitles();
+  const recent = await recentAiTitles(user.id);
   const avoidTypes = typesWithoutPublishedFrame(verifiedKeys);
   let card: DesignedCard;
   try {
@@ -877,9 +898,18 @@ export async function createCardGenerationJob(
           avoidTypes,
         }),
       (designed) => designed.title,
-      // A type the user didn't ask for that has no published frame (the
-      // designer was told to avoid it) is designed again, never saved.
-      { acceptable: (designed) => Boolean(input.cardType) || !avoidTypes.includes(designed.card_type) },
+      {
+        // A type the user didn't ask for that has no published frame in the
+        // design's own colour (the designer was told to avoid the types
+        // with none at all) is designed again, never saved.
+        acceptable: (designed) =>
+          Boolean(input.cardType) ||
+          designHasPublishedFrame(
+            { cardType: designed.card_type, colorIdentity: designed.color_identity, face: designedFace(designed) },
+            verifiedKeys,
+          ),
+        secondFits: planRedesignFits,
+      },
     );
   } catch (error) {
     // Plan time: no job row, nothing reserved — nothing to refund.
@@ -891,16 +921,7 @@ export async function createCardGenerationJob(
     requested: input.frame,
     colorIdentity: card.color_identity,
     verifiedKeys,
-    face: {
-      cardType: card.card_type,
-      supertype: card.supertype,
-      subtypes: card.subtypes,
-      title: card.title,
-      rulesText: card.rules_text,
-      flavorText: card.flavor_text,
-      power: card.power,
-      toughness: card.toughness,
-    },
+    face: designedFace(card),
   });
 
   const plan: CardJobPlan = {
@@ -1002,7 +1023,7 @@ export async function createCardFillJob(
   // Never the same card twice (2026-10-28) — see createCardGenerationJob.
   // Only a fill that WRITES the title is checked against the recent titles
   // (a kept title is the maker's); the spark rides every fill.
-  const recent = await recentAiTitles();
+  const recent = await recentAiTitles(user.id);
   const avoidTypes = wantsType && !input.steer.card_type ? typesWithoutPublishedFrame(verifiedKeys) : [];
   let designed: Awaited<ReturnType<typeof designCardFill>>;
   try {
@@ -1022,8 +1043,29 @@ export async function createCardFillJob(
         }),
       (result) => (input.want.includes("title") ? result.fields.title : null),
       {
+        // A generated type must land on a published frame in the card's
+        // colour (the generated one, else the pinned one).
         acceptable: (result) =>
-          !result.fields.card_type || !avoidTypes.includes(result.fields.card_type),
+          !result.fields.card_type ||
+          Boolean(input.steer.card_type) ||
+          designHasPublishedFrame(
+            {
+              cardType: result.fields.card_type,
+              colorIdentity: result.fields.color_identity ?? input.locked.color_identity ?? [],
+              face: {
+                cardType: result.fields.card_type,
+                supertype: result.fields.supertype !== undefined ? result.fields.supertype : input.locked.supertype,
+                subtypes: result.fields.subtypes ?? input.locked.subtypes,
+                title: result.fields.title ?? input.locked.title,
+                rulesText: result.fields.rules_text ?? input.locked.rules_text,
+                flavorText: result.fields.flavor_text ?? input.locked.flavor_text,
+                power: result.fields.power !== undefined ? result.fields.power : input.locked.power,
+                toughness: result.fields.toughness !== undefined ? result.fields.toughness : input.locked.toughness,
+              },
+            },
+            verifiedKeys,
+          ),
+        secondFits: planRedesignFits,
       },
     );
   } catch (error) {

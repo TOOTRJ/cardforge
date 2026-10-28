@@ -135,6 +135,23 @@ describe("withCreditedStep — the credit outcome on the failed step", () => {
     expect(refundCredits).toHaveBeenCalledTimes(1);
   });
 
+  it("a thrown NON-object (a string, null) still carries the refund outcome", async () => {
+    spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
+    for (const thrown of ["plain string", null, 42]) {
+      refundCredits.mockClear();
+      const error = await withCreditedStep(USER, JOB, 1, "fill_card", STEP, async () => {
+        throw thrown;
+      }).then(
+        () => { throw new Error("expected a throw"); },
+        (e: unknown) => e as Error & { refunded?: number; refund_pending?: boolean },
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe(String(thrown));
+      expect(error).toMatchObject({ refunded: 1, refund_pending: false });
+      expect(refundCredits).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it("a success clears an earlier attempt's failure and refund notes", async () => {
     spendCredits.mockResolvedValue({ ok: true, balance: 4, charged: true });
     const result = await withCreditedStep(

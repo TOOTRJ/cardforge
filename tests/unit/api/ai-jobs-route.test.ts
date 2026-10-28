@@ -74,7 +74,7 @@ vi.mock("@/lib/ai/remix-estimate", () => ({
 vi.mock("@/lib/ai/generation-jobs", () => {
   const record = (kind: string) => async (input: Record<string, unknown>) => {
     s.created.push({ kind, input });
-    return { ok: true, job: { id: `job-${kind}`, steps: [] }, deckSlug: "deck-slug" };
+    return { ok: true, job: { id: `job-${kind}`, steps: [], plan: { fields: { title: "Unpaid text" } } }, deckSlug: "deck-slug" };
   };
   return {
     createCardGenerationJob: record("card"),
@@ -304,6 +304,20 @@ describe("POST /api/ai/jobs — a fill's pins never refuse the generation", () =
     expect(input.locked.tags[0]).toHaveLength(30);
     expect(input.locked.power).toHaveLength(16);
     expect(input.theme).toHaveLength(300);
+  });
+
+  it("the plan never leaves the server: a fill's text is not handed over before the step charges", async () => {
+    for (const body of [
+      { kind: "card_fill", want: ["rules_text"], locked: {} },
+      { kind: "card", theme: "embers" },
+      { kind: "deck", theme: "goblins", format: "commander" },
+    ]) {
+      const { status, json } = await post(body);
+      expect(status).toBe(200);
+      expect(json.job).toMatchObject({ id: expect.any(String) });
+      expect(json.job).not.toHaveProperty("plan");
+      expect(JSON.stringify(json)).not.toContain("Unpaid text");
+    }
   });
 
   it("a refused request says no credits were used", async () => {
