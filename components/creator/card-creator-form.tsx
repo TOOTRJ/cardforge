@@ -51,6 +51,7 @@ import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
 import { CREATOR_ASIDE_QUERY, useMediaQuery } from "@/components/creator/use-media-query";
 import { useStableValue } from "@/components/creator/use-stable-value";
+import { useCreatorScrollPadding } from "@/components/creator/use-scroll-padding";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
@@ -328,6 +329,7 @@ import {
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
 import { editBackFacePayload } from "@/lib/creator/back-face-edit";
+import { cancelsImplicitSubmit } from "@/lib/creator/enter-key";
 import {
   frameAnatomyPatchFor,
   hasMeaningfulChange,
@@ -1040,7 +1042,8 @@ export function CardCreatorForm({
   const remixNicknameClearedRef = useRef(false);
   // The hand rename's clear, ONE rule for the two moments it is read: the
   // maker leaving the title field, and a save that never left it (Enter in
-  // the title submits with no blur — independent re-check). A REMIX whose
+  // the title submitted with no blur until TODO 3b.21 — kept for any submit
+  // that does not blur first). A REMIX whose
   // title differs from the one it opened with, its clear not yet spent:
   // spend it, and clear a nickname it still holds. True when it cleared.
   const spendRemixRenameClear = (title: string): boolean => {
@@ -4288,6 +4291,12 @@ export function CardCreatorForm({
   // Which of the two live previews shows (TODO 3b.9): the aside from lg up,
   // the inline one below — null until the window is known (both mount).
   const asideWide = useMediaQuery(CREATOR_ASIDE_QUERY);
+  // A focused field never sits under the sticky Save bar or the Face switch
+  // (TODO 3b.28, WCAG 2.2 "Focus Not Obscured"): the page's scroll padding
+  // follows their measured heights while the creator is mounted.
+  const [saveBarEl, setSaveBarEl] = useState<HTMLDivElement | null>(null);
+  const [faceSwitchEl, setFaceSwitchEl] = useState<HTMLDivElement | null>(null);
+  useCreatorScrollPadding(saveBarEl, faceSwitchEl);
   // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
   // Part 2 — ONE picture, two parts: where each part sits on it (the
   // profile's own rects, the frame-compare overrides included) and whether
@@ -4336,6 +4345,7 @@ export function CardCreatorForm({
       noteId={faceSwitchNote ? faceNoteId : undefined}
       // In view while the step scrolls, under the site header.
       className="sticky top-[4.25rem] z-20"
+      rootRef={setFaceSwitchEl}
       front={{
         name: watched.title,
         status: faceTabs ? faceStatusOf({ title: watched.title, art_url: watched.art_url }) : null,
@@ -4477,13 +4487,10 @@ export function CardCreatorForm({
   );
   const stepPanels = (
     <div
-      // Under the switch a focused field scrolls clear of it (and of the
-      // site header), never beneath them.
-      className={
-        faceWords
-          ? "relative [&_:is(input,textarea,select,button,summary,[contenteditable='true'])]:scroll-mt-44"
-          : "relative"
-      }
+      // (A focused field scrolls clear of the switch, the site header and
+      // the Save bar through the page's scroll padding — TODO 3b.28,
+      // useCreatorScrollPadding; it replaced a fixed scroll-mt-44 here.)
+      className="relative"
       ref={stepPanelsRef}
       // With the switch, the step is the tab's panel — named by the tab.
       {...(faceWords
@@ -5129,7 +5136,10 @@ export function CardCreatorForm({
     <>
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+          <div
+            ref={setSaveBarEl}
+            className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm"
+          >
             {userId && saveNeeds.length > 0 ? (
               <SaveNeedsLine
                 needs={saveNeeds}
@@ -5299,6 +5309,21 @@ export function CardCreatorForm({
     if ((event.target as HTMLElement).getAttribute("name") !== "title") return;
     spendRemixRenameClear(getValues("title") ?? "");
   };
+  // Enter in a single-line field never saves the card (TODO 3b.21,
+  // lib/creator/enter-key.ts); Save is the button.
+  const onFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (
+      cancelsImplicitSubmit({
+        key: event.key,
+        target: event.target,
+        form: event.currentTarget,
+        isComposing: event.nativeEvent.isComposing,
+      })
+    ) {
+      event.preventDefault();
+    }
+  };
+
   const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     tidyTypographyOnBlur(event);
     clearRemixNicknameOnRename(event);
@@ -5360,6 +5385,7 @@ export function CardCreatorForm({
           noValidate
           onSubmit={onFormSubmit}
           onBlur={onFormBlur}
+          onKeyDown={onFormKeyDown}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -5416,6 +5442,7 @@ export function CardCreatorForm({
         noValidate
         onSubmit={onFormSubmit}
         onBlur={onFormBlur}
+        onKeyDown={onFormKeyDown}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}

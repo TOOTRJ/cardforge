@@ -555,3 +555,88 @@ describe("a legacy back on an edit (TODO 3b.29)", () => {
     expect((await sentUpdate()).back_face).toBeNull();
   });
 });
+
+// TODO 3b.21 (owner 2026-10-28): Enter in a single-line field of the creator
+// never saves the card — a browser submits a form on Enter in a text input,
+// so the title, a stat, the tags… saved it whenever Save was enabled. One
+// rule at the form for every such input; Save is the button.
+describe("Enter in a single-line field does not save (TODO 3b.21)", () => {
+  const settle = () =>
+    act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+  it("in the title: the keydown is cancelled and nothing is sent — Save still saves", async () => {
+    renderForm("edit", savedCard());
+    await type("title", "Another Name");
+    expect(fireEvent.keyDown(field("title"), { key: "Enter" })).toBe(false);
+    await settle();
+    expect(actions.updateCardAction).not.toHaveBeenCalled();
+    expect((await sentUpdate()).title).toBe("Another Name");
+  });
+
+  it("in every single-line input of every step of a new card", async () => {
+    renderForm("create");
+    const stepTitles = Array.from(document.querySelectorAll("[title^='Go to ']"))
+      .map((el) => el.getAttribute("title")!)
+      .filter((title) => !/this (field|row)/.test(title));
+    let checked = 0;
+    for (const title of new Set(stepTitles)) {
+      await act(async () => {
+        fireEvent.click(screen.getAllByTitle(title)[0]);
+      });
+      const form = document.querySelector("form")!;
+      const inputs = Array.from(form.querySelectorAll("input")).filter(
+        (input) => !["button", "submit", "reset", "image", "checkbox", "radio", "file", "color", "range"].includes(input.type),
+      );
+      for (const input of inputs) {
+        expect(fireEvent.keyDown(input, { key: "Enter" }), `${title}: ${input.name || input.type}`).toBe(false);
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(5);
+    await settle();
+    expect(actions.createCardAction).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rules text's Enter to the rules editor: a new line, no save", async () => {
+    renderForm("edit", savedCard());
+    await goTo("Text & stats");
+    const rules = document.querySelector('[data-field="rules_text"]') as HTMLElement;
+    rules.focus();
+    const range = document.createRange();
+    range.selectNodeContents(rules);
+    range.collapse(false);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    await act(async () => {
+      fireEvent.keyDown(rules, { key: "Enter" });
+    });
+    // The editor's own line break, and no save.
+    expect(rules.querySelector("br[data-br]")).not.toBeNull();
+    await settle();
+    expect(actions.updateCardAction).not.toHaveBeenCalled();
+    // A line typed after it travels with the save.
+    rules.appendChild(document.createTextNode("Vigilance"));
+    await act(async () => {
+      fireEvent.input(rules);
+    });
+    expect((await sentUpdate()).rules_text).toBe("Haste\nVigilance");
+  });
+});
+
+// TODO 3b.28: a focused field never sits under the sticky Save bar or the
+// Face switch — the page's scroll padding follows their heights while the
+// creator is mounted (the bars' real heights are a browser's: here, 0).
+describe("the page's scroll padding under the creator's bars (TODO 3b.28)", () => {
+  it("is set while the creator is mounted and put back after", () => {
+    const html = document.documentElement;
+    html.style.scrollPaddingBottom = "";
+    const { unmount } = renderForm("edit", savedCard());
+    expect(html.style.scrollPaddingBottom).toBe("12px");
+    expect(html.style.scrollPaddingTop).toBe("calc(4.25rem + 12px)");
+    unmount();
+    expect(html.style.scrollPaddingBottom).toBe("");
+    expect(html.style.scrollPaddingTop).toBe("");
+  });
+});
