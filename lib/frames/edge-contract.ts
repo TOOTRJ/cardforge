@@ -274,6 +274,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
   // black border all round, cut at the one card corner by the importer.
   tarkirdragon: ALL_BORDER,
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2, Card Conjurer's 'D&D
+  // Sourcebook' pack, frames bucket): the printed black border all round the
+  // parchment page, cut at the one card corner by the importer.
+  dndsourcebook: ALL_BORDER,
   // The Tarkir draconic (TDM #292–326), since TODO 4.11 (layout v68): the
   // black border all round on print — painted under the MSE masters below
   // and beside the dragons, cut at the one card corner at the bottom — and

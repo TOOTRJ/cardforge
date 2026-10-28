@@ -136,6 +136,10 @@ describe("the main box on every template", () => {
         // …and the Avatar elemental and Bloomburrow woodland showcases
         // (layout v69): M15's box and margins on their MSE text boxes.
         "avatar", "bloomburrow",
+        // …and the D&D Sourcebook (TODO 4.11 wave 2): M15's margins on the
+        // page (the run's lines from x 130, its right ink to 1368 at p90),
+        // the box ending above the page's rounded foot.
+        "dndsourcebook",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

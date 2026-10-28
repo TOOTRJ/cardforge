@@ -141,6 +141,10 @@ export const COLLECTOR_TEMPLATES = [
   // masters now paint.
   "avatar",
   "bloomburrow",
+  // …and the D&D Sourcebook showcase (TODO 4.11 wave 2, Card Conjurer's 'D&D
+  // Sourcebook'): AFR #299–349 and CLB #375–450 set both lines in the black
+  // border under the page, 4 px below M15's rows (DNDSOURCEBOOK_COLLECTOR).
+  "dndsourcebook",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

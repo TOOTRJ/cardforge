@@ -110,6 +110,8 @@ describe("the switch values", () => {
       // …and the Avatar and the Bloomburrow woodland (TODO 4.11, layout v69).
       "avatar",
       "bloomburrow",
+      // …and the D&D Sourcebook (TODO 4.11 wave 2): its run's rows.
+      "dndsourcebook",
     ]);
   });
 });

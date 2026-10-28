@@ -491,7 +491,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Tarkir draconic (4.11): MSE's own stamp per key.
     "tarkirdraconic",
     // …and the Bloomburrow woodland (4.11, v69): MSE's own, on the coloured well.
-    "bloomburrow"];
+    "bloomburrow",
+    // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
+    "dndsourcebook"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

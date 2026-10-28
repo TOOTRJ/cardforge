@@ -4688,6 +4688,37 @@ const TARKIRDRAGON: FrameProfile = {
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
   },
 };
+// The Dungeons & Dragons SOURCEBOOK showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'D&D Sourcebook' pack (packDNDSourcebook.js, 1500 × 2100
+// native; scripts/lib/cc-frames.mjs DND), the parchment page of AFR #299–349
+// and CLB #375–450. ONE master for every colour key (the page is the same
+// on every print; the colour is the art's background). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's on the
+// page's own lines — the slots measured on print, each against its own
+// line, and laid on the pack's (DND_* below).
+/** The art slot: the master's window and its torn, half-transparent edges
+ *  (α < 250 on 93–1439 × 227–1180 px on every key — CC's artBounds 60 /
+ *  231 / 1380 × 949) with the art-window check's 0.05 % to spare:
+ *  92–1441 × 226–1183. */
+export const DNDSOURCEBOOK_ART_SLOT: Rect = { topPct: (226 / 2100) * 100, leftPct: (92 / 1500) * 100, widthPct: (1349 / 1500) * 100, heightPct: (957 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1161 / 1861, 260 × 132 px, 1:1). */
+const DNDSOURCEBOOK_PLATE_RECT: Rect = { topPct: (1861 / 2100) * 100, leftPct: (1161 / 1500) * 100, widthPct: (260 / 1500) * 100, heightPct: (132 / 2100) * 100 };
+const DNDSOURCEBOOK: FrameProfile = {
+  ...M15,
+  label: "D&D Sourcebook",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy - 3 / 1500,
+  costDx: 12 / 1500,
+  artSlot: DNDSOURCEBOOK_ART_SLOT,
+  title: { ...M15.title, dy: M15.title.dy! - 1.5 / 1500 },
+  type: { ...M15.type, rect: { ...M15.type.rect, topPct: M15.type.rect.topPct + (7 / 2100) * 100 }, dy: CC_M15_TYPE_DY + 3 / 1500 },
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, heightPct: ((1877.5 - 1335.6) / 2100) * 100 } },
+  pt: {
+    ...M15.pt!,
+    plateRect: DNDSOURCEBOOK_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/dndsourcebook/pt/{color}.png",
+  },
+};
 // Tarkir draconic (TODO 4.11, layout v68): the gold Tarkir: Dragonstorm
 // dragon showcase, TDM #292–326 — MSE's drawing (magic-m15-showcase-tarkir-
 // draconic, 646 px, upscaled by scripts/build-showcase-frames.mjs), with the
@@ -5885,6 +5916,20 @@ export const EXPEDITION_BFZ_COLLECTOR: CollectorSlot = {
   line1BaselinePct: (1987 / 2100) * 100,
   line2BaselinePct: (2025.5 / 2100) * 100,
 };
+/**
+ * The collector line on the D&D Sourcebook showcase (TODO 4.11 wave 2):
+ * M15's slot — the pen x (the prints' first ink at 95–97 px), the brush
+ * column, the sizes, the © slot's right end — on the run's own rows,
+ * measured on all 127 printings at 1500 × 2100 (the foot of the flat-
+ * bottomed digits and capitals): line 1 on 1997 px, line 2 on 2035 (AFR,
+ * 51 prints) / 2036 (CLB, 76), where M15's slot bakes 1993 / 2031 — so
+ * 4 px below M15's 1993.5 / 2032.
+ */
+export const DNDSOURCEBOOK_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1997.5 / 2100) * 100,
+  line2BaselinePct: (2036 / 2100) * 100,
+};
 
 /**
  * The holofoil stamp's notch on the black-bordered M15 family (TODO 4.9c):
@@ -6101,6 +6146,33 @@ export const TARKIRDRAGON_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/tarkirdragonholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: TARKIRDRAGON_HOLO_STAMP_OVAL, keepOut: TARKIRDRAGON_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The sourcebook's stamp oval (scripts/lib/cc-frames.mjs
+ *  DND_STAMP_OVAL_PX: 683–817 × 1929–1993 px) — the PRINTS' hologram, 134 ×
+ *  64 (the 49 stamped AFR / CLB prints), on the centre of the pack's own
+ *  well. */
+export const DNDSOURCEBOOK_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1929 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1917 px at the centre)
+ *  down to the page's foot (1949), over the piece's 657–843 px. */
+export const DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (657 / 1500) * 100, topPct: (1917 / 2100) * 100, widthPct: (186 / 1500) * 100, heightPct: (32 / 2100) * 100 };
+/**
+ * The sourcebook's OVAL stamp notch (TODO 4.11 wave 2): the pack's one 'Holo
+ * Stamp' — the black border arched up into the page's foot round the oval —
+ * 1:1 at its bounds, an 188 × 88 box at 656, 1916 px (DND_NOTCH_BOX in
+ * scripts/lib/cc-frames.mjs: 1 px round the piece and 8 px past its foot),
+ * its hologram oval cut clear for our oval art. The rares and mythics of the
+ * run print it (`security_stamp: oval`, 49 of 127), the commons and
+ * uncommons don't: "auto" = a rare or mythic, as on M15. Keys: the masters'
+ * (one piece; every master is the same page). Set on the dndsourcebook
+ * entry only.
+ */
+export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (656 / 1500) * 100, topPct: (1916 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (88 / 2100) * 100 },
+  assetPathTemplate: "/frames/dndsourcebookholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The Tarkir draconic showcase's oval (TODO 4.11): the prints' hologram
@@ -7413,6 +7485,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
+  // collector line, opt-in per card; no crown (none prints).
+  dndsourcebook: { ...DNDSOURCEBOOK, overlays: [DNDSOURCEBOOK_HOLO_STAMP], collector: DNDSOURCEBOOK_COLLECTOR },
   // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
   // draconic's oval stamp notch and both frames' collector line on the black
   // footer the masters now paint (the prints set it on M15's rows: line 1 at
