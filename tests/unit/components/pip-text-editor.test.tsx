@@ -445,3 +445,137 @@ describe("PipTextEditor — a break the browser put in front of a pip", () => {
     expect(valueOf()).toBe("Aa\n\n{T}");
   });
 });
+
+// TODO 3b.22 — the rules editor's leftovers from #505's review. What a real
+// browser does around them (where its caret lands on a click, what Android's
+// keyboard sends) is not in happy-dom: each test sets up the DOM the browser
+// leaves and fires the event it sends.
+describe("PipTextEditor — 3b.22 leftovers", () => {
+  const HOST = "​";
+  const caret = () => {
+    const selection = window.getSelection()!;
+    return [selection.anchorNode, selection.anchorOffset] as const;
+  };
+  /** A beforeinput as a browser sends it; true when not cancelled. */
+  const beforeInput = (box: HTMLElement, inputType: string, data: string | null = null) => {
+    let notCancelled = true;
+    act(() => {
+      notCancelled = box.dispatchEvent(new InputEvent("beforeinput", { inputType, data, bubbles: true, cancelable: true }));
+    });
+    return notCancelled;
+  };
+  const undo = (box: HTMLElement) => fireEvent.keyDown(box, { key: "z", metaKey: true });
+  const redo = (box: HTMLElement) => fireEvent.keyDown(box, { key: "z", metaKey: true, shiftKey: true });
+  /** A pip drawn 20 px wide from x = 100. */
+  const sized = (pip: Node) => {
+    (pip as HTMLElement).getBoundingClientRect = () =>
+      ({ left: 100, right: 120, width: 20, top: 0, bottom: 20, height: 20, x: 100, y: 0 }) as DOMRect;
+    return pip as HTMLElement;
+  };
+
+  it("(1) a click on a symbol's right half puts the caret behind it, on its left half in front", () => {
+    const box = setup("a{T}b");
+    const pip = sized(box.childNodes[1]);
+    // Chrome's caret for any click on the glyph: the pip's start.
+    caretAt(pip, 0);
+    fireEvent.click(pip.firstChild!, { clientX: 115 });
+    expect(caret()).toEqual([box.childNodes[2], 0]);
+    caretAt(pip, 0);
+    fireEvent.click(pip.firstChild!, { clientX: 104 });
+    expect(caret()).toEqual([box.firstChild, 1]);
+  });
+
+  it("(1) …and on a symbol a line starts with, its left half is the caret host", () => {
+    const box = setup("Cc\n{T}");
+    const pip = sized(box.childNodes[3]);
+    caretAt(pip, 0);
+    fireEvent.click(pip, { clientX: 101 });
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+    caretAt(pip, 0);
+    fireEvent.click(pip, { clientX: 119 });
+    expect(caret()).toEqual([box, 4]);
+  });
+
+  it("(2) the first character typed at a caret host is undone, and redone", () => {
+    const box = setup("Cc\n{T}ab");
+    const host = box.childNodes[2];
+    // The caret on the host when the key goes down; the browser then types.
+    caretAt(host, 1);
+    beforeInput(box, "insertText", "k");
+    host.nodeValue = `${HOST}k`;
+    caretAt(host, 2);
+    fireEvent.input(box);
+    expect(valueOf()).toBe("Cc\nk{T}ab");
+    expect(undo(box)).toBe(false);
+    expect(valueOf()).toBe("Cc\n{T}ab");
+    expect(shape(box)).toBe("Cc<br><caret>{T}ab");
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+    redo(box);
+    expect(valueOf()).toBe("Cc\nk{T}ab");
+  });
+
+  it("(2) a word typed is one step; a value from outside starts a new history", () => {
+    const box = setup("");
+    let text: Text | null = null;
+    for (const ch of "Fly") {
+      beforeInput(box, "insertText", ch);
+      if (!text) {
+        text = document.createTextNode(ch);
+        box.appendChild(text);
+      } else text.nodeValue += ch;
+      caretAt(text, text.nodeValue!.length);
+      fireEvent.input(box);
+    }
+    expect(valueOf()).toBe("Fly");
+    undo(box);
+    expect(valueOf()).toBe("");
+    // Nothing more to undo: the key is still the editor's, and changes nothing.
+    expect(undo(box)).toBe(false);
+    expect(valueOf()).toBe("");
+  });
+
+  it("(3) Shift+→ in a caret host selects the symbol in one press", () => {
+    const box = setup("Cc\n{T}x");
+    const host = box.childNodes[2];
+    caretAt(host, 1);
+    expect(fireEvent.keyDown(box, { key: "ArrowRight", shiftKey: true })).toBe(false);
+    const selection = window.getSelection()!;
+    expect([selection.anchorNode, selection.anchorOffset]).toEqual([host, 1]);
+    expect([selection.focusNode, selection.focusOffset]).toEqual([box.childNodes[4], 0]);
+    // Anywhere else it is the browser's.
+    caretAt(box.firstChild!, 1);
+    expect(fireEvent.keyDown(box, { key: "ArrowRight", shiftKey: true })).toBe(true);
+  });
+
+  it("(4) a soft keyboard's Backspace and Delete (beforeinput only) remove a symbol", () => {
+    const box = setup("Cc\n{T}");
+    caretAt(box, 4);
+    expect(beforeInput(box, "deleteContentBackward")).toBe(false);
+    expect(valueOf()).toBe("Cc\n");
+    cleanup();
+    const other = setup("a{G}b");
+    caretAt(other.firstChild!, 1);
+    expect(beforeInput(other, "deleteContentForward")).toBe(false);
+    expect(other.textContent).toBe("ab");
+    // A character is still the browser's.
+    caretAt(other.firstChild!, 1);
+    expect(beforeInput(other, "deleteContentBackward")).toBe(true);
+  });
+
+  it("(5) Cmd+Z brings back a symbol removed with Backspace — and the Edit menu's Undo too", () => {
+    const box = setup("a{T}b");
+    caretAt(box.childNodes[2], 0);
+    fireEvent.keyDown(box, { key: "Backspace" });
+    expect(valueOf()).toBe("ab");
+    undo(box);
+    expect(valueOf()).toBe("a{T}b");
+    expect(shape(box)).toBe("a{T}b");
+    expect(caret()).toEqual([box.childNodes[2], 0]);
+    fireEvent.keyDown(box, { key: "Backspace" });
+    expect(valueOf()).toBe("ab");
+    expect(beforeInput(box, "historyUndo")).toBe(false);
+    expect(valueOf()).toBe("a{T}b");
+    expect(beforeInput(box, "historyRedo")).toBe(false);
+    expect(valueOf()).toBe("ab");
+  });
+});

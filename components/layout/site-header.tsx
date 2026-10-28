@@ -87,6 +87,14 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
     billingOn && !user?.isPaid
       ? siteConfig.primaryNav
       : siteConfig.primaryNav.filter((item) => item.href !== "/pricing");
+  // Where the row is wide enough for the primary nav beside the account
+  // controls (TODO 3b.27, measured with billing on). Below it the nav lives
+  // in the hamburger drawer. Signed out and paid, the row needs ~955 /
+  // ~1045 px: `lg`. A signed-in free account also carries Pricing, the
+  // Upgrade button and the credits chip (~1215 px): `xl`. Before this the
+  // nav showed from `md` and the row ran up to 390 px past the viewport.
+  const showUpgrade = isAuthed && billingOn && !user?.isPaid;
+  const desktopNavFrom: DesktopNavBreakpoint = showUpgrade ? "xl" : "lg";
 
   return (
     <header
@@ -99,7 +107,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
         <Logo />
 
         <NavLinks
-          className="hidden md:flex md:items-center md:gap-1"
+          className={DESKTOP_NAV_CLASS[desktopNavFrom]}
           items={navItems}
           isAuthed={isAuthed}
           activeClassName="bg-elevated"
@@ -117,7 +125,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
               {user?.id ? (
                 <RealtimeAlerts userId={user.id} isAdmin={user.isAdmin ?? false} />
               ) : null}
-              {billingOn && !user?.isPaid ? (
+              {showUpgrade ? (
                 <Button
                   asChild
                   variant="accent"
@@ -171,6 +179,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
             </>
           )}
           <MobileMenu
+            desktopNavFrom={desktopNavFrom}
             isAuthed={isAuthed}
             username={user?.username ?? null}
             isPaid={user?.isPaid ?? false}
@@ -184,5 +193,15 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
     </header>
   );
 }
+
+/** The breakpoint from which the header shows its primary nav inline (the
+ *  hamburger shows below it). Literal class strings: Tailwind only builds
+ *  classes it can read in the source. */
+export type DesktopNavBreakpoint = "lg" | "xl";
+
+const DESKTOP_NAV_CLASS: Record<DesktopNavBreakpoint, string> = {
+  lg: "hidden lg:flex lg:items-center lg:gap-1",
+  xl: "hidden xl:flex xl:items-center xl:gap-1",
+};
 
 export type { HeaderUser };

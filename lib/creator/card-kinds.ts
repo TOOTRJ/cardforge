@@ -326,6 +326,25 @@ export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardTy
   mdfc: DFC_FACE_TYPES,
 };
 
+/**
+ * The card types a HAND-MADE card of a layout kind picks from on the
+ * Identity step (TODO 3b.14), in the chips' order; null when the kind offers
+ * no choice (its own card type is the only one). The adventure takes every
+ * type its template draws (LAYOUT_KIND_CARD_TYPES — a WOE Virtue is an
+ * Enchantment, a FIN Town a Land, Twice Upon a Time a Sorcery); the flip its
+ * creature and enchantment — not the token, which is the token kind's own
+ * word (a Role imports on the token kind, TODO 1.23). The Prepare kind stays
+ * a creature: every printing is one and its reminder says "this creature".
+ * The kind never changes with the pick — kindFromCard reads the layout
+ * template first — so the server's gates (the kind gate, the verification
+ * gate) judge the card exactly as they judge an import of that type.
+ */
+export function layoutKindTypeChoices(kind: CardKind): readonly CardType[] | null {
+  if (kind === "adventure") return LAYOUT_KIND_CARD_TYPES.adventure;
+  if (kind === "flip") return LAYOUT_KIND_CARD_TYPES.flip.filter((type) => type !== "token");
+  return null;
+}
+
 /** The card type an import writes for its kind (TODO 1.21): a layout kind
  *  keeps the printed card type when its template can draw it
  *  (LAYOUT_KIND_CARD_TYPES), else its own; a standard kind is its own card

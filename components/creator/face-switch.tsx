@@ -43,13 +43,16 @@ type FaceSwitchProps = {
    *  by it, and a greyed tab too. */
   noteId?: string;
   className?: string;
+  /** The switch's own box — the creator measures it for the page's
+   *  scroll padding (TODO 3b.28: a focused field never sits under it). */
+  rootRef?: React.Ref<HTMLDivElement>;
 };
 
 /** The id of a part's tab inside a switch whose base id is `baseId` — the
  *  step's panel names itself with it (aria-labelledby). */
 export const faceTabId = (baseId: string, face: CardFaceId) => `${baseId}-${face}`;
 
-export function FaceSwitch({ words, value, onChange, front, back, panelId, noteId, className }: FaceSwitchProps) {
+export function FaceSwitch({ words, value, onChange, front, back, panelId, noteId, className, rootRef }: FaceSwitchProps) {
   const refs = useRef<Record<CardFaceId, HTMLButtonElement | null>>({ front: null, back: null });
   const backAvailable = words.available;
   const selected: CardFaceId = backAvailable ? value : "front";
@@ -149,7 +152,7 @@ export function FaceSwitch({ words, value, onChange, front, back, panelId, noteI
   };
 
   return (
-    <div className={className} data-testid="face-switch" data-face={selected}>
+    <div ref={rootRef} className={className} data-testid="face-switch" data-face={selected}>
       <div
         role="tablist"
         aria-label="Which part of the card you are editing"

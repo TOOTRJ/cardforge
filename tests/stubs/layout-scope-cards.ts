@@ -39,4 +39,9 @@ export const UNTOUCHED_SINCE_V22 = {
   // v51 (the art's zoom about a focal point of 0) reads the art's position:
   // none stored — and no art.
   art_position: null,
+  // v72 (the display face's collision-guard kerns) reads every text the
+  // display face sets: "Worm" holds no zeroed pair, and the rest is empty.
+  nickname: null,
+  printed_types: null,
+  artist_credit: null,
 };

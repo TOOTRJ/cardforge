@@ -7,12 +7,15 @@
 
 import { useFormContext, useWatch } from "react-hook-form";
 import {
+  CARD_TYPE_OPTIONS,
   FieldGroup,
   MoreOptions,
   inputClass,
 } from "@/components/creator/field-group";
 import { TypesField } from "@/components/creator/types-field";
+import { ChipGroup } from "@/components/ui/chip-group";
 import type { FormValues } from "@/lib/creator/form-types";
+import type { CardType } from "@/types/card";
 
 type IdentityPanelProps = {
   /** Edit / remix: the card's type words and subtypes are locked (see
@@ -31,15 +34,28 @@ type IdentityPanelProps = {
    *  lib/cards/nickname.ts frameDrawsNickname): the field's helper says
    *  where the nickname goes, or that this frame prints none. */
   nicknamePrinted?: boolean;
+  /** A NEW card of a layout kind that draws more than one card type (TODO
+   *  3b.14, `layoutKindTypeChoices`: an adventure, a flip card): the types
+   *  it picks from, and the kind's name for the chip row. Never on an edit
+   *  or a remix, whose card type is locked. */
+  layoutTypes?: { kindLabel: string; types: readonly CardType[] } | null;
 };
 
-export function IdentityPanel({ revise = false, token = false, emblem = false, nicknamePrinted = false }: IdentityPanelProps) {
+export function IdentityPanel({
+  revise = false,
+  token = false,
+  emblem = false,
+  nicknamePrinted = false,
+  layoutTypes = null,
+}: IdentityPanelProps) {
   const {
     register,
     control,
+    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
   const nickname = useWatch({ control, name: "nickname" });
+  const cardType = useWatch({ control, name: "card_type" });
 
   return (
     <>
@@ -96,7 +112,31 @@ export function IdentityPanel({ revise = false, token = false, emblem = false, n
 
       {/* Card type now lives on the Kind step (step 1) — the kind IS the
           type choice, and routing every type change through planKindChange
-          is what makes silent frame overrides impossible. */}
+          is what makes silent frame overrides impossible. A layout kind
+          whose frame draws more than one card type (TODO 3b.14: an
+          adventure — a WOE Virtue is an Enchantment — or a flip card) picks
+          it here: the frame and the kind stay, the type line, the P/T
+          inputs and the type words follow the card type. */}
+      {layoutTypes && !revise ? (
+        <FieldGroup
+          kind="control"
+          label="Card type"
+          helper={`The ${layoutTypes.kindLabel} frame stays — the card type sets the type line and whether the card has power and toughness.`}
+          error={errors.card_type?.message}
+        >
+          {(aria) => (
+            <ChipGroup
+              ariaLabel={`${layoutTypes.kindLabel} card type`}
+              ariaDescribedBy={aria["aria-describedby"]}
+              layout="grid-3"
+              size="md"
+              value={(cardType || layoutTypes.types[0]) as CardType}
+              onChange={(next) => setValue("card_type", next, { shouldDirty: true })}
+              options={CARD_TYPE_OPTIONS.filter((option) => layoutTypes.types.includes(option.value))}
+            />
+          )}
+        </FieldGroup>
+      ) : null}
 
       {/* Quick path stops here: a title makes a real card. Everything below
           is detail control. */}

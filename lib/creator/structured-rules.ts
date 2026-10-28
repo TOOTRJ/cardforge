@@ -183,6 +183,33 @@ export function sagaRowsOut(rows: readonly SagaFormRow[]): SagaRowOut[] {
     .filter((row) => row.text.length > 0);
 }
 
+/**
+ * The rows a KIND SWITCH away from saga folds into the plain rules text
+ * (TODO 3b.30): `sagaRowsOut`, except a row the save would hold back
+ * (`sagaRowsLosingMarker`: its numbers changed on a stored marker that also
+ * names a numeral the editor has no toggle for, "I, XI —" with II picked)
+ * KEEPS that numeral — it is written after the numbers picked ("II, XI —"),
+ * never dropped without a word. Plain text can say it, and it reads back
+ * into the same row (its marker carried) if the card goes back to saga.
+ */
+export function sagaRowsForKindSwitch(rows: readonly SagaFormRow[]): SagaRowOut[] {
+  return rows
+    .map((row): SagaRowOut | null => {
+      const text = row.text.trim();
+      if (!text) return null;
+      if (!keepsStoredMarker(row) && row.marker && markerNumerals(row.marker).length > 0) {
+        const unreadable = unreadableMarkerParts(row.marker);
+        if (unreadable.length > 0) {
+          const numerals = [...row.numerals].sort((a, b) => a - b);
+          const marker = [romanMarker(numerals), ...unreadable].filter(Boolean).join(",");
+          return { marker, numerals, text, kept: true };
+        }
+      }
+      return sagaRowsOut([row])[0] ?? null;
+    })
+    .filter((row): row is SagaRowOut => row !== null);
+}
+
 const carriedMarkersOf = (rows: readonly SagaFormRow[]) =>
   rows.filter((row) => row.text.trim()).map((row) => row.marker ?? null);
 

@@ -129,7 +129,11 @@
   --color-border-strong: oklch(0.43 0.038 262);
   --color-foreground: oklch(0.96 0.005 262);
   --color-muted: oklch(0.72 0.018 262);
-  --color-subtle: oklch(0.62 0.02 262);
+  /* Tertiary text (captions, kbd, chip descriptions — mostly 10–12 px):
+     ≥ 4.5:1 on background, surface AND elevated (TODO 3b.31; 0.62 was
+     4.01:1 on elevated). Stays below muted so the hierarchy holds.
+     tests/unit/content/theme-text-contrast.test.ts holds the ratios. */
+  --color-subtle: oklch(0.66 0.02 262);
 
   /* ── Brand — PipGlyph: purple primary, gold accent ────────────── */
   /* Primary ≈ #6B4D9A (CTAs, active states); accent ≈ #D8B26E (gold
@@ -197,7 +201,9 @@
   --color-border-strong: oklch(0.72 0.018 262);
   --color-foreground: oklch(0.18 0.012 262);
   --color-muted: oklch(0.42 0.018 262);
-  --color-subtle: oklch(0.52 0.018 262);
+  /* ≥ 4.5:1 on background, surface and elevated (TODO 3b.31; 0.52 was
+     4.35:1 on elevated). Still lighter than muted. */
+  --color-subtle: oklch(0.49 0.018 262);
   --color-primary: oklch(0.45 0.14 300);
   --color-primary-foreground: oklch(0.99 0 0);
   /* Text-strength primary, same contract as dark mode but inverted: on a

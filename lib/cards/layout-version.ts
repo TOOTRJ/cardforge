@@ -1,3 +1,4 @@
+import { hasZeroedKernPair } from "@/lib/cards/display-kerning";
 import { hasFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
@@ -1701,6 +1702,23 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            never the look of any print. Verification-neutral: no slot,
 //            master or plate moves, and a reference's compare render
 //            changes only in its flavour's words.
+//   v72 — the display face's collision-guard kerns (2026-10-28): Beleren
+//            Bold kerns 21 pairs APART where the ink would touch (K→y
+//            +0.25 em, R→j +0.33 em, f→l +0.14 em, f→i +0.09 em…) and both
+//            renderers apply it, so "Kylox" baked as "K ylox" and
+//            "Snuffler" as "Snuff ler"; every print sets those pairs tight.
+//            The committed font carries their positive kerns at 0
+//            (lib/cards/display-kerning.ts, scripts/fix-beleren-kerning.mjs;
+//            the metric tables regenerated) — every other pair, every
+//            glyph and every advance as before. Any template, a card scope
+//            alone (kerningGuardsChanged): a card whose name, nickname, type
+//            words or artist credit — or its back face's — holds a pair;
+//            every other card bakes byte-identical. DISPLAY_KERNING_LAYOUT_
+//            VERSION below — the ONE constant (taken as v72 at PR time: v71
+//            is flavour's upright spans, #625). A CORRECTION ("sweep"),
+//            never a badge: the gap was never the look of any print.
+//            Verification-neutral: no slot, master or plate moves; only the
+//            letters of those pairs close up.
 //   v73 — rendering corrections, round 1 (owner 2026-10-28: ONE bump, ONE
 //            before / after sheet, ONE card-scoped sweep — the union of each
 //            part's own scope, v73Changed). RENDERING_CORRECTIONS_1_LAYOUT_
@@ -1990,6 +2008,14 @@ export const ART_FOCAL_ZERO_LAYOUT_VERSION = 51;
  *  v71: v70 is the Bloomburrow anime's (#616). Frozen once it ships. */
 export const FLAVOR_MARKUP_LAYOUT_VERSION = 71;
 
+/** The display face's collision-guard kerns at 0 (lib/cards/display-
+ *  kerning.ts): ITS version lives here alone — CARD_LAYOUT_VERSION, the card
+ *  scope, the verification list and the rollout below read this constant —
+ *  so a bump that merges first moves it in one place (this constant and the
+ *  test's `V` move together). v72: v71 is flavour's upright spans (#625).
+ *  Frozen once it ships. */
+export const DISPLAY_KERNING_LAYOUT_VERSION = 72;
+
 /** A name's room before a detached cost of Phyrexian symbols (TODO 6.16d):
  *  ITS version lives here alone — CARD_LAYOUT_VERSION, the template and
  *  card scopes and the rollout below read this constant. */
@@ -2209,6 +2235,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: V52_DETACHED_COST_TEMPLATES,
   // (v53 is not here: any template — a card scope, v53Changed.)
   // (v71 is not here: any template — a card scope, flavorMarkupChanged.)
+  // (v72 is not here: any template — a card scope, kerningGuardsChanged.)
   // The station frame on print's band rule (4.27a, PR 2): the pair's tier
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
@@ -2466,6 +2493,10 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * a flavour that holds a `*…*` pair change — set roman, without their stars
  * — on any template; no slot, master, plate or text box moves, and a tick
  * judges the frame, not a reference's flavour. Every tick stays fresh.
+ * v72 is (the display face's collision-guard kerns at 0): only the spacing
+ * of 21 letter pairs in names, type lines and credits closes up, on any
+ * template; no slot, master, plate or text box moves. Every tick stays
+ * fresh.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
@@ -2478,6 +2509,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   WALKER_COST_ROW_LAYOUT_VERSION,
   COST_ROW_PRINT_LAYOUT_VERSION,
   FLAVOR_MARKUP_LAYOUT_VERSION,
+  DISPLAY_KERNING_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2508,9 +2540,13 @@ export type ScopeCard = {
   art_url?: string | null;
   // v29: the display lines (word spacing) and the printed stats (3.18).
   title?: string | null;
-  /** v73: the name a nickname frame prints in the title bar (TODO 6.3). */
+  /** v72: the nickname the title bar prints (TODO 6.3). */
   nickname?: string | null;
   supertype?: string | null;
+  /** v72: the type words as the maker typed them (TODO 3b.16). */
+  printed_types?: string | null;
+  /** v72: the artist credit (set in the display face on most footers). */
+  artist_credit?: string | null;
   card_type?: string | null;
   subtypes?: readonly string[] | null;
   power?: string | null;
@@ -2785,6 +2821,40 @@ export function flavorMarkupChanged(card: ScopeCard): boolean {
   if (hasFlavorMarkup(card.flavor_text)) return true;
   const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
   return typeof back?.flavor_text === "string" && hasFlavorMarkup(back.flavor_text);
+}
+
+/** The columns of one face the display face sets that can hold a letter
+ *  pair: the name, the nickname the title bar prints, the type words (the
+ *  card type's own word never holds a zeroed pair) and the artist credit. */
+const V72_FACE_TEXT_COLUMNS = ["title", "nickname", "supertype", "printed_types", "artist_credit"] as const;
+
+function faceHoldsZeroedKernPair(face: Record<string, unknown>): boolean {
+  for (const column of V72_FACE_TEXT_COLUMNS) {
+    const value = face[column];
+    if (typeof value === "string" && hasZeroedKernPair(value)) return true;
+  }
+  const subtypes = Array.isArray(face.subtypes) ? face.subtypes : [];
+  return subtypes.some((s) => typeof s === "string" && hasZeroedKernPair(s));
+}
+
+/**
+ * Whether layout v72 (the display face's collision-guard kerns at 0)
+ * changed a card's bake: a text the display face sets — the name, the
+ * nickname, the type words, the artist credit — of the card or of its
+ * `back_face` (a second part, a back face; a double-faced body also prints
+ * the OTHER face's last type word) holds a zeroed pair (hasZeroedKernPair).
+ * Any template: a slot set in MPlantin (the 1993 / 1997 type lines, a body
+ * footer) or a name in synthesized small caps is re-baked to the same pixels
+ * (read wider than drawn). Every other card bakes byte-identical. A row that
+ * doesn't carry one of those columns or the back face → affected.
+ */
+export function kerningGuardsChanged(card: ScopeCard): boolean {
+  if (V72_FACE_TEXT_COLUMNS.some((column) => card[column] === undefined) || card.subtypes === undefined || card.back_face === undefined) {
+    return true;
+  }
+  if (faceHoldsZeroedKernPair(card as Record<string, unknown>)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return back !== null && faceHoldsZeroedKernPair(back);
 }
 
 const nonBlank = (v: unknown): boolean => typeof v === "string" && v.trim().length > 0;
@@ -3339,6 +3409,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v71 — flavour text's upright spans: on any template, a card whose
   // flavour (or its back face's) holds a `*…*` pair — flavorMarkupChanged.
   [FLAVOR_MARKUP_LAYOUT_VERSION]: flavorMarkupChanged,
+  // v72 — the display face's collision-guard kerns at 0: on any template, a
+  // card whose name, nickname, type words or credit (or its back face's)
+  // holds a zeroed pair — kerningGuardsChanged.
+  [DISPLAY_KERNING_LAYOUT_VERSION]: kerningGuardsChanged,
   // v73 — rendering corrections, round 1: the union of its parts —
   // v73Changed.
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: v73Changed,
@@ -3442,6 +3516,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [DISPLAY_KERNING_LAYOUT_VERSION]: "sweep", // Beleren's collision-guard kerns at 0 (K→y, R→j, f→l, f→i… — 21 pairs): the letters set tight as every print sets them, no more "K ylox" / "Snuff ler" — a correction of what both renderers printed; card-scoped to the names, type words and credits that hold a pair, never a badge
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: "sweep", // rendering corrections round 1 (3.5 / 3.16 / 3.19 / 3.22 / 3.25, owner 2026-10-28): the flavour bar, modal bullets, the land title band, card-relative shadows and the four-way outline — corrections of what both renderers drew against the prints, one sweep, never a badge
   [FLAVOR_MARKUP_LAYOUT_VERSION]: "sweep", // flavour text's upright `*…*` spans (owner 2026-10-28): the words set roman, the stars never drawn — a correction of what both renderers printed, against every print that marks them; card-scoped to the flavours that hold a pair, never a badge
   20: "sweep", // display always watermarked — must not linger

@@ -127,8 +127,11 @@ describe("displayTextEm — Beleren Bold's metrics", () => {
       // …and no wider than its letters plus the pairs that widen it.
       expect(displayTextEm(line), line).toBeLessThanOrEqual(font.getAdvanceWidth(line, 1, { kerning: false }) + 0.35 * line.length);
     }
-    // "Ry" sets 0.31 em wider than its two letters in the browser.
-    expect(displayTextEm("Ry")).toBeCloseTo(perMille("R") + perMille("y") + 0.309, 10);
+    // "RA" sets 0.14 em wider than its two letters in the browser. ("Ry",
+    // 0.31 em wider until layout v72, now sets at its letters' advances:
+    // lib/cards/display-kerning.ts.)
+    expect(displayTextEm("RA")).toBeCloseTo(perMille("R") + perMille("A") + 0.144, 10);
+    expect(displayTextEm("Ry")).toBeCloseTo(perMille("R") + perMille("y"), 10);
   });
 
   it("takes an accented letter's base width, and errs long for glyphs it doesn't list", () => {

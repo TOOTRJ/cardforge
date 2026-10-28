@@ -140,7 +140,16 @@ Where every frame came from, and the rules that follow from it:
     the MSE Full-Magic-Pack's `Magic - Fonts/beleren-bold_P1.01.ttf`. **No
     licence text accompanies it.** It is Beleren Bold itself: the comments
     that called it "an OFL Beleren stand-in" dated from six days in June
-    2026 when the display face was Sorts Mill Goudy.
+    2026 when the display face was Sorts Mill Goudy. Since layout v72 the
+    committed TTF and WOFF2 are that file with the GPOS kern records of 21
+    pairs (and fí) at 0 — the only DATA that changed (sha256
+    `99228173…a9b5`; "The display face's collision-guard kerns" below).
+    fontTools re-encodes the file as it saves, so two more tables differ in
+    their BYTES with no change of data: `cmap` (the identical (0,3) and
+    (3,1) subtables are written once and shared; every mapping is the same)
+    and `head`'s checkSumAdjustment. `scripts/fix-beleren-kerning.mjs
+    --source <the pack's file>` rebuilds both files from the pack's bytes,
+    byte for byte.
   - `public/fonts/mplantin.ttf` (+ `.woff`, `.woff2`; rules text). Name
     table: family "MPlantin", copyright field "Converted by ALLTYPE",
     version "Converted from C:\1E\PLA.TF1 by ALLTYPE"; no licence string.
@@ -11293,6 +11302,35 @@ How rules text is sized and set:
   on its centre line. A lone em dash after a word ("choose one —",
   "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **The display face's collision-guard kerns** (layout v72, 2026-10-28):
+  Beleren Bold P1.01 kerns 21 pairs APART where the two letters' ink would
+  otherwise touch or cross — K's and R's leg over a descender (K→y +0.25 em,
+  R→y +0.31 em, R→j +0.33 em), f's hook over an ascender or i's dot (f→l /
+  f→h / f→k / f→b +0.14 em, f→i +0.09 em), k's arm (k→x, k→y…). Both
+  renderers apply the font's GPOS, so "Kylox" baked as "K ylox" and
+  "Snuffler" as "Snuff ler" (found by the independent check of #620). Every
+  print sets them tight and lets the ink touch: Scryfall's Kylox, Kytheon,
+  Ryusei, Reflector Mage, Skyfisher Spider, Elfhame Druid, Afflict and
+  Griffin Aerie. The list is the font's whole collision-guard CLASS (the
+  rule and the pairs with direct print evidence are in
+  `lib/cards/display-kerning.ts`). The committed TTF + WOFF2 carry those
+  pairs' positive kerns at 0 — the list is DATA in that module, written
+  into the font by `scripts/fix-beleren-kerning.mjs` (fontTools; each pair
+  exactly as listed; never a class-kerned pair) — and the metric tables are
+  regenerated from them, so the fits' `kernWidening` forgets them too. An
+  ACCENTED right letter is its own record: fí (+180, as fi) is zeroed with
+  fi; fì (+495), fî (+451) and fï (+631) keep the font's wider kerns, which
+  keep the f's hook off the accent, and no print shows them tight
+  (`ACCENTED_KERNS_KEPT`). Every other pair keeps the font's value,
+  held by `tests/unit/cards/display-kerning.test.ts`: the tightening ones
+  (AV, To, Ty), the capital pairs no print has shown us yet (R→A, K→A,
+  f→T, TT), the small spacing pairs (r→y +0.055 em, f→u, R→n) and every
+  pair with a digit or punctuation (f→’ IS spaced on print —
+  "Aardwolf's"; P/T's 77 and /7). Grow the list only with print evidence,
+  as its own bump. The scope (`kerningGuardsChanged`): a card whose name,
+  nickname, type words or artist credit — or its back face's — holds a
+  pair; ~3.5 % of Scryfall's 35,412 names, no type-line word, no token
+  small caps (those draw capitals). A sweep, verification-neutral.
 - **The flavor bar** (layout v73, TODO 3.19): ≈ 0.2 % of the card's height
   (`RULES_TEXT.flavorBarPx`: 4 HD px, 2 at 750 — it was 1 px at every
   target, a quarter of the preview's share of the card in the HD bake),
