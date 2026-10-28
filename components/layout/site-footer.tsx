@@ -17,9 +17,13 @@ export function SiteFooter() {
 
           {siteConfig.footerNav.map((column) => (
             <div key={column.title} className="flex flex-col gap-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-subtle">
+              {/* h2: the footer's columns are top-level sections of the page
+                  outline. They were h4s, which skipped a level after every
+                  page's h1 / h2 (axe heading-order on every creator screen,
+                  TODO 3b.34); the classes keep the look. */}
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-subtle">
                 {column.title}
-              </h4>
+              </h2>
               <ul className="space-y-2 text-sm">
                 {column.links
                   .filter(

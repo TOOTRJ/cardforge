@@ -12,15 +12,26 @@ import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { formatCredits } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
+import type { DesktopNavBreakpoint } from "./site-header";
+
+// Literal class strings: Tailwind only builds classes it can read.
+const TRIGGER_HIDDEN_FROM: Record<DesktopNavBreakpoint, string> = {
+  lg: "lg:hidden",
+  xl: "xl:hidden",
+};
 
 // ---------------------------------------------------------------------------
 // MobileMenu — hamburger-triggered slide-in drawer for narrow viewports.
-// Replaces the desktop nav, which is `hidden md:flex`. Reuses Radix Dialog
+// Replaces the desktop nav below `desktopNavFrom` (lg, or xl for a free
+// account's wider row — site-header.tsx, TODO 3b.27). Reuses Radix Dialog
 // for focus trap + ESC + click-outside behavior; the content is styled as
 // a right-anchored drawer instead of a centered modal.
 // ---------------------------------------------------------------------------
 
 type MobileMenuProps = {
+  /** The breakpoint from which the header shows its nav inline — the
+   *  hamburger hides from there. */
+  desktopNavFrom?: DesktopNavBreakpoint;
   isAuthed: boolean;
   username: string | null;
   isPaid?: boolean;
@@ -32,6 +43,7 @@ type MobileMenuProps = {
 };
 
 export function MobileMenu({
+  desktopNavFrom = "lg",
   isAuthed,
   username,
   isPaid = false,
@@ -59,7 +71,10 @@ export function MobileMenu({
         <button
           type="button"
           aria-label="Open navigation menu"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 md:hidden"
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+            TRIGGER_HIDDEN_FROM[desktopNavFrom],
+          )}
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>

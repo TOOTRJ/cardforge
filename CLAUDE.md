@@ -902,7 +902,7 @@ Rules and gotchas:
   scan colour; `scripts/lib/nyx-frame.mjs` `toneNyxRim`: w b r g, blue's
   is the pack's own, gold onto the gold crown's arm, colourless onto MSE's
   bronze), so the untinted bands match it — crown = rim per key. Since
-  layout v74 (TODO 4.17f) the masters are Card Conjurer's 'Nyx Showcase'
+  layout v73 (TODO 4.17f) the masters are Card Conjurer's 'Nyx Showcase'
   in the frames BUCKET (never back in `public/frames/nyx`; `CC_TEMPLATES.nyx`,
   the rim and v37's bar / box darkness as the importer's `masterPass`): its
   lower half on print, never re-cut; the type band rides its bar.
@@ -1283,6 +1283,19 @@ Rules and gotchas:
   sweep's scope, mirrored by the owner's SQL). Any other star is printed;
   rules text has no markup. Print typography never converts a star and
   reads a quote through them.
+- The display face is Beleren Bold P1.01 with its 21 collision-guard kerns
+  (K→y, R→j, f→l, f→i…) at 0 (layout v72; print sets them tight): the pairs
+  are DATA in `lib/cards/display-kerning.ts`, written into BOTH
+  `public/fonts/Beleren-Bold.ttf` and `.woff2` by
+  `scripts/fix-beleren-kerning.mjs`, then `generate-font-metrics.mjs`. A
+  re-import of the font goes through that script (the unpatched pack file
+  fails `tests/unit/cards/display-kerning.test.ts`); a pair joins the list
+  only with print evidence, as its own bump. An accented right letter is its
+  own record, zeroed only where listed (fí; fì / fî / fï keep the font's
+  wider kerns). A scan that judges stored bakes against the card scopes
+  without baking selects `SCOPE_CARD_COLUMNS` through `selectScopeColumns`
+  (`lib/cards/bake-select.ts`): a scope column it leaves out reads as
+  "owes the bump" on every card.
 - An EDIT never changes a field its maker did not touch (#524 + its
   follow-up; `tests/unit/components/creator-clear-fields-save.test.tsx`,
   `creator-footer-and-create-clears.test.tsx`). The editor resends the
@@ -1358,7 +1371,8 @@ Rules and gotchas:
   "II —"). The keyed same-card reset keeps field errors (`keepErrors`): the
   refresh of the save before must not wipe a blocked Save's message. Never write a saga
   row's line from its numbers alone — `sagaRowsOut` is the one answer (a
-  kind switch and the AI's context read it too). A walker whose loyalty
+  kind switch and the AI's context read it too; a kind switch keeps a held
+  row's unreadable numeral too, `sagaRowsForKindSwitch`, TODO 3b.30). A walker whose loyalty
   badges touch on its frame gets a note under its rows
   (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
   never a count compared — 9 one-line rows on `m15pw`, 11 on the tall

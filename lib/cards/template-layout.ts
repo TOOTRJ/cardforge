@@ -5848,7 +5848,7 @@ const EXPEDITIONLANDBFZ: FrameProfile = {
 //     with the bar. The plate's printed colour (white digits on the card's
 //     colour) is 4.17g's look, not geometry.
 //
-// THE LOWER FRAME ON PRINT (TODO 4.17f, layout v74 — ADVENTURE_NYX_
+// THE LOWER FRAME ON PRINT (TODO 4.17f, layout v73 — ADVENTURE_NYX_
 // LAYOUT_VERSION). The masters are Card Conjurer's 'Nyx Showcase' (frames
 // bucket; scripts/lib/cc-frames.mjs NYX_SHOWCASE), the same drawing on the
 // regular M15 pack's geometry: the type bar 5.0 / 5.4 px higher than MSE's

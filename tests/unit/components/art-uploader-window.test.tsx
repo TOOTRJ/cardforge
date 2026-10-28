@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { artPositionerWindows, faceArtWindow, type ArtWindow } from "@/lib/cards/art-positioner-window";
 import type { ArtPosition, FrameTemplate } from "@/types/card";
+import { chipOff } from "../helpers/chip";
 
 // ---------------------------------------------------------------------------
 // The art positioner's surface is the card's art window (TODO 3b.13): with
@@ -16,7 +17,7 @@ import type { ArtPosition, FrameTemplate } from "@/types/card";
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }));
 
-import { ArtUploader } from "@/components/creator/art-uploader";
+import { ART_POSITIONER_INSTRUCTIONS, ArtUploader } from "@/components/creator/art-uploader";
 
 const ART = "https://project.supabase.co/storage/v1/object/public/card-art/u/grid.png";
 const windowOn = (template: FrameTemplate, more: Partial<CardPreviewData> = {}) =>
@@ -256,11 +257,58 @@ describe("keyboard and buttons", () => {
       fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
     });
     expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 4 });
-    expect((screen.getByRole("button", { name: "Zoom in" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(screen.getByRole("button", { name: "Zoom in" }))).toBe(true);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
     });
     expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 3.95 });
+  });
+
+  // TODO 3b.32: the press that takes a button to its limit used to disable
+  // it under the keyboard focus, which a browser drops to the page top. It
+  // goes aria-disabled instead: it keeps the focus and does nothing.
+  it("Zoom in / Zoom out / Fit to frame keep the keyboard focus when their own press takes them off", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="m15" start={{ focalX: 0.5, focalY: 0.5, scale: 3.95 }} onChange={onChange} />);
+    const zoomIn = screen.getByRole("button", { name: "Zoom in" }) as HTMLButtonElement;
+    zoomIn.focus();
+    await act(async () => {
+      fireEvent.click(zoomIn);
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 4 });
+    expect(zoomIn.disabled).toBe(false);
+    expect(chipOff(zoomIn)).toBe(true);
+    expect(document.activeElement).toBe(zoomIn);
+    const calls = onChange.mock.calls.length;
+    await act(async () => {
+      fireEvent.click(zoomIn);
+    });
+    expect(onChange.mock.calls.length).toBe(calls);
+
+    // Fit to frame: back on the fit, the button off and still focused.
+    const fit = screen.getByRole("button", { name: /Fit to frame/ }) as HTMLButtonElement;
+    fit.focus();
+    await act(async () => {
+      fireEvent.click(fit);
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
+    expect(chipOff(fit)).toBe(true);
+    expect(fit.disabled).toBe(false);
+    expect(document.activeElement).toBe(fit);
+  });
+
+  it("Zoom out keeps the focus when it reaches 100 %", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="m15" start={{ focalX: 0.5, focalY: 0.5, scale: 1.05 }} onChange={onChange} />);
+    const zoomOut = screen.getByRole("button", { name: "Zoom out" }) as HTMLButtonElement;
+    zoomOut.focus();
+    await act(async () => {
+      fireEvent.click(zoomOut);
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 1 });
+    expect(zoomOut.disabled).toBe(false);
+    expect(chipOff(zoomOut)).toBe(true);
+    expect(document.activeElement).toBe(zoomOut);
   });
 
   it("shows a stored zoom above 3 as it is drawn (the surface used to stop at 3)", () => {
@@ -268,12 +316,40 @@ describe("keyboard and buttons", () => {
     expect(picture().style.transform).toBe("scale(3.6)");
   });
 
-  it("keeps its labels: a focusable group that says how to use it", () => {
+  it("is a focusable group named by its heading and described by how to use it (3b.33)", () => {
     render(<Harness template="m15" />);
     const el = surface();
     expect(el.getAttribute("role")).toBe("group");
     expect(el.getAttribute("tabindex")).toBe("0");
-    expect(el.getAttribute("aria-label")).toMatch(/Drag to reposition the art/);
+    expect(el.hasAttribute("aria-label")).toBe(false);
+    // The accessible name is the heading alone, never the sentence.
+    const group = screen.getByRole("group", { name: "Artwork" });
+    expect(group).toBe(el);
+    const described = group.getAttribute("aria-describedby")!;
+    expect(document.getElementById(described)?.textContent).toBe(ART_POSITIONER_INSTRUCTIONS);
+    expect(screen.queryByRole("group", { name: /Drag to reposition/ })).toBeNull();
+  });
+
+  it("takes a face's heading as its name", () => {
+    render(
+      <ArtUploader
+        userId="u"
+        heading="Back face — Artwork"
+        artUrl={ART}
+        artPosition={{ focalX: 0.5, focalY: 0.5, scale: 1 }}
+        artWindow={windowOn("m15")}
+        onArtChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole("group", { name: "Back face — Artwork" })).toBe(surface());
+  });
+
+  it("empty, stays a button named by its heading and its own words", () => {
+    render(<Harness template="m15" artUrl={null} />);
+    const el = surface();
+    expect(el.getAttribute("role")).toBe("button");
+    expect(el.hasAttribute("aria-describedby")).toBe(false);
+    expect(screen.getByRole("button", { name: /^Artwork / })).toBe(el);
   });
 });
 
@@ -379,7 +455,7 @@ describe("fitted or placed by hand", () => {
     render(<Harness template="saga" />);
     expect(status().dataset.artFraming).toBe("fitted");
     expect(status().textContent).toMatch(/Fitted to this frame: the picture fills the art window, centred/);
-    expect(fit().disabled).toBe(true);
+    expect(chipOff(fit())).toBe(true);
     expect(screen.queryByRole("button", { name: /Reset position/ })).toBeNull();
   });
 
@@ -396,13 +472,13 @@ describe("fitted or placed by hand", () => {
     fireEvent.keyDown(surface(), { key: "+" });
     expect(status().dataset.artFraming).toBe("by-hand");
     expect(status().textContent).toMatch(/Placed by hand: your framing is kept when you change the frame/);
-    expect(fit().disabled).toBe(false);
+    expect(chipOff(fit())).toBe(false);
     await act(async () => {
       fireEvent.click(fit());
     });
     expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
     expect(status().dataset.artFraming).toBe("fitted");
-    expect(fit().disabled).toBe(true);
+    expect(chipOff(fit())).toBe(true);
   });
 
   it("a stored hand-set position opens as it is: nothing is written, on any frame", () => {
@@ -420,7 +496,7 @@ describe("fitted or placed by hand", () => {
   it("warns when the zoom leaves empty space in the window, and stops when it is filled again", () => {
     render(<Harness template="saga" start={{ focalX: 0.5, focalY: 0.5, scale: 0.7 }} />);
     expect(status().textContent).toMatch(/At 70% the picture is smaller than the art window, so empty space shows on the card/);
-    expect(fit().disabled).toBe(false);
+    expect(chipOff(fit())).toBe(false);
     for (let i = 0; i < 6; i++) fireEvent.keyDown(surface(), { key: "+" });
     expect(screen.getByTestId("art-zoom-readout").textContent).toBe("100%");
     expect(status().textContent).not.toMatch(/empty space/);
@@ -448,7 +524,7 @@ describe("the zoom stops at 100 % on the way down", () => {
   it("at 100 % the − button is disabled and the − key and Shift-scroll write nothing", () => {
     const onChange = vi.fn();
     render(<Harness template="saga" onChange={onChange} />);
-    expect(out().disabled).toBe(true);
+    expect(chipOff(out())).toBe(true);
     fireEvent.keyDown(surface(), { key: "-" });
     fireEvent.keyDown(surface(), { key: "_" });
     wheelOut();
@@ -459,14 +535,14 @@ describe("the zoom stops at 100 % on the way down", () => {
   it("from above 100 % every zoom-out lands on 100 % and stays there", async () => {
     const onChange = vi.fn();
     render(<Harness template="saga" start={{ focalX: 0.3, focalY: 0.6, scale: 1.08 }} onChange={onChange} />);
-    expect(out().disabled).toBe(false);
+    expect(chipOff(out())).toBe(false);
     fireEvent.keyDown(surface(), { key: "-" });
     expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.3, focalY: 0.6, scale: 1.03 });
     await act(async () => {
       fireEvent.click(out());
     });
     expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.3, focalY: 0.6, scale: 1 });
-    expect(out().disabled).toBe(true);
+    expect(chipOff(out())).toBe(true);
     const writes = onChange.mock.calls.length;
     fireEvent.keyDown(surface(), { key: "-" });
     wheelOut();
@@ -480,7 +556,7 @@ describe("the zoom stops at 100 % on the way down", () => {
     expect(picture().style.transform).toBe("scale(0.7)");
     expect(readout()).toBe("70%");
     expect(screen.getByTestId("art-fit-status").textContent).toMatch(/At 70% .* Zoom in to 100%, or choose Fit to frame, to fill it\. It can't be made smaller\./);
-    expect(out().disabled).toBe(true);
+    expect(chipOff(out())).toBe(true);
     fireEvent.keyDown(surface(), { key: "-" });
     wheelOut();
     expect(onChange).not.toHaveBeenCalled();
@@ -492,7 +568,7 @@ describe("the zoom stops at 100 % on the way down", () => {
       fireEvent.click(zoomIn());
     });
     expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 0.75 });
-    expect(out().disabled).toBe(true);
+    expect(chipOff(out())).toBe(true);
     const writes = onChange.mock.calls.length;
     fireEvent.keyDown(surface(), { key: "-" });
     expect(onChange.mock.calls.length).toBe(writes);
@@ -500,13 +576,13 @@ describe("the zoom stops at 100 % on the way down", () => {
     // Up to 100 % and past it; back down stops at 100 %.
     for (let i = 0; i < 6; i++) fireEvent.keyDown(surface(), { key: "+" });
     expect(readout()).toBe("105%");
-    expect(out().disabled).toBe(false);
+    expect(chipOff(out())).toBe(false);
     fireEvent.keyDown(surface(), { key: "-" });
     fireEvent.keyDown(surface(), { key: "-" });
     fireEvent.keyDown(surface(), { key: "-" });
     expect(readout()).toBe("100%");
     expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 1 });
-    expect(out().disabled).toBe(true);
+    expect(chipOff(out())).toBe(true);
   });
 
   it("an off-grid stored zoom (97 %) steps to 102 %, then down to 100 %", () => {

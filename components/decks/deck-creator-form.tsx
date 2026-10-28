@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Controller, useForm, useWatch, type SubmitHandler } from "react-hook-form";
@@ -32,7 +32,7 @@ import {
 import type { Visibility } from "@/types/card";
 import { VisibilityPicker } from "@/components/ui/visibility-picker";
 import { inputClass, textareaClass } from "@/components/ui/field-classes";
-import { FieldGroup } from "@/components/creator/field-group";
+import { FieldGroup, joinIds } from "@/components/creator/field-group";
 
 type FormValues = {
   title: string;
@@ -44,6 +44,10 @@ type FormValues = {
   format: DeckFormat;
   visibility: Visibility;
 };
+
+/** The fields a refused save can focus, in page order (the others have no
+ *  control of their own to focus). */
+const FOCUSABLE_FIELDS = ["title", "format", "description"] as const;
 
 type DeckCreatorFormProps = {
   /** Only "edit" exists: creation goes through the wizard (DeckWizard). */
@@ -106,6 +110,7 @@ export function DeckCreatorForm({ mode, userId, deck,
   const [serverError, setServerError] = useState<string | null>(null);
 
   const defaults = useMemo(() => defaultValuesFor(deck), [deck]);
+  const formatHintId = `${useId()}-format-hint`;
 
   const {
     register,
@@ -155,9 +160,13 @@ export function DeckCreatorForm({ mode, userId, deck,
       const result = await updateDeckAction(deck.id, payload);
       if (!result.ok) {
         if (result.fieldErrors) {
-          for (const [name, message] of Object.entries(result.fieldErrors)) {
-            if (!message) continue;
-            setError(name as keyof FormValues, { message });
+          // A refused save moves the focus to the FIRST refused field, which
+          // then reads its error as its description (FieldGroup's rule) — no
+          // alert per field; a form-level refusal is the form's one alert.
+          const refused = Object.entries(result.fieldErrors).filter(([, message]) => Boolean(message));
+          const first = FOCUSABLE_FIELDS.find((name) => refused.some(([key]) => key === name));
+          for (const [name, message] of refused) {
+            setError(name as keyof FormValues, { message: message as string }, { shouldFocus: name === first });
           }
         }
         if (result.formError) {
@@ -208,37 +217,51 @@ export function DeckCreatorForm({ mode, userId, deck,
           />
         </FieldGroup>
 
+        {/* The select is the field's ONE control, inside a Controller: it
+            takes its name ("Format", the caption) and its description (the
+            error, then the format's hint) from the function child — a plain
+            child there got neither, and an aria-label of other words named
+            it (TODO 3b.36). */}
         <FieldGroup label="Format" error={errors.format?.message}>
-          <Controller
-            control={control}
-            name="format"
-            render={({ field }) => (
-              <div className="flex flex-col gap-1.5">
-                <select
-                  value={field.value}
-                  onChange={(event) =>
-                    field.onChange(event.target.value as DeckFormat)
-                  }
-                  className={cn(
-                    inputClass(Boolean(errors.format)),
-                    "appearance-none",
-                  )}
-                  aria-label="Deck format"
-                >
-                  {DECK_FORMAT_VALUES.map((format) => (
-                    <option key={format} value={format}>
-                      {DECK_FORMAT_LABELS[format]}
-                    </option>
-                  ))}
-                </select>
-                {FORMAT_HINTS[field.value] ? (
-                  <span className="text-xs text-muted">
-                    {FORMAT_HINTS[field.value]}
-                  </span>
-                ) : null}
-              </div>
-            )}
-          />
+          {(aria) => (
+            <Controller
+              control={control}
+              name="format"
+              render={({ field }) => (
+                <div className="flex flex-col gap-1.5">
+                  <select
+                    {...aria}
+                    aria-describedby={joinIds(
+                      aria["aria-describedby"],
+                      FORMAT_HINTS[field.value] ? formatHintId : null,
+                    )}
+                    ref={field.ref}
+                    name={field.name}
+                    value={field.value}
+                    onBlur={field.onBlur}
+                    onChange={(event) =>
+                      field.onChange(event.target.value as DeckFormat)
+                    }
+                    className={cn(
+                      inputClass(Boolean(errors.format)),
+                      "appearance-none",
+                    )}
+                  >
+                    {DECK_FORMAT_VALUES.map((format) => (
+                      <option key={format} value={format}>
+                        {DECK_FORMAT_LABELS[format]}
+                      </option>
+                    ))}
+                  </select>
+                  {FORMAT_HINTS[field.value] ? (
+                    <span id={formatHintId} className="text-xs text-muted">
+                      {FORMAT_HINTS[field.value]}
+                    </span>
+                  ) : null}
+                </div>
+              )}
+            />
+          )}
         </FieldGroup>
 
         <FieldGroup

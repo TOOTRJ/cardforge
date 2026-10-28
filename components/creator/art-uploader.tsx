@@ -86,6 +86,24 @@ const EMPTY_ASPECT_RATIO_CLASS = "aspect-[5/4]";
 // Pointer must travel this far before a press becomes a pan — so a plain
 // click (or a tap) never nudges the framing.
 const DRAG_THRESHOLD_PX = 3;
+/** A toolbar button that has nothing to do right now — Zoom out at 100 %,
+ *  Zoom in at 400 %, Fit to frame on a fitted picture. Its own press is
+ *  what takes it there, so `disabled` dropped the keyboard focus to the page
+ *  top (TODO 3b.32): it is `aria-disabled` instead — it keeps the focus and
+ *  its place in the tab order, says it is unavailable, and has NO click
+ *  handler (so it does nothing). Looks like `disabled`. */
+function offAtLimit(
+  off: boolean,
+  onClick: () => void,
+): { onClick?: () => void; "aria-disabled"?: true; className?: string } {
+  return off
+    ? { "aria-disabled": true, className: "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-muted" }
+    : { onClick };
+}
+
+/** How to use the loaded surface: its DESCRIPTION, never its name (3b.33). */
+export const ART_POSITIONER_INSTRUCTIONS =
+  "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again.";
 
 type ArtUploaderProps = {
   userId: string | null;
@@ -547,6 +565,7 @@ export function ArtUploader({
   const uploaderId = useId();
   const headingId = `${uploaderId}-heading`;
   const dropzoneId = `${uploaderId}-dropzone`;
+  const instructionsId = `${uploaderId}-instructions`;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -558,6 +577,14 @@ export function ArtUploader({
           PNG · JPEG · WebP · GIF · up to {CARD_ART_MAX_LABEL}
         </span>
       </div>
+
+      {/* The loaded surface's description — never shown (the hover hint
+          says it to a mouse), read through aria-describedby. */}
+      {artUrl ? (
+        <span id={instructionsId} hidden>
+          {ART_POSITIONER_INSTRUCTIONS}
+        </span>
+      ) : null}
 
       <input
         ref={inputRef}
@@ -595,18 +622,17 @@ export function ArtUploader({
         // pan, arrow keys nudge, Shift-scroll zoom) — not a static image, so
         // "group" rather than the misleading "img". Empty, it's a picker button.
         role={artUrl ? "group" : "button"}
-        aria-label={
-          artUrl
-            ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again."
-            : undefined
-        }
-        // Empty: named by what it shows — the box's heading ("Artwork",
-        // "Back face — Artwork") and then its own words (the prompt, the
-        // paste hint, the best size). An aria-label in other words hid all
-        // of them from a screen reader, and from voice control ("click drag
-        // art here" found nothing).
+        // Loaded: NAMED by the box's heading ("Artwork", "Back face —
+        // Artwork") and DESCRIBED by how to use it (TODO 3b.33) — the
+        // instructions as its name made a screen reader say a sentence
+        // where a field's name belongs.
+        aria-describedby={artUrl ? instructionsId : undefined}
+        // Empty: named by what it shows — the box's heading and then its own
+        // words (the prompt, the paste hint, the best size). An aria-label in
+        // other words hid all of them from a screen reader, and from voice
+        // control ("click drag art here" found nothing).
         id={dropzoneId}
-        aria-labelledby={artUrl ? undefined : `${headingId} ${dropzoneId}`}
+        aria-labelledby={artUrl ? headingId : `${headingId} ${dropzoneId}`}
         tabIndex={0}
         data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
         style={surfaceStyle}
@@ -692,8 +718,8 @@ export function ArtUploader({
                 variant="ghost"
                 size="sm"
                 aria-label="Zoom out"
-                onClick={() => zoomBy(-ZOOM_STEP)}
-                disabled={uploading || !canZoomArtOut(scale)}
+                {...offAtLimit(!canZoomArtOut(scale), () => zoomBy(-ZOOM_STEP))}
+                disabled={uploading}
               >
                 <ZoomOut className="h-4 w-4" aria-hidden />
               </Button>
@@ -708,8 +734,8 @@ export function ArtUploader({
                 variant="ghost"
                 size="sm"
                 aria-label="Zoom in"
-                onClick={() => zoomBy(ZOOM_STEP)}
-                disabled={uploading || scale >= MAX_SCALE}
+                {...offAtLimit(scale >= MAX_SCALE, () => zoomBy(ZOOM_STEP))}
+                disabled={uploading}
               >
                 <ZoomIn className="h-4 w-4" aria-hidden />
               </Button>
@@ -718,8 +744,8 @@ export function ArtUploader({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleFit}
-              disabled={uploading || fitted}
+              {...offAtLimit(fitted, handleFit)}
+              disabled={uploading}
               title="Fill the art window and centre the picture (R)"
             >
               <Maximize className="h-4 w-4" aria-hidden />

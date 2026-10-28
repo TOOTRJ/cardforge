@@ -596,6 +596,35 @@ describe("between kinds, and on a stored card", () => {
     expect(payload.back_face).toMatchObject({ card_type: "sorcery", title: "Ice" });
   });
 
+  // TODO 3b.11: the "second part is switched off" card ("Add the right
+  // half") was removed as unreachable. Every way onto a frame that paints a
+  // second part leaves the part ON — a stored card saved without one too —
+  // so the second tab always holds the part's fields.
+  it("the second part is never switched off on a frame that paints one — a stored card without one opens with it on", async () => {
+    renderForm({ mode: "edit", card: storedSplit({ back_face: null }) });
+    await click(tab("Right half"));
+    expect(selected()).toBe("back");
+    expect(named("back_face.title")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^Add the/ })).toBeNull();
+    await goTo(/^Text/);
+    expect(named("back_face.rules_text")).not.toBeNull();
+  });
+
+  it("walking every one-picture kind on its second tab, every step shows the part's fields", async () => {
+    renderForm();
+    for (const [i, { chip, kind }] of KINDS.entries()) {
+      // (A new card opens on the Card step, before its step bar.)
+      if (i > 0) await goTo(/^card/i);
+      await pickKind(chip);
+      await goTo(/^Identity/);
+      await click(tab(wordsOf(kind).second));
+      expect(named("back_face.title"), kind).not.toBeNull();
+      await goTo(/^Text/);
+      expect(named("back_face.rules_text"), kind).not.toBeNull();
+      expect(screen.queryByRole("button", { name: /^Add the/ }), kind).toBeNull();
+    }
+  });
+
   it("a legacy back on a one-part frame keeps its art strip and gets no switch", async () => {
     renderForm({
       mode: "edit",

@@ -18,7 +18,7 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { bucketMaster, haveBucketMasters } from "../../stubs/bucket-masters";
 
 // ---------------------------------------------------------------------------
-// Layout v74's two corrections (owner 2026-10-28):
+// Layout v73's two corrections (owner 2026-10-28):
 //   • TODO 4.26a — the adventure's LEFT page's PAPER toned onto print as the
 //     pack file loads (ADVENTURE_PAPER_TONES through sourceTonesOf), inside
 //     `bookLeft`, below the type bar's outline and between the page's two

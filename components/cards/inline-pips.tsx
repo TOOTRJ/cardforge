@@ -5,6 +5,7 @@
 // shown outside the card itself (idea chips, Forge AI suggestions).
 // ---------------------------------------------------------------------------
 
+import { pipName } from "@/lib/cards/pip-names";
 import { splitPipRuns } from "@/lib/cards/pip-runs";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +13,13 @@ import { cn } from "@/lib/utils";
  *  roughly cap-height so it sits in running text like the card preview's. */
 export const INLINE_PIP_FONT_SIZE = `${(0.92 / 1.3).toFixed(4)}em`;
 
+/** One pip: a picture NAMED by what it is ("tap", "white mana" — TODO 6.7;
+ *  its brace code was spelled out brace by brace), the code its tooltip. */
 function InlinePip({ suffix, code }: { suffix: string; code: string }) {
   return (
     <i
       role="img"
-      aria-label={code}
+      aria-label={pipName(code)}
       title={code}
       className={cn("ms ms-cost ms-shadow mx-[0.06em] align-[-0.08em]", `ms-${suffix}`)}
       style={{ fontSize: INLINE_PIP_FONT_SIZE }}

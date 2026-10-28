@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useEffect,
   useId,
   useMemo,
@@ -48,6 +49,9 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { StepRail } from "@/components/ui/step-rail";
 import { CardPreview } from "@/components/cards/card-preview";
+import { CREATOR_ASIDE_QUERY, useMediaQuery } from "@/components/creator/use-media-query";
+import { useStableValue } from "@/components/creator/use-stable-value";
+import { useCreatorScrollPadding } from "@/components/creator/use-scroll-padding";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
@@ -124,7 +128,6 @@ import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import {
   SecondPartCostField,
-  SecondPartEmpty,
   SecondPartFlavorField,
   SecondPartIdentityFields,
   SecondPartRulesField,
@@ -230,7 +233,7 @@ import {
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { keptStationRows, sagaRowsForKindSwitch, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
 import { stationPtChoiceAfterFill } from "@/lib/ai/station-design";
@@ -268,6 +271,7 @@ import {
   typeLineHasWord,
   typeWordFrameFor,
   KIND_DEFS,
+  layoutKindTypeChoices,
   dfcFrontBodyFor,
   dfcLayoutForCard,
   sagaTwoFacesAvailable,
@@ -323,6 +327,8 @@ import {
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
+import { editBackFacePayload } from "@/lib/creator/back-face-edit";
+import { cancelsImplicitSubmit } from "@/lib/creator/enter-key";
 import {
   frameAnatomyPatchFor,
   hasMeaningfulChange,
@@ -363,7 +369,11 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
-import { GlyphCoverageNotice, UndrawableSymbolNotice } from "@/components/creator/glyph-coverage-notice";
+import {
+  GlyphCoverageNotice,
+  GlyphNoticeAnnouncer,
+  UndrawableSymbolNotice,
+} from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import {
   isFramePreviewSave,
@@ -474,6 +484,11 @@ type CardCreatorFormProps = {
 // The URL is read once per render via useSyncExternalStore; it never
 // changes underneath the form, so there is nothing to subscribe to.
 const subscribeToNothing = () => () => {};
+
+/** The live preview, drawn again only when its props say something new
+ *  (TODO 3b.9: `previewProps` is kept by identity while it holds the same
+ *  data — useStableValue). */
+const MemoCardPreview = memo(CardPreview);
 
 // Icons for the xl+ vertical step rail (one per StepKey; the "layout" panel's
 // dynamic labels — Adventure / Back face / Flip side — all read as Layers).
@@ -1011,6 +1026,12 @@ export function CardCreatorForm({
   // refresh after it arrives, `defaults` and `card` are still the card as it
   // OPENED, not the row (onSubmit: face_content is never left out then).
   const [savedUnderKey, setSavedUnderKey] = useState<string | null>(null);
+  // The card (resetKey) a save of this session SENT a back face for (TODO
+  // 3b.29): until the refresh after it lands, the row's back may no longer
+  // be `card.back_face`. A save that left the back out (an untouched legacy
+  // back) is not counted — the row's back is still the stored one, and a
+  // save that leaves `updated_at` alone never moves resetKey (#629 check).
+  const [backSentUnderKey, setBackSentUnderKey] = useState<string | null>(null);
   if (footerBaseline.key !== resetKey) {
     setFooterBaseline({ key: resetKey, text: defaults.footer_text.trim() });
   }
@@ -1030,7 +1051,8 @@ export function CardCreatorForm({
   const remixNicknameClearedRef = useRef(false);
   // The hand rename's clear, ONE rule for the two moments it is read: the
   // maker leaving the title field, and a save that never left it (Enter in
-  // the title submits with no blur — independent re-check). A REMIX whose
+  // the title submitted with no blur until TODO 3b.21 — kept for any submit
+  // that does not blur first). A REMIX whose
   // title differs from the one it opened with, its clear not yet spent:
   // spend it, and clear a nickname it still holds. True when it cleared.
   const spendRemixRenameClear = (title: string): boolean => {
@@ -1082,6 +1104,12 @@ export function CardCreatorForm({
   // The kind ("what am I making") is DERIVED from card_type + template — never
   // stored — so drafts, edits, and legacy rows land on the right kind for free.
   const kind = kindFromCard(watched.card_type, watched.frame_style?.template);
+  // The Identity step's card type chips of a NEW adventure or flip card
+  // (TODO 3b.14): the kind stays, the type follows the pick.
+  const layoutTypeChoice = useMemo(() => {
+    const types = layoutKindTypeChoices(kind);
+    return types ? { kindLabel: KIND_DEFS[kind].label, types } : null;
+  }, [kind]);
   // A double-faced card (TODO 5.2): its layout, the family it wears
   // (frame_style.dfcIcon, else `arrows`) and the BACK body the back's type
   // and that family derive — never form state, derived here for the live
@@ -1920,8 +1948,10 @@ export function CardCreatorForm({
       }
       setValue("loyalty_abilities", [], { shouldDirty: true });
     } else if (prevKind === "saga") {
-      // (As a save writes them: a row under the stored marker it keeps.)
-      const chapters = sagaRowsOut(getValues("saga_chapters")).filter((r) => r.marker);
+      // (As a save writes them: a row under the stored marker it keeps —
+      // and a row whose changed numbers would drop a numeral the editor
+      // can't show keeps that numeral in the text, TODO 3b.30.)
+      const chapters = sagaRowsForKindSwitch(getValues("saga_chapters")).filter((r) => r.marker);
       const intro = getValues("saga_intro").trim();
       if (chapters.length > 0 || intro) {
         setValue("rules_text", serializeSagaMarkers(intro || null, chapters), {
@@ -3642,7 +3672,19 @@ export function CardCreatorForm({
             },
             submitDfcLayout,
           )
-        : backFaceContent;
+        : isEdit && card
+          ? // A legacy back or an inline second part (TODO 3b.29): an
+            // untouched back the form cannot rebuild as stored is LEFT OUT
+            // (the update action keeps the row's) — lib/creator/back-face-edit.ts.
+            editBackFacePayload({
+              stored: card.back_face,
+              opened: defaults,
+              values,
+              built: backFaceContent,
+              trustOpened: backSentUnderKey !== resetKey,
+              ownsColour: drawsPartColor(submitTemplate),
+            })
+          : backFaceContent;
 
     // Structured rows: planeswalkers + sagas dual-write face_content AND a
     // canonically serialized rules_text (round-trip tested in
@@ -3784,7 +3826,9 @@ export function CardCreatorForm({
       // Same no-art rule for the visibility dropdown (covers the "create
       // back face" save path, where intent doesn't force a visibility).
       visibility: finalVisibility,
-      back_face: backFacePayload,
+      // (Left out — not null — for an untouched back an edit keeps as
+      // stored, TODO 3b.29.)
+      ...(backFacePayload === undefined ? {} : { back_face: backFacePayload }),
       // Empty → null so an intentional clear (e.g. generating an AI card
       // over an imported one) actually REMOVES the stored provenance on
       // update; undefined would silently keep the old link. Cards whose
@@ -4015,6 +4059,8 @@ export function CardCreatorForm({
       // …and its rows may no longer be the rows the card opened with (the
       // payload's face_content, above).
       setSavedUnderKey(resetKey);
+      // …and its back face, when this save sent one (see backSentUnderKey).
+      if ("back_face" in payload) setBackSentUnderKey(resetKey);
       // The saved values become the baseline, keeping the on-screen values;
       // the keyed reset swaps in server truth when the refresh lands. Mark
       // clean only if nothing was typed while the request was in flight —
@@ -4144,7 +4190,9 @@ export function CardCreatorForm({
   // Shared live-preview props for the desktop sticky aside + the mobile inline
   // preview, so they never drift. `previewFace` is state (see the sync effect
   // above); `flipOnClick` makes the card itself a flip target with a hover hint.
-  const previewProps = {
+  // Kept by identity while they hold the same data (TODO 3b.9): a keystroke
+  // in a field the card doesn't draw re-renders the form, not the preview.
+  const previewProps = useStableValue({
     staticInEditor: true,
     pipOverrides,
     profileOverrides,
@@ -4251,7 +4299,16 @@ export function CardCreatorForm({
     face: previewFace,
     onFaceChange: setPreviewFace,
     flipOnClick: true,
-  };
+  });
+  // Which of the two live previews shows (TODO 3b.9): the aside from lg up,
+  // the inline one below — null until the window is known (both mount).
+  const asideWide = useMediaQuery(CREATOR_ASIDE_QUERY);
+  // A focused field never sits under the sticky Save bar or the Face switch
+  // (TODO 3b.28, WCAG 2.2 "Focus Not Obscured"): the page's scroll padding
+  // follows their measured heights while the creator is mounted.
+  const [saveBarEl, setSaveBarEl] = useState<HTMLDivElement | null>(null);
+  const [faceSwitchEl, setFaceSwitchEl] = useState<HTMLDivElement | null>(null);
+  useCreatorScrollPadding(saveBarEl, faceSwitchEl);
   // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
   // Part 2 — ONE picture, two parts: where each part sits on it (the
   // profile's own rects, the frame-compare overrides included) and whether
@@ -4300,6 +4357,7 @@ export function CardCreatorForm({
       noteId={faceSwitchNote ? faceNoteId : undefined}
       // In view while the step scrolls, under the site header.
       className="sticky top-[4.25rem] z-20"
+      rootRef={setFaceSwitchEl}
       front={{
         name: watched.title,
         status: faceTabs ? faceStatusOf({ title: watched.title, art_url: watched.art_url }) : null,
@@ -4441,13 +4499,10 @@ export function CardCreatorForm({
   );
   const stepPanels = (
     <div
-      // Under the switch a focused field scrolls clear of it (and of the
-      // site header), never beneath them.
-      className={
-        faceWords
-          ? "relative [&_:is(input,textarea,select,button,summary,[contenteditable='true'])]:scroll-mt-44"
-          : "relative"
-      }
+      // (A focused field scrolls clear of the switch, the site header and
+      // the Save bar through the page's scroll padding — TODO 3b.28,
+      // useCreatorScrollPadding; it replaced a fixed scroll-mt-44 here.)
+      className="relative"
       ref={stepPanelsRef}
       // With the switch, the step is the tab's panel — named by the tab.
       {...(faceWords
@@ -4460,6 +4515,8 @@ export function CardCreatorForm({
       ) : null}
       {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
       {!readOnly ? <UndrawableSymbolNotice values={watched} overrides={pipOverrides} className="mb-6" /> : null}
+      {/* The two notices above, said once to a screen reader (TODO 6.7). */}
+      {!readOnly ? <GlyphNoticeAnnouncer values={watched} overrides={pipOverrides} /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}
@@ -4681,9 +4738,10 @@ export function CardCreatorForm({
                           </FaceScope>
                         }
                       />
-                    ) : (
-                      <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-                    )}
+                    ) : // Nothing while `has_back_face` is off (TODO 3b.11):
+                    // on a frame that paints a second part that lasts only
+                    // until the form's effect above turns it on.
+                    null}
                   </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
@@ -4691,6 +4749,7 @@ export function CardCreatorForm({
                   revise={isRevise}
                   token={kind === "token"}
                   emblem={kind === "emblem"}
+                  layoutTypes={layoutTypeChoice}
                   nicknamePrinted={frameDrawsNickname(
                     resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides),
                   )}
@@ -4804,9 +4863,7 @@ export function CardCreatorForm({
                     <SecondPartStatsFields shown={secondPartFields.shown} />
                   </FaceScope>
                 </>
-              ) : (
-                <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-              )
+              ) : null // (as on the Identity step: never seen — TODO 3b.11)
             ) : stepKey === "text" ? (
               <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 {!hidesCost(watched.frame_style?.template) ? (
@@ -5092,7 +5149,10 @@ export function CardCreatorForm({
     <>
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
+          <div
+            ref={setSaveBarEl}
+            className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm"
+          >
             {userId && saveNeeds.length > 0 ? (
               <SaveNeedsLine
                 needs={saveNeeds}
@@ -5262,6 +5322,21 @@ export function CardCreatorForm({
     if ((event.target as HTMLElement).getAttribute("name") !== "title") return;
     spendRemixRenameClear(getValues("title") ?? "");
   };
+  // Enter in a single-line field never saves the card (TODO 3b.21,
+  // lib/creator/enter-key.ts); Save is the button.
+  const onFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (
+      cancelsImplicitSubmit({
+        key: event.key,
+        target: event.target,
+        form: event.currentTarget,
+        isComposing: event.nativeEvent.isComposing,
+      })
+    ) {
+      event.preventDefault();
+    }
+  };
+
   const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     tidyTypographyOnBlur(event);
     clearRemixNicknameOnRename(event);
@@ -5323,6 +5398,7 @@ export function CardCreatorForm({
           noValidate
           onSubmit={onFormSubmit}
           onBlur={onFormBlur}
+          onKeyDown={onFormKeyDown}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -5332,7 +5408,7 @@ export function CardCreatorForm({
             </p>
             {partEditingLabel}
             <div className="relative w-full max-w-md">
-              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
+              <MemoCardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
               {previewOverlays}
               {readOnly ? null : (
                 <CanvasHotspots
@@ -5379,6 +5455,7 @@ export function CardCreatorForm({
         noValidate
         onSubmit={onFormSubmit}
         onBlur={onFormBlur}
+        onKeyDown={onFormKeyDown}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}
@@ -5414,7 +5491,11 @@ export function CardCreatorForm({
             {faceSwitch}
 
             {/* Mobile inline preview — keeps the card visible while editing
-                (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
+                (the desktop sticky aside is hidden below lg). CSS-only toggle.
+                Mounted only where it shows (TODO 3b.9: one preview, not two
+                with one hidden) — both until the window is known (server
+                render, hydration), as the CSS alone decides. */}
+            {asideWide === true ? null : (
             <details
               className="group/preview rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
               open
@@ -5450,12 +5531,13 @@ export function CardCreatorForm({
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 {partEditingLabel ? <div className="mb-2 flex">{partEditingLabel}</div> : null}
                 <div className="relative">
-                  <CardPreview {...previewProps} />
+                  <MemoCardPreview {...previewProps} />
                   {previewOverlays}
                 </div>
               </div>
               )}
             </details>
+            )}
 
             {stepPanels}
           </div>
@@ -5465,7 +5547,9 @@ export function CardCreatorForm({
         </SurfaceCard>
 
         {/* ----- Right: live preview (desktop; mobile uses the inline
-            <details> preview above the step content) ----- */}
+            <details> preview above the step content). Mounted only where it
+            shows, as the inline one (TODO 3b.9). ----- */}
+        {asideWide === false ? null : (
         <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
           <div className="flex flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -5485,7 +5569,7 @@ export function CardCreatorForm({
             <div className="mx-auto w-full max-w-sm">
               {partEditingLabel ? <div className="mb-3 flex">{partEditingLabel}</div> : null}
               <div className="relative">
-                <CardPreview {...previewProps} />
+                <MemoCardPreview {...previewProps} />
                 {previewOverlays}
               </div>
             </div>
@@ -5493,6 +5577,7 @@ export function CardCreatorForm({
             {visibilityNote}
           </div>
         </aside>
+        )}
       </form>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>

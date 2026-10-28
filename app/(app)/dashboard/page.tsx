@@ -215,6 +215,7 @@ export default async function DashboardPage() {
                 <i
                   key={s}
                   className={`ms ms-${s.toLowerCase()} ms-cost ms-shadow mx-0.5`}
+                  role="img"
                   aria-label={`Standard ${s} pip`}
                   style={{ fontSize: 15 }}
                 />

@@ -16,7 +16,7 @@ import { bucketMaster, haveBucketMasters } from "../../stubs/bucket-masters";
 // whole bar and box) let half the art through, where the THB constellation
 // prints (#258 / #259 / #268) let 0.36–0.46 through the bar and 0.28–0.39
 // (mean 0.33) through the box. The masters' black is α 150 on the bar and
-// α 171 in the box. Since TODO 4.17f (layout v74) the masters are Card
+// α 171 in the box. Since TODO 4.17f (layout v73) the masters are Card
 // Conjurer's 'Nyx Showcase' in the frames bucket, toned by the importer's
 // recipe step on the pack's rows (NYX_CC_*_ROWS); these read the published
 // objects (FRAMES_BUILD_DIR at the manifest's sha256) and skip without them.

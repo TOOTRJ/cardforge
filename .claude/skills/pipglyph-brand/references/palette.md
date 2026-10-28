@@ -15,7 +15,7 @@ disagrees with those, trust the code and update this file.
 | `--color-border` | `oklch(0.33 0.034 262)` | `#2a3346` | hairlines |
 | `--color-foreground` | `oklch(0.96 0.005 262)` | `#f2f3f5` | text |
 | `--color-muted` | `oklch(0.72 0.018 262)` | `#9aa3b5` | secondary text |
-| `--color-subtle` | `oklch(0.62 0.02 262)` | — | tertiary/labels |
+| `--color-subtle` | `oklch(0.66 0.02 262)` | `#8c939f` | tertiary/labels — ≥4.5:1 on background, surface AND elevated (4.72:1 there; TODO 3b.31 raised it from 0.62) |
 | `--color-primary` | `oklch(0.5 0.13 300)` | `#6b4d9a` | CTA fills (light text on top) |
 | `--color-primary-bright` | `oklch(0.7 0.11 300)` | `#8e72c9` | purple TEXT/icons/focus |
 | `--color-gold` / `--color-accent` | `oklch(0.78 0.09 84)` | `#d8b26e` | gold accents, borders |
@@ -34,6 +34,7 @@ WCAG 4.5:1. Key deviations:
 
 | Token | Light value | Note |
 | --- | --- | --- |
+| `--color-subtle` | `oklch(0.49 0.018 262)` | `#5b616b`, 4.93:1 on elevated (TODO 3b.31 lowered it from 0.52) |
 | `--color-primary` | `oklch(0.45 0.14 300)` | fill-strength (9.3:1 vs bg) |
 | `--color-primary-bright` | `oklch(0.4 0.15 300)` | TEXT-strength — same contract as dark, inverted |
 | `--color-gold` | `oklch(0.52 0.11 84)` | ≥4.5:1 on light bg + surface |

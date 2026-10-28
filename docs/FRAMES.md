@@ -141,7 +141,16 @@ Where every frame came from, and the rules that follow from it:
     the MSE Full-Magic-Pack's `Magic - Fonts/beleren-bold_P1.01.ttf`. **No
     licence text accompanies it.** It is Beleren Bold itself: the comments
     that called it "an OFL Beleren stand-in" dated from six days in June
-    2026 when the display face was Sorts Mill Goudy.
+    2026 when the display face was Sorts Mill Goudy. Since layout v72 the
+    committed TTF and WOFF2 are that file with the GPOS kern records of 21
+    pairs (and fí) at 0 — the only DATA that changed (sha256
+    `99228173…a9b5`; "The display face's collision-guard kerns" below).
+    fontTools re-encodes the file as it saves, so two more tables differ in
+    their BYTES with no change of data: `cmap` (the identical (0,3) and
+    (3,1) subtables are written once and shared; every mapping is the same)
+    and `head`'s checkSumAdjustment. `scripts/fix-beleren-kerning.mjs
+    --source <the pack's file>` rebuilds both files from the pack's bytes,
+    byte for byte.
   - `public/fonts/mplantin.ttf` (+ `.woff`, `.woff2`; rules text). Name
     table: family "MPlantin", copyright field "Converted by ALLTYPE",
     version "Converted from C:\1E\PLA.TF1 by ALLTYPE"; no licence string.
@@ -184,11 +193,11 @@ TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
 into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
-- the Theros constellation showcase (4.17f, a correction, layout v74): nyx —
+- the Theros constellation showcase (4.17f, a correction, layout v73): nyx —
   the 'Nyx Showcase' pack's seven frames (`c` its artifact frame), v37's bar /
   box darkness and v55's rim tones as the recipe's master pass; the crown
   band stays `nyxcrown` ([The constellation frame's lower half on
-  print](#the-constellation-frames-lower-half-on-print-417f-layout-v74));
+  print](#the-constellation-frames-lower-half-on-print-417f-layout-v73));
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
   the 'D&D Sourcebook' pack's one parchment frame under every key, its one
@@ -3490,7 +3499,7 @@ public.cards where frame_style->>'template' = 'nyx'`); the cron re-bakes
 whatever it finds and stamps every other card. The visual matrix: the `nyx`
 cases change, nothing else.
 
-### The constellation frame's lower half on print (4.17f, layout v74)
+### The constellation frame's lower half on print (4.17f, layout v73)
 
 Owner-approved 2026-10-28, with the adventure's paper ([above](#each-part-in-its-own-colour-426))
 in one bump. Round 59 registered the MSE `nyx` masters' type bar 5.2 px
@@ -3551,8 +3560,8 @@ m15's): they sat 6–8 px high in MSE's box and sit in this one as on every
 M15 card, unmoved. The art slot still runs under the whole box (1953 px,
 past the box's new bottom at 1937); the title band and the cost row stay.
 
-**Rollout**: layout v74 (`ADVENTURE_NYX_LAYOUT_VERSION`; v72 / v73 are
-taken by open PRs — it renumbers to the next free number at merge),
+**Rollout**: layout v73 (`ADVENTURE_NYX_LAYOUT_VERSION`; v72 is
+#626's),
 "sweep", template-scoped to `adventure` and `nyx`. Not
 verification-neutral for `nyx` (its type slot moves): a tick would be
 re-judged — none exists. The variation-frames builder, whose last
@@ -4339,11 +4348,11 @@ are promoted. A tick
 was given against the creature's master; the owner signs the pages off on
 the review sheet (or re-ticks against WOE #221–241).
 
-**The left page's paper on print (TODO 4.26a, layout v74).** Card
+**The left page's paper on print (TODO 4.26a, layout v73).** Card
 Conjurer's adventure masters painted the storybook's LEFT page — the spell's
 page — far darker than print, on every colour (a one-colour adventure too).
 A correction, in one bump with the Nyx Constellation's lower half
-([below](#the-constellation-frames-lower-half-on-print-417f-layout-v74)).
+([below](#the-constellation-frames-lower-half-on-print-417f-layout-v73)).
 Measured 2026-10-28 by the house tone rule — the raw median of the Scryfall
 PNGs (read at 1500 × 2100) against the master's over the same clean
 interior, the paper x 120–699 × y 1540–1899 with its ink (luma 30 under the
@@ -4390,10 +4399,10 @@ spell is colourless) and stays byte for byte.
   new adventure masters, `build-prepare-frames.mjs` writes all 108 Prepare
   objects byte for byte (only its provenance's `adventure/<k>.png` shas
   move). Not in the bump.
-- **Rollout**: layout v74 (`ADVENTURE_NYX_LAYOUT_VERSION`), "sweep",
+- **Rollout**: layout v73 (`ADVENTURE_NYX_LAYOUT_VERSION`), "sweep",
   template-scoped to `adventure` and `nyx`. Verification: no slot, bar,
   plate or box moves on the adventure, so its seven ticks stay fresh
-  (`VERIFICATION_TEMPLATE_SCOPES[74]` names `nyx` alone) — the owner signs
+  (`VERIFICATION_TEMPLATE_SCOPES[73]` names `nyx` alone) — the owner signs
   the before / after sheet.
 
 **Not built: flip** (no flip printing on the 2015 frame is two-coloured:
@@ -11384,6 +11393,35 @@ How rules text is sized and set:
   (42 px on a frame without one). A lone em dash after a word ("choose one
   —", "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **The display face's collision-guard kerns** (layout v72, 2026-10-28):
+  Beleren Bold P1.01 kerns 21 pairs APART where the two letters' ink would
+  otherwise touch or cross — K's and R's leg over a descender (K→y +0.25 em,
+  R→y +0.31 em, R→j +0.33 em), f's hook over an ascender or i's dot (f→l /
+  f→h / f→k / f→b +0.14 em, f→i +0.09 em), k's arm (k→x, k→y…). Both
+  renderers apply the font's GPOS, so "Kylox" baked as "K ylox" and
+  "Snuffler" as "Snuff ler" (found by the independent check of #620). Every
+  print sets them tight and lets the ink touch: Scryfall's Kylox, Kytheon,
+  Ryusei, Reflector Mage, Skyfisher Spider, Elfhame Druid, Afflict and
+  Griffin Aerie. The list is the font's whole collision-guard CLASS (the
+  rule and the pairs with direct print evidence are in
+  `lib/cards/display-kerning.ts`). The committed TTF + WOFF2 carry those
+  pairs' positive kerns at 0 — the list is DATA in that module, written
+  into the font by `scripts/fix-beleren-kerning.mjs` (fontTools; each pair
+  exactly as listed; never a class-kerned pair) — and the metric tables are
+  regenerated from them, so the fits' `kernWidening` forgets them too. An
+  ACCENTED right letter is its own record: fí (+180, as fi) is zeroed with
+  fi; fì (+495), fî (+451) and fï (+631) keep the font's wider kerns, which
+  keep the f's hook off the accent, and no print shows them tight
+  (`ACCENTED_KERNS_KEPT`). Every other pair keeps the font's value,
+  held by `tests/unit/cards/display-kerning.test.ts`: the tightening ones
+  (AV, To, Ty), the capital pairs no print has shown us yet (R→A, K→A,
+  f→T, TT), the small spacing pairs (r→y +0.055 em, f→u, R→n) and every
+  pair with a digit or punctuation (f→’ IS spaced on print —
+  "Aardwolf's"; P/T's 77 and /7). Grow the list only with print evidence,
+  as its own bump. The scope (`kerningGuardsChanged`): a card whose name,
+  nickname, type words or artist credit — or its back face's — holds a
+  pair; ~3.5 % of Scryfall's 35,412 names, no type-line word, no token
+  small caps (those draw capitals). A sweep, verification-neutral.
 - **Upright words in flavour** (layout v71, owner 2026-10-28): flavour is
   italic, but the prints set a book's title, a ship's name or a stressed
   word ROMAN inside it ("—*Heroics: A Book of Fables*", "Are *we* the

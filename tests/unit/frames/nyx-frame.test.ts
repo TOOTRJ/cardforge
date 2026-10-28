@@ -7,8 +7,9 @@ import { bucketMaster, haveBucketMasters } from "../../stubs/bucket-masters";
 
 // ---------------------------------------------------------------------------
 // The Nyx Constellation frame's rim on its prints (owner Rounds 59 / 61;
-// scripts/lib/nyx-frame.mjs, applied by scripts/build-variation-frames.mjs
-// after the type bar / text box tone): the M15 family's tones, which the
+// scripts/lib/nyx-frame.mjs, applied by the importer's `masterPass` —
+// CC_TEMPLATES.nyx, TODO 4.17f — after the type bar / text box tone): the
+// M15 family's tones, which the
 // print wears once its scan is registered against the same card's regular
 // printing. The published masters (Card Conjurer's 'Nyx Showcase' since
 // TODO 4.17f, the importer's recipe step; MSE's in git before) carry them;
