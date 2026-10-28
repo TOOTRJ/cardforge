@@ -266,6 +266,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "tarkirdragon",
     // The D&D Sourcebook (TODO 4.11 wave 2): P/T only, like the rest.
     "dndsourcebook",
+    // The MKM dossier (TODO 4.11 wave 2): P/T only, like the rest.
+    "dossier",
   ] as const;
   const everyColour = (...templates: string[]) =>
     keys(...templates.flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((c) => [t, c] as [string, string])));

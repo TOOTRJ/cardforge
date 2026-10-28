@@ -544,6 +544,12 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // editable (frameKindUpdateGateError's legacy pin).
   extendedart: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
   extendedartland: ["land"],
+  // The MKM dossier showcase (TODO 4.11 wave 2) is new — no stored card sits
+  // on it. Print dresses creatures alone (MKM #336–389, #433), and the pack
+  // draws no land frame: its pair masters are a SPELL frame's split, which a
+  // land never wears (twoColorFits). So every kind its body draws but the
+  // land.
+  dossier: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
   m15borderless:["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
   m15borderlessland: ["land"],

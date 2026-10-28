@@ -349,6 +349,9 @@ const PICKS: readonly Pick[] = [
   // The D&D Sourcebook showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "dndsourcebook/u/creature-short@collector-2015", why: "D&D Sourcebook: CC's one parchment master under every key, M15's slots on the page's own lines (the name 1.5 px up, the cost row 3 px up and 10 px right, the type band 7 px down), the rules box ending above the page's rounded foot, the parchment plate, the 2015 collector line 4 px below M15's rows" },
   { from: "dndsourcebook/wub/creature-long@stamp-m", why: "D&D Sourcebook: the pack's one oval notch over the page's foot with our oval in its cut, a three-colour legend on the one page" },
+  // The MKM dossier showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "dossier/u/creature-short@collector-2015", why: "MKM dossier: CC's folder masters downscaled once, M15's slots on the folder's bands (the name 2 px up, the cost row 38 px in from the clip and 19 px down, the set symbol 17 px left, the type line 4 px down), the paper tag, the collector line 4–5 px above M15's rows" },
+  { from: "dossier/wu/creature-long@pair-crown", why: "MKM dossier: a two-colour legend — the pair master lerped across print's ramp under the crown band's lerped pair" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

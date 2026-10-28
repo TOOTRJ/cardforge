@@ -96,7 +96,8 @@
   { "template":  "prepare", "change":  "new-template", "capabilities":  ["pt", "adventure"], "reason":  "TODO 4.27: a NEW template — the Prepare frame (Secrets of Strixhaven 2026; PipGlyph's own derivation of the published m15 masters with the adventure master's page bars, frames bucket only): M15's slots and P/T plate with the spell on a page on the RIGHT — the `adventure` anatomy with its own rects. The Prepare kind's alone (TREATMENT_KINDS + EXCLUSIVE_KINDS keep it and the adventure frame apart). An addition: no stored card sits on it." },
   { "template":  "expeditionlandbfz", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 1: a NEW template — the 2015 Battle for Zendikar Expeditions (EXP), Card Conjurer's 'BFZ Expeditions (2015)' pack (frames bucket only): expeditionland's anatomy on its own masters and rows (M15's P/T plate inherited, as on expeditionland: a land creature's). The land kind's alone (TREATMENT_KINDS). An addition: no stored card sits on it." },
   { "template":  "sncartdeco", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Streets of New Capenna Art Deco showcase (SNC #296–340, #361–405), Card Conjurer's 'Golden Age (SNC)' pack (frames bucket only): M15's anatomy on the pack's own bars with its P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
-  { "template":  "dndsourcebook", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the D&D Sourcebook showcase (AFR #299–349, CLB #375–450), Card Conjurer's 'D&D Sourcebook' pack (frames bucket only): M15's anatomy on the parchment page's own lines with the pack's P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." }
+  { "template":  "dndsourcebook", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the D&D Sourcebook showcase (AFR #299–349, CLB #375–450), Card Conjurer's 'D&D Sourcebook' pack (frames bucket only): M15's anatomy on the parchment page's own lines with the pack's P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
+  { "template":  "dossier", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Murders at Karlov Manor dossier showcase (MKM #336–389, #433), Card Conjurer's 'Dossier' pack (frames bucket only): M15's anatomy on the folder's own bands with the pack's P/T tag — the IP showcases' capabilities (P/T only: no walker, battle or layout body). Every kind its body draws but the land (TREATMENT_KINDS: the pack has no land frame). An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -174,6 +175,7 @@
   "sncartdeco": ["pt"],
   "fullart": ["pt"],
   "dndsourcebook": ["pt"],
+  "dossier": ["pt"],
   "extendedart": ["pt"],
   "extendedartland": ["pt"],
   "m15fullartland": ["pt", "basicSymbol"],

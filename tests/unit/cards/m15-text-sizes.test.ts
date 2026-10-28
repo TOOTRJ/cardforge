@@ -100,7 +100,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
     // …and TODO 4.11 wave 2's New Capenna Art Deco (a new template: no bump).
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(84);
+    // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(85);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -183,11 +184,12 @@ describe("one M15-era display size (layout v32)", () => {
       // with its text correction, v66; the MUL Tarkir dragon wings the CC M15
       // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
       // with theirs, v68; the Avatar elemental and Bloomburrow woodland the
-      // CC M15 row with theirs, v69; the D&D Sourcebook, a new template, the
-      // CC M15 disc on its run's row.)
+      // CC M15 row with theirs, v69; the D&D Sourcebook and the MKM dossier,
+      // new templates, the CC M15 disc on their runs' rows.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "dndsourcebook" ||
+        t === "dossier" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -445,6 +447,10 @@ describe("baselines (TextSlot.dy)", () => {
     // rule, the 127 prints' median), the type line 3 px under the CC
     // baseline on a band 7 px lower (88 px under the art's foot rule).
     ["dndsourcebook", base.title - 1.5 / 1500, cc + 3 / 1500],
+    // The MKM dossier (TODO 4.11 wave 2, a new template): M15's slots on the
+    // folder's own bands — the name 2 px up (print's baseline 187, the run's
+    // median), the type line 4 px under the CC baseline (print's 1264).
+    ["dossier", base.title - 2 / 1500, cc + 4 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

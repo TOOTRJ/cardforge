@@ -1835,6 +1835,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/ltr/ring",
   "showcase/ltr/ring+two-colour",
   "showcase/ltr/ring+two-colour-hybrid",
+  // The MKM dossier (TODO 4.11 wave 2): every legendary printing wears the
+  // torn colour strip above the title band (#337, #344, #350, #352 and the
+  // run's legendary pairs and gold card; the plain #336, #343, #358 don't).
+  "showcase/mkm/dossier",
   "showcase/mul/tarkir",
   "showcase/znr/hedron",
   // The Bloomburrow woodland (TODO 4.11, layout v69): every legendary
