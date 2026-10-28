@@ -36,14 +36,14 @@ export type ReconcileClient = ReturnType<typeof createAdminClient>;
  *  could still settle (or refund) on its own. */
 export const RECONCILE_GRACE_MS = 15 * 60_000;
 
-/** How far back one sweep looks. Runs daily (Hobby-plan cron cadence), so
- *  each pass overlaps the previous two — redundant passes are no-ops thanks
- *  to the refund key, and a couple of days of cron outage drops nothing. */
+/** How far back one sweep looks. Runs every 30 min (since 2026-10-28; daily
+ *  before), so each pass overlaps the many before it — redundant passes are
+ *  no-ops thanks to the refund key, and a couple of days of cron outage
+ *  drops nothing. */
 const RECONCILE_WINDOW_MS = 72 * 60 * 60_000;
 
-/** Per-run row bound (defense against a pathological backlog). With the
- *  DAILY cadence a backlog beyond this drains at 500/day, so it must stay
- *  inside RECONCILE_WINDOW_MS — raise the limit (or the window) while a
+/** Per-page row bound (defense against a pathological backlog); a run reads
+ *  up to RECONCILE_MAX_PAGES pages — raise the limit (or the window) while a
  *  large incident is being reconciled. */
 export const RECONCILE_SCAN_LIMIT = 500;
 /** Pages of RECONCILE_SCAN_LIMIT per run — 20 × 500 = 10,000 spends, far above any day so far. */
@@ -52,14 +52,17 @@ const RECONCILE_MAX_PAGES = 20;
 export type ReconcileResult =
   | {
       ok: true;
-      /** Aged, unsettled spends examined (each one is refunded or fails). */
+      /** Aged, unsettled spends examined. */
       scanned: number;
+      /** Of those, already refunded before this run (skipped, not resent). */
+      alreadyRefunded: number;
       /** Settled spends in the same window — the health signal that the
        *  executors are still stamping. A run that settles nothing while
        *  refunding plenty means settlement broke, not that users crashed. */
       settled: number;
-      /** Refunds issued — includes idempotent no-ops for spends the
-       *  in-process path already refunded (indistinguishable by design). */
+      /** Refunds this run issued for spends with no refund yet (a refund
+       *  landing between the read and the grant is still an idempotent
+       *  no-op, counted here — a rare race, never a second credit). */
       refunded: number;
       failed: number;
     }
@@ -74,21 +77,28 @@ type LedgerSpend = {
 export async function reconcileOrphanedSpends(
   admin: ReconcileClient,
   now: Date = new Date(),
+  /** Scope the sweep to ONE user (reconcileUserSpends) — the same rule, the
+   *  same keys, so it and the cron can run in any order. */
+  scope: { userId?: string } = {},
 ): Promise<ReconcileResult> {
   const windowStart = new Date(now.getTime() - RECONCILE_WINDOW_MS);
   const graceCutoff = new Date(now.getTime() - RECONCILE_GRACE_MS);
+  const forUser = <Q extends { eq: (column: string, value: string) => Q }>(query: Q): Q =>
+    scope.userId ? query.eq("user_id", scope.userId) : query;
 
   // Both reads happen before any refund: on a database that doesn't know
   // settled_at yet (code deployed ahead of migration 0106) they fail and the
   // sweep refunds nothing, instead of treating every charge as orphaned.
-  const { count: settledCount, error: countError } = await admin
-    .from("credit_ledger")
-    .select("id", { count: "exact", head: true })
-    .like("idempotency_key", "spend:%")
-    .lt("delta", 0)
-    .not("settled_at", "is", null)
-    .gte("created_at", windowStart.toISOString())
-    .lte("created_at", graceCutoff.toISOString());
+  const { count: settledCount, error: countError } = await forUser(
+    admin
+      .from("credit_ledger")
+      .select("id", { count: "exact", head: true })
+      .like("idempotency_key", "spend:%")
+      .lt("delta", 0)
+      .not("settled_at", "is", null)
+      .gte("created_at", windowStart.toISOString())
+      .lte("created_at", graceCutoff.toISOString()),
+  );
   if (countError) return { ok: false, error: countError.message };
 
   // Page through the whole window. A single .limit(500) meant a busy day
@@ -98,14 +108,16 @@ export async function reconcileOrphanedSpends(
   const spends: LedgerSpend[] = [];
   for (let page = 0; page < RECONCILE_MAX_PAGES; page += 1) {
     const from = page * RECONCILE_SCAN_LIMIT;
-    const { data, error } = await admin
-      .from("credit_ledger")
-      .select("user_id, delta, idempotency_key")
-      .like("idempotency_key", "spend:%")
-      .lt("delta", 0)
-      .is("settled_at", null)
-      .gte("created_at", windowStart.toISOString())
-      .lte("created_at", graceCutoff.toISOString())
+    const { data, error } = await forUser(
+      admin
+        .from("credit_ledger")
+        .select("user_id, delta, idempotency_key")
+        .like("idempotency_key", "spend:%")
+        .lt("delta", 0)
+        .is("settled_at", null)
+        .gte("created_at", windowStart.toISOString())
+        .lte("created_at", graceCutoff.toISOString()),
+    )
       .order("created_at", { ascending: true })
       .range(from, from + RECONCILE_SCAN_LIMIT - 1);
     if (error) return { ok: false, error: error.message };
@@ -114,9 +126,37 @@ export async function reconcileOrphanedSpends(
     if (rows.length < RECONCILE_SCAN_LIMIT) break;
   }
 
+  // The refunds that already LANDED for this window (the in-process refund
+  // of a failed step, an earlier sweep): skipped, never sent to
+  // grant_credits again. Its idempotency guard made the resend harmless,
+  // but every failed spend of the 72 h window went out again on every run
+  // and every AI action (cost, a "returned N" log counting no-ops, and the
+  // ideas route's time budget). A refund is written after its spend, so
+  // every refund of a spend in the window was written in the window too.
+  // Read AFTER the spends: a refund landing in between is caught by the
+  // key, as before.
+  const alreadyRefunded = new Set<string>();
+  for (let page = 0; page < RECONCILE_MAX_PAGES; page += 1) {
+    const from = page * RECONCILE_SCAN_LIMIT;
+    const { data, error } = await forUser(
+      admin
+        .from("credit_ledger")
+        .select("idempotency_key")
+        .like("idempotency_key", "refund:spend:%")
+        .gte("created_at", windowStart.toISOString()),
+    )
+      .order("created_at", { ascending: true })
+      .range(from, from + RECONCILE_SCAN_LIMIT - 1);
+    if (error) return { ok: false, error: error.message };
+    const rows = (data ?? []) as Array<{ idempotency_key: string }>;
+    for (const row of rows) alreadyRefunded.add(row.idempotency_key);
+    if (rows.length < RECONCILE_SCAN_LIMIT) break;
+  }
+
   let refunded = 0;
   let failed = 0;
   for (const spend of spends) {
+    if (alreadyRefunded.has(`refund:${spend.idempotency_key}`)) continue;
     // Orphan (crashed attempt, superseded duplicate, failed step, unrecorded
     // sync call). The refund key makes this exactly-once per spend even
     // against the in-process refund path.
@@ -139,8 +179,33 @@ export async function reconcileOrphanedSpends(
   return {
     ok: true,
     scanned: spends.length,
+    alreadyRefunded: spends.filter((spend) => alreadyRefunded.has(`refund:${spend.idempotency_key}`)).length,
     settled: settledCount ?? 0,
     refunded,
     failed,
   };
+}
+
+/**
+ * The same sweep for ONE user, run when they start their next AI action
+ * (the jobs and ideas routes, before anything is reserved): a credit taken
+ * by an attempt that never finished — a tab closed mid-step, a function
+ * killed past its maxDuration, a refund that didn't land — comes back then
+ * instead of at the next cron run. Only spends past RECONCILE_GRACE_MS
+ * (15 min: no live attempt can still settle them), the same
+ * `refund:{spendRef}` key as the cron and the in-process refund, so nothing
+ * is ever returned twice. Best effort: a failure is logged and never blocks
+ * the user's action.
+ */
+export async function reconcileUserSpends(admin: ReconcileClient, userId: string): Promise<void> {
+  try {
+    const result = await reconcileOrphanedSpends(admin, new Date(), { userId });
+    if (!result.ok) {
+      console.error(`[credits] Per-user reconcile for ${userId} failed: ${result.error}`);
+    } else if (result.refunded > 0) {
+      console.warn(`[credits] Per-user reconcile returned ${result.refunded} orphaned spend(s) to ${userId}.`);
+    }
+  } catch (error) {
+    console.error(`[credits] Per-user reconcile for ${userId} threw:`, error);
+  }
 }

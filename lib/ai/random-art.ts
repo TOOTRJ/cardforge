@@ -57,6 +57,8 @@ export async function persistGeneratedArt(
     upsert: false,
   });
   if (uploadError) {
+    // Logged here; the caller tells the user in its own words (art_store).
+    console.error(`[ai:art] storing generated art failed: ${uploadError.message}`);
     return { ok: false, error: uploadError.message };
   }
 

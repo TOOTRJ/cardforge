@@ -51,23 +51,42 @@ export async function withCreditedStep(
   // Refund ONLY what was actually debited — admin/billing-off reserves are
   // uncharged, and refunding those would MINT credits out of thin air
   // (grant_credits has no matching-spend check).
-  const refundIfCharged = async () => {
-    if (reserve.charged) {
-      await refundCredits(userId, amount, reason, `refund:${ref}`);
-    }
+  // What the user is told comes from what this returns (lib/ai/failure.ts
+  // creditOutcome): `refunded` only when the refund really landed; a refund
+  // that failed is left to the reconcile sweep (same key, so never twice)
+  // and the step says so (`refund_pending`) instead of claiming it.
+  const refundIfCharged = async (): Promise<Pick<JobStep, "refunded" | "refund_pending">> => {
+    if (!reserve.charged) return { refunded: 0, refund_pending: false };
+    const landed = await refundCredits(userId, amount, reason, `refund:${ref}`);
+    return landed ? { refunded: amount, refund_pending: false } : { refunded: 0, refund_pending: true };
   };
   let result: JobStep;
   try {
     result = await body();
   } catch (error) {
-    await refundIfCharged();
-    throw error;
+    const outcome = await refundIfCharged();
+    // runNextJobStep turns the throw into a failed step; it reads the
+    // outcome off the error so the user hears the truth about the credit.
+    // A thrown string / number / null can carry nothing: it is wrapped in
+    // an Error first (its text kept as the message, the original as cause).
+    const carrier =
+      error !== null && typeof error === "object"
+        ? error
+        : new Error(String(error), { cause: error });
+    Object.assign(carrier, outcome);
+    throw carrier;
   }
   if (result.status === "failed") {
-    await refundIfCharged();
-    return { ...result, spend_ref: null };
+    return { ...result, spend_ref: null, ...(await refundIfCharged()) };
   }
   // Success: stamp the charging ref (or clear a stale one from a prior
-  // attempt when this run was uncharged — admin / billing off).
-  return { ...result, spend_ref: reserve.charged ? ref : null };
+  // attempt when this run was uncharged — admin / billing off), and clear a
+  // prior attempt's failure and refund notes.
+  return {
+    ...result,
+    spend_ref: reserve.charged ? ref : null,
+    failure: null,
+    refunded: null,
+    refund_pending: null,
+  };
 }

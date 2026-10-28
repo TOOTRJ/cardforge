@@ -1,7 +1,9 @@
 import "server-only";
 
 import { designCards } from "@/lib/ai/card-design";
+import { designFreshly, repeatsRecentTitle, type DesignVariety } from "@/lib/ai/design-variety";
 import type { CardIdea } from "@/lib/ai/card-ideas-select";
+import { retryFitsBudget } from "@/lib/ai/structured-output";
 import type { CardType, Rarity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -9,6 +11,11 @@ import type { CardType, Rarity } from "@/types/card";
 // clearly different concepts (title, type line, cost, rarity, rules, flavor,
 // stats — never art) for the user to pick fields from. 1 credit per batch,
 // charged by the route. A deck brief (Pro) themes every idea to the deck.
+//
+// Every batch carries a fresh spark and the user's recent AI titles
+// (lib/ai/design-variety.ts, 2026-10-28): the same options twice never
+// send the same prompt, and a batch whose idea repeats a recent title is
+// designed once more before the response (the one credit covers both).
 // ---------------------------------------------------------------------------
 
 const IDEA_COUNT = 3;
@@ -19,12 +26,19 @@ export type CardIdeasInput = {
   rarity?: Rarity;
   /** lib/ai/deck-brief.ts context — Pro only, gated by the route. */
   deckContext?: string;
+  /** The user's recent AI titles (lib/ai/recent-designs.ts). */
+  recentTitles?: readonly string[];
+  /** Types an idea must not be when no type was chosen — no published frame
+   *  yet (frame-random.ts typesWithoutPublishedFrame): an idea applied as a
+   *  battle would land the creator on a frame it can't save. */
+  avoidTypes?: readonly CardType[];
 };
 
-export async function generateCardIdeas(input: CardIdeasInput): Promise<CardIdea[]> {
+async function designIdeas(input: CardIdeasInput, variety: DesignVariety): Promise<CardIdea[]> {
   const steer = input.theme?.trim() || (input.deckContext ? undefined : "an original, memorable card — surprise the user");
   const { cards } = await designCards({
     theme: steer,
+    variety,
     context: [
       input.deckContext ?? null,
       `These ${IDEA_COUNT} cards are IDEAS for the user to choose between, not a set: make them clearly different from each other — different angles on the theme${
@@ -35,6 +49,7 @@ export async function generateCardIdeas(input: CardIdeasInput): Promise<CardIdea
       .join("\n"),
     slots: Array.from({ length: IDEA_COUNT }, (_, i) => ({
       cardType: input.cardType,
+      avoidTypes: input.cardType ? undefined : input.avoidTypes,
       rarity: input.rarity,
       note: `Idea ${i + 1} of ${IDEA_COUNT}.`,
     })),
@@ -54,4 +69,22 @@ export async function generateCardIdeas(input: CardIdeasInput): Promise<CardIdea
     loyalty: card.loyalty,
     defense: card.defense,
   }));
+}
+
+export async function generateCardIdeas(input: CardIdeasInput): Promise<CardIdea[]> {
+  const recent = input.recentTitles ?? [];
+  return designFreshly(
+    recent,
+    (variety) => designIdeas(input, variety),
+    // The first idea whose title repeats a recent one (none → no redesign).
+    (ideas) => ideas.find((idea) => repeatsRecentTitle(idea.title, recent))?.title ?? null,
+    {
+      // A batch with an idea of an avoided type is designed again once.
+      acceptable: (ideas) =>
+        Boolean(input.cardType) || !ideas.some((idea) => input.avoidTypes?.includes(idea.card_type as CardType)),
+      // A sync route: the redesign only while its maxDuration still holds it
+      // (a kill past it would skip the in-process refund).
+      secondFits: (firstMs) => retryFitsBudget(firstMs),
+    },
+  );
 }

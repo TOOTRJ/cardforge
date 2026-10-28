@@ -74,7 +74,7 @@ vi.mock("@/lib/ai/remix-estimate", () => ({
 vi.mock("@/lib/ai/generation-jobs", () => {
   const record = (kind: string) => async (input: Record<string, unknown>) => {
     s.created.push({ kind, input });
-    return { ok: true, job: { id: `job-${kind}`, steps: [] }, deckSlug: "deck-slug" };
+    return { ok: true, job: { id: `job-${kind}`, steps: [], plan: { fields: { title: "Unpaid text" } } }, deckSlug: "deck-slug" };
   };
   return {
     createCardGenerationJob: record("card"),
@@ -271,5 +271,69 @@ describe("POST /api/ai/jobs — the art fill's frame", () => {
       expect(dropped.status, String(art_frame)).toBe(200);
       expect((s.created.at(-1)?.input as Record<string, unknown>).artFrame).toBeUndefined();
     }
+  });
+});
+
+// 2026-10-28 (fix/ai-generation-live): the fill's pinned context is the open
+// form as it stands — a value outside a limit (a 31-character tag, a long
+// subtype, a legacy "spell" type, a deck theme past the dialog's maxLength)
+// used to refuse the WHOLE generation with "Invalid generation request.".
+// It is clipped or dropped now; the request itself is never refused for it.
+describe("POST /api/ai/jobs — a fill's pins never refuse the generation", () => {
+  it("clips a pin past its limit and drops an unknown type", async () => {
+    const { status } = await post({
+      kind: "card_fill",
+      want: ["rules_text"],
+      locked: {
+        card_type: "spell",
+        subtypes: ["Dragon".repeat(8), ...Array.from({ length: 12 }, (_, i) => `Sub${i}`)],
+        tags: ["a".repeat(31), ...Array.from({ length: 14 }, (_, i) => `tag${i}`)],
+        power: "123456789012345678",
+      },
+      theme: "t".repeat(400),
+    });
+    expect(status).toBe(200);
+    const input = s.created.at(-1)!.input as {
+      locked: { card_type?: string; subtypes: string[]; tags: string[]; power: string };
+      theme: string;
+    };
+    expect(input.locked.card_type).toBeUndefined();
+    expect(input.locked.subtypes).toHaveLength(10);
+    expect(input.locked.subtypes[0]).toHaveLength(40);
+    expect(input.locked.tags).toHaveLength(12);
+    expect(input.locked.tags[0]).toHaveLength(30);
+    expect(input.locked.power).toHaveLength(16);
+    expect(input.theme).toHaveLength(300);
+  });
+
+  it("the plan never leaves the server: a fill's text is not handed over before the step charges", async () => {
+    for (const body of [
+      { kind: "card_fill", want: ["rules_text"], locked: {} },
+      { kind: "card", theme: "embers" },
+      { kind: "deck", theme: "goblins", format: "commander" },
+    ]) {
+      const { status, json } = await post(body);
+      expect(status).toBe(200);
+      expect(json.job).toMatchObject({ id: expect.any(String) });
+      expect(json.job).not.toHaveProperty("plan");
+      expect(JSON.stringify(json)).not.toContain("Unpaid text");
+    }
+  });
+
+  it("a refused request says no credits were used", async () => {
+    const { status, json } = await post({ kind: "card_fill", want: [] });
+    expect(status).toBe(400);
+    expect(String(json.error)).toContain("No credits were used.");
+  });
+
+  it("a refused plan passes its failure kind on (its message already says nothing was used)", async () => {
+    s.fillRefusal = {
+      ok: false,
+      code: "design_busy",
+      error: "The AI service is busy right now. Wait a minute, then try again. No credits were used.",
+    };
+    const { status, json } = await post({ kind: "card_fill", want: ["title"], locked: {} });
+    expect(status).toBe(502);
+    expect(json).toEqual(s.fillRefusal);
   });
 });

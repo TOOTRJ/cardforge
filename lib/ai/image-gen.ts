@@ -1,5 +1,10 @@
 import "server-only";
-import { isSafetyBlockError, shouldRewordAfter } from "@/lib/ai/art-prompt-safety";
+import {
+  AI_FAILURE_COPY,
+  classifyProviderError,
+  imageFailureKind,
+  type AiFailureKind,
+} from "@/lib/ai/failure";
 
 import { experimental_generateImage as generateImage, generateText } from "ai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
@@ -46,30 +51,19 @@ export type ImageCallOptions = {
   timeoutMs?: number;
 };
 
-/** Map raw provider errors to something a user can act on. */
-function friendlyImageError(detail: string): string {
-  const lower = detail.toLowerCase();
-  if (isSafetyBlockError(detail)) {
-    return "The image was blocked by the provider's safety filter — try again (each retry rewords the prompt) or adjust the theme.";
-  }
-  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) {
-    return "The image provider is rate-limiting us — wait a moment and retry.";
-  }
-  if (lower.includes("quota") || lower.includes("billing") || lower.includes("insufficient")) {
-    return "The image provider's quota/billing is exhausted on the server side.";
-  }
-  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted")) {
-    return "The image took too long — often a sign the prompt was quietly blocked. Retry: each attempt rewords it.";
-  }
-  if (lower.includes("unauthorized") || lower.includes("401") || lower.includes("403") || lower.includes("api key")) {
-    return "The image provider rejected our credentials — check the AI keys on the server.";
-  }
-  return `Image generation failed: ${detail}`;
+/** Map a raw provider error to its failure kind and the user's sentence.
+ *  The raw text is logged here (server only, truncated) and NEVER returned:
+ *  it used to reach the user as "Image generation failed: <detail>", and a
+ *  credential / quota problem told them to "check the AI keys". */
+export function imageFailure(detail: string, model: string): { kind: AiFailureKind; error: string } {
+  const kind = imageFailureKind(classifyProviderError(detail));
+  console.warn(`[ai:image] ${model} failed (${kind}): ${detail.replace(/\s+/g, " ").slice(0, 300)}`);
+  return { kind, error: AI_FAILURE_COPY[kind] };
 }
 
 export type RestyleResult =
   | { ok: true; bytes: Uint8Array; contentType: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; failure: AiFailureKind };
 
 /** A moderated prompt hangs at the gateway instead of erroring, so each
  *  rung gets a tighter cap than a lone call: a healthy render is ~10–40s,
@@ -87,11 +81,12 @@ export async function generateImageWithFallbacks(
   options: ImageCallOptions & { budgetMs?: number } = {},
 ): Promise<
   | { ok: true; bytes: Uint8Array; contentType: string; promptIndex: number }
-  | { ok: false; error: string; safetyBlocked: boolean }
+  | { ok: false; error: string; failure: AiFailureKind; safetyBlocked: boolean }
 > {
   const started = Date.now();
   const budget = options.budgetMs ?? 160_000;
-  let lastError = "Missing image prompt.";
+  let lastError = AI_FAILURE_COPY.art_failed;
+  let lastFailure: AiFailureKind = "art_failed";
   let blocked = false;
   for (let i = 0; i < prompts.length; i += 1) {
     const remaining = budget - (Date.now() - started);
@@ -102,10 +97,13 @@ export async function generateImageWithFallbacks(
     });
     if (result.ok) return { ...result, promptIndex: i };
     lastError = result.error;
-    blocked = shouldRewordAfter(result.error);
+    lastFailure = result.failure;
+    // A refusal, or a timeout (how a refusal surfaces through the gateway),
+    // moves to the next, safer prompt; anything else stops here.
+    blocked = result.failure === "art_blocked" || result.failure === "art_timeout";
     if (!blocked) break;
   }
-  return { ok: false, error: lastError, safetyBlocked: blocked };
+  return { ok: false, error: lastError, failure: lastFailure, safetyBlocked: blocked };
 }
 
 /** Re-render `source` in a new style. `prompt` should describe both the
@@ -117,10 +115,11 @@ export async function restyleImage(input: {
   timeoutMs?: number;
 }): Promise<RestyleResult> {
   const prompt = input.prompt.trim().slice(0, 2000);
-  if (!prompt) return { ok: false, error: "Missing restyle prompt." };
+  if (!prompt) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
 
   if (!isGatewayConfigured()) {
-    return { ok: false, error: "AI Gateway isn't configured." };
+    console.warn("[ai:image] restyle refused: the AI Gateway isn't configured on this deployment.");
+    return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
   }
   // The model gets the art as the owner sees it in the creator: a JPEG/PNG
   // stored before uploads were normalized may still carry an EXIF "turn me"
@@ -196,10 +195,11 @@ async function generateStyledImage(
   options: ImageCallOptions = {},
 ): Promise<RestyleResult> {
   if (!isGatewayConfigured()) {
-    return { ok: false, error: "AI Gateway isn't configured." };
+    console.warn("[ai:image] refused: the AI Gateway isn't configured on this deployment.");
+    return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
   }
+  const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
   try {
-    const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
     const { image } = await generateImage({
       model,
       abortSignal: AbortSignal.timeout(
@@ -223,7 +223,8 @@ async function generateStyledImage(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image generation failed.";
-    return { ok: false, error: friendlyImageError(detail) };
+    const failure = imageFailure(detail, model);
+    return { ok: false, error: failure.error, failure: failure.kind };
   }
 }
 
@@ -238,7 +239,7 @@ export async function generatePlainImage(
   options: ImageCallOptions = {},
 ): Promise<RestyleResult> {
   const trimmed = prompt.trim().slice(0, 4000);
-  if (!trimmed) return { ok: false, error: "Missing image prompt." };
+  if (!trimmed) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
   return generateStyledImage(trimmed, aspect, options);
 }
 
@@ -248,9 +249,8 @@ async function restyleViaGateway(
   prompt: string,
   timeoutMs?: number,
 ): Promise<RestyleResult> {
+  const model = process.env.AI_IMAGE_REMIX_MODEL?.trim() || GATEWAY_REMIX_DEFAULT;
   try {
-    const model =
-      process.env.AI_IMAGE_REMIX_MODEL?.trim() || GATEWAY_REMIX_DEFAULT;
     const result = await generateText({
       model,
       abortSignal: AbortSignal.timeout(timeoutMs ?? IMAGE_CALL_TIMEOUT_MS),
@@ -272,7 +272,8 @@ async function restyleViaGateway(
     });
     const file = result.files.find((f) => f.mediaType?.startsWith("image/"));
     if (!file) {
-      return { ok: false, error: "The image model returned no image." };
+      console.warn(`[ai:image] ${model} returned no image.`);
+      return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
     }
     return {
       ok: true,
@@ -282,6 +283,7 @@ async function restyleViaGateway(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image restyle failed.";
-    return { ok: false, error: friendlyImageError(detail) };
+    const failure = imageFailure(detail, model);
+    return { ok: false, error: failure.error, failure: failure.kind };
   }
 }

@@ -11,6 +11,7 @@ import { publishCredits } from "@/components/billing/credits-bus";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { AI_NO_ANSWER_MESSAGE } from "@/lib/ai/failure";
 import {
   Dialog,
   DialogContent,
@@ -138,7 +139,14 @@ export function CardIdeasDialog({
           deck_id: canUseDeckIdeas && deckId ? deckId : undefined,
         }),
       });
-      const data = (await response.json()) as IdeasResponse;
+      // A response that isn't ours (a gateway timeout page) has no JSON:
+      // the answer was lost, which is not a "can't reach" — say what
+      // happens to the credit (lib/ai/failure.ts).
+      const data = (await response.json().catch(() => null)) as IdeasResponse | null;
+      if (!data) {
+        toast.error(AI_NO_ANSWER_MESSAGE);
+        return;
+      }
       if (typeof data.credits === "number") publishCredits(data.credits);
       if (!data.ok) {
         if (data.code === "INSUFFICIENT_CREDITS") upgrade.open("credits");
@@ -150,7 +158,7 @@ export function CardIdeasDialog({
       setSelection(wholeIdeaSelection(0));
       setLastBatch({ ideas: data.ideas, created_at: new Date().toISOString() });
     } catch {
-      toast.error("Couldn't reach the idea generator — try again.");
+      toast.error(AI_NO_ANSWER_MESSAGE);
     } finally {
       setBusy(false);
     }

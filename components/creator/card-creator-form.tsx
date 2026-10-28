@@ -80,6 +80,11 @@ import {
   type CardFillLocked,
   type CardFillResult,
 } from "@/lib/ai/card-fill-shared";
+import {
+  AI_FILL_NO_ANSWER_MESSAGE,
+  AI_PLAN_NO_ANSWER_MESSAGE,
+  failedStepMessage,
+} from "@/lib/ai/failure";
 import type { CardFieldPatch } from "@/lib/ai/card-ideas-select";
 import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
@@ -822,11 +827,18 @@ export function CardCreatorForm({
       body: JSON.stringify({ jobId }),
     }).catch(() => {});
   };
+  // The control that opened the fill dialog — the focus goes back to it
+  // when a run ends (handleAiFill's finally).
+  const fillOpenerRef = useRef<HTMLElement | null>(null);
   const openFill = (fields: CardFillField[]) => {
     if (!userId) {
       toast.error("Sign in to generate with AI.");
       return;
     }
+    fillOpenerRef.current =
+      typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setFillDefaults(fields);
     setAiFillOpen(true);
   };
@@ -3257,8 +3269,13 @@ export function CardCreatorForm({
     if (fill.card_type && !isRevise) {
       applyKindProgrammatic(kindFromCard(fill.card_type, undefined));
       if (fill.frame_template) {
+        // The colour the card is about to TAKE (the fill's own, set just
+        // below) — never the form's colour before it: a frame the server
+        // resolved for a red card was checked against the previous card's
+        // colour, which landed the same design on different frames and
+        // toasted a "not available in …" for a colour the card wasn't.
         const colorKey = pickFrameColorKey(
-          getValues("color_identity"),
+          fill.color_identity && !isRevise ? fill.color_identity : getValues("color_identity"),
         ) as FrameColorKey;
         const resolution = resolvePublishedFrame({
           kind: kindFromCard(fill.card_type, undefined),
@@ -3367,6 +3384,9 @@ export function CardCreatorForm({
     }
     setAiFillOpen(false);
     setFillPhase("designing");
+    // Once the job exists its one step may take a credit: a lost answer
+    // after that point is worded with what happens to it (lib/ai/failure.ts).
+    let jobStarted = false;
     try {
       const planResponse = await fetch("/api/ai/jobs", {
         method: "POST",
@@ -3393,17 +3413,29 @@ export function CardCreatorForm({
         } else if (plan?.code === "UPGRADE_REQUIRED") {
           upgrade.open("deck_aware_generation");
         } else {
-          toast.error(plan?.error ?? "AI generation failed. Try again.");
+          // The server's sentence says what happened and that nothing was
+          // used (no job → no charge); a lost answer says the same.
+          toast.error(plan?.error ?? AI_PLAN_NO_ANSWER_MESSAGE);
         }
         return;
       }
       if (typeof plan.credits === "number") publishCredits(plan.credits - 1);
       const jobId: string = plan.job.id;
+      jobStarted = true;
       if (wantsArt) setFillPhase("painting");
 
       // One step; poll while another request holds it (double-click, second
       // tab) instead of counting that as a failure.
-      let step: { status?: string; error?: string; fill?: CardFillResult } | undefined;
+      let step:
+        | {
+            status?: string;
+            error?: string;
+            failure?: string | null;
+            refunded?: number | null;
+            refund_pending?: boolean | null;
+            fill?: CardFillResult;
+          }
+        | undefined;
       for (let attempt = 0; attempt < 40; attempt += 1) {
         const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
           method: "POST",
@@ -3412,7 +3444,10 @@ export function CardCreatorForm({
         });
         const payload = await stepResponse.json().catch(() => null);
         if (!stepResponse.ok || !payload?.ok) {
-          toast.error(payload?.error ?? "AI generation failed. Try again.");
+          // No JSON = the answer was lost on the way (a platform timeout
+          // page, a dropped connection): the result, if it finishes, is
+          // offered back here; a charge with no result comes back by itself.
+          toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
           return;
         }
         if (typeof payload.credits === "number") publishCredits(payload.credits);
@@ -3424,22 +3459,39 @@ export function CardCreatorForm({
         break;
       }
       if (!step || step.status !== "done" || !step.fill) {
-        // A FAILED step was refunded by the server; anything else is a
-        // missing result, which must not claim a refund it can't prove.
+        // A FAILED step says what failed and what its credit did (returned,
+        // or never taken) — from the step's own record, never assumed. A
+        // missing result claims nothing it can't prove.
+        toast.error(step?.status === "failed" ? failedStepMessage(step) : AI_FILL_NO_ANSWER_MESSAGE);
+        return;
+      }
+      try {
+        applyFill(step.fill);
+      } catch (error) {
+        // The result is safe on the job: left unclaimed, it is offered back
+        // on this page after a reload — never reported as a network error.
+        console.error("[ai:fill] applying the result failed", error);
         toast.error(
-          step?.status === "failed"
-            ? `${step.error ?? "AI generation failed."} Your credit was refunded.`
-            : "AI generation didn't return a result. Try again.",
+          "Your card was generated but couldn't be put into the form. Reload the page — it's offered back there, and no further credit is needed.",
         );
         return;
       }
-      applyFill(step.fill);
       claimFill(jobId);
       toast.success("Generated — look it over and save when you're happy.");
     } catch {
-      toast.error("Network error during generation. Try again.");
+      toast.error(jobStarted ? AI_FILL_NO_ANSWER_MESSAGE : AI_PLAN_NO_ANSWER_MESSAGE);
     } finally {
       setFillPhase(null);
+      // The control that opened the dialog was disabled while the card was
+      // made, which drops the focus to the page: hand it back once the
+      // control is enabled again (the toast is the one announcement).
+      const opener = fillOpenerRef.current;
+      fillOpenerRef.current = null;
+      requestAnimationFrame(() => {
+        if (opener?.isConnected && (!document.activeElement || document.activeElement === document.body)) {
+          opener.focus();
+        }
+      });
     }
   };
 
