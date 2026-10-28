@@ -565,6 +565,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // its historical name because it is stored in cards.frame_style,
   // frame_reviews and the frames bucket. Its set is "zendikarrising".
   "fullart",
+  // The Dungeons & Dragons Sourcebook showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'D&D Sourcebook' pack, frames bucket): the parchment page of
+  // Adventures in the Forgotten Realms (AFR #299–349, 2021) and Commander
+  // Legends: Battle for Baldur's Gate (CLB #375–450, 2022) — one design for
+  // every colour. An addition: no stored card sits on it.
+  "dndsourcebook",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
@@ -726,6 +732,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // Set-relative like the other showcase labels: the picker prints
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
+  // Set-relative: the picker prints "Dungeons & Dragons — Sourcebook".
+  dndsourcebook: "Sourcebook",
   // Two full-art basics in the Full Art set: the black-bordered print (the
   // common one, 263 printings) and the borderless one (FRA #382–396). They
   // are variations of the M15 land frame (the picker's groups, 2026-10-13),
@@ -763,6 +771,7 @@ export const FRAME_SET_VALUES = [
   "multiverselegends",
   "newcapenna",
   "zendikarrising",
+  "dnd",
   "extended",
   "fullartset",
   "expeditions",
@@ -783,6 +792,9 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   multiverselegends: "Multiverse Legends",
   newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
+  // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
+  // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
+  dnd: "Dungeons & Dragons",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -866,6 +878,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
+  dndsourcebook: "dnd",
   m15fullartland: "fullartset",
   fullartland: "fullartset",
   m15fullartlandzen: "fullartset",
@@ -948,6 +961,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   // The Art Deco showcase (SNC #296–340, #361–405).
   newcapenna: "showcase",
   zendikarrising: "showcase",
+  // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
+  dnd: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
   // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall

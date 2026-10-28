@@ -137,6 +137,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // the check's spare; the art under the bars is a second layer.
   sncartdeco: { front: [1262, 934] },
   fullart: { front: [1383, 1819] },
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2): the window's torn,
+  // half-transparent edges covered with the art-window check's spare.
+  dndsourcebook: { front: [1349, 957] },
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },

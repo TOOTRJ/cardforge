@@ -332,6 +332,10 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "avatar/main", "bloomburrow/main",
       // 4.11 wave 2's New Capenna Art Deco: M15's box in its translucent one.
       "sncartdeco/main",
+      // 4.11 wave 2's D&D Sourcebook: M15's box ending above the page's
+      // rounded foot (1877.5 px) — it holds the level-up card, not 1,200
+      // characters.
+      "dndsourcebook/main",
     ],
     ["1200 chars"],
   ],

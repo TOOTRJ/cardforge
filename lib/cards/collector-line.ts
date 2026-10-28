@@ -148,6 +148,10 @@ export const COLLECTOR_TEMPLATES = [
   // #361–405 set both lines on M15's rows within 2 px (line 1's ink ending
   // 1991, line 2's 2029, as the Tarkir draconic's) in the black border.
   "sncartdeco",
+  // …and the D&D Sourcebook showcase (TODO 4.11 wave 2, Card Conjurer's 'D&D
+  // Sourcebook'): AFR #299–349 and CLB #375–450 set both lines in the black
+  // border under the page, 4 px below M15's rows (DNDSOURCEBOOK_COLLECTOR).
+  "dndsourcebook",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

@@ -441,6 +441,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
   "sncartdeco",
+  // TODO 4.11 wave 2's D&D Sourcebook.
+  "dndsourcebook",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -479,6 +481,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
   "sncartdeco",
+  // TODO 4.11 wave 2's D&D Sourcebook.
+  "dndsourcebook",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -858,6 +862,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "expeditionlandbfz",
       // …and TODO 4.11 wave 2's New Capenna Art Deco: the same, no bump.
       "sncartdeco",
+      // …and TODO 4.11 wave 2's D&D Sourcebook: the same, no bump.
+      "dndsourcebook",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -3223,8 +3229,11 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // The New Capenna Art Deco (TODO 4.11 wave 2) was BORN on its run's own
     // row: a new template, no bump (8 px lower, 1.5 px further right than
     // the family's).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco"];
+    // The D&D Sourcebook (TODO 4.11 wave 2) was BORN on its run's own row: a
+    // new template, no bump (3 px higher, 10 px further right than the
+    // family's).
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);

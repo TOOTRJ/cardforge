@@ -184,6 +184,12 @@ const STATION_DRESSES: readonly string[] = [
   // #361–405 land there once verified) and
   // tests/unit/frames/snc-art-deco-importer.test.ts.
   "sncartdeco",
+  // …and the D&D Sourcebook showcase (TODO 4.11 wave 2): a new template in
+  // a new showcase set — pinned in
+  // tests/unit/scryfall/dnd-sourcebook-imports.test.ts (AFR #299–349 and
+  // CLB #375–450 land there once verified) and
+  // tests/unit/frames/dnd-sourcebook-importer.test.ts.
+  "dndsourcebook",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

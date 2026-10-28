@@ -114,6 +114,8 @@ describe("the switch values", () => {
       "bloomanime",
       // …and the New Capenna Art Deco (TODO 4.11 wave 2): M15's slot.
       "sncartdeco",
+      // …and the D&D Sourcebook (TODO 4.11 wave 2): its run's rows.
+      "dndsourcebook",
     ]);
   });
 });
