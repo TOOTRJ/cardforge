@@ -5575,31 +5575,55 @@ A pair's stamp notch is its own key (the same black arch). A two-colour
 land (none printed) wears the same dress (`twoColorForLands`).
 
 **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels off
-toned), on the 58 mono prints (Scryfall PNGs at 1500 × 2100, ≥ 250 ms
-apart; scans never committed), the median of the per-print medians, each
-region applied as the FILE loads (`MA_PRINT_TONES` through `MA_SOURCE_TONES`):
+toned), the median of per-print medians on Scryfall PNGs at 1500 × 2100
+(≥ 250 ms apart; scans never committed): w on STA #1–11, u #12–23, b
+#24–35, r #36–47, g #48–58, the gold master on the five pairs #59–63. Each
+region is applied as the FILE loads (`MA_PRINT_TONES` through
+`MA_SOURCE_TONES`).
 
-| Region | Pack | Print | Done |
-|---|---|---|---|
-| Paper (title bar, type bar, text box; ink left out) | 238,220,157 | 240,224,183 | toned (26 in blue) |
-| Gold (the ornament's flat gold, eroded 4 px) | 255,210,15 | 244,206,87 | toned (72 in blue) |
-| w line / band | 247,246,245 | 240,235,242 / 238,233,234 | toned |
-| u line / band | 4,119,192 | 30,91,180 / 27,82,159 | toned |
-| b line / band | 47,52,48 | 66,61,57 / 66,62,60 | toned |
-| r line / band | 234,31,42 | 184,56,37 / 182,51,36 | toned |
-| g line / band | 5,113,46 | 50,100,73 / 45,95,70 | toned |
-| m band (the five pairs' centre) | 240,228,140 | 235,218,140 | toned (its line with it) |
-| Footer | 0,0,0 | 6,7,4 | as drawn: true black |
+- **Paper** (title bar, type bar, text box; ink left out): pack 238,220,157,
+  print 240,224,183 — toned (26 in blue); the yellower field above the
+  title bar comes with it (235,211,155 after, print 235,216,163).
+- **Gold** (the ornament's flat gold): 255,210,15 → 244,206,87 (72 in blue).
+- **The colour.** Every pack file paints its colour in two or three FLAT
+  SHADES, each in the colour lines (inside the 'Pinline' mask) and the
+  wide bands (outside it). Each shade × place is measured on the pixels of
+  that shade where the file differs from another colour's, eroded 6 px —
+  so a print's own black outlines, up to 5 px off the pack's, stay out (8
+  px moves no median more than 3 levels):
 
-The paper region is the file's pixels near the paper (full within 30
-levels, none past 50 — so the yellower paper of the field above the title
-bar, pack 234,207,133, is toned with it: 235,211,155 after against print's
-235,216,163, within 8) where the file is the SAME as another colour's file
-(the gold master's pale colour is near the paper); the colour's two
-regions are where the file differs from another colour's file, clipped
-inside / outside the 'Pinline' mask (the importer's `clip`); `a` and `c`
-have no print and keep their colour as drawn. After the tone every
-measured region is within 2 levels of print.
+  | Key | Shade (pack) | Line (print) | Band (print) |
+  |---|---|---|---|
+  | w | 247,246,245 / 243,241,231 / 184,177,170 | 241,237,244 / 233,227,225 / — | 241,237,245 / 233,227,225 / 160,139,141 |
+  | u | 4,119,192 / 0,96,144 / 0,72,113 | 32,94,184 / 21,64,136 / — | 30,91,181 / 22,68,144 / 20,53,113 |
+  | b | 47,52,48 / 100,100,101 / 72,71,73 | 61,57,54 / 118,115,124 / — | 60,55,54 / 118,116,126 / as drawn (71,67,74: 4 off) |
+  | r | 234,31,42 / 152,11,22 | 193,62,39 / 126,28,27 | 202,64,40 / 127,30,30 |
+  | g | 5,113,46 / 0,62,11 / 0,27,0 | 56,108,79 / 35,70,50 / — | 53,106,79 / 35,70,50 / 24,47,33 |
+  | m (the pairs' bands) | 240,228,140 / 245,212,80 / 158,128,34 | the band's | 235,218,142 / 203,173,70 / 133,109,42 |
+
+  A shade's region is the file's pixels NEAREST that shade (of its shades,
+  the outlines' black, the paper and the gold: an anti-aliased edge goes to
+  the closer) where the file differs from another colour's file, clipped
+  inside / outside the Pinline mask (the importer's `nearest` region and
+  `clip`). Shades with no zero-free gain (u's 0,96,144, g's 0,62,11 …) are
+  toned by LUMINANCE (`mode: "luma"`: each pixel to the print colour scaled
+  by its luminance against the shade's). A shade the lines never carry
+  takes its band tone there; `a` and `c` have no print and keep their
+  colour as drawn.
+- **The plates** (no print: the run has no creature) are the same shades
+  round the same paper face: each colour plate's shades take its colour's
+  band tones where it differs from another colour's plate, its paper and
+  gold the frame's where it is the same (so the gold plate's pale shade,
+  near the paper, keeps its own tone).
+- **The footer**: pack 0,0,0, print 6,7,4 — within 8: as drawn, true black.
+
+Checked independently (the review's method: our master's pixels at each
+target ± 2, eroded 7 px, against the same prints): every line and band
+within 2 levels of print but r's line, 6 in red — print's red lines are
+lighter on the title pieces than down the box's sides (~204 against ~185),
+one tone between them. (Until the review of #619 each place had ONE tone
+measured on the colour region eroded 4 px: the darker shades and the
+prints' outlines pulled every median 10–25 levels dark.)
 
 **Geometry as drawn.** Print's title bar sits 3–5 px higher than the
 pack's, its type bar 1 px lower, its text box 2–4 px lower with its foot

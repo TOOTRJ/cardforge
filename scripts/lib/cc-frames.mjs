@@ -534,9 +534,30 @@ export function toneSourceRegions(buf, width, height, regions, tones) {
   for (const name of Object.keys(regions)) if (!tones[name]) throw new Error(`toneSourceRegions: region ${name} has no tone`);
   const out = Buffer.from(buf);
   for (const [name, tone] of Object.entries(tones)) {
-    checkSourceTone(name, tone);
     const m = regions[name];
     if (!m || m.length !== n) throw new Error(`toneSourceRegions: tone ${name} has no ${width}x${height} region`);
+    // A FLAT shade toned by its luminance (`mode: "luma"`, TODO 4.11 wave 2:
+    // the Mystical Archive's colour shades, some with a 0 channel no gain
+    // can lift): the pixel goes to `to` scaled by its luminance against
+    // `from`'s (1 on the shade itself, less on its edge into black, at most
+    // 1.25 toward a lighter neighbour), blended by the region's coverage.
+    if (tone.mode === "luma") {
+      checkLumaTone(name, tone);
+      const fromL = luma709(...tone.from);
+      for (let p = 0; p < n; p += 1) {
+        if (m[p] === 0) continue;
+        const o = p * 4;
+        if (out[o + 3] === 0) continue;
+        const w = m[p] / 255;
+        const k = Math.min(1.25, luma709(out[o], out[o + 1], out[o + 2]) / fromL);
+        for (let c = 0; c < 3; c += 1) {
+          const target = Math.min(255, tone.to[c] * k);
+          out[o + c] = Math.min(255, Math.max(0, Math.round(out[o + c] + (target - out[o + c]) * w)));
+        }
+      }
+      continue;
+    }
+    checkSourceTone(name, tone);
     const { channel, neutral, fromLuma } = sourceToneGain(tone);
     for (let p = 0; p < n; p += 1) {
       if (m[p] === 0) continue;
@@ -553,10 +574,18 @@ export function toneSourceRegions(buf, width, height, regions, tones) {
   }
   return out;
 }
+/** A luminance tone (`mode: "luma"`), checked: RGB from / to, from not black. */
+export function checkLumaTone(name, tone) {
+  const rgb = (v) => Array.isArray(v) && v.length === 3 && v.every((c) => Number.isFinite(c) && c >= 0 && c <= 255);
+  if (!tone || !rgb(tone.from) || !rgb(tone.to)) throw new Error(`toneSourceRegions: ${name} needs from / to as RGB (0–255)`);
+  if (luma709(...tone.from) < 1) throw new Error(`toneSourceRegions: ${name} can't be toned by luminance from black`);
+  return tone;
+}
 /** How provenance prints a source tone table: name → gains and from → to. */
 export function describeSourceToneTable(tones) {
   return Object.fromEntries(
     Object.entries(tones).map(([name, t]) => {
+      if (t.mode === "luma") return [name, `${t.from.join(", ")} → ${t.to.join(", ")}, each pixel scaled by its luminance against ${t.from.join(", ")}'s (at most × 1.25)`];
       const { channel, neutral } = sourceToneGain(t);
       return [name, `× ${channel.map((g) => g.toFixed(3)).join(" / ")} (${t.from.join(", ")} → ${t.to.join(", ")}), fading to × ${neutral.toFixed(3)} on every channel at white`];
     }),
@@ -600,11 +629,15 @@ export function describeFileTones(files) {
       return [
         c.mask ? `, inside ${c.mask}` : "",
         c.notMask ? `, outside ${c.notMask}` : "",
+        c.diff ? `, where the file differs from ${c.diff.file} (max channel ≥ ${c.diff.full}; none at ${c.diff.none})` : "",
         c.notDiff ? `, where the file is the same as ${c.notDiff.file} (max channel ≤ ${c.notDiff.none}; none from ${c.notDiff.full})` : "",
+        c.nearestIs ? `, where the nearest of ${c.nearestIs.among.map((x) => x.join(",")).join(" / ")} is ${c.nearestIs.among[c.nearestIs.index].join(",")}` : "",
       ].join("");
     };
     const whereBase = (region) => {
       if (tone.masks?.[region]) return `through ${tone.masks[region]}`;
+      const n = tone.nearest?.[region];
+      if (n) return `on the pixels whose nearest of ${n.among.map((x) => x.join(",")).join(" / ")} is ${n.among[n.index].join(",")}`;
       const d = tone.diff?.[region];
       if (d) return `on the pixels that differ from ${d.file} by ${d.none}–${d.full} levels (max channel; full from ${d.full})`;
       const c = tone.chroma?.[region];
@@ -3818,9 +3851,10 @@ const maFrameFile = (k) => `${MA}/${k}.png`;
 const MA_PT = Object.freeze(perColor((k) => `${MA}/pt/${k === "c" ? "a" : k}.png`));
 /**
  * The pack against print by the ring's one rule (raw scan medians; a
- * region ≥ 9 levels off on any channel is toned), measured on the 58
- * mono-colour STA prints (Scryfall PNGs at 1500 × 2100, the median of the
- * per-print medians):
+ * region ≥ 9 levels off on any channel is toned), measured on the STA
+ * prints (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart; the median of the
+ * per-print medians): w #1–11, u #12–23, b #24–35, r #36–47, g #48–58 (the
+ * 58 mono prints), the gold master on the five pairs #59–63.
  *   • paper — the title bar, type bar and text box (130–1370 × 110–210,
  *     130–1250 × 1195–1290, 130–1370 × 1340–1930 px; ink |Δluma| > 45 from
  *     a region's median left out): pack 238,220,157, print 240,224,183
@@ -3835,43 +3869,46 @@ const MA_PT = Object.freeze(perColor((k) => `${MA}/pt/${k === "c" ? "a" : k}.png
  *     eroded 4 px, 44,000 px a master): print 244,206,87 (every colour
  *     within 1 level) — 72 off in blue: toned, over the pixels near it
  *     (full within 4 levels, none past 40);
- *   • the colour — ONE flat colour per pack file in two places, both off
- *     print: the colour lines inside the pack's 'Pinline' mask (`pinline`)
- *     and the wide bands outside it (`band`: above and below the title bar,
- *     between the art and the type bar, the box's outer sides), each the
- *     pixels where the file differs from another colour's (≥ 16 levels,
- *     full from 40), eroded 4 px to measure (61,700 / 55,600 px):
- *       pinline  w 247,246,245 → 240,235,242   band  → 238,233,234
- *                u 4,119,192   → 30,91,180            → 27,82,159
- *                b 47,52,48    → 66,61,57             → 66,62,60
- *                r 234,31,42   → 184,56,37            → 182,51,36
- *                g 5,113,46    → 50,100,73            → 45,95,70
- *     every one ≥ 9 off (w's pinline 11 in green, b's 19 in red): toned.
- *     The gold master (m, 240,228,140) prints only on the two-colour cards'
- *     bands (their colour lines are the two colours'): 235,218,140 on the
- *     five (x 600–900, every print within 3) — 10 off in green: its band
- *     toned, and its pinline (the same flat colour in the pack, printed on
- *     no card) with it. a and c have no print: as drawn;
+ *   • the colour — every pack file paints its colour in two or three FLAT
+ *     SHADES (a light one, a darker one, and on most a darkest one: r's
+ *     234,31,42 and 152,11,22; u's 4,119,192, 0,96,144 and 0,72,113 …),
+ *     each in the colour LINES inside the pack's 'Pinline' mask and the wide
+ *     BANDS outside it. Each shade × place is measured on the pixels of that
+ *     shade, where the file differs from another colour's, eroded 6 px (so a
+ *     print's own black outlines, up to 5 px off the pack's, stay out; 8 px
+ *     moves no median more than 3 levels) — `MA_PRINT_TONES.colour`, line /
+ *     band. A shade's region is the file's pixels NEAREST that shade (of the
+ *     file's shades and black: an anti-aliased edge goes to the closer) where
+ *     the file differs from another colour's file, clipped inside / outside
+ *     the Pinline mask. Every shade × place is ≥ 9 off but b's darkest
+ *     (72,71,73 against print's 71,67,74: as drawn). A shade the lines never
+ *     carry (the darkest ones) takes its band tone there. The gold master
+ *     (m) is measured on the five pairs' bands (their lines are the two
+ *     colours'); its lines take the band tones. a and c have no print: as
+ *     drawn.
+ *   • the plates (no print: the run has no creature) — the same shades, so
+ *     each colour plate's shades take that colour's BAND tones (where the
+ *     plate differs from another colour's plate), its gold and paper the
+ *     frame's (where it is the same — so the gold plate's pale shade, near
+ *     the paper, keeps its own tone).
  *   • the footer: pack 0,0,0, print 6,7,4 — within 8: as drawn.
+ * (Until the review of #619 the colour was measured as ONE tone a place on
+ * the colour region eroded 4 px: the darker shades and the prints' outlines
+ * pulled every median 10–25 levels dark.)
  */
+const MA_SHADE = (from, line, band) => Object.freeze({ from: Object.freeze(from), ...(line ? { line: Object.freeze(line) } : {}), ...(band ? { band: Object.freeze(band) } : {}) });
 export const MA_PRINT_TONES = Object.freeze({
   paper: Object.freeze({ from: [238, 220, 157], to: [240, 224, 183] }),
   gold: Object.freeze({ from: [255, 210, 15], to: [244, 206, 87] }),
-  pinline: Object.freeze({
-    w: Object.freeze({ from: [247, 246, 245], to: [240, 235, 242] }),
-    u: Object.freeze({ from: [4, 119, 192], to: [30, 91, 180] }),
-    b: Object.freeze({ from: [47, 52, 48], to: [66, 61, 57] }),
-    r: Object.freeze({ from: [234, 31, 42], to: [184, 56, 37] }),
-    g: Object.freeze({ from: [5, 113, 46], to: [50, 100, 73] }),
-    m: Object.freeze({ from: [240, 228, 140], to: [235, 218, 140] }),
-  }),
-  band: Object.freeze({
-    w: Object.freeze({ from: [247, 246, 245], to: [238, 233, 234] }),
-    u: Object.freeze({ from: [4, 119, 192], to: [27, 82, 159] }),
-    b: Object.freeze({ from: [47, 52, 48], to: [66, 62, 60] }),
-    r: Object.freeze({ from: [234, 31, 42], to: [182, 51, 36] }),
-    g: Object.freeze({ from: [5, 113, 46], to: [45, 95, 70] }),
-    m: Object.freeze({ from: [240, 228, 140], to: [235, 218, 140] }),
+  /** Per key, every flat shade of the pack file (light → dark) and its
+   *  print tone in the lines and the bands (none: as drawn). */
+  colour: Object.freeze({
+    w: Object.freeze([MA_SHADE([247, 246, 245], [241, 237, 244], [241, 237, 245]), MA_SHADE([243, 241, 231], [233, 227, 225], [233, 227, 225]), MA_SHADE([184, 177, 170], null, [160, 139, 141])]),
+    u: Object.freeze([MA_SHADE([4, 119, 192], [32, 94, 184], [30, 91, 181]), MA_SHADE([0, 96, 144], [21, 64, 136], [22, 68, 144]), MA_SHADE([0, 72, 113], null, [20, 53, 113])]),
+    b: Object.freeze([MA_SHADE([47, 52, 48], [61, 57, 54], [60, 55, 54]), MA_SHADE([100, 100, 101], [118, 115, 124], [118, 116, 126]), MA_SHADE([72, 71, 73], null, null)]),
+    r: Object.freeze([MA_SHADE([234, 31, 42], [193, 62, 39], [202, 64, 40]), MA_SHADE([152, 11, 22], [126, 28, 27], [127, 30, 30])]),
+    g: Object.freeze([MA_SHADE([5, 113, 46], [56, 108, 79], [53, 106, 79]), MA_SHADE([0, 62, 11], [35, 70, 50], [35, 70, 50]), MA_SHADE([0, 27, 0], null, [24, 47, 33])]),
+    m: Object.freeze([MA_SHADE([240, 228, 140], null, [235, 218, 142]), MA_SHADE([245, 212, 80], null, [203, 173, 70]), MA_SHADE([158, 128, 34], null, [133, 109, 42])]),
   }),
 });
 /** The paper and the gold: the pixels near the tone's colour. */
@@ -3879,33 +3916,45 @@ export const MA_PAPER_NEAR = Object.freeze({ full: 30, none: 50 });
 export const MA_GOLD_NEAR = Object.freeze({ full: 4, none: 40 });
 /** The colour region: where a file differs from another colour's file. */
 export const MA_COLOUR_DIFF = Object.freeze({ full: 40, none: 16 });
+/** The black of the outlines, a candidate of every shade split (with the
+ *  paper and the gold). */
+const MA_BLACK = Object.freeze([0, 0, 0]);
 /** The other colour's file a master is compared with (u's is g's). */
 const maReferenceOf = (k) => maFrameFile(k === "u" ? "g" : "u");
-/** One pack file's tone entry: paper and gold on every file; on a
- *  whole-card master the paper only where the file is the same as another
- *  colour's, and its colour (w u b r g m) inside and outside the Pinline
- *  mask. A plate (`card: false`) has no colour region to compare: paper and
- *  gold by their colour alone. */
+/**
+ * One pack file's tone entry. Every file: the paper and the gold. A
+ * whole-card master (`card`): the paper only where the file is the same as
+ * another colour's; each shade × place of its colour (w u b r g m) where
+ * the file differs from another colour's, the shade nearest, inside (line)
+ * or outside (band) the Pinline mask. A plate the same against another
+ * colour's plate, every shade with its band tone.
+ */
 function maSourceTone(key, { card }) {
   const tones = { paper: MA_PRINT_TONES.paper, gold: MA_PRINT_TONES.gold };
   const near = { paper: MA_PAPER_NEAR, gold: MA_GOLD_NEAR };
-  const diff = {};
+  const nearest = {};
   const clip = {};
-  if (card) {
-    const other = Object.freeze({ file: maReferenceOf(key), ...MA_COLOUR_DIFF });
-    clip.paper = Object.freeze({ notDiff: other });
-    if (MA_PRINT_TONES.pinline[key]) {
-      tones.pinline = MA_PRINT_TONES.pinline[key];
-      tones.band = MA_PRINT_TONES.band[key];
-      diff.pinline = other;
-      diff.band = other;
-      clip.pinline = Object.freeze({ mask: MA_PINLINE });
-      clip.band = Object.freeze({ notMask: MA_PINLINE });
+  const shades = MA_PRINT_TONES.colour[key] ?? [];
+  // The candidates a pixel goes to the nearest of: the shades, the outlines'
+  // black, the paper and the gold.
+  const among = Object.freeze([...shades.map((s) => s.from), MA_BLACK, MA_PRINT_TONES.paper.from, MA_PRINT_TONES.gold.from]);
+  // The other colour's file: the master's, or the plate's (every plate is one
+  // drawing too — the colour's shades round the same paper face).
+  const other = Object.freeze({ file: card ? maReferenceOf(key) : `${MA}/pt/${key === "u" ? "g" : "u"}.png`, ...MA_COLOUR_DIFF });
+  clip.paper = Object.freeze({ notDiff: other });
+  shades.forEach((s, i) => {
+    const places = card ? [["line", s.line ?? s.band, { mask: MA_PINLINE }], ["band", s.band, { notMask: MA_PINLINE }]] : [["band", s.band, {}]];
+    for (const [place, to, side] of places) {
+      if (!to) continue;
+      const name = `${place}${i}`;
+      tones[name] = Object.freeze({ from: s.from, to, mode: "luma" });
+      nearest[name] = Object.freeze({ among, index: i });
+      clip[name] = Object.freeze({ diff: other, ...side });
     }
-  }
+  });
   return Object.freeze({
     near: Object.freeze(near),
-    ...(Object.keys(diff).length ? { diff: Object.freeze(diff) } : {}),
+    ...(Object.keys(nearest).length ? { nearest: Object.freeze(nearest) } : {}),
     ...(Object.keys(clip).length ? { clip: Object.freeze(clip) } : {}),
     tones: Object.freeze(tones),
     table: `MA_PRINT_TONES (${key})`,
@@ -3926,7 +3975,7 @@ const MA_NOTES = [
   "two-colour pair masters <pair>.png (FrameProfile.twoColorMasters ['split'], opt-in per card): the gold frame (m.png) with the first colour's frame through the pack's 'Pinline' mask and the second's through its 'Pinline (Right)' mask (pinlineRight.svg, x ≥ 827) — as the prints split them (STA #59 Despark w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix r|w, #63 Putrefy b|g): the colour lines left and right, the wide bands a mono card wears in its colour the gold master's on both halves",
   "borderless: the art under the frame edge to edge; the ornament runs to the card's top edge (design), the side edges are clear beside the art, the footer black. The one card corner is cut at the two BOTTOM corners only (keepCorners): the top corners are the ornament's (lib/frames/square-corners.ts 'frame'); a round output cuts them at render",
   "plates = the pack's eight plates (mysticalArchive/pt/<k>.png, 424x213 at its ptBounds 1135/1848, 317x159 px): no print (the run has no creature); c = the artifact's plate (the plate follows the colour key, as on the scroll)",
-  `toned onto the prints (MA_PRINT_TONES, the ring's rule — raw scan medians over the 58 mono-colour prints, a region ≥ 9 levels off toned; recorded under sourceTones): the paper ${MA_PRINT_TONES.paper.from.join(",")} → ${MA_PRINT_TONES.paper.to.join(",")} (26 off in blue), the gold ${MA_PRINT_TONES.gold.from.join(",")} → ${MA_PRINT_TONES.gold.to.join(",")} (72 off in blue), and each colour in its two places — the lines inside the Pinline mask and the bands outside it, where the file differs from another colour's — w u b r g on the mono prints, m's on the two-colour prints' gold bands (a and c have no print: as drawn); the footer stays true black (print 6,7,4)`,
+  `toned onto the prints (MA_PRINT_TONES, the ring's rule — raw scan medians over the 58 mono-colour prints, a region ≥ 9 levels off toned; recorded under sourceTones): the paper ${MA_PRINT_TONES.paper.from.join(",")} → ${MA_PRINT_TONES.paper.to.join(",")} (26 off in blue), the gold ${MA_PRINT_TONES.gold.from.join(",")} → ${MA_PRINT_TONES.gold.to.join(",")} (72 off in blue), and each colour's two or three flat SHADES in their two places — the lines inside the Pinline mask and the bands outside it, where the file differs from another colour's, each shade measured on its own pixels eroded 6 px and toned by luminance (MA_PRINT_TONES.colour) — w u b r g on the mono prints, m's on the two-colour prints' gold bands (a and c have no print: as drawn); the plates' shades take their colour's band tones (where a plate differs from another colour's plate), their paper and gold the frame's (where it is the same); the footer stays true black (print 6,7,4)`,
   "geometry as drawn: print's title bar 3–5 px higher, its type bar 1 px lower, its text box 2–4 px lower and its foot 7 px lower (row 1950 against 1943) — the lines cross textured paper and ornament, never a flat zone, so nothing is re-cut and the slots are measured on print",
   "not built: the pack's 'Crown' band (mysticalArchive/crowns/<k>.png) — no print wears it (the run has no legendary card)",
 ];
@@ -4569,6 +4618,35 @@ export function diffRegionPlane(buf, ref, width, height, { full, none }) {
     if (buf[o + 3] === 0 || ref[o + 3] === 0) continue;
     const d = Math.max(Math.abs(buf[o] - ref[o]), Math.abs(buf[o + 1] - ref[o + 1]), Math.abs(buf[o + 2] - ref[o + 2]));
     plane[p] = d >= full ? 255 : d <= none ? 0 : Math.round((255 * (d - none)) / (full - none));
+  }
+  return plane;
+}
+/**
+ * A region of an image's own pixels whose NEAREST colour (max-channel
+ * distance) of `among` is `among[index]`: 255 there, 0 elsewhere; a
+ * transparent pixel 0. Pure. (TODO 4.11 wave 2: the Mystical Archive's
+ * colour shades — `among` lists the file's flat shades and the black of its
+ * outlines, so an anti-aliased edge goes to whichever it is closest to.)
+ */
+export function nearestRegionPlane(buf, width, height, { among, index }) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`nearestRegionPlane: the image is not ${width}x${height} RGBA`);
+  if (!Array.isArray(among) || !(index >= 0 && index < among.length)) throw new Error("nearestRegionPlane: bad colour list or index");
+  const plane = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) {
+    const o = p * 4;
+    if (buf[o + 3] === 0) continue;
+    let best = -1;
+    let bestD = Infinity;
+    for (let i = 0; i < among.length; i += 1) {
+      const c = among[i];
+      const d = Math.max(Math.abs(buf[o] - c[0]), Math.abs(buf[o + 1] - c[1]), Math.abs(buf[o + 2] - c[2]));
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    if (best === index) plane[p] = 255;
   }
   return plane;
 }
@@ -6998,7 +7076,7 @@ export function sourceFilesFor(def) {
   for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
   // …and a clipped region's masks and reference files (the Mystical
   // Archive, TODO 4.11 wave 2).
-  for (const file of [...files]) for (const c of Object.values(sourceTonesOf(file)?.clip ?? {})) for (const f of [c.mask, c.notMask, c.notDiff?.file]) if (f) files.add(f);
+  for (const file of [...files]) for (const c of Object.values(sourceTonesOf(file)?.clip ?? {})) for (const f of [c.mask, c.notMask, c.diff?.file, c.notDiff?.file]) if (f) files.add(f);
   // …and a diff region's reference file (the MUL Tarkir wings, TODO 4.11).
   for (const file of [...files]) for (const d of [...Object.values(sourceTonesOf(file)?.diff ?? {}), ...Object.values(sourceTonesOf(file)?.box ?? {})]) if (d.file) files.add(d.file);
   return [...files].sort();

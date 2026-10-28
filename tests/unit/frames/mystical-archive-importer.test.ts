@@ -16,6 +16,8 @@ import {
   MA_STAMP_OVAL_PX,
   blackoutAndCut,
   cutInside,
+  nearestRegionPlane,
+  toneSourceRegions,
   notchCutOf,
   notchSourceFiles,
   pieceNotchFindings,
@@ -87,33 +89,66 @@ describe("the Mystical Archive recipe", () => {
     expect(sourceFilesFor(def as never)).toEqual(expect.arrayContaining([MA_PINLINE, MA_PINLINE_RIGHT, `${MA}/m.png`, `${MA}/pt/a.png`]));
   });
 
-  it("tones by the ring's rule: every toned region ≥ 9 levels off print, the footer left true black", () => {
-    const off = (t: { from: readonly number[]; to: readonly number[] }) => Math.max(...t.from.map((v, i) => Math.abs(v - t.to[i])));
-    expect(off(MA_PRINT_TONES.paper)).toBeGreaterThanOrEqual(9);
-    expect(off(MA_PRINT_TONES.gold)).toBeGreaterThanOrEqual(9);
-    for (const k of [...MONO, "m"] as const) {
-      expect(off(MA_PRINT_TONES.pinline[k]), `pinline ${k}`).toBeGreaterThanOrEqual(9);
-      expect(off(MA_PRINT_TONES.band[k]), `band ${k}`).toBeGreaterThanOrEqual(9);
-      // One flat colour per pack file in both places.
-      expect(MA_PRINT_TONES.pinline[k].from, k).toEqual(MA_PRINT_TONES.band[k].from);
-    }
-    // Every master and plate is toned (paper and gold); a colour master its
-    // colour too — inside and outside the Pinline mask, where it differs
-    // from another colour's file; a and c (no print) and the plates not.
-    for (const k of ["w", "u", "b", "r", "g", "m", "a", "c"]) {
-      const master = sourceTonesOf(`${MA}/${k}.png`) as { tones: Record<string, unknown>; clip?: Record<string, Record<string, unknown>> };
-      const colour = k !== "a" && k !== "c";
-      expect(Object.keys(master.tones).sort(), k).toEqual(colour ? ["band", "gold", "paper", "pinline"] : ["gold", "paper"]);
-      expect(master.clip?.paper?.notDiff, k).toBeDefined();
-      if (colour) {
-        expect(master.clip?.pinline, k).toEqual({ mask: MA_PINLINE });
-        expect(master.clip?.band, k).toEqual({ notMask: MA_PINLINE });
+  it("tones by the ring's rule: every toned shade ≥ 9 levels off print, b's darkest and the footer as drawn", () => {
+    const off = (from: readonly number[], to: readonly number[]) => Math.max(...from.map((v, i) => Math.abs(v - to[i])));
+    expect(off(MA_PRINT_TONES.paper.from, MA_PRINT_TONES.paper.to)).toBeGreaterThanOrEqual(9);
+    expect(off(MA_PRINT_TONES.gold.from, MA_PRINT_TONES.gold.to)).toBeGreaterThanOrEqual(9);
+    const shades = MA_PRINT_TONES.colour as Record<string, readonly { from: readonly number[]; line?: readonly number[]; band?: readonly number[] }[]>;
+    expect(Object.keys(shades).sort()).toEqual(["b", "g", "m", "r", "u", "w"]);
+    for (const [k, list] of Object.entries(shades)) {
+      for (const s of list) {
+        for (const to of [s.line, s.band]) if (to) expect(off(s.from, to), `${k} ${s.from}`).toBeGreaterThanOrEqual(9);
       }
-      const plate = sourceTonesOf(`${MA}/pt/${k}.png`) as { tones: Record<string, unknown> };
-      expect(Object.keys(plate.tones).sort(), k).toEqual(["gold", "paper"]);
+    }
+    // b's darkest shade is within 4 of print: as drawn (no tone).
+    expect(shades.b[2]).toEqual({ from: [72, 71, 73] });
+    // The review's numbers (#619): r's light band, u's, g's, w's.
+    expect(shades.r[0].band).toEqual([202, 64, 40]);
+    expect(shades.u[0].band).toEqual([30, 91, 181]);
+    expect(shades.g[0].band).toEqual([53, 106, 79]);
+    expect(shades.w[0].band).toEqual([241, 237, 245]);
+    // Every master: paper (where it is the same as another colour's file) and
+    // gold; a colour master each shade × place by luminance, the shade
+    // nearest, where the file differs, inside / outside the Pinline mask.
+    for (const k of ["w", "u", "b", "r", "g", "m", "a", "c"]) {
+      type Tone = { tones: Record<string, { mode?: string; from: number[]; to: number[] }>; clip?: Record<string, Record<string, unknown>>; nearest?: Record<string, { among: number[][]; index: number }> };
+      const master = sourceTonesOf(`${MA}/${k}.png`) as Tone;
+      expect(master.clip?.paper?.notDiff, k).toBeDefined();
+      const names = Object.keys(master.tones).filter((n) => n !== "paper" && n !== "gold");
+      if (k === "a" || k === "c") {
+        expect(names, k).toEqual([]);
+        continue;
+      }
+      expect(names.length, k).toBeGreaterThanOrEqual(4);
+      for (const n of names) {
+        expect(master.tones[n].mode, `${k} ${n}`).toBe("luma");
+        expect(master.clip?.[n]?.diff, `${k} ${n}`).toBeDefined();
+        expect(master.clip?.[n]?.[n.startsWith("line") ? "mask" : "notMask"], `${k} ${n}`).toBe(MA_PINLINE);
+        const near = master.nearest![n];
+        expect(near.among[near.index], `${k} ${n}`).toEqual(master.tones[n].from);
+      }
+      // A plate: its shades with the band tones where it differs from
+      // another colour's plate; its paper where it is the same.
+      const plate = sourceTonesOf(`${MA}/pt/${k}.png`) as Tone;
+      expect(plate.clip?.paper?.notDiff, k).toBeDefined();
+      const plateShades = Object.keys(plate.tones).filter((n) => n !== "paper" && n !== "gold");
+      expect(plateShades.every((n) => n.startsWith("band")), k).toBe(true);
+      for (const n of plateShades) expect(plate.tones[n].to, `${k} ${n}`).toEqual(master.tones[n].to);
     }
     // The stamp's arch is our own drawing: nothing to tone.
     expect(sourceTonesOf(MA_STAMP_ARCH)).toBeNull();
+  });
+
+  it("splits a file by its nearest shade, and tones a shade by luminance (a 0 channel lifted)", () => {
+    // Two pixels: a flat shade with a 0 channel, its edge half into black.
+    const buf = Buffer.from([0, 96, 144, 255, 0, 48, 72, 255, 240, 224, 182, 255]);
+    const among = [[4, 119, 192], [0, 96, 144], [0, 0, 0], [238, 220, 157]];
+    expect([...nearestRegionPlane(buf, 3, 1, { among, index: 1 })]).toEqual([255, 255, 0]);
+    expect([...nearestRegionPlane(buf, 3, 1, { among, index: 3 })]).toEqual([0, 0, 255]);
+    const out = toneSourceRegions(buf, 3, 1, { s: Uint8Array.from([255, 255, 0]) }, { s: { from: [0, 96, 144], to: [22, 68, 144], mode: "luma" } });
+    expect([...out.subarray(0, 3)]).toEqual([22, 68, 144]);
+    expect([...out.subarray(4, 7)]).toEqual([11, 34, 72]);
+    expect([...out.subarray(8, 11)]).toEqual([240, 224, 182]);
   });
 
   it("builds no crown band: the run has no legendary card", () => {
