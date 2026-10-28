@@ -174,8 +174,10 @@ function convertLine(rawLine: string, field: TypographyField): string {
         set = opensAfter(prev, following) ? "“" : "”";
       } else if (ch === "'") {
         // '90s, 'tis: an apostrophe although it opens the word. (The longest
-        // elision is five letters; the slice keeps a long text linear.)
-        const rest = text.slice(i + 1, i + 8);
+        // elision is five letters; the slice keeps a long text linear. In
+        // flavour it starts past the upright markup's stars, as `following`
+        // does: '*tis* is an elision too.)
+        const rest = text.slice(next, next + 7);
         const elision = /^\d/.test(rest) || ELISIONS.test(rest);
         set = opensAfter(prev, following) && !elision ? "‘" : "’";
       }

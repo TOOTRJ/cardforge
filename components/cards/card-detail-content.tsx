@@ -1067,7 +1067,7 @@ export function buildCardJsonLd({
   if (back) {
     // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
     const backDescription =
-      back.flavor_text?.trim() || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
+      stripFlavorMarkup(back.flavor_text?.trim() ?? "") || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
     const backName = back.title?.trim() || "Back face";
     const part: Record<string, unknown> = {
       "@type": "CreativeWork",

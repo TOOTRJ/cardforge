@@ -10405,7 +10405,9 @@ How rules text is sized and set:
   non-space after the first star, before the second, none between) is set
   roman — measured with the ROMAN face's advances, so the line breaks are
   the renderers' own — and its stars are never drawn. Any other star is
-  printed. A span may start or end inside a word ("Oracle *en*-Vec"): the
+  printed — so `**bold**` is not bold: it prints `*bold*` with "bold"
+  upright (Scryfall's convention: one star each side). A span may start
+  or end inside a word ("Oracle *en*-Vec"): the
   word is one run of glued pieces, each in its own face. Rules text has
   no markup. The creator's flavour fields say so under the box; print
   typography reads a quote through the stars (`*"Red Box"*` opens).

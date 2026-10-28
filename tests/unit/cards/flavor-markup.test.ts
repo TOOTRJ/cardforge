@@ -203,6 +203,9 @@ describe("print typography never prints the markup's stars as anything else", ()
       ["-*Song of All*, canto 2", "—*Song of All*, canto 2"],
       ['"*That\'s* how."', "“*That’s* how.”"],
       ["Successful delivery is *not* guaranteed.", "Successful delivery is *not* guaranteed."],
+      // An elision's apostrophe is read past the stars too.
+      ["'*tis* the season, back in '*90s*", "’*tis* the season, back in ’*90s*"],
+      ["*'Tis* true.", "*’Tis* true."],
     ] as const) {
       expect(printTypography(typed, "flavor"), typed).toBe(printed);
       // Idempotent.
