@@ -60,6 +60,7 @@ import {
   landFrameColorRule,
   twoColourLandOnPlainFrame,
   resolveFrameSignature,
+  ownFramesOfSignature,
   type FrameMatch,
   type PrintingFacts,
 } from "@/lib/scryfall/frame-signatures";
@@ -236,9 +237,10 @@ export type ScryfallImportPatch = {
    *     2026-09-30, pick (b)): nothing to follow, so the card gets the
    *     new-card default (on) if it is made Legendary later. */
   printed_crown?: boolean;
-  /** The frames whose own crown `printed_crown: true` is
-   *  (OWN_FRAME_CROWN_SIGNATURES; ImportedAnatomyFacts): the switch is on
-   *  only when the card lands on, or is switched to, one of them. */
+  /** The frames whose own crown `printed_crown: true` is — a crowned
+   *  showcase's own frame (ownCrownFramesOf; ImportedAnatomyFacts): the
+   *  switch is on only when the card lands on, or is switched to, one of
+   *  them. */
   printed_crown_frames?: readonly FrameTemplate[];
   /** `true` when THIS printing's own frame is two-coloured (TODO 4.6b): a
    *  2015-frame printing whose front face is exactly two colours
@@ -1852,19 +1854,48 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/dmu/stained-glass",
   // The Bloomburrow anime (TODO 4.11, layout v70): its 12 creatures are
   // legendary and print the flourish above the name box (#353 Ral, the 13th,
-  // is a walker: no crown). Its own frame's crown only (OWN_FRAME_CROWN_
-  // SIGNATURES): off on the standard frame its import lands on.
+  // is a walker: no crown). Like every entry, its own frame's crown only
+  // (CROWN_OWN_FRAMES): off on the standard frame its import lands on.
   "showcase/blb/anime",
 ]);
 
-/** The crowned showcases whose crown is their OWN frame's and which land
- *  elsewhere (TODO 4.11, layout v70): the Bloomburrow anime's flourish —
- *  its full bleed lands an import on the standard frame (1.18), where the
- *  printing wears no standard crown — so the switch is on only on the
- *  frames named here (ImportedAnatomyFacts.printed_crown_frames). */
-const OWN_FRAME_CROWN_SIGNATURES: Readonly<Record<string, readonly FrameTemplate[]>> = {
-  "showcase/blb/anime": ["bloomanime"],
-};
+/** The crowned showcases whose crown IS the standard 2015 crown, so it
+ *  follows the printing onto any landing: the Theros constellation (THB
+ *  #258–268 and MUL's three demigods print the standard crown in their
+ *  colour with the Nyx starfield inside — NYX_CONSTELLATION_CROWN — and
+ *  owner Round 59, 2026-10-14, read M15's own crown on its fallback landing
+ *  as fine; docs/FRAMES.md "The constellation crown"). */
+const STANDARD_CROWN_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set(["showcase/thb/constellation"]);
+
+/** The frames a crowned showcase's crown is ON for (TODO 4.11; the owner's
+ *  rule from the Bloomburrow anime, layout v70, made the rule for every
+ *  entry of CROWNED_SHOWCASE_SIGNATURES): the showcase's crown is its OWN
+ *  frame's piece — the anime's flourish, the dossier's torn strip, the
+ *  stained glass's dome, the ring's scallops… — so the switch is on only
+ *  when the card lands on, or is switched to, the frame the signature's
+ *  rule names (ownFramesOfSignature: read from the registry, never listed
+ *  twice). On any other landing — the standard frame an import falls back
+ *  to while the showcase's combo isn't verified (frame-switched), the
+ *  anime's full-bleed landing (1.18) — the printing wears no standard
+ *  crown, so it is off (ImportedAnatomyFacts.printed_crown_frames;
+ *  lib/cards/anatomy.ts importedAnatomy). A crowned signature whose rule
+ *  names no concrete frame throws here, at load: its crown would follow it
+ *  anywhere. The one exception is STANDARD_CROWN_SHOWCASE_SIGNATURES. */
+const CROWN_OWN_FRAMES: ReadonlyMap<string, readonly FrameTemplate[]> = new Map(
+  [...CROWNED_SHOWCASE_SIGNATURES].filter((signature) => !STANDARD_CROWN_SHOWCASE_SIGNATURES.has(signature)).map((signature) => {
+    const own = ownFramesOfSignature(signature);
+    if (own.length === 0) throw new Error(`CROWNED_SHOWCASE_SIGNATURES: "${signature}" names no frame of its own in the registry.`);
+    return [signature, own] as const;
+  }),
+);
+
+/** The frames THIS signature's crown is its own on (CROWN_OWN_FRAMES), or
+ *  undefined for a printing that is not a crowned showcase, or one whose
+ *  crown is the standard one (STANDARD_CROWN_SHOWCASE_SIGNATURES) — whose
+ *  crown follows it wherever it lands. */
+export function ownCrownFramesOf(signature: string): readonly FrameTemplate[] | undefined {
+  return CROWN_OWN_FRAMES.get(signature);
+}
 
 /** Whether a printing prints the STANDARD legendary crown (see
  *  ScryfallImportPatch.printed_crown): the `legendary` frame effect, on a
@@ -2178,9 +2209,7 @@ export function mapScryfallToFormPatch(
       cardType,
       supertype: typeParts.supertype,
     }),
-    ...(OWN_FRAME_CROWN_SIGNATURES[frameMatch.signature]
-      ? { printed_crown_frames: OWN_FRAME_CROWN_SIGNATURES[frameMatch.signature] }
-      : {}),
+    ...(ownCrownFramesOf(frameMatch.signature) ? { printed_crown_frames: ownCrownFramesOf(frameMatch.signature) } : {}),
     printed_two_color: printsTwoColorFrame(card) ? true : undefined,
     // The collector line as the printing prints it (TODO 4.9b): its style
     // (or "off" for a pre-2015 frame) and the ★ of a foil-only printing.

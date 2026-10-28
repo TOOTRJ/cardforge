@@ -3324,6 +3324,20 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
 
 const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
 
+/** The frames a signature's own rule NAMES — the template its printing is
+ *  drawn on where the registry sends it (and the one it names once
+ *  verified), concrete templates only: a rule whose outcome is a family
+ *  ("the borderless frame for the card") names none. A gap signature
+ *  ("…+two-colour") names its base's frame — the gap only makes it nearest.
+ *  The import's crown reads it (lib/scryfall/import-mapper.ts
+ *  ownCrownFramesOf): a crowned showcase's crown is ITS frame's, on no
+ *  other landing. Empty for an unknown signature. */
+export function ownFramesOfSignature(signature: string): readonly FrameTemplate[] {
+  const rule = RULE_BY_KEY.get(signature);
+  if (!rule) return [];
+  return [rule.outcome.template, rule.outcome.onceVerified].filter((spec): spec is FrameTemplate => typeof spec === "string");
+}
+
 /**
  * Whether a gap signature logged before its piece shipped ("era/2015+crown",
  * "…+two-colour" — frame_requests rows keep their signature) is drawn today
