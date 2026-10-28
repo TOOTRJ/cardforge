@@ -730,11 +730,13 @@ describe("provenance (lib/cards/frame-sources.json)", () => {
     expect(provenance.battle.notes).toEqual(battle.notes);
     // No portrait recipe records a landscape field — but a portrait block
     // shift on a 1500 × 2100 pack (the ZNE Expeditions' re-cut, TODO 4.11
-    // wave 1; tests/unit/frames/expedition-importer.test.ts).
+    // wave 1; tests/unit/frames/expedition-importer.test.ts) or in the
+    // written master's rows (the Enchanting Tales' lower block, TODO 4.11
+    // wave 2; tests/unit/frames/enchanting-tales-importer.test.ts).
     for (const [template, entry] of Object.entries(provenance) as [string, Record<string, unknown>][]) {
       if (template === "split" || template === "battle") continue;
       expect(entry.orientation, template).toBeUndefined();
-      if (template !== "expeditionland") expect(entry.shift, template).toBeUndefined();
+      if (template !== "expeditionland" && template !== "enchantingtales") expect(entry.shift, template).toBeUndefined();
       expect(entry.printRecut, template).toBeUndefined();
     }
   });

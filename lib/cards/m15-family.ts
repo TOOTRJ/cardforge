@@ -174,6 +174,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // new template, no stored card — the family's sizes, as the 2020 look —
   // so it joined without a bump.
   "expeditionlandbfz",
+  // The Enchanting Tales showcase (TODO 4.11 wave 2, CC's 'Enchanting Tales'
+  // pack, the M15 frame's text layout on its own bars): a new template, no
+  // stored card — the family's sizes — so it joined without a bump.
+  "enchantingtales",
   "nyx",
   "fullart",
   "m15textless",

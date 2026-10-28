@@ -123,6 +123,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): CC's artBounds, the
+  // art under the whole frame from the title bar to the text box's foot.
+  enchantingtales: { front: [1500, 1821] },
   avatar: { front: [1500, 1168] },
   bloomburrow: { front: [1500, 954] },
   bloomanime: { front: [1500, 2100] },
@@ -265,8 +268,10 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // before its back, 5.5 (b) PR 2: the same column; 39 before the full-art
     // token's Nyx dress, TODO 4.51: six more full-art token windows; 45
     // before the Expeditions' window + panel, TODO 4.11 wave 1: the 2020
-    // look's 1382 × 1500 and the new 2015 look's 1276 × 1471.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(47);
+    // look's 1382 × 1500 and the new 2015 look's 1276 × 1471; 47 before the
+    // Enchanting Tales showcase, TODO 4.11 wave 2: the art under its whole
+    // frame, 1500 × 1821.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(48);
   });
 });
 

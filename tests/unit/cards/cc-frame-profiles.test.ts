@@ -63,6 +63,13 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 + 19 / 1500, 2 / 1500]);
         continue;
       }
+      // The Enchanting Tales showcase (TODO 4.11 wave 2): the CC M15 row 3 px
+      // further right (registered on all 63 WOT #1–63 prints), its lift
+      // kept on the pack's title bar, 70 px discs.
+      if (template === "enchantingtales") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500 + 3 / 1500]);
+        continue;
+      }
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
         expect(profile.costDx, template).toBeUndefined();

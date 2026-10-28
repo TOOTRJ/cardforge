@@ -152,6 +152,10 @@ export const COLLECTOR_TEMPLATES = [
   // MKM #336–389 / #433 set both lines in the black border under the page,
   // 4–5 px above M15's rows and 2 px left of its pen (DOSSIER_COLLECTOR).
   "dossier",
+  // …and the Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
+  // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).
+  "enchantingtales",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

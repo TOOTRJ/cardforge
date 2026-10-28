@@ -116,6 +116,8 @@ describe("the switch values", () => {
       "dndsourcebook",
       // …and the MKM dossier (TODO 4.11 wave 2): its run's rows.
       "dossier",
+      // …and the Enchanting Tales (TODO 4.11 wave 2): its run's rows.
+      "enchantingtales",
     ]);
   });
 });

@@ -544,6 +544,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Enchanting Tales' pack, frames bucket): the swirled
+  // storybook frame of the bonus sheet WOT #1–63 (2023), borderless, the
+  // art under its translucent text box. An addition: no stored card sits on
+  // it.
+  "enchantingtales",
   "avatar",
   "bloomburrow",
   "bloomanime",
@@ -715,6 +721,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Wilds of Eldraine — Enchanting Tales".
+  enchantingtales: "Enchanting Tales",
   avatar: "Elemental",
   bloomburrow: "Woodland",
   bloomanime: "Anime",
@@ -764,6 +772,7 @@ export const FRAME_SET_VALUES = [
   "borderless",
   "alpha",
   "lotr",
+  "eldraine",
   "avatar",
   "bloomburrow",
   "tarkir",
@@ -785,6 +794,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   borderless: "Borderless",
   alpha: "Alpha (1993)",
   lotr: "The Lord of the Rings",
+  // Wilds of Eldraine (WOE 2023) and its bonus sheet, Enchanting Tales (WOT).
+  eldraine: "Wilds of Eldraine",
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
@@ -868,6 +879,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  enchantingtales: "eldraine",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
   bloomanime: "bloomburrow",
@@ -954,6 +966,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   extended: "m15",
   fullartset: "m15",
   lotr: "showcase",
+  // The Enchanting Tales showcase (WOT #1–63).
+  eldraine: "showcase",
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",

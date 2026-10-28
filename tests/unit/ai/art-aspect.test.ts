@@ -110,6 +110,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the art under the
+  // whole frame from the title bar down, 1500 × 1821 px.
+  enchantingtales: ["928x1120", "3:4", 0.8237],
   // TODO 4.11 (layout v69): print's windows, edge to edge across the card.
   avatar: ["1152x896", "4:3", 1.284],
   bloomburrow: ["1280x816", "3:2", 1.572],
