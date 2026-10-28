@@ -91,6 +91,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
 import type { CardBackFace, FrameStyle, FaceContent } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
+import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the shared body of the public card detail view.
@@ -947,7 +948,8 @@ export function buildCardJsonLd({
   siteBase: string;
 }): Record<string, unknown> {
   const description =
-    card.flavor_text?.trim() ||
+    // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
+    stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
     // CARDNAME / ~ as the name the card prints (TODO 6.2).
     storedRulesTextWithSelfName(card)?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";

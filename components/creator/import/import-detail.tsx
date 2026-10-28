@@ -25,6 +25,7 @@ import {
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
+import { flavorSegments } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
 // The import dialog's detail pane (TODO 1.5): the selected printing, what the
@@ -368,7 +369,18 @@ function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
     rows.push({
       label: "Flavor",
       value: (
-        <span className="italic text-subtle">{patch.flavor_text}</span>
+        <span className="italic text-subtle whitespace-pre-line">
+          {/* Its upright `*…*` spans as the card prints them (lib/cards/flavor-markup.ts). */}
+          {flavorSegments(patch.flavor_text).map((seg, i) =>
+            seg.upright ? (
+              <span key={i} className="not-italic">
+                {seg.text}
+              </span>
+            ) : (
+              seg.text
+            ),
+          )}
+        </span>
       ),
     });
   }
