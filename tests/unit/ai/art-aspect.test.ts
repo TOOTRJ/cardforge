@@ -113,7 +113,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   // TODO 4.11 (layout v69): print's windows, edge to edge across the card.
   avatar: ["1152x896", "4:3", 1.284],
   bloomburrow: ["1280x816", "3:2", 1.572],
-  bloomanime: ["864x1200", "3:4", 0.722],
+  // TODO 4.11 / 4.35 (layout v70): full bleed, the whole card.
+  bloomanime: ["864x1200", "3:4", 0.714],
   // The Tarkir: Dragonstorm showcases (TODO 4.11, v68): the draconic's
   // window and the dragons' gaps, 1390 × 944 px; the ghostfire's inside its
   // painted ring, 1344 × 1806.

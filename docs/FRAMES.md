@@ -615,8 +615,9 @@ bake's transparent corner mask and the frame masters all read it.
   edge band is see-through (the rings — the Tarkir draconic's left it with
   its painted border, 4.11 layout v68, the ghostfire's ring with its own,
   and the Avatar elemental and bloomburrow's bottom with their painted
-  footers, v69) — or, where art or frame design runs into the corner (an
-  art-to-edge frame; bloomburrow — its leafy top band, and since v69 its
+  footers, v69, and bloomanime, the last, with its full bleed, v70: no ring
+  is left) — or, where art or frame design runs into the corner (an
+  art-to-edge frame — bloomanime's art and footer since v70; bloomburrow — its leafy top band, and since v69 its
   coloured footer, kept square by the builder — the LOTR ring — its frame
   field, kept square by the importer since 4.11 — and tarkirdraconic),
   what was drawn. The table is `lib/frames/square-corners.ts`;
@@ -5171,7 +5172,8 @@ the same cards; sheet: the owner's design-backup
     then truecolour (`BORDERED_PNG_ATTEMPTS`) and takes the first encode
     that loses no border pixel (bloomburrow `r` truecolour, `g` and `u` at
     q90, `m` at q80, the rest the plain palette).
-  Both left `BORDER_PENDING_TEMPLATES` (only `bloomanime` remains), the
+  Both left `BORDER_PENDING_TEMPLATES` (`bloomanime` was the last, until
+  its layout v70), the
   edge contract's and the art-window check's known failures, and the ring
   entry of `SQUARE_CORNERS` (bloomburrow is `frame` on all four corners).
 - **Slots: M15's.** `artForwardShowcase()` set the name on the type bar
@@ -5243,6 +5245,126 @@ the same cards; sheet: the owner's design-backup
     #327–330 / #333–336; TLA #348, #351) — they import `nearest` with the
     `two-colour` gap, on the gold master, until they ship;
   - the woodland's `c` has no print to measure against.
+
+### The Bloomburrow anime showcase (4.11 / 4.35, layout v70)
+
+`bloomanime` (BLB #343–355, the thirteen raised-foil legends: twelve
+creatures and #353 Ral, a walker, which stays out of scope — a walker lands
+on a walker frame) came out after Card Conjurer's last pack, so it stays on
+Magic Set Editor's style (`magic-m15-showcase-bloomburrow-borderless-anime`).
+A CORRECTION (layout v70, a sweep scoped to the one template,
+`ANIME_LAYOUT_VERSION`; taken after #615's v69, and a test refuses it
+while v69 has no rollout): no colour is ticked. Measured 2026-10-27 on all
+thirteen printings (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart).
+**These scans are photographs of raised foil:** the crop wanders 0–12 px,
+so every scan is registered on MSE's stroke shapes region by region (the
+corners, the name and type rows, the footer; the best of ±30 px by the
+darkest mean under the strokes) and every number is a median; sheet: the
+owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
+
+- **One master for every key.** MSE's style is a RECOLOUR template: its
+  strokes (`card.png`, the P/T dress's `nonptpt.png`) are flat red that MSE
+  recolours per card colour at render, and its name and text boxes
+  (`namebox.png`, `textbox_pt.png`) are `set_alpha(recolor_image(…), 70 %)`.
+  Print wears ONE look on every colour — the run is two-colour legends, all
+  on the same frame — so the builder bakes one master (`layered` in
+  `scripts/build-showcase-frames.mjs`, the numbers in
+  `scripts/lib/mse-showcase-borders.mjs` `ANIME_*`), every key the same
+  bytes, in MSE's z order:
+  - the **boxes** at print's opacity, from pairs of pixels 7 px inside and
+    outside every box edge (strokes masked off), fitted inside = (1 − α) ·
+    outside + α · C per channel over the twelve creatures: the name box α
+    0.78 over 45,50,52 (a slate, lighter than MSE's 70 % black), the type /
+    text box α 0.80 over 39,40,35;
+  - the **footer** through MSE's `border_pt_mask.png`, OVER the boxes, in
+    print's own tone 15,20,16 (the median of the twelve footers; 20 levels
+    off black on green where the same BLB scans read 0,0,0 on the regular
+    black borders — print's tone, as the woodland's black) and kept to the
+    card corner (`keepCorners`: the footer is the card's edge there);
+  - the **strokes** in ONE flat tone, 35,31,12: the raw median of every
+    stroke's core (2 px eroded) over 75 registered regions, 531,750 px
+    (owner 2026-10-27: one flat tone; print's raised foil runs 15–98 per
+    region) — with print's **copper rim** (owner 2026-10-27: add it,
+    `ANIME_RIM`, `copperRimLayer`): a copper edge on the strokes' UPPER
+    edges only (outward normal within ~37° of straight up — the share of
+    copper pixels per 15° bin is 0.41–0.55 within ±15°, 0.25–0.46 at ±30°,
+    0.13–0.26 at ±45°, the background's 0.03–0.09 past 60°), straddling
+    MSE's stroke edge: one ring inside and one outside fully, a half ring
+    past it (print's copper share peaks on the edge's first rings, 0.51
+    inside / 0.55 outside, and fades by the third; a 2 + 3 ring rim read
+    heavier than print's on the sheet), full strength to 30° from up,
+    fading to none at 50°, in 180,103,59 — the median of the copper pixels
+    of those rings within ±45° (68,570 px). A DELIBERATE EXCEPTION to the
+    raw-median rule: a median of pixels SELECTED as copper (R − B ≥ 55,
+    R ≥ 90, R − G ≥ 25), because a raw median of the rim's rings is the
+    stroke's own tone and the art beside it — it can't paint a visible
+    rim. The strokes' core stays
+    35,31,12 (the rings past the rim read 34–38, 29–33, 9–16). The P/T
+    outline, the crown and the stamp's arch wear the same rim.
+  Every print has a P/T, so the master is MSE's P/T dress: the text box's
+  tab under the P/T and the shorter right stroke; the P/T box's outline
+  (`pt.png`, with the rim) is the plate (`bloomanime/pt/<key>.png`,
+  1157, 1846, 254 × 151). A card with no P/T keeps the tab without the outline (no print to
+  match).
+- **Full bleed.** The art runs under the whole card (`artSlot` 0 / 0 / 100
+  × 100; it was inset 2.5 / 3.5 / 93 × 92 over a #101015 ring). The edge
+  contract is print's: art on the top and sides but where the strokes touch
+  them (the top corners' flourishes, the sides at the name box and the type
+  line), the footer a bar at least 108 px deep that also climbs both sides
+  from 75.2 %. It left the edge contract's, the art-window check's and
+  `BORDER_PENDING_TEMPLATES`'s lists (`BORDER_PENDING_TEMPLATES` is empty
+  now) and `SQUARE_CORNERS` (no ring is left: its art covers every corner).
+  As a full-bleed frame it is art-first (`artFillsCard`: the picker tile's
+  sample art by rule, no longer `pickerSampleArt`), Etched is hidden, and
+  an import lands on the standard frame with the anime offered (1.18:
+  Scryfall's art_crop is the classic window).
+- **Its own layout on M15's slots** at the M15-era family's sizes (`fit:
+  "measured"`, joined WITH v70), each measured on the twelve creatures
+  against our bakes of the same cards:
+  - the name: baseline 164 px (25 above M15's: the band's rect moves),
+    its pen at 125 (6 px left);
+  - the cost row: the CC M15 70 px disc on print's row — centred on 139.5
+    (8 px under the band's lift), ending at 1389 (4.5 px right);
+  - the type line: the CC M15 baseline (print's 1261, ours 1260), its pen
+    at 127 (4 px left);
+  - the rules: 125–1372.5 × 1320–1882 px — lines from 128.5, the widest
+    to ~1362–1366 on print (BLB #352, #344: the box's right stroke at
+    1387–1395, ~17 px of margin inside it), so the rect ends where M15's
+    does; centred on 1601.5 (MSE's rect centres them 14 px lower); M15's
+    padding, white. OUR rules glyphs run ~3 % wider than print's: print's
+    ink measures 0.95–0.975× our MPlantin advances at 76 px (BLB #344, six
+    lines, e.g. 1232 px against our 1268) at print's 76 px pitch (74.7 =
+    0.98 × 76), so a long text steps down where print keeps 76 px (Alania
+    #344: ~72–73 px here) and breaks its lines elsewhere (TODO 3.29b: is it
+    the whole M15 family?);
+  - the P/T: MSE's text rect 6 px left and 12 px down, the digits on
+    print's (1282, 1930), white;
+  - name and type ink white, no shadow; no scrim any more (the boxes are
+    the master's).
+- **Opt-ins** (ADDITIONS, opt-in per card):
+  - the **crown** — MSE's `crown.png`, the small flourish above the name
+    box, in the strokes' tone (`BLOOMANIME_CROWN`, 646, 16, 209 × 64). All
+    twelve creatures are legendary and print it, so `showcase/blb/anime`
+    imports with it on (`CROWNED_SHOWCASE_SIGNATURES`; Ral, the walker,
+    names none) — but ONLY on the anime frame
+    (`printed_crown_frames`, `OWN_FRAME_CROWN_SIGNATURES`): the import lands
+    on the standard frame (1.18), where the printing wears no standard
+    crown, so the switch is off there and on when the card is switched to
+    the anime (the chooser's tile too);
+  - the **stamp** — MSE's own notch, the footer's tone through
+    `border_stamp_mask.png` under `stamp.png`'s arch in the strokes' tone
+    (`bloomanimeholostamp/<key>.png`, 494, 1882, 540 × 58), our oval at
+    the prints' hologram (684, 1920, 134 × 67; print's within 3 px). Every
+    print is rare or mythic: "auto" is M15's rule;
+  - the **collector line** (`M15_COLLECTOR`): print's rows within 3 px of
+    M15's, its pen ~5 px left.
+- **Flagged, not changed** (TODO 4.11):
+  - the P/T digits print ~25 px wider than ours at the same height, and
+    our rules glyphs run ~3 % wider than print's (Alania #344 steps down to
+    ~72–73 px where print sets 76; TODO 3.29b);
+  - a card moved onto the anime frame later through Variations (not the
+    import chooser) keeps the crown off: only the import names it;
+  - #353 Ral, the walker, stays out of scope.
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
@@ -9671,7 +9793,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 81 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 82 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless

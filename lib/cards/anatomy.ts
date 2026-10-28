@@ -1134,6 +1134,12 @@ export type ImportedAnatomyFacts = {
    *  Legendary showcase; absent — nothing to follow (a nonlegendary
    *  printing, a showcase one included). */
   printed_crown?: boolean;
+  /** The frames whose OWN crown a `printed_crown: true` is (TODO 4.11,
+   *  layout v70: the Bloomburrow anime's flourish): on any other landing the
+   *  printing wears no standard crown, so the switch is `false` there — a
+   *  Legendary showcase's (Q6 → b). Absent: the crown follows the printing
+   *  wherever it lands. */
+  printed_crown_frames?: readonly string[];
   /** `true` for a two-colour printing, else absent — never `false`. */
   printed_two_color?: true;
   /** The collector line as THIS printing prints it (TODO 4.9b): its style
@@ -1200,6 +1206,10 @@ export function importedAnatomy(
 ): { style: FrameAnatomyStyle; colorIdentity: ColorIdentity[] | undefined } {
   const style: FrameAnatomyStyle = {};
   if (patch.printed_crown !== undefined) style.crown = patch.printed_crown;
+  // A printing whose crown is its own frame's (the anime's flourish) wears
+  // no standard crown elsewhere: off on the m15 landing, on when the card
+  // lands on — or is switched to — that frame.
+  if (patch.printed_crown === true && patch.printed_crown_frames && !patch.printed_crown_frames.includes(String(landedTemplate))) style.crown = false;
   const twoColourPrinting = patch.printed_two_color === true;
   if (twoColourPrinting) style.twoColor = true;
   // The collector line follows the printing too (owner 2026-09-29): its

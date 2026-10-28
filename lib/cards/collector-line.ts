@@ -141,6 +141,9 @@ export const COLLECTOR_TEMPLATES = [
   // masters now paint.
   "avatar",
   "bloomburrow",
+  // The Bloomburrow anime (TODO 4.11, layout v70): BLB #343–355 set both
+  // lines on M15's rows on the footer its master now paints.
+  "bloomanime",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

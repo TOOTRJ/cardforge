@@ -37,10 +37,14 @@ describe("the square-corner table", () => {
     }
   });
 
-  it("is border black by default, root on the rings, design on top of Bloomburrow / LOTR / Tarkir draconic", () => {
+  it("is border black by default, design on top of Bloomburrow / LOTR / Tarkir draconic — and no ring is left", () => {
     expect(squareCornerKind("m15", "w", "tl")).toBe("border");
     expect(squareCornerKind("retro", "b", "br")).toBe("border");
-    for (const c of CORNER_NAMES) expect(squareCornerKind("bloomanime", "r", c)).toBe("root");
+    // The Bloomburrow anime, the last ring (root on every corner), left
+    // with TODO 4.11 / 4.35's layout v70: full-bleed art covers every
+    // corner (the art slot's, never listed). No entry is "root" today.
+    expect(SQUARE_CORNERS.bloomanime).toBeUndefined();
+    expect(Object.values(SQUARE_CORNERS).some((e) => (typeof e.kinds === "string" ? e.kinds === "root" : Object.values(e.kinds).includes("root")))).toBe(false);
     // The Avatar elemental left the rings with TODO 4.11 (layout v69): its
     // art runs into the top corners (the art slot's, never listed) and its
     // black footer into the bottom ones.
@@ -90,14 +94,17 @@ describe("the square-corner table", () => {
     ]);
     const full = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 };
     expect(squareCornerFills("fullartland", full, { left: "w", right: "w" })).toEqual([null, null, null, null]);
-    // (A ring: bloomanime — tarkirdragon left the rings with TODO 4.11, and
-    // avatar with its layout v69.)
-    expect(squareCornerFills("bloomanime", null, { left: "u", right: "r" })).toEqual([
-      ROOT_BACKDROP_RGB,
-      ROOT_BACKDROP_RGB,
-      ROOT_BACKDROP_RGB,
-      ROOT_BACKDROP_RGB,
-    ]);
+    // …and the Bloomburrow anime's full-bleed slot (layout v70: it was the
+    // last ring, #101015 at every corner).
+    expect(squareCornerFills("bloomanime", getFrameProfile("bloomanime").artSlot, { left: "u", right: "r" })).toEqual([null, null, null, null]);
+    // The "root" branch on a synthetic table (no ring is left since v70): a
+    // ring's every corner the root's #101015, a keyed entry on its key's half
+    // alone, an art corner still the art's.
+    const rings = { ring: { kinds: "root" as const }, half: { kinds: "root" as const, keys: ["b"] } };
+    expect(squareCornerFills("ring", null, { left: "u", right: "r" }, rings)).toEqual([ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB]);
+    expect(squareCornerFills("half", null, { left: "b", right: "w" }, rings)).toEqual([ROOT_BACKDROP_RGB, BORDER_BLACK_RGB, ROOT_BACKDROP_RGB, BORDER_BLACK_RGB]);
+    expect(squareCornerFills("ring", { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 50 }, { left: "u", right: "u" }, rings)).toEqual([null, null, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB]);
+    for (const c of CORNER_NAMES) expect(squareCornerKind("ring", "u", c, rings)).toBe("root");
     // A split's halves each answer for their own side (no entry is keyed by
     // colour since expeditionland's left with TODO 4.11 wave 1, so both
     // halves of its card are border black).

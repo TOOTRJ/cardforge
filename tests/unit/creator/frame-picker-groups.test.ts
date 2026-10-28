@@ -612,9 +612,20 @@ describe("the frame picker's groups: a classification change only", () => {
     for (const [key, template] of [["blb-295", "bloomburrow"], ["blb-316", "bloomburrow"], ["tla-338", "avatar"], ["tle-315", "avatar"]] as const) {
       expect(raw.imports[`all|${key}`], key).toMatchObject({ frame_template: template, match: ["exact", template, null] });
     }
+    // …and the Bloomburrow anime (BLB #343; TODO 4.11 / 4.35 layout v70): its
+    // border is true (one master in print's look) and its art full bleed, so
+    // it is EXACT once verified and lands on the standard frame (1.18:
+    // Scryfall's art_crop is the classic window) under every policy, the
+    // anime offered.
+    for (const policy of ["all", "prodPlusMoved", "prod"]) {
+      // Exact once verified ("all"); nearest where it isn't ticked (production).
+      expect(raw.imports[`${policy}|blb-343`], policy).toMatchObject({ frame_template: "m15", match: [policy === "all" ? "exact" : "nearest", "bloomanime", "m15"] });
+    }
+    expect(raw.imports["all|blb-343"]).toMatchObject({ plan: { options: ["m15*", "bloomanime", "bloomburrow"] } });
     expect(changed("imports")).toEqual([
       "all|blb-295",
       "all|blb-316",
+      "all|blb-343",
       "all|ltr-306",
       "all|ltr-482",
       "all|mul-1",
@@ -626,8 +637,8 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|tla-338", "all|tle-315",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
-      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
-      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
+      "prodPlusMoved|blb-343", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prod|blb-343", "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
     ]);
     // …and TODO 4.11 wave 1: a two-colour Expedition (ZNE #1 Flooded
     // Strand, white and blue) prints a split pinline the frame doesn't draw

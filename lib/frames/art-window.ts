@@ -607,7 +607,8 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   // and the showcase windows cut wider than their slots.
   // (4.11 struck avatar and bloomburrow, layout v69: their slots run to the
   // edges their windows reach, AVATAR_ART_SLOT / BLOOMBURROW_ART_SLOT.)
-  bloomanime: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card, the slot inset 2.5/3.5/93×92 (4.35)", maxMissPx: 116 },
+  // (…and bloomanime, layout v70: its slot is the whole card, full bleed
+  // as printed.)
   // (4.11 struck tarkirghostfire and tarkirdraconic, layout v68: the
   // ghostfire's painted ring closes its window to 78–1420 × 80–1884 px and
   // the draconic's slot covers its window and the dragons' gaps,

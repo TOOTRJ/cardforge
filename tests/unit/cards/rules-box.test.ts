@@ -136,6 +136,9 @@ describe("the main box on every template", () => {
         // …and the Avatar elemental and Bloomburrow woodland showcases
         // (layout v69): M15's box and margins on their MSE text boxes.
         "avatar", "bloomburrow",
+        // …and the Bloomburrow anime (layout v70): M15's margins in print's
+        // own rect (lines from x 128.5, the rect's 125 + 4).
+        "bloomanime",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });
