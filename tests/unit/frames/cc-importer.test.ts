@@ -238,6 +238,8 @@ describe("Card Conjurer recipe", () => {
       "modernland",
       // The Strixhaven Mystical Archive (TODO 4.11 wave 2; tests/unit/frames/mystical-archive-importer.test.ts).
       "mysticalarchive",
+      // The Theros constellation showcase (TODO 4.17f, layout v74; tests/unit/frames/nyx-showcase-importer.test.ts).
+      "nyx",
       // The 1997 frame (TODO 4.10a; tests/unit/frames/retro-1997-importer.test.ts).
       "retro",
       "retroland",

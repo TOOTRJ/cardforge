@@ -1,32 +1,32 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
+  NYX_CC_TEXT_BOX_ROWS,
+  NYX_CC_TYPE_BAR_ROWS,
   NYX_TEXT_BOX_ALPHA,
-  NYX_TEXT_BOX_ROWS,
   NYX_TYPE_BAR_ALPHA,
   NYX_TYPE_BAR_ROWS,
   toneNyxMaster,
 } from "@/scripts/lib/nyx-tone.mjs";
+import { bucketMaster, haveBucketMasters } from "../../stubs/bucket-masters";
 
 // ---------------------------------------------------------------------------
-// Nyx's type bar and text box (TODO 4.17e, layout v37): MSE's Theros
-// constellation masters paint both flat black at 50 %, which since v35 (the
-// art under the whole bar and box) let half the art through, where the THB
-// constellation prints (#258 / #259 / #268) let 0.36–0.46 through the bar and
-// 0.28–0.39 (mean 0.33) through the box. The masters' black is α 150 on the
-// bar and α 171 in the box now; scripts/build-variation-frames.mjs rebuilds
-// them that way from MSE's sources (the committed pixels are its output).
+// Nyx's type bar and text box (TODO 4.17e, layout v37): the constellation
+// masters paint both flat black at 50 %, which since v35 (the art under the
+// whole bar and box) let half the art through, where the THB constellation
+// prints (#258 / #259 / #268) let 0.36–0.46 through the bar and 0.28–0.39
+// (mean 0.33) through the box. The masters' black is α 150 on the bar and
+// α 171 in the box. Since TODO 4.17f (layout v74) the masters are Card
+// Conjurer's 'Nyx Showcase' in the frames bucket, toned by the importer's
+// recipe step on the pack's rows (NYX_CC_*_ROWS); these read the published
+// objects (FRAMES_BUILD_DIR at the manifest's sha256) and skip without them.
 // ---------------------------------------------------------------------------
 
 const KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
+const HAVE = haveBucketMasters(KEYS.map((key) => `nyx/${key}.png`));
 
 async function master(key: string) {
-  const { data, info } = await sharp(readFileSync(join(process.cwd(), "public/frames/nyx", `${key}.png`)))
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(bucketMaster(`nyx/${key}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const at = (x: number, y: number) => {
     const i = (y * info.width + x) * 4;
     return [data[i], data[i + 1], data[i + 2], data[i + 3]];
@@ -45,38 +45,41 @@ async function master(key: string) {
   return { data, info, at, count };
 }
 
-describe("nyx's type bar and text box (4.17e)", () => {
-  it("let the prints' share of the art through, in black, on every colour — none of MSE's 50 % is left", async () => {
+describe.skipIf(!HAVE)("nyx's type bar and text box on the published masters (4.17e, 4.17f)", () => {
+  it("let the prints' share of the art through, in black, on every colour — none of the pack's 50 % is left", async () => {
     expect(NYX_TYPE_BAR_ALPHA).toBe(150);
     expect(NYX_TEXT_BOX_ALPHA).toBe(171);
+    // The pack's rows: the bar's black 1193–1290, the box's 1315–1929.
+    expect(NYX_CC_TYPE_BAR_ROWS).toEqual([1175, 1305]);
+    expect(NYX_CC_TEXT_BOX_ROWS).toEqual([1305, 2100]);
     for (const key of KEYS) {
       const { info, at, count } = await master(key);
       expect([info.width, info.height], key).toEqual([1500, 2100]);
-      // The box's interior (1328–1935 × 120–1380 px on the master).
-      for (const y of [1350, 1500, 1700, 1900]) {
+      // The box's interior (1321–1929 × 120–1380 px on the master).
+      for (const y of [1340, 1500, 1700, 1920]) {
         for (const x of [200, 750, 1300]) expect(at(x, y), `${key} box ${x},${y}`).toEqual([0, 0, 0, 171]);
       }
-      // The type bar's (1200–1294 × 104–1396 px).
-      for (const y of [1210, 1250, 1290]) {
+      // The type bar's (1193–1290 × 104–1396 px).
+      for (const y of [1200, 1240, 1285]) {
         for (const x of [200, 750, 1200]) expect(at(x, y), `${key} bar ${x},${y}`).toEqual([0, 0, 0, 150]);
       }
-      // Every pixel of MSE's black changed: 122,130 on the bar, 766,082 in
-      // the box, on every master.
-      const mse = (a: number) => a === 127 || a === 128;
-      expect(count(NYX_TYPE_BAR_ROWS[0], NYX_TYPE_BAR_ROWS[1], mse), `${key} bar at 50 %`).toBe(0);
-      expect(count(NYX_TEXT_BOX_ROWS[0], NYX_TEXT_BOX_ROWS[1], mse), `${key} box at 50 %`).toBe(0);
-      expect(count(NYX_TYPE_BAR_ROWS[0], NYX_TYPE_BAR_ROWS[1], (a) => a === 150), key).toBeGreaterThanOrEqual(122_130);
-      expect(count(NYX_TEXT_BOX_ROWS[0], NYX_TEXT_BOX_ROWS[1], (a) => a === 171), key).toBeGreaterThanOrEqual(766_082);
-      // The opaque frame line between them and the art window are untouched.
-      expect(at(750, 1311)[3], `${key} line`).toBe(255);
+      // Every pixel of the pack's 50 % black changed (above the corner arcs,
+      // whose cut leaves α 128 specks on the last rows).
+      const half = (a: number) => a === 127 || a === 128;
+      expect(count(NYX_CC_TYPE_BAR_ROWS[0], NYX_CC_TYPE_BAR_ROWS[1], half), `${key} bar at 50 %`).toBe(0);
+      expect(count(NYX_CC_TEXT_BOX_ROWS[0], 1950, half), `${key} box at 50 %`).toBe(0);
+      expect(count(NYX_CC_TYPE_BAR_ROWS[0], NYX_CC_TYPE_BAR_ROWS[1], (a) => a === 150), key).toBeGreaterThanOrEqual(122_000);
+      expect(count(NYX_CC_TEXT_BOX_ROWS[0], NYX_CC_TEXT_BOX_ROWS[1], (a) => a === 171), key).toBeGreaterThanOrEqual(769_000);
+      // The opaque rim between them and the art window are untouched.
+      expect(at(750, 1308)[3], `${key} line`).toBe(255);
       expect(at(750, 600)[3], `${key} window`).toBe(0);
     }
-  }, 30_000);
+  }, 60_000);
 
   it("refuses to tone a master twice", async () => {
     const { data, info } = await master("w");
     const copy = Buffer.from(data);
-    expect(() => toneNyxMaster(copy, info.width, info.height)).toThrow(/already toned/);
+    expect(() => toneNyxMaster(copy, info.width, info.height, { barRows: NYX_CC_TYPE_BAR_ROWS, boxRows: NYX_CC_TEXT_BOX_ROWS })).toThrow(/already toned/);
     expect(copy.equals(data)).toBe(true);
   });
 });

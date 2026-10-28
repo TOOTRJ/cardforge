@@ -3687,3 +3687,40 @@ describe("v71 — flavour text's upright `*…*` spans (owner 2026-10-28)", () =
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v70 reads as a sweep of every card").toBe(false);
   });
 });
+
+describe("v74 — the adventure's left-page paper and the Nyx Constellation's lower half on their prints (TODO 4.26a + 4.17f)", () => {
+  // Renumbered with ADVENTURE_NYX_LAYOUT_VERSION at merge (taken as v74 at PR
+  // time: v72 is #626's, v73 a rendering PR's).
+  const V = 74;
+  const SCOPE = ["adventure", "nyx"];
+  it("is a sweep, never a badge, scoped to `adventure` and `nyx`; verification stales `nyx` alone", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ADVENTURE_NYX_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ADVENTURE_NYX_TEMPLATES]).toEqual(SCOPE);
+    // The adventure's masters change their paper only (no slot moves: its
+    // ticks stay fresh); the nyx type band moves (a tick — none yet — re-opens).
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["nyx"]);
+    // A bake one version older owes it on the two templates alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+    // Prepare reads the adventure masters' BARS, which do not change: not in scope.
+    expect(isRenderStale(V - 1, "prepare", undefined, V)).toBe(false);
+  });
+
+  // v72 (#626) and v73 are not on this branch. A version with no rollout and
+  // no scope reads as a SWEEP OF EVERY CARD, so v74 must never ship over that
+  // gap: at merge this bump takes the next free number. This test is
+  // EXPECTED to fail while the gap is there (it.fails) — once the gap closes
+  // (or the bump is renumbered onto the next free number) it passes, so
+  // it.fails turns it red: make it a plain it() then.
+  it.fails("ships only after v73: no gap below it (renumber at merge)", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v73 has no rollout yet: renumber this bump").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v73 reads as a sweep of every card").toBe(false);
+  });
+});

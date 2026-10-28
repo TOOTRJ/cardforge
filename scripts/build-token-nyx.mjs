@@ -19,7 +19,8 @@
 // The sources are local copies of the PUBLISHED masters, each sha256-checked
 // against lib/frames/frame-manifest.json (--masters, FRAMES_BUILD_DIR,
 // .frames-cache — scripts/frames-fetch.mjs — or .frames-build), and the
-// Magic Set Editor constellation master public/frames/nyx/b.png (git). The
+// Magic Set Editor constellation master scripts/frame-inputs/nyx-
+// constellation-mse-b.png (git; public/frames/nyx/b.png until 4.17f). The
 // output is gitignored: a master cut from a Card Conjurer-derived master
 // never enters git. Provenance → lib/cards/frame-sources.json.
 //

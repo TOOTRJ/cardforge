@@ -62,6 +62,12 @@ export const NYX_RIM_TONES = Object.freeze({
   r: Object.freeze({ from: Object.freeze([239, 56, 39]), to: Object.freeze([209, 77, 53]) }),
   g: Object.freeze({ from: Object.freeze([0, 123, 67]), to: Object.freeze([42, 108, 69]) }),
   m: Object.freeze({ from: Object.freeze([246, 210, 98]), to: Object.freeze([233, 212, 125]) }),
+  // Colourless (TODO 4.17f): the masters are Card Conjurer's 'Nyx Showcase'
+  // now, whose colourless frame is its 'Artifact Frame' — a SILVER rim
+  // (246,247,245) where MSE's `c` was bronze. No print is colourless; the
+  // rim takes MSE's bronze, the tone the constellation crown's `a` band was
+  // tinted to (Round 59), so crown and rim stay one metal.
+  c: Object.freeze({ from: Object.freeze([246, 247, 245]), to: Object.freeze([172, 148, 132]) }),
 });
 
 /** How the rim region is found: `flat` = the most a channel may differ from

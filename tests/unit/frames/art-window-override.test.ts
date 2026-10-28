@@ -20,9 +20,8 @@ import {
 // template paints, with CI's verdict, before the editor may save it.
 // Synthetic 1500 × 2100 masters cut to the Card Conjurer M15 window
 // (116–1384 × 238–1165, measured on every colour) and its opaque outline,
-// the real git nyx masters through the bake's own loader, and — where the
-// bucket masters are on disk at the manifest's sha (CI's FRAMES_BUILD_DIR) —
-// the real m15devoid ones.
+// and — where the bucket masters are on disk at the manifest's sha (CI's
+// FRAMES_BUILD_DIR) — the real m15devoid and nyx ones.
 // ---------------------------------------------------------------------------
 
 const W = 1500;
@@ -134,6 +133,23 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
     return fs.existsSync(file) && createHash("sha256").update(fs.readFileSync(file)).digest("hex") === manifest.files[rel]?.sha256 ? file : null;
   };
   const devoidOnDisk = ["w", "u", "b", "r", "g", "c", "m"].every((k) => onDisk(`m15devoid/${k}.png`));
+  // The nyx masters left git for the bucket with TODO 4.17f (Card Conjurer's
+  // 'Nyx Showcase'): the v34 slot ended at 81.2 % and the translucent text
+  // box showed #101015 below it — still refused on the new masters (their box
+  // 111–1389 × 1314–1937), v35's slot saved.
+  const nyxOnDisk = ["w", "u", "b", "r", "g", "c", "m"].every((k) => onDisk(`nyx/${k}.png`));
+  it.runIf(nyxOnDisk)("checks the real nyx masters (bucket): the v34 slot's seam is refused, v35's saved", async () => {
+    const real: MasterLoader = async (template, key) => {
+      const file = onDisk(`${template}/${key}.png`);
+      if (!file) return null;
+      const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      return { data, width: info.width, height: info.height };
+    };
+    expect(await artSlotOverrideRefusal("nyx", { artSlot: { heightPct: 70 } }, real)).toMatch(
+      /^The art slot leaves the nyx\/w frame's art window uncovered .*a translucent part of the frame 111–1389 × 1314–1937 px .*bottom 231\.8 px$/,
+    );
+    expect(await artSlotOverrideRefusal("nyx", { artSlot: { heightPct: 81.8 } }, real)).toBeNull();
+  });
   it.runIf(devoidOnDisk)("refuses the review's two m15devoid overrides on the real masters, and saves the code's slot", async () => {
     const real: MasterLoader = async (template, key) => {
       const file = onDisk(`${template}/${key}.png`);
@@ -180,11 +196,4 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
     );
   });
 
-  it("checks the real nyx masters through the bake's own loader (git masters): the v34 slot's seam is refused, v35's saved", async () => {
-    // The v34 slot ended at 81.2 %: the translucent text box showed #101015 below it.
-    expect(await artSlotOverrideRefusal("nyx", { artSlot: { heightPct: 70 } })).toMatch(
-      /^The art slot leaves the nyx\/w frame's art window uncovered .*a translucent part of the frame 110–1391 × 1319–1946 px .*bottom 240\.8 px$/,
-    );
-    expect(await artSlotOverrideRefusal("nyx", { artSlot: { heightPct: 81.8 } })).toBeNull();
-  });
 });

@@ -899,12 +899,15 @@ Rules and gotchas:
   other legendary showcase still imports with it off. Since v55 the
   masters' RIM wears the M15 FAMILY's tones (owner Rounds 59 / 61: print
   read per card against the same card's regular printing — never a raw
-  scan colour; `scripts/lib/nyx-frame.mjs`, `toneNyxRim` in
-  `build-variation-frames.mjs`: w b r g, blue's is MSE's own, gold onto the
-  gold crown's arm), so the untinted bands match it — crown = rim per key.
-  Geometry is not re-cut (the lower frame's 4–6 px: TODO.md).
-  `docs/FRAMES.md` "The constellation crown" and "The constellation frame
-  on its prints".
+  scan colour; `scripts/lib/nyx-frame.mjs` `toneNyxRim`: w b r g, blue's
+  is the pack's own, gold onto the gold crown's arm, colourless onto MSE's
+  bronze), so the untinted bands match it — crown = rim per key. Since
+  layout v74 (TODO 4.17f) the masters are Card Conjurer's 'Nyx Showcase'
+  in the frames BUCKET (never back in `public/frames/nyx`; `CC_TEMPLATES.nyx`,
+  the rim and v37's bar / box darkness as the importer's `masterPass`): its
+  lower half on print, never re-cut; the type band rides its bar.
+  `docs/FRAMES.md` "The constellation crown", "The constellation frame
+  on its prints" and "The constellation frame's lower half on print".
 - The station frame (`m15station`, `m15stationland`; TODO 4.27a): Edge of
   Eternities' Spacecraft (an artifact whose subtype says Spacecraft) and
   Planets (a land whose subtype says Planet) — `SUBTYPE_DRESSES`, the
