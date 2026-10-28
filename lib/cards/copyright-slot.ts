@@ -31,17 +31,14 @@ import { BRAND_MARK_GEOMETRY, brandMarkWidthPct, type CollectorMarkAnchor, type 
 import { displayTextWidthEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
 import { baseMasterKey } from "@/lib/cards/master-key";
-import { cardPx, slotInk, type CopyrightSlot, type FrameProfile } from "@/lib/cards/template-layout";
+import { slotInk, type CopyrightSlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { BRAND_FACE, slotFace, TEXT_DEFAULT_FACE, type TypeFace } from "@/lib/cards/type-faces";
 import type { FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 
 /** The mark's standard ink and shadow — the renderers' own (the border
- *  mark's and the collector slot's): 82 % white, a soft shadow 1 px down
- *  and 3 px wide at a 750 px card — in card-width px (cardPx, layout v73,
- *  TODO 3.5: 2 / 6 px at HD; it was a CSS 1 / 3 px at every size). The bake
- *  materialises it (bakeShadowCss). */
+ *  mark's and the collector slot's): 82 % white, a soft 1 px shadow. */
 export const BRAND_MARK_LIGHT_INK = "rgba(255,255,255,0.82)";
-export const BRAND_MARK_LIGHT_SHADOW = `0 ${cardPx(1)} ${cardPx(3)} rgba(0,0,0,0.8)`;
+export const BRAND_MARK_LIGHT_SHADOW = "0 1px 3px rgba(0,0,0,0.8)";
 
 export type CopyrightMarkInk =
   /** The standard white mark with its soft shadow. */

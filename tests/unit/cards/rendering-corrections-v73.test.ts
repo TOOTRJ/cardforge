@@ -21,7 +21,6 @@ import {
   shadowDrawsAsCopies,
   textShadowCopies,
 } from "@/lib/cards/template-layout";
-import { BRAND_MARK_LIGHT_SHADOW } from "@/lib/cards/copyright-slot";
 import { RULES_TEXT } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
@@ -173,7 +172,6 @@ describe("3.5 / 3.25 — shadows as card-width fractions, an outline as copies",
     expect(bakeShadowCss(`-${cardPx(1)} 0 0 #000`, 2100)).toBe("-2.8px 0 0 #000");
     // Any other length is left as it is.
     expect(bakeShadowCss("0.06em 0.06em 0 #000", 1500)).toBe("0.06em 0.06em 0 #000");
-    expect(BRAND_MARK_LIGHT_SHADOW).toBe("0 0.13333cqw 0.4cqw rgba(0,0,0,0.8)");
   });
 
   it("draws OUTLINE_SHADOW as four copies, in px at the card's width — and its text alone carries it", () => {

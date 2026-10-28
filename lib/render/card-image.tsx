@@ -1731,9 +1731,7 @@ function CardImage({
             fontWeight: 600,
             letterSpacing: "0.02em",
             color: "rgba(255,255,255,0.82)",
-            // Card-relative (layout v73, TODO 3.5): the collector slot's
-            // shadow, in px at this width.
-            textShadow: bakeShadowCss(BRAND_MARK_LIGHT_SHADOW, width),
+            textShadow: "0 1px 3px rgba(0,0,0,0.8)",
             // On the art (BRAND_MARK_ON_ART): a dark pill behind it — the
             // preview's twin (brandMarkPillStyle).
             ...(markLayout.pill ? brandMarkPillBake(markLayout.scale, width) : {}),

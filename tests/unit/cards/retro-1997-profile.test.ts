@@ -194,9 +194,7 @@ describe("the 1997 footer — the centred two lines of Exodus 1998 on", () => {
       expect(copyrightSlotLayout(retro, `${key}-legendary`, { kind: "display" })).toEqual(layout);
     }
     expect(BRAND_MARK_LIGHT_INK).toBe("rgba(255,255,255,0.82)");
-    // 1 px down, 3 px wide at a 750 px card, in card-width px (cardPx,
-    // layout v73 — TODO 3.5: 2 / 6 px at HD).
-    expect(BRAND_MARK_LIGHT_SHADOW).toBe("0 0.13333cqw 0.4cqw rgba(0,0,0,0.8)");
+    expect(BRAND_MARK_LIGHT_SHADOW).toBe("0 1px 3px rgba(0,0,0,0.8)");
     // The whole mark stays on the frame: its ink ends above the frame's
     // bottom edge (2019 px), inside the footer strip.
     const mark = copyrightSlotLayout(retro, "r", { kind: "display" })!;
