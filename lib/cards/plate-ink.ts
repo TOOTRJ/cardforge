@@ -68,6 +68,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // scroll P/T (435 × 266), drawn at the pack's ptBounds — the rolled
   // parchment with its curls, none of the soft shadow round it.
   "/frames/lotrscroll/pt/{color}.png": { left: 0.1425, top: 0.1992, right: 0.9472, bottom: 0.9286 },
+  // The Strixhaven Mystical Archive's plates (TODO 4.11 wave 2): Card
+  // Conjurer's 'Mystical Archive (STA)' P/T (424 × 213), drawn at the pack's
+  // ptBounds — the plate fills the image all but its 1–2 px soft rim.
+  "/frames/mysticalarchive/pt/{color}.png": { left: 0.0023, top: 0.0093, right: 0.9977, bottom: 0.9907 },
   // The Lord of the Rings ring's plates (TODO 4.11): Card Conjurer's ring
   // P/T (268 × 134), drawn at the pack's ptBounds — the bevelled plate with
   // its rim, none of the soft shadow left of and under it.

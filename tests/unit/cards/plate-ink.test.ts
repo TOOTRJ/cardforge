@@ -30,6 +30,7 @@ const manifest = manifestJson as { files: Record<string, { sha256: string; hash:
  * every rules test in CI).
  */
 const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/frames/mysticalarchive/pt/{color}.png": { w: "7a5e94f5fe27", u: "3e33959df670", b: "18d4b9850f97", r: "c30ca59d9873", g: "ba3e8ec9d6d3", c: "0b9eb7c4583b", m: "6556509f1421" },
   "/frames/m15/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "aa94a0984a71", m: "21f2e51b2eac" },
   "/frames/m15artifact/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "82954026d022", m: "21f2e51b2eac" },
   "/frames/m15nyx/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "aa94a0984a71", m: "21f2e51b2eac" },

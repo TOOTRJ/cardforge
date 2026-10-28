@@ -544,6 +544,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // Showcase set families (popular recent sets).
   "lotr",
   "lotrscroll",
+  // The Strixhaven Mystical Archive showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Mystical Archive (STA)' pack, frames bucket): the gold
+  // ornament over edge-to-edge art of STA #1–63 (2021, English). An
+  // addition: no stored card sits on it.
+  "mysticalarchive",
   // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2, Card
   // Conjurer's 'Enchanting Tales' pack, frames bucket): the swirled
   // storybook frame of the bonus sheet WOT #1–63 (2023), borderless, the
@@ -734,6 +739,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   aftermath: "Aftermath",
   lotr: "Ring",
   lotrscroll: "Scroll",
+  // Set-relative: the picker prints "Strixhaven — Mystical Archive".
+  mysticalarchive: "Mystical Archive",
   // Set-relative: the picker prints "Wilds of Eldraine — Enchanting Tales".
   enchantingtales: "Enchanting Tales",
   avatar: "Elemental",
@@ -795,6 +802,7 @@ export const FRAME_SET_VALUES = [
   "tarkir",
   "dominariaunited",
   "multiverselegends",
+  "strixhaven",
   "newcapenna",
   "zendikarrising",
   "dnd",
@@ -822,6 +830,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   // Multiverse Legends Dominaria legends (MUL 2023) print too.
   dominariaunited: "Dominaria United",
   multiverselegends: "Multiverse Legends",
+  // The Strixhaven Mystical Archive (STA 2021).
+  strixhaven: "Strixhaven",
   newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
@@ -902,6 +912,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   aftermath: "m15",
   lotr: "lotr",
   lotrscroll: "lotr",
+  mysticalarchive: "strixhaven",
   enchantingtales: "eldraine",
   avatar: "avatar",
   bloomburrow: "bloomburrow",
@@ -999,6 +1010,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   // The Stained Glass showcase (DMU #287–368, MUL's Dominaria legends).
   dominariaunited: "showcase",
   multiverselegends: "showcase",
+  // The Strixhaven Mystical Archive (STA #1–63).
+  strixhaven: "showcase",
   // The Art Deco showcase (SNC #296–340, #361–405).
   newcapenna: "showcase",
   zendikarrising: "showcase",

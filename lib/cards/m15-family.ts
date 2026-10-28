@@ -130,6 +130,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Lord of the Rings scroll (TODO 4.11, CC's 'Scroll' pack, whose text
   // layout is the M15 pack's; layout v62): it joined WITH its bump.
   "lotrscroll",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2, CC's 'Mystical
+  // Archive (STA)' pack, the M15 pack's text layout on its own bars): a new
+  // template, no stored card — the family's sizes — so it joined without a
+  // bump.
+  "mysticalarchive",
   // …and the ring (TODO 4.11, CC's 'Ring' pack, the M15 pack's text layout
   // under a lower title bar; layout v65): it joined WITH its bump.
   "lotr",

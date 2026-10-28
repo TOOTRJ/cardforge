@@ -134,6 +134,26 @@ const RING_EDGES: EdgeContract = {
   left: { kind: "design" },
 };
 
+/** CC's 'Mystical Archive (STA)' pack (TODO 4.11 wave 2; measured on all
+ *  eight masters at 1500 × 2100, the 2 % band): the gold ornament α 1.00 to
+ *  the top edge — design, no border (STA #1–63 are borderless on print);
+ *  the art to the side edges but where the ornament reaches them (rows
+ *  0–298 the title block, 1137–1317 the type bar's ends, 1432–1512 the box's
+ *  side ornament, and from 1707 the footer's shoulders); the black footer
+ *  along the bottom. */
+const MYSTICAL_ARCHIVE_SIDE_EXCEPT: readonly (readonly [number, number])[] = [
+  [0, 14.3],
+  [54.1, 62.8],
+  [68.1, 72.1],
+  [81.2, 100],
+];
+const MYSTICAL_ARCHIVE_EDGES: EdgeContract = {
+  top: { kind: "design" },
+  right: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+  bottom: BORDER,
+  left: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+};
+
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
  * tests/unit/frames/edge-contract.test.ts fails for a template missing
@@ -313,6 +333,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the border's black (the folder starts below the top one and ends above
   // the bottom one).
   dossier: { top: BORDER, right: BORDER, bottom: BORDER, left: { kind: "design" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2
+  // (frames bucket): borderless — the ornament to the top edge, the art to
+  // the sides between its pieces, the black footer; the importer cuts the
+  // one card corner at the bottom only.
+  mysticalarchive: MYSTICAL_ARCHIVE_EDGES,
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
   // it — the swirled frame field to the top edge (design) and down the sides

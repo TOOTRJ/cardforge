@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 68 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 69 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
@@ -257,6 +257,13 @@ into `.frames-build/` — 68 templates today (`CC_TEMPLATES` in
   its artifact frame, the top corners kept square), its plates, its crown
   band (`lotrcrown`) and its own triangle stamp notch per key
   (`lotrholostamp`) ([The Lord of the Rings ring](#the-lord-of-the-rings-ring-411-layout-v65));
+- the Strixhaven Mystical Archive (4.11 wave 2, an addition):
+  mysticalarchive — the 'Mystical Archive (STA)' pack's eight frames whole
+  (2010 px, downscaled once; `c` its land frame, `a` its artifact frame),
+  toned onto print, its ten pair masters (the gold frame with the two
+  colours' lines), its plates and our own oval stamp notch
+  (`mysticalarchiveholostamp`); no crown ([The Strixhaven Mystical
+  Archive](#the-strixhaven-mystical-archive-411-wave-2));
 - the MUL Tarkir showcase (4.11, layout v67): tarkirdragon — the 'Tarkir'
   pack's six colour frames whole at its native 1500 px (`c` its artifact
   frame), the w and u wings toned onto print, its plates, its crown band
@@ -6128,6 +6135,178 @@ verified.
   (the stamp): w #6 / #1, u #26 / #25, b #37 / #27, r #41 / #40, g #63 /
   #52. `c` and `m` have no printing (documented nulls).
 
+### The Strixhaven Mystical Archive (4.11 wave 2)
+
+`mysticalarchive` — "Mystical Archive" in the Strixhaven set (`strixhaven`,
+showcase era): the gold ornament over edge-to-edge art of the Strixhaven
+Mystical Archive, STA #1–63 (2021, English) — 58 mono-colour and 5
+two-colour instants and sorceries, every one borderless, single-faced and
+on the 2015 frame, none legendary. Card Conjurer's 'Mystical Archive
+(STA)' pack (packMysticalArchive.js, `img/frames/mysticalArchive/`, 2010 ×
+2814 — its red frame 2693 × 3770), each master downscaled ONCE to 1500 ×
+2100, frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.mysticalarchive`, the `MA` block of `scripts/lib/cc-frames.mjs`).
+An ADDITION: a new template — no layout bump, no sweep, no badge; nobody
+can pick it until a colour is verified.
+
+**Not this frame** (both stay on `borderless/mystical-archive`, nearest on
+the borderless family, as before):
+
+- STA #64–126, the Japanese alternate art: a vertical name panel over the
+  art's left side and no title bar — another frame (Card Conjurer draws it
+  as its own SVG pack, 'Japanese Mystical Archive');
+- SOA #1–195, Secrets of Strixhaven's 2026 archive: the English run (#1–65)
+  wears the same ornament with the title bar and text box INVERTED — navy
+  boxes, white text (`frame_effects ∋ inverted`) — and #66–195 are its
+  Japanese runs (plain and 'silverscroll'). Card Conjurer has no pack for
+  it; MSE does.
+
+**Masters.** w u b r g m are the pack's colour frames whole; `a` its
+silver 'Artifact Frame' (FrameProfile.artifactMasterKeys { c: "a" }) and
+`c` its 'Land Frame' (c.png) — the scroll's split (#604), unprinted (no
+colourless STA card). Every pack file is ONE drawing: the masters differ
+only where the colour is — the colour lines inside the pack's 'Pinline'
+mask and the wide bands outside it (above and below the title bar,
+between the art and the type bar, the box's outer sides). The ornament
+runs to the card's TOP edge (design: the top corners kept square,
+`keepCorners`, as the ring's; square-corners.ts "frame"), the art shows at
+the side edges between the ornament's pieces, the footer is black: the
+edge contract `MYSTICAL_ARCHIVE_EDGES` (sides clear but rows 0–298, 1137–1317,
+1432–1512 and from 1707). The pack's 'Crown' band is not built: no print
+wears it (the run has no legendary card).
+
+**Two colours** (`twoColorMasters: ["split"]`, opt-in per card, imports
+with it on — `printsTwoColorFrame`, a 2015-frame printing): `<pair>` = the
+GOLD master with the first colour's frame through the 'Pinline' mask and
+the second's through 'Pinline (Right)' (x ≥ 827, a diagonal through the
+type bar's foot). Measured on the five two-colour prints (STA #59 Despark
+w|b, #60 Electrolyze u|r, #61 Growth Spiral g|u, #62 Lightning Helix r|w,
+#63 Putrefy b|g): the colour LINES split left / right, while the wide
+bands a mono card wears in its colour are the gold master's pale gold on
+both halves (Electrolyze row 82: blue only on the left bracket and arch,
+red on the right, gold between; row 1170: colour only at the bars' ends).
+A pair's stamp notch is its own key (the same black arch). A two-colour
+land (none printed) wears the same dress (`twoColorForLands`).
+
+**Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels off
+toned), the median of per-print medians on Scryfall PNGs at 1500 × 2100
+(≥ 250 ms apart; scans never committed): w on STA #1–11, u #12–23, b
+#24–35, r #36–47, g #48–58, the gold master on the five pairs #59–63. Each
+region is applied as the FILE loads (`MA_PRINT_TONES` through
+`MA_SOURCE_TONES`).
+
+- **Paper** (title bar, type bar, text box; ink left out): pack 238,220,157,
+  print 240,224,183 — toned (26 in blue); the yellower field above the
+  title bar comes with it (235,211,155 after, print 235,216,163).
+- **Gold** (the ornament's flat gold): 255,210,15 → 244,206,87 (72 in blue).
+- **The colour.** Every pack file paints its colour in two or three FLAT
+  SHADES, each in the colour lines (inside the 'Pinline' mask) and the
+  wide bands (outside it). Each shade × place is measured on the pixels of
+  that shade where the file differs from another colour's, eroded 6 px —
+  so a print's own black outlines, up to 5 px off the pack's, stay out (8
+  px moves no median more than 3 levels):
+
+  | Key | Shade (pack) | Line (print) | Band (print) |
+  |---|---|---|---|
+  | w | 247,246,245 / 243,241,231 / 184,177,170 | 241,237,244 / 233,227,225 / — | 241,237,245 / 233,227,225 / 160,139,141 |
+  | u | 4,119,192 / 0,96,144 / 0,72,113 | 32,94,184 / 21,64,136 / — | 30,91,181 / 22,68,144 / 20,53,113 |
+  | b | 47,52,48 / 100,100,101 / 72,71,73 | 61,57,54 / 118,115,124 / — | 60,55,54 / 118,116,126 / as drawn (71,67,74: 4 off) |
+  | r | 234,31,42 / 152,11,22 | 193,62,39 / 126,28,27 | 202,64,40 / 127,30,30 |
+  | g | 5,113,46 / 0,62,11 / 0,27,0 | 56,108,79 / 35,70,50 / — | 53,106,79 / 35,70,50 / 24,47,33 |
+  | m (the pairs' bands) | 240,228,140 / 245,212,80 / 158,128,34 | the band's | 235,218,142 / 203,173,70 / 133,109,42 |
+
+  A shade's region is the file's pixels NEAREST that shade (of its shades,
+  the outlines' black, the paper and the gold: an anti-aliased edge goes to
+  the closer) where the file differs from another colour's file, clipped
+  inside / outside the Pinline mask (the importer's `nearest` region and
+  `clip`). Shades with no zero-free gain (u's 0,96,144, g's 0,62,11 …) are
+  toned by LUMINANCE (`mode: "luma"`: each pixel to the print colour scaled
+  by its luminance against the shade's). A shade the lines never carry
+  takes its band tone there; `a` and `c` have no print and keep their
+  colour as drawn.
+- **The plates** (no print: the run has no creature) are the same shades
+  round the same paper face: each colour plate's shades take its colour's
+  band tones where it differs from another colour's plate, its paper and
+  gold the frame's where it is the same (so the gold plate's pale shade,
+  near the paper, keeps its own tone).
+- **The footer**: pack 0,0,0, print 6,7,4 — within 8: as drawn, true black.
+
+Checked independently (the review's method: our master's pixels at each
+target ± 2, eroded 7 px, against the same prints): every line and band
+within 2 levels of print but r's line, 6 in red — print's red lines are
+lighter on the title pieces than down the box's sides (~204 against ~185),
+one tone between them. (Until the review of #619 each place had ONE tone
+measured on the colour region eroded 4 px: the darker shades and the
+prints' outlines pulled every median 10–25 levels dark.)
+
+**Geometry as drawn.** Print's title bar sits 3–5 px higher than the
+pack's, its type bar 1 px lower, its text box 2–4 px lower with its foot
+7 px lower (row 1950 against 1943) and 4 px wider on the left. Every line
+crosses textured paper or ornament — never a flat zone — so nothing is
+re-cut; the slots are measured on print, each against its own line.
+
+**The art** runs under the frame edge to edge: the masters are see-through
+on 0–1500 × 253–1822 px on every key (CC's artBounds 0 / 0.1205 / 1 ×
+0.7539); the slot covers it with the art-window check's 0.05 % to spare,
+0–1500 × 251–1838 (`MYSTICALARCHIVE_ART_SLOT`; an AI picture asks 992 ×
+1056).
+
+**Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+family joined without a bump). Each measured on all 63 prints against our
+bakes of the same names, costs and texts:
+
+| Slot | Print | Ours before | Profile |
+|---|---|---|---|
+| Name baseline / pen | 184 / 129 | 189 / 131 | `dy` − 5 px, the band 2 px left (its right end kept) |
+| Cost row | outlined symbols 77 px across (a dark ring round a 71 px face), centred 1352.5 / 151.5, the last ring's right edge 1391 (q 1389–1394) | 70 px discs centred 1348 / 157 | the CC M15 disc 6 px higher, 4 px right (`costDy` −12.6, `costDx` 6 px): 1354 / 151 |
+| Type baseline / pen | 1261 / 128 | 1260 / 133 | the CC baseline + 1 px, the band 5 px left |
+| Set symbol | 1281–1383 × 1196–1280 | 1285–1383 × 1202–1280 | as M15 (the family's box) |
+| Rules block | first ink, last ink, first-ink x | +4, +4, +2 against print | M15's box 3 px up, 2 px left (then +1, +1, 0) |
+| Collector line 1 / 2, pen | 1993 / 2032, 98 | — | M15's slot (1994 / 2032, 99) |
+| Stamp | the arch's top 1911.7, its feet 658 / 846; the oval 687–813 × 1934–1995 | — | our arch and the 134 × 64 oval on 750 / 1964 |
+
+The P/T has no print (the run has no creature): the pack's plate at its
+ptBounds (1135 / 1848, 317 × 159), M15's digit box.
+
+**Opt-ins**, each as print shows it: the holofoil stamp (45 of the 63 —
+the rares and mythics — print the oval: "auto" = a rare or mythic, as on
+M15) through our own notch, `mysticalarchiveholostamp` — the pack draws no
+stamp, so the plain black arch print raises into the box's foot round the
+hologram (no rim) is PipGlyph's own drawing,
+`scripts/frame-inputs/mystical-archive-stamp-arch.svg`, its top edge
+measured column by column on the per-pixel median of the 45 stamped
+prints, the oval cut clear and ringed black by the importer; the 2015
+collector line on M15's rows. No crown.
+
+**Registry.** `borderless/mystical-archive/sta` (STA #1–63, borderless):
+`exact` on `mysticalarchive` once the card's colour is verified
+(`withVerification`), `nearest` until then (the request row logged); no
+gap. The import keeps the printing's real colours (a two-colour printing
+keeps both and wears the pair dress), names the stamp from
+`security_stamp` and the 2015 collector line. Every other printing's
+outcome is unchanged (the Japanese run and SOA stay
+`borderless/mystical-archive`).
+
+**Flagged, not built:**
+
+- Print sets its mana symbols in Card Conjurer's OUTLINE style (a pale
+  disc, the symbol in its colour, a dark ring, no shadow); no symbol style
+  draws that yet (`lib/cards/symbol-style.ts`) — the discs are the
+  family's, on print's centres.
+- Print's set symbol carries a black keyline; the keyrune glyph draws
+  none (as on every frame).
+- The picker tile shows the master over the tile's dark ground (no sample
+  art: `pickerSampleArt` is the owner's hand-picked list).
+- The SOA 2026 archive (navy boxes, white text) and the two Japanese runs
+  as frames of their own.
+
+**Combos to tick** (each has two references in `frame-references.json`):
+w (#1 Approach of the Second Sun, #10 Swords to Plowshares), u (#15
+Counterspell, #13 Brainstorm), b (#27 Demonic Tutor, #28 Doom Blade), r
+(#42 Lightning Bolt, #36 Chaos Warp), g (#50 Channel, #56 Regrowth), m
+(#62 Lightning Helix, #60 Electrolyze — the pair dress rides the `m` tick,
+V-A); `c` has no print.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -10555,12 +10734,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 87 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 88 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales and Dominaria United Stained Glass, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass and Strixhaven Mystical Archive, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

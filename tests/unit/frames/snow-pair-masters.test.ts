@@ -134,6 +134,8 @@ describe("declared and published", () => {
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // …and the Prepare frame since 4.26 (m15's two dresses with the page).
       "prepare",
+      // …and the Strixhaven Mystical Archive since 4.11 wave 2 (the gold frame with the two colours' lines).
+      "mysticalarchive",
       // …and the MKM dossier since 4.11 wave 2 (the pack's colour frames lerped).
       "dossier",
       // …and the Dominaria United stained glass since 4.11 wave 2 (the gold frame, the box split).

@@ -140,6 +140,9 @@ describe("the main box on every template", () => {
         // margins on the glass box (the run's lines from x 130–133), the box
         // 8.5 px shorter at each end on M15's centre.
         "stainedglass",
+        // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): M15's box
+        // and margins, the block 3 px up and 2 px left onto print's.
+        "mysticalarchive",
         // …and the Bloomburrow anime (layout v70): M15's margins in print's
         // own rect (lines from x 128.5, the rect's 125 + 4).
         "bloomanime",

@@ -82,14 +82,17 @@ function onDisk(rel: string): Buffer | null {
  *  tests/unit/frames/lotr-scroll-importer.test.ts, lotr-ring-importer.test.ts,
  *  tarkir-dragon-importer.test.ts, dnd-sourcebook-importer.test.ts and
  *  mkm-dossier-importer.test.ts; the Enchanting Tales' the pack's piece per
- *  colour, TODO 4.11 wave 2: enchanting-tales-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+ *  colour, TODO 4.11 wave 2: enchanting-tales-importer.test.ts — and the
+ *  Strixhaven Mystical Archive's, PipGlyph's own arch:
+ *  mystical-archive-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, mysticalarchiveholostamp: _archiveNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
 void _dndNotch;
 void _dossierNotch;
 void _etalesNotch;
+void _archiveNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

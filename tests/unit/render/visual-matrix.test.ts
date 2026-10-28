@@ -408,8 +408,9 @@ describe("visual-regression matrix", () => {
     // (the borderless land draws its pairs and no crown, 4.56: none there).
     const both = crowned.filter((c) => paired.includes(c));
     expect([...new Set(both.map((c) => c.template))].sort()).toEqual(PAIR_TEMPLATES.filter((t) => frameAnatomyOf(t).crown).sort());
-    // …and the old frames' (4.6h): pairs, no crown.
-    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland"]);
+    // …and the old frames' (4.6h): pairs, no crown — and the Strixhaven
+    // Mystical Archive's (4.11 wave 2: no legend prints on it).
+    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland", "mysticalarchive"]);
   });
 
   it("bakes the two-colour frame (TODO 4.6b) on every template that draws pairs, in each dress it draws", () => {

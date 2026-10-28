@@ -102,8 +102,9 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
     // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
     // …and TODO 4.11 wave 2's Enchanting Tales and Dominaria United
-    // Stained Glass (new templates: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(87);
+    // Stained Glass, and the Strixhaven Mystical Archive (new templates: no
+    // bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(88);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -187,11 +188,13 @@ describe("one M15-era display size (layout v32)", () => {
       // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
       // with theirs, v68; the Avatar elemental and Bloomburrow woodland the
       // CC M15 row with theirs, v69; the D&D Sourcebook and the MKM dossier,
-      // new templates, the CC M15 disc on their runs' rows.)
+      // new templates, the CC M15 disc on their runs' rows; the Strixhaven
+      // Mystical Archive the same.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "dndsourcebook" ||
         t === "dossier" ||
+        t === "mysticalarchive" ||
         t === "enchantingtales" ||
         t === "lotrscroll" ||
         t === "lotr" ||
@@ -466,6 +469,11 @@ describe("baselines (TextSlot.dy)", () => {
     // against the title bar, the 50 base prints' median), the type line 1 px
     // under the CC baseline (against the type bar).
     ["stainedglass", base.title - 4.5 / 1500, cc + 1 / 1500],
+    // The Strixhaven Mystical Archive (TODO 4.11 wave 2, a new template):
+    // M15's slots on the run's own lines — the name 5 px up (print's
+    // baseline 184, the 63 prints' median), the type line 1 px under the CC
+    // baseline (print's 1261).
+    ["mysticalarchive", base.title - 5 / 1500, cc + 1 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

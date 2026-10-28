@@ -345,6 +345,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // shorter at each end (the run's own) — it holds the level-up card,
       // not 1,200 characters.
       "stainedglass/main",
+      // 4.11 wave 2's Strixhaven Mystical Archive: M15's box, 3 px up.
+      "mysticalarchive/main",
     ],
     ["1200 chars"],
   ],

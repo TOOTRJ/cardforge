@@ -1697,6 +1697,10 @@ export function visualCases(): VisualCase[] {
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pair on an instant,
+  // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
+  // and flavour).
+  add("mysticalarchive", "instant", "wu", "long", { suffix: "@pair", row: pairStyle("mysticalarchive") });
   // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
   // per card — no stored card has the switch, so these are NEW cases, no
   // bump): the second part's colour on back_face.color_identity, its cost
@@ -2079,6 +2083,12 @@ export function visualCases(): VisualCase[] {
   add("dndsourcebook", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dndsourcebook", "auto", { rarity: "common" }) });
   add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
   add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's OVAL notch (our own
+  // black arch) — none on an uncommon (STA prints it on a rare or mythic
+  // only), on an instant and a sorcery as the run prints them, the HD bake.
+  add("mysticalarchive", "instant", "u", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("mysticalarchive", "auto", { rarity: "uncommon" }) });
+  add("mysticalarchive", "instant", "r", "long", { suffix: "@stamp", row: stampRow("mysticalarchive", "auto", { rarity: "rare" }) });
+  add("mysticalarchive", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("mysticalarchive", "auto", { rarity: "mythic" }) });
   // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
   // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
   // HD bake.
@@ -2544,6 +2554,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "dndsourcebook",
   // …and the MKM dossier's oval (TODO 4.11 wave 2: the pack's one piece).
   "dossier",
+  // …and the Strixhaven Mystical Archive's oval (TODO 4.11 wave 2: our own
+  // black arch, one piece under every key).
+  "mysticalarchive",
   // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
   "enchantingtales",
   // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
@@ -2562,6 +2575,8 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
   // one notch piece (a pair draws m's).
   "dossier",
+  // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pairs (its one arch).
+  "mysticalarchive",
   // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
   // own arch over its split box).
   "stainedglass",
@@ -3018,6 +3033,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the gold frame with
+  // the two colours' lines.
+  "mysticalarchive",
   // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
   // the box split.
   "stainedglass",

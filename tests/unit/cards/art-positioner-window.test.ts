@@ -123,6 +123,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
+  mysticalarchive: { front: [1500, 1587] },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): CC's artBounds, the
   // art under the whole frame from the title bar to the text box's foot.
   enchantingtales: { front: [1500, 1821] },

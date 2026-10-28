@@ -182,6 +182,7 @@ import {
   sourceTonesOf,
   nearRegionPlane,
   diffRegionPlane,
+  nearestRegionPlane,
   chromaRegionPlane,
   boxRegionPlane,
   capturePlane,
@@ -320,6 +321,50 @@ async function toneLoaded(src, data, w, h) {
   for (const [name, g] of Object.entries(tone.geom ?? {})) {
     const read = async (file) => rgba(await fetchCached(file), w, h);
     regions[name] = geomRegionPlane(await read(g.a), await read(g.b), w, h, g, g.minus ? await read(g.minus.a) : null, g.minus ? await read(g.minus.b) : null, data);
+  }
+  // A region CLIPPED (TODO 4.11 wave 2, the Mystical Archive): kept only
+  // inside a pack mask (`mask`), only outside one (`notMask`), and/or only
+  // where the file is the SAME as another pack file (`notDiff`, the
+  // complement of diffRegionPlane) — each read at the file's size.
+  // …or the pixels whose NEAREST of a list of colours is one of them (TODO
+  // 4.11 wave 2: the Mystical Archive's colour shades, each pack file
+  // painting two or three flat shades of its colour).
+  for (const [name, n] of Object.entries(tone.nearest ?? {})) regions[name] = nearestRegionPlane(data, w, h, n);
+  // A region CLIPPED (TODO 4.11 wave 2, the Mystical Archive): kept only
+  // inside a pack mask (`mask`), only outside one (`notMask`), only where
+  // the file DIFFERS from another pack file (`diff`) or is the SAME as it
+  // (`notDiff`), and/or only where the nearest of a list of colours is the
+  // one named (`nearestIs`) — each read at the file's size, once a file.
+  const loaded = new Map();
+  const raster = async (file) => {
+    if (!loaded.has(file)) loaded.set(file, await rgba(await fetchCached(file), w, h));
+    return loaded.get(file);
+  };
+  for (const [name, c] of Object.entries(tone.clip ?? {})) {
+    const plane = regions[name];
+    if (!plane) throw new Error(`${src}: clip names region ${name}, which the tone has not got`);
+    const keep = new Float64Array(w * h).fill(1);
+    if (c.mask) {
+      const m = await raster(c.mask);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= m[p * 4 + 3] / 255;
+    }
+    if (c.notMask) {
+      const m = await raster(c.notMask);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - m[p * 4 + 3] / 255;
+    }
+    if (c.diff) {
+      const d = diffRegionPlane(data, await raster(c.diff.file), w, h, c.diff);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= d[p] / 255;
+    }
+    if (c.notDiff) {
+      const d = diffRegionPlane(data, await raster(c.notDiff.file), w, h, c.notDiff);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= 1 - d[p] / 255;
+    }
+    if (c.nearestIs) {
+      const n = nearestRegionPlane(data, w, h, c.nearestIs);
+      for (let p = 0; p < w * h; p += 1) keep[p] *= n[p] / 255;
+    }
+    for (let p = 0; p < w * h; p += 1) plane[p] = Math.round(plane[p] * keep[p]);
   }
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
