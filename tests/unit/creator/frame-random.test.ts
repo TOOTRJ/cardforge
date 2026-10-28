@@ -5,6 +5,7 @@ import {
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { borrowedTypeWord, isBorrowedVariation } from "@/lib/creator/card-kinds";
 
 // Verified-keys fixtures — the gate is (template, colorKey) pairs exactly as
 // /admin/frame-compare publishes them.
@@ -205,6 +206,51 @@ describe("resolveGeneratedFrame — Nyx on a creature", () => {
   });
 });
 
+// TODO 4.11 wave 2 (owner 2026-10-27: "also creatures" = Enchantment
+// Creatures): the Enchanting Tales showcase is borrowed as Nyx is — an AI
+// pick gives it to a creature only when the design's type line says
+// Enchantment, and picking it writes the word.
+describe("resolveGeneratedFrame — Enchanting Tales on a creature", () => {
+  const verified = keys(["enchantingtales", "u"], ["m15", "u"]);
+  const face = (supertype: string | null) => ({
+    cardType: "creature",
+    supertype,
+    subtypes: ["Faerie"],
+    title: "Test Faerie",
+    rulesText: "",
+  });
+  const pick = (supertype: string | null, requested: "random" | "enchantingtales") =>
+    resolveGeneratedFrame({
+      cardType: "creature",
+      requested,
+      colorIdentity: ["blue"],
+      verifiedKeys: verified,
+      face: face(supertype),
+      random: () => 0,
+    });
+
+  it("offers it among a creature's frames, as a borrowed showcase that writes Enchantment", () => {
+    expect(frameChoicesForType("creature", verified).map((c) => c.template)).toContain("enchantingtales");
+    expect(isBorrowedVariation("creature", "enchantingtales")).toBe(true);
+    expect(borrowedTypeWord("creature", "enchantingtales")).toBe("Enchantment");
+    // The Enchantment kind wears it as its own: nothing is borrowed.
+    expect(borrowedTypeWord("enchantment", "enchantingtales")).toBeNull();
+  });
+
+  it("gives it to an Enchantment Creature, never to a plain or artifact one", () => {
+    expect(pick("Enchantment", "enchantingtales")).toBe("enchantingtales");
+    expect(pick("Legendary Enchantment", "enchantingtales")).toBe("enchantingtales");
+    expect(pick(null, "enchantingtales")).not.toBe("enchantingtales");
+    expect(pick("Artifact", "enchantingtales")).not.toBe("enchantingtales");
+    for (const supertype of [null, "Legendary", "Artifact"]) {
+      for (let i = 0; i < 50; i += 1) {
+        const r = resolveGeneratedFrame({ cardType: "creature", requested: "random", colorIdentity: ["blue"], verifiedKeys: verified, face: face(supertype), random: () => i / 50 });
+        expect(r, `${supertype} ${i}`).not.toBe("enchantingtales");
+      }
+    }
+  });
+});
+
 // TODO 0.26: the full-art basic land frame can't draw a nonbasic's rules, so
 // an AI-generated land only lands on it when the design is one basic land.
 describe("resolveGeneratedFrame — basic-only frames", () => {
@@ -268,6 +314,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "dndsourcebook",
     // The MKM dossier (TODO 4.11 wave 2): P/T only, like the rest.
     "dossier",
+    // The Enchanting Tales (TODO 4.11 wave 2): enchantment dress, P/T only.
+    "enchantingtales",
     // The OTJ Breaking News (TODO 4.11 wave 2): P/T only, like the rest.
     "breakingnews",
   ] as const;
@@ -285,9 +333,10 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
         resolveGeneratedFrame({ cardType: "battle", requested: template, colorIdentity: ["red"], verifiedKeys: verified, random: () => 0 }),
         template,
       ).toBe("battle");
-      // A creature still gets it.
+      // A creature still gets it — the Enchanting Tales an enchantment (a
+      // plain creature only borrows it as an Enchantment Creature, above).
       expect(
-        resolveGeneratedFrame({ cardType: "creature", requested: template, colorIdentity: ["red"], verifiedKeys: verified }),
+        resolveGeneratedFrame({ cardType: template === "enchantingtales" ? "enchantment" : "creature", requested: template, colorIdentity: ["red"], verifiedKeys: verified }),
         template,
       ).toBe(template);
     }

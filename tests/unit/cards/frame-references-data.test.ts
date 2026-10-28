@@ -129,6 +129,9 @@ const DOCUMENTED_NULLS = new Set([
   "lotr/c",
   "bloomburrow/c",
   "tarkirdragon/u", "tarkirdragon/b", "tarkirdragon/r", "tarkirdragon/g", "tarkirdragon/c",
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): WOT #1–63 prints no
+  // colourless and no multicoloured card.
+  "enchantingtales/c", "enchantingtales/m",
   "tarkirghostfire/u", "tarkirghostfire/b",
   // The transform land pair (TODO 5.1a): one master under every key, the
   // emblem's model — verified on c only (INR #287 / FIN #31).

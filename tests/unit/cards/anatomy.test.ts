@@ -513,6 +513,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "dndsourcebook",
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
     "dossier",
+    // …and the Enchanting Tales (4.11 wave 2): the pack's own oval piece per colour.
+    "enchantingtales",
     // …and the OTJ Breaking News (4.11 wave 2): the pack's one oval tab.
     "breakingnews"];
 

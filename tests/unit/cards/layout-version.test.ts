@@ -444,6 +444,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
+  // TODO 4.11 wave 2's Enchanting Tales.
+  "enchantingtales",
   // TODO 4.11 wave 2's OTJ Breaking News.
   "breakingnews",
 ];
@@ -486,6 +488,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
+  // TODO 4.11 wave 2's Enchanting Tales.
+  "enchantingtales",
   // TODO 4.11 wave 2's OTJ Breaking News.
   "breakingnews",
 ];
@@ -869,6 +873,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "dndsourcebook",
       // …and TODO 4.11 wave 2's MKM dossier: the same, no bump.
       "dossier",
+      // …and TODO 4.11 wave 2's Enchanting Tales: the same, no bump.
+      "enchantingtales",
       // …and TODO 4.11 wave 2's OTJ Breaking News: the same, no bump.
       "breakingnews",
     ];
@@ -3241,10 +3247,12 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // The MKM dossier (TODO 4.11 wave 2) was BORN on its run's own row too: a
     // new template, no bump (the CC M15 row 19 px lower, ending 38 px further
     // left with its name band).
+    // The Enchanting Tales (TODO 4.11 wave 2) was BORN on its run's own row:
+    // a new template, no bump (the CC M15 row 3 px further right).
     // …and the OTJ Breaking News (TODO 4.11 wave 2): the 70 px disc in a box
     // of its own in the masthead (costRect), its run's row.
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "dossier", "breakingnews"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "dossier", "breakingnews"];
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "dossier", "enchantingtales", "breakingnews"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "dossier", "enchantingtales", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);

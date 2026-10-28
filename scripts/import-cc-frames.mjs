@@ -181,6 +181,9 @@ import {
   chromaRegionPlane,
   boxRegionPlane,
   capturePlane,
+  fillRowsOutsideCut,
+  flattenNearToneRgba8,
+  solidifyRowsRgba8,
   toneSourceRegions,
   describeSourceTones,
   describeFileTones,
@@ -635,7 +638,10 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       // Whole blocks moved onto the prints through the flat zones between
       // them (TODO 4.21b: split's halves, battle's lower block) — it throws
       // when a zone isn't flat, so every moved pixel is the pack's.
-      if (def.shift && !landscape && (W !== outW || H !== outH)) {
+      // (A recipe whose shift names the WRITTEN master's rows says so —
+      // `shiftOnOutput`, TODO 4.11 wave 2: the Enchanting Tales pack is 2010
+      // px, its shift in the 1500 × 2100 master's rows, after the downscale.)
+      if (def.shift && !landscape && !def.shiftOnOutput && (W !== outW || H !== outH)) {
         throw new Error(`${template}/${key}: a portrait block shift names the ${outW}×${outH} master's rows; the pack is ${W}×${H}`);
       }
       if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
@@ -664,6 +670,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       const pieceFile = path.join(outDir, template, "holostamp", `${key}.png`);
       await writeCutout(piece, def.notch.box, pieceFile);
       console.log(`wrote ${path.relative(process.cwd(), pieceFile)} (+ .webp) ${def.notch.box.width}×${def.notch.box.height} at ${def.notch.box.x}, ${def.notch.box.y}: ${findings.kept} px kept`);
+    }
+    // Rows the pack leaves nearly solid made solid (TODO 4.11 wave 2: the
+    // Enchanting Tales top corners' translucent crease), before the cut.
+    if (def.solidRows && !isBuiltRecipe(def.colors[key])) {
+      const changed = solidifyRowsRgba8(master, outW, outH, def.solidRows);
+      console.log(`${template}/${key}: ${changed} px of rows ${def.solidRows.y0}–${def.solidRows.y1} made solid (α ≥ ${def.solidRows.minAlpha} → 255)`);
     }
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
@@ -1199,9 +1211,18 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     const placeAndCut = async (src) => {
       const file = await fetchCached(src);
       const meta = await sharp(file).metadata();
-      if (meta.width !== def.placeAt.width || meta.height !== def.placeAt.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${def.placeAt.width}×${def.placeAt.height} (the source moved?)`);
+      // A piece the pack draws at bounds other than its own size (TODO 4.11
+      // wave 2: the Enchanting Tales stamp, 306 × 176 at 229 × 132 of the
+      // 2010 px card) names its `nativeSize` and is resampled ONCE, straight
+      // to its HD box (placeAt, on a card of the HD size).
+      const native = def.nativeSize ?? def.placeAt;
+      if (meta.width !== native.width || meta.height !== native.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${native.width}×${native.height} (the source moved?)`);
+      if (def.nativeSize && (CW !== OUT_W || CH !== OUT_H || sourceTonesOf(src))) throw new Error(`${src}: a resampled piece is placed on the ${OUT_W}×${OUT_H} card, untoned`);
       // A toned piece (the LOTR ring's stamps, TODO 4.11), toned as it loads.
-      const canvas = placeOnCanvas(await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height), def.placeAt, CW, CH);
+      const loaded = def.nativeSize
+        ? await rgba(file, def.placeAt.width, def.placeAt.height)
+        : await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height);
+      const canvas = placeOnCanvas(loaded, def.placeAt, CW, CH);
       // (A pack drawn at HD — the ring, 4.11 — passes through unchanged: a
       // same-size Lanczos resize is the identity.)
       const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
@@ -1224,13 +1245,13 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     for (const key of def.keys) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
-        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${def.nativeSize ? `resampled once from ${def.nativeSize.width}×${def.nativeSize.height} (Lanczos)` : CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
         ...(def.clearAboveY !== undefined ? [`the rows above card row ${def.clearAboveY} cleared (the master's own page shows there)`] : []),
         ...(def.clearOutside !== undefined ? [`cleared outside card x ${def.clearOutside.x0}–${def.clearOutside.x1}, rows to ${def.clearOutside.y1} (the master's own flat ground shows there)`] : []),
         ...(def.blackoutCapturePx !== undefined
           ? [`the pack's capture (luma > ${def.capture.minLuma} in box x ${def.capture.x0}–${def.capture.x1}, rows ${def.capture.y0}–${def.capture.y1}) painted opaque ${def.fillRgb ? def.fillRgb.join(",") : "black"}, grown ${def.blackoutCapturePx} px`]
           : []),
-        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque ${def.fillRgb ? def.fillRgb.join(",") : "black"}`,
+        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent${def.blackoutPx ? `, the ${def.blackoutPx} px round it painted opaque ${def.fillRgb ? def.fillRgb.join(",") : "black"}` : " (no ring painted round it)"}`,
       ];
       if (dryRun) {
         console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -1274,6 +1295,19 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // (TODO 4.11 wave 2: a notch whose ground round the hologram is not
       // black — the Breaking News strip's charcoal — names it, `fillRgb`.)
       const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.fillRgb);
+      // A well flattened into its master's footer tone (TODO 4.11 wave 2:
+      // the Enchanting Tales piece's darker outer ring), alpha kept.
+      let wellNote = "";
+      if (def.wellTone) {
+        const { data: m, width: mw } = await notchMasterPixels(`${def.wellTone.master}/${key}`, key);
+        const o = (def.wellTone.at.y * mw + def.wellTone.at.x) * 4;
+        if (m[o + 3] !== 255) throw new Error(`${folder}/${key}: the footer tone at ${def.wellTone.at.x},${def.wellTone.at.y} is not opaque`);
+        const tone = [m[o], m[o + 1], m[o + 2]];
+        const flattened = flattenNearToneRgba8(piece, tone, def.wellTone.within);
+        const filled = fillRowsOutsideCut(piece, def.shape, cut, def.cutMarginPx, def.wellTone.footerFromRow, tone);
+        wellNote = `, well flattened into ${tone.join(",")} (${flattened} px; ${filled} px of rows ${def.wellTone.footerFromRow} on filled)`;
+        recipe[key].push(`the well flattened into ${def.wellTone.master}/${key}.png's footer tone ${tone.join(",")} (every pixel within ${def.wellTone.within} levels, alpha kept), and from row ${def.wellTone.footerFromRow} of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)`);
+      }
       // With the shape blacked out, the hologram check is the shape's own
       // (every pixel of it black or clear), not "nothing outside the ring".
       const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined || captureBlacked ? null : (captured ?? stamp), def.fillRgb);
@@ -1284,7 +1318,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
       await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
-      console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${box.width}×${box.height}: ${findings.opaque} opaque px, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, stamp shape outside α ≤ ${findings.stampOutside}`);
+      console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${box.width}×${box.height}: ${findings.opaque} opaque px, cut clear ${findings.cutClear}, ${def.blackoutPx ? `ring black ${findings.ringBlack}` : "no ring painted"}, stamp shape outside α ≤ ${findings.stampOutside}${wellNote}`);
     }
     for (const f of notchFailures) edgeFailures.push(f);
     provenance[folder] = {
@@ -1296,7 +1330,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       kind: "overlay",
       output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the ${def.triangle ? "triangle" : "oval"} region cut to transparent, webp q${WEBP.quality}`,
       colors: recipe,
-      cut: { ...(def.triangle ? { triangle: def.triangle } : { oval: def.oval }), marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: `the hologram capture inside the pack's ${def.triangle ? "triangle" : "oval"} — never published; the ring round the cut painted black` },
+      cut: { ...(def.triangle ? { triangle: def.triangle } : { oval: def.oval }), marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: `the hologram capture inside the pack's ${def.triangle ? "triangle" : "oval"} — never published${def.blackoutPx ? "; the ring round the cut painted black" : "; no ring painted round the cut"}` },
       ...(describeFileTones(notchSourceFiles(def)) ? { sourceTones: describeFileTones(notchSourceFiles(def)) } : {}),
       sourceFiles: notchSourceFiles(def),
       notes: def.notes,

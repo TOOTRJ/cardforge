@@ -4979,6 +4979,75 @@ const DOSSIER: FrameProfile = {
   },
 };
 
+// The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js, 2010 × 2814,
+// downscaled once; scripts/lib/cc-frames.mjs ETALES), the swirled storybook
+// frame of the bonus sheet WOT #1–63. An ADDITION: a new template, no stored
+// card. Borderless: the art runs under the whole frame from the title bar
+// down, to the side edges, and on under the translucent text box; dark name
+// and type ink on the light bars, WHITE rules on the box (print's), the
+// collector line in white on the colour's dark footer. Its text layout is
+// the M15 frame's at the family's sizes, measured on all 63 prints (Scryfall
+// PNGs at 1500 × 2100, each slot against the pack's own lines): the pack's
+// LOWER block is moved onto print by the importer (ETALES_LOWER_RECUT, 3 px
+// up), so the type line, the rules box, the plate, the stamp and the
+// collector line sit where print sets them; its TOP block is kept as drawn,
+// 3.5 px above print's, so the name and the cost row ride the pack's title
+// bar as print sets them on its own.
+/** The art slot: CC's artBounds (0 / 111, 1500 × 1821 px) — the window's
+ *  see-through rows (from 116 at the top-right shoulder) and the
+ *  translucent text box down to row 1928 (the box's moved foot), with the
+ *  art-window check's spare. */
+export const ENCHANTINGTALES_ART_SLOT: Rect = { topPct: (111 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (1821 / 2100) * 100 };
+/** The lower block's move onto print (scripts/lib/cc-frames.mjs
+ *  ETALES_LOWER_RECUT): what the pack places in it rides it. */
+const ENCHANTINGTALES_LOWER_DY_PX = -3;
+/** The pack's plate at its bounds (1535 / 2458, 373 × 206 of the 2010 ×
+ *  2814 card = 1145.5 / 1834.3, 278.4 × 153.7 px), 3 px up with the lower
+ *  block. No print draws one (the run has no creature). */
+const ENCHANTINGTALES_PLATE_RECT: Rect = {
+  topPct: (2458 / 2814) * 100 + (ENCHANTINGTALES_LOWER_DY_PX / 2100) * 100,
+  leftPct: (1535 / 2010) * 100,
+  widthPct: (373 / 2010) * 100,
+  heightPct: (206 / 2814) * 100,
+};
+/** The name 3.5 px above M15's band: print sets its baseline 88 px under
+ *  its title bar's top outline (188.5 against 100.5 px, all 63 prints), and
+ *  the pack draws that bar 3.5 px higher (97). Its pen is M15's (print's
+ *  ink from 132–133 px, ours 132). */
+const ENCHANTINGTALES_TITLE_DY_PX = -3.5;
+const ENCHANTINGTALES: FrameProfile = {
+  ...M15,
+  label: "Enchanting Tales",
+  // The CC M15 row (70 px discs, 78 pitch), 3 px further right: registered
+  // on all 63 prints' cost rows (36 at +3 / +3, 26 at +2 / +2 or +3 / +2,
+  // ours → print), its lift kept — print's row sits 2.5–3 px lower than the
+  // CC M15 row on a bar 3.5 px lower than the pack's.
+  ...CC_M15_COST,
+  costDx: CC_M15_COST_DX + 3 / 1500,
+  artSlot: ENCHANTINGTALES_ART_SLOT,
+  title: { ...M15.title, dy: M15.title.dy! + ENCHANTINGTALES_TITLE_DY_PX / 1500 },
+  // The type line on the CC baseline, where print sets it (1259–1260 px,
+  // all 63, ours 1259; its pen within a pixel), black on the light bar.
+  type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: INK_DARK },
+  // White on the translucent box, Card Conjurer's text rect (129 / 1316,
+  // 1242 × 604 px) 3 px up with the lower block: 1313–1917. Print's lines
+  // start at 132–133 px (ours 133) and its fullest boxes run 1313–1911.
+  rules: {
+    ...M15.rules,
+    rect: { leftPct: 8.6, topPct: ((1316 + ENCHANTINGTALES_LOWER_DY_PX) / 2100) * 100, widthPct: 82.8, heightPct: 28.75 },
+    colorHex: "#ffffff",
+  },
+  pt: {
+    ...M15.pt!,
+    // Card Conjurer's box (1605 / 2538 of 2010 × 2814, 0.1367 × 0.0372),
+    // 3 px up with the plate.
+    rect: { leftPct: (1605 / 2010) * 100, topPct: (2538 / 2814) * 100 + (ENCHANTINGTALES_LOWER_DY_PX / 2100) * 100, widthPct: 13.67, heightPct: 3.72 },
+    plateRect: ENCHANTINGTALES_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/enchantingtales/pt/{color}.png",
+  },
+};
+
 // The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2)
 // — Card Conjurer's 'Breaking News' pack (packBreakingNews.js, 2010 × 2814,
 // downscaled once; scripts/lib/cc-frames.mjs BREAKING_NEWS), the front page
@@ -6176,6 +6245,18 @@ export const DNDSOURCEBOOK_COLLECTOR: CollectorSlot = {
   line1BaselinePct: (1997.5 / 2100) * 100,
   line2BaselinePct: (2036 / 2100) * 100,
 };
+/**
+ * The collector line on the Enchanting Tales showcase (TODO 4.11 wave 2):
+ * M15's slot — the pen x, the brush column, the sizes, the © slot's right
+ * end — on the run's own rows in the colour's dark footer, registered on
+ * all 63 prints (ours → print, each line's ink): line 1 4 px and line 2 3 px
+ * above M15's slot (1993.5 / 2032) — 1990 / 2029.
+ */
+export const ENCHANTINGTALES_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1990 / 2100) * 100,
+  line2BaselinePct: (2029 / 2100) * 100,
+};
 
 /**
  * The holofoil stamp's notch on the black-bordered M15 family (TODO 4.9c):
@@ -6548,6 +6629,32 @@ export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/dndsourcebookholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The Enchanting Tales oval (scripts/lib/cc-frames.mjs
+ *  ETALES_STAMP_OVAL_PX: 688–815 × 1923–1987 px) — the PRINTS' hologram,
+ *  127 × 64 (the 45 stamped WOT #1–63 prints). */
+export const ENCHANTINGTALES_HOLO_STAMP_OVAL: Rect = { leftPct: (688 / 1500) * 100, topPct: (1923 / 2100) * 100, widthPct: (127 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch the piece raises into the box: its
+ *  top (1898 px) down to the box's moved foot (1928), over the piece's
+ *  666–837 px. */
+export const ENCHANTINGTALES_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (666 / 1500) * 100, topPct: (1898 / 2100) * 100, widthPct: (171 / 1500) * 100, heightPct: (30 / 2100) * 100 };
+/**
+ * The Enchanting Tales OVAL stamp notch (TODO 4.11 wave 2): the pack's
+ * 'Holo Stamp' per colour — the text box's bottom rim arched up over a well
+ * in the footer's own tone round the oval — resampled once to its HD box
+ * and placed on print (ETALES_NOTCH in scripts/lib/cc-frames.mjs: 173 × 101
+ * at 665, 1897 — with the master's lower block, 2 px right of CC's), its
+ * hologram oval cut clear for our oval art. The rares and mythics of the run
+ * print it (`security_stamp: oval`, 45 of 63), the uncommons don't: "auto" =
+ * a rare or mythic, as on M15. Keys: the masters' (c the white piece).
+ */
+export const ENCHANTINGTALES_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (665 / 1500) * 100, topPct: (1897 / 2100) * 100, widthPct: (173 / 1500) * 100, heightPct: (101 / 2100) * 100 },
+  assetPathTemplate: "/frames/enchantingtalesholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: ENCHANTINGTALES_HOLO_STAMP_OVAL, keepOut: ENCHANTINGTALES_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The Tarkir draconic showcase's oval (TODO 4.11): the prints' hologram
@@ -7889,6 +7996,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // dress (the ten pair masters: print's accents ramp from the first colour
   // to the second).
   dossier: { ...DOSSIER, overlays: [DOSSIER_CROWN, DOSSIER_HOLO_STAMP], collector: DOSSIER_COLLECTOR, twoColorMasters: ["split"] },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the stamp and the
+  // collector line, opt-in per card; no crown (none prints, the pack has
+  // none).
+  enchantingtales: { ...ENCHANTINGTALES, overlays: [ENCHANTINGTALES_HOLO_STAMP], collector: ENCHANTINGTALES_COLLECTOR },
   // The OTJ Breaking News showcase (TODO 4.11 wave 2): the crown, the oval
   // stamp and the collector line, opt-in per card, and the two-colour
   // "split" dress (the ten pair masters: print splits a two-colour page

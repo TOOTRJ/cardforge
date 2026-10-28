@@ -304,6 +304,21 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the border's black (the folder starts below the top one and ends above
   // the bottom one).
   dossier: { top: BORDER, right: BORDER, bottom: BORDER, left: { kind: "design" } },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
+  // it — the swirled frame field to the top edge (design) and down the sides
+  // above the art and beside the text box, the art to the side edges between
+  // them, the dark footer in the colour's own tone to the bottom edge
+  // (design: never held dark at the corner). Measured on all seven masters
+  // in the 2 % band: the art from row 469–470 on the left (the top-left swirl
+  // hangs lower) and 121–122 on the right, to 1382–1384 on both (the text box's
+  // shoulders).
+  enchantingtales: {
+    top: { kind: "design" },
+    right: { kind: "art", except: [[0, 5.8], [65.8, 100]] },
+    bottom: { kind: "design" },
+    left: { kind: "art", except: [[0, 22.4], [65.8, 100]] },
+  },
   // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Breaking News' pack, frames bucket): a borderless newspaper page — the
   // page to the top and side edges (design: its top corners the pack's

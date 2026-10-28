@@ -131,7 +131,7 @@ describe("the OTJ Breaking News imports", () => {
   });
 
   it("the AI's random pool reaches the frame only once it is verified in the card's colour", () => {
-    const pool = (cardType: string, verified: ReadonlySet<string>) => {
+    const pool = (cardType: "instant" | "creature", verified: ReadonlySet<string>) => {
       const picks = new Set<string | null>();
       for (let i = 0; i < 400; i += 1) {
         picks.add(resolveGeneratedFrame({ cardType, requested: "random", colorIdentity: ["red"], verifiedKeys: verified, random: () => i / 400 }));
@@ -139,7 +139,7 @@ describe("the OTJ Breaking News imports", () => {
       return picks;
     };
     const m15 = every("m15");
-    for (const cardType of ["instant", "creature"]) {
+    for (const cardType of ["instant", "creature"] as const) {
       expect(pool(cardType, m15).has("breakingnews"), cardType).toBe(false);
       expect(pool(cardType, new Set([...m15, frameComboKey("breakingnews", "w")])).has("breakingnews"), cardType).toBe(false);
       expect(pool(cardType, new Set([...m15, frameComboKey("breakingnews", "r")])).has("breakingnews"), cardType).toBe(true);

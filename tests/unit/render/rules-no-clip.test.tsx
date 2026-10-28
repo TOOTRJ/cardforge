@@ -336,6 +336,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "dndsourcebook/main",
       // 4.11 wave 2's MKM dossier: M15's box (a new template).
       "dossier/main",
+      // 4.11 wave 2's Enchanting Tales: Card Conjurer's text rect (604 px,
+      // 1313–1917) — it holds the run's fullest boxes, not 1,200 characters.
+      "enchantingtales/main",
       // 4.11 wave 2's OTJ Breaking News: the page's box between its rules
       // (1371–1895 px, 64 px shorter than M15's).
       "breakingnews/main",
