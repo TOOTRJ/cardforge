@@ -468,3 +468,235 @@ describe("a two-part card's parts on an edit", () => {
     });
   }
 });
+
+// TODO 3b.29 (owner 2026-10-13, found by #539's check): a card with a LEGACY
+// back — a stored `back_face` on a frame that draws no second face (a saga, a
+// plain M15 card) — was rebuilt from the form on every edit, so a title-only
+// edit dropped the back's `color_identity` (only a frame that draws a part
+// colour sends one), gave it the form's default `art_position`, and turned a
+// stored null or "" into an absent key. The row-diff of #524: an untouched
+// back the form cannot rebuild as stored is LEFT OUT of the update — the
+// action keeps the row's back as it is (an omitted `back_face` is "leave it
+// alone"). A back that round-trips (every second part above) still travels.
+describe("a legacy back on an edit (TODO 3b.29)", () => {
+  const LEGACY_BACK = {
+    title: "The Other Side",
+    cost: "{1}{B}",
+    card_type: "creature",
+    supertype: "Legendary",
+    subtypes: ["Spirit"],
+    rules_text: "Flying",
+    color_identity: ["black"],
+    power: "2",
+    toughness: "2",
+  };
+  const sagaWithLegacyBack = (back: Record<string, unknown> = LEGACY_BACK) =>
+    savedCard({
+      card_type: "enchantment",
+      supertype: null,
+      subtypes: ["Saga"],
+      power: null,
+      toughness: null,
+      flavor_text: null,
+      rules_text: "I — Draw a card.",
+      face_content: { v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "Draw a card." }] } },
+      frame_style: { finish: "regular", template: "saga" },
+      back_face: back,
+    });
+
+  it("a title-only edit of a saga leaves its legacy back out — the row keeps it", async () => {
+    renderForm("edit", sagaWithLegacyBack());
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.title).toBe("Another Name");
+    // Not null (that would clear it), not a rebuilt object: no key at all.
+    expect(payload).not.toHaveProperty("back_face");
+    expect(payload.rules_text).toBe("I — Draw a card.");
+  });
+
+  it("…and so does a title-only edit of a plain M15 card with one", async () => {
+    renderForm("edit", savedCard({ back_face: LEGACY_BACK }));
+    await type("title", "Another Name");
+    expect(await sentUpdate()).not.toHaveProperty("back_face");
+  });
+
+  it("a back stored with null and blank fields is left out too", async () => {
+    const sparse = { title: "Back", cost: null, rules_text: "", subtypes: [] };
+    renderForm("edit", sagaWithLegacyBack(sparse));
+    await type("title", "Another Name");
+    expect(await sentUpdate()).not.toHaveProperty("back_face");
+  });
+
+  it("a back the form rebuilds as stored still travels (main's payload)", async () => {
+    const whole = {
+      title: "Back",
+      cost: "{1}{B}",
+      card_type: "creature",
+      supertype: "Legendary",
+      subtypes: ["Spirit"],
+      rules_text: "Flying",
+      flavor_text: "Kept.",
+      power: "2",
+      toughness: "2",
+      loyalty: "3",
+      defense: "4",
+      artist_credit: "Bo Reed",
+      art_url: "https://example.com/back.png",
+      art_position: { focalX: 0.2, focalY: 0.8, scale: 1.7 },
+    };
+    renderForm("edit", sagaWithLegacyBack(whole));
+    await type("title", "Another Name");
+    expect((await sentUpdate()).back_face).toEqual(whole);
+  });
+
+  it("a card with no back still says null (nothing to keep)", async () => {
+    renderForm("edit", savedCard());
+    await type("title", "Another Name");
+    expect((await sentUpdate()).back_face).toBeNull();
+  });
+
+  // (#629's check) A save that changes nothing leaves `updated_at` alone, so
+  // no refresh moves the form's card key: the guard must not count a save
+  // that never SENT the back as one that changed it.
+  it("two saves with no refresh between: the back is left out both times", async () => {
+    renderForm("edit", sagaWithLegacyBack());
+    // (The card prop never changes here: no refresh lands, as after a save
+    // that leaves updated_at alone.)
+    await type("title", "First Name");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.updateCardAction.mock.calls[0][1]).not.toHaveProperty("back_face");
+    await type("title", "Another Name");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    const second = actions.updateCardAction.mock.calls[1][1] as Record<string, unknown>;
+    expect(second.title).toBe("Another Name");
+    expect(second).not.toHaveProperty("back_face");
+  });
+
+  // (#629's check, LOW) An EDITED back on a frame that draws no part colour
+  // keeps what the form never holds: its stored colour, and no default
+  // picture position it never had. Every field the form owns takes the
+  // form's value — an emptied one leaves the object, which clears it.
+  describe("an edited second part on a frame that draws no part colour (flip)", () => {
+    const FLIP_BACK = {
+      title: "Flipped",
+      card_type: "creature",
+      rules_text: "Flying",
+      power: "2",
+      toughness: "2",
+      color_identity: ["blue"],
+    };
+    const flip = () =>
+      savedCard({ frame_style: { finish: "regular", template: "flip" }, supertype: null, back_face: FLIP_BACK });
+    const flippedSide = async () => {
+      await goTo("Text & stats");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("tab", { name: /^Flipped side/ }));
+      });
+    };
+
+    it("keeps the stored colour and adds no art position", async () => {
+      renderForm("edit", flip());
+      await flippedSide();
+      await typeRich("back_face.rules_text", "Flying, vigilance");
+      // (`subtypes: []` is the form's "none", as the server's own default.)
+      expect((await sentUpdate()).back_face).toEqual({ ...FLIP_BACK, subtypes: [], rules_text: "Flying, vigilance" });
+    });
+
+    it("…and a field it emptied still clears", async () => {
+      renderForm("edit", flip());
+      await flippedSide();
+      await typeRich("back_face.rules_text", "");
+      const back = (await sentUpdate()).back_face as Record<string, unknown>;
+      expect(back.rules_text).toBeUndefined();
+      expect(back.color_identity).toEqual(["blue"]);
+      expect(back.art_position).toBeUndefined();
+    });
+  });
+});
+
+// TODO 3b.21 (owner 2026-10-28): Enter in a single-line field of the creator
+// never saves the card — a browser submits a form on Enter in a text input,
+// so the title, a stat, the tags… saved it whenever Save was enabled. One
+// rule at the form for every such input; Save is the button.
+describe("Enter in a single-line field does not save (TODO 3b.21)", () => {
+  const settle = () =>
+    act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+  it("in the title: the keydown is cancelled and nothing is sent — Save still saves", async () => {
+    renderForm("edit", savedCard());
+    await type("title", "Another Name");
+    expect(fireEvent.keyDown(field("title"), { key: "Enter" })).toBe(false);
+    await settle();
+    expect(actions.updateCardAction).not.toHaveBeenCalled();
+    expect((await sentUpdate()).title).toBe("Another Name");
+  });
+
+  it("in every single-line input of every step of a new card", async () => {
+    renderForm("create");
+    const stepTitles = Array.from(document.querySelectorAll("[title^='Go to ']"))
+      .map((el) => el.getAttribute("title")!)
+      .filter((title) => !/this (field|row)/.test(title));
+    let checked = 0;
+    for (const title of new Set(stepTitles)) {
+      await act(async () => {
+        fireEvent.click(screen.getAllByTitle(title)[0]);
+      });
+      const form = document.querySelector("form")!;
+      const inputs = Array.from(form.querySelectorAll("input")).filter(
+        (input) => !["button", "submit", "reset", "image", "checkbox", "radio", "file", "color", "range"].includes(input.type),
+      );
+      for (const input of inputs) {
+        expect(fireEvent.keyDown(input, { key: "Enter" }), `${title}: ${input.name || input.type}`).toBe(false);
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(5);
+    await settle();
+    expect(actions.createCardAction).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rules text's Enter to the rules editor: a new line, no save", async () => {
+    renderForm("edit", savedCard());
+    await goTo("Text & stats");
+    const rules = document.querySelector('[data-field="rules_text"]') as HTMLElement;
+    rules.focus();
+    const range = document.createRange();
+    range.selectNodeContents(rules);
+    range.collapse(false);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    await act(async () => {
+      fireEvent.keyDown(rules, { key: "Enter" });
+    });
+    // The editor's own line break, and no save.
+    expect(rules.querySelector("br[data-br]")).not.toBeNull();
+    await settle();
+    expect(actions.updateCardAction).not.toHaveBeenCalled();
+    // A line typed after it travels with the save.
+    rules.appendChild(document.createTextNode("Vigilance"));
+    await act(async () => {
+      fireEvent.input(rules);
+    });
+    expect((await sentUpdate()).rules_text).toBe("Haste\nVigilance");
+  });
+});
+
+// TODO 3b.28: a focused field never sits under the sticky Save bar or the
+// Face switch — the page's scroll padding follows their heights while the
+// creator is mounted (the bars' real heights are a browser's: here, 0).
+describe("the page's scroll padding under the creator's bars (TODO 3b.28)", () => {
+  it("is set while the creator is mounted and put back after", () => {
+    const html = document.documentElement;
+    html.style.scrollPaddingBottom = "";
+    const { unmount } = renderForm("edit", savedCard());
+    expect(html.style.scrollPaddingBottom).toBe("12px");
+    expect(html.style.scrollPaddingTop).toBe("calc(4.25rem + 12px)");
+    unmount();
+    expect(html.style.scrollPaddingBottom).toBe("");
+    expect(html.style.scrollPaddingTop).toBe("");
+  });
+});
