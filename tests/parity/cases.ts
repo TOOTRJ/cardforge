@@ -339,6 +339,9 @@ const PICKS: readonly Pick[] = [
   // The New Capenna Art Deco showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "sncartdeco/wub/creature-long@stamp-crown", why: "New Capenna Art Deco: CC's 'Golden Age' gold toned onto print, the art under the translucent bars and box (underFrameArt) beside the window's own layer, the crowned twin (the arch), our lifted-rim notch with our oval, white ink, the CC M15 row 8 px lower" },
   { from: "sncartdeco/u/creature-short@collector-2015", why: "New Capenna Art Deco: one gold master under a mono colour key, the pack's plate with white digits, the name 1 px up and the type line 4.5 px under the CC baseline, M15's collector line" },
+  // The Enchanting Tales showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "enchantingtales/u/enchantment-long@stamp", why: "Enchanting Tales: the art under the whole frame and its translucent box, white rules in CC's rect 3 px up with the moved lower block, the name riding the pack's bar, the CC M15 row 3 px right, the pack's oval notch per colour with our oval and no black ring" },
+  { from: "enchantingtales/g/creature-long@collector", why: "Enchanting Tales: the matrix's creature row (its primary kind; the renderers draw any card — the kind gate keeps the frame to Enchantment Creatures) on the pack's plate (3 px up), the 2023 collector line on the run's rows (1990 / 2029) in the colour's footer" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },

@@ -91,6 +91,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // ptBounds — the paper tag with its string hole fills the image but for
   // 3 px of its shadow on the left and 1 at the top.
   "/frames/dossier/pt/{color}.png": { left: 0.0076, top: 0.0051, right: 1, bottom: 1 },
+  // The Enchanting Tales showcase's plates (TODO 4.11 wave 2): Card
+  // Conjurer's six 'Power/Toughness' (499 × 276; c the white one), drawn at
+  // the pack's bounds — the plate and its curled tail fill the image to
+  // every edge.
+  "/frames/enchantingtales/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/avatar/pt/{color}.png": { left: 0.0037, top: 0.007, right: 0.9963, bottom: 0.993 },
   "/frames/bloomburrow/pt/{color}.png": { left: 0.0022, top: 0.0076, right: 0.9978, bottom: 0.9924 },

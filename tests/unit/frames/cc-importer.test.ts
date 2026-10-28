@@ -166,6 +166,8 @@ describe("Card Conjurer recipe", () => {
       // The MKM dossier showcase (TODO 4.11 wave 2; tests/unit/frames/mkm-dossier-importer.test.ts).
       "dossier",
       "emblem",
+      // The Enchanting Tales showcase (TODO 4.11 wave 2; tests/unit/frames/enchanting-tales-importer.test.ts).
+      "enchantingtales",
       // The Expeditions (TODO 4.11 wave 1; tests/unit/frames/expedition-importer.test.ts).
       "expeditionland",
       "expeditionlandbfz",

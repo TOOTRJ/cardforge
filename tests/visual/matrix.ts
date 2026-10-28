@@ -1369,6 +1369,9 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // colourless artifact creature on the one page (AFR #348 Iron Golem).
   ["dndsourcebook", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["dndsourcebook", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "5", toughness: "3" }],
+  // TODO 4.11 wave 2: the Enchanting Tales plate at its widest (an
+  // Enchantment Creature borrows the frame; no print has one).
+  ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2055,6 +2058,12 @@ export function visualCases(): VisualCase[] {
   add("dndsourcebook", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dndsourcebook", "auto", { rarity: "common" }) });
   add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
   add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
+  // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
+  // HD bake.
+  add("enchantingtales", "enchantment", "g", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("enchantingtales", "auto", { rarity: "uncommon" }) });
+  add("enchantingtales", "enchantment", "u", "long", { suffix: "@stamp", row: stampRow("enchantingtales", "auto", { rarity: "rare" }) });
+  add("enchantingtales", "enchantment", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("enchantingtales", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.11 wave 2: the MKM dossier's OVAL notch — none on an uncommon
   // (MKM prints it on a rare or mythic only), a gold legend's (MKM #368
@@ -2508,6 +2517,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "dndsourcebook",
   // …and the MKM dossier's oval (TODO 4.11 wave 2: the pack's one piece).
   "dossier",
+  // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
+  "enchantingtales",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

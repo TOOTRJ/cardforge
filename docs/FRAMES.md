@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 66 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 67 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
@@ -206,6 +206,12 @@ into `.frames-build/` — 66 templates today (`CC_TEMPLATES` in
   band (`dossiercrown`, the pairs lerped) and its oval stamp notch
   (`dossierholostamp`)
   ([The MKM dossier showcase](#the-mkm-dossier-showcase-411-wave-2));
+- the Enchanting Tales showcase (4.11 wave 2, an addition): enchantingtales
+  — the 'Enchanting Tales' pack's six frames (c the white one) downscaled
+  once, its lower block moved 3 px up onto the prints through flat zones,
+  its six plates and its oval stamp notch per colour
+  (`enchantingtalesholostamp`); no crown ([The Enchanting Tales
+  showcase](#the-enchanting-tales-showcase-411-wave-2));
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
@@ -5810,6 +5816,147 @@ can pick it until a colour is verified.
   (`TREATMENT_KINDS`: the pack has no land frame, and its pair masters are
   a spell frame's split, which a land never wears); offered only in a
   ticked colour, and the AI's random pool reaches it only there.
+### The Enchanting Tales showcase (4.11 wave 2)
+
+`enchantingtales` — "Enchanting Tales" in the Wilds of Eldraine set
+(`eldraine`, showcase era): the swirled storybook frame of the bonus sheet
+WOT #1–63 (2023) — 63 printings, every one borderless, single-faced and
+mono-coloured, every one an enchantment (seven Auras, Fraying Sanity's an
+Aura Curse, and Bitterblossom a Kindred Enchantment — all on the same frame;
+none needs a body of its own), none legendary, none a creature. NOT WOT
+#64–83 and their confetti-foil twins #84–103: the anime-style borderless
+reprints of twenty of the same cards (dark translucent boxes, no swirls;
+no `showcase` effect on Scryfall) are another design, not in the pack, and
+keep their landing. Card Conjurer's 'Enchanting Tales' pack
+(packEnchantingTales.js, `img/frames/enchantingTales/`, 2010 × 2814,
+downscaled ONCE with Lanczos as the scroll's), frames bucket only, through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.enchantingtales`, the
+`ETALES` block of `scripts/lib/cc-frames.mjs`). An ADDITION: a new template
+— no layout bump, no sweep, no badge; nobody can pick it until a colour is
+verified.
+
+- **Masters.** The pack's w u b r g and gold frames whole (gold has no
+  print: the run is mono-coloured); `c` is the WHITE frame (the pack draws
+  no colourless, artifact or land frame and no colourless card prints; the
+  white page is its own nearest neutral). Borderless as printed: the
+  swirled field runs to the top edge and down the sides above the art and
+  beside the text box, the art to the side edges between them (rows 469 /
+  121 to 1383 in the edge band, left / right), the dark footer in the
+  colour's own tone to the bottom edge — `design` top and bottom edges, all
+  four corners kept square (`keepCorners`, `lib/frames/square-corners.ts`
+  "frame") and cut round at render. Card Conjurer leaves a translucent
+  crease (α 200–254) along its own rounded top corners, and the gold
+  frame's swirls are near-opaque (α 228–254) across its whole top band
+  (3,136 px more, x 35–1480): rows 0–80 with α ≥ 128 are made solid in
+  their own colour (`ETALES_SOLID_ROWS`, 3,282 px on gold, 466–976 on the
+  others; no art reaches above row 111).
+- **The art** runs under the whole frame from the title bar down: see-
+  through across the card's width to the type bar and on under the
+  TRANSLUCENT text box (α 204 on w, 222 on the others; print shows the art
+  through it) to its foot — CC's artBounds, 0 / 111, 1500 × 1821
+  (`ENCHANTINGTALES_ART_SLOT`). The slot reaches the side edges but not the
+  top or bottom, so the frame is not edge-to-edge (`artReachesCardEdge`):
+  an import lands on it. Scryfall's `art_crop` of the run is the regular
+  626 × 457 window, so an imported picture fills the tall slot from its
+  centre.
+- **Geometry** (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart, all 63
+  read; scans never committed; every frame edge registered, print against
+  the pack): across, every bar edge within a pixel. Down, the pack's TOP
+  block (swirls, title bar) sits 3.5 px above print's (the bar's outlines
+  79 / 97 / 216 / 235 against 83 / 100.5 / 219.5 / 238.5) and its LOWER
+  block 3 px below (the type bar's 1171 / 1191 / 1302 against 1167 / 1188 /
+  1299, the box's rim 1932 against 1929, the footer's top 1950 against
+  1947). The lower block (rows 1163–1953) is moved 3 px UP through the two
+  FLAT zones round it — the see-through art rows 472–1162 and the footer's
+  rows 1954–2099, every row of each identical across the card on every key
+  (`ETALES_LOWER_RECUT`, `shiftBlocksRgba8`, byte for byte, after the
+  downscale: `shiftOnOutput`) — and now registers within a pixel. The top
+  block is kept as drawn: no flat zone lies above it (the swirls run to the
+  card's edge), so the name and the cost row ride the pack's bar.
+- **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels
+  off is toned): per colour, the median of the per-print medians over the
+  title bar, the type bar, the footer and the swirled field (ink left out
+  of the bars and footer) against the pack's over the same pixels — within
+  5 levels everywhere (`ETALES_PRINT_TONE`; e.g. blue's bars 150,196,227 →
+  150,195,227, footer 8,38,60 → 9,39,60, field 5,75,105 → 4,74,104).
+  Nothing is toned. The text box is translucent over the art: no raw median
+  to tone it by (the ghostfire's rule), so it keeps the pack's colour.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), measured on all 63:
+  - the name 3.5 px above M15's band (`ENCHANTINGTALES_TITLE_DY_PX`): print
+    sets its baseline 88 px under its title bar's top outline (188.5
+    against 100.5), on the pack's bar 3.5 px higher; its pen is M15's
+    (print's ink from 132–133 px, ours 132);
+  - the cost row: the CC M15 70 px disc, 3 px further right (`costDx`:
+    registered on every print's row, 36 at +3 and 26 at +2, ours → print),
+    its lift kept (print's row sits 2.5–3 px below the CC row on a bar
+    3.5 px lower than the pack's: on the pack's bar, within a pixel);
+  - the type line on the CC baseline (print's 1259–1260, ours 1259; its pen
+    within a pixel), dark;
+  - the rules WHITE on the box, in Card Conjurer's text rect 3 px up with
+    the lower block (129–1371 × 1313–1917; M15's margins inside it): print's
+    lines from x 132–133 (ours 133), its fullest boxes 1313–1911;
+  - the P/T: the pack's six plates at its bounds (1145.5 / 1831.3, 278.4 ×
+    153.7 px — 3 px up with the block; they fill their images,
+    `lib/cards/plate-ink.ts`) and CC's text box; no print draws one (the
+    run has no creature), and the frame dresses an Enchantment Creature
+    only as the constellation frame does.
+  Flagged, not changed: print's WOT set symbol is ~12 % larger than ours
+  (92 × 86 px against our 81 × 79 — WOT is not in the per-set printed-size
+  table, `lib/cards/set-symbol-prints.ts`, so our glyph takes the family's
+  ink fit; adding a set is its own bump); our rules glyphs run ~3 % wider
+  than print's (TODO 3.29b), so a full box steps down a size where print
+  keeps it.
+- **No crown.** The pack draws none and no printing of the run is
+  legendary: the template declares none.
+- **Stamp** (`ENCHANTINGTALES_HOLO_STAMP`,
+  `enchantingtalesholostamp/<key>.png`): the run's rares and mythics wear
+  the OVAL (`security_stamp: oval`, 45 of 63), its uncommons none — "auto"
+  is a rare or mythic, as on M15. The notch is the pack's per-colour 'Holo
+  Stamp' (`stamp/<k>.png`, 306 × 176 at stampBounds 229 × 132 of the 2010
+  card) — the text box's rim arched up over a well in the footer's own tone
+  — resampled ONCE straight to its HD box (171 × 99; the importer's
+  `nativeSize`) and placed ON PRINT at 666, 1898: 3 px up with the lower
+  block, 2 px right of CC's bounds (the 45 prints' arch runs 678–825, centre
+  751.5; ours now 676–826, 751), cut to a 173 × 101 box at 665, 1897. The
+  pack paints a capture of WotC's hologram in the well; the prints' oval
+  (688–815 × 1923–1987, 127 × 64) plus 2 px is cut clear and the importer
+  holds every lit pixel of the well inside the cut (`capture`, the ellipse
+  inscribed in its box: the box's corners hold the rim and the piece's
+  edge); NO black ring is painted round it (`blackoutPx` 0: print's well is
+  the footer's tone to the hologram's edge). The rules box keeps out of the
+  arch (666–837 × 1898–1928). Card Conjurer draws the well's outer
+  ellipse 4–8 levels darker than the footer with a light low-α fringe (a
+  faint line round the stamp that print does not have): the importer
+  flattens the well into the same key's footer tone and, below the box's
+  rim (card row 1948 on, the master's flat footer), makes every pixel of
+  the piece outside the cut that tone, opaque (`ETALES_WELL_TONE`,
+  `flattenNearToneRgba8`, `fillRowsOutsideCut`) — no line. Our own oval
+  bitmap carries its thin dark ring as everywhere.
+- **Collector line** (opt-in, `ENCHANTINGTALES_COLLECTOR`): M15's slot on
+  the run's rows, white in the colour's footer — line 1 at 1990 px, line 2
+  at 2029 (4 / 3 px above M15's; print's ink registered per line on all
+  63).
+- **Import** (`showcase/wot/enchanting-tales`, WOT #1–63, borderless):
+  exact on `enchantingtales` once the card's colour is verified
+  (`withVerification`), `nearest` on it until then (before: `nearest` on
+  the borderless spell frame, `borderless/showcase`), the request row
+  logged. No
+  gap: the run prints no two-colour, double-faced, crowned or creature
+  card. WOT #64–103 keep their landing. An import keeps the printing's real
+  `color_identity`; the 45 rares and mythics get the oval stamp, the
+  uncommons none; every printing the 2023 collector line.
+- **Kinds** (`TREATMENT_KINDS`): enchantment dress, like the
+  constellation frame — the Enchantment kind (Auras and Kindred included)
+  and an Enchantment Creature, which BORROWS it (`BORROWED_SHOWCASES`,
+  `BORROWED_TYPE_WORD` "Enchantment", owner 2026-10-27: picking it on a
+  creature writes the word; a random pick, a request by name or the import
+  chooser gives it to a creature only when its words say Enchantment — the
+  pack draws the plates for one).
+- **Verify** (`lib/cards/frame-references.json`): two prints per colour —
+  an uncommon (no stamp; an Aura on red and green) and a rare or mythic
+  (the stamp): w #6 / #1, u #26 / #25, b #37 / #27, r #41 / #40, g #63 /
+  #52. `c` and `m` have no printing (documented nulls).
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
@@ -10238,12 +10385,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 85 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 86 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco and MKM dossier, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier and Enchanting Tales, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

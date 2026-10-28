@@ -388,6 +388,13 @@ const TEMPLATES = {
     confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
     q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
   },
+  // The Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT
+  // #1–63 (#64–103 are the anime-style borderless reprints, another
+  // design). Mono-coloured enchantments only: no colourless or gold print.
+  enchantingtales: {
+    confirm: "WOT showcase — confirm the thumbnail is the swirled Enchanting Tales storybook frame (#1–63), not the anime-style borderless reprint (#64–103).",
+    q: (k) => (k === "c" || k === "m" ? null : `set:wot cn<=63 ${spellColor(k)}`),
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

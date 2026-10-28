@@ -188,6 +188,9 @@ describe("bake path = preview path", () => {
                                     : template === "dossier"
                                       ? // …and the MKM dossier's oval piece (4.11 wave 2).
                                         "dossierholostamp"
+                                    : template === "enchantingtales"
+                                      ? // …and the Enchanting Tales' (4.11 wave 2).
+                                        "enchantingtalesholostamp"
                                       : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
@@ -271,9 +274,10 @@ describe("bake path = preview path", () => {
     // woodland's 7 (4.11, v69), the Bloomburrow anime's 7 (4.11, v70), and
     // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
     // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
-    // pack's one oval piece under every key and pair), and the New Capenna Art
-    // Deco's 7 (4.11 wave 2, its lifted gold rim).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7);
+    // pack's one oval piece under every key and pair), and the Enchanting
+    // Tales' 7 (4.11 wave 2, the pack's piece per colour), and the New Capenna Art Deco's 7
+    // (4.11 wave 2, its lifted gold rim).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
