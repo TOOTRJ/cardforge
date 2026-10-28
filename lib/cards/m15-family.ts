@@ -151,6 +151,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // slots at the family's sizes, with their bump.
   "avatar",
   "bloomburrow",
+  // The Bloomburrow anime (TODO 4.11 / 4.35, one MSE master in print's look;
+  // layout v70): its own measured layout on M15's slots at the family's
+  // sizes, with its bump.
+  "bloomanime",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

@@ -257,14 +257,17 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   battle: ALL_BORDER,
   // The showcase families, declared as the treatment prints; each master's
   // transparent outer ring is 4.35's / 4.11's to fix.
+  // The Bloomburrow anime (BLB #343–355), since TODO 4.11 / 4.35 (layout
+  // v70): full-bleed art on three edges but where the strokes touch them
+  // (the top corners' flourishes; the sides' at the name box and the type
+  // line), and the footer MSE's border_pt_mask.png draws — a bar at least
+  // 108 px deep (at the P/T box, x 1343) that also climbs both sides from
+  // 75.24 % down.
   bloomanime: {
-    // MSE's source runs the image 0/0/100 × 91.6 (4.35): art on three
-    // edges over a bottom bar. The bar's reach up the sides is 4.35's to
-    // measure when it re-cuts the master.
-    top: { kind: "art" },
-    right: { kind: "art", except: [[80, 100]] },
-    bottom: { kind: "bar", depthPct: 8.4 },
-    left: { kind: "art", except: [[80, 100]] },
+    top: { kind: "art", except: [[2.9, 7.7], [92.2, 97.1]] },
+    right: { kind: "art", except: [[4, 10], [53.8, 58.8], [75.2, 100]] },
+    bottom: { kind: "bar", depthPct: 5.1 },
+    left: { kind: "art", except: [[3.9, 10.1], [53.6, 58.9], [75.2, 100]] },
   },
   // The ghostfire's black run, TDM #399–408: since TODO 4.11 (layout v68)
   // its MSE masters carry the black ring and footer MSE paints at render
@@ -398,10 +401,8 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
     keys: ["b"],
     why: "edges pass; corner: two α 0.97 specks just inside the arc (top-right, bottom-right), invisible",
   },
-  bloomanime: {
-    keys: "all",
-    why: "transparent outer ring + inset art slot 2.5/3.5/93×92 (4.35); corner: the bottom bar is transparent at the arc",
-  },
+  // (bloomanime left with TODO 4.11 / 4.35's layout v70: one master in
+  // print's look, its footer to the corner, full-bleed art.)
   // (avatar and bloomburrow, found by this check on 2026-09-26 — a
   // transparent outer band at the bottom and lower sides — left with TODO
   // 4.11's layout v69: their footers painted under the masters, their edges

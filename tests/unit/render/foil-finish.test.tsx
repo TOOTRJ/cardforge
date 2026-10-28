@@ -505,7 +505,7 @@ const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; he
     .join(" ");
 
 describe("foil backdrops — which frames have one", () => {
-  it("is exactly the six templates whose foil bakes FoilBackdropSheen changes", () => {
+  it("is exactly the five templates whose foil bakes FoilBackdropSheen changes", () => {
     // A frame that gains a rules backdrop changes its foil bakes, so it
     // needs a layout-version bump scoped to it — but for a NEW template no
     // card was ever baked on (4.33's borderless planeswalkers, which keep
@@ -519,7 +519,8 @@ describe("foil backdrops — which frames have one", () => {
       "m15tokenartifact",
       "m15borderlesspw",
       "m15borderlesspwtall",
-      "bloomanime",
+      // (bloomanime's 0.55 scrim left with TODO 4.11 / 4.35's layout v70:
+      // print's slate boxes are in its master.)
     ]);
     // The renderers read only the rules slot's.
     for (const t of FRAME_TEMPLATE_VALUES) {
@@ -558,7 +559,6 @@ describe("foil finish — rules backdrops in the preview", () => {
       ["m15pw", "creature"],
       ["m15token", "token"],
       ["m15tokenartifact", "token"],
-      ["bloomanime", "creature"],
     ] as const) {
       const p = getFrameProfile(template);
       const hex = p.rules.backdropHex!;

@@ -170,6 +170,27 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
         crownedShowcases += 1;
         continue;
       }
+      // …and the Bloomburrow anime (BLB #343–355, TODO 4.11 layout v70): its
+      // 12 creatures are legendary under the flourish above the name box —
+      // the anime frame's OWN crown: the import lands on the standard frame
+      // (1.18), where it stays OFF (a Legendary showcase's, Q6 → b), and it
+      // is ON when the card is put on the anime frame. #353 Ral, a walker,
+      // names none: the crown doesn't print on a planeswalker.
+      if (key === "blb-353") {
+        expect(patch.printed_crown, key).toBeUndefined();
+        continue;
+      }
+      if (/^blb-3(4[3-9]|5[0-2]|5[45])$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(patch.printed_crown, key).toBe(true);
+        expect(template, key).toBe("m15");
+        expect(ai.crown, key).toBe(false);
+        expect(creator.crown, key).toBe(false);
+        expect(importedAnatomy(patch, "bloomanime").style.crown, key).toBe(true);
+        expect(importedAnatomy(patch, "m15").style.crown, key).toBe(false);
+        crownedShowcases += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(legendary, key).toBe(true);
         expect(template, key).toBe("nyx");

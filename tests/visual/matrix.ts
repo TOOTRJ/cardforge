@@ -720,6 +720,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["tarkirdragon", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   // The Bloomburrow woodland's leaf crown (TODO 4.11, layout v69).
   ["bloomburrow", ["g", "u", "wu"]],
+  // …and the Bloomburrow anime's flourish (TODO 4.11 / 4.35, layout v70):
+  // one master, so one colour and a pair.
+  ["bloomanime", ["g", "wu"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -2473,6 +2476,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "tarkirdraconic",
   // …and the Bloomburrow woodland's (TODO 4.11, layout v69).
   "bloomburrow",
+  // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
+  "bloomanime",
   // …and the D&D Sourcebook's oval (TODO 4.11 wave 2: the pack's one piece).
   "dndsourcebook",
 ];

@@ -30,9 +30,10 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // master (opaque black, its corner cut transparent at 39 px — the pre-3.26
 // import — or at 64.5 px — 3.26's re-cut; the LANDSCAPE battle's 2100 × 1500
 // one cut at 64.5, as TODO 4.21b's importer cuts it) and clear masters for
-// the art-to-edge frames. modern, bloomanime (a ring; tarkirdragon until its
-// Card Conjurer masters, tarkirghostfire until its painted ring and avatar
-// until its footer, TODO 4.11) and tarkirdraconic
+// the art-to-edge frames. modern, bloomanime (full bleed since TODO 4.11 /
+// 4.35's layout v70 — it was the last ring; tarkirdragon until its Card
+// Conjurer masters, tarkirghostfire until its painted ring and avatar until
+// its footer, TODO 4.11) and tarkirdraconic
 // (design in its top corners) are git masters read from disk. The art is
 // one flat colour, so anything else where the art shows is something the
 // renderer drew.
@@ -346,9 +347,16 @@ describe("the bake's corner (TODO 3.26)", () => {
       for (const [x, y] of mirrors(0, 0)) expect(near(full.at(x, y), ART)).toBe(true);
     });
 
-    it("a ring (bloomanime): the root's #101015 outside the arc — its see-through band's colour, no #000 cap", () => {
-      const b = square.get("bloomanime")!;
-      for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) expect(b.at(x, y).slice(0, 3), `${x},${y}`).toEqual([...ROOT]);
+    it("the Bloomburrow anime (full bleed, layout v70): its art in the top corners and its footer in the bottom ones stay — it was the last ring, #101015 outside the arc", () => {
+      const sq = square.get("bloomanime")!;
+      const rd = round.get("bloomanime")!;
+      for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) {
+        expect(sq.at(x, y), `${x},${y}`).toEqual([...rd.at(x, y).slice(0, 3), 255]);
+        expect(sq.at(x, y).slice(0, 3), `${x},${y}`).not.toEqual([...ROOT]);
+      }
+      // The top corners show the art, the bottom ones the footer's 15,20,16.
+      expect(near(sq.at(0, 0), ART)).toBe(true);
+      expect(near(sq.at(0, -1), [15, 20, 16], 3)).toBe(true);
     });
 
     it("the landscape battle: the border black outside the arc, on the 2100 × 1500 card (it was a ring's #101015 on the MSE master)", () => {
@@ -388,7 +396,7 @@ describe("the bake's corner (TODO 3.26)", () => {
     // just past the corner box, whatever colour that band is (within a
     // scanned border's noise, ≤ 12 levels; #000 against a ring's #101015 is
     // 16–21).
-    it.each(["m15", "modern", "battle", "bloomanime"] as const)("%s: every filled corner matches the edge band beside it", (t) => {
+    it.each(["m15", "modern", "battle"] as const)("%s: every filled corner matches the edge band beside it", (t) => {
       const b = square.get(t)!;
       const past = Math.ceil(R) + 4;
       for (const [sx, sy] of [[1, 1], [-2, 1], [1, -2], [-2, -2]] as const) {
@@ -469,16 +477,18 @@ describe("the bake's corner (TODO 3.26)", () => {
       for (const [x, y] of mirrors(0, 0)) expect(flat.at(x, y).slice(0, 3)).toEqual([0, 0, 0]);
       const before = await decode(fitted);
       expect(flat.at(375, 525)).toEqual(before.at(375, 525));
-      // A ring's corners are its band's #101015.
-      const ring = await fitStoredRender(round.get("bloomanime")!.png, "default", false);
-      const ringFlat = await decode(await flattenStoredCorners(ring, squareCornerFillsOf(card("bloomanime"))));
-      for (const [x, y] of mirrors(0, 0)) expect(ringFlat.at(x, y).slice(0, 3)).toEqual([...ROOT]);
+      // A ring's corners are its band's #101015 — no ring is left since the
+      // Bloomburrow anime's layout v70, so the root fill is held on the m15
+      // bake with a ring's fills.
+      const rootFlat = await decode(await flattenStoredCorners(fitted, [[...ROOT], [...ROOT], [...ROOT], [...ROOT]]));
+      for (const [x, y] of mirrors(0, 0)) expect(rootFlat.at(x, y).slice(0, 3)).toEqual([...ROOT]);
+      expect(rootFlat.at(375, 525)).toEqual(before.at(375, 525));
     });
 
     // The free Square is the paid Square's twin: the stored round bake,
     // squared with the same fills, is the live square render pixel for pixel
     // (at the bake's own size — a free download is then downscaled 2×).
-    it.each(["m15", "modern", "battle", "bloomanime"] as const)("%s: the round bake squared = the live square render, at HD", async (t) => {
+    it.each(["m15", "modern", "battle"] as const)("%s: the round bake squared = the live square render, at HD", async (t) => {
       const [{ flattenStoredCorners }, { squareCornerFillsOf }] = await Promise.all([
         import("@/lib/render/stored-render"),
         import("@/lib/render/card-image"),

@@ -97,8 +97,9 @@ describe("one M15-era display size (layout v32)", () => {
     // their own bump, v68).
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
+    // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(82);
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(83);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -193,6 +194,7 @@ describe("one M15-era display size (layout v32)", () => {
         t === "tarkirghostfire" ||
         t === "avatar" ||
         t === "bloomburrow" ||
+        t === "bloomanime" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -427,6 +429,10 @@ describe("baselines (TextSlot.dy)", () => {
     // the type line the CC baseline (print's 1259–1260, ours 1260).
     ["avatar", base.title, cc],
     ["bloomburrow", base.title, cc],
+    // The Bloomburrow anime (layout v70): its own layout on M15's slots — the
+    // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
+    // type line the CC baseline (print's 1261, ours 1260).
+    ["bloomanime", base.title, cc],
     // The D&D Sourcebook (TODO 4.11 wave 2, a new template): M15's slots on
     // the page's own lines — the name 1.5 px up (42.5 px above the title
     // rule, the 127 prints' median), the type line 3 px under the CC
@@ -561,11 +567,12 @@ describe("baselines (TextSlot.dy)", () => {
     }
     // Only on masters from the frames bucket (Card Conjurer's), and only on
     // M15's type bar: not on the M15 base the MSE-framed spreads share.
-    // (The Avatar elemental and Bloomburrow woodland, layout v69, are MSE
-    // masters in git whose own type bars put print's baseline on the CC one:
+    // (The Avatar elemental and Bloomburrow woodland, layout v69, and the
+    // Bloomburrow anime, v70, are MSE masters in git whose own type bars put
+    // print's baseline on the CC one:
     // measured on TLA / BLB, not inherited from a CC master.)
     const ccTemplates = new Set(Object.keys(manifest.files).map((key) => key.split("/")[0]));
-    const MSE_ON_CC_BASELINE = new Set(["avatar", "bloomburrow"]);
+    const MSE_ON_CC_BASELINE = new Set(["avatar", "bloomburrow", "bloomanime"]);
     for (const t of M15_FAMILY_TEMPLATES) {
       if (Math.abs(getFrameProfile(t).type.dy! - cc) > 1e-12) continue;
       expect(ccTemplates.has(t) || MSE_ON_CC_BASELINE.has(t), t).toBe(true);
@@ -663,7 +670,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // tests/unit/cards/fixtures/profiles-base.json).
   const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
   const V31_DIGESTS: Record<string, string> = {
-    bloomanime: "86e5e9d3da194ee1ccfbe5e0654e1401024f303c54a0a912dee5e792d206705f",
   };
 
   // Layout v33 (TODO 3.29) gave every profile's rules box a named HD-px
@@ -720,7 +726,8 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     // re-source, layout v62 / TODO 4.11: off this list — and the ring with
     // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67,
     // and the Tarkir: Dragonstorm draconic and ghostfire with theirs, v68,
-    // and the Avatar elemental and Bloomburrow woodland with theirs, v69.)
+    // and the Avatar elemental and Bloomburrow woodland with theirs, v69,
+    // and the Bloomburrow anime with its own, v70.)
     const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland", "agclassic", "alphaland"]);
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());

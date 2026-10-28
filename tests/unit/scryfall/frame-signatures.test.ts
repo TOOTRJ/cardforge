@@ -15,6 +15,7 @@ import {
   TEMPLATES_WITHOUT_PRINTED_SIGNATURE,
   isBorderPending,
   isKnownFrameSignature,
+  setBorderPendingForTests,
   landFrameColorRule,
   registryCoversEveryTemplate,
   signatureDrawnOn,
@@ -147,10 +148,13 @@ describe("borderless families (TODO 1.17)", () => {
     // exact once verified — and the Bloomburrow woodland and the Avatar
     // elemental with their footers and title bar built into their masters
     // (TODO 4.11, layout v69; the colourless Arcane Signet, TLE #315, on the
-    // silver master).
+    // silver master), and the Bloomburrow anime with its one master in
+    // print's look (TODO 4.11 / 4.35, layout v70) — full bleed, so it lands
+    // on the standard frame (1.18: Scryfall's art_crop is the classic
+    // window), the anime frame offered.
     ["blb-295", "exact", "bloomburrow", undefined],
     ["blb-316", "exact", "bloomburrow", undefined],
-    ["blb-343", "nearest", "bloomanime", undefined],
+    ["blb-343", "exact", "bloomanime", "m15"],
     ["ltr-306", "exact", "lotr", undefined],
     ["tla-338", "exact", "avatar", undefined],
     ["tle-315", "exact", "avatar", undefined],
@@ -356,8 +360,10 @@ describe("borderless families (TODO 1.17)", () => {
       forGood: true,
     });
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
+    // (blb-343, the anime, was capped by its border, 4.35, until TODO 4.11 /
+    // 4.35's layout v70: exact now.)
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
-      blockedBy: "4.35",
+      status: "exact",
       exactLabel: "Bloomburrow anime showcase",
     });
   });
@@ -854,8 +860,9 @@ describe("the general signatures (TODO 1.4)", () => {
       blockedBy: "4.30",
       reason: "PipGlyph doesn't print a white border yet; PipGlyph's Tarkir: Dragonstorm Ghostfire frame doesn't dress planeswalkers yet",
     });
-    // The anime run's creatures still land on the anime frame.
-    expect(frameMatchFromScryfall(printing("blb-343")).landOn).toBeUndefined();
+    // The anime run's creatures land on the standard frame since the
+    // anime's full bleed (layout v70, 1.18's rule), the frame offered.
+    expect(frameMatchFromScryfall(printing("blb-343")).landOn).toBe("m15");
   });
 
   it("dresses a Theros god on Nyx because its type line says Enchantment (A3)", () => {
@@ -1024,35 +1031,85 @@ describe("the rule table", () => {
     }
   });
 
+  /** Where the cap and the edge contract's known failures disagree (empty
+   *  when they agree): every known failure but alphaland's corner specks is
+   *  capped — a whole template, or exactly its listed colours — and every
+   *  cap names a known failure. */
+  const capMismatches = (
+    failures: Readonly<Record<string, { keys: "all" | readonly string[] }>>,
+    templates: ReadonlySet<string>,
+    colours: ReadonlyMap<string, ReadonlySet<string>>,
+  ): string[] => {
+    const out: string[] = [];
+    for (const [template, { keys }] of Object.entries(failures)) {
+      if (template === "alphaland") continue;
+      if (keys === "all") {
+        if (!templates.has(template)) out.push(`${template} not capped`);
+      } else if ([...(colours.get(template) ?? [])].sort().join() !== [...keys].sort().join()) {
+        out.push(`${template} capped on the wrong colours`);
+      }
+    }
+    for (const template of [...templates, ...colours.keys()]) if (!failures[template]) out.push(`${template} capped with no known failure`);
+    return out;
+  };
+
   it("caps exactly the edge contract's known failures, but alphaland's invisible corner specks (A8)", () => {
     // Fixing a master strikes it from EDGE_CONTRACT_KNOWN_FAILURES (its
     // it.fails turns red); this test then asks for the cap to go too.
-    for (const [template, { keys }] of Object.entries(EDGE_CONTRACT_KNOWN_FAILURES)) {
-      if (template === "alphaland") continue;
-      if (keys === "all") {
-        expect(BORDER_PENDING_TEMPLATES.has(template as FrameTemplate), template).toBe(true);
-      } else {
-        expect([...(BORDER_PENDING_COLOURS.get(template as FrameTemplate) ?? [])].sort(), template).toEqual(
-          [...keys].sort(),
-        );
-      }
-    }
-    for (const template of [...BORDER_PENDING_TEMPLATES, ...BORDER_PENDING_COLOURS.keys()]) {
-      expect(EDGE_CONTRACT_KNOWN_FAILURES[template], template).toBeDefined();
-    }
+    expect(capMismatches(EDGE_CONTRACT_KNOWN_FAILURES, BORDER_PENDING_TEMPLATES, BORDER_PENDING_COLOURS)).toEqual([]);
     expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland?.why).toMatch(/^edges pass; corner:/);
+    // Both tables are empty since the Bloomburrow anime's layout v70 (TODO
+    // 4.11 / 4.35), so the rule is held on synthetic tables too: a whole
+    // template, a template's colours, and each way they can disagree.
+    const failures = { probe: { keys: "all" as const }, keyed: { keys: ["b", "g"] }, alphaland: { keys: ["b"] } };
+    expect(capMismatches(failures, new Set(["probe"]), new Map([["keyed", new Set(["g", "b"])]]))).toEqual([]);
+    expect(capMismatches(failures, new Set(), new Map([["keyed", new Set(["b", "g"])]]))).toEqual(["probe not capped"]);
+    expect(capMismatches(failures, new Set(["probe"]), new Map([["keyed", new Set(["b"])]]))).toEqual(["keyed capped on the wrong colours"]);
+    expect(capMismatches(failures, new Set(["probe", "stray"]), new Map([["keyed", new Set(["b", "g"])]]))).toEqual(["stray capped with no known failure"]);
   });
 
-  it("names the border as the reason a capped showcase isn't exact (A8)", () => {
+  it("caps a border-pending template at nearest with the border's reason (synthetic: both tables are empty since v70)", () => {
+    // The whole template capped (the avatar, as tla-338 was until v69)…
+    let restore = setBorderPendingForTests(["avatar"]);
+    try {
+      expect(isBorderPending("avatar", "u")).toBe(true);
+      const match = frameMatchFromScryfall(printing("tla-338"));
+      expect(match).toMatchObject({ status: "nearest", template: "avatar", blockedBy: "4.35" });
+      expect(match.reason).toMatch(/Avatar: The Last Airbender.*frame doesn't have the printed border yet$/);
+      // …and "never calls a border-pending template exact" holds over every
+      // fixture, with at least one capped printing among them.
+      let capped = 0;
+      for (const key of Object.keys(printingsData) as PrintingKey[]) {
+        const m = frameMatchFromScryfall(printing(key));
+        if (!isBorderPending(m.template, colorKeyOf(key))) continue;
+        capped += 1;
+        expect(m.status, key).not.toBe("exact");
+      }
+      expect(capped).toBeGreaterThan(0);
+    } finally {
+      restore();
+    }
+    // …and one colour of a template (expeditionland b / g's shape until 4.11
+    // wave 1): Yue (blue) capped, the colourless Arcane Signet not.
+    restore = setBorderPendingForTests([], new Map([["avatar", new Set(["u"])]]));
+    try {
+      expect(frameMatchFromScryfall(printing("tla-338"))).toMatchObject({ status: "nearest", blockedBy: "4.35" });
+      expect(frameMatchFromScryfall(printing("tle-315"))).toMatchObject({ status: "exact", template: "avatar" });
+    } finally {
+      restore();
+    }
+    expect(isBorderPending("avatar", "u")).toBe(false);
+  });
+
+  it("caps no showcase on its border any more (A8)", () => {
     // (The LOTR ring, ltr-306, left the cap with TODO 4.11, the Avatar
-    // elemental, tla-338, with layout v69.)
-    for (const [key, frame] of [
-      ["blb-343", "Bloomburrow Anime"],
-    ] as const) {
+    // elemental, tla-338, with layout v69, and the Bloomburrow anime,
+    // blb-343, the last, with layout v70.)
+    expect(BORDER_PENDING_TEMPLATES.size).toBe(0);
+    for (const key of ["ltr-306", "tla-338", "blb-343"] as const) {
       const match = frameMatchFromScryfall(printing(key));
-      expect(match.blockedBy, key).toBe("4.35");
-      expect(match.reason, key).toMatch(/frame doesn't have the printed border yet$/);
-      expect(match.reason, key).toContain(frame);
+      expect(match.blockedBy, key).not.toBe("4.35");
+      expect(match.reason ?? "", key).not.toMatch(/printed border yet/);
     }
   });
 
@@ -1087,7 +1144,9 @@ describe("the rule table", () => {
       expect(isBorderPending("expeditionlandbfz", key), key).toBe(false);
     }
     expect(BORDER_PENDING_COLOURS.size).toBe(0);
-    expect(isBorderPending("bloomanime", "w")).toBe(true);
+    // The Bloomburrow anime left it with TODO 4.11 / 4.35 (layout v70), the
+    // last.
+    expect(isBorderPending("bloomanime", "w")).toBe(false);
     // The Avatar elemental and Bloomburrow woodland left it with TODO 4.11
     // (layout v69: MSE's render-time title bar and footers built in).
     expect(isBorderPending("avatar", "w")).toBe(false);

@@ -1097,8 +1097,9 @@ export type FrameProfile = {
    *  frame (artFillsCard) — TODO 4.45, owner decision 2026-09-27. For a tall
    *  window whose master is see-through there, so the bare master read as a
    *  near-black tile on the tile's dark ground, although the art does not
-   *  fill the card: Anime, Ghostfire, the ZNR hedron (`fullart`), both M15
-   *  textless frames and Nyx. A hand-picked list, not a rule — M15
+   *  fill the card: Ghostfire, the ZNR hedron (`fullart`), both M15
+   *  textless frames and Nyx (Anime, the owner's sixth, is art-first since
+   *  its full bleed, TODO 4.11 / 4.35 layout v70). A hand-picked list, not a rule — M15
    *  planeswalker, the tokens and Expedition Land sit between these on both
    *  window size and tile brightness and keep their tiles. Picker-only:
    *  FrameThumb is its one reader; no card, preview, bake or finish reads
@@ -1318,10 +1319,11 @@ const FULL_ART_WINDOW_MIN_PCT = 85;
  *  basic inside its ring (a basic land's symbol slot, `basicSymbol`, on a
  *  window of FULL_ART_WINDOW_MIN_PCT or more each way — m15fullartland).
  *  The creator's frame tiles draw a sample art under these masters
- *  (FrameThumb); cards, previews and bakes never read it. Six other
- *  tall-window frames whose tiles read as near-black (Anime, Ghostfire, the
- *  ZNR hedron, the two textless frames, Nyx) are not art-first: their tiles
- *  opt in by name (FrameProfile.pickerSampleArt, owner 2026-09-27). */
+ *  (FrameThumb); cards, previews and bakes never read it. Five other
+ *  tall-window frames whose tiles read as near-black (Ghostfire, the ZNR
+ *  hedron, the two textless frames, Nyx) are not art-first: their tiles opt
+ *  in by name (FrameProfile.pickerSampleArt, owner 2026-09-27; Anime, the
+ *  sixth, is art-first since its full bleed, TODO 4.11 / 4.35 layout v70). */
 export function artFillsCard(profile: Pick<FrameProfile, "artSlot" | "basicSymbol">): boolean {
   if (artReachesCardEdge(profile)) return true;
   const a = profile.artSlot;
@@ -4866,52 +4868,81 @@ const LOTRSCROLL: FrameProfile = {
   },
 };
 
-// Borderless showcases — art fills nearly the whole card; the name + rules sit
-// on translucent panels over the art (scrim for legibility).
-function borderlessShowcase(
-  label: string,
-  opts: { typeInk?: string; ptInk?: string } = {},
-): FrameProfile {
-  const typeInk = opts.typeInk ?? INK_LIGHT;
-  const ptInk = opts.ptInk ?? "#ffffff";
-  return {
-    label,
-    artSlot: { topPct: 2.5, leftPct: 3.5, widthPct: 93, heightPct: 92 },
-    costSizePct: 0.034,
-    title: {
-      rect: { topPct: 5, leftPct: 8, widthPct: 84, heightPct: 6 },
-      sizePct: 0.044,
-      colorHex: INK_LIGHT,
-      weight: 600,
-      font: "display",
-      shadowCss: OUTLINE_SHADOW,
+// (borderlessShowcase(), the art-forward layout the anime last wore —
+// inset art, a 0.55 scrim on the rules box, the name 44 px — left with TODO
+// 4.11 / 4.35's layout v70.)
+// The Bloomburrow anime showcase (BLB #343–355, the raised-foil legends;
+// TODO 4.11 / 4.35, layout v70): ONE master for every key
+// (scripts/build-showcase-frames.mjs `layered`: MSE's recolour template in
+// print's flat stroke tone with its copper rim on the strokes' upper edges,
+// the name and text boxes at print's opacity, the
+// footer through MSE's border mask — scripts/lib/mse-showcase-borders.mjs
+// ANIME_*). Its own text layout, measured on the 12 creature scans, each
+// registered on MSE's stroke shapes (the raised-foil crops wander 0–12 px;
+// medians): the name's baseline 164 px (25 above M15's), its pen at 125;
+// the cost discs 70 px on 139.5, the row ending at ~1389; the type line on
+// the CC M15 baseline (1261); the rules ink from x 128.5 in MSE's text rect
+// (125–1372.5 × 1320–1882 px, centred on print's 1601.5), white; the P/T digits on (1282,
+// 1930) inside MSE's outline (pt.png, the plate). The art runs under the
+// whole card (full bleed, as printed).
+/** The name band 25 px above M15's (print's baseline 164 against 189), its
+ *  pen 6 px left (print's ink from 125). */
+const BLOOMANIME_TITLE_DY_PX = -25;
+const BLOOMANIME_TITLE_DX_PX = -6;
+/** The type line's pen 4 px left of M15's (print's ink from 127). */
+const BLOOMANIME_TYPE_DX_PX = -4;
+const BLOOMANIME_ART_SLOT: Rect = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 };
+const BLOOMANIME_PLATE_RECT: Rect = { leftPct: (1157 / 1500) * 100, topPct: (1846 / 2100) * 100, widthPct: (254 / 1500) * 100, heightPct: (151 / 2100) * 100 };
+const BLOOMANIME: FrameProfile = {
+  ...M15,
+  label: "Anime",
+  ...CC_M15_COST,
+  // The CC M15 disc, its row ON print's: the band's 25 px lift leaves the
+  // discs on 131.5 where print centres them on 139.5 (8 px down), and the
+  // row ends 4.5 px further right (1389 against 1384.4).
+  costDy: CC_M15_COST_DY + 8 / 1500,
+  costDx: CC_M15_COST_DX + 4.5 / 1500,
+  artSlot: BLOOMANIME_ART_SLOT,
+  title: {
+    ...M15.title,
+    rect: {
+      topPct: M15.title.rect.topPct + (BLOOMANIME_TITLE_DY_PX / 2100) * 100,
+      leftPct: M15.title.rect.leftPct + (BLOOMANIME_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct - (BLOOMANIME_TITLE_DX_PX / 1500) * 100,
+      heightPct: M15.title.rect.heightPct,
     },
-    type: {
-      rect: { topPct: 56, leftPct: 8, widthPct: 84, heightPct: 4.5 },
-      sizePct: 0.026,
-      colorHex: typeInk,
-      weight: 600,
-      font: "display",
-      ...(typeInk === INK_LIGHT ? { shadowCss: OUTLINE_SHADOW } : {}),
+    colorHex: SHOWCASE_WHITE_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: {
+      ...M15.type.rect,
+      leftPct: M15.type.rect.leftPct + (BLOOMANIME_TYPE_DX_PX / 1500) * 100,
+      widthPct: M15.type.rect.widthPct - (BLOOMANIME_TYPE_DX_PX / 1500) * 100,
     },
-    rules: {
-      rect: { topPct: 62, leftPct: 7, widthPct: 86, heightPct: 28 },
-      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
-      colorHex: INK_LIGHT,
-      vAlign: "center",
-      font: "body",
-      backdropHex: "rgba(8,8,12,0.55)",
-    },
-    pt: {
-      rect: { topPct: 89, leftPct: 73, widthPct: 21, heightPct: 7 },
-      sizePct: 0.04,
-      colorHex: ptInk,
-      weight: 700,
-      ...(ptInk === "#ffffff" ? { shadowCss: OUTLINE_SHADOW } : {}),
-    },
-  };
-}
-const BLOOMANIME = borderlessShowcase("Anime");
+    dy: CC_M15_TYPE_DY,
+    colorHex: SHOWCASE_WHITE_INK,
+  },
+  rules: {
+    ...M15.rules,
+    // Print's lines from x 128.5, the widest to ~1362–1366 (BLB #352, #344:
+    // the box's right stroke at 1387–1395, ~17 px of margin inside it), so
+    // the rect ends where M15's does (1372.5); centred on 1601.5 px:
+    // 1320–1882 (MSE's rect, 1334–1896, centres them 14 px lower).
+    rect: { leftPct: (125 / 1500) * 100, topPct: (1320 / 2100) * 100, widthPct: ((1372.5 - 125) / 1500) * 100, heightPct: ((1882 - 1320) / 2100) * 100 },
+    colorHex: SHOWCASE_WHITE_INK,
+  },
+  pt: {
+    ...M15.pt!,
+    // The digits on print's (centred on 1282 × 1930): MSE's pt rect (1200–
+    // 1379 × 1878–1969 px) 6 px left and 12 px down.
+    rect: { leftPct: (1194 / 1500) * 100, topPct: (1890 / 2100) * 100, widthPct: (180 / 1500) * 100, heightPct: (90 / 2100) * 100 },
+    plateRect: BLOOMANIME_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/bloomanime/pt/{color}.png",
+    inkSpanPct: undefined,
+    colorHex: SHOWCASE_WHITE_INK,
+  },
+};
 
 // Ghostfire — the Tarkir: Dragonstorm ghostfire showcase (TDM #399–418;
 // #399–408 black-bordered, #409–418 the white halo-foil run, 4.30). MSE's
@@ -6239,6 +6270,31 @@ export const BLOOMBURROW_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "oval", oval: BLOOMBURROW_HOLO_STAMP_OVAL, keepOut: BLOOMBURROW_HOLO_STAMP_KEEP_OUT },
 };
 
+/** The anime's crown (TODO 4.11, layout v70): MSE's `crown.png` — the small
+ *  flourish above the name box on all 12 creature prints (the 13th, #353
+ *  Ral, is a walker) — in
+ *  the strokes' flat tone, cropped to its box (646, 16, 209 × 64). */
+export const BLOOMANIME_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { leftPct: (646 / 1500) * 100, topPct: (16 / 2100) * 100, widthPct: (209 / 1500) * 100, heightPct: (64 / 2100) * 100 },
+  assetPathTemplate: "/frames/bloomanimecrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+};
+/** The anime's oval: the prints' hologram, at M15's 134 × 67. */
+export const BLOOMANIME_HOLO_STAMP_OVAL: Rect = { leftPct: (684 / 1500) * 100, topPct: (1920 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the arch over the oval. */
+export const BLOOMANIME_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (631 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (240 / 1500) * 100, heightPct: (70 / 2100) * 100 };
+/** The anime's stamp notch: MSE's own (the footer's tone through
+ *  border_stamp_mask.png under stamp.png's rim, in the strokes' tone), cut
+ *  to its box (494, 1882, 540 × 58, the copper rim on its arch). */
+export const BLOOMANIME_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (494 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (540 / 1500) * 100, heightPct: (58 / 2100) * 100 },
+  assetPathTemplate: "/frames/bloomanimeholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: BLOOMANIME_HOLO_STAMP_OVAL, keepOut: BLOOMANIME_HOLO_STAMP_KEEP_OUT },
+};
+
 /**
  * The holofoil stamp's notch on the BORDERLESS frames (TODO 4.9d, owner
  * Round 66, 2026-10-14): every stamped borderless print arches the text
@@ -7475,7 +7531,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // sample art (pickerSampleArt, 4.45) on their entries here, not on their
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads
   // M15TEXTLESS, so a flag on a base would reach whatever spreads it next.
-  bloomanime: { ...BLOOMANIME, pickerSampleArt: true },
+  bloomanime: { ...BLOOMANIME, overlays: [BLOOMANIME_CROWN, BLOOMANIME_HOLO_STAMP], collector: M15_COLLECTOR },
   // The ring's crown, its triangle stamp notch (TODO 4.11) and the
   // collector line as the prints set it (M15's two lines) — each opt-in per
   // card, so no stored card changes by them.

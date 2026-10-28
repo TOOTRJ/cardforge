@@ -125,7 +125,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotrscroll: { front: [1280, 941] },
   avatar: { front: [1500, 1168] },
   bloomburrow: { front: [1500, 954] },
-  bloomanime: { front: [1395, 1932] },
+  bloomanime: { front: [1500, 2100] },
   // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
   // draconic's window and the dragons' gaps; the ghostfire's inside its
   // painted ring.

@@ -92,7 +92,8 @@ describe("the edge-contract table", () => {
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
         "alphaland",
-        "bloomanime",
+        // (bloomanime left with TODO 4.11 / 4.35's layout v70: one master in
+        // print's look, full-bleed art, its footer drawn to the corner.)
         // (avatar and bloomburrow left with TODO 4.11's layout v69: the
         // title bar and footers MSE paints at render time built into their
         // masters, their edges re-declared as print draws them.)

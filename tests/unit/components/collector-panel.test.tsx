@@ -131,9 +131,9 @@ describe("a stored card (an edit)", () => {
 
 describe("where the frame has no slot", () => {
   it("says the frame prints its own footer, and offers no switch", () => {
-    // (avatar stands in for an MSE showcase: the LOTR ring has the slot
-    // since TODO 4.11.)
-    for (const template of ["extendedart", "bloomanime", "saga", "m20token"] as const) {
+    // (No MSE showcase stands in any more: the LOTR ring has the slot since
+    // TODO 4.11, the Avatar since v69, the Bloomburrow anime since v70.)
+    for (const template of ["extendedart", "saga", "m20token"] as const) {
       render(<Harness frameStyle={{ template, collector: "2023" }} />);
       expect(screen.getByTestId("collector-no-slot").textContent).toBe(NO_COLLECTOR_SLOT_NOTE);
       expect(screen.queryByRole("switch", { name: "Collector line" })).toBeNull();

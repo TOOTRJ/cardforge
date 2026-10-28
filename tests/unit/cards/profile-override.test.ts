@@ -175,13 +175,15 @@ describe("stat slots, by path (isStatSlotPath)", () => {
     }
     expect(missed).toContain("battle/defense");
     expect(missed).toContain("retro/pt");
-    // Six in all: the battle's defense and five P/T slots with no plate
-    // (the Alpha frames, retro, the showcases that print it on the art; the
-    // retired Alpha token's was the eleventh, TODO 4.54, the Lord of the
-    // Rings scroll's and ring's — their plates since TODO 4.11 — the tenth
-    // and the ninth, and the Avatar elemental's and Bloomburrow woodland's —
-    // MSE's plates since layout v69 — the eighth and the seventh).
-    expect(missed).toHaveLength(6);
+    // Five in all: the battle's defense and four P/T slots with no plate
+    // (the Alpha frames, retro and retroland; the retired Alpha token's was
+    // the eleventh, TODO 4.54, the Lord of the Rings scroll's and ring's —
+    // their plates since TODO 4.11 — the tenth and the ninth, the Avatar
+    // elemental's and Bloomburrow woodland's — MSE's plates since layout v69
+    // — the eighth and the seventh, and the Bloomburrow anime's — MSE's
+    // outline since v70 — the sixth).
+    expect(missed).toHaveLength(5);
+    expect(missed).not.toContain("bloomanime/pt");
     expect(missed).not.toContain("lotrscroll/pt");
     expect(missed).not.toContain("lotr/pt");
     expect(missed).not.toContain("avatar/pt");

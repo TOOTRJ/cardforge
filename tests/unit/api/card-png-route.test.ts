@@ -306,13 +306,17 @@ describe("card PNG download", () => {
     expect(state.render).not.toHaveBeenCalled();
   });
 
-  it("free Square of a ring squares the stored bake with the root's #101015 — its border's colour, not #000", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } }); // a ring (tarkirdragon, tarkirghostfire and avatar left the rings with TODO 4.11)
-    const png = await decode(await download("default", {}, "square"));
-    expect(state.render).not.toHaveBeenCalled();
-    expect(png.opaque).toBe(true);
-    expect(png.at(0, 0).slice(0, 3)).toEqual([16, 16, 21]);
-    expect(png.at(749, 1049).slice(0, 3)).toEqual([16, 16, 21]);
+  it("free Square of a full-bleed frame (art in every corner) renders live square — no ring is left to square with the root's #101015", async () => {
+    // (bloomanime was the last ring — a transparent outer band whose square
+    // corners were the root's #101015 — until TODO 4.11 / 4.35's layout v70
+    // drew it full bleed: its art covers every corner, as print's does.)
+    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } });
+    await download("default", {}, "square");
+    expect(state.render).toHaveBeenCalledWith(expect.anything(), "default", {
+      brandMark: true,
+      watermarkText: null,
+      corners: "square",
+    });
   });
 
   it("names the Square file <slug>-square.png (the header wins over the modal's download attribute)", async () => {
@@ -443,12 +447,10 @@ describe("JPEG download (TODO 6.18)", () => {
     expect(roundAsked.headers.get("content-disposition")).toBe('attachment; filename="c.jpg"');
   });
 
-  it("a ring's JPEG corners are the root's #101015, like its Square PNG", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } }); // a ring (tarkirdragon, tarkirghostfire and avatar left the rings with TODO 4.11)
-    const jpeg = await decodeJpeg(await download("default", {}, undefined, "jpeg"));
-    expect(state.render).not.toHaveBeenCalled();
-    near(jpeg.at(0, 0), [16, 16, 21]);
-    near(jpeg.at(749, 1049), [16, 16, 21]);
+  it("a full-bleed frame's JPEG is its live square render, like its Square PNG (no ring is left)", async () => {
+    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } });
+    await decodeJpeg(await download("default", {}, undefined, "jpeg"));
+    expect(state.render).toHaveBeenCalled();
   });
 
   it("a paid viewer's JPEG is a live clean SQUARE render, re-encoded", async () => {

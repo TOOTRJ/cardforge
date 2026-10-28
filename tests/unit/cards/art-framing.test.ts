@@ -138,6 +138,9 @@ describe("the Etched finish on edge-to-edge frames", () => {
       "m15borderlessdfcback",
       "m15borderlessmdfcfront",
       "m15borderlessmdfcback",
+      // The Bloomburrow anime (TODO 4.11 / 4.35, layout v70): full bleed as
+      // printed.
+      "bloomanime",
       "fullartland",
     ]);
     // The Avatar elemental showcase's art runs out of the top edge (TODO

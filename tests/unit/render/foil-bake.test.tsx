@@ -611,19 +611,25 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The scrims over full art (git frames, so no stand-in): bloomanime's rules
-// box is a cut-out over the art with a 55 % dark scrim.
+// The scrims over full art (git frames, so no stand-in): bloomanime's art
+// runs under the whole card. Its rules box drew a 55 % dark scrim over the
+// art until TODO 4.11 / 4.35's layout v70 baked print's slate box into its
+// master; the tests now lay a rules box with that scrim over the CLEAR art
+// above the master's boxes (a profile override), where nothing of the frame
+// is between the art and the scrim.
 // ---------------------------------------------------------------------------
 
 describe("foil finish — rules scrims over the art (real bakes)", () => {
+  const OVER_ART = { topPct: 20, leftPct: 12, widthPct: 76, heightPct: 20 };
+  const SCRIM = "rgba(8,8,12,0.55)";
+  const backdrop = (hex: string) => ({ bloomanime: { rules: { rect: OVER_ART, backdropHex: hex } } });
   const anime = (finish: string, over: Partial<CardPreviewData> = {}) =>
-    card("bloomanime", finish, { colorIdentity: ["red"], cost: "{1}{R}", ...over });
-  const inner = () => box(getFrameProfile("bloomanime").rules.rect, 1.5);
+    card("bloomanime", finish, { colorIdentity: ["red"], cost: "{1}{R}", profileOverrides: backdrop(SCRIM), ...over });
+  const inner = () => box(OVER_ART, 1.5);
 
   it("continues the card-wide rainbow: under an opaque white backdrop it matches the card-wide sheen over white art", async () => {
     const mod = await import("@/lib/render/card-image");
     const white = await solidArt(255);
-    const backdrop = (hex: string) => ({ bloomanime: { rules: { backdropHex: hex } } });
     // A clear backdrop shows the card-wide sheen over the white art; an
     // opaque white one hides it and shows its own at full strength — the
     // same rainbow in the same place, as long as it keeps its card-space
