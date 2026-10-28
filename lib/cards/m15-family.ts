@@ -136,6 +136,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // …and the MUL Tarkir dragon wings (TODO 4.11, CC's 'Tarkir' pack, the M15
   // pack's text layout on its own bars; layout v67): it joined WITH its bump.
   "tarkirdragon",
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2, CC's 'D&D Sourcebook'
+  // pack, the M15 frame's text layout on the page's own lines): a new
+  // template, no stored card — the family's sizes — so it joined without a
+  // bump.
+  "dndsourcebook",
   // The MKM dossier showcase (TODO 4.11 wave 2, CC's 'Dossier' pack, the M15
   // frame's text layout on the folder's own bands): a new template, no
   // stored card — the family's sizes — so it joined without a bump.

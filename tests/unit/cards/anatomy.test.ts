@@ -503,6 +503,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "bloomburrow",
     // …and the Bloomburrow anime (4.11, v70): MSE's own, on its footer's well.
     "bloomanime",
+    // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
+    "dndsourcebook",
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
     "dossier"];
 

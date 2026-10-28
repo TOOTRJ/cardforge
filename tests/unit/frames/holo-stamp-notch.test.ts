@@ -77,14 +77,16 @@ function onDisk(rel: string): Buffer | null {
  *  M15 folder's alone). */
 /** The folders built from ONE tinted piece (the Lord of the Rings scroll's
  *  and ring's notches are each pack's own piece per key, and the MUL
- *  Tarkir dragon wings' and the MKM dossier's the pack's one oval piece,
- *  TODO 4.11: their own tests, tests/unit/frames/lotr-scroll-importer.test.ts,
- *  lotr-ring-importer.test.ts, tarkir-dragon-importer.test.ts and
+ *  Tarkir dragon wings', the D&D Sourcebook's and the MKM dossier's the
+ *  pack's one oval piece, TODO 4.11: their own tests,
+ *  tests/unit/frames/lotr-scroll-importer.test.ts, lotr-ring-importer.test.ts,
+ *  tarkir-dragon-importer.test.ts, dnd-sourcebook-importer.test.ts and
  *  mkm-dossier-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dossierholostamp: _dossierNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
+void _dndNotch;
 void _dossierNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
@@ -371,9 +373,11 @@ describe("published to the frames bucket", () => {
       );
       expect(p.notes.join(" ")).toMatch(/hologram/);
     }
-    // No CC holo piece but the two U shapes is read.
+    // No CC holo piece but the two U shapes is read — and the D&D
+    // Sourcebook's one 'Holo Stamp' (TODO 4.11 wave 2), whose capture is cut
+    // (dnd-sourcebook-importer.test.ts).
     const all = Object.values(provenance).flatMap((p) => p.sourceFiles ?? []);
-    expect(all.filter((f) => /holo/i.test(f)).sort()).toEqual([M15.shape.src, PW.shape.src]);
+    expect(all.filter((f) => /holo/i.test(f) && f !== "img/frames/dndSourcebook/holo.png").sort()).toEqual([M15.shape.src, PW.shape.src]);
   });
 
   const published = Object.entries(TINTED_NOTCHES).flatMap(([folder, def]) => def.keys.map((key) => [folder, key, onDisk(`${folder}/${key}.png`)] as const));

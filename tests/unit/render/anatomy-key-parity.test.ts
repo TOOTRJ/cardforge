@@ -177,6 +177,9 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
+                                    : template === "dndsourcebook"
+                                      ? // …and the D&D Sourcebook's oval piece (4.11 wave 2).
+                                        "dndsourcebookholostamp"
                                     : template === "dossier"
                                       ? // …and the MKM dossier's oval piece (4.11 wave 2).
                                         "dossierholostamp"
@@ -261,9 +264,10 @@ describe("bake path = preview path", () => {
     // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
     // MSE's own stamp per key; `c` the steel rim), and the Bloomburrow
     // woodland's 7 (4.11, v69), the Bloomburrow anime's 7 (4.11, v70), and
-    // the MKM dossier's 7 + 10 pairs (4.11 wave 2, the pack's one oval piece
-    // under every key).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + (7 + 10));
+    // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
+    // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
+    // pack's one oval piece under every key and pair).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

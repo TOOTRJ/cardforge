@@ -558,6 +558,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // its historical name because it is stored in cards.frame_style,
   // frame_reviews and the frames bucket. Its set is "zendikarrising".
   "fullart",
+  // The Dungeons & Dragons Sourcebook showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'D&D Sourcebook' pack, frames bucket): the parchment page of
+  // Adventures in the Forgotten Realms (AFR #299–349, 2021) and Commander
+  // Legends: Battle for Baldur's Gate (CLB #375–450, 2022) — one design for
+  // every colour. An addition: no stored card sits on it.
+  "dndsourcebook",
   // The Murders at Karlov Manor DOSSIER showcase (TODO 4.11 wave 2, Card
   // Conjurer's 'Dossier' pack, frames bucket): the case-file folder of MKM
   // #336–389 and #433 (Scryfall's `dossier` promo type, 55 printings) — a
@@ -725,6 +731,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // Set-relative like the other showcase labels: the picker prints
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
+  // Set-relative: the picker prints "Dungeons & Dragons — Sourcebook".
+  dndsourcebook: "Sourcebook",
   // Two full-art basics in the Full Art set: the black-bordered print (the
   // common one, 263 printings) and the borderless one (FRA #382–396). They
   // are variations of the M15 land frame (the picker's groups, 2026-10-13),
@@ -761,6 +769,7 @@ export const FRAME_SET_VALUES = [
   "tarkir",
   "multiverselegends",
   "zendikarrising",
+  "dnd",
   "karlov",
   "extended",
   "fullartset",
@@ -781,6 +790,9 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
   zendikarrising: "Zendikar Rising",
+  // Adventures in the Forgotten Realms (AFR 2021) and Commander Legends:
+  // Battle for Baldur's Gate (CLB 2022): the Dungeons & Dragons sets.
+  dnd: "Dungeons & Dragons",
   // Murders at Karlov Manor (MKM 2024): the Dossier showcase.
   karlov: "Murders at Karlov Manor",
   extended: "Extended Art",
@@ -866,6 +878,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
+  dndsourcebook: "dnd",
   m15fullartland: "fullartset",
   fullartland: "fullartset",
   m15fullartlandzen: "fullartset",
@@ -946,6 +959,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   tarkir: "showcase",
   multiverselegends: "showcase",
   zendikarrising: "showcase",
+  // The D&D Sourcebook showcase (AFR #299–349, CLB #375–450).
+  dnd: "showcase",
   // The Murders at Karlov Manor Dossier showcase (MKM #336–389, #433).
   karlov: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
