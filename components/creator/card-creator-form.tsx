@@ -5059,6 +5059,11 @@ export function CardCreatorForm({
             statsLabel={statsLabel}
             statsAvailable={hasStats}
             verifiedFrameKeys={publishedFrameKeys}
+            colorKey={
+              watched.color_identity?.length
+                ? (pickFrameColorKey(watched.color_identity) as FrameColorKey)
+                : null
+            }
             generating={fillPhase !== null}
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
