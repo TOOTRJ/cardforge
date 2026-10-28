@@ -160,8 +160,12 @@ export const ANIME_FOOTER_RGB = Object.freeze([15, 20, 16]);
  *  0.03–0.09 past 60°) — straddling MSE's stroke edge: its first two pixels
  *  inside (0.51 / 0.31 copper at 0°) and two to three outside (0.55 / 0.44 /
  *  0.26) — drawn as one ring in, one out and a half past it (a 2 + 3 ring
- *  rim read heavier than print's on the 2× sheet). Its tone: the median of the copper pixels of those rings within
- *  ±45° (68,570 px), 180,103,59; the stroke's core keeps its 35,31,12 (the
+ *  rim read heavier than print's on the 2× sheet). Its tone: the median of
+ *  the copper pixels of those rings within ±45° (68,570 px), 180,103,59 — a
+ *  DELIBERATE EXCEPTION to the owner's raw-median rule: the median of pixels
+ *  SELECTED as copper (R − B ≥ 55, R ≥ 90, R − G ≥ 25), because a raw median
+ *  of the rim's rings is the stroke's own tone and the art beside it, which
+ *  can't paint a visible rim; the stroke's core keeps its 35,31,12 (the
  *  rings past the rim read 34–38, 29–33, 9–16). */
 export const ANIME_RIM = Object.freeze({
   rgb: Object.freeze([180, 103, 59]),

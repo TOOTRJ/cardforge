@@ -5294,7 +5294,11 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     inside / 0.55 outside, and fades by the third; a 2 + 3 ring rim read
     heavier than print's on the sheet), full strength to 30° from up,
     fading to none at 50°, in 180,103,59 — the median of the copper pixels
-    of those rings within ±45° (68,570 px). The strokes' core stays
+    of those rings within ±45° (68,570 px). A DELIBERATE EXCEPTION to the
+    raw-median rule: a median of pixels SELECTED as copper (R − B ≥ 55,
+    R ≥ 90, R − G ≥ 25), because a raw median of the rim's rings is the
+    stroke's own tone and the art beside it — it can't paint a visible
+    rim. The strokes' core stays
     35,31,12 (the rings past the rim read 34–38, 29–33, 9–16). The P/T
     outline, the crown and the stamp's arch wear the same rim.
   Every print has a P/T, so the master is MSE's P/T dress: the text box's
@@ -5327,10 +5331,12 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     to ~1362–1366 on print (BLB #352, #344: the box's right stroke at
     1387–1395, ~17 px of margin inside it), so the rect ends where M15's
     does; centred on 1601.5 (MSE's rect centres them 14 px lower); M15's
-    padding, white. Print's rules glyphs run ~3 % wider than ours at the
-    same 76 px size (the same 74 px pitch), so a long text breaks a word
-    earlier there (BLB #344's second line ends "sorcery", ours "sorcery
-    spell,");
+    padding, white. OUR rules glyphs run ~3 % wider than print's: print's
+    ink measures 0.95–0.975× our MPlantin advances at 76 px (BLB #344, six
+    lines, e.g. 1232 px against our 1268) at print's 76 px pitch (74.7 =
+    0.98 × 76), so a long text steps down where print keeps 76 px (Alania
+    #344: ~72–73 px here) and breaks its lines elsewhere (TODO 3.29b: is it
+    the whole M15 family?);
   - the P/T: MSE's text rect 6 px left and 12 px down, the digits on
     print's (1282, 1930), white;
   - name and type ink white, no shadow; no scrim any more (the boxes are
@@ -5354,7 +5360,10 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     M15's, its pen ~5 px left.
 - **Flagged, not changed** (TODO 4.11):
   - the P/T digits print ~25 px wider than ours at the same height, and
-    the rules glyphs ~3 % wider (a word breaks earlier on print);
+    our rules glyphs run ~3 % wider than print's (Alania #344 steps down to
+    ~72–73 px where print sets 76; TODO 3.29b);
+  - a card moved onto the anime frame later through Variations (not the
+    import chooser) keeps the crown off: only the import names it;
   - #353 Ral, the walker, stays out of scope.
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
