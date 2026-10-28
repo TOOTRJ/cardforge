@@ -338,7 +338,7 @@ const PICKS: readonly Pick[] = [
   { from: "bloomanime/u/creature-short@stamp", why: "v70 Bloomburrow anime: the footer in print's tone, MSE's P/T outline as the plate, MSE's stamp notch on the footer's well with our oval" },
   // The Enchanting Tales showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "enchantingtales/u/enchantment-long@stamp", why: "Enchanting Tales: the art under the whole frame and its translucent box, white rules in CC's rect 3 px up with the moved lower block, the name riding the pack's bar, the CC M15 row 3 px right, the pack's oval notch per colour with our oval and no black ring" },
-  { from: "enchantingtales/g/creature-long@collector", why: "Enchanting Tales: an Enchantment Creature on the pack's plate (3 px up), the 2023 collector line on the run's rows (1990 / 2029) in the colour's footer" },
+  { from: "enchantingtales/g/creature-long@collector", why: "Enchanting Tales: the matrix's creature row (its primary kind; the renderers draw any card — the kind gate keeps the frame to Enchantment Creatures) on the pack's plate (3 px up), the 2023 collector line on the run's rows (1990 / 2029) in the colour's footer" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },
@@ -346,6 +346,9 @@ const PICKS: readonly Pick[] = [
   // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
   { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
   { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
+  // The D&D Sourcebook showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "dndsourcebook/u/creature-short@collector-2015", why: "D&D Sourcebook: CC's one parchment master under every key, M15's slots on the page's own lines (the name 1.5 px up, the cost row 3 px up and 10 px right, the type band 7 px down), the rules box ending above the page's rounded foot, the parchment plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "dndsourcebook/wub/creature-long@stamp-m", why: "D&D Sourcebook: the pack's one oval notch over the page's foot with our oval in its cut, a three-colour legend on the one page" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

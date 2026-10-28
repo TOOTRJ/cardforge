@@ -178,6 +178,12 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the D&D Sourcebook showcase (TODO 4.11 wave 2): a new template in
+  // a new showcase set — pinned in
+  // tests/unit/scryfall/dnd-sourcebook-imports.test.ts (AFR #299–349 and
+  // CLB #375–450 land there once verified) and
+  // tests/unit/frames/dnd-sourcebook-importer.test.ts.
+  "dndsourcebook",
   // …and the Enchanting Tales showcase (TODO 4.11 wave 2): a new template in
   // a new showcase set — pinned in
   // tests/unit/scryfall/enchanting-tales-imports.test.ts (WOT #1–63 land

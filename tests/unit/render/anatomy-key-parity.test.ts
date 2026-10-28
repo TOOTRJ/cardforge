@@ -176,6 +176,9 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
+                                    : template === "dndsourcebook"
+                                      ? // …and the D&D Sourcebook's oval piece (4.11 wave 2).
+                                        "dndsourcebookholostamp"
                                     : template === "enchantingtales"
                                       ? // …and the Enchanting Tales' (4.11 wave 2).
                                         "enchantingtalesholostamp"
@@ -256,9 +259,11 @@ describe("bake path = preview path", () => {
     // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
     // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
     // MSE's own stamp per key; `c` the steel rim), and the Bloomburrow
-    // woodland's 7 (4.11, v69), and the Bloomburrow anime's 7 (4.11, v70),
-    // and the Enchanting Tales' 7 (4.11 wave 2, the pack's piece per colour).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7);
+    // woodland's 7 (4.11, v69), the Bloomburrow anime's 7 (4.11, v70), and
+    // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
+    // every key), and the Enchanting Tales' 7 (4.11 wave 2, the pack's piece
+    // per colour).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

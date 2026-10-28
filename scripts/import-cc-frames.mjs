@@ -181,6 +181,8 @@ import {
   chromaRegionPlane,
   boxRegionPlane,
   capturePlane,
+  fillRowsOutsideCut,
+  flattenNearToneRgba8,
   solidifyRowsRgba8,
   toneSourceRegions,
   describeSourceTones,
@@ -1259,6 +1261,19 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // well) is read off the placed piece before the cut: held inside it.
       const captured = def.capture ? capturePlane(placedPiece, box.width, box.height, def.capture) : null;
       const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx);
+      // A well flattened into its master's footer tone (TODO 4.11 wave 2:
+      // the Enchanting Tales piece's darker outer ring), alpha kept.
+      let wellNote = "";
+      if (def.wellTone) {
+        const { data: m, width: mw } = await notchMasterPixels(`${def.wellTone.master}/${key}`, key);
+        const o = (def.wellTone.at.y * mw + def.wellTone.at.x) * 4;
+        if (m[o + 3] !== 255) throw new Error(`${folder}/${key}: the footer tone at ${def.wellTone.at.x},${def.wellTone.at.y} is not opaque`);
+        const tone = [m[o], m[o + 1], m[o + 2]];
+        const flattened = flattenNearToneRgba8(piece, tone, def.wellTone.within);
+        const filled = fillRowsOutsideCut(piece, def.shape, cut, def.cutMarginPx, def.wellTone.footerFromRow, tone);
+        wellNote = `, well flattened into ${tone.join(",")} (${flattened} px; ${filled} px of rows ${def.wellTone.footerFromRow} on filled)`;
+        recipe[key].push(`the well flattened into ${def.wellTone.master}/${key}.png's footer tone ${tone.join(",")} (every pixel within ${def.wellTone.within} levels, alpha kept), and from row ${def.wellTone.footerFromRow} of the piece down every pixel of the piece outside the cut that tone, opaque (the master's flat footer under it)`);
+      }
       // With the shape blacked out, the hologram check is the shape's own
       // (every pixel of it black or clear), not "nothing outside the ring".
       const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined ? null : (captured ?? stamp));
@@ -1268,7 +1283,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
       await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
-      console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${box.width}×${box.height}: ${findings.opaque} opaque px, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, stamp shape outside α ≤ ${findings.stampOutside}`);
+      console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${box.width}×${box.height}: ${findings.opaque} opaque px, cut clear ${findings.cutClear}, ${def.blackoutPx ? `ring black ${findings.ringBlack}` : "no ring painted"}, stamp shape outside α ≤ ${findings.stampOutside}${wellNote}`);
     }
     for (const f of notchFailures) edgeFailures.push(f);
     provenance[folder] = {

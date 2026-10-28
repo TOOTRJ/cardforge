@@ -1355,6 +1355,10 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the D&D Sourcebook's plate at its widest, and a
+  // colourless artifact creature on the one page (AFR #348 Iron Golem).
+  ["dndsourcebook", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["dndsourcebook", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "5", toughness: "3" }],
   // TODO 4.11 wave 2: the Enchanting Tales plate at its widest (an
   // Enchantment Creature borrows the frame; no print has one).
   ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
@@ -2030,6 +2034,12 @@ export function visualCases(): VisualCase[] {
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tarkirdragon", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the D&D Sourcebook's OVAL notch — none on a common
+  // (AFR / CLB print it on a rare or mythic only), a three-colour legend's
+  // (CLB #415 Bane: the one page, the gold key's piece), the HD bake.
+  add("dndsourcebook", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dndsourcebook", "auto", { rarity: "common" }) });
+  add("dndsourcebook", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dndsourcebook", "auto", { rarity: "rare" }) });
+  add("dndsourcebook", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dndsourcebook", "auto", { rarity: "mythic" }) });
   // TODO 4.11 wave 2: the Enchanting Tales oval notch per colour — none on
   // an uncommon (WOT #1–63 print it on a rare or mythic only), a rare's, the
   // HD bake.
@@ -2477,6 +2487,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the D&D Sourcebook's oval (TODO 4.11 wave 2: the pack's one piece).
+  "dndsourcebook",
   // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
   "enchantingtales",
 ];

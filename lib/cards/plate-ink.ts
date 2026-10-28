@@ -77,6 +77,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // pack's ptBounds (274 × 150) — the bevelled plate and its
   // coloured ends fill the image to every edge.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The D&D Sourcebook showcase's plate (TODO 4.11 wave 2): Card Conjurer's
+  // one 'Power/Toughness' (260 × 132) under every key, drawn at the pack's
+  // ptBounds — the bevelled parchment plate fills the image to every edge.
+  "/frames/dndsourcebook/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // The Enchanting Tales showcase's plates (TODO 4.11 wave 2): Card
   // Conjurer's six 'Power/Toughness' (499 × 276; c the white one), drawn at
   // the pack's bounds — the plate and its curled tail fill the image to

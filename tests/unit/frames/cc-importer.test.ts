@@ -161,6 +161,8 @@ describe("Card Conjurer recipe", () => {
       "aftermath",
       // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
       "battle",
+      // The D&D Sourcebook showcase (TODO 4.11 wave 2; tests/unit/frames/dnd-sourcebook-importer.test.ts).
+      "dndsourcebook",
       "emblem",
       // The Enchanting Tales showcase (TODO 4.11 wave 2; tests/unit/frames/enchanting-tales-importer.test.ts).
       "enchantingtales",

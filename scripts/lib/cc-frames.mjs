@@ -4255,9 +4255,11 @@ export const ETALES = "img/frames/enchantingTales";
 /**
  * The pack's top rows made solid (ETALES' masters, before the corner cut):
  * Card Conjurer leaves a translucent crease (α 200–254, ~12 px wide) along
- * its own rounded corner at the two TOP corners, and the gold frame a 3 px
- * speck (α 0.93) on its top edge at x 1313 — so every pixel of rows 0–80
- * with α ≥ 128 takes α 255 in its own colour. No art reaches above row 111
+ * its own rounded corner at the two TOP corners (466–976 px a key at HD),
+ * and the GOLD frame's swirls are near-opaque across its whole top band —
+ * 3,136 px more at α 228–254 over x 35–1480 of rows 0–79 (one of them the
+ * edge band's α 0.93 at x 1313) — so every pixel of rows 0–80 with α ≥ 128
+ * takes α 255 in its own colour (3,282 px on the gold master). No art reaches above row 111
  * (the art slot), so nothing there is meant to be seen through — and the
  * corners are kept square (ETALES_KEEP_CORNERS), so a square output shows
  * the swirls there solid.
@@ -4290,6 +4292,61 @@ export const ETALES_LOWER_RECUT = Object.freeze({
  *  (lib/frames/square-corners.ts "frame"); every round output cuts them at
  *  render. */
 export const ETALES_KEEP_CORNERS = Object.freeze(["tl", "tr", "bl", "br"]);
+/**
+ * Every pixel of an 8-bit RGBA image within `within` levels (max channel) of
+ * `tone` — but not exactly it — takes that tone, its alpha kept (in place;
+ * TODO 4.11 wave 2: the Enchanting Tales notch's well and the slightly
+ * darker ring Card Conjurer draws on its outer ellipse, flattened into the
+ * master's footer tone so the piece meets the footer with no line). Returns
+ * how many pixels changed.
+ */
+export function flattenNearToneRgba8(buf, tone, within) {
+  if (buf.length % 4 !== 0) throw new Error("flattenNearToneRgba8: not RGBA");
+  if (!(Array.isArray(tone) && tone.length >= 3 && within >= 0 && within < 32)) throw new Error(`flattenNearToneRgba8: bad tone ${tone} / ${within}`);
+  let changed = 0;
+  for (let o = 0; o < buf.length; o += 4) {
+    if (buf[o + 3] === 0) continue;
+    const d = Math.max(Math.abs(buf[o] - tone[0]), Math.abs(buf[o + 1] - tone[1]), Math.abs(buf[o + 2] - tone[2]));
+    if (d > within || d === 0) continue;
+    buf[o] = tone[0];
+    buf[o + 1] = tone[1];
+    buf[o + 2] = tone[2];
+    changed += 1;
+  }
+  return changed;
+}
+/**
+ * A notch piece's rows from `fromRow` down: every pixel of the piece (α >
+ * 0) outside its cut takes `tone`, opaque (in place; TODO 4.11 wave 2: the Enchanting
+ * Tales piece below the text box's rim, where it lies on the master's flat
+ * footer — the well and the pack's soft outer ellipse there become the
+ * footer itself, so nothing of the piece's edge shows). The cut (`cut` grown
+ * by `marginPx`, cutInside) stays transparent. Returns how many pixels
+ * changed.
+ */
+export function fillRowsOutsideCut(buf, shape, cut, marginPx, fromRow, tone) {
+  const { width, height } = shape.size;
+  if (buf.length !== width * height * 4) throw new Error(`fillRowsOutsideCut: the piece is not ${width}x${height} RGBA`);
+  if (!(fromRow >= 0 && fromRow < height)) throw new Error(`fillRowsOutsideCut: bad row ${fromRow}`);
+  const inside = cutInside(shape, cut, marginPx);
+  let changed = 0;
+  for (let y = fromRow; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (inside(x, y, 0)) continue;
+      const o = (y * width + x) * 4;
+      // The piece's own pixels only: what it leaves clear stays clear (the
+      // master's footer, the same tone, shows there).
+      if (buf[o + 3] === 0) continue;
+      if (buf[o] === tone[0] && buf[o + 1] === tone[1] && buf[o + 2] === tone[2] && buf[o + 3] === 255) continue;
+      buf[o] = tone[0];
+      buf[o + 1] = tone[1];
+      buf[o + 2] = tone[2];
+      buf[o + 3] = 255;
+      changed += 1;
+    }
+  }
+  return changed;
+}
 /**
  * Make the rows `y0` ≤ y < `y1` of an 8-bit RGBA image solid where they are
  * nearly so (in place): every pixel with `minAlpha` ≤ α < 255 takes α 255,
@@ -4353,7 +4410,7 @@ const ETALES_NOTES = [
   "plates = the pack's six P/T plates (enchantingTales/pt/<k>.png, 499x276, drawn at the pack's bounds 1535/2458 px, 373x206 of 2010x2814); c = the white one; no print draws one (the run has no creature)",
   `the pack against print by the ring's rule (raw scan medians over the bars, the footer and the swirled field, ink left out; a region ≥ 9 levels off is toned): within 5 levels on every colour (ETALES_PRINT_TONE) — nothing is toned; the text box is translucent over the art, so it has no raw median to tone by, and keeps the pack's colour`,
   "geometry: the LOWER block (rows 1163–1953 of the master: the type bar, the text box, its rim, the footer's top) moved 3 px UP onto the 63 prints through the flat zones round it (ETALES_LOWER_RECUT: the see-through art rows 472–1162 above, the footer's flat rows 1954–2099 below — every row of each identical across the card on every key; shiftBlocksRgba8, byte for byte, after the downscale); the TOP block (swirls, title bar) kept as drawn, 3.5 px above print's — no flat zone lies above it — so the name and the cost row ride the pack's bar; across, every bar edge registers within a pixel",
-  "the top rows made solid after the downscale (ETALES_SOLID_ROWS: rows 0–80, α ≥ 128 → 255, the colour kept): the pack's translucent crease along its own rounded TOP corners (α 200–254) and a 3 px speck on the gold frame's top edge; no art reaches above row 111",
+  "the top rows made solid after the downscale (ETALES_SOLID_ROWS: rows 0–80, α ≥ 128 → 255, the colour kept): the pack's translucent crease along its own rounded TOP corners (α 200–254) on every key, and on the gold frame the near-opaque swirls across its whole top band (3,136 px more at α 228–254, x 35–1480; 3,282 made solid in all); no art reaches above row 111",
   "no legendary crown: the pack draws none and no printing of the run is legendary",
   "not built: WOT #64–103, the anime-style borderless reprints — another design, not in the pack",
 ];
@@ -4374,6 +4431,21 @@ const ETALES_NOTES = [
  * oval`, 45 of 63), the uncommons don't.
  */
 export const ETALES_NOTCH_BOX = Object.freeze({ x: 665, y: 1897, width: 173, height: 101 });
+/**
+ * The well flattened into the footer (TODO 4.11 wave 2, review of #618):
+ * Card Conjurer draws the piece's well in the footer's tone but its outer
+ * ellipse 4–8 levels darker (w 65,65,53 / 70,69,57 against the footer's
+ * 72,71,61) — a faint oval line round the stamp that print does not have.
+ * Every pixel of the cut piece within `within` levels of the master's
+ * footer (read from the same key's master at `at`, a flat footer pixel)
+ * takes that tone, its alpha kept (flattenNearToneRgba8) — the well inside
+ * the arch — and from `footerFromRow` down (card row 1948: below the box's
+ * rim, where the piece lies on the master's flat footer, rows 1947 on) every
+ * pixel of the piece outside the cut IS the footer, opaque (fillRowsOutsideCut): the
+ * pack's soft outer ellipse there — its 4–8 levels darker ring and its light
+ * low-α fringe — leaves no line. The rim, the box and the cut are untouched.
+ */
+export const ETALES_WELL_TONE = Object.freeze({ master: "enchantingtales", at: Object.freeze({ x: 750, y: 2060 }), within: 12, footerFromRow: 51 });
 /** The stamp's oval, card px: the PRINTS' hologram — the 45 stamped WOT
  *  prints' bright pixels at 688–814 × 1923–1986 (the median over the dark-
  *  footed prints, every one within a pixel), 127 × 64. The pack's own
@@ -4764,7 +4836,118 @@ export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma, elli
   return plane;
 }
 
+// ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2 item 1): the Dungeons & Dragons
+// SOURCEBOOK showcase (`dndsourcebook`; Adventures in the Forgotten Realms
+// AFR #299–349, 2021, and Commander Legends: Battle for Baldur's Gate CLB
+// #375–450, 2022 — 127 printings; AFR #350–358, the nine lands of the same
+// run, print the 'Dungeon Module' cover instead and are not this frame) from
+// Card Conjurer's 'D&D Sourcebook' pack (packDNDSourcebook.js,
+// `img/frames/dndSourcebook/`, 1500 × 2100 NATIVE: nothing is resampled).
+// An ADDITION: a new template, no stored card sits on it.
+//   • ONE master for every key: the pack draws one parchment page for every
+//     colour, and so does print — a sourcebook card's colour is its ART's
+//     background (a white card's pale pink, a blue's teal …), never the
+//     frame's: the parchment's median is the same within print's own spread
+//     whatever the colour (DND_PRINT_TONE below). So w u b r g c m are all
+//     `frame.png`, byte for byte.
+//   • a real black border all round (the edge contract's ALL_BORDER), cut
+//     at the one card corner by the importer; the page's own rounded
+//     corners are the pack's drawing.
+//   • the art window is see-through on 133–1399 × 237–1175 px (α < 1) with
+//     torn, half-transparent edges reaching 93–1439 × 227–1180 (α < 250):
+//     the profile's slot covers that with the art-window check's spare.
+//   • plates: the pack's one P/T plate (pt.png, 260 × 132, 1:1) under every
+//     key; the profile draws it where print sets it (1167 / 1867), 6 px
+//     right of and below the pack's ptBounds (1161 / 1861).
+//   • geometry kept as drawn: print is the same page with its lines a few px
+//     higher — the title rule 1.5 (AFR) / 5 (CLB) px, the art's foot and
+//     the type rule 4–5 / 7.5 px — and its page's foot 3.5–4.5 px lower; the
+//     lines run across textured parchment, never a flat zone, so nothing is
+//     re-cut, and the slots ride the pack's own lines.
+// ---------------------------------------------------------------------------
+export const DND = "img/frames/dndSourcebook";
+const DND_PACK = "packDNDSourcebook.js 'D&D Sourcebook' (the Adventures in the Forgotten Realms / Battle for Baldur's Gate sourcebook showcase; groupShowcase-5.js)";
+/**
+ * The parchment against print by the ring's one rule (raw scan medians; a
+ * region ≥ 9 levels off is toned): the page's median over its title band,
+ * type band and text box (100–1400 × 80–210, 1200–1295, 1340–1880 px; the
+ * ink, |Δluma| > 45 from the region's median, left out) on all 127
+ * sourcebook prints (Scryfall PNGs at 1500 × 2100), the median of the
+ * per-print medians, against the pack's over the same pixels:
+ *   • the pack 219,178,139 — print 217,181,144 (AFR 214,174,137, CLB
+ *     218,183,146; the prints' quartiles 213–219 / 174–184 / 138–148): 2 /
+ *     3 / 5 off — as drawn.
+ * Nothing is toned.
+ */
+export const DND_PRINT_TONE = Object.freeze({ pack: Object.freeze([219, 178, 139]), print: Object.freeze([217, 181, 144]), afr: Object.freeze([214, 174, 137]), clb: Object.freeze([218, 183, 146]) });
+const DND_PT = Object.freeze(perColor(() => `${DND}/pt.png`));
+const DND_NOTES = [
+  "w u b r g c m = the pack's one 'Frame' (dndSourcebook/frame.png, 1500x2100 NATIVE — no resample), byte for byte: the pack and print draw one parchment page for every colour (a sourcebook card's colour is its art's background), so there is no colour master to draw",
+  "a real black border all round, cut at the one card corner; the page's own rounded corners are the pack's drawing",
+  "plates = the pack's one 'Power/Toughness' plate (dndSourcebook/pt.png, 260x132, native size) under every key; the profile draws it 1:1 where print sets it (1167/1867 px, the median of 115 creatures), 6 px right of and below the pack's ptBounds (1161/1861)",
+  `the parchment against print by the ring's rule (raw scan medians over the title band, type band and text box, ink left out; a region ≥ 9 levels off is toned): the pack ${DND_PRINT_TONE.pack.join(",")}, the 127 sourcebook prints ${DND_PRINT_TONE.print.join(",")} (AFR ${DND_PRINT_TONE.afr.join(",")}, CLB ${DND_PRINT_TONE.clb.join(",")}) — within 5 levels, as drawn: nothing is toned`,
+  "geometry as drawn: print's lines sit a few px higher (the title rule 1.5 / 5 px on AFR / CLB, the art's foot and the type rule 4–5 / 7.5 px) and its page's foot 3.5–4.5 px lower; the lines cross textured parchment, never a flat zone, so nothing is re-cut and the slots ride the pack's own lines",
+  "no legendary crown: the pack's 'Legend Crown' (dndSourcebook/crown.png) is not on print — none of the run's legendary printings (AFR #303, #304, #317, #323, #333, #335–347 and CLB's legends) prints one — so it is neither built nor published",
+];
+
+/**
+ * The sourcebook's OVAL stamp notch (TODO 4.11): the pack's one 'Holo Stamp'
+ * (`dndSourcebook/holo.png`, 186 × 78 at its bounds 657 / 1917 — the black
+ * border arched up into the page's foot round the hologram oval) — 1:1 at
+ * HD, no resample — cut to DND_NOTCH_BOX: 1 px round the piece and 8 px past
+ * its foot, so the oval cut and its black ring fit (below the piece the box
+ * is clear but for that ring, over the master's own black border). The
+ * prints' oval (134 × 64 on the well's centre, DND_STAMP_OVAL_PX — it
+ * covers the capture the pack paints in the well, 685–815 × 1930–1993 px)
+ * is cut clear with 2 px, the 2 px round it painted black, and our own oval
+ * art covers it (lib/cards/holo-stamp-art.ts). Its own piece per key (all
+ * seven the same pixels), as the masters.
+ */
+export const DND_NOTCH_BOX = Object.freeze({ x: 656, y: 1916, width: 188, height: 88 });
+/** The stamp's oval, card px: the PRINTS' hologram — 134 × 64 (the 49
+ *  stamped prints: its right edge at 816–818, its foot at 1991–1994; the
+ *  Tarkir and M15 prints' 134 across) — on the centre of the pack's own
+ *  well (750, 1961), whose capture (DND_CAPTURE_PX) it covers. */
+export const DND_STAMP_OVAL_PX = Object.freeze({ x: 683, y: 1929, width: 134, height: 64 });
+/** The pack's capture in the well, card px — what the cut must cover
+ *  (the piece's lit pixels, luma > 60: x 28–157, rows 13–75). */
+export const DND_CAPTURE_PX = Object.freeze({ x: 685, y: 1930, width: 130, height: 63 });
+export const DND_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, `${DND}/holo.png`]))),
+  placeAt: Object.freeze({ x: 657, y: 1917, width: 186, height: 78 }),
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: DND_NOTCH_BOX.width, height: DND_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (DND_NOTCH_BOX.x / 1500) * 100,
+      topPct: (DND_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (DND_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (DND_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (DND_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (DND_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (DND_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (DND_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+  /** The capture's pixels in the notch box (the well's lit pixels: x
+   *  29–158, rows 14–76 of the box), which the importer holds inside the
+   *  cut and its ring. */
+  capture: Object.freeze({ x0: 29, x1: 158, y0: 14, y1: 76, minLuma: 60 }),
+});
+
 export const CC_TEMPLATES = {
+  // TODO 4.11 wave 2: the D&D Sourcebook showcase (see DND above) — one
+  // master for every key.
+  dndsourcebook: {
+    colors: perColor(() => [layer(`${DND}/frame.png`)]),
+    plates: DND_PT,
+    pack: DND_PACK,
+    notes: DND_NOTES,
+  },
   // TODO 4.11: the MUL Tarkir dragon-wing showcase (see TARKIR above).
   tarkirdragon: {
     colors: perColor((k) => [layer(tarkirFile("", k))]),
@@ -8027,6 +8210,25 @@ export const HOLO_STAMP_NOTCHES = {
       "the hologram: the pack's 'Gray Holo Stamp' shape (lotr/stamp/gray.png) placed the same way, grown 1 px, painted opaque black — the pack draws its triangle 8–10 px HIGHER than the printed stamp (its top edge at 1915 px against the hole's 1924.6; LTR #302 / #313 print the Universes Beyond stamp, the hole 687–812 × 1924.6–1992.5) — then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
     ],
   },
+  // TODO 4.11 wave 2: the D&D Sourcebook's OVAL notch — the pack's one
+  // piece, 1:1, its hologram oval cut (DND_NOTCH).
+  dndsourcebookholostamp: {
+    pack: DND_PACK,
+    pieces: DND_NOTCH.pieces,
+    keys: DND_NOTCH.keys,
+    shape: DND_NOTCH.shape,
+    placeAt: DND_NOTCH.placeAt,
+    compositeSize: DND_NOTCH.compositeSize,
+    oval: DND_NOTCH.oval,
+    capture: DND_NOTCH.capture,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the sourcebook's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dndSourcebook/holo.png, 186x78) — the black border arched up into the page's foot round the hologram oval — at its bounds (657/1917 px), 1:1 (the pack is 1500 px native), cut to its box ${DND_NOTCH_BOX.width}x${DND_NOTCH_BOX.height} at ${DND_NOTCH_BOX.x},${DND_NOTCH_BOX.y} px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border`,
+      "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp, and every master is the same page",
+      `the hologram: the pack paints a capture of WotC's oval in the well (${DND_CAPTURE_PX.x}–${DND_CAPTURE_PX.x + DND_CAPTURE_PX.width} × ${DND_CAPTURE_PX.y}–${DND_CAPTURE_PX.y + DND_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${DND_STAMP_OVAL_PX.width} × ${DND_STAMP_OVAL_PX.height} at ${DND_STAMP_OVAL_PX.x}, ${DND_STAMP_OVAL_PX.y} — the 49 stamped AFR / CLB prints, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+    ],
+  },
   // TODO 4.11: the MUL Tarkir showcase's OVAL notch — the pack's one piece,
   // 1:1, its hologram oval cut (TARKIR_NOTCH).
   tarkirdragonholostamp: {
@@ -8061,10 +8263,12 @@ export const HOLO_STAMP_NOTCHES = {
     capture: ETALES_NOTCH.capture,
     cutMarginPx: 2,
     blackoutPx: 0,
+    wellTone: ETALES_WELL_TONE,
     notes: [
       `the Enchanting Tales oval stamp notch (TODO 4.11 wave 2): the pack's 'Holo Stamp' per colour (enchantingTales/stamp/<k>.png, 306x176) — the text box's bottom rim arched up over a well in the footer's own tone round the hologram oval — drawn at its stampBounds (890/2548, 229x132 of 2010x2814 = 664.2/1901.5, 170.9x98.5 px at HD): resampled ONCE (Lanczos) to ${ETALES_NOTCH.placeAt.width}x${ETALES_NOTCH.placeAt.height} and placed on print at ${ETALES_NOTCH.placeAt.x},${ETALES_NOTCH.placeAt.y} px — 3 px up with the master's lower block (ETALES_LOWER_RECUT) and 2 px right (the 45 stamped prints' arch centred on 751.5 px) — cut to its box ${ETALES_NOTCH_BOX.width}x${ETALES_NOTCH_BOX.height} at ${ETALES_NOTCH_BOX.x},${ETALES_NOTCH_BOX.y} px (1 px round the piece)`,
       "keys = the masters' w u b r g m and c (the white piece, as the c master is the white frame)",
       `the hologram: the pack paints a capture of WotC's oval in the well; the prints' oval (${ETALES_STAMP_OVAL_PX.width} × ${ETALES_STAMP_OVAL_PX.height} at ${ETALES_STAMP_OVAL_PX.x}, ${ETALES_STAMP_OVAL_PX.y} — the 45 stamped WOT prints) plus 2 px is cut to transparent and the importer holds every lit pixel of the oval's box inside the cut: no pixel of the capture is published; the well round the cut keeps the footer's own tone (no black ring, blackoutPx 0: print draws none); our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+      "the well flattened into the master's footer tone (ETALES_WELL_TONE: every pixel within 12 levels of the same key's footer, read at 750, 2060 on the master, takes it, alpha kept; from the piece's row 51 — card row 1948, the master's flat footer — every pixel of the piece outside the cut is the footer tone, opaque; what the piece leaves clear stays clear): the pack draws the well's outer ellipse 4–8 levels darker than the footer with a light low-α fringe, a faint line print does not have",
     ],
   },
   lotrscrollholostamp: {

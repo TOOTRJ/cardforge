@@ -9,6 +9,7 @@ import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import { frameChoicesForType, resolveGeneratedFrame } from "@/lib/creator/frame-random";
 import { templateRefusesKind } from "@/lib/creator/card-kinds";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
+import { frameFitsImport, type ImportChooserPatch } from "@/lib/creator/import-frame-choice";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,16 @@ describe("the Enchanting Tales imports", () => {
     expect(templateRefusesKind("enchantingtales", "enchantment")).toBe(false);
     expect(templateRefusesKind("enchantingtales", "creature")).toBe(false);
     for (const kind of ["instant", "sorcery", "artifact", "land", "planeswalker", "battle", "token"] as const) expect(templateRefusesKind("enchantingtales", kind), kind).toBe(true);
+  });
+
+  it("the import chooser offers it to an enchantment and an Enchantment Creature only — never a plain or Artifact creature", () => {
+    const verified = new Set([...every("enchantingtales"), ...every("m15"), ...every("m15artifact")]);
+    const patch = (card_type: string, supertype: string | null) =>
+      ({ kind: card_type, card_type, supertype, subtypes_text: "", title: "Test", rules_text: "", color_identity: ["blue"], frame_template: "m15", frame_match: null }) as unknown as ImportChooserPatch;
+    expect(frameFitsImport("enchantingtales", { kind: "enchantment", verifiedKeys: verified, patch: patch("enchantment", null) })).toBe(true);
+    expect(frameFitsImport("enchantingtales", { kind: "creature", verifiedKeys: verified, patch: patch("creature", "Enchantment") })).toBe(true);
+    expect(frameFitsImport("enchantingtales", { kind: "creature", verifiedKeys: verified, patch: patch("creature", null) })).toBe(false);
+    expect(frameFitsImport("enchantingtales", { kind: "creature", verifiedKeys: verified, patch: patch("creature", "Artifact") })).toBe(false);
   });
 
   it("leaves the anime reprints where they were", () => {

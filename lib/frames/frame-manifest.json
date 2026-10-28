@@ -548,6 +548,300 @@
       "width": 220,
       "height": 220
     },
+    "dndsourcebook/b.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/b.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/c.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/c.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/g.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/g.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/m.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/m.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/pt/b.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/b.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/c.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/c.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/g.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/g.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/m.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/m.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/r.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/r.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/u.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/u.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/w.png": {
+      "hash": "c1cf1d543418",
+      "sha256": "c1cf1d543418a719d120c874545244c8aef9bea85dedb0c725e02b7ec1e8fc7a",
+      "bytes": 69126,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/pt/w.webp": {
+      "hash": "a363ba9fff5f",
+      "sha256": "a363ba9fff5f00c5e480701aaa91e43d4d0864f3e99a46f27af7418346b4f3f5",
+      "bytes": 5846,
+      "width": 260,
+      "height": 132
+    },
+    "dndsourcebook/r.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/r.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/u.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/u.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/w.png": {
+      "hash": "7473601193a8",
+      "sha256": "7473601193a88e7940e66470121ded2c41cd306224c6a432770544d4941dad81",
+      "bytes": 3453614,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebook/w.webp": {
+      "hash": "e7d4c9ebe98c",
+      "sha256": "e7d4c9ebe98c01f38abfbc4b2a01284ce2a93e2d626653283dd8d043d9f17c56",
+      "bytes": 276832,
+      "width": 1500,
+      "height": 2100
+    },
+    "dndsourcebookholostamp/b.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/b.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/c.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/c.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/g.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/g.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/m.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/m.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/r.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/r.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/u.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/u.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/w.png": {
+      "hash": "5261e9c5c556",
+      "sha256": "5261e9c5c5561d14f555251b1931c0f46e59ddb9fb5b0500393d1bfe3d9f0133",
+      "bytes": 1018,
+      "width": 188,
+      "height": 88
+    },
+    "dndsourcebookholostamp/w.webp": {
+      "hash": "0a60d81f5d1b",
+      "sha256": "0a60d81f5d1b7ad5e0bb8d9233dfd49fdf548327147cb33c8605d3e62bc16f45",
+      "bytes": 718,
+      "width": 188,
+      "height": 88
+    },
     "emblem/b.png": {
       "hash": "2adb45cd9c81",
       "sha256": "2adb45cd9c81e8e31e90639301fb988c029c34faf7d3a491237411d6438c2937",
@@ -843,100 +1137,100 @@
       "height": 2100
     },
     "enchantingtalesholostamp/b.png": {
-      "hash": "70d579beaaba",
-      "sha256": "70d579beaaba290f824f946614825ccbd1ac2a061f42fb6d53b0f7b9d6849961",
-      "bytes": 7956,
+      "hash": "1c7480a55807",
+      "sha256": "1c7480a55807632f28178d5cfb1293e6a3c2a26758912683e4ecbd40e259b4bf",
+      "bytes": 4646,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/b.webp": {
-      "hash": "a21cd1c809a0",
-      "sha256": "a21cd1c809a0b38298ed82bc57a646e84834f3c9a5cd3f6e5dcbfae000c65a09",
-      "bytes": 4598,
+      "hash": "04a4c534e2f8",
+      "sha256": "04a4c534e2f8041a6e61f6f38d9845c75bde6dcaa18b131c080bc4a770e4a8bd",
+      "bytes": 3296,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/c.png": {
-      "hash": "34d7c6831b53",
-      "sha256": "34d7c6831b53639cdd70b521d9d96c86d2ddfdae5faa5a651e67bf4e89448f35",
-      "bytes": 8020,
+      "hash": "60e0bf8ecf64",
+      "sha256": "60e0bf8ecf641cbd4e8d5ae447bfa44c3310825a550b008d5da315a896194507",
+      "bytes": 4382,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/c.webp": {
-      "hash": "38a687b85747",
-      "sha256": "38a687b85747029b21484181985485b3fee50e819df78c9f860f1d08c894217c",
-      "bytes": 4170,
+      "hash": "73a2f2075ada",
+      "sha256": "73a2f2075ada9660aa9f8c9875c3128e6bad8d087921f8c6129d4da73f06d9cc",
+      "bytes": 2606,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/g.png": {
-      "hash": "b57eaebf57e7",
-      "sha256": "b57eaebf57e7b1274ec21f3bc8c82d40c505f93154124dab9a5b90b472549b01",
-      "bytes": 8362,
+      "hash": "5c5c3fe1ac6d",
+      "sha256": "5c5c3fe1ac6dc460dd6754b291865f4266d20d2e3ba6759913268e0ae7a3699b",
+      "bytes": 4819,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/g.webp": {
-      "hash": "5bd834ec58f1",
-      "sha256": "5bd834ec58f150faa6ddc218a0c70923c53b342e868d46c91eaef95c53fd866d",
-      "bytes": 4932,
+      "hash": "90e694ff3287",
+      "sha256": "90e694ff32877c59416346aab2350a58a66327608f1ea89f0de3b21fb6dfce90",
+      "bytes": 3476,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/m.png": {
-      "hash": "a98406252389",
-      "sha256": "a984062523893a69494bbdc65b6d107ac617acbd44c45fc7b999bfef373e3356",
-      "bytes": 8160,
+      "hash": "fb3785895961",
+      "sha256": "fb37858959612c84a67656e20822424dfdb4befd365924a9c095c9fef7d97d3a",
+      "bytes": 4668,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/m.webp": {
-      "hash": "49dfbac36b95",
-      "sha256": "49dfbac36b958eaef1d7902e74c73d0d5b191023a61694427e949b6d3ba3244c",
-      "bytes": 5384,
+      "hash": "a96563261074",
+      "sha256": "a96563261074dbb6cfa12ed20de7cf9dd0240fc0574ac57df9231d36c12e97e7",
+      "bytes": 4064,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/r.png": {
-      "hash": "786d6e8f5d3d",
-      "sha256": "786d6e8f5d3ddc6a5acce154a8b2493534dbead2cef4bf8ad5b3edd02bc8f787",
-      "bytes": 8377,
+      "hash": "c77377c5cc3e",
+      "sha256": "c77377c5cc3e8c392ffd02a99e67852448fe5b533017ca0ad87a5fb3d8cbf9ec",
+      "bytes": 4845,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/r.webp": {
-      "hash": "4bec65abab40",
-      "sha256": "4bec65abab4044e767e1d90efe39a02fb4f70865e07132116b4e880caee04011",
-      "bytes": 5272,
+      "hash": "d135fdae8171",
+      "sha256": "d135fdae817116c7ca13a991d6cb924e49fea8a2ca2a30e39d85f1433ae51d6d",
+      "bytes": 3924,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/u.png": {
-      "hash": "509c1889ae70",
-      "sha256": "509c1889ae70f85c777e5bf049e6fe7d214f6d3bf2862af7ec393917905d608f",
-      "bytes": 8624,
+      "hash": "6da6a7fbc51b",
+      "sha256": "6da6a7fbc51b0c42a323ba19cfdcc125fa3acc394a9bac87663cedfde60efc9b",
+      "bytes": 5065,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/u.webp": {
-      "hash": "d464d842e738",
-      "sha256": "d464d842e7386fa60bf9881d94fbc1ee4762e93a6cbc76caa7ba6b390cb4b9b7",
-      "bytes": 5336,
+      "hash": "c0a063e1e5d8",
+      "sha256": "c0a063e1e5d816a3d30b635464e9389b09e53db44cd4acaa182e2eab30b418cd",
+      "bytes": 3914,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/w.png": {
-      "hash": "34d7c6831b53",
-      "sha256": "34d7c6831b53639cdd70b521d9d96c86d2ddfdae5faa5a651e67bf4e89448f35",
-      "bytes": 8020,
+      "hash": "60e0bf8ecf64",
+      "sha256": "60e0bf8ecf641cbd4e8d5ae447bfa44c3310825a550b008d5da315a896194507",
+      "bytes": 4382,
       "width": 173,
       "height": 101
     },
     "enchantingtalesholostamp/w.webp": {
-      "hash": "38a687b85747",
-      "sha256": "38a687b85747029b21484181985485b3fee50e819df78c9f860f1d08c894217c",
-      "bytes": 4170,
+      "hash": "73a2f2075ada",
+      "sha256": "73a2f2075ada9660aa9f8c9875c3128e6bad8d087921f8c6129d4da73f06d9cc",
+      "bytes": 2606,
       "width": 173,
       "height": 101
     },

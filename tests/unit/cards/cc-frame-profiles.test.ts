@@ -46,6 +46,15 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 4 / 1500]);
         continue;
       }
+      // The D&D Sourcebook showcase (TODO 4.11 wave 2): its own run's row —
+      // the CC M15 row 3 px higher (the discs 109.5 px above the title rule,
+      // median of the 127 AFR / CLB prints) and its end 10 px further right
+      // (the last disc ending at 1391, on a page 3 px narrower than the
+      // pack's), 70 px discs.
+      if (template === "dndsourcebook") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 12 / 1500]);
+        continue;
+      }
       // The Enchanting Tales showcase (TODO 4.11 wave 2): the CC M15 row 3 px
       // further right (registered on all 63 WOT #1–63 prints), its lift
       // kept on the pack's title bar, 70 px discs.

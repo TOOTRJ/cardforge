@@ -180,8 +180,13 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 64 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 65 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
+  the 'D&D Sourcebook' pack's one parchment frame under every key, its one
+  plate and its oval stamp notch (`dndsourcebookholostamp`); no crown
+  ([The D&D Sourcebook showcase](#the-dd-sourcebook-showcase-411-wave-2));
 
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
   the 'Zendikar Rising' pack's frames whole with their title ends, each
@@ -4991,6 +4996,149 @@ ticked.
   colour is verified (the border cap is gone); #60 / #190 Taigam is the
   frame's own split wings, so no two-colour gap.
 
+### The D&D Sourcebook showcase (4.11 wave 2)
+
+`dndsourcebook` — "Sourcebook" in the Dungeons & Dragons set (`dnd`,
+showcase era): the parchment page of Adventures in the Forgotten Realms
+#299–349 (2021) and Commander Legends: Battle for Baldur's Gate #375–450
+(2022) — 127 printings, every one single-faced and black-bordered on the
+2015 frame, none a walker, token or layout card. NOT AFR #350–358: the
+nine lands of the same showcase run print the orange 'Dungeon Module'
+cover, another design (Card Conjurer's `dndModule`, not built; they stay
+`showcase`). Card Conjurer's 'D&D Sourcebook' pack (packDNDSourcebook.js,
+`img/frames/dndSourcebook/`, 1500 × 2100 NATIVE: nothing is resampled),
+frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.dndsourcebook`, the `DND` block of
+`scripts/lib/cc-frames.mjs`). An ADDITION: a new template — no layout bump,
+no sweep, no badge; nobody can pick it until a colour is verified.
+
+- **One master for every key.** The pack draws one parchment page for
+  every colour, and so does print: a sourcebook card's colour is its ART's
+  background (a white card's pale pink, a blue's teal, a gold legend's
+  yellow), never the frame's. So w u b r g c m are all the pack's
+  `frame.png`, byte for byte (one manifest sha under seven names, as the
+  emblem's and the transform land pair's single masters), with a real black
+  border all round, cut at the one card corner by the importer; the page's
+  rounded corners are the pack's drawing. No pair masters, no two-colour
+  gap: a two- or three-colour legend prints the same page.
+- **The window.** See-through on 133–1399 × 237–1175 px (α < 1) with torn,
+  half-transparent edges reaching 93–1439 × 227–1180 (α < 250) on every
+  key. The art slot covers them with the art-window check's 0.05 % to
+  spare: 92–1441 × 226–1183 (`DNDSOURCEBOOK_ART_SLOT`; Scryfall's
+  `art_crop` of the run is 627 × 448, the same 1.40 shape).
+- **The pack against its prints** (Scryfall PNGs at 1500 × 2100, ≥ 250 ms
+  apart, all 127 read; scans never committed). The page's lines, the
+  median rule centre of each print: the title rule 229 (AFR) / 224.5 (CLB)
+  px against the pack's 229, the art's foot rule 1177.5 / 1174 against
+  1181.5, the type rule 1313 / 1309.5 against 1317.5; the page's foot
+  1952.5 / 1953.5 against 1949; its sides 59–60 / 1435–1437 against 60 /
+  1439. Print is the same page with its lines a few px higher and its foot
+  a few px lower, and the two sets differ from each other by 3–4 px. The
+  lines cross textured parchment, never a flat zone, so nothing is re-cut:
+  the masters stay as drawn and every slot is placed against ITS OWN line,
+  as each print places it against its own.
+- **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels
+  off is toned): the page's median over its title band, type band and text
+  box (ink, |Δluma| > 45, left out), the median of the 127 per-print
+  medians — pack 219,178,139, print 217,181,144 (AFR 214,174,137, CLB
+  218,183,146; quartiles 213–219 / 174–184 / 138–148): 2 / 3 / 5 off.
+  Nothing is toned (`DND_PRINT_TONE`).
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump):
+  - the name 1.5 px above M15's (its baseline 42.5 px above the title rule
+    on the 127 prints, both sets alike; ours 42) and its pen 2 px left of
+    M15's (`DNDSOURCEBOOK_TITLE_DX_PX`; the right end kept): each name's
+    first ink against the same name's on print, ours sat 5 px right of AFR's
+    and 1 px right of CLB's, the median of all 127 being 2 — now 0 (AFR
+    +3, CLB −1);
+  - the cost row: the CC M15 70 px disc 3 px higher (`costDy` −9.6 px —
+    the discs 109.5 px above the title rule and their shadow's foot 35.5)
+    and its end 10 px further right (`costDx` 12 px: the last disc ending
+    at 1391 on print, on a page 3 px narrower than the pack's — AFR ends at
+    1383, CLB at 1393);
+  - the type band 7 px lower (its RECT: the set symbol centred on the band
+    as both sets centre it, 1248 / 1250.5 against the band's middle 1249.5)
+    and the type line 3 px under the CC baseline on it (88 px under the
+    art's foot rule, the prints' median; AFR 92, CLB 87);
+  - the rules box M15's but its foot, 1877.5 px: the run's full boxes end
+    their last descenders on 1868–1880, and the page's rounded foot (its
+    corner curve starts at 1765) would cut a line set lower at the left;
+    M15's margins (the run's lines from x 130, its right ink to 1368 at
+    p90 and 1377 at most against our 1368.5);
+  - the P/T: the pack's one plate (`pt.png`, 260 × 132, 1:1; it fills its
+    image, `lib/cards/plate-ink.ts`) where PRINT sets it, NOT at the pack's
+    ptBounds (1161 / 1861): the pack's plate registered on each of the
+    run's 115 creatures (its rim and outlines matched, the digits left out)
+    puts its top edge on 1867 in both sets and its left edge on 1158 (AFR,
+    50) / 1167 (CLB, 65) — so `DNDSOURCEBOOK_PLATE_PX` 1167 / 1867, the
+    median of all, 6 px right of and 6 px below the pack's bounds (an
+    earlier reading on 17 cards' digits had called it 3 px; the plate
+    itself is 6). M15's text box moves with it (6 px right, 5 px down) and
+    the face (`inkSpanPct`) is the plate's inner outline, 1195–1398: the
+    digits' ink centre now sits 129.5 / 66 px from the plate's top-left
+    corner, print's median (AFR 128 / 62.5, CLB 130 / 66.5); the ink 57 px
+    tall against print's 59–60 (the family's size);
+  - dark ink everywhere (the page is light).
+  Flagged, not changed: print's name, type line and P/T are set in a
+  bolder serif display face than Beleren (no font is added for a frame);
+  the AFR and CLB symbols sit 12 px apart across (AFR's hexagon ends at
+  1365, CLB's shield at 1385; ours ends both at 1377–1380, between); print
+  sets short rules texts larger than the family's 76 px ceiling (CLB #401
+  Lightning Bolt ~5 % larger) — the rules layout's, not the frame's.
+- **AFR and CLB are not the same page to the pixel.** The two sets were
+  printed a year apart and set a few px apart; ONE profile serves both, on
+  the median of all 127 prints (76 of them CLB), so each set sits a few px
+  off it. Per set, print against ours (px at 1500 × 2100; + = print lower /
+  further right):
+
+  | | AFR (51) | CLB (76) | ours |
+  |---|---|---|---|
+  | title rule (centre) | 229 | 224.5 | 229 (the pack's) |
+  | name baseline − title rule | −42.5 | −42 | −42 |
+  | name first ink vs ours | −3 | +1 | — |
+  | cost discs' top − title rule | −111 | −109.5 | −109 |
+  | cost row's right end | 1383 | 1393 | 1394–1395 |
+  | art-foot rule | 1177.5 | 1174 | 1181.5 |
+  | type baseline − art-foot rule | 92 | 87 | 88 |
+  | set symbol (ink box) | 1291–1365, centre 1245 | 1324–1385, centre 1240.5 | the band's middle, right end 1377–1380 |
+  | type rule | 1313 | 1309.5 | 1317.5 |
+  | P/T plate (left / top) | 1158 / 1867 | 1167 / 1867 | 1167 / 1867 |
+  | digits − plate corner | 128 / 62.5 | 130 / 66.5 | 129.5 / 66 |
+  | collector line 1 / 2 (ink foot) | 1997 / 2035 | 1997 / 2036 | 1997 / 2035 |
+
+  Exact per set would need a per-set slot (TODO 4.11, the owner's call):
+  the profile has no way to tell an AFR card from a CLB one today.
+- **No crown.** None of the run's legends (AFR #303, #304, #317, #323,
+  #333, #335–347; most of CLB #375–441) prints one — the pack's 'Legend
+  Crown' is Card Conjurer's own — so the template declares none, the
+  importer builds none, and an import of a legend writes the showcase's
+  crown off (`crownSwitchFromPrinting`: a showcase signature not in
+  `CROWNED_SHOWCASE_SIGNATURES`).
+- **Stamp** (`DNDSOURCEBOOK_HOLO_STAMP`, `dndsourcebookholostamp/<key>.png`):
+  the run's rares and mythics wear the OVAL (`security_stamp: oval`, 49 of
+  127), its commons and uncommons none — "auto" is a rare or mythic, as on
+  M15. The notch is the pack's one 'Holo Stamp' (`holo.png`, 186 × 78 at
+  657 / 1917, 1:1) — the black border arched up into the page's foot — cut
+  to an 188 × 88 box at 656, 1916 (1 px round the piece, 8 px past its
+  foot), the same piece for every key. The pack paints a capture of the
+  hologram in the well (685–815 × 1930–1993 px); the cut is the PRINTS'
+  oval, 134 × 64 on the well's centre (683–817 × 1929–1993: its right edge
+  at 816–818 and its foot at 1991–1994 on the 49 stamped prints), + 2 px
+  cut clear and the 2 px round it painted black; the importer holds every
+  lit pixel of the well inside them — no pixel of the capture is
+  published; our oval art covers the cut. The arch is a rules keep-out
+  (657–843 × 1917–1949). An ADDITION, opt-in per card.
+- **Collector line** (`DNDSOURCEBOOK_COLLECTOR`): M15's slot 4 px lower —
+  line 1 on 1997.5, line 2 on 2036 px (the 127 prints end line 1's ink on
+  1997, line 2's on 2035 / 2036; M15's slot bakes 1993 / 2031). An
+  ADDITION, opt-in per card.
+- **Imports.** `showcase/afr/sourcebook` (AFR #299–349, CLB #375–450) is
+  exact on `dndsourcebook` once the card's colour is verified, `nearest`
+  until then (`withVerification`); before this frame the run imported
+  `showcase`, nearest on M15 / its artifact frame. No gap: one page for
+  every colour, no crown, no double-faced or walker printing in the run.
+  Every other printing's outcome is unchanged (the fixtures).
+
 ### The Tarkir: Dragonstorm showcases (4.11 / 4.35, layout v68)
 
 `tarkirdraconic` (TDM #292–326, the gold-railed dragon frame) and
@@ -5402,9 +5550,11 @@ verified.
   colour's own tone to the bottom edge — `design` top and bottom edges, all
   four corners kept square (`keepCorners`, `lib/frames/square-corners.ts`
   "frame") and cut round at render. Card Conjurer leaves a translucent
-  crease (α 200–254) along its own rounded top corners and a 3 px speck on
-  the gold top edge: rows 0–80 with α ≥ 128 are made solid in their own
-  colour (`ETALES_SOLID_ROWS`; no art reaches above row 111).
+  crease (α 200–254) along its own rounded top corners, and the gold
+  frame's swirls are near-opaque (α 228–254) across its whole top band
+  (3,136 px more, x 35–1480): rows 0–80 with α ≥ 128 are made solid in
+  their own colour (`ETALES_SOLID_ROWS`, 3,282 px on gold, 466–976 on the
+  others; no art reaches above row 111).
 - **The art** runs under the whole frame from the title bar down: see-
   through across the card's width to the type bar and on under the
   TRANSLUCENT text box (α 204 on w, 222 on the others; print shows the art
@@ -5480,9 +5630,14 @@ verified.
   inscribed in its box: the box's corners hold the rim and the piece's
   edge); NO black ring is painted round it (`blackoutPx` 0: print's well is
   the footer's tone to the hologram's edge). The rules box keeps out of the
-  arch (666–837 × 1898–1928). Flagged: the piece's outer edge is 5–7 levels
-  darker than the footer it sits on (Card Conjurer's drawing), and our own
-  oval bitmap carries its thin dark ring as everywhere.
+  arch (666–837 × 1898–1928). Card Conjurer draws the well's outer
+  ellipse 4–8 levels darker than the footer with a light low-α fringe (a
+  faint line round the stamp that print does not have): the importer
+  flattens the well into the same key's footer tone and, below the box's
+  rim (card row 1948 on, the master's flat footer), makes every pixel of
+  the piece outside the cut that tone, opaque (`ETALES_WELL_TONE`,
+  `flattenNearToneRgba8`, `fillRowsOutsideCut`) — no line. Our own oval
+  bitmap carries its thin dark ring as everywhere.
 - **Collector line** (opt-in, `ENCHANTINGTALES_COLLECTOR`): M15's slot on
   the run's rows, white in the colour's footer — line 1 at 1990 px, line 2
   at 2029 (4 / 3 px above M15's; print's ink registered per line on all
@@ -5498,8 +5653,11 @@ verified.
   uncommons none; every printing the 2023 collector line.
 - **Kinds** (`TREATMENT_KINDS`): enchantment dress, like the
   constellation frame — the Enchantment kind (Auras and Kindred included)
-  and an Enchantment Creature, which borrows it (the pack draws the plates
-  for one).
+  and an Enchantment Creature, which BORROWS it (`BORROWED_SHOWCASES`,
+  `BORROWED_TYPE_WORD` "Enchantment", owner 2026-10-27: picking it on a
+  creature writes the word; a random pick, a request by name or the import
+  chooser gives it to a creature only when its words say Enchantment — the
+  pack draws the plates for one).
 - **Verify** (`lib/cards/frame-references.json`): two prints per colour —
   an uncommon (no stamp; an Aura on red and green) and a rare or mythic
   (the stamp): w #6 / #1, u #26 / #25, b #37 / #27, r #41 / #40, g #63 /
@@ -9932,12 +10090,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 83 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 84 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions and 4.11 wave 2's Enchanting Tales, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions and 4.11 wave 2's D&D Sourcebook and Enchanting Tales, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

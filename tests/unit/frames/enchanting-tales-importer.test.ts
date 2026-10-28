@@ -13,10 +13,13 @@ import {
   ETALES_PRINT_TONE,
   ETALES_SOLID_ROWS,
   ETALES_STAMP_OVAL_PX,
+  ETALES_WELL_TONE,
   HOLO_STAMP_NOTCHES,
   blackoutAndCut,
   capturePlane,
   cutInside,
+  fillRowsOutsideCut,
+  flattenNearToneRgba8,
   notchCutOf,
   notchSourceFiles,
   pieceNotchFindings,
@@ -200,6 +203,28 @@ describe("the importer's notch piece", () => {
     expect(ring).toBe(0);
   });
 
+  it("flattens the well into the footer tone and fills the piece's own pixels below the rim — the cut and what the piece leaves clear stay clear", () => {
+    expect(HOLO_STAMP_NOTCHES.enchantingtalesholostamp.wellTone).toBe(ETALES_WELL_TONE);
+    expect(ETALES_WELL_TONE).toEqual({ master: "enchantingtales", at: { x: 750, y: 2060 }, within: 12, footerFromRow: 51 });
+    // Row 51 of the piece is card row 1948: below the box's rim, on the
+    // master's flat footer (from 1947).
+    expect(ETALES_NOTCH_BOX.y + ETALES_WELL_TONE.footerFromRow).toBe(1948);
+    const tone = [72, 71, 61];
+    const px = Buffer.from([65, 65, 53, 180, 72, 71, 61, 255, 245, 245, 235, 255, 70, 69, 57, 0]);
+    expect(flattenNearToneRgba8(px, tone, 12)).toBe(1);
+    expect(Array.from(px)).toEqual([72, 71, 61, 180, 72, 71, 61, 255, 245, 245, 235, 255, 70, 69, 57, 0]);
+    const placed = blackoutAndCut(piece(), shape, ETALES_NOTCH.oval, 2, 0);
+    // A soft, darker outer edge and a light low-α fringe below the rim.
+    placed.set([60, 60, 50, 120], (90 * width + 30) * 4);
+    placed.set([160, 160, 150, 40], (90 * width + 31) * 4);
+    placed.set([0, 0, 0, 0], (90 * width + 2) * 4);
+    fillRowsOutsideCut(placed, shape, ETALES_NOTCH.oval, 2, ETALES_WELL_TONE.footerFromRow, tone);
+    expect(Array.from(placed.subarray((90 * width + 30) * 4, (90 * width + 32) * 4))).toEqual([...tone, 255, ...tone, 255]);
+    expect(placed[(90 * width + 2) * 4 + 3]).toBe(0);
+    const inside = cutInside(shape, ETALES_NOTCH.oval, 2);
+    for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) if (inside(x, y, 0)) expect(placed[(y * width + x) * 4 + 3], `${x},${y}`).toBe(0);
+  });
+
   it("a capture drawn wider than the cut is refused", () => {
     const placed = piece(6);
     const captured = capturePlane(placed, width, height, ETALES_NOTCH.capture);
@@ -325,5 +350,19 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
     expect(below[0] + below[1] + below[2]).toBeGreaterThan(0);
     const found = pieceNotchFindings(Buffer.from(data), ETALES_NOTCH.shape, ETALES_NOTCH.oval, 2, 0, capturePlane(Buffer.from(data), info.width, info.height, ETALES_NOTCH.capture));
     expect(found.failures).toEqual([]);
+    // Below the rim the piece IS the master's footer (no line round the
+    // well): every pixel it draws there outside the cut is the tone, opaque.
+    const master = await sharp(published(`enchantingtales/${key}.png`)!).ensureAlpha().raw().toBuffer();
+    const t = (ETALES_WELL_TONE.at.y * 1500 + ETALES_WELL_TONE.at.x) * 4;
+    const tone = [master[t], master[t + 1], master[t + 2]];
+    const inside = cutInside(ETALES_NOTCH.shape, ETALES_NOTCH.oval, 2);
+    for (let y = ETALES_WELL_TONE.footerFromRow; y < info.height; y += 1) {
+      for (let x = 0; x < info.width; x += 1) {
+        if (inside(x, y, 0)) continue;
+        const p = px(x, y);
+        if (p[3] === 0) continue;
+        expect(p, `${key} ${x},${y}`).toEqual([...tone, 255]);
+      }
+    }
   });
 });

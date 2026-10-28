@@ -553,7 +553,8 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // The Wilds of Eldraine Enchanting Tales showcase (TODO 4.11 wave 2) is
   // enchantment dress like the constellation frame: WOT #1–63 are all
   // enchantments (Auras and a Kindred Enchantment among them), and an
-  // Enchantment Creature borrows it — Card Conjurer's pack draws the P/T
+  // Enchantment Creature borrows it (BORROWED_SHOWCASES, below: only one
+  // whose words say Enchantment) — Card Conjurer's pack draws the P/T
   // plates for one; no print has one.
   enchantingtales: ["enchantment", "creature"],
   emblem: ["emblem"],
@@ -1001,8 +1002,13 @@ const KIND_SKIN_VARIANTS: Partial<
 // constellation gods, THB #258–268 — prints on it. NYX is the M15 profile
 // with its P/T plate, so it dresses a creature as it is; the Variations
 // section lists it with the other showcase treatments.
+// The Enchanting Tales showcase (TODO 4.11 wave 2, owner 2026-10-27: "also
+// creatures" — Enchantment Creatures, as on Nyx) is the same: WOT #1–63 are
+// all enchantments, and a creature wears it only as an Enchantment Creature
+// (picking it writes "Enchantment"; a random or stand-in pick skips it
+// unless the card says so).
 const BORROWED_SHOWCASES: Partial<Record<CardKind, readonly FrameTemplate[]>> = {
-  creature: ["nyx"],
+  creature: ["nyx", "enchantingtales"],
 };
 
 /** The card-type word a borrowed frame dresses the card as. */
@@ -1014,6 +1020,7 @@ const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15ubartifact: "Artifact",
   nyx: "Enchantment",
   m15nyx: "Enchantment",
+  enchantingtales: "Enchantment",
 };
 
 // The M15 TREATMENTS (the picker's groups, 2026-10-13): extended art, the
