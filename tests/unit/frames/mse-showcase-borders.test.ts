@@ -157,7 +157,9 @@ describe("the MSE showcase borders as data", () => {
     expect(at(cov, 80, 1880)).toBe(1);
     expect(at(cov, 1420, 1880)).toBe(1);
     expect(at(cov, 200, 1880)).toBe(0);
-  });
+    // A full-card supersampled raster: ~2–5 s alone, past vitest's 5 s
+    // default on a loaded CI shard (main's runs 40767783868 / 40770054143).
+  }, 30_000);
 
   it("the edge band floods only what is joined to the card's outline, and refuses to reach the art", () => {
     const rgba = new Uint8Array(W * H * 4).fill(255);
