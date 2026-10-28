@@ -16,6 +16,7 @@ import {
   type DrawnStats,
 } from "@/lib/cards/rules-box";
 import {
+  RULES_TARGETS,
   RULES_TARGET_SCALE,
   layoutRulesAt,
   linePositions,
@@ -934,6 +935,55 @@ describe("the 750 bake's own whole-px gaps (s = 50 / 58 / 66 / 74)", () => {
     }
     expect(tight).toBe(4);
   }, 60_000);
+});
+
+describe("a bullet mode's hung lone run (layout v74 review) — never ends past its column", () => {
+  // A mode's wrapped lines hang where its first word starts (TODO 3.16). A
+  // run too long to wrap that lands on a hung line must still END inside
+  // the column — the fit judges each line by its indent and its width, as
+  // it judges an unindented over-wide run (it once judged the width alone:
+  // "• Draw mmm…" ended up to 41 HD px past m15's column, unclipped, and
+  // the box's padding hid it from the box check above). The main box, and
+  // a narrow one: the split's halves.
+  const text = (n: number) => `Choose one —\n• Draw ${"m".repeat(n)}`;
+  const consumers = (n: number): [string, RulesLayout][] => {
+    const m15 = getFrameProfile("m15");
+    const split = getFrameProfile("split");
+    return [
+      ["m15/main", mainRulesLayout({ layout: m15, rulesText: text(n), flavorText: null, aspect: 7 / 5, show: { pt: true } })],
+      ["split/main", mainRulesLayout({ layout: split, rulesText: text(n), flavorText: null, aspect: aspectOf(split), show: {} })],
+      ["split/second face", secondFaceRulesLayout({ layout: split, rulesText: text(n), aspect: aspectOf(split), show: {} })!],
+    ];
+  };
+
+  it("lays out and draws every line inside its column, at 750 px and HD", async () => {
+    const hungPerConsumer = new Map<string, number>();
+    for (let n = 8; n <= 30; n += 1) {
+      for (const [key, layout] of consumers(n)) {
+        const label = `${key} · ${n} m's`;
+        if (layout.clipped) {
+          // A run no step of the ladder holds where it hangs: clipped at the
+          // floor, said so — as an unindented over-wide run is.
+          expect(layout.sizePx, label).toBe(RULES_SIZE_PX.floor);
+          expect(RULES_TARGETS.some((t) => layout.checks[t].overwideRun), label).toBe(true);
+          continue;
+        }
+        for (const t of RULES_TARGETS) {
+          const { placed, svg } = await checkDrawn(layout, t, `${label} · ${t}`);
+          const right = placed.interior.left + placed.interior.width;
+          for (const l of placed.lines) expect(l.left + l.width, `${label} · ${t}: a line past the column`).toBeLessThanOrEqual(right);
+          // …and the bake draws each word where the layout ends its line.
+          wordsOf(layout).forEach((w, i) => {
+            const b = svg.words[i];
+            if (b) expect(b.x1, `${label} · ${t}: "${w.v}" past its line`).toBeLessThanOrEqual(placed.lines[w.line].inkRight + EPS);
+          });
+          if (placed.lines.some((l) => l.indent > 0)) hungPerConsumer.set(key, (hungPerConsumer.get(key) ?? 0) + 1);
+        }
+      }
+    }
+    // Every consumer really hung the run on some of the texts.
+    expect([...hungPerConsumer.keys()].sort()).toEqual(["m15/main", "split/main", "split/second face"]);
+  }, 240_000);
 });
 
 describe("a layout clipped at the floor", () => {

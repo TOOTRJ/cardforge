@@ -22,6 +22,7 @@ import {
   textShadowCopies,
 } from "@/lib/cards/template-layout";
 import { RULES_TEXT } from "@/lib/cards/typography";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Layout v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 /
@@ -200,6 +201,29 @@ describe("3.5 / 3.25 — shadows as card-width fractions, an outline as copies",
     expect(shadowDrawsAsCopies(nyx)).toBe(false);
     expect(bandTextStyle(getFrameProfile("nyx").title, "w")).toEqual({});
     expect(bakeShadowCss(nyx, 1500)).toBe("0 2px 4px rgba(0,0,0,0.65), 0 0 4px rgba(0,0,0,0.5)");
+  });
+
+  it("declares no outline drawn as copies on a SMALL-CAPS slot — the bake would draw none there", () => {
+    // bandTextCopies (lib/render/card-image.tsx) returns null for a
+    // small-caps slot (its runs are drawn by smallCapsRuns, not the band's
+    // one text span), while the preview's bandTextStyle still sets the
+    // outline on its text: such a slot would be outlined in the preview
+    // and bare in the bake. No profile combines the two; a new one must
+    // first teach the small-caps runs the copies.
+    let smallCapsSlots = 0;
+    const walk = (node: unknown, path: string) => {
+      if (!node || typeof node !== "object") return;
+      const o = node as Record<string, unknown>;
+      if (typeof o.smallCaps === "number") {
+        smallCapsSlots += 1;
+        const shadows = [o.shadowCss, ...Object.values((o.inkByColorKey ?? {}) as Record<string, { shadowCss?: string }>).map((e) => e?.shadowCss)];
+        for (const s of shadows) if (typeof s === "string") expect(shadowDrawsAsCopies(s), path).toBe(false);
+      }
+      for (const [k, v] of Object.entries(o)) walk(v, `${path}.${k}`);
+    };
+    for (const t of FRAME_TEMPLATE_VALUES) walk(getFrameProfile(t), t);
+    // The arch tokens' gold names (TODO 4.53) are small caps: the walk saw them.
+    expect(smallCapsSlots).toBeGreaterThan(0);
   });
 
   it("leaves no px shadow on any profile", () => {

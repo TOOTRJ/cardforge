@@ -618,7 +618,9 @@ export type RulesTargetCheck = {
   overflowPx: number;
   /** A line's ink enters a keep-out. */
   keepOutHit: boolean;
-  /** A single run is wider than the column (it can't wrap). */
+  /** A placed line ends past the column — its indent (a bullet mode's
+   *  hang, TODO 3.16) and width wider than the interior: a single run too
+   *  wide for where it starts (it can't wrap). */
   overwideRun: boolean;
   fits: boolean;
 };
@@ -1110,9 +1112,15 @@ function checkPlacement(
   const keepOutHit = placed.lines.some((l) =>
     keepOuts.some((k) => lineHitsKeepOut(l, blocks[l.block].lines[l.line], placed.metrics, k)),
   );
-  const overwideRun = blocks.some((b) =>
-    b.lines.some((l) => l.runs.length === 1 && l.widthPx[placed.target] > interior.width),
-  );
+  // Each PLACED line is judged where it ends — its indent and its width
+  // against the interior — never its width alone: a bullet mode's hung line
+  // (TODO 3.16) starts its hang in, so a lone run that fits the column
+  // unindented can still end past it (v74 review: "• Draw mmm…" ended up to
+  // 41 HD px right of the column, unclipped). A line the breaker built
+  // ends inside its column by construction (a hung one broke against the
+  // column less its hang); a lone run, hung or not, is the only line that
+  // can end past it, and it steps the size down as it always did.
+  const overwideRun = placed.lines.some((l) => l.indent + l.width > interior.width);
   return { overflowPx, keepOutHit, overwideRun, fits: overflowPx <= 0 && !keepOutHit && !overwideRun };
 }
 

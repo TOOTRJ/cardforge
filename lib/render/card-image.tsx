@@ -1829,7 +1829,11 @@ function bakeBandTextStyle(ink: { color?: string; textShadow?: string }, cardWid
  * in px at this width. Satori merges a multi-layer text-shadow into one
  * filter and the rasteriser keeps only its last layer, so the band baked a
  * one-sided up-left shadow where the browser draws a ring (the footer's
- * finding, FooterBake). Null for any other band.
+ * finding, FooterBake). Null for any other band — and for a SMALL-CAPS
+ * slot, whose runs (smallCapsRuns) draw no copies: such a slot with an
+ * outline would be bare here while the preview (bandTextStyle) outlines it.
+ * No profile combines the two; rendering-corrections-v74.test.ts fails if
+ * one does, until the small-caps runs learn the copies.
  */
 function bandTextCopies(slot: TextSlot, cardWidth: number): TextShadowCopy[] | null {
   if (!slot.shadowCss || !shadowDrawsAsCopies(slot.shadowCss) || slot.smallCaps) return null;

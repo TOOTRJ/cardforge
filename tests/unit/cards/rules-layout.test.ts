@@ -20,6 +20,7 @@ import {
   type RulesLayoutInput,
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
+import { layoutProfileLoyaltyRows, loyaltyRowLines } from "@/lib/cards/loyalty-rows";
 import type { RulesItem } from "@/lib/cards/rules-text";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX, RULES_TEXT, ptToPct, rulesPxToPct } from "@/lib/cards/typography";
@@ -531,6 +532,50 @@ describe("fitRulesLayout — the largest step that fits both targets, no safety 
     expect(fit.sizePx).toBe(expected);
     expect(fit.clipped).toBe(false);
     expect(layoutRulesAt(input, expected + 2).clipped).toBe(true);
+  });
+
+  it("steps down past a bullet mode's HUNG lone run — judged where it ends (its hang and width), at both targets", () => {
+    // v74 review: "• Draw mmm…" put the m's on a hung line of their own; the
+    // check compared the run's width with the column and forgot the hang,
+    // so the line ended up to 41 HD px past the column, unclipped.
+    let caught = 0;
+    for (let n = 19; n <= 28; n += 1) {
+      const input = m15(`Choose one —\n• Draw ${"m".repeat(n)}`, { padPx: PRINT_PAD });
+      const fit = fitRulesLayout(input);
+      expect(fit.clipped, `${n} m's`).toBe(false);
+      for (const t of RULES_TARGETS) {
+        const placed = linePositions(fit, t);
+        const right = placed.interior.left + placed.interior.width;
+        for (const l of placed.lines) expect(l.left + l.width, `${n} m's · ${t}`).toBeLessThanOrEqual(right);
+        // The run did hang: its line starts the hang in.
+        expect(placed.lines[placed.lines.length - 1].indent, `${n} m's · ${t}`).toBeGreaterThan(0);
+      }
+      // One size up the hung run ends past the column at a target, where the
+      // same run unhung ("plain", the pre-v74 layout) fits — the hang alone
+      // made it overwide.
+      const above = layoutRulesAt(input, fit.sizePx + 2);
+      if (fit.sizePx < 76 && RULES_TARGETS.some((t) => above.checks[t].overwideRun)) {
+        const plain = layoutRulesAt({ ...input, bulletModes: "plain" }, fit.sizePx + 2);
+        if (RULES_TARGETS.every((t) => !plain.checks[t].overwideRun)) caught += 1;
+      }
+    }
+    expect(caught).toBeGreaterThan(0);
+  });
+
+  it("a walker row (a narrow column): no hung line ends past its row's column", () => {
+    const pw = getFrameProfile("m15pw");
+    let hung = 0;
+    for (let n = 6; n <= 22; n += 1) {
+      const rows = layoutProfileLoyaltyRows(pw, [{ cost: "+1", text: `Choose one —\n• Draw ${"m".repeat(n)}` }, { cost: "−2", text: "Draw a card." }], PORTRAIT);
+      expect(rows.clipped, `${n} m's`).toBe(false);
+      for (const t of RULES_TARGETS) {
+        const placed = loyaltyRowLines(rows, 0, t);
+        const right = placed.interior.left + placed.interior.width;
+        for (const l of placed.lines) expect(l.left + l.width, `${n} m's · ${t}`).toBeLessThanOrEqual(right);
+        if (placed.lines.some((l) => l.indent > 0)) hung += 1;
+      }
+    }
+    expect(hung).toBeGreaterThan(0);
   });
 
   it("clips at the floor only when nothing fits — the box keeps overflow hidden", () => {
