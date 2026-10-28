@@ -39,6 +39,20 @@
 // TRANSLUCENT entry (α 231–240 on the draconic sides — cheap for the
 // quantizer, which weighs dark colours premultiplied, and a 7.7 failure).
 //
+//   • "outside" — every see-through pixel NOT joined to the art window
+//     (the window: α < 250 joined to an art seed): the footer a frame whose
+//     art runs to the top and side edges leaves below its box. The Avatar
+//     elemental (TLA #336–353, TLE #305–317: a black footer — MSE's
+//     `border_borderless_mask.png`, the style's "only copyright" border) and
+//     the Bloomburrow woodland (BLB #295–336: the footer in the colour's own
+//     tone — MSE's `card colored border`, border/<c>border.png through
+//     border_mask.png — whose flat colours equal the raw scan medians of the
+//     prints, colour for colour: w 64,49,56 · u 0,55,81 · r 84,0,9 · g
+//     18,66,7 · gold 64,37,49 · b 19,12,13 — the footer's own tone, not
+//     the scanner's: the same scans read 0,0,0 on BLB's black borders; c (no
+//     print) MSE's 51,31,21). On both the region is
+//     exactly MSE's mask (the woodland's differs by 56 px of rim).
+//
 // The painted layer is cut at the one card corner (lib/cards/card-corner.ts
 // applyCardCornerMask) — the drawing's own pixels outside the arc are left
 // as drawn (draconic's dragon heads in the top corners: design, 3.26).
@@ -72,6 +86,19 @@ export const GHOSTFIRE_WINDOW = Object.freeze({
 
 /** The PNG encoder options for a bordered master (no dithering, see above). */
 export const PALETTE_PNG_OPTIONS = Object.freeze({ compressionLevel: 9, effort: 10, dither: 0 });
+/** …tried in this order until the decoded border is whole (the quantizer's
+ *  palette for a busy drawing — the woodland's — can still map a few
+ *  footer pixels onto a translucent entry at full quality); the last is a
+ *  truecolour PNG, which cannot. The builder logs which one each master
+ *  took; the attempts are deterministic for the same input. */
+export const BORDERED_PNG_ATTEMPTS = Object.freeze([
+  PALETTE_PNG_OPTIONS,
+  Object.freeze({ ...PALETTE_PNG_OPTIONS, quality: 90 }),
+  Object.freeze({ ...PALETTE_PNG_OPTIONS, quality: 80 }),
+  // Truecolour, lossless: adaptive filtering writes it ~30 % smaller
+  // (bloomburrow/r 2.9 MB → 2.0 MB, the same pixels).
+  Object.freeze({ compressionLevel: 9, palette: false, adaptiveFiltering: true }),
+]);
 
 /** Pixels of the painted BORDER (coverage 1) the encode left short of
  *  opaque (α < 252, 0.99 — the edge contract's floor): must be none. (The
@@ -84,11 +111,48 @@ export function borderLost(cov, after) {
   return lost;
 }
 
-/** Per template: the border's shape and colour. */
+/** The woodland's footer per colour key: MSE's border/<c>border.png, equal
+ *  to the prints' raw medians channel for channel. The black key's is the
+ *  footer's OWN tone, 19,12,13 — not the border black: every black woodland
+ *  print reads it at the footer's centre and both lower sides (BLB #309,
+ *  #311, #312, #314) while the same BLB scans read 0,0,0 on the regular
+ *  black-bordered cards (#1, #60, #86, #90, #100, #210), so it is print's
+ *  drawing, not the scanner's tint (the owner's "true black" is for a
+ *  border whose tint is the scanner's). */
+export const WOODLAND_FOOTER_RGB = Object.freeze({
+  w: Object.freeze([64, 49, 56]),
+  u: Object.freeze([0, 55, 81]),
+  b: Object.freeze([19, 12, 13]),
+  r: Object.freeze([84, 0, 9]),
+  g: Object.freeze([18, 66, 7]),
+  m: Object.freeze([64, 37, 49]),
+  c: Object.freeze([51, 31, 21]),
+});
+
+/** Per template: the border's shape and colour (`rgb`, or `rgbByKey` per
+ *  colour key). */
 export const MSE_SHOWCASE_BORDERS = Object.freeze({
   tarkirdraconic: Object.freeze({ kind: "edge", rgb: BORDER_BLACK }),
   tarkirghostfire: Object.freeze({ kind: "ring", rgb: BORDER_BLACK, window: GHOSTFIRE_WINDOW }),
+  avatar: Object.freeze({ kind: "outside", rgb: BORDER_BLACK }),
+  // Not cut at the card corner: the coloured footer is the frame's design
+  // running into the bottom corners (a square output keeps it there,
+  // lib/frames/square-corners.ts "frame"; a round render cuts it).
+  bloomburrow: Object.freeze({ kind: "outside", rgbByKey: WOODLAND_FOOTER_RGB, keepCorners: true }),
 });
+
+/** The colour `template`'s border paints for colour key `key` (null: no
+ *  border declared). */
+export function showcaseBorderRgb(template, key) {
+  const spec = MSE_SHOWCASE_BORDERS[template];
+  if (!spec) return null;
+  if (spec.rgbByKey) {
+    const rgb = spec.rgbByKey[key];
+    if (!rgb) throw new Error(`${template}: no border colour for key ${key}`);
+    return rgb;
+  }
+  return spec.rgb;
+}
 
 /** 1 inside the ghostfire-style window at the point (x, y), else 0. */
 function insideWindow(win, x, y) {
@@ -175,6 +239,19 @@ export function edgeCoverage(rgba, width, height, seeds) {
   return cov;
 }
 
+/**
+ * The footer's coverage: every see-through pixel (α < 255) NOT in the art
+ * window — the window being every α < 250 pixel joined to an art seed
+ * ([fx, fy] fractions of the card).
+ */
+export function outsideCoverage(rgba, width, height, seeds) {
+  const starts = seeds.map(([fx, fy]) => Math.round(height * fy) * width + Math.round(width * fx));
+  const win = flood((p) => rgba[p * 4 + 3] < 250, width, height, starts);
+  const cov = new Float32Array(width * height);
+  for (let p = 0; p < cov.length; p += 1) cov[p] = !win[p] && rgba[p * 4 + 3] < SEE_THROUGH_BELOW ? 1 : 0;
+  return cov;
+}
+
 /** The coverage cut at the one card corner (alpha only). */
 export function cutAtCardCorner(cov, width, height) {
   const a = new Uint8Array(width * height * 4);
@@ -205,11 +282,16 @@ export function paintUnder(rgba, cov, rgb) {
 
 /** The border of `template` painted under its master (in place); its
  *  coverage back (null: the template has none). */
-export function paintShowcaseBorder(template, rgba, width, height, seeds) {
+export function paintShowcaseBorder(template, rgba, width, height, seeds, key) {
   const spec = MSE_SHOWCASE_BORDERS[template];
   if (!spec) return null;
-  const raw = spec.kind === "ring" ? ringCoverage(spec.window, width, height) : edgeCoverage(rgba, width, height, seeds);
-  const cov = cutAtCardCorner(raw, width, height);
-  paintUnder(rgba, cov, spec.rgb);
+  const raw =
+    spec.kind === "ring"
+      ? ringCoverage(spec.window, width, height)
+      : spec.kind === "outside"
+        ? outsideCoverage(rgba, width, height, seeds)
+        : edgeCoverage(rgba, width, height, seeds);
+  const cov = spec.keepCorners ? raw : cutAtCardCorner(raw, width, height);
+  paintUnder(rgba, cov, showcaseBorderRgb(template, key));
   return cov;
 }

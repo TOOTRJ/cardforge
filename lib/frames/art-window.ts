@@ -605,8 +605,8 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   // 230–1168 px on every key, is covered by LOTRSCROLL_ART_SLOT.)
   // Transparent rings and bands (7.7's known failures) the window leaks into,
   // and the showcase windows cut wider than their slots.
-  avatar: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent outer band: 0–1500 × 0–1160 (4.35 A8)", maxMissPx: 90.5 },
-  bloomburrow: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent sides: 0–1500 × 236–1182 (4.35 A8)", maxMissPx: 90.5 },
+  // (4.11 struck avatar and bloomburrow, layout v69: their slots run to the
+  // edges their windows reach, AVATAR_ART_SLOT / BLOOMBURROW_ART_SLOT.)
   bloomanime: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card, the slot inset 2.5/3.5/93×92 (4.35)", maxMissPx: 116 },
   // (4.11 struck tarkirghostfire and tarkirdraconic, layout v68: the
   // ghostfire's painted ring closes its window to 78–1420 × 80–1884 px and

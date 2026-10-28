@@ -123,8 +123,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
-  avatar: { front: [1320, 1134] },
-  bloomburrow: { front: [1320, 1134] },
+  avatar: { front: [1500, 1168] },
+  bloomburrow: { front: [1500, 954] },
   bloomanime: { front: [1395, 1932] },
   // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
   // draconic's window and the dragons' gaps; the ghostfire's inside its

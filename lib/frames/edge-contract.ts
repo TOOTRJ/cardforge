@@ -289,8 +289,30 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Card Conjurer's 'Scroll' pack since TODO 4.11 (frames bucket): a real black
   // border all round, cut at the one card corner by the importer.
   lotrscroll: ALL_BORDER,
-  avatar: ALL_BORDER,
-  bloomburrow: ALL_BORDER,
+  // The Avatar elemental (TLA #336–353, TLE #305–317), since TODO 4.11
+  // (layout v69): borderless — the art to the top edge and down both sides
+  // to the frame (the masters see-through to 918 px on the left, 1101 on the
+  // right) but for the ornate title bar (its ends at 50–1448 px in the top
+  // band, rows 108–175 at the sides), the frame to the side edges below, the
+  // black footer MSE paints at render time painted under the masters (from
+  // 1952 px, 7 % of the height), cut at the one card corner.
+  avatar: {
+    top: { kind: "art", except: [[3.3, 96.6]] },
+    right: { kind: "art", except: [[5.1, 8.4], [52.3, 100]] },
+    bottom: { kind: "bar", depthPct: 7 },
+    left: { kind: "art", except: [[5.1, 8.4], [43.5, 100]] },
+  },
+  // The Bloomburrow woodland (BLB #295–336), since TODO 4.11 (layout v69):
+  // its leafy top band runs to the top and side edges (design), the art to
+  // the side edges between the band and the medallions (519–846 px on both
+  // sides), the footer in the colour's own tone to the bottom edge (design:
+  // a coloured footer, never held dark at the corner).
+  bloomburrow: {
+    top: { kind: "design" },
+    right: { kind: "art", except: [[0, 24.8], [40.2, 100]] },
+    bottom: { kind: "design" },
+    left: { kind: "art", except: [[0, 24.8], [40.2, 100]] },
+  },
   // 4.32 / 4.39 (Card Conjurer, frames bucket).
   m15borderless: BORDERLESS_M15,
   // The artifact dress: CC's A frame (c) and the colour frames — the same
@@ -376,16 +398,10 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
     keys: "all",
     why: "transparent outer ring + inset art slot 2.5/3.5/93×92 (4.35); corner: the bottom bar is transparent at the arc",
   },
-  // Found by this check on 2026-09-26 (the borderless research sampled the
-  // side band at 20–80 % H only): transparent bottom band and lower sides.
-  avatar: {
-    keys: "all",
-    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: transparent at the arc",
-  },
-  bloomburrow: {
-    keys: "all",
-    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the pale design corner (never normalised, 3.26)",
-  },
+  // (avatar and bloomburrow, found by this check on 2026-09-26 — a
+  // transparent outer band at the bottom and lower sides — left with TODO
+  // 4.11's layout v69: their footers painted under the masters, their edges
+  // declared borderless as printed.)
 };
 
 export function isKnownEdgeFailure(template: string, key: string): boolean {

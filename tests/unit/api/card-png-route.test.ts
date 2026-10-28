@@ -307,7 +307,7 @@ describe("card PNG download", () => {
   });
 
   it("free Square of a ring squares the stored bake with the root's #101015 — its border's colour, not #000", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "avatar" } }); // a ring (tarkirdragon and tarkirghostfire left the rings with TODO 4.11)
+    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } }); // a ring (tarkirdragon, tarkirghostfire and avatar left the rings with TODO 4.11)
     const png = await decode(await download("default", {}, "square"));
     expect(state.render).not.toHaveBeenCalled();
     expect(png.opaque).toBe(true);
@@ -444,7 +444,7 @@ describe("JPEG download (TODO 6.18)", () => {
   });
 
   it("a ring's JPEG corners are the root's #101015, like its Square PNG", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "avatar" } }); // a ring (tarkirdragon and tarkirghostfire left the rings with TODO 4.11)
+    state.card = card({ layout_version: 30, frame_style: { template: "bloomanime" } }); // a ring (tarkirdragon, tarkirghostfire and avatar left the rings with TODO 4.11)
     const jpeg = await decodeJpeg(await download("default", {}, undefined, "jpeg"));
     expect(state.render).not.toHaveBeenCalled();
     near(jpeg.at(0, 0), [16, 16, 21]);

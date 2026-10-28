@@ -256,12 +256,12 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
-    // (bloomburrow, bound 90.5 px — the 2003 pair, this test's first
+    // (bloomanime, bound 116 px — the 2003 pair, this test's first
     // example, left the table with TODO 4.10b; m15textless, its second, with
     // 4.35's re-source, layout v58; tarkirdraconic, its third, with 4.11's
-    // layout v68.)
-    expect(artWindowVerdict("bloomburrow", "w", miss(80))).toEqual({ fails: [], fixed: false });
-    expect(artWindowVerdict("bloomburrow", "w", miss(95)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.35\): misses by 95 px > 90\.5: /)]);
+    // layout v68; bloomburrow, its fourth, with 4.11's layout v69.)
+    expect(artWindowVerdict("bloomanime", "w", miss(100))).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("bloomanime", "w", miss(120)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.35\): misses by 120 px > 116: /)]);
     // An entry limited to some keys (expeditionland's per-key b/g / u/r
     // bounds, this test's third example, left the table with TODO 4.11 wave
     // 1): the colourless arch token's c is listed, its w is not.
@@ -291,7 +291,7 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
-    expect(artWindowVerdict("bloomburrow", "w", [])).toEqual({ fails: [], fixed: true });
+    expect(artWindowVerdict("bloomanime", "w", [])).toEqual({ fails: [], fixed: true });
   });
 });
 
@@ -627,10 +627,10 @@ describe("the art-window known failures", () => {
         // the saga's hairline by its own, 4.21c; lotrscroll by Card
         // Conjurer's 'Scroll' masters, layout v62, 4.11, and lotr by its
         // 'Ring' masters, layout v65.)
-        // Found on 2026-09-29.
-        "avatar",
+        // Found on 2026-09-29. (avatar and bloomburrow left with TODO 4.11's
+        // layout v69: their art slots on print's windows, AVATAR_ART_SLOT /
+        // BLOOMBURROW_ART_SLOT.)
         "bloomanime",
-        "bloomburrow",
         // (extendedart, m15textless and m15textlessland left with their Card
         // Conjurer masters, layout v58: TODO 4.7 / 4.35; expeditionland with
         // its own, layout v64: TODO 4.11 wave 1.)

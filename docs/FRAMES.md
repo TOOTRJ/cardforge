@@ -612,12 +612,14 @@ bake's transparent corner mask and the frame masters all read it.
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
   colour — the border black by default, the root's #101015 where a master's
-  edge band is see-through (the rings; bloomburrow's bottom — the Tarkir
-  draconic's left it with its painted border, 4.11 layout v68, and the
-  ghostfire's ring with its own) — or, where art or frame design runs into
-  the corner (an art-to-edge frame; the tops of bloomburrow, the LOTR ring
-  — its frame field, kept square by the importer since 4.11 — and
-  tarkirdraconic), what was drawn. The table is `lib/frames/square-corners.ts`;
+  edge band is see-through (the rings — the Tarkir draconic's left it with
+  its painted border, 4.11 layout v68, the ghostfire's ring with its own,
+  and the Avatar elemental and bloomburrow's bottom with their painted
+  footers, v69) — or, where art or frame design runs into the corner (an
+  art-to-edge frame; bloomburrow — its leafy top band, and since v69 its
+  coloured footer, kept square by the builder — the LOTR ring — its frame
+  field, kept square by the importer since 4.11 — and tarkirdraconic),
+  what was drawn. The table is `lib/frames/square-corners.ts`;
   `tests/unit/frames/square-corners.test.ts` holds it to every master, so a
   new or rebuilt frame whose corner changes turns CI red.
 - **Left alone.** The Alpha masters (agclassic, alphaland) keep their clean
@@ -5125,6 +5127,123 @@ bakes of the same cards; sheet: the owner's design-backup
   - on the densest rules texts the M15 rules layout sets one ladder step
     smaller than these prints do — M15's own behaviour, not this frame's.
 
+### The Avatar elemental and Bloomburrow woodland showcases (4.11 / 4.35, layout v69)
+
+`avatar` (TLA #336–353 and TLE #305–317, the Eternal-legal companion
+set's printings of the same frame) and `bloomburrow` (BLB #295–336, the
+woodland run) came out after Card Conjurer's last pack, so they stay on
+their Magic Set Editor masters
+(`magic-m15-showcase-avatar-elemental` / `-bloomburrow-woodland`, upscaled
+in git by `scripts/build-showcase-frames.mjs`). A CORRECTION (layout v69,
+a sweep scoped to the two templates, `AVATAR_BLOOMBURROW_LAYOUT_VERSION`;
+taken after #613's v68, and a test refuses it while v68 has no rollout):
+no colour of either frame is ticked. Measured 2026-10-27 on the runs'
+printings (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart) against the
+sets' regular printings (TLA / BLB #1–14, the same scans) and our bakes of
+the same cards; sheet: the owner's design-backup
+`mse-showcase/avatar-bloomburrow-sheet.jpg`.
+
+- **What MSE paints at render time, built in.** Both styles draw parts of
+  the printed card in render-time layers, so the card PNGs they ship are
+  see-through there and our bake showed the root's #101015:
+  - **the Avatar's title bar** — every printing, legendary or not, wears
+    the ornate bar MSE draws as `crown/<c>.png` (its plain `noncrown` bar
+    has no print). The builder lays it UNDER the drawing on every key
+    (`underlays` in the builder, the colourless key from MSE's silver `a`);
+  - **the Avatar's black footer** and **the woodland's coloured footer** —
+    every see-through pixel outside the art window (the window being the
+    α < 250 flood from the art's seeds: `outsideCoverage`, kind
+    `"outside"` in `scripts/lib/mse-showcase-borders.mjs`), painted UNDER
+    the drawing. The Avatar's in the border black 0,0,0, cut at the one
+    card corner. The woodland's in each colour's own tone
+    (`WOODLAND_FOOTER_RGB`: MSE's `border/<c>border.png` — w 64,49,56 ·
+    u 0,55,81 · b 19,12,13 · r 84,0,9 · g 18,66,7 · gold 64,37,49 — equal
+    to the raw scan medians channel for channel, so nothing is toned; the
+    black footer's 19,12,13 is print's own tone, not the scanner's — every
+    black woodland print reads it (#309, #311, #312, #314) where the same
+    BLB scans read 0,0,0 on the regular black borders (#1, #60, #86, #90,
+    #100, #210), so it is never the border black; `c` has no print and
+    keeps MSE's 51,31,21), kept to the corner (`keepCorners`):
+    the footer is the card's edge there, so a square output shows it.
+  - Encoding: a palette PNG without dithering where that keeps every
+    painted pixel opaque; the woodland's leafy band has too many colours
+    for one palette on some keys, so the builder tries a finer palette and
+    then truecolour (`BORDERED_PNG_ATTEMPTS`) and takes the first encode
+    that loses no border pixel (bloomburrow `r` truecolour, `g` and `u` at
+    q90, `m` at q80, the rest the plain palette).
+  Both left `BORDER_PENDING_TEMPLATES` (only `bloomanime` remains), the
+  edge contract's and the art-window check's known failures, and the ring
+  entry of `SQUARE_CORNERS` (bloomburrow is `frame` on all four corners).
+- **Slots: M15's.** `artForwardShowcase()` set the name on the type bar
+  and the type line under it; print sets every text where the sets'
+  regular printings do — the name's ink 145–189 px against 145–188 on the
+  regular TLA cards (baseline 188–188.5, ours 189), the type line's
+  1220–1260 against 1223–1259 (ours 1260), the collector rows 1988–1989 /
+  2027 with the © line ending at 1396 (`M15_COLLECTOR`). So both profiles
+  are M15's slots at the M15-era family's sizes (`fit: "measured"`, joined
+  WITH v69) with the CC M15 cost row (print: 70.2 px discs at a 78.5–78.6
+  px pitch, centred on 157.8 px, the row ending at 1386.3 / 1384.7; ours
+  69.9 px on 156.5, ending at 1384.4 — within #598's known offsets, the
+  row kept). The type line takes the CC M15 baseline (both MSE type bars
+  sit where the CC M15 master's does: the Avatar's 1183 / 1296 px against
+  1185 / 1298, its title bar 82.5 px tall against 82). Name and type ink
+  are white, no shadow (print's 255,255,255 on every bar); the rules box
+  and its margins are M15's, dark ink on the paper.
+- **Art slots on print's windows.** The Avatar's art runs out of the top
+  edge and down the sides to the type bar (α < 250 on 0–1499 × 0–1165 px
+  on every key): `AVATAR_ART_SLOT`, 0–1500 × 0–1168. It is NOT an
+  edge-to-edge treatment (`artReachesCardEdge` asks for a window taller
+  than wide as well): the bars, box and footer are opaque, so Etched stays
+  offered, and Scryfall's art_crop of its printings is the classic 626 ×
+  457 (TLA #338), which fills a 1500 × 1168 window with 6 % of its width
+  trimmed — an import keeps the frame, as before. The woodland's window
+  runs to both side edges between its top band and its medallions (0–1499
+  × 234–1183): `BLOOMBURROW_ART_SLOT`, 0–1500 × 232–1186. The old slots
+  (6 / 2.5 / 88 × 54 and 6–94 %W) left the sides showing the root (7.6).
+- **Edges, as printed** (7.7 had `ALL_BORDER`; both are borderless): the
+  Avatar's top is `art` but where its title bar meets the edge (3.3–96.6 %),
+  its sides `art` but along the bar's ends and below the art (5.1–8.4 %,
+  from 52.3 % on the right and 43.5 % on the left), its bottom a 7 % `bar`
+  (the footer); the woodland's top and bottom `design` (the leafy band, the
+  coloured footer), its sides `art` between them (24.8–40.2 %).
+- **P/T boxes:** MSE's own, cropped by the builder as the draconic's
+  (`avatar/pt/<c>.png`, the framed parchment box at 1159, 1859, 270 × 141
+  px; `bloomburrow/pt/<c>.png`, the box with its vine flourishes at 1038,
+  1863, 445 × 131), ink measured (`plate-ink.ts`). Dark digits on them, as
+  M15's.
+- **Colourless.** The Avatar's colourless printings are artifacts (TLE
+  #315 Arcane Signet, #316, #317) and wear the silver drawing MSE ships as
+  `a` (within 1 level of the scans), so `c` is built from it — card, title
+  bar and plate alike. The woodland has no colourless printing; its `c`
+  keeps MSE's own.
+- **Opt-ins** (ADDITIONS, opt-in per card; never a sweep):
+  - the woodland's **crown** — the leaf crown MSE draws as
+    `crown/<c>crown.png` above the title band (`BLOOMBURROW_CROWN`,
+    `bloomburrowcrown/<key>.png`, git: 1500 × 301 from the top). The
+    legendary printings (#304, #314, #327–336) wear it, and
+    `showcase/blb/woodland` imports with it on (`CROWNED_SHOWCASE_SIGNATURES`).
+    The Avatar has no crown switch: its ornate bar IS the printed bar;
+  - the woodland's **stamp** — MSE's own notch: the well (its
+    `border_stamp_mask.png`) in the footer's own tone under the rim
+    (`stamp/<c>stamp.png`), cut to its box (`bloomburrowholostamp/<key>.png`,
+    631, 1882, 240 × 82), our oval at the prints' hologram (687–814 ×
+    1921–1986 on the stamped printings: 684, 1920, 134 × 67), the arch a
+    rules keep-out (631–871 × 1882–1952). Every printing of the run is
+    rare or mythic, so "auto" is M15's rule. Every Avatar print is
+    oval-stamped on its black footer, but `avatar` declares no `holoStamp`
+    slot yet, so an import's `printed_stamp: "oval"` draws nothing — a
+    follow-up addition (TODO 4.11);
+  - the **collector line** on both (`M15_COLLECTOR`), on the footers.
+- **Flagged, not changed** (TODO 4.11):
+  - the Avatar's bender medallion at the type bar's left end shows the
+    card's own element on print (water, earth, fire, air); MSE draws one
+    fixed symbol per colour, and so do our masters;
+  - MSE's Avatar P/T box is ~8 px wider than print's;
+  - the two-colour dresses split the frame field left / right (BLB
+    #327–330 / #333–336; TLA #348, #351) — they import `nearest` with the
+    `two-colour` gap, on the gold master, until they ship;
+  - the woodland's `c` has no print to measure against.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -9552,7 +9671,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 79 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 81 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
@@ -9565,7 +9684,9 @@ the Rings scroll, WITH one too: layout v62, on Card Conjurer's 'Scroll'
 pack, the ring, layout v65, on its 'Ring' pack, the MUL Tarkir
 dragon wings, layout v67, on its 'Tarkir' pack, and the Tarkir:
 Dragonstorm draconic and ghostfire showcases, layout v68, on their MSE
-masters with the printed border painted) prints its names,
+masters with the printed border painted, and the Avatar elemental and
+Bloomburrow woodland showcases, layout v69, on their MSE masters with the
+title bar and footers MSE paints at render time built in) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The

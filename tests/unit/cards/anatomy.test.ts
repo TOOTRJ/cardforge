@@ -314,6 +314,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // …and the MUL Tarkir dragon wings (TODO 4.11): the pack's spikes, its
       // pairs split over the halves (pairCrownOnGold), no pair masters.
       "tarkirdragon",
+      // …and the Bloomburrow woodland (TODO 4.11, v69): MSE's leaf crown, no pairs.
+      "bloomburrow",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -359,7 +361,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
       // way; nor the MUL Tarkir dragon wings, which split the frame itself,
       // twoColorSplit.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -487,7 +489,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the MUL Tarkir dragon wings (4.11): the pack's own oval piece.
     "tarkirdragon",
     // …and the Tarkir draconic (4.11): MSE's own stamp per key.
-    "tarkirdraconic"];
+    "tarkirdraconic",
+    // …and the Bloomburrow woodland (4.11, v69): MSE's own, on the coloured well.
+    "bloomburrow"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

@@ -141,6 +141,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // ghostfire on its own bars — both at the family's sizes, with their bump.
   "tarkirdraconic",
   "tarkirghostfire",
+  // The Avatar elemental and the Bloomburrow woodland (TODO 4.11, MSE
+  // masters with what MSE paints at render time built in; layout v69): M15's
+  // slots at the family's sizes, with their bump.
+  "avatar",
+  "bloomburrow",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

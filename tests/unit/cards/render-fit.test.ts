@@ -372,7 +372,7 @@ describe("fitTypeLine (TODO 4.20, layout v32)", () => {
     // (An unmeasured frame: the Avatar showcase's — the 2003 pair, this
     // test's first example, is measured since TODO 4.10b, Alpha, its
     // second, since TODO 4.10c, and the LOTR ring, its third, since 4.11.)
-    const old = getFrameProfile("avatar");
+    const old = getFrameProfile("bloomanime");
     expect(fitTypeLineBand({ layout: old, text: line, symbolWidthPct: symbol })).toEqual({
       sizePct: fitTypeLine({ layout: old, text: line, symbolWidthPct: symbol }),
       text: line,

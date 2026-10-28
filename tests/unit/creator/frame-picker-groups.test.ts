@@ -605,7 +605,16 @@ describe("the frame picker's groups: a classification change only", () => {
     // under their masters).
     expect(raw.imports["all|tdm-303"]).toMatchObject({ frame_template: "tarkirdraconic", match: ["exact", "tarkirdraconic", null] });
     expect(raw.imports["all|tdm-400"]).toMatchObject({ frame_template: "tarkirghostfire", match: ["exact", "tarkirghostfire", null] });
+    // …and the Bloomburrow woodland and Avatar elemental (BLB #295 / #316,
+    // TLA #338, TLE #315; TODO 4.11 layout v69: the footers and title bar MSE
+    // paints at render time built into their masters) — on their own frame
+    // as before, exact once verified.
+    for (const [key, template] of [["blb-295", "bloomburrow"], ["blb-316", "bloomburrow"], ["tla-338", "avatar"], ["tle-315", "avatar"]] as const) {
+      expect(raw.imports[`all|${key}`], key).toMatchObject({ frame_template: template, match: ["exact", template, null] });
+    }
     expect(changed("imports")).toEqual([
+      "all|blb-295",
+      "all|blb-316",
       "all|ltr-306",
       "all|ltr-482",
       "all|mul-1",
@@ -614,6 +623,7 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|tdm-303",
       "all|tdm-400",
       "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
+      "all|tla-338", "all|tle-315",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
       "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",

@@ -92,9 +92,10 @@ describe("the edge-contract table", () => {
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
         "alphaland",
-        "avatar",
         "bloomanime",
-        "bloomburrow",
+        // (avatar and bloomburrow left with TODO 4.11's layout v69: the
+        // title bar and footers MSE paints at render time built into their
+        // masters, their edges re-declared as print draws them.)
         // (expeditionland b/g left with Card Conjurer's masters, TODO 4.11
         // wave 1.)
         // (tarkirdragon left with Card Conjurer's 'Tarkir' masters, TODO
@@ -106,7 +107,17 @@ describe("the edge-contract table", () => {
     for (const k of ["w", "u", "b", "r", "g", "c", "m"]) {
       expect(isKnownEdgeFailure("tarkirdraconic", k), k).toBe(false);
       expect(isKnownEdgeFailure("tarkirghostfire", k), k).toBe(false);
+      expect(isKnownEdgeFailure("avatar", k), k).toBe(false);
+      expect(isKnownEdgeFailure("bloomburrow", k), k).toBe(false);
     }
+    // The Avatar elemental: art out of the top edge but under its title bar,
+    // and down the sides to the type bar's medallions, over a black footer
+    // bar; the Bloomburrow woodland: its leafy band across the top, art on
+    // the sides between it and the box, its coloured footer at the bottom.
+    expect(EDGE_CONTRACTS.avatar.top).toEqual({ kind: "art", except: [[3.3, 96.6]] });
+    expect(EDGE_CONTRACTS.avatar.bottom).toEqual({ kind: "bar", depthPct: 7 });
+    expect(EDGE_CONTRACTS.bloomburrow.top.kind).toBe("design");
+    expect(EDGE_CONTRACTS.bloomburrow.bottom.kind).toBe("design");
     // The draconic's dragons run to the side edges above its painted
     // border, their heads into the top corners: design sides, a border top
     // and bottom; the ghostfire's ring is a border all round.

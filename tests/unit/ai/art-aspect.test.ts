@@ -110,8 +110,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
-  avatar: ["1104x944", "4:3", 1.164],
-  bloomburrow: ["1104x944", "4:3", 1.164],
+  // TODO 4.11 (layout v69): print's windows, edge to edge across the card.
+  avatar: ["1152x896", "4:3", 1.284],
+  bloomburrow: ["1280x816", "3:2", 1.572],
   bloomanime: ["864x1200", "3:4", 0.722],
   // The Tarkir: Dragonstorm showcases (TODO 4.11, v68): the draconic's
   // window and the dragons' gaps, 1390 × 944 px; the ghostfire's inside its

@@ -465,7 +465,10 @@ describe("TODO 6.1a — the 1/8 in bleed", () => {
     expect(notBlack).toBe(0);
   }, 60_000);
 
-  it.each(["extendedart", "bloomburrow"])("`border` (%s, the git master): every bleed pixel continues its trim edge", async (template) => {
+  // (bloomburrow left this list with TODO 4.11, layout v69: its edges are
+  // design and art now; the ghostfire's painted ring, a git master, takes
+  // its place.)
+  it.each(["extendedart", "tarkirghostfire"])("`border` (%s, the git master): every bleed pixel continues its trim edge", async (template) => {
     const img = await print(card(template, { artUrl: await smoothArt(1200, 900) }), { ppi: 600, bleed: true }, `${template}-bleed-600ppi`);
     const b = 75;
     const w = 1650;

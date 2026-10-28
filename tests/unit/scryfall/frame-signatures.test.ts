@@ -144,13 +144,16 @@ describe("borderless families (TODO 1.17)", () => {
     // border is true: 4.35's five, and the four 7.7's edge contract found
     // (bloomburrow, lotr, avatar, tarkirdraconic — owner decision A8). The
     // LOTR ring left the cap with its Card Conjurer re-source (TODO 4.11):
-    // exact once verified.
-    ["blb-295", "nearest", "bloomburrow", undefined],
-    ["blb-316", "nearest", "bloomburrow", undefined],
+    // exact once verified — and the Bloomburrow woodland and the Avatar
+    // elemental with their footers and title bar built into their masters
+    // (TODO 4.11, layout v69; the colourless Arcane Signet, TLE #315, on the
+    // silver master).
+    ["blb-295", "exact", "bloomburrow", undefined],
+    ["blb-316", "exact", "bloomburrow", undefined],
     ["blb-343", "nearest", "bloomanime", undefined],
     ["ltr-306", "exact", "lotr", undefined],
-    ["tla-338", "nearest", "avatar", undefined],
-    ["tle-315", "nearest", "avatar", undefined],
+    ["tla-338", "exact", "avatar", undefined],
+    ["tle-315", "exact", "avatar", undefined],
     // Text on the art (4.36): TDM clan, source material. `full_art` doesn't
     // exempt a printing from landOn: TLE #1's art_crop is the 626×457 window.
     ["tdm-327", "nearest", "m15borderless", "m15"],
@@ -1041,9 +1044,10 @@ describe("the rule table", () => {
   });
 
   it("names the border as the reason a capped showcase isn't exact (A8)", () => {
-    // (The LOTR ring, ltr-306, left the cap with TODO 4.11.)
+    // (The LOTR ring, ltr-306, left the cap with TODO 4.11, the Avatar
+    // elemental, tla-338, with layout v69.)
     for (const [key, frame] of [
-      ["tla-338", "Avatar: The Last Airbender"],
+      ["blb-343", "Bloomburrow Anime"],
     ] as const) {
       const match = frameMatchFromScryfall(printing(key));
       expect(match.blockedBy, key).toBe("4.35");
@@ -1083,7 +1087,11 @@ describe("the rule table", () => {
       expect(isBorderPending("expeditionlandbfz", key), key).toBe(false);
     }
     expect(BORDER_PENDING_COLOURS.size).toBe(0);
-    expect(isBorderPending("avatar", "w")).toBe(true);
+    expect(isBorderPending("bloomanime", "w")).toBe(true);
+    // The Avatar elemental and Bloomburrow woodland left it with TODO 4.11
+    // (layout v69: MSE's render-time title bar and footers built in).
+    expect(isBorderPending("avatar", "w")).toBe(false);
+    expect(isBorderPending("bloomburrow", "g")).toBe(false);
     // The LOTR ring left the list with TODO 4.11 (Card Conjurer's masters,
     // opaque to every edge).
     expect(isBorderPending("lotr", "w")).toBe(false);

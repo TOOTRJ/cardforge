@@ -40,7 +40,12 @@ describe("the square-corner table", () => {
   it("is border black by default, root on the rings, design on top of Bloomburrow / LOTR / Tarkir draconic", () => {
     expect(squareCornerKind("m15", "w", "tl")).toBe("border");
     expect(squareCornerKind("retro", "b", "br")).toBe("border");
-    for (const c of CORNER_NAMES) expect(squareCornerKind("avatar", "r", c)).toBe("root");
+    for (const c of CORNER_NAMES) expect(squareCornerKind("bloomanime", "r", c)).toBe("root");
+    // The Avatar elemental left the rings with TODO 4.11 (layout v69): its
+    // art runs into the top corners (the art slot's, never listed) and its
+    // black footer into the bottom ones.
+    expect(SQUARE_CORNERS.avatar).toBeUndefined();
+    for (const c of ["bl", "br"] as const) expect(squareCornerKind("avatar", "r", c)).toBe("border");
     // The ghostfire left the rings with TODO 4.11 (layout v68): its painted
     // ring runs black to every corner.
     expect(SQUARE_CORNERS.tarkirghostfire).toBeUndefined();
@@ -56,7 +61,9 @@ describe("the square-corner table", () => {
         for (const c of CORNER_NAMES) expect(squareCornerKind(template, key, c), `${template}/${key} ${c}`).toBe("border");
       }
     }
-    expect(CORNER_NAMES.map((c) => squareCornerKind("bloomburrow", "g", c))).toEqual(["frame", "frame", "root", "root"]);
+    // Bloomburrow's leafy band in the top corners, and since TODO 4.11
+    // (layout v69) its footer in the colour's own tone in the bottom ones.
+    expect(CORNER_NAMES.map((c) => squareCornerKind("bloomburrow", "g", c))).toEqual(["frame", "frame", "frame", "frame"]);
     // The Tarkir draconic since TODO 4.11 (layout v68): its dragons' heads in
     // the top corners, the border painted under its MSE masters black into
     // the bottom ones.
@@ -83,8 +90,9 @@ describe("the square-corner table", () => {
     ]);
     const full = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 };
     expect(squareCornerFills("fullartland", full, { left: "w", right: "w" })).toEqual([null, null, null, null]);
-    // (A ring: avatar — tarkirdragon left the rings with TODO 4.11.)
-    expect(squareCornerFills("avatar", null, { left: "u", right: "r" })).toEqual([
+    // (A ring: bloomanime — tarkirdragon left the rings with TODO 4.11, and
+    // avatar with its layout v69.)
+    expect(squareCornerFills("bloomanime", null, { left: "u", right: "r" })).toEqual([
       ROOT_BACKDROP_RGB,
       ROOT_BACKDROP_RGB,
       ROOT_BACKDROP_RGB,
