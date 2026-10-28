@@ -318,6 +318,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish, no pairs (one master).
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): the arch in its
+      // crowned twins, no pairs (one gold master: every print is three colours).
+      "sncartdeco",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -363,7 +366,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
       // way; nor the MUL Tarkir dragon wings, which split the frame itself,
       // twoColorSplit.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -495,7 +498,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Bloomburrow woodland (4.11, v69): MSE's own, on the coloured well.
     "bloomburrow",
     // …and the Bloomburrow anime (4.11, v70): MSE's own, on its footer's well.
-    "bloomanime"];
+    "bloomanime",
+    // …and the New Capenna Art Deco (4.11 wave 2): its own lifted gold rim.
+    "sncartdeco"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

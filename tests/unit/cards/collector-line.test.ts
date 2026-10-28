@@ -112,6 +112,8 @@ describe("the switch values", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, layout v70).
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): M15's slot.
+      "sncartdeco",
     ]);
   });
 });

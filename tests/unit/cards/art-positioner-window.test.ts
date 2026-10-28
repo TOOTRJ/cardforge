@@ -133,6 +133,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1344, 1806] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its window with
+  // the check's spare; the art under the bars is a second layer.
+  sncartdeco: { front: [1262, 934] },
   fullart: { front: [1383, 1819] },
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.

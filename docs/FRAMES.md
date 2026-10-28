@@ -180,8 +180,14 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 63 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 64 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the New Capenna Art Deco showcase (4.11 wave 2, an addition): sncartdeco
+  — the 'Golden Age (SNC)' pack's one gold frame under every key and its
+  'Legendary Frame' as every key's crowned twin, its one plate, the gold
+  toned onto print; its stamp notch is our own lifted rim
+  ([The New Capenna Art Deco showcase](#the-new-capenna-art-deco-showcase-411-wave-2));
 
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
   the 'Zendikar Rising' pack's frames whole with their title ends, each
@@ -5366,6 +5372,132 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     import chooser) keeps the crown off: only the import names it;
   - #353 Ral, the walker, stays out of scope.
 
+### The New Capenna Art Deco showcase (4.11 wave 2)
+
+`sncartdeco` — "Art Deco" in the Streets of New Capenna set (`newcapenna`,
+showcase era): the black-and-gold filigree of the five families'
+three-colour cards, SNC #296–340 (2022), and their gilded-foil twins
+#361–405 — 90 printings, every one single-faced, black-bordered, on the
+2015 frame, none a walker, token or layout card. An ADDITION: a new
+template — no layout bump, no sweep, no badge; nobody can pick it until a
+colour is verified.
+
+- **Which pack.** Card Conjurer names the two SNC showcase packs the other
+  way round from print: its 'Art Deco (SNC)' pack (packSNCArtDeco.js,
+  `snc/artDeco/`) draws the PALE Golden Age frame of #341–359 (Elspeth,
+  Giada, the angels, the lands — and the walkers #341 / #347 / #348 and
+  #441–449), while its 'Golden Age (SNC)' pack (packSNCGilded.js,
+  `snc/gilded/`, 1500 × 2100 NATIVE: nothing resampled) draws this frame.
+  So the masters come from the 'Golden Age' pack, through
+  `scripts/import-cc-frames.mjs` (`CC_TEMPLATES.sncartdeco`, the `SNC_DECO`
+  block of `scripts/lib/cc-frames.mjs`), frames bucket only. #341–359,
+  #360 (the Phyrexian Urabrask) and #441–449 are other designs and stay
+  `showcase`.
+- **The gilded half.** #361–405 print the SAME frame — the same drawing, bar
+  for bar — in gilded foil: the gold is an embossed foil that Scryfall's
+  scans read near-black (25,24,13), with a copper edge. A finish, not a
+  frame: they land on `sncartdeco` with the plain run, and their gold is
+  never read for a tone.
+- **One master for every key.** All 90 printings are three colours (GRW GUW
+  BRU BGR BUW) and wear one gold filigree, the pack's 'Regular Frame'
+  (`gilded/m.png`), byte for byte under w u b r g c m (as the emblem's and
+  the D&D Sourcebook's single masters). The pack's 'GildedColored' frames
+  (silver for the mono colours) are Card Conjurer's own — no printing wears
+  them — and are not imported. Only `m` has references; the other keys are
+  documented nulls.
+- **The crown is a whole master.** All 30 legends (#301, #306, #307, #312,
+  #313, #314, #315, #320, #325, #326, #327, #329, #332, #336, #339 and their
+  gilded twins) print an arch over the title bar: the pack's 'Legendary
+  Frame' (`gilded/legendary/m.png`), built as `<key>-legendary` under every
+  key (`crownMasters`, like the borderless floating crown) because the arch
+  reshapes the TRANSLUCENT title bar under it (28,300 pixels differ, 10,843
+  of them translucent) — an overlay cannot draw that. Opt-in per card; an
+  import of a legendary printing names it on
+  (`CROWNED_SHOWCASE_SIGNATURES`).
+- **The art under the frame.** The title bar, type bar and text box are
+  translucent (α 127) over the art on every printing: the profile's
+  `underFrameArt` covers them (96–1404 × 77–1936 px, every translucent pixel
+  of both masters with the art-window check's spare; Card Conjurer's
+  artBounds 96 / 78 / 1308 × 1857). The window keeps its own slot —
+  `SNCARTDECO_ART_SLOT`, 119–1381 × 236–1170 (α < 250 on 120–1379 ×
+  238–1167; the stepped fins narrow it to 143–1356 at its top), Scryfall's
+  `art_crop` shape (626 × 457) — and the two layers meet on the opaque gold
+  round it (the fins, the title bar's foot rim, the art's foot rim).
+- **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels
+  off is toned), the 45 non-gilded prints registered block by block on the
+  pack's gold:
+  - the gold (the file's pixels of chroma ≥ 45): 181,156,71 → 207,180,115
+    (quartiles 206–208 / 179–182 / 113–119), 26 / 24 / 44 off: TONED, on
+    `m.png` and `legendary/m.png` as each loads (`SNC_DECO_SOURCE_TONES`);
+  - the plate's gold rim (30 creatures): 176,152,68 → 202,164,98, 26 / 12 /
+    30 off: TONED, on `pt/m.png`; its dark face 20,16,24 → 20,19,21, as
+    drawn;
+  - the black border: as drawn (0,0,0) — the prints read 22,19,14, and so
+    do SNC's own regular black borders on the same scans (16 cards, #1–17):
+    print's true black (the woodland rule);
+  - the translucent bars and box lie over each card's art: no raw median,
+    as drawn.
+- **Geometry kept as drawn.** Registered on the prints, the pack's pillars,
+  art-foot rim, type bar and box rim sit within 0–2 px of print's. The
+  PLAIN printings draw their title bar 6–7 px lower than the pack does (its
+  rims at 98–111 / 225–238 against the pack's 91–106 / 217–232); the
+  LEGENDARY printings and the pack's twin agree within 1 px. No row from
+  69 to 1949 repeats (the gold pillars run unbroken from the title bar to
+  the box), so there is no flat zone to re-cut through: nothing is moved,
+  and the slots ride the pack's bars.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), measured on all 90 printings, our bake of
+  each registered on its print region by region (the cost row by
+  normalised cross-correlation over our own discs, the name and the type
+  line by their white ink). The plain 60 set the name and the cost row ~4 px
+  LOWER than the 30 legends; no slot follows the crown, so each takes the
+  mean of the 90:
+  - the name 1 px up and 3 px left (plain +1, legendary −5 before);
+  - the cost row: the CC M15 70 px disc 8 px lower and 1.5 px further right
+    (`costDy` +1.4 px, `costDx` 3.5 px; plain +9.3, legendary +5.2 before) —
+    after, plain +1.3, legendary −2.9;
+  - the type line 4.5 px under the CC baseline (plain +5, legendary +3),
+    its band 3 px wider so the set symbol ends 3 px further right (its rows
+    within 1 px);
+  - M15's rules box and margins (the run's lines from x 133, its full
+    boxes' last descenders down to 1922 px), WHITE ink;
+  - the P/T: the pack's one plate (`gilded/pt/m.png`, 254 × 134 at its
+    bounds 1156 / 1857, 1:1) with M15's digit box 4.5 px left and 1 px down,
+    white; the plate's dark face runs 1180–1384 (`inkSpanPct`);
+  - white name and type ink, no shadow;
+  - the collector line on M15's rows: the run's line 1 ink ends at 1991
+    and line 2 at 2029, ours 2 px lower — within the offset the Tarkir
+    draconic keeps.
+- **Stamp** (`SNCARTDECO_HOLO_STAMP`, `sncartdecoholostamp/<key>.png`): the
+  run's rares and mythics arch the text box's gold foot rim over the oval
+  (`security_stamp: oval`), its commons and uncommons run it straight —
+  "auto" is a rare or mythic, as on M15. Card Conjurer's pack has no stamp
+  piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram
+  itself, never read), so the notch is PipGlyph's own: the published
+  master's own black outline, gold rim and black border LIFTED along the
+  printed arch (`scripts/build-borderless-stamp.mjs`, `SNC_DECO_ARCH` in
+  `scripts/lib/borderless-stamp.mjs`: 35.3 px at the centre, rising from x
+  664 to x 836 on the 25 stamped plain prints; the box's alpha read on row
+  1931, its brown arcs being opaque over the centre), 188 × 54 px at 656,
+  1896, every key the same piece (the crowned twins hold the same pixels
+  there — checked by the build). The oval is our own art at 683–817 ×
+  1924–1988 (the hologram's lit pixels 685–815 × 1925–1988 on the 50
+  stamped prints). The arch is a rules keep-out. An ADDITION, opt-in per
+  card.
+- **Imports.** `showcase/snc/art-deco` (SNC #296–340, #361–405) is exact on
+  `sncartdeco` once the card's colour is verified, `nearest` until then
+  (`withVerification`); before this frame the run imported `showcase`,
+  nearest on M15. No gap: every card of the run is three colours on the one
+  gold frame. The card keeps its real colour (gold), legends import with the
+  crown on, rares and mythics with the oval stamp, every printing with the
+  2015 collector line. Every other printing's outcome is unchanged (the
+  fixtures).
+- **Flagged, not changed:** the legends' name and cost row sit ~3 px high
+  and the plain cards' ~1–2 px low (the mean of the two); the gilded twins'
+  dark foil gold is a finish the frame doesn't draw; the Golden Age frame
+  (#341–359, Card Conjurer's 'Art Deco' pack) is a frame of its own, not
+  built; the walkers among it stay out of scope (ask first).
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -9793,12 +9925,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 82 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 83 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.11's 2015 Expeditions, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions and 4.11 wave 2's New Capenna Art Deco, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

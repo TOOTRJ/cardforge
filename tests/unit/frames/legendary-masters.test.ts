@@ -61,7 +61,11 @@ const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUI
 // …and the borderless double-faced bodies (TODO 5.7: scripts/build-dfc-
 // borderless-frames.mjs grafts m15borderless's twins).
 const DERIVED_TWINS: readonly string[] = ["m15borderlessstation", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"];
-const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).crownMasters === true && !DERIVED_TWINS.includes(t));
+// …and the New Capenna Art Deco (TODO 4.11 wave 2): its twin is its pack's
+// own 'Legendary Frame', a whole master of its own — not the floating crown
+// over the plain master (tests/unit/frames/snc-art-deco-importer.test.ts).
+const OWN_PACK_TWINS: readonly string[] = ["sncartdeco"];
+const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).crownMasters === true && !DERIVED_TWINS.includes(t) && !OWN_PACK_TWINS.includes(t));
 
 /** Every master a template paints: the colours and its declared pair keys. */
 function plainKeysOf(template: string): string[] {
@@ -266,7 +270,7 @@ describe("published to the frames bucket", () => {
     for (const key of Object.keys(files)) {
       const [template, name] = key.split("/");
       if (!name || key.split("/").length !== 2 || !isLegendaryMasterKey(name.replace(/\.(png|webp)$/, ""))) continue;
-      expect([...CROWNED, ...DERIVED_TWINS], key).toContain(template);
+      expect([...CROWNED, ...DERIVED_TWINS, ...OWN_PACK_TWINS], key).toContain(template);
       if (DERIVED_TWINS.includes(template)) continue;
       expect(plainKeysOf(template).map(legendaryKey), key).toContain(name.replace(/\.(png|webp)$/, ""));
     }

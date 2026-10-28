@@ -569,7 +569,9 @@ export function sourceTonesOf(src) {
   // recipe below; read at call time).
   if (Object.hasOwn(RING_SOURCE_TONES, src)) return RING_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
-  return Object.hasOwn(TARKIR_SOURCE_TONES, src) ? TARKIR_SOURCE_TONES[src] : null;
+  if (Object.hasOwn(TARKIR_SOURCE_TONES, src)) return TARKIR_SOURCE_TONES[src];
+  // …and the New Capenna Art Deco gold (TODO 4.11 wave 2, SNC_DECO_SOURCE_TONES).
+  return Object.hasOwn(SNC_DECO_SOURCE_TONES, src) ? SNC_DECO_SOURCE_TONES[src] : null;
 }
 /** The toned files a recipe draws, as provenance prints them: file → the
  *  table's name, each region's mask and its gain (describeSourceToneTable). */
@@ -4214,6 +4216,99 @@ export function stampShapeBlackFindings(buf, stamp, width, height) {
 }
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2): the Streets of New Capenna ART DECO
+// showcase (`sncartdeco`; SNC #296–340 — the 45 three-colour cards of the
+// five families, 2022 — and their gilded-foil twins #361–405: 90 printings,
+// every one single-faced, black-bordered, on the 2015 frame) from Card
+// Conjurer's 'Golden Age (SNC)' pack (packSNCGilded.js,
+// `img/frames/snc/gilded/`, 1500 × 2100 NATIVE: nothing is resampled). Card
+// Conjurer names its packs the other way round from the prints: its 'Art
+// Deco (SNC)' pack (packSNCArtDeco.js, snc/artDeco/) draws the pale Golden
+// Age cards SNC #341–359 (Elspeth, Giada, the lands), and its 'Golden Age'
+// pack is the black-and-gold filigree #296–340 print. An ADDITION: a new
+// template, no stored card sits on it.
+//   • ONE master for every key: the pack's 'Regular Frame' (gilded/m.png)
+//     is the one gold filigree all 90 printings wear (every one is three
+//     colours: GRW GUW BRU BGR BUW); the pack's 'GildedColored' frames
+//     (gilded/colored/<k>.png, silver for the mono colours) are Card
+//     Conjurer's own — no printing wears them — and are not imported.
+//   • its crowned twin under every key (`<k>-legendary`, the profile's
+//     crownMasters): the pack's 'Legendary Frame' (gilded/legendary/m.png),
+//     the arch over the title bar every legendary printing of the run carries
+//     (30 of 90). It is a whole master because the arch changes the
+//     translucent bar under it (28,300 pixels differ, 10,843 of them
+//     translucent) — no overlay can draw that.
+//   • a real black border all round (the edge contract's ALL_BORDER), cut at
+//     the one card corner; the prints' border is the black of SNC's own
+//     regular printings on the same scans (22,19,14 both — the woodland rule):
+//     true black, as drawn.
+//   • the art runs under the title bar, the type bar and the text box (α 127
+//     on 98–1399 × 116–1933, the twin's arch from 79): the profile's
+//     underFrameArt; the window (α < 250 on 120–1379 × 238–1167) is its own
+//     slot, the two meeting on the opaque gold round it.
+//   • plates: the pack's one P/T plate (gilded/pt/m.png, 254 × 134 at its
+//     bounds 1156 / 1857, 1:1) under every key.
+//   • geometry kept as drawn: registered on the 45 non-gilded prints, the
+//     pack's pillars, art-foot rim, type bar and box rim sit within 0–2 px of
+//     print's; the plain prints draw their title bar 6–7 px LOWER than the
+//     pack (the legendary prints and the pack's twin within 1 px), but the
+//     pillars run unbroken from the title bar to the box, a gold texture no
+//     row of which repeats (rows 69–1949 hold no two equal rows): no flat
+//     zone, so nothing is re-cut and the slots ride the pack's own bars.
+// ---------------------------------------------------------------------------
+export const SNC_DECO = "img/frames/snc/gilded";
+const SNC_DECO_PACK = "packSNCGilded.js 'Golden Age (SNC)' — the Streets of New Capenna Art Deco showcase, SNC #296–340 / #361–405 (groupShowcase-5.js; CC's 'Art Deco (SNC)' pack draws the Golden Age cards #341–359)";
+/**
+ * The pack's gold against print by the ring's one rule (raw scan medians; a
+ * region ≥ 9 levels off is toned), the 45 non-gilded prints (#296–340;
+ * Scryfall PNGs at 1500 × 2100), each registered block by block (the title
+ * bar, each pillar, the type bars, the box) on the pack's gold, the median
+ * of every print's median:
+ *   • the gold (the pack's pixels of chroma ≥ 45, eroded 2 px for the read —
+ *     the pillars, rims, title and type bars' rings and the box's frame):
+ *     181,156,71 → 207,180,115 (quartiles 206–208 / 179–182 / 113–119) —
+ *     26 / 24 / 44 off: TONED;
+ *   • the plate's gold rim (30 creatures): 176,152,68 → 202,164,98 — 26 / 12
+ *     / 30 off: TONED;
+ *   • the plate's dark face: 20,16,24 → 20,19,21 — 3: as drawn;
+ *   • the black border: 0,0,0, where the prints read 22,19,14 — and SNC's
+ *     own regular black-bordered printings on the same scans read 22,19,14
+ *     too (16 cards, #1–17): print's true black, as drawn.
+ * The translucent bars and box lie over each card's art: no raw median to
+ * tone by — as drawn (α 127). The gilded twins (#361–405) print the gold as
+ * an embossed foil that scans near-black (25,24,13): a finish, not read.
+ * Through toneSourceRegions on the file's own gold (chromaRegionPlane): a
+ * per-channel gain at the region's tone, fading to the neutral gain toward
+ * white.
+ */
+export const SNC_DECO_PRINT_TONES = Object.freeze({
+  gold: Object.freeze({ from: [181, 156, 71], to: [207, 180, 115] }),
+  plateGold: Object.freeze({ from: [176, 152, 68], to: [202, 164, 98] }),
+});
+/** The gold region: the file's pixels of chroma (max − min channel) ≥
+ *  `full`, none at ≤ `none`: the pack's gold reads 40–110, its brown box
+ *  ornaments 31–33 and the dark bars below them — so neither is toned. */
+export const SNC_DECO_GOLD_CHROMA = Object.freeze({ full: 45, none: 34 });
+export const SNC_DECO_SOURCE_TONES = Object.freeze({
+  ...Object.fromEntries(
+    [`${SNC_DECO}/m.png`, `${SNC_DECO}/legendary/m.png`].map((file) => [
+      file,
+      Object.freeze({ chroma: Object.freeze({ gold: SNC_DECO_GOLD_CHROMA }), tones: Object.freeze({ gold: SNC_DECO_PRINT_TONES.gold }), table: "SNC_DECO_PRINT_TONES (gold)" }),
+    ]),
+  ),
+  [`${SNC_DECO}/pt/m.png`]: Object.freeze({ chroma: Object.freeze({ plateGold: SNC_DECO_GOLD_CHROMA }), tones: Object.freeze({ plateGold: SNC_DECO_PRINT_TONES.plateGold }), table: "SNC_DECO_PRINT_TONES (plateGold)" }),
+});
+const SNC_DECO_NOTES = [
+  "w u b r g c m = the pack's 'Regular Frame' (snc/gilded/m.png, 1500x2100 NATIVE — no resample), byte for byte: the one gold filigree all 90 printings wear (every card of the run is three colours); the pack's 'GildedColored' frames (snc/gilded/colored/<k>.png) are Card Conjurer's own — no printing wears them — and are not imported",
+  "<k>-legendary = the pack's 'Legendary Frame' (snc/gilded/legendary/m.png): the arch over the title bar all 30 legendary printings carry, baked into its own master under every key (the profile's crownMasters) — the arch changes the translucent bar under it, which no overlay can draw",
+  "Card Conjurer's names run the other way round from print: its 'Art Deco (SNC)' pack (snc/artDeco/) is the pale Golden Age frame of SNC #341–359, its 'Golden Age (SNC)' pack this black-and-gold Art Deco frame of #296–340 / #361–405",
+  "a real black border all round, cut at the one card corner (print's border is the black of SNC's own regular printings on the same scans, 22,19,14 both: true black)",
+  "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
+  `the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold ${SNC_DECO_PRINT_TONES.gold.from.join(",")} → ${SNC_DECO_PRINT_TONES.gold.to.join(",")}, the plate's gold rim ${SNC_DECO_PRINT_TONES.plateGold.from.join(",")} → ${SNC_DECO_PRINT_TONES.plateGold.to.join(",")} (the file's pixels of chroma ≥ ${SNC_DECO_GOLD_CHROMA.full}); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read`,
+  "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+];
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild): the Multiverse Legends TARKIR "Dragon Wing"
 // showcase (`tarkirdragon`; MUL #1 / #131 / #131z Anafenza, Kin-Tree Spirit
 // — white — and #60 / #190 / #190z Taigam, Ojutai Master — white-blue: six
@@ -5437,6 +5532,17 @@ export const CC_TEMPLATES = {
       "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)",
       OLD_PAIR_NOTE.modernland,
     ],
+  },
+  // TODO 4.11 wave 2: the New Capenna Art Deco showcase (see SNC_DECO
+  // above) — one master and its crowned twin under every key.
+  sncartdeco: {
+    colors: {
+      ...perColor(() => [layer(`${SNC_DECO}/m.png`)]),
+      ...Object.fromEntries(COLORS.map((k) => [legendaryKey(k), [layer(`${SNC_DECO}/legendary/m.png`)]])),
+    },
+    plates: perColor(() => `${SNC_DECO}/pt/m.png`),
+    pack: SNC_DECO_PACK,
+    notes: SNC_DECO_NOTES,
   },
 };
 

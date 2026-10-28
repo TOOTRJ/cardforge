@@ -723,6 +723,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // …and the Bloomburrow anime's flourish (TODO 4.11 / 4.35, layout v70):
   // one master, so one colour and a pair.
   ["bloomanime", ["g", "wu"]],
+  // …and the New Capenna Art Deco's arch (TODO 4.11 wave 2): its crowned
+  // twin — one gold master, so a three-colour legend and a mono one.
+  ["sncartdeco", ["wub", "r"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1355,6 +1358,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the New Capenna Art Deco's plate at its widest.
+  ["sncartdeco", "creature", "wub", "@wide", { power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2023,6 +2028,14 @@ export function visualCases(): VisualCase[] {
   // TODO 4.11: the MUL Tarkir dragon wings' OVAL notch — "auto" on a rare
   // (every printing), none on a common, the two-colour card's (the split
   // wings: the gold key's piece, `-m`), the HD bake.
+  // TODO 4.11 wave 2: the New Capenna Art Deco's lifted rim — none on a
+  // common (SNC #296–340 arch only a rare's or mythic's), a three-colour
+  // rare, a crowned legend's (the arch on its twin: the same pixels there),
+  // the HD bake.
+  add("sncartdeco", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("sncartdeco", "auto", { rarity: "common" }) });
+  add("sncartdeco", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("sncartdeco", "auto", { rarity: "rare" }) });
+  add("sncartdeco", "creature", "wub", "long", { suffix: "@stamp-crown", row: { ...stampRow("sncartdeco", "auto", { rarity: "mythic" }), supertype: "Legendary", frame_style: { template: "sncartdeco", finish: "regular", stamp: "auto", crown: true } } });
+  add("sncartdeco", "creature", "r", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("sncartdeco", "auto", { rarity: "mythic" }) });
   add("tarkirdragon", "creature", "w", "long", { suffix: "@stamp", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
   add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
   add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
@@ -2468,6 +2481,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "bloomburrow",
   // …and the Bloomburrow anime's (TODO 4.11 / 4.35, layout v70).
   "bloomanime",
+  // …and the New Capenna Art Deco's (TODO 4.11 wave 2: its own lifted gold rim).
+  "sncartdeco",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

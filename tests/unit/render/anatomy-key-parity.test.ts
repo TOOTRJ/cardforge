@@ -84,7 +84,9 @@ describe("bake path = preview path", () => {
     expect(pairKeys).toBe(410);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
-    expect(crownedKeys).toBe(51 + 4 * 18);
+    // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
+    // 'Legendary Frame' under every colour key).
+    expect(crownedKeys).toBe(51 + 4 * 18 + 7);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -176,7 +178,10 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
-                                    : "m15holostamp"
+                                    : template === "sncartdeco"
+                                      ? // …and the New Capenna Art Deco's lifted rim (4.11 wave 2).
+                                        "sncartdecoholostamp"
+                                      : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
                   "fullartcrown"
@@ -253,8 +258,9 @@ describe("bake path = preview path", () => {
     // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
     // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
     // MSE's own stamp per key; `c` the steel rim), and the Bloomburrow
-    // woodland's 7 (4.11, v69), and the Bloomburrow anime's 7 (4.11, v70).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7);
+    // woodland's 7 (4.11, v69), and the Bloomburrow anime's 7 (4.11, v70),
+    // and the New Capenna Art Deco's 7 (4.11 wave 2, its lifted gold rim).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

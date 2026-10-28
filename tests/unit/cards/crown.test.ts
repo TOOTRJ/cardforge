@@ -70,6 +70,8 @@ describe("which card draws the crown", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish above the name box.
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): the arch in its crowned twins.
+      "sncartdeco",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",

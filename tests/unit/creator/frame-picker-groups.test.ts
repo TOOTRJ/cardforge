@@ -178,6 +178,12 @@ const STATION_DRESSES: readonly string[] = [
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).
   "expeditionlandbfz",
+  // …and the New Capenna Art Deco showcase (TODO 4.11 wave 2): a new
+  // template in a new showcase set — pinned in
+  // tests/unit/scryfall/snc-art-deco-imports.test.ts (SNC #296–340 and
+  // #361–405 land there once verified) and
+  // tests/unit/frames/snc-art-deco-importer.test.ts.
+  "sncartdeco",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

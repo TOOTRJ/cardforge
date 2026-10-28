@@ -98,7 +98,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
     // own bump, v69).
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(82);
+    // …and TODO 4.11 wave 2's New Capenna Art Deco (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(83);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -192,6 +193,7 @@ describe("one M15-era display size (layout v32)", () => {
         t === "avatar" ||
         t === "bloomburrow" ||
         t === "bloomanime" ||
+        t === "sncartdeco" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -430,6 +432,11 @@ describe("baselines (TextSlot.dy)", () => {
     // name band's RECT 25 px up (print's baseline 164; its dy M15's), the
     // type line the CC baseline (print's 1261, ours 1260).
     ["bloomanime", base.title, cc],
+    // The New Capenna Art Deco (TODO 4.11 wave 2, a new template): M15's
+    // slots on the pack's own bars — the name 1 px up and the type line 4.5
+    // px under the CC baseline, the means of its 90 printings (the plain 60
+    // set both ~4 px lower than the 30 legends).
+    ["sncartdeco", base.title - 1 / 1500, cc + 4.5 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

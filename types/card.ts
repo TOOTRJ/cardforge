@@ -553,6 +553,13 @@ export const FRAME_TEMPLATE_VALUES = [
   // "tarkir" prefix because it is stored in cards.frame_style, frame_reviews
   // and the frames bucket. Its set is "multiverselegends", not "tarkir".
   "tarkirdragon",
+  // Streets of New Capenna (SNC 2022) — the ART DECO showcase of the five
+  // families' three-colour cards (SNC #296–340) and their gilded-foil twins
+  // (#361–405): black and gold filigree, the art under translucent bars and
+  // text box. Card Conjurer's pack for it is 'Golden Age (SNC)'
+  // (packSNCGilded.js; CC's 'Art Deco (SNC)' pack draws the Golden Age
+  // cards #341–359 instead). An addition: no stored card sits on it.
+  "sncartdeco",
   // Zendikar Rising (ZNR 2020) showcase — the hedron frame. It is not full
   // art (Scryfall flags none of those printings full_art), but the key keeps
   // its historical name because it is stored in cards.frame_style,
@@ -712,6 +719,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdragon: "Dragon Wing (Multiverse Legends)",
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
+  // Set-relative: the picker prints "Streets of New Capenna — Art Deco".
+  sncartdeco: "Art Deco",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
@@ -752,6 +761,7 @@ export const FRAME_SET_VALUES = [
   "bloomburrow",
   "tarkir",
   "multiverselegends",
+  "newcapenna",
   "zendikarrising",
   "extended",
   "fullartset",
@@ -771,6 +781,7 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
   multiverselegends: "Multiverse Legends",
+  newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
   extended: "Extended Art",
   fullartset: "Full Art",
@@ -851,6 +862,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirdraconic: "tarkir",
   tarkirghostfire: "tarkir",
   tarkirdragon: "multiverselegends",
+  sncartdeco: "newcapenna",
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
@@ -933,6 +945,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
+  // The Art Deco showcase (SNC #296–340, #361–405).
+  newcapenna: "showcase",
   zendikarrising: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
