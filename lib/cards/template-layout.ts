@@ -5039,6 +5039,9 @@ const BREAKING_NEWS_ART_SLOT: Rect = { topPct: (356 / 2100) * 100, leftPct: (78 
  *  2814 card: 1124.6–1427.6 × 1838.7–1987.9 px at HD), the value in Card
  *  Conjurer's text box (1599 / 2529, 0.1367 W × 0.0372 H). */
 const BREAKING_NEWS_PLATE_RECT: Rect = { topPct: (2464 / 2814) * 100, leftPct: (1507 / 2010) * 100, widthPct: (406 / 2010) * 100, heightPct: (200 / 2814) * 100 };
+/** Card Conjurer's value box 8 px lower: print's ★/★ on #64 centres on 1925.6
+ *  px (1921.4 on the pack's page), ours sat on 1913.6. */
+const BREAKING_NEWS_PT_DY = 8;
 /** Print's name, type line and P/T ink: 51,46,48 (the median of the run's
  *  dark ink in those bands; Card Conjurer draws #332e2e). */
 const BREAKING_NEWS_INK = "#332e30";
@@ -5070,7 +5073,7 @@ const BREAKING_NEWS: FrameProfile = {
   rules: { ...M15.rules, rect: BREAKING_NEWS_RULES_RECT },
   pt: {
     ...M15.pt!,
-    rect: { topPct: (2529 / 2814) * 100, leftPct: (1599 / 2010) * 100, widthPct: 13.67, heightPct: 3.72 },
+    rect: { topPct: (2529 / 2814) * 100 + (BREAKING_NEWS_PT_DY / 2100) * 100, leftPct: (1599 / 2010) * 100, widthPct: 13.67, heightPct: 3.72 },
     plateRect: BREAKING_NEWS_PLATE_RECT,
     // The box's paper face on the digits' rows: 1172–1400 px (its torn
     // right end and its brackets past them).
