@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "67c714f457389942"
+    "manifest": "929e1c837805e92f"
   },
   "cases": {
     "adventure/b/adventure-long": "33f0376c03fd9950:42614af9",
@@ -267,6 +267,8 @@
     "breakingnews/wub/creature-short": "8943788e042aef30:94400d95",
     "breakingnews/wub/sorcery-long@stamp-m": "168004d36a446c69:da7ad98a",
     "breakingnews/wub/sorcery-short@masthead-shift": "e13aecf8e447262d:0aec186c",
+    "breakingnews/wub/sorcery-short@masthead-shift-etched": "566536fc338a4a3f:c3ece557",
+    "breakingnews/wub/sorcery-short@masthead-shift-foil": "315c94ea7b07b89f:e4e52505",
     "dndsourcebook/b/creature-long": "52470bd70ed899d7:d1de8ca9",
     "dndsourcebook/b/creature-short": "02929d08ea4ba592:0557d664",
     "dndsourcebook/b/sorcery-short": "39007c5f12a91059:cd3578b3",
