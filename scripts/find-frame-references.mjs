@@ -381,6 +381,14 @@ const TEMPLATES = {
     confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
     q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
   },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 (the
+  // serialized and surge-foil twins are the same frame under a finish), every
+  // one borderless. No mono-green print (green only in pairs); `c` the
+  // colourless artifact creature; `m` a three-colour card or a pair.
+  tardis: {
+    confirm: "WHO showcase — confirm the thumbnail is the TARDIS police-box frame (borderless, #535–564), not the regular, extended-art or etched frame.",
+    q: (k) => (k === "g" ? null : `set:who border:borderless cn>=535 cn<=564 ${spellColor(k)}`),
+  },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT
   // #1–63 (#64–103 are the anime-style borderless reprints, another
   // design). Mono-coloured enchantments only: no colourless or gold print.

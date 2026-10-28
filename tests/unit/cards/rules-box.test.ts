@@ -151,6 +151,10 @@ describe("the main box on every template", () => {
         // Card Conjurer's rect (the run's lines from x 132–133, the rect's
         // 129 + 4).
         "enchantingtales",
+        // …and the Doctor Who TARDIS (TODO 4.11 wave 2): M15's margins on the
+        // police box's panels (the run's lines from x 129–132, its right ink
+        // to 1365), the box on print's rows.
+        "tardis",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

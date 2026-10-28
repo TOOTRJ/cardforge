@@ -4979,6 +4979,104 @@ const DOSSIER: FrameProfile = {
   },
 };
 
+// The Doctor Who TARDIS showcase (TODO 4.11 wave 2) — Card Conjurer's
+// 'TARDIS' pack (packTARDIS.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs
+// TARDIS), the police box of WHO #535–564, their serialized twins and their
+// surge-foil twins #1126–1155: the blue doors round the art, the black name
+// and type bars, the paneled blue text box, a stripe down each side and a
+// brace at the window's top corners in the card's colour; white ink
+// everywhere (the bars are black, the box dark blue). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's at the
+// family's sizes on the pack's own bars (the title bar 104–223 px, the type
+// bar 1179–1305 — M15's within 1 px), each slot measured on the run's 30
+// base printings (Scryfall PNGs at 1500 × 2100, registered on the pack's
+// drawing: the scans sit 3 px right of it) against our bakes of the same
+// names, types and costs — TARDIS_* below. Print sets the name and the type
+// line in a sans serif's capitals and the P/T in a serif; PipGlyph keeps
+// its faces (no font is added for a frame).
+/** The art slot: the masters' window — see-through (α < 16) on 116–1384 ×
+ *  265–1160 px, its anti-aliased rim (α < 250) on 115–1385 × 264–1161, on
+ *  every key; CC's artBounds 115 / 264 / 1271 × 898 — with the art-window
+ *  check's 0.05 % to spare: 114–1387 × 262–1164. The brace hides the
+ *  rect's top corners. */
+export const TARDIS_ART_SLOT: Rect = { topPct: (262 / 2100) * 100, leftPct: (114 / 1500) * 100, widthPct: (1273 / 1500) * 100, heightPct: (902 / 2100) * 100 };
+/** The set symbol's ring on the type bar: white, 1271–1400 × 1170–1312 px,
+ *  centred on (1335.5, 1241) — print centres the set's symbol in it. */
+const TARDIS_SYMBOL_CENTRE_PX = { x: 1335.5, y: 1241 } as const;
+/** The symbol box, right-aligned in its rect (FrameProfile.symbolRect), so
+ *  the rect's right end is the ring's centre plus half the box: a square
+ *  icon is centred in the ring. */
+const TARDIS_SYMBOL_BOX_PX = SET_SYMBOL_BOX_PCT * 1500;
+export const TARDIS_SYMBOL_RECT: Rect = {
+  topPct: ((TARDIS_SYMBOL_CENTRE_PX.y - TARDIS_SYMBOL_BOX_PX / 2) / 2100) * 100,
+  leftPct: ((TARDIS_SYMBOL_CENTRE_PX.x + TARDIS_SYMBOL_BOX_PX / 2 - 180) / 1500) * 100,
+  widthPct: 12,
+  heightPct: (TARDIS_SYMBOL_BOX_PX / 2100) * 100,
+};
+/** The type line ends 9 px short of the ring's left edge (1271 px). */
+const TARDIS_TYPE_RIGHT_PX = 1262;
+/** The pack's P/T box at its ptBounds (1133 / 1850, 299 × 173 px, 1:1). */
+const TARDIS_PLATE_RECT: Rect = { topPct: (1850 / 2100) * 100, leftPct: (1133 / 1500) * 100, widthPct: (299 / 1500) * 100, heightPct: (173 / 2100) * 100 };
+/** The P/T digits' box: CC's (1193 / 1891, 195 × 78 px) — centred on the
+ *  box's black face (1186–1388 × 1879–1969 px). */
+const TARDIS_PT_RECT: Rect = { topPct: (1891 / 2100) * 100, leftPct: (1193 / 1500) * 100, widthPct: (195 / 1500) * 100, heightPct: (78 / 2100) * 100 };
+const TARDIS_INK = { colorHex: SHOWCASE_WHITE_INK } as const;
+// The measured nudges, HD px (the run's 30 base printings against our bakes
+// of the same names, types and costs; print registered on the pack):
+/** The name's baseline 3 px above M15's: print's 185 on every printing,
+ *  ours sat on 188. Its pen within 3 px of print's (126–131 by the first
+ *  letter; M15's 129–132), kept. */
+const TARDIS_TITLE_DY = -3;
+/** The CC M15 disc row 4 px lower: print centres its discs on 160.5 px (the
+ *  title bar's black is 104–223), where the CC M15 row sits on 156.5; the
+ *  row's right end is print's (1384) and so is its pitch. */
+const TARDIS_COST_DY = 4;
+/** The type line 2 px under the CC baseline: print sets a full-size line on
+ *  1261–1263 px (#535, #538, #549, #550), ours sat on 1259. (Print CENTRES a
+ *  long line it sets smaller — "LEGENDARY CREATURE — TIME LORD DOCTOR" on
+ *  1255 —, where PipGlyph keeps a shrunk line on its band's baseline.) */
+const TARDIS_TYPE_DY = 2;
+/** CC's digit box 2 px left and 1 px up: print's digits' ink centres on
+ *  (1285, 1924) — a serif's, 60 px tall — ours on (1288.5, 1925). */
+const TARDIS_PT_DX = -2;
+const TARDIS_PT_DY = -1;
+/** The collector lines 6 / 5 px above M15's rows (TARDIS_COLLECTOR). */
+const TARDIS_COLL1_DY = -6;
+const TARDIS_COLL2_DY = -5;
+/** The rules box: M15's margins on print's rows — the run's full boxes set
+ *  their first ascenders on 1354–1360 px and their last descenders on
+ *  1877–1897 (registered), 14 px under M15's first line. */
+const TARDIS_RULES_TOP_PX = 1350;
+const TARDIS_RULES_BOTTOM_PX = 1902;
+const TARDIS: FrameProfile = {
+  ...M15,
+  label: "TARDIS",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST_DY + TARDIS_COST_DY / 1500,
+  artSlot: TARDIS_ART_SLOT,
+  symbolRect: TARDIS_SYMBOL_RECT,
+  title: { ...M15.title, dy: M15.title.dy! + TARDIS_TITLE_DY / 1500, ...TARDIS_INK },
+  type: {
+    ...M15.type,
+    rect: { ...M15.type.rect, widthPct: ((TARDIS_TYPE_RIGHT_PX - (M15.type.rect.leftPct / 100) * 1500) / 1500) * 100 },
+    dy: CC_M15_TYPE_DY + TARDIS_TYPE_DY / 1500,
+    ...TARDIS_INK,
+  },
+  rules: {
+    ...M15.rules,
+    rect: { ...M15.rules.rect, topPct: (TARDIS_RULES_TOP_PX / 2100) * 100, heightPct: ((TARDIS_RULES_BOTTOM_PX - TARDIS_RULES_TOP_PX) / 2100) * 100 },
+    ...TARDIS_INK,
+  },
+  pt: {
+    ...M15.pt!,
+    ...TARDIS_INK,
+    rect: { ...TARDIS_PT_RECT, topPct: TARDIS_PT_RECT.topPct + (TARDIS_PT_DY / 2100) * 100, leftPct: TARDIS_PT_RECT.leftPct + (TARDIS_PT_DX / 1500) * 100 },
+    inkSpanPct: { leftPct: (1186 / 1500) * 100, rightPct: (1389 / 1500) * 100 },
+    plateRect: TARDIS_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/tardis/pt/{color}.png",
+  },
+};
+
 // The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2) — Card
 // Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js, 2010 × 2814,
 // downscaled once; scripts/lib/cc-frames.mjs ETALES), the swirled storybook
@@ -6379,6 +6477,45 @@ export const DOSSIER_COLLECTOR: CollectorSlot = {
   ...M15_COLLECTOR,
   line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (DOSSIER_COLL1_DY / 2100) * 100,
   line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (DOSSIER_COLL2_DY / 2100) * 100,
+};
+
+/** Every key the TARDIS masters and its notch publish: the seven frames and
+ *  the ten pairs. */
+const TARDIS_KEYS = ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
+/** The rules box keeps out of the stamp's black trapezoid: its top (1909 px)
+ *  down past the rules box, over 662–838 px. */
+export const TARDIS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (662 / 1500) * 100, topPct: (1909 / 2100) * 100, widthPct: (176 / 1500) * 100, heightPct: (20 / 2100) * 100 };
+/**
+ * The Doctor Who TARDIS's TRIANGLE stamp notch (TODO 4.11 wave 2): the
+ * pack's one piece — a black trapezoid over the box's foot round the stamp
+ * — 1:1 at its bounds, a 178 × 90 box at 661, 1908 px (TARDIS_NOTCH_BOX in
+ * scripts/lib/cc-frames.mjs: 1 px round the piece and 9 px past its foot,
+ * so the hole fits), the Universes Beyond stamp's hole cut clear (every
+ * printing of the run wears that physical stamp, `security_stamp:
+ * triangle`) and our triangle art over it: "auto" stamps every rarity (a
+ * triangle frame — the matte face below a rare, as #538 / #550 / #551
+ * print it). Keys: the masters' and the ten pairs' (one piece under every
+ * key). Set on the tardis entry only.
+ */
+export const TARDIS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (661 / 1500) * 100, topPct: (1908 / 2100) * 100, widthPct: (178 / 1500) * 100, heightPct: (90 / 2100) * 100 },
+  assetPathTemplate: "/frames/tardisholostamp/{key}.png",
+  keys: TARDIS_KEYS,
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: TARDIS_HOLO_STAMP_KEEP_OUT },
+};
+/**
+ * The collector line on the TARDIS showcase (TODO 4.11 wave 2): M15's slot
+ * (the pen x, the brush column, the sizes, the © slot's right end) on the
+ * run's own rows, measured on its 30 base printings at 1500 × 2100 (each
+ * line's capitals' foot): line 1 on 1987 px, line 2 on 2026, where M15's
+ * slot bakes 1993 / 2031 — so 6 and 5 px above M15's. The pen: print's
+ * first ink at 96 px, ours 99 — within M15's own measured 96–101, kept.
+ */
+export const TARDIS_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (TARDIS_COLL1_DY / 2100) * 100,
+  line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (TARDIS_COLL2_DY / 2100) * 100,
 };
 
 /**
@@ -7823,6 +7960,13 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // dress (the ten pair masters: print's accents ramp from the first colour
   // to the second).
   dossier: { ...DOSSIER, overlays: [DOSSIER_CROWN, DOSSIER_HOLO_STAMP], collector: DOSSIER_COLLECTOR, twoColorMasters: ["split"] },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the triangle stamp
+  // and the collector line, opt-in per card, and the two-colour "split"
+  // dress (the ten pair masters: print gives a pair's left stripe and brace
+  // its first colour, the right ones its second). No crown: the brace the
+  // pack calls its crown is on every print of the run, so the masters draw
+  // it.
+  tardis: { ...TARDIS, overlays: [TARDIS_HOLO_STAMP], collector: TARDIS_COLLECTOR, twoColorMasters: ["split"] },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints, the pack has
   // none).

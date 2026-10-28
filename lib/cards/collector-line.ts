@@ -156,6 +156,10 @@ export const COLLECTOR_TEMPLATES = [
   // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
   // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).
   "enchantingtales",
+  // …and the Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS'): WHO #535–564 / #1126–1155 set both lines in the black border
+  // under the box, 6 / 5 px above M15's rows (TARDIS_COLLECTOR).
+  "tardis",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

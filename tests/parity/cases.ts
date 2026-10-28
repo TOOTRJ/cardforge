@@ -352,6 +352,9 @@ const PICKS: readonly Pick[] = [
   // The MKM dossier showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "dossier/u/creature-short@collector-2015", why: "MKM dossier: CC's folder masters downscaled once, M15's slots on the folder's bands (the name 2 px up, the cost row 38 px in from the clip and 19 px down, the set symbol 17 px left, the type line 4 px down), the paper tag, the collector line 4–5 px above M15's rows" },
   { from: "dossier/wu/creature-long@pair-crown", why: "MKM dossier: a two-colour legend — the pair master lerped across print's ramp under the crown band's lerped pair" },
+  // The Doctor Who TARDIS showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "tardis/u/creature-short@collector-2015", why: "Doctor Who TARDIS: CC's police-box masters with the brace drawn in, white ink on M15's slots on the pack's bars (the name 3 px up, the cost row 4 px down, the type line 2 px down, the set symbol centred in the ring), the pack's P/T box, the collector line 6 / 5 px above M15's rows" },
+  { from: "tardis/wub/creature-long@stamp-m", why: "Doctor Who TARDIS: the pack's trapezoid notch with our triangle in the Universes Beyond hole, a three-colour legend on the gold master" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

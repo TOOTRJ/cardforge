@@ -132,6 +132,9 @@ const DOCUMENTED_NULLS = new Set([
   // The Enchanting Tales showcase (TODO 4.11 wave 2): WOT #1–63 prints no
   // colourless and no multicoloured card.
   "enchantingtales/c", "enchantingtales/m",
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 prints
+  // no mono-green card (green only in its pairs).
+  "tardis/g",
   "tarkirghostfire/u", "tarkirghostfire/b",
   // The transform land pair (TODO 5.1a): one master under every key, the
   // emblem's model — verified on c only (INR #287 / FIN #31).

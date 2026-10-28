@@ -70,6 +70,13 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500 + 3 / 1500]);
         continue;
       }
+      // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the CC M15 row 4 px
+      // lower (the discs centred on 160.5 px on the run's 30 base prints),
+      // its end and pitch print's, 70 px discs.
+      if (template === "tardis") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 + 4 / 1500, 2 / 1500]);
+        continue;
+      }
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
         expect(profile.costDx, template).toBeUndefined();

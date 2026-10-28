@@ -6123,6 +6123,64 @@
       ]
     }
   },
+  "tardis": {
+    "note": "The Doctor Who TARDIS showcase (TODO 4.11 wave 2): WHO #535–564 (the serialized #552z–564z and surge-foil #1126–1155 twins are the same frame under a finish). One police box per colour key, the colour on the stripes down the sides and the brace at the window's top corners (on every print, legendary or not); every printing borderless with the Universes Beyond triangle. 'c' the colourless artifact creature (#550 Cyberman Patrol, the pack's steel artifact frame; #551 TARDIS is left out: its art covers the brace); 'g' has no print (green appears only in pairs); 'm' the three-colour Davros (gold) and a two-colour legend (The War Doctor, R/W — the pair masters, the split dress, ride the gold key).",
+    "colors": {
+      "w": [
+        {
+          "name": "Rose Tyler",
+          "set": "who",
+          "scryfallId": "2f305be6-c51d-423d-8283-39e3ffc2d790"
+        },
+        {
+          "name": "Sarah Jane Smith",
+          "set": "who",
+          "scryfallId": "cb59b2b4-34d8-4add-a187-61677c7a3b0d"
+        }
+      ],
+      "u": [
+        {
+          "name": "K-9, Mark I",
+          "set": "who",
+          "scryfallId": "f51905ce-9146-46e4-8d7f-643843d48edb"
+        }
+      ],
+      "b": [
+        {
+          "name": "Dalek Squadron",
+          "set": "who",
+          "scryfallId": "b34eebf0-36be-4632-8687-cbe35eedcc13"
+        }
+      ],
+      "r": [
+        {
+          "name": "Yasmin Khan",
+          "set": "who",
+          "scryfallId": "2f884ca5-76b7-4eb8-857e-d347f3e70b1c"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Cyberman Patrol",
+          "set": "who",
+          "scryfallId": "63c4675f-1fcc-49ea-a43f-8540140689c8"
+        }
+      ],
+      "m": [
+        {
+          "name": "Davros, Dalek Creator",
+          "set": "who",
+          "scryfallId": "ed3a8776-e1bd-47c0-bdb9-cb120424e76d"
+        },
+        {
+          "name": "The War Doctor",
+          "set": "who",
+          "scryfallId": "ddf2d71d-f662-470d-bd99-68e69ea516d5"
+        }
+      ]
+    }
+  },
   "avatar": {
     "colors": {
       "w": [

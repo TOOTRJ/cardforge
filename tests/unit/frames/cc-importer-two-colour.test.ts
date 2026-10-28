@@ -329,8 +329,10 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         continue;
       }
       // …and the MKM dossier's ten (TODO 4.11 wave 2): the pack's two colour
-      // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts).
-      if (template === "dossier") {
+      // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts);
+      // …and the Doctor Who TARDIS's ten: its frames and braces lerped
+      // (tests/unit/frames/who-tardis-importer.test.ts).
+      if (template === "dossier" || template === "tardis") {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }

@@ -241,6 +241,8 @@ describe("Card Conjurer recipe", () => {
       "saga",
       "sagadfcfront",
       "split",
+      // The Doctor Who TARDIS showcase (TODO 4.11 wave 2; tests/unit/frames/who-tardis-importer.test.ts).
+      "tardis",
       // The MUL Tarkir dragon wings (TODO 4.11, layout v67; tests/unit/frames/tarkir-dragon-importer.test.ts).
       "tarkirdragon",
     ]);

@@ -355,6 +355,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   const PAIRED = FRAME_TEMPLATE_VALUES.filter(
     (t): boolean =>
       t === "m15borderlessland" ||
+      // The Doctor Who TARDIS (4.11 wave 2): its pair masters, and no crown
+      // (its brace is on every print, in the masters).
+      t === "tardis" ||
       OLD_FRAME_PAIRED.includes(t) ||
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
@@ -434,6 +437,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The MKM dossier (4.11 wave 2): the pack's two colour frames lerped
       // across print's ramp; no hybrid printing.
       dossier: ["split"],
+      // The Doctor Who TARDIS (4.11 wave 2): the pack's two colour frames
+      // and braces lerped across a span of identical pixels; no hybrid
+      // printing.
+      tardis: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -508,7 +515,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
     "dossier",
     // …and the Enchanting Tales (4.11 wave 2): the pack's own oval piece per colour.
-    "enchantingtales"];
+    "enchantingtales",
+    // …and the Doctor Who TARDIS (4.11 wave 2): the pack's one trapezoid, the Universes Beyond hole.
+    "tardis"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

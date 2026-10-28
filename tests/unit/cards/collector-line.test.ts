@@ -118,6 +118,8 @@ describe("the switch values", () => {
       "dossier",
       // …and the Enchanting Tales (TODO 4.11 wave 2): its run's rows.
       "enchantingtales",
+      // …and the Doctor Who TARDIS (TODO 4.11 wave 2): its run's rows.
+      "tardis",
     ]);
   });
 });

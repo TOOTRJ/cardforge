@@ -139,6 +139,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The MKM dossier showcase (TODO 4.11 wave 2): the tilted photo's
   // half-transparent rim covered with the art-window check's spare.
   dossier: { front: [1319, 859] },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the police box's
+  // window covered with the art-window check's spare.
+  tardis: { front: [1273, 902] },
   fullart: { front: [1383, 1819] },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the window's torn,
   // half-transparent edges covered with the art-window check's spare.

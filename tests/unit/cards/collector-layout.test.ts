@@ -19,7 +19,7 @@ import {
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
-import { DNDSOURCEBOOK_COLLECTOR, DOSSIER_COLLECTOR, ENCHANTINGTALES_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15_COLLECTOR, getFrameProfile, type CollectorSlot } from "@/lib/cards/template-layout";
+import { DNDSOURCEBOOK_COLLECTOR, DOSSIER_COLLECTOR, ENCHANTINGTALES_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, TARDIS_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15_COLLECTOR, getFrameProfile, type CollectorSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ describe("when the line is drawn", () => {
     // rows — the same layout as M15's with those two baselines.
     // (…and the MUL Tarkir dragon wings, TODO 4.11: the ZNE rows.)
     // (…and the D&D Sourcebook and the MKM dossier, TODO 4.11 wave 2: their runs' rows.)
-    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, dossier: DOSSIER_COLLECTOR, enchantingtales: ENCHANTINGTALES_COLLECTOR };
+    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, dossier: DOSSIER_COLLECTOR, enchantingtales: ENCHANTINGTALES_COLLECTOR, tardis: TARDIS_COLLECTOR };
     // (…and the D&D Sourcebook, TODO 4.11 wave 2: its run's rows.)
     // (…and the Enchanting Tales, TODO 4.11 wave 2: its run's rows.)
     for (const template of FRAME_TEMPLATE_VALUES) {

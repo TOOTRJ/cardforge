@@ -194,6 +194,11 @@ const STATION_DRESSES: readonly string[] = [
   // tests/unit/scryfall/enchanting-tales-imports.test.ts (WOT #1–63 land
   // there once verified) and tests/unit/frames/enchanting-tales-importer.test.ts.
   "enchantingtales",
+  // …and the Doctor Who TARDIS showcase (TODO 4.11 wave 2): a new template in
+  // a new showcase set — pinned in tests/unit/scryfall/who-tardis-imports.test.ts
+  // (WHO #535–564 / #1126–1155 land there once verified) and
+  // tests/unit/frames/who-tardis-importer.test.ts.
+  "tardis",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

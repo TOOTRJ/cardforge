@@ -570,6 +570,9 @@ export function sourceTonesOf(src) {
   if (Object.hasOwn(RING_SOURCE_TONES, src)) return RING_SOURCE_TONES[src];
   // …the MKM dossier's crowns (TODO 4.11 wave 2, DOSSIER_SOURCE_TONES)…
   if (Object.hasOwn(DOSSIER_SOURCE_TONES, src)) return DOSSIER_SOURCE_TONES[src];
+  // …the Doctor Who TARDIS's stripes, wedges and plate (TODO 4.11 wave 2,
+  // TARDIS_SOURCE_TONES)…
+  if (Object.hasOwn(TARDIS_SOURCE_TONES, src)) return TARDIS_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
   return Object.hasOwn(TARKIR_SOURCE_TONES, src) ? TARKIR_SOURCE_TONES[src] : null;
 }
@@ -595,7 +598,10 @@ export function describeFileTones(files) {
     const where = (region) => {
       if (tone.masks?.[region]) return `through ${tone.masks[region]}`;
       const d = tone.diff?.[region];
-      if (d) return `on the pixels that differ from ${d.file} by ${d.none}–${d.full} levels (max channel; full from ${d.full})`;
+      if (d) {
+        const split = d.luma ? `, the share of them with Rec. 601 luma ${d.luma.side} ${d.luma.split} (ramping across ± ${d.luma.half})` : "";
+        return `on the pixels that differ from ${d.file} by ${d.none}–${d.full} levels (max channel; full from ${d.full})${split}`;
+      }
       const c = tone.chroma?.[region];
       if (c) return `on the pixels of chroma (max − min channel) ${c.none}–${c.full} (full from ${c.full})`;
       const b = tone.box?.[region];
@@ -4171,6 +4177,240 @@ export const DOSSIER_NOTCH = Object.freeze({
 });
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2): the Doctor Who TARDIS showcase
+// (`tardis`; WHO #535–564, their serialized twins #552z–564z and their
+// surge-foil twins #1126–1155 — 73 printings, every one single-faced and
+// borderless on the 2015 frame, every one a creature but #551 / #1142 TARDIS
+// (an artifact Vehicle), each with the Universes Beyond triangle stamp —
+// Scryfall 2026-10-28) from Card Conjurer's 'TARDIS' pack (packTARDIS.js,
+// `img/frames/tardis/`, 1500 × 2100 NATIVE: nothing is resampled). An
+// ADDITION: a new template, no stored card sits on it. Self-contained: the
+// template and its stamp notch read only the constants below.
+//   • masters: the pack's frames — w u b r g, m (gold: three colours or
+//     more) and `c` = the pack's 'Artifact Frame' (tardis/a.png, the steel
+//     stripe): the pack's Land frame 404s in the tree and it draws no
+//     colourless one; the run's two colourless printings are artifacts
+//     (#550 Cyberman Patrol, #551 TARDIS), and print gives them the steel.
+//     Each master is the frame WITH the pack's 'Legendary Crown'
+//     (tardis/crowns/<k>.png, 1270 × 450 at its bounds 115 / 45, 1:1) —
+//     the angled brace under the title bar at the window's top corners, its
+//     wedge in the card's colour: print draws it on EVERY printing of the
+//     run, legendary or not (#538 Dalek Squadron, #549 Weeping Angel, #550
+//     Cyberman Patrol carry it as the legends do), so it is the frame's own
+//     drawing here, not an opt-in crown. (The one exception is #551 / #1142
+//     TARDIS, whose art — the police box's open doors — fills the window
+//     past the brace; a card is drawn on the frame as the rest of the run
+//     prints it.)
+//   • the ten two-colour PAIR masters (the "split" dress, opt-in per card):
+//     print draws a two-colour card's left stripe and wedge in its first
+//     colour and the right ones in its second (pair order; #541–545, #547–
+//     549, #552–564 — 22 of the 30 base printings). The masters differ only
+//     on the stripes and wedges (x 61–346 and 1156–1439, measured on all
+//     seven), so the pair is the two masters lerped across TARDIS_PAIR_RAMP,
+//     a span of identical pixels.
+//   • a real black border at the top and the bottom (0,0,0 on the pack and on
+//     print), cut at the one card corner; the police box's blue sides run to
+//     the left and right edges as print draws them (borderless: the edge
+//     contract's `design`).
+//   • plates: the pack's one P/T box (pt.png, 299 × 173 at its ptBounds
+//     1133 / 1850, 1:1) under every key.
+//   • tones (the ring's one rule: raw scan medians, a region toned only
+//     where ≥ 9 levels off — TARDIS_PRINT_TONES): each stripe's body and
+//     light strip (the steel body aside) and every wedge (the steel one
+//     aside) are toned; the blue box, the bars and the plate are within 8
+//     levels, as drawn.
+//   • geometry kept as drawn: the run is WotC's digital file (its black reads
+//     0,0,0 and its blue the pack's within 7 levels), and the pack is that
+//     drawing at the same size — the bars, box, plate and stamp housing sit
+//     within 2–3 px of print, all of it one shift of the scans' crop — so
+//     nothing is re-cut.
+// ---------------------------------------------------------------------------
+export const TARDIS = "img/frames/tardis";
+const TARDIS_PACK = "packTARDIS.js 'TARDIS' (the Doctor Who TARDIS showcase; groupShowcase-5.js 'TARDIS (WHO)')";
+/** A colour key's pack file: `c` draws the pack's artifact frame. */
+const tardisFile = (dir, k) => `${TARDIS}/${dir}${k === "c" ? "a" : k}.png`;
+/** The pack's crown at its bounds (115 / 45, 1270 × 450 of the 1500 × 2100
+ *  card: 1:1). */
+export const TARDIS_CROWN_AT = Object.freeze({ leftPct: (115 / 1500) * 100, topPct: (45 / 2100) * 100, widthPct: (1270 / 1500) * 100, heightPct: (450 / 2100) * 100 });
+/**
+ * The two-colour split, % of the card's width: any span between the
+ * masters' last coloured column on the left (346 px, the left wedge's tip)
+ * and their first on the right (1156 px) draws the same pixels — print
+ * gives the left stripe and wedge the pair's first colour and the right
+ * ones its second, with nothing coloured between. The ramp is the standard
+ * band's 45 → 55, inside that span.
+ */
+export const TARDIS_PAIR_RAMP = Object.freeze([45, 55]);
+/**
+ * The pack's colours against print by the ring's one rule (raw scan medians
+ * over the run's 30 base printings, WHO #535–564 — the serialized and
+ * surge-foil twins are the same frame under a foil, not read; Scryfall PNGs at 1500 ×
+ * 2100; a region ≥ 9 levels off on a channel is toned). Each print is read
+ * REGISTERED on the pack's drawing (the scans sit 3 px right of it and 2 px
+ * higher at the top, 1 px lower at the box: the best fit of the frame's
+ * opaque pixels band by band), so a thin region's interior is its own on
+ * both. The regions are interiors, read per side with the side's colour (a
+ * pair's left with its first colour, its right with its second):
+ *   • the stripe's BODY (down both sides of the box, x 62–78 / 1421–1437:
+ *     the pixels where the colour's frame file differs from the blue one —
+ *     the white one for the blue and steel files — darker than the stripe's
+ *     light strip, eroded 2 px across and 4 down): w 176,171,165 →
+ *     206,190,155 (30 off), u 6,103,154 → 0,101,166 (12), b 44,39,40 →
+ *     61,67,77 (37), r 131,16,6 → 133,33,26 (20), g 16,91,11 → 21,92,44
+ *     (33), gold 175,132,51 → 182,127,25 (26) — TONED; the steel
+ *     71,113,135 → 72,113,140 (5): as drawn;
+ *   • the stripe's LIGHT strip (its 5 px highlight column, x 79–84 /
+ *     1430–1435: the same pixels lighter than the body, eroded 1 px across
+ *     and 4 down — the pack draws it as the colour paled toward white, print
+ *     as the colour lit): w 241,236,230 → 250,243,226 (9), u 163,207,231 →
+ *     0,155,218 (163), b 117,112,113 → 117,121,127 (14), r 198,91,81 →
+ *     212,43,41 (48), g 91,161,86 → 93,165,67 (19), gold 239,199,122 →
+ *     249,217,41 (81), the steel 175,217,239 → 196,214,228 (21) — TONED
+ *     (one gain on the whole stripe turned the red's and green's light
+ *     strips lilac and sky blue: their blue channel × 4.5 / × 4);
+ *   • the wedge (the brace's colour, x 115–346 / 1156–1384, rows 264–298,
+ *     eroded 4 px; #551's left out, its art covers them): w 209,203,195 →
+ *     195,180,146 (49), u 5,94,140 → 0,96,157 (17), b 54,48,49 → 64,70,80
+ *     (31), r 156,19,7 → 126,32,25 (30), g 19,109,13 → 18,86,41 (28), gold
+ *     209,157,60 → 172,120,25 (37) — TONED; the steel 62,104,126 →
+ *     69,108,133 (7, #550 alone): as drawn;
+ *   • the box's blue panels (780–1100 × 1700–1830): 3,39,85 → 0,40,78 (7);
+ *     the sides' blue (18–52 × 500–1000): 5,70,126 → 0,65,120 (6); the
+ *     title bar 1,1,1 → 0,0,0, the type bar 0,0,0 → 2,3,3; the P/T box's
+ *     blue rim (the plate's pixels with blue > 80, eroded 2 px) 7,70,125 →
+ *     0,63,117 (8) — as drawn.
+ * Through toneSourceRegions: a per-channel gain at the region's tone, fading
+ * to the neutral (luma) gain toward white.
+ */
+export const TARDIS_PRINT_TONES = Object.freeze({
+  stripe: Object.freeze({
+    w: Object.freeze({ from: [176, 171, 165], to: [206, 190, 155] }),
+    u: Object.freeze({ from: [6, 103, 154], to: [0, 101, 166] }),
+    b: Object.freeze({ from: [44, 39, 40], to: [61, 67, 77] }),
+    r: Object.freeze({ from: [131, 16, 6], to: [133, 33, 26] }),
+    g: Object.freeze({ from: [16, 91, 11], to: [21, 92, 44] }),
+    m: Object.freeze({ from: [175, 132, 51], to: [182, 127, 25] }),
+  }),
+  stripeLight: Object.freeze({
+    w: Object.freeze({ from: [241, 236, 230], to: [250, 243, 226] }),
+    u: Object.freeze({ from: [163, 207, 231], to: [0, 155, 218] }),
+    b: Object.freeze({ from: [117, 112, 113], to: [117, 121, 127] }),
+    r: Object.freeze({ from: [198, 91, 81], to: [212, 43, 41] }),
+    g: Object.freeze({ from: [91, 161, 86], to: [93, 165, 67] }),
+    m: Object.freeze({ from: [239, 199, 122], to: [249, 217, 41] }),
+    a: Object.freeze({ from: [175, 217, 239], to: [196, 214, 228] }),
+  }),
+  wedge: Object.freeze({
+    w: Object.freeze({ from: [209, 203, 195], to: [195, 180, 146] }),
+    u: Object.freeze({ from: [5, 94, 140], to: [0, 96, 157] }),
+    b: Object.freeze({ from: [54, 48, 49], to: [64, 70, 80] }),
+    r: Object.freeze({ from: [156, 19, 7], to: [126, 32, 25] }),
+    g: Object.freeze({ from: [19, 109, 13], to: [18, 86, 41] }),
+    m: Object.freeze({ from: [209, 157, 60], to: [172, 120, 25] }),
+  }),
+});
+/** The stripe / wedge region: full coverage where the file differs from the
+ *  pack's blue file of its kind (the white one, for the blue and the steel
+ *  files) by ≥ `full` levels (max channel), none at ≤ `none`. */
+export const TARDIS_ACCENT_DIFF = Object.freeze({ full: 40, none: 16 });
+/** The stripe's body / light split: the Rec. 601 luma between the body's and
+ *  the light strip's (pack medians: w 174 / 237, u 79 / 196, b 41 / 114, r
+ *  51 / 124, g 59 / 132, gold 140 / 205, steel 105 / 205), the coverage
+ *  ramping across ± TARDIS_STRIPE_SPLIT_HALF — the body's share below it,
+ *  the light strip's above. */
+export const TARDIS_STRIPE_SPLIT = Object.freeze({ w: 210, u: 138, b: 76, r: 85, g: 95, m: 172, a: 157 });
+export const TARDIS_STRIPE_SPLIT_HALF = 15;
+/** The blue file a TARDIS file's accent is read against (its own colour's
+ *  pixels are those that differ from it). */
+const tardisAccentRef = (dir, key) => `${TARDIS}/${dir}${key === "u" || key === "a" ? "w" : "u"}.png`;
+/** A frame file's tone entry: its stripe's body and light strip. */
+function tardisFrameTone(key) {
+  const diff = {};
+  const tones = {};
+  const split = TARDIS_STRIPE_SPLIT[key];
+  for (const [region, side] of [["stripe", "below"], ["stripeLight", "above"]]) {
+    if (!TARDIS_PRINT_TONES[region][key]) continue;
+    diff[region] = Object.freeze({ file: tardisAccentRef("", key), ...TARDIS_ACCENT_DIFF, luma: Object.freeze({ split, half: TARDIS_STRIPE_SPLIT_HALF, side }) });
+    tones[region] = TARDIS_PRINT_TONES[region][key];
+  }
+  return Object.freeze({ diff: Object.freeze(diff), tones: Object.freeze(tones), table: `TARDIS_PRINT_TONES (${key})` });
+}
+/** The TARDIS pack's toned files: every frame file (its stripe; the steel
+ *  file its light strip alone) and every crown but the steel one (its
+ *  wedges). */
+export const TARDIS_SOURCE_TONES = Object.freeze(
+  Object.fromEntries([
+    ...["w", "u", "b", "r", "g", "m", "a"].map((k) => [`${TARDIS}/${k}.png`, tardisFrameTone(k)]),
+    ...Object.keys(TARDIS_PRINT_TONES.wedge).map((k) => [
+      `${TARDIS}/crowns/${k}.png`,
+      Object.freeze({
+        diff: Object.freeze({ wedge: Object.freeze({ file: tardisAccentRef("crowns/", k), ...TARDIS_ACCENT_DIFF }) }),
+        tones: Object.freeze({ wedge: TARDIS_PRINT_TONES.wedge[k] }),
+        table: `TARDIS_PRINT_TONES.wedge.${k}`,
+      }),
+    ]),
+  ]),
+);
+const TARDIS_PT = Object.freeze(perColor(() => `${TARDIS}/pt.png`));
+/** A key's master: the frame and its crown at the crown's bounds, as every
+ *  print of the run draws them. */
+const tardisMasterLayers = (k) => [layer(tardisFile("", k)), placed(tardisFile("crowns/", k), TARDIS_CROWN_AT)];
+/** A pair's master: the two frames and the two crowns lerped across
+ *  TARDIS_PAIR_RAMP. */
+function tardisPairLayers(pair) {
+  const [a, b] = pairSides(pair);
+  return [
+    { src: tardisFile("", a), right: tardisFile("", b), ramp: [...TARDIS_PAIR_RAMP] },
+    placed(tardisFile("crowns/", a), TARDIS_CROWN_AT, { right: tardisFile("crowns/", b), ramp: [...TARDIS_PAIR_RAMP] }),
+  ];
+}
+const TARDIS_NOTES = [
+  "w u b r g m = the pack's colour frames (tardis/<k>.png, 1500x2100 NATIVE — no resample), each with the pack's 'Legendary Crown' (tardis/crowns/<k>.png, 1270x450) at its bounds 115/45 px, 1:1 — the angled brace under the title bar at the window's top corners, its wedge in the card's colour, which print draws on EVERY printing of the run, legendary or not (WHO #538 Dalek Squadron, #549 Weeping Angel, #550 Cyberman Patrol as the legends do): the frame's own drawing on this showcase, not an opt-in crown",
+  "c = the pack's 'Artifact Frame' and crown (tardis/a.png, crowns/a.png, the steel stripe and wedge): the pack draws no colourless frame (and its Land frame and crown 404 in the tree); the run's two colourless printings are artifacts that print the steel (WHO #550 Cyberman Patrol, #551 TARDIS)",
+  `the ten pairs (wu wb ub ur br bg rg rw gw gu, the "split" dress) = the pair's two frames and two crowns lerped across ${TARDIS_PAIR_RAMP[0]} → ${TARDIS_PAIR_RAMP[1]} %W (scripts/lib/pair-ramp.mjs blendPair): print draws a two-colour card's left stripe and wedge in its first colour and the right ones in its second (WHO #541–545, #547–549, #552–564); the masters differ only on x 61–346 and 1156–1439, so the ramp crosses identical pixels`,
+  "a real black border at the top and the bottom (0,0,0 on the pack and on print), cut at the one card corner; the police box's blue sides run to the left and right edges (borderless — the edge contract's design), as print draws them",
+  "plates = the pack's one 'Power/Toughness' box (tardis/pt.png, 299x173 at its ptBounds 1133/1850 px, 1:1) under every key",
+  "toned onto the prints by one rule, the ring's (raw scan medians over WHO #535–564, each print registered on the pack's drawing, a region ≥ 9 levels off is toned — TARDIS_PRINT_TONES through TARDIS_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters and pairs drawn from it agree: each stripe's body and its light strip (the pixels where the frame file differs from the blue one — the white one for the blue and steel files — split by luma; the steel body is within 5 levels and stays as drawn) and every crown's wedge but the steel one (within 7); the box, the bars and the P/T box are within 8 levels and stay as drawn",
+  "geometry as drawn: the pack is print's drawing at print's size — the bars, the box, the plate and the stamp housing sit within 2–3 px of the scans (one shift, the scans' crop) — so nothing is re-cut",
+];
+/**
+ * The TARDIS showcase's triangle stamp notch (TODO 4.11): the pack's one
+ * 'Gold Holo Stamp' (`tardis/stamp.png`, 176 × 80 at its stampBounds 662 /
+ * 1909: a black trapezoid over the box's foot round the stamp) — 1:1 at HD,
+ * no resample — cut to TARDIS_NOTCH_BOX: 1 px round the piece and 9 px past
+ * its foot, so the Universes Beyond hole (apex 1992.5, lib/cards/holo-stamp.ts
+ * UB_STAMP_HOLE — the run's prints set the stamp there: 686–816 px wide at
+ * row 1925, 708–793 at 1950, the apex on 1990–1991, every one) and its ring
+ * fit. The pack paints a capture of WotC's hologram in the trapezoid (its
+ * triangle 693–806 × 1922–1985 px, inside the hole's cut — the rounded hole
+ * reaches up to 1918): every lit pixel of it is painted opaque black first
+ * (grown 1 px: belt and braces, the importer holds it), then the hole plus
+ * 2 px cut clear and the 2 px round it painted black. Our own
+ * triangle art covers the cut (lib/cards/holo-stamp-art.ts). One piece under
+ * every key, the ten pairs' too (every master is the same box under it).
+ */
+export const TARDIS_NOTCH_BOX = Object.freeze({ x: 661, y: 1908, width: 178, height: 90 });
+export const TARDIS_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS].map((k) => [k, `${TARDIS}/stamp.png`]))),
+  placeAt: Object.freeze({ x: 662, y: 1909, width: 176, height: 80 }),
+  compositeSize: Object.freeze({ width: 1500, height: 2100 }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: TARDIS_NOTCH_BOX.width, height: TARDIS_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (TARDIS_NOTCH_BOX.x / 1500) * 100,
+      topPct: (TARDIS_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (TARDIS_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (TARDIS_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  /** The capture's pixels in the notch box: the trapezoid's lit pixels (luma
+   *  > 40) on box x 27–150, rows 10–82 — the pack's triangle (693–806 ×
+   *  1922–1985 px) and 4 px round it. */
+  capture: Object.freeze({ x0: 27, x1: 150, y0: 10, y1: 82, minLuma: 40 }),
+});
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings RING showcase
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
@@ -4831,18 +5071,36 @@ export const TARKIR_PLATE_CHROMA = Object.freeze({ full: 30, none: 12 });
  * channel difference is ≥ `full`, 0 at ≤ `none` or where either pixel is
  * transparent, linear between. The Tarkir pack draws every colour as one
  * drawing whose dragon wings alone change (TODO 4.11), so the region is
- * the colour's own wing pixels. Pure.
+ * the colour's own wing pixels. With `luma` (TODO 4.11 wave 2: the TARDIS
+ * stripe's body and its light strip, two regions of one difference) the
+ * coverage is split by the pixel's own Rec. 601 luma: `side: "below"` keeps
+ * the share 1 − s, `"above"` the share s, s ramping 0 → 1 across
+ * `split ± half` — the two sides of one split sum to the plain coverage.
+ * Pure.
+ *
+ * @param {Uint8Array | Buffer} buf
+ * @param {Uint8Array | Buffer} ref
+ * @param {number} width
+ * @param {number} height
+ * @param {{ full: number, none: number, luma?: { split: number, half: number, side: string } | null }} opts
  */
-export function diffRegionPlane(buf, ref, width, height, { full, none }) {
+export function diffRegionPlane(buf, ref, width, height, { full, none, luma = null }) {
   const n = width * height;
   if (buf.length !== n * 4 || ref.length !== n * 4) throw new Error(`diffRegionPlane: the images are not ${width}x${height} RGBA`);
   if (!(full > none && none >= 0)) throw new Error(`diffRegionPlane: bad range ${none}–${full}`);
+  if (luma && !(luma.half > 0 && (luma.side === "below" || luma.side === "above"))) throw new Error(`diffRegionPlane: bad luma split ${JSON.stringify(luma)}`);
   const plane = new Uint8Array(n);
   for (let p = 0; p < n; p += 1) {
     const o = p * 4;
     if (buf[o + 3] === 0 || ref[o + 3] === 0) continue;
     const d = Math.max(Math.abs(buf[o] - ref[o]), Math.abs(buf[o + 1] - ref[o + 1]), Math.abs(buf[o + 2] - ref[o + 2]));
-    plane[p] = d >= full ? 255 : d <= none ? 0 : Math.round((255 * (d - none)) / (full - none));
+    let cover = d >= full ? 1 : d <= none ? 0 : (d - none) / (full - none);
+    if (luma && cover > 0) {
+      const l = 0.299 * buf[o] + 0.587 * buf[o + 1] + 0.114 * buf[o + 2];
+      const s = Math.min(1, Math.max(0, (l - (luma.split - luma.half)) / (2 * luma.half)));
+      cover *= luma.side === "above" ? s : 1 - s;
+    }
+    plane[p] = Math.round(255 * cover);
   }
   return plane;
 }
@@ -5232,6 +5490,17 @@ export const CC_TEMPLATES = {
     plates: DOSSIER_PT,
     pack: DOSSIER_PACK,
     notes: DOSSIER_NOTES,
+  },
+  // TODO 4.11 wave 2: the Doctor Who TARDIS showcase (see TARDIS above) —
+  // each master the frame and its brace, and the ten two-colour pairs.
+  tardis: {
+    colors: {
+      ...perColor((k) => tardisMasterLayers(k)),
+      ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, tardisPairLayers(pair)])),
+    },
+    plates: TARDIS_PT,
+    pack: TARDIS_PACK,
+    notes: TARDIS_NOTES,
   },
   // TODO 4.11 wave 2: the Wilds of Eldraine Enchanting Tales showcase (see
   // ETALES above) — the pack's six frames, `c` the white one.
@@ -8522,6 +8791,27 @@ export const HOLO_STAMP_NOTCHES = {
   // TODO 4.11 wave 2: the dossier's OVAL notch — the pack's one piece,
   // placed and downscaled with the card, its capture blacked out, the
   // prints' oval cut (DOSSIER_NOTCH).
+  // TODO 4.11 wave 2: the Doctor Who TARDIS's triangle notch — the pack's
+  // one piece, 1:1, its capture blacked out, the Universes Beyond hole cut
+  // (TARDIS_NOTCH).
+  tardisholostamp: {
+    pack: TARDIS_PACK,
+    pieces: TARDIS_NOTCH.pieces,
+    keys: TARDIS_NOTCH.keys,
+    shape: TARDIS_NOTCH.shape,
+    placeAt: TARDIS_NOTCH.placeAt,
+    compositeSize: TARDIS_NOTCH.compositeSize,
+    triangle: UB_STAMP_HOLE,
+    capture: TARDIS_NOTCH.capture,
+    blackoutCapturePx: 1,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the TARDIS showcase's triangle stamp notch (TODO 4.11): the pack's one 'Gold Holo Stamp' (tardis/stamp.png, 176x80) — a black trapezoid over the box's foot round the stamp — at its stampBounds (662/1909 px), 1:1 (the pack is 1500 px native), cut to its box ${TARDIS_NOTCH_BOX.width}x${TARDIS_NOTCH_BOX.height} at ${TARDIS_NOTCH_BOX.x},${TARDIS_NOTCH_BOX.y} px — 1 px round the piece and 9 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border`,
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (every master is the same box under the trapezoid)",
+      "the hologram: the pack paints a capture of WotC's hologram in the trapezoid (its triangle 693–806 × 1922–1985 px) — every lit pixel of it is painted opaque black first (grown 1 px), then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE: the run's prints set the stamp there, 686–816 px wide at row 1925, 708–793 at 1950, the apex on 1990–1991) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's 'Gray Holo Stamp' is not read",
+    ],
+  },
   dossierholostamp: {
     pack: DOSSIER_PACK,
     pieces: DOSSIER_NOTCH.pieces,

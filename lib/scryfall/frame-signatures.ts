@@ -2022,6 +2022,27 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2; Card Conjurer's
+  // 'TARDIS' pack): WHO #535–564, their serialized twins #552z–564z (the
+  // "z" reads as its number) and their surge-foil twins #1126–1155 — 73
+  // printings, every one single-faced and borderless on the 2015 frame,
+  // every one a creature but #551 / #1142 TARDIS (an artifact Vehicle), each
+  // with the Universes Beyond triangle stamp (Scryfall 2026-10-28). The
+  // serial and the surge foil are finishes over the same frame. Exact once
+  // verified (withVerification). No gap: the template draws the two-colour
+  // dress (its pair masters — print gives a pair's left stripe and brace its
+  // first colour, the right ones its second; 22 of the 30 base printings),
+  // the triangle stamp and the collector line; the brace the pack calls its
+  // crown is on every print, so the masters draw it. No land prints in the
+  // run (and the pack's Land frame 404s): none can land here. #551 / #1142
+  // TARDIS land here too — their art (the police box's open doors) fills the
+  // window past the brace, which the frame draws, as for every other card.
+  {
+    key: "showcase/who/tardis",
+    exactLabel: "Doctor Who TARDIS showcase",
+    match: { borders: ["borderless"], collectors: { who: [[535, 564], [1126, 1155]] } },
+    outcome: { status: "exact", template: "tardis" },
+  },
   {
     key: "showcase/tdm/clan",
     exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",
