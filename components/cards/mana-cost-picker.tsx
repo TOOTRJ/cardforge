@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Delete, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs, offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
@@ -41,6 +41,13 @@ import {
 // limit). A symbol that would take the cost past it is NOT added: its button
 // dims (aria-disabled — it keeps its place in the tab order), and a line
 // under the cost says why.
+//
+// "Remove last" and "Clear" are off (disabled) on an empty cost. When a
+// press of either empties it, the button under the keyboard focus goes off
+// and a browser drops the focus to the top of the document: the focus is
+// handed on to the generic amount, the first control that builds a cost
+// again (TODO 3b.32 — `useRowFocus`'s rule: only when the focus was lost
+// with the button, never when it is somewhere else on the page).
 // ---------------------------------------------------------------------------
 
 type Props = {
@@ -124,11 +131,31 @@ export function ManaCostPicker({
     !fits(String(generic)) ||
     [...COLOR_BUTTONS, ...SYMBOL_BUTTONS].some((b) => !fits(b.token)) ||
     MORE_SYMBOLS.some((symbol) => !fits(symbol.token.slice(1, -1)));
-  const backspace = () => onChange(dropLastToken(value));
-  const clear = () => onChange("");
+  // The focus hand-off (3b.32): asked for by a press that empties the cost,
+  // done once the buttons have gone off.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [handOff, setHandOff] = useState(0);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!handOff || !root) return;
+    const active = document.activeElement;
+    const lost =
+      !active ||
+      active === document.body ||
+      (root.contains(active) && active.matches(":disabled"));
+    if (!lost) return;
+    root.querySelector<HTMLElement>("[data-cost-start]")?.focus();
+  }, [handOff]);
+  const emptied = (next: string) => {
+    onChange(next);
+    if (!next.trim()) setHandOff((tick) => tick + 1);
+  };
+  const backspace = () => emptied(dropLastToken(value));
+  const clear = () => emptied("");
 
   return (
     <div
+      ref={rootRef}
       id={id}
       // The creator mounts this in a FieldGroup of kind "group" (never a
       // <label>). Should a mount ever sit inside a <label>: that hands a
@@ -197,6 +224,8 @@ export function ManaCostPicker({
           value={generic}
           // The caption beside it is not tied to it: named here.
           aria-label="Generic mana amount"
+          // Where the focus goes when "Remove last" / "Clear" empty the cost.
+          data-cost-start
           // Enter in a form's input submits the form — here it would SAVE
           // the card from the middle of building a cost. It adds the number
           // instead, as the button beside it does.
