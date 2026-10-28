@@ -125,6 +125,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   // The Dominaria United Stained Glass window (TODO 4.11 wave 2): 1382 × 939 px.
   stainedglass: ["1232x832", "3:2", 1.472],
   fullart: ["896x1168", "3:4", 0.7605],
+  dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],

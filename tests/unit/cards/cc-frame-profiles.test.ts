@@ -46,6 +46,15 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 4 / 1500]);
         continue;
       }
+      // The D&D Sourcebook showcase (TODO 4.11 wave 2): its own run's row —
+      // the CC M15 row 3 px higher (the discs 109.5 px above the title rule,
+      // median of the 127 AFR / CLB prints) and its end 10 px further right
+      // (the last disc ending at 1391, on a page 3 px narrower than the
+      // pack's), 70 px discs.
+      if (template === "dndsourcebook") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 12 / 1500]);
+        continue;
+      }
       // The Dominaria United stained glass (TODO 4.11 wave 2): its own run's
       // row — the CC M15 row 1 px higher against the bar and its end 9.5 px
       // further right (the last disc's ink ending at 1392–1393 on print), 70

@@ -4578,6 +4578,108 @@ export function capturePlane(buf, width, height, { x0, x1, y0, y1, minLuma }) {
 }
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2 item 1): the Dungeons & Dragons
+// SOURCEBOOK showcase (`dndsourcebook`; Adventures in the Forgotten Realms
+// AFR #299–349, 2021, and Commander Legends: Battle for Baldur's Gate CLB
+// #375–450, 2022 — 127 printings; AFR #350–358, the nine lands of the same
+// run, print the 'Dungeon Module' cover instead and are not this frame) from
+// Card Conjurer's 'D&D Sourcebook' pack (packDNDSourcebook.js,
+// `img/frames/dndSourcebook/`, 1500 × 2100 NATIVE: nothing is resampled).
+// An ADDITION: a new template, no stored card sits on it.
+//   • ONE master for every key: the pack draws one parchment page for every
+//     colour, and so does print — a sourcebook card's colour is its ART's
+//     background (a white card's pale pink, a blue's teal …), never the
+//     frame's: the parchment's median is the same within print's own spread
+//     whatever the colour (DND_PRINT_TONE below). So w u b r g c m are all
+//     `frame.png`, byte for byte.
+//   • a real black border all round (the edge contract's ALL_BORDER), cut
+//     at the one card corner by the importer; the page's own rounded
+//     corners are the pack's drawing.
+//   • the art window is see-through on 133–1399 × 237–1175 px (α < 1) with
+//     torn, half-transparent edges reaching 93–1439 × 227–1180 (α < 250):
+//     the profile's slot covers that with the art-window check's spare.
+//   • plates: the pack's one P/T plate (pt.png, 260 × 132, 1:1) under every
+//     key; the profile draws it where print sets it (1167 / 1867), 6 px
+//     right of and below the pack's ptBounds (1161 / 1861).
+//   • geometry kept as drawn: print is the same page with its lines a few px
+//     higher — the title rule 1.5 (AFR) / 5 (CLB) px, the art's foot and
+//     the type rule 4–5 / 7.5 px — and its page's foot 3.5–4.5 px lower; the
+//     lines run across textured parchment, never a flat zone, so nothing is
+//     re-cut, and the slots ride the pack's own lines.
+// ---------------------------------------------------------------------------
+export const DND = "img/frames/dndSourcebook";
+const DND_PACK = "packDNDSourcebook.js 'D&D Sourcebook' (the Adventures in the Forgotten Realms / Battle for Baldur's Gate sourcebook showcase; groupShowcase-5.js)";
+/**
+ * The parchment against print by the ring's one rule (raw scan medians; a
+ * region ≥ 9 levels off is toned): the page's median over its title band,
+ * type band and text box (100–1400 × 80–210, 1200–1295, 1340–1880 px; the
+ * ink, |Δluma| > 45 from the region's median, left out) on all 127
+ * sourcebook prints (Scryfall PNGs at 1500 × 2100), the median of the
+ * per-print medians, against the pack's over the same pixels:
+ *   • the pack 219,178,139 — print 217,181,144 (AFR 214,174,137, CLB
+ *     218,183,146; the prints' quartiles 213–219 / 174–184 / 138–148): 2 /
+ *     3 / 5 off — as drawn.
+ * Nothing is toned.
+ */
+export const DND_PRINT_TONE = Object.freeze({ pack: Object.freeze([219, 178, 139]), print: Object.freeze([217, 181, 144]), afr: Object.freeze([214, 174, 137]), clb: Object.freeze([218, 183, 146]) });
+const DND_PT = Object.freeze(perColor(() => `${DND}/pt.png`));
+const DND_NOTES = [
+  "w u b r g c m = the pack's one 'Frame' (dndSourcebook/frame.png, 1500x2100 NATIVE — no resample), byte for byte: the pack and print draw one parchment page for every colour (a sourcebook card's colour is its art's background), so there is no colour master to draw",
+  "a real black border all round, cut at the one card corner; the page's own rounded corners are the pack's drawing",
+  "plates = the pack's one 'Power/Toughness' plate (dndSourcebook/pt.png, 260x132, native size) under every key; the profile draws it 1:1 where print sets it (1167/1867 px, the median of 115 creatures), 6 px right of and below the pack's ptBounds (1161/1861)",
+  `the parchment against print by the ring's rule (raw scan medians over the title band, type band and text box, ink left out; a region ≥ 9 levels off is toned): the pack ${DND_PRINT_TONE.pack.join(",")}, the 127 sourcebook prints ${DND_PRINT_TONE.print.join(",")} (AFR ${DND_PRINT_TONE.afr.join(",")}, CLB ${DND_PRINT_TONE.clb.join(",")}) — within 5 levels, as drawn: nothing is toned`,
+  "geometry as drawn: print's lines sit a few px higher (the title rule 1.5 / 5 px on AFR / CLB, the art's foot and the type rule 4–5 / 7.5 px) and its page's foot 3.5–4.5 px lower; the lines cross textured parchment, never a flat zone, so nothing is re-cut and the slots ride the pack's own lines",
+  "no legendary crown: the pack's 'Legend Crown' (dndSourcebook/crown.png) is not on print — none of the run's legendary printings (AFR #303, #304, #317, #323, #333, #335–347 and CLB's legends) prints one — so it is neither built nor published",
+];
+
+/**
+ * The sourcebook's OVAL stamp notch (TODO 4.11): the pack's one 'Holo Stamp'
+ * (`dndSourcebook/holo.png`, 186 × 78 at its bounds 657 / 1917 — the black
+ * border arched up into the page's foot round the hologram oval) — 1:1 at
+ * HD, no resample — cut to DND_NOTCH_BOX: 1 px round the piece and 8 px past
+ * its foot, so the oval cut and its black ring fit (below the piece the box
+ * is clear but for that ring, over the master's own black border). The
+ * prints' oval (134 × 64 on the well's centre, DND_STAMP_OVAL_PX — it
+ * covers the capture the pack paints in the well, 685–815 × 1930–1993 px)
+ * is cut clear with 2 px, the 2 px round it painted black, and our own oval
+ * art covers it (lib/cards/holo-stamp-art.ts). Its own piece per key (all
+ * seven the same pixels), as the masters.
+ */
+export const DND_NOTCH_BOX = Object.freeze({ x: 656, y: 1916, width: 188, height: 88 });
+/** The stamp's oval, card px: the PRINTS' hologram — 134 × 64 (the 49
+ *  stamped prints: its right edge at 816–818, its foot at 1991–1994; the
+ *  Tarkir and M15 prints' 134 across) — on the centre of the pack's own
+ *  well (750, 1961), whose capture (DND_CAPTURE_PX) it covers. */
+export const DND_STAMP_OVAL_PX = Object.freeze({ x: 683, y: 1929, width: 134, height: 64 });
+/** The pack's capture in the well, card px — what the cut must cover
+ *  (the piece's lit pixels, luma > 60: x 28–157, rows 13–75). */
+export const DND_CAPTURE_PX = Object.freeze({ x: 685, y: 1930, width: 130, height: 63 });
+export const DND_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, `${DND}/holo.png`]))),
+  placeAt: Object.freeze({ x: 657, y: 1917, width: 186, height: 78 }),
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: DND_NOTCH_BOX.width, height: DND_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (DND_NOTCH_BOX.x / 1500) * 100,
+      topPct: (DND_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (DND_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (DND_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (DND_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (DND_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (DND_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (DND_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+  /** The capture's pixels in the notch box (the well's lit pixels: x
+   *  29–158, rows 14–76 of the box), which the importer holds inside the
+   *  cut and its ring. */
+  capture: Object.freeze({ x0: 29, x1: 158, y0: 14, y1: 76, minLuma: 60 }),
+});
+
 // TODO 4.11 (showcase rebuild, wave 2): the Dominaria United STAINED GLASS
 // showcase (`stainedglass`; DMU #287–368 — 41 legends and their 41 textured-
 // foil twins, 2022 — and the nine Multiverse Legends Dominaria legends MUL
@@ -5036,6 +5138,14 @@ const SG_NOTES = [
 ];
 
 export const CC_TEMPLATES = {
+  // TODO 4.11 wave 2: the D&D Sourcebook showcase (see DND above) — one
+  // master for every key.
+  dndsourcebook: {
+    colors: perColor(() => [layer(`${DND}/frame.png`)]),
+    plates: DND_PT,
+    pack: DND_PACK,
+    notes: DND_NOTES,
+  },
   // TODO 4.11 wave 2: the Dominaria United Stained Glass showcase (see SG
   // above) — the six frames, `c` the gold one, the ten pair masters; the
   // stamp notch split off every master.
@@ -8315,6 +8425,25 @@ export const HOLO_STAMP_NOTCHES = {
       `the ring showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (lotr/stamp/<k>.png, 212x95) — the text box's rim stepped up round a black trapezoid over the stamp — at its stampBounds (644/1893 px), 1:1 (the pack is 1500 px native), cut to its box ${RING_NOTCH_BOX.width}x${RING_NOTCH_BOX.height} at ${RING_NOTCH_BOX.x},${RING_NOTCH_BOX.y} px — 1 px round the piece and 10 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border`,
       "the pack's OWN piece per key (w u b r g, m gold, a the artifact's blue-grey, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the rim is the text box's own edge in the frame's colour, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
       "the hologram: the pack's 'Gray Holo Stamp' shape (lotr/stamp/gray.png) placed the same way, grown 1 px, painted opaque black — the pack draws its triangle 8–10 px HIGHER than the printed stamp (its top edge at 1915 px against the hole's 1924.6; LTR #302 / #313 print the Universes Beyond stamp, the hole 687–812 × 1924.6–1992.5) — then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
+    ],
+  },
+  // TODO 4.11 wave 2: the D&D Sourcebook's OVAL notch — the pack's one
+  // piece, 1:1, its hologram oval cut (DND_NOTCH).
+  dndsourcebookholostamp: {
+    pack: DND_PACK,
+    pieces: DND_NOTCH.pieces,
+    keys: DND_NOTCH.keys,
+    shape: DND_NOTCH.shape,
+    placeAt: DND_NOTCH.placeAt,
+    compositeSize: DND_NOTCH.compositeSize,
+    oval: DND_NOTCH.oval,
+    capture: DND_NOTCH.capture,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the sourcebook's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dndSourcebook/holo.png, 186x78) — the black border arched up into the page's foot round the hologram oval — at its bounds (657/1917 px), 1:1 (the pack is 1500 px native), cut to its box ${DND_NOTCH_BOX.width}x${DND_NOTCH_BOX.height} at ${DND_NOTCH_BOX.x},${DND_NOTCH_BOX.y} px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border`,
+      "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp, and every master is the same page",
+      `the hologram: the pack paints a capture of WotC's oval in the well (${DND_CAPTURE_PX.x}–${DND_CAPTURE_PX.x + DND_CAPTURE_PX.width} × ${DND_CAPTURE_PX.y}–${DND_CAPTURE_PX.y + DND_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${DND_STAMP_OVAL_PX.width} × ${DND_STAMP_OVAL_PX.height} at ${DND_STAMP_OVAL_PX.x}, ${DND_STAMP_OVAL_PX.y} — the 49 stamped AFR / CLB prints, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
   // TODO 4.11: the MUL Tarkir showcase's OVAL notch — the pack's one piece,

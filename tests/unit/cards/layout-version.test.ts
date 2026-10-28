@@ -439,6 +439,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
+  // TODO 4.11 wave 2's D&D Sourcebook.
+  "dndsourcebook",
   // TODO 4.11 wave 2's Dominaria United Stained Glass.
   "stainedglass",
 ];
@@ -477,6 +479,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
+  // TODO 4.11 wave 2's D&D Sourcebook.
+  "dndsourcebook",
   // TODO 4.11 wave 2's Dominaria United Stained Glass.
   "stainedglass",
 ];
@@ -856,6 +860,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "prepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
       "expeditionlandbfz",
+      // …and TODO 4.11 wave 2's D&D Sourcebook: the same, no bump.
+      "dndsourcebook",
       // …and TODO 4.11 wave 2's Dominaria United Stained Glass: the same, no bump.
       "stainedglass",
     ];
@@ -3220,11 +3226,12 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // with theirs (v69): print's rows lie within its known offsets.
     // The Bloomburrow anime took the 70 px disc on its own prints' row
     // (v70): 8 px under the CC M15 lift, its name band 25 px up.
-    // The Dominaria United Stained Glass (TODO 4.11 wave 2) was BORN on its
-    // run's own row: a new template, no bump (1 px higher against its bar,
-    // 9.5 px further right than the family's).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "stainedglass"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "stainedglass"];
+    // The D&D Sourcebook (TODO 4.11 wave 2) was BORN on its run's own row: a
+    // new template, no bump (3 px higher, 10 px further right than the
+    // family's) — and so was the Dominaria United Stained Glass (1 px higher
+    // against its bar, 9.5 px further right).
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "stainedglass"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "stainedglass"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);

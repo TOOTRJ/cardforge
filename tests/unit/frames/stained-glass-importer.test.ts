@@ -134,7 +134,7 @@ describe("the Stained Glass recipe", () => {
     const a = Buffer.from([...px(200, 0, 0), ...px(200, 0, 0), ...px(10, 10, 10), ...px(90, 90, 90)]);
     const b = Buffer.from([...px(0, 0, 200), ...px(0, 0, 200), ...px(30, 30, 30), ...px(90, 90, 90)]);
     const self = Buffer.from([...px(120, 120, 120), ...px(120, 120, 120), ...px(15, 15, 15), ...px(120, 120, 120)]);
-    const plane = geomRegionPlane(a, b, 4, 1, { full: 40, none: 16, luma: [24, 40], cols: [[1, 4]] }, null, null, self);
+    const plane = geomRegionPlane(a, b, 4, 1, { full: 40, none: 16, luma: [24, 40], cols: [[1, 4]] }, null, null, self as never);
     expect([...plane]).toEqual([0, 255, 0, 0]);
   });
 });
@@ -181,8 +181,8 @@ describe("the stamp notch, split off every master", () => {
     expect(at(749, 1940)[0]).toBe(Math.round(left * (1 - 102 / 204) + right * (102 / 204)));
     // The piece over the plain master draws the original back, but for the
     // oval cut.
-    const restored = restoredZnrMaster(plain, piece, 1500, 2100, SG_NOTCH);
-    expect(restored.equals(clearZnrOvalCut(Buffer.from(master), 1500, SG_NOTCH))).toBe(true);
+    const restored = restoredZnrMaster(plain, piece, 1500, 2100, SG_NOTCH as never);
+    expect(restored.equals(clearZnrOvalCut(Buffer.from(master), 1500, SG_NOTCH as never))).toBe(true);
   });
 
   it("refuses a mask with no arch", () => {
@@ -340,9 +340,9 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
       const piece = await sharp(published(`stainedglass/holostamp/${k}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       expect([piece.info.width, piece.info.height], k).toEqual([SG_NOTCH.box.width, SG_NOTCH.box.height]);
       for (let p = 3; p < piece.data.length; p += 4) expect(piece.data[p] === 0 || piece.data[p] === 255, k).toBe(true);
-      const drawn = restoredZnrMaster(master, piece.data, 1500, 2100, SG_NOTCH);
+      const drawn = restoredZnrMaster(master, piece.data, 1500, 2100, SG_NOTCH as never);
       expect(createHash("sha256").update(drawn).digest("hex"), k).toBe(restored[k]);
-      const plain = clearZnrOvalCut(Buffer.from(master), 1500, SG_NOTCH);
+      const plain = clearZnrOvalCut(Buffer.from(master), 1500, SG_NOTCH as never);
       expect(createHash("sha256").update(plain).digest("hex"), k).not.toBe(restored[k]);
     }
   }, 120_000);

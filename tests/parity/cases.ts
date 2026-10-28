@@ -343,6 +343,9 @@ const PICKS: readonly Pick[] = [
   // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
   { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
   { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
+  // The D&D Sourcebook showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "dndsourcebook/u/creature-short@collector-2015", why: "D&D Sourcebook: CC's one parchment master under every key, M15's slots on the page's own lines (the name 1.5 px up, the cost row 3 px up and 10 px right, the type band 7 px down), the rules box ending above the page's rounded foot, the parchment plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "dndsourcebook/wub/creature-long@stamp-m", why: "D&D Sourcebook: the pack's one oval notch over the page's foot with our oval in its cut, a three-colour legend on the one page" },
   // The Dominaria United Stained Glass showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "stainedglass/u/creature-short@collector-2015", why: "Stained Glass: CC's leaded-glass master (the arch split off: the box's foot straight), M15's slots on the pack's bars (the name 4.5 px up, the cost row 1 px up and 9.5 px right, the type line 1 px down), the box 8.5 px shorter at each end, white ink, the pack's plate, the 2015 collector line 4 px below M15's rows" },
   { from: "stainedglass/wu/creature-long@pair-crown", why: "Stained Glass: the pair master (gold frame, the box split across 46→57 %W) under the pair's crown (the gold dome split across 47→53 %W)" },

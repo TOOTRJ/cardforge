@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { parseFrameProfileOverride, resolveFrameProfile } from "@/lib/cards/profile-override";
-import { STAINEDGLASS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15PW_COLLECTOR, M15_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
+import { DNDSOURCEBOOK_COLLECTOR, STAINEDGLASS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15PW_COLLECTOR, M15_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -30,9 +30,9 @@ describe("the collector slot", () => {
     // printed rows — below.)
     // (…and the MUL Tarkir dragon wings', TODO 4.11: the ZNE rows, where
     // MUL #1 / #60 / #131 / #190 set both lines.)
-    // (…and the Dominaria United stained glass's, TODO 4.11 wave 2: its
-    // run's rows, 4 px below M15's.)
-    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR };
+    // (…and the D&D Sourcebook's and the Dominaria United stained glass's,
+    // TODO 4.11 wave 2: their runs' rows, 4 px below M15's.)
+    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR };
     for (const t of slotted) expect(getFrameProfile(t).collector, t).toBe(own[t] ?? (walkers.includes(t) ? M15PW_COLLECTOR : M15_COLLECTOR));
     expect(M15PW_COLLECTOR).toEqual({ ...M15_COLLECTOR, markLine: 2 });
     expect("markLine" in M15_COLLECTOR).toBe(false);
@@ -48,7 +48,7 @@ describe("the collector slot", () => {
     // inside the PROFILES literal.
     const profiles = source.indexOf("const PROFILES: Record<FrameTemplate, FrameProfile> = {");
     expect(profiles).toBeGreaterThan(0);
-    const SLOT = /collector: (?:M15(?:PW)?|EXPEDITION_(?:ZNR|BFZ)|STAINEDGLASS)_COLLECTOR/g;
+    const SLOT = /collector: (?:M15(?:PW)?|EXPEDITION_(?:ZNR|BFZ)|DNDSOURCEBOOK|STAINEDGLASS)_COLLECTOR/g;
     for (const m of source.matchAll(SLOT)) expect(m.index, "a slot outside PROFILES").toBeGreaterThan(profiles);
     expect(source.match(SLOT)).toHaveLength(COLLECTOR_TEMPLATES.length);
     expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(3);
@@ -57,6 +57,13 @@ describe("the collector slot", () => {
     // dragon wings on the ZNE rows (TODO 4.11).
     expect(source.match(/collector: EXPEDITION_(?:ZNR|BFZ)_COLLECTOR/g)).toHaveLength(3);
     expect(getFrameProfile("tarkirdragon").collector).toBe(EXPEDITION_ZNR_COLLECTOR);
+    // The D&D Sourcebook (TODO 4.11 wave 2): its run's rows, 4 px below M15's.
+    expect(source.match(/collector: DNDSOURCEBOOK_COLLECTOR/g)).toHaveLength(1);
+    expect(getFrameProfile("dndsourcebook").collector).toEqual({
+      ...M15_COLLECTOR,
+      line1BaselinePct: (1997.5 / 2100) * 100,
+      line2BaselinePct: (2036 / 2100) * 100,
+    });
     // The Dominaria United stained glass (TODO 4.11 wave 2): its run's rows,
     // 4 px below M15's.
     expect(source.match(/collector: STAINEDGLASS_COLLECTOR/g)).toHaveLength(1);
