@@ -347,6 +347,10 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "stainedglass/main",
       // 4.11 wave 2's Strixhaven Mystical Archive: M15's box, 3 px up.
       "mysticalarchive/main",
+      // 4.11 wave 2's Doctor Who TARDIS: M15's margins on print's rows (552
+      // px, 1350–1902) — it holds the run's fullest boxes, not 1,200
+      // characters.
+      "tardis/main",
     ],
     ["1200 chars"],
   ],

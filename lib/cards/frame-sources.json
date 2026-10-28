@@ -18227,6 +18227,305 @@
       "the domes and panes toned with the masters (SG_PRINT_TONES); the crown's dome rim reaches 8 px higher than print's and its panes start 8 px higher (print's band is shorter): as drawn"
     ]
   },
+  "tardis": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTARDIS.js 'TARDIS' (the Doctor Who TARDIS showcase; groupShowcase-5.js 'TARDIS (WHO)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/tardis/w.png",
+        "img/frames/tardis/crowns/w.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "u": [
+        "img/frames/tardis/u.png",
+        "img/frames/tardis/crowns/u.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "b": [
+        "img/frames/tardis/b.png",
+        "img/frames/tardis/crowns/b.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "r": [
+        "img/frames/tardis/r.png",
+        "img/frames/tardis/crowns/r.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "g": [
+        "img/frames/tardis/g.png",
+        "img/frames/tardis/crowns/g.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "c": [
+        "img/frames/tardis/a.png",
+        "img/frames/tardis/crowns/a.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "m": [
+        "img/frames/tardis/m.png",
+        "img/frames/tardis/crowns/m.png at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "wu": [
+        "(img/frames/tardis/w.png | img/frames/tardis/u.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/w.png | img/frames/tardis/crowns/u.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "wb": [
+        "(img/frames/tardis/w.png | img/frames/tardis/b.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/w.png | img/frames/tardis/crowns/b.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "ub": [
+        "(img/frames/tardis/u.png | img/frames/tardis/b.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/u.png | img/frames/tardis/crowns/b.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "ur": [
+        "(img/frames/tardis/u.png | img/frames/tardis/r.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/u.png | img/frames/tardis/crowns/r.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "br": [
+        "(img/frames/tardis/b.png | img/frames/tardis/r.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/b.png | img/frames/tardis/crowns/r.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "bg": [
+        "(img/frames/tardis/b.png | img/frames/tardis/g.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/b.png | img/frames/tardis/crowns/g.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "rg": [
+        "(img/frames/tardis/r.png | img/frames/tardis/g.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/r.png | img/frames/tardis/crowns/g.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "rw": [
+        "(img/frames/tardis/r.png | img/frames/tardis/w.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/r.png | img/frames/tardis/crowns/w.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "gw": [
+        "(img/frames/tardis/g.png | img/frames/tardis/w.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/g.png | img/frames/tardis/crowns/w.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ],
+      "gu": [
+        "(img/frames/tardis/g.png | img/frames/tardis/u.png across procedural:ramp(45→55 %W))",
+        "(img/frames/tardis/crowns/g.png | img/frames/tardis/crowns/u.png across procedural:ramp(45→55 %W)) at 7.666666666666666/2.142857142857143/84.66666666666667×21.428571428571427 %"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/tardis/pt.png",
+      "u": "img/frames/tardis/pt.png",
+      "b": "img/frames/tardis/pt.png",
+      "r": "img/frames/tardis/pt.png",
+      "g": "img/frames/tardis/pt.png",
+      "c": "img/frames/tardis/pt.png",
+      "m": "img/frames/tardis/pt.png"
+    },
+    "sourceTones": {
+      "img/frames/tardis/a.png": {
+        "table": "TARDIS_PRINT_TONES (a)",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/w.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 157 (ramping across ± 15): × 1.120 / 0.986 / 0.954 (175, 217, 239 → 196, 214, 228), fading to × 1.007 on every channel at white"
+      },
+      "img/frames/tardis/b.png": {
+        "table": "TARDIS_PRINT_TONES (b)",
+        "stripe": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 76 (ramping across ± 15): × 1.386 / 1.718 / 1.925 (44, 39, 40 → 61, 67, 77), fading to × 1.656 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 76 (ramping across ± 15): × 1.000 / 1.080 / 1.124 (117, 112, 113 → 117, 121, 127), fading to × 1.066 on every channel at white"
+      },
+      "img/frames/tardis/crowns/b.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.b",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/u.png by 16–40 levels (max channel; full from 40): × 1.185 / 1.458 / 1.633 (54, 48, 49 → 64, 70, 80), fading to × 1.407 on every channel at white"
+      },
+      "img/frames/tardis/crowns/g.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.g",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.947 / 0.789 / 3.154 (19, 109, 13 → 18, 86, 41), fading to × 0.823 on every channel at white"
+      },
+      "img/frames/tardis/crowns/m.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.m",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.823 / 0.764 / 0.417 (209, 157, 60 → 172, 120, 25), fading to × 0.771 on every channel at white"
+      },
+      "img/frames/tardis/crowns/r.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.r",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.808 / 1.684 / 3.571 (156, 19, 7 → 126, 32, 25), fading to × 1.089 on every channel at white"
+      },
+      "img/frames/tardis/crowns/u.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.u",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/w.png by 16–40 levels (max channel; full from 40): × 0.000 / 1.021 / 1.121 (5, 94, 140 → 0, 96, 157), fading to × 1.020 on every channel at white"
+      },
+      "img/frames/tardis/crowns/w.png": {
+        "table": "TARDIS_PRINT_TONES.wedge.w",
+        "wedge": "on the pixels that differ from img/frames/tardis/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.933 / 0.887 / 0.749 (209, 203, 195 → 195, 180, 146), fading to × 0.887 on every channel at white"
+      },
+      "img/frames/tardis/g.png": {
+        "table": "TARDIS_PRINT_TONES (g)",
+        "stripe": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 95 (ramping across ± 15): × 1.313 / 1.011 / 4.000 (16, 91, 11 → 21, 92, 44), fading to × 1.060 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 95 (ramping across ± 15): × 1.022 / 1.025 / 0.779 (91, 161, 86 → 93, 165, 67), fading to × 1.014 on every channel at white"
+      },
+      "img/frames/tardis/m.png": {
+        "table": "TARDIS_PRINT_TONES (m)",
+        "stripe": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 172 (ramping across ± 15): × 1.040 / 0.962 / 0.490 (175, 132, 51 → 182, 127, 25), fading to × 0.971 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 172 (ramping across ± 15): × 1.042 / 1.090 / 0.336 (239, 199, 122 → 249, 217, 41), fading to × 1.045 on every channel at white"
+      },
+      "img/frames/tardis/r.png": {
+        "table": "TARDIS_PRINT_TONES (r)",
+        "stripe": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 85 (ramping across ± 15): × 1.015 / 2.063 / 4.333 (131, 16, 6 → 133, 33, 26), fading to × 1.353 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 85 (ramping across ± 15): × 1.071 / 0.473 / 0.506 (198, 91, 81 → 212, 43, 41), fading to × 0.697 on every channel at white"
+      },
+      "img/frames/tardis/u.png": {
+        "table": "TARDIS_PRINT_TONES (u)",
+        "stripe": "on the pixels that differ from img/frames/tardis/w.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 138 (ramping across ± 15): × 0.000 / 0.981 / 1.078 (6, 103, 154 → 0, 101, 166), fading to × 0.979 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/w.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 138 (ramping across ± 15): × 0.000 / 0.749 / 0.944 (163, 207, 231 → 0, 155, 218), fading to × 0.635 on every channel at white"
+      },
+      "img/frames/tardis/w.png": {
+        "table": "TARDIS_PRINT_TONES (w)",
+        "stripe": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma below 210 (ramping across ± 15): × 1.170 / 1.111 / 0.939 (176, 171, 165 → 206, 190, 155), fading to × 1.112 on every channel at white",
+        "stripeLight": "on the pixels that differ from img/frames/tardis/u.png by 16–40 levels (max channel; full from 40), the share of them with Rec. 601 luma above 210 (ramping across ± 15): × 1.037 / 1.030 / 0.983 (241, 236, 230 → 250, 243, 226), fading to × 1.028 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/tardis/a.png",
+      "img/frames/tardis/b.png",
+      "img/frames/tardis/crowns/a.png",
+      "img/frames/tardis/crowns/b.png",
+      "img/frames/tardis/crowns/g.png",
+      "img/frames/tardis/crowns/m.png",
+      "img/frames/tardis/crowns/r.png",
+      "img/frames/tardis/crowns/u.png",
+      "img/frames/tardis/crowns/w.png",
+      "img/frames/tardis/g.png",
+      "img/frames/tardis/m.png",
+      "img/frames/tardis/pt.png",
+      "img/frames/tardis/r.png",
+      "img/frames/tardis/u.png",
+      "img/frames/tardis/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames (tardis/<k>.png, 1500x2100 NATIVE — no resample), each with the pack's 'Legendary Crown' (tardis/crowns/<k>.png, 1270x450) at its bounds 115/45 px, 1:1 — the angled brace under the title bar at the window's top corners, its wedge in the card's colour, which print draws on EVERY printing of the run, legendary or not (WHO #538 Dalek Squadron, #549 Weeping Angel, #550 Cyberman Patrol as the legends do): the frame's own drawing on this showcase, not an opt-in crown",
+      "c = the pack's 'Artifact Frame' and crown (tardis/a.png, crowns/a.png, the steel stripe and wedge): the pack draws no colourless frame (and its Land frame and crown 404 in the tree); the run's two colourless printings are artifacts that print the steel (WHO #550 Cyberman Patrol, #551 TARDIS)",
+      "the ten pairs (wu wb ub ur br bg rg rw gw gu, the \"split\" dress) = the pair's two frames and two crowns lerped across 45 → 55 %W (scripts/lib/pair-ramp.mjs blendPair): print draws a two-colour card's left stripe and wedge in its first colour and the right ones in its second (WHO #541–545, #547–549, #552–564); the masters differ only on x 61–346 and 1156–1439, so the ramp crosses identical pixels",
+      "a real black border at the top and the bottom (0,0,0 on the pack and on print), cut at the one card corner; the police box's blue sides run to the left and right edges (borderless — the edge contract's design), as print draws them",
+      "plates = the pack's one 'Power/Toughness' box (tardis/pt.png, 299x173 at its ptBounds 1133/1850 px, 1:1) under every key",
+      "toned onto the prints by one rule, the ring's (raw scan medians over WHO #535–564, each print registered on the pack's drawing, a region ≥ 9 levels off is toned — TARDIS_PRINT_TONES through TARDIS_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters and pairs drawn from it agree: each stripe's body and its light strip (the pixels where the frame file differs from the blue one — the white one for the blue and steel files — split by luma; the steel body is within 5 levels and stays as drawn) and every crown's wedge but the steel one (within 7); the box, the bars and the P/T box are within 8 levels and stay as drawn",
+      "geometry as drawn: the pack is print's drawing at print's size — the bars, the box, the plate and the stamp housing sit within 2–3 px of the scans (one shift, the scans' crop) — so nothing is re-cut"
+    ]
+  },
+  "tardisholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTARDIS.js 'TARDIS' (the Doctor Who TARDIS showcase; groupShowcase-5.js 'TARDIS (WHO)')",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "178x90 notch piece (1:1 at 1500x2100, at 661,1908), the triangle region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wu": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wb": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ub": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ur": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "br": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "bg": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rg": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rw": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gw": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gu": [
+        "img/frames/tardis/stamp.png at 662,1909 176×80 px of a clear 1500×2100 card, 1:1 (no resample), cut to 178×90 at 661,1908",
+        "the pack's capture (luma > 40 in box x 27–150, rows 10–82) painted opaque black, grown 1 px",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "triangle": {
+        "points": [
+          [
+            687.1,
+            1924.6
+          ],
+          [
+            812.1,
+            1924.6
+          ],
+          [
+            749.6,
+            1992.5
+          ]
+        ],
+        "radius": 6.7
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/tardis/stamp.png"
+    ],
+    "notes": [
+      "the TARDIS showcase's triangle stamp notch (TODO 4.11): the pack's one 'Gold Holo Stamp' (tardis/stamp.png, 176x80) — a black trapezoid over the box's foot round the stamp — at its stampBounds (662/1909 px), 1:1 (the pack is 1500 px native), cut to its box 178x90 at 661,1908 px — 1 px round the piece and 9 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border",
+      "keys = the masters' w u b r g m c and the ten pairs, every one the same piece (every master is the same box under the trapezoid)",
+      "the hologram: the pack paints a capture of WotC's hologram in the trapezoid (its triangle 693–806 × 1922–1985 px) — every lit pixel of it is painted opaque black first (grown 1 px), then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE: the run's prints set the stamp there, 686–816 px wide at row 1925, 708–793 at 1950, the apex on 1990–1991) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's 'Gray Holo Stamp' is not read"
+    ]
+  },
   "tarkirdragon": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

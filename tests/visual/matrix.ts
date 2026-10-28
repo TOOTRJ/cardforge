@@ -1381,6 +1381,11 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the Dominaria United stained glass's plate at its widest.
   ["stainedglass", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Doctor Who TARDIS's P/T box at its widest, and a
+  // colourless artifact creature on the pack's steel artifact master (WHO
+  // #550 Cyberman Patrol).
+  ["tardis", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["tardis", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Cyberman"], power: "2", toughness: "2" }],
   [
     "m15artifact",
     "artifact",
@@ -2108,6 +2113,13 @@ export function visualCases(): VisualCase[] {
   add("dossier", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("dossier", "auto", { rarity: "uncommon" }) });
   add("dossier", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("dossier", "auto", { rarity: "rare" }) });
   add("dossier", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("dossier", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Doctor Who TARDIS's TRIANGLE notch — on an
+  // uncommon too (a triangle frame stamps every rarity: the matte face, WHO
+  // #538 Dalek Squadron), a three-colour legend's (WHO #540 Davros: the gold
+  // key's piece), the HD bake.
+  add("tardis", "creature", "b", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("tardis", "auto", { rarity: "uncommon" }) });
+  add("tardis", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("tardis", "auto", { rarity: "mythic" }) });
+  add("tardis", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tardis", "auto", { rarity: "rare" }) });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
   // see-through colourless frame and the artifact's silver, a crowned
@@ -2562,6 +2574,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
   // arch, split off every master).
   "stainedglass",
+  // …and the Doctor Who TARDIS's triangle (TODO 4.11 wave 2: the pack's one trapezoid).
+  "tardis",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2580,6 +2594,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
   // own arch over its split box).
   "stainedglass",
+  // …and the Doctor Who TARDIS — its pair masters under the pack's one
+  // trapezoid (a pair draws m's).
+  "tardis",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -3039,6 +3056,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
   // the box split.
   "stainedglass",
+  // The Doctor Who TARDIS (TODO 4.11 wave 2): its two colour frames and
+  // braces lerped.
+  "tardis",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

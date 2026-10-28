@@ -594,6 +594,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // #55, #56, #58, #59 and their halo-foil / serialized twins). An
   // addition: no stored card sits on it.
   "stainedglass",
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS' pack, frames bucket): the police box of WHO #535–564, their
+  // serialized twins and their surge-foil twins #1126–1155 (73 printings) —
+  // the blue doors round the art, a stripe and a brace in the card's colour.
+  // An addition: no stored card sits on it.
+  "tardis",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
@@ -758,6 +764,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   dossier: "Dossier",
   // Set-relative: the picker prints "Dominaria United — Stained Glass".
   stainedglass: "Stained Glass",
+  // Set-relative: the picker prints "Doctor Who — TARDIS".
+  tardis: "TARDIS",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
@@ -807,6 +815,7 @@ export const FRAME_SET_VALUES = [
   "zendikarrising",
   "dnd",
   "karlov",
+  "doctorwho",
   "extended",
   "fullartset",
   "expeditions",
@@ -839,6 +848,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   dnd: "Dungeons & Dragons",
   // Murders at Karlov Manor (MKM 2024): the Dossier showcase.
   karlov: "Murders at Karlov Manor",
+  // Doctor Who (WHO 2023): the TARDIS showcase.
+  doctorwho: "Doctor Who",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -923,6 +934,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirdragon: "multiverselegends",
   sncartdeco: "newcapenna",
   dossier: "karlov",
+  tardis: "doctorwho",
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
@@ -1019,6 +1031,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   dnd: "showcase",
   // The Murders at Karlov Manor Dossier showcase (MKM #336–389, #433).
   karlov: "showcase",
+  // The Doctor Who TARDIS showcase (WHO #535–564, #1126–1155).
+  doctorwho: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
   // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall

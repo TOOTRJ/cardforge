@@ -409,8 +409,9 @@ describe("visual-regression matrix", () => {
     const both = crowned.filter((c) => paired.includes(c));
     expect([...new Set(both.map((c) => c.template))].sort()).toEqual(PAIR_TEMPLATES.filter((t) => frameAnatomyOf(t).crown).sort());
     // …and the old frames' (4.6h): pairs, no crown — and the Strixhaven
-    // Mystical Archive's (4.11 wave 2: no legend prints on it).
-    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland", "mysticalarchive"]);
+    // Mystical Archive's (4.11 wave 2: no legend prints on it) and the Doctor
+    // Who TARDIS's (4.11 wave 2: its brace is in the masters, on every print).
+    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland", "modern", "modernland", "retroland", "mysticalarchive", "tardis"]);
   });
 
   it("bakes the two-colour frame (TODO 4.6b) on every template that draws pairs, in each dress it draws", () => {

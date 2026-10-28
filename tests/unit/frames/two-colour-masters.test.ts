@@ -112,6 +112,10 @@ describe("the declared pair masters", () => {
       // gold frame with the two colours' lines through the pack's Pinline
       // masks (tests/unit/frames/mystical-archive-importer.test.ts).
       mysticalarchive: 10,
+      // …and the Doctor Who TARDIS's ten (TODO 4.11 wave 2): its frames and
+      // braces lerped across a span of identical pixels
+      // (tests/unit/frames/who-tardis-importer.test.ts).
+      tardis: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

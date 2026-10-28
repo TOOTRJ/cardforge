@@ -84,7 +84,8 @@ describe("bake path = preview path", () => {
     // …and the MKM dossier's 10 (4.11 wave 2: the pack's colour frames lerped).
     // …and the Dominaria United stained glass's 10 (4.11 wave 2).
     // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
-    expect(pairKeys).toBe(440);
+    // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
+    expect(pairKeys).toBe(450);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -199,6 +200,9 @@ describe("bake path = preview path", () => {
                                     : template === "mysticalarchive"
                                       ? // …and the Strixhaven Mystical Archive's own arch (4.11 wave 2).
                                         "mysticalarchiveholostamp"
+                                    : template === "tardis"
+                                      ? // …and the Doctor Who TARDIS's trapezoid (4.11 wave 2).
+                                        "tardisholostamp"
                                       : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
@@ -290,8 +294,10 @@ describe("bake path = preview path", () => {
     // (4.11 wave 2, its lifted gold rim), and the Dominaria United stained
     // glass's 7 + 10 pairs (4.11 wave 2: the arch split off every master and
     // pair master), and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11
-    // wave 2: one black arch under every key).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10));
+    // wave 2: one black arch under every key), and the Doctor Who TARDIS's
+    // 7 + 10 pairs (4.11 wave 2, the pack's one trapezoid under every key
+    // and pair).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

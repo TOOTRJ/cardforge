@@ -125,6 +125,8 @@ describe("the switch values", () => {
       "enchantingtales",
       // …and the Dominaria United stained glass (TODO 4.11 wave 2): its run's rows.
       "stainedglass",
+      // …and the Doctor Who TARDIS (TODO 4.11 wave 2): its run's rows.
+      "tardis",
     ]);
   });
 });

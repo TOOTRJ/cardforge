@@ -158,7 +158,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the MKM dossier, TODO 4.11 wave 2, as every showcase.)
     // (…and the Enchanting Tales, the Dominaria United Stained Glass and the
     // Strixhaven Mystical Archive, TODO 4.11 wave 2, as every showcase.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(79);
+    // (…and the Doctor Who TARDIS, TODO 4.11 wave 2, as every showcase.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(80);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

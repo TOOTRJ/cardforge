@@ -588,9 +588,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         const load = async (src) => {
           if (!box) return loadSource(src, W, H);
           // A file toned through the pack's whole-card masks is never drawn
-          // at bounds of its own.
-          if (sourceTonesOf(src)) throw new Error(`${template}/${key}: ${src} is toned through whole-card masks and can't be placed at bounds`);
-          return placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H);
+          // at bounds of its own; one toned by its own pixels (a `near` /
+          // `diff` / `chroma` region — TODO 4.11 wave 2: the TARDIS crown's
+          // wedges) is toned at its box's size as it loads, as an overlay
+          // band's layer is, then placed.
+          const tone = sourceTonesOf(src);
+          if (tone?.masks) throw new Error(`${template}/${key}: ${src} is toned through whole-card masks and can't be placed at bounds`);
+          const data = await rgba(await fetchCached(src), box.width, box.height);
+          return placeOnCanvas(tone ? await toneLoaded(src, data, box.width, box.height) : data, box, W, H);
         };
         let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
         if (l.retint) {

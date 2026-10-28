@@ -338,6 +338,13 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the sides between its pieces, the black footer; the importer cuts the
   // one card corner at the bottom only.
   mysticalarchive: MYSTICAL_ARCHIVE_EDGES,
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS' pack, frames bucket): the printed black border at the top and
+  // the bottom (0,0,0 on the pack and on WHO #535–564), cut at the one card
+  // corner by the importer; the police box's blue sides run to the left and
+  // right edges beside the art and the text box (borderless, as print draws
+  // them), black beside the bars — `design`.
+  tardis: { top: BORDER, right: { kind: "design" }, bottom: BORDER, left: { kind: "design" } },
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
   // it — the swirled frame field to the top edge (design) and down the sides

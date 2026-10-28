@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 69 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 70 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the D&D Sourcebook showcase (4.11 wave 2, an addition): dndsourcebook —
@@ -215,6 +215,12 @@ into `.frames-build/` — 69 templates today (`CC_TEMPLATES` in
   its six plates and its oval stamp notch per colour
   (`enchantingtalesholostamp`); no crown ([The Enchanting Tales
   showcase](#the-enchanting-tales-showcase-411-wave-2));
+- the Doctor Who TARDIS showcase (4.11 wave 2, an addition): tardis — the
+  'TARDIS' pack's seven frames (c its artifact frame) at their native size,
+  each with the pack's brace (its 'Legendary Crown', on every print of the
+  run) drawn in, ten two-colour pairs lerped, its one plate and its
+  triangle stamp notch (`tardisholostamp`); no crown ([The Doctor Who TARDIS
+  showcase](#the-doctor-who-tardis-showcase-411-wave-2));
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
@@ -5993,6 +5999,147 @@ can pick it until a colour is verified.
   (`TREATMENT_KINDS`: the pack has no land frame, and its pair masters are
   a spell frame's split, which a land never wears); offered only in a
   ticked colour, and the AI's random pool reaches it only there.
+### The Doctor Who TARDIS showcase (4.11 wave 2)
+
+`tardis` — "TARDIS" in the Doctor Who set (`doctorwho`, showcase era): the
+police box of WHO #535–564 (2023), their serialized twins #552z–564z and
+their surge-foil twins #1126–1155 — 73 printings, every one borderless and
+single-faced on the 2015 frame, every one a creature but #551 / #1142
+TARDIS (an artifact Vehicle), each with the Universes Beyond triangle
+stamp. No land, walker, saga or double-faced card prints in the run. Card
+Conjurer's 'TARDIS' pack (packTARDIS.js, `img/frames/tardis/`, 1500 × 2100
+NATIVE — nothing is resampled), frames bucket only, through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.tardis`, the `TARDIS` block
+of `scripts/lib/cc-frames.mjs`). An ADDITION: a new template — no layout
+bump, no sweep, no badge; nobody can pick it until a colour is verified.
+
+- **Scope.** The serialized and surge-foil twins print the same frame
+  under a finish (the double-rainbow and surge foils, and their own
+  collector numbers): exact like the rest. Only the 30 base printings are
+  read for tones and slots. The run's neighbours (the
+  extended-art lands #528–534 / #1120–1125, the promo #565, the surge-foil
+  basics from #1156) and the same cards' regular, etched, extended-art and
+  surge-foil printings keep their landing.
+- **Masters.** The pack's frames: w u b r g, m (gold — three colours or
+  more: #540 Davros, #546 Missy) and `c` = the pack's 'Artifact Frame'
+  (`a.png`, the steel stripe: the pack draws no colourless frame, and the
+  run's two colourless printings are artifacts that print the steel —
+  #550 Cyberman Patrol, #551 TARDIS). Its 'Land Frame' and land crown 404
+  in the pack's tree, and no land prints in the run: no land master, the
+  land kind is not offered (`TREATMENT_KINDS`), and no printing can land
+  here as a land — no gap is needed. Each master is the frame WITH the
+  pack's 'Legendary Crown' (`crowns/<k>.png`, 1270 × 450 at 115 / 45, 1:1):
+  the angled brace under the title bar at the window's top corners, its
+  wedge in the card's colour. Print draws it on EVERY printing of the run,
+  legendary or not (#538 Dalek Squadron, #549 Weeping Angel and #550
+  Cyberman Patrol carry it as the legends do), so it is the frame's own
+  drawing on this showcase: the masters draw it and the template has no
+  crown switch. (#551 / #1142 TARDIS is the one print without it: its art,
+  the police box's open doors, fills the window past the brace. It lands
+  here like the rest; the frame draws the brace over its art.) A real black
+  border at the top and the bottom (0,0,0 on the pack and on the scans — the
+  run is WotC's digital file, as the regular WHO cards are); the blue sides
+  run to the left and right edges (the edge contract's `design`).
+- **The two-colour dress** (`twoColorMasters: ["split"]`, opt-in per card;
+  an import of a two-colour printing names it). Print gives a two-colour
+  card's LEFT stripe and wedge its first colour and the right ones its
+  second (pair order: #548 The War Doctor R|W, #549 Weeping Angel U|B,
+  #543 B|R …; 21 of the 30 base printings). The masters differ only on x
+  61–346 and 1156–1439 (the stripes and the wedges, measured on all seven),
+  so the ten pair masters are the two frames and the two braces lerped
+  across `TARDIS_PAIR_RAMP` (45 → 55 %W), a span of identical pixels.
+- **The window.** See-through (α < 16) on 116–1384 × 265–1160 px, its
+  anti-aliased rim (α < 250) on 115–1385 × 264–1161 on every key; the art
+  slot covers it with the art-window check's 0.05 % to spare: 114–1387 ×
+  262–1164. The brace hides the slot's top corners.
+- **Tones** — the ring's one rule (raw scan medians over the 30 base
+  printings, each scan REGISTERED on the pack's drawing — the scans sit
+  3 px right of it, 2 px higher at the top and 1 px lower at the box, one
+  shift of their crop; a region ≥ 9 levels off is toned;
+  `TARDIS_PRINT_TONES`). The regions are interiors, read per side with the
+  side's colour (a pair's left with its first, its right with its second):
+  the stripe's BODY (eroded 2 px across, 4 down), its 5 px LIGHT strip
+  (eroded 1 px across) and the wedge (eroded 4 px; #551's left out). The
+  pack draws the light strip as the colour paled toward white, print as
+  the colour lit (red 198,91,81 → 212,43,41; blue 163,207,231 → 0,155,218):
+  one gain on the whole stripe turned the red's and green's light strips
+  lilac and sky blue (their blue channel × 4.5 / × 4), so the body and the
+  light strip are two regions of one difference, split by luma
+  (`TARDIS_STRIPE_SPLIT`, `diffRegionPlane`'s `lumaSplit`). Toned: every
+  stripe body but the steel (5 off), every light strip, every wedge but
+  the steel (7 off) — the worst the gold light strip (81 off in blue) and
+  the white wedge (49). As drawn: the box's blue panels (7), the sides'
+  blue (6), the title and type bars (1–3), the P/T box's blue rim (8).
+- **Re-cut: none.** The pack is print's drawing at print's size: the bars,
+  the box, the plate and the stamp's housing sit within 2–3 px of the
+  scans, all of it the one shift of their crop.
+- **Slots** (M15's, the M15-era family's sizes, `fit: "measured"`; the
+  family joined without a bump), each measured on the 30 base printings
+  against our bakes of the same names, types and costs:
+
+  | | print (registered) | ours |
+  |---|---|---|
+  | name baseline / first ink | 185 / 126–131 | 185 / 128–132 |
+  | cost discs: centre row / last disc's right end | 160.5 / 1384 | 160.5 / 1384 |
+  | type baseline (a full-size line) | 1261–1263 | 1261 |
+  | set symbol (WHO): the ring's centre / the glyph's | (1335.5, 1241) / (1336, 1242) | (1340, 1242) |
+  | rules: first ink x / right ink | 129–132 / 1363–1365 | 129–132 / 1365 |
+  | P/T digits' ink centre | (1285, 1924) | (1286.5, 1924) |
+  | collector line 1 / 2 (capitals' foot) | 1987 / 2026 | 1987 / 2026 |
+
+  — the name 3 px above M15's (`TARDIS_TITLE_DY`); the CC M15 cost row
+  4 px lower (`costDy`); the type line 2 px under the CC baseline, its band
+  ending 9 px short of the set symbol's ring (1262 px); the set symbol in
+  the ring (`symbolRect`: the family's box centred on the ring's centre —
+  a square icon is centred; a Keyrune glyph, right-aligned in the box,
+  sits 4 px right of print's); the rules box on print's rows (1350–1902,
+  M15's margins); the P/T on the pack's box at its ptBounds (1133 / 1850,
+  299 × 173) in CC's digit box 2 px left and 1 px up; the collector line
+  6 / 5 px above M15's rows (`TARDIS_COLLECTOR`), M15's pen; white ink
+  everywhere.
+- **Flagged, not changed:** print sets the name and the type line in a
+  sans serif's CAPITALS (Card Conjurer's 'Gill Sans', all caps) and the P/T
+  in a serif 60 px tall; ours are Beleren as typed and the family's P/T
+  (no font is added for a frame). Print CENTRES a long type line it sets
+  smaller ("LEGENDARY CREATURE — TIME LORD DOCTOR" on 1255), where PipGlyph
+  keeps a shrunk line on its band's baseline (1261).
+- **Stamp** (`TARDIS_HOLO_STAMP`, `tardisholostamp/<key>.png`): every
+  printing of the run wears the Universes Beyond TRIANGLE
+  (`security_stamp: triangle`, the uncommons too: #538, #550, #551 print
+  the matte face), so on this triangle frame "auto" stamps every rarity —
+  the matte face below a rare, our silver on a rare or mythic. The notch is
+  the pack's one 'Gold Holo Stamp' (`stamp.png`, 176 × 80 at 662 / 1909,
+  1:1: a black trapezoid over the box's foot round the stamp), cut to a
+  178 × 90 box at 661, 1908 (1 px round the piece and 9 px past its foot,
+  so the hole and its ring fit), one piece under every key and pair. The
+  pack paints a capture of the hologram in the trapezoid (its triangle
+  693–806 × 1922–1985 px): every lit pixel of it is painted opaque black
+  first (grown 1 px, `blackoutCapturePx`), then the Universes Beyond hole
+  (`UB_STAMP_HOLE` — the run's prints set the stamp there: 686–816 px wide
+  at row 1925, 708–793 at 1950, the apex on 1990–1991) + 2 px cut clear and
+  the 2 px round it painted black — no pixel of the capture is published;
+  our triangle art covers the cut. The slot's keep-out is the trapezoid
+  (662–838 × 1909–1929), which the text never meets: the rules box ends at
+  1902, above it. An ADDITION, opt-in per card.
+- **Imports.** `showcase/who/tardis` (set `who`, borderless, #535–564 and
+  #1126–1155 — the "z" serials read as their numbers) is exact on `tardis`
+  once the card's colour is verified, `nearest` until then
+  (`withVerification`); before this frame the run imported
+  `borderless/showcase`, nearest on the borderless frame. No gap. Every
+  printing keeps its real colour (a pair's colours, gold for three, the
+  artifacts colourless); the two-colour dress follows a pair, the triangle
+  and the 2023 collector line every printing, and no crown is named (the
+  frame draws none: its brace is the masters'). Every other fixture's
+  outcome is unchanged.
+- **Creator.** In the Showcase & Universes Beyond era as "Doctor Who —
+  TARDIS", for every kind its body draws but the land (`TREATMENT_KINDS`);
+  offered only in a ticked colour, and the AI's random pool reaches it
+  only there.
+- **Verification.** w, u, b, r, m and c have prints (Rose Tyler / Sarah
+  Jane Smith, K-9, Dalek Squadron, Yasmin Khan, Davros / The War Doctor as
+  the pair riding the gold key, Cyberman Patrol); `g` has none (green only
+  in pairs) — do not tick it.
+
 ### The Enchanting Tales showcase (4.11 wave 2)
 
 `enchantingtales` — "Enchanting Tales" in the Wilds of Eldraine set
@@ -10734,12 +10881,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 88 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 89 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass and Strixhaven Mystical Archive, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive and Doctor Who TARDIS, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

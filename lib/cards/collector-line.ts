@@ -170,6 +170,10 @@ export const COLLECTOR_TEMPLATES = [
   // legends set both lines in the black border, 4 px below M15's rows
   // (STAINEDGLASS_COLLECTOR).
   "stainedglass",
+  // …and the Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS'): WHO #535–564 / #1126–1155 set both lines in the black border
+  // under the box, 6 / 5 px above M15's rows (TARDIS_COLLECTOR).
+  "tardis",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

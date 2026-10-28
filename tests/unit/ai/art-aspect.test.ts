@@ -133,6 +133,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   dossier: ["1264x816", "3:2", 1.5355],
   // The Dominaria United Stained Glass window (TODO 4.11 wave 2): 1382 × 939 px.
   stainedglass: ["1232x832", "3:2", 1.472],
+  // The Card Conjurer TARDIS window (TODO 4.11 wave 2): the police box's window, 1273 × 902 px.
+  tardis: ["1200x848", "4:3", 1.4113],
   fullart: ["896x1168", "3:4", 0.7605],
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],
