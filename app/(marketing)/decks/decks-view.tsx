@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
+import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import {
   DECK_GRID_CLASS,
@@ -116,9 +117,7 @@ export function DecksLanding() {
         title="Community decks"
         description={DECKS_DESCRIPTION}
         actions={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">Build a deck</Link>
-          </Button>
+          <NewDeckButton>Build a deck</NewDeckButton>
         }
       />
 
@@ -339,9 +338,7 @@ async function PublicDecksResults({
               : "Be the first to publish a public deck — they'll show up here for everyone."
         }
         action={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">Build a deck</Link>
-          </Button>
+          <NewDeckButton>Build a deck</NewDeckButton>
         }
       />
     );

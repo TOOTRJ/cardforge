@@ -31,7 +31,9 @@ const buttonVariants = cva(
   },
 );
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+// ComponentProps, not ButtonHTMLAttributes: `ref` is a plain prop in React
+// 19, and the spread below hands it to the <button>.
+type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
   };

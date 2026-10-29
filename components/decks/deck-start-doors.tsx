@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ClipboardPaste, Crown, LibraryBig, Search } from "lucide-react";
 import { openDeckTool, type DeckTool } from "@/components/decks/deck-owner-tools";
+import { NEW_DECK_FIRST_ADD_ATTRIBUTE } from "@/components/decks/use-focus-add-on-new-deck";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -18,10 +19,12 @@ import { cn } from "@/lib/utils";
 // matches them, and you check every match — never "search". The commander
 // slot opens the same two flows with the commander zone chosen: the import
 // starts its text under "Commander", and a card of yours is added straight
-// to the zone.
+// to the zone. A deck the New deck dialog just made (`?new=1`, TODO DK4.1)
+// lands on "Paste a decklist": the door a maker who left the dialog's paste
+// empty most likely wants (useFocusAddOnNewDeck).
 // ---------------------------------------------------------------------------
 
-const DOORS: Array<{ tool: DeckTool; icon: LucideIcon; title: string; body: string }> = [
+const DOORS: Array<{ tool: DeckTool; icon: LucideIcon; title: string; body: string; firstAdd?: true }> = [
   {
     tool: "names",
     icon: Search,
@@ -31,6 +34,7 @@ const DOORS: Array<{ tool: DeckTool; icon: LucideIcon; title: string; body: stri
   {
     tool: "paste",
     icon: ClipboardPaste,
+    firstAdd: true,
     title: "Paste a decklist",
     body: "From Moxfield, Archidekt, MTG Arena, ManaBox or plain text — sideboard and commander sections included.",
   },
@@ -58,9 +62,14 @@ export function DeckStartDoors({ commander }: { commander: boolean }) {
       </div>
       {commander ? <CommanderSlot /> : null}
       <ul className="grid gap-3 md:grid-cols-3">
-        {DOORS.map(({ tool, icon: Icon, title, body }) => (
+        {DOORS.map(({ tool, icon: Icon, title, body, firstAdd }) => (
           <li key={tool}>
-            <button type="button" onClick={(event) => openDeckTool(tool, event.currentTarget)} className={DOOR_CLASS}>
+            <button
+              type="button"
+              onClick={(event) => openDeckTool(tool, event.currentTarget)}
+              className={DOOR_CLASS}
+              {...(firstAdd ? { [NEW_DECK_FIRST_ADD_ATTRIBUTE]: "" } : {})}
+            >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-gold transition-colors group-hover:text-primary-bright">
                 <Icon className="h-4 w-4" aria-hidden />
               </span>
