@@ -184,9 +184,10 @@ describe("the surfaces that draw a picture column", () => {
     // A deck cover: ONE answer, deckCoverOf (TODO DK6.2) — the upload only
     // through the guard, else a built-in default from the exact list.
     ["lib/decks/cover.ts", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
-    ["app/(marketing)/decks/decks-view.tsx", /deckCoverOf\(deck, coverColors\)/],
+    // Every deck tile is DeckTile (TODO DK8.1): /decks, browse, the format
+    // hubs, trending rows, profiles, My decks, "Decks with this card".
+    ["components/decks/deck-tile.tsx", /deckCoverOf\(deck, art\.colors\)/],
     ["app/(marketing)/deck/[slug]/page.tsx", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
-    ["app/(app)/dashboard/decks/page.tsx", /deckCoverOf\(deck, coverColors\)/],
     ["app/(marketing)/deck/[slug]/opengraph-image.tsx", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
     ["app/api/decks/[id]/download/route.ts", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
     // A deck entry's printing at the size a surface draws it (TODO DK5.11).

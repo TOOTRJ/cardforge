@@ -132,6 +132,41 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "deck_like": {
+      // Someone liked your PUBLIC deck — once per liker and deck (0149).
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      return {
+        subject: actorName,
+        body: `liked your deck${title ? ` "${title}"` : ""}.`,
+        href: slug ? `/deck/${slug}` : "/dashboard/decks",
+      };
+    }
+    case "deck_card_added": {
+      // Another creator's public deck now holds your cards (D3) — ONE row
+      // per deck, its cards merged in (0149: payload.cardIds / count; the
+      // row's card is the card when there is one), by the card page's own
+      // rule.
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      const count = num(payload.count) ?? (Array.isArray(payload.cardIds) ? payload.cardIds.length : 1);
+      const deck = title ? `"${title}"` : "their deck";
+      const what =
+        count > 1
+          ? `${count.toLocaleString("en-US")} of your cards`
+          : item.card
+            ? item.card.title
+            : "your card";
+      return {
+        subject: actorName,
+        body: `added ${what} to ${deck}.`,
+        href: slug
+          ? `/deck/${slug}`
+          : count <= 1 && item.card && item.card.ownerUsername
+            ? `/card/${item.card.ownerUsername}/${item.card.slug}`
+            : "/dashboard/cards",
+      };
+    }
     case "deck_generated": {
       const title = str(payload.title);
       const slug = str(payload.slug);

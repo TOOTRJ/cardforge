@@ -64,10 +64,15 @@ import {
   type CardWithStats,
   type ProfileWithStats,
 } from "@/lib/cards/queries";
-import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
-import { listPublicDecksContaining } from "@/lib/decks/queries";
+import {
+  countPublicDecksForCard,
+  listPublicDeckTilesContaining,
+  listPublicDecksContaining,
+} from "@/lib/decks/queries";
+import { listDeckTileArt } from "@/lib/decks/tile-art";
+import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
 import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
@@ -159,12 +164,13 @@ export async function CardDetailContent({
     creatorProfile,
     viewerFollows,
     remixCount,
-    deckCount,
+    publicDeckCount,
     topRemixes,
     remixParent,
     overallRank,
     trendingSignals,
     inDecks,
+    deckTiles,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
     // scopes the anon client to shareable cards) — and only the owner's own
@@ -197,8 +203,10 @@ export async function CardDetailContent({
       ? isFollowing(card.owner_id)
       : Promise.resolve(false),
     // Analytics: remix + deck membership counts, and the top-liked remixes.
+    // The deck count is the public decks' (TODO DK8.4: the "In decks" list's
+    // own rule — a count and the decks it stands for never disagree).
     countRemixesOfCard(card.id),
-    countDecksForCard(card.id),
+    countPublicDecksForCard(card.id),
     listTopRemixesOfCard(card.id, 4),
     // Provenance: the original card this was remixed from (if any).
     card.parent_card_id
@@ -208,10 +216,16 @@ export async function CardDetailContent({
     getCardLikeRankOverall(card.id),
     // 7-day velocity for the trending badge.
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
-    // The owner's custom footer mark (paid perk) — the live hero preview
-    // prints it so the page matches exports and bakes.
-    variant === "page" ? listPublicDecksContaining(card.id) : Promise.resolve([]),
+    // The public decks the card is in — ONE list (0144 / 0149's rule) for the
+    // "In decks" row, the JSON-LD isPartOf and the "Decks with this card"
+    // tiles (the same list hydrated: cache()-deduped, one RPC).
+    listPublicDecksContaining(card.id),
+    listPublicDeckTilesContaining(card.id),
   ]);
+  const deckTileArt = await listDeckTileArt(deckTiles, { anonymous: true });
+  // The stat counts every deck the list stands for (it shows the newest few);
+  // unread (a database 0149 hasn't reached), the list's own length.
+  const deckCount = publicDeckCount ?? inDecks.length;
 
   // Bump the view tally after the response ships — never for the owner's own
   // views, and never blocking render. A modal open is a view of the card the
@@ -515,6 +529,15 @@ export async function CardDetailContent({
         />
       </div>
 
+      {deckTiles.length > 0 ? (
+        <DecksWithCard
+          decks={deckTiles}
+          art={deckTileArt}
+          total={Math.max(deckCount, deckTiles.length)}
+          cardPath={`/card/${username}/${card.slug}`}
+        />
+      ) : null}
+
       {moreFromOwner.length > 0 || relatedCards.length > 0 ? (
         <div className="mt-14 flex flex-col gap-12">
           {moreFromOwner.length > 0 ? (
@@ -568,6 +591,52 @@ function CardMissingNotice() {
         <Link href="/gallery">Browse the gallery</Link>
       </Button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DecksWithCard — "Decks with this card" (TODO DK8.4), page and modal alike:
+// the public decks the card's page names (listPublicDecksContaining — the
+// one list, by its one rule; the JSON-LD isPartOf reads it too) as
+// DeckTiles. The heading counts every such deck; the tiles are the newest.
+// SEAM (DK8.3, not built here): "Build a deck around this card" sits beside
+// the heading once the create-deck dialog lands (another builder's PR).
+// ---------------------------------------------------------------------------
+
+function DecksWithCard({
+  decks,
+  art,
+  total,
+  cardPath,
+}: {
+  decks: Awaited<ReturnType<typeof listPublicDeckTilesContaining>>;
+  art: Awaited<ReturnType<typeof listDeckTileArt>>;
+  total: number;
+  cardPath: string;
+}) {
+  return (
+    <section aria-labelledby="decks-with-card-heading" className="mt-14">
+      <div className="mb-4 flex flex-col gap-1">
+        <h2 id="decks-with-card-heading" className="font-display text-lg font-semibold text-foreground">
+          Decks with this card
+        </h2>
+        <p className="text-xs text-muted">
+          In {total} public deck{total === 1 ? "" : "s"}
+          {total > decks.length ? ` — the newest ${decks.length}` : ""}.
+        </p>
+      </div>
+      <div className={DECK_GRID_CLASS}>
+        {decks.map((deck) => (
+          <DeckTile
+            key={deck.id}
+            deck={deck}
+            art={art.get(deck.id)}
+            sizes={DECK_GRID_SIZES}
+            likeRedirect={cardPath}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

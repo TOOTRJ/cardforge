@@ -320,9 +320,29 @@ instead. Each bullet: what the header says, and what is true now.
   dropped; a 3-argument call resolves to the new one). 0143's
   `import_deck_entries` is redefined by 0144 unchanged but for writing
   `source = 'import'` on the rows it adds.
+- **0144 (`public_decks_containing_card` holds the decks-on-a-card rule
+  itself)** — since 0149 its body reads `public_deck_card_pairs`, which
+  holds 0144's predicate word for word but for its "real creator" clause
+  (no admin, a public card of their own), now the shared
+  `owner_is_creator(owner)` that `list_trending_decks` reads too; the pairs
+  are read as well by `public_deck_counts_for_cards` (the gallery's "In N
+  decks") and the `deck_card_added` notification. The list's signature and
+  order are unchanged; its result is narrowed on purpose: a card on a
+  deck's MAYBEBOARD alone no longer names that deck (0144 counted it; the
+  stored `card_count`, the tiles and the fans already left the maybeboard
+  out).
+- **0055 (`deck_likes_deck_id_idx` on `deck_likes (deck_id)`)** — since
+  0149 the index is `deck_likes_deck_id_created_at_idx` on
+  `(deck_id, created_at)` (trending decks count the week's likes per deck);
+  the single-column index is dropped.
 - **0145 (the private-deck cap: `deck_capacity_for(uuid)` and
   `decks_enforce_capacity` hold Free to 1 and Plus to 3 private or unlisted
   decks)** — dropped by 0147 (owner decision 2026-10-29: decks are unlimited
   on every plan; paid conversion is saved-card capacity, 0104). The trigger,
   `enforce_deck_capacity()` and the helper are gone; 0145 never changed a
   row, so nothing was restored.
+- **0148 (`list_public_creators` keeps its makers with `not
+  owner_is_admin(owner)`)** — since 0149 that filter is the shared
+  `owner_is_creator(owner)` (no admin, a public card of their own — the
+  card pages' and trending's anti-spam rule); the same people, signature,
+  result and order.

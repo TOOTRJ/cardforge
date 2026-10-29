@@ -32,10 +32,10 @@ test.describe("public decks browse", () => {
     await expect(page).toHaveURL(/\/decks\/browse$/);
     await expect(page.getByRole("heading", { name: /browse decks/i })).toBeVisible();
     await expect(
-      page.getByRole("group", { name: /filter by format/i }),
+      page.getByRole("radiogroup", { name: /filter by format/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /^commander$/i }),
+      page.getByRole("radio", { name: /^commander$/i }),
     ).toBeVisible();
   });
 });

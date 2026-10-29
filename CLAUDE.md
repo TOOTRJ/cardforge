@@ -1821,11 +1821,43 @@ Rules and gotchas:
   decks, and another user's only from a real creator — no admin, at least
   one public card of their own, and only while the card is public
   (0144 `public_decks_containing_card`, read by `listPublicDecksContaining`;
-  "In decks" and the JSON-LD `isPartOf` are that one list, never a second
-  read). Another creator's card is credited
+  "In decks", the "Decks with this card" tiles and the JSON-LD `isPartOf`
+  are that one list, never a second read). Since 0149 "a real creator" is
+  ONE function, `owner_is_creator(owner)` (no admin, a public card of their
+  own — the anti-spam rule; trending and /creators' `list_public_creators`
+  read it too, never a restated
+  predicate), and the rule lives in ONE
+  function, `public_deck_card_pairs`, which that list, the gallery tile's
+  batched "In N decks" (`public_deck_counts_for_cards` →
+  `publicDeckCountsForCards`, `CardWithStats.public_deck_count`) and the
+  `deck_card_added` notification all read — a count, a list or a
+  notification about "decks with this card" goes through it, never a
+  restated predicate. Another creator's card is credited
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
+  Every deck LIST draws ONE tile, `DeckTile` (`components/decks/deck-tile.tsx`,
+  TODO DK8.1: /decks + browse, format hubs, trending rows, profiles, My
+  decks, a card's decks — never a tile of its own), fed by `listDeckTileArt`
+  (`lib/decks/tile-art.ts`: ONE embedded read per page of decks — the
+  colours and the first three of the page's own fan, by the page's rules: a
+  private card nowhere, another creator's only while public, thumbs only).
+  Its title is its one link, stretched over it; the author and the heart are
+  siblings. Trending (DK8.2) is `list_trending_decks` (0149: the last 7
+  days' likes minus the owner's own, public, non-empty, real creators'
+  decks only — `owner_is_creator`), cookie-free on /decks and the gallery
+  (both stay ISR); /decks'
+  controls live on /decks/browse alone (sort, ChipGroup formats, `?owner=`).
+  Deck notifications (DK8.6, 0149): `deck_like` (a public deck, never the
+  owner's own like, once per liker and deck — never retracted, so a like
+  loop can't toast again) and `deck_card_added` (ONE row per recipient and
+  deck, never per card — payload `cardIds` / `count`; later cards MERGE
+  into it, unread again only when the set grew, and an UPDATE raises no
+  toast — a DEFERRED constraint trigger judged at commit, when 0143's
+  statement trigger has stored `card_count`, and when a deck turns public);
+  neither trigger can fail the write that fired it. The maybeboard is not
+  the deck there either: `public_deck_card_pairs` leaves it out, as
+  `card_count`, the tiles and the fans do.
   A SAVED card joins or leaves the owner's decks from My Cards, the
   creator's edit and another creator's card page (TODO DK9) through ONE
   picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a
