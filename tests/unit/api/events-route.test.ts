@@ -17,7 +17,8 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/supabase/session-cookie", () => ({
   isSupabaseAuthCookieName: (name: string) => name.startsWith("sb-"),
 }));
-vi.mock("@/lib/supabase/server", () => ({ getCurrentUser: async () => s.user }));
+const getCurrentUser = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/supabase/server", () => ({ getCurrentUser: async () => getCurrentUser() ?? s.user }));
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
@@ -45,6 +46,7 @@ beforeEach(() => {
   s.inserts = [];
   s.sessionCookie = false;
   s.user = null;
+  getCurrentUser.mockClear();
 });
 
 describe("POST /api/events", () => {
@@ -79,6 +81,53 @@ describe("POST /api/events", () => {
     expect((await post({ event: "pricing_view" }, { "sec-fetch-site": "cross-site" })).status).toBe(204);
     expect((await post("{not json")).status).toBe(204);
     expect((await post({ event: "pricing_view", props: { reason: "x".repeat(3000) } })).status).toBe(204);
+    expect(s.inserts).toEqual([]);
+  });
+});
+
+describe("POST /api/events — screen_width (TODO WD9)", () => {
+  it("records the bucket alone, with no identifier and no signedIn", async () => {
+    const res = await post({ event: "screen_width", props: { bucket: "1366-1535" } });
+    expect(res.status).toBe(204);
+    expect(s.inserts).toEqual([{ event: "screen_width", user_id: null, props: { bucket: "1366-1535" }, source: "client" }]);
+  });
+
+  it("stays anonymous for a signed-in visitor — the session is never read", async () => {
+    s.sessionCookie = true;
+    s.user = { id: "user-1" };
+    await post({ event: "screen_width", props: { bucket: "1920-2559" } });
+    expect(s.inserts).toEqual([{ event: "screen_width", user_id: null, props: { bucket: "1920-2559" }, source: "client" }]);
+    expect(getCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it("drops every other prop a body might carry — the exact width, the screen, the UA, any id", async () => {
+    await post({
+      event: "screen_width",
+      props: {
+        bucket: "0-639",
+        width: 390,
+        screen: "1170x2532",
+        userAgent: "Mozilla/5.0",
+        userId: "user-1",
+        sessionId: "s-1",
+        referrer: "google.com",
+        signedIn: true,
+      },
+    });
+    expect(s.inserts).toEqual([{ event: "screen_width", user_id: null, props: { bucket: "0-639" }, source: "client" }]);
+  });
+
+  it("records nothing without a known bucket", async () => {
+    for (const props of [{}, { bucket: "1440" }, { bucket: 1440 }, { width: 1440 }, null]) {
+      expect((await post({ event: "screen_width", props })).status).toBe(204);
+    }
+    expect(s.inserts).toEqual([]);
+  });
+
+  it("drops crawlers like every browser event", async () => {
+    await post({ event: "screen_width", props: { bucket: "1024-1365" } }, {
+      "user-agent": "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+    });
     expect(s.inserts).toEqual([]);
   });
 });
