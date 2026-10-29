@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
+import { publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
@@ -276,7 +277,7 @@ export default async function DeckDetailPage({
             {/* Free for every viewer (TODO DK0.7); streams in with the
                 card list, so the header still paints at once. */}
             <Suspense fallback={null}>
-              <DeckCopyDecklistSlot deckId={deck.id} deckTitle={deck.title} />
+              <DeckCopyDecklistSlot deckId={deck.id} deckTitle={deck.title} isOwner={isOwner} />
             </Suspense>
             {isOwner && user ? (
               <DeckOwnerTools
@@ -335,12 +336,16 @@ async function DeckBody({
   const analytics = computeDeckAnalytics(items);
   // The format check is the owner's to-do list (TODO DK0.9): a visitor
   // never sees it, and an empty deck has nothing to check (validateDeck).
+  // A card the strong-language rule kept private shows a neutral name to
+  // anyone but the owner (lib/decks/private-card-name.ts) — in the list, its
+  // pop-up and a warning that quotes it. Judged on the real entries.
   const warnings = isOwner
     ? validateDeck(
         format,
         items.map((i) => i.entry),
-      )
+      ).map((warning) => publicDeckWarning(warning, isOwner))
     : [];
+  const shownItems = publicDeckItems(items, isOwner);
 
   // The export menu (owner-only, its file builds Pro) gets the viewer's
   // batch-export entitlement. Copying the list is the header's, for all.
@@ -429,7 +434,7 @@ async function DeckBody({
             />
           ) : (
             <DeckCardList
-              items={items}
+              items={shownItems}
               ownerUsername={ownerUsername}
               canManage={isOwner}
             />
@@ -449,11 +454,15 @@ async function DeckBody({
 async function DeckCopyDecklistSlot({
   deckId,
   deckTitle,
+  isOwner,
 }: {
   deckId: string;
   deckTitle: string;
+  isOwner: boolean;
 }) {
-  const items = await listDeckCardsOnce(deckId);
+  // The rows as this viewer's list shows them: a private card's name the
+  // strong-language rule hides stays hidden in the copied text too.
+  const items = publicDeckItems(await listDeckCardsOnce(deckId), isOwner);
   if (!items.some((item) => item.entry.board !== "maybe")) return null;
   const entries = exportEntriesOf(items);
   return (
