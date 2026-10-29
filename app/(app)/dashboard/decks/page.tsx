@@ -10,13 +10,15 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
-import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
 import { getDeckCapacity } from "@/lib/decks/capacity";
 import { DeckCapacityMeter } from "@/components/decks/deck-capacity";
 import { deckCountsTowardCap } from "@/lib/billing/deck-capacity-copy";
+import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
 import { DECK_FORMAT_LABELS } from "@/types/deck";
 import { deckCoverOf } from "@/lib/decks/cover";
 import { listDeckCoverColors } from "@/lib/decks/cover-colors";
+import { DeckFeedbackButton } from "@/components/feedback/deck-feedback-dialog";
+import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 
 export const metadata: Metadata = {
   title: "Decks",
@@ -37,17 +39,22 @@ export default async function DecksPage() {
 
   return (
     <DashboardShell>
+      {/* The dashboard is signed in (its layout sends anyone else to log in). */}
+      <DeckBetaBanner signedIn className="mb-6" />
       <PageHeader
         eyebrow="Library"
         title="My decks"
         description="Build decks from real cards and your own creations, then customize the real ones."
         actions={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">
-              <Plus className="h-4 w-4" aria-hidden />
-              New deck
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DeckFeedbackButton signedIn className="h-10" />
+            <Button asChild>
+              <Link href="/dashboard/decks/new">
+                <Plus className="h-4 w-4" aria-hidden />
+                New deck
+              </Link>
+            </Button>
+          </div>
         }
       />
 

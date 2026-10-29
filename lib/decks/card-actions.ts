@@ -24,6 +24,8 @@ export type DeckCardActionResult =
 type OwnedEntry = {
   id: string;
   deck_id: string;
+  /** The linked card before this action — null for an entry with none yet
+   *  (the funnel's deck_card_customized counts the first). */
   card_id: string | null;
   scryfall_id?: string | null;
   /** Absent on a database 0144 has not reached. */
