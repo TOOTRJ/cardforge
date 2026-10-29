@@ -30,22 +30,13 @@ export function isSafetyBlockError(message: string): boolean {
 
 // Phrased POSITIVELY on purpose: listing the forbidden things ("no blood,
 // no gore") can trip the very classifier this is meant to pass.
-/** A timeout was once read as a quiet refusal (probed 2026-09-17: the
- *  strictest-tier prompts ended as timeouts). Inside ONE image call it no
- *  longer moves to the next prompt — on 2026-10-28 every timed-out render
- *  was a slow provider whose picture arrived (lib/ai/image-gen.ts
- *  IMAGE_BUDGET_MS) — but a RETRY of the step still starts one prompt
- *  further down the ladder (artPromptLadder), so a quiet refusal is still
- *  reworded by the next try. */
-function isTimeoutError(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted");
-}
-
-/** Errors worth answering with a reworded prompt. */
-export function shouldRewordAfter(message: string): boolean {
-  return isSafetyBlockError(message) || isTimeoutError(message);
-}
+// A timeout is NOT a refusal (2026-10-28: every timed-out render was a slow
+// provider whose picture arrived — lib/ai/image-gen.ts IMAGE_BUDGET_MS), so
+// only a refusal the provider states moves to a softer prompt. A RETRY of a
+// deck or `card` job step starts its ladder one prompt further down
+// (artPromptLadder, by the step's attempt count); the creator's AI fill and
+// the DFC back step start a NEW job on "try again", so they begin at the
+// original prompt again.
 
 export const SAFE_ART_SUFFIX =
   "Family-friendly stylized fantasy illustration, wholesome and serene, suitable for all ages.";

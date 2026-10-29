@@ -40,7 +40,8 @@ const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
  *  into a HANDLED failure (step patched "failed", credit refunded, retry
  *  offered).
  *
- *  Steps that make ONE image call use the 100s default. Steps that stack
+ *  The default for a caller that names no budget: every card picture
+ *  now passes IMAGE_BUDGET_MS / CARD_STEP_IMAGE_BUDGET_MS. Steps that stack
  *  several bounded calls (remix: identity 30s + source fetch 10s + restyle +
  *  t2i fallback) pass tighter per-call budgets so the SUM stays inside 180s
  *  — a single generous cap does not compose. */
@@ -77,9 +78,10 @@ export type RestyleResult =
  *  threw away pictures that were on their way, paid for a second one that
  *  was just as slow, and failed every generation in the window. A slow
  *  render now gets the whole wait; a refusal the provider SAYS is a
- *  refusal still walks to the next, safer prompt; a timeout stops (a
- *  retry of the step starts its ladder one prompt further on, so a quiet
- *  refusal is still reworded — by the next try, not inside this one).
+ *  refusal still walks to the next, safer prompt; a timeout stops. A retry
+ *  of a deck or `card` job step starts its ladder one prompt further on;
+ *  the creator's AI fill and the DFC back step start a NEW job on "try
+ *  again", so they begin at the original prompt again.
  *
  *  150 s leaves the step route (maxDuration 180 s) its claim, upload and
  *  patch. A step that also saves and publishes a card around the picture
