@@ -14,12 +14,13 @@
 // really gets — its frame's box, its texts — at both bake targets; a static
 // ability draws no badge, so only neighbours that both have a cost count.
 //
-// With one-line abilities, each with a cost, it starts where the rows are
-// closer than a "+" badge's rim is tall (108 px at HD): 6 rows on m15pw and
-// the regular borderless walker (a 594 px box: 99 px each), 7 on the tall
-// borderless one (732 px: 105) — no printed walker has that many; longer
-// texts bring the point down, which is why the card's own rows are laid
-// out rather than a count compared.
+// With EQUAL one-line abilities, each with a cost, it starts where the rows
+// are closer than a "+" badge's rim is tall (108 px at HD): from 6 rows on
+// m15pw and the regular borderless walker (a 594 px box: 99 px each), 7 on
+// the tall borderless one (732 px: 105). MIXED rows reach it from about 5
+// (a long ability takes the room its short neighbours' badges need) — which
+// is why the card's own rows are laid out rather than a count compared. No
+// printed walker has that many rows.
 // tests/unit/creator/walker-crowding.test.ts holds the numbers to the
 // profiles, so a re-cut box moves them with it.
 // Pure: no form, no React.
@@ -27,7 +28,7 @@
 
 import type { LoyaltyAbility } from "@/lib/cards/card-display";
 import { layoutProfileLoyaltyRows, loyaltyBadgesMeet, type LoyaltyRowsLayout } from "@/lib/cards/loyalty-rows";
-import type { FrameProfile } from "@/lib/cards/template-layout";
+import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 
 /** Whether two neighbouring badges of `rows` touch or overlap at either
  *  bake target. `abilities` are the rows' own (a null cost = no badge). */
@@ -39,14 +40,18 @@ export function loyaltyBadgesCollide(
 }
 
 /** The same for a card: its frame's profile (null / no walker rows: never),
- *  the abilities it draws, its aspect. */
+ *  the abilities it draws, its aspect — and, where the caller knows it, the
+ *  holofoil stamp's arch the rows keep out of (rowsStampKeepOut: the
+ *  borderless walkers), so the note judges the very layout the bake draws.
+ *  Without it the rows are the unstamped ones. */
 export function walkerBadgesCollide(
   profile: Pick<FrameProfile, "rules" | "loyalty" | "loyaltyRows" | "symbolStyle"> | null | undefined,
   abilities: readonly LoyaltyAbility[],
   aspect: number,
+  stamp: readonly Rect[] | null = null,
 ): boolean {
   if (!profile?.loyaltyRows || abilities.length < 2) return false;
-  return loyaltyBadgesCollide(layoutProfileLoyaltyRows(profile, abilities, aspect), abilities);
+  return loyaltyBadgesCollide(layoutProfileLoyaltyRows(profile, abilities, aspect, stamp), abilities);
 }
 
 /** The first row count at which a walker of one-line abilities, each with a

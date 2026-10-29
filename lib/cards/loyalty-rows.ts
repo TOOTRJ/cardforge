@@ -71,9 +71,10 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { walkerSizePct } from "@/lib/cards/rules-box";
+import { statInkEm } from "@/lib/cards/stat-fit";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
-import { RULES_HD_WIDTH, RULES_TEXT, orientationFromAspect, rulesPxToPct } from "@/lib/cards/typography";
+import { RULES_HD_WIDTH, RULES_SIZE_PX, RULES_TEXT, orientationFromAspect, rulesPxToPct } from "@/lib/cards/typography";
 
 /** Row anatomy, in em of LOYALTY_ROW_SIZE_PX — the single copy both
  *  renderers draw from (the preview's badge was 1.6 em tall against the
@@ -153,6 +154,29 @@ export function loyaltyBadgeShapeOf(cost: string): LoyaltyBadgeShape {
 /** The badge's numeral as printed: a leading hyphen is the long minus. */
 export function loyaltyBadgeLabel(cost: string): string {
   return cost.replace(/^-/, "−");
+}
+
+/** The room the numeral keeps on each side of the face, HD px: print's
+ *  widest two-character costs ("−10", "+10") leave 9–12 px. */
+const BADGE_NUMERAL_SIDE_PX = 8;
+
+/**
+ * The badge numeral's size, HD px: LOYALTY_BADGE_PRINT.numeralPx while its
+ * ink — both renderers' reach, glyph by glyph (lib/cards/stat-fit.ts
+ * statInkEm, the stat fit's measure) — keeps BADGE_NUMERAL_SIDE_PX inside
+ * the face; a wider one (a three-digit cost, "+100": ~150 px at 62 px
+ * against a 129 px face) steps down to the largest EVEN px that fits (whole
+ * at 750), never below the rules ladder's floor (42 px). Every one- and two-digit
+ * cost keeps 62 px.
+ */
+export function loyaltyBadgeNumeralPx(label: string): number {
+  const base = LOYALTY_BADGE_PRINT.numeralPx;
+  const ink = statInkEm(label);
+  const reach = Math.max(ink.left, ink.right);
+  const half = LOYALTY_BADGE_PRINT.faceWidthPx / 2 - BADGE_NUMERAL_SIDE_PX;
+  if (reach <= 0 || base * reach <= half) return base;
+  const fit = Math.floor(half / reach);
+  return Math.max(RULES_SIZE_PX.floor, fit - (fit % 2));
 }
 
 /** Where a glyph's digits are centred in a line-height-1 box of Beleren
@@ -769,7 +793,7 @@ export function loyaltyBadgesDrawing(
     const art = badgeArtHd(shape);
     const x = span(art.left * k, art.width * k);
     const y = span(centre + art.top * k, art.height * k);
-    const fontPx = Math.round(p.numeralPx * k);
+    const fontPx = Math.round(loyaltyBadgeNumeralPx(loyaltyBadgeLabel(ab.cost)) * k);
     const faceCentre = centre + (p.shapes[shape].faceDyPx + p.numeralDyPx) * k;
     const nx = span(p.faceLeftPx * k, p.faceWidthPx * k);
     const dot = Math.round(p.colon.dotPx * k);

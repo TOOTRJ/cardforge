@@ -9,7 +9,15 @@ import {
   liveRenderScopesSince,
   v75WalkerRowsChanged,
 } from "@/lib/cards/layout-version";
+import {
+  LOYALTY_BADGE_PRINT,
+  layoutProfileLoyaltyRows,
+  loyaltyBadgeLabel,
+  loyaltyBadgeNumeralPx,
+  loyaltyBadgesDrawing,
+} from "@/lib/cards/loyalty-rows";
 import { measuredLinePreviewPct, measuredLinePx, probeLiveShrunkLines } from "@/lib/cards/render-tiers";
+import { statInkEm } from "@/lib/cards/stat-fit";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
@@ -95,5 +103,42 @@ describe("v75 — the long name at the 750 px bake (3.37 (d)): live renders only
     expect((await probeLiveShrunkLines(async () => measuredLinePx(0.04, 0.04, 750))).shrunk).toBe(false);
     // Outside a probe nothing is recorded (and nothing throws).
     expect(measuredLinePx(0.0351, 0.04, 750)).toBe(Math.floor(0.0351 * 1500) / 2);
+  });
+});
+
+describe("v75 — a badge's numeral fits its face", () => {
+  it("keeps 62 px for every one- and two-digit cost, and steps a three-digit one down to an even px that fits", () => {
+    const face = LOYALTY_BADGE_PRINT.faceWidthPx;
+    for (const cost of ["+1", "0", "-2", "-10", "+10", "-X", "+X", "-99"]) {
+      expect(loyaltyBadgeNumeralPx(loyaltyBadgeLabel(cost)), cost).toBe(LOYALTY_BADGE_PRINT.numeralPx);
+    }
+    for (const cost of ["+100", "-100", "-250"]) {
+      const label = loyaltyBadgeLabel(cost);
+      const px = loyaltyBadgeNumeralPx(label);
+      const ink = statInkEm(label);
+      expect(px, cost).toBeLessThan(LOYALTY_BADGE_PRINT.numeralPx);
+      expect(px % 2, cost).toBe(0);
+      // Its ink (either renderer's reach, each side of the centre) inside
+      // the face, with room to spare on both sides…
+      expect(2 * Math.max(ink.left, ink.right) * px, cost).toBeLessThanOrEqual(face - 16);
+      // …where at 62 px it was not.
+      expect(2 * Math.max(ink.left, ink.right) * LOYALTY_BADGE_PRINT.numeralPx, cost).toBeGreaterThan(face - 16);
+    }
+    // Never below the rules floor.
+    expect(loyaltyBadgeNumeralPx(loyaltyBadgeLabel("-100000"))).toBe(42);
+  });
+
+  it("is the size both renderers draw: the drawing's numeral at each target", () => {
+    const abilities = [
+      { cost: "+100", text: "Draw a card." },
+      { cost: "-2", text: "Scry 2." },
+    ];
+    const rows = layoutProfileLoyaltyRows(getFrameProfile("m15pw"), abilities, 7 / 5);
+    const [big, small] = loyaltyBadgesDrawing(rows, abilities, "hd");
+    expect(big.numeral.fontPx).toBe(loyaltyBadgeNumeralPx("+100"));
+    expect(big.numeral.fontPx).toBe(50);
+    expect(small.numeral.fontPx).toBe(62);
+    const [big750, small750] = loyaltyBadgesDrawing(rows, abilities, "default");
+    expect([big750.numeral.fontPx, small750.numeral.fontPx]).toEqual([25, 31]);
   });
 });
