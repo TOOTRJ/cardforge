@@ -66,7 +66,10 @@ export function UserMenu({
       align="end"
       ariaLabel="Open account menu"
       label={<Avatar avatarUrl={avatarUrl ?? null} label={label} className="h-8 w-8" />}
-      buttonClassName="rounded-full pl-0.5 pr-1.5"
+      // Below `sm` the avatar alone (no caret): a 320 px row holds the mark,
+      // ＋, the bell, the avatar and ☰ inside its 16 px gutters.
+      buttonClassName="rounded-full px-0.5 sm:pr-1.5"
+      caretClassName="max-sm:hidden"
       // An admin's panel is wider: its admin grid's two columns fit their
       // labels whole.
       panelClassName={cn("max-h-[calc(100svh-5rem)] overflow-y-auto", isAdmin ? "w-80" : "w-72")}

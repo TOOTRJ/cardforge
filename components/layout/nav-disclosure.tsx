@@ -80,6 +80,8 @@ type NavDisclosureProps = {
   align?: "start" | "end";
   className?: string;
   buttonClassName?: string;
+  /** The caret's classes (the avatar drops it on a phone's narrow row). */
+  caretClassName?: string;
   panelClassName?: string;
   children: React.ReactNode;
 };
@@ -92,6 +94,7 @@ export function NavDisclosure({
   align = "start",
   className,
   buttonClassName,
+  caretClassName,
   panelClassName,
   children,
 }: NavDisclosureProps) {
@@ -153,6 +156,7 @@ export function NavDisclosure({
           className={cn(
             "h-3.5 w-3.5 shrink-0 text-subtle transition-transform duration-150 motion-reduce:transition-none",
             open && "rotate-180",
+            caretClassName,
           )}
         />
       </button>

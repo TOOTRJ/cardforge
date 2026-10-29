@@ -126,7 +126,10 @@ export function SiteHeader({ user, challengeBadge, className }: SiteHeaderProps)
     >
       <HeaderDisclosures>
         <div className={cn(WIDE_FRAME_CLASS, "flex h-16 items-center gap-3 sm:gap-6")}>
-          <Logo className="shrink-0" />
+          {/* Under 360 px the mark stands alone: the signed-in row (＋, bell,
+              avatar, ☰) and the wordmark don't fit a 320 px screen together
+              (WCAG 1.4.10 reflow). */}
+          <Logo className="shrink-0" wordmarkClassName="max-[359px]:hidden" />
 
           <HeaderNav
             className="hidden lg:block"

@@ -89,6 +89,64 @@ test.describe("header row widths", () => {
   }
 });
 
+// The phone row at the narrowest widths (WCAG 1.4.10 reflow at 320 px).
+// Signed in, the row is the mark, ＋, the bell, the avatar and ☰ — the
+// widest it gets; the /api/me island is fed a long name and a 4-digit
+// balance (the session cookie is a stand-in: only its presence is read).
+const MOCK_USER = {
+  id: null,
+  username: "maximiliana_thunderquill_9999",
+  displayName: "Maximiliana Thunderquill-Okonkwo the Third",
+  isPaid: false,
+  tier: "free",
+  credits: 9876,
+  creditsUsed: 1234,
+  unreadNotifications: 12,
+  hasMessages: true,
+  unreadMessages: 3,
+};
+
+test.describe("the phone row", () => {
+  for (const who of ["signed out", "signed in", "admin"] as const) {
+    for (const width of [320, 360, 390]) {
+      test(`${who} at ${width} px: no sideways scroll, every control inside the 16 px gutters`, async ({ page, context, baseURL }) => {
+        await page.setViewportSize({ width, height: 800 });
+        if (who !== "signed out") {
+          await context.addCookies([{ name: "sb-e2e-auth-token", value: "stand-in", url: baseURL! }]);
+          await page.route("**/api/me", (route) =>
+            route.fulfill({
+              contentType: "application/json",
+              body: JSON.stringify({ user: { ...MOCK_USER, isAdmin: who === "admin", isPaid: who === "admin" } }),
+            }),
+          );
+        }
+        await page.goto("/about");
+        const header = page.getByRole("banner");
+        if (who !== "signed out") await expect(header.getByRole("button", { name: "Open account menu" })).toBeVisible();
+        await expect(header.getByRole("link", { name: "Create a card" })).toBeVisible();
+        await expect(header.getByRole("button", { name: "Open navigation menu" })).toBeVisible();
+        const row = await page.evaluate(() => {
+          const el = document.querySelector("header > div")!;
+          const controls = [...el.querySelectorAll("a, button")]
+            .filter((c) => !c.closest("[hidden]") && c.getBoundingClientRect().width > 0)
+            .map((c) => {
+              const r = c.getBoundingClientRect();
+              return { name: c.getAttribute("aria-label") ?? c.textContent?.trim() ?? "", left: r.left, right: r.right };
+            });
+          return {
+            page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            row: el.scrollWidth - el.clientWidth,
+            outside: controls.filter((c) => c.left < 16 - 0.5 || c.right > window.innerWidth - 16 + 0.5).map((c) => c.name),
+          };
+        });
+        expect(row.page).toBeLessThanOrEqual(0);
+        expect(row.row).toBeLessThanOrEqual(0);
+        expect(row.outside).toEqual([]);
+      });
+    }
+  }
+});
+
 test.describe("the drawer (phone)", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
