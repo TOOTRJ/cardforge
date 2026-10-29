@@ -265,12 +265,18 @@ export function OgBody({
   );
 }
 
+/** One card of the deck share image's fan: its bake thumb as a data URI,
+ *  and whether the card is 7:5 (Battle, Split — lib/cards/card-orientation). */
+export type OgFanCard = { src: string; landscape: boolean };
+
 /** The deck share image (TODO DK6.6): the deck's cover full-bleed (its
  *  upload or its default background) under a navy scrim, the title block
  *  on the left and up to five card thumbnails fanned on the right — the
- *  deck page's hero, flat. `cover` and every `cards` entry are data URIs
- *  (fetchImageAsDataUri); Satori must never fetch mid-render. With no
- *  cards the title block takes the width. */
+ *  deck page's hero, flat. `cover` and every card's `src` are data URIs
+ *  (lib/og/deck-share-image.tsx); Satori must never fetch mid-render. A
+ *  landscape card is letterboxed in its portrait slot, whole, as the deck
+ *  page's tile draws it — never cropped. With no cards the title block
+ *  takes the width. */
 export function OgDeckHero({
   cover,
   cards,
@@ -279,7 +285,7 @@ export function OgDeckHero({
   byline,
 }: {
   cover: string | null;
-  cards: readonly string[];
+  cards: readonly OgFanCard[];
   eyebrow: string;
   title: string;
   byline: string;
@@ -292,7 +298,7 @@ export function OgDeckHero({
   const slots = fan
     .map((_, k) => k - (fan.length - 1) / 2)
     .sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
-  const placed = fan.map((src, index) => ({ src, offset: slots[index] })).reverse();
+  const placed = fan.map((card, index) => ({ card, offset: slots[index] })).reverse();
   const cardW = 208;
   const cardH = Math.round((cardW * 7) / 5);
   const step = fan.length > 3 ? 80 : 100;
@@ -345,8 +351,9 @@ export function OgDeckHero({
           background: "linear-gradient(180deg, rgba(13,19,32,0) 0%, rgba(13,19,32,0.72) 100%)",
         }}
       />
-      {placed.map(({ src, offset }) => {
+      {placed.map(({ card, offset }) => {
         const reach = Math.abs(offset);
+        const landscapeH = Math.round((cardW * 5) / 7);
         return (
           <div
             key={offset}
@@ -361,10 +368,17 @@ export function OgDeckHero({
               boxShadow: "0 18px 36px rgba(0,0,0,0.55)",
               transform: `rotate(${(offset * 7).toFixed(1)}deg)`,
               transformOrigin: "50% 120%",
+              ...(card.landscape ? { alignItems: "center", background: "#101015" } : {}),
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="" width={cardW} height={cardH} style={{ borderRadius: 12, objectFit: "cover" }} />
+            <img
+              src={card.src}
+              alt=""
+              width={cardW}
+              height={card.landscape ? landscapeH : cardH}
+              style={{ borderRadius: card.landscape ? 9 : 12, objectFit: "cover" }}
+            />
           </div>
         );
       })}

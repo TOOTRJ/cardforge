@@ -1,4 +1,3 @@
-import { ogImageResponse } from "@/lib/og/image-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createPublicClient } from "@/lib/supabase/public";
 import { lookupUsername } from "@/lib/profile/username";
@@ -14,13 +13,21 @@ import {
 import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import {
+  DECK_SHARE_IMAGE_TYPE,
+  deckCoverDataUri,
+  deckShareImageResponse,
+  renderDeckShareImage,
+} from "@/lib/og/deck-share-image";
 
 // Social-preview card for deck pages (TODO DK6.6): the deck page's hero,
 // flat — the cover (an upload, or the default background its colours pick,
 // lib/decks/cover.ts) with up to five of its PipGlyph cards fanned in front
 // (lib/decks/featured.ts: commanders first, then a seeded pick of its custom
 // cards). Every picture is pre-fetched to a data URI, so a dead URL drops
-// that one picture, never the render.
+// that one picture, never the render. Served as JPEG, under WhatsApp's
+// 600 KB (lib/og/deck-share-image.tsx).
 //
 // The fan here is the deck's OWN cards only — their stored bake thumbs,
 // which carry the pipglyph.com mark like every display surface. A real
@@ -29,9 +36,9 @@ import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
 
 export const alt = "A custom card deck on PipGlyph";
 export const size = OG_SIZE;
-export const contentType = "image/png";
+export const contentType = DECK_SHARE_IMAGE_TYPE;
 
-type OgCard = FeaturableCard & { color_identity: string[] | null };
+type OgCard = FeaturableCard & { color_identity: string[] | null; frame_style: unknown };
 
 type OgDeck = {
   id: string;
@@ -74,7 +81,7 @@ async function getDeck(
       supabase
         .from("deck_cards")
         .select(
-          "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity)",
+          "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)",
         )
         .eq("deck_id", deck.id)
         .order("position", { ascending: true }),
@@ -95,15 +102,14 @@ export default async function Image({
   const result = await getDeck(slug);
 
   if (!result) {
-    return ogImageResponse(
-      (
+    return deckShareImageResponse(
+      await renderDeckShareImage(
         <OgShell>
           <OgEyebrow>Community decks</OgEyebrow>
           <OgTitle text="Custom card decks" />
           <OgBody>Real decks rebuilt with custom cards.</OgBody>
-        </OgShell>
+        </OgShell>,
       ),
-      size,
     );
   }
 
@@ -114,28 +120,27 @@ export default async function Image({
   // filled from the baked PipGlyph cards alone.
   const customs = featuredCardsOf(items, deck.id, { printings: false });
   const [coverUri, ...thumbs] = await Promise.all([
-    fetchImageAsDataUri(cover.src),
-    ...customs.map((featured) =>
-      featured.kind === "custom" && featured.card.rendered_thumb_url
-        ? fetchImageAsDataUri(featured.card.rendered_thumb_url)
-        : Promise.resolve(null),
-    ),
+    deckCoverDataUri(cover.src),
+    ...customs.map(async (featured) => {
+      if (featured.kind !== "custom" || !featured.card.rendered_thumb_url) return null;
+      const src = await fetchImageAsDataUri(featured.card.rendered_thumb_url);
+      return src ? { src, landscape: isLandscapeFrame(featured.card.frame_style) } : null;
+    }),
   ]);
   const byline = username ? `by @${username}` : "on PipGlyph";
   const formatLabel = isDeckFormat(deck.format)
     ? DECK_FORMAT_LABELS[deck.format]
     : "Deck";
 
-  return ogImageResponse(
-    (
+  return deckShareImageResponse(
+    await renderDeckShareImage(
       <OgDeckHero
         cover={coverUri}
-        cards={thumbs.filter((thumb): thumb is string => Boolean(thumb))}
+        cards={thumbs.filter((thumb) => thumb !== null)}
         eyebrow={`${formatLabel} deck`}
         title={deck.title}
         byline={byline}
-      />
+      />,
     ),
-    size,
   );
 }

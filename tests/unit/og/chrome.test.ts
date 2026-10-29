@@ -54,7 +54,7 @@ describe("OG chrome is Satori-safe (no undefined style values)", () => {
     // card, one, and the full fan of five (more are cut to five).
     for (const cover of ["data:image/png;base64,", null]) {
       for (const count of [0, 1, 3, 5, 7]) {
-        const cards = Array.from({ length: count }, () => "data:image/png;base64,");
+        const cards = Array.from({ length: count }, (_, i) => ({ src: "data:image/png;base64,", landscape: i === 1 }));
         expect(
           undefinedStyleKeys(OgDeckHero({ cover, cards, eyebrow: "Commander deck", title: "T", byline: "by @x" })),
           `${cover ? "cover" : "no cover"}, ${count} cards`,
@@ -80,11 +80,35 @@ describe("the deck share image's fan (TODO DK6.6)", () => {
   };
 
   it("draws at most five cards, back to front — the first card (the commander) LAST, on top (Satori has no z-index)", () => {
-    const cards = ["one", "two", "three", "four", "five", "six"].map((name) => `data:image/png;base64,${name}`);
+    const cards = ["one", "two", "three", "four", "five", "six"].map((name) => ({ src: `data:image/png;base64,${name}`, landscape: false }));
     const drawn = imagesOf(OgDeckHero({ cover: null, cards, eyebrow: "Deck", title: "T", byline: "b" }));
     const fan = drawn.filter((src) => src.startsWith("data:image/png;base64,") && !src.endsWith(","));
     expect(fan).toHaveLength(5);
-    expect(fan.at(-1)).toBe(cards[0]);
-    expect(fan).not.toContain(cards[5]);
+    expect(fan.at(-1)).toBe(cards[0].src);
+    expect(fan).not.toContain(cards[5].src);
+  });
+
+  it("letterboxes a landscape card (Battle, Split) whole in its portrait slot — never a portrait crop", () => {
+    const tree = OgDeckHero({
+      cover: null,
+      cards: [{ src: "data:image/png;base64,battle", landscape: true }],
+      eyebrow: "Deck",
+      title: "T",
+      byline: "b",
+    });
+    const find = (node: ReactNode): ReactElement<{ src?: string; width?: number; height?: number }> | null => {
+      if (Array.isArray(node)) return node.map(find).find(Boolean) ?? null;
+      if (!isValidElement(node)) return null;
+      const element = node as ReactElement<{ src?: string; width?: number; height?: number; children?: ReactNode }>;
+      if (element.type === "img" && element.props.src === "data:image/png;base64,battle") return element;
+      const rendered =
+        typeof element.type === "function"
+          ? (element.type as (props: unknown) => ReactNode)(element.props)
+          : element.props.children;
+      return find(rendered);
+    };
+    const image = find(tree)!;
+    // 7:5, as wide as the slot.
+    expect(image.props.width! / image.props.height!).toBeCloseTo(7 / 5, 1);
   });
 });

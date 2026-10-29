@@ -1,8 +1,5 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { isDefaultProfileMedia } from "@/lib/profile/default-media";
-import { isDefaultDeckCover } from "@/lib/decks/cover";
 import { toSatoriDataUrl } from "@/lib/render/art-source";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
@@ -20,21 +17,10 @@ export * from "@/lib/og/chrome";
 export async function fetchImageAsDataUri(
   url: string,
 ): Promise<string | null> {
-  // A built-in deck background (lib/decks/cover.ts) is one of OUR static
-  // files, named by an exact list: read from disk where the function has
-  // it, else from this deployment's own origin (a protected preview needs
-  // the automation bypass, as the bake's frame fetch does).
-  const headers: Record<string, string> = {};
-  if (isDefaultDeckCover(url)) {
-    const onDisk = await readFile(path.join(process.cwd(), "public", url)).catch(() => null);
-    if (onDisk) return toSatoriDataUrl(onDisk).catch(() => null);
-    const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
-    if (bypass) headers["x-vercel-protection-bypass"] = bypass;
-    url = `${getSiteBaseUrl()}${url}`;
-  } else if (isDefaultProfileMedia(url)) {
-    // A built-in avatar/banner is stored as a site-relative path
-    // (lib/profile/default-media) — it is one of OUR static files, matched
-    // by a strict pattern, so it is fetched from this deployment's own origin.
+  // A built-in avatar/banner is stored as a site-relative path
+  // (lib/profile/default-media) — it is one of OUR static files, matched by a
+  // strict pattern, so it is fetched from this deployment's own origin.
+  if (isDefaultProfileMedia(url)) {
     url = `${getSiteBaseUrl()}${url}`;
   } else if (!isAllowedServerImageFetchUrl(url)) {
     // SSRF guard: only fetch from our storage bucket / Scryfall — never an
@@ -44,7 +30,7 @@ export async function fetchImageAsDataUri(
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(url, { signal: controller.signal, headers });
+    const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") ?? "image/png";
