@@ -16,6 +16,9 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //   image refused / timed out         refunded once          "…returned."
 //   image provider error (raw text)   refunded once          our sentence, no raw text
 //   art could not be stored           refunded once          "…returned."
+//   the nudity scan blocked the art   refunded once          the scan's sentence + "…returned."
+//   both image models failed          refunded once          the failure's sentence
+//   the BACKUP model painted          charged once           (done; image_model names it)
 //   the card save is refused          refunded once          the save's own words
 //   the step throws                   refunded once          "Something went wrong…"
 //   a refund that doesn't land        left to the sweep      "…comes back … within the hour"
@@ -42,6 +45,8 @@ const s = vi.hoisted(() => ({
   imageThrows: null as Error | null,
   imageCalls: 0,
   persistOk: true,
+  persistBlocked: false,
+  persistCalls: 0,
   createResult: null as null | Record<string, unknown>,
   createThrows: null as Error | null,
   recentLabels: [] as string[],
@@ -121,11 +126,23 @@ vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
     restyleImage: image,
   };
 });
+// The REAL persist's answers (lib/ai/random-art.ts, pinned by
+// ai-art-nudity-scan.test.ts): our sentence, never the storage text, and
+// the scan's block as `art_blocked`.
 vi.mock("@/lib/ai/random-art", () => ({
-  persistGeneratedArt: async () =>
-    s.persistOk
+  persistGeneratedArt: async () => {
+    s.persistCalls += 1;
+    if (s.persistBlocked) {
+      return {
+        ok: false,
+        error: "This artwork was blocked by our nudity filter. Try again or change the prompt.",
+        failure: "art_blocked",
+      };
+    }
+    return s.persistOk
       ? { ok: true, publicUrl: `https://example.supabase.co/storage/v1/object/public/card-art/${USER}/x.png` }
-      : { ok: false, error: "storage: The resource already exists (409) bucket card-art" },
+      : { ok: false, error: "The artwork was painted but couldn't be saved. Try again.", failure: "art_store" };
+  },
 }));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/rate-limit")>()),
@@ -215,6 +232,8 @@ beforeEach(() => {
   s.imageThrows = null;
   s.imageCalls = 0;
   s.persistOk = true;
+  s.persistBlocked = false;
+  s.persistCalls = 0;
   s.createResult = null;
   s.createThrows = null;
   s.recentLabels = [];
@@ -275,6 +294,42 @@ describe("the fill step: every failure after the reserve is refunded once, and s
     expect(step).toMatchObject({ status: "failed", failure: "art_store", refunded: 1 });
     expect(String(step.error)).not.toContain("409");
     expect(s.refund).toHaveBeenCalledTimes(1);
+  });
+
+  it("art our nudity scan blocked: refunded once, the scan's own sentence and the credit's", async () => {
+    s.persistBlocked = true;
+    job("card_fill", FILL_PLAN, "fill:0");
+    const step = await runStep("fill:0");
+    expect(step).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1, refund_pending: false, spend_ref: null });
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(step.fill).toBeNull(); // no art_url handed to the creator
+    expect(failedStepMessage(step)).toBe(
+      "This artwork was blocked by our nudity filter. Try again or change the prompt. Your credit was returned.",
+    );
+  });
+
+  it("both image models failed (the default and its backup): one picture's failure, refunded once", async () => {
+    // generateImageWithFallbacks' answer when flex and pro both timed out.
+    s.image = { ok: false, error: "x", failure: "art_timeout", safetyBlocked: false };
+    job("card_fill", FILL_PLAN, "fill:0");
+    const step = await runStep("fill:0");
+    expect(step).toMatchObject({ status: "failed", failure: "art_timeout", refunded: 1 });
+    expect(s.imageCalls).toBe(1);
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(s.persistCalls).toBe(0);
+  });
+
+  it("the BACKUP model painted: one credit charged, nothing refunded, the step names the painter", async () => {
+    s.image = { ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", promptIndex: 0, model: "bfl/flux-2-pro" };
+    job("card_fill", FILL_PLAN, "fill:0");
+    const step = await runStep("fill:0");
+    expect(step).toMatchObject({ status: "done", image_model: "bfl/flux-2-pro", refunded: null });
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.spend.mock.calls[0]![0]).toBe(1);
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(String(step.spend_ref)).toMatch(/^spend:job-1:fill:0:/);
   });
 
   it("a refund that doesn't land is pending — the user is told it comes back by itself", async () => {
@@ -344,10 +399,22 @@ describe("the single-card step", () => {
     expect(failedStepMessage(step)).toBe("Something went wrong while making this card. Try again. Your credit was returned.");
   });
 
-  it("a success settles: the ref is stamped and no refund runs", async () => {
+  it("art our nudity scan blocked: refunded once, the scan's sentence (the card stays a private draft)", async () => {
+    s.persistBlocked = true;
     job("card", CARD_PLAN, "card:0");
     const step = await runStep("card:0");
-    expect(step).toMatchObject({ status: "done", failure: null, refunded: null });
+    expect(step).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1, card_id: "card-1" });
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(failedStepMessage(step)).toBe(
+      "This artwork was blocked by our nudity filter. Try again or change the prompt. Your credit was returned.",
+    );
+  });
+
+  it("a success settles: the ref is stamped and no refund runs", async () => {
+    s.image = { ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", promptIndex: 0, model: "bfl/flux-2-flex" };
+    job("card", CARD_PLAN, "card:0");
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "done", failure: null, refunded: null, image_model: "bfl/flux-2-flex" });
     expect(String(step.spend_ref)).toMatch(/^spend:job-1:card:0:/);
     expect(s.refund).not.toHaveBeenCalled();
   });
@@ -577,6 +644,25 @@ describe("double-faced cards from the AI dialog: one credit per picture", () => 
     expect(new Set(refs).size).toBe(3);
     // No double refund: one per failed charge, never the front's.
     expect(refundKeys()).toEqual([`refund:${refs[1]}`, `refund:${refs[2]}`]);
+  });
+
+  it("the back picture our nudity scan blocked: the back's credit returned once, the front's stands", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    expect((await dfcFill("transform")).ok).toBe(true);
+    const plan = s.inserted.at(-1)!.plan as Record<string, unknown>;
+    job("card_fill", plan, "fill:0");
+    const front = await runStep("fill:0");
+    expect(front).toMatchObject({ status: "done" });
+    twoStepJob(plan, front);
+    s.persistBlocked = true;
+    const back = await runStep("fill:1");
+    expect(back).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1, spend_ref: null });
+    const [frontRef, backRef] = spendRefs();
+    expect(refundKeys()).toEqual([`refund:${backRef}`]);
+    expect(front.spend_ref).toBe(frontRef);
+    expect(failedStepMessage(back)).toBe(
+      "This artwork was blocked by our nudity filter. Try again or change the prompt. Your credit was returned.",
+    );
   });
 
   it("a finished back asked again is never charged again", async () => {
