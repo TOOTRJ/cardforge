@@ -2067,7 +2067,7 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { format: string; deck_count: number }[];
       };
-      // Migration 0147 — the /creators directory and the public requested-
+      // Migration 0148 — the /creators directory and the public requested-
       // frames list (public reads; aggregates only).
       list_public_creators: {
         Args: { p_sort?: string; p_limit?: number; p_offset?: number };

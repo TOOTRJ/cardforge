@@ -11,7 +11,7 @@
 -- Japan showcase (3 users, 3 requests) outranks Zilortha (2 users, 6). A
 -- row whose dev account is missing (this file run on its own) is skipped.
 --
--- The public /frames/requested list (migration 0147, TODO NV12) counts the
+-- The public /frames/requested list (migration 0148, TODO NV12) counts the
 -- same rows by PEOPLE — only rows with an account, never an admin's, before
 -- today's UTC midnight (every row here is a day old or more) — and shows a
 -- frame only once TWO people asked (k = 2). So: the Japan showcase reads
@@ -79,7 +79,7 @@ from (values
   -- Overlord of the Floodpits DSK #389: Japan showcase, full art — two dev accounts
   ('fa000000-0000-4000-a000-000000000009', 'd0000000-0000-4000-a000-000000000002', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '15 days'),
   ('fa000000-0000-4000-a000-00000000000f', 'd0000000-0000-4000-a000-000000000004', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '10 days'),
-  -- …and dev_admin: counted on the admin page, never on the public list (0147)
+  -- …and dev_admin: counted on the admin page, never on the public list (0148)
   ('fa000000-0000-4000-a000-000000000013', 'd0000000-0000-4000-a000-000000000001', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '6 days'),
   -- A key no registry rule has (a renamed / removed rule): flagged on the page (D6)
   ('fa000000-0000-4000-a000-000000000010', null, 'retired/seed-example', 'Retired rule (seeded example)', null, null, null, 'nearest', 'missing', 'm15', null, 'import', now() - interval '25 days'),

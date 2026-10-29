@@ -4,7 +4,7 @@ import type { ListEntry } from "@/components/seo/json-ld";
 // ---------------------------------------------------------------------------
 // The /creators directory (TODO NV11) — the pure half: sorts, paging, links,
 // the row's words and its structured-data entries. The read is
-// lib/creators/queries.ts (migration 0147's list_public_creators()).
+// lib/creators/queries.ts (migration 0148's list_public_creators()).
 //
 // Who is listed is the DATABASE's rule, held by the migration test: a maker
 // with at least one PUBLIC card (the rule the sitemap lists profiles by),
@@ -61,7 +61,7 @@ export function creatorsHref({ sort, page }: CreatorsViewParams): string {
   return parts.length ? `${CREATORS_BROWSE_PATH}?${parts.join("&")}` : CREATORS_PATH;
 }
 
-/** One row of list_public_creators() (migration 0147). */
+/** One row of list_public_creators() (migration 0148). */
 export type PublicCreatorRow = {
   id: string;
   username: string;

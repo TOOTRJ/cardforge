@@ -14,13 +14,13 @@ import {
 } from "@/lib/creators/directory";
 
 // ---------------------------------------------------------------------------
-// The /creators read (TODO NV11, migration 0147). Viewer-independent, so the
+// The /creators read (TODO NV11, migration 0148). Viewer-independent, so the
 // cookie-free public client: the landing stays ISR and the browse route
 // renders the same numbers for everyone. Two round trips per page — the
 // directory function (who, their counts, the ids of their three newest
 // public cards) and ONE read of those cards for the strips.
 //
-// Fail-soft: on a database without 0147 (the shared dev DB until this
+// Fail-soft: on a database without 0148 (the shared dev DB until this
 // merges) the function doesn't exist — the page says the directory isn't
 // available, never throws.
 // ---------------------------------------------------------------------------

@@ -13,13 +13,13 @@ import {
 } from "@/lib/frames/requested-frames";
 
 // ---------------------------------------------------------------------------
-// The /frames/requested read (TODO NV12, migration 0147): one call to
+// The /frames/requested read (TODO NV12, migration 0148): one call to
 // requested_frame_counts() and the verified combos (each frame's status),
 // both through the cookie-free public client, so the page and the sitemap
 // stay ISR-eligible. React cache() lets the page and its generateMetadata
 // share it.
 //
-// Fail-soft: on a database without 0147 (the shared dev DB until this
+// Fail-soft: on a database without 0148 (the shared dev DB until this
 // merges) the RPC doesn't exist — the page says the list isn't available,
 // never throws.
 // ---------------------------------------------------------------------------

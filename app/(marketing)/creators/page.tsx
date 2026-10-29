@@ -7,7 +7,7 @@ const TITLE = "Creators — The Makers Behind PipGlyph's Custom MTG Cards";
 
 export async function generateMetadata(): Promise<Metadata> {
   // The page's own first read (React cache()): with no creator to list — or
-  // no directory at all, on a database without migration 0147 — the page is
+  // no directory at all, on a database without migration 0148 — the page is
   // thin: noindex, and the sitemap leaves it out on the same answer.
   const { creators, error } = await listPublicCreators("cards", 1);
   return {

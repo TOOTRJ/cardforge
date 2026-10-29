@@ -17,7 +17,7 @@ import {
 import { CREATORS_FILTER_PARAMS } from "@/lib/routing/browse-params";
 
 // ---------------------------------------------------------------------------
-// /creators (TODO NV11) — the pure half. WHO is listed is migration 0147's
+// /creators (TODO NV11) — the pure half. WHO is listed is migration 0148's
 // rule (tests/unit/db/creators-requested-frames-migration.test.ts); this holds
 // the app to it: a row with no handle or no public card is never drawn, the
 // numbers are never negative, the links stay on the two routes, and the

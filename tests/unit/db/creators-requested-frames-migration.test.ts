@@ -9,7 +9,7 @@ import {
 } from "@/lib/frames/requested-frames";
 
 // ---------------------------------------------------------------------------
-// Migration 0147 (TODO NV11 / NV12 part 1) as text. Who /creators lists and
+// Migration 0148 (TODO NV11 / NV12 part 1) as text. Who /creators lists and
 // what /frames/requested may publish are decided in SQL, so the rules are
 // held here: the creators function counts PUBLIC cards and non-empty PUBLIC
 // decks only and never lists an admin (checked once per maker); the
@@ -25,7 +25,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const sql = readFileSync(
-  join(process.cwd(), "supabase/migrations/0147_creators_and_requested_frames.sql"),
+  join(process.cwd(), "supabase/migrations/0148_creators_and_requested_frames.sql"),
   "utf8",
 );
 const body = sql
@@ -50,7 +50,7 @@ const constant = (fn: string, name: string) => {
   return match ? Number(match[1]) : null;
 };
 
-describe("0147_creators_and_requested_frames.sql", () => {
+describe("0148_creators_and_requested_frames.sql", () => {
   it("only reads: no table, no write, no grant all", () => {
     expect(body).not.toMatch(/create table|alter table|insert into|update public\.|delete from|grant all/);
   });

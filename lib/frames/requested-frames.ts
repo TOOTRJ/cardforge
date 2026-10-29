@@ -15,7 +15,7 @@ import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/ca
 // frame_requests row (TODO 1.6, migration 0123) — the admin page counts them
 // per signature and set. The public list is the same log, told as a
 // roadmap: per frame, how many PEOPLE asked in the last six months and where
-// it stands. Migration 0147's requested_frame_counts() publishes only a
+// it stands. Migration 0148's requested_frame_counts() publishes only a
 // signature and a count of distinct non-admin accounts — counted up to
 // today's UTC midnight, and only once REQUESTED_FRAMES_MIN_PEOPLE asked —
 // and nothing from the rows themselves.
@@ -37,18 +37,18 @@ import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/ca
 // Pure and client-safe; the read is lib/frames/requested-frames-queries.ts.
 // ---------------------------------------------------------------------------
 
-/** The window the database counts over (fixed in 0147, not a parameter):
+/** The window the database counts over (fixed in 0148, not a parameter):
  *  180 days up to today's UTC midnight. */
 export const REQUESTED_FRAMES_WINDOW_LABEL = "the last six months";
 
 /** k — the fewest distinct people a frame needs before it is listed, so no
  *  count is one person's import. The database applies it
- *  (requested_frame_counts' `min_people`, migration 0147); this mirrors it
+ *  (requested_frame_counts' `min_people`, migration 0148); this mirrors it
  *  for the page's words and a defensive filter, and a test holds the two
  *  together. The owner's to change: a new migration and this constant. */
 export const REQUESTED_FRAMES_MIN_PEOPLE = 2;
 
-/** The most signatures / answered pairs one call may pass (0147's
+/** The most signatures / answered pairs one call may pass (0148's
  *  `max_keys`; the database refuses more). A test keeps the app under it. */
 export const REQUESTED_FRAMES_MAX_KEYS = 600;
 
@@ -249,7 +249,7 @@ export function requestedFrameStatus(
   return frames.every((template) => verifiedInEveryPrintedColour(template, verifiedKeys)) ? "built" : "checking";
 }
 
-/** One row of requested_frame_counts() (migration 0147). */
+/** One row of requested_frame_counts() (migration 0148). */
 export type RequestedFrameCountRow = {
   signature: string;
   people: number | string;

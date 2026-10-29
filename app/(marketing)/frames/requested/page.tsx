@@ -26,7 +26,7 @@ import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 // each stands. The first piece of a public roadmap; it lives under /frames,
 // where the frame gallery (NV8) will sit, so the two read as one place.
 //
-// The data is migration 0147's requested_frame_counts(): per frame, a count
+// The data is migration 0148's requested_frame_counts(): per frame, a count
 // of distinct accounts (never an admin's) whose import PipGlyph couldn't
 // draw exactly in the six months up to today's UTC midnight, listed only
 // once REQUESTED_FRAMES_MIN_PEOPLE (k) asked. No name, card, printing, set
