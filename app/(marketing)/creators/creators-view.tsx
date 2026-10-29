@@ -19,6 +19,7 @@ import {
   type CreatorsViewParams,
 } from "@/lib/creators/directory";
 import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The creators directory (TODO NV11) is two routes with one grid, the
@@ -33,8 +34,6 @@ import { cn } from "@/lib/utils";
 // All reads are anonymous (public client, no cookies) — the numbers are the
 // same for every viewer.
 // ---------------------------------------------------------------------------
-
-const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16";
 
 export const CREATORS_TITLE = "Creators";
 export const CREATORS_DESCRIPTION =
@@ -66,7 +65,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
   const pages = creatorPageCount(result.total);
 
   return (
-    <div className={FRAME}>
+    <PageContainer className="py-12 lg:py-16">
       {landing ? (
         <JsonLd
           data={collectionPageJsonLd({
@@ -141,7 +140,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
           </>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

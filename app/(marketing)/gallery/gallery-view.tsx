@@ -38,6 +38,7 @@ import {
 } from "@/types/card";
 import { isUuid } from "@/lib/ids";
 import { firstString } from "@/lib/routing/search-params";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The community gallery is two routes with one result grid:
@@ -61,8 +62,6 @@ const PAGE_SIZE = 24;
 
 /** The one place search, filters, sort and paging live. */
 export const GALLERY_BROWSE_PATH = "/gallery/browse";
-
-const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 type GallerySort = GalleryListSort;
 
@@ -199,7 +198,7 @@ export function GalleryLanding() {
   const filters = parseGalleryFilters({});
 
   return (
-    <div className={FRAME}>
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -303,7 +302,7 @@ export function GalleryLanding() {
           </Suspense>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -312,7 +311,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -364,7 +363,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
           <HubLinks currentType={filters.cardType} />
         </Suspense>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 

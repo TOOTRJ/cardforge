@@ -5,7 +5,7 @@ import { SignedOutAccountMenu, UserMenu, type AccountPlan } from "./user-menu";
 import { MobileMenu } from "./mobile-menu";
 import { HeaderCreditsChip } from "./header-credits-chip";
 import { HeaderCreateLink } from "./header-create-link";
-import { WIDE_FRAME_CLASS } from "./wide-frame";
+import { PageContainer } from "./page-container";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { RealtimeAlerts } from "@/components/notifications/realtime-alerts";
 import { siteConfig } from "@/lib/site-config";
@@ -115,7 +115,7 @@ export function SiteHeader({ user, challengeBadge, className }: SiteHeaderProps)
       )}
     >
       <HeaderDisclosures>
-        <div className={cn(WIDE_FRAME_CLASS, "flex h-16 items-center gap-3 sm:gap-6")}>
+        <PageContainer size="wide" className="flex h-16 items-center gap-3 sm:gap-6">
           {/* Under 360 px the mark stands alone: the signed-in row (＋, bell,
               avatar, ☰) and the wordmark don't fit a 320 px screen together
               (WCAG 1.4.10 reflow). */}
@@ -168,7 +168,7 @@ export function SiteHeader({ user, challengeBadge, className }: SiteHeaderProps)
               challengeBadge={challengeBadge}
             />
           </div>
-        </div>
+        </PageContainer>
       </HeaderDisclosures>
     </header>
   );

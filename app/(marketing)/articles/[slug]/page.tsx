@@ -24,6 +24,7 @@ import {
 import { categoryPath, getArticleCategory } from "@/lib/content/article-categories";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { formatCalendarDate } from "@/lib/format/dates";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /articles/[slug] — one guide, rendered from its MDX file. Fully static:
@@ -80,7 +81,7 @@ export default async function ArticlePage({
   const others = getRelatedArticles(meta.slug, 3);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12">
+    <PageContainer className="py-12 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12">
       <div className="max-w-3xl">
       <JsonLd data={buildArticleJsonLd(meta)} />
       {meta.faq ? <JsonLd data={faqJsonLd(meta.faq)} /> : null}
@@ -206,7 +207,7 @@ export default async function ArticlePage({
           <ArticleToc items={toc} variant="sidebar" />
         </div>
       </aside>
-    </div>
+    </PageContainer>
   );
 }
 

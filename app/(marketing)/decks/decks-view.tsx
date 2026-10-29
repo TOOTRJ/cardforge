@@ -28,6 +28,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
 import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
@@ -50,8 +51,6 @@ const PAGE_SIZE = 24;
 
 /** The one place search, the format filter and paging live. */
 export const DECKS_BROWSE_PATH = "/decks/browse";
-
-const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 export type DecksViewParams = {
   page: number;
@@ -105,7 +104,7 @@ export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -175,7 +174,7 @@ export function DecksLanding() {
           </Suspense>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -209,7 +208,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -281,7 +280,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
           <DeckFormatLinks current={format} />
         </Suspense>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 

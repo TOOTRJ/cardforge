@@ -7,6 +7,7 @@ import {
 import { countNewFeedback } from "@/lib/feedback/queries";
 import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/layout/page-container";
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -33,7 +34,7 @@ export async function DashboardShell({
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer className="py-8">
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
         {/* min-w-0: a grid item defaults to min-width:auto, which lets the
             nav's one-line mobile strip widen the whole page instead of
@@ -53,6 +54,6 @@ export async function DashboardShell({
 
         <div className={cn("min-w-0", className)}>{children}</div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -10,6 +10,7 @@ import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-
 import { listGalleryCards } from "@/lib/cards/queries";
 import { HUB_TYPES, isHubType, listTypeHubs, TYPE_HUB_COPY, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import { CARD_TYPE_LABELS } from "@/types/card";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /gallery/type/[type] — one page per card type (creature, instant, …) with a
@@ -54,7 +55,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
   const label = CARD_TYPE_LABELS[type].toLowerCase();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -113,6 +114,6 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
         </Button>
       </div>
       <HubLinks currentType={type} />
-    </div>
+    </PageContainer>
   );
 }

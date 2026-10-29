@@ -7,6 +7,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { CARD_MAKER_FAQ } from "@/lib/content/faq";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mtg-card-maker
@@ -70,7 +71,7 @@ export default function MtgCardMakerPage() {
     })),
   };
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <div className="max-w-4xl">
       <script
         type="application/ld+json"
@@ -165,6 +166,6 @@ export default function MtgCardMakerPage() {
         </div>
       </section>
     </div>
-    </div>
+    </PageContainer>
   );
 }

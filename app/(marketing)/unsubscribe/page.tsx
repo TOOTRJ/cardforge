@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { UnsubscribeForm } from "@/components/email/unsubscribe-form";
 import { EMAIL_LIST_COPY, isUnsubscribeToken, parseEmailList } from "@/lib/email/lists";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const metadata: Metadata = {
   title: "Unsubscribe",
@@ -23,7 +24,7 @@ export default async function UnsubscribePage({
   const valid = isUnsubscribeToken(token) && list;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <SurfaceCard className="mx-auto flex max-w-xl flex-col gap-6 p-8">
         {valid ? (
           <>
@@ -58,6 +59,6 @@ export default async function UnsubscribePage({
           </Link>
         </p>
       </SurfaceCard>
-    </div>
+    </PageContainer>
   );
 }

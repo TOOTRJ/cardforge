@@ -9,6 +9,7 @@ import { HubLinks } from "@/components/cards/hub-links";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listGalleryCards } from "@/lib/cards/queries";
 import { isIndexableTagHub, listTagHubs, resolveTagHub, TAG_HUB_MIN_CARDS } from "@/lib/cards/hubs";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /gallery/tag/[tag] — a real page per discovery tag, built from the public
@@ -55,7 +56,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
   const galleryHref = `/gallery/browse?tag=${encodeURIComponent(hub.tag)}`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -100,6 +101,6 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
         </Button>
       </div>
       <HubLinks currentTag={hub.slug} />
-    </div>
+    </PageContainer>
   );
 }

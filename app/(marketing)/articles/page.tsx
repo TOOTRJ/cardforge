@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { CategoryLinks } from "@/components/content/category-links";
 import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listArticles, listCategoryShelves } from "@/lib/content/articles";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /articles — the guides index, every guide newest first; the /learn
@@ -28,7 +29,7 @@ export default function ArticlesIndexPage() {
   const articles = listArticles();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -65,6 +66,6 @@ export default function ArticlesIndexPage() {
           <ArticleCard key={article.slug} article={article} />
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

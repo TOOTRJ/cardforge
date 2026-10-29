@@ -4,6 +4,7 @@ import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Sparkles, X } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 const STORAGE_KEY = "pipglyph:updates-banner:dismissed";
 
@@ -79,7 +80,7 @@ function RibbonBody({ dismissKey, headline, upcoming }: BannerSliceProps) {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-linear-to-r from-gold/15 via-primary/10 to-gold/15"
       />
-      <div className="relative mx-auto flex w-full max-w-7xl items-stretch px-4 sm:px-6 lg:px-8">
+      <PageContainer className="relative flex items-stretch">
         <Link
           href={href}
           className="group flex min-w-0 flex-1 flex-col gap-1 py-3 pr-10 text-sm sm:flex-row sm:items-center sm:gap-4"
@@ -123,7 +124,7 @@ function RibbonBody({ dismissKey, headline, upcoming }: BannerSliceProps) {
         >
           <X className="h-4 w-4" aria-hidden />
         </button>
-      </div>
+      </PageContainer>
     </section>
   );
 }

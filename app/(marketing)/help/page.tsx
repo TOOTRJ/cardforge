@@ -21,6 +21,7 @@ import {
   type HelpSection,
 } from "@/lib/content/help";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /help — the help centre's hub (TODO NV6): a filter box over every answer
@@ -72,7 +73,7 @@ export default function HelpPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <HelpHashForward targets={helpForwardTargets()} />
       <JsonLd
         data={collectionPageJsonLd({
@@ -190,7 +191,7 @@ export default function HelpPage() {
           </div>
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }
 

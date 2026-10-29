@@ -44,6 +44,7 @@ import { absoluteProfileMediaUrl } from "@/lib/profile/default-media";
 import { JsonLd } from "@/components/seo/json-ld";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { PageContainer } from "@/components/layout/page-container";
 
 type Params = { username: string };
 
@@ -125,10 +126,7 @@ export default async function ProfilePage({
     : undefined;
 
   return (
-    <div
-      className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8"
-      style={accentStyle}
-    >
+    <PageContainer className="py-12" style={accentStyle}>
       <JsonLd data={buildProfileJsonLd(profile, displayName)} />
       <Link
         href="/gallery"
@@ -195,7 +193,7 @@ export default async function ProfilePage({
           </div>
         </>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 
