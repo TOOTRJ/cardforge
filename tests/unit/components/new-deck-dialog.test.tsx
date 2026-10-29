@@ -39,6 +39,7 @@ const s = vi.hoisted(() => ({
   resolve: vi.fn(),
   commit: vi.fn(),
   toastSuccess: vi.fn(),
+  toastMessage: vi.fn(),
   signedInCookie: true,
 }));
 
@@ -50,7 +51,7 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: s.toastSuccess, message: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: s.toastSuccess, message: s.toastMessage } }));
 vi.mock("@/lib/decks/actions", () => ({ createDeckAction: s.createDeck, updateDeckAction: vi.fn(), deleteDeckAction: vi.fn() }));
 vi.mock("@/lib/decks/import", () => ({ resolveDecklistAction: s.resolve, commitDeckImportAction: s.commit }));
 vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => s.signedInCookie }));
@@ -96,6 +97,7 @@ beforeEach(() => {
   s.push.mockReset();
   s.refresh.mockReset();
   s.toastSuccess.mockReset();
+  s.toastMessage.mockReset();
   s.createDeck.mockReset().mockResolvedValue({ ok: true, deckId: "deck-1", slug: "goblin-swarm" });
   s.resolve.mockReset().mockResolvedValue({ ok: true, title: null, lines: RESOLVED_LINES, parseWarnings: [] });
   s.commit.mockReset().mockResolvedValue({ ok: true, added: 2, merged: 0, placeholders: 0 });
@@ -560,7 +562,24 @@ describe("an empty deck", () => {
     await openDialog({ cardId: "c0000000-0000-4000-8000-000000000001" });
     await type(nameInput(), "Around Zoey");
     await press(createButton());
+    expect(s.toastMessage).toHaveBeenCalledWith("That card couldn't be added — add it from the deck page.");
     expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm?new=1");
+  });
+
+  it("a first card that went in but not as the commander says so — and the deck isn't empty", async () => {
+    s.createDeck.mockResolvedValue({
+      ok: true,
+      deckId: "deck-1",
+      slug: "goblin-swarm",
+      firstCardNotice: "Added to the deck, but it couldn't be set as the commander — set it from the deck page.",
+    });
+    await openDialog({ cardId: "c0000000-0000-4000-8000-000000000001" });
+    await type(nameInput(), "Around Zoey");
+    await press(createButton());
+    expect(s.toastMessage).toHaveBeenCalledWith(
+      "Added to the deck, but it couldn't be set as the commander — set it from the deck page.",
+    );
+    expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm");
   });
 });
 
