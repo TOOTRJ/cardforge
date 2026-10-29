@@ -114,6 +114,49 @@ export function describeUsage(capacity: CardCapacity | null): CapacityMessage | 
   };
 }
 
+/**
+ * The decklist import's slot forecast (owner decision D2, 2026-10-28): an
+ * imported card is a reference to a real card and takes NO saved-card slot;
+ * it takes one when it is first customized (made into the user's own card),
+ * and one customized card covers all its copies. So the import never blocks
+ * — it says what customizing the list would use. `cards` is the copies the
+ * review counts (its badge and its "Add N cards"), `distinct` the different
+ * cards among them. null when there is nothing to say (no list, or no
+ * capacity to read).
+ */
+export function describeImportSlots(
+  capacity: CardCapacity | null,
+  list: { cards: number; distinct: number },
+): { message: string; short: boolean } | null {
+  const { cards, distinct } = list;
+  if (!capacity || cards <= 0 || distinct <= 0) return null;
+  const n = (value: number) => value.toLocaleString("en-US");
+  // Both numbers, so the line reads with the badge ("100 cards") beside it.
+  const these =
+    distinct === 1
+      ? cards === 1
+        ? "This card uses"
+        : `These ${n(cards)} copies of one card use`
+      : cards === distinct
+        ? `These ${n(cards)} cards use`
+        : `These ${n(cards)} cards (${n(distinct)} different) use`;
+  const each =
+    distinct === 1
+      ? "Customizing it uses 1"
+      : cards === distinct
+        ? "Each one you customize uses 1"
+        : "Each different card you customize uses 1";
+  const remaining = remainingCapacity(capacity);
+  if (remaining === null) {
+    return { message: `${these} no saved-card slots.`, short: false };
+  }
+  return {
+    message: `${these} no saved-card slots. ${each} — you have ${n(remaining)} left.`,
+    // More different cards than slots: customizing the whole list needs room.
+    short: distinct > remaining,
+  };
+}
+
 /** The Postgres error raised by migration 0104's trigger. */
 export function isCapacityViolation(message: string | null | undefined): boolean {
   return typeof message === "string" && message.includes("card_capacity_exceeded");

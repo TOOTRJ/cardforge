@@ -4435,6 +4435,7 @@ export function CardCreatorForm({
             linkResult = await linkDeckCardAction(
               deckRemix.deckCardId,
               result.cardId,
+              { surface: "creator" },
             );
           } catch (error) {
             console.error("[creator] deck link request failed", error);

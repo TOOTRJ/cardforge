@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/decks/import";
 import { DECK_BOARD_LABELS, DECK_BOARD_VALUES } from "@/types/deck";
 import type { ParseWarning } from "@/lib/decks/parse-decklist";
+import { describeImportSlots, type CardCapacity } from "@/lib/billing/capacity-copy";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +48,9 @@ type ImportDecklistDialogProps = {
   triggerLabel?: string;
   /** Open on mount (the wizard's "Import a decklist" path lands here). */
   defaultOpen?: boolean;
+  /** The owner's saved-card slots, for the review's forecast (owner decision
+   *  D2): an imported card uses none until it is customized. Never blocks. */
+  cardCapacity?: CardCapacity | null;
 };
 
 type Step = "paste" | "review";
@@ -54,6 +59,7 @@ export function ImportDecklistDialog({
   deckId,
   triggerLabel = "Import decklist",
   defaultOpen = false,
+  cardCapacity = null,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
@@ -161,6 +167,8 @@ export function ImportDecklistDialog({
       fuzzy: kept.filter((l) => l.status === "fuzzy").length,
       unresolved: kept.filter((l) => l.status === "unresolved").length,
       cards: kept.reduce((sum, l) => sum + l.quantity, 0),
+      // Different cards (one name on two boards is one card to customize).
+      distinct: new Set(kept.map((l) => (l.resolved?.name ?? l.name).trim().toLowerCase())).size,
     };
   }, [lines]);
 
@@ -233,6 +241,8 @@ export function ImportDecklistDialog({
               ) : null}
             </div>
 
+            <ImportSlotForecast cardCapacity={cardCapacity} cards={counts.cards} distinctCards={counts.distinct} />
+
             {parseWarnings.length > 0 ? (
               <div className="rounded-md border border-gold/40 bg-gold/5 p-3">
                 <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-gold">
@@ -303,6 +313,38 @@ export function ImportDecklistDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The review's slot forecast (owner decision D2, TODO DK3.7): importing
+ *  uses no saved-card slots; customizing a card does. A link to more slots
+ *  when the list has more different cards than slots left. It never blocks
+ *  the import. */
+export function ImportSlotForecast({
+  cardCapacity,
+  cards,
+  distinctCards,
+}: {
+  cardCapacity: CardCapacity | null;
+  /** The copies the review counts (its badge, its "Add N cards"). */
+  cards: number;
+  /** The different cards among them — what customizing would use. */
+  distinctCards: number;
+}) {
+  const slots = describeImportSlots(cardCapacity, { cards, distinct: distinctCards });
+  if (!slots) return null;
+  return (
+    <p data-testid="import-slot-forecast" className="text-xs leading-5 text-muted">
+      {slots.message}
+      {slots.short ? (
+        <>
+          {" "}
+          <Link href="/pricing" className="font-semibold text-primary-bright underline-offset-2 hover:underline">
+            Get more slots
+          </Link>
+        </>
+      ) : null}
+    </p>
   );
 }
 

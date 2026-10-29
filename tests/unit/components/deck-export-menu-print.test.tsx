@@ -15,6 +15,8 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: v
 vi.mock("@/components/billing/upgrade-modal-provider", () => ({ useUpgradeModal: () => ({ open: vi.fn() }) }));
 const exporter = vi.hoisted(() => ({ busy: false, start: vi.fn(), cancel: vi.fn(), openDetails: vi.fn(), active: null }));
 vi.mock("@/components/decks/deck-export-provider", () => ({ useDeckExport: () => exporter }));
+const funnel = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: funnel.track }));
 
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { PRINT_SELECTION_SETTINGS_KEY } from "@/lib/cards/print-selection";
@@ -124,5 +126,23 @@ describe("DeckExportMenu — the print options (TODO 6.15)", () => {
     await openMenu();
     await click(screen.getByRole("button", { name: /build zip/i }));
     expect(exporter.start).toHaveBeenCalledWith(expect.objectContaining({ kind: "zip", quality: "default", bleed: false }));
+  });
+});
+
+describe("DeckExportMenu — the funnel (TODO DK3.8)", () => {
+  it("a started export is a deck_export_clicked with its kind, quality and layout", async () => {
+    funnel.track.mockReset();
+    await openMenu();
+    await click(screen.getByRole("button", { name: /build zip/i }));
+    expect(funnel.track).toHaveBeenCalledWith("deck_export_clicked", expect.objectContaining({ kind: "zip" }));
+  });
+
+  it("the Pro gate's click is one too, kind upgrade", async () => {
+    funnel.track.mockReset();
+    render(
+      <DeckExportMenu deckId="d1" deckSlug="gorgon-gaze" allowBatchExport={false} customCardCount={12} realCardCount={0} hasCover={false} />,
+    );
+    await click(screen.getByRole("button", { name: /export/i }));
+    expect(funnel.track).toHaveBeenCalledWith("deck_export_clicked", { kind: "upgrade" });
   });
 });

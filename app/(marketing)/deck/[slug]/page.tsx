@@ -45,6 +45,7 @@ import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { getDeckCapacity } from "@/lib/decks/capacity";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -289,6 +290,7 @@ export default async function DeckDetailPage({
                 aiConfigured={isDesignAiConfigured()}
                 maxCards={await batchCardLimit()}
                 capacity={await getCardCapacity()}
+                deckCapacity={await getDeckCapacity()}
                 remixableCount={await countRemixableDeckCards(deck.id)}
                 aiSeed={await getDeckAiSeed(deck.id)}
                 openImport={(await searchParams).import === "1"}

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { HELP_SECTION_ICONS } from "@/components/content/help-icons";
 import { DECK_AI_PAUSED, DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import {
+  CARD_CAPACITY,
+  CARD_CAPACITY_UNLIMITED,
+  DECK_CAPACITY,
+  privateDecksByPlanSentence,
+} from "@/lib/billing/plans";
+import {
   AI_GENERATOR_FAQ,
   allFaqEntries,
   CARD_MAKER_FAQ,
@@ -261,13 +267,39 @@ describe("answers that follow the product", () => {
     expect(getHelpSection("getting-started")!.howTo!.steps[0].body).toMatch(/signed out, the creator is read-only/);
   });
 
-  it("never state a deck limit per plan — none is shipped (TODO DK3)", () => {
+  it("state the private-deck limits as DECK_CAPACITY sets them (TODO DK3, migration 0145)", () => {
+    // Free 1 / Plus 3 / Pro unlimited — PRIVATE and UNLISTED decks only;
+    // public decks are unlimited on every plan (owner decision D1).
+    expect(DECK_CAPACITY).toEqual({ free: 1, plus: 3, pro: CARD_CAPACITY_UNLIMITED });
+    const plans = `Free includes ${DECK_CAPACITY.free} private or unlisted deck, Plus ${DECK_CAPACITY.plus}, and Pro as many as you like.`;
+    expect(privateDecksByPlanSentence()).toBe(plans);
+
+    const answer = faqEntryById("how-many-decks")!.a;
+    expect(answer).toContain("As many public decks as you like, on every plan.");
+    expect(answer).toContain(`The limit is on private and unlisted decks: ${plans}`);
+    expect(answer).toContain("never locks a deck");
+    const start = getHelpSection("decks")!.howTo!.steps[0].body;
+    expect(start).toContain(`Public decks are unlimited on every plan; ${plans}`);
+
+    // No other number for a deck limit anywhere in the section.
     const decks = getHelpSection("decks")!;
     const text = [
       ...helpSectionEntries(decks).flatMap((entry) => [entry.q, entry.a]),
       ...(decks.howTo?.steps.map((step) => step.body) ?? []),
+      decks.howTo?.tip ?? "",
     ].join("\n");
-    expect(text).not.toMatch(/\b(one|three|1|3|unlimited) (private )?decks?\b/i);
-    expect(text).not.toMatch(/deck (limit|cap)/i);
+    for (const [, n] of text.matchAll(/\b(\d+) (?:private|unlisted)(?: or unlisted)? decks?\b/gi)) {
+      expect([DECK_CAPACITY.free, DECK_CAPACITY.plus]).toContain(Number(n));
+    }
+    expect(text).not.toMatch(/\bup to \d+ decks\b/i);
+  });
+
+  it("say an import uses no saved-card slots — customizing does (owner decision D2)", () => {
+    const answer = faqEntryById("import-uses-slots")!.a;
+    expect(answer).toMatch(/^No\./);
+    expect(answer).toContain(`Free holds ${CARD_CAPACITY.free}, Plus ${CARD_CAPACITY.plus}, Pro unlimited`);
+    expect(getHelpSection("decks")!.howTo!.steps.map((step) => step.body).join("\n")).toContain(
+      "Importing uses none of your saved-card slots",
+    );
   });
 });
