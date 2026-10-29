@@ -1725,6 +1725,10 @@ export type Database = {
           cover_url: string | null;
           deck_type: string | null;
           bracket: number | null;
+          // Migration 0143 — kept by the deck_cards statement trigger;
+          // API roles can't write them (the guard keeps the old values).
+          card_count: number;
+          linked_card_count: number;
           created_at: string;
           description: string | null;
           format: string;
@@ -1742,6 +1746,8 @@ export type Database = {
           cover_url?: string | null;
           deck_type?: string | null;
           bracket?: number | null;
+          card_count?: number;
+          linked_card_count?: number;
           created_at?: string;
           description?: string | null;
           format?: string;
@@ -1759,6 +1765,8 @@ export type Database = {
           cover_url?: string | null;
           deck_type?: string | null;
           bracket?: number | null;
+          card_count?: number;
+          linked_card_count?: number;
           created_at?: string;
           description?: string | null;
           format?: string;
@@ -2047,6 +2055,16 @@ export type Database = {
       requested_frame_counts: {
         Args: { p_signatures: string[]; p_answered?: string[] };
         Returns: { signature: string; people: number }[];
+      };
+      // Migration 0143 — the decklist commit and the creator's custom-entry
+      // add, each one transaction under the deck's entry lock (hand-extended).
+      import_deck_entries: {
+        Args: { p_deck_id: string; p_entries: Json };
+        Returns: Json;
+      };
+      add_custom_deck_entry: {
+        Args: { p_deck_id: string; p_card_id: string; p_name: string };
+        Returns: boolean;
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };

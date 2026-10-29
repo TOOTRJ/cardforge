@@ -59,6 +59,16 @@ export async function proxy(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url, 308);
   }
+  // /faq became the help centre (TODO NV6): one home per answer, so the long
+  // page that repeated every one of them is gone. The fragment of an old
+  // /faq#exports link never reaches us — the browser carries it across the
+  // redirect to /help#exports, and the hub forwards it to its section.
+  if (requestPath === "/faq") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/help";
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
   if (requestPath === "/sets" || requestPath.startsWith("/set/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/decks";

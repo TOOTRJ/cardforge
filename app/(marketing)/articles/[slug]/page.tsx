@@ -162,7 +162,7 @@ export default async function ArticlePage({
               <Link href="/create">{meta.cta?.label ?? "Open the card creator"}</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href="/faq">Read the FAQ</Link>
+              <Link href="/help">Help &amp; FAQ</Link>
             </Button>
           </div>
         </div>

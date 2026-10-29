@@ -12983,14 +12983,17 @@ correction sweep that changes cards people will notice. Write it in
 Admin → Updates (`/admin/updates`); it shows on `/news` (What's new). The
 FAQ entry "Why
 does my card look slightly different than before?" (`lib/content/faq.ts`,
-Exports & printing, `/faq#exports`) is the standing answer to link. A post
+the help centre's Printing & exports,
+`/help/printing#why-a-card-looks-different`) is the standing answer to link
+(an older post's link to the retired FAQ page still lands on that
+section: the FAQ is a 308 to the help centre). A post
 is plain text: title ≤ 120 characters, summary ≤ 280 (a single line), body
 ≤ 4000. The page keeps the body's line breaks, so each paragraph or bullet
 is ONE line: paste each block below into its field as it stands. Post a
 correction once its sweep has finished; an addition when it ships.
 
-**Correction (a sweep)** — kind "update", link `/faq#exports`. Title,
-summary, body:
+**Correction (a sweep)** — kind "update", link
+`/help/printing#why-a-card-looks-different`. Title, summary, body:
 
 ```text
 Cards on <frames> now match their printed frames more closely

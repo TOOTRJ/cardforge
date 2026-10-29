@@ -198,3 +198,65 @@ export function nameFallbackIdentifiers(
   }
   return fallbacks;
 }
+
+// ---------------------------------------------------------------------------
+// The commit's own lookup. The review payload comes back from the browser,
+// so nothing in it is trusted but the printing's id: the server asks
+// Scryfall for those ids itself and stores what Scryfall answers (DK0.3,
+// migration 0143). An id Scryfall doesn't know becomes a name-only
+// placeholder — the shape an unresolved line has always had.
+// ---------------------------------------------------------------------------
+
+/** A line of the commit payload: what the browser may still say. */
+export type CommitPayloadLine = {
+  board: string;
+  quantity: number;
+  name: string;
+  resolved: { scryfall_id: string } | null;
+};
+
+/** The distinct printing ids a commit names, lower-cased (Scryfall's own
+ *  spelling), in first-seen order. */
+export function commitScryfallIds(lines: CommitPayloadLine[]): string[] {
+  const seen = new Set<string>();
+  for (const line of lines) {
+    const id = line.resolved?.scryfall_id?.toLowerCase();
+    if (id) seen.add(id);
+  }
+  return Array.from(seen);
+}
+
+/** Collection identifiers for those ids, `SCRYFALL_COLLECTION_MAX` a batch. */
+export function scryfallIdBatches(
+  ids: string[],
+  size: number,
+): ScryfallCollectionIdentifier[][] {
+  return chunkIdentifiers(
+    ids.map((id) => ({ id })),
+    size,
+  );
+}
+
+/** Every line with ONLY server-fetched card data: the card Scryfall returned
+ *  for its id, or none (a placeholder under the name the list gave). */
+export function serverResolvedLines(
+  lines: CommitPayloadLine[],
+  cards: ScryfallCard[],
+): Array<{
+  board: string;
+  quantity: number;
+  name: string;
+  resolved: ResolvedCardData | null;
+}> {
+  const byId = new Map(cards.map((card) => [card.id.toLowerCase(), card]));
+  return lines.map((line) => {
+    const id = line.resolved?.scryfall_id?.toLowerCase();
+    const card = id ? byId.get(id) : undefined;
+    return {
+      board: line.board,
+      quantity: line.quantity,
+      name: line.name,
+      resolved: card ? toResolvedCardData(card) : null,
+    };
+  });
+}

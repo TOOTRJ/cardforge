@@ -11,7 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 //     dynamic /browse sibling (query intact); junk params keep the
 //     CDN-cached page. A rewrite would be invisible to the client router,
 //     which reuses the cached static tree for same-path query changes;
-//   * the guide tag hubs that became /learn categories 308 to them;
+//   * the guide tag hubs that became /learn categories 308 to them, and
+//     /faq to the help centre (/help);
 //   * a signed-in /pricing is rewritten to the dynamic pricing-member twin
 //     (server-rendered buttons, no anonymous flash); the internal path 308s;
 //   * a redirect from updateSession is never clobbered.
@@ -128,6 +129,19 @@ describe("proxy", () => {
     const standing = await proxy(request("/articles/tag/oracle-text"));
     expect(locationOf(standing)).toBeNull();
     expect(s.updateSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("308s /faq to the help centre, query dropped (the browser carries a #fragment on)", async () => {
+    for (const path of ["/faq", "/faq?utm_source=newsletter"]) {
+      const response = await proxy(request(path));
+      expect(response.status, path).toBe(308);
+      expect(locationOf(response), path).toBe("http://localhost:3000/help");
+    }
+    expect(s.updateSession).not.toHaveBeenCalled();
+    // The help centre itself is served as any page.
+    for (const path of ["/help", "/help/printing"]) {
+      expect(locationOf(await proxy(request(path))), path).toBeNull();
+    }
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {
