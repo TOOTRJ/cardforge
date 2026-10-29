@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HELP_SECTION_ICONS } from "@/components/content/help-icons";
 import { DECK_AI_PAUSED, DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
-import {
-  CARD_CAPACITY,
-  CARD_CAPACITY_UNLIMITED,
-  DECK_CAPACITY,
-  privateDecksByPlanSentence,
-} from "@/lib/billing/plans";
+import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import {
   AI_GENERATOR_FAQ,
   allFaqEntries,
@@ -27,6 +22,7 @@ import {
   helpSectionAnchors,
   helpSectionEntries,
   helpSectionMarkupEntries,
+  helpSectionOf,
   helpSectionPath,
   LANDING_PAGE_LABELS,
   landingPageOf,
@@ -267,31 +263,30 @@ describe("answers that follow the product", () => {
     expect(getHelpSection("getting-started")!.howTo!.steps[0].body).toMatch(/signed out, the creator is read-only/);
   });
 
-  it("state the private-deck limits as DECK_CAPACITY sets them (TODO DK3, migration 0145)", () => {
-    // Free 1 / Plus 3 / Pro unlimited — PRIVATE and UNLISTED decks only;
-    // public decks are unlimited on every plan (owner decision D1).
-    expect(DECK_CAPACITY).toEqual({ free: 1, plus: 3, pro: CARD_CAPACITY_UNLIMITED });
-    const plans = `Free includes ${DECK_CAPACITY.free} private or unlisted deck, Plus ${DECK_CAPACITY.plus}, and Pro as many as you like.`;
-    expect(privateDecksByPlanSentence()).toBe(plans);
-
+  it("say decks are unlimited on every plan — no plan names a deck number (owner 2026-10-29, 0147)", () => {
+    // 0145 shipped a private-deck cap; the owner dropped it ("that is what
+    // other sites do — paid conversion happens with card limits"). The answer
+    // keeps its id (links point at it) and names the CARD caps instead.
     const answer = faqEntryById("how-many-decks")!.a;
-    expect(answer).toContain("As many public decks as you like, on every plan.");
-    expect(answer).toContain(`The limit is on private and unlisted decks: ${plans}`);
-    expect(answer).toContain("never locks a deck");
-    const start = getHelpSection("decks")!.howTo!.steps[0].body;
-    expect(start).toContain(`Public decks are unlimited on every plan; ${plans}`);
+    expect(answer).toMatch(/^As many as you like, on every plan — public, unlisted or private\./);
+    expect(answer).toContain(`saved cards do (Free holds ${CARD_CAPACITY.free}, Plus ${CARD_CAPACITY.plus}, Pro unlimited)`);
+    expect(CARD_CAPACITY.pro).toBe(CARD_CAPACITY_UNLIMITED);
+    expect(helpSectionOf("how-many-decks")?.slug).toBe("decks");
 
-    // No other number for a deck limit anywhere in the section.
-    const decks = getHelpSection("decks")!;
+    // No deck number and no deck limit anywhere the help centre speaks.
     const text = [
-      ...helpSectionEntries(decks).flatMap((entry) => [entry.q, entry.a]),
-      ...(decks.howTo?.steps.map((step) => step.body) ?? []),
-      decks.howTo?.tip ?? "",
+      ...allFaqEntries().flatMap((entry) => [entry.q, entry.a]),
+      ...HELP_SECTIONS.flatMap((section) => [
+        section.intro,
+        section.description,
+        ...(section.howTo
+          ? [section.howTo.summary, section.howTo.tip ?? "", ...section.howTo.steps.map((step) => step.body)]
+          : []),
+      ]),
     ].join("\n");
-    for (const [, n] of text.matchAll(/\b(\d+) (?:private|unlisted)(?: or unlisted)? decks?\b/gi)) {
-      expect([DECK_CAPACITY.free, DECK_CAPACITY.plus]).toContain(Number(n));
-    }
-    expect(text).not.toMatch(/\bup to \d+ decks\b/i);
+    expect(text).not.toMatch(/\b\d+ (?:(?:private|unlisted|public)(?: or unlisted)? )?decks?\b/i);
+    expect(text).not.toMatch(/private[- ]deck (limit|cap|slot)|deck (limit|cap)s? (per|on) (your )?plan/i);
+    expect(getHelpSection("decks")!.howTo!.steps[0].body).toMatch(/choose who sees it: public, unlisted or private\.$/);
   });
 
   it("say an import uses no saved-card slots — customizing does (owner decision D2)", () => {

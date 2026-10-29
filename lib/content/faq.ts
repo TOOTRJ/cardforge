@@ -16,11 +16,7 @@
 
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 
-import {
-  CARD_CAPACITY,
-  CARD_CAPACITY_UNLIMITED,
-  privateDecksByPlanSentence,
-} from "@/lib/billing/plans";
+import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 
 export type FaqEntry = {
   /** The answer's anchor in the help centre (/help/<section>#<id>), stable
@@ -311,10 +307,10 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
 // version of it "Edited", made with "Customize"). The rest of the rebuild
 // changes them again — a create dialog instead of the stepper (DK4), other
 // creators' public cards in your decks (DK2.9, owner D3): rewrite with it.
-// The private-deck limits (owner D1, migration 0145) and the import's slot
-// rule (D2) are said from lib/billing/plans.ts — tests/unit/content/
-// help.test.ts and tests/unit/billing/plan-limits-copy.test.tsx hold the
-// numbers to DECK_CAPACITY and CARD_CAPACITY.
+// Decks are unlimited on every plan (owner 2026-10-29: 0145's private-deck
+// cap was dropped by 0147); the import's slot rule (D2) is said from
+// lib/billing/plans.ts — tests/unit/content/help.test.ts and
+// tests/unit/billing/plan-limits-copy.test.tsx hold both.
 
 const DECKS_FAQ: FaqEntry[] = [
   {
@@ -335,10 +331,11 @@ const DECKS_FAQ: FaqEntry[] = [
     a: `No. A pasted decklist is a list of real cards, and it uses none of your saved-card slots however long it is. A card takes a slot when you customize it — turn the imported card into your own design — like any card you save (Free holds ${cardCap("free")}, Plus ${cardCap("plus")}, Pro ${cardCap("pro")}). The import's review says how many slots you have left.`,
   },
   {
-    // The private-deck cap (owner decision D1, migration 0145).
+    // Owner 2026-10-29: no deck cap (0147 dropped 0145's). The id stays:
+    // links point at it.
     id: "how-many-decks",
     q: "How many decks can I make?",
-    a: `As many public decks as you like, on every plan. The limit is on private and unlisted decks: ${privateDecksByPlanSentence()} A downgrade or a lapsed plan never locks a deck: every deck you have stays editable, and only a NEW private or unlisted deck needs a free slot — make another deck public, delete one, or upgrade.`,
+    a: `As many as you like, on every plan — public, unlisted or private. Decks don't count against your plan; saved cards do (Free holds ${cardCap("free")}, Plus ${cardCap("plus")}, Pro ${cardCap("pro")}), and a real card in a deck uses no slot until you customize it. One deck holds up to 500 lines, each a card with its quantity.`,
   },
   {
     id: "copy-export-or-print-a-deck",

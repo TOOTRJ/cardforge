@@ -13,7 +13,6 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { createDeckAction } from "@/lib/decks/actions";
-import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import {
   DECK_FORMAT_LABELS,
   DECK_FORMAT_VALUES,
@@ -333,7 +332,6 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
   };
 
   const options = [...extraDecks, ...myDecks];
-  const upgrade = useUpgradeModal();
 
   const handleQuickCreate = () => {
     const title = newTitle.trim();
@@ -343,11 +341,9 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
     }
     startTransition(async () => {
       // No visibility is sent, so createDeckSchema's "public" default
-      // applies (lib/validation/deck.ts — not the column's 'private'): the
-      // private-deck cap never counts it (D1), so there is nothing to warn
-      // about first; a refusal still opens the plans (TODO DK3.2). A
-      // visibility choice here — and its pre-check — is DK0.8's remaining
-      // part, which moves to DK9.3's creator deck box.
+      // applies (lib/validation/deck.ts — not the column's 'private'). A
+      // visibility choice here is DK0.8's remaining part, which moves to
+      // DK9.3's creator deck box.
       const result = await createDeckAction({ title, format: newFormat }, { surface: "creator" });
       if (!result.ok) {
         toast.error(
@@ -355,7 +351,6 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
             Object.values(result.fieldErrors ?? {})[0] ??
             "Could not create the deck.",
         );
-        if (result.reason === "deck_capacity") upgrade.open("deck_capacity");
         return;
       }
       setExtraDecks((prev) => [
