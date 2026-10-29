@@ -33,7 +33,8 @@ export const AI_FAILURE_KINDS = [
   "frame_unfit",
   /** The image provider's safety filter refused every prompt we tried. */
   "art_blocked",
-  /** The picture took too long (a quiet refusal looks the same). */
+  /** The picture didn't arrive inside the step's wait — on production a
+   *  slow image service (2026-10-28: 93–168 s renders), never yet a refusal. */
   "art_timeout",
   /** The image provider is rate-limited or overloaded. */
   "art_busy",
@@ -65,7 +66,8 @@ export const AI_FAILURE_COPY: Record<AiFailureKind, string> = {
     "The AI's design didn't fit the frame you picked. Try again, or let it choose the frame with Surprise me.",
   art_blocked:
     "The image service's safety filter declined this artwork. Try again — each try rewords the art prompt — or change the theme.",
-  art_timeout: "The artwork took too long to paint. Try again — each try rewords the art prompt.",
+  art_timeout:
+    "The image service is running slowly right now, so the artwork took too long. Try again in a few minutes.",
   art_busy: "The image service is busy right now. Wait a minute, then try again.",
   art_failed: "The artwork couldn't be painted. Try again.",
   art_store: "The artwork was painted but couldn't be saved. Try again.",

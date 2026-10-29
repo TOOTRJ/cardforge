@@ -28,6 +28,7 @@ import {
 } from "@/lib/ai/deck-design";
 import { generateRemixIdentity } from "@/lib/ai/remix";
 import {
+  CARD_STEP_IMAGE_BUDGET_MS,
   generateImageWithFallbacks,
   generatePlainImage,
   restyleImage,
@@ -2200,7 +2201,9 @@ async function paintAndPublishCard(
   shape: ArtShape,
 ): Promise<{ ok: true } | { ok: false; error: string; failure: AiFailureKind }> {
   // Painted in the shape of the card's own art window (TODO 4.48b).
-  const image = await generateImageWithFallbacks(prompts, shape);
+  // The card is created before and attached + baked after, in the same
+  // 180 s function: the picture waits a little less than a fill's.
+  const image = await generateImageWithFallbacks(prompts, shape, { budgetMs: CARD_STEP_IMAGE_BUDGET_MS });
   if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);

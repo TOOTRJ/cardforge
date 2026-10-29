@@ -30,11 +30,13 @@ export function isSafetyBlockError(message: string): boolean {
 
 // Phrased POSITIVELY on purpose: listing the forbidden things ("no blood,
 // no gore") can trip the very classifier this is meant to pass.
-/** A moderated request through the gateway never comes back as a refusal
- *  — it hangs until our abort fires (probed 2026-09-17: the strictest-tier
- *  prompts all ended as timeouts). So a timeout is treated as a probable
- *  block and the next, safer rung is tried; a genuinely slow render simply
- *  gets a second chance with a tamer prompt. */
+/** A timeout was once read as a quiet refusal (probed 2026-09-17: the
+ *  strictest-tier prompts ended as timeouts). Inside ONE image call it no
+ *  longer moves to the next prompt — on 2026-10-28 every timed-out render
+ *  was a slow provider whose picture arrived (lib/ai/image-gen.ts
+ *  IMAGE_BUDGET_MS) — but a RETRY of the step still starts one prompt
+ *  further down the ladder (artPromptLadder), so a quiet refusal is still
+ *  reworded by the next try. */
 function isTimeoutError(message: string): boolean {
   const lower = message.toLowerCase();
   return lower.includes("timeout") || lower.includes("timed out") || lower.includes("aborted");
