@@ -27,7 +27,10 @@ import type { DeckEntryStatus } from "@/types/deck";
 //         prints (never by hand);
 //       - its mana value from its cost — and, on a split or aftermath card,
 //         its second half's too (CR 709.4: Fire // Ice is 4, Commit //
-//         Memory 10); the cost shown is then "front // back";
+//         Memory 10); the cost shown is then "front // back". A split card
+//         is one on the split / aftermath frame, or one imported from the
+//         entry's own split printing (the split frame is unverified today,
+//         so such an import lands on m15 with a second face);
 //       - its colours are the card's FRAME colour (`cards.color_identity`),
 //         not the game's colour identity: where the entry knows the real
 //         letters, they win whenever the frame names no colour, names gold
@@ -111,10 +114,24 @@ function cardTypeLine(card: EffectiveCard): string | null {
   );
 }
 
-/** The card's cost and mana value — both halves of a split card. */
-function cardCost(card: EffectiveCard): { cost: string | null; manaValue: number | null } {
+/** The entry's printing is a SPLIT card: Scryfall's mana value is both
+ *  halves of its " // " cost, not the first alone (an adventure's or a
+ *  modal card's is the first half's). How a split import that did not land
+ *  on the split frame (it lands on m15 with a second face while the split
+ *  frame is unverified) is still known for one. */
+function printingSumsHalves(entry: EffectiveEntry): boolean {
+  const cost = entry.mana_cost ?? "";
+  if (!cost.includes("//") || entry.mana_value === null || entry.mana_value === undefined) return false;
+  const whole = manaValueOfCost(cost);
+  const first = manaValueOfCost(cost.split("//")[0]);
+  return whole !== null && first !== null && whole !== first && Number(entry.mana_value) === whole;
+}
+
+/** The card's cost and mana value — both halves of a split card (its frame
+ *  says so, or it was imported from the entry's split printing). */
+function cardCost(card: EffectiveCard, splitPrinting: boolean): { cost: string | null; manaValue: number | null } {
   const front = card.cost?.trim() ? card.cost : null;
-  const back = SPLIT_TEMPLATES.has(templateOf(card) ?? "") ? backCostOf(card) : null;
+  const back = SPLIT_TEMPLATES.has(templateOf(card) ?? "") || splitPrinting ? backCostOf(card) : null;
   if (!back) return { cost: front, manaValue: manaValueOfCost(front) };
   const frontValue = manaValueOfCost(front);
   const backValue = manaValueOfCost(back);
@@ -152,7 +169,13 @@ export function effectiveEntryFields(
     return { ...fromEntry, multicolorOnly: false };
   }
 
-  const priced = cardCost(card);
+  // A card imported from the entry's own split printing is a split card,
+  // whatever frame it landed on.
+  const fromThisPrinting =
+    Boolean(entry.scryfall_id) &&
+    Boolean(card.import_scryfall_id) &&
+    entry.scryfall_id!.toLowerCase() === card.import_scryfall_id!.toLowerCase();
+  const priced = cardCost(card, fromThisPrinting && printingSumsHalves(entry));
   const fromCard = {
     typeLine: cardTypeLine(card),
     cost: priced.cost,

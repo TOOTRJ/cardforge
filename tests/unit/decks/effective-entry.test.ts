@@ -253,6 +253,35 @@ describe("the frame colour and split halves (M1)", () => {
     expect(own).toMatchObject({ manaValue: 4, cost: "{1}{R} // {1}{U}", colors: [], multicolorOnly: true });
   });
 
+  it("an EDITED Fire // Ice that landed on m15 with a second face (the split frame unverified) is still 4", () => {
+    const onM15 = { ...FIRE_ICE_CARD, frame_style: { template: "m15" } };
+    expect(effectiveEntryFields(printingEntry(FIRE_ICE), editedFrom(onM15, FIRE_ICE.id) as never)).toMatchObject({
+      manaValue: 4,
+      cost: "{1}{R} // {1}{U}",
+      colors: ["R", "U"],
+    });
+    // …but only for a card imported from THAT printing: an Elves-like card of
+    // another printing linked there sums nothing.
+    expect(effectiveEntryFields(printingEntry(FIRE_ICE), editedFrom(onM15, "another-printing") as never).manaValue).toBe(2);
+  });
+
+  it("an EDITED adventure (Bonecrusher Giant: Scryfall's mana value is the creature's) never sums its page", () => {
+    const BONECRUSHER = { id: "09fd2d9c-1793-4beb-a3fb-7a869f660cd4", type: "Creature — Giant // Instant — Adventure", cost: "{2}{R} // {1}{R}", mv: 3, letters: ["R"] };
+    const card = {
+      ...FIRE_ICE_CARD,
+      title: "Bonecrusher Giant",
+      cost: "{2}{R}",
+      card_type: "creature",
+      color_identity: ["red"],
+      frame_style: { template: "m15" },
+      back_face: { title: "Stomp", cost: "{1}{R}", card_type: "instant" },
+    };
+    expect(effectiveEntryFields(printingEntry(BONECRUSHER), editedFrom(card, BONECRUSHER.id) as never)).toMatchObject({
+      manaValue: 3,
+      cost: "{2}{R}",
+    });
+  });
+
   it("an adventure / flip card's second part never adds to its mana value", () => {
     const adventure = { ...FIRE_ICE_CARD, frame_style: { template: "adventure" } };
     expect(effectiveEntryFields(entry({ scryfall_id: null, mana_value: null, mana_cost: null }), adventure as never).manaValue).toBe(2);
