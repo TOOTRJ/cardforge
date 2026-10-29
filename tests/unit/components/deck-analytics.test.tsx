@@ -304,6 +304,47 @@ describe("every chart has its table", () => {
   });
 });
 
+describe("the curve, the averages and Card types count the main deck and the commander (owner 2026-10-29)", () => {
+  const withSideboard = () => [
+    item({ name: "Zoey", board: "commander", type_line: "Legendary Creature — Elf", mana_cost: "{2}{G}", mana_value: 3 }),
+    ...deck(),
+    item({ name: "Naturalize", board: "side", type_line: "Instant", mana_cost: "{1}{G}", mana_value: 2, quantity: 3 }),
+    item({ name: "Side Mountain", board: "side", type_line: "Basic Land — Mountain", mana_cost: null, mana_value: 0, color_identity: ["R"], quantity: 2 }),
+  ];
+  const tableRows = (name: string | RegExp) =>
+    within(screen.getByRole("table", { name }))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => Array.from(row.querySelectorAll("th, td"), (cell) => cell.textContent).join(" "));
+
+  it("the sideboard's cards are in no bar, no type and no average; the commander is", () => {
+    renderPage(withSideboard());
+    expect(screen.getByText(/8 nonland cards in the main deck and commander, by mana value/)).toBeTruthy();
+    expect(screen.getByText("Every card in the main deck and commander — an artifact creature counts as a creature.")).toBeTruthy();
+    expect(screen.queryByText(/sideboard included/)).toBeNull();
+    // The commander at 3; Naturalize (2) nowhere.
+    fireEvent.click(screen.getByRole("button", { name: "Show mana curve as a table" }));
+    expect(tableRows(/^Mana curve/)).toEqual(["0 0 0 0", "1 4 2 6", "2 0 0 0", "3 1 0 1", "4 0 0 0", "5 0 0 0", "6 1 0 1", "7 or more 0 0 0"]);
+    // 6 creatures, 2 instants, 10 lands: 18 cards, the sideboard's 5 out.
+    expect(tableRows("Cards by type")).toEqual(["Creatures 6 33%", "Instants 2 11%", "Lands 10 56%"]);
+    // (4×1 + 2×1 + 6 + 3) / 8 = 1.875; the median of 1,1,1,1,1,1,3,6 is 1.
+    const tile = (label: string) =>
+      Array.from(document.querySelectorAll("span"))
+        .find((span) => span.textContent === label && span.nextElementSibling)
+        ?.nextElementSibling?.textContent;
+    expect(tile("Average mana value")).toBe("1.9");
+    expect(tile("Median mana value")).toBe("1");
+    expect(tile("Lands")).toBe("10");
+    expect(tile("Deck size")).toBe("18");
+  });
+
+  it("a deck with no commander says the main deck", () => {
+    renderPage([...deck(), item({ name: "Naturalize", board: "side", type_line: "Instant", mana_cost: "{1}{G}", mana_value: 2, quantity: 3 })]);
+    expect(screen.getByText(/7 nonland cards in the main deck, by mana value/)).toBeTruthy();
+    expect(screen.getByText("Every card in the main deck — an artifact creature counts as a creature.")).toBeTruthy();
+  });
+});
+
 describe("the playtest", () => {
   it("lands by turn on the play / on the draw, and a picked card's odds", () => {
     render(<DeckDrawOdds items={deck()} canManage commander={false} multiplayer={false} />);

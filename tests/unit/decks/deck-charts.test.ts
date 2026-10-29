@@ -18,7 +18,9 @@ import type { DeckCardEntry } from "@/types/deck";
 // The breakdown's charts (TODO DK7.1): the curve's columns (one bucket with
 // the list's "Group by mana value"), split creatures / other spells, the
 // average and median without lands, colour symbols against sources, types
-// and rarity — the maybeboard never counts.
+// and rarity — the maybeboard never counts, and the curve, the averages,
+// the types and the lands count the main deck and the commander alone
+// (owner 2026-10-29).
 // ---------------------------------------------------------------------------
 
 let n = 0;
@@ -76,20 +78,23 @@ describe("computeDeckCharts", () => {
   ];
   const charts = computeDeckCharts(items);
 
-  it("the curve: creatures and other spells per column, lands and the maybeboard out", () => {
+  it("the curve: creatures and other spells per column, lands, the sideboard and the maybeboard out", () => {
     const column = (slot: number) => {
       const c = charts.curve[slot];
       return [c.creatures, c.other, c.total];
     };
     expect(charts.curve).toHaveLength(8);
-    expect(column(1)).toEqual([4, 6, 10]); // elves; bolts + side bolts
+    expect(column(1)).toEqual([4, 4, 8]); // elves; bolts (the side bolts are out)
     expect(column(3)).toEqual([1, 0, 1]); // the commander
     expect(column(4)).toEqual([0, 1, 1]); // Fire // Ice: both halves (CR 709.4)
     expect(column(7)).toEqual([2, 0, 2]); // the dragons, 7+
     expect(charts.curve[7].label).toBe("7+");
-    expect(charts.curveCards).toBe(14);
+    expect(charts.curveCards).toBe(12);
     expect(charts.lands).toBe(12);
+    // Every board but the maybeboard (the colours, rarity, keywords); the
+    // main deck and the commander (the curve, the averages, the types).
     expect(charts.total).toBe(26);
+    expect(charts.deckCards).toBe(24);
   });
 
   it("adds up to the breakdown's curve, card for card", () => {
@@ -99,19 +104,24 @@ describe("computeDeckCharts", () => {
   it("each column names the entries the list shows for it (Group by mana value)", () => {
     const rows = deckRowsOf(items, true);
     const groups = groupDeckRows(rows, "mana", "mana");
-    const mainAt1 = groups.find((group) => group.key === "main-1")!.rows.map((row) => row.id);
-    // The column also holds the sideboard's bolts — the curve's deck is every
-    // board but the maybeboard, and the filter shows them in their board.
-    expect(charts.curve[1].entryIds).toEqual(expect.arrayContaining(mainAt1));
-    const sideBolt = items.find((i) => i.entry.name === "Side Bolt")!.entry.id;
-    expect(charts.curve[1].entryIds).toContain(sideBolt);
-    const maybe = items.find((i) => i.entry.name === "Maybe")!.entry.id;
-    expect(charts.curve.flatMap((c) => c.entryIds)).not.toContain(maybe);
+    const idsOf = (key: string) => groups.find((group) => group.key === key)?.rows.map((row) => row.id) ?? [];
+    expect(charts.curve[1].entryIds).toEqual(expect.arrayContaining(idsOf("main-1")));
+    // Every id a column holds is in the list's mana-value group of that
+    // value or the Commander group — never the sideboard's or the
+    // maybeboard's.
+    for (const column of charts.curve) {
+      const shown = new Set([...idsOf(`main-${column.slot}`), ...idsOf("commander")]);
+      for (const id of column.entryIds) expect(shown.has(id)).toBe(true);
+    }
+    const commander = items.find((i) => i.entry.name === "Commander")!.entry.id;
+    expect(charts.curve[3].entryIds).toContain(commander);
+    const all = charts.curve.flatMap((c) => c.entryIds);
+    for (const name of ["Side Bolt", "Maybe"]) expect(all).not.toContain(items.find((i) => i.entry.name === name)!.entry.id);
   });
 
-  it("average and median without lands", () => {
-    // 4×1 + 4×1 + 2×8 + 1×4 + 1×3 + 2×1 = 33 over 14 cards.
-    expect(charts.averageManaValue).toBeCloseTo(33 / 14, 10);
+  it("average and median without lands (or the sideboard)", () => {
+    // 4×1 + 4×1 + 2×8 + 1×4 + 1×3 = 31 over 12 cards.
+    expect(charts.averageManaValue).toBeCloseTo(31 / 12, 10);
     expect(charts.averageManaValue).toBeCloseTo(computeDeckAnalytics(items).averageManaValue!, 10);
     expect(charts.medianManaValue).toBe(1);
   });
@@ -135,7 +145,7 @@ describe("computeDeckCharts", () => {
   it("types and rarity", () => {
     expect(charts.types.map((t) => [t.label, t.count])).toEqual([
       ["Creatures", 7],
-      ["Instants", 7],
+      ["Instants", 5], // the side bolts are out
       ["Lands", 12],
     ]);
     expect(charts.rarity.map((r) => [r.label, r.count])).toEqual([
@@ -160,6 +170,58 @@ describe("computeDeckCharts", () => {
       item({ card_id: "c2" }, { id: "c2", title: "Elf", card_type: "creature", cost: "{G}", rules_text: "{T}: Add {G}.", color_identity: ["green"] }),
     ]);
     expect(elves.colors).toEqual([expect.objectContaining({ color: "G", symbols: 1, sources: 1 })]);
+  });
+});
+
+describe("a deck with a sideboard: its stats are the main deck and the commander (owner 2026-10-29)", () => {
+  const items = [
+    item({ name: "Commander", board: "commander", type_line: "Legendary Creature — Elf", mana_cost: "{2}{G}", mana_value: 3 }),
+    item({ name: "Llanowar Elves", quantity: 4 }),
+    item({ name: "Growth Spiral", type_line: "Instant", mana_cost: "{G}{U}", mana_value: 2, color_identity: ["G", "U"], quantity: 2 }),
+    item({ name: "Forest", type_line: "Basic Land — Forest", mana_cost: null, mana_value: 0, quantity: 6 }),
+    // The sideboard and a companion: no type, no land, no column.
+    item({ name: "Naturalize", board: "side", type_line: "Instant", mana_cost: "{1}{G}", mana_value: 2, quantity: 3 }),
+    item({ name: "Side Island", board: "side", type_line: "Basic Land — Island", mana_cost: null, mana_value: 0, color_identity: ["U"], quantity: 2 }),
+    item({ name: "Big Side Wurm", board: "side", type_line: "Creature — Wurm", mana_cost: "{5}{G}{G}", mana_value: 7, quantity: 1 }),
+    item({ name: "Companion", board: "companion", type_line: "Legendary Creature — Cat", mana_cost: "{4}{G}", mana_value: 5 }),
+  ];
+  const analytics = computeDeckAnalytics(items);
+  const charts = computeDeckCharts(items);
+
+  it("the curve counts the commander and the main deck, no sideboard card or companion", () => {
+    expect(charts.curve.map((c) => c.total)).toEqual([0, 4, 2, 1, 0, 0, 0, 0]);
+    expect(analytics.curve).toEqual([0, 4, 2, 1, 0, 0, 0, 0]);
+    expect(charts.curveCards).toBe(7);
+    const ids = new Set(charts.curve.flatMap((c) => c.entryIds));
+    const idOf = (name: string) => items.find((i) => i.entry.name === name)!.entry.id;
+    expect(ids.has(idOf("Commander"))).toBe(true);
+    for (const name of ["Naturalize", "Big Side Wurm", "Companion"]) expect(ids.has(idOf(name))).toBe(false);
+  });
+
+  it("the average and the median: 4×1 + 2×2 + 1×3 = 11 over 7", () => {
+    expect(charts.averageManaValue).toBeCloseTo(11 / 7, 10);
+    expect(analytics.averageManaValue).toBeCloseTo(11 / 7, 10);
+    expect(charts.medianManaValue).toBe(1);
+  });
+
+  it("Card types and the lands: the commander in, the sideboard's instants, wurm and island out", () => {
+    expect(charts.types.map((t) => [t.label, t.count])).toEqual([
+      ["Creatures", 5],
+      ["Instants", 2],
+      ["Lands", 6],
+    ]);
+    expect(analytics.byType).toMatchObject({ Creature: 5, Instant: 2, Land: 6 });
+    expect(charts.lands).toBe(6);
+    expect(analytics.lands).toBe(6);
+    expect(charts.deckCards).toBe(13);
+  });
+
+  it("the sideboard is still on its board, in the colours and in the total", () => {
+    expect(analytics.byBoard).toMatchObject({ main: 12, commander: 1, side: 6, companion: 1 });
+    expect(analytics.total).toBe(20);
+    expect(charts.total).toBe(20);
+    // Naturalize's three {G} and the wurm's two count as symbols.
+    expect(charts.colors.find((c) => c.color === "G")?.symbols).toBe(1 + 4 + 2 + 3 + 2 + 1);
   });
 });
 

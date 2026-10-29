@@ -1,5 +1,6 @@
 import {
   computeDeckAnalytics,
+  countsTowardDeckStats,
   curveSlotLabel,
   CURVE_SLOTS,
   manaValueSlot,
@@ -26,19 +27,24 @@ import type { DeckCardEntry } from "@/types/deck";
 // The deck breakdown's charts (TODO DK7.1 / DK7.3) — pure, over the deck's
 // rows as the list builds them (deckRowsOf: each entry's EFFECTIVE fields,
 // its rarity by effectiveEntryRarity), so a bar on the curve and the cards
-// it filters the list to are one set. The DECK is every board but the
-// maybeboard, a scratchpad that never counts (computeDeckAnalytics' rule:
-// the curve here adds up to its curve, card for card); the LIBRARY the draw
-// odds and the sample hand shuffle is the mainboard alone (deckLibraryOf).
+// it filters the list to are one set. The maybeboard, a scratchpad, never
+// counts; the curve, the averages, the types and the lands count the MAIN
+// DECK and the COMMANDER alone (countsTowardDeckStats, owner 2026-10-29 —
+// computeDeckAnalytics' rule: the curve here adds up to its curve, card for
+// card); the colours, rarity and keywords every board but the maybeboard;
+// the LIBRARY the draw odds and the sample hand shuffle is the mainboard
+// alone (deckLibraryOf).
 //
 //   * the curve: nonland cards with a mana value, 0 … 6 and 7+
 //     (manaValueSlot), each column split into creatures and other spells,
-//     with the entry ids it counts (the list's filter);
+//     with the entry ids it counts (the list's filter: a sideboard card is
+//     in no column);
 //   * average and median mana value over the same cards — lands left out,
 //     as the curve leaves them;
 //   * colour: the coloured symbols in the costs against the mana SOURCES
 //     of each colour (manaProduced);
-//   * types, rarity (DECK_RARITY_KEYS) and the keywords (DK7.3).
+//   * types (the curve's deck), rarity (DECK_RARITY_KEYS) and the keywords
+//     (DK7.3).
 // ---------------------------------------------------------------------------
 
 /** The colours the colour chart counts, wheel order, colourless last. */
@@ -142,8 +148,12 @@ export type ColorBalanceRow = {
 };
 
 export type DeckCharts = {
-  /** Cards in the deck (maybeboard out). */
+  /** Cards on every board but the maybeboard — the colours', rarity's and
+   *  keywords' cards. */
   total: number;
+  /** Cards in the main deck and the commander (countsTowardDeckStats) — the
+   *  curve's, the averages', the types' and the lands' deck. */
+  deckCards: number;
   curve: CurveColumn[];
   /** Nonland cards with a mana value — the curve's cards. */
   curveCards: number;
@@ -197,13 +207,13 @@ export function computeDeckCharts(items: readonly ChartItem[]): DeckCharts {
   const symbols: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   const sources: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   let total = 0;
+  let deckCards = 0;
   let lands = 0;
   let noManaValue = 0;
 
   for (const row of rows) {
     const quantity = row.quantity;
     total += quantity;
-    typeCounts.set(row.bucket, (typeCounts.get(row.bucket) ?? 0) + quantity);
     const rarity = deckRarityKey(row.rarity);
     rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + quantity);
 
@@ -214,6 +224,11 @@ export function computeDeckCharts(items: readonly ChartItem[]): DeckCharts {
       sources[color] += quantity;
     }
 
+    // The sideboard and a companion stop here: in no type, no land count
+    // and no column of the curve (owner 2026-10-29).
+    if (!countsTowardDeckStats(row.board)) continue;
+    deckCards += quantity;
+    typeCounts.set(row.bucket, (typeCounts.get(row.bucket) ?? 0) + quantity);
     if (row.bucket === "Land") {
       lands += quantity;
       continue;
@@ -243,6 +258,7 @@ export function computeDeckCharts(items: readonly ChartItem[]): DeckCharts {
 
   return {
     total,
+    deckCards,
     curve,
     curveCards,
     lands,

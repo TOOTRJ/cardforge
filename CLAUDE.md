@@ -1923,7 +1923,11 @@ Rules and gotchas:
   `computeDeckAnalytics`' card for card), both over the VIEWER's rows
   (`viewerDeckBreakdown`: through `publicDeckItems`, so a visitor's
   counts never name the type a "Private card" tile hides): ONE curve bucket,
-  `manaValueSlot`, shared with the list's "Group by mana value". A curve
+  `manaValueSlot`, shared with the list's "Group by mana value". The curve,
+  the average / median mana value, Card types and the lands count the main
+  deck and the commander only, never the sideboard or a companion
+  (`countsTowardDeckStats`: also the summary bar, the report PDF and the AI
+  deck brief / guide) (owner 2026-10-29). A curve
   bar FILTERS the list above through `DeckCurveFilterProvider`
   (`components/decks/deck-curve-filter.tsx`, around both sections; it
   holds the picked column only — the ids come from the page's latest

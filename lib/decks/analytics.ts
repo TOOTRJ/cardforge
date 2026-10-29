@@ -6,7 +6,24 @@ import { deckEntryStatus } from "@/lib/decks/entry-status";
 // Deck analytics — pure functions over deck entries (quantity-weighted, so
 // 4× Lightning Bolt counts as 4 cards). Playable boards only; the
 // maybeboard is a scratchpad and never counts toward totals or the curve.
+// The curve, the average mana value, the types and the lands count the
+// main deck and the commander alone (countsTowardDeckStats).
 // ---------------------------------------------------------------------------
+
+/** The boards the deck's stats read — the curve, the average and median
+ *  mana value, the card types and the lands, here and in the breakdown's
+ *  charts (lib/decks/deck-charts.ts): the main deck and the commander, as
+ *  Moxfield and Archidekt count (owner 2026-10-29). Never the sideboard, the
+ *  companion or the maybeboard. */
+export function countsTowardDeckStats(board: DeckBoard): boolean {
+  return board === "main" || board === "commander";
+}
+
+/** The cards those stats count (countsTowardDeckStats) — the deck's size
+ *  the breakdown's "Deck size" says. */
+export function deckStatCards(analytics: Pick<DeckAnalytics, "byBoard">): number {
+  return analytics.byBoard.main + analytics.byBoard.commander;
+}
 
 /** Type buckets in canonical deck-list display order. First matching word in
  *  the type line wins (an Artifact Creature is a creature, matching how deck
@@ -97,8 +114,9 @@ export type DeckAnalytics = {
    *  what `decks.linked_card_count` stores (0143), counted from the rows:
    *  the hero's "made on PipGlyph". */
   linked: number;
-  /** Mana curve over playable non-land cards: indexes 0–6 are exact mana
-   *  values, index 7 is "7+". Cards with unknown mana value are excluded. */
+  /** Mana curve over the main deck's and the commander's non-land cards
+   *  (countsTowardDeckStats): indexes 0–6 are exact mana values, index 7 is
+   *  "7+". Cards with unknown mana value are excluded. */
   curve: number[];
   /** WUBRG + colorless pip presence, quantity-weighted (playable boards).
    *  A multicolor card counts once per color in its identity. */
@@ -108,10 +126,12 @@ export type DeckAnalytics = {
    *  card saved as only "multicolor", whose colours aren't named — counted
    *  here alone, never as colorless. */
   multicolor: number;
-  /** Cards per type bucket (playable boards). */
+  /** Cards per type bucket (the main deck and the commander). */
   byType: Record<TypeBucket, number>;
+  /** Lands in the main deck and the commander. */
   lands: number;
-  /** Average mana value across playable non-land cards with a known value. */
+  /** Average mana value across the main deck's and the commander's non-land
+   *  cards with a known value. */
   averageManaValue: number | null;
 };
 
@@ -167,9 +187,6 @@ export function computeDeckAnalytics(
     byStatus[status] += entry.quantity;
     const fields = effectiveEntryFields(entry, card, status);
 
-    const bucket = typeBucketFor(fields.typeLine);
-    byType[bucket] += entry.quantity;
-
     if (fields.colors.length === 0) {
       // A custom card saved as "multicolor" without naming its colours is
       // gold, not colorless.
@@ -182,6 +199,12 @@ export function computeDeckAnalytics(
       for (const color of fields.colors) byColor[color] += entry.quantity;
       if (new Set(fields.colors).size > 1) multicolor += entry.quantity;
     }
+
+    // The sideboard and a companion stop here: off the types, the lands,
+    // the curve and the average (owner 2026-10-29).
+    if (!countsTowardDeckStats(entry.board)) continue;
+    const bucket = typeBucketFor(fields.typeLine);
+    byType[bucket] += entry.quantity;
 
     if (bucket === "Land") {
       lands += entry.quantity;

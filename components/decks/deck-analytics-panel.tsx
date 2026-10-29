@@ -22,7 +22,9 @@ import type { KeywordCount, KeywordKind } from "@/lib/decks/keyword-frequency";
 // the cards by status (THE status count the list's chips and the summary
 // bar say, deckStatusCountsOf) and the keywords. Every number is
 // computeDeckCharts' (lib/decks/deck-charts.ts: the entries' effective
-// fields, the maybeboard never counted); every chart has its table. The
+// fields, the maybeboard never counted; the curve, the averages, the types
+// and the lands the main deck and the commander alone — owner 2026-10-29);
+// every chart has its table. The
 // playtest (draw odds, the sample hand — DK7.2) is the page's next section.
 // ---------------------------------------------------------------------------
 
@@ -86,6 +88,9 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
     charts.lands > 0 ? `${charts.lands} land${charts.lands === 1 ? "" : "s"}` : null,
     charts.noManaValue > 0 ? `${charts.noManaValue} with no mana value` : null,
   ].filter(Boolean);
+  // What the curve and the types count (countsTowardDeckStats): never the
+  // sideboard.
+  const counted = analytics.byBoard.commander > 0 ? "main deck and commander" : "main deck";
 
   return (
     <div className="flex flex-col gap-4">
@@ -106,7 +111,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
           title="Mana curve"
           description={
             <>
-              {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} by mana value, sideboard included
+              {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} in the {counted}, by mana value
               {offCurve.length > 0 ? ` — ${offCurve.join(" and ")} left off` : ""}.
             </>
           }
@@ -116,9 +121,9 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         />
         <DeckChartCard
           title="Card types"
-          description="Every card in the deck, sideboard included — an artifact creature counts as a creature."
-          chart={typeRows.length > 0 ? <HorizontalBars rows={typeRows} total={charts.total} /> : <Empty>Add cards to see types.</Empty>}
-          table={<BarsTable caption="Cards by type" label="Type" rows={typeRows} total={charts.total} />}
+          description={`Every card in the ${counted} — an artifact creature counts as a creature.`}
+          chart={typeRows.length > 0 ? <HorizontalBars rows={typeRows} total={charts.deckCards} /> : <Empty>Add cards to see types.</Empty>}
+          table={<BarsTable caption="Cards by type" label="Type" rows={typeRows} total={charts.deckCards} />}
         />
 
         <DeckChartCard

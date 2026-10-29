@@ -4,7 +4,7 @@ import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
-import type { DeckAnalytics } from "@/lib/decks/analytics";
+import { deckStatCards, type DeckAnalytics } from "@/lib/decks/analytics";
 
 // ---------------------------------------------------------------------------
 // Deck guide — ONE text call that reads the whole list (names, types, costs,
@@ -95,7 +95,8 @@ export async function generateDeckGuide(input: DeckGuideInput): Promise<DeckGuid
       `Format: ${input.format}.`,
       type ? `Built as ${type.label} (${type.hint}).` : null,
       bracket ? `Power level: Bracket ${bracket.level} (${bracket.name}) — ${bracket.blurb}` : null,
-      `Stats: ${a.total} cards, ${a.lands} lands, average mana value ${a.averageManaValue === null ? "n/a" : a.averageManaValue.toFixed(1)}, curve ${a.curve.join("/")}.`,
+      // The main deck and the commander, as the deck page counts them.
+      `Stats: ${deckStatCards(a)} cards, ${a.lands} lands, average mana value ${a.averageManaValue === null ? "n/a" : a.averageManaValue.toFixed(1)}, curve ${a.curve.join("/")}.`,
       "Cards:",
       deckGuideCardLines(input.cards),
     ]
