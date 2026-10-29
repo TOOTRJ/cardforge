@@ -1,13 +1,16 @@
-import { statusRows, type DeckAnalytics } from "@/lib/decks/analytics";
+import type { DeckAnalytics } from "@/lib/decks/analytics";
+import { statusCountRows, type EntryBadge, type StatusFilter } from "@/lib/decks/deck-view";
 import { deckSizeRule, formatHasCommander } from "@/lib/decks/format-rules";
-import type { DeckEntryStatus, DeckFormat } from "@/types/deck";
+import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // The deck page's sticky summary bar (TODO DK5.9) as data: the count
-// against the format's size, the commander, the composition (the four
-// kinds of card), the average mana value and the lands — every number the
-// deck's breakdown already says (computeDeckAnalytics, playable boards), so
-// the bar and the breakdown never disagree. The format check's verdict and
+// against the format's size, the commander, the composition (each kind of
+// card), the average mana value and the lands. The size, the average and
+// the lands are the deck's breakdown's (computeDeckAnalytics, playable
+// boards); the composition is THE status count the chips and the breakdown
+// say too (deckStatusCountsOf, lib/decks/deck-view.ts) — so the bar, the
+// chips and the breakdown never disagree. The format check's verdict and
 // "Edit next" are the owner's and come from the page. Pure.
 // ---------------------------------------------------------------------------
 
@@ -28,16 +31,18 @@ export type DeckSummary = {
   sizeState: DeckSizeState;
   /** Commander formats only: the zone's cards by name (empty = none set). */
   commanders: string[] | null;
-  composition: Array<{ status: DeckEntryStatus; count: number }>;
+  composition: Array<{ badge: EntryBadge; count: number }>;
   averageManaValue: number | null;
   lands: number;
 };
 
 export function deckSummaryOf(
   format: DeckFormat,
-  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "byStatus" | "averageManaValue" | "lands">,
+  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "lands">,
   /** The commander zone's names as the viewer's list shows them. */
   commanderNames: readonly string[],
+  /** The deck's cards per badge (deckStatusCountsOf). */
+  statusCounts: Record<StatusFilter, number>,
 ): DeckSummary {
   // Companions live outside the deck proper; the sideboard is not the deck.
   const size = analytics.total - analytics.byBoard.side - analytics.byBoard.companion;
@@ -59,7 +64,7 @@ export function deckSummaryOf(
     target: rule.exact !== undefined ? String(rule.exact) : rule.min !== undefined ? `${rule.min}+` : null,
     sizeState,
     commanders: formatHasCommander(format) ? [...commanderNames] : null,
-    composition: statusRows(analytics),
+    composition: statusCountRows(statusCounts),
     averageManaValue: analytics.averageManaValue,
     lands: analytics.lands,
   };

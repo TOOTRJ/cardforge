@@ -70,34 +70,36 @@ describe("the summary bar's numbers (DK5.9)", () => {
   const analytics = (over: Partial<Parameters<typeof deckSummaryOf>[1]> = {}) => ({
     total: 100,
     byBoard: { main: 99, side: 0, maybe: 4, commander: 1, companion: 0 },
-    byStatus: { imported: 60, edited: 20, remix: 4, original: 16, not_found: 0 },
     averageManaValue: 3.3,
     lands: 36,
     ...over,
   });
-
-  it("counts against an exact size, a floor, or none — the sideboard and a companion outside the deck", () => {
-    expect(deckSummaryOf("commander", analytics(), ["Zoey"])).toMatchObject({ size: 100, target: "100", sizeState: "ok", commanders: ["Zoey"] });
-    expect(deckSummaryOf("commander", analytics({ total: 98 }), [])).toMatchObject({ size: 98, sizeState: "short", commanders: [] });
-    expect(deckSummaryOf("commander", analytics({ total: 102 }), [])).toMatchObject({ sizeState: "over" });
-    const standard = analytics({ total: 75, byBoard: { main: 60, side: 15, maybe: 0, commander: 0, companion: 0 } });
-    expect(deckSummaryOf("standard", standard, [])).toMatchObject({ size: 60, target: "60+", sizeState: "ok", commanders: null });
-    const withCompanion = analytics({ total: 76, byBoard: { main: 60, side: 15, maybe: 0, commander: 0, companion: 1 } });
-    expect(deckSummaryOf("standard", withCompanion, []).size).toBe(60);
-    expect(deckSummaryOf("limited", analytics({ total: 39, byBoard: { main: 39, side: 0, maybe: 0, commander: 0, companion: 0 } }), []))
-      .toMatchObject({ target: "40+", sizeState: "short" });
-    expect(deckSummaryOf("casual", analytics(), [])).toMatchObject({ target: null, sizeState: "free", commanders: null });
+  const counts = (over: Partial<Record<string, number>> = {}) => ({
+    all: 100, imported: 60, edited: 20, remix: 4, original: 16, not_found: 0, unavailable: 0, ...over,
   });
 
-  it("the composition is the breakdown's: the four kinds always, Not found only when there is one", () => {
-    expect(deckSummaryOf("casual", analytics(), []).composition).toEqual([
-      { status: "imported", count: 60 },
-      { status: "edited", count: 20 },
-      { status: "remix", count: 4 },
-      { status: "original", count: 16 },
+  it("counts against an exact size, a floor, or none — the sideboard and a companion outside the deck", () => {
+    expect(deckSummaryOf("commander", analytics(), ["Zoey"], counts())).toMatchObject({ size: 100, target: "100", sizeState: "ok", commanders: ["Zoey"] });
+    expect(deckSummaryOf("commander", analytics({ total: 98 }), [], counts())).toMatchObject({ size: 98, sizeState: "short", commanders: [] });
+    expect(deckSummaryOf("commander", analytics({ total: 102 }), [], counts())).toMatchObject({ sizeState: "over" });
+    const standard = analytics({ total: 75, byBoard: { main: 60, side: 15, maybe: 0, commander: 0, companion: 0 } });
+    expect(deckSummaryOf("standard", standard, [], counts())).toMatchObject({ size: 60, target: "60+", sizeState: "ok", commanders: null });
+    const withCompanion = analytics({ total: 76, byBoard: { main: 60, side: 15, maybe: 0, commander: 0, companion: 1 } });
+    expect(deckSummaryOf("standard", withCompanion, [], counts()).size).toBe(60);
+    expect(deckSummaryOf("limited", analytics({ total: 39, byBoard: { main: 39, side: 0, maybe: 0, commander: 0, companion: 0 } }), [], counts()))
+      .toMatchObject({ target: "40+", sizeState: "short" });
+    expect(deckSummaryOf("casual", analytics(), [], counts())).toMatchObject({ target: null, sizeState: "free", commanders: null });
+  });
+
+  it("the composition is THE status count (the chips' and the breakdown's): four kinds always, the others when there", () => {
+    expect(deckSummaryOf("casual", analytics(), [], counts()).composition).toEqual([
+      { badge: "imported", count: 60 },
+      { badge: "edited", count: 20 },
+      { badge: "remix", count: 4 },
+      { badge: "original", count: 16 },
     ]);
-    const withLost = analytics({ byStatus: { imported: 1, edited: 0, remix: 0, original: 0, not_found: 2 } });
-    expect(deckSummaryOf("casual", withLost, []).composition.map((row) => row.status)).toContain("not_found");
+    const withLost = deckSummaryOf("casual", analytics(), [], counts({ not_found: 2, unavailable: 1 }));
+    expect(withLost.composition.map((row) => row.badge)).toEqual(["imported", "edited", "remix", "original", "not_found", "unavailable"]);
   });
 
   it("every format with a commander zone says so, and only those", () => {

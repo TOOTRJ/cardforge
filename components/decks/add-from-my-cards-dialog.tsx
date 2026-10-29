@@ -48,12 +48,19 @@ export function AddFromMyCardsDialog({
         toast.error(result.error);
         return;
       }
+      // A commander pick: the card is the commander now, new or moved from
+      // the mainboard (else it already was, or sits on another board).
+      if (board === "commander" && result.commander) {
+        toast.success(`${result.title} is your commander.`);
+        onOpenChange(false);
+        router.refresh();
+        return;
+      }
       if (!result.added) {
         toast(`${result.title} is already in this deck.`);
         return;
       }
-      toast.success(board === "commander" ? `${result.title} is your commander.` : `Added ${result.title}.`);
-      if (board === "commander") onOpenChange(false);
+      toast.success(`Added ${result.title}.`);
       router.refresh();
     });
   };

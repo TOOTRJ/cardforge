@@ -39,12 +39,10 @@ import { DECK_BOARD_LABELS } from "@/types/deck";
 // the row's full name — its quantity and status included (TODO DK5.12) —
 // and keeps clear of the sticky summary bar when focused (scroll-margin).
 //
-// A deck past LARGE_DECK_ENTRIES renders each group lazily (TODO DK5.11):
-// `content-visibility: auto` skips an off-screen group's layout and paint
-// until it nears the viewport, while every card stays in the document — so
-// find-in-page, a screen reader's reading order and the pop-up's focus
-// hand-back are untouched (a windowing list that unmounts rows would break
-// all three).
+// Every group is in the document, however big the deck: no windowing and
+// no `content-visibility` (the independent check of #671 found it took
+// off-screen groups and their headings out of the accessibility tree, and
+// the page jumped as the guessed sizes reflowed) — 160+ entries draw fine.
 // ---------------------------------------------------------------------------
 
 type ViewRow = DeckRow<DeckItem<DeckPageCard>>;
@@ -53,9 +51,6 @@ type ViewGroup = DeckGroup<ViewRow>;
 /** Openers keep clear of the sticky summary bar when the focus scrolls them
  *  into view (WCAG 2.4.11). */
 const CLEAR_OF_BAR = "scroll-mb-28";
-
-/** A large deck's group: skipped while off screen, its size guessed. */
-const LAZY_GROUP = "[content-visibility:auto] [contain-intrinsic-size:auto_36rem]";
 
 const makerOf = (row: ViewRow) => row.item.cardOwner?.username ?? null;
 const labelOf = (row: ViewRow) => deckRowLabel(row, makerOf(row));
@@ -66,7 +61,6 @@ export function DeckGroupViews({
   sort,
   onSort,
   showProxies,
-  large,
   onOpen,
 }: {
   view: DeckView;
@@ -74,13 +68,12 @@ export function DeckGroupViews({
   sort: DeckSort;
   onSort: (sort: DeckSort) => void;
   showProxies: boolean;
-  large: boolean;
   onOpen: (entryId: string) => void;
 }) {
   if (view === "table") return <TableView groups={groups} sort={sort} onSort={onSort} showProxies={showProxies} onOpen={onOpen} />;
-  if (view === "list") return <ListView groups={groups} showProxies={showProxies} large={large} onOpen={onOpen} />;
-  if (view === "grid") return <GridView groups={groups} showProxies={showProxies} large={large} onOpen={onOpen} />;
-  return <StacksView groups={groups} showProxies={showProxies} large={large} onOpen={onOpen} />;
+  if (view === "list") return <ListView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
+  if (view === "grid") return <GridView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
+  return <StacksView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
 }
 
 function GroupHeading({ id, group, className }: { id: string; group: ViewGroup; className?: string }) {
@@ -102,12 +95,10 @@ function GroupHeading({ id, group, className }: { id: string; group: ViewGroup; 
 function StacksView({
   groups,
   showProxies,
-  large,
   onOpen,
 }: {
   groups: ViewGroup[];
   showProxies: boolean;
-  large: boolean;
   onOpen: (entryId: string) => void;
 }) {
   const baseId = useId();
@@ -119,7 +110,7 @@ function StacksView({
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         return (
-          <section key={group.key} aria-labelledby={headingId} className={cn("flex max-w-full flex-col gap-2.5", large && LAZY_GROUP, large && "p-1")}>
+          <section key={group.key} aria-labelledby={headingId} className="flex max-w-full flex-col gap-2.5">
             <GroupHeading id={headingId} group={group} />
             <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-6">
               {stackColumnsOf(group.rows).map((column, c) => (
@@ -159,12 +150,10 @@ function StacksView({
 function GridView({
   groups,
   showProxies,
-  large,
   onOpen,
 }: {
   groups: ViewGroup[];
   showProxies: boolean;
-  large: boolean;
   onOpen: (entryId: string) => void;
 }) {
   const baseId = useId();
@@ -173,7 +162,7 @@ function GridView({
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         return (
-          <section key={group.key} aria-labelledby={headingId} className={cn("flex flex-col gap-3", large && LAZY_GROUP, large && "p-1")}>
+          <section key={group.key} aria-labelledby={headingId} className="flex flex-col gap-3">
             <GroupHeading id={headingId} group={group} />
             {/* Columns are added, never grown: two on a phone, as many
                 10.5 rem cards as the width takes (the 600 px thumb stays
@@ -207,12 +196,10 @@ function GridView({
 function ListView({
   groups,
   showProxies,
-  large,
   onOpen,
 }: {
   groups: ViewGroup[];
   showProxies: boolean;
-  large: boolean;
   onOpen: (entryId: string) => void;
 }) {
   const baseId = useId();
@@ -223,7 +210,7 @@ function ListView({
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         return (
-          <section key={group.key} aria-labelledby={headingId} className={cn("mb-4 break-inside-avoid", large && LAZY_GROUP)}>
+          <section key={group.key} aria-labelledby={headingId} className="mb-4 break-inside-avoid">
             <SurfaceCard className="flex min-w-0 flex-col gap-1 p-4">
               <GroupHeading id={headingId} group={group} className="mb-1 font-sans text-xs uppercase tracking-wider text-subtle" />
               <ul className="flex flex-col">

@@ -13,7 +13,8 @@ import { isUuid } from "@/lib/ids";
 // creator's deck picker uses (lib/decks/membership.ts, migration 0143 /
 // 0144: the entry says it came by `link`). Already in the deck → nothing
 // is added, and the answer says so. The commander slot asks for the
-// commander zone: the new entry then moves there.
+// commander zone: the card's mainboard entry — the one just added, or the
+// one the deck already had — moves there.
 //
 // The full add box (search my cards, PipGlyph cards and real cards — TODO
 // DK5.2) replaces the dialog that calls this; the action stays its "my
@@ -21,7 +22,9 @@ import { isUuid } from "@/lib/ids";
 // ---------------------------------------------------------------------------
 
 export type AddMyCardResult =
-  | { ok: true; added: boolean; title: string }
+  /** `added`: a new entry; `commander`: the card is now in the commander
+   *  zone (a commander pick — new, or moved from the mainboard). */
+  | { ok: true; added: boolean; commander: boolean; title: string }
   | { ok: false; error: string };
 
 export async function addMyCardToDeckAction(
@@ -43,17 +46,30 @@ export async function addMyCardToDeckAction(
 
   const result = await addCustomCardEntryToDeck(supabase, user.id, deckId, cardId, card.title, { source: "link" });
   if (!result.ok) return { ok: false, error: result.error ?? "Couldn't add the card." };
-  if (!result.added) return { ok: true, added: false, title: card.title };
+  const added = Boolean(result.added);
+  if (board === "main") return { ok: true, added, commander: false, title: card.title };
 
-  if (board === "commander") {
-    const { error } = await supabase
-      .from("deck_cards")
-      .update({ board: "commander" })
-      .eq("deck_id", deckId)
-      .eq("card_id", cardId)
-      .eq("board", "main");
-    if (error) return { ok: false, error: `Added ${card.title}, but couldn't make it the commander: ${error.message}` };
-    if (result.deckSlug) revalidatePath(`/deck/${result.deckSlug}`);
+  // The commander pick: the card's mainboard entry moves to the commander
+  // zone — the one just added, or the one the deck already had (a picked
+  // commander left on the mainboard with "already in this deck" was the
+  // independent check's L2 of #671). A card that already is the commander,
+  // or sits only on another board, stays where it is.
+  const { data: moved, error } = await supabase
+    .from("deck_cards")
+    .update({ board: "commander" })
+    .eq("deck_id", deckId)
+    .eq("card_id", cardId)
+    .eq("board", "main")
+    .select("id");
+  if (error) {
+    return {
+      ok: false,
+      error: added
+        ? `Added ${card.title}, but couldn't make it the commander: ${error.message}`
+        : `Couldn't make ${card.title} the commander: ${error.message}`,
+    };
   }
-  return { ok: true, added: true, title: card.title };
+  const commander = (moved ?? []).length > 0;
+  if (commander && result.deckSlug) revalidatePath(`/deck/${result.deckSlug}`);
+  return { ok: true, added, commander, title: card.title };
 }

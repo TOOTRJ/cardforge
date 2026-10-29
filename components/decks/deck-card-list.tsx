@@ -8,14 +8,13 @@ import { DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
 import type { DeckAnalytics } from "@/lib/decks/analytics";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
 import {
-  badgeCountsOf,
+  deckStatusCountsOf,
   DECK_VIEW_COOKIE,
   DECK_VIEW_COOKIE_MAX_AGE,
   DECK_VIEW_COOKIE_PATH,
   deckRowsOf,
   filterDeckRows,
   groupDeckRows,
-  LARGE_DECK_ENTRIES,
   nextUnchangedImport,
   serializeDeckViewPrefs,
   statusFilterOptions,
@@ -48,7 +47,7 @@ const LIST_PREFS: DeckViewPrefs = { view: "list", group: "type", sort: "mana" };
 export type DeckCardListSummary = {
   format: DeckFormat;
   /** The deck's breakdown (computeDeckAnalytics over the viewer's rows). */
-  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "byStatus" | "averageManaValue" | "lands">;
+  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "lands">;
   /** The owner's format check: how many issues (0 = passes). Null for a
    *  visitor, who never sees it (TODO DK0.9). */
   formatIssues: number | null;
@@ -80,7 +79,9 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
   // title), each with its status, badge and effective fields — once.
   const shown = useMemo(() => publicDeckItems(items, canManage), [items, canManage]);
   const rows = useMemo(() => deckRowsOf(shown, canManage), [shown, canManage]);
-  const counts = useMemo(() => badgeCountsOf(rows), [rows]);
+  // THE status count — the chips, the bar and the page's breakdown say the
+  // same numbers (the deck's cards; the maybeboard never counts).
+  const counts = useMemo(() => deckStatusCountsOf(rows), [rows]);
   const chips = statusFilterOptions(counts, filter);
   const allGroups = useMemo(() => groupDeckRows(rows, prefs.group, prefs.sort), [rows, prefs.group, prefs.sort]);
   const groups = useMemo(
@@ -180,6 +181,7 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
           summary.format,
           summary.analytics,
           rows.filter((row) => row.board === "commander").map((row) => row.privateName ?? row.name),
+          counts,
         ),
         formatIssues: summary.formatIssues,
         editNext: canManage ? nextUnchangedImport(allGroups) : null,
@@ -219,7 +221,6 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
             sort={prefs.sort}
             onSort={(sort) => changePrefs({ sort })}
             showProxies={showProxies}
-            large={items.length > LARGE_DECK_ENTRIES}
             onOpen={(id) => setSelectedId(id)}
           />
         )}
@@ -229,7 +230,7 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
             summary={bar.summary}
             formatIssues={bar.formatIssues}
             editNext={bar.editNext ? { href: `/create?deckCard=${bar.editNext.id}`, name: bar.editNext.name } : null}
-            unchanged={summary!.analytics.byStatus.imported}
+            unchanged={counts.imported}
             canManage={canManage}
           />
         ) : null}

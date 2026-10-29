@@ -99,7 +99,7 @@ describe("the empty deck's doors", () => {
   });
 
   it("“Pick a commander from my cards” adds the pick to the commander zone; the dialog closes", async () => {
-    s.addMyCard.mockResolvedValue({ ok: true, added: true, title: "Ember Wyrm" });
+    s.addMyCard.mockResolvedValue({ ok: true, added: true, commander: true, title: "Ember Wyrm" });
     page(true);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Pick a commander from my cards" }));

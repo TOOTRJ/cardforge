@@ -1846,8 +1846,14 @@ Rules and gotchas:
   views draw a "Private card" tile — no art; the owner gets
   `DeckPrivateCardsNotice` ("Make public" is `updateCardsVisibilityAction`,
   its strong-language rule included). The sticky summary bar's format check
-  and "Edit next" are the owner's. Past 150 entries each group is
-  `content-visibility: auto` (every row stays in the DOM).
+  and "Edit next" are the owner's. The page's status numbers — the filter
+  chips, the bar's composition, the breakdown's "Card status" — are ONE
+  count, `deckStatusCountsOf` (the deck's cards: the maybeboard never
+  counts; each card under the badge it wears, "No longer available" its
+  own); never a second count. Group by "None" keeps the sideboard and the
+  maybeboard apart from the deck. Every group stays in the accessibility
+  tree: no `content-visibility` or windowing on the card area (it hid
+  off-screen groups from screen readers and made the page jump).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

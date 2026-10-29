@@ -16,6 +16,8 @@ const s = vi.hoisted(() => ({
   add: vi.fn(),
   updates: [] as Array<{ patch: unknown; filters: Array<[string, unknown]> }>,
   updateError: null as { message: string } | null,
+  /** The mainboard entries the commander move finds. */
+  moved: [{ id: "entry-1" }] as Array<{ id: string }>,
   revalidated: [] as string[],
 }));
 
@@ -33,8 +35,9 @@ vi.mock("@/lib/supabase/server", () => ({
       const chain = {
         eq: (column: string, value: unknown) => {
           filters.push([column, value]);
-          return filters.length === 3 ? Promise.resolve({ error: s.updateError }) : chain;
+          return chain;
         },
+        select: async () => ({ data: s.updateError ? null : s.moved, error: s.updateError }),
       };
       return {
         update: (patch: unknown) => {
@@ -54,30 +57,45 @@ beforeEach(() => {
   s.add.mockReset();
   s.updates = [];
   s.updateError = null;
+  s.moved = [{ id: "entry-1" }];
   s.revalidated = [];
 });
 
 describe("addMyCardToDeckAction", () => {
   it("adds the caller's own card through the RPC, as a link", async () => {
     s.add.mockResolvedValue({ ok: true, deckSlug: "ness", added: true });
-    expect(await addMyCardToDeckAction(DECK, CARD)).toEqual({ ok: true, added: true, title: "Ember Wyrm" });
+    expect(await addMyCardToDeckAction(DECK, CARD)).toEqual({ ok: true, added: true, commander: false, title: "Ember Wyrm" });
     expect(s.add).toHaveBeenCalledWith(expect.anything(), "user-1", DECK, CARD, "Ember Wyrm", { source: "link" });
     expect(s.updates).toEqual([]);
   });
 
   it("the commander slot's pick moves to the commander zone", async () => {
     s.add.mockResolvedValue({ ok: true, deckSlug: "ness", added: true });
-    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: true, added: true, title: "Ember Wyrm" });
+    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: true, added: true, commander: true, title: "Ember Wyrm" });
     expect(s.updates).toEqual([
       { patch: { board: "commander" }, filters: [["deck_id", DECK], ["card_id", CARD], ["board", "main"]] },
     ]);
     expect(s.revalidated).toEqual(["/deck/ness"]);
   });
 
-  it("already in the deck: nothing added, nothing moved, and it says so", async () => {
+  it("already in the deck: nothing added — a commander pick still moves its mainboard entry to the zone (L2)", async () => {
     s.add.mockResolvedValue({ ok: true, deckSlug: "ness", added: false });
-    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: true, added: false, title: "Ember Wyrm" });
+    expect(await addMyCardToDeckAction(DECK, CARD)).toEqual({ ok: true, added: false, commander: false, title: "Ember Wyrm" });
     expect(s.updates).toEqual([]);
+    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: true, added: false, commander: true, title: "Ember Wyrm" });
+    expect(s.updates).toEqual([
+      { patch: { board: "commander" }, filters: [["deck_id", DECK], ["card_id", CARD], ["board", "main"]] },
+    ]);
+    expect(s.revalidated).toEqual(["/deck/ness"]);
+  });
+
+  it("a card already the commander (or only on another board) stays where it is, and says so", async () => {
+    s.add.mockResolvedValue({ ok: true, deckSlug: "ness", added: false });
+    s.moved = [];
+    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: true, added: false, commander: false, title: "Ember Wyrm" });
+    expect(s.revalidated).toEqual([]);
+    s.updateError = { message: "boom" };
+    expect(await addMyCardToDeckAction(DECK, CARD, "commander")).toEqual({ ok: false, error: "Couldn't make Ember Wyrm the commander: boom" });
   });
 
   it("refuses another creator's card, a stranger, bad ids and boards, and passes the RPC's refusal on", async () => {

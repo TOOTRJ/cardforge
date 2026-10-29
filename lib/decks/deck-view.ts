@@ -10,6 +10,7 @@ import { isPrivateForViewer, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-
 import { COLOR_IDENTITY_LABELS, RARITY_LABELS } from "@/types/card";
 import {
   DECK_BOARD_LABELS,
+  DECK_ENTRY_STATUS_COUNT_LABELS,
   DECK_ENTRY_STATUS_LABELS,
   type DeckBoard,
   type DeckEntrySource,
@@ -36,7 +37,8 @@ import {
 // their own, then the mainboard in the chosen groups, then the sideboard
 // and the maybeboard as one group each — whatever the grouping, a card in
 // the sideboard never reads as part of the deck. "Board" draws one group per
-// board; "None" one flat list of every entry.
+// board; "None" the deck itself as ONE group (its commander and companion
+// rows first), then the sideboard and the maybeboard — never mixed in.
 // ---------------------------------------------------------------------------
 
 /** How the cards are drawn. */
@@ -221,15 +223,38 @@ export function filterDeckRows<R extends Pick<DeckRow, "badge">>(rows: readonly 
   return filter === "all" ? [...rows] : rows.filter((row) => row.badge === filter);
 }
 
-/** Cards per badge (quantities summed — "Imported 59" is 59 cards, the
- *  number the summary bar and the breakdown say), over every row listed. */
-export function badgeCountsOf(rows: readonly Pick<DeckRow, "badge" | "quantity">[]): Record<StatusFilter, number> {
+/** The deck's cards per badge — THE status count the page says everywhere:
+ *  the filter chips, the summary bar's composition and the breakdown's
+ *  "Card status" all read it (the independent check of #671: they had
+ *  disagreed). Quantities summed ("Imported 59" is 59 cards), over the deck
+ *  itself — the maybeboard is a scratchpad and never counts, as everywhere
+ *  else (computeDeckAnalytics) — and each card under the badge it WEARS, so
+ *  "No longer available" is its own count wherever counts are shown. */
+export function deckStatusCountsOf(
+  rows: readonly Pick<DeckRow, "badge" | "quantity" | "board">[],
+): Record<StatusFilter, number> {
   const counts = { all: 0, imported: 0, edited: 0, remix: 0, original: 0, not_found: 0, unavailable: 0 };
   for (const row of rows) {
+    if (row.board === "maybe") continue;
     counts.all += row.quantity;
     counts[row.badge] += row.quantity;
   }
   return counts;
+}
+
+/** A badge as a COUNT of cards says it (the breakdown's "Card status"). */
+export const ENTRY_BADGE_COUNT_LABELS: Record<EntryBadge, string> = {
+  ...DECK_ENTRY_STATUS_COUNT_LABELS,
+  unavailable: NO_LONGER_AVAILABLE,
+};
+
+/** The counts as a breakdown lists them (the summary bar, the breakdown):
+ *  the four kinds of card always — a 0 is news too — then "Not found" and
+ *  "No longer available" only when the deck has one. */
+export function statusCountRows(counts: Record<StatusFilter, number>): Array<{ badge: EntryBadge; count: number }> {
+  return ENTRY_BADGE_ORDER.filter(
+    (badge) => (badge !== "not_found" && badge !== "unavailable") || counts[badge] > 0,
+  ).map((badge) => ({ badge, count: counts[badge] }));
 }
 
 /** The filter chips, in order: All, then Imported and Edited always (a 0
@@ -386,8 +411,6 @@ function groupOf<R>(key: string, label: string, rows: R[]): DeckGroup<R> {
 /** The rows in their groups, each group sorted, empty groups left out. */
 export function groupDeckRows<R extends DeckRow>(rows: readonly R[], group: DeckGroupBy, sort: DeckSort): DeckGroup<R>[] {
   const sorted = sortDeckRows(rows, sort);
-  if (group === "none") return sorted.length > 0 ? [groupOf("all", "All cards", sorted)] : [];
-
   const byBoard = new Map<DeckBoard, R[]>();
   for (const row of sorted) {
     const list = byBoard.get(row.board) ?? [];
@@ -396,6 +419,17 @@ export function groupDeckRows<R extends DeckRow>(rows: readonly R[], group: Deck
   }
 
   const groups: DeckGroup<R>[] = [];
+  if (group === "none") {
+    // The deck as one group, its zones' cards first; the sideboard and the
+    // maybeboard after it, never mixed in.
+    const deck = (["commander", "companion", "main"] as const).flatMap((board) => byBoard.get(board) ?? []);
+    if (deck.length > 0) groups.push(groupOf("deck", "Deck", deck));
+    for (const board of ["side", "maybe"] as const) {
+      const boardRows = byBoard.get(board);
+      if (boardRows && boardRows.length > 0) groups.push(groupOf(board, DECK_BOARD_LABELS[board], boardRows));
+    }
+    return groups;
+  }
   for (const board of BOARD_ORDER) {
     const boardRows = byBoard.get(board);
     if (!boardRows || boardRows.length === 0) continue;
@@ -430,10 +464,6 @@ export function stackColumnsOf<R>(rows: readonly R[], max = 12): R[][] {
   for (let i = 0; i < rows.length; i += per) out.push(rows.slice(i, i + per));
   return out;
 }
-
-/** Past this many entries the views render each group lazily: its layout
- *  and paint are skipped while it is off screen (TODO DK5.11). */
-export const LARGE_DECK_ENTRIES = 150;
 
 /** "Edit next" (TODO DK5.9): the first unchanged import, in the order the
  *  viewer reads the groups, that the Customize flow takes — a printing

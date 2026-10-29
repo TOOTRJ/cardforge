@@ -35,9 +35,11 @@ vi.mock("@/lib/decks/card-actions", () => ({
 }));
 
 import { DeckCardList } from "@/components/decks/deck-card-list";
+import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
+import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
-import { DECK_VIEW_COOKIE } from "@/lib/decks/deck-view";
+import { DECK_VIEW_COOKIE, deckRowsOf, deckStatusCountsOf, ENTRY_BADGE_COUNT_LABELS, statusCountRows } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
 
 // Our storage host: a bake's pointers are drawn only from it.
@@ -273,10 +275,10 @@ describe("a private card in a visitor's view (D11)", () => {
 });
 
 describe("the sticky summary bar", () => {
+  const NO_CARDS = { all: 0, imported: 0, edited: 0, remix: 0, original: 0, not_found: 0, unavailable: 0 };
   const analytics = {
     total: 99,
     byBoard: { main: 98, side: 0, maybe: 3, commander: 1, companion: 0 },
-    byStatus: { imported: 59, edited: 22, remix: 3, original: 15, not_found: 0 },
     averageManaValue: 3.31,
     lands: 36,
   };
@@ -296,12 +298,13 @@ describe("the sticky summary bar", () => {
     expect(bar.textContent).toContain("99 / 100");
     expect(within(bar).getByText("99 of 100 cards, short of the format's size")).toBeTruthy();
     expect(bar.textContent).toContain("Zoey");
-    expect(bar.textContent).toContain("Imported 59 · Edited 22 · Remix 3 · Original 15");
+    // The composition is the rows' own count (the chips' and the breakdown's).
+    expect(bar.textContent).toContain("Imported 2 · Edited 0 · Remix 0 · Original 0");
     expect(within(bar).getByRole("link", { name: /1 format issue/ }).getAttribute("href")).toBe("#format-check");
     // The first unchanged import in the order the list shows (Zoey, the commander group).
     const next = within(bar).getByRole("link", { name: /^Edit next/ });
     expect(next.getAttribute("href")).toMatch(/^\/create\?deckCard=00000000-/);
-    expect(next.getAttribute("aria-label")).toBe("Edit next: customize Zoey (59 cards not changed yet)");
+    expect(next.getAttribute("aria-label")).toBe("Edit next: customize Zoey (2 cards not changed yet)");
     // Nothing in it holds the focus: links and text only.
     expect(bar.querySelectorAll("[tabindex]")).toHaveLength(0);
     owner.unmount();
@@ -320,10 +323,54 @@ describe("the sticky summary bar", () => {
     expect(within(visitorBar).queryByRole("link")).toBeNull();
   });
 
+  it("the chips, the bar and the breakdown say the SAME counts — the maybeboard out, No longer available its own", async () => {
+    const items = [
+      item({ name: "Llanowar Elves", quantity: 4 }),
+      item({ name: "Ember Wyrm", card_id: CARD_ID, scryfall_id: null, source: "creator" }, card(CARD_ID, { title: "Ember Wyrm" })),
+      // Gone (D3): the owner's badge says No longer available.
+      item({ name: "Tidecaller", card_id: "c-gone", scryfall_id: null, source: "link" }),
+      // The maybeboard is a scratchpad: listed, never counted.
+      item({ name: "Maybe Bolt", board: "maybe", quantity: 3 }),
+    ];
+    const rows = deckRowsOf(items, true);
+    const counts = deckStatusCountsOf(rows);
+    render(
+      <>
+        <DeckCardList
+          items={items}
+          ownerUsername="kesh"
+          canManage
+          initialPrefs={{ view: "list", group: "type", sort: "mana" }}
+          summary={{ format: "casual", analytics: computeDeckAnalytics(items), formatIssues: 0 }}
+        />
+        {/* The page's breakdown, fed the way the page feeds it. */}
+        <DeckAnalyticsPanel
+          analytics={computeDeckAnalytics(items)}
+          statusCounts={statusCountRows(counts).map(({ badge, count }) => ({ key: badge, label: ENTRY_BADGE_COUNT_LABELS[badge], count }))}
+        />
+      </>,
+    );
+    const chips = within(screen.getByRole("radiogroup", { name: "Filter by card status" }))
+      .getAllByRole("radio")
+      .map((chip) => chip.textContent?.replace(/\s+/g, " ").trim());
+    expect(chips).toEqual(["All 6", "Imported 4", "Edited 0", "Original 1", "No longer available 1"]);
+    expect(screen.getByRole("region", { name: "Deck summary" }).textContent).toContain(
+      "Imported 4 · Edited 0 · Remix 0 · Original 1 · No longer available 1",
+    );
+    const breakdown = Array.from(document.querySelectorAll("dl > div")).map((row) => row.textContent);
+    expect(breakdown).toEqual([
+      "Imported, not changed yet4",
+      "Edited imports0",
+      "Remixes0",
+      "Originals1",
+      "No longer available1",
+    ]);
+  });
+
   it("names no commander yet, and a format with no size", () => {
     render(
       <DeckSummaryBar
-        summary={deckSummaryOf("commander", { ...analytics, byBoard: { ...analytics.byBoard, commander: 0 } }, [])}
+        summary={deckSummaryOf("commander", { ...analytics, byBoard: { ...analytics.byBoard, commander: 0 } }, [], NO_CARDS)}
         formatIssues={0}
         editNext={null}
         unchanged={0}
@@ -333,7 +380,7 @@ describe("the sticky summary bar", () => {
     expect(screen.getByText("No commander yet")).toBeTruthy();
     expect(screen.getByText("Format check passes")).toBeTruthy();
     cleanup();
-    render(<DeckSummaryBar summary={deckSummaryOf("casual", analytics, [])} formatIssues={null} editNext={null} unchanged={0} canManage={false} />);
+    render(<DeckSummaryBar summary={deckSummaryOf("casual", analytics, [], NO_CARDS)} formatIssues={null} editNext={null} unchanged={0} canManage={false} />);
     const bar = screen.getByRole("region", { name: "Deck summary" });
     expect(within(bar).getByText("99 cards")).toBeTruthy();
     expect(bar.textContent).not.toMatch(/commander/i);

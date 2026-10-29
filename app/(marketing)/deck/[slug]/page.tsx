@@ -40,7 +40,16 @@ import {
 } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
-import { DECK_CARDS_HEADING_ID, DECK_VIEW_COOKIE, defaultDeckViewPrefs, parseDeckViewPrefs } from "@/lib/decks/deck-view";
+import {
+  DECK_CARDS_HEADING_ID,
+  DECK_VIEW_COOKIE,
+  deckRowsOf,
+  deckStatusCountsOf,
+  defaultDeckViewPrefs,
+  ENTRY_BADGE_COUNT_LABELS,
+  parseDeckViewPrefs,
+  statusCountRows,
+} from "@/lib/decks/deck-view";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -192,6 +201,13 @@ export default async function DeckDetailPage({
   const cover = deckCoverOf(deck, deckCoverColors(items));
   const featured = featuredCardsOf(shownItems, deck);
   const analytics = computeDeckAnalytics(items);
+  // The breakdown's "Card status": THE status count the list's chips and the
+  // summary bar say (the viewer's rows, each card under the badge it wears).
+  const statusCounts = statusCountRows(deckStatusCountsOf(deckRowsOf(shownItems, isOwner))).map(({ badge, count }) => ({
+    key: badge,
+    label: ENTRY_BADGE_COUNT_LABELS[badge],
+    count,
+  }));
   const { total: cardCount, linked: madeCount } = analytics;
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
@@ -468,7 +484,7 @@ export default async function DeckDetailPage({
               </ul>
             </SurfaceCard>
           ) : null}
-          <DeckAnalyticsPanel analytics={analytics} />
+          <DeckAnalyticsPanel analytics={analytics} statusCounts={statusCounts} />
         </section>
       ) : null}
 

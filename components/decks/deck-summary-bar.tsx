@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2, Crown } from "lucide-react";
 import type { DeckSummary } from "@/lib/decks/deck-summary";
+import { ENTRY_BADGE_LABELS } from "@/lib/decks/deck-view";
 import { cn } from "@/lib/utils";
-import { DECK_ENTRY_STATUS_LABELS } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // The deck's sticky summary bar (TODO DK5.9, WD5): the count against the
@@ -105,7 +105,7 @@ export function DeckSummaryBar({
           <Item className="hidden xl:flex">
             <span className="sr-only">Composition: </span>
             {summary.composition
-              .map((row) => `${DECK_ENTRY_STATUS_LABELS[row.status]} ${row.count}`)
+              .map((row) => `${ENTRY_BADGE_LABELS[row.badge]} ${row.count}`)
               .join(" · ")}
           </Item>
           {summary.averageManaValue !== null ? (

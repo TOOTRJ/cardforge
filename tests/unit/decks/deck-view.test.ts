@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  badgeCountsOf,
+  deckStatusCountsOf,
   DECK_GROUPS,
   DECK_SORTS,
   DECK_VIEWS,
@@ -16,6 +16,7 @@ import {
   serializeDeckViewPrefs,
   sortDeckRows,
   stackColumnsOf,
+  statusCountRows,
   statusFilterOptions,
   type DeckRow,
   type ViewItem,
@@ -171,8 +172,27 @@ describe("the status filter and its chips", () => {
   ];
   const rows = rowsOf(items);
 
-  it("counts CARDS per badge (quantities summed) over every row listed", () => {
-    expect(badgeCountsOf(rows)).toEqual({ all: 10, imported: 4, edited: 1, remix: 1, original: 1, not_found: 2, unavailable: 1 });
+  it("counts the deck's CARDS per badge (quantities summed); the maybeboard never counts", () => {
+    expect(deckStatusCountsOf(rows)).toEqual({ all: 10, imported: 4, edited: 1, remix: 1, original: 1, not_found: 2, unavailable: 1 });
+    const withMaybe = rowsOf([...items, item({ board: "maybe", quantity: 3 }), item({ board: "side", quantity: 2 })]);
+    expect(deckStatusCountsOf(withMaybe)).toEqual({ all: 12, imported: 6, edited: 1, remix: 1, original: 1, not_found: 2, unavailable: 1 });
+  });
+
+  it("lists the counts as the breakdown and the bar do: the four kinds always, Not found and No longer available when there", () => {
+    expect(statusCountRows(deckStatusCountsOf(rows))).toEqual([
+      { badge: "imported", count: 4 },
+      { badge: "edited", count: 1 },
+      { badge: "remix", count: 1 },
+      { badge: "original", count: 1 },
+      { badge: "not_found", count: 2 },
+      { badge: "unavailable", count: 1 },
+    ]);
+    expect(statusCountRows(deckStatusCountsOf(rowsOf([item()]))).map((row) => row.badge)).toEqual([
+      "imported",
+      "edited",
+      "remix",
+      "original",
+    ]);
   });
 
   it("filters to exactly the rows wearing a badge", () => {
@@ -185,10 +205,10 @@ describe("the status filter and its chips", () => {
   });
 
   it("offers All, Imported and Edited always, the rest only where the deck has them — or where picked", () => {
-    const onlyImports = badgeCountsOf(rowsOf([item(), item()]));
+    const onlyImports = deckStatusCountsOf(rowsOf([item(), item()]));
     expect(statusFilterOptions(onlyImports, "all").map((o) => o.value)).toEqual(["all", "imported", "edited"]);
     expect(statusFilterOptions(onlyImports, "remix").map((o) => o.value)).toEqual(["all", "imported", "edited", "remix"]);
-    expect(statusFilterOptions(badgeCountsOf(rows), "all")).toEqual([
+    expect(statusFilterOptions(deckStatusCountsOf(rows), "all")).toEqual([
       { value: "all", label: "All", count: 10 },
       { value: "imported", label: "Imported", count: 4 },
       { value: "edited", label: "Edited", count: 1 },
@@ -324,12 +344,17 @@ describe("grouping", () => {
     ]);
   });
 
-  it("none: one flat list of every entry, sorted", () => {
-    const [all, ...rest] = groupDeckRows(deck, "none", "name");
-    expect(rest).toEqual([]);
-    expect(all!.label).toBe("All cards");
-    expect(all!.rows).toHaveLength(deck.length);
-    expect(names(all!.rows)[0]).toBe("Big Thing");
+  it("none: the deck as one group (its zones' cards first, the rest sorted) — the sideboard and maybeboard never mixed in", () => {
+    expect(shape("none")).toEqual([
+      "Deck·41:Zoey,Lurrus,Bolt,Elf,Charm,Wrath,Big Thing,Mystery,Forest",
+      "Sideboard·1:Side Card",
+      "Maybeboard·1:Maybe Card",
+    ]);
+    const byName = groupDeckRows(deck, "none", "name");
+    expect(names(byName[0]!.rows).slice(0, 3)).toEqual(["Zoey", "Lurrus", "Big Thing"]);
+    expect(byName.map((g) => g.label)).toEqual(["Deck", "Sideboard", "Maybeboard"]);
+    // A deck with no sideboard or maybeboard: the one group.
+    expect(groupDeckRows(rowsOf([item({ name: "Solo" })]), "none", "mana").map((g) => g.label)).toEqual(["Deck"]);
   });
 
   it("keys are unique on the page, and empty groups never appear", () => {
