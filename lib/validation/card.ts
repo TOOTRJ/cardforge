@@ -699,7 +699,13 @@ const baseCardSchema = z.object({
   frame_preview: z.boolean().optional(),
 });
 
-export const createCardSchema = baseCardSchema;
+/** A NEW card also says whether it still prints what its Scryfall import
+ *  gave it (TODO DK2.5, lib/creator/import-baseline.ts): only then does
+ *  createCardAction store the import's fingerprint (migration 0144,
+ *  insert-only). An edit can't send it — updateCardSchema is the base's. */
+export const createCardSchema = baseCardSchema.extend({
+  import_unchanged: z.boolean().optional(),
+});
 
 // Update accepts the same shape but everything is optional. We model it as a
 // partial of the base, THEN override every defaulted field with its

@@ -28,6 +28,7 @@ import {
   countPublicDecksByOwner,
   listPublicDecksByOwner,
 } from "@/lib/decks/queries";
+import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
 import { DECK_FORMAT_LABELS } from "@/types/deck";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -194,10 +195,7 @@ async function ProfileDecks({ ownerId }: { ownerId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {decks.map((deck) => {
-        const remixPct =
-          deck.cards_count > 0
-            ? Math.round((deck.remixed_count / deck.cards_count) * 100)
-            : 0;
+        const made = madeOnPipGlyph(deck);
         return (
           <Link
             key={deck.id}
@@ -219,7 +217,7 @@ async function ProfileDecks({ ownerId }: { ownerId: string }) {
                 <span>
                   {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
                 </span>
-                <span>{remixPct}% proxied</span>
+                <span>{made.made} made on PipGlyph</span>
               </div>
             </SurfaceCard>
           </Link>

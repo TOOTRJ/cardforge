@@ -6,6 +6,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   isDeckBoard,
+  isDeckEntrySource,
   isDeckFormat,
   isDeckVisibility,
   type Deck,
@@ -37,9 +38,12 @@ function narrowDeck(row: DeckRow): Deck {
 }
 
 function narrowDeckCard(row: DeckCardRow): DeckCardEntry {
+  // `source` (migration 0144) is absent on a database 0144 hasn't reached.
+  const source = (row as { source?: unknown }).source;
   return {
     ...row,
     board: isDeckBoard(row.board) ? row.board : "main",
+    source: isDeckEntrySource(source) ? source : null,
   };
 }
 
@@ -47,9 +51,9 @@ type DeckCounts = {
   /** Physical cards across playable boards (quantities summed, maybeboard
    *  excluded) — the "99 cards" number. `decks.card_count`. */
   cards_count: number;
-  /** Physical cards (same boards) whose entry has a linked custom proxy.
-   *  `decks.linked_card_count`. */
-  remixed_count: number;
+  /** Physical cards (same boards) whose entry links a PipGlyph card — the
+   *  deck owner's or, since D3, another creator's. `decks.linked_card_count`. */
+  linked_count: number;
 };
 
 export type DeckWithCounts = Deck & DeckCounts;
@@ -62,7 +66,7 @@ function withCounts(row: DeckRow): DeckWithCounts {
   return {
     ...narrowDeck(row),
     cards_count: row.card_count ?? 0,
-    remixed_count: row.linked_card_count ?? 0,
+    linked_count: row.linked_card_count ?? 0,
   };
 }
 
@@ -356,9 +360,14 @@ export const getDeckBySlugWithOwner = cache(async (
 
 export type DeckItem = {
   entry: DeckCardEntry;
-  /** The linked custom card (proxy), when the entry has one and it's still
+  /** The linked PipGlyph card, when the entry has one and it's still
    *  readable by the viewer. */
   card: Card | null;
+  /** The card's maker when it is NOT the deck's owner (owner decision D3,
+   *  TODO DK2.9: another creator's public card, credited "by @handle" and
+   *  linked at THEIR card page). Null for the owner's own cards and for an
+   *  entry with no readable card. */
+  cardOwner: { username: string | null } | null;
 };
 
 /** Every entry of a deck, in list order. Paged past PostgREST's 1000-row
@@ -369,16 +378,19 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
-    const { data: entries, error } = await selectAllRows<DeckCardRow>((from, to) =>
-      supabase
-        .from("deck_cards")
-        .select("*", { count: "exact" })
-        .eq("deck_id", deckId)
-        .order("position", { ascending: true })
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
-    );
+    const [{ data: entries, error }, { data: deck }] = await Promise.all([
+      selectAllRows<DeckCardRow>((from, to) =>
+        supabase
+          .from("deck_cards")
+          .select("*", { count: "exact" })
+          .eq("deck_id", deckId)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      supabase.from("decks").select("owner_id").eq("id", deckId).maybeSingle(),
+    ]);
     if (error || entries.length === 0) return [];
 
     const cardIds = Array.from(
@@ -399,10 +411,29 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
       }
     }
 
-    return entries.map((row) => ({
-      entry: narrowDeckCard(row),
-      card: row.card_id ? (cardById.get(row.card_id) ?? null) : null,
-    }));
+    // Another creator's card (D3): its maker's handle, for the credit and
+    // the link to their card page.
+    const deckOwnerId = deck?.owner_id ?? null;
+    const makerIds = Array.from(
+      new Set([...cardById.values()].map((card) => card.owner_id).filter((id) => id !== deckOwnerId)),
+    );
+    const usernameOf = new Map<string, string | null>();
+    if (makerIds.length > 0) {
+      const { data: makers } = await supabase.from("profiles").select("id, username").in("id", makerIds);
+      for (const maker of makers ?? []) usernameOf.set(maker.id, maker.username ?? null);
+    }
+
+    return entries.map((row) => {
+      const card = row.card_id ? (cardById.get(row.card_id) ?? null) : null;
+      return {
+        entry: narrowDeckCard(row),
+        card,
+        cardOwner:
+          card && deckOwnerId && card.owner_id !== deckOwnerId
+            ? { username: usernameOf.get(card.owner_id) ?? null }
+            : null,
+      };
+    });
   } catch {
     return [];
   }

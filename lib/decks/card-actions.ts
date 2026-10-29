@@ -7,10 +7,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
+import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
-// edits, remove, and linking/unlinking a custom proxy card. Same
+// edits, remove, and linking/unlinking a PipGlyph card. Same
 // discriminated-union posture as lib/decks/actions.ts.
 // ---------------------------------------------------------------------------
 
@@ -55,7 +56,7 @@ async function revalidateDeckCardPaths(
   revalidatePath(`/deck/${deckSlug}/edit`);
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks");
-  // The profile's "Decks by X" tiles show card counts + proxy % — entry
+  // The profile's "Decks by X" tiles show card counts + "made on PipGlyph" — entry
   // mutations change those numbers too.
   await revalidateProfilePage(supabase, userId);
 }
@@ -129,9 +130,13 @@ export async function removeDeckCardAction(
   return { ok: true, deckCardId };
 }
 
-/** Link one of the caller's custom cards as this entry's proxy. RLS also
- *  enforces card ownership (the deck_cards UPDATE policy checks it), but the
- *  pre-flight gives a friendlier error. */
+/** Link a PipGlyph card as this entry's card: one of the caller's own at any
+ *  visibility, or another creator's PUBLIC card (owner decision D3, TODO
+ *  DK2.9). The database enforces the same rule (migration 0144's
+ *  deck_cards_guard_card_link: a NEW card_id is checked, so an entry whose
+ *  linked card later went private stays editable); the pre-flight gives a
+ *  friendlier error. The entry keeps its source — it still came from where
+ *  it came from. */
 export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
@@ -151,13 +156,13 @@ export async function linkDeckCardAction(
 
   const { data: card } = await supabase
     .from("cards")
-    .select("id, owner_id")
+    .select("id, owner_id, visibility")
     .eq("id", cardId)
     .maybeSingle();
-  if (!card || card.owner_id !== user.id) {
+  if (!card || !canLinkIntoDeck(card, user.id)) {
     return {
       ok: false,
-      error: "You can only link cards you own as proxies.",
+      error: "You can link your own cards, or another creator's public card.",
     };
   }
 

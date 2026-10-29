@@ -340,6 +340,7 @@ import {
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
+import { importBaselineOf, importUnchangedPayload, type ImportBaseline } from "@/lib/creator/import-baseline";
 import { editBackFacePayload } from "@/lib/creator/back-face-edit";
 import { cancelsImplicitSubmit } from "@/lib/creator/enter-key";
 import {
@@ -875,6 +876,9 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
+  // The printed values the last import landed with (TODO DK2.5): a new
+  // card's save says whether it still prints them (lib/creator/import-baseline.ts).
+  const [importBaseline, setImportBaseline] = useState<ImportBaseline | null>(null);
   // Session-only import facts (never saved): the Card step's "Frame
   // substituted (imported …)" chip while the card sits on a frame that
   // isn't the printing's own (TODO 1.5), and the Art step's note on
@@ -3122,6 +3126,7 @@ export function CardCreatorForm({
     // (a step change used to turn the preview to the front). With Face tabs
     // an import made from the Back face tab would otherwise land there.
     setPreviewFace("front");
+    setImportBaseline(importBaselineOf(getValues()));
     return notice;
   };
 
@@ -3836,6 +3841,7 @@ export function CardCreatorForm({
     secondPartFields.forget();
     forgetBorrowedWords();
     setRemixSource(null);
+    setImportBaseline(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
     setPreviewFace("front");
@@ -4181,6 +4187,10 @@ export function CardCreatorForm({
       // update; undefined would silently keep the old link. Cards whose
       // provenance should persist hydrate the field non-empty on load.
       source_scryfall_id: values.source_scryfall_id.trim() || null,
+      // A NEW card started from an import this session says whether it
+      // still prints what the import gave it (TODO DK2.5): the key is
+      // absent otherwise, so every other save is unchanged.
+      ...(mode === "create" ? importUnchangedPayload(importBaseline, values) : {}),
       // Set-symbol fields (Set icon step). Empty → null clears back to the
       // default PipGlyph mark.
       set_icon_url: values.set_icon_url.trim() || null,

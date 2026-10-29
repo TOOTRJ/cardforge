@@ -686,7 +686,9 @@ async function runGeneratedCardStep(
           artist_credit: await aiArtistCredit(),
           ...config.createExtras,
         },
-        { redirectAfterCreate: false },
+        // A card designed for a deck (its createExtras' deck_id) joins it as
+        // the AI's (deck_cards.source, migration 0144).
+        { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
       );
       if (!result.ok) {
         return {
@@ -2864,7 +2866,14 @@ async function executeDeckRemixStep(
       artist_credit: await aiArtistCredit(),
       deck_id: job.deck_id ?? undefined,
     },
-    { redirectAfterCreate: false },
+    // The new deck's entry is the AI's restyle (deck_cards.source, 0144) and
+    // keeps the printing it was made from — its Scryfall id and real name,
+    // so the copied decklist still names the real card (TODO DK2.6). An
+    // own card's remix has no printing: the entry takes the card's title.
+    {
+      redirectAfterCreate: false,
+      deckEntry: { source: "ai_remix", scryfallId: entry.scryfall_id, name: entry.name },
+    },
   );
   if (!result.ok) {
     return { ...step, status: "failed", error: createFailureMessage(result) };

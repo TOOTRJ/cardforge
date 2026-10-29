@@ -18,6 +18,8 @@ const s = vi.hoisted(() => ({
   rows: {} as Record<string, unknown[]>,
   entries: [] as Record<string, unknown>[],
   withCount: true,
+  /** A linked card's maker, by card id (default: the deck's owner). */
+  cardOwner: {} as Record<string, string>,
 }));
 
 function client() {
@@ -37,7 +39,7 @@ function client() {
         }
         if (table === "cards") {
           const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
-          return { data: ids.map((id) => ({ id, title: id, color_identity: [] })), error: null };
+          return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1" })), error: null };
         }
         return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
       };
@@ -101,13 +103,14 @@ beforeEach(() => {
   s.rows = {};
   s.entries = [];
   s.withCount = true;
+  s.cardOwner = {};
 });
 
 describe("deck tiles read their counts off the deck row", () => {
-  it("listPublicDecks: card_count > 0, counts mapped to cards_count / remixed_count, no deck_cards read", async () => {
+  it("listPublicDecks: card_count > 0, counts mapped to cards_count / linked_count, no deck_cards read", async () => {
     s.rows.decks = [deckRow("a", 100, 40), deckRow("b", 2400, 0)];
     const decks = await listPublicDecks({ anonymous: true, limit: 25 });
-    expect(decks.map((d) => [d.id, d.cards_count, d.remixed_count])).toEqual([
+    expect(decks.map((d) => [d.id, d.cards_count, d.linked_count])).toEqual([
       ["a", 100, 40],
       ["b", 2400, 0],
     ]);
@@ -121,7 +124,7 @@ describe("deck tiles read their counts off the deck row", () => {
   it("listPublicDecksByOwner and both public counts leave empty decks out", async () => {
     s.rows.decks = [deckRow("a", 60, 60)];
     const decks = await listPublicDecksByOwner("owner-1", 6);
-    expect(decks[0]).toMatchObject({ cards_count: 60, remixed_count: 60 });
+    expect(decks[0]).toMatchObject({ cards_count: 60, linked_count: 60 });
     await countPublicDecksByOwner("owner-1");
     await countPublicDecks();
     const deckQueries = s.calls.filter((c) => c.table === "decks");
@@ -133,7 +136,7 @@ describe("deck tiles read their counts off the deck row", () => {
   it("listMyDecks keeps the owner's empty decks (the dashboard is where they're filled)", async () => {
     s.rows.decks = [deckRow("draft", 0, 0), deckRow("full", 99, 12)];
     const decks = await listMyDecks();
-    expect(decks.map((d) => [d.id, d.cards_count, d.remixed_count])).toEqual([
+    expect(decks.map((d) => [d.id, d.cards_count, d.linked_count])).toEqual([
       ["draft", 0, 0],
       ["full", 99, 12],
     ]);
@@ -177,6 +180,35 @@ describe("listDeckCards reads a whole deck", () => {
     expect(cardCalls.map((c) => (c.ops.find((op) => op[0] === "in")?.[2] as string[]).length)).toEqual([
       100, 100, 100, 100, 50,
     ]);
+  });
+
+  it("another creator's card names its maker (D3); the owner's own cards and printings don't", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.rows.profiles = [{ id: "artist-1", username: "dev_artist" }];
+    s.cardOwner = { "card-foreign": "artist-1" };
+    s.entries = [
+      { id: "e-own", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own", source: "creator" },
+      { id: "e-foreign", deck_id: "d", board: "main", quantity: 1, position: 1, card_id: "card-foreign", name: "Theirs", source: "link" },
+      { id: "e-print", deck_id: "d", board: "main", quantity: 1, position: 2, card_id: null, scryfall_id: "x", name: "Bolt", source: "bogus" },
+    ];
+    const items = await listDeckCards("d");
+    expect(items.map((item) => item.cardOwner)).toEqual([null, { username: "dev_artist" }, null]);
+    // One profiles read, for the other makers only.
+    const makerReads = s.calls.filter((c) => c.table === "profiles");
+    expect(makerReads).toHaveLength(1);
+    expect(makerReads[0]!.ops.find((op) => op[0] === "in")).toEqual(["in", "id", ["artist-1"]]);
+    // `source` narrowed: a value outside the CHECK's list reads as none.
+    expect(items.map((item) => item.entry.source)).toEqual(["creator", "link", null]);
+  });
+
+  it("a deck with only its owner's cards reads no profile", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    const items = await listDeckCards("d");
+    expect(items[0]!.cardOwner).toBeNull();
+    // A database 0144 hasn't reached: no source at all.
+    expect(items[0]!.entry.source).toBeNull();
+    expect(s.calls.filter((c) => c.table === "profiles")).toHaveLength(0);
   });
 
   it("an ordinary deck is ONE request (the exact count says it's all there)", async () => {

@@ -392,7 +392,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Analytics"
           title="Deck breakdown"
-          description="Mana curve, colors, and remix progress across the deck."
+          description="Mana curve, colors, and every card by status: imported, edited, remixed or original."
         />
         <div className="mt-6">
           <DeckAnalyticsPanel analytics={analytics} />

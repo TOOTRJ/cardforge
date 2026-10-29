@@ -14,6 +14,7 @@ import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
+import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   DECK_FORMAT_LABELS,
@@ -304,10 +305,7 @@ export function PublicDeckTile({
     deck.owner?.display_name?.trim() ||
     deck.owner?.username ||
     "Anonymous forger";
-  const remixPct =
-    deck.cards_count > 0
-      ? Math.round((deck.remixed_count / deck.cards_count) * 100)
-      : 0;
+  const made = madeOnPipGlyph(deck);
 
   // Avoid nesting <a> inside <a> (invalid HTML): the cover + title/description
   // are wrapped in one Link, then the owner chip is a sibling Link below.
@@ -354,22 +352,18 @@ export function PublicDeckTile({
               {deck.description}
             </p>
           ) : null}
-          {deck.cards_count > 0 ? (
+          {made.total > 0 ? (
             <div className="mt-auto flex items-center gap-2 text-[11px] text-subtle">
-              <div
-                className="h-1 flex-1 overflow-hidden rounded-full bg-elevated"
-                role="progressbar"
-                aria-valuenow={remixPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Proxy progress"
-              >
+              {/* The share of the deck made on PipGlyph (stored counts,
+                  lib/decks/tile-counts.ts) — the meter is decoration; the
+                  words beside it say the numbers. */}
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-elevated" aria-hidden>
                 <div
                   className="h-full rounded-full bg-primary"
-                  style={{ width: `${remixPct}%` }}
+                  style={{ width: `${made.pct}%` }}
                 />
               </div>
-              <span className="shrink-0">{remixPct}% proxied</span>
+              <span className="shrink-0">{made.label}</span>
             </div>
           ) : null}
         </div>

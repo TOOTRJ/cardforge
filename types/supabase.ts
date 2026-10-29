@@ -829,6 +829,12 @@ export type Database = {
           supertype: string | null;
           nickname: string | null;
           printed_types: string | null;
+          /** Import provenance (migration 0144, TODO DK2.5): the Scryfall
+           *  printing the card was started from and the fingerprint of what it
+           *  printed at its first save (lib/cards/import-fingerprint.ts).
+           *  Insert-only — an API role can't change them. */
+          import_scryfall_id: string | null;
+          import_fingerprint: string | null;
           template_id: string | null;
           title: string;
           toughness: string | null;
@@ -883,6 +889,8 @@ export type Database = {
           lang?: string;
           slug: string;
           source_scryfall_id?: string | null;
+          import_scryfall_id?: string | null;
+          import_fingerprint?: string | null;
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
@@ -940,6 +948,8 @@ export type Database = {
           lang?: string;
           slug?: string;
           source_scryfall_id?: string | null;
+          import_scryfall_id?: string | null;
+          import_fingerprint?: string | null;
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
@@ -1799,6 +1809,9 @@ export type Database = {
           rarity: string | null;
           scryfall_id: string | null;
           set_code: string | null;
+          /** How the entry got into the deck (migration 0144, TODO DK2.6);
+           *  null = written before 0144 and not placed by its backfill. */
+          source: string | null;
           type_line: string | null;
           updated_at: string;
         };
@@ -1819,6 +1832,7 @@ export type Database = {
           rarity?: string | null;
           scryfall_id?: string | null;
           set_code?: string | null;
+          source?: string | null;
           type_line?: string | null;
           updated_at?: string;
         };
@@ -1839,6 +1853,7 @@ export type Database = {
           rarity?: string | null;
           scryfall_id?: string | null;
           set_code?: string | null;
+          source?: string | null;
           type_line?: string | null;
           updated_at?: string;
         };
@@ -2041,8 +2056,17 @@ export type Database = {
         Args: { p_deck_id: string; p_entries: Json };
         Returns: Json;
       };
+      /** 0143; 0144 added the entry's origin (p_source: creator | link |
+       *  ai_generate | ai_remix, default creator) and the printing an AI
+       *  restyle keeps (p_scryfall_id). */
       add_custom_deck_entry: {
-        Args: { p_deck_id: string; p_card_id: string; p_name: string };
+        Args: {
+          p_deck_id: string;
+          p_card_id: string;
+          p_name: string;
+          p_source?: string;
+          p_scryfall_id?: string | null;
+        };
         Returns: boolean;
       };
       claim_job_step: {

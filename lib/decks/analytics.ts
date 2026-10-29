@@ -1,6 +1,7 @@
-import type { DeckBoard, DeckCardEntry } from "@/types/deck";
+import { DECK_ENTRY_STATUS_VALUES, type DeckBoard, type DeckCardEntry, type DeckEntryStatus } from "@/types/deck";
 import type { Card } from "@/types/card";
-import { manaValueOfCost } from "@/lib/cards/mana-value";
+import { effectiveEntryFields } from "@/lib/decks/effective-entry";
+import { deckEntryStatus } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
 // Deck analytics — pure functions over deck entries (quantity-weighted, so
@@ -68,42 +69,14 @@ export function typeBucketFor(typeLine: string | null | undefined): TypeBucket {
   return "Other";
 }
 
-/** Effective type line of an entry: the denormalized Scryfall one, else
- *  derived from the linked custom card. Shared by the analytics buckets AND
- *  the deck list grouping so the two views never disagree (custom-only
- *  entries have type_line = null). */
-export function entryTypeLine(
-  entry: Pick<DeckCardEntry, "type_line">,
-  card?: Pick<Card, "supertype" | "card_type"> | null,
-): string | null {
-  if (entry.type_line) return entry.type_line;
-  if (!card) return null;
-  return [card.supertype, card.card_type].filter(Boolean).join(" ") || null;
-}
-
-/** Mana value of an entry: the denormalized Scryfall value when present,
- *  otherwise read from the entry's cost, then the linked custom card's
- *  (`manaValueOfCost`: hybrid, Phyrexian and snow pips count as print
- *  counts them). */
-export function entryManaValue(
-  entry: Pick<DeckCardEntry, "mana_value" | "mana_cost">,
-  card?: Pick<Card, "cost"> | null,
-): number | null {
-  if (entry.mana_value !== null && entry.mana_value !== undefined) {
-    return entry.mana_value;
-  }
-  const fromEntryCost = manaValueOfCost(entry.mana_cost);
-  if (fromEntryCost !== null) return fromEntryCost;
-  return card ? manaValueOfCost(card.cost) : null;
-}
-
 export type DeckAnalytics = {
   /** Physical cards per board (quantities summed). */
   byBoard: Record<DeckBoard, number>;
   /** Physical cards across playable boards. */
   total: number;
-  /** Entries with a linked custom proxy, quantity-weighted (playable boards). */
-  remixed: number;
+  /** Physical cards per entry status (deckEntryStatus, TODO DK2.6),
+   *  playable boards — Imported / Edited / Remix / Original / Not found. */
+  byStatus: Record<DeckEntryStatus, number>;
   /** Mana curve over playable non-land cards: indexes 0–6 are exact mana
    *  values, index 7 is "7+". Cards with unknown mana value are excluded. */
   curve: number[];
@@ -121,6 +94,15 @@ export type DeckAnalytics = {
   /** Average mana value across playable non-land cards with a known value. */
   averageManaValue: number | null;
 };
+
+/** The deck's cards by status as a breakdown lists them (the deck page's
+ *  "Card status", the report PDF): the four kinds of card always — a 0 is
+ *  news too — and "Not found" only when the deck has one. */
+export function statusRows(analytics: Pick<DeckAnalytics, "byStatus">): Array<{ status: DeckEntryStatus; count: number }> {
+  return DECK_ENTRY_STATUS_VALUES.map((status) => ({ status, count: analytics.byStatus[status] })).filter(
+    (row) => row.status !== "not_found" || row.count > 0,
+  );
+}
 
 function emptyCounter<K extends string>(keys: readonly K[]): Record<K, number> {
   const init = {} as Record<K, number>;
@@ -142,10 +124,10 @@ export function computeDeckAnalytics(
   ]);
   const byColor = emptyCounter(COLOR_KEYS);
   const byType = emptyCounter(TYPE_BUCKETS);
+  const byStatus = emptyCounter(DECK_ENTRY_STATUS_VALUES);
   const curve = Array.from({ length: 8 }, () => 0);
 
   let total = 0;
-  let remixed = 0;
   let multicolor = 0;
   let lands = 0;
   let mvTotal = 0;
@@ -156,46 +138,27 @@ export function computeDeckAnalytics(
     if (entry.board === "maybe") continue;
 
     total += entry.quantity;
-    if (entry.card_id) remixed += entry.quantity;
+    // The entry's status and its effective fields (TODO DK2.6 / DK2.7): an
+    // edited card counts as what it now is, an unchanged import as its
+    // printing.
+    const status = deckEntryStatus(entry, card);
+    byStatus[status] += entry.quantity;
+    const fields = effectiveEntryFields(entry, card, status);
 
-    const bucket = typeBucketFor(entryTypeLine(entry, card));
+    const bucket = typeBucketFor(fields.typeLine);
     byType[bucket] += entry.quantity;
 
-    const colors =
-      entry.color_identity.length > 0
-        ? entry.color_identity
-        : card
-          ? card.color_identity
-              .map((c) =>
-                c === "white"
-                  ? "W"
-                  : c === "blue"
-                    ? "U"
-                    : c === "black"
-                      ? "B"
-                      : c === "red"
-                        ? "R"
-                        : c === "green"
-                          ? "G"
-                          : null,
-              )
-              .filter((c): c is "W" | "U" | "B" | "R" | "G" => c !== null)
-          : [];
-    if (colors.length === 0) {
+    if (fields.colors.length === 0) {
       // A custom card saved as "multicolor" without naming its colours is
       // gold, not colorless.
-      if (entry.color_identity.length === 0 && card?.color_identity.includes("multicolor")) {
+      if (fields.multicolorOnly) {
         multicolor += entry.quantity;
       } else {
         byColor.C += entry.quantity;
       }
     } else {
-      for (const color of colors) {
-        if (color in byColor) {
-          byColor[color as keyof typeof byColor] += entry.quantity;
-        }
-      }
-      if (new Set(colors).size > 1) multicolor += entry.quantity;
+      for (const color of fields.colors) byColor[color] += entry.quantity;
+      if (new Set(fields.colors).size > 1) multicolor += entry.quantity;
     }
 
     if (bucket === "Land") {
@@ -203,7 +166,7 @@ export function computeDeckAnalytics(
       continue; // lands stay out of the curve + average, deck-site convention
     }
 
-    const mv = entryManaValue(entry, card);
+    const mv = fields.manaValue;
     if (mv !== null) {
       const slot = Math.min(Math.max(Math.floor(mv), 0), 7);
       curve[slot] += entry.quantity;
@@ -215,7 +178,7 @@ export function computeDeckAnalytics(
   return {
     byBoard,
     total,
-    remixed,
+    byStatus,
     curve,
     byColor,
     multicolor,
