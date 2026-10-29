@@ -1550,8 +1550,8 @@ Rules and gotchas:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
   (a unit test keeps the SQL in sync), `getCardCapacity()` +
-  `describeCapacity()` feed the `CapacityNotice` warnings (creator, deck
-  wizard, in-deck AI panel, My Cards meter), the jobs route refuses an
+  `describeCapacity()` feed the `CapacityNotice` warnings (creator, in-deck
+  AI panel, My Cards meter), the jobs route refuses an
   over-cap batch with `code: "CARD_CAPACITY"`, and `createCardAction` maps the
   trigger's `card_capacity_exceeded` to the upgrade prompt. A batch step that
   hits a plan limit fails with `error_code` (`CARD_CAPACITY` /

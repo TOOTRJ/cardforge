@@ -22,6 +22,7 @@ import {
 import { countCappedDecks } from "@/lib/decks/capacity";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 
 // ---------------------------------------------------------------------------
 // Result shapes — discriminated unions so callers pattern-match without throwing.
@@ -34,17 +35,26 @@ type DeckActionFailure = {
   formError?: string;
   fieldErrors?: DeckFieldErrors;
   /** "UPGRADE_REQUIRED" when a plan with more room is needed — the UI opens
-   *  the upgrade modal instead of only showing the error. */
-  code?: "UPGRADE_REQUIRED";
+   *  the upgrade modal instead of only showing the error. "AUTH_REQUIRED"
+   *  when nobody is signed in — the New deck dialog asks the visitor to
+   *  sign up or sign in instead (TODO DK4.3). */
+  code?: "UPGRADE_REQUIRED" | "AUTH_REQUIRED";
   /** Which limit was hit: the private-deck cap (migration 0145). */
   reason?: "deck_capacity";
 };
 
 /** Where a deck was made from — a funnel prop only (allow-listed, sanitized
  *  again by recordFunnelEvent); it never changes what the action does. */
-export type DeckCreateSurface = "wizard" | "creator" | "ai";
+export type DeckCreateSurface = "dialog" | "creator" | "ai";
 
-type CreateDeckSuccess = { ok: true; deckId: string; slug: string };
+type CreateDeckSuccess = {
+  ok: true;
+  deckId: string;
+  slug: string;
+  /** Only when `firstCardId` was asked for and could not be added: why. The
+   *  deck is made all the same. */
+  firstCardError?: string;
+};
 type UpdateDeckSuccess = { ok: true; deckId: string; slug: string };
 type DeleteDeckSuccess = { ok: true; deckId: string };
 
@@ -83,6 +93,7 @@ function notConfigured(): DeckActionFailure {
 function notAuthed(): DeckActionFailure {
   return {
     ok: false,
+    code: "AUTH_REQUIRED",
     formError: "You must be signed in to do that.",
   };
 }
@@ -144,7 +155,14 @@ function slugCandidate(desired: string, attempt: number): string {
 
 export async function createDeckAction(
   payload: unknown,
-  options: { redirectAfterCreate?: boolean; surface?: DeckCreateSurface } = {},
+  options: {
+    redirectAfterCreate?: boolean;
+    surface?: DeckCreateSurface;
+    /** A saved card the deck starts with (the New deck dialog's `cardId`:
+     *  "Build a deck around this card", TODO DK8.3). Added to the main board
+     *  once the deck exists — best effort, never fails the create. */
+    firstCardId?: string;
+  } = {},
 ): Promise<CreateDeckResult> {
   const parsed = createDeckSchema.safeParse(payload);
   if (!parsed.success) {
@@ -227,10 +245,35 @@ export async function createDeckAction(
     surface: options.surface,
   });
 
+  const firstCardError = options.firstCardId
+    ? await addFirstCard(supabase, user.id, row.id, options.firstCardId)
+    : null;
+
   if (options.redirectAfterCreate) {
     redirect(`/deck/${row.slug}/edit`);
   }
-  return { ok: true, deckId: row.id, slug: row.slug };
+  return firstCardError
+    ? { ok: true, deckId: row.id, slug: row.slug, firstCardError }
+    : { ok: true, deckId: row.id, slug: row.slug };
+}
+
+/** The card a new deck starts with, through the RPC the creator's "add to
+ *  deck" uses (`add_custom_deck_entry`: the per-deck lock, the entry cap).
+ *  The card is read through RLS — the caller's own, or a public one — and
+ *  the deck_cards policies decide whether it may join. Null when added,
+ *  else why not. */
+async function addFirstCard(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  deckId: string,
+  cardId: string,
+): Promise<string | null> {
+  const unavailable = "That card couldn't be added — add it from the deck page.";
+  if (!isUuid(cardId)) return unavailable;
+  const { data: card } = await supabase.from("cards").select("id, title").eq("id", cardId).maybeSingle();
+  if (!card) return unavailable;
+  const added = await addCustomCardEntryToDeck(supabase, userId, deckId, card.id, card.title);
+  return added.ok ? null : (added.error ?? unavailable);
 }
 
 // ---------------------------------------------------------------------------

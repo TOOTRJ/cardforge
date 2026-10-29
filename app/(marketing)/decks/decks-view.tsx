@@ -12,6 +12,7 @@ import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
+import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -83,9 +84,7 @@ export function DecksLanding() {
         title="Community decks"
         description={DECKS_DESCRIPTION}
         actions={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">Build a deck</Link>
-          </Button>
+          <NewDeckButton>Build a deck</NewDeckButton>
         }
       />
 
@@ -235,9 +234,7 @@ async function PublicDecksResults({
             : "Be the first to publish a public deck — they'll show up here for everyone."
         }
         action={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">Build a deck</Link>
-          </Button>
+          <NewDeckButton>Build a deck</NewDeckButton>
         }
       />
     );

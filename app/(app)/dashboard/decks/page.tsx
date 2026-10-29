@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { VISIBILITY_LABELS, type Visibility } from "@/types/card";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
+import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
 import { getDeckCapacity } from "@/lib/decks/capacity";
@@ -40,14 +40,7 @@ export default async function DecksPage() {
         eyebrow="Library"
         title="My decks"
         description="Build decks from real cards and your own creations, then customize the real ones."
-        actions={
-          <Button asChild>
-            <Link href="/dashboard/decks/new">
-              <Plus className="h-4 w-4" aria-hidden />
-              New deck
-            </Link>
-          </Button>
-        }
+        actions={<NewDeckButton>New deck</NewDeckButton>}
       />
 
       <div className="mt-8">
@@ -60,11 +53,7 @@ export default async function DecksPage() {
             icon={BookOpen}
             title="No decks yet"
             description="Create your first deck — pick a format, add cards, and customize the real ones."
-            action={
-              <Button asChild>
-                <Link href="/dashboard/decks/new">Create a deck</Link>
-              </Button>
-            }
+            action={<NewDeckButton>Create a deck</NewDeckButton>}
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

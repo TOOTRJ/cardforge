@@ -6,7 +6,8 @@
 //
 //   Edit details   → dialog with the deck form (title, description, format,
 //                    visibility, cover + focal point)
-//   Import         → the decklist import dialog (auto-opens with ?import=1)
+//   Import         → the decklist import dialog (auto-opens with ?import=1;
+//                    focused on a deck the New deck dialog just made, ?new=1)
 //   Add with AI    → "Coming soon" while deck AI is paused (TODO DK1,
 //   Restyle with AI   lib/ai/deck-ai-pause.ts): greyed, no dialog, with the
 //                     one visible line that says why. "Restyle" is the deck
@@ -33,6 +34,7 @@ import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { ImportDecklistDialog } from "@/components/decks/import-decklist-dialog";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
 import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
+import { useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
@@ -99,6 +101,9 @@ export function DeckOwnerTools({
   openImport?: boolean;
 }) {
   const [open, setOpen] = useState<DeckTool | null>(null);
+  // A deck the New deck dialog just made, empty (TODO DK4.1): the import is
+  // the page's way to add cards today.
+  const importTrigger = useFocusAddOnNewDeck<HTMLButtonElement>();
 
   useEffect(() => {
     const onTool = (event: Event) => {
@@ -114,7 +119,12 @@ export function DeckOwnerTools({
       <Button type="button" onClick={() => setOpen("details")}>
         <Pencil className="h-4 w-4" aria-hidden /> Edit details
       </Button>
-      <ImportDecklistDialog deckId={deck.id} defaultOpen={openImport} cardCapacity={capacity} />
+      <ImportDecklistDialog
+        deckId={deck.id}
+        defaultOpen={openImport}
+        cardCapacity={capacity}
+        triggerRef={importTrigger}
+      />
       {/* The greyed AI tools and the one line that says why, kept together
           on their own row (TODO DK1). */}
       <div className="flex basis-full flex-wrap items-center gap-2">

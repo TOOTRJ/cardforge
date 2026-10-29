@@ -46,11 +46,14 @@ type ImportDecklistDialogProps = {
   deckId: string;
   /** Rendered as the trigger; defaults to an "Import decklist" button. */
   triggerLabel?: string;
-  /** Open on mount (the wizard's "Import a decklist" path lands here). */
+  /** Open on mount (`?import=1` on the deck page). */
   defaultOpen?: boolean;
   /** The owner's saved-card slots, for the review's forecast (owner decision
    *  D2): an imported card uses none until it is customized. Never blocks. */
   cardCapacity?: CardCapacity | null;
+  /** The trigger button — the deck page focuses it on a deck the New deck
+   *  dialog just made (useFocusAddOnNewDeck). */
+  triggerRef?: React.Ref<HTMLButtonElement>;
 };
 
 type Step = "paste" | "review";
@@ -60,6 +63,7 @@ export function ImportDecklistDialog({
   triggerLabel = "Import decklist",
   defaultOpen = false,
   cardCapacity = null,
+  triggerRef,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
@@ -70,7 +74,7 @@ export function ImportDecklistDialog({
   const [isResolving, startResolving] = useTransition();
   const [isCommitting, startCommitting] = useTransition();
 
-  // Opened by `?import=1` (the new-deck wizard's import path): the flag
+  // Opened by `?import=1` (a link straight to the import): the flag
   // leaves the address bar once the dialog is up, so a reload or a shared
   // link doesn't open it again. Through the router, never a bare
   // history.replaceState: on a hard load this effect runs before the app
@@ -167,7 +171,7 @@ export function ImportDecklistDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button ref={triggerRef} variant="outline">
           <ClipboardPaste className="h-4 w-4" aria-hidden />
           {triggerLabel}
         </Button>

@@ -7,8 +7,8 @@ import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 /**
  * The signed-in user's saved-card usage against their plan cap — for the
- * warnings the creator, deck wizard and My Cards show BEFORE an action, and
- * for the jobs route's pre-check. The database enforces the same cap
+ * warnings the creator, the New deck dialog's forecast and My Cards show
+ * BEFORE an action, and for the jobs route's pre-check. The database enforces the same cap
  * (migration 0104); this is the friendly layer in front of it. Null when
  * signed out or Supabase isn't configured.
  */
