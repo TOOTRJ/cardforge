@@ -46,6 +46,41 @@ type ImportDecklistDialogProps = {
   triggerLabel?: string;
   /** Open on mount (the wizard's "Import a decklist" path lands here). */
   defaultOpen?: boolean;
+  /** Opened from elsewhere on the deck page (TODO DK4.4: the empty deck's
+   *  doors, the commander slot): each new `nonce` opens the dialog in its
+   *  `mode`. */
+  request?: { nonce: number; mode: ImportMode } | null;
+  /** Where the focus goes on close when a request opened it (the trigger
+   *  is Radix's own default). */
+  onCloseAutoFocus?: (event: Event) => void;
+};
+
+/** What the dialog was opened for: a pasted list, cards typed by name, or
+ *  the deck's commander (the text starts under a "Commander" header — the
+ *  parser's own section, so the line lands in the commander zone). */
+export type ImportMode = "paste" | "names" | "commander";
+
+const COMMANDER_START = "Commander\n1 ";
+
+const MODE_COPY: Record<ImportMode, { title: string; description: string; placeholder: string }> = {
+  paste: {
+    title: "Import a decklist",
+    description:
+      "Paste a list from Moxfield, Archidekt, MTG Arena, ManaBox, or plain text. You'll review everything before it's added.",
+    placeholder: "4 Lightning Bolt\n4 Monastery Swiftspear (KTK) 118\n20 Mountain\n\nSideboard\n3 Pyroblast",
+  },
+  names: {
+    title: "Add cards by name",
+    description:
+      "Type one card a line with how many you want, like “1 Sol Ring”. Each name is matched on Scryfall, and you review every match before it's added.",
+    placeholder: "1 Sol Ring\n1 Arcane Signet\n1 Command Tower",
+  },
+  commander: {
+    title: "Choose your commander",
+    description:
+      "Type your commander's name after the “1” under Commander — or paste the whole list. You'll review the match before it's added.",
+    placeholder: COMMANDER_START,
+  },
 };
 
 type Step = "paste" | "review";
@@ -54,11 +89,26 @@ export function ImportDecklistDialog({
   deckId,
   triggerLabel = "Import decklist",
   defaultOpen = false,
+  request = null,
+  onCloseAutoFocus,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
   const [step, setStep] = useState<Step>("paste");
   const [text, setText] = useState("");
+  const [mode, setMode] = useState<ImportMode>("paste");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // A request from the page (adjust-during-render, not an effect): open in
+  // its mode; the commander's starts its text under the header.
+  const [lastNonce, setLastNonce] = useState(request?.nonce ?? null);
+  if (request && request.nonce !== lastNonce) {
+    setLastNonce(request.nonce);
+    setOpen(true);
+    setStep("paste");
+    setMode(request.mode);
+    if (request.mode === "commander" && !text.trim()) setText(COMMANDER_START);
+  }
+  const copy = MODE_COPY[mode];
   const [lines, setLines] = useState<ImportReviewLine[]>([]);
   const [parseWarnings, setParseWarnings] = useState<ParseWarning[]>([]);
   const [isResolving, startResolving] = useTransition();
@@ -169,6 +219,8 @@ export function ImportDecklistDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+        // The trigger opens it for a pasted list.
+        if (next) setMode("paste");
         if (!next) reset();
       }}
     >
@@ -178,24 +230,32 @@ export function ImportDecklistDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent size="xl">
+      <DialogContent
+        size="xl"
+        onCloseAutoFocus={onCloseAutoFocus}
+        onOpenAutoFocus={(event) => {
+          // Straight into the text, its caret at the end (the commander's
+          // name goes after the "1").
+          const area = textareaRef.current;
+          if (!area) return;
+          event.preventDefault();
+          area.focus();
+          area.setSelectionRange(area.value.length, area.value.length);
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>Import a decklist</DialogTitle>
-          <DialogDescription>
-            Paste a list from Moxfield, Archidekt, MTG Arena, ManaBox, or
-            plain text. You&apos;ll review everything before it&apos;s added.
-          </DialogDescription>
+          <DialogTitle>{copy.title}</DialogTitle>
+          <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
 
         {step === "paste" ? (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 px-5 py-4">
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={14}
-              placeholder={
-                "4 Lightning Bolt\n4 Monastery Swiftspear (KTK) 118\n20 Mountain\n\nSideboard\n3 Pyroblast"
-              }
+              placeholder={copy.placeholder}
               aria-label="Decklist text"
               className="w-full rounded-md border border-border bg-background/60 px-3 py-2 font-mono text-xs leading-5 text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               spellCheck={false}
@@ -221,7 +281,7 @@ export function ImportDecklistDialog({
             </div>
           </div>
         ) : (
-          <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
+          <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto px-5 pt-4">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <Badge variant="primary">{counts.cards} cards</Badge>
               <Badge>{counts.resolved} matched</Badge>

@@ -83,16 +83,16 @@ test.describe("deck CRUD + import", () => {
 
     // Dialog gone: it's our deck, and it shows the imported lands (the page
     // behind an open dialog is aria-hidden, so the heading is asserted here,
-    // not on arrival). Tiles are image-first — the
-    // card name lives in the button's accessible name).
+    // not on arrival). Tiles are image-first — the card's name, quantity
+    // and status live in the button's accessible name (TODO DK5.12).
     await expect(page.getByRole("heading", { name: title })).toBeVisible({
       timeout: 15_000,
     });
     await expect(
-      page.getByRole("button", { name: /^open mountain$/i }),
+      page.getByRole("button", { name: /^mountain, 4 copies, imported$/i }),
     ).toBeVisible({ timeout: 15_000 });
     await expect(
-      page.getByRole("button", { name: /^open island$/i }),
+      page.getByRole("button", { name: /^island, 2 copies, imported$/i }),
     ).toBeVisible();
 
     // Delete (cleanup — also exercises the destructive path). Owner tools

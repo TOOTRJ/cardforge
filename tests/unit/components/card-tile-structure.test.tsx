@@ -301,13 +301,15 @@ describe("every wrapper goes through CardTile (source scan)", () => {
   it("a back thumb reaches a tile only through CardTile's `thumbnail` — never as a JSX prop of a hand-nested BakedCardThumbnail", () => {
     const handNested = files.filter((path) => /renderedBackThumbUrl=\{/.test(read(path)));
     expect(handNested).toEqual([]);
-    // The five tile wrappers, by name: a new one joins this list AND uses CardTile.
+    // The six tile wrappers, by name: a new one joins this list AND uses CardTile.
     const passing = files.filter((path) => /renderedBackThumbUrl:/.test(read(path)));
     expect(passing.sort()).toEqual([
       "app/(marketing)/profile/[username]/page.tsx",
       "components/cards/gallery-card-tile.tsx",
       "components/creator/dashboard-card-tile.tsx",
       "components/creator/liked-card-tile.tsx",
+      // The deck page's Stacks and Grid views (TODO DK5.3).
+      "components/decks/deck-entry-tile.tsx",
       "components/gallery/trending-cards-section.tsx",
     ]);
     for (const path of passing) {

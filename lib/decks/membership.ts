@@ -53,7 +53,7 @@ export async function addCustomCardEntryToDeck(
   cardId: string,
   cardTitle: string,
   origin?: DeckEntryOrigin | null,
-): Promise<{ ok: boolean; deckSlug?: string; error?: string }> {
+): Promise<{ ok: boolean; deckSlug?: string; error?: string; added?: boolean }> {
   // Ownership pre-flight (the RPC and RLS enforce it too; this yields the
   // slug for revalidation and a friendly failure).
   const { data: deck } = await supabase
@@ -89,7 +89,7 @@ export async function addCustomCardEntryToDeck(
   if (error) {
     return { ok: false, error: deckEntryLimitMessage(error) ?? error.message };
   }
-  if (added === false) return { ok: true, deckSlug: deck.slug };
+  if (added === false) return { ok: true, deckSlug: deck.slug, added: false };
 
   revalidatePath(`/deck/${deck.slug}`);
   revalidatePath(`/deck/${deck.slug}/edit`);
@@ -97,5 +97,5 @@ export async function addCustomCardEntryToDeck(
   // Profile "Decks by X" tiles show card counts — membership changes them.
   await revalidateProfilePage(supabase, userId);
 
-  return { ok: true, deckSlug: deck.slug };
+  return { ok: true, deckSlug: deck.slug, added: true };
 }

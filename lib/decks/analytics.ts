@@ -1,6 +1,5 @@
 import { DECK_ENTRY_STATUS_VALUES, type DeckBoard, type DeckCardEntry, type DeckEntryStatus } from "@/types/deck";
-import type { Card } from "@/types/card";
-import { effectiveEntryFields } from "@/lib/decks/effective-entry";
+import { effectiveEntryFields, type EffectiveEntryCard } from "@/lib/decks/effective-entry";
 import { deckEntryStatus } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
@@ -117,7 +116,7 @@ function emptyCounter<K extends string>(keys: readonly K[]): Record<K, number> {
 const COLOR_KEYS = ["W", "U", "B", "R", "G", "C"] as const;
 
 export function computeDeckAnalytics(
-  items: Array<{ entry: DeckCardEntry; card?: Card | null }>,
+  items: Array<{ entry: DeckCardEntry; card?: EffectiveEntryCard | null }>,
 ): DeckAnalytics {
   const byBoard = emptyCounter<DeckBoard>([
     "main",

@@ -56,7 +56,7 @@ beforeEach(() => {
 describe("addCustomCardEntryToDeck", () => {
   it("adds through the locked RPC, never a direct insert, and revalidates the deck", async () => {
     const result = await addCustomCardEntryToDeck(supabase, "user-1", "deck-1", "card-1", "Cinderwing");
-    expect(result).toEqual({ ok: true, deckSlug: "dragons" });
+    expect(result).toEqual({ ok: true, deckSlug: "dragons", added: true });
     expect(s.rpc).toEqual([
       {
         fn: "add_custom_deck_entry",
@@ -112,7 +112,7 @@ describe("addCustomCardEntryToDeck", () => {
       { data: true, error: null },
     ];
     const result = await addCustomCardEntryToDeck(supabase, "user-1", "deck-1", "card-1", "Cinderwing", { source: "ai_generate" });
-    expect(result).toEqual({ ok: true, deckSlug: "dragons" });
+    expect(result).toEqual({ ok: true, deckSlug: "dragons", added: true });
     expect(s.rpc.map((call) => call.args)).toEqual([
       { p_deck_id: "deck-1", p_card_id: "card-1", p_name: "Cinderwing", p_source: "ai_generate", p_scryfall_id: null },
       { p_deck_id: "deck-1", p_card_id: "card-1", p_name: "Cinderwing" },
@@ -122,7 +122,7 @@ describe("addCustomCardEntryToDeck", () => {
   it("an entry already in the deck is fine and changes nothing", async () => {
     s.rpcResult = { data: false, error: null };
     const result = await addCustomCardEntryToDeck(supabase, "user-1", "deck-1", "card-1", "Cinderwing");
-    expect(result).toEqual({ ok: true, deckSlug: "dragons" });
+    expect(result).toEqual({ ok: true, deckSlug: "dragons", added: false });
     expect(s.revalidated).toEqual([]);
   });
 

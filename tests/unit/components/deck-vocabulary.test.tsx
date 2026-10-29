@@ -102,29 +102,31 @@ describe("the deck card pop-up", () => {
 describe("the deck card list", () => {
   it("badges each row, and its filter chips say the badges' words", async () => {
     render(<DeckCardList items={[real, edited, original]} ownerUsername="kesh" canManage={false} />);
-    const filters = screen.getByRole("group", { name: "Filter by card status" });
-    expect(within(filters).getByRole("button", { name: "Imported (1)" })).toBeTruthy();
-    expect(within(filters).getByRole("button", { name: "Edited (1)" })).toBeTruthy();
+    // A ChipGroup (TODO DK5.6): one radio a status, its card count in its name.
+    const filters = screen.getByRole("radiogroup", { name: "Filter by card status" });
+    expect(within(filters).getByRole("radio", { name: "Imported 1" })).toBeTruthy();
+    expect(within(filters).getByRole("radio", { name: "Edited 1" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Showing custom cards" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open Lightning Bolt" }).textContent).toContain("Imported");
-    expect(screen.getByRole("button", { name: "Open Counter-Hex" }).textContent).toContain("Edited");
+    expect(screen.getByRole("button", { name: "Lightning Bolt, 1 copy, Imported" }).textContent).toContain("Imported");
+    expect(screen.getByRole("button", { name: "Counter-Hex, 1 copy, Edited" }).textContent).toContain("Edited");
     expect(document.body.textContent).not.toMatch(NOT_THESE);
 
     // Each chip shows exactly the rows wearing its badge.
+    const row = (name: string) => screen.queryByRole("button", { name: new RegExp(`^${name}, `) });
     await act(async () => {
-      fireEvent.click(within(filters).getByRole("button", { name: "Edited (1)" }));
+      fireEvent.click(within(filters).getByRole("radio", { name: "Edited 1" }));
     });
-    expect(screen.getByRole("button", { name: "Open Counter-Hex" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open Lightning Bolt" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Ember Imp" })).toBeNull();
+    expect(row("Counter-Hex")).toBeTruthy();
+    expect(row("Lightning Bolt")).toBeNull();
+    expect(row("Ember Imp")).toBeNull();
     await act(async () => {
-      fireEvent.click(within(filters).getByRole("button", { name: "Imported (1)" }));
+      fireEvent.click(within(filters).getByRole("radio", { name: "Imported 1" }));
     });
-    expect(screen.getByRole("button", { name: "Open Lightning Bolt" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Open Counter-Hex" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Ember Imp" })).toBeNull();
+    expect(row("Lightning Bolt")).toBeTruthy();
+    expect(row("Counter-Hex")).toBeNull();
+    expect(row("Ember Imp")).toBeNull();
     await act(async () => {
-      fireEvent.click(within(filters).getByRole("button", { name: "All" }));
+      fireEvent.click(within(filters).getByRole("radio", { name: "All 3" }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Showing custom cards" }));

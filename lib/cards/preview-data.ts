@@ -6,8 +6,41 @@ import { drawableCardMedia } from "@/lib/cards/drawable-media";
 // Map a persisted Card row to the flat props <CardPreview> consumes. Used
 // wherever a whole card needs to render — notably the v2 back face, where a
 // referenced card is drawn on the flip with its OWN frame/colour/rarity/art.
+//
+// It reads the columns below and nothing else — a narrower read that names
+// them all (the deck page's DeckPageCard, lib/decks/queries.ts) is enough.
+export type PreviewCardColumns = Pick<
+  Card,
+  | "title"
+  | "nickname"
+  | "cost"
+  | "card_type"
+  | "supertype"
+  | "printed_types"
+  | "subtypes"
+  | "rarity"
+  | "color_identity"
+  | "rules_text"
+  | "flavor_text"
+  | "power"
+  | "toughness"
+  | "loyalty"
+  | "defense"
+  | "artist_credit"
+  | "art_url"
+  | "art_position"
+  | "frame_style"
+  | "set_icon_url"
+  | "set_icon_code"
+  | "face_content"
+  | "watermark"
+  | "set_code"
+  | "collector_number"
+  | "lang"
+>;
+
 export function cardToPreviewData(
-  card: Card,
+  card: PreviewCardColumns,
   profileOverrides: FrameProfileOverridesMap | null = null,
 ): CardPreviewData {
   // Only the pictures CardPreview would draw (lib/cards/drawable-media.ts).

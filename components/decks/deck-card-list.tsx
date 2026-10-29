@@ -1,103 +1,115 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HelpCircle, Sparkles } from "lucide-react";
-import { SurfaceCard } from "@/components/ui/surface-card";
-import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
-import { DeckEntryStatusBadge, NO_LONGER_AVAILABLE } from "@/components/decks/deck-entry-status-badge";
+import { DeckGroupViews } from "@/components/decks/deck-card-views";
+import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
+import { DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
+import type { DeckAnalytics } from "@/lib/decks/analytics";
+import { deckSummaryOf } from "@/lib/decks/deck-summary";
 import {
-  typeBucketFor,
-  TYPE_BUCKET_PLURALS,
-  TYPE_BUCKETS,
-} from "@/lib/decks/analytics";
-import { effectiveEntryFields } from "@/lib/decks/effective-entry";
-import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
-import type { DeckItem } from "@/lib/decks/queries";
-import type { DeckBoard, DeckEntryStatus } from "@/types/deck";
-import { DECK_BOARD_LABELS, DECK_ENTRY_STATUS_LABELS } from "@/types/deck";
-import { cn } from "@/lib/utils";
-import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
-import { hasBackPicture } from "@/lib/cards/tile-faces";
-import { TwoFacesMark } from "@/components/cards/two-faces-mark";
-import { drawableMediaUrl } from "@/lib/media/media-urls";
+  badgeCountsOf,
+  DECK_VIEW_COOKIE,
+  DECK_VIEW_COOKIE_MAX_AGE,
+  DECK_VIEW_COOKIE_PATH,
+  deckRowsOf,
+  filterDeckRows,
+  groupDeckRows,
+  LARGE_DECK_ENTRIES,
+  nextUnchangedImport,
+  serializeDeckViewPrefs,
+  statusFilterOptions,
+  type DeckViewPrefs,
+  type StatusFilter,
+} from "@/lib/decks/deck-view";
+import { publicDeckItems } from "@/lib/decks/private-card-name";
+import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
+import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
-// DeckCardList — the deck's card list grouped by board, then by type bucket.
-// Client component: rows open the deck-card modal (info for everyone,
-// management for the owner), the status filter narrows the list, and the
-// real cards ⇄ custom cards toggle flips which image an entry with both
-// shows. The words are the deck vocabulary (TODO DK2.2,
-// components/creator/card-glossary.tsx). Each row's badge is its status —
-// Imported / Edited / Remix / Original / Not found, ONE deckEntryStatus
-// (lib/decks/entry-status.ts), or "No longer available" — and the filter
-// chips say the same words as the badges, each showing exactly the rows
-// that wear its badge (TODO DK5.6's status chips). A row's group and cost
-// are its EFFECTIVE fields (lib/decks/effective-entry.ts: an edited card
-// counts as what it now is).
+// DeckCardList — the deck page's card area (TODO DK5.1 / DK5.3 / DK5.6 /
+// DK5.9): the view toolbar, the cards in the viewer's view — Stacks, Grid,
+// List or Table — grouped and sorted their way, the status filter, the
+// pop-up a card opens (info for everyone, management for the owner) and the
+// sticky summary bar. Every group, sort and filter is
+// lib/decks/deck-view.ts's (the entry's EFFECTIVE fields and its ONE
+// status); the view, the grouping and the sort are remembered per viewer in
+// a cookie (DECK_VIEW_COOKIE), so the server draws the first paint right.
+// The status filter and "custom cards ⇄ real cards" are this visit's.
+//
+// A visitor never reads a private card's title (D11): the items go through
+// publicDeckItems here too — the page already did; a list rendered on its
+// own is held to the same rule — and the card is a "Private card" tile.
 // ---------------------------------------------------------------------------
 
-const BOARD_ORDER: readonly DeckBoard[] = [
-  "commander",
-  "companion",
-  "main",
-  "side",
-  "maybe",
-];
+/** The view a list rendered without the viewer's prefs starts on. */
+const LIST_PREFS: DeckViewPrefs = { view: "list", group: "type", sort: "mana" };
 
-/** What a row's badge says: its status, or "No longer available". */
-type EntryBadge = DeckEntryStatus | "unavailable";
-/** The filter: every row, or the rows wearing one badge. */
-type StatusFilter = "all" | EntryBadge;
-
-/** The chips after Imported and Edited (always shown, #654), each only
- *  where the deck has a row wearing it. */
-const OTHER_BADGES: readonly EntryBadge[] = ["remix", "original", "not_found", "unavailable"];
-
-const BADGE_LABELS: Record<EntryBadge, string> = {
-  ...DECK_ENTRY_STATUS_LABELS,
-  unavailable: NO_LONGER_AVAILABLE,
-};
-
-function entryBadge(item: DeckItem, viewerIsOwner: boolean): EntryBadge {
-  return deckEntryUnavailable(item.entry, item.card, viewerIsOwner) ? "unavailable" : deckEntryStatus(item.entry, item.card);
-}
-
-const countOf = (counts: ReadonlyMap<EntryBadge, number>, badge: EntryBadge) => {
-  const n = counts.get(badge) ?? 0;
-  return n > 0 ? ` (${n})` : "";
+export type DeckCardListSummary = {
+  format: DeckFormat;
+  /** The deck's breakdown (computeDeckAnalytics over the viewer's rows). */
+  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "byStatus" | "averageManaValue" | "lands">;
+  /** The owner's format check: how many issues (0 = passes). Null for a
+   *  visitor, who never sees it (TODO DK0.9). */
+  formatIssues: number | null;
 };
 
 type DeckCardListProps = {
-  items: DeckItem[];
+  items: DeckItem<DeckPageCard>[];
   ownerUsername: string | null;
   canManage: boolean;
+  /** The viewer's remembered view (the cookie). The List when left out. */
+  initialPrefs?: DeckViewPrefs;
+  /** The sticky summary bar's numbers; no bar when left out. */
+  summary?: DeckCardListSummary;
 };
 
-export function DeckCardList({
-  items,
-  ownerUsername,
-  canManage,
-}: DeckCardListProps) {
+export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, summary }: DeckCardListProps) {
+  const [prefs, setPrefs] = useState<DeckViewPrefs>(initialPrefs ?? LIST_PREFS);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [showProxies, setShowProxies] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Closing the pop-up hands the focus back to the ROW that opened it (TODO
-  // 5.17). The dialog has no Dialog.Trigger — a row opens it through state —
-  // so Radix has nowhere to return the focus and it fell to <body>: a
-  // keyboard user started again from the top of the page. The row is found
-  // by its entry id once the dialog has unmounted (its focus trap would pull
-  // the focus back before that).
+  const changePrefs = (patch: Partial<DeckViewPrefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    document.cookie = `${DECK_VIEW_COOKIE}=${serializeDeckViewPrefs(next)}; path=${DECK_VIEW_COOKIE_PATH}; max-age=${DECK_VIEW_COOKIE_MAX_AGE}; samesite=lax`;
+  };
+
+  // The rows as this viewer may see them (a visitor: no private card's
+  // title), each with its status, badge and effective fields — once.
+  const shown = useMemo(() => publicDeckItems(items, canManage), [items, canManage]);
+  const rows = useMemo(() => deckRowsOf(shown, canManage), [shown, canManage]);
+  const counts = useMemo(() => badgeCountsOf(rows), [rows]);
+  const chips = statusFilterOptions(counts, filter);
+  const allGroups = useMemo(() => groupDeckRows(rows, prefs.group, prefs.sort), [rows, prefs.group, prefs.sort]);
+  const groups = useMemo(
+    () =>
+      filter === "all"
+        ? allGroups
+        : allGroups.flatMap((group) => {
+            const kept = filterDeckRows(group.rows, filter);
+            return kept.length > 0 ? [{ ...group, rows: kept, count: kept.reduce((sum, row) => sum + row.quantity, 0) }] : [];
+          }),
+    [allGroups, filter],
+  );
+
+  // Closing the pop-up hands the focus back to the card that opened it
+  // (TODO 5.17). The dialog has no Dialog.Trigger — a card opens it through
+  // state — so Radix has nowhere to return the focus and it fell to <body>:
+  // a keyboard user started again from the top of the page. The opener is
+  // found by its entry id (`data-deck-entry`, on the opener of every view)
+  // once the dialog has unmounted (its focus trap would pull the focus back
+  // before that).
   //
   // Three things the first cut missed (the independent check of #536):
   //  - a click on the BACKDROP closes the dialog on pointerdown, and the
-  //    same click's mousedown then takes the focus off the row again (it
+  //    same click's mousedown then takes the focus off the opener again (it
   //    lands on <body>): the hand-back is repeated once the click is over;
-  //  - the row may be GONE — "Remove from deck" in the pop-up, or a card
+  //  - the entry may be GONE — "Remove from deck" in the pop-up, or a card
   //    linked under the "Imported" filter — before or just after the
-  //    close: the focus then goes to the row that took its place (the last
-  //    one, past the end; the list's first control when no row is left),
+  //    close: the focus then goes to the opener that took its place (the
+  //    last one, past the end; the list's first control when none is left),
   //    never to <body>;
   //  - an entry removed while its pop-up is open unmounts the dialog without
   //    `selectedId` changing: the pop-up counts as open only while its entry
@@ -105,14 +117,13 @@ export function DeckCardList({
   const listRef = useRef<HTMLDivElement | null>(null);
   const openId = selectedId !== null && items.some((i) => i.entry.id === selectedId) ? selectedId : null;
   const returnFocusTo = useRef<{ id: string; index: number } | null>(null);
-  // The row the focus was handed back to, for as long as the focus is on it.
+  // The opener the focus was handed back to, for as long as the focus is on it.
   const handedBack = useRef<{ id: string; index: number } | null>(null);
-  const rowsOf = () =>
-    Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-deck-entry]") ?? []);
+  const rowsOf = () => Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-deck-entry]") ?? []);
   const focusNear = (index: number) => {
-    const rows = rowsOf();
+    const openers = rowsOf();
     const target =
-      rows[Math.max(0, Math.min(index, rows.length - 1))] ??
+      openers[Math.max(0, Math.min(index, openers.length - 1))] ??
       listRef.current?.querySelector<HTMLElement>("button, a[href]");
     target?.focus({ preventScroll: true });
   };
@@ -138,7 +149,7 @@ export function DeckCardList({
       }
     };
     handBack();
-    // A backdrop click: its mousedown comes after the close and blurs the row.
+    // A backdrop click: its mousedown comes after the close and blurs the opener.
     const again = setTimeout(() => {
       const active = document.activeElement;
       if (!active || active === document.body) handBack();
@@ -146,8 +157,8 @@ export function DeckCardList({
     return () => clearTimeout(again);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the helpers read refs and the live DOM
   }, [openId]);
-  // The row the focus was handed back to is taken away by the refresh that
-  // follows the close (a removal answers after the pop-up has shut).
+  // The opener the focus was handed back to is taken away by the refresh
+  // that follows the close (a removal answers after the pop-up has shut).
   useEffect(() => {
     const given = handedBack.current;
     if (!given) return;
@@ -159,124 +170,70 @@ export function DeckCardList({
   });
 
   const anyLinked = items.some((i) => i.entry.card_id);
-  // Each row's badge, once: the status filter and the chips' counts read it.
-  const badgeOf = useMemo(() => {
-    const out = new Map<string, EntryBadge>();
-    for (const item of items) out.set(item.entry.id, entryBadge(item, canManage));
-    return out;
-  }, [items, canManage]);
-  const badgeCounts = useMemo(() => {
-    const counts = new Map<EntryBadge, number>();
-    for (const badge of badgeOf.values()) counts.set(badge, (counts.get(badge) ?? 0) + 1);
-    return counts;
-  }, [badgeOf]);
-
-  const filtered = useMemo(() => {
-    if (filter === "all") return items;
-    return items.filter((item) => badgeOf.get(item.entry.id) === filter);
-  }, [items, filter, badgeOf]);
-
   // The modal reads the CURRENT item from props by id, so a mutation +
   // router.refresh() re-renders it with fresh data instead of a stale copy.
-  const selected = selectedId
-    ? (items.find((i) => i.entry.id === selectedId) ?? null)
-    : null;
+  const selected = selectedId ? (shown.find((i) => i.entry.id === selectedId) ?? null) : null;
 
-  const byBoard = new Map<DeckBoard, DeckItem[]>();
-  for (const item of filtered) {
-    const list = byBoard.get(item.entry.board) ?? [];
-    list.push(item);
-    byBoard.set(item.entry.board, list);
-  }
+  const bar = summary
+    ? {
+        summary: deckSummaryOf(
+          summary.format,
+          summary.analytics,
+          rows.filter((row) => row.board === "commander").map((row) => row.privateName ?? row.name),
+        ),
+        formatIssues: summary.formatIssues,
+        editNext: canManage ? nextUnchangedImport(allGroups) : null,
+      }
+    : null;
 
   return (
     <div
       ref={listRef}
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-5"
       // The focus moved on by itself (Tab, a click on another control): the
-      // row it was handed back to is no longer anyone's concern.
+      // opener it was handed back to is no longer anyone's concern.
       onBlurCapture={(event) => {
         if (event.relatedTarget) handedBack.current = null;
       }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          className="flex flex-wrap items-center gap-1.5"
-          role="group"
-          aria-label="Filter by card status"
-        >
-          <FilterChip
-            label="All"
-            active={filter === "all"}
-            onClick={() => setFilter("all")}
+      <DeckViewToolbar
+        prefs={prefs}
+        onPrefs={changePrefs}
+        filter={filter}
+        filterOptions={chips}
+        onFilter={setFilter}
+        proxyToggle={anyLinked ? { showProxies, onToggle: () => setShowProxies((prev) => !prev) } : null}
+      />
+
+      {/* The bar sticks within the CARDS only: it never sits over the
+          toolbar, and it rests under the last card. */}
+      <div className="flex flex-col gap-5">
+        {groups.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted">
+            {filter === "imported" ? "Every real card here is edited. 🎉" : "No cards match this filter."}
+          </p>
+        ) : (
+          <DeckGroupViews
+            view={prefs.view}
+            groups={groups}
+            sort={prefs.sort}
+            onSort={(sort) => changePrefs({ sort })}
+            showProxies={showProxies}
+            large={items.length > LARGE_DECK_ENTRIES}
+            onOpen={(id) => setSelectedId(id)}
           />
-          <FilterChip
-            label={`Imported${countOf(badgeCounts, "imported")}`}
-            active={filter === "imported"}
-            onClick={() => setFilter("imported")}
+        )}
+
+        {bar ? (
+          <DeckSummaryBar
+            summary={bar.summary}
+            formatIssues={bar.formatIssues}
+            editNext={bar.editNext ? { href: `/create?deckCard=${bar.editNext.id}`, name: bar.editNext.name } : null}
+            unchanged={summary!.analytics.byStatus.imported}
+            canManage={canManage}
           />
-          <FilterChip
-            label={`Edited${countOf(badgeCounts, "edited")}`}
-            active={filter === "edited"}
-            onClick={() => setFilter("edited")}
-          />
-          {/* The rest of the statuses, where the deck has them. */}
-          {OTHER_BADGES.filter((badge) => (badgeCounts.get(badge) ?? 0) > 0).map((badge) => (
-            <FilterChip
-              key={badge}
-              label={`${BADGE_LABELS[badge]}${countOf(badgeCounts, badge)}`}
-              active={filter === badge}
-              onClick={() => setFilter(badge)}
-            />
-          ))}
-        </div>
-        {anyLinked ? (
-          <button
-            type="button"
-            onClick={() => setShowProxies((prev) => !prev)}
-            aria-pressed={showProxies}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-          >
-            <Sparkles className="h-3 w-3" aria-hidden />
-            {showProxies ? "Showing custom cards" : "Showing real cards"}
-          </button>
         ) : null}
       </div>
-
-      {filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted">
-          {filter === "imported"
-            ? "Every real card here is edited. 🎉"
-            : "No cards match this filter."}
-        </p>
-      ) : (
-        <div className="flex flex-col gap-8">
-          {BOARD_ORDER.map((board) => {
-            const boardItems = byBoard.get(board);
-            if (!boardItems || boardItems.length === 0) return null;
-            const boardCount = boardItems.reduce(
-              (sum, i) => sum + i.entry.quantity,
-              0,
-            );
-            return (
-              <section key={board} aria-label={DECK_BOARD_LABELS[board]}>
-                <h3 className="mb-3 flex items-baseline gap-2 font-display text-lg font-semibold text-foreground">
-                  {DECK_BOARD_LABELS[board]}
-                  <span className="text-xs font-normal text-subtle">
-                    {boardCount} card{boardCount === 1 ? "" : "s"}
-                  </span>
-                </h3>
-                <BoardGroups
-                  items={boardItems}
-                  showProxies={showProxies}
-                  viewerIsOwner={canManage}
-                  onOpen={(id) => setSelectedId(id)}
-                />
-              </section>
-            );
-          })}
-        </div>
-      )}
 
       {selected ? (
         <DeckCardModal
@@ -291,163 +248,5 @@ export function DeckCardList({
         />
       ) : null}
     </div>
-  );
-}
-
-function FilterChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
-        active
-          ? "border-primary bg-primary/15 text-primary-bright"
-          : "border-border bg-surface text-muted hover:border-border-strong hover:text-foreground",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function BoardGroups({
-  items,
-  showProxies,
-  viewerIsOwner,
-  onOpen,
-}: {
-  items: DeckItem[];
-  showProxies: boolean;
-  viewerIsOwner: boolean;
-  onOpen: (deckCardId: string) => void;
-}) {
-  const byBucket = new Map<string, DeckItem[]>();
-  for (const item of items) {
-    // The analytics' bucket (effectiveEntryFields): an edited card groups
-    // as what it now is, a card with no printing by its own type line.
-    const bucket = typeBucketFor(effectiveEntryFields(item.entry, item.card).typeLine);
-    const list = byBucket.get(bucket) ?? [];
-    list.push(item);
-    byBucket.set(bucket, list);
-  }
-
-  return (
-    // minmax(0, 1fr) columns and min-w-0 groups: a row's badges and pips
-    // never widen the column past a 390 px screen (the title truncates).
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {TYPE_BUCKETS.map((bucket) => {
-        const bucketItems = byBucket.get(bucket);
-        if (!bucketItems || bucketItems.length === 0) return null;
-        const bucketCount = bucketItems.reduce(
-          (sum, i) => sum + i.entry.quantity,
-          0,
-        );
-        return (
-          <SurfaceCard key={bucket} className="flex min-w-0 flex-col gap-1 p-4">
-            <span className="mb-1 text-xs font-semibold uppercase tracking-wider text-subtle">
-              {TYPE_BUCKET_PLURALS[bucket]} · {bucketCount}
-            </span>
-            <ul className="flex flex-col">
-              {bucketItems.map((item) => (
-                <EntryRow
-                  key={item.entry.id}
-                  item={item}
-                  showProxies={showProxies}
-                  viewerIsOwner={viewerIsOwner}
-                  onOpen={onOpen}
-                />
-              ))}
-            </ul>
-          </SurfaceCard>
-        );
-      })}
-    </div>
-  );
-}
-
-function EntryRow({
-  item,
-  showProxies,
-  viewerIsOwner,
-  onOpen,
-}: {
-  item: DeckItem;
-  showProxies: boolean;
-  viewerIsOwner: boolean;
-  onOpen: (deckCardId: string) => void;
-}) {
-  const { entry, card } = item;
-  const status = deckEntryStatus(entry, card);
-  const unavailable = deckEntryUnavailable(entry, card, viewerIsOwner);
-  const fields = effectiveEntryFields(entry, card, status);
-  // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
-  // written before migration 0126 could point the card anywhere.
-  // The 32 px row draws the 600 px WebP thumb where the bake wrote one —
-  // never the HD PNG when there is a thumb (TODO 5.15).
-  const proxyPng = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
-  const proxyThumb = proxyPng && card && isStoredRenderUrl(card.rendered_thumb_url) ? card.rendered_thumb_url : null;
-  const proxyImage = proxyThumb ? (toRenderCdnUrl(proxyThumb) ?? proxyThumb) : proxyPng;
-  // A proxy with a back picture: the row says so (the picture is too small
-  // to turn; the pop-up has the Front / Back switch).
-  const twoFaces = Boolean(card && hasBackPicture(card));
-  // …and a printing image only from Scryfall (migration 0127,
-  // lib/media/media-urls.ts), the one outside host a deck entry stores.
-  const printImage = drawableMediaUrl("deck-card-image", entry.image_url);
-  const thumb =
-    (showProxies ? proxyImage : printImage) ??
-    proxyImage ??
-    printImage;
-
-  return (
-    <li>
-      <button
-        type="button"
-        data-deck-entry={entry.id}
-        onClick={() => onOpen(entry.id)}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-        aria-label={`Open ${card?.title ?? entry.name}${item.cardOwner?.username ? ` by @${item.cardOwner.username}` : ""}`}
-      >
-        {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumb}
-            alt=""
-            loading="lazy"
-            className={cn(
-              "h-11 w-8 shrink-0 rounded-sm object-cover",
-              // A printing with no PipGlyph card yet.
-              !entry.card_id && "opacity-70 saturate-50",
-            )}
-          />
-        ) : (
-          <span className="flex h-11 w-8 shrink-0 items-center justify-center rounded-sm bg-elevated">
-            <HelpCircle className="h-3.5 w-3.5 text-subtle" aria-hidden />
-          </span>
-        )}
-        <span className="w-7 shrink-0 text-right font-mono text-xs text-subtle">
-          {entry.quantity}×
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-          {card?.title ?? entry.name}
-          {/* Another creator's card (D3): their credit. */}
-          {item.cardOwner?.username ? (
-            <span className="ml-1.5 font-mono text-[11px] text-subtle">by @{item.cardOwner.username}</span>
-          ) : null}
-        </span>
-        {fields.cost ? <ManaCostGlyphs cost={fields.cost} size="sm" /> : null}
-        {twoFaces && thumb === proxyImage ? <TwoFacesMark /> : null}
-        <DeckEntryStatusBadge status={status} unavailable={unavailable} small />
-      </button>
-    </li>
   );
 }

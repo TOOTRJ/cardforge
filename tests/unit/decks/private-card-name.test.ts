@@ -40,10 +40,19 @@ describe("publicDeckItems", () => {
     expect(publicDeckItems(items, true)).toEqual(items);
   });
 
-  it("keeps today's behaviour for everything else", () => {
+  it("a private card with no printing behind it (D11): its name is the card's own title — hidden", () => {
+    const [item] = publicDeckItems([{ entry: entry("Grim Goblin"), card: null }], false);
+    expect(item.entry.name).toBe(PRIVATE_CARD_NAME);
+    expect(item.entry.type_line).toBeNull();
+    // The owner reads it.
+    expect(publicDeckItems([{ entry: entry("Grim Goblin"), card: null }], true)[0]!.entry.name).toBe("Grim Goblin");
+  });
+
+  it("keeps the real card's name of a private card's printing, and everything else as it was", () => {
     const items = [
-      // An ordinary private card in a public deck.
-      { entry: entry("Grim Goblin"), card: null },
+      // A private card standing in for a printing: the entry's name is the
+      // REAL card's ("Goblin Guide"), never the private card's title.
+      { entry: entry("Goblin Guide", { scryfall_id: "sf-1" }), card: null },
       // A readable card (public / unlisted): its own title is shown anyway.
       { entry: entry(`${STRONG} Goblin`), card: { id: "c-1", title: "Grim Goblin" } },
       // A printing or a placeholder: no linked card.
@@ -51,6 +60,8 @@ describe("publicDeckItems", () => {
     ];
     expect(publicDeckItems(items, false)).toEqual(items);
     expect(hidesEntryName(entry(`${STRONG}`, { card_id: null }), null, false)).toBe(false);
+    // …but a printing's name with strong language is still hidden.
+    expect(hidesEntryName(entry(`${STRONG} Goblin`, { scryfall_id: "sf-1" }), null, false)).toBe(true);
   });
 });
 
