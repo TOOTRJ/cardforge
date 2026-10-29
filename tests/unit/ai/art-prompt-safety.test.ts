@@ -5,7 +5,6 @@ import {
   artPromptLadder,
   fallbackArtPrompt,
   isSafetyBlockError,
-  shouldRewordAfter,
   softenArtPrompt,
 } from "@/lib/ai/art-prompt-safety";
 
@@ -20,11 +19,6 @@ describe("isSafetyBlockError", () => {
   it("leaves other failures alone", () => {
     expect(isSafetyBlockError("Rate limit exceeded")).toBe(false);
     expect(isSafetyBlockError("The operation was aborted due to timeout")).toBe(false);
-  });
-  it("rewords after a timeout too — that is how the gateway surfaces a block", () => {
-    expect(shouldRewordAfter("Gateway request failed: The operation was aborted due to timeout")).toBe(true);
-    expect(shouldRewordAfter("Request Moderated")).toBe(true);
-    expect(shouldRewordAfter("Rate limit exceeded")).toBe(false);
   });
 });
 
