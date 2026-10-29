@@ -9,7 +9,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isDeckFormat } from "@/types/deck";
-import { getDeckCapacity } from "@/lib/decks/capacity";
 
 export const metadata: Metadata = {
   title: "New deck",
@@ -63,7 +62,7 @@ export default async function NewDeckPage({ searchParams }: PageProps) {
       />
 
       <div className="mt-10">
-        <DeckWizard userId={user.id} initialFormat={initialFormat} deckCapacity={await getDeckCapacity()} />
+        <DeckWizard userId={user.id} initialFormat={initialFormat} />
       </div>
     </div>
   );

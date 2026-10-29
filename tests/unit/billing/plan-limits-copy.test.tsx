@@ -6,12 +6,13 @@ import { cleanup, render } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // The plan limits as copy (TODO DK3.5): every surface that names a plan's
-// saved cards or decks says them FROM the constants (CARD_CAPACITY,
-// DECK_CAPACITY in lib/billing/plans.ts) — the plan cards on /pricing and
-// /dashboard/billing, the billing page's free-plan line, the upgrade modal
-// (deck-capacity-ui.test.tsx renders it) and the FAQ. So a cap that changes
-// in plans.ts (and in its migration, held together by card-capacity.test.ts
-// and deck-capacity.test.ts) can't leave a page quoting the old number.
+// saved cards says them FROM the constant (CARD_CAPACITY in
+// lib/billing/plans.ts) — the plan cards on /pricing and /dashboard/billing,
+// the billing page's free-plan line and the FAQ — so a cap that changes in
+// plans.ts (and in 0104, held together by card-capacity.test.ts) can't leave
+// a page quoting the old number. Decks are unlimited on every plan (owner
+// 2026-10-29; 0147 dropped 0145's private-deck cap): no plan names a deck
+// number, and the free plan says "unlimited decks".
 // ---------------------------------------------------------------------------
 
 vi.mock("@/lib/stripe/actions", () => ({
@@ -26,12 +27,9 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 import {
   CARD_CAPACITY,
   CARD_CAPACITY_UNLIMITED,
-  DECK_CAPACITY,
   PLANS,
-  decksLine,
+  UNLIMITED_DECKS_LINE,
   planForTier,
-  privateDecksByPlanSentence,
-  privateDecksPhrase,
   savedCardsLine,
   type PlanTier,
 } from "@/lib/billing/plans";
@@ -41,34 +39,24 @@ import { FAQ_TOPICS } from "@/lib/content/faq";
 afterEach(cleanup);
 
 const TIERS: PlanTier[] = ["free", "plus", "pro"];
+/** Any deck count a plan could be sold on ("1 private deck", "3 decks"…). */
+const DECK_NUMBER = /\b\d+ (?:(?:private|unlisted|public)(?: or unlisted)? )?decks?\b/i;
 
 describe("the plan cards", () => {
-  it("say each tier's saved cards and decks from the constants", () => {
+  it("say each tier's saved cards from CARD_CAPACITY", () => {
     expect(savedCardsLine("free")).toBe(`Up to ${CARD_CAPACITY.free} saved cards`);
     expect(savedCardsLine("plus")).toBe(`Up to ${CARD_CAPACITY.plus} saved cards`);
     expect(savedCardsLine("pro")).toBe("Unlimited saved cards");
-    expect(decksLine("free")).toBe(`Unlimited public decks, plus ${DECK_CAPACITY.free} private or unlisted deck`);
-    expect(decksLine("plus")).toBe(`Unlimited public decks, plus ${DECK_CAPACITY.plus} private or unlisted decks`);
-    expect(decksLine("pro")).toBe("Unlimited decks — public, unlisted or private");
-    for (const tier of TIERS) {
-      const features = planForTier(tier).features;
-      expect(features, tier).toContain(savedCardsLine(tier));
-      expect(features, tier).toContain(decksLine(tier));
-    }
+    for (const tier of TIERS) expect(planForTier(tier).features, tier).toContain(savedCardsLine(tier));
     expect(CARD_CAPACITY.pro).toBe(CARD_CAPACITY_UNLIMITED);
-    expect(DECK_CAPACITY.pro).toBe(CARD_CAPACITY_UNLIMITED);
   });
 
-  it("never sell decks as capped in total — public decks are unlimited on every plan (D1)", () => {
-    const all = PLANS.flatMap((p) => p.features).join("\n");
-    expect(all).not.toMatch(/up to \d+ decks/i);
-    for (const tier of ["free", "plus"] as const) expect(decksLine(tier)).toMatch(/^Unlimited public decks/);
-  });
-
-  it("the one-sentence version names every plan", () => {
-    expect(privateDecksByPlanSentence()).toBe(
-      `Free includes ${DECK_CAPACITY.free} private or unlisted deck, Plus ${DECK_CAPACITY.plus}, and Pro as many as you like.`,
-    );
+  it("sell no deck limit: Free says decks are unlimited, and no plan names a deck number", () => {
+    expect(UNLIMITED_DECKS_LINE).toBe("Unlimited decks — public, unlisted or private");
+    expect(planForTier("free").features).toContain(UNLIMITED_DECKS_LINE);
+    const all = PLANS.flatMap((p) => [p.tagline, ...p.features, ...(p.comingSoon ?? [])]).join("\n");
+    expect(all).not.toMatch(DECK_NUMBER);
+    expect(all).not.toMatch(/private deck/i);
   });
 });
 
@@ -80,19 +68,20 @@ describe("the billing page's free-plan line", () => {
     return container.textContent ?? "";
   };
 
-  it("says the free card and deck limits from the constants", () => {
+  it("says the free card limit from the constant, and unlimited decks", () => {
     for (const kind of ["free", "ended"] as const) {
       cleanup();
       const text = line(kind);
       expect(text, kind).toContain(`up to ${CARD_CAPACITY.free} saved cards`);
-      expect(text, kind).toContain(`unlimited public decks and ${privateDecksPhrase("free")}`);
+      expect(text, kind).toContain("unlimited decks");
+      expect(text, kind).not.toMatch(DECK_NUMBER);
     }
-    // A downgrade keeps everything (the caps check new rows only).
+    // A downgrade keeps everything (the card cap checks new rows only).
     cleanup();
     expect(line("ended")).toContain("Every card and deck you made stays yours.");
   });
 
-  it("holds no hard-coded limit any more", () => {
+  it("holds no hard-coded limit", () => {
     const source = readFileSync(join(process.cwd(), "components/billing/plan-status.tsx"), "utf8");
     expect(source).not.toMatch(/up to \d+ saved cards/);
     expect(source).not.toMatch(/\b\d+ private/);
@@ -107,11 +96,11 @@ describe("the FAQ", () => {
     return entry.a;
   };
 
-  it("answers the deck limit from the constants, with the grandfathering", () => {
+  it("answers that decks are unlimited on every plan, and that saved cards are what plans differ in", () => {
     const a = answer("How many decks can I make?");
-    expect(a).toContain("As many public decks as you like, on every plan.");
-    expect(a).toContain(privateDecksByPlanSentence());
-    expect(a).toContain("never locks a deck");
+    expect(a).toMatch(/^As many as you like, on every plan — public, unlisted or private\./);
+    expect(a).toContain(`Free holds ${CARD_CAPACITY.free}, Plus ${CARD_CAPACITY.plus}, Pro unlimited`);
+    expect(a).not.toMatch(DECK_NUMBER);
   });
 
   it("answers that an import uses no slots until a card is customized (D2), from CARD_CAPACITY", () => {

@@ -42,9 +42,6 @@ import type { Visibility } from "@/types/card";
 import { VisibilityPicker } from "@/components/ui/visibility-picker";
 import { inputClass, textareaClass } from "@/components/ui/field-classes";
 import { FieldGroup, joinIds } from "@/components/creator/field-group";
-import { DeckCapacityNotice } from "@/components/decks/deck-capacity";
-import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
-import { deckCountsTowardCap, type DeckCapacity } from "@/lib/billing/deck-capacity-copy";
 
 type FormValues = {
   title: string;
@@ -73,10 +70,6 @@ type DeckCreatorFormProps = {
    *  and a successful save calls `onSaved` instead of navigating. */
   embedded?: boolean;
   onSaved?: (slug: string) => void;
-  /** The owner's private-deck cap (TODO DK3.2): turning a PUBLIC deck
-   *  private or unlisted past it is warned about here and refused by the
-   *  server. A deck that is private or unlisted already holds its slot. */
-  deckCapacity?: DeckCapacity | null;
 };
 
 
@@ -124,10 +117,8 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
 export function DeckCreatorForm({ mode, userId, deck,
   defaultCoverSrc = null,
   embedded = false,
-  onSaved,
-  deckCapacity = null }: DeckCreatorFormProps) {
+  onSaved }: DeckCreatorFormProps) {
   const router = useRouter();
-  const upgrade = useUpgradeModal();
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -157,7 +148,6 @@ export function DeckCreatorForm({ mode, userId, deck,
   }, [defaults, reset]);
 
   const coverPosition = useWatch({ control, name: "cover_position" }) ?? null;
-  const pickedVisibility = useWatch({ control, name: "visibility" });
 
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     setServerError(null);
@@ -196,7 +186,6 @@ export function DeckCreatorForm({ mode, userId, deck,
           setServerError(result.formError);
           toast.error(result.formError);
         }
-        if (result.reason === "deck_capacity") upgrade.open("deck_capacity");
         return;
       }
       toast.success("Changes saved.");
@@ -333,12 +322,6 @@ export function DeckCreatorForm({ mode, userId, deck,
             )}
           />
         </FieldGroup>
-        <DeckCapacityNotice
-          capacity={deckCapacity}
-          visibility={pickedVisibility}
-          alreadyCounted={deckCountsTowardCap(deck?.visibility ?? "public")}
-          onMakePublic={() => setValue("visibility", "public", { shouldDirty: true })}
-        />
 
         <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-xs text-muted">
