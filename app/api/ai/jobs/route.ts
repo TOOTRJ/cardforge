@@ -32,6 +32,7 @@ import {
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
 import { AI_DESIGN_KINDS } from "@/lib/ai/frame-choices";
 import { AI_LAYOUT_KINDS, isAiLayoutKind } from "@/lib/ai/layout-design";
+import { AI_DFC_KINDS, fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
@@ -200,7 +201,7 @@ const requestSchema = z.discriminatedUnion("kind", [
     /** The AI dialog's kind ("surprise" or one it can make): set, the fill
      *  is designed frame-first (lib/ai/frame-brief.ts). Anything else is
      *  dropped — the fill is then what it always was. */
-    design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS]).optional().catch(undefined),
+    design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS, ...AI_DFC_KINDS]).optional().catch(undefined),
     /** The dialog's theme / style presets and the maker's twists: when any
      *  is named they are what the designer and the painter read (the twist
      *  first), in place of `theme` / `style`. */
@@ -432,16 +433,23 @@ export async function POST(request: Request) {
     if (isAdminConfigured()) await reconcileUserSpends(createAdminClient(), user.id);
     // A deck remix needs what its estimate priced: a double-faced card's
     // two pictures cost two (TODO 5.4, owner Q4).
-    const needed = remixEstimate?.credits ?? size;
+    // …and a double-faced fill with its artwork ticked two: one picture per
+    // face (the AI dialog, PR 3), priced here before anything is planned.
+    const needed =
+      remixEstimate?.credits ??
+      (parsed.data.kind === "card_fill" ? fillCreditsFor(parsed.data.design_kind, parsed.data.want) : size);
     const doubleFaced = remixEstimate?.doubleFaced ?? 0;
     const entitlements = await getEntitlements();
     if (entitlements.credits < needed) {
       return NextResponse.json(
         {
           ok: false,
-          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"}${
-            doubleFaced > 0 ? `, ${doubleFaced} of them double-faced at 2 credits` : ""
-          } (you have ${entitlements.credits}).`,
+          error:
+            parsed.data.kind === "card_fill" && needed > 1
+              ? `You need ${needed} credits for this generation — one picture per face (you have ${entitlements.credits}).`
+              : `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"}${
+                  doubleFaced > 0 ? `, ${doubleFaced} of them double-faced at 2 credits` : ""
+                } (you have ${entitlements.credits}).`,
           code: "INSUFFICIENT_CREDITS",
           balance: entitlements.credits,
           needed,
@@ -525,13 +533,15 @@ export async function POST(request: Request) {
     // A saga or a two-part kind (PR 2) is no card type: it names its
     // layout, and the plan steers the type its frame takes.
     const layout = isAiLayoutKind(asked) ? asked : undefined;
-    const designKind = asked && !isAiLayoutKind(asked) ? asked : undefined;
+    // …and a double-faced kind (PR 3) names its kind, never a card type.
+    const dfc = isAiDfcKind(asked) ? asked : undefined;
+    const designKind = asked && !isAiLayoutKind(asked) && !isAiDfcKind(asked) ? asked : undefined;
     const result = await createCardFillJob({
       want: fill.want,
       locked: fill.locked,
       steer: designKind && designKind !== SURPRISE_PRESET_ID
         ? { ...fill.steer, card_type: designKind }
-        : layout
+        : layout || dfc
           ? { ...fill.steer, card_type: undefined }
           : fill.steer,
       theme: assembled ? assembled.theme : fill.theme,
@@ -542,6 +552,7 @@ export async function POST(request: Request) {
       scope: fill.scope,
       ...(designKind ? { designKind } : {}),
       ...(layout ? { layout } : {}),
+      ...(dfc ? { dfc } : {}),
       ...(assembled ? { assembled: { artStyle: assembled.artStyle, styleArt: assembled.styleArt } } : {}),
     });
     if (!result.ok) {
@@ -554,8 +565,12 @@ export async function POST(request: Request) {
       );
     }
     await recordGeneration(user.id, parsed.data.kind);
+    // `cost`: what the steps reserve — one credit per picture, so a
+    // double-faced fill that paints (PR 3: two steps) says 2; every other
+    // fill's answer is what it always was.
+    const steps = Array.isArray(result.job.steps) ? result.job.steps.length : 1;
     return NextResponse.json(
-      { ok: true, job: withoutPlan(result.job), cardLimit: limit, credits },
+      { ok: true, job: withoutPlan(result.job), cardLimit: limit, credits, ...(steps > 1 ? { cost: steps } : {}) },
       { status: 200 },
     );
   }

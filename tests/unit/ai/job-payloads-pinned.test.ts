@@ -152,6 +152,7 @@ vi.mock("@/lib/cards/actions", () => ({
 import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { LAYOUT_DESIGNS, WANT_ALL } from "./fixtures/layout-designs";
+import { DFC_DESIGNS, DFC_FRONT } from "./fixtures/dfc-designs";
 
 const FIXTURE = join(process.cwd(), "tests/unit/ai/fixtures/job-payloads-main.json");
 const UPDATE = process.env.JOB_PAYLOADS_UPDATE === "1";
@@ -439,6 +440,34 @@ describe("the AI dialog's sagas and two-part cards (new cases)", () => {
     expect(result.ok).toBe(true);
     const step = s.patched.at(-1)!;
     pinned(`layout fill step · ${kind}`, { status: step.status, fill: step.fill ?? null, credits: s.spend.mock.calls.map((call) => ({ amount: call[0], reason: call[1] })), refunds: s.refund.mock.calls.length });
+  });
+});
+
+/** The AI dialog's double-faced cards (PR 3, feat/ai-dialog-dfc): NEW
+ *  cases, recorded on that branch — main had no such fill. Every entry
+ *  above is main's, unchanged. What each kind's plan stores, what BOTH of
+ *  its steps hand the creator and the credits they take (two: one picture
+ *  per face, each its own step). */
+describe("the AI dialog's double-faced cards (new cases)", () => {
+  const KINDS = ["transform", "mdfc", "dfc_saga", "dfc_token"] as const;
+  it.each(KINDS)("dfc fill · %s", async (kind) => {
+    s.answers = [[structuredClone(DFC_DESIGNS[kind])]];
+    const out = await createCardFillJob({ want: WANT_ALL as never, locked: {}, steer: {}, frame: DFC_FRONT[kind] as FrameTemplate, dfc: kind });
+    expect(out.ok).toBe(true);
+    const row = s.inserted.at(-1)!;
+    pinned(`dfc fill plan · ${kind}`, { kind: row.kind, plan: row.plan, steps: row.steps, prompts: s.prompts });
+    const fills: unknown[] = [];
+    for (const key of ["fill:0", "fill:1"]) {
+      job("card_fill", row.plan as Record<string, unknown>, key);
+      s.job.steps = (row.steps as Array<Record<string, unknown>>).map((step) =>
+        step.key === key ? { ...step, status: "running" } : { ...step, status: "done" },
+      ) as never;
+      const result = await runNextJobStep("job-1", key);
+      expect(result.ok).toBe(true);
+      const step = s.patched.at(-1)!;
+      fills.push({ key, status: step.status, fill: step.fill ?? null });
+    }
+    pinned(`dfc fill steps · ${kind}`, { steps: fills, credits: s.spend.mock.calls.map((call) => ({ amount: call[0], reason: call[1] })), refunds: s.refund.mock.calls.length });
   });
 });
 

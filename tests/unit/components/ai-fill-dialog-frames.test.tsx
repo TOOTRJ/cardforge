@@ -69,7 +69,7 @@ function open({
 }
 
 const group = (name: string) => screen.getByRole("radiogroup", { name });
-const pickKind = (label: string) => fireEvent.click(within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${label}`) }));
+const pickKind = (label: string) => fireEvent.click(within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${label}(?!,)`) }));
 const openFrames = () => fireEvent.click(screen.getByRole("button", { name: /Choose a frame/ }));
 const frameRadio = (name: RegExp) => within(screen.getByRole("radiogroup", { name: /^Frames for/ })).getByRole("radio", { name });
 const generate = async () => {
@@ -79,7 +79,7 @@ const generate = async () => {
 };
 
 describe("AI fill dialog — kinds", () => {
-  it("lists the kinds the AI can make — the saga and two-part layouts too (PR 2) — never a battle, double-faced card or emblem", () => {
+  it("lists the kinds the AI can make — the saga and two-part layouts (PR 2) and the double-faced kinds (PR 3) too — never a battle, a walker face or an emblem", () => {
     open();
     const kinds = within(group("Card kind")).getAllByRole("radio").map((chip) => chip.textContent);
     expect(kinds).toEqual([
@@ -98,12 +98,18 @@ describe("AI fill dialog — kinds", () => {
       "SplitNo frame published yet",
       "AftermathNo frame published yet",
       "FlipNo frame published yet",
+      // The double-faced kinds (PR 3): each where its front AND its default
+      // back are published — a token pair wherever a token frame is.
+      "TransformNo frame published yet",
+      "Modal double-facedNo frame published yet",
+      "Saga, two facesNo frame published yet",
+      "Token, two faces",
     ]);
   });
 
   it("a saga or two-part kind lights where its one frame is published (never the double-faced saga front)", () => {
     open({ verified: [...WITH_LAYOUTS, frameComboKey("sagadfcfront", "w")] });
-    const chip = (name: string) => within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${name}`) });
+    const chip = (name: string) => within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${name}(?!,)`) });
     expect(chip("Saga").getAttribute("aria-disabled")).toBeNull();
     expect(chip("Split").getAttribute("aria-disabled")).toBeNull();
     expect(chipOff(chip("Adventure"))).toBe(true);
@@ -250,5 +256,53 @@ describe("AI fill dialog — what Generate sends", () => {
     pickKind("Artifact");
     await generate();
     expect(onGenerate.mock.calls[0]![0]).toMatchObject({ design_kind: "artifact", frame: "random" });
+  });
+});
+
+/** …with the double-faced bodies published (PR 3): transform and the saga
+ *  front in red and white, the default back with them; no modal back. */
+const WITH_DFC = [
+  ...VERIFIED,
+  ...["m15dfcfront", "m15dfcback", "sagadfcfront"].flatMap((template) => ["r", "w"].map((colour) => frameComboKey(template, colour))),
+  frameComboKey("m15mdfcfront", "u"),
+];
+
+describe("AI fill dialog — double-faced kinds (PR 3)", () => {
+  it("a double-faced kind lights only where its front AND its default back are published", () => {
+    open({ verified: WITH_DFC });
+    const chip = (name: string) => within(group("Card kind")).getByRole("radio", { name: new RegExp(`^${name}`) });
+    expect(chip("Transform").getAttribute("aria-disabled")).toBeNull();
+    expect(chip("Saga, two faces").getAttribute("aria-disabled")).toBeNull();
+    expect(chip("Token, two faces").getAttribute("aria-disabled")).toBeNull();
+    // A modal front with no modal back published: off, with its reason.
+    expect(chipOff(chip("Modal double-faced"))).toBe(true);
+    expect(chip("Modal double-faced").textContent).toContain("No frame published yet");
+    // Never a battle or a walker face.
+    expect(within(group("Card kind")).queryByRole("radio", { name: /^Battle/ })).toBeNull();
+  });
+
+  it("lists the kind's FRONT frames; a kept colour leaves one not published in it off with the reason", () => {
+    open({ verified: WITH_DFC, fields: ["card_type", "title"], colorKey: "g" });
+    pickKind("Transform");
+    openFrames();
+    const front = frameRadio(/^Transform front/);
+    expect(chipOff(front)).toBe(true);
+    expect(front.textContent).toContain("Not published in green yet");
+  });
+
+  it("prices TWO credits — one picture per face — before anyone pays, and names the kind, never a card type", async () => {
+    billing.on = true;
+    const onGenerate = open({ verified: WITH_DFC });
+    pickKind("Transform");
+    expect(screen.getByText("Uses 2 credits — one picture per face")).toBeTruthy();
+    openFrames();
+    fireEvent.click(frameRadio(/^Transform front/));
+    await generate();
+    expect(onGenerate.mock.calls[0]![0]).toMatchObject({ design_kind: "transform", card_type: undefined, frame: "m15dfcfront" });
+    cleanup();
+    // Without the artwork ticked nothing is painted: one credit, as any fill.
+    open({ verified: WITH_DFC, fields: ["card_type", "title"] });
+    pickKind("Saga, two faces");
+    expect(screen.getByText("Uses 1 credit")).toBeTruthy();
   });
 });

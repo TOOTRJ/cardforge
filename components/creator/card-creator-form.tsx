@@ -74,6 +74,7 @@ import {
 } from "@/components/creator/ai-fill-dialog";
 import { aiDialogColorKey } from "@/lib/ai/frame-choices";
 import { isAiLayoutKind } from "@/lib/ai/layout-design";
+import { fillCreditsFor } from "@/lib/ai/dfc-design";
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
@@ -298,6 +299,7 @@ import {
   isSagaFront,
   isDfcBackBody,
   templateHasBackFace,
+  templateTakesBackBody,
   withTransformBackShape,
   type DfcIconFamily,
 } from "@/lib/cards/dfc";
@@ -770,7 +772,7 @@ export function CardCreatorForm({
   // leaving mid-generation used to lose the credit silently).
   const [guardArmed, setGuardArmed] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
-  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting">(
+  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting" | "painting-back">(
     null,
   );
   const aiBusy = fillPhase !== null || ideasBusy;
@@ -3295,14 +3297,17 @@ export function CardCreatorForm({
     // The kind the card was before the fill: a two-part fill onto ANOTHER
     // kind starts its second part afresh (below).
     const kindBeforeFill = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
+    // A double-faced fill (PR 3): a back of its own on a double-faced front
+    // body or a token template — the kind its frame IS, as a layout fill's.
+    const twoFacedFill = Boolean(fill.back_face) && templateTakesBackBody(fill.frame_template);
     if (fill.card_type && fillKind && !isRevise) {
       // A saga / two-part fill's kind change is judged in the colour the
       // card is about to take — the old one named a frame the card never
       // had ("isn't available in colorless") — set again below as ever.
-      if (isAiLayoutKind(fillKind) && fill.color_identity) {
+      if ((isAiLayoutKind(fillKind) || twoFacedFill) && fill.color_identity) {
         setValue("color_identity", normalizeColorSelection(fill.color_identity, { keepPair: drawsTwoColorFrame() }), { shouldDirty: true });
       }
-      applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) ? fill.card_type : undefined);
+      applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) || twoFacedFill ? fill.card_type : undefined);
       if (fill.frame_template) {
         // The colour the card is about to TAKE (the fill's own, set just
         // below) — never the form's colour before it: a frame the server
@@ -3418,6 +3423,12 @@ export function CardCreatorForm({
       if (back.power !== undefined) setValue("back_face.power", back.power ?? "", { shouldDirty: true });
       if (back.toughness !== undefined) setValue("back_face.toughness", back.toughness ?? "", { shouldDirty: true });
       if (back.color_identity !== undefined) setValue("back_face.color_identity", back.color_identity, { shouldDirty: true });
+      // A double-faced card's back (PR 3): its flavour, and its OWN picture
+      // with its credit (the back's step).
+      if (back.flavor_text !== undefined) {
+        setValue("back_face.flavor_text", printTypography(back.flavor_text ?? "", "flavor"), { shouldDirty: true });
+      }
+      if (back.artist_credit) setValue("back_face.artist_credit", back.artist_credit, { shouldDirty: true });
       // A split / aftermath half's own window: the card's one picture,
       // fitted to that window as any picture that lands is (TODO 3b.18).
       if (back.art_url) {
@@ -3428,6 +3439,11 @@ export function CardCreatorForm({
     // Each part in its own colour (TODO 4.26): the switch the plan judged —
     // on where both parts are verified, off where they are not — and a
     // split / aftermath first half's own colour (M2).
+    // A double-faced saga's front starts on today's look (the arrows), as a
+    // maker's "Two faces" pick does (handleSagaFaces).
+    if (twoFacedFill && templateHasBackFace(fill.frame_template) && !getValues("frame_style.dfcIcon") && !isRevise) {
+      setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
+    }
     if (fill.part_color !== undefined && !isRevise) {
       setValue("frame_style.partColor", fill.part_color, { shouldDirty: true });
       setValue("frame_style.firstPartColor", fill.first_part_color, { shouldDirty: true });
@@ -3445,12 +3461,17 @@ export function CardCreatorForm({
       return;
     }
     const wantsArt = options.want.includes("art");
+    // One credit per picture: a double-faced card that paints is two (PR 3),
+    // priced before anyone pays, as the dialog and the server price it.
+    const fillCost = fillCreditsFor(options.design_kind, options.want);
     if (
       !(await confirmSpend({
-        cost: 1,
+        cost: fillCost,
         title: "Generate with AI?",
         description: wantsArt
-          ? options.design_kind && isAiLayoutKind(options.design_kind) && options.design_kind !== "saga"
+          ? fillCost > 1
+            ? "Writes the ticked fields into both faces of this card and paints a picture for each face — one credit per picture. Nothing is saved until you click Save."
+            : options.design_kind && isAiLayoutKind(options.design_kind) && options.design_kind !== "saga"
             ? // A two-part card is ONE picture, one credit (PR 2).
               "Writes the ticked fields into both parts of this card and paints its one picture. Nothing is saved until you click Save."
             : "Writes the ticked fields into this card and paints its artwork. Nothing is saved until you click Save."
@@ -3499,54 +3520,86 @@ export function CardCreatorForm({
         }
         return;
       }
-      if (typeof plan.credits === "number") publishCredits(plan.credits - 1);
+      if (typeof plan.credits === "number") publishCredits(plan.credits - (typeof plan.cost === "number" ? plan.cost : 1));
       const jobId: string = plan.job.id;
       jobStarted = true;
       if (wantsArt) setFillPhase("painting");
 
+      // A double-faced fill that paints has a second step, its back picture
+      // (PR 3): run after the front's, one credit of its own.
+      const backStepKey: string | undefined = (plan.job?.steps as Array<{ key?: string }> | undefined)
+        ?.map((planned) => planned.key)
+        .find((key) => key === "fill:1");
+      type FillStep = {
+        key?: string;
+        status?: string;
+        error?: string;
+        failure?: string | null;
+        refunded?: number | null;
+        refund_pending?: boolean | null;
+        fill?: CardFillResult;
+      };
       // One step; poll while another request holds it (double-click, second
-      // tab) instead of counting that as a failure.
-      let step:
-        | {
-            status?: string;
-            error?: string;
-            failure?: string | null;
-            refunded?: number | null;
-            refund_pending?: boolean | null;
-            fill?: CardFillResult;
+      // tab) instead of counting that as a failure. Null = the answer was
+      // lost (already said).
+      const runFillStep = async (key: string | undefined): Promise<FillStep | undefined | null> => {
+        let found: FillStep | undefined;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: key ? JSON.stringify({ step: key }) : "{}",
+          });
+          const payload = await stepResponse.json().catch(() => null);
+          if (!stepResponse.ok || !payload?.ok) {
+            // No JSON = the answer was lost on the way (a platform timeout
+            // page, a dropped connection): the result, if it finishes, is
+            // offered back here; a charge with no result comes back by itself.
+            toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
+            return null;
           }
-        | undefined;
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
-        const payload = await stepResponse.json().catch(() => null);
-        if (!stepResponse.ok || !payload?.ok) {
-          // No JSON = the answer was lost on the way (a platform timeout
-          // page, a dropped connection): the result, if it finishes, is
-          // offered back here; a charge with no result comes back by itself.
-          toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
-          return;
+          if (typeof payload.credits === "number") publishCredits(payload.credits);
+          const steps = (payload.job?.steps ?? []) as FillStep[];
+          found = key ? steps.find((candidate) => candidate.key === key) : (steps.find((candidate) => candidate.key === "fill:0") ?? steps[0]);
+          if (payload.inFlight || found?.status === "running") {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            continue;
+          }
+          break;
         }
-        if (typeof payload.credits === "number") publishCredits(payload.credits);
-        step = payload.job?.steps?.[0];
-        if (payload.inFlight || step?.status === "running") {
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          continue;
-        }
-        break;
-      }
+        return found;
+      };
+      const step = await runFillStep(undefined);
+      if (step === null) return;
       if (!step || step.status !== "done" || !step.fill) {
         // A FAILED step says what failed and what its credit did (returned,
         // or never taken) — from the step's own record, never assumed. A
         // missing result claims nothing it can't prove.
         toast.error(step?.status === "failed" ? failedStepMessage(step) : AI_FILL_NO_ANSWER_MESSAGE);
+        // The back is never painted for a front that wasn't made: its step
+        // closes the job, uncharged (best effort).
+        if (backStepKey) await runFillStep(backStepKey).catch(() => undefined);
         return;
       }
+      let filled: CardFillResult = step.fill;
+      // The back's picture: merged in when it was painted; when it wasn't,
+      // the front is still the maker's (its credit stands — its picture
+      // was delivered) and the back's credit was returned — said below.
+      let backMissed: string | null = null;
+      if (backStepKey) {
+        setFillPhase("painting-back");
+        const back = await runFillStep(backStepKey);
+        const backArt = back?.status === "done" ? back.fill?.back_face : undefined;
+        if (backArt?.art_url && filled.back_face) {
+          filled = { ...filled, back_face: { ...filled.back_face, ...backArt } };
+        } else {
+          backMissed = `The back face's picture couldn't be painted. ${
+            back?.status === "failed" ? failedStepMessage(back) : "If a credit was taken for it, it comes back to you automatically within the hour."
+          } Add a picture for the back face before you save it — or save it as a draft.`;
+        }
+      }
       try {
-        applyFill(step.fill);
+        applyFill(filled);
       } catch (error) {
         // The result is safe on the job: left unclaimed, it is offered back
         // on this page after a reload — never reported as a network error.
@@ -3558,11 +3611,17 @@ export function CardCreatorForm({
       }
       claimFill(jobId);
       // ONE announcement: a card kept on another frame than the one picked
-      // says why in it (frame-first, lib/ai/frame-brief.ts).
-      toast.success(
-        "Generated — look it over and save when you're happy.",
-        step.fill.frame_notice ? { description: step.fill.frame_notice } : undefined,
-      );
+      // says why in it (frame-first, lib/ai/frame-brief.ts); a double-faced
+      // card whose back picture failed says so — and what its credit did —
+      // never a silent half (PR 3).
+      if (backMissed) {
+        toast.warning("Generated the card — but not its back face's picture.", { description: backMissed });
+      } else {
+        toast.success(
+          "Generated — look it over and save when you're happy.",
+          filled.frame_notice ? { description: filled.frame_notice } : undefined,
+        );
+      }
     } catch {
       toast.error(jobStarted ? AI_FILL_NO_ANSWER_MESSAGE : AI_PLAN_NO_ANSWER_MESSAGE);
     } finally {
@@ -4573,7 +4632,9 @@ export function CardCreatorForm({
       <span className="text-xs font-semibold uppercase tracking-wider text-muted">
         {fillPhase === "painting"
           ? "Painting the artwork — this takes about a minute"
-          : "Designing your card…"}
+          : fillPhase === "painting-back"
+            ? "Painting the back face — about a minute more"
+            : "Designing your card…"}
       </span>
     </div>
   ) : null;
@@ -4595,7 +4656,7 @@ export function CardCreatorForm({
       {partOutline}
       {fillPhase ? (
         <CardGeneratingOverlay
-          label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
+          label={fillPhase === "painting" ? "Painting art…" : fillPhase === "painting-back" ? "Painting the back…" : "Designing…"}
           landscape={previewLandscape}
         />
       ) : null}

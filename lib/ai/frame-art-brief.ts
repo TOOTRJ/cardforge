@@ -125,6 +125,24 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
     brief: "Show the creature as it is now, with a hint of what it becomes when it flips.",
     templates: ["flip"],
   },
+  // The double-faced bodies (the AI dialog, PR 3): TWO pictures, one per
+  // face — each shows its own face's subject.
+  {
+    brief: "The FRONT face of a two-faced card: show this face's own subject as it is now — the back face has a picture of its own.",
+    templates: ["m15dfcfront", "m15dfclandfront", "m15mdfcfront", "m15mdfclandfront"],
+  },
+  {
+    brief: "The BACK face of a two-faced card: show this face's own subject — what the front became, or the other side of the choice — never the front's picture again.",
+    templates: ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback"],
+  },
+  {
+    brief: `${FULL_CARD} It is one face of a two-faced card: the other face has a picture of its own.`,
+    templates: ["m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"],
+  },
+  {
+    brief: "A tall storybook scene for one face of a two-faced saga: one strong subject composed for a tall, narrow panel — the other face has a picture of its own.",
+    templates: ["sagadfcfront", "sagadfcback"],
+  },
 ];
 
 const BY_TEMPLATE: ReadonlyMap<FrameTemplate, string> = new Map(

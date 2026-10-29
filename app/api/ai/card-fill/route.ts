@@ -27,7 +27,7 @@ type JobRow = {
   kind: string;
   status: string;
   request: Record<string, unknown> | null;
-  steps: Array<{ status?: string; fill?: CardFillResult | null }> | null;
+  steps: Array<{ key?: string; status?: string; fill?: CardFillResult | null }> | null;
   created_at: string;
 };
 
@@ -43,7 +43,9 @@ export async function GET(request: Request) {
     .from("ai_generation_jobs")
     .select("id, owner_id, kind, status, request, steps, created_at")
     .eq("kind", "card_fill")
-    .eq("status", "done")
+    // A double-faced fill (PR 3) has a second step, its back picture: one
+    // whose back failed (refunded) still finished its front — offered too.
+    .in("status", ["done", "done_with_errors"])
     .gte("created_at", new Date(Date.now() - UNCLAIMED_WINDOW_MS).toISOString())
     .order("created_at", { ascending: false })
     .limit(10);
@@ -58,8 +60,18 @@ export async function GET(request: Request) {
   if (!match) return NextResponse.json({ ok: true, fill: null });
   return NextResponse.json({
     ok: true,
-    fill: { jobId: match.id, result: match.steps![0].fill, createdAt: match.created_at },
+    fill: { jobId: match.id, result: withBackPicture(match), createdAt: match.created_at },
   });
+}
+
+/** The fill a job hands back: its first step's, with a double-faced card's
+ *  BACK picture (its second step, PR 3) where that step finished. */
+function withBackPicture(row: JobRow): CardFillResult {
+  const front = row.steps![0]!.fill!;
+  const back = row.steps?.find((step) => step.key === "fill:1");
+  const art = back?.status === "done" ? back.fill?.back_face : undefined;
+  if (!art || !front.back_face) return front;
+  return { ...front, back_face: { ...front.back_face, ...art } };
 }
 
 const claimSchema = z.object({ jobId: z.string().uuid() });

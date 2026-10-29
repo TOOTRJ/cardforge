@@ -6,9 +6,11 @@
 // Kinds: the creator's kind list (lib/creator/card-kinds.ts), but only the
 // kinds the design engine can write: the one-faced kinds (PR 1) and, since
 // PR 2, the saga and the one-picture two-part layouts (adventure, Prepare,
-// split, aftermath, flip — lib/ai/layout-design.ts). The double-faced kinds
-// are PR 3; a battle has no published frame and the emblem is pin-only
-// (owner decision). A kind with no frame published in any colour is still
+// split, aftermath, flip — lib/ai/layout-design.ts) and, since PR 3, the
+// double-faced kinds (transform, modal, the double-faced saga, the
+// double-sided token — lib/ai/dfc-design.ts). A battle has no published
+// frame, no walker face has a double-faced body (owner Q2: ask first), and
+// the emblem is pin-only (owner decision). A kind with no frame published in any colour is still
 // listed, as an off chip with its reason.
 //
 // Frames: every frame the creator's gallery offers for the kind
@@ -28,6 +30,7 @@ import {
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
 import { AI_LAYOUT_KINDS, LAYOUT_TEMPLATE, isAiLayoutKind, type AiLayoutKind } from "@/lib/ai/layout-design";
+import { AI_DFC_KINDS, dfcFrontChoices, dfcKindOffReason, isAiDfcKind, type AiDfcKind } from "@/lib/ai/dfc-design";
 import {
   FRAME_ERA_LABELS,
   FRAME_TEMPLATE_LABELS,
@@ -57,12 +60,14 @@ export function isAiDesignKind(value: unknown): value is AiDesignKind {
 
 /** Every kind the dialog's Card kind row offers, in the creator's order:
  *  the one-faced kinds, then the saga and the two-part layouts (PR 2). */
-export type AiDialogKind = AiDesignKind | AiLayoutKind;
-export const AI_DIALOG_KINDS: readonly AiDialogKind[] = [...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS];
+export type AiDialogKind = AiDesignKind | AiLayoutKind | AiDfcKind;
+export const AI_DIALOG_KINDS: readonly AiDialogKind[] = [...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS, ...AI_DFC_KINDS];
 
 /** Why a kind chip is off, or null when the kind can be generated. A layout
  *  kind is judged on its ONE frame (never the double-faced saga front). */
 export function aiKindOffReason(kind: AiDialogKind, verifiedKeys: ReadonlySet<string>): string | null {
+  // A double-faced kind: its front AND its default back published (PR 3).
+  if (isAiDfcKind(kind)) return dfcKindOffReason(kind, verifiedKeys);
   const published = isAiLayoutKind(kind)
     ? aiFrameOptions(kind, verifiedKeys, null).length > 0
     : kindHasAvailableFrame(kind, verifiedKeys);
@@ -91,7 +96,10 @@ export function aiFrameOptions(
   verifiedKeys: ReadonlySet<string>,
   colorKey: FrameColorKey | null,
 ): AiFrameOption[] {
-  return framesForKind(kind, verifiedKeys)
+  // A double-faced kind lists its FRONT frames (PR 3); the back's body is
+  // derived from the back the AI designs.
+  const choices = isAiDfcKind(kind) ? dfcFrontChoices(kind, verifiedKeys) : framesForKind(kind, verifiedKeys);
+  return choices
     // A layout kind is made on its one frame (the double-faced saga front
     // is PR 3's).
     .filter((choice) => !isAiLayoutKind(kind) || choice.template === LAYOUT_TEMPLATE[kind])
