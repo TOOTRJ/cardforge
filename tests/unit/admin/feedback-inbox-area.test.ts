@@ -65,7 +65,7 @@ describe("listAllFeedback's area", () => {
     expect(called(feedbackRead(), "eq", "area")).toBe(false);
   });
 
-  it("carries the area badge, the deck link and the screen size", async () => {
+  it("carries the area badge, the deck link and the window size", async () => {
     const inbox = await listAllFeedback("all");
     expect(inbox?.loadError).toBe(false);
     expect(inbox?.items[0]).toMatchObject({
@@ -97,6 +97,57 @@ describe("listAllFeedback's area", () => {
     expect(inbox?.loadError).toBe(true);
     expect(inbox?.items[0].deck).toBeNull();
     expect(log).toHaveBeenCalledWith(expect.stringContaining("deck read failed"), "boom");
+  });
+
+  describe("on a database 0146 has not reached (the deploy before the migration, the dev DB)", () => {
+    const selectsArea = (calls: ChainCall[]) =>
+      calls.some((c) => c.method === "select" && String(c.args[0]).includes("area"));
+    // The rows as a pre-0146 database holds them: no area, deck_id or viewport.
+    const LEGACY = ROWS.map((r) =>
+      Object.fromEntries(Object.entries(r).filter(([key]) => !["area", "deck_id", "viewport"].includes(key))),
+    );
+
+    for (const code of ["42703", "PGRST204"]) {
+      it(`${code}: reads the rows without the new columns — never the load error`, async () => {
+        const base = state.resolve!;
+        state.resolve = (table, calls) =>
+          table === "feedback"
+            ? selectsArea(calls)
+              ? { data: null, error: { code, message: "column feedback.area does not exist" } }
+              : { data: LEGACY }
+            : base(table, calls);
+        const inbox = await listAllFeedback("unresolved");
+        expect(inbox?.loadError).toBe(false);
+        expect(inbox?.items).toHaveLength(2);
+        expect(inbox?.items.map((i) => [i.area, i.deck, i.viewport])).toEqual([
+          [null, null, null],
+          [null, null, null],
+        ]);
+        // The retry keeps the status filter and asks for no deck.
+        const reads = state.stub!.forTable("feedback");
+        expect(reads).toHaveLength(2);
+        expect(called(reads[1].calls, "in", "status")).toBe(true);
+        expect(state.stub!.forTable("decks")).toHaveLength(0);
+        expect(log).not.toHaveBeenCalled();
+      });
+    }
+
+    it("one area there is an honest empty inbox (no row has an area yet)", async () => {
+      state.resolve = (table) =>
+        table === "feedback" ? { data: null, error: { code: "42703", message: "column feedback.area does not exist" } } : { data: [] };
+      expect(await listAllFeedback("all", "decks")).toEqual({ items: [], loadError: false });
+      expect(state.stub!.forTable("feedback")).toHaveLength(1);
+    });
+
+    it("any other error is still the load error", async () => {
+      state.resolve = (table) =>
+        table === "feedback" ? { data: null, error: { code: "42703", message: "column feedback.subjectx does not exist" } } : { data: [] };
+      expect(await listAllFeedback("all")).toEqual({ items: [], loadError: true });
+      state.stub = chainClient((table, calls) => state.resolve!(table, calls));
+      state.resolve = (table) =>
+        table === "feedback" ? { data: null, error: { code: "57014", message: "timeout on area" } } : { data: [] };
+      expect(await listAllFeedback("all")).toEqual({ items: [], loadError: true });
+    });
   });
 
   it("an unknown stored area reads as none", async () => {

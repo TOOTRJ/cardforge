@@ -53,7 +53,7 @@ const insertOf = () =>
   payloadOf(state.stub!.forTable("feedback").find((e) => called(e.calls, "insert"))?.calls ?? [], "insert");
 
 describe("submitDeckFeedbackAction", () => {
-  it("files the row under area decks with the deck, the path and the screen size", async () => {
+  it("files the row under area decks with the deck, the path and the window size", async () => {
     expect(await submitDeckFeedbackAction(input)).toEqual({ ok: true });
     expect(insertOf()).toEqual({
       user_id: "u1",
@@ -118,6 +118,28 @@ describe("submitDeckFeedbackAction", () => {
       error: "Couldn't save your feedback. Try again.",
     });
     warn.mockRestore();
+  });
+
+  it("on a database 0146 has not reached, the send fails with the same friendly error", async () => {
+    state.resolve = (table, calls) =>
+      table === "decks"
+        ? { data: { id: DECK } }
+        : called(calls, "insert")
+          ? { error: { code: "PGRST204", message: "Could not find the 'area' column of 'feedback' in the schema cache" } }
+          : { count: 0 };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await submitDeckFeedbackAction(input)).toEqual({
+      ok: false,
+      error: "Couldn't save your feedback. Try again.",
+    });
+    warn.mockRestore();
+  });
+
+  it("a long first line of emoji still saves: the subject is well formed", async () => {
+    await submitDeckFeedbackAction({ ...input, message: "😀".repeat(100) });
+    const subject = (insertOf() as { subject: string }).subject;
+    expect(subject.isWellFormed()).toBe(true);
+    expect(subject).toBe(`${"😀".repeat(39)}…`);
   });
 });
 

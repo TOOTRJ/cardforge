@@ -27,7 +27,7 @@ const valid = {
   viewport: "390x844",
 };
 
-describe("areas and screen sizes", () => {
+describe("areas and window sizes", () => {
   it("viewportOf writes what the CHECK takes", () => {
     expect(viewportOf(390, 844)).toBe("390x844");
     expect(viewportOf(1366.4, 767.6)).toBe("1366x768");
@@ -102,6 +102,24 @@ describe("deckFeedbackSubject", () => {
 
   it("cuts a long word too", () => {
     expect(deckFeedbackSubject("x".repeat(300))).toHaveLength(DECK_FEEDBACK_SUBJECT_MAX);
+  });
+
+  it("never cuts through an emoji (a lone surrogate fails the send on every retry)", () => {
+    for (const line of [
+      "😀".repeat(100),
+      `${"x".repeat(78)}😀😀😀`,
+      `${"x".repeat(77)}👩‍👩‍👧 and more words after it`,
+      `Deck page ${"🃏".repeat(60)}`,
+    ]) {
+      const subject = deckFeedbackSubject(line);
+      expect(subject.isWellFormed(), line).toBe(true);
+      expect(subject.length, line).toBeLessThanOrEqual(DECK_FEEDBACK_SUBJECT_MAX);
+      expect(subject.endsWith("…"), line).toBe(true);
+      expect(line.startsWith(subject.slice(0, -1)), line).toBe(true);
+      expect(feedbackSchema.shape.subject.safeParse(subject).success, line).toBe(true);
+    }
+    // 100 emoji: 39 whole ones (78 units) and the ellipsis.
+    expect(deckFeedbackSubject("😀".repeat(100))).toBe(`${"😀".repeat(39)}…`);
   });
 });
 

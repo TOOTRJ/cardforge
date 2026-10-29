@@ -12,7 +12,7 @@
 --             card_id: the feedback outlives the deck). Only on a 'decks'
 --             row (feedback_deck_needs_area).
 --   viewport  the sender's window, "<width>x<height>" in CSS px — a bug
---             report's screen size. Nothing else about the device is kept.
+--             report's window size. Nothing else about the device is kept.
 --
 -- No stored row changes: the columns are added NULL, nothing is backfilled.
 -- The admin fan-out (0051's feedback_notify_admins) fires on every insert,

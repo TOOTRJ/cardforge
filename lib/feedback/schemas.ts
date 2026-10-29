@@ -146,7 +146,16 @@ export const DECK_FEEDBACK_SUBJECT_MAX = 80;
 export function deckFeedbackSubject(message: string): string {
   const firstLine = message.trim().split(/\r?\n/)[0]?.trim() ?? "";
   if (firstLine.length <= DECK_FEEDBACK_SUBJECT_MAX) return firstLine || "Deck feedback";
-  const cut = firstLine.slice(0, DECK_FEEDBACK_SUBJECT_MAX - 1);
+  // Cut by CODE POINT, never by UTF-16 unit: a `slice` through an emoji
+  // leaves a lone surrogate, which the JSON body to PostgREST refuses — the
+  // send would fail on every retry. (A long first line of emoji is a
+  // shorter subject than 80 units; that is fine.)
+  const points = Array.from(firstLine);
+  let cut = "";
+  for (const point of points) {
+    if (cut.length + point.length > DECK_FEEDBACK_SUBJECT_MAX - 1) break;
+    cut += point;
+  }
   const atWord = cut.lastIndexOf(" ");
   return `${(atWord > 40 ? cut.slice(0, atWord) : cut).trimEnd()}…`;
 }
@@ -172,7 +181,7 @@ export const deckFeedbackSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
   viewport: z
     .string()
-    .regex(VIEWPORT_PATTERN, "Invalid screen size.")
+    .regex(VIEWPORT_PATTERN, "Invalid window size.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 });

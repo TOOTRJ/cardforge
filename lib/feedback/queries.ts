@@ -73,6 +73,20 @@ export async function countNewFeedback(): Promise<number> {
 
 export type { FeedbackInboxFilter };
 
+/** Migration 0146's columns (TODO DK10.1) are missing — "column
+ *  feedback.area does not exist" (42703) or PostgREST's stale-schema
+ *  PGRST204. On a merge Vercel can deploy before Supabase migrates, and the
+ *  dev DB migrates from the `dev` branch after it; until then the inbox
+ *  reads the rows without them instead of showing its load error (a deck
+ *  dialog's insert fails with its friendly "Couldn't save" meanwhile).
+ *  Remove once 0146 is on production and dev. */
+function isMissing0146Column(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+): boolean {
+  if (error?.code !== "42703" && error?.code !== "PGRST204") return false;
+  return /\b(area|deck_id|viewport)\b/.test(error.message ?? "");
+}
+
 /** Statuses that still need attention (the inbox default). */
 const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewed"];
 
@@ -101,7 +115,22 @@ export async function listAllFeedback(
   if (filter === "unresolved") query = query.in("status", [...UNRESOLVED_FEEDBACK_STATUSES]);
   else if (filter !== "all") query = query.eq("status", filter);
   if (area) query = query.eq("area", area);
-  const { data: fetched, error } = await query;
+  let { data: fetched, error } = await query;
+  if (isMissing0146Column(error)) {
+    // A database 0146 has not reached yet: no row there has an area, so one
+    // area is an honest empty inbox, and every area is the rows as before.
+    if (area) return { items: [], loadError: false };
+    let legacy = admin
+      .from("feedback")
+      .select("id, category, subject, message, frame_template, page_url, status, created_at, user_id")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (filter === "unresolved") legacy = legacy.in("status", [...UNRESOLVED_FEEDBACK_STATUSES]);
+    else if (filter !== "all") legacy = legacy.eq("status", filter);
+    const read = await legacy;
+    fetched = read.data?.map((r) => ({ ...r, area: null, deck_id: null, viewport: null })) ?? null;
+    error = read.error;
+  }
   if (error || !fetched) {
     console.error("[admin/feedback] feedback read failed:", error?.message ?? "no data");
     return { items: [], loadError: true };

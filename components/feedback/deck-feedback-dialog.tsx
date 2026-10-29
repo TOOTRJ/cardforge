@@ -14,10 +14,21 @@
 // anonymous feedback.
 //
 // One dialog per trigger (the deck toolbar, the deck footer, My Decks, the
-// beta banner): Radix returns the focus to the button that opened it.
+// beta banner): Radix returns the focus to the button that opened it. Radix
+// also UNMOUNTS the content on close, so the draft (kind + message) lives
+// here, above it: Escape or a backdrop click never loses a long report —
+// only a send clears it.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactElement,
+  type SetStateAction,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CheckCircle2, Info, Loader2, MessageSquare, Send } from "lucide-react";
@@ -51,9 +62,12 @@ const KIND_OPTIONS: ChipOption<DeckFeedbackKind>[] = DECK_FEEDBACK_KINDS.map((k)
 /** What the dialog attaches, in the words it shows above Send. */
 export function deckFeedbackIncludes(hasDeck: boolean): string {
   return hasDeck
-    ? "We’ll include: this deck, the page address and your screen size."
-    : "We’ll include: the page address and your screen size.";
+    ? "We’ll include: this deck, the page address and your window size."
+    : "We’ll include: the page address and your window size.";
 }
+
+type Draft = { kind: DeckFeedbackKind; message: string };
+const EMPTY_DRAFT: Draft = { kind: "idea", message: "" };
 
 export function DeckFeedbackDialog({
   deckId = null,
@@ -68,14 +82,15 @@ export function DeckFeedbackDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  // The unsent draft outlives the content Radix unmounts on close.
+  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        // A sent dialog opens on a fresh form next time; an unsent message
-        // stays as a draft.
+        // A sent dialog opens on a fresh form next time.
         if (!next && sent) setSent(false);
       }}
     >
@@ -92,7 +107,15 @@ export function DeckFeedbackDialog({
         ) : sent ? (
           <SentBody />
         ) : (
-          <DeckFeedbackForm deckId={deckId} onSent={() => setSent(true)} />
+          <DeckFeedbackForm
+            deckId={deckId}
+            draft={draft}
+            onDraftChange={setDraft}
+            onSent={() => {
+              setDraft(EMPTY_DRAFT);
+              setSent(true);
+            }}
+          />
         )}
       </DialogContent>
     </Dialog>
@@ -101,13 +124,18 @@ export function DeckFeedbackDialog({
 
 function DeckFeedbackForm({
   deckId,
+  draft,
+  onDraftChange,
   onSent,
 }: {
   deckId: string | null;
+  draft: Draft;
+  onDraftChange: Dispatch<SetStateAction<Draft>>;
   onSent: () => void;
 }) {
-  const [kind, setKind] = useState<DeckFeedbackKind>("idea");
-  const [message, setMessage] = useState("");
+  const { kind, message } = draft;
+  const setKind = (next: DeckFeedbackKind) => onDraftChange((d) => ({ ...d, kind: next }));
+  const setMessage = (next: string) => onDraftChange((d) => ({ ...d, message: next }));
   const [sending, setSending] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -116,6 +144,10 @@ function DeckFeedbackForm({
   const hint = DECK_FEEDBACK_KINDS.find((k) => k.key === kind)?.hint;
 
   const onSubmit = async () => {
+    // Send stays focusable while a send is out (aria-disabled, see below):
+    // a second press is ignored here, never by a `disabled` that would drop
+    // the focus to <body> and leave it there after a refusal.
+    if (sending) return;
     const payload = {
       kind,
       message,
@@ -216,11 +248,18 @@ function DeckFeedbackForm({
             Cancel
           </Button>
         </DialogClose>
+        {/* While sending: aria-disabled, never `disabled` — the focus stays
+            on Send, so after a refusal it is still here and the alert above
+            is the one announcement (onSubmit ignores the press). Empty:
+            `disabled`, there is nothing to send and the focus is in the
+            message. */}
         <Button
           type="submit"
           size="sm"
           aria-describedby={includesId}
-          disabled={sending || !message.trim()}
+          aria-disabled={sending || undefined}
+          disabled={!sending && !message.trim()}
+          className={sending ? "cursor-wait opacity-70" : undefined}
         >
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

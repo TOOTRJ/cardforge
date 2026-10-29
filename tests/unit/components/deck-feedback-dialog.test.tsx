@@ -34,6 +34,7 @@ vi.mock("@/lib/feedback/actions", () => actions);
 
 import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
+import { DeckBetaBannerView } from "@/components/decks/deck-beta-banner-view";
 import {
   DECK_BETA_BANNER_ENDS_AT,
   DECK_BETA_BANNER_STORAGE_KEY,
@@ -86,10 +87,10 @@ describe("the deck feedback dialog", () => {
 
   it("says what it attaches — the deck only where there is one", async () => {
     await openDialog();
-    expect(screen.getByText("We’ll include: this deck, the page address and your screen size.")).toBeTruthy();
+    expect(screen.getByText("We’ll include: this deck, the page address and your window size.")).toBeTruthy();
     cleanup();
     await openDialog(<DeckFeedbackButton signedIn />);
-    expect(screen.getByText("We’ll include: the page address and your screen size.")).toBeTruthy();
+    expect(screen.getByText("We’ll include: the page address and your window size.")).toBeTruthy();
     expect(screen.queryByText(/this deck/)).toBeNull();
   });
 
@@ -157,8 +158,79 @@ describe("the deck feedback dialog", () => {
       fireEvent.change(message, { target: { value: "Hello" } });
     });
     await click(screen.getByRole("button", { name: "Send feedback" }));
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(screen.getByRole("alert").textContent).toBe("Try again in a little while.");
     expect((screen.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement).value).toBe("Hello");
+  });
+
+  it("while sending, Send is aria-disabled — never disabled, so the focus stays on it — and a second press does nothing", async () => {
+    let answer: (value: { ok: false; error: string }) => void = () => {};
+    actions.submitDeckFeedbackAction.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    await openDialog();
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), { target: { value: "Hello" } });
+    });
+    const send = screen.getByRole("button", { name: "Send feedback" }) as HTMLButtonElement;
+    send.focus();
+    await click(send);
+    const sending = screen.getByRole("button", { name: "Sending…" }) as HTMLButtonElement;
+    expect(sending).toBe(send);
+    expect(sending.disabled).toBe(false);
+    expect(sending.getAttribute("aria-disabled")).toBe("true");
+    await click(sending);
+    expect(actions.submitDeckFeedbackAction).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      answer({ ok: false, error: "Try again in a little while." });
+    });
+    expect(screen.getByRole("alert").textContent).toBe("Try again in a little while.");
+    expect(send.disabled).toBe(false);
+    expect(send.getAttribute("aria-disabled")).toBeNull();
+    expect(document.activeElement).toBe(send);
+  });
+
+  it("keeps the unsent draft when Escape closes it", async () => {
+    const { trigger } = await openDialog();
+    await click(screen.getByRole("radio", { name: "Bug" }));
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), { target: { value: "A long report" } });
+    });
+    await act(async () => {
+      fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await click(trigger);
+    expect((screen.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement).value).toBe("A long report");
+    expect(screen.getByRole("radio", { name: "Bug" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("keeps the unsent draft when a backdrop click closes it", async () => {
+    const { trigger } = await openDialog();
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), { target: { value: "Half written" } });
+    });
+    // Radix listens for the outside pointerdown from the tick after it opens.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      fireEvent.pointerDown(document.body, { button: 0, pointerType: "mouse" });
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await click(trigger);
+    expect((screen.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement).value).toBe("Half written");
+  });
+
+  it("a sent dialog opens on a fresh form", async () => {
+    const { trigger } = await openDialog();
+    await click(screen.getByRole("radio", { name: "Other" }));
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), { target: { value: "Thanks" } });
+    });
+    await click(screen.getByRole("button", { name: "Send feedback" }));
+    await click(await screen.findByRole("button", { name: "Done" }));
+    await click(trigger);
+    expect((screen.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement).value).toBe("");
+    expect(screen.getByRole("radio", { name: "Idea" }).getAttribute("aria-checked")).toBe("true");
   });
 
   it("signed out, it asks for a sign-in that comes back to the page", async () => {
@@ -218,10 +290,17 @@ describe("the deck builder beta banner (DK10.2)", () => {
     expect(screen.queryByRole("region", { name: "Deck builder beta" })).toBeNull();
   });
 
-  it("never draws after its end date", () => {
+  it("never draws after its end date (decided by the server wrapper)", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(Date.parse(DECK_BETA_BANNER_ENDS_AT) + 1000));
     const { container } = render(<DeckBetaBanner signedIn />);
     expect(container.textContent).toBe("");
+  });
+
+  it("the browser half never reads the clock, so hydration can't disagree with the server at the end date", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.parse(DECK_BETA_BANNER_ENDS_AT) + 1000));
+    render(<DeckBetaBannerView signedIn />);
+    expect(screen.getByRole("region", { name: "Deck builder beta" })).toBeTruthy();
   });
 });

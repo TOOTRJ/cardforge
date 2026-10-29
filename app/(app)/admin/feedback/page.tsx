@@ -188,7 +188,7 @@ export default async function AdminFeedbackPage({
                   </span>
                 ) : null}
                 {item.pageUrl ? <span>Page: {item.pageUrl}</span> : null}
-                {item.viewport ? <span>Screen: {item.viewport.replace("x", " × ")} px</span> : null}
+                {item.viewport ? <span>Window: {item.viewport.replace("x", " × ")} px</span> : null}
                 <span className="ml-auto flex flex-wrap items-center gap-2">
                   <FeedbackReplyButton
                     feedbackId={item.id}
@@ -222,7 +222,9 @@ function FilterTab({
   return (
     <Link
       href={href}
-      aria-current={active ? "page" : undefined}
+      // "true", never "page": two filter rows each mark their own choice,
+      // and neither link is the page itself.
+      aria-current={active ? "true" : undefined}
       className={cn(
         "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
         active
