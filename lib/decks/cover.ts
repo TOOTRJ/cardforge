@@ -38,6 +38,30 @@ import { coverObjectPosition } from "@/types/deck";
 export const DECK_COVER_WIDTH = 1600;
 export const DECK_COVER_HEIGHT = 900;
 
+/** The deck hero's picture box, about (components/decks/deck-hero.tsx): a
+ *  wide band on a desktop (1214 × 416 px at 1280+) and a tall column on a
+ *  phone (358 × ~470 px at 390). The cover editor draws these two crops of
+ *  the 16:9 picture, so its focal-point drag shows what it moves. */
+export const HERO_CROP_ASPECTS = { wide: 2.9, phone: 0.76 } as const;
+
+/** Where a crop of `aspect` (width / height) sits in the 16:9 picture at a
+ *  focal point, as fractions of the picture — CSS object-fit: cover with
+ *  object-position at the focal point (coverObjectPosition). Null = centred. */
+export function heroCropWindow(
+  aspect: number,
+  focal: { focalX: number; focalY: number } | null,
+): { left: number; top: number; width: number; height: number } {
+  const picture = DECK_COVER_WIDTH / DECK_COVER_HEIGHT;
+  const fx = focal?.focalX ?? 0.5;
+  const fy = focal?.focalY ?? 0.5;
+  if (aspect >= picture) {
+    const height = picture / aspect;
+    return { left: 0, top: (1 - height) * fy, width: 1, height };
+  }
+  const width = aspect / picture;
+  return { left: (1 - width) * fx, top: 0, width, height: 1 };
+}
+
 /** The colour identities a default is picked by, in WUBRG order, then the
  *  two that aren't one colour. `neutral` = nothing known about the colours
  *  (an empty deck, a list of placeholders). */

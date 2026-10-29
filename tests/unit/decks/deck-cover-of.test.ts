@@ -8,6 +8,8 @@ import {
   deckCoverIdentity,
   deckCoverOf,
   defaultDeckCoverFor,
+  HERO_CROP_ASPECTS,
+  heroCropWindow,
   isDefaultDeckCover,
 } from "@/lib/decks/cover";
 import { BRAND } from "@/lib/brand/constants";
@@ -237,5 +239,29 @@ describe("deckCoverColors — from rows every viewer can read", () => {
     expect(
       deckCoverColors([{ entry: entry("main", { card_id: "c", color_identity: ["U"] }), card: { color_identity: ["red"], visibility: "public" } }]),
     ).toEqual(["U"]);
+  });
+});
+
+describe("heroCropWindow — what the hero shows of the 16:9 picture", () => {
+  it("a wide band spans the width and slides down with the focal point", () => {
+    const top = heroCropWindow(HERO_CROP_ASPECTS.wide, { focalX: 0.5, focalY: 0 });
+    const bottom = heroCropWindow(HERO_CROP_ASPECTS.wide, { focalX: 0.5, focalY: 1 });
+    expect(top).toMatchObject({ left: 0, top: 0, width: 1 });
+    expect(top.height).toBeCloseTo(16 / 9 / HERO_CROP_ASPECTS.wide, 6);
+    expect(bottom.top + bottom.height).toBeCloseTo(1, 6);
+  });
+
+  it("a phone column spans the height and slides across with the focal point", () => {
+    const left = heroCropWindow(HERO_CROP_ASPECTS.phone, { focalX: 0, focalY: 0.5 });
+    const right = heroCropWindow(HERO_CROP_ASPECTS.phone, { focalX: 1, focalY: 0.5 });
+    expect(left).toMatchObject({ left: 0, top: 0, height: 1 });
+    expect(left.width).toBeCloseTo(HERO_CROP_ASPECTS.phone / (16 / 9), 6);
+    expect(right.left + right.width).toBeCloseTo(1, 6);
+  });
+
+  it("no focal point is centred; a 16:9 box is the whole picture", () => {
+    const centred = heroCropWindow(HERO_CROP_ASPECTS.phone, null);
+    expect(centred.left + centred.width / 2).toBeCloseTo(0.5, 6);
+    expect(heroCropWindow(16 / 9, { focalX: 0.2, focalY: 0.9 })).toEqual({ left: 0, top: 0, width: 1, height: 1 });
   });
 });

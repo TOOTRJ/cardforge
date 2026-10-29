@@ -78,6 +78,10 @@ export function DeckCardFan({
                 previewData={cardToPreviewData(featured.card)}
                 sizes="150px"
                 priority={index === 0}
+                // The hero is dark in both themes: the card's own dark rim
+                // and backdrop, never the theme's pale border / page colour
+                // (the backdrop shows only at a rounded bake's corners).
+                className="border-black/40 bg-[#101015]"
               />
             ) : (
               <div

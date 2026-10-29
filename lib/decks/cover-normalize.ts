@@ -16,7 +16,9 @@ import { DECK_COVER_HEIGHT, DECK_COVER_WIDTH } from "@/lib/decks/cover";
 const DECK_COVER_QUALITY = 82;
 const DECK_COVER_CONTENT_TYPE = "image/webp";
 
-/** Centre-crop + resize any image to the 16:9 cover standard, as WebP. */
+/** Crop any image to 16:9 around its most interesting region (sharp's
+ *  `attention` strategy — not a plain centre crop) and resize it to the
+ *  cover standard, as WebP. */
 export async function normalizeDeckCover(
   bytes: Uint8Array | ArrayBuffer | Buffer,
 ): Promise<{ bytes: Uint8Array; contentType: string }> {

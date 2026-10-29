@@ -73,6 +73,10 @@ export async function listDeckCoverColors(
       .select(`id, deck_cards(${ENTRY_COLUMNS})`)
       .in("id", rest)
       .neq("deck_cards.board", "maybe")
+      // The order the page reads its rows in (listDeckCards), so a deck past
+      // the cap is cut where its page cuts it.
+      .order("position", { referencedTable: "deck_cards" })
+      .order("created_at", { referencedTable: "deck_cards" })
       .limit(ENTRY_CAP, { referencedTable: "deck_cards" });
     for (const deck of (decks ?? []) as unknown as Array<{ id: string; deck_cards: ColorRow[] }>) {
       colors.set(deck.id, deckCoverColors(asItems(deck.deck_cards ?? [])));

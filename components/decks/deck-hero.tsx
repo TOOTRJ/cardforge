@@ -91,7 +91,14 @@ export function DeckHero({
 
         {coverAction ? <div className="absolute right-3 top-3 z-20">{coverAction}</div> : null}
 
-        <div className="grid gap-5 px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8 md:min-h-[22rem] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:items-center md:gap-8 lg:min-h-[26rem] lg:px-10">
+        {/* Under md the fan stands on top: with the owner's cover button in
+            the corner it starts below that button, never under it. */}
+        <div
+          className={cn(
+            "grid gap-5 px-5 pb-6 sm:px-8 sm:pb-8 md:min-h-[22rem] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:items-center md:gap-8 md:pt-8 lg:min-h-[26rem] lg:px-10",
+            coverAction ? "pt-14" : "pt-6 sm:pt-8",
+          )}
+        >
           <div className="flex min-w-0 flex-col gap-3 text-white">
             {chips ? <div className="flex flex-wrap items-center gap-2">{chips}</div> : null}
             <h1

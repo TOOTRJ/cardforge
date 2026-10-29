@@ -87,7 +87,8 @@ export async function uploadCoverServerAction(
   }
 
   // A DECK cover is stored as the cover standard (TODO DK6.5): 1600×900
-  // WebP, centre-cropped to 16:9 — the box every deck surface draws — from
+  // WebP, cropped to 16:9 around the picture's most interesting region
+  // (sharp's attention strategy) — the box every deck surface draws — from
   // the upright, metadata-free bytes above (sharp writes no metadata of its
   // own). A card's set icon keeps its own shape and format.
   let extension = EXTENSION_BY_FORMAT[format];
