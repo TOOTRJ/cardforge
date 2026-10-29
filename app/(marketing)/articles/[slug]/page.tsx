@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
@@ -11,15 +11,17 @@ import {
   articleMdxOptions,
   mdxComponents,
 } from "@/components/content/mdx-components";
-import { breadcrumbJsonLd, faqJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
+import { faqJsonLd, JsonLd, type CrumbItem } from "@/components/seo/json-ld";
 import {
   extractToc,
   getArticle,
   getRelatedArticles,
   listArticles,
-  slugifyTag,
+  tagHubHref,
   type ArticleMeta,
 } from "@/lib/content/articles";
+import { categoryPath, getArticleCategory } from "@/lib/content/article-categories";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { formatCalendarDate } from "@/lib/format/dates";
 
@@ -82,21 +84,11 @@ export default async function ArticlePage({
       <div className="max-w-3xl">
       <JsonLd data={buildArticleJsonLd(meta)} />
       {meta.faq ? <JsonLd data={faqJsonLd(meta.faq)} /> : null}
-      <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Home", path: "/" },
-          { name: "Articles", path: "/articles" },
-          { name: meta.title, path: `/articles/${meta.slug}` },
-        ])}
-      />
-
-      <Link
-        href="/articles"
-        className="mb-8 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        All articles
-      </Link>
+      {/* The reader's path, not the URL: Home › Learn › <its category> ›
+          Title (the guide's frontmatter `category`; /articles/<slug> never
+          moves). A guide with no valid category — which the category test
+          fails on — falls back to the plain articles index. */}
+      <Breadcrumbs items={articleCrumbs(meta)} />
 
       {/* Header */}
       <header className="flex flex-col gap-4">
@@ -125,7 +117,7 @@ export default async function ArticlePage({
             {meta.tags.map((tag) => (
               <Link
                 key={tag}
-                href={`/articles/tag/${slugifyTag(tag)}`}
+                href={tagHubHref(tag)}
                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
               >
                 <Badge
@@ -218,6 +210,19 @@ export default async function ArticlePage({
   );
 }
 
+/** Home › Learn › <category> › Title — or Home › Learn › All articles ›
+ *  Title for a guide without a category. */
+function articleCrumbs(meta: ArticleMeta): CrumbItem[] {
+  const category = meta.category ? getArticleCategory(meta.category) : null;
+  return [
+    { name: "Home", path: "/" },
+    { name: "Learn", path: "/learn" },
+    category
+      ? { name: category.label, path: categoryPath(category.slug) }
+      : { name: "All articles", path: "/articles" },
+    { name: meta.title, path: `/articles/${meta.slug}` },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Article JSON-LD — authored by the PipGlyph organization (guides are
@@ -238,6 +243,10 @@ function buildArticleJsonLd(meta: ArticleMeta): Record<string, unknown> {
     url: canonical,
     mainEntityOfPage: canonical,
     keywords: meta.tags.join(", "),
+    // The /learn shelf the guide sits on (its breadcrumb names the same one).
+    ...(meta.category
+      ? { articleSection: getArticleCategory(meta.category)?.label }
+      : {}),
     inLanguage: "en",
     isAccessibleForFree: true,
     author: {
