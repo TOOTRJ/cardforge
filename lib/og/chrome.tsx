@@ -265,20 +265,45 @@ export function OgBody({
   );
 }
 
-/** Full-bleed cover with a legibility scrim and the title block — deck and
- *  set pages that have an uploaded cover. `cover` is a data URI
- *  (fetchImageAsDataUri); Satori must never fetch mid-render. */
-export function OgCoverHero({
+/** One card of the deck share image's fan: its bake thumb as a data URI,
+ *  and whether the card is 7:5 (Battle, Split — lib/cards/card-orientation). */
+export type OgFanCard = { src: string; landscape: boolean };
+
+/** The deck share image (TODO DK6.6): the deck's cover full-bleed (its
+ *  upload or its default background) under a navy scrim, the title block
+ *  on the left and up to five card thumbnails fanned on the right — the
+ *  deck page's hero, flat. `cover` and every card's `src` are data URIs
+ *  (lib/og/deck-share-image.tsx); Satori must never fetch mid-render. A
+ *  landscape card is letterboxed in its portrait slot, whole, as the deck
+ *  page's tile draws it — never cropped. With no cards the title block
+ *  takes the width. */
+export function OgDeckHero({
   cover,
+  cards,
   eyebrow,
   title,
   byline,
 }: {
-  cover: string;
+  cover: string | null;
+  cards: readonly OgFanCard[];
   eyebrow: string;
   title: string;
   byline: string;
 }) {
+  const fan = cards.slice(0, 5);
+  // The first card in the middle, the rest right / left outward
+  // (components/decks/deck-card-fan.tsx). Satori has no z-index: the cards
+  // are drawn back to front — the last first, the first (the commander)
+  // last, on top; with an even count the two inner slots tie on reach.
+  const slots = fan
+    .map((_, k) => k - (fan.length - 1) / 2)
+    .sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
+  const placed = fan.map((card, index) => ({ card, offset: slots[index] })).reverse();
+  const cardW = 208;
+  const cardH = Math.round((cardW * 7) / 5);
+  const step = fan.length > 3 ? 80 : 100;
+  const centreX = 900;
+  const titleSize = title.length > 40 ? 46 : title.length > 24 ? 56 : 68;
   return (
     <div
       style={{
@@ -287,16 +312,33 @@ export function OgCoverHero({
         display: "flex",
         position: "relative",
         fontFamily: OG_FONT,
-        background: BRAND.navy,
+        background: OG_BACKGROUND,
+        color: BRAND.foreground,
+        overflow: "hidden",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={cover}
-        alt=""
-        width={OG_SIZE.width}
-        height={OG_SIZE.height}
-        style={{ objectFit: "cover" }}
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={cover}
+          alt=""
+          width={OG_SIZE.width}
+          height={OG_SIZE.height}
+          style={{ position: "absolute", left: 0, top: 0, objectFit: "cover" }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          background: fan.length
+            ? "linear-gradient(90deg, rgba(13,19,32,0.94) 0%, rgba(13,19,32,0.82) 40%, rgba(13,19,32,0.36) 70%, rgba(13,19,32,0.16) 100%)"
+            : "linear-gradient(90deg, rgba(13,19,32,0.9) 0%, rgba(13,19,32,0.62) 60%, rgba(13,19,32,0.4) 100%)",
+        }}
       />
       <div
         style={{
@@ -304,47 +346,73 @@ export function OgCoverHero({
           left: 0,
           right: 0,
           bottom: 0,
-          height: 320,
+          height: 150,
           display: "flex",
-          background:
-            "linear-gradient(180deg, rgba(13,19,32,0) 0%, rgba(13,19,32,0.92) 70%)",
+          background: "linear-gradient(180deg, rgba(13,19,32,0) 0%, rgba(13,19,32,0.72) 100%)",
         }}
       />
+      {placed.map(({ card, offset }) => {
+        const reach = Math.abs(offset);
+        const landscapeH = Math.round((cardW * 5) / 7);
+        return (
+          <div
+            key={offset}
+            style={{
+              position: "absolute",
+              left: Math.round(centreX - cardW / 2 + offset * step),
+              top: Math.round(130 + reach * reach * 10),
+              width: cardW,
+              height: cardH,
+              display: "flex",
+              borderRadius: 12,
+              boxShadow: "0 18px 36px rgba(0,0,0,0.55)",
+              transform: `rotate(${(offset * 7).toFixed(1)}deg)`,
+              transformOrigin: "50% 120%",
+              ...(card.landscape ? { alignItems: "center", background: "#101015" } : {}),
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={card.src}
+              alt=""
+              width={cardW}
+              height={card.landscape ? landscapeH : cardH}
+              style={{ borderRadius: card.landscape ? 9 : 12, objectFit: "cover" }}
+            />
+          </div>
+        );
+      })}
       <div
         style={{
           position: "absolute",
           left: 72,
-          right: 72,
-          bottom: 48,
+          top: 56,
+          bottom: 56,
+          width: fan.length ? 600 : 1000,
           display: "flex",
           flexDirection: "column",
-          gap: 10,
-          color: BRAND.foreground,
+          justifyContent: "space-between",
         }}
       >
-        <span
-          style={{
-            fontSize: 20,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            color: BRAND.gold,
-            fontWeight: 600,
-          }}
-        >
-          {eyebrow}
-        </span>
-        <span
-          style={{
-            fontSize: title.length > 36 ? 52 : 64,
-            fontWeight: 700,
-            lineHeight: 1.08,
-            letterSpacing: -1,
-          }}
-        >
-          {title}
-        </span>
-        <span style={{ fontSize: 24, color: BRAND.muted }}>{byline}</span>
+        <BrandLockup markSize={44} fontSize={22} gap={12} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <span
+            style={{
+              fontSize: 20,
+              letterSpacing: 4,
+              textTransform: "uppercase",
+              color: BRAND.gold,
+              fontWeight: 600,
+            }}
+          >
+            {eyebrow}
+          </span>
+          <span style={{ fontSize: titleSize, fontWeight: 700, lineHeight: 1.08, letterSpacing: -1 }}>{title}</span>
+          <span style={{ fontSize: 24, color: BRAND.muted }}>{byline}</span>
+        </div>
       </div>
+      <OgPipStrip />
+      <OgDomainStamp />
     </div>
   );
 }

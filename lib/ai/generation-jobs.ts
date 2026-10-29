@@ -18,7 +18,7 @@ import {
 } from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
 import type { ForcedPrivateNotice } from "@/lib/moderation/profanity";
-import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
+import { createDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { buildDeckBrief } from "@/lib/ai/deck-brief";
@@ -33,7 +33,6 @@ import {
   generateImageWithFallbacks,
   generatePlainImage,
   restyleImage,
-  type ImageAspect,
 } from "@/lib/ai/image-gen";
 import {
   artShapeForBackFace,
@@ -43,11 +42,9 @@ import {
 } from "@/lib/ai/art-aspect";
 import {
   artPromptLadder,
-  softenArtPrompt,
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
-import { normalizeDeckCover } from "@/lib/decks/cover";
 import {
   logAiCall,
   type AiActionLabel,
@@ -159,7 +156,7 @@ import { recentAiTitles } from "@/lib/ai/recent-designs";
 //
 //   PLAN  (create*Job): one design call for every card (single batch =
 //         cross-card cohesion), then the target deck is created/loaded and
-//         the job row written with one step per card (+ cover / guide).
+//         the job row written with one step per card (+ the guide).
 //   STEP  (runNextJobStep): create one card (private → no bake) and paint
 //         its art. Steps are retry-safe: a step that already created its
 //         card only redoes the art.
@@ -379,6 +376,11 @@ type DeckRemixJobPlan = {
 
 
 
+/** The AI deck cover, RETIRED (TODO DK6.3, owner decision D12): a deck with
+ *  no upload shows a built-in background (lib/decks/cover.ts). No job is
+ *  planned with this step any more; a job planned before the change may
+ *  still hold one, pending — it completes without an image call (see
+ *  retiredCoverStep). The key stays so those jobs finish cleanly. */
 const COVER_STEP_KEY = "cover";
 /** Free "how to play" guide written after the cards (deck jobs only). */
 const GUIDE_STEP_KEY = "guide";
@@ -510,7 +512,7 @@ async function executeJobStep(
   }
 
   if (step.key === COVER_STEP_KEY) {
-    return runCoverStep(userId, job, step);
+    return retiredCoverStep(step);
   }
   if (step.key === GUIDE_STEP_KEY) {
     return runGuideStep(job, step);
@@ -2025,10 +2027,8 @@ export async function createDeckGenerationJob(
     label: card.title,
     status: "pending" as const,
   }));
-  // New decks always get a cover; add-mode only when the deck has none.
-  if (!existingDeck || !existingDeck.cover_url) {
-    steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
-  }
+  // No cover step (TODO DK6.3): the deck shows its default background
+  // (lib/decks/cover.ts) until the owner uploads one.
   // The free how-to-play guide, written once every card is in.
   steps.push({ key: GUIDE_STEP_KEY, label: "How to play guide", status: "pending" });
 
@@ -2196,7 +2196,7 @@ export async function createDeckRemixJob(
     status: "pending" as const,
     ...(entry.credits !== undefined && entry.credits > 1 ? { credits: entry.credits } : {}),
   }));
-  steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
+  // No cover step (TODO DK6.3) — the remix deck shows its default background.
   // Same free guide step as a generated deck — pushed BEFORE the insert (it
   // used to land after, into the discarded local array, so remix decks never
   // got a "How to play" guide).
@@ -2908,84 +2908,23 @@ async function activeGameSystemId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-/** Wide key-art prompt for the deck cover tile. */
-function coverPrompt(job: GenerationJobRow): { prompt: string; aspect: ImageAspect } {
-  let title = "the collection";
-  let subject = "";
-  let style: string | null = null;
-  if (job.kind === "deck") {
-    const plan = job.plan as DeckJobPlan;
-    title = plan.deck_title;
-    subject = `${plan.theme}. ${plan.strategy}`;
-    style = plan.style;
-  } else {
-    const plan = job.plan as DeckRemixJobPlan;
-    title = plan.deck_title;
-    subject = plan.theme ?? "the deck's world, re-imagined";
-    style = plan.style;
-  }
-  const styleLine = style?.trim()
-    ? `Rendered strictly in ${style.trim()} style.`
-    : "Painterly high-fantasy illustration style.";
+/** An AI-cover step of a job planned before the covers were retired (TODO
+ *  DK6.3). It is marked done at once: no image call, no `card_ai_calls`
+ *  row, nothing stored on the deck — which keeps showing its upload or its
+ *  default background. The cover was never charged (owner decision
+ *  2026-09-15): it reserved no credit and has no `spend:` ledger row, so it
+ *  carries no spend_ref and patch_job_step settles nothing. "done", not
+ *  "failed": a failed step would mark the job done_with_errors and offer a
+ *  retry of a step that can no longer run. */
+function retiredCoverStep(step: JobStep): JobStep {
   return {
-    // Every deck-cover surface is a 16:9 box (lib/decks/cover.ts), so the
-    // cover is generated "wide" and needs no crop.
-    aspect: "wide",
-    prompt: [
-      `Wide cinematic key art for a trading-card collection called "${title}".`,
-      subject.slice(0, 400),
-      styleLine,
-      "Epic establishing-shot composition, 16:9, with the focal point near the center of the frame and nothing important touching the edges.",
-      "NO frame, NO borders, NO logo, NO text or lettering anywhere in the image.",
-    ].join(" "),
+    ...step,
+    status: "done",
+    error: undefined,
+    failure: null,
+    error_code: null,
+    spend_ref: null,
   };
-}
-
-/** Generate + attach the deck cover image. The cover is FREE (owner
- *  decision, 2026-09-15): no credit is reserved or charged for it — only
- *  the cards cost credits. Deck covers are normalised to the 16:9 standard
- *  (lib/decks/cover.ts) before upload so every surface shows the same image. */
-async function runCoverStep(
-  userId: string,
-  job: GenerationJobRow,
-  step: JobStep,
-): Promise<JobStep> {
-  await logAiCall(userId, "generate_deck_cards");
-  {
-    const { prompt, aspect } = coverPrompt(job);
-    const image = await generateImageWithFallbacks([prompt, softenArtPrompt(prompt)], aspect);
-    if (!image.ok) {
-      return { ...step, status: "failed", error: image.error, failure: image.failure };
-    }
-    let bytes: Uint8Array = image.bytes;
-    let contentType = image.contentType;
-    try {
-      const normalized = await normalizeDeckCover(image.bytes);
-      bytes = normalized.bytes;
-      contentType = normalized.contentType;
-    } catch (err) {
-      console.warn(`[cover] normalise failed for job ${job.id}:`, err instanceof Error ? err.message : err);
-    }
-    const persisted = await persistGeneratedArt(bytes, contentType);
-    if (!persisted.ok) {
-      // A cover our nudity scan blocked (never stored) or one not stored. Free:
-      // nothing to refund.
-      return { ...step, status: "failed", error: persisted.error, failure: persisted.failure };
-    }
-
-    if (job.deck_id) {
-      const updated = await updateDeckAction(job.deck_id, {
-        cover_url: persisted.publicUrl,
-        // Already 16:9 — a centred focal point means zero crop everywhere.
-        cover_position: { focalX: 0.5, focalY: 0.5 },
-      });
-      if (!updated.ok) {
-        return { ...step, status: "failed", error: "Couldn't attach the deck cover." };
-      }
-      return { ...step, status: "done", error: undefined, image_model: image.model };
-    }
-    return { ...step, status: "failed", error: "Job has no deck to cover." };
-  }
 }
 
 /** The free guide step: reads the finished deck and stores its primer.

@@ -15,14 +15,10 @@ import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  DECK_FORMAT_LABELS,
-  coverObjectPosition,
-  isDeckFormat,
-  type DeckFormat,
-} from "@/types/deck";
+import { DECK_FORMAT_LABELS, isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
-import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { deckCoverOf } from "@/lib/decks/cover";
+import { listDeckCoverColors } from "@/lib/decks/cover-colors";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
@@ -68,7 +64,7 @@ export function parseDecksParams(
 }
 
 const DECKS_DESCRIPTION =
-  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics remixed by PipGlyph forgers. Open one to see the originals side by side with their proxies.";
+  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics customized by PipGlyph forgers. Open one to see the real cards side by side with their proxies.";
 
 /** /decks — the static landing. */
 export function DecksLanding() {
@@ -257,12 +253,18 @@ async function PublicDecksResults({
     ].filter(Boolean);
     return parts.length ? `${DECKS_BROWSE_PATH}?${parts.join("&")}` : DECKS_BROWSE_PATH;
   };
+  // The colours each deck's default cover is picked by — the same answer
+  // its own page reads (lib/decks/cover-colors.ts).
+  const coverColors = await listDeckCoverColors(
+    decks.map((deck) => deck.id),
+    { anonymous: true },
+  );
 
   return (
     <>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((deck) => (
-          <PublicDeckTile key={deck.id} deck={deck} />
+          <PublicDeckTile key={deck.id} deck={deck} coverColors={coverColors.get(deck.id) ?? null} />
         ))}
       </div>
       {hasPrev || hasMore ? (
@@ -294,8 +296,11 @@ async function PublicDecksResults({
 
 export function PublicDeckTile({
   deck,
+  coverColors,
 }: {
   deck: Awaited<ReturnType<typeof listPublicDecks>>[number];
+  /** listDeckCoverColors' answer for this deck (null = unknown). */
+  coverColors: readonly string[] | null;
 }) {
   const ownerLabel =
     deck.owner?.display_name?.trim() ||
@@ -308,8 +313,9 @@ export function PublicDeckTile({
 
   // Avoid nesting <a> inside <a> (invalid HTML): the cover + title/description
   // are wrapped in one Link, then the owner chip is a sibling Link below.
-  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
-  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
+  // The owner's upload (only one we store, migration 0127) or the default
+  // its colours pick — the picture the deck's own page draws.
+  const cover = deckCoverOf(deck, coverColors);
   return (
     <SurfaceCard className="flex h-full flex-col gap-0 overflow-hidden p-0 transition-colors hover:border-border-strong">
       <Link
@@ -318,23 +324,14 @@ export function PublicDeckTile({
         aria-label={`Open ${deck.title}`}
       >
         <div className="relative aspect-video w-full overflow-hidden bg-elevated">
-          {coverUrl ? (
-            <Image
-              src={coverUrl}
-              alt={`${deck.title} — custom card deck cover`}
-              fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover transition-transform group-hover:scale-[1.03]"
-              style={{
-                objectPosition: coverObjectPosition(deck.cover_position),
-              }}
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-elevated via-surface to-background">
-              <BookOpen className="h-10 w-10 text-subtle" aria-hidden />
-            </div>
-          )}
+          <Image
+            src={cover.src}
+            alt={`${deck.title} — custom card deck cover`}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover transition-transform group-hover:scale-[1.03]"
+            style={cover.objectPosition ? { objectPosition: cover.objectPosition } : undefined}
+          />
           <div className="absolute left-3 top-3">
             <Badge variant="outline" className="bg-background/70 backdrop-blur">
               {DECK_FORMAT_LABELS[deck.format]}
@@ -343,7 +340,7 @@ export function PublicDeckTile({
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-5 pb-3">
-          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
+          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground [overflow-wrap:anywhere]">
             {deck.title}
           </h3>
           {deck.description ? (
@@ -404,7 +401,7 @@ export function PublicDeckTile({
 
 function DecksSkeletonGrid({ count }: { count: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <SurfaceCard key={i} className="flex flex-col gap-0 overflow-hidden p-0">
           <Skeleton className="aspect-video w-full rounded-none" />

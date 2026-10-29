@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { CARD_MAKER_FAQ } from "@/lib/content/faq";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mtg-card-maker
@@ -25,12 +26,12 @@ export const metadata: Metadata = {
   description:
     "PipGlyph is the best free MTG card maker. Design custom Magic: The Gathering cards with mana costs, oracle text, art, and power/toughness. No download required.",
   alternates: { canonical: "/mtg-card-maker" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "MTG Card Maker — Create Custom Magic Cards for Free | PipGlyph",
     description:
       "Build custom MTG cards online in minutes. Set mana cost, oracle text, color identity, rarity, and art. Free, browser-based, no download required.",
     type: "article",
-  },
+  }),
 };
 
 // ---------------------------------------------------------------------------

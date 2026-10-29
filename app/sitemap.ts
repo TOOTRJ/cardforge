@@ -2,7 +2,12 @@ import "server-only";
 
 import type { MetadataRoute } from "next";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { listArticles, listTags } from "@/lib/content/articles";
+import { listArticles, listCategoryShelves, listTags } from "@/lib/content/articles";
+import {
+  categoryForTagSlug,
+  categoryPath,
+  isIndexableCategory,
+} from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -22,7 +27,8 @@ import {
 // Layers, in priority order:
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
-//      /decks, /challenges, /news, guides + their indexable topic hubs, …).
+//      /decks, /challenges, /news, /learn + its indexable categories, /tools,
+//      guides + their indexable topic hubs, …).
 //      They carry NO lastModified: stamping "now" on every hourly rebuild
 //      taught crawlers the date was noise and made them ignore the real
 //      ones on cards and guides.
@@ -87,6 +93,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
     staticEntry(baseUrl, "/faq", "monthly", 0.85),
+    // The /learn hub and the tools directory, then the category shelves that
+    // are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
+    // on its own page, so it stays out of here too).
+    staticEntry(baseUrl, "/learn", "weekly", 0.85),
+    staticEntry(baseUrl, "/tools", "monthly", 0.8),
+    ...listCategoryShelves()
+      .filter((shelf) => isIndexableCategory(shelf.articles.length))
+      .map((shelf) => staticEntry(baseUrl, categoryPath(shelf.category.slug), "weekly", 0.75)),
     staticEntry(baseUrl, "/articles", "weekly", 0.85),
     // The guides themselves — read straight from content/articles/ so a new
     // MDX file lands in the sitemap on the same deploy. These DO carry a
@@ -101,8 +115,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
     // Tag/cluster hubs — the substantive topic pages (defined clusters or any
     // tag with 2+ guides). One-off single-article tags are noindex, so they're
-    // kept out of the sitemap too. Tag slugs are [a-z0-9-] only, so XML-safe.
+    // kept out of the sitemap too, and so are the four hubs that became /learn
+    // categories (they 308 there). Tag slugs are [a-z0-9-] only, so XML-safe.
     ...listTags()
+      .filter((tag) => !categoryForTagSlug(tag.slug))
       .filter((tag) => getCluster(tag.slug) !== null || tag.count >= 2)
       .map((tag) => staticEntry(baseUrl, `/articles/tag/${tag.slug}`, "weekly", 0.7)),
     staticEntry(baseUrl, "/news", "weekly", 0.6),

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { PublicDeckTile } from "@/app/(marketing)/decks/decks-view";
+import { listDeckCoverColors } from "@/lib/decks/cover-colors";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { listPublicDecks } from "@/lib/decks/queries";
 import { FORMAT_HUB_MIN_DECKS, formatHubCopy, isDeckFormat, listFormatHubs } from "@/lib/cards/hubs";
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   if (!isDeckFormat(format)) notFound();
   const copy = formatHubCopy(format);
   const count = (await listFormatHubs()).find((hub) => hub.format === format)?.count ?? 0;
-  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists and remixed proxies. Browse, copy a list, or build your own.`;
+  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists rebuilt card by card as proxies. Browse, copy a list, or build your own.`;
   return {
     title: `${copy.title} — browse and build`,
     description,
@@ -50,6 +51,10 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
     listFormatHubs(),
   ]);
   const count = hubs.find((hub) => hub.format === format)?.count ?? 0;
+  const coverColors = await listDeckCoverColors(
+    decks.map((deck) => deck.id),
+    { anonymous: true },
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -70,9 +75,9 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
       <p className="mt-4 text-sm text-muted">
         {count} public deck{count === 1 ? "" : "s"} in this format so far.
       </p>
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((deck) => (
-          <PublicDeckTile key={deck.id} deck={deck} />
+          <PublicDeckTile key={deck.id} deck={deck} coverColors={coverColors.get(deck.id) ?? null} />
         ))}
       </div>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">

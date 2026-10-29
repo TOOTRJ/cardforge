@@ -1,5 +1,6 @@
 import { listArticles } from "@/lib/content/articles";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { escapeXml } from "@/lib/seo/rss";
 
 // ---------------------------------------------------------------------------
 // /articles/feed.xml — RSS for the guides. force-static so it's built once and
@@ -8,15 +9,6 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // ---------------------------------------------------------------------------
 
 export const dynamic = "force-static";
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
 
 export function GET(): Response {
   const base = getSiteBaseUrl();

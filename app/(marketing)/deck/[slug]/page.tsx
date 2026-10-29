@@ -11,11 +11,10 @@ import Link from "next/link";
 import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { AlertTriangle, ArrowLeft, BookOpen, Pencil } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, ImagePlus, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
@@ -45,14 +44,12 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
-import {
-  DECK_FORMAT_LABELS,
-  coverObjectPosition,
-  type DeckFormat,
-} from "@/types/deck";
+import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
+import { featuredCardsOf } from "@/lib/decks/featured";
+import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
 
 type Params = { slug: string };
 
@@ -139,10 +136,20 @@ export default async function DeckDetailPage({
   if (!deck) notFound();
 
   const isOwner = Boolean(user && user.id === deck.owner_id);
-  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
-  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
   const isPublic = deck.visibility === "public";
-  const likedByViewer = user ? await viewerLikesDeck(deck.id) : false;
+  // The hero needs the rows too (the default cover's colours, the fan); the
+  // read is cache()d, so the body below streams from the same one.
+  const [items, likedByViewer] = await Promise.all([
+    listDeckCardsOnce(deck.id),
+    user ? viewerLikesDeck(deck.id) : false,
+  ]);
+  // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
+  // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
+  const cover = deckCoverOf(deck, deckCoverColors(items));
+  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck.id);
+  const { total: cardCount, remixed: customCount } = computeDeckAnalytics(items);
+  const deckType = deckTypeByKey(deck.deck_type);
+  const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
 
   // Best-effort lifetime view tally, off the request path; owner views don't
   // count (matches increment_card_view's posture).
@@ -185,80 +192,73 @@ export default async function DeckDetailPage({
       </Link>
       <DeckBetaBanner deckId={deck.id} signedIn={Boolean(user)} className="mb-6" />
 
-      {/* Cover + header. The cover is the same 16:9 box every deck tile
-          uses (lib/decks/cover.ts), so it crops identically here, on the
-          public grid and on the dashboard. */}
-      <SurfaceCard className="overflow-hidden p-0">
-        <div className="grid gap-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <div className="relative aspect-video w-full overflow-hidden bg-elevated md:h-full md:min-h-full">
-            {coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverUrl}
-                alt={`${deck.title} cover`}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{
-                  objectPosition: coverObjectPosition(deck.cover_position),
-                }}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-elevated via-surface to-background">
-                <BookOpen className="h-10 w-10 text-subtle" aria-hidden />
-              </div>
-            )}
-            {isOwner ? (
-              <DeckToolButton
-                tool="details"
-                label="Change cover"
-                className="absolute bottom-3 right-3 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
+      {/* The hero (TODO DK6.5): the cover — the same 16:9 picture every
+          deck tile draws (lib/decks/cover.ts) — with the featured cards and
+          the title block; the actions on its bottom strip. */}
+      <DeckHero
+        cover={cover}
+        title={deck.title}
+        titleAction={
+          isOwner ? (
+            <DeckToolButton tool="details" label="Edit deck details" className="text-base text-white/70 hover:text-white" />
+          ) : null
+        }
+        chips={
+          <>
+            <HeroChip tone="gold">{DECK_FORMAT_LABELS[deck.format]}</HeroChip>
+            {deckType?.label ? <HeroChip>{deckType.label}</HeroChip> : null}
+            {bracket ? (
+              <HeroChip title={bracket.blurb}>
+                Bracket {deck.bracket} · {bracket.name}
+              </HeroChip>
+            ) : null}
+            {deck.visibility !== "public" ? <HeroChip>{VISIBILITY_LABELS[deck.visibility]}</HeroChip> : null}
+          </>
+        }
+        byline={
+          <>
+            {deck.owner?.username ? (
+              <Link
+                href={`/profile/${deck.owner.username}`}
+                className="rounded-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
-                <Pencil className="h-3.5 w-3.5" aria-hidden /> {coverUrl ? "Change cover" : "Add cover"}
-              </DeckToolButton>
+                by <span className="font-mono text-white">@{deck.owner.username}</span>
+              </Link>
             ) : null}
-          </div>
-        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between md:p-8">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="primary">{DECK_FORMAT_LABELS[deck.format]}</Badge>
-              {deckTypeByKey(deck.deck_type)?.label ? (
-                <Badge variant="outline">{deckTypeByKey(deck.deck_type)?.label}</Badge>
+            <span>
+              {cardCount} card{cardCount === 1 ? "" : "s"}
+              {customCount > 0 ? ` · ${customCount} custom` : ""}
+            </span>
+          </>
+        }
+        description={
+          deck.description ? (
+            <p>
+              {deck.description}
+              {isOwner ? (
+                <DeckToolButton tool="details" label="Edit description" className="ml-1.5 align-middle text-white/70 hover:text-white" />
               ) : null}
-              {deck.format === "commander" && commanderBracket(deck.bracket) ? (
-                <Badge variant="outline" title={commanderBracket(deck.bracket)?.blurb}>
-                  Bracket {deck.bracket} · {commanderBracket(deck.bracket)?.name}
-                </Badge>
-              ) : null}
-              {deck.visibility !== "public" ? (
-                <Badge variant="outline">{VISIBILITY_LABELS[deck.visibility]}</Badge>
-              ) : null}
-              {deck.owner?.username ? (
-                <Link
-                  href={`/profile/${deck.owner.username}`}
-                  className="text-xs text-muted transition-colors hover:text-foreground"
-                >
-                  by{" "}
-                  <span className="font-mono text-foreground">
-                    @{deck.owner.username}
-                  </span>
-                </Link>
-              ) : null}
-            </div>
-            <h1 className="flex items-center gap-2 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              {deck.title}
-              {isOwner ? <DeckToolButton tool="details" label="Edit deck details" className="text-base" /> : null}
-            </h1>
-            {deck.description ? (
-              <p className="max-w-2xl text-sm leading-6 text-muted">
-                {deck.description}
-                {isOwner ? <DeckToolButton tool="details" label="Edit description" className="ml-1.5 align-middle" /> : null}
-              </p>
-            ) : isOwner ? (
-              <DeckToolButton tool="details" label="Add a description" className="self-start text-xs">
-                <Pencil className="h-3.5 w-3.5" aria-hidden /> Add a description
-              </DeckToolButton>
-            ) : null}
-          </div>
-
+            </p>
+          ) : isOwner ? (
+            <DeckToolButton tool="details" label="Add a description" className="text-xs text-white/70 hover:text-white">
+              <Pencil className="h-3.5 w-3.5" aria-hidden /> Add a description
+            </DeckToolButton>
+          ) : null
+        }
+        coverAction={
+          isOwner ? (
+            <DeckToolButton
+              tool="details"
+              label={cover.kind === "upload" ? "Change cover" : "Upload a cover"}
+              className="rounded-full border border-white/25 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur hover:bg-black/60 hover:text-white"
+            >
+              {cover.kind === "upload" ? <Pencil className="h-3.5 w-3.5" aria-hidden /> : <ImagePlus className="h-3.5 w-3.5" aria-hidden />}
+              {cover.kind === "upload" ? "Change cover" : "Upload a cover"}
+            </DeckToolButton>
+          ) : null
+        }
+        featured={featured}
+        actions={
           <div className="flex flex-wrap items-center gap-2">
             <QuickLikeButton
               kind="deck"
@@ -287,6 +287,7 @@ export default async function DeckDetailPage({
               <DeckOwnerTools
                 deck={deck}
                 userId={user.id}
+                defaultCoverSrc={cover.kind === "default" ? cover.src : null}
                 aiConfigured={isDesignAiConfigured()}
                 maxCards={await batchCardLimit()}
                 capacity={await getCardCapacity()}
@@ -296,9 +297,8 @@ export default async function DeckDetailPage({
               />
             ) : null}
           </div>
-        </div>
-        </div>
-      </SurfaceCard>
+        }
+      />
 
       <Suspense fallback={<DeckBodySkeleton />}>
         <DeckBody
@@ -307,7 +307,6 @@ export default async function DeckDetailPage({
           format={deck.format}
           ownerUsername={deck.owner?.username ?? null}
           isOwner={isOwner}
-          hasCover={Boolean(coverUrl)}
         />
       </Suspense>
       <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
@@ -321,14 +320,12 @@ async function DeckBody({
   format,
   ownerUsername,
   isOwner,
-  hasCover,
 }: {
   deckId: string;
   deckSlug: string;
   format: DeckFormat;
   ownerUsername: string | null;
   isOwner: boolean;
-  hasCover: boolean;
 }) {
   const [items, failedJob, activeJob, guide, entitlements] = await Promise.all([
     listDeckCardsOnce(deckId),
@@ -362,7 +359,8 @@ async function DeckBody({
         allowBatchExport={entitlements.allowBatchExport}
         customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
         realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
-        hasCover={hasCover}
+        // Every deck has a cover since DK6.2 (an upload or its default).
+        hasCover
         doubleFacedCount={
           new Set(items.filter((i) => i.card && i.entry.board !== "maybe" && rowHasBakedBack(i.card)).map((i) => i.card!.id)).size
         }
@@ -417,7 +415,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Cards"
           title={`${analytics.total} card${analytics.total === 1 ? "" : "s"}`}
-          description="Click any card for details — remix originals into custom proxies, flip between versions, and track what's left."
+          description="Click any card for details — customize the real cards, flip between versions, and track what's left."
           actions={exportMenu}
         />
 

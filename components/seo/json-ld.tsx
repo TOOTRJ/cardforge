@@ -87,6 +87,36 @@ export function itemListJsonLd({
   };
 }
 
+/** CollectionPage structured data — a page whose job is to gather other
+ *  pages (the /learn hub, a /learn/<category> shelf). `items` become its
+ *  mainEntity ItemList (same cap as itemListJsonLd). */
+export function collectionPageJsonLd({
+  name,
+  description,
+  path,
+  items,
+}: {
+  name: string;
+  description: string;
+  /** Site-relative path of the collection page itself. */
+  path: string;
+  items: ListEntry[];
+}): Record<string, unknown> {
+  const base = getSiteBaseUrl();
+  // Nested inside the page, the list carries no @context of its own.
+  const list = itemListJsonLd({ name, items });
+  delete list["@context"];
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name,
+    description,
+    url: `${base}${path}`,
+    isPartOf: { "@type": "WebSite", name: "PipGlyph", url: base },
+    mainEntity: list,
+  };
+}
+
 export type FaqItem = { q: string; a: string };
 
 /** FAQPage structured data — the Q&A becomes eligible for rich results. Pass

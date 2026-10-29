@@ -181,11 +181,14 @@ describe("the surfaces that draw a picture column", () => {
     ["app/(app)/settings/page.tsx", /drawableMediaUrl\("banner", profile\?\.banner_url, profile\?\.id\)/],
     ["app/(onboarding)/onboarding/page.tsx", /drawableMediaUrl\("avatar", profile\.avatar_url, profile\.id\)/],
     ["lib/admin/users-queries.ts", /avatarUrl: profileMediaSrc\("avatar", row\.avatar_url, row\.id\)/],
-    ["app/(marketing)/decks/decks-view.tsx", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
-    ["app/(marketing)/deck/[slug]/page.tsx", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
-    ["app/(app)/dashboard/decks/page.tsx", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
-    ["app/(marketing)/deck/[slug]/opengraph-image.tsx", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
-    ["app/api/decks/[id]/download/route.ts", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
+    // A deck cover: ONE answer, deckCoverOf (TODO DK6.2) — the upload only
+    // through the guard, else a built-in default from the exact list.
+    ["lib/decks/cover.ts", /drawableMediaUrl\("deck-cover", deck\.cover_url, deck\.owner_id\)/],
+    ["app/(marketing)/decks/decks-view.tsx", /deckCoverOf\(deck, coverColors\)/],
+    ["app/(marketing)/deck/[slug]/page.tsx", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
+    ["app/(app)/dashboard/decks/page.tsx", /deckCoverOf\(deck, coverColors\)/],
+    ["app/(marketing)/deck/[slug]/opengraph-image.tsx", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
+    ["app/api/decks/[id]/download/route.ts", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
     ["components/decks/deck-card-list.tsx", /drawableMediaUrl\("deck-card-image", entry\.image_url\)/],
     ["components/decks/deck-card-modal.tsx", /drawableMediaUrl\("deck-card-image", entry\.image_url\)/],
   ];

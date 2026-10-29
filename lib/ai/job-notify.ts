@@ -28,8 +28,8 @@ export async function notifyDeckJobFinished(job: GenerationJobRow): Promise<void
     .select("slug, title")
     .eq("id", job.deck_id)
     .maybeSingle();
-  // Cards only: the free cover and guide steps are neither "cards ready"
-  // nor "cards needing a retry".
+  // Cards only: the free guide step (and an older job's retired cover
+  // step, TODO DK6.3) is neither "cards ready" nor "cards needing a retry".
   const isCard = (s: { key: string }) => s.key !== "cover" && s.key !== "guide";
   const done = job.steps.filter((s) => s.status === "done" && isCard(s)).length;
   const failed = job.steps.filter((s) => s.status === "failed" && isCard(s)).length;
