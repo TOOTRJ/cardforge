@@ -1,18 +1,27 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  REQUESTED_FRAMES_MAX_KEYS,
+  REQUESTED_FRAMES_MIN_PEOPLE,
+  answeredSignaturePairs,
+  publicSignatures,
+} from "@/lib/frames/requested-frames";
 
 // ---------------------------------------------------------------------------
 // Migration 0147 (TODO NV11 / NV12 part 1) as text. Who /creators lists and
 // what /frames/requested may publish are decided in SQL, so the rules are
 // held here: the creators function counts PUBLIC cards and non-empty PUBLIC
-// decks only and never lists an admin; the requested-frames function reads
-// the admin-only log as a definer with an empty search_path, returns three
-// aggregate columns, echoes only the caller's own signatures, drops admins
-// and answered pairs, and fixes its window. Both are public reads, never
-// PUBLIC, and the table itself stays closed to the API roles. Applied for
-// real by the PR's Supabase preview branch and the CI e2e stack; the PR
-// body carries the local transaction proof.
+// decks only and never lists an admin (checked once per maker); the
+// requested-frames function reads the admin-only log as a definer with an
+// empty search_path, returns a signature and a count only, echoes only the
+// caller's own signatures, drops admins and answered pairs, counts only rows
+// from before today's UTC midnight, publishes a frame only from k people on
+// (the app's REQUESTED_FRAMES_MIN_PEOPLE) and caps its arrays (the app's
+// REQUESTED_FRAMES_MAX_KEYS). Both are public reads, never PUBLIC, and the
+// table itself stays closed to the API roles. Applied for real by the PR's
+// Supabase preview branch and the CI e2e stack; the PR body carries the
+// local transaction proof.
 // ---------------------------------------------------------------------------
 
 const sql = readFileSync(
@@ -33,6 +42,12 @@ const fnBody = (name: string) => {
   const start = body.indexOf(`create or replace function public.${name}(`);
   expect(start, name).toBeGreaterThan(-1);
   return body.slice(start, body.indexOf("$$;", start));
+};
+
+/** The integer a `name constant integer := N;` declaration holds. */
+const constant = (fn: string, name: string) => {
+  const match = fn.match(new RegExp(`${name} constant integer := (\\d+);`));
+  return match ? Number(match[1]) : null;
 };
 
 describe("0147_creators_and_requested_frames.sql", () => {
@@ -56,9 +71,12 @@ describe("0147_creators_and_requested_frames.sql", () => {
       expect(fn).toMatch(/stable security invoker set search_path = ''/);
     });
 
-    it("lists makers by their PUBLIC cards and never an admin (0091)", () => {
+    it("lists makers by their PUBLIC cards and never an admin (0091), checked once per maker", () => {
       expect(fn).toMatch(/from public\.cards c where c\.visibility = 'public' group by c\.owner_id/);
       expect(fn).toContain("not public.owner_is_admin(m.owner_id)");
+      // Materialized: an inlined CTE lets the planner push the admin filter
+      // below the GROUP BY — one owner_is_admin() call per public card.
+      expect(fn).toContain("with makers as materialized (");
       // A maker comes from the public-card aggregate alone — no zero-card row.
       expect(fn).not.toMatch(/left join public\.cards/);
     });
@@ -89,31 +107,52 @@ describe("0147_creators_and_requested_frames.sql", () => {
     const fn = fnBody("requested_frame_counts");
 
     it("reads the admin-only log as a definer with an empty search_path", () => {
-      expect(fn).toMatch(/stable security definer set search_path = ''/);
+      expect(fn).toMatch(/language plpgsql stable security definer set search_path = ''/);
       expect(fn).toContain("from public.frame_requests r");
     });
 
-    it("returns three aggregate columns and no identifying one", () => {
-      const returns = fn.slice(fn.indexOf("returns table"), fn.indexOf("language sql"));
-      expect(returns).toBe("returns table ( signature text, people bigint, latest_cause text ) ");
-      // The select list: the signature, a distinct count and the latest cause —
-      // the only places a row's user or date appear are inside the aggregates.
-      const list = fn.slice(fn.indexOf("as $$ select") + "as $$ select".length, fn.indexOf("from public.frame_requests"));
-      expect(list.trim()).toBe(
-        "r.signature, count(distinct r.user_id)::bigint as people, (array_agg(r.cause order by r.created_at desc))[1] as latest_cause",
-      );
+    it("returns a signature and a count — no cause, template, date or user", () => {
+      const returns = fn.slice(fn.indexOf("returns table"), fn.indexOf("language plpgsql"));
+      expect(returns).toBe("returns table ( signature text, people bigint ) ");
+      // The select list: the only place a row's user appears is inside the count.
+      const start = fn.indexOf("return query select") + "return query select".length;
+      const list = fn.slice(start, fn.indexOf("from public.frame_requests"));
+      expect(list.trim()).toBe("r.signature, count(distinct r.user_id)::bigint");
+      expect(fn).not.toMatch(/latest_cause|r\.cause|array_agg/);
     });
 
     it("echoes only the caller's own signatures, never an admin's rows, never an answered pair", () => {
       expect(fn).toContain("r.signature = any(coalesce(p_signatures, '{}'::text[]))");
       expect(fn).toContain("join public.profiles p on p.id = r.user_id");
       expect(fn).toContain("not p.is_admin");
-      expect(fn).toContain("(r.signature || '|' || coalesce(r.template, '')) <> all(coalesce(p_answered, '{}'::text[]))");
+      expect(fn).toContain(
+        "(r.signature || '|' || coalesce(r.template, '')) <> all(coalesce(p_answered, '{}'::text[]))",
+      );
     });
 
-    it("fixes its window in the body — not a parameter a caller could narrow", () => {
-      expect(fn).toContain("r.created_at >= now() - interval '180 days'");
-      expect(fn).not.toMatch(/p_since|p_window|timestamptz\s*(,|\))/);
+    it("can't be watched live: the window ends at today's UTC midnight and is no parameter", () => {
+      expect(fn).toContain(
+        "window_end constant timestamptz := date_trunc('day', now() at time zone 'utc') at time zone 'utc';",
+      );
+      expect(fn).toContain("r.created_at >= window_end - interval '180 days' and r.created_at < window_end");
+      expect(fn).not.toMatch(/p_since|p_window|p_[a-z_]+ timestamptz/);
+      // now() appears only inside the midnight.
+      expect(fn.match(/now\(\)/g)).toHaveLength(1);
+    });
+
+    it("publishes a frame only from k people on — the app's REQUESTED_FRAMES_MIN_PEOPLE", () => {
+      expect(constant(fn, "min_people")).toBe(REQUESTED_FRAMES_MIN_PEOPLE);
+      expect(REQUESTED_FRAMES_MIN_PEOPLE).toBeGreaterThanOrEqual(2);
+      expect(fn).toContain("having count(distinct r.user_id) >= min_people");
+    });
+
+    it("refuses arrays past the cap, and the app stays under it", () => {
+      expect(constant(fn, "max_keys")).toBe(REQUESTED_FRAMES_MAX_KEYS);
+      expect(fn).toContain(
+        "if coalesce(cardinality(p_signatures), 0) > max_keys or coalesce(cardinality(p_answered), 0) > max_keys then raise exception",
+      );
+      expect(publicSignatures().length).toBeLessThanOrEqual(REQUESTED_FRAMES_MAX_KEYS);
+      expect(answeredSignaturePairs().length).toBeLessThanOrEqual(REQUESTED_FRAMES_MAX_KEYS);
     });
   });
 });

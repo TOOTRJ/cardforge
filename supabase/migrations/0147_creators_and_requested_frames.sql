@@ -17,29 +17,45 @@
 --     count). PostgREST can't group and order by an aggregate, hence SQL.
 --     Sorts: 'cards' (most public cards; the default), 'recent' (newest
 --     public card), 'liked' (most likes on public cards) — any other value
---     reads as 'cards'.
+--     reads as 'cards'. The makers CTE is MATERIALIZED so owner_is_admin()
+--     runs once per maker: inlined, the planner pushes that filter below the
+--     GROUP BY and calls it once per public card.
 --
 -- (b) requested_frame_counts(signatures, answered) — /frames/requested. Per
 --     frame signature, how many PEOPLE (distinct non-admin accounts) logged
---     an import PipGlyph couldn't draw exactly in the last 180 days (0123's
---     frame_requests), and why the latest of those rows was logged.
+--     an import PipGlyph couldn't draw exactly (0123's frame_requests).
 --     frame_requests is admin-read only (0123), so this is SECURITY DEFINER
---     with an empty search_path, and it publishes aggregates and nothing
---     else:
+--     with an empty search_path, and it publishes a count per frame and
+--     nothing else:
 --       * never a user id, set, collector number, Scryfall id, template,
---         date or a row's label;
+--         cause, date or a row's label — where a frame stands is the app's
+--         answer from its registry and the verified combos, never a row's;
 --       * the one text it returns, `signature`, is always an element of the
 --         caller's own p_signatures (the app passes its registry's keys):
 --         record_frame_request() takes any signature and label text from a
 --         signed-in caller, so a row's own text could say anything — the app
 --         names every frame from its code (lib/frames/requested-frames.ts),
---         never from a row;
---       * `latest_cause` is 'missing' or 'unverified' (the table's CHECK).
+--         never from a row. A caller may name keys the page leaves out (a
+--         family PipGlyph will never build, a retired key): it gets the same
+--         count, under the same rules, for those;
+--       * it can't be watched live: it counts only rows from BEFORE today's
+--         UTC midnight, back 180 days from that midnight — fixed here, not a
+--         parameter — so a poll sees at most one change a day, never the
+--         import that arrived a minute ago;
+--       * a frame is published only once `min_people` (k = 2) distinct
+--         people asked for it, so no count is one person's import. k is the
+--         owner's to change (a new migration; REQUESTED_FRAMES_MIN_PEOPLE in
+--         lib/frames/requested-frames.ts mirrors it, a test holds the two).
 --     p_answered drops the rows whose "signature|template" pair PipGlyph
 --     draws today (a gap logged before its piece shipped — the admin page's
---     `drawnNow`, lib/scryfall/frame-signatures.ts signatureDrawnOn). The
---     window is fixed here rather than a parameter, so no caller can narrow
---     it to the last minute and watch a single import arrive.
+--     `drawnNow`, lib/scryfall/frame-signatures.ts signatureDrawnOn). It has
+--     to be per ROW: whether a gap is drawn depends on the frame the import
+--     landed on (era/2015+crown is drawn on 7 of its rule's 18 frames), and
+--     the rows' templates are never returned. A caller can still compare two
+--     calls with different lists; what that tells is how many people's
+--     day-old rows for a signature sit on one frame, and k applies after the
+--     exclusion. Both arrays are capped (`max_keys`, 600) and the call is
+--     refused past it.
 --
 -- Grants: both are public reads (anon, authenticated, service_role), never
 -- PUBLIC. The table grants of 0123 are untouched — the API roles still can't
@@ -70,7 +86,7 @@ stable
 security invoker
 set search_path = ''
 as $$
-  with makers as (
+  with makers as materialized (
     select
       c.owner_id,
       count(*)::bigint as public_cards,
@@ -143,27 +159,43 @@ create or replace function public.requested_frame_counts(
 )
 returns table (
   signature text,
-  people bigint,
-  latest_cause text
+  people bigint
 )
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-  select
-    r.signature,
-    count(distinct r.user_id)::bigint as people,
-    (array_agg(r.cause order by r.created_at desc))[1] as latest_cause
-  from public.frame_requests r
-  join public.profiles p on p.id = r.user_id
-  where r.signature = any(coalesce(p_signatures, '{}'::text[]))
-    and not p.is_admin
-    and r.created_at >= now() - interval '180 days'
-    and (r.signature || '|' || coalesce(r.template, '')) <> all(coalesce(p_answered, '{}'::text[]))
-  group by r.signature
-  order by count(distinct r.user_id) desc, r.signature asc
-  limit 200;
+declare
+  -- k: a frame is published only once this many distinct people asked.
+  min_people constant integer := 2;
+  -- The most keys / answered pairs one call may pass.
+  max_keys constant integer := 600;
+  -- Today's UTC midnight: the window ends there, never at now().
+  window_end constant timestamptz := date_trunc('day', now() at time zone 'utc') at time zone 'utc';
+begin
+  if coalesce(cardinality(p_signatures), 0) > max_keys
+     or coalesce(cardinality(p_answered), 0) > max_keys then
+    raise exception 'requested_frame_counts: at most % signatures and % answered pairs', max_keys, max_keys
+      using errcode = '22023';
+  end if;
+
+  return query
+    select
+      r.signature,
+      count(distinct r.user_id)::bigint
+    from public.frame_requests r
+    join public.profiles p on p.id = r.user_id
+    where r.signature = any(coalesce(p_signatures, '{}'::text[]))
+      and not p.is_admin
+      and r.created_at >= window_end - interval '180 days'
+      and r.created_at < window_end
+      and (r.signature || '|' || coalesce(r.template, '')) <> all(coalesce(p_answered, '{}'::text[]))
+    group by r.signature
+    having count(distinct r.user_id) >= min_people
+    order by count(distinct r.user_id) desc, r.signature asc
+    limit 200;
+end;
 $$;
 
 -- Grants (every migration states them — new projects don't auto-grant, and

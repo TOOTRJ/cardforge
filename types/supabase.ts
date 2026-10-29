@@ -2046,7 +2046,7 @@ export type Database = {
       };
       requested_frame_counts: {
         Args: { p_signatures: string[]; p_answered?: string[] };
-        Returns: { signature: string; people: number; latest_cause: string }[];
+        Returns: { signature: string; people: number }[];
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };

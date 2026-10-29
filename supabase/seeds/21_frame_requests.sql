@@ -8,14 +8,16 @@
 -- NOTHING. Most rows have no user (no account made those imports, so they
 -- count 0 distinct users); a few are dev_* accounts from 10_dev_data.sql, so
 -- the page's order — distinct users first, then requests (D4) — shows: the
--- Japan showcase (3 users, 3 requests) outranks Zilortha (1 user, 5). A
+-- Japan showcase (3 users, 3 requests) outranks Zilortha (2 users, 6). A
 -- row whose dev account is missing (this file run on its own) is skipped.
 --
 -- The public /frames/requested list (migration 0147, TODO NV12) counts the
--- same rows by PEOPLE: only rows with an account, never an admin's — the
--- Japan showcase reads "2 people" there although dev_admin logged it too
--- (…0013, on purpose), and Zilortha and Oko have one dev_free row each so
--- the list has a "Requested" frame with a gap to show.
+-- same rows by PEOPLE — only rows with an account, never an admin's, before
+-- today's UTC midnight (every row here is a day old or more) — and shows a
+-- frame only once TWO people asked (k = 2). So: the Japan showcase reads
+-- "2 people" although dev_admin logged it too (…0013, on purpose); Zilortha
+-- (dev_free + dev_artist) and Heliod (dev_pro + dev_artist) reach two; Oko
+-- stays at one dev_free row, so it is the frame k keeps off the list.
 --
 -- Both groups (D1): cause 'missing' (the registry has no exact frame) and
 -- 'unverified' (its exact frame isn't verified in the card's colour: Heliod
@@ -61,6 +63,7 @@ from (values
   ('fa000000-0000-4000-a000-000000000003', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'deck_prefill', now() - interval '45 days'),
   ('fa000000-0000-4000-a000-00000000000c', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '1 day'),
   ('fa000000-0000-4000-a000-000000000011', 'd0000000-0000-4000-a000-000000000003', 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '3 days'),
+  ('fa000000-0000-4000-a000-000000000014', 'd0000000-0000-4000-a000-000000000004', 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '8 days'),
   -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33) in two
   -- colours, whose split frame is 4.6's
   ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
@@ -83,6 +86,7 @@ from (values
   -- Not yet verified ----------------------------------------------------------
   -- Heliod, Sun-Crowned THB #259: constellation showcase, exact on Nyx (A3) — Nyx isn't verified in white
   ('fa000000-0000-4000-a000-000000000006', 'd0000000-0000-4000-a000-000000000002', 'showcase/thb/constellation', 'Theros Beyond Death constellation showcase', 'thb', '259', 'e11cf760-da35-41f2-8cf5-a5141103eeb3', 'nearest', 'unverified', 'm15', null, 'import', now() - interval '12 days'),
+  ('fa000000-0000-4000-a000-000000000015', 'd0000000-0000-4000-a000-000000000004', 'showcase/thb/constellation', 'Theros Beyond Death constellation showcase', 'thb', '259', 'e11cf760-da35-41f2-8cf5-a5141103eeb3', 'nearest', 'unverified', 'm15', null, 'import', now() - interval '9 days'),
   -- A Tale for the Ages WOE #328: extended art, exact on the extended-art frame — not verified in white
   ('fa000000-0000-4000-a000-00000000000d', 'd0000000-0000-4000-a000-000000000004', 'extendedart', 'Extended-art frame', 'woe', '328', '4fc7d7d8-0965-4097-98ee-e89cfa05fd05', 'nearest', 'unverified', 'm15', null, 'import', now() - interval '5 days'),
   ('fa000000-0000-4000-a000-00000000000e', 'd0000000-0000-4000-a000-000000000003', 'extendedart', 'Extended-art frame', 'woe', '328', '4fc7d7d8-0965-4097-98ee-e89cfa05fd05', 'nearest', 'unverified', 'm15', null, 'deck_prefill', now() - interval '7 days'),
