@@ -40,6 +40,7 @@ import {
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck, type DeckEntryOrigin } from "@/lib/decks/membership";
+import { deckFullMessage } from "@/lib/decks/membership-copy";
 import {
   importProvenanceInsert,
   isMissingImportProvenanceColumn,
@@ -124,6 +125,10 @@ type CreateCardSuccess = {
    *  public / unlisted, because its text holds strong language (owner
    *  policy 2026-10-28, lib/moderation/profanity.ts) — the UI says why. */
   forcedPrivate?: ForcedPrivateNotice;
+  /** Set only when the save named a deck (`deck_id`) and the card could not
+   *  join it — the deck is at its 500 entries, or is gone. The card IS
+   *  saved; the creator says why the deck didn't take it. */
+  deckEntryError?: string;
 };
 
 type UpdateCardSuccess = {
@@ -628,9 +633,12 @@ export async function createCardAction(
   // Drop the card into its chosen deck as a custom-only mainboard entry,
   // with how it got there (options.deckEntry; the creator's add by
   // default). Best-effort — a deck hiccup never rolls back the card save. A
-  // frame preview is a test card: it never joins a deck.
+  // frame preview is a test card: it never joins a deck. A refusal comes
+  // back as `deckEntryError` (TODO DK9.3: a deck at its 500 entries used to
+  // fail in silence) — the card IS saved; the creator says so.
+  let deckEntryError: string | undefined;
   if (data.deck_id && !framePreview) {
-    await addCustomCardEntryToDeck(
+    const added = await addCustomCardEntryToDeck(
       supabase,
       user.id,
       data.deck_id,
@@ -638,6 +646,11 @@ export async function createCardAction(
       data.title,
       options.deckEntry,
     );
+    if (added?.ok === false) {
+      deckEntryError = added.deckFull
+        ? deckFullMessage(added.deckTitle)
+        : (added.error ?? "The deck couldn't take it.");
+    }
   }
 
   const ownerUsername = await getCurrentUsername();
@@ -684,6 +697,7 @@ export async function createCardAction(
     cardId: row.id,
     slug: row.slug,
     ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
+    ...(deckEntryError ? { deckEntryError } : {}),
   };
 }
 

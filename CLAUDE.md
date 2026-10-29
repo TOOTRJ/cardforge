@@ -1832,6 +1832,22 @@ Rules and gotchas:
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
+  A SAVED card joins or leaves the owner's decks from My Cards, the
+  creator's edit and another creator's card page (TODO DK9) through ONE
+  picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a
+  one-card row's board / copies, "＋ New deck" with its visibility SAID —
+  Public unless changed; decks are unlimited on every plan) and
+  ONE writer, `changeDeckMembershipAction` (`lib/decks/membership-actions.ts`:
+  one deck, ≤ `MAX_MEMBERSHIP_BATCH` cards, `add_custom_deck_entry` per card
+  with source `link`, D3 refused before the RPC, the 500 cap in words —
+  `deckFullMessage` — a result per card, ONE revalidation). A removal deletes
+  the entry the card BROUGHT and unlinks one that holds a decklist line (a
+  printing, an import / manual source): the real card stays. The creator's
+  "Add to a deck" box (`creator-deck-box.tsx`, under the live preview) gives
+  a NEW card / remix the save's `deck_id` — the payload main sends, pinned —
+  and acts AT ONCE on an edit (D13), never touching the form; never for a
+  guest or a frame preview; a deck that refuses the new card comes back as
+  `deckEntryError` (the card is saved).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

@@ -123,7 +123,7 @@ describe("the Publish step's Save as a draft (3b.36)", () => {
     });
     return (
       <FormProvider {...methods}>
-        <PublishPanel userId="u1" myDecks={[]} />
+        <PublishPanel userId="u1" />
       </FormProvider>
     );
   }
