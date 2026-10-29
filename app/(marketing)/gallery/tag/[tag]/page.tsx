@@ -57,7 +57,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
   const galleryHref = `/gallery/browse?tag=${encodeURIComponent(hub.tag)}`;
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -75,13 +75,14 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
         })}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Gallery · tag"
         title={`Custom MTG cards tagged "${hub.tag}"`}
         description={`${hub.count} public card${hub.count === 1 ? "" : "s"} carry the #${hub.tag} tag — all designed with PipGlyph's card creator. ${
           hub.count < TAG_HUB_MIN_CARDS ? "A young tag: add yours to grow it." : "Sorted by what the community liked most."
         }`}
       />
-      <CardGrid className="mt-8">
+      <CardGrid className="mt-6">
         {cards.map((card) => (
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}

@@ -56,7 +56,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
   const label = CARD_TYPE_LABELS[type].toLowerCase();
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -73,7 +73,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
           })),
         })}
       />
-      <PageHeader eyebrow="Gallery · card type" title={copy.title} description={copy.intro} />
+      <PageHeader className="pb-6" eyebrow="Gallery · card type" title={copy.title} description={copy.intro} />
       <p className="mt-4 text-sm text-muted">
         {count} public custom {label} card{count === 1 ? "" : "s"} so far
         {copy.guide ? (
@@ -87,7 +87,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
         ) : null}
         .
       </p>
-      <CardGrid className="mt-8">
+      <CardGrid className="mt-6">
         {cards.map((card) => (
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}

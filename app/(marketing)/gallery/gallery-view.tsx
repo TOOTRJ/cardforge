@@ -199,7 +199,7 @@ export function GalleryLanding() {
   const filters = parseGalleryFilters({});
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -207,6 +207,7 @@ export function GalleryLanding() {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Public"
         title="Community gallery"
         description={GALLERY_DESCRIPTION}
@@ -219,7 +220,7 @@ export function GalleryLanding() {
 
       {/* Search + browse-by first: a search is a navigation to the browse
           route, and the hub chips are the crawlable way in. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <BrowseSearchBox
           browsePath={GALLERY_BROWSE_PATH}
           placeholder="Search cards by name, rules, or flavor"
@@ -312,7 +313,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -321,9 +322,10 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Gallery"
         title="Browse cards"
-        description="Search every public card by name, rules or flavor text, then narrow by type, rarity, color and tag."
+        description="Search every public card, then narrow by type, rarity, color and tag."
         actions={
           <Button asChild variant="outline">
             <Link href="/gallery">
@@ -336,13 +338,13 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
 
       {/* Search + filters. The Suspense boundary contains GalleryFilters'
           useSearchParams() CSR bailout so the shell still server-renders. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <Suspense fallback={null}>
           <GalleryFilters />
         </Suspense>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {!configured ? (
           <GalleryOffline />
         ) : (

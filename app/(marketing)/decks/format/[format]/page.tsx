@@ -56,7 +56,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
   const art = await listDeckTileArt(decks, { anonymous: true });
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -70,11 +70,11 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
           items: decks.map((deck) => ({ name: deck.title, path: `/deck/${deck.slug}` })),
         })}
       />
-      <PageHeader eyebrow="Decks · format" title={copy.title} description={copy.intro} />
+      <PageHeader className="pb-6" eyebrow="Decks · format" title={copy.title} description={copy.intro} />
       <p className="mt-4 text-sm text-muted">
         {count} public deck{count === 1 ? "" : "s"} in this format so far.
       </p>
-      <DeckGrid className="mt-8">
+      <DeckGrid className="mt-6">
         {decks.map((deck) => (
           <DeckTile
             key={deck.id}

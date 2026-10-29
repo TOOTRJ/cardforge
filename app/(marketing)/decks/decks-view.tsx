@@ -104,7 +104,7 @@ export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -112,6 +112,7 @@ export function DecksLanding() {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Public"
         title="Community decks"
         description={DECKS_DESCRIPTION}
@@ -122,7 +123,7 @@ export function DecksLanding() {
 
       {/* Search + browse-by first: a search is a navigation to the browse
           route, and the format chips are the crawlable way in. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <BrowseSearchBox
           browsePath={DECKS_BROWSE_PATH}
           placeholder="Search decks by name or description"
@@ -208,7 +209,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer size="wide" className="py-12">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -217,6 +218,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Community decks"
         title="Browse decks"
         description="Search every public deck by name or description, sort it and narrow by format."
@@ -232,7 +234,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
 
       {/* The Suspense boundary contains DecksSearch's useSearchParams() CSR
           bailout so the shell still server-renders. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <Suspense fallback={null}>
           <DecksSearch />
         </Suspense>
@@ -256,7 +258,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-6">
         {!configured ? (
           <DecksOffline />
         ) : (
