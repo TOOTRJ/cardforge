@@ -68,6 +68,23 @@ export function typeBucketFor(typeLine: string | null | undefined): TypeBucket {
   return "Other";
 }
 
+/** The curve's columns: mana values 0–6, then "7+" (index 7). */
+export const CURVE_SLOTS = 8;
+
+/** A mana value's column on the curve — THE bucket the breakdown's curve,
+ *  its click-to-filter (TODO DK7.1) and the list's "Group by mana value"
+ *  all read, so a bar and the cards it filters to never disagree. A split
+ *  card's value is already both halves' (effectiveEntryFields); a half
+ *  mana (Un-sets) rounds down. */
+export function manaValueSlot(manaValue: number): number {
+  return Math.min(Math.max(Math.floor(manaValue), 0), CURVE_SLOTS - 1);
+}
+
+/** A curve column's label: "0" … "6", "7+". */
+export function curveSlotLabel(slot: number): string {
+  return slot >= CURVE_SLOTS - 1 ? `${CURVE_SLOTS - 1}+` : String(slot);
+}
+
 export type DeckAnalytics = {
   /** Physical cards per board (quantities summed). */
   byBoard: Record<DeckBoard, number>;
@@ -128,7 +145,7 @@ export function computeDeckAnalytics(
   const byColor = emptyCounter(COLOR_KEYS);
   const byType = emptyCounter(TYPE_BUCKETS);
   const byStatus = emptyCounter(DECK_ENTRY_STATUS_VALUES);
-  const curve = Array.from({ length: 8 }, () => 0);
+  const curve = Array.from({ length: CURVE_SLOTS }, () => 0);
 
   let total = 0;
   let linked = 0;
@@ -173,8 +190,7 @@ export function computeDeckAnalytics(
 
     const mv = fields.manaValue;
     if (mv !== null) {
-      const slot = Math.min(Math.max(Math.floor(mv), 0), 7);
-      curve[slot] += entry.quantity;
+      curve[manaValueSlot(mv)] += entry.quantity;
       mvTotal += mv * entry.quantity;
       mvSample += entry.quantity;
     }

@@ -220,8 +220,9 @@ function StandInFace({
 }
 
 /** A visitor's private card (D11): a lock, the words, the real card's name
- *  where the entry has one — never the private card's title or art. */
-function PrivateCardFace({ name }: { name: string | null }) {
+ *  where the entry has one — never the private card's title or art. The
+ *  sample hand (deck-sample-hand.tsx) draws it too. */
+export function PrivateCardFace({ name }: { name: string | null }) {
   return (
     <StandInFace title={name ?? "Private card"} titleIcon={<Lock className="h-3 w-3 shrink-0 text-muted" aria-hidden />} dashed>
       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted">
@@ -234,7 +235,7 @@ function PrivateCardFace({ name }: { name: string | null }) {
 }
 
 /** Nothing to draw: the name on a blank card. */
-function BlankCardFace({ name }: { name: string }) {
+export function BlankCardFace({ name }: { name: string }) {
   return (
     <StandInFace title={name}>
       <HelpCircle className="h-6 w-6 text-subtle" aria-hidden />
