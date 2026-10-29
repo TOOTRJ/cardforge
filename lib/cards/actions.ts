@@ -39,7 +39,13 @@ import {
   isSlugTakenForCurrentUser,
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
-import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
+import { addCustomCardEntryToDeck, type DeckEntryOrigin } from "@/lib/decks/membership";
+import {
+  importProvenanceInsert,
+  isMissingImportProvenanceColumn,
+  namesImportProvenance,
+  withoutImportProvenance,
+} from "@/lib/cards/import-provenance";
 import { CLEARED_RENDER_POINTERS, REBAKE_PENDING_RENDER, removeRenderObjects } from "@/lib/cards/bake-core";
 import {
   purgeHiddenCard,
@@ -242,6 +248,15 @@ export type CreateCardOptions = {
    * the owner has no username yet.
    */
   redirectAfterCreate?: boolean;
+  /**
+   * How the card's deck entry (`deck_id`) says it got there (migration 0144,
+   * TODO DK2.6): the AI jobs pass `ai_generate` / `ai_remix` — an AI restyle
+   * of a printing also its Scryfall id and the printing's name, which the
+   * entry keeps. Absent = the creator's add (`creator`). Checked by
+   * lib/decks/membership.ts; descriptive only (the deck's owner can write
+   * their entries' source anyway).
+   */
+  deckEntry?: DeckEntryOrigin;
 };
 
 
@@ -564,6 +579,11 @@ export async function createCardAction(
     collector_number: data.collector_number ?? null,
     ...(data.lang !== undefined ? { lang: data.lang } : {}),
   };
+  // Import provenance (TODO DK2.5, migration 0144; insert-only): the source
+  // printing, and the fingerprint of THIS row when the creator says it is
+  // still the import's (lib/cards/import-provenance.ts). Named only for a
+  // card with a source.
+  Object.assign(insert, importProvenanceInsert(data, insert));
 
   // Strong language (owner policy 2026-10-28; lib/moderation/profanity.ts):
   // a card whose text — any field, either face, its rows, its tags, its
@@ -574,11 +594,12 @@ export async function createCardAction(
   const languageFields = languageForcesPrivate({ saved: insert, visibility: insert.visibility });
   if (languageFields.length > 0) insert.visibility = "private";
 
-  const { data: row, error } = await supabase
-    .from("cards")
-    .insert(insert)
-    .select("id, slug")
-    .single();
+  const insertRow = (values: CardInsert) => supabase.from("cards").insert(values).select("id, slug").single();
+  let { data: row, error } = await insertRow(insert);
+  // A database 0144 has not reached yet: the same card, without provenance.
+  if (error && namesImportProvenance(insert) && isMissingImportProvenanceColumn(error)) {
+    ({ data: row, error } = await insertRow(withoutImportProvenance(insert)));
+  }
 
   // The database enforces the cap too (migration 0104) — the pre-check above
   // can lose a race between two saves, the trigger can't.
@@ -604,9 +625,10 @@ export async function createCardAction(
     };
   }
 
-  // Drop the card into its chosen deck as a custom-only mainboard entry.
-  // Best-effort — a deck hiccup never rolls back the card save. A frame
-  // preview is a test card: it never joins a deck.
+  // Drop the card into its chosen deck as a custom-only mainboard entry,
+  // with how it got there (options.deckEntry; the creator's add by
+  // default). Best-effort — a deck hiccup never rolls back the card save. A
+  // frame preview is a test card: it never joins a deck.
   if (data.deck_id && !framePreview) {
     await addCustomCardEntryToDeck(
       supabase,
@@ -614,6 +636,7 @@ export async function createCardAction(
       data.deck_id,
       row.id,
       data.title,
+      options.deckEntry,
     );
   }
 

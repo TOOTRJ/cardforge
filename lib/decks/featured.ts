@@ -1,6 +1,7 @@
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import { stableDeckHash } from "@/lib/decks/cover";
+import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
 // The cards a deck's hero (and its share image) fans out in front of the
@@ -19,6 +20,10 @@ import { stableDeckHash } from "@/lib/decks/cover";
 //
 // What may stand in the fan, for EVERY viewer alike (the owner sees what a
 // visitor sees):
+//   * another creator's card only while it is PUBLIC (owner decision D3,
+//     canLinkIntoDeck — the rule listDeckCards reads by; an UNLISTED card is
+//     readable by anyone through RLS, and never a deck's), and then it is
+//     left out entirely, its printing included;
 //   * a linked card only when it is readable and NOT private (a private card
 //     is never drawn on a public surface, D11 — a visitor's RLS read has it
 //     null, the owner's has it private: both skip the entry, and its
@@ -92,9 +97,9 @@ type Candidate<C extends FeaturableCard> = { entryId: string; typeLine: string |
 
 /** What an entry may stand in the fan as — its baked card, its printing,
  *  or nothing (the header's rules). */
-function asFeatured<C extends FeaturableCard>(entry: FeaturableEntry, card: C | null): FeaturedCard<C> | null {
+function asFeatured<C extends FeaturableCard>(entry: FeaturableEntry, card: C | null, deckOwnerId: string): FeaturedCard<C> | null {
   if (entry.card_id) {
-    if (!card || card.visibility === "private") return null;
+    if (!card || card.visibility === "private" || !canLinkIntoDeck(card, deckOwnerId)) return null;
     const own = { ownerId: card.owner_id, cardId: card.id };
     if (isStoredRenderUrl(card.rendered_image_url, own) && isStoredRenderUrl(card.rendered_thumb_url, own)) {
       return { kind: "custom", key: `card:${card.id}`, title: card.title, card };
@@ -107,7 +112,9 @@ function asFeatured<C extends FeaturableCard>(entry: FeaturableEntry, card: C | 
 
 export function featuredCardsOf<C extends FeaturableCard>(
   items: readonly { entry: FeaturableEntry; card: C | null }[],
-  deckId: string,
+  /** The deck: its id seeds the fill, its owner decides whose cards are
+   *  its own (D3). */
+  deck: { id: string; owner_id: string },
   options: {
     /** The most cards (FAN_MAX). */
     max?: number;
@@ -116,14 +123,14 @@ export function featuredCardsOf<C extends FeaturableCard>(
   } = {},
 ): FeaturedCard<C>[] {
   const { max = FAN_MAX, printings = true } = options;
-  const random = seededRandom(stableDeckHash(deckId));
+  const random = seededRandom(stableDeckHash(deck.id));
   const allowed = (featured: FeaturedCard<C> | null): featured is FeaturedCard<C> =>
     Boolean(featured) && (printings || featured!.kind === "custom");
 
   const playable = items.filter((item) => item.entry.board !== "maybe");
   const candidates = (rows: typeof playable): Candidate<C>[] =>
     rows.flatMap(({ entry, card }) => {
-      const featured = asFeatured(entry, card);
+      const featured = asFeatured(entry, card, deck.owner_id);
       return allowed(featured) ? [{ entryId: entry.id, typeLine: entry.type_line, featured }] : [];
     });
 

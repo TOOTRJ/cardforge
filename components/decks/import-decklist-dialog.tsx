@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -77,12 +77,26 @@ export function ImportDecklistDialog({
   // router's own (a child's effects run first), so Next would not hear of
   // it and its next history write would put the flag back. The dialog's
   // state outlives the re-render (same place in the tree).
+  //
+  // ONE replace, and no server action of the dialog's while it is on its way
+  // (`clearingFlag`, Preview import waits): Next 16's router queue loses an
+  // action dispatched while a navigation that PRE-EMPTED another is pending
+  // (the pre-empted node stays the queue's `last`, and the action is chained
+  // after it), so a "Preview import" pressed in that window never reached
+  // the server — the button spun "Matching cards…" for good. StrictMode's
+  // second effect run (every dev server, the e2e suite's included) was that
+  // second navigation; the ref keeps it to one.
+  const flagCleared = useRef(false);
+  const [clearingFlag, startClearingFlag] = useTransition();
   useEffect(() => {
-    if (!defaultOpen) return;
+    if (!defaultOpen || flagCleared.current) return;
+    flagCleared.current = true;
     const url = new URL(window.location.href);
     if (url.searchParams.get("import") !== "1") return;
     url.searchParams.delete("import");
-    router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    startClearingFlag(() => {
+      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the mount that opened it
   }, []);
 
@@ -203,7 +217,7 @@ export function ImportDecklistDialog({
               <Button
                 type="button"
                 onClick={handleResolve}
-                disabled={!text.trim() || isResolving}
+                disabled={!text.trim() || isResolving || clearingFlag}
               >
                 {isResolving ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

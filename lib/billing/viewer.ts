@@ -47,6 +47,10 @@ export const ANONYMOUS_BILLING_VIEWER: BillingViewer = {
 
 export const LIVE_SUBSCRIPTION_STATUSES: ReadonlySet<string> = new Set(["active", "trialing"]);
 
+/** A subscription whose payment broke: perks paused until it is fixed — the
+ *  billing page's "delinquent" plan card, the Account menu's "payment due". */
+export const DELINQUENT_SUBSCRIPTION_STATUSES: ReadonlySet<string> = new Set(["past_due", "unpaid", "incomplete"]);
+
 /** From the /api/me payload (client side). */
 export function billingViewerFromUser(user: HeaderUser | null): BillingViewer {
   if (!user) return { ...ANONYMOUS_BILLING_VIEWER, loaded: true };
