@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 // "Remove from cover"), so the focus stays on it across the refresh; at an
 // end of the list "Earlier" / "Later" are aria-disabled, never removed or
 // `disabled` (a focused control that disappears drops the focus to <body>).
+// The same holds on the commander zone and the maybeboard: the toggle stays,
+// aria-disabled with no click handler and the board's note as its
+// description — so "Remove from cover" on a pick that moved there leaves the
+// focus on the same button once the refresh unpicks it.
 // ---------------------------------------------------------------------------
 
 const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th"];
@@ -50,7 +54,8 @@ export function DeckCoverPicks({
   const full = !picked && ids.length >= FEATURED_PICKS_MAX;
 
   // The commander leads the fan by itself; the maybeboard isn't the deck.
-  // An entry already picked there can still be taken off.
+  // An entry already picked there can still be taken off; one that isn't
+  // keeps the toggle, off, its reason the board's note.
   const offBoard = board === "commander" || board === "maybe";
   const boardNote =
     board === "commander"
@@ -58,9 +63,7 @@ export function DeckCoverPicks({
       : board === "maybe"
         ? "The maybeboard isn't shown on the cover."
         : null;
-  if (offBoard && !picked) {
-    return <p className="text-xs leading-5 text-subtle">{boardNote}</p>;
-  }
+  const noPick = offBoard && !picked;
 
   const move = (by: -1 | 1) => {
     const next = [...ids];
@@ -69,15 +72,17 @@ export function DeckCoverPicks({
     onChange(next);
   };
   const toggle = () => onChange(picked ? ids.filter((id) => id !== entryId) : [...ids, entryId]);
-  const blocked = pending || full;
+  const blocked = pending || full || noPick;
 
-  const status = picked
-    ? `On the cover — ${ORDINALS[index]} of ${ids.length} pick${ids.length === 1 ? "" : "s"}, after the commanders.`
-    : full
-      ? `${FEATURED_PICKS_MAX} cards are featured — remove one to feature this.`
-      : ids.length > 0
-        ? `${ids.length} of ${FEATURED_PICKS_MAX} cover picks used.`
-        : `Pick up to ${FEATURED_PICKS_MAX} cards for the deck's cover; the rest are chosen for you.`;
+  const status = noPick
+    ? boardNote
+    : picked
+      ? `On the cover — ${ORDINALS[index]} of ${ids.length} pick${ids.length === 1 ? "" : "s"}, after the commanders. ${boardNote ?? ""}`.trim()
+      : full
+        ? `${FEATURED_PICKS_MAX} cards are featured — remove one to feature this.`
+        : ids.length > 0
+          ? `${ids.length} of ${FEATURED_PICKS_MAX} cover picks used.`
+          : `Pick up to ${FEATURED_PICKS_MAX} cards for the deck's cover; the rest are chosen for you.`;
 
   return (
     <div role="group" aria-labelledby={labelId} className="flex flex-col gap-2 rounded-md border border-border/50 bg-background/40 p-3">
@@ -129,8 +134,7 @@ export function DeckCoverPicks({
       </div>
       <p id={statusId} aria-live="polite" className="text-xs leading-5 text-muted">
         {status}
-        {boardNote ? ` ${boardNote}` : ""}
-        {(picked || !full) && !shown ? " This card can't be shown on the cover (a private card, or one with no picture) — the next card takes its place." : ""}
+        {!noPick && (picked || !full) && !shown ? " This card can't be shown on the cover (a private card, or one with no picture) — the next card takes its place." : ""}
       </p>
       {ids.length > 0 ? (
         <ol aria-label="Cards on the cover, in order" className="flex flex-col gap-0.5 text-xs text-muted">

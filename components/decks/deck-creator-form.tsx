@@ -388,6 +388,7 @@ export function CoverField({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const shuffleRef = useRef<HTMLButtonElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const draggingRef = useRef(false);
@@ -593,9 +594,32 @@ export function CoverField({
             </span>
           </div>
         ) : null}
-        <DeckCoverDefaults value={storedDefault ? value : ""} shown={shownDefault} onPick={onChange} disabled={uploading} />
+        <DeckCoverDefaults
+          value={storedDefault ? value : ""}
+          shown={shownDefault}
+          onPick={onChange}
+          disabled={uploading}
+          shuffleRef={shuffleRef}
+        />
         {storedDefault ? (
-          <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => onChange("")} disabled={uploading}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={(event) => {
+              // This button leaves with the stored pick: hand the focus on
+              // to Shuffle (always there) before it goes, or it drops to
+              // <body> (CLAUDE.md: a control that removes itself hands the
+              // focus on) — never while the focus is elsewhere on the page.
+              const active = document.activeElement;
+              if (!active || active === document.body || active === event.currentTarget) {
+                shuffleRef.current?.focus();
+              }
+              onChange("");
+            }}
+            disabled={uploading}
+          >
             <Undo2 className="h-4 w-4" aria-hidden /> Back to the colours&apos; pick
           </Button>
         ) : null}

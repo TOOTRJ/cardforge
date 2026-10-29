@@ -9,7 +9,9 @@ import type { CoverPickRow } from "@/lib/decks/featured";
 // picks' order shown, Earlier / Later — buttons, never a drag — every change
 // the deck's WHOLE list, rank 1 first. Five at most (the toggle is
 // aria-disabled with its reason, never a click handler); a commander and the
-// maybeboard are no pick; a pick the fan can't show says so.
+// maybeboard are no pick — the toggle stays there, aria-disabled, so taking
+// off a pick that moved there never drops the focus; a pick the fan can't
+// show says so.
 // ---------------------------------------------------------------------------
 
 afterEach(() => cleanup());
@@ -84,13 +86,17 @@ describe("DeckCoverPicks", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("a commander or a maybeboard card is no pick — one line says why", () => {
-    picks("c1", PICKS, { board: "commander" });
-    expect(screen.queryByRole("button", { name: "Feature on cover" })).toBeNull();
-    expect(screen.getByText("Commanders always lead the cover.")).toBeTruthy();
-    cleanup();
-    picks("m1", PICKS, { board: "maybe" });
-    expect(screen.getByText("The maybeboard isn't shown on the cover.")).toBeTruthy();
+  it.each([
+    ["commander", "Commanders always lead the cover."],
+    ["maybe", "The maybeboard isn't shown on the cover."],
+  ])("a %s card is no pick — the toggle stays, aria-disabled with no handler, the board's note its reason", (board, note) => {
+    const onChange = picks("x1", PICKS, { board });
+    const toggle = screen.getByRole("button", { name: "Feature on cover" });
+    expect(toggle.getAttribute("aria-disabled")).toBe("true");
+    expect(toggle.hasAttribute("disabled")).toBe(false);
+    expect(document.getElementById(toggle.getAttribute("aria-describedby")!)?.textContent).toBe(note);
+    fireEvent.click(toggle);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("a card picked before it moved to the maybeboard can still be taken off", () => {
@@ -98,6 +104,28 @@ describe("DeckCoverPicks", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove from cover" }));
     expect(onChange).toHaveBeenCalledWith(["e2", "e3"]);
   });
+
+  it.each(["commander", "maybe"])(
+    "taking off a pick on the %s board keeps the focus on the toggle across the refresh — never <body>",
+    (board) => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <DeckCoverPicks entryId="e1" board={board} picks={PICKS} shown pending={false} onChange={onChange} />,
+      );
+      const toggle = screen.getByRole("button", { name: "Remove from cover" });
+      toggle.focus();
+      fireEvent.click(toggle);
+      expect(onChange).toHaveBeenCalledWith(["e2", "e3"]);
+      // The save's pending render, then the refresh: e1 is no longer a pick.
+      rerender(<DeckCoverPicks entryId="e1" board={board} picks={PICKS} shown pending onChange={onChange} />);
+      rerender(<DeckCoverPicks entryId="e1" board={board} picks={PICKS.slice(1)} shown pending={false} onChange={onChange} />);
+      const after = screen.getByRole("button", { name: "Feature on cover" });
+      expect(after).toBe(toggle);
+      expect(document.activeElement).toBe(toggle);
+      expect(document.activeElement).not.toBe(document.body);
+      expect(after.getAttribute("aria-disabled")).toBe("true");
+    },
+  );
 
   it("a card the fan can't show (private, no picture) may be picked, and says it is skipped", () => {
     picks("e3", PICKS, { shown: false });
