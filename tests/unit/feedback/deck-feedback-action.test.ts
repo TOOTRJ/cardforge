@@ -70,6 +70,19 @@ describe("submitDeckFeedbackAction", () => {
     expect(called(deckRead.calls, "eq", "id")).toBe(true);
   });
 
+  it("names the deck by its link on the deck read and the insert (an unlisted deck, migration 0151)", async () => {
+    await submitDeckFeedbackAction(input);
+    const deckRead = state.stub!.forTable("decks")[0];
+    expect(deckRead.calls.find((c) => c.method === "setHeader")?.args).toEqual(["x-pipglyph-deck", DECK]);
+    const insert = state.stub!.forTable("feedback").find((e) => called(e.calls, "insert"));
+    expect(insert?.calls.find((c) => c.method === "setHeader")?.args).toEqual(["x-pipglyph-deck", DECK]);
+    // A row with no deck names none.
+    state.stub = chainClient((table, calls) => state.resolve!(table, calls));
+    await submitDeckFeedbackAction({ ...input, deck_id: "", page_url: "/dashboard/decks" });
+    const bare = state.stub!.forTable("feedback").find((e) => called(e.calls, "insert"));
+    expect(called(bare?.calls ?? [], "setHeader")).toBe(false);
+  });
+
   it("an Idea files as a feature request", async () => {
     await submitDeckFeedbackAction({ ...input, kind: "idea" });
     expect(insertOf()).toMatchObject({ category: "feature", area: "decks" });

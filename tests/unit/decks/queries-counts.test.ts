@@ -59,7 +59,7 @@ function client() {
         return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
       };
       const chain: Record<string, unknown> = {};
-      for (const op of ["select", "eq", "gt", "in", "or", "order", "range", "limit"]) {
+      for (const op of ["select", "eq", "gt", "in", "or", "order", "range", "limit", "setHeader"]) {
         chain[op] = (...args: unknown[]) => {
           call.ops.push([op, ...args]);
           return chain;
@@ -85,6 +85,7 @@ import {
   countPublicDecks,
   countPublicDecksByOwner,
   DECK_PAGE_CARD_COLUMNS,
+  getDeckBySlugWithOwner,
   listDeckCards,
   listDeckPageCards,
   listMyDecks,
@@ -273,6 +274,39 @@ describe("listDeckCards reads a whole deck", () => {
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
     expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
+  });
+});
+
+// An unlisted deck is read only by its link (migration 0151,
+// lib/decks/deck-link.ts): the page's reads name the deck, a list never does.
+describe("the deck page names its deck by its link", () => {
+  const DECK = "B0000000-0000-4000-A000-000000000007";
+  const named = (call: Call | undefined) => call?.ops.filter((op) => op[0] === "setHeader") ?? [];
+
+  it("the deck's rows and its owner read name it by its id (as Postgres prints it)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entries = [{ id: "e", deck_id: DECK, board: "main", quantity: 1, position: 0, card_id: null, name: "Bolt" }];
+    await listDeckPageCards(DECK);
+    const deckRead = s.calls.find((c) => c.table === "decks");
+    const entryRead = s.calls.find((c) => c.table === "deck_cards");
+    expect(named(deckRead)).toEqual([["setHeader", "x-pipglyph-deck", DECK.toLowerCase()]]);
+    expect(named(entryRead)).toEqual([["setHeader", "x-pipglyph-deck", DECK.toLowerCase()]]);
+  });
+
+  it("the deck by its slug names the slug; a mangled slug names nothing", async () => {
+    s.rows.decks = [deckRow("hidden-tech", 2, 1)];
+    await getDeckBySlugWithOwner("hidden-tech");
+    expect(named(s.calls.find((c) => c.table === "decks"))).toEqual([["setHeader", "x-pipglyph-deck", "hidden-tech"]]);
+    s.calls = [];
+    await getDeckBySlugWithOwner("Hidden Tech ✓");
+    expect(named(s.calls.find((c) => c.table === "decks"))).toEqual([]);
+  });
+
+  it("a public list never names a deck", async () => {
+    s.rows.decks = [deckRow("a", 1, 0)];
+    await listPublicDecks({ anonymous: true, limit: 25 });
+    await listMyDecks();
+    expect(s.calls.flatMap((c) => named(c))).toEqual([]);
   });
 });
 
