@@ -2203,9 +2203,11 @@ describe("a save from the leave dialog still links the new card", () => {
     await typeTitle("My Bolt");
     await leaveViaLinkAndSaveDraft();
 
+    // `surface` is the funnel's (TODO DK3.8: deck_card_customized).
     expect(actions.linkDeckCardAction).toHaveBeenCalledWith(
       "66666666-6666-4666-8666-666666666666",
       NEW_CARD,
+      { surface: "creator" },
     );
     expect(actions.linkDeckCardAction.mock.invocationCallOrder[0]).toBeLessThan(
       router.push.mock.invocationCallOrder[0],

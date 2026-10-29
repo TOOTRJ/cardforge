@@ -16,6 +16,12 @@
 
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 
+import {
+  CARD_CAPACITY,
+  CARD_CAPACITY_UNLIMITED,
+  privateDecksByPlanSentence,
+} from "@/lib/billing/plans";
+
 export type FaqEntry = {
   /** The answer's anchor in the help centre (/help/<section>#<id>), stable
    *  across rewordings: links point at it. Unique across every topic. */
@@ -23,6 +29,10 @@ export type FaqEntry = {
   q: string;
   a: string;
 };
+
+/** A plan's saved-card cap as a word, from CARD_CAPACITY. */
+const cardCap = (tier: keyof typeof CARD_CAPACITY) =>
+  CARD_CAPACITY[tier] === CARD_CAPACITY_UNLIMITED ? "unlimited" : CARD_CAPACITY[tier].toLocaleString("en-US");
 
 export type FaqTopic = {
   /** The topic's key. The nine topics /faq had keep their old anchor
@@ -301,8 +311,10 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
 // version of it "Edited", made with "Customize"). The rest of the rebuild
 // changes them again — a create dialog instead of the stepper (DK4), other
 // creators' public cards in your decks (DK2.9, owner D3): rewrite with it.
-// TODO(DK3): the private-deck limits per plan (owner D1) are not shipped —
-// add their answer when they are, never before.
+// The private-deck limits (owner D1, migration 0145) and the import's slot
+// rule (D2) are said from lib/billing/plans.ts — tests/unit/content/
+// help.test.ts and tests/unit/billing/plan-limits-copy.test.tsx hold the
+// numbers to DECK_CAPACITY and CARD_CAPACITY.
 
 const DECKS_FAQ: FaqEntry[] = [
   {
@@ -314,6 +326,19 @@ const DECKS_FAQ: FaqEntry[] = [
     id: "decklist-formats",
     q: "Which decklist formats can I import?",
     a: "Paste a list exported from MTG Arena, Moxfield, Archidekt, ManaBox or MTGO, or plain lines like “4 Lightning Bolt”. Commander, sideboard and maybeboard sections are detected automatically. You review every line before anything is added: change a quantity or a board, check the cards marked as a best guess, and expect a name Scryfall can't find to come in as a name-only placeholder.",
+  },
+  {
+    // Owner decision D2 (2026-10-28): an import takes no slot; customizing
+    // a card does.
+    id: "import-uses-slots",
+    q: "Does importing a decklist use my saved-card slots?",
+    a: `No. A pasted decklist is a list of real cards, and it uses none of your saved-card slots however long it is. A card takes a slot when you customize it — turn the imported card into your own design — like any card you save (Free holds ${cardCap("free")}, Plus ${cardCap("plus")}, Pro ${cardCap("pro")}). The import's review says how many slots you have left.`,
+  },
+  {
+    // The private-deck cap (owner decision D1, migration 0145).
+    id: "how-many-decks",
+    q: "How many decks can I make?",
+    a: `As many public decks as you like, on every plan. The limit is on private and unlisted decks: ${privateDecksByPlanSentence()} A downgrade or a lapsed plan never locks a deck: every deck you have stays editable, and only a NEW private or unlisted deck needs a free slot — make another deck public, delete one, or upgrade.`,
   },
   {
     id: "copy-export-or-print-a-deck",

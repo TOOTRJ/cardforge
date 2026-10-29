@@ -8,12 +8,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FeedbackStatusButtons } from "@/components/admin/feedback-status-buttons";
 import { FeedbackReplyButton } from "@/components/admin/feedback-reply-button";
 import { AdminLoadError } from "@/components/admin/admin-load-error";
-import { listAllFeedback, type FeedbackInboxFilter } from "@/lib/feedback/queries";
+import { listAllFeedback } from "@/lib/feedback/queries";
+import { feedbackInboxHref, parseFeedbackInboxParams } from "@/lib/feedback/inbox-filters";
 import { threadIdsForFeedback } from "@/lib/messages/queries";
 import {
+  FEEDBACK_AREAS,
   FEEDBACK_CATEGORIES,
   FEEDBACK_STATUSES,
-  type FeedbackStatus,
+  type FeedbackArea,
 } from "@/lib/feedback/schemas";
 import { FRAME_TEMPLATE_LABELS } from "@/types/card";
 import type { FrameTemplate } from "@/types/card";
@@ -31,6 +33,10 @@ const CATEGORY_LABEL = Object.fromEntries(
   FEEDBACK_CATEGORIES.map((c) => [c.key, c.label]),
 );
 
+const AREA_LABEL = Object.fromEntries(
+  FEEDBACK_AREAS.map((a) => [a.key, a.label]),
+) as Record<FeedbackArea, string>;
+
 const CATEGORY_TONE: Record<string, string> = {
   bug: "border-danger/50 bg-danger/10 text-foreground",
   frame: "border-accent/50 bg-accent/10 text-foreground",
@@ -42,19 +48,14 @@ const CATEGORY_TONE: Record<string, string> = {
 export default async function AdminFeedbackPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; area?: string }>;
 }) {
-  const { status } = await searchParams;
   // Default view: everything still needing a look (new + reviewed), newest
   // first with untouched reports on top. "All" and the single statuses are
-  // explicit tabs.
-  const filter: FeedbackInboxFilter =
-    status === "all"
-      ? "all"
-      : (FEEDBACK_STATUSES as readonly string[]).includes(status ?? "")
-        ? (status as FeedbackStatus)
-        : "unresolved";
-  const inbox = await listAllFeedback(filter);
+  // explicit tabs; the Area row (0146, TODO DK10.1) narrows either to one
+  // area — the deck dialog's — or shows every area, /feedback's included.
+  const { filter, area } = parseFeedbackInboxParams(await searchParams);
+  const inbox = await listAllFeedback(filter, area);
   // Non-admins get a 404 (don't reveal the route exists).
   if (inbox === null) notFound();
   const { items } = inbox;
@@ -69,21 +70,32 @@ export default async function AdminFeedbackPage({
       <PageHeader
         eyebrow="Admin · Feedback"
         title="Feedback inbox"
-        description="Bug reports, frame issues, and feature/frame requests from users. New submissions ping the notification bell; Reply opens a conversation the user sees under Messages."
+        description="Bug reports, frame issues, feature/frame requests and the deck builder's feedback from users. New submissions ping the notification bell; Reply opens a conversation the user sees under Messages."
       />
 
-      <div className="mt-4 flex items-center gap-2">
-        <FilterTab href="/admin/feedback" active={filter === "unresolved"} label="Unresolved" />
-        <FilterTab href="/admin/feedback?status=all" active={filter === "all"} label="All" />
+      <nav aria-label="Status" className="mt-4 flex flex-wrap items-center gap-2">
+        <FilterTab href={feedbackInboxHref("unresolved", area)} active={filter === "unresolved"} label="Unresolved" />
+        <FilterTab href={feedbackInboxHref("all", area)} active={filter === "all"} label="All" />
         {FEEDBACK_STATUSES.map((s) => (
           <FilterTab
             key={s}
-            href={`/admin/feedback?status=${s}`}
+            href={feedbackInboxHref(s, area)}
             active={filter === s}
             label={s[0].toUpperCase() + s.slice(1)}
           />
         ))}
-      </div>
+      </nav>
+      <nav aria-label="Area" className="mt-2 flex flex-wrap items-center gap-2">
+        <FilterTab href={feedbackInboxHref(filter, null)} active={area === null} label="All areas" />
+        {FEEDBACK_AREAS.map((a) => (
+          <FilterTab
+            key={a.key}
+            href={feedbackInboxHref(filter, a.key)}
+            active={area === a.key}
+            label={a.label}
+          />
+        ))}
+      </nav>
 
       <div className="mt-6 flex flex-col gap-4">
         {loadError ? <AdminLoadError what="the feedback inbox" /> : null}
@@ -91,11 +103,12 @@ export default async function AdminFeedbackPage({
           <EmptyState
             title="Inbox zero"
             description={
-              filter === "unresolved"
+              (filter === "unresolved"
                 ? "Nothing needs a look right now — every submission is resolved."
                 : filter === "all"
                   ? "No feedback yet — when users submit, it lands here."
-                  : `No ${filter} feedback right now.`
+                  : `No ${filter} feedback right now.`) +
+              (area ? ` (Area: ${AREA_LABEL[area]}.)` : "")
             }
           />
         ) : (
@@ -110,6 +123,11 @@ export default async function AdminFeedbackPage({
                 >
                   {CATEGORY_LABEL[item.category] ?? item.category}
                 </span>
+                {item.area ? (
+                  <span className="rounded-full border border-gold/50 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                    {AREA_LABEL[item.area]}
+                  </span>
+                ) : null}
                 <span className="text-sm font-medium text-foreground">
                   {item.subject}
                 </span>
@@ -153,7 +171,24 @@ export default async function AdminFeedbackPage({
                     </Link>
                   </span>
                 ) : null}
+                {item.deck ? (
+                  <span>
+                    Deck:{" "}
+                    {item.deck.isPrivate ? (
+                      // Its page opens for its owner only (decks' RLS).
+                      <span className="font-medium">{item.deck.title} (private)</span>
+                    ) : (
+                      <Link
+                        href={`/deck/${item.deck.slug}`}
+                        className="font-medium text-primary-bright hover:underline"
+                      >
+                        {item.deck.title}
+                      </Link>
+                    )}
+                  </span>
+                ) : null}
                 {item.pageUrl ? <span>Page: {item.pageUrl}</span> : null}
+                {item.viewport ? <span>Window: {item.viewport.replace("x", " × ")} px</span> : null}
                 <span className="ml-auto flex flex-wrap items-center gap-2">
                   <FeedbackReplyButton
                     feedbackId={item.id}
@@ -187,7 +222,9 @@ function FilterTab({
   return (
     <Link
       href={href}
-      aria-current={active ? "page" : undefined}
+      // "true", never "page": two filter rows each mark their own choice,
+      // and neither link is the page itself.
+      aria-current={active ? "true" : undefined}
       className={cn(
         "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
         active

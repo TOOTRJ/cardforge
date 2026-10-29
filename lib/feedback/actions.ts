@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser, getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import {
+  deckFeedbackCategory,
+  deckFeedbackSchema,
+  deckFeedbackSubject,
   feedbackSchema,
   FEEDBACK_STATUSES,
   type FeedbackStatus,
 } from "@/lib/feedback/schemas";
+import type { Database } from "@/types/supabase";
 
 export type FeedbackActionResult =
   | { ok: true }
@@ -34,13 +38,72 @@ export async function submitFeedbackAction(
     };
   }
 
+  return insertFeedback(user.id, {
+    category: parsed.data.category,
+    subject: parsed.data.subject,
+    message: parsed.data.message,
+    frame_template: parsed.data.frame_template ?? null,
+    page_url: parsed.data.page_url ?? null,
+  });
+}
+
+/** The deck feedback dialog (TODO DK10.1): Idea / Bug / Other and a
+ *  message, filed under area "decks" with the deck, the page's path and the
+ *  window size it attached. A deck the sender can't read is dropped rather
+ *  than refused (0146's insert policy would refuse the whole row) — the
+ *  feedback still arrives, without the link. */
+export async function submitDeckFeedbackAction(
+  input: unknown,
+): Promise<FeedbackActionResult> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { ok: false, error: "Sign in to send feedback." };
+  }
+
+  const parsed = deckFeedbackSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        parsed.error.issues[0]?.message ?? "Check your feedback and try again.",
+    };
+  }
+
+  let deckId = parsed.data.deck_id ?? null;
+  if (deckId) {
+    const supabase = await createClient();
+    const { data: deck } = await supabase
+      .from("decks")
+      .select("id")
+      .eq("id", deckId)
+      .maybeSingle();
+    if (!deck) deckId = null;
+  }
+
+  return insertFeedback(user.id, {
+    category: deckFeedbackCategory(parsed.data.kind),
+    subject: deckFeedbackSubject(parsed.data.message),
+    message: parsed.data.message,
+    area: "decks",
+    deck_id: deckId,
+    page_url: parsed.data.page_url ?? null,
+    viewport: parsed.data.viewport ?? null,
+  });
+}
+
+/** One insert for every intake: the hourly cap, then the row under RLS
+ *  (users insert their own; 0051's trigger pings the admins). */
+async function insertFeedback(
+  userId: string,
+  row: Omit<Database["public"]["Tables"]["feedback"]["Insert"], "user_id">,
+): Promise<FeedbackActionResult> {
   const supabase = await createClient();
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count } = await supabase
     .from("feedback")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .gte("created_at", oneHourAgo);
   if ((count ?? 0) >= MAX_PER_HOUR) {
     return {
@@ -50,16 +113,9 @@ export async function submitFeedbackAction(
     };
   }
 
-  const { error } = await supabase.from("feedback").insert({
-    user_id: user.id,
-    category: parsed.data.category,
-    subject: parsed.data.subject,
-    message: parsed.data.message,
-    frame_template: parsed.data.frame_template ?? null,
-    page_url: parsed.data.page_url ?? null,
-  });
+  const { error } = await supabase.from("feedback").insert({ ...row, user_id: userId });
   if (error) {
-    console.warn("submitFeedbackAction: insert error", error.message);
+    console.warn("insertFeedback: insert error", error.message);
     return { ok: false, error: "Couldn't save your feedback. Try again." };
   }
 

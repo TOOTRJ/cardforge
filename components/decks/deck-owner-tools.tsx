@@ -45,6 +45,8 @@ import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/dec
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
+import type { CardCapacity } from "@/lib/billing/capacity-copy";
+import type { DeckCapacity } from "@/lib/billing/deck-capacity-copy";
 
 /** What a page control can open: the details dialog, the import dialog in
  *  one of its modes, or "Add from my cards" (for the commander zone too). */
@@ -120,6 +122,8 @@ export function DeckToolButton({
 export function DeckOwnerTools({
   deck,
   userId,
+  capacity = null,
+  deckCapacity = null,
   defaultCoverSrc = null,
   openImport = false,
 }: {
@@ -128,6 +132,12 @@ export function DeckOwnerTools({
   /** The default background the deck shows while it has no upload
    *  (deckCoverOf) — the cover field previews it. */
   defaultCoverSrc?: string | null;
+  /** Saved-card slots: the import's forecast (D2 — customizing an imported
+   *  card is what takes one). */
+  capacity?: CardCapacity | null;
+  /** Private-deck slots: the details form warns before a public deck is
+   *  turned private or unlisted past the cap (TODO DK3.2). */
+  deckCapacity?: DeckCapacity | null;
   openImport?: boolean;
 }) {
   const [details, setDetails] = useState(false);
@@ -172,7 +182,13 @@ export function DeckOwnerTools({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <ImportDecklistDialog deckId={deck.id} defaultOpen={openImport} request={importRequest} onCloseAutoFocus={returnFocus} />
+      <ImportDecklistDialog
+        deckId={deck.id}
+        defaultOpen={openImport}
+        request={importRequest}
+        onCloseAutoFocus={returnFocus}
+        cardCapacity={capacity}
+      />
       <Button
         type="button"
         variant="outline"
@@ -228,7 +244,15 @@ export function DeckOwnerTools({
             <DialogDescription>Name, description, format, visibility and cover.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <DeckCreatorForm mode="edit" userId={userId} deck={deck} defaultCoverSrc={defaultCoverSrc} embedded onSaved={() => setDetails(false)} />
+            <DeckCreatorForm
+              mode="edit"
+              userId={userId}
+              deck={deck}
+              defaultCoverSrc={defaultCoverSrc}
+              deckCapacity={deckCapacity}
+              embedded
+              onSaved={() => setDetails(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>

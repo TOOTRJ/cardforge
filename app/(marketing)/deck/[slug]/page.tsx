@@ -27,6 +27,8 @@ import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
+import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import {
   countDeckEntries,
   getDeckBySlugWithOwner,
@@ -46,6 +48,8 @@ import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
+import { getCardCapacity } from "@/lib/cards/capacity";
+import { getDeckCapacity } from "@/lib/decks/capacity";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -169,13 +173,18 @@ export default async function DeckDetailPage({
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, ownerCapacity] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
     cookies(),
     headers(),
     searchParams,
+    // The owner's slots: saved cards (the import's forecast, D2) and
+    // private decks (the details form's warning, TODO DK3.2).
+    isOwner
+      ? Promise.all([getCardCapacity(), getDeckCapacity()]).then(([cards, decks]) => ({ cards, decks }))
+      : null,
   ]);
 
   // The rows as this viewer's list shows them: a private card's title never
@@ -272,6 +281,7 @@ export default async function DeckDetailPage({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to decks
       </Link>
+      <DeckBetaBanner deckId={deck.id} signedIn={Boolean(user)} className="mb-6" />
 
       {/* The hero (TODO DK6.5): the cover — the same 16:9 picture every
           deck tile draws (lib/decks/cover.ts) — with the featured cards and
@@ -360,6 +370,7 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
+            <DeckFeedbackButton deckId={deck.id} signedIn={Boolean(user)} className="h-9" />
             {/* Free for every viewer (TODO DK0.7). */}
             {copyEntries ? (
               <DeckCopyDecklist
@@ -381,6 +392,8 @@ export default async function DeckDetailPage({
               deck={deck}
               userId={user.id}
               defaultCoverSrc={cover.kind === "default" ? cover.src : null}
+              capacity={ownerCapacity?.cards ?? null}
+              deckCapacity={ownerCapacity?.decks ?? null}
               openImport={search.import === "1"}
             />
           </div>
@@ -475,6 +488,7 @@ export default async function DeckDetailPage({
           />
         </Suspense>
       </div>
+      <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </div>
   );
 }
