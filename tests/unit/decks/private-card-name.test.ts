@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+import { PRIVATE_CARD_NAME, hidesEntryName, publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
+
+// ---------------------------------------------------------------------------
+// A public deck's view of a card the strong-language rule kept private
+// (owner 2026-10-28): the entry's own copy of the name is not shown to
+// anyone but the owner — narrowly: only an entry linking a card the viewer
+// can't read whose name or type line holds strong language. Ordinary
+// private cards and printings are as before. ROT13'd: the repo is public.
+// ---------------------------------------------------------------------------
+
+const rot13 = (text: string) =>
+  text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
+const STRONG = rot13("fuvg");
+
+const entry = (name: string, overrides: Record<string, unknown> = {}) => ({
+  id: "e-1",
+  card_id: "c-1",
+  name,
+  type_line: "Creature — Goblin",
+  quantity: 1,
+  ...overrides,
+});
+
+describe("publicDeckItems", () => {
+  it("hides an unreadable card's name with strong language from a viewer", () => {
+    const [item] = publicDeckItems([{ entry: entry(`${STRONG} Goblin`), card: null }], false);
+    expect(item.entry.name).toBe(PRIVATE_CARD_NAME);
+    expect(item.entry.type_line).toBeNull();
+    expect(item.entry.quantity).toBe(1);
+  });
+
+  it("…and one whose type line holds it", () => {
+    const [item] = publicDeckItems([{ entry: entry("Grim Goblin", { type_line: `Creature — ${STRONG}` }), card: null }], false);
+    expect(item.entry.name).toBe(PRIVATE_CARD_NAME);
+  });
+
+  it("the owner always sees the real name", () => {
+    const items = [{ entry: entry(`${STRONG} Goblin`), card: null }];
+    expect(publicDeckItems(items, true)).toEqual(items);
+  });
+
+  it("keeps today's behaviour for everything else", () => {
+    const items = [
+      // An ordinary private card in a public deck.
+      { entry: entry("Grim Goblin"), card: null },
+      // A readable card (public / unlisted): its own title is shown anyway.
+      { entry: entry(`${STRONG} Goblin`), card: { id: "c-1", title: "Grim Goblin" } },
+      // A printing or a placeholder: no linked card.
+      { entry: entry("Goblin Guide", { card_id: null }), card: null },
+    ];
+    expect(publicDeckItems(items, false)).toEqual(items);
+    expect(hidesEntryName(entry(`${STRONG}`, { card_id: null }), null, false)).toBe(false);
+  });
+});
+
+describe("publicDeckWarning", () => {
+  it("quotes 'Private card' instead of a name with strong language, for a viewer only", () => {
+    const warning = { code: "copy_limit", message: `“${STRONG} Goblin” appears 5× — the limit is 4 copies across mainboard and sideboard.` };
+    expect(publicDeckWarning(warning, false).message).toBe(
+      `“${PRIVATE_CARD_NAME}” appears 5× — the limit is 4 copies across mainboard and sideboard.`,
+    );
+    expect(publicDeckWarning(warning, true)).toBe(warning);
+    const clean = { code: "copy_limit", message: "“Goblin Guide” appears 5× — the limit is 4 copies." };
+    expect(publicDeckWarning(clean, false)).toBe(clean);
+  });
+});

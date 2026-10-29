@@ -17,10 +17,15 @@
 // one exception is the INFIX list: a stem no English word contains, matched
 // anywhere ("motherf…").
 //
-// A word may be disguised: case, accents and full-width letters
-// (NFKD), leetspeak (4→a, 3→e, 1→i, 0→o, 5/$→s, 7→t, @→a, v→u…), a `*`
-// standing for a vowel, letters repeated ("fuuuu…"), invisible characters
-// inside it, and every letter spaced out ("f u c k", "f.u.c.k").
+// A PREFIX stem (one no English word begins with) counts at a word's start
+// whatever follows it.
+//
+// A word may be disguised: case, accents and full-width letters (NFKD),
+// Cyrillic / Greek look-alikes, leetspeak (4→a, 3→e, 1→i, 0→o, 5/$→s, 7→t,
+// @→a, v→u…), a `*` masking any letter ("f*ck", "f**k" — a match keeps two
+// real letters), letters repeated ("fuuuu…"), invisible characters inside
+// it, and every letter spaced out ("f u c k", "f.u.c.k"). A match with no
+// real letter at all is a number, never a word ("600k").
 //
 // The repo is PUBLIC: the words are stored ROT13'd below (a light
 // obfuscation, not a secret — decode with any ROT13 tool). Tests use the
@@ -29,6 +34,14 @@
 
 /** Stems matched ANYWHERE inside a word (ROT13). No English word holds one. */
 const INFIX_ROT13 = "shpx";
+
+/** Stems matched at the START of a word, whatever follows (ROT13): no
+ *  English word begins with one ("…ing", "…ers", compounds). A stem an
+ *  innocent word starts with — "shittim", "twattle", "spice", "retardant",
+ *  "beanery", "coonhound", "niggard", "Pakistan" — is never here: its forms
+ *  are listed whole below instead. */
+const PREFIX_ROT13 =
+  "phag avttre snttbg pbpxfhpx nffubyr nefrubyr qvpxurnq ovgpu juber fyhg wvmm qvyqb oybjwbo jrgonpx enturnq gbjryurnq fuvgurnq ohyyfuvg ubefrfuvg qvcfuvg";
 
 /** Whole-word forms (ROT13), grouped by stem. A form counts only on its own. */
 const WORDS_ROT13 = [
@@ -52,24 +65,25 @@ function rot13(text: string): string {
   return text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
 }
 
-// What may stand for each letter (always lower-case, after NFKD). `*` is a
-// masked vowel ("f*ck"); `v` is the Roman-style u.
+// What may stand for each letter (always lower-case, after NFKD and the
+// look-alike fold). `v` is the Roman-style u. No digit stands for g: "600k
+// bounty" and "900K gold" are numbers, not a slur. A `*` masks ANY letter
+// ("f*ck", "f**k") — a match must still hold real letters (realEnough).
 const LEET: Readonly<Record<string, string>> = {
-  a: "a4@*",
+  a: "a4@",
   b: "b8",
-  c: "c(",
-  e: "e3*",
-  g: "g69",
-  i: "i1!|*",
+  c: "c",
+  e: "e3",
+  i: "i1!|",
   l: "l1|",
-  o: "o0*",
+  o: "o0",
   s: "s5$",
   t: "t7+",
-  u: "uv*",
+  u: "uv",
 };
 
 const escapeClass = (chars: string) => chars.replace(/[\\\]^-]/g, "\\$&");
-const classOf = (letter: string) => `[${escapeClass(LEET[letter] ?? letter)}]`;
+const classOf = (letter: string) => `[${escapeClass(`${LEET[letter] ?? letter}*`)}]`;
 
 /** A form's letters, each run of k equal letters allowing k or more. */
 function compactPattern(word: string): string {
@@ -89,38 +103,82 @@ function spacedPattern(word: string): string {
 }
 
 const WORD_FORMS: readonly string[] = WORDS_ROT13.flatMap((group) => group.split(" ")).map(rot13);
+const PREFIX_FORMS: readonly string[] = PREFIX_ROT13.split(" ").map(rot13);
 const INFIX_FORMS: readonly string[] = INFIX_ROT13.split(" ").map(rot13);
 
 // No letter or digit on either side of a whole word.
 const BEFORE = "(?<![\\p{L}\\p{N}])";
 const AFTER = "(?![\\p{L}\\p{N}])";
 
-const WORD_RE = new RegExp(
-  `${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(compactPattern).join("|")})${AFTER}`,
-  "u",
-);
-const SPACED_RE = new RegExp(
-  `${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(spacedPattern).join("|")})${AFTER}`,
-  "u",
-);
-const INFIX_RE = new RegExp(`(?:${INFIX_FORMS.map(compactPattern).join("|")})`, "u");
+const MATCHERS: readonly RegExp[] = [
+  // A listed form on its own.
+  new RegExp(`${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(compactPattern).join("|")})${AFTER}`, "gu"),
+  // A stem at a word's start, whatever follows.
+  new RegExp(`${BEFORE}(?:${PREFIX_FORMS.map(compactPattern).join("|")})`, "gu"),
+  // An infix stem anywhere.
+  new RegExp(`(?:${INFIX_FORMS.map(compactPattern).join("|")})`, "gu"),
+  // A form spelled out letter by letter.
+  new RegExp(`${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(spacedPattern).join("|")})${AFTER}`, "gu"),
+];
+
+/** A match is a word only with real letters in it: one at least ("$h1t"
+ *  has two, "5007" none), two once a `*` masks any ("f**k" yes, "c***" no,
+ *  "****" no). */
+function realEnough(match: string): boolean {
+  const letters = match.match(/\p{L}/gu)?.length ?? 0;
+  return match.includes("*") ? letters >= 2 : letters >= 1;
+}
 
 // Characters that draw nothing: a soft hyphen or a zero-width joiner inside
 // a word must not split it.
-const INVISIBLE = /[­​-‏⁠﻿]/g;
+const INVISIBLE = new RegExp("[\\u00AD\\u200B-\\u200F\\u2060\\uFEFF]", "g");
+
+// Cyrillic and Greek letters that look like Latin ones (lower case, after
+// NFKD), folded to the Latin letter they pass for.
+const LOOK_ALIKES: Readonly<Record<string, string>> = {
+  "а": "a", "в": "b", "е": "e", "ё": "e", "к": "k", "м": "m", "н": "h", "о": "o", "р": "p", "с": "c", "т": "t", "у": "y", "х": "x",
+  "і": "i", "ї": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "ɡ": "g", "ɩ": "i",
+  "α": "a", "β": "b", "ε": "e", "η": "n", "ι": "i", "κ": "k", "μ": "u", "ν": "v", "ο": "o", "ρ": "p", "τ": "t", "υ": "u", "χ": "x", "ζ": "z",
+};
+const LOOK_ALIKE_RE = new RegExp(`[${Object.keys(LOOK_ALIKES).join("")}]`, "gu");
 
 /** The text as the matcher reads it: no accents, no invisible characters,
- *  full-width and other compatibility forms folded, lower case. */
+ *  full-width and other compatibility forms folded, Cyrillic / Greek
+ *  look-alikes folded to Latin, lower case. */
 function normalized(text: string): string {
-  return text.normalize("NFKD").replace(/\p{M}/gu, "").replace(INVISIBLE, "").toLowerCase();
+  return text
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(INVISIBLE, "")
+    .toLowerCase()
+    .replace(LOOK_ALIKE_RE, (c) => LOOK_ALIKES[c] ?? c);
 }
 
 /** True when `text` holds strong language — a listed word on its own (or
- *  disguised), or an infix stem anywhere. */
+ *  disguised), a listed stem at a word's start, or an infix stem anywhere. */
 export function containsProfanity(text: string | null | undefined): boolean {
   if (!text) return false;
   const value = normalized(text);
-  return WORD_RE.test(value) || INFIX_RE.test(value) || SPACED_RE.test(value);
+  for (const matcher of MATCHERS) {
+    matcher.lastIndex = 0;
+    for (const match of value.matchAll(matcher)) {
+      if (realEnough(match[0])) return true;
+    }
+  }
+  return false;
+}
+
+/** A field's text as an EDIT compares it (lib/cards/actions.ts, the
+ *  creator): its words, normalised, as a set — so a stored text and the
+ *  same text resent (typography kept, rows dual-written beside the rules,
+ *  tags as a list or as typed) read as unchanged, and any word added,
+ *  changed or removed reads as an edit. */
+function wordsOf(texts: readonly string[]): string {
+  const words = new Set<string>();
+  for (const text of texts) {
+    for (const word of normalized(text).split(/[^\p{L}\p{N}*$@!|+(]+/u)) if (word) words.add(word);
+  }
+  return [...words].sort().join(" ");
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +187,9 @@ export function containsProfanity(text: string | null | undefined): boolean {
 
 /** The places a card's text lives, as the creator and the notice name them.
  *  The type line is one field (supertype, the typed Types line, subtypes);
- *  a walker's / saga's / station card's rows are its rules text. */
+ *  a walker's / saga's / station card's rows are its rules text; the
+ *  printed stats and the collector line (P/T, loyalty, defense, set code,
+ *  collector number, a cost's unrecognised `{…}` symbols) are one. */
 export const PROFANITY_FIELDS = [
   "title",
   "nickname",
@@ -137,6 +197,7 @@ export const PROFANITY_FIELDS = [
   "rules_text",
   "flavor_text",
   "artist_credit",
+  "stats",
   "footer_text",
   "tags",
   "back_face.title",
@@ -144,6 +205,7 @@ export const PROFANITY_FIELDS = [
   "back_face.rules_text",
   "back_face.flavor_text",
   "back_face.artist_credit",
+  "back_face.stats",
 ] as const;
 
 export type ProfanityField = (typeof PROFANITY_FIELDS)[number];
@@ -155,6 +217,7 @@ const FIELD_LABELS: Readonly<Record<ProfanityField, string>> = {
   rules_text: "rules text",
   flavor_text: "flavor text",
   artist_credit: "artist credit",
+  stats: "stats / collector line",
   footer_text: "footer mark",
   tags: "tags",
   "back_face.title": "second face's name",
@@ -162,6 +225,7 @@ const FIELD_LABELS: Readonly<Record<ProfanityField, string>> = {
   "back_face.rules_text": "second face's rules text",
   "back_face.flavor_text": "second face's flavor text",
   "back_face.artist_credit": "second face's artist credit",
+  "back_face.stats": "second face's stats",
 };
 
 /** A card's text as any save path holds it: a payload or a stored row
@@ -183,11 +247,19 @@ export type ProfanityScanInput = {
   saga_chapters?: unknown;
   flavor_text?: unknown;
   artist_credit?: unknown;
+  /** The printed stats and collector line. */
+  cost?: unknown;
+  power?: unknown;
+  toughness?: unknown;
+  loyalty?: unknown;
+  defense?: unknown;
+  set_code?: unknown;
+  collector_number?: unknown;
   footer_text?: unknown;
   tags?: unknown;
   tags_text?: unknown;
   /** The second face / part: the same keys (its own name, type line,
-   *  rules, flavour and artist). */
+   *  rules, flavour, artist and stats). */
   back_face?: unknown;
 };
 
@@ -200,41 +272,68 @@ function textsOf(value: unknown, depth = 0): string[] {
   return children.flatMap((child) => textsOf(child, depth + 1));
 }
 
-const anyProfane = (...values: unknown[]) => values.some((value) => textsOf(value).some(containsProfanity));
+// A cost's symbols the card prints as symbols — colours, generic numbers,
+// X / Y / Z, snow, tap / untap, energy, Phyrexian, hybrid and twobrid,
+// half, infinity, chaos. Anything else inside `{…}` is text to the reader.
+const COST_SYMBOL =
+  /^(?:[wubrgcsxyzteqpa]|\d{1,3}|[wubrgc2](?:\/[wubrgcp])(?:\/p)?|h[wubrgcr]|½|∞|chaos|pw|tk|l)$/i;
 
-/** The face fields of one face that hold strong language, unprefixed. */
-function faceFields(face: ProfanityScanInput, front: boolean): ProfanityField[] {
-  const out: ProfanityField[] = [];
-  if (anyProfane(face.title)) out.push("title");
-  if (front && anyProfane(face.nickname)) out.push("nickname");
-  if (anyProfane(face.supertype, face.printed_types, face.subtypes, face.subtypes_text)) out.push("type_line");
-  if (
-    anyProfane(
-      face.rules_text,
-      ...(front ? [face.face_content, face.loyalty_abilities, face.saga_intro, face.saga_chapters] : []),
-    )
-  ) {
-    out.push("rules_text");
+/** A cost as text: what sits outside its symbols, and every `{…}` that is
+ *  no symbol. */
+function costTexts(cost: unknown): string[] {
+  if (typeof cost !== "string") return [];
+  return [cost.replace(/\{([^}]*)\}/g, (_token, inner: string) => (COST_SYMBOL.test(inner.trim()) ? " " : ` ${inner} `))];
+}
+
+type FieldTexts = Map<ProfanityField, string[]>;
+
+/** One face's texts, field by field (unprefixed). */
+function faceTexts(face: ProfanityScanInput, front: boolean): Array<[ProfanityField, string[]]> {
+  return [
+    ["title", textsOf(face.title)],
+    ["nickname", front ? textsOf(face.nickname) : []],
+    ["type_line", [face.supertype, face.printed_types, face.subtypes, face.subtypes_text].flatMap((v) => textsOf(v))],
+    [
+      "rules_text",
+      [face.rules_text, ...(front ? [face.face_content, face.loyalty_abilities, face.saga_intro, face.saga_chapters] : [])].flatMap((v) =>
+        textsOf(v),
+      ),
+    ],
+    ["flavor_text", textsOf(face.flavor_text)],
+    ["artist_credit", textsOf(face.artist_credit)],
+    [
+      "stats",
+      [
+        ...costTexts(face.cost),
+        ...[face.power, face.toughness, face.loyalty, face.defense, ...(front ? [face.set_code, face.collector_number] : [])].flatMap((v) =>
+          textsOf(v),
+        ),
+      ],
+    ],
+  ];
+}
+
+/** Every field's texts. */
+function fieldTextsOf(card: ProfanityScanInput): FieldTexts {
+  const out: FieldTexts = new Map(faceTexts(card, true));
+  out.set("footer_text", textsOf(card.footer_text));
+  out.set("tags", [card.tags, card.tags_text].flatMap((v) => textsOf(v)));
+  const back = card.back_face;
+  if (back && typeof back === "object" && !Array.isArray(back)) {
+    for (const [field, texts] of faceTexts(back as ProfanityScanInput, false)) {
+      out.set(`back_face.${field}` as ProfanityField, texts);
+    }
   }
-  if (anyProfane(face.flavor_text)) out.push("flavor_text");
-  if (anyProfane(face.artist_credit)) out.push("artist_credit");
   return out;
 }
+
+const profaneIn = (texts: FieldTexts) =>
+  PROFANITY_FIELDS.filter((field) => (texts.get(field) ?? []).some(containsProfanity));
 
 /** The fields of a card whose text holds strong language, in the order
  *  PROFANITY_FIELDS lists them — empty for a clean card. */
 export function profaneFields(card: ProfanityScanInput | null | undefined): ProfanityField[] {
-  if (!card) return [];
-  const found = new Set<ProfanityField>(faceFields(card, true));
-  if (anyProfane(card.footer_text)) found.add("footer_text");
-  if (anyProfane(card.tags, card.tags_text)) found.add("tags");
-  const back = card.back_face;
-  if (back && typeof back === "object" && !Array.isArray(back)) {
-    for (const field of faceFields(back as ProfanityScanInput, false)) {
-      found.add(`back_face.${field}` as ProfanityField);
-    }
-  }
-  return PROFANITY_FIELDS.filter((field) => found.has(field));
+  return card ? profaneIn(fieldTextsOf(card)) : [];
 }
 
 // ---------------------------------------------------------------------------
@@ -250,11 +349,12 @@ const AUDIENCE: Readonly<Record<VisibilityValue, number>> = { private: 0, unlist
  * save would store. A private save is never forced (nothing to force).
  *
  * An EDIT (`stored` = the row before it) of a card that is already public
- * or unlisted is left as it is when it adds no strong language (every field
- * that holds some held some before) and asks for no wider audience: the
- * policy is not applied retroactively, and an edit never changes what its
- * maker did not touch (CLAUDE.md). Typing a new word, or publishing a draft
- * whose text holds one, makes it private.
+ * or unlisted is left as it is only while every field that holds strong
+ * language held it before with its text UNCHANGED (its words, normalised —
+ * wordsOf) and the edit asks for no wider audience: the policy is not
+ * applied retroactively, and an edit never changes what its maker did not
+ * touch (CLAUDE.md). Typing a new word, editing a flagged field in any way,
+ * or publishing a draft whose text holds one makes it private.
  */
 export function languageForcesPrivate(input: {
   saved: ProfanityScanInput;
@@ -263,13 +363,17 @@ export function languageForcesPrivate(input: {
 }): ProfanityField[] {
   const visibility = input.visibility as VisibilityValue;
   if (!(visibility in AUDIENCE) || visibility === "private") return [];
-  const fields = profaneFields(input.saved);
+  const saved = fieldTextsOf(input.saved);
+  const fields = profaneIn(saved);
   if (fields.length === 0 || !input.stored) return fields;
   const storedVisibility = input.stored.visibility as VisibilityValue;
   if (!(storedVisibility in AUDIENCE) || storedVisibility === "private") return fields;
   if (AUDIENCE[visibility] > AUDIENCE[storedVisibility]) return fields;
-  const before = new Set(profaneFields(input.stored.card));
-  return fields.every((field) => before.has(field)) ? [] : fields;
+  const stored = fieldTextsOf(input.stored.card);
+  const untouched = (field: ProfanityField) =>
+    (stored.get(field) ?? []).some(containsProfanity) &&
+    wordsOf(stored.get(field) ?? []) === wordsOf(saved.get(field) ?? []);
+  return fields.every(untouched) ? [] : fields;
 }
 
 // ---------------------------------------------------------------------------

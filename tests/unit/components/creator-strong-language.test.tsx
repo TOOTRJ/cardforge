@@ -194,6 +194,18 @@ describe("the Publish step while the text holds strong language", () => {
     expect(visibilityChip(/^Public/).getAttribute("aria-checked")).toBe("true");
   });
 
+  it("a choice still open says nothing more than its chips: an unlisted card kept from Public", async () => {
+    renderForm({ card: savedCard({ visibility: "unlisted", flavor_text: STRONG }) });
+    await goTo(/Publish/);
+    expect(chipOff(visibilityChip(/^Public/))).toBe(true);
+    expect(visibilityChip(/^Public/).textContent).toContain(STRONG_LANGUAGE_CHOICE_REASON);
+    expect(chipOff(visibilityChip(/^Unlisted/))).toBe(false);
+    expect(visibilityChip(/^Unlisted/).getAttribute("aria-checked")).toBe("true");
+    // Its current choice saves as asked: no note.
+    expect(note().textContent).toBe("");
+    expect(screen.getByRole("radiogroup", { name: "Visibility" }).getAttribute("aria-describedby")).toBeNull();
+  });
+
   it("an edit of a card already public that adds none is left alone (not retroactive)", async () => {
     renderForm({ card: savedCard({ flavor_text: STRONG }) });
     await goTo(/Publish/);

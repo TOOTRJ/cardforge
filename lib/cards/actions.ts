@@ -351,8 +351,13 @@ export async function createCardAction(
 
   // A second face may stay unnamed on a private draft only (TODO 3b.5,
   // lib/cards/second-face-name.ts) — judged at the visibility the row will
-  // be stored with.
-  if (missingSecondFaceName(data.back_face, storedVisibility)) {
+  // be stored with: a save the strong-language rule makes private (below,
+  // on the row as written) is a draft's, so its text is read here too and
+  // such a save is never refused for the name. (The footer is the one field
+  // read only below: whether it is stored depends on the plan.)
+  const textForcesPrivate =
+    languageForcesPrivate({ saved: { ...data, footer_text: undefined }, visibility: storedVisibility }).length > 0;
+  if (missingSecondFaceName(data.back_face, textForcesPrivate ? "private" : storedVisibility)) {
     return {
       ok: false,
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
@@ -1014,23 +1019,6 @@ export async function updateCardAction(
   // CHECK would refuse anything else); only a preview save names the flag.
   if (previewCard || becomesPreview) update.visibility = "private";
   if (becomesPreview) update.frame_preview = true;
-  // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
-  // card as it will be stored — the patched back face over the stored one,
-  // at the visibility the rule above settled on — so both "publish a draft
-  // with an unnamed half" and "clear the name of a public card" refuse.
-  if (
-    missingSecondFaceName(
-      data.back_face !== undefined
-        ? data.back_face
-        : (existing.back_face as { title?: string | null } | null),
-      update.visibility ?? existing.visibility,
-    )
-  ) {
-    return {
-      ok: false,
-      fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
-    };
-  }
   if (data.parent_card_id !== undefined) {
     // Same pre-flight createCardAction runs: the parent must exist and a
     // card can't be its own remix (a dangling id used to be stored as-is).
@@ -1091,6 +1079,26 @@ export async function updateCardAction(
     stored: { card: existing, visibility: existing.visibility },
   });
   if (languageFields.length > 0) update.visibility = "private";
+
+  // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
+  // card as it will be stored — the patched back face over the stored one,
+  // at the visibility the rules above settled on (the strong-language rule
+  // included: a save it makes private is a draft's, never refused here) —
+  // so both "publish a draft with an unnamed half" and "clear the name of a
+  // public card" refuse.
+  if (
+    missingSecondFaceName(
+      data.back_face !== undefined
+        ? data.back_face
+        : (existing.back_face as { title?: string | null } | null),
+      update.visibility ?? existing.visibility,
+    )
+  ) {
+    return {
+      ok: false,
+      fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
+    };
+  }
 
   // The stored bake shows the card as it was before this edit, and the
   // re-bake below only lands seconds after the response: in the SAME write,

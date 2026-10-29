@@ -76,6 +76,29 @@ describe("containsProfanity — strong words", () => {
   it("finds the infix stem inside a longer word", () => {
     expect(containsProfanity(`un${F}withable`)).toBe(true);
   });
+
+  it("finds a prefix stem whatever follows it (no English word starts with one)", () => {
+    for (const form of ["ovgpuvarff", "juberqbz", "phagvfu", "fyhggvfu", "nffubyrel"].map(rot13)) {
+      expect(containsProfanity(form), form).toBe(true);
+    }
+  });
+
+  it("folds Cyrillic and Greek look-alike letters", () => {
+    expect(containsProfanity(S.replace("i", "і"))).toBe(true); // Cyrillic і
+    expect(containsProfanity(F.replace("u", "υ"))).toBe(true); // Greek υ
+    expect(containsProfanity(rot13("pbbaf").replace(/o/g, "о"))).toBe(true); // Cyrillic о
+    expect(containsProfanity(rot13("ovgpu").replace("c", "с"))).toBe(true); // Cyrillic с
+  });
+
+  it("finds a word with two letters masked, never a mask with too few real letters", () => {
+    expect(containsProfanity(`${F[0]}**${F[3]}`)).toBe(true);
+    expect(containsProfanity(`${S[0]}**${S[3]}`)).toBe(true);
+    expect(containsProfanity(`**${S}**`)).toBe(true);
+    expect(containsProfanity(`${F[0]}***`)).toBe(false);
+    expect(containsProfanity("****")).toBe(false);
+    expect(containsProfanity("*/*")).toBe(false);
+    expect(containsProfanity("1+*")).toBe(false);
+  });
 });
 
 describe("containsProfanity — no false positives", () => {
@@ -146,6 +169,22 @@ describe("containsProfanity — no false positives", () => {
   it("leaves every keyword and its reminder text alone", () => {
     const texts = [...CR_KEYWORD_NAMES, ...KEYWORD_REMINDERS.flatMap((k) => [k.name, k.text, k.reminder])];
     expect(texts.filter((text) => containsProfanity(text))).toEqual([]);
+  });
+
+  it("never reads a number as a word (no digit stands for g; a match needs a real letter)", () => {
+    for (const text of ["600k bounty", "900K gold", "Pay 6000 life", "5007", "0000", "1337"]) {
+      expect(containsProfanity(text), text).toBe(false);
+    }
+  });
+
+  // KNOWN false positives, accepted as the list's cost (owner 2026-10-28):
+  // innocent phrases that spell a listed word on its own. Rare in card
+  // text; a card that trips one saves private and its maker is told which
+  // field. Pinned so a change to them is deliberate.
+  it("known, accepted false positives", () => {
+    for (const text of ["Spic and span", "Coon Creek", "pussy willow", "It retards the spread."]) {
+      expect(containsProfanity(text), text).toBe(true);
+    }
   });
 
   it("leaves a spaced-out list of single letters alone", () => {
@@ -221,6 +260,29 @@ describe("profaneFields — every text field of a card", () => {
     expect(profaneFields({ face_content: { v: 1, station: { tiers: [{ threshold: 3, text: S }] } } })).toEqual(["rules_text"]);
   });
 
+  it("reads the printed stats and the collector line, both faces", () => {
+    for (const key of ["power", "toughness", "loyalty", "defense", "set_code", "collector_number"]) {
+      expect(profaneFields({ [key]: S }), key).toEqual(["stats"]);
+    }
+    expect(profaneFields({ cost: `{2}{${S}}` })).toEqual(["stats"]);
+    expect(profaneFields({ back_face: { power: S } })).toEqual(["back_face.stats"]);
+    expect(profaneFields({ back_face: { cost: `{${F}}` } })).toEqual(["back_face.stats"]);
+    // Real stats and costs are no text: the symbols (snow, tap, hybrid,
+    // Phyrexian, X…), stars, the collector line.
+    expect(
+      profaneFields({
+        cost: "{X}{2}{W/U}{B/P}{2/G}{S}{C}{T}{Q}{E}{HW}{½}{∞}",
+        power: "*",
+        toughness: "1+*",
+        loyalty: "X",
+        defense: "5",
+        set_code: "DMU",
+        collector_number: "107/281",
+        back_face: { cost: "{W/U/P}", power: "*" },
+      }),
+    ).toEqual([]);
+  });
+
   it("reads the creator's form values too", () => {
     expect(profaneFields({ subtypes_text: `Goblin ${S}` })).toEqual(["type_line"]);
     expect(profaneFields({ tags_text: `dragons, ${S}` })).toEqual(["tags"]);
@@ -256,6 +318,47 @@ describe("languageForcesPrivate — the rule every save applies", () => {
     expect(
       languageForcesPrivate({ saved: { rules_text: S, flavor_text: S }, visibility: "public", stored: { card: rough, visibility: "public" } }),
     ).toEqual(["rules_text", "flavor_text"]);
+  });
+
+  it("a flagged field is grandfathered only while its text is unchanged — any edit to it forces", () => {
+    const stored = { card: { flavor_text: `A ${S} day.` }, visibility: "public" };
+    expect(languageForcesPrivate({ saved: { flavor_text: `A ${S} day.` }, visibility: "public", stored })).toEqual([]);
+    expect(languageForcesPrivate({ saved: { flavor_text: `A ${S} day, again.` }, visibility: "public", stored })).toEqual([
+      "flavor_text",
+    ]);
+    expect(languageForcesPrivate({ saved: { flavor_text: `${S}.` }, visibility: "public", stored })).toEqual(["flavor_text"]);
+    expect(languageForcesPrivate({ saved: { flavor_text: `A ${F} day.` }, visibility: "public", stored })).toEqual(["flavor_text"]);
+  });
+
+  it("reads a field resent as stored as unchanged: typography, a dual-written walker, tags as typed", () => {
+    // A walker stored as plain text gains its rows beside it on an edit.
+    const walker = { rules_text: `+1: Draw, ${S}.\n−2: Tap it.` };
+    expect(
+      languageForcesPrivate({
+        saved: {
+          ...walker,
+          face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: `Draw, ${S}.` }, { cost: "-2", text: "Tap it." }] } },
+        },
+        visibility: "public",
+        stored: { card: walker, visibility: "public" },
+      }),
+    ).toEqual([]);
+    // The form's typed tags against the stored list; its subtypes text against the array.
+    expect(
+      languageForcesPrivate({
+        saved: { tags_text: `dragons, ${S}`, subtypes_text: `Goblin ${S}` },
+        visibility: "public",
+        stored: { card: { tags: ["dragons", S], subtypes: ["Goblin", S] }, visibility: "public" },
+      }),
+    ).toEqual([]);
+    // Case and accents are no change.
+    expect(
+      languageForcesPrivate({
+        saved: { title: `${S.toUpperCase()} Lord` },
+        visibility: "public",
+        stored: { card: { title: `${S} lord` }, visibility: "public" },
+      }),
+    ).toEqual([]);
   });
 
   it("an edit of a card already in view that adds none and widens nothing is left alone", () => {

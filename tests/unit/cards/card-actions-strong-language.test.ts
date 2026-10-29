@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => false,
 }));
 vi.mock("@/lib/cards/frame-reviews", () => ({
-  getVerifiedFrameKeys: async () => ["m15/w"],
+  getVerifiedFrameKeys: async () => ["m15/w", "split/w"],
 }));
 vi.mock("@/lib/cards/queries", () => ({
   getCardById: async () => state.existing,
@@ -186,7 +186,67 @@ describe("createCardAction — strong language", () => {
   });
 });
 
+// A save the rule makes private is a draft's: an unnamed second face (a
+// draft's privilege, TODO 3b.5) never refuses it.
+const splitPayload = (overrides: Record<string, unknown> = {}) =>
+  payload({
+    card_type: "instant",
+    subtypes: [],
+    power: undefined,
+    toughness: undefined,
+    frame_style: { template: "split" },
+    rules_text: `Deal 2 damage, ${STRONG}.`,
+    back_face: { title: "", card_type: "instant", rules_text: "Tap two target permanents." },
+    ...overrides,
+  });
+
+describe("strong language before the second-face-name refusal", () => {
+  it("create: a public save the text makes private saves, unnamed half and all", async () => {
+    const stub = db();
+    const result = await createCardAction(splitPayload());
+    expect(result).toMatchObject({ ok: true, forcedPrivate: { fields: ["rules_text"] } });
+    expect(insertOf(stub).visibility).toBe("private");
+  });
+
+  it("create: a clean public save with an unnamed half is still refused", async () => {
+    db();
+    const result = await createCardAction(splitPayload({ rules_text: "Deal 2 damage." }));
+    expect(result).toMatchObject({ ok: false, fieldErrors: { "back_face.title": expect.any(String) } });
+  });
+
+  it("edit: publishing a draft with an unnamed half whose text holds it saves private", async () => {
+    state.existing = row({
+      visibility: "private",
+      card_type: "instant",
+      subtypes: [],
+      frame_style: { template: "split" },
+      rules_text: `Deal 2 damage, ${STRONG}.`,
+      back_face: { title: "", card_type: "instant", rules_text: "Tap two target permanents." },
+    });
+    const stub = db();
+    const result = await updateCardAction(CARD, { visibility: "public" });
+    expect(result).toMatchObject({ ok: true, forcedPrivate: { fields: ["rules_text"] } });
+    expect(updateOf(stub).visibility).toBe("private");
+  });
+});
+
 describe("updateCardAction — strong language", () => {
+  it("any edit of a field that already held it forces private (no in-field loophole)", async () => {
+    state.existing = row({ flavor_text: `A ${STRONG} day.` });
+    const stub = db();
+    const result = await updateCardAction(CARD, { flavor_text: `A ${STRONG} day, and worse.`, visibility: "public" });
+    expect(result).toMatchObject({ ok: true, forcedPrivate: { fields: ["flavor_text"] } });
+    expect(updateOf(stub).visibility).toBe("private");
+  });
+
+  it("a stat or the collector line counts", async () => {
+    state.existing = row();
+    const stub = db();
+    const result = await updateCardAction(CARD, { collector_number: STRONG });
+    expect(result).toMatchObject({ ok: true, forcedPrivate: { fields: ["stats"] } });
+    expect(updateOf(stub).visibility).toBe("private");
+  });
+
   it("an edit that types it into a public card makes the card private and takes it out of view", async () => {
     state.existing = row();
     const stub = db();

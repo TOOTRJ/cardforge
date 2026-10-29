@@ -110,19 +110,26 @@ export function PublishPanel({
   const draftNoteId = `${draftId}-note`;
   const languageNoteId = `${draftId}-language`;
   // Strong language in the text: the choices it rules out are unavailable
-  // (aria-disabled, the reason in their name), none of them shows as
-  // picked, and ONE polite note under them says why and names the fields.
-  // The save sends private (card-creator-form.tsx runSubmit).
+  // (aria-disabled, the reason in their name). While the CURRENT choice is
+  // one of them it shows as unpicked and ONE polite note under the chips
+  // says the card will save private and names the fields — the save sends
+  // private (card-creator-form.tsx runSubmit). A choice still open (an
+  // unlisted card kept from Public) says nothing more than its chips do.
   const blockedPublic = strongLanguage?.public ?? [];
   const blockedUnlisted = strongLanguage?.unlisted ?? [];
-  const languageFields = blockedPublic.length > 0 ? blockedPublic : blockedUnlisted;
   const visibilityOptions = VISIBILITY_OPTIONS.map((option) =>
     (option.value === "public" ? blockedPublic : blockedUnlisted).length > 0
       ? { ...option, disabled: true, description: STRONG_LANGUAGE_CHOICE_REASON }
       : option,
   );
-  const blockedNow =
-    (visibility === "public" ? blockedPublic : visibility === "unlisted" ? blockedUnlisted : []).length > 0;
+  const languageFields = saveAsDraft
+    ? []
+    : visibility === "public"
+      ? blockedPublic
+      : visibility === "unlisted"
+        ? blockedUnlisted
+        : [];
+  const blockedNow = languageFields.length > 0;
   // The checkbox and the visibility field move together: ticking it forces
   // private; unticking a private card offers public (the default) again.
   const setSaveAsDraft = (next: boolean) => {
@@ -255,7 +262,7 @@ export function PublishPanel({
             data-testid="strong-language-note"
             className="text-xs leading-5 text-accent empty:-mt-3"
           >
-            {saveAsDraft || languageFields.length === 0 ? null : strongLanguageNote(languageFields)}
+            {blockedNow ? strongLanguageNote(languageFields) : null}
           </p>
         </div>
       </FieldGroup>
