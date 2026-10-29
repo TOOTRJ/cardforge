@@ -28,7 +28,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/faq", "FAQ", "Every common question answered directly — card making, pips, AI, sharing, printing, remixing, challenges, plans."],
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
-  ["/frames/requested", "Requested frames", "The card frames people asked for, most requested first, and whether each is requested or built and being checked."],
+  ["/frames/requested", "Requested frames", "The card frames people asked for, most requested first, and whether each is requested, being checked or built."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
   ["/about", "About", "What PipGlyph is and the principles behind it."],
 ];

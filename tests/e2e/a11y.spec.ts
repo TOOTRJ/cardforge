@@ -31,6 +31,8 @@ const PAGES = [
   "/learn",
   "/learn/design",
   "/tools",
+  "/creators",
+  "/frames/requested",
   "/news",
   "/best-mtg-card-makers",
 ];

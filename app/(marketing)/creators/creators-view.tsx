@@ -97,6 +97,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
         {result.error ? (
           <EmptyState
             icon={Users}
+            headingLevel={2}
             title="The directory isn't available right now"
             description="Creators couldn't be loaded. Try again in a few minutes — their cards are still in the gallery."
             action={
@@ -108,6 +109,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
         ) : result.creators.length === 0 ? (
           <EmptyState
             icon={Users}
+            headingLevel={2}
             title={page > 1 ? "No creators on this page" : "No creators yet"}
             description={
               page > 1
@@ -124,9 +126,13 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
           />
         ) : (
           <>
-            <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {/* grid-cols-1 + min-w-0: an implicit column (no template) sizes
+                to its content, and a strip card drawn live (no stored render)
+                has a min-content wider than a phone — the page scrolled
+                sideways at 390 px. */}
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {result.creators.map((creator) => (
-                <li key={creator.id} className="flex">
+                <li key={creator.id} className="flex min-w-0">
                   <CreatorCard creator={creator} profileOverrides={profileOverrides} />
                 </li>
               ))}

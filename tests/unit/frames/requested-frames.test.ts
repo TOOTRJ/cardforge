@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { FRAME_SIGNATURE_KEYS, FRAME_SIGNATURE_RULES, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
 import { isForGoodSignature } from "@/lib/frames/frame-requests";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import {
+  REQUESTED_FRAMES_MIN_PEOPLE,
   answeredSignaturePairs,
+  exactFramesOfSignature,
   mapRequestedFrames,
   peopleLabel,
   publicFrameLabel,
@@ -17,7 +21,9 @@ import {
 // frame_requests row, whose signature and label are any text a signed-in
 // caller handed record_frame_request(). Held here: the tables cover the
 // registry key for key, the never-built families stay off, the answered
-// pairs are real, and the mapping drops anything it can't name.
+// pairs are real, the mapping drops anything it can't name or that fewer
+// than k people asked for, and the status comes from the registry and the
+// verified combos alone.
 // ---------------------------------------------------------------------------
 
 describe("public frame names", () => {
@@ -99,21 +105,29 @@ describe("what the page passes the database", () => {
   });
 });
 
+/** Every template × colour, verified — and the same less what `drop` names. */
+const ALL_VERIFIED = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((c) => frameComboKey(t, c))));
+const verifiedExcept = (...drop: string[]) => new Set([...ALL_VERIFIED].filter((key) => !drop.includes(key)));
+const NONE = new Set<string>();
+
 describe("the list", () => {
-  it("maps rows to named frames with a status, most people first", () => {
-    const frames = mapRequestedFrames([
-      { signature: "borderless/standard+nickname", people: "1", latest_cause: "missing" },
-      { signature: "extendedart", people: 2, latest_cause: "unverified" },
-      { signature: "japan-showcase", people: "2", latest_cause: "missing" },
-    ]);
+  it("maps rows to named frames with a status from the verified combos, most people first", () => {
+    const frames = mapRequestedFrames(
+      [
+        { signature: "borderless/standard+nickname", people: "2" },
+        { signature: "extendedart", people: 3 },
+        { signature: "japan-showcase", people: "3" },
+      ],
+      NONE,
+    );
     expect(frames).toEqual([
-      { signature: "extendedart", label: "Extended-art frame", detail: null, people: 2, status: "checking" },
-      { signature: "japan-showcase", label: "Japan showcase", detail: null, people: 2, status: "requested" },
+      { signature: "extendedart", label: "Extended-art frame", detail: null, people: 3, status: "checking" },
+      { signature: "japan-showcase", label: "Japan showcase", detail: null, people: 3, status: "requested" },
       {
         signature: "borderless/standard+nickname",
         label: "Borderless frame",
         detail: "The nickname plate",
-        people: 1,
+        people: 2,
         status: "requested",
       },
     ]);
@@ -121,26 +135,67 @@ describe("the list", () => {
     for (const frame of frames) expect(Object.keys(frame).sort()).toEqual(["detail", "label", "people", "signature", "status"]);
   });
 
-  it("drops a row it can't name, one that counts nobody, and a for-good family", () => {
+  it("drops a row it can't name, one under k people, and a for-good family", () => {
+    expect(REQUESTED_FRAMES_MIN_PEOPLE).toBe(2);
     expect(
-      mapRequestedFrames([
-        { signature: "evil <script>alert(1)</script>", people: 9, latest_cause: "missing" },
-        { signature: "retired/seed-example", people: 4, latest_cause: "missing" },
-        { signature: "japan-showcase", people: 0, latest_cause: "missing" },
-        { signature: "future", people: "x", latest_cause: "missing" },
-        { signature: "borderless/poster", people: 3, latest_cause: "missing" },
-      ]),
+      mapRequestedFrames(
+        [
+          { signature: "evil <script>alert(1)</script>", people: 9 },
+          { signature: "retired/seed-example", people: 4 },
+          { signature: "japan-showcase", people: 1 },
+          { signature: "extendedart", people: 0 },
+          { signature: "future", people: "x" },
+          { signature: "borderless/poster", people: 3 },
+        ],
+        NONE,
+      ),
     ).toEqual([]);
   });
+});
 
-  it("calls a frame 'Being checked' when it is built: an unverified latest row, or a rule exact today", () => {
-    expect(requestedFrameStatus("extendedart", "unverified")).toBe("checking");
-    // Exact today; a 'missing' row is from before it was built.
-    expect(requestedFrameStatus("showcase/blb/woodland", "missing")).toBe("checking");
-    // A gap signature is never exact: still requested unless its latest row says unverified.
-    expect(requestedFrameStatus("borderless/standard+nickname", "missing")).toBe("requested");
-    expect(requestedFrameStatus("future", "missing")).toBe("requested");
-    expect(requestedFrameStatus("future", null)).toBe("requested");
+describe("requestedFrameStatus — the registry and the verified combos, never a row", () => {
+  it("is Requested where PipGlyph has no exact frame: a nearest rule, any gap signature", () => {
+    for (const signature of ["japan-showcase", "future", "borderless/standard+nickname", "extendedart+crown"]) {
+      expect(exactFramesOfSignature(signature), signature).toEqual([]);
+      expect(requestedFrameStatus(signature, ALL_VERIFIED), signature).toBe("requested");
+    }
+  });
+
+  it("is Built once every frame it is exact on is verified in every printed colour, else Being checked", () => {
+    const frames = exactFramesOfSignature("extendedart");
+    expect(frames).toContain("extendedart");
+    expect(requestedFrameStatus("extendedart", ALL_VERIFIED)).toBe("built");
+    expect(requestedFrameStatus("extendedart", NONE)).toBe("checking");
+    // One printed colour still to verify keeps it "Being checked".
+    const printed = FRAME_COLOR_KEYS.find((colour) => frameReferenceOptions(frames[0], colour).length > 0)!;
+    expect(requestedFrameStatus("extendedart", verifiedExcept(frameComboKey(frames[0], printed)))).toBe("checking");
+    // A colour no printing exists in is never waited for.
+    const unprinted = FRAME_COLOR_KEYS.filter((colour) => frameReferenceOptions(frames[0], colour).length === 0);
+    if (unprinted.length > 0) {
+      expect(requestedFrameStatus("extendedart", verifiedExcept(frameComboKey(frames[0], unprinted[0])))).toBe("built");
+    }
+  });
+
+  it("reads a frame named once verified as built only where it would be exact (exactOnceVerified)", () => {
+    // The M20 token design: the stand-in arch is not the frame the printing wears.
+    const m20 = exactFramesOfSignature("token/m20");
+    expect(m20.length).toBeGreaterThan(0);
+    expect(m20.every((template) => template.startsWith("m20token"))).toBe(true);
+    expect(requestedFrameStatus("token/m20", NONE)).toBe("checking");
+    // Rule for rule: a frame to check exactly when the registry answers exact,
+    // or names a frame once verified that is exact on it.
+    for (const rule of FRAME_SIGNATURE_RULES) {
+      if (splitSignature(rule.key).gap !== null) continue;
+      const { outcome } = rule;
+      const exact = outcome.status === "exact" || (outcome.onceVerified !== undefined && outcome.exactOnceVerified === true);
+      expect(exactFramesOfSignature(rule.key).length > 0, rule.key).toBe(exact);
+    }
+  });
+
+  it("covers every public signature without throwing", () => {
+    for (const signature of publicSignatures()) {
+      expect(["requested", "checking", "built"]).toContain(requestedFrameStatus(signature, ALL_VERIFIED));
+    }
   });
 
   it("says people, not requests", () => {

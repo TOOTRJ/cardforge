@@ -13,6 +13,7 @@ import {
   REQUESTED_FRAME_STATUS_HINTS,
   REQUESTED_FRAME_STATUS_LABELS,
   REQUESTED_FRAMES_MIN_INDEXED,
+  REQUESTED_FRAMES_MIN_PEOPLE,
   REQUESTED_FRAMES_WINDOW_LABEL,
   peopleLabel,
   type RequestedFrameStatus,
@@ -27,9 +28,11 @@ import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 //
 // The data is migration 0147's requested_frame_counts(): per frame, a count
 // of distinct accounts (never an admin's) whose import PipGlyph couldn't
-// draw exactly in the last six months. No name, card, printing, set or date
-// reaches this page, and every frame's words are the registry's
-// (lib/frames/requested-frames.ts), never a row's.
+// draw exactly in the six months up to today's UTC midnight, listed only
+// once REQUESTED_FRAMES_MIN_PEOPLE (k) asked. No name, card, printing, set
+// or date reaches this page; every frame's words and its status are the
+// registry's and the verified combos' (lib/frames/requested-frames.ts),
+// never a row's.
 //
 // ISR, cookie-free (the public client), re-baked at most every 5 minutes
 // like the other marketing pages. Thin (fewer than
@@ -41,7 +44,7 @@ export const revalidate = 300;
 
 const TITLE = "Requested Frames — The PipGlyph Frame Roadmap";
 const DESCRIPTION =
-  "The Magic card frames and treatments people asked PipGlyph for, most requested first, and where each one stands: requested, or built and being checked.";
+  "The Magic card frames and treatments people asked PipGlyph for, most requested first, and where each one stands: requested, being checked, or built.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { frames } = await getRequestedFrames();
@@ -64,9 +67,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const STATUS_BADGE: Record<RequestedFrameStatus, "gold" | "primary"> = {
-  requested: "gold",
-  checking: "primary",
+// Three looks a glance tells apart: waiting (neutral), in progress (gold),
+// done (the brand's purple).
+const STATUS_BADGE: Record<RequestedFrameStatus, "default" | "gold" | "primary"> = {
+  requested: "default",
+  checking: "gold",
+  built: "primary",
 };
 
 export default async function RequestedFramesPage() {
@@ -84,7 +90,7 @@ export default async function RequestedFramesPage() {
       <PageHeader
         eyebrow="Roadmap"
         title="Requested frames"
-        description={`When someone imports a printing PipGlyph can't draw exactly yet, we count it. These are the frames people asked for in ${REQUESTED_FRAMES_WINDOW_LABEL}, most people first — the list decides what we build and check next.`}
+        description={`When someone imports a printing PipGlyph can't draw exactly yet, we count it. These are the frames at least ${peopleLabel(REQUESTED_FRAMES_MIN_PEOPLE)} asked for in ${REQUESTED_FRAMES_WINDOW_LABEL}, most people first — the list decides what we build and check next.`}
         actions={
           <Button asChild>
             <Link href={REQUEST_A_FRAME_HREF}>
@@ -107,7 +113,7 @@ export default async function RequestedFramesPage() {
               description={
                 error
                   ? "Requests couldn't be loaded. Try again in a little while."
-                  : "Nobody has imported a printing PipGlyph can't draw in the last six months. Missing one? Ask for it."
+                  : `No frame has been asked for by ${peopleLabel(REQUESTED_FRAMES_MIN_PEOPLE)} yet in ${REQUESTED_FRAMES_WINDOW_LABEL}. Missing one? Ask for it.`
               }
               action={
                 <Button asChild variant="outline">
@@ -164,14 +170,13 @@ export default async function RequestedFramesPage() {
               How we count
             </h2>
             <p>
-              Each person counts once per frame, however many cards they import. We show counts only —
-              never who asked or which card. Staff accounts don&apos;t count.
+              {`Each person counts once per frame, however many cards they import, and a frame shows up once ${peopleLabel(REQUESTED_FRAMES_MIN_PEOPLE)} have asked. We show counts only — never who asked or which card. Staff accounts don't count, and the counts update once a day.`}
             </p>
             <p>
               A frame you&apos;d like that isn&apos;t here?{" "}
               <Link
                 href={REQUEST_A_FRAME_HREF}
-                className="text-primary-bright underline-offset-4 hover:underline"
+                className="text-primary-bright underline underline-offset-4 hover:text-foreground"
               >
                 Tell us about it
               </Link>

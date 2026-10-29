@@ -5,6 +5,9 @@ import { CompassStar } from "@/components/ui/compass-star";
 type EmptyStateProps = {
   icon?: LucideIcon;
   title: string;
+  /** The title's heading level — 3 by default (an empty state usually sits
+   *  under a section heading); 2 where it follows the page's h1 directly. */
+  headingLevel?: 2 | 3;
   description?: string;
   action?: React.ReactNode;
   className?: string;
@@ -13,10 +16,12 @@ type EmptyStateProps = {
 export function EmptyState({
   icon: Icon,
   title,
+  headingLevel = 3,
   description,
   action,
   className,
 }: EmptyStateProps) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <div
       className={cn(
@@ -32,7 +37,7 @@ export function EmptyState({
         )}
       </span>
       <div className="flex max-w-md flex-col gap-1.5">
-        <h3 className="font-display text-lg font-semibold text-foreground">{title}</h3>
+        <Heading className="font-display text-lg font-semibold text-foreground">{title}</Heading>
         {description ? (
           <p className="text-sm leading-6 text-muted">{description}</p>
         ) : null}

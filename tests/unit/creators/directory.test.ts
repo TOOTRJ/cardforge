@@ -4,6 +4,7 @@ vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://www.pipglyph.c
 
 import { collectionPageJsonLd } from "@/components/seo/json-ld";
 import {
+  CREATORS_MAX_PAGE,
   CREATORS_PAGE_SIZE,
   creatorListEntries,
   creatorPageCount,
@@ -45,6 +46,11 @@ describe("parseCreatorsParams / creatorsHref", () => {
     expect(parseCreatorsParams({ sort: ["recent", "liked"], page: ["2"] })).toEqual({ sort: "recent", page: 2 });
     expect(parseCreatorsParams({ sort: "drop table", page: "-4" })).toEqual({ sort: "cards", page: 1 });
     expect(parseCreatorsParams({ page: "abc" })).toEqual({ sort: "cards", page: 1 });
+  });
+
+  it("clamps a huge page, so the function's integer offset can't overflow", () => {
+    expect(parseCreatorsParams({ page: "99999999999" })).toEqual({ sort: "cards", page: CREATORS_MAX_PAGE });
+    expect((CREATORS_MAX_PAGE - 1) * CREATORS_PAGE_SIZE).toBeLessThan(2 ** 31 - 1);
   });
 
   it("links the default view to the landing and every other view inside /creators/browse", () => {

@@ -28,6 +28,10 @@ export const CREATOR_SORT_LABELS: Record<CreatorSort, string> = {
 };
 
 export const CREATORS_PAGE_SIZE = 24;
+/** The last page a link may ask for (24,000 creators): a bigger ?page
+ *  would overflow the function's integer offset. Past the end is an empty
+ *  page, never an error. */
+export const CREATORS_MAX_PAGE = 1000;
 export const CREATORS_PATH = "/creators";
 export const CREATORS_BROWSE_PATH = "/creators/browse";
 
@@ -37,7 +41,8 @@ export function isCreatorSort(value: unknown): value is CreatorSort {
 
 export type CreatorsViewParams = { sort: CreatorSort; page: number };
 
-/** A browse request's sort and page; anything else reads as the default. */
+/** A browse request's sort and page; anything else reads as the default,
+ *  and a page past CREATORS_MAX_PAGE reads as that page. */
 export function parseCreatorsParams(
   params: Record<string, string | string[] | undefined>,
 ): CreatorsViewParams {
@@ -45,7 +50,7 @@ export function parseCreatorsParams(
   const pageRaw = Number.parseInt(firstString(params.page) ?? "1", 10);
   return {
     sort: isCreatorSort(sortParam) ? sortParam : "cards",
-    page: Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1,
+    page: Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.min(pageRaw, CREATORS_MAX_PAGE) : 1,
   };
 }
 
