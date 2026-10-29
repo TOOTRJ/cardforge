@@ -26,7 +26,7 @@ export default async function DecksPage() {
       <PageHeader
         eyebrow="Library"
         title="My decks"
-        description="Build decks from real cards and your own creations, then customize any real card into your own version."
+        description="Build decks from real cards and your own creations, then customize the real ones."
         actions={
           <Button asChild>
             <Link href="/dashboard/decks/new">

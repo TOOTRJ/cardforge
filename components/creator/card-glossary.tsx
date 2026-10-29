@@ -72,7 +72,9 @@ export function CardGlossary({
             The words PipGlyph uses for where a card starts.
           </DialogDescription>
         </DialogHeader>
-        <dl className="flex flex-col gap-4">
+        {/* The body's padding matches the header's px-5 (the list sat flush
+            against the dialog's edge). */}
+        <dl className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
           {GLOSSARY_TERMS.map(({ term, definition }) => (
             <div key={term} className="flex flex-col gap-1">
               <dt className="text-sm font-semibold text-foreground">{term}</dt>

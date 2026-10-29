@@ -137,7 +137,7 @@ export function GenerationDetailsDialog({
                     : "Finished with some failures — retry them below; nothing is generated twice."
                   : "All done."}
           </DialogDescription>
-          {showPausedNote ? <DeckAiPausedNote id={RETRY_PAUSED_NOTE_ID} className="text-sm" /> : null}
+          {showPausedNote ? <DeckAiPausedNote id={RETRY_PAUSED_NOTE_ID} /> : null}
         </DialogHeader>
 
         <div className="grid gap-3 px-5 py-4 sm:grid-cols-4">
