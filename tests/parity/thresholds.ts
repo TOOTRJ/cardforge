@@ -100,6 +100,10 @@ export type KnownDifference = {
   /** The bounds the measurement may not leave (inclusive). */
   min: number;
   max: number;
+  /** A `tileMad` entry only: the named region every tile over the limit
+   *  must touch (the case's region rects) — a worst tile ANYWHERE else on
+   *  the card over the limit is not this difference and fails the run. */
+  tilesIn?: string;
   /** What differs, and why it is believed to — a finding, not an excuse. */
   why: string;
 };
@@ -236,7 +240,8 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     metric: "tileMad",
     min: 62,
     max: 72,
-    why: "The worst tile of the same card is the P/T's (hd-kerned-pt-centre: the digits 6 px apart): 66.8 on macOS, over the 65 limit by that tile alone.",
+    tilesIn: "stat",
+    why: "The worst tile of the same card is the P/T's (hd-kerned-pt-centre: the digits 6 px apart): 66.8 on macOS, over the 65 limit by that tile alone — scoped to it (`tilesIn`: every tile over the limit touches the P/T's region; one anywhere else fails the run).",
   },
 ];
 
@@ -343,12 +348,36 @@ export function knownFor(m: Pick<Measured, "id" | "size">, over: Pick<OverLimit,
 const fmt = (metric: Metric, value: number) =>
   metric === "dx" || metric === "dy" ? `${value > 0 ? "+" : ""}${value} px` : metric === "hot" ? `${(value * 100).toFixed(1)} %` : value.toFixed(1);
 
+/** The tiles of a case over the tileMad limit, each touching the region
+ *  `name` (its rect from the case) — false when the run has no rect for it. */
+function tilesOverLimitIn(m: Measured, name: string): boolean {
+  const r = m.rects?.[name];
+  if (!r) return false;
+  const limit = LIMITS[m.size].tileMad;
+  const width = m.tiles.cols * m.tiles.tile;
+  const height = (width * m.tiles.rows) / m.tiles.cols;
+  return m.tiles.mads.every((mad, i) => {
+    if (mad <= limit) return true;
+    const x = (i % m.tiles.cols) * m.tiles.tile;
+    const y = Math.floor(i / m.tiles.cols) * m.tiles.tile;
+    return x + m.tiles.tile > r.x * width && x < (r.x + r.w) * width && y + m.tiles.tile > r.y * height && y < (r.y + r.h) * height;
+  });
+}
+
+/** Whether the known difference `k` (one knownFor names) covers this
+ *  over-limit measurement: inside its bounds, and — for a `tilesIn` entry —
+ *  every tile over the limit inside its region. */
+export function knownCovers(k: KnownDifference, m: Measured, over: Pick<OverLimit, "metric" | "value">): boolean {
+  if (over.value < k.min || over.value > k.max) return false;
+  return !(over.metric === "tileMad" && k.tilesIn) || tilesOverLimitIn(m, k.tilesIn);
+}
+
 /** Layers 1 + 2: the over-limit measurements no known difference covers. */
 export function limitFailures(m: Measured): string[] {
   const out: string[] = [];
   for (const over of overLimits(m)) {
     const known = knownFor(m, over);
-    if (known.some((k) => over.value >= k.min && over.value <= k.max)) continue;
+    if (known.some((k) => knownCovers(k, m, over))) continue;
     const limit = over.metric === "dx" || over.metric === "dy" ? `±${over.limit} px` : fmt(over.metric, over.limit);
     out.push(
       known.length
@@ -423,6 +452,6 @@ export function judge(m: Measured, base: BaselineCase | undefined | null): strin
 /** The known differences no measurement of a FULL run needs any more. */
 export function staleKnownDifferences(run: readonly Measured[]): KnownDifference[] {
   return KNOWN_DIFFERENCES.filter(
-    (k) => !run.some((m) => overLimits(m).some((over) => knownFor(m, over).includes(k) && over.value >= k.min && over.value <= k.max)),
+    (k) => !run.some((m) => overLimits(m).some((over) => knownFor(m, over).includes(k) && knownCovers(k, m, over))),
   );
 }

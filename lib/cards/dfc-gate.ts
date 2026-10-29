@@ -74,6 +74,7 @@ import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availab
 import { isTokenPairBack, isTokenPairFront, tokenDesignOf } from "@/lib/cards/token-faces";
 import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { isArtifactFrameType } from "@/lib/cards/anatomy";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 /** A back face as the actions see it: the 0015 content plus, since 5.0a,
@@ -387,11 +388,19 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     const storedColour = input.stored
       ? backColourOf(input.stored.back, input.frontColorIdentity)
       : null;
+    // On `c` the master a face wears follows its Artifact word (the modal
+    // bodies' see-through `c`, TODO 5.11a — an artifact face wears `a`):
+    // a back that gains or loses the word moves onto the other master, so
+    // it is a change (the front's seeThroughPinned rule).
+    const storedArtifact = input.stored
+      ? isArtifactFrameType({ cardType: input.stored.back?.card_type ?? null, supertype: input.stored.back?.supertype ?? null })
+      : false;
     const unchanged =
       input.stored !== undefined &&
       storedBody === template &&
       storedColour !== null &&
-      pickFrameColorKey(storedColour) === pickFrameColorKey(colour);
+      pickFrameColorKey(storedColour) === pickFrameColorKey(colour) &&
+      (!colourless || storedArtifact === isArtifactFrameType(typeWords));
     if (!unchanged) {
       const gateError = frameGateError(template, colour, input.verifiedKeys);
       if (gateError) {

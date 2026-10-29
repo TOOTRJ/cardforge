@@ -44,6 +44,7 @@ import {
   normalizeDfcDesign,
   type AiDfcKind,
   type DfcDesignFields,
+  type DfcDesignFrame,
 } from "@/lib/ai/dfc-design";
 
 /** A slot's layout: a saga or a two-part card (PR 2), or a double-faced
@@ -281,13 +282,17 @@ export type DesignSlot = {
    *  (layoutFrameBrief). A double-faced kind (PR 3) writes its back face
    *  (lib/ai/dfc-design.ts). Absent on every other slot. */
   layout?: DesignLayout;
+  /** A double-faced kind's frame as the fit will read it (the verified
+   *  keys, the frame picked): the lint and the autofix judge a colourless
+   *  back on that body (TODO 5.11a). Absent = nothing verified. */
+  dfcFrame?: DfcDesignFrame;
 };
 
 /** The lint of one design: the one-faced rules, and its layout's. */
-function lintDesign(card: DesignedCard, layout: DesignLayout | undefined) {
+function lintDesign(card: DesignedCard, layout: DesignLayout | undefined, dfcFrame?: DfcDesignFrame) {
   const lint = lintCardDesign(card);
   if (!layout) return lint;
-  const own = isAiDfcKind(layout) ? lintDfcDesign(card, layout) : lintLayoutDesign(card, layout);
+  const own = isAiDfcKind(layout) ? lintDfcDesign(card, layout, dfcFrame) : lintLayoutDesign(card, layout);
   return { errors: [...lint.errors, ...own.errors], warnings: [...lint.warnings, ...own.warnings] };
 }
 
@@ -299,9 +304,9 @@ function normalizeDesign(card: DesignedCard, layout: DesignLayout | undefined): 
 }
 
 /** The last-resort repair of one design, its layout's fields included. */
-function autofixDesign(card: DesignedCard, layout: DesignLayout | undefined): DesignedCard {
+function autofixDesign(card: DesignedCard, layout: DesignLayout | undefined, dfcFrame?: DfcDesignFrame): DesignedCard {
   if (!layout) return autofixCard(card);
-  if (isAiDfcKind(layout)) return autofixDfcParts(autofixCard(autofixDfcFront(card, layout)), layout);
+  if (isAiDfcKind(layout)) return autofixDfcParts(autofixCard(autofixDfcFront(card, layout)), layout, dfcFrame);
   return autofixLayoutParts(autofixCard(autofixLayoutFront(card, layout)), layout);
 }
 
@@ -522,6 +527,7 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   // card). Every other chunk asks for what it always did.
   const layout = input.slots.find((slot) => slot.layout)?.layout;
   const layoutOf = (index: number) => input.slots[index]?.layout;
+  const dfcFrameOf = (index: number) => input.slots[index]?.dfcFrame;
   // An answer outside the schema is repaired where a machine can, else the
   // design is asked for once more (lib/ai/structured-output.ts); a second
   // miss throws AiOutputError, whose message is the client's.
@@ -543,7 +549,7 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
     .map((card, index) => normalizeDesign(card, layoutOf(index)));
 
   // ---- Lint ----
-  let lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
+  let lints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
   const flawedIndexes = lints
     .map((lint, index) => ({ lint, index }))
     .filter(({ lint }) => lint.errors.length > 0 || lint.warnings.length > 0)
@@ -565,7 +571,7 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
         const repairIndex = flawedIndexes.indexOf(index);
         return repairIndex === -1 ? card : normalizeDesign(repaired[repairIndex]!, layoutOf(index));
       });
-      lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
+      lints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
     }
   }
 
@@ -574,10 +580,10 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   cards = cards.map((card, index) => {
     if (lints[index].errors.length === 0) return card;
     autofixed.push(index);
-    return autofixDesign(card, layoutOf(index));
+    return autofixDesign(card, layoutOf(index), dfcFrameOf(index));
   });
 
-  const finalLints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
+  const finalLints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
   return {
     cards,
     report: {

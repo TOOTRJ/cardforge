@@ -30,7 +30,7 @@ import { resolveFrameOverlays } from "@/lib/cards/anatomy";
 import { verificationState } from "@/lib/cards/frame-verification-state";
 import { verifiedKeysOfRows } from "@/lib/cards/frame-reviews";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { dfcColorHints, dfcSeeThroughColorlessOffered, lintDfcDesign } from "@/lib/ai/dfc-design";
+import { autofixDfcParts, dfcColorHints, dfcFitOf, dfcSeeThroughColorlessOffered, lintDfcDesign } from "@/lib/ai/dfc-design";
 import {
   ARROW_LUMA_GAP,
   BACK_LUMA_GAINS,
@@ -41,6 +41,9 @@ import {
   toneThrough,
 } from "../../../scripts/lib/mdfc-colourless.mjs";
 import type { FrameTemplate } from "@/types/card";
+import { cardFormSchemaFor, type FormBackBodyContext } from "@/lib/creator/form-schema";
+import { EMPTY_BACK_FACE, EMPTY_WATERMARK, type FormValues } from "@/lib/creator/form-types";
+import { resolveFramePreviewMode } from "@/lib/creator/frame-preview";
 
 vi.mock("server-only", () => ({}));
 
@@ -319,36 +322,218 @@ describe("the AI dialog (#639): a colourless modal card once the see-through `c`
     expect(dfcColorHints("transform", null, transformKeys)).not.toContain("colorless");
   });
 
-  it("the lint lets a colourless sorcery back through on Modal (the fit asks for the tick), never on Transform", () => {
-    const card = {
-      title: "Wandering Archaic",
-      cost: "{5}",
-      card_type: "creature" as const,
+  // A green front over Wandering Archaic's colourless sorcery back: what the
+  // lint, the autofix and the fit say of the back on each frame.
+  const design = {
+    title: "Vastland Wanderer",
+    cost: "{3}{G}",
+    card_type: "creature" as const,
+    supertype: null,
+    subtypes: ["Avatar"],
+    color_identity: ["green" as const],
+    rules_text: "Trample",
+    power: "4",
+    toughness: "4",
+    loyalty: null,
+    defense: null,
+    back_face: {
+      title: "Explore the Vastlands",
+      cost: "{3}",
+      card_type: "sorcery" as const,
       supertype: null,
-      subtypes: ["Avatar"],
+      subtypes: [],
       color_identity: ["colorless" as const],
+      rules_text: "Each player gains 3 life.",
+      flavor_text: null,
+      power: null,
+      toughness: null,
+      art_prompt: "a vast snowy plain",
+    },
+  };
+  const faceOf = (card: typeof design) => ({ ...card, flavor_text: null, back_face: card.back_face as never });
+  const colourIssues = (kind: "mdfc" | "transform", frame?: { verifiedKeys: ReadonlySet<string>; picked: FrameTemplate | null }) =>
+    lintDfcDesign(design as never, kind, frame).errors.filter((e) => e.field === "color_identity").map((e) => e.message);
+  const fixedBack = (frame: { verifiedKeys: ReadonlySet<string>; picked: FrameTemplate | null }) =>
+    autofixDfcParts(design as Parameters<typeof autofixDfcParts>[0], "mdfc", frame).back_face?.color_identity;
+  const BORDERLESS = new Set([
+    ...SEE_THROUGH,
+    ...keys(...(["m15borderlessmdfcfront", "m15borderlessmdfcback"] as const).flatMap((t) => ALL_KEYS.map((k) => [t, k] as [string, string]))),
+  ]);
+
+  it("before the re-tick: the lint names the see-through frame, the autofix gives the back the front's colour, and the fixed design fits", () => {
+    const frame = { verifiedKeys: TICKED, picked: null };
+    expect(colourIssues("mdfc", frame)).toEqual([expect.stringMatching(/see-through colorless frame isn't verified/)]);
+    expect(fixedBack(frame)).toEqual([]);
+    const unfixed = dfcFitOf("mdfc", faceOf(design), TICKED, { picked: null });
+    expect(unfixed).toMatchObject({ ok: false, reason: expect.stringMatching(/see-through colorless frame isn't verified/) });
+    const fixed = autofixDfcParts(design as Parameters<typeof autofixDfcParts>[0], "mdfc", frame);
+    expect(dfcFitOf("mdfc", faceOf(fixed as never), TICKED, { picked: null })).toMatchObject({
+      ok: true,
+      back: { template: "m15mdfcback", color_identity: ["green"] },
+    });
+    // No frame told: the cautious answer, the same.
+    expect(colourIssues("mdfc")).toHaveLength(1);
+  });
+
+  it("after the re-tick: the colourless back passes the lint, the autofix keeps it, and it fits on the see-through back", () => {
+    const frame = { verifiedKeys: SEE_THROUGH, picked: null };
+    expect(colourIssues("mdfc", frame)).toEqual([]);
+    expect(fixedBack(frame)).toEqual(["colorless"]);
+    expect(dfcFitOf("mdfc", faceOf(design), SEE_THROUGH, { picked: null })).toMatchObject({
+      ok: true,
+      back: { template: "m15mdfcback", color_identity: ["colorless"] },
+    });
+  });
+
+  it("a borderless front (no see-through back there): the lint says so, the autofix gives the back the front's colour, which fits", () => {
+    const frame = { verifiedKeys: BORDERLESS, picked: "m15borderlessmdfcfront" as FrameTemplate };
+    expect(colourIssues("mdfc", frame)).toEqual([expect.stringMatching(/borderless frame has no see-through colorless back/)]);
+    expect(fixedBack(frame)).toEqual([]);
+    expect(dfcFitOf("mdfc", faceOf(design), BORDERLESS, { picked: "m15borderlessmdfcfront" })).toMatchObject({ ok: false });
+    const fixed = autofixDfcParts(design as Parameters<typeof autofixDfcParts>[0], "mdfc", frame);
+    expect(dfcFitOf("mdfc", faceOf(fixed as never), BORDERLESS, { picked: "m15borderlessmdfcfront" })).toMatchObject({
+      ok: true,
+      back: { template: "m15borderlessmdfcback", color_identity: ["green"] },
+    });
+  });
+
+  it("Transform still asks for the Artifact word, ticked or not", () => {
+    expect(colourIssues("transform", { verifiedKeys: SEE_THROUGH, picked: null })).toEqual([
+      expect.stringMatching(/needs "Artifact" on its type line/),
+    ]);
+  });
+});
+
+describe("the creator's form (lib/creator/form-schema.ts): the see-through tick is a create's question, the server's on an edit", () => {
+  function archaic(): FormValues {
+    return {
+      title: "Wandering Archaic",
+      slug: "",
+      game_system_id: "g",
+      cost: "{5}",
+      color_identity: ["colorless"],
+      supertype: "",
+      printed_types: null,
+      card_type: "creature",
+      subtypes_text: "Avatar",
+      tags_text: "",
+      rarity: "rare",
       rules_text: "Whenever an opponent casts an instant or sorcery spell, they may pay {2}.",
+      loyalty_abilities: [],
+      saga_intro: "",
+      saga_chapters: [],
+      flavor_text: "",
       power: "4",
       toughness: "4",
-      loyalty: null,
-      defense: null,
+      loyalty: "",
+      defense: "",
+      artist_credit: "",
+      art_url: "https://example.com/art.png",
+      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      frame_style: { finish: "regular", template: "m15mdfcfront", dfcIcon: "arrows" },
+      visibility: "public",
+      save_as_draft: false,
+      has_back_face: true,
       back_face: {
+        ...EMPTY_BACK_FACE,
         title: "Explore the Vastlands",
         cost: "{3}",
-        card_type: "sorcery" as const,
-        supertype: null,
-        subtypes: [],
-        color_identity: ["colorless" as const],
+        card_type: "sorcery",
         rules_text: "Each player gains 3 life.",
-        flavor_text: null,
-        power: null,
-        toughness: null,
-        art_prompt: "a vast snowy plain",
+        art_url: "https://example.com/back.png",
+        color_identity: ["colorless"],
       },
-    };
-    const colourIssue = (kind: "mdfc" | "transform") =>
-      lintDfcDesign(card as never, kind).errors.filter((e) => e.field === "color_identity" && /colorless back/i.test(e.message));
-    expect(colourIssue("mdfc")).toEqual([]);
-    expect(colourIssue("transform").length).toBe(1);
+      source_scryfall_id: "",
+      set_icon_url: "",
+      set_icon_code: "",
+      set_code: "",
+      collector_number: "",
+      lang: "en",
+      deck_id: "",
+      watermark: EMPTY_WATERMARK,
+      footer_text: "",
+    } as FormValues;
+  }
+  const issuesOf = (context: FormBackBodyContext) => {
+    const issues = cardFormSchemaFor(null, context).safeParse(archaic()).error?.issues ?? [];
+    const at = (path: string) => issues.find((i) => i.path.join(".") === path)?.message ?? null;
+    return { front: at("color_identity"), back: at("back_face.color_identity") };
+  };
+
+  it("a NEW card before the re-tick: both faces say the see-through frame waits; after it, neither", () => {
+    expect(issuesOf({ mode: "create", verifiedKeys: TICKED })).toEqual({ front: DFC_SEE_THROUGH_UNVERIFIED, back: DFC_SEE_THROUGH_UNVERIFIED });
+    expect(issuesOf({ mode: "remix", verifiedKeys: TICKED })).toEqual({ front: DFC_SEE_THROUGH_UNVERIFIED, back: DFC_SEE_THROUGH_UNVERIFIED });
+    expect(issuesOf({ mode: "create", verifiedKeys: SEE_THROUGH })).toEqual({ front: null, back: null });
+  });
+
+  it("an EDIT of a stored see-through card after an untick is not blocked (the colour is locked; the server's legacy pin decides)", () => {
+    const edit = { mode: "edit" as const, verifiedKeys: TICKED, storedBackTemplate: "m15mdfcback", storedFamily: "arrows" as const };
+    expect(issuesOf(edit)).toEqual({ front: null, back: null });
+    expect(issuesOf({ ...edit, verifiedKeys: new Set() })).toEqual({ front: null, back: null });
+  });
+
+  it("an edit still asks the structural rule: a colourless face on a transform body needs its Artifact word", () => {
+    const issues = cardFormSchemaFor(null, { mode: "edit", verifiedKeys: SEE_THROUGH })
+      .safeParse({ ...archaic(), frame_style: { finish: "regular", template: "m15dfcfront", dfcIcon: "arrows" } })
+      .error?.issues ?? [];
+    expect(issues.find((i) => i.path.join(".") === "color_identity")?.message).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+  });
+});
+
+describe("the admin frame preview (lib/creator/frame-preview.ts): a previewed modal `c` offers the see-through look before the tick", () => {
+  it("`<template>/c`, the template or \"all\" adds the see-through key to the pickable set; never to the unverified count, never for a body without one", () => {
+    const one = resolveFramePreviewMode({ isAdmin: true, param: "m15mdfcfront/c", verifiedKeys: [] });
+    expect(one?.pickableKeys).toEqual(["m15mdfcfront/c", seeThroughColorlessKey("m15mdfcfront")]);
+    expect(one?.unverifiedKeys).toEqual(["m15mdfcfront/c"]);
+    const template = resolveFramePreviewMode({ isAdmin: true, param: "m15mdfcback", verifiedKeys: [] });
+    expect(template?.pickableKeys).toContain(seeThroughColorlessKey("m15mdfcback"));
+    const all = resolveFramePreviewMode({ isAdmin: true, param: "all", verifiedKeys: [] });
+    const seeThrough = (all?.pickableKeys ?? []).filter((key) => key.endsWith(":see-through"));
+    expect(seeThrough.sort()).toEqual([seeThroughColorlessKey("m15mdfcback"), seeThroughColorlessKey("m15mdfcfront")].sort());
+    expect(all?.unverifiedKeys.some((key) => key.endsWith(":see-through"))).toBe(false);
+    // A previewed `w`, or a transform body's `c`, brings none.
+    expect(resolveFramePreviewMode({ isAdmin: true, param: "m15mdfcfront/w,m15dfcfront/c", verifiedKeys: [] })?.pickableKeys.some((key) => key.endsWith(":see-through"))).toBe(false);
+    // Already ticked: not listed twice.
+    const ticked = resolveFramePreviewMode({ isAdmin: true, param: "m15mdfcfront/c", verifiedKeys: [seeThroughColorlessKey("m15mdfcfront")] });
+    expect(ticked?.pickableKeys.filter((key) => key === seeThroughColorlessKey("m15mdfcfront"))).toHaveLength(1);
+  });
+
+  it("the previewed keys pass the creator's colourless rule as the admin's preview save expects", () => {
+    const mode = resolveFramePreviewMode({ isAdmin: true, param: "m15mdfcfront/c,m15mdfcback/c", verifiedKeys: [] });
+    const pickable = new Set(mode?.pickableKeys);
+    expect(colorlessFaceAllowed("m15mdfcfront", AVATAR, pickable)).toBe(true);
+    expect(colorlessFaceAllowed("m15mdfcback", SORCERY, pickable)).toBe(true);
+  });
+});
+
+describe("the back's legacy pin (resolveDfcBackFace `unchanged`): on `c` the Artifact word is part of what is pinned", () => {
+  const ARTIFACT_BACK = {
+    title: "Cauldron's Gift",
+    cost: "{3}",
+    card_type: "artifact",
+    supertype: null,
+    rules_text: "Draw two cards.",
+    frame_style: { template: "m15mdfcback" },
+    color_identity: ["colorless" as const],
+  };
+  const input = { frontTemplate: "m15mdfcfront", family: null, frontColorIdentity: ["colorless" as const] };
+
+  it("a stored colourless ARTIFACT back retyped to sorcery moves onto the see-through master: refused before the re-tick, stored after", () => {
+    const retyped = { ...ARTIFACT_BACK, card_type: "sorcery" };
+    const stored = { back: ARTIFACT_BACK, familyChanged: false };
+    expect(resolveDfcBackFace({ ...input, back: retyped, verifiedKeys: TICKED, stored })).toMatchObject({
+      ok: false,
+      field: "back_face.color_identity",
+      message: DFC_SEE_THROUGH_UNVERIFIED,
+      code: "unverified",
+    });
+    expect(resolveDfcBackFace({ ...input, back: retyped, verifiedKeys: SEE_THROUGH, stored }).ok).toBe(true);
+  });
+
+  it("the artifact back left an artifact, and a stored see-through back left a sorcery, keep editing whatever the keys say", () => {
+    const stored = { back: ARTIFACT_BACK, familyChanged: false };
+    expect(resolveDfcBackFace({ ...input, back: { ...ARTIFACT_BACK, rules_text: "Draw three cards." }, verifiedKeys: new Set(), stored }).ok).toBe(true);
+    const sorcery = { ...ARTIFACT_BACK, card_type: "sorcery" };
+    expect(resolveDfcBackFace({ ...input, back: sorcery, verifiedKeys: TICKED, stored: { back: sorcery, familyChanged: false } }).ok).toBe(true);
   });
 });
