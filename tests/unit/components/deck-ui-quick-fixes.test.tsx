@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReactNode } from "react";
+import { StrictMode, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -148,6 +148,23 @@ describe("DK0.10 / DK0.12 — the import dialog", () => {
     render(<ImportDecklistDialog deckId="d1" defaultOpen />);
     expect(screen.getByRole("dialog", { name: "Import a decklist" })).toBeTruthy();
     expect(router.replace).toHaveBeenCalledWith("/deck/kesh/burn?via=x", { scroll: false });
+  });
+
+  it("replaces ONCE under StrictMode (a second navigation lost the first Preview import in Next 16's router queue — e2e decks.spec)", async () => {
+    window.history.replaceState(null, "", "/deck/kesh/burn?import=1");
+    render(
+      <StrictMode>
+        <ImportDecklistDialog deckId="d1" defaultOpen />
+      </StrictMode>,
+    );
+    expect(screen.getByRole("dialog", { name: "Import a decklist" })).toBeTruthy();
+    expect(router.replace).toHaveBeenCalledTimes(1);
+    expect(router.replace).toHaveBeenCalledWith("/deck/kesh/burn", { scroll: false });
+    // Once the replace has gone, Preview import is the paste's to press.
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Decklist text" }), { target: { value: "4 Mountain" } });
+    });
+    expect((screen.getByRole("button", { name: /preview import/i }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("without the flag, nothing is replaced", () => {
