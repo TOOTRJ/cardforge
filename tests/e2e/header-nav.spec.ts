@@ -142,6 +142,13 @@ test.describe("the phone row", () => {
         expect(row.page).toBeLessThanOrEqual(0);
         expect(row.row).toBeLessThanOrEqual(0);
         expect(row.outside).toEqual([]);
+        if (who !== "signed out") {
+          // The Account panel never leaves the screen (an admin's is the widest).
+          await header.getByRole("button", { name: "Open account menu" }).click();
+          const box = await page.locator('header [id^="nav-panel-account"]').boundingBox();
+          expect(box!.x).toBeGreaterThanOrEqual(16 - 0.5);
+          expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+        }
       });
     }
   }

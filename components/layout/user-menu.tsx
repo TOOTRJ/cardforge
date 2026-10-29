@@ -71,8 +71,13 @@ export function UserMenu({
       buttonClassName="rounded-full px-0.5 sm:pr-1.5"
       caretClassName="max-sm:hidden"
       // An admin's panel is wider: its admin grid's two columns fit their
-      // labels whole.
-      panelClassName={cn("max-h-[calc(100svh-5rem)] overflow-y-auto", isAdmin ? "w-80" : "w-72")}
+      // labels whole. Never wider than the screen allows: below `lg` the
+      // avatar's right edge sits a gutter + ☰ + gap (60 px; 68 from `sm`) in
+      // from the screen's, so the cap keeps the left edge on the gutter.
+      panelClassName={cn(
+        "max-h-[calc(100svh-5rem)] max-w-[calc(100vw-4.75rem)] overflow-y-auto sm:max-w-[calc(100vw-5.75rem)]",
+        isAdmin ? "w-80" : "w-72",
+      )}
     >
       <AccountSummary
         username={username}
