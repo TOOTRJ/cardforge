@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useDeckExport } from "@/components/decks/deck-export-provider";
+import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 import {
   perSheetLabel,
   PrintBacksCheckbox,
@@ -133,7 +134,15 @@ export function DeckExportMenu({
 
   if (!allowBatchExport) {
     return (
-      <Button variant="outline" type="button" onClick={() => upgrade.open("deck_export")}>
+      <Button
+        variant="outline"
+        type="button"
+        onClick={() => {
+          // Funnel (TODO DK3.8): an export wanted by a plan without it.
+          trackFunnelEvent("deck_export_clicked", { kind: "upgrade" });
+          upgrade.open("deck_export");
+        }}
+      >
         <Download className="h-4 w-4" aria-hidden /> Export
         <ProBadge />
       </Button>
@@ -141,6 +150,7 @@ export function DeckExportMenu({
   }
 
   const startExport = (kind: "zip" | "pdf") => {
+    trackFunnelEvent("deck_export_clicked", { kind, preset: quality, layout });
     savePrintSelectionSettings({ ...settings, kind });
     exporter.start({
       deckId,

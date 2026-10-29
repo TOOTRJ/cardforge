@@ -30,6 +30,10 @@ type DeleteDeckDialogProps = {
   redirectTo?: string;
   triggerLabel?: string;
   triggerVariant?: "ghost" | "outline" | "secondary";
+  triggerSize?: "sm" | "md";
+  /** The trigger's name when its label alone doesn't say which deck (a list
+   *  of decks, each with its own "Delete"). */
+  triggerAriaLabel?: string;
 };
 
 export function DeleteDeckDialog({
@@ -38,6 +42,8 @@ export function DeleteDeckDialog({
   redirectTo = "/dashboard/decks",
   triggerLabel = "Delete deck",
   triggerVariant = "outline",
+  triggerSize = "md",
+  triggerAriaLabel,
 }: DeleteDeckDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -60,7 +66,7 @@ export function DeleteDeckDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => (isPending ? undefined : setOpen(next))}>
       <DialogTrigger asChild>
-        <Button type="button" variant={triggerVariant}>
+        <Button type="button" variant={triggerVariant} size={triggerSize} aria-label={triggerAriaLabel}>
           <Trash2 className="h-4 w-4" aria-hidden />
           {triggerLabel}
         </Button>

@@ -400,7 +400,7 @@ import {
   UndrawableSymbolNotice,
 } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
-import { creatorLanguageFields, strongLanguageChoices } from "@/lib/creator/strong-language";
+import { creatorLanguageFields, NO_STRONG_LANGUAGE, strongLanguageChoices } from "@/lib/creator/strong-language";
 import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
 import {
   isFramePreviewSave,
@@ -1429,7 +1429,9 @@ export function CardCreatorForm({
     stored: isEdit && card ? card : null,
     footerStored: isEdit ? values.footer_text.trim() !== footerBaseline.text : isPaid,
   });
-  const languageChoices = strongLanguageChoices(watched, languageContextFor(watched));
+  // Read only where it is shown (the Publish panel), not on every keystroke.
+  const languageChoices =
+    stepKey === "publish" ? strongLanguageChoices(watched, languageContextFor(watched)) : NO_STRONG_LANGUAGE;
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -4433,6 +4435,7 @@ export function CardCreatorForm({
             linkResult = await linkDeckCardAction(
               deckRemix.deckCardId,
               result.cardId,
+              { surface: "creator" },
             );
           } catch (error) {
             console.error("[creator] deck link request failed", error);

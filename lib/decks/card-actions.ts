@@ -8,6 +8,8 @@ import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
 import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
@@ -22,6 +24,7 @@ export type DeckCardActionResult =
 type OwnedEntry = {
   id: string;
   deck_id: string;
+  card_id: string | null;
   scryfall_id?: string | null;
   /** Absent on a database 0144 has not reached. */
   source?: string | null;
@@ -145,10 +148,14 @@ export async function removeDeckCardAction(
  *  deck_cards_guard_card_link: a NEW card_id is checked, so an entry whose
  *  linked card later went private stays editable); the pre-flight gives a
  *  friendlier error. The entry keeps its source — it still came from where
- *  it came from. */
+ *  it came from. `surface` says who linked it — the creator's
+ *  /create?deckCard= save (the card was just made from the entry, the only
+ *  link the funnel counts) or the deck page's picker (the default) — for
+ *  the funnel only. */
 export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
+  options: { surface?: "creator" | "deck" } = {},
 ): Promise<DeckCardActionResult> {
   if (!isUuid(deckCardId) || !isUuid(cardId)) {
     return { ok: false, error: "Invalid id." };
@@ -180,6 +187,22 @@ export async function linkDeckCardAction(
     .update({ card_id: cardId })
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
+
+  // Funnel (TODO DK3.8): the entry got its FIRST card of the user's, MADE
+  // from it in the creator — an imported card customized (owner decision
+  // D2: the moment it takes a saved-card slot) or a placeholder filled. A
+  // card linked from the deck page already existed (no new slot), and a
+  // re-link is not counted.
+  if (options.surface === "creator" && owned.entry.card_id === null && isAdminConfigured()) {
+    await recordFunnelEvent(createAdminClient(), {
+      event: "deck_card_customized",
+      userId: user.id,
+      props: {
+        surface: "creator",
+        kind: owned.entry.scryfall_id ? "import" : "placeholder",
+      },
+    });
+  }
 
   await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };

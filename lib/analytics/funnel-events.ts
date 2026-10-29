@@ -37,12 +37,24 @@ export const SERVER_FUNNEL_EVENTS = [
   "payment_received",
   "payment_failed",
   "pack_purchased",
+  // Decks (TODO DK3.8, the 2026-10-28 deck plan): a deck made (visibility,
+  // format, surface), the private-deck cap refusing one (kind create /
+  // visibility, the tier), and a deck entry's FIRST card of the user's made
+  // from it in the creator — an imported card customized, the moment it
+  // takes a saved-card slot (owner decision D2; surface creator, kind
+  // import / placeholder).
+  "deck_created",
+  "deck_cap_hit",
+  "deck_card_customized",
 ] as const;
 
 export const CLIENT_FUNNEL_EVENTS = [
   "pricing_view",
   "cta_click",
   "upgrade_modal_open",
+  // The deck export menu (kind zip / pdf with its preset and layout, or
+  // "upgrade" for the Pro gate) — TODO DK3.8.
+  "deck_export_clicked",
 ] as const;
 
 export type ServerFunnelEvent = (typeof SERVER_FUNNEL_EVENTS)[number];

@@ -60,6 +60,10 @@ const LABEL: Record<FunnelEvent, string> = {
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",
   pack_purchased: "Packs purchased",
+  deck_created: "Decks created",
+  deck_cap_hit: "Private-deck cap hits",
+  deck_card_customized: "Deck cards customized",
+  deck_export_clicked: "Deck export clicks",
 };
 
 /** Each section is a chain: a step's rate is its count over the previous
@@ -71,9 +75,11 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Out of credits", chain: ["upgrade_modal_open", "pack_purchased"] },
   { title: "Money", chain: ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled", "subscription_resumed"] },
   { title: "Leaks", chain: ["checkout_expired", "trial_lapsed", "payment_failed"] },
+  // Counts only: the deck plan's upgrade moments (TODO DK3.8).
+  { title: "Decks", chain: ["deck_created", "deck_cap_hit", "deck_card_customized", "deck_export_clicked"] },
 ];
 
-/** Rates are chained inside a section except in the last two, which are
+/** Rates are chained inside a section except in the last three, which are
  *  counts only. */
 const RATE_SECTIONS = new Set(["Activation", "Storefront", "Trials", "Out of credits"]);
 
