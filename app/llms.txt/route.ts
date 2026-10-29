@@ -1,5 +1,6 @@
 import { listArticles, listCategoryShelves, type ArticleMeta } from "@/lib/content/articles";
 import { categoryPath } from "@/lib/content/article-categories";
+import { HELP_SECTIONS, helpSectionPath } from "@/lib/content/help";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------
@@ -17,14 +18,14 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/ai-mtg-card-generator", "AI MTG Card Generator", "Concept-to-card AI generation, per-field AI fill and idea batches, with FAQ."],
   ["/mana-pip-editor", "Mana Pip Editor", "The full mana symbol vocabulary (hybrid, twobrid, Phyrexian, snow, energy) and custom pip uploads, with FAQ."],
   ["/best-mtg-card-makers", "Best MTG Card Makers", "Honest comparison of custom MTG card makers and a free Card Conjurer alternative, with FAQ."],
-  ["/create", "Card Creator", "The creator itself. Anyone can design a card without an account; saving, sharing and downloads need a free account."],
+  ["/create", "Card Creator", "The creator itself. Signed out, it shows every step and the live preview read-only; designing and saving a card need a free account."],
   ["/gallery", "Community Gallery", "Public custom cards — trending, newest and a random discover feed; filter by color, type, rarity and tag."],
   ["/decks", "Community Decks", "Public decks built from custom and real cards: import a decklist, customize the real cards, print proxies."],
   ["/challenges", "Design Challenges", "Community design briefs; entries are public cards wearing the challenge tag."],
   ["/learn", "Learn", "The guides by category (design guides, rules & reference, card maker comparisons, MTG lore — list below), plus help, what's new and the tools."],
   ["/articles", "All articles", "Every long-form guide, newest first; finer topic hubs at /articles/tag/<topic>."],
   ["/tools", "Tools", "Directory of the card creator, AI card generator, mana pip editor, deck builder and print sheets."],
-  ["/faq", "FAQ", "Every common question answered directly — card making, pips, AI, sharing, printing, remixing, challenges, plans."],
+  ["/help", "Help & FAQ", "How to use PipGlyph: direct answers and short how-tos, one page per topic (list below)."],
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
@@ -44,6 +45,14 @@ export function GET() {
     "## Key pages",
     "",
     ...KEY_PAGES.map(([path, label, blurb]) => `- [${label}](${base}${path}): ${blurb}`),
+    "",
+    "## Help",
+    "",
+    // One line per help section (lib/content/help.ts); answers keep stable
+    // anchors (/help/<section>#<id>).
+    ...HELP_SECTIONS.map(
+      (section) => `- [${section.title}](${base}${helpSectionPath(section.slug)}): ${section.description}`,
+    ),
     "",
     "## Guides",
     "",

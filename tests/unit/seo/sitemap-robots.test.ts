@@ -22,6 +22,7 @@ import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
 import { listArticles, listCategoryShelves } from "@/lib/content/articles";
 import { CATEGORY_MIN_ARTICLES } from "@/lib/content/article-categories";
+import { HELP_SECTION_SLUGS } from "@/lib/content/help";
 
 const BASE = "https://www.pipglyph.com";
 const pathOf = (url: string) => url.slice(BASE.length) || "/";
@@ -49,7 +50,7 @@ describe("sitemap (static layer)", () => {
       "/gallery",
       "/decks",
       "/challenges",
-      "/faq",
+      "/help",
       "/articles",
       "/news",
       "/about",
@@ -73,6 +74,13 @@ describe("sitemap (static layer)", () => {
     }
     // The hubs that still stand stay listed.
     expect(paths.has("/articles/tag/oracle-text")).toBe(true);
+  });
+
+  it("lists the help centre and every section — never /faq, which 308s there", async () => {
+    const paths = new Set((await sitemap()).map((e) => pathOf(e.url)));
+    expect(paths.has("/help")).toBe(true);
+    for (const slug of HELP_SECTION_SLUGS) expect(paths.has(`/help/${slug}`), slug).toBe(true);
+    expect(paths.has("/faq")).toBe(false);
   });
 
   it("never lists a removed sets URL or an auth-only surface", async () => {

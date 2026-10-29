@@ -9,6 +9,7 @@ import {
   isIndexableCategory,
 } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
+import { HELP_PATH, HELP_SECTION_SLUGS, helpSectionPath } from "@/lib/content/help";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -28,7 +29,7 @@ import {
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
 //      /decks, /challenges, /news, /learn + its indexable categories, /tools,
-//      guides + their indexable topic hubs, …).
+//      /help + its sections, guides + their indexable topic hubs, …).
 //      They carry NO lastModified: stamping "now" on every hourly rebuild
 //      taught crawlers the date was noise and made them ignore the real
 //      ones on cards and guides.
@@ -92,7 +93,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/decks", "daily", 0.8),
     staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
-    staticEntry(baseUrl, "/faq", "monthly", 0.85),
+    // The help centre (/faq 308s to it): the hub, then every section — each
+    // is indexed and self-canonical.
+    staticEntry(baseUrl, HELP_PATH, "monthly", 0.85),
+    ...HELP_SECTION_SLUGS.map((slug) => staticEntry(baseUrl, helpSectionPath(slug), "monthly", 0.75)),
     // The /learn hub and the tools directory, then the category shelves that
     // are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
     // on its own page, so it stays out of here too).

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { listArticles, listTags, slugifyTag } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
 import { categoryForTagSlug, isArticleCategory } from "@/lib/content/article-categories";
+import { getHelpSection, helpSectionAnchors } from "@/lib/content/help";
 
 // ---------------------------------------------------------------------------
 // Every guide: complete frontmatter, a FAQ block that mirrors the visible
@@ -135,9 +136,25 @@ describe("guides", () => {
           }
         } else if (segments[0] === "learn" && segments.length > 1) {
           expect(isArticleCategory(segments[1]), `${file} → ${path}`).toBe(true);
+        } else if (segments[0] === "help" && segments.length > 1) {
+          expect(getHelpSection(segments[1]), `${file} → ${path}`).toBeDefined();
+        } else if (segments[0] === "faq") {
+          // /faq is a 308 to /help (TODO NV6): link the section itself.
+          expect.fail(`${file} → ${path} (link /help/<section>#<answer> instead)`);
         } else if (segments.length > 0) {
           expect(routeRoots.has(segments[0]), `${file} → ${path}`).toBe(true);
         }
+      }
+    }
+  });
+
+  it("link help-centre anchors that exist on the section they name", () => {
+    for (const file of files) {
+      const raw = readFileSync(join(articlesDir, file), "utf8");
+      for (const match of raw.matchAll(/\]\(\/help\/([a-z0-9-]+)#([^)\s]+)\)/g)) {
+        const section = getHelpSection(match[1]);
+        expect(section, `${file} → ${match[0]}`).toBeDefined();
+        expect(helpSectionAnchors(section!), `${file} → ${match[0]}`).toContain(match[2]);
       }
     }
   });
@@ -147,11 +164,12 @@ describe("retired product claims", () => {
   const sources = [
     ...readdirSync(articlesDir).map((f) => join(articlesDir, f)),
     join(root, "lib/content/faq.ts"),
+    join(root, "lib/content/help.ts"),
     join(root, "lib/billing/plans.ts"),
     ...readdirSync(join(root, "components/marketing"))
       .filter((f) => f.endsWith(".tsx"))
       .map((f) => join(root, "components/marketing", f)),
-    ...["about", "press", "faq", "mtg-card-maker", "ai-mtg-card-generator", "best-mtg-card-makers", "privacy", "terms"].map(
+    ...["about", "press", "help", "mtg-card-maker", "ai-mtg-card-generator", "best-mtg-card-makers", "privacy", "terms"].map(
       (page) => join(root, `app/(marketing)/${page}/page.tsx`),
     ),
   ].filter((p) => existsSync(p));
