@@ -57,6 +57,35 @@ test("the /learn categories render, index from three guides, and an unknown one 
   }
 });
 
+test("the glossary is indexable, self-canonical, and anchors every term", async ({ request }) => {
+  // Static — no database needed.
+  const response = await request.get("/glossary");
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(html).toMatch(/rel="canonical" href="[^"]*\/glossary"/);
+  expect(html).not.toMatch(/name="robots" content="noindex/);
+  expect(html).toContain('"@type":"DefinedTermSet"');
+  expect(html).toContain('aria-label="Breadcrumb"');
+  for (const id of ["proxy", "import", "remix", "original", "pip", "mana-value"]) {
+    expect(html, id).toContain(`id="${id}"`);
+  }
+});
+
+test("the glossary filter narrows the terms and a hidden anchor brings them back", async ({ page }) => {
+  await page.goto("/glossary");
+  const filter = page.getByLabel("Filter terms");
+  await filter.fill("cmc");
+  await expect(page.locator("#glossary-status")).toHaveText(/^1 of \d+ terms match\.$/);
+  await expect(page.locator("#mana-value")).toBeVisible();
+  await expect(page.locator("#proxy")).toHaveCount(0);
+  // A link to an entry the filter hides clears the filter and lands there.
+  await page.evaluate(() => {
+    window.location.hash = "proxy";
+  });
+  await expect(filter).toHaveValue("");
+  await expect(page.locator("#proxy")).toBeInViewport();
+});
+
 test("retired URLs 308 to living pages", async ({ request }) => {
   for (const [from, to] of [
     ["/preview", "/create"],

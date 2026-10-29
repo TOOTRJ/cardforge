@@ -24,6 +24,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/learn", "Learn", "The guides by category (design guides, rules & reference, card maker comparisons, MTG lore — list below), plus help, what's new and the tools."],
   ["/articles", "All articles", "Every long-form guide, newest first; finer topic hubs at /articles/tag/<topic>."],
   ["/tools", "Tools", "Directory of the card creator, AI card generator, mana pip editor, deck builder and print sheets."],
+  ["/glossary", "Glossary", "Plain definitions of Magic card terms (pip, frame, type line, mana value, double-faced cards…) and PipGlyph's own words (proxy, import, remix, original), one anchor per term."],
   ["/faq", "FAQ", "Every common question answered directly — card making, pips, AI, sharing, printing, remixing, challenges, plans."],
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],

@@ -93,11 +93,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
     staticEntry(baseUrl, "/faq", "monthly", 0.85),
-    // The /learn hub and the tools directory, then the category shelves that
-    // are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
-    // on its own page, so it stays out of here too).
+    // The /learn hub, the tools directory and the glossary, then the
+    // category shelves that are indexable (CATEGORY_MIN_ARTICLES guides — a
+    // thinner one is noindex on its own page, so it stays out of here too).
     staticEntry(baseUrl, "/learn", "weekly", 0.85),
     staticEntry(baseUrl, "/tools", "monthly", 0.8),
+    staticEntry(baseUrl, "/glossary", "monthly", 0.75),
     ...listCategoryShelves()
       .filter((shelf) => isIndexableCategory(shelf.articles.length))
       .map((shelf) => staticEntry(baseUrl, categoryPath(shelf.category.slug), "weekly", 0.75)),

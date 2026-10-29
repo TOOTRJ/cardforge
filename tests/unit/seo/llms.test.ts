@@ -19,9 +19,9 @@ describe("/llms.txt", () => {
     expect(text).not.toMatch(/expansion[- ]set|set builder|\/preview\b|\/sets\b/i);
   });
 
-  it("names /learn, /tools and the What's new feed, and lists the guides under their categories", async () => {
+  it("names /learn, /tools, /glossary and the What's new feed, and lists the guides under their categories", async () => {
     const text = await GET().text();
-    for (const path of ["/learn", "/tools", "/news", "/news/feed.xml"]) {
+    for (const path of ["/learn", "/tools", "/glossary", "/news", "/news/feed.xml"]) {
       expect(text).toContain(`https://www.pipglyph.com${path}`);
     }
     for (const { category, articles } of listCategoryShelves()) {

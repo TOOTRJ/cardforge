@@ -148,10 +148,11 @@ describe("retired product claims", () => {
     ...readdirSync(articlesDir).map((f) => join(articlesDir, f)),
     join(root, "lib/content/faq.ts"),
     join(root, "lib/billing/plans.ts"),
+    join(root, "lib/content/glossary.ts"),
     ...readdirSync(join(root, "components/marketing"))
       .filter((f) => f.endsWith(".tsx"))
       .map((f) => join(root, "components/marketing", f)),
-    ...["about", "press", "faq", "mtg-card-maker", "ai-mtg-card-generator", "best-mtg-card-makers", "privacy", "terms"].map(
+    ...["about", "press", "faq", "glossary", "mtg-card-maker", "ai-mtg-card-generator", "best-mtg-card-makers", "privacy", "terms"].map(
       (page) => join(root, `app/(marketing)/${page}/page.tsx`),
     ),
   ].filter((p) => existsSync(p));
