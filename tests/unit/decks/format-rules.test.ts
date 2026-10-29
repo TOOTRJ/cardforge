@@ -17,6 +17,19 @@ const filler = (count: number, board: DeckBoard = "main"): Entry[] =>
 const codes = (warnings: ReturnType<typeof validateDeck>) =>
   warnings.map((w) => w.code);
 
+describe("validateDeck — an empty deck", () => {
+  it("has nothing to check: no size, commander or copy warnings (audit M5)", () => {
+    expect(validateDeck("commander", [])).toEqual([]);
+    expect(validateDeck("standard", [])).toEqual([]);
+    // A maybeboard alone is still an empty deck.
+    expect(validateDeck("commander", [entry("Sol Ring", 1, "maybe")])).toEqual([]);
+  });
+
+  it("one card in the deck is checked as before", () => {
+    expect(codes(validateDeck("commander", [entry("Sol Ring")]))).toEqual(["deck_size", "commander_count"]);
+  });
+});
+
 describe("validateDeck — commander", () => {
   it("accepts a legal 100-card singleton deck", () => {
     const deck = [

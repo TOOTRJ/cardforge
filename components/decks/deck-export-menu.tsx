@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  ClipboardCopy,
   Download,
   FileText,
   Image as ImageIcon,
@@ -12,7 +11,6 @@ import {
   ScrollText,
   Sparkles,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -60,17 +58,15 @@ import { cn } from "@/lib/utils";
 // options start from the ones this browser used last — shared with the
 // selection export and the download modal (lib/cards/print-selection.ts) —
 // and are saved when a build starts.
-// Plus the free copy-as-text buttons. A free/Plus owner never sees this
-// dialog: the Export button opens the upgrade modal straight away (owner
-// decision 2026-09-15).
+// A free/Plus owner never sees this dialog: the Export button opens the
+// upgrade modal straight away (owner decision 2026-09-15). Copying the
+// decklist as text is free for everyone and lives in the deck header
+// (components/decks/deck-copy-decklist.tsx), not here.
 // ---------------------------------------------------------------------------
 
 type DeckExportMenuProps = {
   deckId: string;
   deckSlug: string;
-  /** Precomputed decklist text variants (see lib/decks/export-text.ts). */
-  arenaText: string;
-  plainText: string;
   /** Whether the viewer's plan includes batch export (Pro). */
   allowBatchExport: boolean;
   /** Unique custom (remixed) cards — what gets rendered. */
@@ -117,8 +113,6 @@ function layoutDetail(layout: DeckPdfLayout, settings: PrintSelectionSettings): 
 export function DeckExportMenu({
   deckId,
   deckSlug,
-  arenaText,
-  plainText,
   allowBatchExport,
   customCardCount,
   realCardCount,
@@ -135,15 +129,6 @@ export function DeckExportMenu({
   const onOpenChange = (next: boolean) => {
     if (next) setSettings(loadPrintSelectionSettings());
     setOpen(next);
-  };
-
-  const copyText = async (label: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied to your clipboard.`);
-    } catch {
-      toast.error("Couldn't access the clipboard.");
-    }
   };
 
   if (!allowBatchExport) {
@@ -313,19 +298,6 @@ export function DeckExportMenu({
           </section>
         </div>
 
-        <section className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-          <span className="text-xs font-semibold uppercase tracking-wider text-subtle">Copy decklist</span>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => copyText("Arena decklist", arenaText)}>
-              <ClipboardCopy className="h-3.5 w-3.5" aria-hidden />
-              Arena format
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => copyText("Decklist", plainText)}>
-              <FileText className="h-3.5 w-3.5" aria-hidden />
-              Plain text
-            </Button>
-          </div>
-        </section>
         <span className="sr-only">{deckSlug}</span>
       </DialogContent>
     </Dialog>

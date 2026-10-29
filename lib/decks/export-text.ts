@@ -9,8 +9,13 @@ import type { DeckBoard } from "@/types/deck";
 //             sideboard. Maximum compatibility.
 //
 // Pure + unit-tested; the deck page precomputes both variants server-side
-// for the copy buttons. `useProxyNames` swaps in the custom card's title
-// for remixed entries (share your build as YOUR cards).
+// for its free "Copy decklist" button (owner and visitors alike). The page
+// passes `useProxyNames`: each line names the card the way the viewer's
+// list does — the linked custom card's title where they can read it, the
+// entry's own name otherwise (a private card the viewer can't read is null
+// in their rows, so it never leaks its title). A line that swaps in a
+// custom title drops the printing: "(SET) 123" is the original's, not the
+// custom card's.
 // ---------------------------------------------------------------------------
 
 export type ExportEntry = {
@@ -36,15 +41,34 @@ function lineFor(
   entry: ExportEntry,
   opts: { withPrinting: boolean; useProxyNames: boolean },
 ): string {
-  const name =
-    opts.useProxyNames && entry.proxyTitle?.trim()
-      ? entry.proxyTitle.trim()
-      : entry.name;
+  const proxy = opts.useProxyNames ? (entry.proxyTitle?.trim() ?? "") : "";
+  const name = proxy || entry.name;
+  // The custom card is not the printing the entry was imported from.
+  const renamed = proxy !== "" && proxy !== entry.name.trim();
   const printing =
-    opts.withPrinting && entry.set_code && entry.collector_number
+    opts.withPrinting && !renamed && entry.set_code && entry.collector_number
       ? ` (${entry.set_code.toUpperCase()}) ${entry.collector_number}`
       : "";
   return `${entry.quantity} ${name}${printing}`;
+}
+
+/** Export entries from deck rows AS THE VIEWER READ THEM (`card` is null
+ *  where RLS hid a private card): with `useProxyNames`, each line then says
+ *  what the viewer's deck list says. */
+export function exportEntriesOf(
+  items: ReadonlyArray<{
+    entry: Omit<ExportEntry, "proxyTitle">;
+    card: { title: string } | null;
+  }>,
+): ExportEntry[] {
+  return items.map(({ entry, card }) => ({
+    name: entry.name,
+    quantity: entry.quantity,
+    board: entry.board,
+    set_code: entry.set_code,
+    collector_number: entry.collector_number,
+    proxyTitle: card?.title ?? null,
+  }));
 }
 
 export function deckToText(

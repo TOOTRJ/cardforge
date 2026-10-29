@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deckToText, type ExportEntry } from "@/lib/decks/export-text";
+import { deckToText, exportEntriesOf, type ExportEntry } from "@/lib/decks/export-text";
 import { parseDecklist } from "@/lib/decks/parse-decklist";
 import type { DeckBoard } from "@/types/deck";
 
@@ -99,5 +99,47 @@ describe("deckToText — proxy names", () => {
     expect(text).toContain("1 Grenko, Riot Forgeboss");
     expect(text).toContain("4 Lightning Bolt");
     expect(text).not.toContain("Krenko, Mob Boss");
+  });
+
+  it("a renamed line drops the original's printing; an unrenamed one keeps it", () => {
+    const text = deckToText(
+      DECK,
+      [
+        entry("Krenko, Mob Boss", 1, "commander", {
+          set_code: "fdn",
+          collector_number: "204",
+          proxyTitle: "Grenko, Riot Forgeboss",
+        }),
+        entry("Lightning Bolt", 4, "main", {
+          set_code: "m11",
+          collector_number: "149",
+          proxyTitle: "Lightning Bolt",
+        }),
+      ],
+      { style: "arena", useProxyNames: true },
+    );
+    expect(text).toContain("Commander\n1 Grenko, Riot Forgeboss\n");
+    expect(text).not.toContain("(FDN)");
+    expect(text).toContain("Deck\n4 Lightning Bolt (M11) 149");
+  });
+});
+
+describe("exportEntriesOf — the names the viewer's deck list shows (DK0.7)", () => {
+  const row = (name: string, card: { title: string } | null, extra: Partial<ExportEntry> = {}) => ({
+    entry: { name, quantity: 1, board: "main" as DeckBoard, set_code: null, collector_number: null, ...extra },
+    card,
+  });
+
+  it("a readable custom card names the line; a card the viewer can't read leaves the entry's own name", () => {
+    const entries = exportEntriesOf([
+      row("Krenko, Mob Boss", { title: "Grenko, Riot Forgeboss" }),
+      // A private card in a public deck: RLS gives the visitor no card.
+      row("Old Draft Title", null),
+      row("Lightning Bolt", null, { set_code: "m11", collector_number: "149" }),
+    ]);
+    const plain = deckToText(DECK, entries, { style: "plain", useProxyNames: true });
+    expect(plain).toBe("1 Grenko, Riot Forgeboss\n1 Old Draft Title\n1 Lightning Bolt");
+    const arena = deckToText(DECK, entries, { style: "arena", useProxyNames: true });
+    expect(arena).toContain("1 Lightning Bolt (M11) 149");
   });
 });

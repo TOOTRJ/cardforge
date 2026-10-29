@@ -8,7 +8,7 @@ import { getActiveDeckJob, getLatestFailedDeckJob } from "@/lib/ai/generation-jo
 import { DeckLiveProgress } from "@/components/decks/deck-live-progress";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { AlertTriangle, ArrowLeft, BookOpen, Pencil } from "lucide-react";
@@ -20,10 +20,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
+import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
 import { getDeckGuide } from "@/lib/decks/guides";
-import { deckToText } from "@/lib/decks/export-text";
+import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
@@ -46,10 +47,16 @@ import {
   coverObjectPosition,
   type DeckFormat,
 } from "@/types/deck";
+import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 type Params = { slug: string };
+
+// The deck's rows as THIS viewer reads them (RLS: a private card linked
+// into the deck is null for a visitor), read once per request — the
+// header's "Copy decklist" and the body's list share the one read.
+const listDeckCardsOnce = cache(listDeckCards);
 
 function titleFromSlug(slug: string): string {
   return slug
@@ -218,7 +225,7 @@ export default async function DeckDetailPage({
                 </Badge>
               ) : null}
               {deck.visibility !== "public" ? (
-                <Badge variant="outline">{deck.visibility}</Badge>
+                <Badge variant="outline">{VISIBILITY_LABELS[deck.visibility]}</Badge>
               ) : null}
               {deck.owner?.username ? (
                 <Link
@@ -266,6 +273,11 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
+            {/* Free for every viewer (TODO DK0.7); streams in with the
+                card list, so the header still paints at once. */}
+            <Suspense fallback={null}>
+              <DeckCopyDecklistSlot deckId={deck.id} deckTitle={deck.title} />
+            </Suspense>
             {isOwner && user ? (
               <DeckOwnerTools
                 deck={deck}
@@ -287,7 +299,6 @@ export default async function DeckDetailPage({
         <DeckBody
           deckId={deck.id}
           deckSlug={deck.slug}
-          deckTitle={deck.title}
           format={deck.format}
           ownerUsername={deck.owner?.username ?? null}
           isOwner={isOwner}
@@ -301,7 +312,6 @@ export default async function DeckDetailPage({
 async function DeckBody({
   deckId,
   deckSlug,
-  deckTitle,
   format,
   ownerUsername,
   isOwner,
@@ -309,14 +319,13 @@ async function DeckBody({
 }: {
   deckId: string;
   deckSlug: string;
-  deckTitle: string;
   format: DeckFormat;
   ownerUsername: string | null;
   isOwner: boolean;
   hasCover: boolean;
 }) {
   const [items, failedJob, activeJob, guide, entitlements] = await Promise.all([
-    listDeckCards(deckId),
+    listDeckCardsOnce(deckId),
     isOwner ? getLatestFailedDeckJob(deckId) : Promise.resolve(null),
     isOwner ? getActiveDeckJob(deckId) : Promise.resolve(null),
     getDeckGuide(deckId),
@@ -324,24 +333,22 @@ async function DeckBody({
   ]);
   const viewerIsPro = entitlements.effectiveTier === "pro";
   const analytics = computeDeckAnalytics(items);
-  const warnings = validateDeck(
-    format,
-    items.map((i) => i.entry),
-  );
+  // The format check is the owner's to-do list (TODO DK0.9): a visitor
+  // never sees it, and an empty deck has nothing to check (validateDeck).
+  const warnings = isOwner
+    ? validateDeck(
+        format,
+        items.map((i) => i.entry),
+      )
+    : [];
 
-  // The export menu (owner-only) gets precomputed decklist text and the
-  // viewer's batch-export entitlement.
+  // The export menu (owner-only, its file builds Pro) gets the viewer's
+  // batch-export entitlement. Copying the list is the header's, for all.
   const exportMenu =
     isOwner && items.length > 0 ? (
       <DeckExportMenu
         deckId={deckId}
         deckSlug={deckSlug}
-        arenaText={deckToText({ title: deckTitle }, toExportEntries(items), {
-          style: "arena",
-        })}
-        plainText={deckToText({ title: deckTitle }, toExportEntries(items), {
-          style: "plain",
-        })}
         allowBatchExport={entitlements.allowBatchExport}
         customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
         realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
@@ -433,15 +440,27 @@ async function DeckBody({
   );
 }
 
-function toExportEntries(items: Awaited<ReturnType<typeof listDeckCards>>) {
-  return items.map(({ entry, card }) => ({
-    name: entry.name,
-    quantity: entry.quantity,
-    board: entry.board,
-    set_code: entry.set_code,
-    collector_number: entry.collector_number,
-    proxyTitle: card?.title ?? null,
-  }));
+/** "Copy decklist" (TODO DK0.7): free for the owner on every plan and for
+ *  every visitor who can open the deck. Both texts come from the rows this
+ *  viewer read, named as their deck list names them (a private card they
+ *  can't read keeps its entry name — lib/decks/export-text.ts). Nothing
+ *  to copy outside the maybeboard → no button. */
+async function DeckCopyDecklistSlot({
+  deckId,
+  deckTitle,
+}: {
+  deckId: string;
+  deckTitle: string;
+}) {
+  const items = await listDeckCardsOnce(deckId);
+  if (!items.some((item) => item.entry.board !== "maybe")) return null;
+  const entries = exportEntriesOf(items);
+  return (
+    <DeckCopyDecklist
+      plainText={deckToText({ title: deckTitle }, entries, { style: "plain", useProxyNames: true })}
+      arenaText={deckToText({ title: deckTitle }, entries, { style: "arena", useProxyNames: true })}
+    />
+  );
 }
 
 function DeckBodySkeleton() {
