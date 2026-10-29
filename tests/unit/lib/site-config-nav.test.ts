@@ -32,12 +32,13 @@ describe("the header's top level", () => {
     expect(siteConfig.createCta).toMatchObject({ label: "Create a card", href: "/create" });
   });
 
-  it("Community holds the gallery, decks, challenges and — signed in only — the feed", () => {
+  it("Community holds the gallery, decks, challenges, creators and — signed in only — the feed", () => {
     const community = groups.find((group) => group.id === "community")!;
     expect(groupLinks(community).map((link) => [link.label, link.href, Boolean(link.authedOnly)])).toEqual([
       ["Card gallery", "/gallery", false],
       ["Community decks", "/decks", false],
       ["Design challenges", "/challenges", false],
+      ["Creators", "/creators", false],
       ["Your feed", "/feed", true],
     ]);
     expect(groupLinks(community).find((link) => link.href === "/challenges")?.liveBadge).toBe("challenge");
