@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Hammer, LifeBuoy, Megaphone, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookA, Hammer, LifeBuoy, Megaphone, type LucideIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,9 @@ import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 // /learn — the hub of everything a reader learns from (TODO NV4): the four
 // article categories (lib/content/article-categories.ts) with their counts
 // and newest guides, the latest three "What's new" posts, and the pages
-// about USING PipGlyph (Help & FAQ, What's new, Tools), kept apart from the
-// design guides on purpose — mixing the two was the old "Guides" confusion.
+// about USING PipGlyph (Help & FAQ, What's new, Tools, the Glossary), kept
+// apart from the design guides on purpose — mixing the two was the old
+// "Guides" confusion.
 //
 // ISR, cookie-free: the guides are read from content/articles/ at build
 // time and the updates through the cached public feed (lib/updates/queries,
@@ -75,6 +76,12 @@ const USING_PIPGLYPH: UsingLink[] = [
     label: "Tools",
     description: "The card creator, AI generator, pip editor, decks and print sheets.",
     icon: Hammer,
+  },
+  {
+    href: "/glossary",
+    label: "Glossary",
+    description: "The words on a Magic card, and the words PipGlyph uses, from A to Z.",
+    icon: BookA,
   },
 ];
 
@@ -179,7 +186,7 @@ export default async function LearnPage() {
         >
           Using PipGlyph
         </h2>
-        <ul className="grid gap-4 md:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {USING_PIPGLYPH.map((link) => (
             <li key={link.href} className="flex">
               <Link

@@ -4332,7 +4332,7 @@ NV1 ships together with WD2 (the same header files).
 - [x] **NV6 [P2 · M] /help** — A help centre built from faq.ts plus product how-tos. Files: `lib/content/faq.ts`. (done: `lib/content/help.ts` + `app/(marketing)/help` — eight static sections, every FAQ answer in exactly one under a stable anchor, six how-tos; ONE FAQPage home per answer (a landing page's topic stays marked up there); `/faq` 308s to `/help`, whose island forwards the old `#topic` anchors; sitemap, llms.txt and every internal link moved)
 - [x] **NV7 [P2 · S] /tools** — A directory of the creator, AI generator, pip editor, deck builder and print sheets. (done: `lib/content/tools.ts` + `app/(marketing)/tools`, linking all four SEO landing pages; ItemList JSON-LD)
 - [ ] **NV8 [P2 · M] /frames** — Every verified frame with a baked example and "Start with this frame".
-- [ ] **NV9 [P2 · S] /glossary** — Seeded from the creator’s glossary; terms link to the creator.
+- [x] **NV9 [P2 · S] /glossary** — Seeded from the creator’s glossary; terms link to the creator. (done 2026-10-29, feat/glossary: `lib/content/glossary.ts` is the ONE list — 36 terms, the creator's `CardGlossary` reads its four card-origin words from it — + static `app/(marketing)/glossary` with an A–Z jump list, a filter, an anchor per term, DefinedTermSet + BreadcrumbList JSON-LD; in the sitemap, llms.txt and /learn's "Using PipGlyph")
 - [ ] **NV10 [P2 · S] nav_click event** — Allow-listed, so Gallery’s move under Community can be watched (D9). Files: `lib/analytics/funnel-events.ts`.
 - [ ] **NV11 [P3 · M] /creators** — A directory of makers with public cards.
 - [ ] **NV12 [P3 · S] Challenge winners and a public roadmap** — Start with a public "requested frames" list.
