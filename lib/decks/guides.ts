@@ -14,8 +14,18 @@ import { aiErrorMessage } from "@/lib/ai/structured-output";
 // ---------------------------------------------------------------------------
 // Deck guides — storage + the one shared "build a guide for this deck"
 // routine used by the generation job's guide step (free) and the paid
-// analyze route (Pro owner, 1 credit). Reads go through RLS (the guide
-// follows the deck's visibility); writes use the service role.
+// analyze route (Pro owner, 1 credit). Writes use the service role.
+//
+// Reads go through ONE database function, deck_guide_for_viewer (migration
+// 0151, TODO DK0.11): the guide as the deck page shows it to the caller —
+// nothing for a deck they can't open, the TEXT only for a Pro viewer (an
+// admin, an active / trialing Pro plan, a Pro comp: entitlements.ts's rule),
+// and for anyone but the deck's owner the text with the deck's hidden cards'
+// names redacted (a guide was written from the owner's view of the cards; a
+// card that has gone private since reads "Private card", or the printing's
+// own name where its entry stands for one — what the visitor's list shows).
+// The stored text is never rewritten, and deck_guides is no API role's to
+// read directly, so the API hands out exactly what the page draws.
 // ---------------------------------------------------------------------------
 
 export type DeckGuide = DeckGuideContent & {
@@ -24,26 +34,56 @@ export type DeckGuide = DeckGuideContent & {
   generated_at: string;
 };
 
-export async function getDeckGuide(deckId: string): Promise<DeckGuide | null> {
-  if (!isSupabaseConfigured()) return null;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("deck_guides")
-    .select("deck_id, overview, game_plan, mulligan, combos, weaknesses, key_cards, source, generated_at")
-    .eq("deck_id", deckId)
-    .maybeSingle();
-  if (!data) return null;
+/** A deck's guide as this viewer reads it: the text, or — `withheld` —
+ *  only that one exists (the Pro teaser), or neither. */
+export type DeckGuideRead = { guide: DeckGuide | null; withheld: boolean };
+
+const NO_GUIDE: DeckGuideRead = { guide: null, withheld: false };
+
+type GuideRow = {
+  deck_id: string;
+  overview: string | null;
+  game_plan: unknown;
+  mulligan: string | null;
+  combos: unknown;
+  weaknesses: string | null;
+  key_cards: unknown;
+  source: string | null;
+  generated_at: string | null;
+};
+
+function narrowGuide(row: GuideRow): DeckGuide {
   return {
-    deck_id: data.deck_id,
-    overview: data.overview,
-    game_plan: (data.game_plan as string[]) ?? [],
-    mulligan: data.mulligan ?? "",
-    combos: (data.combos as DeckGuideContent["combos"]) ?? [],
-    weaknesses: data.weaknesses ?? "",
-    key_cards: (data.key_cards as string[]) ?? [],
-    source: data.source === "analysis" ? "analysis" : "generation",
-    generated_at: data.generated_at,
+    deck_id: row.deck_id,
+    overview: row.overview ?? "",
+    game_plan: (row.game_plan as string[] | null) ?? [],
+    mulligan: row.mulligan ?? "",
+    combos: (row.combos as DeckGuideContent["combos"] | null) ?? [],
+    weaknesses: row.weaknesses ?? "",
+    key_cards: (row.key_cards as string[] | null) ?? [],
+    source: row.source === "analysis" ? "analysis" : "generation",
+    generated_at: row.generated_at ?? new Date(0).toISOString(),
   };
+}
+
+export async function getDeckGuide(deckId: string): Promise<DeckGuideRead> {
+  if (!isSupabaseConfigured()) return NO_GUIDE;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("deck_guide_for_viewer", { p_deck_id: deckId });
+  if (error?.code === "PGRST202") {
+    // A database 0151 hasn't reached has no such function: 0085's table read
+    // (the page withholds the text from a non-Pro viewer itself). Remove once
+    // 0151 is on production and dev.
+    const { data: row } = await supabase
+      .from("deck_guides")
+      .select("deck_id, overview, game_plan, mulligan, combos, weaknesses, key_cards, source, generated_at")
+      .eq("deck_id", deckId)
+      .maybeSingle();
+    return row ? { guide: narrowGuide(row), withheld: false } : NO_GUIDE;
+  }
+  const row = Array.isArray(data) ? data[0] : null;
+  if (error || !row) return NO_GUIDE;
+  return row.readable ? { guide: narrowGuide(row), withheld: false } : { guide: null, withheld: true };
 }
 
 export type BuildGuideResult = { ok: true; guide: DeckGuideContent } | { ok: false; error: string };
