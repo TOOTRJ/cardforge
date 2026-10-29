@@ -238,20 +238,25 @@ describe("planeswalker ability rows", () => {
     expect(BAKE_ROWS).toContain("loyaltyRowsDrawing(rowsLayout, target)");
     expect(PREVIEW_ROWS).toContain('loyaltyRowsDrawing(rowsLayout, "hd")');
     expect(PREVIEW_ROWS).toContain("height: `${rowFractions[i] * 100}%`");
-    // One badge box (TODO 3.3: the preview's was 1.6 em, the bake's 1.5),
-    // from LOYALTY_ROW through loyaltyRowPx — never an em literal here.
-    expect(BAKE_ROWS).toContain("width: a.badgeWidth,");
-    expect(BAKE_ROWS).toContain("height: a.badgeHeight,");
-    expect(PREVIEW_ROWS).toContain("width: hdCqw(a.badgeWidth),");
-    expect(PREVIEW_ROWS).toContain("height: hdCqw(a.badgeHeight),");
+    // One set of badges (TODO 3.3: the preview's was 1.6 em, the bake's 1.5;
+    // layout v75: where print draws them), from loyaltyBadgesDrawing — the
+    // bake's target, the preview the HD bake's — never a literal here.
+    expect(BAKE_ROWS).toContain("loyaltyBadgesDrawing(rowsLayout, abilities, target)");
+    expect(PREVIEW_ROWS).toContain('loyaltyBadgesDrawing(rowsLayout, abilities, "hd")');
     for (const rows of [BAKE_ROWS, PREVIEW_ROWS]) {
       expect(rows).not.toMatch(/\* (1\.6|1\.5|2\.3|0\.22|0\.4)\b/);
       expect(rows).not.toContain("LOYALTY_ROW.");
-      // The text starts where the rail ends; each ability's column is the
-      // width its lines were broken for — the last one short of the loyalty
-      // shield when it would reach it (TODO 4.19) — and they are the
-      // layout's own lines, never wrapped by the renderer.
-      expect(rows).toMatch(/marginRight: (hdCqw\()?a\.rail - a\.padX - a\.badgeWidth/);
+      expect(rows).not.toContain("LOYALTY_BADGE_PRINT");
+      // Each badge's art, numeral and colon at the drawing's boxes.
+      for (const box of ["b.art.left", "b.art.top", "b.art.width", "b.art.height", "b.numeral.left", "b.numeral.top", "b.numeral.width", "b.numeral.fontPx", "dot.left", "dot.top", "dot.size", "b.label"]) {
+        expect(rows).toContain(box);
+      }
+      // The text starts where the row's rail ends (a static ability's
+      // shorter, v75); each ability's column is the width its lines were
+      // broken for — the last one short of the loyalty shield when it would
+      // reach it (TODO 4.19) — and they are the layout's own lines, never
+      // wrapped by the renderer.
+      expect(rows).toMatch(/width: (hdCqw\()?draw\.rails\[i\] - a\.padX/);
       expect(rows).toMatch(/width: (hdCqw\()?draw\.text\[i\]\.column/);
       expect(rows).toMatch(/<RulesLines(Bake)? blocks=\{rowsLayout\.text\[i\]\.blocks\} metrics=\{draw\.text\[i\]\.metrics\}/);
       expect(rows).not.toContain("RulesBody");

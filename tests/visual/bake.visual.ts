@@ -145,7 +145,13 @@ it("bakes its shard of the visual-regression matrix", async () => {
   const { rowToPreviewData } = await import("@/lib/cards/bake-core");
   const { backPreviewData } = await import("@/lib/cards/faces");
   const { renderCardImage } = await import("@/lib/render/card-image");
-  const { CARD_LAYOUT_VERSION, isRenderStale } = await import("@/lib/cards/layout-version");
+  const { CARD_LAYOUT_VERSION, isRenderStale, liveRenderScopesSince } = await import("@/lib/cards/layout-version");
+  const { probeLiveShrunkLines } = await import("@/lib/cards/render-tiers");
+  // A bump whose change reached only the LIVE 750 px render (lib/cards/
+  // layout-version.ts LIVE_RENDER_SCOPES — never a stored bake, which is
+  // HD): a 750 px case the render's own probe names is in that bump's
+  // scope, and the sweep (which never reads the table) re-bakes nothing.
+  const liveScopes = BASE_VERSION !== null ? liveRenderScopesSince(BASE_VERSION, CARD_LAYOUT_VERSION) : [];
   const { resetFrameAssetCacheForTests } = await import("@/lib/render/card-frames");
 
   const art = await generatedArt(1000, 760, 30);
@@ -193,8 +199,13 @@ it("bakes its shard of the visual-regression matrix", async () => {
         const card = c.face === "back" ? backPreviewData(front) : front;
         if (!card) throw new Error("the case bakes a back face the row has not got");
         if (c.face === "back" && card.artUrl === "ART") card.artUrl = art2;
-        const res = await renderCardImage(card, c.preset, { brandMark: true, watermarkText: null, corners: c.corners });
-        const png = Buffer.from(await res.arrayBuffer());
+        // (The body is read inside the probe: the response renders lazily.)
+        const { result: png, shrunk } = await probeLiveShrunkLines(async () =>
+          Buffer.from(
+            await (await renderCardImage(card, c.preset, { brandMark: true, watermarkText: null, corners: c.corners })).arrayBuffer(),
+          ),
+        );
+        if (result.stale === false && shrunk && liveScopes.includes("measured-line")) result.stale = true;
         const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         result.hash = sha(Buffer.concat([Buffer.from(`${info.width}x${info.height}x${info.channels}\n`), data])).slice(0, 16);
         if (SAVE_DIR) fs.writeFileSync(path.join(SAVE_DIR, `${c.id.replace(/[/@]/g, "__")}.png`), png);

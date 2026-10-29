@@ -551,17 +551,19 @@ describe("2. an edited save keeps the marker of a row whose numbers were not tou
 describe("3. a walker whose loyalty badges touch", () => {
   const lines = (count: number) => Array.from({ length: count }, (_, i) => `+${i + 1}: Draw a card.`).join("\n");
 
-  it("nine one-line abilities on m15pw: the editor says the card will be crowded", async () => {
-    await openRows(walker(lines(9)));
+  // (Layout v75: the badges at print's size meet from six one-line rows on
+  // m15pw — nine with the 69 px badges before; lib/creator/walker-crowding.ts.)
+  it("six one-line abilities on m15pw: the editor says the card will be crowded", async () => {
+    await openRows(walker(lines(6)));
     expect(screen.getByTestId("rows-crowded").textContent).toBe(
       "With this many rows the card will be crowded: its loyalty badges touch.",
     );
     // A note: the card still saves.
-    expect((await sentUpdate()).rules_text).toBe(lines(9));
+    expect((await sentUpdate()).rules_text).toBe(lines(6));
   });
 
-  it("eight, and an ordinary walker: no note", async () => {
-    await openRows(walker(lines(8)));
+  it("five, and an ordinary walker: no note", async () => {
+    await openRows(walker(lines(5)));
     expect(screen.queryByTestId("rows-crowded")).toBeNull();
     cleanup();
     await openRows(walker("+1: Draw a card.\n−2: Deal 3 damage to any target.\n−7: You get an emblem."));
@@ -569,9 +571,9 @@ describe("3. a walker whose loyalty badges touch", () => {
   });
 
   it("follows the rows as they are removed", async () => {
-    await openRows(walker(lines(9)));
+    await openRows(walker(lines(6)));
     expect(screen.getByTestId("rows-crowded")).toBeTruthy();
-    await clickLabel("Remove ability 9");
+    await clickLabel("Remove ability 6");
     await waitFor(() => expect(screen.queryByTestId("rows-crowded")).toBeNull());
   });
 });

@@ -34,9 +34,10 @@ import {
 import {
   contentRowsAt,
   layoutProfileLoyaltyRows,
+  LOYALTY_BADGE_PRINT,
+  loyaltyBadgesMeet,
   loyaltyRowAnatomy,
   loyaltyRowLines,
-  loyaltyRowPx,
   loyaltyRowsDrawing,
   rowsStampKeepOut,
   type LoyaltyRowsLayout,
@@ -245,10 +246,12 @@ describe("the ability rows hold against the arch", () => {
     // Held up over the arch by the smallest even lift that clears it at its
     // size (owner Round 72); a step down only where no lift does (6 of 70
     // on the regular frame, 4 on the tall one — the all-or-nothing 24 px of
-    // the first cut stepped 10 and 9).
+    // the first cut stepped 10 and 9). Layout v75 moved the tall walker's
+    // (its four rows' badges at print's size: a size step that parts two of
+    // them comes before one that lets them meet) — 3 of 70 step down now.
     expect(summary).toEqual({
       m15borderlesspw: { lifted: [51, 52, 53, 54, 56, 57, 58, 66, 67, 68, 69, 70], stepped: [37, 38, 63, 64, 65, 66] },
-      m15borderlesspwtall: { lifted: [37, 38, 45, 46, 47, 48, 49, 50, 58, 59, 60, 61, 62, 63, 64], stepped: [57, 58, 59, 60] },
+      m15borderlesspwtall: { lifted: [37, 38, 49, 50, 57, 58, 59, 60, 67], stepped: [68, 69, 70] },
     });
   });
 
@@ -273,13 +276,18 @@ describe("the ability rows hold against the arch", () => {
               rect: profile.rules.rect,
               baseSizePct: walkerSizePct(profile),
               aspect: ASPECT,
-              anatomy: loyaltyRowAnatomy(),
+              anatomy: loyaltyRowAnatomy(abilities),
             },
             stamped.sizePx,
             { lastRowInsetHd: stamped.lastRowInsetPct > 0 ? Math.round(stamped.lastRowInsetPct * 1500) : 0, ...(smaller > 0 ? { lastRowLiftHd: smaller } : {}) },
           );
           const rows = { text: at.text, rowFractions: at.rowFractions } as LoyaltyRowsLayout;
-          expect(!at.fits || entersArch(rows, "hd") || entersArch(rows, "default"), `${t} · ${n} · lift ${smaller}`).toBe(true);
+          // (…or, layout v75, two of its badges meet where a bigger lift
+          // parts them — the layout looks for that first.)
+          expect(
+            !at.fits || entersArch(rows, "hd") || entersArch(rows, "default") || loyaltyBadgesMeet(rows, abilities),
+            `${t} · ${n} · lift ${smaller}`,
+          ).toBe(true);
         }
       }
     }
@@ -296,11 +304,11 @@ describe("the ability rows hold against the arch", () => {
     }
   });
 
-  it("no badge comes near the arch (the rail ends far left of it)", () => {
+  it("no badge comes near the arch (the colon, its right end, is far left of it)", () => {
     for (const t of WALKERS) {
-      const r = getFrameProfile(t).rules.rect;
-      const a = loyaltyRowPx("hd");
-      const badgeRight = (r.leftPct / 100) * 1500 + a.padX + a.badgeWidth;
+      // Layout v75: the badges at print's place, card-absolute, the same on
+      // every walker body — the colon after them ends at x 255.
+      const badgeRight = LOYALTY_BADGE_PRINT.colon.centreXPx + LOYALTY_BADGE_PRINT.colon.dotPx / 2;
       const archLeft = Math.min(...arch.map((k) => (k.leftPct / 100) * 1500));
       expect(badgeRight, t).toBeLessThan(archLeft - 300);
       // …nor the starting-loyalty shield (it starts right of the arch).

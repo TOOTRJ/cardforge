@@ -45,6 +45,7 @@ import {
 } from "@/lib/cards/foil-finish";
 import {
   layoutProfileLoyaltyRows,
+  loyaltyBadgesDrawing,
   loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
@@ -136,7 +137,6 @@ import {
   brandMarkLayout,
   footerInk,
   loyaltyBadgeAssetFor,
-  loyaltyBadgeShapeFor,
   resolveColorAsset,
   slotInk,
   slotTextDy,
@@ -3693,7 +3693,11 @@ function LoyaltyRows({
   // Foil: rows contain their sheen, and the badge + text after it are
   // positioned so they paint on top (the bake's document order).
   const onTop = foil ? { position: "relative" as const } : {};
+  // The printed badges and colons (layout v75): card-absolute HD px in cqw,
+  // in a layer of their own after the rows — the bake's twin.
+  const badges = loyaltyBadgesDrawing(rowsLayout, abilities, "hd");
   return (
+    <>
     <div
       style={{
         ...rectStyle(slot.rect),
@@ -3736,63 +3740,10 @@ function LoyaltyRows({
               style={{ pointerEvents: "none" }}
             />
           ) : null}
-          <div
-            style={{
-              position: "relative",
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: hdCqw(a.badgeWidth),
-              height: hdCqw(a.badgeHeight),
-              // The text column starts where the rail ends: the column the
-              // ability's lines were broken for.
-              marginRight: hdCqw(a.rail - a.padX - a.badgeWidth),
-            }}
-          >
-            {ab.cost ? (
-              // The printed loyalty shield asset: peaked top for +, pointed
-              // bottom for -, flat hexagon for 0. WebP in the browser, PNG
-              // fallback (the bake reads the PNG master directly).
-              <picture>
-                <source
-                  srcSet={frameUrl(webpVariant(loyaltyBadgeAssetFor(ab.cost)))}
-                  type="image/webp"
-                />
-                <img
-                  src={frameUrl(loyaltyBadgeAssetFor(ab.cost))}
-                  alt=""
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "fill",
-                  }}
-                />
-              </picture>
-            ) : null}
-            <span
-              style={{
-                position: "relative",
-                color: rows.badgeTextHex,
-                fontFamily: faceOf({ loyaltyRows: rows }, "badge").previewFamily,
-                fontSize: hdCqw(a.badgeText),
-                fontWeight: 700,
-                // Optically center inside the shield's flat region.
-                ...(ab.cost
-                  ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: hdCqw(a.badgeNudge) }
-                    : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: hdCqw(a.badgeNudge) }
-                      : {}
-                  : {}),
-              }}
-            >
-              {ab.cost ?? ""}
-            </span>
-          </div>
+          {/* The rail: the text column starts where it ends — the column
+              the ability's lines were broken for (a static ability's
+              starts further left, layout v75). The badge is drawn below. */}
+          <div style={{ flexShrink: 0, width: hdCqw(draw.rails[i] - a.padX) }} />
           {/* The ability's lines, in the column they were broken for — the
               last one short of the loyalty shield when its text would reach
               it (lastRowInsetPct) — centred in the row, with the ink
@@ -3817,5 +3768,61 @@ function LoyaltyRows({
         </div>
       ))}
     </div>
+      {badges.map((b) => (
+        <div key={b.row} aria-hidden style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "none", ...(placeholder ? { opacity: 0.55 } : {}) }}>
+          {/* The printed loyalty badge: peaked top for +, pointed bottom
+              for −, flat for 0. WebP in the browser, PNG fallback (the bake
+              reads the PNG master directly). */}
+          <picture>
+            <source srcSet={frameUrl(webpVariant(loyaltyBadgeAssetFor(abilities[b.row].cost ?? "")))} type="image/webp" />
+            <img
+              src={frameUrl(loyaltyBadgeAssetFor(abilities[b.row].cost ?? ""))}
+              alt=""
+              style={{
+                position: "absolute",
+                left: hdCqw(b.art.left),
+                top: hdCqw(b.art.top),
+                width: hdCqw(b.art.width),
+                height: hdCqw(b.art.height),
+                objectFit: "fill",
+              }}
+            />
+          </picture>
+          <div
+            style={{
+              position: "absolute",
+              left: hdCqw(b.numeral.left),
+              top: hdCqw(b.numeral.top),
+              width: hdCqw(b.numeral.width),
+              height: hdCqw(b.numeral.fontPx),
+              display: "flex",
+              justifyContent: "center",
+              color: rows.badgeTextHex,
+              fontFamily: faceOf({ loyaltyRows: rows }, "badge").previewFamily,
+              fontSize: hdCqw(b.numeral.fontPx),
+              fontWeight: 700,
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {b.label}
+          </div>
+          {b.colon.map((dot, j) => (
+            <div
+              key={j}
+              style={{
+                position: "absolute",
+                left: hdCqw(dot.left),
+                top: hdCqw(dot.top),
+                width: hdCqw(dot.size),
+                height: hdCqw(dot.size),
+                borderRadius: "50%",
+                backgroundColor: slot.colorHex,
+              }}
+            />
+          ))}
+        </div>
+      ))}
+    </>
   );
 }

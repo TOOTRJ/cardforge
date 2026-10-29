@@ -71,28 +71,154 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { walkerSizePct } from "@/lib/cards/rules-box";
+import { statInkEm } from "@/lib/cards/stat-fit";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
-import { RULES_HD_WIDTH, RULES_TEXT, orientationFromAspect, rulesPxToPct } from "@/lib/cards/typography";
+import { RULES_HD_WIDTH, RULES_SIZE_PX, RULES_TEXT, orientationFromAspect, rulesPxToPct } from "@/lib/cards/typography";
 
 /** Row anatomy, in em of LOYALTY_ROW_SIZE_PX — the single copy both
  *  renderers draw from (the preview's badge was 1.6 em tall against the
- *  bake's 1.5, TODO 3.3). Its print re-source is TODO 4.19. */
+ *  bake's 1.5, TODO 3.3). Since layout v75 the badges themselves are drawn
+ *  where the prints draw them (LOYALTY_BADGE_PRINT, outside the rows): these
+ *  ems only set the RAIL — where an ability's text column starts (x 275 at
+ *  HD, the prints'). */
 export const LOYALTY_ROW = {
-  /** The loyalty-cost badge box. Static abilities keep the (empty) box so
-   *  every ability's text starts on the same margin. */
+  /** The rail's badge share (the pre-v75 badge box's width). */
   badgeWidthEm: 2.3,
-  badgeHeightEm: 1.5,
-  /** Space between the badge box and the ability text. */
+  /** …and the room after it. */
   badgeGapEm: 0.5,
-  /** The badge numeral, and its optical nudge into the shield's flat part
-   *  (down for a peaked "+", up for a pointed "−"). */
-  badgeTextEm: 0.88,
-  badgeNudgeEm: 0.18,
   /** Row padding: vertical, horizontal. */
   padYEm: 0.22,
   padXEm: 0.4,
 } as const;
+
+/**
+ * The loyalty-cost badges AS PRINTED (layout v75, TODO 4.19's badge rail;
+ * owner 2026-10-28), card-absolute HD px. Measured on 13 printings, 1500 ×
+ * 2100 (WAR #1 / #169, M21 #135 / #183 / #283 / #284, DMU #1, ONE #115, MOM
+ * #6 / #134 / #320, BFZ #29, FDN #357 — bordered and borderless alike): the
+ * badge's black FACE spans x 87–220 (median 89–218) on every card, so the
+ * badge straddles the frame's edge LEFT of the text box — never inside the
+ * rules box, where v33–v74 drew a 106 × 69 px badge at x 146–252. Its
+ * height and its place on the row depend on its shape: the face's centre
+ * sits `faceDyPx` from the row's centre (medians of the face's centre
+ * against the colon's, which prints on the row's text: a "+" badge rides
+ * 10 px high, its peak above; a "−" 6 px low, its point below). The numeral
+ * — Beleren Bold, 44–45 px digits = 62 px type — is centred on the face, 1 px
+ * above its middle; the print's long minus "−". The COLON prints after the
+ * badge on every walker: two round dots, 8–10 px, centres 26.5 px apart at x
+ * 250, on the row's centre. A STATIC ability has no badge and no colon, and
+ * its text starts at x 207–209 (ONE #115, MOM #134, WAR #1), not at the
+ * ability margin (Card Conjurer: the column 0.044 W further left).
+ */
+export const LOYALTY_BADGE_PRINT = {
+  faceLeftPx: 89,
+  faceWidthPx: 129,
+  shapes: {
+    up: { faceHeightPx: 77, faceDyPx: -10 },
+    down: { faceHeightPx: 79, faceDyPx: 6 },
+    zero: { faceHeightPx: 74, faceDyPx: 0 },
+  },
+  numeralPx: 62,
+  numeralDyPx: -1,
+  colon: { centreXPx: 250, dotPx: 10, halfGapPx: 13 },
+  /** A static ability's rail: its text column starts 67 px left of an
+   *  ability's (x 207.5 against 274.5 on the M15 walker's box). */
+  staticRailPx: 80,
+} as const;
+
+/** The badge art (public/frames/m15pw/loyalty{up,down,naught}.png, the MSE
+ *  masters, 265 × 210): each shape's black face and its silver rim's rows
+ *  in the art's own px, measured on the files. The art is drawn so its face
+ *  lands on the print's (x and y scaled apart — MSE's flat badge is 7 %
+ *  flatter than print's). */
+const LOYALTY_BADGE_ART = {
+  width: 265,
+  height: 210,
+  shapes: {
+    up: { face: { left: 40, top: 40, right: 224, bottom: 153 }, rimTop: 5, rimBottom: 164 },
+    down: { face: { left: 41, top: 48, right: 225, bottom: 161 }, rimTop: 31, rimBottom: 189 },
+    zero: { face: { left: 40, top: 50, right: 225, bottom: 149 }, rimTop: 33, rimBottom: 160 },
+  },
+} as const;
+
+export type LoyaltyBadgeShape = keyof typeof LOYALTY_BADGE_PRINT.shapes;
+
+/** The badge's shape for a cost: "+N" peaked, "−N" pointed, else flat. */
+export function loyaltyBadgeShapeOf(cost: string): LoyaltyBadgeShape {
+  if (cost.startsWith("+")) return "up";
+  if (cost.startsWith("-") || cost.startsWith("−")) return "down";
+  return "zero";
+}
+
+/** The badge's numeral as printed: a leading hyphen is the long minus. */
+export function loyaltyBadgeLabel(cost: string): string {
+  return cost.replace(/^-/, "−");
+}
+
+/** The room the numeral keeps on each side of the face, HD px: print's
+ *  widest two-character costs ("−10", "+10") leave 9–12 px. */
+const BADGE_NUMERAL_SIDE_PX = 8;
+
+/**
+ * The badge numeral's size, HD px: LOYALTY_BADGE_PRINT.numeralPx while its
+ * ink — both renderers' reach, glyph by glyph (lib/cards/stat-fit.ts
+ * statInkEm, the stat fit's measure) — keeps BADGE_NUMERAL_SIDE_PX inside
+ * the face; a wider one (a three-digit cost, "+100": ~150 px at 62 px
+ * against a 129 px face) steps down to the largest EVEN px that fits (whole
+ * at 750), never below the rules ladder's floor (42 px). Every one- and two-digit
+ * cost keeps 62 px.
+ */
+export function loyaltyBadgeNumeralPx(label: string): number {
+  const base = LOYALTY_BADGE_PRINT.numeralPx;
+  const ink = statInkEm(label);
+  const reach = Math.max(ink.left, ink.right);
+  const half = LOYALTY_BADGE_PRINT.faceWidthPx / 2 - BADGE_NUMERAL_SIDE_PX;
+  if (reach <= 0 || base * reach <= half) return base;
+  const fit = Math.floor(half / reach);
+  return Math.max(RULES_SIZE_PX.floor, fit - (fit % 2));
+}
+
+/** Where a glyph's digits are centred in a line-height-1 box of Beleren
+ *  Bold, in em from the box's top: the baseline at (1 − (ascent + descent))
+ *  / 2 + ascent = 0.833 em (hhea 1917 / 552 of 2048), the digits 0–0.71 em
+ *  above it. */
+const BADGE_NUMERAL_CENTRE_EM = 0.478;
+
+/** A shape's art box and rim relative to its row's centre, HD px (floats). */
+function badgeArtHd(shape: LoyaltyBadgeShape) {
+  const p = LOYALTY_BADGE_PRINT.shapes[shape];
+  const art = LOYALTY_BADGE_ART.shapes[shape];
+  const sx = LOYALTY_BADGE_PRINT.faceWidthPx / (art.face.right - art.face.left);
+  const sy = p.faceHeightPx / (art.face.bottom - art.face.top);
+  const faceTop = p.faceDyPx - p.faceHeightPx / 2;
+  const top = faceTop - art.face.top * sy;
+  return {
+    left: LOYALTY_BADGE_PRINT.faceLeftPx - art.face.left * sx,
+    width: LOYALTY_BADGE_ART.width * sx,
+    top,
+    height: LOYALTY_BADGE_ART.height * sy,
+    rimTop: top + art.rimTop * sy,
+    rimBottom: top + art.rimBottom * sy,
+  };
+}
+
+/** The least height of a row with a badge, HD px: what it was before the
+ *  badges grew to print's size (v33–v74: a 69 px badge and its padding,
+ *  89 px), so no walker's text is set smaller for them. Like print's, a
+ *  badge may ride over its row's edges (a "+" peak above its stripe); what
+ *  it may never do is meet its neighbour — the layout steps its size down
+ *  first (loyaltyBadgesMeet). A static ability's row has no such floor:
+ *  its text and padding. */
+export const LOYALTY_BADGE_ROW_MIN_HD = 89;
+
+/** LOYALTY_BADGE_ROW_MIN_HD at a target: the old badge's 69 px and the
+ *  row's padding, each rounded there as v33–v74 drew them. */
+function badgeRowMinPx(target: RulesTarget): number {
+  const k = RULES_TARGET_SCALE[target];
+  const padY = Math.round(Math.round(LOYALTY_ROW_SIZE_PX * LOYALTY_ROW.padYEm) * k);
+  return Math.round((LOYALTY_BADGE_ROW_MIN_HD - 2 * Math.round(LOYALTY_ROW_SIZE_PX * LOYALTY_ROW.padYEm)) * k) + 2 * padY;
+}
 
 /**
  * The size, HD px, LOYALTY_ROW's ems are drawn at — whatever size the
@@ -110,40 +236,41 @@ export const LOYALTY_ROW_SIZE_PX = 46;
 export type LoyaltyRowPx = {
   padY: number;
   padX: number;
-  badgeWidth: number;
-  badgeHeight: number;
-  badgeGap: number;
-  badgeText: number;
-  badgeNudge: number;
-  /** The rail before an ability's text: the padding, the badge box and its
-   *  gap — where the text column starts. */
+  /** The rail before an ability's text: the padding, the badge's share and
+   *  its gap — where the text column starts. */
   rail: number;
+  /** …and before a STATIC ability's (LOYALTY_BADGE_PRINT.staticRailPx). */
+  staticRail: number;
 };
+
+/** The rail's HD px: the padding, the badge's share and its gap. */
+function railHd(): number {
+  const hd = (em: number) => Math.round(LOYALTY_ROW_SIZE_PX * em);
+  return hd(LOYALTY_ROW.padXEm) + hd(LOYALTY_ROW.badgeWidthEm) + hd(LOYALTY_ROW.badgeGapEm);
+}
+
+/** Row `index`'s rail, HD px: an ability's, or a static ability's. */
+function rowRailHd(abilities: readonly LoyaltyAbility[] | undefined, index: number): number {
+  return abilities && !abilities[index]?.cost ? LOYALTY_BADGE_PRINT.staticRailPx : railHd();
+}
 
 /**
  * LOYALTY_ROW (at LOYALTY_ROW_SIZE_PX) in whole px of `target`: each em
  * value rounded to the HD px, and the 750 px bake's each the half of that,
- * rounded — the rail too (so the column the lines were broken for starts
+ * rounded — the rails too (so the column the lines were broken for starts
  * where both bakes draw it: lib/cards/rules-layout.ts rounds a box's HD px
  * padding the same way).
  */
 export function loyaltyRowPx(target: RulesTarget = "hd"): LoyaltyRowPx {
   const r = LOYALTY_ROW;
   const hd = (em: number) => Math.round(LOYALTY_ROW_SIZE_PX * em);
-  const padX = hd(r.padXEm);
-  const badgeWidth = hd(r.badgeWidthEm);
-  const badgeGap = hd(r.badgeGapEm);
   const scale = RULES_TARGET_SCALE[target];
   const at = (px: number) => Math.round(px * scale);
   return {
     padY: at(hd(r.padYEm)),
-    padX: at(padX),
-    badgeWidth: at(badgeWidth),
-    badgeHeight: at(hd(r.badgeHeightEm)),
-    badgeGap: at(badgeGap),
-    badgeText: at(hd(r.badgeTextEm)),
-    badgeNudge: at(hd(r.badgeNudgeEm)),
-    rail: at(padX + badgeWidth + badgeGap),
+    padX: at(hd(r.padXEm)),
+    rail: at(railHd()),
+    staticRail: at(LOYALTY_BADGE_PRINT.staticRailPx),
   };
 }
 
@@ -240,6 +367,10 @@ export type RowAnatomy = {
    *  (RulesLayoutInput.padPx): the rail before the text, the room after it,
    *  and the row's own padding above and below its text block. */
   padPx: { left: number; right: number; top: number; bottom: number };
+  /** Row `index`'s rail, HD px, where it differs from `padPx.left` (a
+   *  walker's static ability, layout v75); absent = `padPx.left` on every
+   *  row. */
+  leftPx?: (index: number) => number;
   /** Row `index`'s minimum height at `target`, whole px of that target: what
    *  its badge(s) take, with whatever room the row keeps round them. */
   minHeightPx: (index: number, target: RulesTarget) => number;
@@ -315,7 +446,7 @@ export function contentRowsAt(
           sizePct: baseSizePct,
           lineHeight,
           padPx: {
-            left: pad.left,
+            left: anatomy.leftPx?.(i) ?? pad.left,
             right: pad.right + (i === last ? lastInset : 0),
             top: pad.top,
             bottom: pad.bottom + (i === last ? lastLift : 0),
@@ -352,17 +483,16 @@ export function contentRowsAt(
   return { sizePx, insetHd: lastInset, liftHd: lastLift, text, needs, rowFractions, fits: holds && !overwide };
 }
 
-/** The walker rows' anatomy (LOYALTY_ROW at LOYALTY_ROW_SIZE_PX): the badge
- *  rail before the text, the row's padding, and ONE badge with that padding
- *  as every row's minimum. */
-export function loyaltyRowAnatomy(): RowAnatomy {
+/** The walker rows' anatomy (LOYALTY_ROW at LOYALTY_ROW_SIZE_PX): the rail
+ *  before the text (a static ability's shorter, layout v75), the row's
+ *  padding, and — on a row with a badge — LOYALTY_BADGE_ROW_MIN_HD as its
+ *  minimum. */
+export function loyaltyRowAnatomy(abilities: readonly LoyaltyAbility[]): RowAnatomy {
   const a = loyaltyRowPx();
   return {
     padPx: { left: a.rail, right: a.padX, top: a.padY, bottom: a.padY },
-    minHeightPx: (_index, target) => {
-      const at = loyaltyRowPx(target);
-      return at.badgeHeight + 2 * at.padY;
-    },
+    leftPx: (index) => rowRailHd(abilities, index),
+    minHeightPx: (index, target) => (abilities[index]?.cost ? badgeRowMinPx(target) : 0),
   };
 }
 
@@ -404,7 +534,7 @@ export function layoutLoyaltyRows({
     baseSizePct,
     lineHeight,
     aspect,
-    anatomy: loyaltyRowAnatomy(),
+    anatomy: loyaltyRowAnatomy(abilities),
     ...(symbolStyle ? { symbolStyle } : {}),
   };
   const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean, lastLift = 0): RowsAt =>
@@ -468,23 +598,35 @@ export function layoutLoyaltyRows({
   // over it by the SMALLEST even lift (2, 4, … up to the arch's height)
   // that clears it (owner Round 72) — never a smaller size while holding
   // it up fits, and never a change to a walker whose text clears the arch.
-  for (const sizePx of ladder) {
-    const candidates = insetHd > 0 ? [0, insetHd] : [0];
-    const archOnly: number[] = [];
-    for (const inset of candidates) {
-      const at = rowsAt(sizePx, inset, false);
-      if (!at.fits || reachesShield(at)) continue;
-      if (!entersArch(at)) return result(at, false);
-      archOnly.push(inset);
-    }
-    if (archOnly.length === 0) continue;
-    for (let lift = 2; lift <= liftHd; lift += 2) {
-      for (const inset of archOnly) {
-        const held = rowsAt(sizePx, inset, false, lift);
-        if (held.fits && !reachesShield(held) && !entersArch(held)) return result(held, false);
+  // Down the ladder twice (layout v75): first for a size whose badges keep
+  // apart (loyaltyBadgesMeet — a long row's room given to its short
+  // neighbours as the text shrinks), then — where no size parts them, as
+  // with many equal one-line rows, whose pitch no size changes — exactly
+  // as before the badges grew, so no walker is set smaller than its text
+  // needs for a meeting no size would part.
+  const down = (apart: boolean): LoyaltyRowsLayout | null => {
+    const ok = (at: RowsAt) => !apart || !loyaltyBadgesMeet(at, abilities);
+    for (const sizePx of ladder) {
+      const candidates = insetHd > 0 ? [0, insetHd] : [0];
+      const archOnly: number[] = [];
+      for (const inset of candidates) {
+        const at = rowsAt(sizePx, inset, false);
+        if (!at.fits || reachesShield(at) || !ok(at)) continue;
+        if (!entersArch(at)) return result(at, false);
+        archOnly.push(inset);
+      }
+      if (archOnly.length === 0) continue;
+      for (let lift = 2; lift <= liftHd; lift += 2) {
+        for (const inset of archOnly) {
+          const held = rowsAt(sizePx, inset, false, lift);
+          if (held.fits && !reachesShield(held) && !entersArch(held) && ok(held)) return result(held, false);
+        }
       }
     }
-  }
+    return null;
+  };
+  const laid = down(true) ?? down(false);
+  if (laid) return laid;
   // Nothing fits even at the floor: the floor's rows, scaled into the box —
   // with NO lift (owner Round 72): a lift here only takes room from a text
   // that already does not fit, so the fallback is exactly the unstamped one.
@@ -574,6 +716,9 @@ export type LoyaltyRowsDrawing = {
    *  drawing of every other walker is what it was). */
   lastRowLift?: number;
   text: { column: number; insetTop: number; insetBottom: number; metrics: RulesMetrics }[];
+  /** Each row's rail at this target, whole px — the space before its text
+   *  column, padding included (an ability's, or a static ability's). */
+  rails: number[];
 };
 
 export function loyaltyRowsDrawing(rows: LoyaltyRowsLayout, target: RulesTarget): LoyaltyRowsDrawing {
@@ -595,5 +740,94 @@ export function loyaltyRowsDrawing(rows: LoyaltyRowsLayout, target: RulesTarget)
         metrics: placed.metrics,
       };
     }),
+    rails: rows.text.map((layout) => {
+      const pad = layout.input.padPx;
+      const left = pad && typeof pad === "object" && "left" in pad ? pad.left : railHd();
+      return Math.round(left * RULES_TARGET_SCALE[target]);
+    }),
   };
+}
+
+/** One printed loyalty badge at a target, card-absolute whole px of it:
+ *  the art's box, the numeral's line box (the face's width, centred), and
+ *  the colon's two dots (LOYALTY_BADGE_PRINT). */
+export type LoyaltyBadgeDrawing = {
+  row: number;
+  shape: LoyaltyBadgeShape;
+  label: string;
+  art: { left: number; top: number; width: number; height: number };
+  /** The silver rim's top and bottom rows (the art's soft shadow below it
+   *  is not the badge): where two badges would meet. */
+  rim: { top: number; bottom: number };
+  numeral: { left: number; top: number; width: number; fontPx: number };
+  colon: { left: number; top: number; size: number }[];
+};
+
+/**
+ * The badges of `abilities` (one per ability with a cost; a static ability
+ * has none, and no colon) where the prints draw them, at `target`: each on
+ * its row's centre (the rows' whole-px edges both renderers draw), in
+ * card-absolute px — OUTSIDE the rules box, so both renderers draw them in
+ * a layer of their own after the rows (layout v75).
+ */
+export function loyaltyBadgesDrawing(
+  rows: Pick<LoyaltyRowsLayout, "text" | "rowFractions">,
+  abilities: readonly LoyaltyAbility[],
+  target: RulesTarget,
+): LoyaltyBadgeDrawing[] {
+  const first = rows.text[0];
+  if (!first) return [];
+  const k = RULES_TARGET_SCALE[target];
+  const box = rectPx(first.input.rect, first.orientation, first.input.aspect, target);
+  const edges = loyaltyRowEdgesPx(rows.rowFractions, box.height);
+  const p = LOYALTY_BADGE_PRINT;
+  const span = (from: number, size: number) => {
+    const a = Math.round(from);
+    return { at: a, size: Math.round(from + size) - a };
+  };
+  const out: LoyaltyBadgeDrawing[] = [];
+  abilities.forEach((ab, i) => {
+    if (!ab.cost || i >= edges.length - 1) return;
+    const shape = loyaltyBadgeShapeOf(ab.cost);
+    const centre = box.top + (edges[i] + edges[i + 1]) / 2;
+    const art = badgeArtHd(shape);
+    const x = span(art.left * k, art.width * k);
+    const y = span(centre + art.top * k, art.height * k);
+    const fontPx = Math.round(loyaltyBadgeNumeralPx(loyaltyBadgeLabel(ab.cost)) * k);
+    const faceCentre = centre + (p.shapes[shape].faceDyPx + p.numeralDyPx) * k;
+    const nx = span(p.faceLeftPx * k, p.faceWidthPx * k);
+    const dot = Math.round(p.colon.dotPx * k);
+    const dotLeft = Math.round(p.colon.centreXPx * k - dot / 2);
+    out.push({
+      row: i,
+      shape,
+      label: loyaltyBadgeLabel(ab.cost),
+      art: { left: x.at, top: y.at, width: x.size, height: y.size },
+      rim: { top: centre + art.rimTop * k, bottom: centre + art.rimBottom * k },
+      numeral: { left: nx.at, top: Math.round(faceCentre - BADGE_NUMERAL_CENTRE_EM * fontPx), width: nx.size, fontPx },
+      colon: [-1, 1].map((side) => ({ left: dotLeft, top: Math.round(centre + side * p.colon.halfGapPx * k - dot / 2), size: dot })),
+    });
+  });
+  return out;
+}
+
+/** Whether two neighbouring badges of `rows` touch or overlap at either
+ *  bake target (their silver rims, where the rows put them) — a static
+ *  ability draws none, so only neighbours that both have a cost count. The
+ *  layout steps its size down before it lets them (layoutLoyaltyRows); past
+ *  the floor they may, and the row editor says so (lib/creator/
+ *  walker-crowding.ts). */
+export function loyaltyBadgesMeet(
+  rows: Pick<LoyaltyRowsLayout, "text" | "rowFractions">,
+  abilities: readonly Pick<LoyaltyAbility, "cost">[],
+): boolean {
+  if (rows.rowFractions.length < 2) return false;
+  const drawn = abilities.map((a) => ({ cost: a.cost, text: "" }));
+  return RULES_TARGETS.some((target) => {
+    const badges = loyaltyBadgesDrawing(rows, drawn, target);
+    return badges.some((b, j) => {
+      const next = badges[j + 1];
+      return next !== undefined && next.row === b.row + 1 && next.rim.top <= b.rim.bottom;
+    });
+  });
 }

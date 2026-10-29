@@ -29,9 +29,18 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 // the rows with those two numbers put back to what v41 held (the "modern"
 // disc shadow of each metrics' own pip), and a test of its own says they
 // are 0 now: any other number, line or px that moves still fails here.
+//
+// Layout v75 (the loyalty badges on print, TODO 4.19's badge rail) moved
+// the walker rows ON PURPOSE: a static ability's column starts 67 px left
+// (the print's margin) and has no badge floor, the layout steps its size
+// down before two of the larger badges meet, and the drawing carries each
+// row's rail. So the fixture was RE-WRITTEN by this file on the v75 commit
+// (PIN_LOYALTY_ROWS=write, tests/unit/cards/fixtures/loyalty-rows-v75.json)
+// — the saga's rows still may not move a walker's; the v49 restoration of
+// the pip shadow is kept (the digest hashes what it always hashed).
 // ---------------------------------------------------------------------------
 
-const FIXTURE = join(process.cwd(), "tests/unit/cards/fixtures/loyalty-rows-v41.json");
+const FIXTURE = join(process.cwd(), "tests/unit/cards/fixtures/loyalty-rows-v75.json");
 const TEMPLATES = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"] as const;
 
 const CASES: Record<string, LoyaltyAbility[]> = {
@@ -179,10 +188,10 @@ const all = () =>
     TEMPLATES.map((template) => [template, Object.fromEntries(Object.entries(CASES).map(([name, abilities]) => [name, snapshot(template, abilities)]))]),
   );
 
-describe("the walker rows are what layout v41 computed (pinned before the saga's rows joined them)", () => {
+describe("the walker rows are what layout v75 computed (re-pinned with the badges on print)", () => {
   if (process.env.PIN_LOYALTY_ROWS === "write") {
     it("writes the fixture (run on the commit being pinned)", () => {
-      writeFileSync(FIXTURE, `${JSON.stringify({ pinned: "origin/main ed1a2cd0, layout v41", cases: CASES, rows: all() }, null, 1)}\n`);
+      writeFileSync(FIXTURE, `${JSON.stringify({ pinned: "fix/walker-name-750-and-shields, layout v75 (first pinned at origin/main ed1a2cd0, layout v41)", cases: CASES, rows: all() }, null, 1)}\n`);
       expect(existsSync(FIXTURE)).toBe(true);
     });
     return;

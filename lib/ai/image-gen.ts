@@ -40,7 +40,8 @@ const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
  *  into a HANDLED failure (step patched "failed", credit refunded, retry
  *  offered).
  *
- *  Steps that make ONE image call use the 100s default. Steps that stack
+ *  The default for a caller that names no budget: every card picture
+ *  now passes IMAGE_BUDGET_MS / CARD_STEP_IMAGE_BUDGET_MS. Steps that stack
  *  several bounded calls (remix: identity 30s + source fetch 10s + restyle +
  *  t2i fallback) pass tighter per-call budgets so the SUM stays inside 180s
  *  — a single generous cap does not compose. */
@@ -65,15 +66,41 @@ export type RestyleResult =
   | { ok: true; bytes: Uint8Array; contentType: string }
   | { ok: false; error: string; failure: AiFailureKind };
 
-/** A moderated prompt hangs at the gateway instead of erroring, so each
- *  rung gets a tighter cap than a lone call: a healthy render is ~10–40s,
- *  and two rungs still fit the step route's budget. */
-const RUNG_TIMEOUT_MS = 70_000;
+/** How long ONE picture may take, all prompts included: the WHOLE wait is
+ *  given to the first prompt.
+ *
+ *  It used to be 70 s a prompt, a second (reworded) prompt after a timeout,
+ *  on the belief that a moderated prompt hangs at the gateway (probed
+ *  2026-09-17). Production disproved that for the slow renders on
+ *  2026-10-28 (fix/ai-image-timeout): in two windows (20:30–20:45 and
+ *  02:10–02:35 UTC) FLUX.2 [flex] took 93–168 s to answer, and the gateway
+ *  answered EVERY aborted request 200 with an image, billed. The 70 s cap
+ *  threw away pictures that were on their way, paid for a second one that
+ *  was just as slow, and failed every generation in the window. A slow
+ *  render now gets the whole wait; a refusal the provider SAYS is a
+ *  refusal still walks to the next, safer prompt; a timeout stops. A retry
+ *  of a deck or `card` job step starts its ladder one prompt further on;
+ *  the creator's AI fill and the DFC back step start a NEW job on "try
+ *  again", so they begin at the original prompt again.
+ *
+ *  150 s leaves the step route (maxDuration 180 s) its claim, upload and
+ *  patch. A step that also saves and publishes a card around the picture
+ *  passes a smaller budget (CARD_STEP_IMAGE_BUDGET_MS). */
+export const IMAGE_BUDGET_MS = 150_000;
 
-/** Try each prompt in order until one renders. A moderation refusal OR a
- *  timeout (how a refusal actually surfaces through the gateway) moves to
- *  the next, safer prompt while the step budget allows; any other failure
- *  stops immediately (a rate limit won't be cured by rewording).
+/** The picture's budget inside a step that ALSO creates the card, attaches
+ *  the art and bakes it in the same 180 s function — the worst case the
+ *  old two-prompt ladder already spent (2 × 70 s). */
+export const CARD_STEP_IMAGE_BUDGET_MS = 140_000;
+
+/** A later prompt (after a refusal) is started only with this much left:
+ *  a healthy render is ~10–40 s. */
+const MIN_RUNG_MS = 45_000;
+
+/** Try each prompt in order until one renders. A refusal the provider says
+ *  is a refusal moves to the next, safer prompt while the budget allows;
+ *  a timeout or any other failure stops (rewording cures neither a slow
+ *  provider nor a rate limit). The first prompt is given the whole budget.
  *  `promptIndex` says which rung succeeded. */
 export async function generateImageWithFallbacks(
   prompts: readonly string[],
@@ -84,23 +111,22 @@ export async function generateImageWithFallbacks(
   | { ok: false; error: string; failure: AiFailureKind; safetyBlocked: boolean }
 > {
   const started = Date.now();
-  const budget = options.budgetMs ?? 160_000;
+  const budget = options.budgetMs ?? IMAGE_BUDGET_MS;
   let lastError = AI_FAILURE_COPY.art_failed;
   let lastFailure: AiFailureKind = "art_failed";
   let blocked = false;
   for (let i = 0; i < prompts.length; i += 1) {
     const remaining = budget - (Date.now() - started);
     // Don't start a rung we can't finish inside the step budget.
-    if (i > 0 && remaining < 45_000) break;
+    if (i > 0 && remaining < MIN_RUNG_MS) break;
     const result = await generatePlainImage(prompts[i], aspect, {
-      timeoutMs: Math.min(options.timeoutMs ?? RUNG_TIMEOUT_MS, Math.max(remaining, 10_000)),
+      timeoutMs: Math.min(options.timeoutMs ?? remaining, Math.max(remaining, 10_000)),
     });
     if (result.ok) return { ...result, promptIndex: i };
     lastError = result.error;
     lastFailure = result.failure;
-    // A refusal, or a timeout (how a refusal surfaces through the gateway),
-    // moves to the next, safer prompt; anything else stops here.
-    blocked = result.failure === "art_blocked" || result.failure === "art_timeout";
+    // Only a stated refusal moves to the next, safer prompt.
+    blocked = result.failure === "art_blocked";
     if (!blocked) break;
   }
   return { ok: false, error: lastError, failure: lastFailure, safetyBlocked: blocked };
@@ -199,6 +225,7 @@ async function generateStyledImage(
     return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
   }
   const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
+  const started = Date.now();
   try {
     const { image } = await generateImage({
       model,
@@ -223,7 +250,8 @@ async function generateStyledImage(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Image generation failed.";
-    const failure = imageFailure(detail, model);
+    // How long it waited, so a slow provider shows in the log as one.
+    const failure = imageFailure(`${detail} (after ${Math.round((Date.now() - started) / 1000)} s)`, model);
     return { ok: false, error: failure.error, failure: failure.kind };
   }
 }

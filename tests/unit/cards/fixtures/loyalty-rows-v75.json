@@ -1,5 +1,5 @@
 {
- "pinned": "origin/main ed1a2cd0, layout v41",
+ "pinned": "fix/walker-name-750-and-shields, layout v75 (first pinned at origin/main ed1a2cd0, layout v41)",
  "cases": {
   "three short": [
    {
@@ -183,7 +183,7 @@
       "heightPct": 10.322671156004489
      }
     ],
-    "digest": "4fe4e483ca32dc4f178a7a495f0803268185f326617ae7449c81587983f04372"
+    "digest": "17289cc50d002de97ee7d8406fb3b36e934b2b1701d9058c7ecc981f9937c2b8"
    },
    "1 / 1 / 5": {
     "sizePx": 56,
@@ -251,7 +251,7 @@
       "heightPct": 19.43838383838384
      }
     ],
-    "digest": "dc83b7c46d23fb0519a561d52ef85fec490c987b909f8340e56530d23a6545ef"
+    "digest": "6b6c772124ac19ad96aec90514ed3871697b13897e8ef49aa736953868eaecbb"
    },
    "reaches the shield": {
     "sizePx": 56,
@@ -319,7 +319,7 @@
       "heightPct": 12.053703703703704
      }
     ],
-    "digest": "da91740a34ac0c021d7ef351394f43017624dccde97a6e80fef66c6f3bffbab5"
+    "digest": "d1f339c6d4a84ddd293f3fbd68ba253c50652e83cca242db48227bc5191a60f1"
    },
    "pips + reminder": {
     "sizePx": 64,
@@ -385,7 +385,7 @@
       "heightPct": 8.432828282828282
      }
     ],
-    "digest": "8f3b306dbc4092fc2592b0143fa5fada387a1f9461657515bd98f06f8712e7db"
+    "digest": "c490f7cbf7a64b482a64154a77299e34a111ea49091129ce786bdda7d943bbdf"
    },
    "a static ability's two paragraphs, accents": {
     "sizePx": 64,
@@ -451,7 +451,7 @@
       "heightPct": 9.94152637485971
      }
     ],
-    "digest": "b2276d43a6352fef86ad1c2a44d5aa329774f3b95f918c48e9dbbff978742a71"
+    "digest": "53dc793ce8a46c7d51129e273eb1504d70cec46d30fb5d34b9f5de58f585b42a"
    },
    "one ability": {
     "sizePx": 64,
@@ -486,7 +486,7 @@
       "heightPct": 28.3
      }
     ],
-    "digest": "1e4f0d8374269750581c9ffe29482f43f2b3836d0a7923056cabbdba8e10f0eb"
+    "digest": "3241ef762822598f5aa30eb1eeab7cb18a66964cef18afdbbcd99ee2592b762f"
    },
    "six abilities": {
     "sizePx": 44,
@@ -592,7 +592,7 @@
       "heightPct": 5.288383838383838
      }
     ],
-    "digest": "494c0bf3cdfcee289d5038178871acabe4533667924feeb891750ebc06cac948"
+    "digest": "45c51dd713c28d3a4ed2a033ac5505c4ff3e8effd18d9554b5217c547a234921"
    },
    "past the floor": {
     "sizePx": 42,
@@ -667,7 +667,7 @@
       "heightPct": 10.51584699453552
      }
     ],
-    "digest": "2494567dad7a30f7344d96b032cac97d77f11167685752cf0bee88741665a7e7"
+    "digest": "117505fa9bf653df602a0fb016e170030b1e523a834ac57340336bf18f76c497"
    },
    "no abilities": {
     "sizePx": 64,
@@ -684,7 +684,7 @@
      ]
     },
     "stripes": [],
-    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+    "digest": "3e34aefc6ec301aa1ff4bf792f12a35c77a55c6d4b40261e41900d763917b868"
    }
   },
   "m15borderlesspw": {
@@ -750,7 +750,7 @@
       "heightPct": 10.322671156004489
      }
     ],
-    "digest": "4fe4e483ca32dc4f178a7a495f0803268185f326617ae7449c81587983f04372"
+    "digest": "17289cc50d002de97ee7d8406fb3b36e934b2b1701d9058c7ecc981f9937c2b8"
    },
    "1 / 1 / 5": {
     "sizePx": 56,
@@ -818,7 +818,7 @@
       "heightPct": 19.43838383838384
      }
     ],
-    "digest": "dc83b7c46d23fb0519a561d52ef85fec490c987b909f8340e56530d23a6545ef"
+    "digest": "6b6c772124ac19ad96aec90514ed3871697b13897e8ef49aa736953868eaecbb"
    },
    "reaches the shield": {
     "sizePx": 56,
@@ -886,7 +886,7 @@
       "heightPct": 12.053703703703704
      }
     ],
-    "digest": "da91740a34ac0c021d7ef351394f43017624dccde97a6e80fef66c6f3bffbab5"
+    "digest": "d1f339c6d4a84ddd293f3fbd68ba253c50652e83cca242db48227bc5191a60f1"
    },
    "pips + reminder": {
     "sizePx": 64,
@@ -952,7 +952,7 @@
       "heightPct": 8.432828282828282
      }
     ],
-    "digest": "8f3b306dbc4092fc2592b0143fa5fada387a1f9461657515bd98f06f8712e7db"
+    "digest": "c490f7cbf7a64b482a64154a77299e34a111ea49091129ce786bdda7d943bbdf"
    },
    "a static ability's two paragraphs, accents": {
     "sizePx": 64,
@@ -1018,7 +1018,7 @@
       "heightPct": 9.94152637485971
      }
     ],
-    "digest": "b2276d43a6352fef86ad1c2a44d5aa329774f3b95f918c48e9dbbff978742a71"
+    "digest": "53dc793ce8a46c7d51129e273eb1504d70cec46d30fb5d34b9f5de58f585b42a"
    },
    "one ability": {
     "sizePx": 64,
@@ -1053,7 +1053,7 @@
       "heightPct": 28.3
      }
     ],
-    "digest": "1e4f0d8374269750581c9ffe29482f43f2b3836d0a7923056cabbdba8e10f0eb"
+    "digest": "3241ef762822598f5aa30eb1eeab7cb18a66964cef18afdbbcd99ee2592b762f"
    },
    "six abilities": {
     "sizePx": 44,
@@ -1159,7 +1159,7 @@
       "heightPct": 5.288383838383838
      }
     ],
-    "digest": "494c0bf3cdfcee289d5038178871acabe4533667924feeb891750ebc06cac948"
+    "digest": "45c51dd713c28d3a4ed2a033ac5505c4ff3e8effd18d9554b5217c547a234921"
    },
    "past the floor": {
     "sizePx": 42,
@@ -1234,7 +1234,7 @@
       "heightPct": 10.51584699453552
      }
     ],
-    "digest": "2494567dad7a30f7344d96b032cac97d77f11167685752cf0bee88741665a7e7"
+    "digest": "117505fa9bf653df602a0fb016e170030b1e523a834ac57340336bf18f76c497"
    },
    "no abilities": {
     "sizePx": 64,
@@ -1251,7 +1251,7 @@
      ]
     },
     "stripes": [],
-    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+    "digest": "3e34aefc6ec301aa1ff4bf792f12a35c77a55c6d4b40261e41900d763917b868"
    }
   },
   "m15borderlesspwtall": {
@@ -1317,7 +1317,7 @@
       "heightPct": 12.51306271142337
      }
     ],
-    "digest": "2ecb61a7a0c09d5dd9e1bcd59c639a7b4d47a2ca000c4ee509a7a8d0f277fa33"
+    "digest": "4a3e438600ba332d7515d0d3ce89b0dcb5bdf184bc2558da58d756a4b33521bc"
    },
    "1 / 1 / 5": {
     "sizePx": 64,
@@ -1386,7 +1386,7 @@
       "heightPct": 25.4072339318241
      }
     ],
-    "digest": "e15b31c4cf2559beb1fcd79ff2371c9d61f46cfbb7bf8e45e7042f2b63fc3ac1"
+    "digest": "2df8700aa6294268356bda57c7fd59fce8b3faeb1a9918cf58b8639c2b3799d1"
    },
    "reaches the shield": {
     "sizePx": 64,
@@ -1455,7 +1455,7 @@
       "heightPct": 13.624629195940672
      }
     ],
-    "digest": "049933a644e4c2ea3d381addd0a63d3d9f9e89c4ab4fa4bbdf033f8d3f81061b"
+    "digest": "b1779a01ffb7fdb776ba0531cdae5b5889dae5a1230cf25bcceebc80230d33f7"
    },
    "pips + reminder": {
     "sizePx": 64,
@@ -1521,7 +1521,7 @@
       "heightPct": 10.623399687743952
      }
     ],
-    "digest": "4ec2b44fac245934332659327891a1cd2667b37a7207386d29433c8b4a7df0bc"
+    "digest": "257a6ac2c523d5fd4c530592791778f4f65e3396171adb56d1cba02c17349b3a"
    },
    "a static ability's two paragraphs, accents": {
     "sizePx": 64,
@@ -1587,7 +1587,7 @@
       "heightPct": 12.131954202446007
      }
     ],
-    "digest": "207ce6ac9f04572ab826de6824528618226dcf9a27f03921ea3b999fa9ff9e2d"
+    "digest": "1d31bce8428b6405a4ef5d5be930d29541d7a4cdfb21740a196aa5eb9713405b"
    },
    "one ability": {
     "sizePx": 64,
@@ -1622,17 +1622,17 @@
       "heightPct": 34.871428571428574
      }
     ],
-    "digest": "b954a01e1104d492b69442e2cb50605941860531134836631a8ca3ddde002f62"
+    "digest": "fa020e105235017fae8725c87d6c0914715f834a0310766fe818c6aa4de4a08f"
    },
    "six abilities": {
-    "sizePx": 58,
+    "sizePx": 48,
     "rowFractions": [
-     0.13661202185792348,
-     0.13661202185792348,
-     0.19672131147540983,
-     0.13661202185792348,
-     0.19672131147540983,
-     0.19672131147540983
+     0.1489071038251366,
+     0.1489071038251366,
+     0.18442622950819673,
+     0.1489071038251366,
+     0.18442622950819673,
+     0.18442622950819673
     ],
     "lastRowInsetPct": 0.12400000000000005,
     "clipped": false,
@@ -1649,8 +1649,8 @@
      ],
      [
       [
-       "Create a 0/0 colorless Construct artifact",
-       "creature token."
+       "Create a 0/0 colorless Construct artifact creature",
+       "token."
       ]
      ],
      [
@@ -1660,34 +1660,34 @@
      ],
      [
       [
-       "Exile target permanent. Its controller may",
-       "search their library for a basic land card."
+       "Exile target permanent. Its controller may search",
+       "their library for a basic land card."
       ]
      ],
      [
       [
-       "You get an emblem with \"Artifacts",
-       "you control have hexproof.\""
+       "You get an emblem with \"Artifacts you",
+       "control have hexproof.\""
       ]
      ]
     ],
     "edges": {
      "hd": [
       0,
-      100,
-      200,
-      344,
-      444,
-      588,
+      109,
+      218,
+      353,
+      462,
+      597,
       732
      ],
      "default": [
       0,
-      50,
-      100,
-      172,
-      222,
-      294,
+      55,
+      109,
+      177,
+      231,
+      299,
       366
      ]
     },
@@ -1696,40 +1696,40 @@
       "topPct": 56.52857142857143,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 4.763856362217018
+      "heightPct": 5.19260343481655
      },
      {
-      "topPct": 61.29242779078845,
+      "topPct": 61.72117486338798,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 4.763856362217018
+      "heightPct": 5.19260343481655
      },
      {
-      "topPct": 66.05628415300546,
+      "topPct": 66.91377829820453,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 6.8599531615925065
+      "heightPct": 6.431206088992975
      },
      {
-      "topPct": 72.91623731459796,
+      "topPct": 73.34498438719751,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 4.763856362217018
+      "heightPct": 5.19260343481655
      },
      {
-      "topPct": 77.68009367681498,
+      "topPct": 78.53758782201406,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 6.8599531615925065
+      "heightPct": 6.431206088992975
      },
      {
-      "topPct": 84.54004683840748,
+      "topPct": 84.96879391100704,
       "leftPct": 8.5,
       "widthPct": 83.5,
-      "heightPct": 6.8599531615925065
+      "heightPct": 6.431206088992975
      }
     ],
-    "digest": "8e7a8657044b84a754c74e5ef0d34ba7f60a88aa893c5c63776f23272de3eaf6"
+    "digest": "bc92bf2e190e9d5598d02460d58b0102591e81bfa37e284e53672a43ffe82dd4"
    },
    "past the floor": {
     "sizePx": 42,
@@ -1804,7 +1804,7 @@
       "heightPct": 12.957689305230291
      }
     ],
-    "digest": "65db8015546463582196ef47f3903b9fa0aad64b76c62a078da9812754a066a5"
+    "digest": "f4bd6bbd90a06d168d4b8a6f008de4e5f688f0fcfee9e227e1407c6ac7216d23"
    },
    "no abilities": {
     "sizePx": 64,
@@ -1821,7 +1821,7 @@
      ]
     },
     "stripes": [],
-    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+    "digest": "3e34aefc6ec301aa1ff4bf792f12a35c77a55c6d4b40261e41900d763917b868"
    }
   }
  }
