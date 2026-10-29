@@ -297,7 +297,11 @@ function buildRunMatcher({ forms, before, after, spaced }: MatcherSpec): RunMatc
   };
 }
 
-const RUN_MATCHERS: readonly RunMatcher[] = MATCHER_SPECS.map(buildRunMatcher);
+/** Built on the first text that needs them, never at import: the module is
+ *  in every page's client graph (the root layout's AI provider) and the
+ *  tries cost a few ms to build on a phone. */
+let runMatchers: readonly RunMatcher[] | undefined;
+const runMatchersOf = () => (runMatchers ??= MATCHER_SPECS.map(buildRunMatcher));
 
 /** Text the regexes could be slow on goes to the emulation (see above): a
  *  character sharing a class with the one before it more than SAFE_CHAIN
@@ -329,31 +333,92 @@ function isWordCodePoint(cp: number): boolean {
   return WORD_CODE_POINT.test(String.fromCodePoint(cp));
 }
 
-/** The text as the emulation reads it: each character's sets, and the run
- *  ends per set, filled as they are asked for. */
+// ---------------------------------------------------------------------------
+// The emulation's memory is bounded: its memos hold one entry per position
+// for each step it touches, so it reads one WINDOW of the text at a time —
+// LINEAR_WINDOW characters where the text allows, one unbroken stretch of
+// up to LINEAR_MAX where it does not — and every entry fits in 16 bits.
+//
+// A matcher's text is cut only at characters in none of ITS sets (a run
+// form's: no letter's class — so a space or a dot is a cut; a spaced-out
+// form's: no class and no gap): its matches never hold one, and the
+// look-around reads the real character either side (positions are the
+// text's), so each window meets exactly the matches the whole text's search
+// meets there, in the same order — nothing past a cut goes unread.
+//
+// LINEAR_MAX is above any card field: they stop at 4000 UTF-16 units, and
+// the normalisation makes one unit at most four class characters ("Ⅷ" →
+// "viii"; every code point checked). A longer unbroken stretch goes to the
+// regexes, as all text did before — the same matches, without the time
+// bound for a run form (a spaced-out form's regex has bounded steps and
+// stays linear).
+// ---------------------------------------------------------------------------
+
+const LINEAR_WINDOW = 4096;
+const LINEAR_MAX = 16384;
+
+type RunWindow = { start: number; end: number; linear: boolean };
+
+/** A matcher's text cut into windows (see above), in order. `sets` are the
+ *  sets its matches are made of: a character in none of them is a cut. */
+function runWindowsOf(value: string, sets: number): RunWindow[] {
+  const n = value.length;
+  if (n <= LINEAR_WINDOW) return [{ start: 0, end: n, linear: true }];
+  const isCut = (i: number) => (setMask(value.charCodeAt(i)) & sets) === 0;
+  const windows: RunWindow[] = [];
+  for (let start = 0; start < n; ) {
+    if (n - start <= LINEAR_WINDOW) {
+      windows.push({ start, end: n, linear: true });
+      break;
+    }
+    let end = start + LINEAR_WINDOW;
+    while (end > start && !isCut(end)) end -= 1;
+    if (end === start) {
+      // One unbroken stretch longer than a window: one window to its end,
+      // by regex past LINEAR_MAX.
+      end = start + LINEAR_WINDOW;
+      while (end < n && !isCut(end)) end += 1;
+      windows.push({ start, end, linear: end - start <= LINEAR_MAX });
+    } else {
+      windows.push({ start, end, linear: true });
+    }
+    start = end;
+  }
+  return windows;
+}
+
+const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
+const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+
+/** The text as the emulation reads it, one window of it: each character's
+ *  sets, and the run ends per set, filled as they are asked for. Positions
+ *  are the window's (0 = `start`); the look-around reads the whole text. */
 class RunText {
   readonly value: string;
+  readonly start: number;
   readonly n: number;
-  /** Per position, its sets (`setMask`); past the end reads as in none. */
+  /** Per position, its sets (`setMask`); past the end reads as in none (the
+   *  window ends at a character in none, or at the text's end). */
   readonly masks: Int32Array;
   /** Per position, how many characters from it on are in a letter's class —
    *  the most a run form starting there can take. */
-  readonly stretch: Int32Array;
+  readonly stretch: Int16Array;
   /** Per position, the most letters a spaced-out form starting there can
    *  spell: a class character, then (one or two gap characters and a class
    *  character) as often as the text allows. */
-  readonly spelled: Int32Array;
-  private readonly runEnds: Array<Int32Array | undefined> = [];
+  readonly spelled: Int16Array;
+  private readonly runEnds: Array<Int16Array | undefined> = [];
 
-  constructor(value: string) {
+  constructor(value: string, start: number, end: number) {
     this.value = value;
-    this.n = value.length;
+    this.start = start;
+    this.n = end - start;
     const n = this.n;
     // Three spare zeros past the end: the reads below look up to i + 3.
     const masks = (this.masks = new Int32Array(n + 4));
-    const stretch = (this.stretch = new Int32Array(n + 4));
-    const spelled = (this.spelled = new Int32Array(n + 4));
-    for (let i = 0; i < n; i++) masks[i] = setMask(value.charCodeAt(i));
+    const stretch = (this.stretch = new Int16Array(n + 4));
+    const spelled = (this.spelled = new Int16Array(n + 4));
+    for (let i = 0; i < n; i++) masks[i] = setMask(value.charCodeAt(start + i));
     for (let i = n - 1; i >= 0; i--) {
       if (!(masks[i] & LETTER_BITS)) continue;
       stretch[i] = stretch[i + 1] + 1;
@@ -368,25 +433,27 @@ class RunText {
 
   /** `(?<![\p{L}\p{N}])` at `p`: the code point before it is no letter or digit. */
   beforeOk(p: number): boolean {
-    if (p === 0) return true;
-    const low = this.value.charCodeAt(p - 1);
-    if (low >= 0xdc00 && low <= 0xdfff && p >= 2) {
-      const high = this.value.charCodeAt(p - 2);
-      if (high >= 0xd800 && high <= 0xdbff) return !isWordCodePoint((high - 0xd800) * 0x400 + (low - 0xdc00) + 0x10000);
+    const at = this.start + p;
+    if (at === 0) return true;
+    const low = this.value.charCodeAt(at - 1);
+    if (isLowSurrogate(low) && at >= 2) {
+      const high = this.value.charCodeAt(at - 2);
+      if (isHighSurrogate(high)) return !isWordCodePoint((high - 0xd800) * 0x400 + (low - 0xdc00) + 0x10000);
     }
     return !isWordCodePoint(low);
   }
 
   /** `(?![\p{L}\p{N}])` at `p`: the code point at it is no letter or digit. */
   afterOk(p: number): boolean {
-    return p >= this.n || !isWordCodePoint(this.value.codePointAt(p) as number);
+    const at = this.start + p;
+    return at >= this.value.length || !isWordCodePoint(this.value.codePointAt(at) as number);
   }
 
   /** Where the run of `bit`'s set holding `p` ends (p is in it). */
   runEnd(bit: number, p: number): number {
     const index = 31 - Math.clz32(bit);
     let ends = this.runEnds[index];
-    if (!ends) ends = this.runEnds[index] = new Int32Array(this.n + 1);
+    if (!ends) ends = this.runEnds[index] = new Int16Array(this.n + 1);
     if (ends[p] !== 0) return ends[p] - 1;
     let end = p;
     while (this.masks[end] & bit && ends[end] === 0) end += 1;
@@ -419,8 +486,8 @@ class RunSearch {
   private readonly text: RunText;
   private readonly size: number;
   /** What the text offers each position, as `matcher.reach` counts it. */
-  private readonly reach: Int32Array;
-  private readonly memos: Array<Int32Array | undefined> = [];
+  private readonly reach: Int16Array;
+  private readonly memos: Array<Int16Array | undefined> = [];
 
   constructor(matcher: RunMatcher, text: RunText) {
     this.matcher = matcher;
@@ -431,23 +498,24 @@ class RunSearch {
 
   /** Where the regex's match of `node` (and the steps after it) starting at
    *  `p` ends — -1 for none. A node's memo: [0, n] its answer at p (+2;
-   *  0 = not asked yet), then, for an unbounded step, per run end E how far
-   *  down from E the next node has been tried: 0 = not yet, v > 0 = down to
-   *  v − 1 with no match, v < 0 = it matches at −v − 1 (the largest such
-   *  q ≤ E). */
+   *  0 = not asked yet), then, for an unbounded step only, per run end E how
+   *  far down from E the next node has been tried: 0 = not yet, v > 0 = down
+   *  to v − 1 with no match, v < 0 = it matches at −v − 1 (the largest such
+   *  q ≤ E). A window is at most LINEAR_MAX long: every entry fits in
+   *  16 bits. */
   matchEnd(node: number, p: number): number {
     const { matcher, text } = this;
     if (node === 0) return !matcher.after || text.afterOk(p) ? p : -1;
     if (!this.mayMatch(node, p)) return -1;
     const size = this.size;
+    const max = matcher.max[node];
     let memo = this.memos[node];
-    if (!memo) memo = this.memos[node] = new Int32Array(2 * size);
+    if (!memo) memo = this.memos[node] = new Int16Array(max === 0 ? 2 * size : size);
     if (memo[p] !== 0) return memo[p] - 2;
 
     const next = matcher.next[node];
     const end = text.runEnd(matcher.bit[node], p);
     const lowest = p + matcher.min[node];
-    const max = matcher.max[node];
     let answer = -1;
     if (max !== 0) {
       // A bounded step (spaced out): at most `max` ends, longest first.
@@ -489,16 +557,18 @@ class RunSearch {
     );
   }
 
-  /** Every match a global search meets, in order, handed to `visit` until
-   *  it says stop (true) — the regex's matches. */
+  /** Every match a global search of the window meets, in order, handed to
+   *  `visit` (in the text's positions) until it says stop (true) — the
+   *  regex's matches there. */
   matches(visit: (start: number, end: number) => boolean): boolean {
     const { matcher, text, reach } = this;
     const { value, n, masks } = text;
+    const offset = text.start;
     for (let from = 0; ; ) {
       let start = -1;
       let end = -1;
       for (let p = from; p < n && start < 0; p++) {
-        const code = value.charCodeAt(p);
+        const code = value.charCodeAt(offset + p);
         if (code >= 128) continue;
         const nodes = firstNodesBefore(matcher, code, masks[p + 1]);
         if (nodes.length === 0 || (matcher.before && !text.beforeOk(p))) continue;
@@ -513,7 +583,7 @@ class RunSearch {
         }
       }
       if (start < 0) return false;
-      if (visit(start, end)) return true;
+      if (visit(offset + start, offset + end)) return true;
       from = end; // never empty: each step takes a character
     }
   }
@@ -536,16 +606,46 @@ function regexMatches(matcher: RegExp, value: string, visit: (start: number, end
 
 type Engine = "regex" | "runs";
 
+/** One matcher's regex over the window [start, end) alone — a window that
+ *  starts and ends at characters in no set (`runWindowsOf`) — read with the
+ *  code point either side as its context, in the text's positions. */
+function regexMatchesIn(
+  regex: RegExp,
+  value: string,
+  start: number,
+  end: number,
+  visit: (start: number, end: number) => boolean,
+): boolean {
+  if (start === 0 && end === value.length) return regexMatches(regex, value, visit);
+  const from = start > 0 && isLowSurrogate(value.charCodeAt(start)) && isHighSurrogate(value.charCodeAt(start - 1)) ? start - 1 : start;
+  const to =
+    end >= value.length
+      ? value.length
+      : end + (isHighSurrogate(value.charCodeAt(end)) && isLowSurrogate(value.charCodeAt(end + 1)) ? 2 : 1);
+  return regexMatches(regex, value.slice(from, to), (s, e) => visit(from + s, from + e));
+}
+
 /** Each matcher's search over the normalised text, as [matcher, start, end]
  *  handed to `visit` until it says stop. `engine` picks the regexes or the
- *  emulation; both meet the same matches. */
+ *  emulation (window by window); both meet the same matches. */
 function searchAll(value: string, engine: Engine, visit: (matcher: number, start: number, end: number) => boolean): boolean {
-  const text = engine === "runs" ? new RunText(value) : null;
-  return MATCHERS.some((regex, index) =>
-    text
-      ? new RunSearch(RUN_MATCHERS[index], text).matches((start, end) => visit(index, start, end))
-      : regexMatches(regex, value, (start, end) => visit(index, start, end)),
-  );
+  if (engine === "regex") {
+    return MATCHERS.some((regex, index) => regexMatches(regex, value, (start, end) => visit(index, start, end)));
+  }
+  const matchers = runMatchersOf();
+  // One window (every card field): its text is read once for all four.
+  const only = value.length <= LINEAR_WINDOW ? new RunText(value, 0, value.length) : null;
+  const windowsBy = new Map<number, RunWindow[]>();
+  return MATCHERS.some((regex, index) => {
+    const sets = matchers[index].spaced ? LETTER_BITS | GAP_BIT : LETTER_BITS;
+    let windows = windowsBy.get(sets);
+    if (!windows) windowsBy.set(sets, (windows = runWindowsOf(value, sets)));
+    return windows.some(({ start, end, linear }) => {
+      const at = (s: number, e: number) => visit(index, s, e);
+      if (!linear) return regexMatchesIn(regex, value, start, end, at);
+      return new RunSearch(matchers[index], only ?? new RunText(value, start, end)).matches(at);
+    });
+  });
 }
 
 /** For the equivalence tests only: every match each matcher meets in
@@ -568,7 +668,14 @@ export function containsProfanityForTests(text: string | null | undefined, engin
 
 /** For the equivalence tests only: the regexes' sources (the oracle builds
  *  the ones this file shipped with and compares). */
-export const PROFANITY_PATTERN_SOURCES_FOR_TESTS: readonly string[] = MATCHERS.map((regex) => regex.source);
+export function profanityPatternSourcesForTests(): string[] {
+  return MATCHERS.map((regex) => regex.source);
+}
+
+/** For the tests only: which engine the detector picks for `text`. */
+export function profanityEngineForTests(text: string): Engine {
+  return needsLinearSearch(normalized(text)) ? "runs" : "regex";
+}
 
 /** For the equivalence tests only: the lists, decoded (the oracle builds its
  *  regexes from them, so a list change keeps it in step). */

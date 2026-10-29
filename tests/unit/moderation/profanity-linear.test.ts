@@ -5,8 +5,9 @@ import {
   containsProfanity,
   containsProfanityForTests,
   PROFANITY_FORMS_FOR_TESTS,
-  PROFANITY_PATTERN_SOURCES_FOR_TESTS,
+  profanityEngineForTests,
   profanityMatchesForTests,
+  profanityPatternSourcesForTests,
 } from "@/lib/moderation/profanity";
 
 // ---------------------------------------------------------------------------
@@ -25,8 +26,17 @@ import {
 // stronger than the verdict, which is read from those matches.
 //
 // The repo is public: no word is written out here; the forms come from the
-// module at run time.
+// module at run time, and a failure prints its input ROT13'd (as
+// profanity.test.ts writes them), never decoded into the CI log.
 // ---------------------------------------------------------------------------
+
+const rot13 = (text: string) =>
+  text.replace(/[a-z]/gi, (c) => {
+    const base = c <= "Z" ? 65 : 97;
+    return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+  });
+/** An input as a failure message shows it: ROT13'd, and cut if long. */
+const shown = (input: string) => JSON.stringify(rot13(input.length > 200 ? `${input.slice(0, 200)}…(${input.length})` : input));
 
 /** The detector as it shipped before this change — the oracle. */
 function shippedDetector(lists: { words: readonly string[]; prefixes: readonly string[]; infixes: readonly string[] }) {
@@ -123,11 +133,11 @@ function differences(inputs: Iterable<string>): string[] {
       runs: containsProfanityForTests(input, "runs"),
     };
     if (got.auto !== verdict || got.regex !== verdict || got.runs !== verdict) {
-      out.push(`verdict ${JSON.stringify(input)}: shipped ${verdict}, now ${JSON.stringify(got)}`);
+      out.push(`verdict ${shown(input)} (ROT13): shipped ${verdict}, now ${JSON.stringify(got)}`);
     }
     for (const engine of ["regex", "runs"] as const) {
       const now = JSON.stringify(profanityMatchesForTests(input, engine));
-      if (now !== spans) out.push(`matches (${engine}) ${JSON.stringify(input)}: shipped ${spans}, now ${now}`);
+      if (now !== spans) out.push(`matches (${engine}) ${shown(input)} (ROT13): shipped ${spans}, now ${now}`);
     }
     if (out.length >= 20) break;
   }
@@ -240,7 +250,7 @@ const adversarialInputs = () =>
 
 describe("the detector keeps every verdict it gave (oracle: as shipped before)", () => {
   it("builds the same regexes, from the same lists", () => {
-    expect(PROFANITY_PATTERN_SOURCES_FOR_TESTS).toEqual(shipped.sources);
+    expect(profanityPatternSourcesForTests()).toEqual(shipped.sources);
     expect(FORMS.length).toBeGreaterThan(100);
   });
 
@@ -286,27 +296,80 @@ describe("the detector keeps every verdict it gave (oracle: as shipped before)",
   });
 });
 
+describe("texts longer than one emulation window (cut only where no match can be)", () => {
+  // Every text here is past LINEAR_WINDOW (4096) and so read window by
+  // window; the oracle still reads it whole.
+  const card = realCardTexts().join(" ");
+  let state = 7;
+  const random = () => ((state = (Math.imul(state, 1103515245) + 12345) >>> 0) / 2 ** 32);
+  const at = (text: string, index: number, insert: string) => text.slice(0, index) + insert + text.slice(index);
+
+  it("real card text with listed forms set in at, around and across the window edges", { timeout: 60_000 }, () => {
+    const inputs: string[] = [];
+    FORMS.forEach((form, i) => {
+      const length = i % 10 === 0 ? 20000 : i % 2 === 0 ? 9000 : 5000;
+      const base = card.slice(0, length);
+      const near = 4090 + (i % 12); // around the first window's edge
+      const anywhere = Math.floor(random() * base.length);
+      inputs.push(at(base, near, form), at(base, near, ` ${form} `), at(base, anywhere, form), at(base, anywhere, ` ${form} `));
+      // Spelled out across the edge: a space is a run form's cut, never a spaced-out one's.
+      inputs.push(at(base, near - form.length, ` ${[...form].join(" ")} `), at(base, near - 2, ` ${[...form].join(".")} `));
+    });
+    // Some of them must be read by the emulation in automatic mode too.
+    inputs.push(...FORMS.map((form) => `${"*s ".repeat(2000)}${form}${" *|".repeat(800)}`));
+    expect(inputs.filter((input) => profanityEngineForTests(input) === "runs").length).toBeGreaterThan(100);
+    expect(differences(inputs)).toEqual([]);
+  });
+
+  it("unbroken stretches longer than a window: one window to LINEAR_MAX, the regexes past it", { timeout: 60_000 }, () => {
+    const stretch = (n: number) => "ab".repeat(Math.ceil(n / 2)).slice(0, n);
+    const inputs = FORMS.flatMap((form) => [
+      `${stretch(5000)} ${form}`,
+      `${stretch(5000)}${form}${stretch(300)}`,
+      `x ${stretch(4100)}${form} ${stretch(4100)}`,
+      `${form} ${stretch(17000)}`,
+      `${stretch(17000)}${form}`,
+      `${"*".repeat(70)} ${stretch(6000)} ${form}`,
+    ]);
+    expect(differences(inputs)).toEqual([]);
+  });
+});
+
 describe("no catastrophic backtracking", () => {
   // At this length (the zod max for rules text) the shipped detector took up
-  // to 33 s a call on these ("*|"), 13–22 s on "*c" / "*k", 0.2–0.5 s on
-  // "*s" / "*$" / "$". Now each takes at most ~6 ms (≈ 30 ms under
-  // coverage). The bound is generous for a slow CI runner with coverage on;
-  // a super-linear search still trips it.
+  // to 33 s a call ("*|"), 13–22 s ("*c", "*k"), 0.2–0.5 s ("*s", "*$",
+  // "$") — and well under the bound on the rest, which are here because the
+  // EMULATION must stay fast on them: each is asserted to be routed to it,
+  // and the emulation itself is timed. Locally each takes at most ~6 ms
+  // (≈ 30 ms under coverage). The bound is generous for a slow CI runner
+  // with coverage on; a super-linear search still trips it.
   const BOUND_MS = 150;
   const LENGTH = 4000;
   const shapes = [
     "*|", "|*", "*c", "*k", "*s", "*f", "*a", "4*", "4@", "*$", "*!", "*+", "*1|", "*i|", "f", "s", "$", "@",
     "****888*8***8**é", "***q", "** ", "**.", "*-", "* ", "yyw****yw*​", "*yyyy**y*y*y***yy***", "a* ", "*-a-",
   ];
-
-  it.each(shapes)("%j repeated to 4000 characters", (unit) => {
-    const text = unit.repeat(Math.ceil(LENGTH / unit.length)).slice(0, LENGTH);
+  const fastest = (run: () => unknown) => {
     let best = Infinity;
-    for (let run = 0; run < 5; run++) {
+    for (let i = 0; i < 5; i++) {
       const start = performance.now();
-      containsProfanity(text);
+      run();
       best = Math.min(best, performance.now() - start);
     }
-    expect(best).toBeLessThan(BOUND_MS);
+    return best;
+  };
+
+  it.each(shapes)("%j repeated to 4000 characters: routed to the emulation, and fast", (unit) => {
+    const text = unit.repeat(Math.ceil(LENGTH / unit.length)).slice(0, LENGTH);
+    expect(profanityEngineForTests(text)).toBe("runs");
+    expect(fastest(() => containsProfanityForTests(text, "runs"))).toBeLessThan(BOUND_MS);
+    expect(fastest(() => containsProfanity(text))).toBeLessThan(BOUND_MS);
+  });
+
+  it.each(["*|", "*$", "****888*8***8**é"])("%j at 16000 unbroken characters (one window) and 20000 in windows", (unit) => {
+    const unbroken = unit.repeat(Math.ceil(16000 / unit.length)).slice(0, 16000);
+    const cut = `${unit.repeat(Math.ceil(3900 / unit.length)).slice(0, 3900)} `.repeat(5);
+    expect(fastest(() => containsProfanity(unbroken))).toBeLessThan(4 * BOUND_MS);
+    expect(fastest(() => containsProfanity(cut))).toBeLessThan(4 * BOUND_MS);
   });
 });

@@ -48,7 +48,8 @@ describe("languageForcesPrivateByVisibility — one scan, the same answers", () 
       const stores = [null, undefined, ...CARDS.flatMap((card) => VISIBILITIES.map((visibility) => ({ card, visibility })))];
       for (const stored of stores) {
         const both = languageForcesPrivateByVisibility({ saved, stored });
-        expect(both, JSON.stringify({ saved, stored })).toEqual({
+        // ROT13'd: a failure never prints the words decoded into the CI log.
+        expect(both, rot13(JSON.stringify({ saved, stored }))).toEqual({
           public: languageForcesPrivate({ saved, visibility: "public", stored }),
           unlisted: languageForcesPrivate({ saved, visibility: "unlisted", stored }),
         });
