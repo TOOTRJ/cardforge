@@ -72,7 +72,7 @@ const PRINTING: GlossaryLink = {
   label: "How to print proxy MTG cards",
 };
 const IMPORT_REMIX: GlossaryLink = {
-  href: "/faq#import-remix",
+  href: "/help/importing",
   label: "Scryfall import and remixing, answered",
 };
 

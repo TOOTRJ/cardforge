@@ -60,9 +60,9 @@ type UsingLink = { href: string; label: string; description: string; icon: Lucid
 
 const USING_PIPGLYPH: UsingLink[] = [
   {
-    href: "/faq",
+    href: "/help",
     label: "Help & FAQ",
-    description: "Answers about the creator, downloads, credits and printing.",
+    description: "Answers and how-tos: the creator, imports, decks, printing and credits.",
     icon: LifeBuoy,
   },
   {

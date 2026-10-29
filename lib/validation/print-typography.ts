@@ -222,25 +222,10 @@ function within(text: string, field: TypographyField, max: number): string {
 // Matching — a search reads typed and printed characters as the same
 // ---------------------------------------------------------------------------
 
-/** The printed quotes and dashes and what a keyboard types for each. The
- *  gallery's SQL search folds the same six the same way (migration 0136's
- *  translate(); a unit test holds the two together). */
-export const TYPED_FORMS: Readonly<Record<string, string>> = {
-  "’": "'",
-  "‘": "'",
-  "“": '"',
-  "”": '"',
-  "—": "-",
-  "–": "-",
-};
-
-/** `text` with its printed quotes and dashes as typed ones — for MATCHING
- *  only (a search box against a title), on BOTH sides of the comparison:
- *  cards saved since TODO 6.11 hold “Urza’s”, older ones and every keyboard
- *  hold "Urza's". Never stored, never drawn. */
-export function typedForMatching(text: string): string {
-  return text.replace(/[’‘“”—–]/g, (ch) => TYPED_FORMS[ch] ?? ch);
-}
+// TYPED_FORMS and typedForMatching() live in a dependency-free module of
+// their own (lib/validation/typed-forms.ts) so a small client island can
+// fold the same way without this file's imports; they stay exported here.
+export { TYPED_FORMS, typedForMatching } from "@/lib/validation/typed-forms";
 
 // ---------------------------------------------------------------------------
 // The creator form — which field is which

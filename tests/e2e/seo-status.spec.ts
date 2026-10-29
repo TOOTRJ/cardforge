@@ -86,8 +86,29 @@ test("the glossary filter narrows the terms and a hidden anchor brings them back
   await expect(page.locator("#proxy")).toBeInViewport();
 });
 
+test("the help sections render self-canonical with their FAQ, and an unknown one is a real 404", async ({
+  request,
+}) => {
+  // Static pages — no database needed.
+  const printing = await request.get("/help/printing");
+  expect(printing.status()).toBe(200);
+  const html = await printing.text();
+  expect(html).toMatch(/rel="canonical" href="[^"]*\/help\/printing"/);
+  expect(html).not.toMatch(/name="robots" content="noindex/);
+  expect(html).toContain('aria-label="Breadcrumb"');
+  expect(html).toContain('"@type":"FAQPage"');
+  // Answers keep their anchors.
+  expect(html).toContain('id="what-is-a-bleed"');
+  for (const path of ["/help/nope", "/help/exports", "/help/faq"]) {
+    expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(404);
+  }
+});
+
 test("retired URLs 308 to living pages", async ({ request }) => {
   for (const [from, to] of [
+    // The FAQ became the help centre (TODO NV6); /help forwards its old
+    // #topic anchors client-side.
+    ["/faq", "/help"],
     ["/preview", "/create"],
     ["/sets", "/decks"],
     ["/set/anything-at-all", "/decks"],

@@ -1,23 +1,20 @@
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { clampManaValue } from "@/lib/decks/import-resolution";
 import { isScryfallPrintingImage } from "@/lib/media/media-urls";
-import type { DeckCardInsert } from "@/types/supabase";
 
 // ---------------------------------------------------------------------------
-// The commit half of a decklist import, as a pure plan: which rows to insert
-// and which existing rows get their quantity bumped. Kept out of the server
-// action so the merge rules can be unit-tested — one of them guards against
-// a real data-loss bug (see `quantityUpdates` below).
+// The commit half of a decklist import, as a pure plan. The app merges the
+// list's own duplicate lines and builds each entry's fields; the database
+// (migration 0143, `import_deck_entries`) merges them into the rows the deck
+// already holds and inserts the rest — in ONE transaction under a per-deck
+// lock, so a double submit can never read the same rows twice and insert
+// every line twice (it used to: read-then-write in the app).
 // ---------------------------------------------------------------------------
 
-export type ExistingDeckRow = {
-  id: string;
-  board: string;
-  quantity: number;
-  position: number | null;
-  scryfall_id: string | null;
-  name: string;
-};
+/** The most entry ROWS a deck may hold — the `deck_cards` cap of migration
+ *  0143 (`guard_deck_entry_limit`, `import_deck_entries`). A unit test holds
+ *  the two equal. Quantities don't count: one row is N copies. */
+export const MAX_DECK_ENTRIES = 500;
 
 export type ImportResolvedCard = {
   scryfall_id: string;
@@ -40,16 +37,32 @@ export type ImportCommitLine = {
   resolved: ImportResolvedCard | null;
 };
 
+/** One entry as `import_deck_entries` takes it: deck_cards' own keys. */
+export type ImportEntry = {
+  board: string;
+  quantity: number;
+  name: string;
+  scryfall_id: string | null;
+  set_code: string | null;
+  collector_number: string | null;
+  type_line: string | null;
+  mana_cost: string | null;
+  mana_value: number | null;
+  color_identity: string[];
+  rarity: string | null;
+  image_url: string | null;
+};
+
 export type ImportPlan = {
-  inserts: DeckCardInsert[];
-  /** One update per existing row, with the FINAL quantity (base + every
-   *  matching line, clamped). */
-  quantityUpdates: Array<{ id: string; quantity: number }>;
+  /** One entry per merge key, in the list's order. */
+  entries: ImportEntry[];
+  /** Lines that go in as name-only placeholders. */
   placeholders: number;
 };
 
 /** Merge key: same board + same card — Scryfall id when the row has one,
- *  else the case-insensitive name (covers placeholders). */
+ *  else the case-insensitive name (covers placeholders). The SQL side of
+ *  0143 matches the deck's rows with the same rule. */
 export function importMergeKey(row: {
   board: string;
   scryfall_id: string | null;
@@ -68,36 +81,22 @@ export function scryfallImageOnly(url: string | null): string | null {
   return isScryfallPrintingImage(url) ? url : null;
 }
 
-export function planImportWrites(
-  deckId: string,
-  existingRows: ExistingDeckRow[],
-  lines: ImportCommitLine[],
-): ImportPlan {
-  const existingByKey = new Map(existingRows.map((row) => [importMergeKey(row), row]));
-  let maxPosition = existingRows.reduce((max, row) => Math.max(max, row.position ?? 0), -1);
-
-  const inserts: DeckCardInsert[] = [];
-  // Accumulate quantity bumps PER existing row id. Two committed lines can
-  // resolve to the same existing deck row (e.g. an exact line + a
-  // fuzzy-rescued typo of it, same board/scryfall_id); pushing a separate
-  // update for each (both computed from the same base quantity) made the
-  // writes clobber each other last-write-wins, silently dropping one line's
-  // copies. Summing here and issuing one update per row fixes it.
-  const quantityAddByRowId = new Map<string, { base: number; added: number }>();
-  // Duplicate keys WITHIN the payload merge as we go.
-  const pendingByKey = new Map<string, DeckCardInsert>();
+export function planImportEntries(lines: ImportCommitLine[]): ImportPlan {
+  // Duplicate keys WITHIN the payload merge as we go (an exact line and a
+  // fuzzy-rescued typo of it, same board and printing); the database refuses
+  // a payload that still holds two entries with one key.
+  const byKey = new Map<string, ImportEntry>();
+  const entries: ImportEntry[] = [];
   let placeholders = 0;
 
   for (const line of lines) {
     const resolved = line.resolved;
     if (!resolved) placeholders += 1;
-    const candidate: DeckCardInsert = {
-      deck_id: deckId,
+    const candidate: ImportEntry = {
       board: line.board,
-      quantity: line.quantity,
-      position: 0, // assigned below for fresh inserts
+      quantity: Math.min(line.quantity, MAX_ENTRY_QUANTITY),
+      name: (resolved?.name ?? line.name).trim(),
       scryfall_id: resolved?.scryfall_id ?? null,
-      name: resolved?.name ?? line.name,
       set_code: resolved?.set_code ?? null,
       collector_number: resolved?.collector_number ?? null,
       type_line: resolved?.type_line ?? null,
@@ -107,38 +106,44 @@ export function planImportWrites(
       rarity: resolved?.rarity ?? null,
       image_url: scryfallImageOnly(resolved?.image_url ?? null),
     };
-    const key = importMergeKey({
-      board: candidate.board ?? "main",
-      scryfall_id: candidate.scryfall_id ?? null,
-      name: candidate.name,
-    });
-
-    const pending = pendingByKey.get(key);
+    const key = importMergeKey(candidate);
+    const pending = byKey.get(key);
     if (pending) {
-      pending.quantity = Math.min((pending.quantity ?? 1) + line.quantity, MAX_ENTRY_QUANTITY);
+      pending.quantity = Math.min(pending.quantity + line.quantity, MAX_ENTRY_QUANTITY);
       continue;
     }
-
-    const existing = existingByKey.get(key);
-    if (existing) {
-      const acc = quantityAddByRowId.get(existing.id) ?? { base: existing.quantity, added: 0 };
-      acc.added += line.quantity;
-      quantityAddByRowId.set(existing.id, acc);
-      continue;
-    }
-
-    maxPosition += 1;
-    candidate.position = maxPosition;
-    pendingByKey.set(key, candidate);
-    inserts.push(candidate);
+    byKey.set(key, candidate);
+    entries.push(candidate);
   }
 
-  return {
-    inserts,
-    quantityUpdates: Array.from(quantityAddByRowId, ([id, { base, added }]) => ({
-      id,
-      quantity: Math.min(base + added, MAX_ENTRY_QUANTITY),
-    })),
-    placeholders,
-  };
+  return { entries, placeholders };
+}
+
+// ---------------------------------------------------------------------------
+// Errors the database raises on an entry write (migration 0143), read back
+// into words a person can act on.
+// ---------------------------------------------------------------------------
+
+export type DeckEntryWriteError = { message?: string | null; details?: string | null } | null | undefined;
+
+/** The 500-row cap: `deck_entry_limit` (check_violation), with
+ *  `existing=N,adding=M` in its detail when the database knows the numbers. */
+export function deckEntryLimitMessage(error: DeckEntryWriteError): string | null {
+  if (!error?.message?.includes("deck_entry_limit")) return null;
+  const numbers = /existing=(\d+),adding=(\d+)/.exec(error.details ?? "");
+  const cap = MAX_DECK_ENTRIES.toLocaleString("en-US");
+  if (!numbers) {
+    return `A deck holds at most ${cap} different entries. Remove some lines, or start a second deck for the rest.`;
+  }
+  const existing = Number(numbers[1]);
+  const adding = Number(numbers[2]);
+  const total = (existing + adding).toLocaleString("en-US");
+  return existing >= MAX_DECK_ENTRIES
+    ? `This deck already holds ${existing.toLocaleString("en-US")} different entries — the most a deck can hold is ${cap}. Lines for cards it already has still merge; new cards need another deck.`
+    : `A deck holds at most ${cap} different entries — this import would bring it to ${total}. Remove some lines, or start a second deck for the rest.`;
+}
+
+/** `deck_not_owned`: the RPCs' own ownership check. */
+export function isDeckNotOwnedError(error: DeckEntryWriteError): boolean {
+  return Boolean(error?.message?.includes("deck_not_owned"));
 }

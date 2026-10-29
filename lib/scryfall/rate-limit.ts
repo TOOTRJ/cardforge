@@ -28,6 +28,14 @@ export const SCRYFALL_LIMITS = {
   // One row per decklist-import RUN (a run itself makes ≤ a handful of
   // collection calls), so these numbers are runs, not API calls.
   deck_import: { perMinute: 10, perDay: 50 },
+  // One row per import COMMIT that re-fetches its printings (migration
+  // 0143; a list of placeholders only calls nothing and logs nothing). Its
+  // own action, so a commit never spends the resolve quota. Twice the
+  // resolve's numbers: every honest commit follows a resolve (itself held
+  // to 10 / 50) and may be retried once after a hiccup, so a commit right
+  // after its resolve is never the one refused — a reviewed list is lost
+  // when the dialog closes.
+  deck_import_commit: { perMinute: 20, perDay: 100 },
 } as const;
 
 const LIMITS = SCRYFALL_LIMITS;

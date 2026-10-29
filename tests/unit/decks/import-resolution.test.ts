@@ -9,6 +9,9 @@ import {
   toResolvedCardData,
   clampManaValue,
   MAX_MANA_VALUE,
+  commitScryfallIds,
+  scryfallIdBatches,
+  serverResolvedLines,
 } from "@/lib/decks/import-resolution";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 
@@ -220,5 +223,41 @@ describe("clampManaValue", () => {
     expect(clampManaValue(1_000_000)).toBe(MAX_MANA_VALUE);
     expect(clampManaValue(Number.POSITIVE_INFINITY)).toBeNull();
     expect(clampManaValue(-4)).toBe(0);
+  });
+});
+
+describe("the commit's own lookup (DK0.3: only the printing id is read from the browser)", () => {
+  const BOLT_ID = "00000000-0000-0000-0000-000000000001";
+  const SHOCK_ID = "00000000-0000-0000-0000-000000000002";
+  const UNKNOWN_ID = "00000000-0000-0000-0000-0000000000ff";
+
+  it("asks for each distinct id once, lower-cased, 75 a batch", () => {
+    const ids = commitScryfallIds([
+      { board: "main", quantity: 1, name: "Bolt", resolved: { scryfall_id: BOLT_ID.toUpperCase() } },
+      { board: "side", quantity: 2, name: "Bolt", resolved: { scryfall_id: BOLT_ID } },
+      { board: "main", quantity: 1, name: "Typo", resolved: null },
+      { board: "main", quantity: 1, name: "Shock", resolved: { scryfall_id: SHOCK_ID } },
+    ]);
+    expect(ids).toEqual([BOLT_ID, SHOCK_ID]);
+    const many = Array.from({ length: 160 }, (_, i) => `id-${i}`);
+    const batches = scryfallIdBatches(many, 75);
+    expect(batches.map((b) => b.length)).toEqual([75, 75, 10]);
+    expect(batches[0]?.[0]).toEqual({ id: "id-0" });
+  });
+
+  it("stores Scryfall's answer, never the browser's copy; an unknown id is a name-only placeholder", () => {
+    const lines = serverResolvedLines(
+      [
+        // A tampered payload: the id is Bolt's, everything else is made up —
+        // and only the id survives the schema anyway.
+        { board: "main", quantity: 4, name: "Lightning Bolt", resolved: { scryfall_id: BOLT_ID } },
+        { board: "main", quantity: 1, name: "Made Up", resolved: { scryfall_id: UNKNOWN_ID } },
+        { board: "side", quantity: 2, name: "Mystery", resolved: null },
+      ],
+      [card({ id: BOLT_ID, name: "Lightning Bolt", type_line: "Instant" })],
+    );
+    expect(lines[0]?.resolved).toEqual(toResolvedCardData(card({ id: BOLT_ID })));
+    expect(lines[1]).toEqual({ board: "main", quantity: 1, name: "Made Up", resolved: null });
+    expect(lines[2]).toEqual({ board: "side", quantity: 2, name: "Mystery", resolved: null });
   });
 });
