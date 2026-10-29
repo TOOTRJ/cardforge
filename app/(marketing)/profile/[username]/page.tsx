@@ -45,7 +45,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { PageContainer } from "@/components/layout/page-container";
-import { CardGrid } from "@/components/cards/card-grid";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 type Params = { username: string };
 
@@ -198,8 +198,12 @@ export default async function ProfilePage({
   );
 }
 
-/** How many decks the profile shows; past it, "See all decks". */
-const PROFILE_DECKS_MAX = 6;
+/** How many decks the profile shows; past it, "See all decks". Eight fills
+ *  the DeckGrid's rows at 1, 2 and 4 columns (a phone, a tablet, every
+ *  window from 1408 px) and ends 3 + 3 + 2 at 3 — never a lone tile; six
+ *  ended 4 + 2 on every wide screen, and twelve would double the section
+ *  for a list that already links to all of them. */
+const PROFILE_DECKS_MAX = 8;
 
 async function ProfileDecks({
   ownerId,
@@ -331,10 +335,16 @@ function ProfileHero({
   );
 }
 
+// The banner's box: 128 / 176 px tall, and from 1280 px a 7 : 1 strip — the
+// shape it had in the standard frame (1216 × 176) — so the wide frame (up to
+// 1856 px) shows the same ~57 % of a built-in 4 : 1 banner, not a thinner
+// slice of it (TODO WD3).
+const BANNER_BOX = "h-32 w-full sm:h-44 xl:aspect-[7/1] xl:h-auto";
+
 function ProfileBanner({ bannerUrl }: { bannerUrl: string | null }) {
   if (bannerUrl) {
     return (
-      <div className="relative h-32 w-full overflow-hidden sm:h-44">
+      <div className={`relative overflow-hidden ${BANNER_BOX}`}>
         <Image
           src={bannerUrl}
           alt=""
@@ -350,7 +360,7 @@ function ProfileBanner({ bannerUrl }: { bannerUrl: string | null }) {
   // Gradient fallback uses the accent var when set, else the brand gradient.
   return (
     <div
-      className="h-32 w-full sm:h-44"
+      className={BANNER_BOX}
       style={{
         background:
           "linear-gradient(135deg, var(--profile-accent, var(--color-primary)) 0%, var(--color-accent) 100%)",
@@ -571,6 +581,8 @@ function ProfileCardTile({
           renderedBackThumbUrl: card.rendered_back_thumb_url,
           title: card.title,
           previewData: cardToPreviewData(card, profileOverrides),
+          // Every profile tile sits in a CardGrid on the wide page.
+          sizes: CARD_GRID_SIZES,
         }}
       />
       <div className="flex items-center justify-between gap-2 text-xs">
