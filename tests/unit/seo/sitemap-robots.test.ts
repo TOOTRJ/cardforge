@@ -8,10 +8,11 @@ import { describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 const flags = vi.hoisted(() => ({ billing: true }));
-// What /creators and /frames/requested read (their own pages decide their
-// robots on the same answers): none, offline, unless a test sets them.
+// What /creators, /frames and /frames/requested read (their own pages decide
+// their robots on the same answers): none, offline, unless a test sets them.
 const community = vi.hoisted(() => ({
   creators: { creators: [] as unknown[], total: 0, error: "offline" as string | null },
+  gallery: { sections: [] as Array<{ id: string; entries: unknown[] }>, error: "offline" as string | null },
   frames: { frames: [] as unknown[], error: "offline" as string | null },
 }));
 
@@ -25,6 +26,7 @@ vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => flags.billing })
 vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://www.pipglyph.com" }));
 vi.mock("@/lib/creators/queries", () => ({ listPublicCreators: async () => community.creators }));
 vi.mock("@/lib/frames/requested-frames-queries", () => ({ getRequestedFrames: async () => community.frames }));
+vi.mock("@/lib/frames/frame-gallery-queries", () => ({ getFrameGalleryFrames: async () => community.gallery }));
 
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
@@ -106,6 +108,18 @@ describe("sitemap (static layer)", () => {
     community.creators = { creators: [], total: 0, error: null };
     community.frames = { frames: [], error: "offline" };
     expect((await pathsNow()).has("/creators")).toBe(false);
+  });
+
+  it("lists /frames only while its own page is indexable", async () => {
+    const pathsNow = async () => new Set((await sitemap()).map((e) => pathOf(e.url)));
+    expect((await pathsNow()).has("/frames")).toBe(false);
+    // Two frames is below the bar (FRAME_GALLERY_MIN_INDEXED, 3).
+    community.gallery = { sections: [{ id: "m15", entries: [{}, {}] }], error: null };
+    expect((await pathsNow()).has("/frames")).toBe(false);
+    community.gallery = { sections: [{ id: "m15", entries: [{}, {}] }, { id: "retro", entries: [{}] }], error: null };
+    expect((await pathsNow()).has("/frames")).toBe(true);
+    community.gallery = { sections: [], error: "unavailable" };
+    expect((await pathsNow()).has("/frames")).toBe(false);
   });
 
   it("lists the help centre and every section — never /faq, which 308s there", async () => {

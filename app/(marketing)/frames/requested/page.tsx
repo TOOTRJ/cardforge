@@ -24,7 +24,8 @@ import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 // /frames/requested — the public "Requested frames" list (TODO NV12, part
 // 1): the frames people asked PipGlyph for, most people first, and where
 // each stands. The first piece of a public roadmap; it lives under /frames,
-// where the frame gallery (NV8) will sit, so the two read as one place.
+// the frame gallery (NV8), so the two read as one place — each links the
+// other.
 //
 // The data is migration 0148's requested_frame_counts(): per frame, a count
 // of distinct accounts (never an admin's) whose import PipGlyph couldn't
@@ -84,6 +85,7 @@ export default async function RequestedFramesPage() {
         items={[
           { name: "Home", path: "/" },
           { name: "Learn", path: "/learn" },
+          { name: "Frames", path: "/frames" },
           { name: "Requested frames", path: "/frames/requested" },
         ]}
       />
@@ -92,12 +94,17 @@ export default async function RequestedFramesPage() {
         title="Requested frames"
         description={`When someone imports a printing PipGlyph can't draw exactly yet, we count it. These are the frames at least ${peopleLabel(REQUESTED_FRAMES_MIN_PEOPLE)} asked for in ${REQUESTED_FRAMES_WINDOW_LABEL}, most people first — the list decides what we build and check next.`}
         actions={
-          <Button asChild>
-            <Link href={REQUEST_A_FRAME_HREF}>
-              <MessageSquarePlus className="h-4 w-4" aria-hidden />
-              Request a frame
-            </Link>
-          </Button>
+          <>
+            <Button asChild>
+              <Link href={REQUEST_A_FRAME_HREF}>
+                <MessageSquarePlus className="h-4 w-4" aria-hidden />
+                Request a frame
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/frames">All frames</Link>
+            </Button>
+          </>
         }
       />
 
