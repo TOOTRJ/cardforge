@@ -33,6 +33,13 @@ describe("/llms.txt", () => {
     expect(text).not.toContain("https://www.pipglyph.com/faq");
   });
 
+  it("says what the guest creator is: every step read-only, an account to design (the FAQ's words)", async () => {
+    const text = await GET().text();
+    const line = text.split("\n").find((l) => l.includes("https://www.pipglyph.com/create)"));
+    expect(line).toMatch(/read-only; designing and saving a card need a free account/);
+    expect(line).not.toMatch(/anyone can design/i);
+  });
+
   it("names /learn, /tools and the What's new feed, and lists the guides under their categories", async () => {
     const text = await GET().text();
     for (const path of ["/learn", "/tools", "/news", "/news/feed.xml"]) {

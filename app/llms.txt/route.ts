@@ -18,7 +18,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/ai-mtg-card-generator", "AI MTG Card Generator", "Concept-to-card AI generation, per-field AI fill and idea batches, with FAQ."],
   ["/mana-pip-editor", "Mana Pip Editor", "The full mana symbol vocabulary (hybrid, twobrid, Phyrexian, snow, energy) and custom pip uploads, with FAQ."],
   ["/best-mtg-card-makers", "Best MTG Card Makers", "Honest comparison of custom MTG card makers and a free Card Conjurer alternative, with FAQ."],
-  ["/create", "Card Creator", "The creator itself. Anyone can design a card without an account; saving, sharing and downloads need a free account."],
+  ["/create", "Card Creator", "The creator itself. Signed out, it shows every step and the live preview read-only; designing and saving a card need a free account."],
   ["/gallery", "Community Gallery", "Public custom cards — trending, newest and a random discover feed; filter by color, type, rarity and tag."],
   ["/decks", "Community Decks", "Public decks built from custom and real cards: import a decklist, remix cards into custom versions, print proxies."],
   ["/challenges", "Design Challenges", "Community design briefs; entries are public cards wearing the challenge tag."],

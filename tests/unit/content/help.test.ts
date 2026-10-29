@@ -240,6 +240,27 @@ describe("answers that follow the product", () => {
     expect(getHelpSection("ai-and-credits")?.howTo?.tip).toContain(DECK_AI_PAUSED_MESSAGE);
   });
 
+  it("speak the deck vocabulary (TODO DK2.2): Customize, Imported, Edited — never the retired proxy words", () => {
+    const text = [
+      ...allFaqEntries().flatMap((entry) => [entry.q, entry.a]),
+      ...HELP_SECTIONS.flatMap((section) => [
+        section.intro,
+        ...(section.howTo
+          ? [section.howTo.summary, section.howTo.tip ?? "", ...section.howTo.steps.map((step) => step.body)]
+          : []),
+      ]),
+    ].join("\n");
+    expect(text).not.toMatch(/custom proxy|needs proxy|unlink proxy|remix with ai|my proxies/i);
+    const decks = getHelpSection("decks")!.howTo!.steps.map((step) => step.body).join("\n");
+    expect(decks).toMatch(/choose Customize/);
+    expect(faqEntryById("what-goes-in-a-deck")?.a).toMatch(/Imported.*Customize.*Edited/);
+  });
+
+  it("say what a signed-out visitor gets: the creator, read-only — designing needs an account", () => {
+    expect(faqEntryById("do-i-need-an-account")?.a).toMatch(/read-only; designing, saving and publishing/);
+    expect(getHelpSection("getting-started")!.howTo!.steps[0].body).toMatch(/signed out, the creator is read-only/);
+  });
+
   it("never state a deck limit per plan — none is shipped (TODO DK3)", () => {
     const decks = getHelpSection("decks")!;
     const text = [

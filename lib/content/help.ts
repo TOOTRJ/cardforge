@@ -79,7 +79,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       steps: [
         {
           title: "Open the creator",
-          body: "Go to /create and sign in, or make a free account — you can look around without one, but saving needs it. Choose “Blank canvas” in the “Start with…” row.",
+          body: "Go to /create and sign in, or make a free account: signed out, the creator is read-only. Choose “Blank canvas” in the “Start with…” row.",
         },
         {
           title: "Choose what it is",
@@ -237,8 +237,9 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       "Build a deck from a pasted decklist, turn its real cards into versions of your own, and copy, export or print the list.",
     intro:
       "A deck gathers real Magic cards and your own designs in one list, with a format, boards and a cover. Paste a list from another deck site to start, then turn the real cards you want into versions of your own.",
-    // TODO(DK4): the stepper below becomes the "New deck" dialog, and DK2.2
-    // renames "Create a custom proxy" — rewrite these steps with them.
+    // The deck vocabulary of TODO DK2.2 ("Customize", "Imported", "Edited").
+    // TODO(DK4): the stepper below becomes the "New deck" dialog — rewrite
+    // the first two steps with it.
     howTo: {
       id: "build-a-deck-from-a-decklist",
       title: "Build a deck from a decklist",
@@ -262,7 +263,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Customize a card",
-          body: "Open a real card in the deck and choose “Create a custom proxy”. The creator opens with the card filled in, and the card you save takes its place in the deck.",
+          body: "Open a real card in the deck (marked Imported) and choose Customize. The creator opens with the card filled in, and the version you save takes its place in the deck, marked Edited.",
         },
         {
           title: "Share the list",
@@ -315,7 +316,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Print a deck",
-          body: "On Pro, a deck's Export makes a print PDF of its custom cards; real cards without a custom version are listed on a checklist page instead.",
+          body: "On Pro, a deck's Export makes a print PDF of its custom cards; real cards not customized yet are listed on a checklist page instead.",
         },
         {
           title: "Cut and sleeve",

@@ -270,7 +270,7 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
   {
     id: "do-i-need-an-account",
     q: "Do I need an account to use PipGlyph?",
-    a: "Yes — a free one, which takes seconds. You can look around the creator at /create without signing in, but designing, saving and publishing need an account so your cards are always yours, on any device. The same free account unlocks the gallery, decks, custom mana pips, design challenges and 5 AI credits to get started.",
+    a: "Yes — a free one, which takes seconds. Signed out, /create shows the whole creator — every step and the live preview — read-only; designing, saving and publishing a card need an account, so your cards are always yours, on any device. The same free account unlocks the gallery, decks, custom mana pips, design challenges and 5 AI credits to get started.",
   },
   {
     id: "does-the-editor-autosave",
@@ -296,9 +296,11 @@ const ACCOUNTS_FAQ: FaqEntry[] = [
 
 // --- Decks (help centre only) -----------------------------------------------
 //
-// What decks do TODAY. The deck rebuild changes them (TODO DK2–DK5: new
-// words for an entry's origin, a create dialog instead of the stepper, other
-// creators' public cards in your decks — owner D3): rewrite these with it.
+// What decks do TODAY, in the deck vocabulary (TODO DK2.2,
+// components/creator/card-glossary.tsx: a real card is "Imported", your
+// version of it "Edited", made with "Customize"). The rest of the rebuild
+// changes them again — a create dialog instead of the stepper (DK4), other
+// creators' public cards in your decks (DK2.9, owner D3): rewrite with it.
 // TODO(DK3): the private-deck limits per plan (owner D1) are not shipped —
 // add their answer when they are, never before.
 
@@ -306,7 +308,7 @@ const DECKS_FAQ: FaqEntry[] = [
   {
     id: "what-goes-in-a-deck",
     q: "What can I put in a PipGlyph deck?",
-    a: "Real Magic cards and cards you design yourself. Paste a decklist and each line is matched to its card on Scryfall; any real card in the deck can then become your own custom version of it, which takes its place in the deck. A new card can join one of your decks from the creator's Publish step, and a deck entry can be linked to a card you've already saved. Every deck has a format, which sets its size and copy limits, and boards for the commander, companion, main deck, sideboard and maybeboard.",
+    a: "Real Magic cards and cards you design yourself. Paste a decklist and each line is matched to its card on Scryfall, marked Imported; choose Customize on one and the version you save takes its place in the deck, marked Edited. A new card can join one of your decks from the creator's Publish step, and a deck entry can be linked to a card you've already saved. Every deck has a format, which sets its size and copy limits, and boards for the commander, companion, main deck, sideboard and maybeboard.",
   },
   {
     id: "decklist-formats",
@@ -316,7 +318,7 @@ const DECKS_FAQ: FaqEntry[] = [
   {
     id: "copy-export-or-print-a-deck",
     q: "Can I copy, export or print a deck?",
-    a: "Copying the list is free: the deck's owner, and every visitor to a public or unlisted deck, can copy it as plain text or in Arena format, ready to paste into another deck site or an import. Exporting files is a Pro feature for the deck's owner: a ZIP with clean images of the deck's custom cards, its decklist and a PDF of its stats, or a print-ready PDF of those cards at true size, one per page or on US Letter or A4 sheets. Real cards without a custom version go on a checklist page instead of being printed.",
+    a: "Copying the list is free: the deck's owner, and every visitor to a public or unlisted deck, can copy it as plain text or in Arena format, ready to paste into another deck site or an import. Exporting files is a Pro feature for the deck's owner: a ZIP with clean images of the deck's custom cards, its decklist and a PDF of its stats, or a print-ready PDF of those cards at true size, one per page or on US Letter or A4 sheets. Real cards not customized yet go on a checklist page instead of being printed.",
   },
   {
     id: "ai-deck-building",
