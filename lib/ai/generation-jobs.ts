@@ -77,7 +77,7 @@ import {
   LAYOUT_TEMPLATE,
   layoutColorHints,
   layoutColorKeys,
-  layoutFitOf,
+  layoutFrameFitOf,
   layoutFrameBrief,
   layoutLockedOf,
   layoutPrecheckError,
@@ -1065,6 +1065,11 @@ export type CreateCardFillJobInput = {
    *  window's shape (TODO 4.48b). Read for nothing else — the fill never
    *  sets a frame from it. */
   artFrame?: FrameTemplate;
+  /** The creator's CURRENT frame where it is a Variations skin of a layout
+   *  kind's frame (TODO 4.27b: the extended-art Prepare dress) — read ONLY
+   *  by a layout fill, which keeps the card on that skin where the filled
+   *  card fits there (layoutFrameFitOf). Validated by the route. */
+  layoutSkin?: FrameTemplate;
   /** Pro: brief the designer with this deck. */
   deckId?: string;
   /** The creator this fill belongs to — see app/api/ai/card-fill. */
@@ -1434,9 +1439,11 @@ async function createLayoutFillJob(
   await logAiCall(userId, "fill_card");
   const recent = await recentAiTitles(userId);
   type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
-  const fitOf = (result: DesignedFill): LayoutFit => {
+  // (The card's Variations skin of the frame — the extended-art Prepare
+  // dress — is kept where the filled card fits there, TODO 4.27b.)
+  const fitOf = (result: DesignedFill): LayoutFit & { template: FrameTemplate } => {
     const f = result.fields;
-    return layoutFitOf(
+    return layoutFrameFitOf(
       layout,
       {
         card_type: f.card_type ?? input.locked.card_type ?? "creature",
@@ -1451,6 +1458,7 @@ async function createLayoutFillJob(
         second_part: mergedSecondPart(layout, result.second_part, input.want, input.locked.back_face),
       },
       verifiedKeys,
+      input.layoutSkin,
     );
   };
   let designs = 0;
@@ -1505,7 +1513,7 @@ async function createLayoutFillJob(
     if (fit.partColour.first) fields.first_part_color = fit.partColour.first;
     fields.back_face = { ...(fields.back_face ?? {}), color_identity: fit.partColour.second ?? [] };
   }
-  const template = LAYOUT_TEMPLATE[layout];
+  const template = fit.template;
   const plan: CardFillJobPlan = {
     want: input.want,
     fields,

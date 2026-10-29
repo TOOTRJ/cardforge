@@ -439,6 +439,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b).
+  "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
@@ -491,6 +493,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b).
+  "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
@@ -884,6 +888,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15tokentall", "m15tokenartifacttall",
       // …and TODO 4.27's Prepare frame: a new template, no stored card — no bump.
       "prepare",
+      // …and TODO 4.27b's extended-art Prepare dress: the same, no bump.
+      "extendedartprepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
       "expeditionlandbfz",
       // …and TODO 4.11 wave 2's New Capenna Art Deco: the same, no bump.
@@ -3286,7 +3292,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // the Strixhaven Mystical Archive (6 px higher, 4 px further right), and
     // the Doctor Who TARDIS (the CC M15 row 4 px lower), and the OTJ Breaking
     // News (the 70 px disc in a box of its own in the masthead: costRect).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
+    // (…and the extended-art Prepare dress, TODO 4.27b: a new template BORN
+    // on the Prepare frame's CC M15 row — no bump.)
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "extendedartprepare"];
     const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
@@ -3922,7 +3930,11 @@ describe("v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 
     expect(v74ShadowsChanged(at({ frame_style: { template: "m15" } }))).toBe(false);
     // The list is every template whose profile declares a shadow in
     // card-width px today (cardPx's `cqw`).
-    const declared = FRAME_TEMPLATE_VALUES.filter((t) => JSON.stringify(getFrameProfile(t)).includes("cqw"));
+    // (A template born after v74 — the extended-art Prepare dress, TODO
+    // 4.27b, the Prepare page's ADV_SHADOW — has no card a v74 sweep could
+    // re-bake: the frozen list never names it.)
+    const BORN_AFTER_V74 = ["extendedartprepare"];
+    const declared = FRAME_TEMPLATE_VALUES.filter((t) => JSON.stringify(getFrameProfile(t)).includes("cqw") && !BORN_AFTER_V74.includes(t));
     expect([...V74_SHADOW_TEMPLATES].sort()).toEqual([...declared].sort());
   });
 

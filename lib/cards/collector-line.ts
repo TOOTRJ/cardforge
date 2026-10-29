@@ -73,6 +73,10 @@ export const COLLECTOR_TEMPLATES = [
   // The Spacecraft's extended-art dress (TODO 4.27a step 2): its bottom
   // border is M15's, pixel for pixel, and its prints carry the line.
   "extendedartstation",
+  // The Prepare frame and its extended-art dress (TODO 4.27b): SOS / SOC /
+  // FRA set both lines on M15's rows, as the set's plain M15 cards.
+  "prepare",
+  "extendedartprepare",
   // The borderless frames (TODO 4.9d, owner Round 66): the prints set both
   // lines in the black bottom bar exactly where the bordered frame does.
   "m15borderless",

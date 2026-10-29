@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { pickFrameColorKey as pickFrameKey } from "@/lib/cards/frame-color-key";
 import { lintCardDesign } from "@/lib/ai/mtg-rules";
 import {
   AI_LAYOUT_KINDS,
@@ -9,6 +10,8 @@ import {
   fillSecondPartOf,
   layoutFitOf,
   layoutFrameBrief,
+  layoutFrameFitOf,
+  layoutSkinOf,
   layoutLockedOf,
   layoutPrecheckError,
   lintLayoutDesign,
@@ -27,7 +30,7 @@ import { neverDrawnSecondPartUnits } from "@/lib/creator/second-part-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { KIND_DEFS } from "@/lib/creator/card-kinds";
 import { sagaEditorRows } from "@/lib/cards/face-content";
-import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, TEMPLATE_SKIN_VARIANTS, type FrameTemplate } from "@/types/card";
 import { LAYOUT_DESIGNS, SAGA, SPLIT } from "./fixtures/layout-designs";
 
 // ---------------------------------------------------------------------------
@@ -147,6 +150,15 @@ describe("what the designer is told", () => {
     for (const kind of AI_LAYOUT_KINDS) expect(frameArtBrief(LAYOUT_TEMPLATE[kind]), kind).not.toBe("");
     expect(frameArtBrief("split")).toContain("ONE picture shown in BOTH halves' windows");
     expect(frameArtBrief("adventure")).toContain("creature itself");
+  });
+
+  it("a layout's skins (Variations) carry the layout's art direction — the extended-art Prepare dress (TODO 4.27b)", () => {
+    for (const kind of AI_LAYOUT_KINDS) {
+      const layout = LAYOUT_TEMPLATE[kind];
+      for (const skin of TEMPLATE_SKIN_VARIANTS[layout] ?? []) expect(frameArtBrief(skin), `${kind} · ${skin}`).toBe(frameArtBrief(layout));
+    }
+    expect(TEMPLATE_SKIN_VARIANTS.prepare).toContain("extendedartprepare");
+    expect(frameArtBrief("extendedartprepare")).toContain("creature itself");
   });
 });
 
@@ -268,5 +280,33 @@ describe("the fit — every gate the save runs, at plan time", () => {
     expect(layoutFitOf("saga", faceOf(card("saga")), noGreenSaga).ok).toBe(false);
     expect(layoutFitOf("saga", { ...faceOf(card("saga")), rules_text: "Draw a card." }, EVERY)).toMatchObject({ ok: false, reason: expect.stringContaining("chapter rows") });
     expect(layoutFitOf("prepare", { ...faceOf(card("prepare")), card_type: "instant", power: null, toughness: null }, EVERY).ok).toBe(false);
+  });
+
+  // TODO 4.27b: a fill used to move a card off the extended-art Prepare
+  // dress (a Variations skin of `prepare`) back to `prepare` without a word.
+  it("a card on a layout's Variations skin keeps it where the filled card fits there, else the kind's own frame", () => {
+    expect(layoutSkinOf("prepare", "extendedartprepare")).toBe("extendedartprepare");
+    expect(layoutSkinOf("prepare", "prepare")).toBeNull();
+    expect(layoutSkinOf("prepare", "extendedart")).toBeNull();
+    expect(layoutSkinOf("adventure", "extendedartprepare")).toBeNull();
+    expect(layoutSkinOf("prepare", null)).toBeNull();
+    const face = faceOf(card("prepare"));
+    const white = pickFrameKey(face.color_identity);
+    const dress = new Set([...EVERY, ...COLOURS.map((k) => frameComboKey("extendedartprepare", k))]);
+    // On the dress, verified in the card's colour: kept.
+    expect(layoutFrameFitOf("prepare", face, dress, "extendedartprepare")).toMatchObject({ ok: true, template: "extendedartprepare", partColour: { on: true, second: ["white"] } });
+    // The dress not verified in the colour: the Prepare frame, as before.
+    const noWhiteDress = new Set([...dress].filter((key) => key !== frameComboKey("extendedartprepare", white)));
+    expect(layoutFrameFitOf("prepare", face, noWhiteDress, "extendedartprepare")).toMatchObject({ ok: true, template: "prepare" });
+    // …and short of both, no fit (the Prepare frame's reason).
+    const neither = new Set([...noWhiteDress].filter((key) => key !== frameComboKey("prepare", white)));
+    expect(layoutFrameFitOf("prepare", face, neither, "extendedartprepare").ok).toBe(false);
+    // The dress alone verified: the fill keeps it there.
+    const dressOnly = new Set([...dress].filter((key) => key !== frameComboKey("prepare", white)));
+    expect(layoutFrameFitOf("prepare", face, dressOnly, "extendedartprepare")).toMatchObject({ ok: true, template: "extendedartprepare" });
+    // A card on no skin: exactly layoutFitOf on the kind's frame.
+    for (const current of [undefined, null, "prepare", "m15", "extendedart"]) {
+      expect(layoutFrameFitOf("prepare", face, dress, current)).toEqual({ ...layoutFitOf("prepare", face, dress), template: "prepare" });
+    }
   });
 });

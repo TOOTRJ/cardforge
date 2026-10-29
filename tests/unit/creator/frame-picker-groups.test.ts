@@ -174,6 +174,10 @@ const STATION_DRESSES: readonly string[] = [
   // above; pinned in tests/unit/creator/prepare-kind.test.ts and
   // tests/unit/scryfall/prepare-imports.test.ts.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b): a new template, the Prepare
+  // kind's alone — pinned in tests/unit/creator/prepare-kind.test.ts and
+  // tests/unit/scryfall/prepare-imports.test.ts.
+  "extendedartprepare",
   // …and the 2015 Expeditions (TODO 4.11 wave 1): a new template in the
   // Expeditions set — pinned in tests/unit/scryfall/expedition-imports.test.ts
   // (EXP's printings land there; read below as the one Expedition frame).

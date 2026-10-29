@@ -97,6 +97,9 @@ describe("the declared pair masters", () => {
       // …and the Prepare frame's twenty (TODO 4.26): m15's two dresses with
       // the page (scripts/build-prepare-frames.mjs).
       prepare: 20,
+      // …and its extended-art dress (TODO 4.27b): the same twenty, merged
+      // under the extended-art top.
+      extendedartprepare: 20,
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,

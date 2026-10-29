@@ -4107,7 +4107,7 @@
     }
   },
   "prepare": {
-    "note": "The Prepare frame (TODO 4.27): Secrets of Strixhaven's (2026) black-bordered Prepare creatures — M15's frame with the spell on a page on the right. Each reference is a mono-coloured creature whose spell is its own colour (a hybrid or gold spell prints its own page colour, 4.26) and carries no holofoil stamp (no notch is drawn yet). m and c: no plain printing (a two-colour Prepare prints the split frame; none is colourless).",
+    "note": "The Prepare frame (TODO 4.27): Secrets of Strixhaven's (2026) black-bordered Prepare creatures — M15's frame with the spell on a page on the right. Each reference is a mono-coloured creature whose spell is its own colour (a hybrid or gold spell prints its own page colour, 4.26) and carries no holofoil stamp (the notch, TODO 4.27b, is judged on the extended-art dress's stamped prints and the sheet). m and c: no plain printing (a two-colour Prepare prints the split frame; none is colourless).",
     "colors": {
       "w": [
         {
@@ -4192,6 +4192,103 @@
           "name": "Studious First-Year // Rampant Growth",
           "set": "sos",
           "scryfallId": "24f888dd-785c-4089-a89c-03f9080130ed"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "extendedartprepare": {
+    "note": "The Prepare frame's extended-art dress (TODO 4.27b): Secrets of Strixhaven's extended-art Prepare creatures (SOS #309–342, the SOC commander decks' #63–98, FRA #425–430) — the extended-art pack's bars and black type bar over the Prepare frame's lower half (the creature's box, the spell's page). Every listed print is mono-coloured and oval-stamped (the stamp drawn with it on: the notch is the Prepare frame's, TODO 4.27b). m and c: no such printing (SOC #93–98 are two-colour, judged with the gold key's tick as on the plain frame; none is colourless).",
+    "colors": {
+      "w": [
+        {
+          "name": "Emeritus of Truce // Swords to Plowshares",
+          "set": "sos",
+          "scryfallId": "bfd607c0-7ed7-4a4e-abdd-508080f40ef2",
+          "curated": true
+        },
+        {
+          "name": "Joined Researchers // Secret Rendezvous",
+          "set": "sos",
+          "scryfallId": "15d99a75-939e-4584-9b4a-8afd115bab2c"
+        },
+        {
+          "name": "Eiganjo Dynastorian // Replenish",
+          "set": "soc",
+          "scryfallId": "f6a504a6-2501-4384-9db9-da6abe1cf81d"
+        }
+      ],
+      "u": [
+        {
+          "name": "Emeritus of Ideation // Ancestral Recall",
+          "set": "sos",
+          "scryfallId": "d8e1e20c-03b9-446b-84d4-466377e50310",
+          "curated": true
+        },
+        {
+          "name": "Harmonized Trio // Brainstorm",
+          "set": "sos",
+          "scryfallId": "c8f1baae-dd81-4e10-841e-15531ea1ffaa"
+        },
+        {
+          "name": "Dirgur Focusmage // Braingeyser",
+          "set": "soc",
+          "scryfallId": "baae3f8f-f282-40db-a1e0-cf6efc70bff0"
+        }
+      ],
+      "b": [
+        {
+          "name": "Emeritus of Woe // Demonic Tutor",
+          "set": "sos",
+          "scryfallId": "26156da4-1ec3-4702-bded-9868af3026b5",
+          "curated": true
+        },
+        {
+          "name": "Grave Researcher // Reanimate",
+          "set": "sos",
+          "scryfallId": "1d12804c-dda0-4dae-9eb8-f670e72c17e7"
+        },
+        {
+          "name": "Stensian Sanguinist // Exsanguinate",
+          "set": "soc",
+          "scryfallId": "66d88104-c69d-4349-a4ae-4a3d855a3536"
+        }
+      ],
+      "r": [
+        {
+          "name": "Emeritus of Conflict // Lightning Bolt",
+          "set": "sos",
+          "scryfallId": "f11b8d24-375d-40dc-8497-c1ee779e156a",
+          "curated": true
+        },
+        {
+          "name": "Maelstrom Artisan // Rocket Volley",
+          "set": "sos",
+          "scryfallId": "8463c38a-0441-404e-b183-1f871f61f250"
+        },
+        {
+          "name": "Naktamun Lorespinner // Wheel of Fortune",
+          "set": "soc",
+          "scryfallId": "f562fbca-9446-4074-bf00-faf581a18c72"
+        }
+      ],
+      "g": [
+        {
+          "name": "Emeritus of Abundance // Regrowth",
+          "set": "sos",
+          "scryfallId": "2b7e8e07-b3ff-496e-923f-42d703f20a1e",
+          "curated": true
+        },
+        {
+          "name": "Vastlands Scavenger // Bind to Life",
+          "set": "sos",
+          "scryfallId": "91db5c3d-45ab-440f-8568-a2837aee1fca"
+        },
+        {
+          "name": "Yavimaya Bloomsage // Channel",
+          "set": "soc",
+          "scryfallId": "c243c2c4-f227-42a8-8b78-5f4b761106c2"
         }
       ],
       "c": null,

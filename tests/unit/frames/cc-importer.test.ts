@@ -1,4 +1,4 @@
-import { BORDERLESS_STAMP_FOLDERS, SNC_DECO_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
+import { BORDERLESS_STAMP_FOLDERS, PREPARE_STAMP_FOLDERS, SNC_DECO_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -2151,6 +2151,13 @@ describe("provenance and hygiene", () => {
         // (scripts/build-prepare-frames.mjs) of the published m15 and
         // adventure masters; its own test: tests/unit/frames/prepare-recipe.test.ts.
         "prepare",
+        // …and its extended-art dress and holofoil stamp notch (TODO 4.27b):
+        // PipGlyph's merge of the published extendedart and prepare masters
+        // (scripts/build-prepare-frames.mjs --only extended) and the prepare
+        // masters' own foot lifted (scripts/build-borderless-stamp.mjs); their
+        // own test: tests/unit/frames/prepare-stamp-extended.test.ts.
+        "extendedartprepare",
+        ...Object.keys(PREPARE_STAMP_FOLDERS),
         // …and the Breaking News masthead pieces (owner decision on #624):
         // PipGlyph's own cut (scripts/build-breaking-news-masthead.mjs) of
         // the published breakingnews masters; its own test:

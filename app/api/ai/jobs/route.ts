@@ -32,7 +32,7 @@ import {
 } from "@/types/card";
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
 import { AI_DESIGN_KINDS } from "@/lib/ai/frame-choices";
-import { AI_LAYOUT_KINDS, isAiLayoutKind } from "@/lib/ai/layout-design";
+import { AI_LAYOUT_KINDS, isAiLayoutKind, layoutSkinOf } from "@/lib/ai/layout-design";
 import { AI_DFC_KINDS, fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
@@ -195,6 +195,11 @@ const requestSchema = z.discriminatedUnion("kind", [
      *  card, a made-up one) is dropped and the art is painted for the
      *  default frame, never a refused fill. Read for the shape alone. */
     art_frame: z.enum(FRAME_TEMPLATE_VALUES).optional().catch(undefined),
+    /** The creator's current frame where it is a Variations skin of a
+     *  layout kind's frame (TODO 4.27b: the extended-art Prepare dress): a
+     *  layout fill keeps the card there where it fits. A known template
+     *  only, else dropped; read by a layout fill alone. */
+    layout_skin: z.enum(FRAME_TEMPLATE_VALUES).optional().catch(undefined),
     /** Which creator this fill belongs to ("create", "card:<id>",
      *  "remix:<id>") so an unclaimed result is offered back on the right
      *  page (app/api/ai/card-fill). */
@@ -552,6 +557,7 @@ export async function POST(request: Request) {
       style: assembled ? assembled.style : fill.style,
       frame: fill.frame,
       artFrame: fill.art_frame,
+      ...(layout && layoutSkinOf(layout, fill.layout_skin) ? { layoutSkin: layoutSkinOf(layout, fill.layout_skin)! } : {}),
       deckId: fill.deck_id,
       scope: fill.scope,
       ...(designKind ? { designKind } : {}),
