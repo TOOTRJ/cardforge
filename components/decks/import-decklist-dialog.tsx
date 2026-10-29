@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/decks/import";
 import { DECK_BOARD_LABELS, DECK_BOARD_VALUES } from "@/types/deck";
 import type { ParseWarning } from "@/lib/decks/parse-decklist";
+import { describeImportSlots, type CardCapacity } from "@/lib/billing/capacity-copy";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +48,9 @@ type ImportDecklistDialogProps = {
   triggerLabel?: string;
   /** Open on mount (the wizard's "Import a decklist" path lands here). */
   defaultOpen?: boolean;
+  /** The owner's saved-card slots, for the review's forecast (owner decision
+   *  D2): an imported card uses none until it is customized. Never blocks. */
+  cardCapacity?: CardCapacity | null;
 };
 
 type Step = "paste" | "review";
@@ -54,6 +59,7 @@ export function ImportDecklistDialog({
   deckId,
   triggerLabel = "Import decklist",
   defaultOpen = false,
+  cardCapacity = null,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
@@ -71,12 +77,26 @@ export function ImportDecklistDialog({
   // router's own (a child's effects run first), so Next would not hear of
   // it and its next history write would put the flag back. The dialog's
   // state outlives the re-render (same place in the tree).
+  //
+  // ONE replace, and no server action of the dialog's while it is on its way
+  // (`clearingFlag`, Preview import waits): Next 16's router queue loses an
+  // action dispatched while a navigation that PRE-EMPTED another is pending
+  // (the pre-empted node stays the queue's `last`, and the action is chained
+  // after it), so a "Preview import" pressed in that window never reached
+  // the server — the button spun "Matching cards…" for good. StrictMode's
+  // second effect run (every dev server, the e2e suite's included) was that
+  // second navigation; the ref keeps it to one.
+  const flagCleared = useRef(false);
+  const [clearingFlag, startClearingFlag] = useTransition();
   useEffect(() => {
-    if (!defaultOpen) return;
+    if (!defaultOpen || flagCleared.current) return;
+    flagCleared.current = true;
     const url = new URL(window.location.href);
     if (url.searchParams.get("import") !== "1") return;
     url.searchParams.delete("import");
-    router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    startClearingFlag(() => {
+      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the mount that opened it
   }, []);
 
@@ -147,6 +167,8 @@ export function ImportDecklistDialog({
       fuzzy: kept.filter((l) => l.status === "fuzzy").length,
       unresolved: kept.filter((l) => l.status === "unresolved").length,
       cards: kept.reduce((sum, l) => sum + l.quantity, 0),
+      // Different cards (one name on two boards is one card to customize).
+      distinct: new Set(kept.map((l) => (l.resolved?.name ?? l.name).trim().toLowerCase())).size,
     };
   }, [lines]);
 
@@ -195,7 +217,7 @@ export function ImportDecklistDialog({
               <Button
                 type="button"
                 onClick={handleResolve}
-                disabled={!text.trim() || isResolving}
+                disabled={!text.trim() || isResolving || clearingFlag}
               >
                 {isResolving ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -218,6 +240,8 @@ export function ImportDecklistDialog({
                 <Badge variant="outline">{counts.unresolved} not found</Badge>
               ) : null}
             </div>
+
+            <ImportSlotForecast cardCapacity={cardCapacity} cards={counts.cards} distinctCards={counts.distinct} />
 
             {parseWarnings.length > 0 ? (
               <div className="rounded-md border border-gold/40 bg-gold/5 p-3">
@@ -289,6 +313,38 @@ export function ImportDecklistDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The review's slot forecast (owner decision D2, TODO DK3.7): importing
+ *  uses no saved-card slots; customizing a card does. A link to more slots
+ *  when the list has more different cards than slots left. It never blocks
+ *  the import. */
+export function ImportSlotForecast({
+  cardCapacity,
+  cards,
+  distinctCards,
+}: {
+  cardCapacity: CardCapacity | null;
+  /** The copies the review counts (its badge, its "Add N cards"). */
+  cards: number;
+  /** The different cards among them — what customizing would use. */
+  distinctCards: number;
+}) {
+  const slots = describeImportSlots(cardCapacity, { cards, distinct: distinctCards });
+  if (!slots) return null;
+  return (
+    <p data-testid="import-slot-forecast" className="text-xs leading-5 text-muted">
+      {slots.message}
+      {slots.short ? (
+        <>
+          {" "}
+          <Link href="/pricing" className="font-semibold text-primary-bright underline-offset-2 hover:underline">
+            Get more slots
+          </Link>
+        </>
+      ) : null}
+    </p>
   );
 }
 

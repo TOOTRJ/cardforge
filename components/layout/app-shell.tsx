@@ -2,6 +2,7 @@ import { SiteHeader, type HeaderUser } from "./site-header";
 import { SiteHeaderClient } from "./site-header-client";
 import { Suspense } from "react";
 import { SiteFooter } from "./site-footer";
+import { ChallengeNavBadge } from "./challenge-nav-badge";
 import { UpdatesBanner } from "@/components/marketing/updates-banner";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
@@ -30,12 +31,20 @@ export function AppShell({
   hideFooter = false,
   className,
 }: AppShellProps) {
+  // The Community panel's "Ends in N days" pill: a cached, cookie-free read
+  // streamed into the header (as the ribbon below is), so it never holds the
+  // page up and a static page stays static.
+  const challengeBadge = isSupabaseConfigured() ? (
+    <Suspense fallback={null}>
+      <ChallengeNavBadge />
+    </Suspense>
+  ) : null;
   return (
     <div className={cn("flex min-h-svh flex-col", className)}>
       {authMode === "client" ? (
-        <SiteHeaderClient />
+        <SiteHeaderClient challengeBadge={challengeBadge} />
       ) : (
-        <SiteHeader user={user} />
+        <SiteHeader user={user} challengeBadge={challengeBadge} />
       )}
       {/* What's-new ribbon, right under the header on every page: the
           homepage shows every banner-flagged update, other pages only the

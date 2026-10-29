@@ -10,6 +10,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
+import { getDeckCapacity } from "@/lib/decks/capacity";
+import { DeckCapacityMeter } from "@/components/decks/deck-capacity";
+import { deckCountsTowardCap } from "@/lib/billing/deck-capacity-copy";
+import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
 import { DECK_FORMAT_LABELS } from "@/types/deck";
 import { deckCoverOf } from "@/lib/decks/cover";
 import { listDeckCoverColors } from "@/lib/decks/cover-colors";
@@ -21,10 +25,15 @@ export const metadata: Metadata = {
 };
 
 export default async function DecksPage() {
-  const decks = await listMyDecks();
+  const [decks, deckCapacity] = await Promise.all([listMyDecks(), getDeckCapacity()]);
   // The colours each deck's default cover is picked by (the owner's
   // session: private decks too) — what the deck's page reads.
   const coverColors = await listDeckCoverColors(decks.map((deck) => deck.id));
+  // The decks the private-deck cap counts — at the cap each gets "Make
+  // public" and "Delete" in the meter (TODO DK3.3).
+  const cappedDecks = decks
+    .filter((deck) => deckCountsTowardCap(deck.visibility))
+    .map((deck) => ({ id: deck.id, title: deck.title, visibility: deck.visibility }));
 
   return (
     <DashboardShell>
@@ -43,6 +52,7 @@ export default async function DecksPage() {
       />
 
       <div className="mt-8">
+        <DeckCapacityMeter capacity={deckCapacity} cappedDecks={cappedDecks} />
       </div>
 
       <div className="mt-6">
@@ -76,10 +86,7 @@ function DeckTile({
   deck: Awaited<ReturnType<typeof listMyDecks>>[number];
   coverColors: readonly string[] | null;
 }) {
-  const remixPct =
-    deck.cards_count > 0
-      ? Math.round((deck.remixed_count / deck.cards_count) * 100)
-      : 0;
+  const made = madeOnPipGlyph(deck);
 
   // The owner's upload (only one we store, migration 0127) or the default
   // its colours pick — the picture the deck's own page draws.
@@ -129,24 +136,19 @@ function DeckTile({
           <div className="mt-2 flex items-center justify-between text-xs text-muted">
             <span>
               {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
-              {deck.cards_count > 0 ? ` · ${remixPct}% proxied` : ""}
+              {made.total > 0 ? ` · ${made.made} made on PipGlyph` : ""}
             </span>
             <span className="opacity-0 transition-opacity group-hover:opacity-100">
               Open deck →
             </span>
           </div>
-          {deck.cards_count > 0 ? (
-            <div
-              className="h-1 w-full overflow-hidden rounded-full bg-elevated"
-              role="progressbar"
-              aria-valuenow={remixPct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Proxy progress"
-            >
+          {made.total > 0 ? (
+            // Decoration: the line above says the numbers (stored counts,
+            // lib/decks/tile-counts.ts).
+            <div className="h-1 w-full overflow-hidden rounded-full bg-elevated" aria-hidden>
               <div
                 className="h-full rounded-full bg-primary transition-[width]"
-                style={{ width: `${remixPct}%` }}
+                style={{ width: `${made.pct}%` }}
               />
             </div>
           ) : null}

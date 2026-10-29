@@ -13,6 +13,7 @@ import {
 import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
+import { withDeckVisibleCards } from "@/lib/decks/entry-status";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import {
   DECK_SHARE_IMAGE_TYPE,
@@ -114,11 +115,17 @@ export default async function Image({
   }
 
   const { deck, entries, username } = result;
-  const items = entries.map(({ card, ...entry }) => ({ entry, card }));
+  // Only the cards the deck may show (D3: another creator's card while it
+  // is public — the rule the deck page's listDeckCards reads by; an
+  // unlisted card's anonymous read is not null).
+  const items = withDeckVisibleCards(
+    entries.map(({ card, ...entry }) => ({ entry, card })),
+    deck.owner_id,
+  );
   const cover = deckCoverOf(deck, deckCoverColors(items));
   // The page's rule (commanders first, then the seeded fill, up to five),
   // filled from the baked PipGlyph cards alone.
-  const customs = featuredCardsOf(items, deck.id, { printings: false });
+  const customs = featuredCardsOf(items, deck, { printings: false });
   const [coverUri, ...thumbs] = await Promise.all([
     deckCoverDataUri(cover.src),
     ...customs.map(async (featured) => {

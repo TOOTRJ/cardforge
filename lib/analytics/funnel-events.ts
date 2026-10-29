@@ -37,13 +37,34 @@ export const SERVER_FUNNEL_EVENTS = [
   "payment_received",
   "payment_failed",
   "pack_purchased",
+  // Decks (TODO DK3.8, the 2026-10-28 deck plan): a deck made (visibility,
+  // format, surface), the private-deck cap refusing one (kind create /
+  // visibility, the tier), and a deck entry's FIRST card of the user's made
+  // from it in the creator — an imported card customized, the moment it
+  // takes a saved-card slot (owner decision D2; surface creator, kind
+  // import / placeholder).
+  "deck_created",
+  "deck_cap_hit",
+  "deck_card_customized",
 ] as const;
 
 export const CLIENT_FUNNEL_EVENTS = [
   "pricing_view",
   "cta_click",
   "upgrade_modal_open",
+  // The deck export menu (kind zip / pdf with its preset and layout, or
+  // "upgrade" for the Pro gate) — TODO DK3.8.
+  "deck_export_clicked",
+  // A header, drawer or footer link (TODO NV10): `item` is the link's id
+  // in lib/site-config.ts (`community.gallery`), `surface` where it sat
+  // (NAV_SURFACES). Owner decision D9: Gallery moved under Community, and
+  // its header clicks are watched.
+  "nav_click",
 ] as const;
+
+/** Where a nav_click's link sat. */
+export const NAV_SURFACES = ["header", "drawer", "footer"] as const;
+export type NavSurface = (typeof NAV_SURFACES)[number];
 
 export type ServerFunnelEvent = (typeof SERVER_FUNNEL_EVENTS)[number];
 
@@ -75,6 +96,7 @@ const PROP_KEYS = new Set([
   "scheduled", "sessionId", "subscriptionId",
   "referrer", "utmSource", "utmMedium", "utmCampaign",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
+  "item",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;

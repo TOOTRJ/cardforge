@@ -28,7 +28,10 @@ import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { FieldGroup, inputClass, textareaClass } from "@/components/creator/field-group";
 import { CoverField } from "@/components/decks/deck-creator-form";
 import { ComingSoonBadge, ComingSoonSuffix } from "@/components/decks/deck-ai-coming-soon";
+import { DeckCapacityNotice } from "@/components/decks/deck-capacity";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { createDeckAction } from "@/lib/decks/actions";
+import { deckUsageLabel, describeDeckUsage, type DeckCapacity } from "@/lib/billing/deck-capacity-copy";
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import { cn } from "@/lib/utils";
 import {
@@ -51,12 +54,18 @@ const STEPS: StepperStep[] = [
 export function DeckWizard({
   userId,
   initialFormat = "commander",
+  deckCapacity = null,
 }: {
   userId: string;
   /** The format picked on arrival (the format hub's link). */
   initialFormat?: DeckFormat;
+  /** The private-deck cap (TODO DK3.2): the visibility field says where the
+   *  plan stands and warns before a private / unlisted deck it can't hold.
+   *  The server decides; this only says so first. */
+  deckCapacity?: DeckCapacity | null;
 }) {
   const router = useRouter();
+  const upgrade = useUpgradeModal();
   const [step, setStep] = useState(0);
 
   // Basics
@@ -75,6 +84,11 @@ export function DeckWizard({
   // Create
   const [creating, startCreate] = useTransition();
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+
+  // "Private decks: 0 of 1 · 1 left on Free. Public decks are unlimited."
+  // under the visibility field — null on an unlimited plan.
+  const deckUsage = describeDeckUsage(deckCapacity);
+  const visibilityHelper = deckUsage ? `${deckUsageLabel(deckCapacity)} · ${deckUsage.message}` : undefined;
 
   const titleError = title.trim().length < 3 ? "Give the deck a name (3+ characters)." : null;
   const stepHasError = (i: number) => i === 0 && step > 0 && Boolean(titleError);
@@ -103,7 +117,7 @@ export function DeckWizard({
           cover_url: coverUrl || undefined,
           cover_position: coverUrl ? coverPosition : null,
         },
-        { redirectAfterCreate: false },
+        { redirectAfterCreate: false, surface: "wizard" },
       );
       if (!result.ok) {
         const message =
@@ -111,6 +125,8 @@ export function DeckWizard({
           ("fieldErrors" in result && Object.values(result.fieldErrors ?? {})[0]) ||
           "Couldn't create the deck.";
         toast.error(String(message));
+        // The private-deck cap: the plans, with the free ways out named.
+        if (result.reason === "deck_capacity") upgrade.open("deck_capacity");
         return;
       }
       setCreatedSlug(result.slug);
@@ -177,7 +193,7 @@ export function DeckWizard({
                 ))}
               </select>
             </FieldGroup>
-            <FieldGroup label="Visibility">
+            <FieldGroup label="Visibility" helper={visibilityHelper}>
               <select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value as Visibility)}
@@ -189,6 +205,11 @@ export function DeckWizard({
               </select>
             </FieldGroup>
           </div>
+          <DeckCapacityNotice
+            capacity={deckCapacity}
+            visibility={visibility}
+            onMakePublic={() => setVisibility("public")}
+          />
           <FieldGroup label="Description" helper="Optional — a sentence on what the deck is about.">
             <textarea
               value={description}
@@ -260,6 +281,11 @@ export function DeckWizard({
               </div>
             ))}
           </dl>
+          <DeckCapacityNotice
+            capacity={deckCapacity}
+            visibility={visibility}
+            onMakePublic={() => setVisibility("public")}
+          />
           <div className="flex flex-wrap items-center justify-end gap-2">
             {createdSlug ? (
               <Button asChild variant="outline">

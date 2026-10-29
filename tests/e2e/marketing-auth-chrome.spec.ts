@@ -19,8 +19,10 @@ const hasDatabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 test.describe("marketing header — anonymous", () => {
   test("shows the sign-in CTA and no account menu", async ({ page }) => {
     await page.goto("/about");
+    // Signed out, the Account button holds Sign in / Create account (TODO NV1).
+    await page.getByRole("banner").getByRole("button", { name: "Account", exact: true }).click();
     await expect(
-      page.getByRole("link", { name: /sign in/i }).first(),
+      page.getByRole("banner").getByRole("link", { name: /sign in/i }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /open account menu/i }),

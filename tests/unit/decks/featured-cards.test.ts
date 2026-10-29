@@ -9,7 +9,9 @@ import { FAN_MAX, featuredCardsOf, type FeaturableCard } from "@/lib/decks/featu
 
 const HOST = "https://auth.pipglyph.com";
 const OWNER = "11111111-1111-4111-8111-111111111111";
-const DECK = "33333333-3333-4333-8333-333333333333";
+/** The deck: its id seeds the fill, its owner's cards are its own (D3). */
+const DECK = { id: "33333333-3333-4333-8333-333333333333", owner_id: OWNER };
+const OTHER_CREATOR = "22222222-2222-4222-8222-222222222222";
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", HOST);
@@ -139,7 +141,7 @@ describe("featuredCardsOf", () => {
     expect(keys(featuredCardsOf([...items].reverse(), DECK))).toEqual(first);
     expect(keys(featuredCardsOf(items, DECK))).toEqual(first);
     // Another deck with the same cards picks its own.
-    const other = keys(featuredCardsOf(items, "44444444-4444-4444-8444-444444444444"));
+    const other = keys(featuredCardsOf(items, { id: "44444444-4444-4444-8444-444444444444", owner_id: OWNER }));
     expect(other).toHaveLength(FAN_MAX);
   });
 
@@ -236,5 +238,25 @@ describe("featuredCardsOf fills to 3–5 behind the commanders", () => {
     expect(fan[0].key).toBe(`card:${bakedCommander.card.id}`);
     // Two baked cards and no others: two, never a printing to pad it.
     expect(featuredCardsOf([customItem("main"), customItem("main"), printingItem("main", "Opt")], DECK, { printings: false })).toHaveLength(2);
+  });
+});
+
+describe("featuredCardsOf and other creators' cards (D3)", () => {
+  it("another creator's PUBLIC card may stand; their UNLISTED or private card never — nor its printing", () => {
+    const theirsPublic = customItem("main", { owner_id: OTHER_CREATOR });
+    // Its bake lives in ITS maker's folder.
+    const theirRender = (suffix: string) =>
+      `${HOST}/storage/v1/object/public/card-renders/${OTHER_CREATOR}/${theirsPublic.card.id}${suffix}?v=1`;
+    theirsPublic.card.rendered_image_url = theirRender(".png");
+    theirsPublic.card.rendered_thumb_url = theirRender(".thumb.webp");
+    const theirsUnlisted = customItem("commander", { owner_id: OTHER_CREATOR, visibility: "unlisted" });
+    theirsUnlisted.entry.scryfall_id = "sf-unlisted";
+    theirsUnlisted.entry.image_url = "https://cards.scryfall.io/normal/front/u/n/unlisted.jpg";
+    const theirsPrivate = customItem("main", { owner_id: OTHER_CREATOR, visibility: "private" });
+    const ownUnlisted = customItem("main", { visibility: "unlisted" });
+    const fan = featuredCardsOf([theirsPublic, theirsUnlisted, theirsPrivate, ownUnlisted], DECK);
+    expect(keys(fan).sort()).toEqual([`card:${theirsPublic.card.id}`, `card:${ownUnlisted.card.id}`].sort());
+    // The share image's fill reads the same rule.
+    expect(keys(featuredCardsOf([theirsUnlisted], DECK, { printings: false }))).toEqual([]);
   });
 });

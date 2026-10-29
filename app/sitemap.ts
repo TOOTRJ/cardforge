@@ -101,11 +101,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // is indexed and self-canonical.
     staticEntry(baseUrl, HELP_PATH, "monthly", 0.85),
     ...HELP_SECTION_SLUGS.map((slug) => staticEntry(baseUrl, helpSectionPath(slug), "monthly", 0.75)),
-    // The /learn hub and the tools directory, then the category shelves that
-    // are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
+    // The /learn hub, the tools directory and the glossary, then the
+    // category shelves that are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
     // on its own page, so it stays out of here too).
     staticEntry(baseUrl, "/learn", "weekly", 0.85),
     staticEntry(baseUrl, "/tools", "monthly", 0.8),
+    staticEntry(baseUrl, "/glossary", "monthly", 0.75),
     ...listCategoryShelves()
       .filter((shelf) => isIndexableCategory(shelf.articles.length))
       .map((shelf) => staticEntry(baseUrl, categoryPath(shelf.category.slug), "weekly", 0.75)),

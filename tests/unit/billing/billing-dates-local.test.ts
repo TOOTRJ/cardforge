@@ -130,9 +130,12 @@ describe("every billing surface a subscriber sees prints its dates through <Loca
   });
 
   it("the header hands the menu PARTS, not a formatted string", () => {
+    // The Account menu's plan line is built by accountPlanLine (TODO NV1).
     const header = read("components/layout/site-header.tsx");
-    expect(header).toMatch(/planEndingShortText\(/);
-    expect(header).not.toMatch(/planEndingShort\(/);
+    expect(header).toMatch(/accountPlanLine\(/);
+    const line = read("lib/billing/account-plan-line.ts");
+    expect(line).toMatch(/planEndingShortText\(/);
+    expect(line).not.toMatch(/planEndingShort\(/);
   });
 
   it("the component itself is the only place a billing page picks a zone, and it reads the shared formats", () => {

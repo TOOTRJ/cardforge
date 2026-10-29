@@ -70,10 +70,11 @@ describe("sitemap (static layer)", () => {
     }
   });
 
-  it("lists /learn, /tools and the indexable categories — never a thin one or a tag hub that 308s", async () => {
+  it("lists /learn, /tools, /glossary and the indexable categories — never a thin one or a tag hub that 308s", async () => {
     const paths = new Set((await sitemap()).map((e) => pathOf(e.url)));
     expect(paths.has("/learn")).toBe(true);
     expect(paths.has("/tools")).toBe(true);
+    expect(paths.has("/glossary")).toBe(true);
     for (const { category, articles } of listCategoryShelves()) {
       expect(paths.has(`/learn/${category.slug}`), category.slug).toBe(
         articles.length >= CATEGORY_MIN_ARTICLES,

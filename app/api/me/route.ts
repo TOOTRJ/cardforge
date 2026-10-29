@@ -71,6 +71,9 @@ export async function GET() {
     // The EFFECTIVE tier (comp + live subscription), not the display tier a
     // lapsed subscription keeps — /pricing decides "your current plan" on it.
     tier: entitlements?.effectiveTier ?? null,
+    // The plan subscribed to even while a broken payment pauses it — the
+    // Account menu's "Pro · payment due" (lib/billing/account-plan-line.ts).
+    subscribedTier: entitlements?.tier ?? null,
     subscriptionStatus: profile?.subscription_status ?? null,
     credits: entitlements?.credits ?? 0,
     creditsUsed,

@@ -7,10 +7,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
+import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
-// edits, remove, and linking/unlinking a custom proxy card. Same
+// edits, remove, and linking/unlinking a PipGlyph card. Same
 // discriminated-union posture as lib/decks/actions.ts.
 // ---------------------------------------------------------------------------
 
@@ -18,21 +21,33 @@ export type DeckCardActionResult =
   | { ok: true; deckCardId: string }
   | { ok: false; error: string };
 
+type OwnedEntry = {
+  id: string;
+  deck_id: string;
+  /** The linked card before this action — null for an entry with none yet
+   *  (the funnel's deck_card_customized counts the first). */
+  card_id: string | null;
+  scryfall_id?: string | null;
+  /** Absent on a database 0144 has not reached. */
+  source?: string | null;
+};
+
 /** Load an entry + prove the caller owns its deck. Returns the deck slug
- *  for revalidation. */
+ *  for revalidation. (`*`: the row reads the same whether or not the
+ *  database has 0144's `source` yet.) */
 async function getOwnedEntry(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   deckCardId: string,
 ): Promise<
-  | { ok: true; entry: { id: string; deck_id: string }; deckSlug: string }
+  | { ok: true; entry: OwnedEntry; deckSlug: string }
   | { ok: false; error: string }
 > {
-  const { data: entry } = await supabase
+  const { data: entry } = (await supabase
     .from("deck_cards")
-    .select("id, deck_id")
+    .select("*")
     .eq("id", deckCardId)
-    .maybeSingle();
+    .maybeSingle()) as { data: OwnedEntry | null };
   if (!entry) return { ok: false, error: "Deck entry not found." };
 
   const { data: deck } = await supabase
@@ -55,7 +70,7 @@ async function revalidateDeckCardPaths(
   revalidatePath(`/deck/${deckSlug}/edit`);
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks");
-  // The profile's "Decks by X" tiles show card counts + proxy % — entry
+  // The profile's "Decks by X" tiles show card counts + "made on PipGlyph" — entry
   // mutations change those numbers too.
   await revalidateProfilePage(supabase, userId);
 }
@@ -129,12 +144,20 @@ export async function removeDeckCardAction(
   return { ok: true, deckCardId };
 }
 
-/** Link one of the caller's custom cards as this entry's proxy. RLS also
- *  enforces card ownership (the deck_cards UPDATE policy checks it), but the
- *  pre-flight gives a friendlier error. */
+/** Link a PipGlyph card as this entry's card: one of the caller's own at any
+ *  visibility, or another creator's PUBLIC card (owner decision D3, TODO
+ *  DK2.9). The database enforces the same rule (migration 0144's
+ *  deck_cards_guard_card_link: a NEW card_id is checked, so an entry whose
+ *  linked card later went private stays editable); the pre-flight gives a
+ *  friendlier error. The entry keeps its source — it still came from where
+ *  it came from. `surface` says who linked it — the creator's
+ *  /create?deckCard= save (the card was just made from the entry, the only
+ *  link the funnel counts) or the deck page's picker (the default) — for
+ *  the funnel only. */
 export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
+  options: { surface?: "creator" | "deck" } = {},
 ): Promise<DeckCardActionResult> {
   if (!isUuid(deckCardId) || !isUuid(cardId)) {
     return { ok: false, error: "Invalid id." };
@@ -151,13 +174,13 @@ export async function linkDeckCardAction(
 
   const { data: card } = await supabase
     .from("cards")
-    .select("id, owner_id")
+    .select("id, owner_id, visibility")
     .eq("id", cardId)
     .maybeSingle();
-  if (!card || card.owner_id !== user.id) {
+  if (!card || !canLinkIntoDeck(card, user.id)) {
     return {
       ok: false,
-      error: "You can only link cards you own.",
+      error: "You can link your own cards, or another creator's public card.",
     };
   }
 
@@ -166,6 +189,22 @@ export async function linkDeckCardAction(
     .update({ card_id: cardId })
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
+
+  // Funnel (TODO DK3.8): the entry got its FIRST card of the user's, MADE
+  // from it in the creator — an imported card customized (owner decision
+  // D2: the moment it takes a saved-card slot) or a placeholder filled. A
+  // card linked from the deck page already existed (no new slot), and a
+  // re-link is not counted.
+  if (options.surface === "creator" && owned.entry.card_id === null && isAdminConfigured()) {
+    await recordFunnelEvent(createAdminClient(), {
+      event: "deck_card_customized",
+      userId: user.id,
+      props: {
+        surface: "creator",
+        kind: owned.entry.scryfall_id ? "import" : "placeholder",
+      },
+    });
+  }
 
   await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
@@ -187,9 +226,15 @@ export async function unlinkDeckCardAction(
   const owned = await getOwnedEntry(supabase, user.id, deckCardId);
   if (!owned.ok) return owned;
 
+  // An entry the card itself brought (the creator's add, a link, the AI)
+  // with no printing is a plain name once its card is unlinked: its source
+  // goes too, so it never reads "No longer available" — that is a card the
+  // OWNER didn't take away (lib/decks/entry-status.ts deckEntryUnavailable).
+  // An import keeps its source: it is the real card again.
+  const clearsSource = !owned.entry.scryfall_id && bringsCard(owned.entry.source);
   const { error } = await supabase
     .from("deck_cards")
-    .update({ card_id: null })
+    .update(clearsSource ? { card_id: null, source: null } : { card_id: null })
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 

@@ -1557,7 +1557,18 @@ Rules and gotchas:
   hits a plan limit fails with `error_code` (`CARD_CAPACITY` /
   `INSUFFICIENT_CREDITS`); the runner stops on it and opens the matching
   modal, and retries check `/api/me`'s `cardCapacity` before the credit
-  confirm. Change the caps in both places together.
+  confirm. Change the caps in both places together. Private decks follow the
+  same design (TODO DK3, migration 0145): `DECK_CAPACITY` (Free 1 / Plus 3 /
+  Pro unlimited) mirrors `deck_capacity_for()` + `decks_enforce_capacity`
+  (`tests/unit/billing/deck-capacity.test.ts` keeps them in sync); only
+  PRIVATE + UNLISTED decks count (public is unlimited); only a deck JOINING
+  the count is checked (insert, public → private / unlisted, an owner change),
+  so a deck over the cap stays editable and a downgrade locks nothing; every
+  role is capped (service role and seeds too); `createDeckAction` /
+  `updateDeckAction` map `deck_capacity_exceeded` to the upgrade reason
+  `deck_capacity`. With billing off the app reads unlimited while the trigger
+  still caps (local `npm run dev` shows no meter — the refusal is the first
+  sign).
 - SEO contract for public pages: a missing or unreadable entity answers a
   real HTTP 404 — call `notFound()` BEFORE any Suspense/loading boundary (the
   global `loading.tsx` lives in `app/(app)/` for exactly this reason; the card
@@ -1742,4 +1753,91 @@ Rules and gotchas:
   the sibling) and never bring back a hidden rewrite: Next's client router
   reuses the cached static tree for a same-path query change and never calls
   the server, so the URL changed while the grid stayed frozen (2026-09-22).
+- Decks (2026-10-28 plan, TODO DK0–DK2; owner decisions D1–D13): a deck
+  STORES `card_count` / `linked_card_count` (0143: physical cards,
+  maybeboard out; kept by ONE statement trigger, `sync_deck_from_entries`,
+  which also touches `updated_at`) — tiles, lists, hubs and robots read
+  them, never the entry rows (PostgREST's 1000-row cap). Counters
+  (`likes_count`, `view_count`, the two counts, `created_at`; cards' too)
+  are the SERVER's: 0143's guards revert an API role's write. Entry INSERTS
+  go through the RPCs — `import_deck_entries` (the decklist commit, ONE
+  transaction, merge-or-insert) and `add_custom_deck_entry` (a card added to
+  a deck) — under the per-deck advisory lock and the 500-entry cap. Deck AI
+  is PAUSED (`lib/ai/deck-ai-pause.ts`, `DECK_AI_PAUSED`: every new deck job,
+  remix, estimate, idea and guide refused before any charge; running jobs
+  finish, D6); the creator's card AI is untouched (D5). Vocabulary: proxy =
+  any card made on PipGlyph; an entry is Imported (a real card, unchanged),
+  Edited, Remix, Original or Not found — ONE `deckEntryStatus(entry, card)`
+  (`lib/decks/entry-status.ts`) every surface reads, never a second
+  derivation; "No longer available" is `deckEntryUnavailable`. Where an entry
+  came from is `deck_cards.source` (0144: both RPCs write it; NULL = an older
+  row; descriptive, never a gate). A card's import provenance is
+  `cards.import_scryfall_id` + `import_fingerprint` (0144): INSERT-ONLY (the
+  0126-style guard refuses an API role's change), written by
+  createCardAction's insert — never a trigger, never an edit — the
+  fingerprint the ONE hash of `lib/cards/import-fingerprint.ts`. "Edited" is
+  ANY change to the card (owner 2026-10-29): it covers every field a maker
+  can set — text, colour, rarity, frame + every `frame_style` switch, art +
+  crop, collector fields, watermark, footer, `face_content`,
+  `printed_types`, the whole `back_face` — and leaves out only what isn't
+  the card (ids, owner, slug, visibility, tags, render pointers, stamps,
+  counters, timestamps); its two lists name every `cards` column (a test
+  reads `types/supabase.ts`), so a new column is a decision. Its field list
+  is a version (v1 was widened before production stored one; the next
+  change is `v2`, never a silent one). It is stored only when the creator
+  says the card is still the import's (`lib/creator/import-baseline.ts`:
+  form values against the import AFTER its own automatic steps — art fit,
+  frame follows, part colour, anatomy — re-taken on every value change while
+  the SETTLE WINDOW is open; it shuts on a quiet spell (150 ms, capped at
+  500 ms), on any user gesture anywhere on the page (window capture,
+  `IMPORT_SETTLE_GESTURES`: a drag-pan, a wheel zoom, a drop or a paste
+  never pass the form's own events) and in every writer the maker sets off
+  without one — a new one (an AI fill, an idea, a toast action) calls
+  `closeImportBaseline()` first; a value the form held before the import
+  and the import doesn't write (footer, watermark, set icon, finish) starts
+  the card changed, `preImportChanges`; every fixture printing proves an
+  untouched save, `creator-import-unchanged-printings.test.tsx`, and
+  `creator-import-settle-window.test.tsx` the maker's changes). A
+  PLATFORM rewrite of a fingerprinted field (a frame sweep, a typography
+  fix) re-fingerprints the untouched imports it changes, in the same UPDATE
+  on the trusted path (the guard allows it): `fingerprintAfterRewrite(before,
+  after)`. SQL can't compute the hash (the canonical text is that module's
+  JSON), so a SQL migration rewrites only rows `where import_fingerprint is
+  null` and leaves the fingerprinted ones to a service-role script that
+  calls the helper — else every untouched import it touches reads Edited
+  (`tests/unit/db/import-fingerprint-migrations.test.ts` fails a migration
+  after 0144 that doesn't, short of a `-- import-fingerprint: exempt` note).
+  An entry's type line, cost, colours and
+  mana value are `effectiveEntryFields` (`lib/decks/effective-entry.ts`: the
+  printing is the authority for an unchanged import of it and for any card
+  with no provenance linked onto a printing; else the card's own win — but
+  a card's `color_identity` is its FRAME colour, so the entry's real
+  letters win over a gold / colourless / land frame, and a split or
+  aftermath card sums both halves' costs). D3: a deck holds its owner's
+  own cards at any visibility or ANOTHER creator's PUBLIC card, on BOTH
+  sides — the write (the insert policy and `deck_cards_guard_card_link`, a
+  NEW `card_id` only, so an entry whose card stopped being public stays
+  editable) and the read (`listDeckCards`, the one deck read every surface
+  and export uses, withholds another creator's card that isn't public: RLS
+  hands an unlisted card to anyone; a surface that reads its own rows —
+  the share image, the tiles' cover colours — goes through
+  `withDeckVisibleCards`, and the hero's fan, `featuredCardsOf`, takes the
+  deck's owner); `canLinkIntoDeck` is the one rule — never widen either
+  side to unlisted. A card's PAGE names the owner's own public, non-empty
+  decks, and another user's only from a real creator — no admin, at least
+  one public card of their own, and only while the card is public
+  (0144 `public_decks_containing_card`, read by `listPublicDecksContaining`;
+  "In decks" and the JSON-LD `isPartOf` are that one list, never a second
+  read). Another creator's card is credited
+  ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
+  its downloads are the card routes' (the viewer's plan). A gone card reads
+  "No longer available" and never says why.
 
+- A router navigation a component makes BY ITSELF (an effect's
+  `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode
+  runs effects twice in dev) and the component's own server actions wait
+  for it (`useTransition`
+  around the navigation, the button disabled while it is pending): Next
+  16.2's router queue loses an action dispatched while a navigation that
+  pre-empted another is pending — it is chained after the pre-empted node
+  (`components/decks/import-decklist-dialog.tsx`; e2e `decks.spec.ts`).

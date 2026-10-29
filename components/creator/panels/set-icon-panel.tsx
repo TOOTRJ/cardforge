@@ -64,7 +64,21 @@ const PRESET_SET_CODES = [
   "dmu",
 ];
 
-export function SetIconPanel({ userId, stored = null }: { userId: string | null; stored?: FrameStyle | null }) {
+/** Told when "Fill from the printing" filled the collector line from the
+ *  card's own source printing, with the values from before the fill: the
+ *  creator re-takes an untouched import's baseline (TODO DK2.5 — the
+ *  printing's own line is the import's, never an edit). */
+export type FilledFromPrinting = (before: FormValues, scryfallId: string) => void;
+
+export function SetIconPanel({
+  userId,
+  stored = null,
+  onFilledFromPrinting,
+}: {
+  userId: string | null;
+  stored?: FrameStyle | null;
+  onFilledFromPrinting?: FilledFromPrinting;
+}) {
   const { control, setValue } = useFormContext<FormValues>();
   const iconUrl = useWatch({ control, name: "set_icon_url" }) ?? "";
   const iconCode = useWatch({ control, name: "set_icon_code" }) ?? "";
@@ -211,7 +225,7 @@ export function SetIconPanel({ userId, stored = null }: { userId: string | null;
         </div>
       </FieldGroup>
 
-      <CollectorInfoFields />
+      <CollectorInfoFields onFilledFromPrinting={onFilledFromPrinting} />
 
       {/* The collector line's switches (TODO 4.9b): on / off, the printed
           style, the foil-printing ★ — opt-in per card, with the one-line
@@ -233,11 +247,12 @@ const SECONDARY_BUTTON =
  * The collector fields (TODO 4.9a): set code, collector number, language.
  * Exported for the panel tests; the step renders it under the symbol.
  */
-export function CollectorInfoFields() {
+export function CollectorInfoFields({ onFilledFromPrinting }: { onFilledFromPrinting?: FilledFromPrinting } = {}) {
   const {
     control,
     register,
     setValue,
+    getValues,
     formState: { errors },
   } = useFormContext<FormValues>();
   const iconCode = useWatch({ control, name: "set_icon_code" }) ?? "";
@@ -274,9 +289,11 @@ export function CollectorInfoFields() {
         toast.error("Scryfall didn't answer for this printing's set — try again in a moment.");
         return;
       }
+      const before = getValues();
       setValue("set_code", collector.set_code ?? "", { shouldDirty: true });
       setValue("collector_number", collector.collector_number ?? "", { shouldDirty: true });
       setValue("lang", collector.lang, { shouldDirty: true });
+      onFilledFromPrinting?.(before, sourceScryfallId);
       toast.success("Filled from the printing — save to keep it.");
     } catch {
       toast.error("Couldn't look up the printing.");

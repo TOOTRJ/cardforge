@@ -1,5 +1,6 @@
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import { allFaqEntries, faqTopicOf, type FaqEntry } from "@/lib/content/faq";
+import { privateDecksByPlanSentence } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // The help centre (/help, TODO NV6) — how to USE PipGlyph, kept apart from
@@ -247,7 +248,8 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       steps: [
         {
           title: "Start a deck",
-          body: "In My Decks, choose “New deck”. Give it a name and a format — the format sets its size and copy limits — and choose who sees it: public, unlisted or private.",
+          // The private-deck cap (owner D1, migration 0145), from DECK_CAPACITY.
+          body: `In My Decks, choose “New deck”. Give it a name and a format — the format sets its size and copy limits — and choose who sees it: public, unlisted or private. Public decks are unlimited on every plan; ${privateDecksByPlanSentence()}`,
         },
         {
           title: "Choose to import",
@@ -259,7 +261,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Review it",
-          body: "Check each row's quantity and board, the cards marked as a best guess, and the names Scryfall couldn't find, which come in as placeholders. Then add the cards.",
+          body: "Check each row's quantity and board, the cards marked as a best guess, and the names Scryfall couldn't find, which come in as placeholders. Then add the cards. Importing uses none of your saved-card slots; the review says how many you have left for the cards you customize.",
         },
         {
           title: "Customize a card",
@@ -280,6 +282,8 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         entryIds: [
           "what-goes-in-a-deck",
           "decklist-formats",
+          "import-uses-slots",
+          "how-many-decks",
           "copy-export-or-print-a-deck",
           "ai-deck-building",
         ],

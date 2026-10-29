@@ -32,6 +32,7 @@ const PAGES = [
   "/learn",
   "/learn/design",
   "/tools",
+  "/glossary",
   "/creators",
   "/frames/requested",
   "/news",

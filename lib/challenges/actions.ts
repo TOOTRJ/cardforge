@@ -3,8 +3,9 @@
 import "server-only";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
+import { CHALLENGE_NAV_TAG } from "@/lib/challenges/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { slugify } from "@/lib/validation/card";
 
@@ -52,6 +53,8 @@ function revalidateChallengeSurfaces() {
   revalidatePath("/challenges/[slug]", "page");
   revalidatePath("/gallery");
   revalidatePath("/admin/challenges");
+  // The header's "Ends in N days" pill, on every page.
+  revalidateTag(CHALLENGE_NAV_TAG, "max");
 }
 
 export async function createChallengeAction(
