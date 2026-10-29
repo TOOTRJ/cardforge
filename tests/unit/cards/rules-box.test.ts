@@ -582,12 +582,20 @@ describe("rulesDraw — the geometry both renderers draw", () => {
     });
   }
 
-  it("splits the flavor gap around the 1 px bar, or keeps the no-bar gap", () => {
+  it("splits the flavor gap around the bar (4 px at HD, 2 at 750, on the v33 hairline's centre), or keeps the no-bar gap", () => {
     const withBar = mainRulesLayout({ layout: getFrameProfile("m15"), rulesText: "Flying", flavorText: "Up.", aspect: PORTRAIT, show: {} });
     const [, flavor] = rulesDraw(withBar, "hd").blocks;
-    expect(flavor).toMatchObject({ kind: "flavor", marginTop: 0, bar: { above: 30, below: 30, thickness: 1 } });
+    // 96 % of the column, centred (TODO 3.19): M15's 1245 px box less its
+    // 4 / 0 px print margins and side headroom.
+    const column = linePositions(withBar, "hd").interior.width;
+    const width = Math.round(column * 0.96);
+    expect(flavor).toMatchObject({
+      kind: "flavor",
+      marginTop: 0,
+      bar: { above: 29, below: 28, thickness: 4, width, inset: Math.floor((column - width) / 2) },
+    });
     const [, small] = rulesDraw(withBar, "default").blocks;
-    expect(small).toMatchObject({ bar: { above: 15, below: 15, thickness: 1 } });
+    expect(small).toMatchObject({ bar: { above: 15, below: 14, thickness: 2 } });
     const noBar = mainRulesLayout({ layout: getFrameProfile("retro"), rulesText: "Flying", flavorText: "Up.", aspect: PORTRAIT, show: {} });
     expect(rulesDraw(noBar, "hd").blocks[1]).toMatchObject({ kind: "flavor", marginTop: 42, bar: null });
     // Paragraphs: the fixed 24 px (12 at 750).

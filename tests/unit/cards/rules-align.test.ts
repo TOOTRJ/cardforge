@@ -265,8 +265,14 @@ describe("centred: every line on the box's centre, nothing else moved", () => {
     expect(new Set(placed.lines.map((l) => l.block)).size).toBe(2);
     const centre = boxCentre(layout, "hd");
     for (const l of placed.lines) expect(Math.abs(l.left + l.width / 2 - centre)).toBeLessThanOrEqual(0.5);
-    // The flavor bar still spans the column.
-    expect(placed.bar).toEqual({ top: placed.bar!.top, left: placed.interior.left, width: placed.interior.width });
+    // The flavor bar is still the column's (96 % of it, centred — TODO 3.19).
+    const barWidth = Math.round(placed.interior.width * 0.96);
+    expect(placed.bar).toEqual({
+      top: placed.bar!.top,
+      left: placed.interior.left + Math.floor((placed.interior.width - barWidth) / 2),
+      width: barWidth,
+      height: placed.metrics.barPx,
+    });
   });
 
   it("centres on the BOX, not on the column the side headroom leaves", () => {

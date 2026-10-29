@@ -20,6 +20,7 @@ import {
   type RulesLayoutInput,
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
+import { layoutProfileLoyaltyRows, loyaltyRowLines } from "@/lib/cards/loyalty-rows";
 import type { RulesItem } from "@/lib/cards/rules-text";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX, RULES_TEXT, ptToPct, rulesPxToPct } from "@/lib/cards/typography";
@@ -91,9 +92,13 @@ describe("metricsFor — whole px per target", () => {
       pipTopPx: 3, // centre 25 px above the baseline (it sat at 21)
       pipGapPx: 8,
       paragraphGapPx: 24,
-      flavorGapPx: 30,
+      bulletGapPx: 12,
+      // The v33 hairline's 30 + 1 + 30, the v74 bar (TODO 3.19) on its
+      // centre line: the flavor text keeps its place.
+      flavorBarAbovePx: 29,
+      barPx: 4,
+      flavorBarBelowPx: 28,
       flavorGapNoBarPx: 42,
-      barPx: 1,
       blankLinePx: 46,
       baselinePx: { regular: 58, italic: 58 },
     });
@@ -105,9 +110,11 @@ describe("metricsFor — whole px per target", () => {
       pipTopPx: 1,
       pipGapPx: 4,
       paragraphGapPx: 12,
-      flavorGapPx: 15,
+      bulletGapPx: 6,
+      flavorBarAbovePx: 15,
+      barPx: 2,
+      flavorBarBelowPx: 14,
       flavorGapNoBarPx: 21,
-      barPx: 1,
       blankLinePx: 23,
     });
   });
@@ -365,7 +372,7 @@ describe("layoutRulesAt — block height and positions", () => {
     expect(box("default")).toEqual({ left: 64, top: 668, right: 686, bottom: 962, width: 622, height: 294 });
   });
 
-  it("stacks lines at the pitch, a fixed 24 px between abilities, 30 + 1 + 30 around the flavor bar (42 without)", () => {
+  it("stacks lines at the pitch, a fixed 24 px between abilities, 29 + 4 + 28 around the flavor bar (42 without)", () => {
     const rules = "Flying\nVigilance\n\nLifelink";
     const flavor = "Wings of light.";
     for (const target of RULES_TARGETS) {
@@ -374,14 +381,20 @@ describe("layoutRulesAt — block height and positions", () => {
       const noBar = layoutRulesAt(m15(rules, { flavorText: flavor, padPx: PRINT_PAD, divider: false }), 76);
       const lines = 4 * m.linePx;
       const gaps = 3 * m.paragraphGapPx + m.blankLinePx; // Flying | Vigilance | blank | Lifelink
-      expect(blockHeightPx(bar, target), target).toBe(lines + gaps + 2 * m.flavorGapPx + m.barPx);
+      expect(blockHeightPx(bar, target), target).toBe(lines + gaps + m.flavorBarAbovePx + m.barPx + m.flavorBarBelowPx);
+      // The sum is the v33 hairline's (2 × 30 + 1 HD px): no flavor text moved.
+      expect(m.flavorBarAbovePx + m.barPx + m.flavorBarBelowPx, target).toBe(target === "hd" ? 61 : 31);
       expect(blockHeightPx(noBar, target), target).toBe(lines + gaps + m.flavorGapNoBarPx);
       const placed = linePositions(bar, target);
       const [flying, vigilance, lifelink, flavorLine] = placed.lines;
       expect(vigilance.top - flying.top).toBe(m.linePx + m.paragraphGapPx);
       expect(lifelink.top - vigilance.top).toBe(m.linePx + 2 * m.paragraphGapPx + m.blankLinePx);
-      expect(placed.bar!.top - (lifelink.top + m.linePx)).toBe(m.flavorGapPx);
-      expect(flavorLine.top - (placed.bar!.top + m.barPx)).toBe(m.flavorGapPx);
+      expect(placed.bar!.top - (lifelink.top + m.linePx)).toBe(m.flavorBarAbovePx);
+      expect(flavorLine.top - (placed.bar!.top + m.barPx)).toBe(m.flavorBarBelowPx);
+      // 96 % of the column, centred, whole px (TODO 3.19).
+      expect(placed.bar!.height).toBe(m.barPx);
+      expect(placed.bar!.width).toBe(Math.round(placed.interior.width * 0.96));
+      expect(placed.bar!.left - placed.interior.left).toBe(Math.floor((placed.interior.width - placed.bar!.width) / 2));
       expect(placed.blanks).toHaveLength(1);
       expect(linePositions(noBar, target).bar).toBeNull();
     }
@@ -519,6 +532,50 @@ describe("fitRulesLayout — the largest step that fits both targets, no safety 
     expect(fit.sizePx).toBe(expected);
     expect(fit.clipped).toBe(false);
     expect(layoutRulesAt(input, expected + 2).clipped).toBe(true);
+  });
+
+  it("steps down past a bullet mode's HUNG lone run — judged where it ends (its hang and width), at both targets", () => {
+    // v74 review: "• Draw mmm…" put the m's on a hung line of their own; the
+    // check compared the run's width with the column and forgot the hang,
+    // so the line ended up to 41 HD px past the column, unclipped.
+    let caught = 0;
+    for (let n = 19; n <= 28; n += 1) {
+      const input = m15(`Choose one —\n• Draw ${"m".repeat(n)}`, { padPx: PRINT_PAD });
+      const fit = fitRulesLayout(input);
+      expect(fit.clipped, `${n} m's`).toBe(false);
+      for (const t of RULES_TARGETS) {
+        const placed = linePositions(fit, t);
+        const right = placed.interior.left + placed.interior.width;
+        for (const l of placed.lines) expect(l.left + l.width, `${n} m's · ${t}`).toBeLessThanOrEqual(right);
+        // The run did hang: its line starts the hang in.
+        expect(placed.lines[placed.lines.length - 1].indent, `${n} m's · ${t}`).toBeGreaterThan(0);
+      }
+      // One size up the hung run ends past the column at a target, where the
+      // same run unhung ("plain", the pre-v74 layout) fits — the hang alone
+      // made it overwide.
+      const above = layoutRulesAt(input, fit.sizePx + 2);
+      if (fit.sizePx < 76 && RULES_TARGETS.some((t) => above.checks[t].overwideRun)) {
+        const plain = layoutRulesAt({ ...input, bulletModes: "plain" }, fit.sizePx + 2);
+        if (RULES_TARGETS.every((t) => !plain.checks[t].overwideRun)) caught += 1;
+      }
+    }
+    expect(caught).toBeGreaterThan(0);
+  });
+
+  it("a walker row (a narrow column): no hung line ends past its row's column", () => {
+    const pw = getFrameProfile("m15pw");
+    let hung = 0;
+    for (let n = 6; n <= 22; n += 1) {
+      const rows = layoutProfileLoyaltyRows(pw, [{ cost: "+1", text: `Choose one —\n• Draw ${"m".repeat(n)}` }, { cost: "−2", text: "Draw a card." }], PORTRAIT);
+      expect(rows.clipped, `${n} m's`).toBe(false);
+      for (const t of RULES_TARGETS) {
+        const placed = loyaltyRowLines(rows, 0, t);
+        const right = placed.interior.left + placed.interior.width;
+        for (const l of placed.lines) expect(l.left + l.width, `${n} m's · ${t}`).toBeLessThanOrEqual(right);
+        if (placed.lines.some((l) => l.indent > 0)) hung += 1;
+      }
+    }
+    expect(hung).toBeGreaterThan(0);
   });
 
   it("clips at the floor only when nothing fits — the box keeps overflow hidden", () => {

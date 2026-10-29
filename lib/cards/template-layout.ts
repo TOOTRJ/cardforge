@@ -407,8 +407,12 @@ export function footerInk(
  *  Satori both inherit it). */
 export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: string; textShadow?: string } {
   const entry = slot.inkByColorKey?.[baseMasterKey(masterKey) as FrameMasterKey];
-  if (!entry) return {};
-  return entry.shadowCss ? { color: entry.colorHex, textShadow: entry.shadowCss } : { color: entry.colorHex };
+  // A zero-blur outline the BAND declares (OUTLINE_SHADOW, tarkirghostfire)
+  // is its text's alone (layout v74, TODO 3.25): the band never sets it, so
+  // the pips beside the text are not outlined — in the bake its copies.
+  const outline = slot.shadowCss && shadowDrawsAsCopies(slot.shadowCss) ? { textShadow: slot.shadowCss } : {};
+  if (!entry) return outline;
+  return entry.shadowCss ? { color: entry.colorHex, textShadow: entry.shadowCss } : { color: entry.colorHex, ...outline };
 }
 
 /** Art drawn UNDER the whole frame for see-through frames (TODO 4.17): CC's
@@ -1376,13 +1380,43 @@ export function loyaltyBadgeAssetFor(cost: string): string {
 const INK_DARK = "#17120c";
 const INK_DARK_SOFT = "#2a2118";
 const INK_LIGHT = "#f4eee2";
-const OUTLINE_SHADOW =
-  "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000";
+
+/**
+ * A shadow or outline length as a fraction of the CARD'S WIDTH (layout v74,
+ * TODO 3.5): `px` px of a 750 px wide card, written in `cqw` — the preview's
+ * card is a size container, so the browser draws it at every editor width
+ * as the same share of the card; the bake materialises it in px at its own
+ * width (bakeShadowCss, textShadowCopies): 1 px at 750, 2 px at HD. Until
+ * v74 these were CSS px — the same px at every size, so the HD bake drew
+ * them at HALF the preview's share of the card (the parity harness's HD
+ * preview, 750 CSS px at 2×, drew them twice the bake's) and a 250 px tile
+ * three times it.
+ */
+export function cardPx(px: number): string {
+  return `${Number(((px * 100) / 750).toFixed(5))}cqw`;
+}
+
+const CQW_LENGTH = /(-?(?:\d+\.?\d*|\.\d+))cqw/g;
+
+/** A CSS shadow with its card-width lengths (cardPx) in px at a card
+ *  `cardWidthPx` wide — what the bake hands Satori (which knows no `cqw`),
+ *  to the thousandth of a px (`0.13333cqw` is 1 px at 750, 2 at 1500). Any
+ *  other length is left as it is. */
+export function bakeShadowCss(shadowCss: string, cardWidthPx: number): string {
+  return shadowCss.replace(CQW_LENGTH, (_, v: string) => `${Math.round(((Number(v) * cardWidthPx) / 100) * 1000) / 1000}px`);
+}
+
+const OUTLINE_SHADOW = [
+  `${cardPx(1)} ${cardPx(1)} 0 #000`,
+  `-${cardPx(1)} ${cardPx(1)} 0 #000`,
+  `${cardPx(1)} -${cardPx(1)} 0 #000`,
+  `-${cardPx(1)} -${cardPx(1)} 0 #000`,
+].join(", ");
 /** Outline for small text set straight on the art (the footer of a bar-less
  *  treatment, TODO 3.8): in em, like ALPHA_EMBOSS, so the preview and the
- *  bake draw it at the same size at every scale (OUTLINE_SHADOW's 1 px is a
- *  hairline at HD and a smear on a 250 px tile). Card Conjurer outlines its
- *  bottom info the same way. */
+ *  bake draw it at the same size at every scale (OUTLINE_SHADOW was a CSS
+ *  1 px until layout v74 — a hairline at HD and a smear on a 250 px tile).
+ *  Card Conjurer outlines its bottom info the same way. */
 export const ON_ART_OUTLINE =
   "0.06em 0.06em 0 #000, -0.06em 0.06em 0 #000, 0.06em -0.06em 0 #000, -0.06em -0.06em 0 #000";
 
@@ -1397,22 +1431,34 @@ export const SET_SYMBOL_KEYLINE =
   "0.05em 0 0 #ffffff, -0.05em 0 0 #ffffff, 0 0.05em 0 #ffffff, 0 -0.05em 0 #ffffff, " +
   "0.035em 0.035em 0 #ffffff, -0.035em 0.035em 0 #ffffff, 0.035em -0.035em 0 #ffffff, -0.035em -0.035em 0 #ffffff";
 
+/** Whether a text shadow is drawn as offset COPIES of its text in the bake
+ *  (textShadowCopies: two or more zero-blur layers — OUTLINE_SHADOW,
+ *  ON_ART_OUTLINE) rather than as CSS. Such a shadow belongs to its TEXT
+ *  only, in both renderers (layout v74, TODO 3.25): a band sets it on its
+ *  name or type line, never on the band, whose pips would inherit it. */
+export function shadowDrawsAsCopies(shadowCss: string): boolean {
+  return textShadowCopies(shadowCss, 1, 1) !== null;
+}
+
 /** One layer of a multi-layer text shadow, in px at the text's font size. */
 export type TextShadowCopy = { dx: number; dy: number; color: string };
 
-const SHADOW_LENGTH = /^(-?(?:\d+\.?\d*|\.\d+))(px|em)?$/;
+const SHADOW_LENGTH = /^(-?(?:\d+\.?\d*|\.\d+))(px|em|cqw)?$/;
 
 /**
  * A text shadow of TWO OR MORE zero-blur layers (ON_ART_OUTLINE,
- * OUTLINE_SHADOW) as px offsets at `fontPx`, or null. The bake draws these
- * as offset copies of the text under it instead of a CSS text-shadow:
- * Satori writes one feDropShadow per layer and merges them, and the bake's
- * rasteriser (sharp → librsvg) keeps only the last layer, so a four-way
- * outline baked as a one-sided up-left shadow while the browser drew all
- * four (new-frames review 2026-09-26). A single layer rasterises correctly,
- * and a blurred one can't be drawn as a copy: both stay CSS (null).
+ * OUTLINE_SHADOW) as px offsets at `fontPx` (em) and a card `cardWidthPx`
+ * wide (cardPx's `cqw`), or null. The bake draws these as offset copies of
+ * the text under it instead of a CSS text-shadow: Satori writes one
+ * feDropShadow per layer and merges them, and the bake's rasteriser (sharp
+ * → librsvg) keeps only the last layer, so a four-way outline baked as a
+ * one-sided up-left shadow while the browser drew all four (new-frames
+ * review 2026-09-26; the footer then, the bands and stat values since
+ * layout v74, TODO 3.25). A single layer rasterises correctly, and a blurred
+ * one can't be drawn as a copy: both stay CSS (null). A `cqw` length with no
+ * card width can't be read: null.
  */
-export function textShadowCopies(shadowCss: string, fontPx: number): TextShadowCopy[] | null {
+export function textShadowCopies(shadowCss: string, fontPx: number, cardWidthPx?: number): TextShadowCopy[] | null {
   const layers: string[] = [];
   let depth = 0;
   let start = 0;
@@ -1436,7 +1482,14 @@ export function textShadowCopies(shadowCss: string, fontPx: number): TextShadowC
       const m = SHADOW_LENGTH.exec(token);
       if (m) {
         if (m[2] === undefined && Number(m[1]) !== 0) return null;
-        lengths.push(m[2] === "em" ? Number(m[1]) * fontPx : Number(m[1]));
+        if (m[2] === "cqw" && cardWidthPx === undefined) return null;
+        lengths.push(
+          m[2] === "em"
+            ? Number(m[1]) * fontPx
+            : m[2] === "cqw"
+              ? Math.round(((Number(m[1]) * cardWidthPx!) / 100) * 1000) / 1000
+              : Number(m[1]),
+        );
       } else if (color === null) {
         color = token;
       } else {
@@ -1730,8 +1783,12 @@ const M15: FrameProfile = {
 //     the left of the title bar, which pushed the name to 14%. The orb was
 //     removed from the PNGs (f15273e) and the name moved back to 8.4% — a DB
 //     override on production since 2026-07-08, folded into code 2026-09-25
-//     (migration 0114). The band keeps its 77.5% width; keep the right edge
-//     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
+//     (migration 0114). The band's RIGHT edge is M15's (8.5 + 83.7 =
+//     92.2 %W — lands print no cost, so the name may run that far): 8.4 +
+//     83.8 here, 9.1 + 83.1 on the snow land (layout v74, TODO 3.22 — the
+//     band kept its old 77.5 % width when the left edge moved, so it ended at
+//     85.9 / 86.6 %W and long names shrank early; Card Conjurer's box ends
+//     at 91.28).
 // A Card Conjurer master (4.4): the type line sits on the prints' baseline
 // (CC_M15_TYPE_DY), the art on CC's window (CC_M15_ART_SLOT, layout v35).
 const M15LAND: FrameProfile = {
@@ -1741,7 +1798,7 @@ const M15LAND: FrameProfile = {
   artSlot: CC_M15_ART_SLOT,
   title: {
     ...M15.title,
-    rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 77.5 },
+    rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 83.8 },
   },
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
 };
@@ -1754,7 +1811,8 @@ const M15SNOWLAND: FrameProfile = {
   label: "M15 Snow Land",
   title: {
     ...M15LAND.title,
-    rect: { ...M15LAND.title.rect, leftPct: 9.1 },
+    // Its right edge stays M15's 92.2 %W (TODO 3.22, layout v74).
+    rect: { ...M15LAND.title.rect, leftPct: 9.1, widthPct: 83.1 },
   },
 };
 
@@ -3894,7 +3952,8 @@ const SAGA: FrameProfile = {
 // 1481: centre 1460.3) — 6 and 7 px above CC's box centres, which CC fills
 // from the top. P/T plate: M15's, as the pack draws it (m15PT<K>.png at
 // M15's bounds).
-const ADV_SHADOW = "0 1px 2px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.5)";
+// In card-width px (cardPx, layout v74 — TODO 3.5): 1 / 2 px at 750.
+const ADV_SHADOW = `0 ${cardPx(1)} ${cardPx(2)} rgba(0,0,0,0.6), 0 0 ${cardPx(2)} rgba(0,0,0,0.5)`;
 const ADVENTURE_PANEL_BAND_PCT = 4.0;
 const ADVENTURE: FrameProfile = {
   ...M15,
@@ -4537,7 +4596,8 @@ export const AFTERMATH_PART_SEAM: PartColorSeam = { axis: "y", atPct: (1140 / 21
 // (built by scripts/build-showcase-frames.mjs), so these are layout-only
 // profiles.
 // ---------------------------------------------------------------------------
-const SHOWCASE_SHADOW = "0 1px 2px rgba(0,0,0,0.65), 0 0 2px rgba(0,0,0,0.5)";
+// In card-width px (cardPx, layout v74 — TODO 3.5): 1 / 2 px at 750.
+const SHOWCASE_SHADOW = `0 ${cardPx(1)} ${cardPx(2)} rgba(0,0,0,0.65), 0 0 ${cardPx(2)} rgba(0,0,0,0.5)`;
 
 // The Avatar elemental (TLA #336–353, TLE #305–317) and the Bloomburrow
 // woodland (BLB #295–336) showcases (TODO 4.11, layout v69): MSE's drawings

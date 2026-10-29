@@ -152,17 +152,27 @@ describe("CardPreview — rules lines", () => {
     }
   });
 
-  it("keeps the flavor bar a 1 CSS px line that advances the layout only 1 HD px, at any editor width", () => {
+  it("draws the flavor bar as the bake's box and picture, at the HD bake's px — card-relative at any editor width (TODO 3.19)", () => {
     const { container } = render(<CardPreview {...creature("m15", "Flying", "Wings of light.")} />);
     const layout = mainRulesLayout({ layout: getFrameProfile("m15"), rulesText: "Flying", flavorText: "Wings of light.", aspect: 7 / 5, show: { pt: true } });
     const flavor = rulesDraw(layout, "hd").blocks.find((b) => b.kind === "flavor")!;
     expect(flavor.kind === "flavor" && flavor.bar).toBeTruthy();
-    const block = Array.from(boxes(container)[0].querySelectorAll<HTMLElement>("div")).find((el) => css(el, "border-top") !== "")!;
-    expect(css(block, "border-top")).toMatch(/^1px solid /);
+    // No border line any more (it was one CSS px at every editor width).
+    expect(Array.from(boxes(container)[0].querySelectorAll<HTMLElement>("div")).some((el) => css(el, "border-top") !== "")).toBe(false);
+    const bar = Array.from(boxes(container)[0].querySelectorAll<HTMLElement>("span")).find((el) =>
+      css(el, "background-image").includes("data:image/svg+xml"),
+    )!;
+    expect(bar).toBeTruthy();
     if (flavor.kind === "flavor" && flavor.bar) {
-      expect(css(block, "margin-top")).toBe(cqwOf(flavor.bar.above, "m15"));
-      // below + the bar's 1 HD px, less the 1 CSS px the border draws.
-      expect(css(block, "padding-top")).toBe(`calc(${cqwOf(flavor.bar.below + 1, "m15")} - 1px)`);
+      const b = flavor.bar;
+      expect(b.thickness).toBe(4);
+      expect(css(bar, "height")).toBe(cqwOf(b.thickness, "m15"));
+      expect(css(bar, "width")).toBe(cqwOf(b.width, "m15"));
+      expect(css(bar, "margin-top")).toBe(cqwOf(b.above, "m15"));
+      expect(css(bar, "margin-left")).toBe(cqwOf(b.inset, "m15"));
+      expect(bar.getAttribute("style") ?? "").toContain(encodeURIComponent('<linearGradient id="b"'));
+      // The flavor's lines then start the gap below it, as in the bake.
+      expect(css(bar.nextElementSibling as HTMLElement, "margin-top")).toBe(cqwOf(b.below, "m15"));
     }
   });
 

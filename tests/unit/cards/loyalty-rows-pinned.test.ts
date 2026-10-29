@@ -102,13 +102,22 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value)) as unknown;
 /** `drawing` with each metrics' inline pip shadow as layout v41 held it:
  *  M15's disc shadow at that metrics' own pip (discShadowPx). The ONLY
  *  numbers v49 changed on a walker's rows — and without the field layout
- *  v53 added to the metrics (`largePipScale`), which v41 did not have. */
+ *  v53 added to the metrics (`largePipScale`), which v41 did not have, and
+ *  with the flavor gap and bar as v41 named them (layout v74, TODO 3.16 /
+ *  3.19: the bullet gap is new; the bar's two gaps and its thickness were
+ *  one `flavorGapPx` around a 1 px bar — no walker row draws either). */
 function withV41PipShadow<T>(drawing: T): T {
   const modern = symbolStyle("modern");
   const visit = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(visit);
     if (!value || typeof value !== "object") return value;
-    const out = Object.fromEntries(Object.entries(value).map(([k, v]) => [k, visit(v)])) as Record<string, unknown>;
+    const entries = Object.entries(value).flatMap(([k, v]): [string, unknown][] => {
+      if (k === "bulletGapPx" || k === "flavorBarBelowPx") return [];
+      if (k === "flavorBarAbovePx") return [["flavorGapPx", Math.round(30 * Number((value as { scale?: number }).scale ?? 1))]];
+      if (k === "barPx") return [["barPx", 1]];
+      return [[k, visit(v)]];
+    });
+    const out = Object.fromEntries(entries) as Record<string, unknown>;
     if (typeof out.pipPx === "number" && "pipShadowPx" in out && "pipShadowLeftPx" in out) {
       const { left, down } = discShadowPx(modern, out.pipPx);
       out.pipShadowPx = down;

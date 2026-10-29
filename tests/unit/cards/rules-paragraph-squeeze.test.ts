@@ -164,20 +164,25 @@ describe("fitRulesLayout's paragraph squeeze (RulesLayoutInput.paragraphGapMinPx
     expect(fit.input.paragraphGapPx).toBeLessThan(RULES_TEXT.paragraphGapPx);
     const draw = rulesDraw(fit, "hd");
     const flavour = draw.blocks.find((b) => b.kind === "flavor");
+    // The v33 hairline's 30 + 1 + 30, the v74 bar on its centre line.
     expect(flavour && flavour.kind === "flavor" ? flavour.bar : null).toMatchObject({
-      above: RULES_TEXT.flavorGapPx,
-      below: RULES_TEXT.flavorGapPx,
+      above: RULES_TEXT.flavorGapPx - 1,
+      thickness: RULES_TEXT.flavorBarPx,
+      below: RULES_TEXT.flavorGapPx - 2,
     });
   });
 });
 
 describe("TBLB #5 Warren Warleader on the tall box: 9 pt, as printed", () => {
-  it("keeps 76 px with its gaps at 12 px, its last line clear of the P/T plate — where 24 px gaps stepped it down to 72", () => {
+  it("keeps 76 px with its gaps squeezed, its last line clear of the P/T plate — where 24 px gaps stepped it down to 72", () => {
     for (const t of TALL) {
       const fit = layoutOf(t, WARLEADER);
       expect(fit.sizePx, t).toBe(76);
       expect(fit.clipped, t).toBe(false);
-      expect(fit.input.paragraphGapPx, t).toBe(12);
+      // Its two modes sit the bullet gap apart (12 px, TODO 3.16 — layout
+      // v74), so the one ability gap left (before the reminder) squeezes
+      // only to 14 px; before v74 every gap squeezed to 12.
+      expect(fit.input.paragraphGapPx, t).toBe(14);
       // Without the squeeze (the rect as it is), the plate stepped it down
       // (to 70 before layout v36's narrower inline pips, TODO 3.31).
       const { paragraphGapMinPx: _min, paragraphGapPx: _gap, ...unsqueezed } = fit.input;
@@ -185,12 +190,18 @@ describe("TBLB #5 Warren Warleader on the tall box: 9 pt, as printed", () => {
       void _gap;
       expect(fitRulesLayout(unsqueezed).sizePx, t).toBe(72);
     }
-    // Where the print sets it (Scryfall PNG at 1500 × 2100): baselines 1441
-    // … 1846, gaps 10–13 px — ours 1441 … 1847.
-    const placed = linePositions(layoutOf("m20tokentall", WARLEADER), "hd");
+    // Where the print sets it (Scryfall PNG at 1500 × 2100, re-measured
+    // 2026-10-28 for TODO 3.16): every baseline — 1441, 1528, 1601, 1687,
+    // 1762, 1847 — within 2 px (ours 1441, 1527, 1601, 1687, 1761, 1849),
+    // and each mode's second line HUNG where its first word starts (the
+    // print's ink at 183–184 px, the bullets' at 131–135).
+    const layout = layoutOf("m20tokentall", WARLEADER);
+    const placed = linePositions(layout, "hd");
     const base = placed.metrics.baselinePx;
-    const baselines = placed.lines.map((l) => l.top + (layoutOf("m20tokentall", WARLEADER).blocks[l.block].kind === "flavor" ? base.italic : base.regular));
-    expect(Math.abs(baselines[0] - 1441)).toBeLessThanOrEqual(2);
-    expect(Math.abs(baselines[baselines.length - 1] - 1846)).toBeLessThanOrEqual(2);
+    const baselines = placed.lines.map((l) => l.top + (layout.blocks[l.block].kind === "flavor" ? base.italic : base.regular));
+    const print = [1441, 1528, 1601, 1687, 1762, 1847];
+    expect(baselines).toHaveLength(print.length);
+    baselines.forEach((b, i) => expect(Math.abs(b - print[i]), `baseline ${i}: ${b} against ${print[i]}`).toBeLessThanOrEqual(2));
+    expect(placed.lines.map((l) => l.indent > 0)).toEqual([false, false, true, false, true, false]);
   });
 });

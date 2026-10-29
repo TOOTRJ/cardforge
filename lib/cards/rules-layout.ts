@@ -143,11 +143,20 @@ export type RulesMetrics = {
   pipShadowLeftPx: number;
   /** Line box to line box between two paragraphs. */
   paragraphGapPx: number;
-  /** Rules → flavor: above the bar and again below it. */
-  flavorGapPx: number;
+  /** Line box to line box before a bullet mode that follows a rules
+   *  paragraph (TODO 3.16, layout v74): the "Choose … —" line or the mode
+   *  before it. */
+  bulletGapPx: number;
+  /** Rules → flavor on a frame that draws the bar: the gap above the bar
+   *  and the gap below it (layout v74: their sum and the bar are the v33
+   *  hairline's 30 + 1 + 30, whole px at each target, so the flavor text
+   *  does not move). */
+  flavorBarAbovePx: number;
+  flavorBarBelowPx: number;
   /** Rules → flavor with no bar. */
   flavorGapNoBarPx: number;
-  /** The flavor bar's thickness: 1 px at every target (TODO 3.19). */
+  /** The flavor bar's thickness (TODO 3.19, layout v74): RULES_TEXT's
+   *  flavorBarPx at the target — 4 px at HD, 2 at 750. */
   barPx: number;
   /** A blank source line's height. */
   blankLinePx: number;
@@ -182,6 +191,12 @@ export function metricsFor(
   const baseline = (face: { ascent: number; descent: number }) =>
     Math.round(face.ascent * fontPx + (linePx - (face.ascent + face.descent) * fontPx) / 2);
   const regularBaseline = baseline(MPLANTIN_LINE_METRICS.regular);
+  // The rules → flavor gap with its bar (layout v74, TODO 3.19): the v33
+  // total (both gaps and the 1 px hairline) at the target, the thicker bar
+  // centred on the hairline's centre line — the flavor text keeps its place.
+  const flavorTotal = targetPx(2 * RULES_TEXT.flavorGapPx + 1, scale);
+  const barPx = targetPx(RULES_TEXT.flavorBarPx, scale);
+  const flavorBarAbovePx = Math.round((flavorTotal - barPx) / 2);
   return {
     target,
     scale,
@@ -196,9 +211,11 @@ export function metricsFor(
     pipShadowPx: pipShadow(pipPx).down,
     pipShadowLeftPx: pipShadow(pipPx).left,
     paragraphGapPx: targetPx(RULES_TEXT.paragraphGapPx, scale),
-    flavorGapPx: targetPx(RULES_TEXT.flavorGapPx, scale),
+    bulletGapPx: targetPx(RULES_TEXT.bulletGapPx, scale),
+    flavorBarAbovePx,
+    flavorBarBelowPx: flavorTotal - barPx - flavorBarAbovePx,
     flavorGapNoBarPx: targetPx(RULES_TEXT.flavorGapNoBarPx, scale),
-    barPx: 1,
+    barPx,
     blankLinePx: Math.round(fontPx * RULES_TEXT.blankLineEm),
     baselinePx: { regular: regularBaseline, italic: baseline(MPLANTIN_LINE_METRICS.italic) },
   };
@@ -219,9 +236,47 @@ export type RulesLine = {
  *  flavor source line, wrapped, at the same pitch — the attribution line
  *  included). A layout has at most one flavor block, last. */
 export type RulesBlock =
-  | { kind: "rules"; lines: RulesLine[] }
+  | {
+      kind: "rules";
+      lines: RulesLine[];
+      /** A modal spell's bullet mode (TODO 3.16, layout v74): a paragraph
+       *  whose first run is the bullet "•" alone (isBulletRun). Its lines
+       *  after the first HANG — they start where the mode's first word
+       *  does, the bullet's width and a word gap in (hangIndentPx), and
+       *  break against a column that much narrower — and it sits the
+       *  bullet gap below a rules paragraph before it, not an ability's. */
+      bullet?: true;
+    }
   | { kind: "blank"; lines: [] }
   | { kind: "flavor"; lines: RulesLine[] };
+
+/** A bullet mode's opening run (TODO 3.16): the bullet "•" as a word of its
+ *  own — "• Return target…" (printTypography turns a typed leading "- " or
+ *  "* " into it). A "•" glued to the word after it ("•Return") is not one,
+ *  and neither is spree's "+" (its prints hang nothing, OTJ #125). */
+export function isBulletRun(run: readonly RulesItem[] | undefined): boolean {
+  return run?.length === 1 && run[0].t === "w" && run[0].v === "•" && !run[0].em;
+}
+
+/** How far a bullet mode's lines after the first are indented at `m`'s
+ *  target (TODO 3.16): the bullet's own box and a word gap — exactly where
+ *  the mode's first word starts on its first line. 0 for any other block or
+ *  for its first line. */
+export function hangIndentPx(block: RulesBlock, lineIndex: number, m: RulesMetrics): number {
+  if (block.kind !== "rules" || !block.bullet || lineIndex === 0) return 0;
+  const bullet = block.lines[0]?.runs[0];
+  return bullet ? runWidthPx(bullet, m) + m.wordGapPx : 0;
+}
+
+/** The hang of a paragraph's runs at each target (0 when it is no bullet
+ *  mode): its first run's width and a word gap. */
+function hangPx(runs: readonly RulesItem[][], metrics: Readonly<Record<RulesTarget, RulesMetrics>>): Record<RulesTarget, number> {
+  if (!isBulletRun(runs[0]) || runs.length < 2) return { hd: 0, default: 0 };
+  return {
+    hd: runWidthPx(runs[0], metrics.hd) + metrics.hd.wordGapPx,
+    default: runWidthPx(runs[0], metrics.default) + metrics.default.wordGapPx,
+  };
+}
 
 /** A word's box as `m`'s target draws it: its advances (italic for any
  *  emphasis) CEILED to the px — Satori's text measure. The bake's word gets
@@ -317,6 +372,7 @@ function breakRuns(
   columns: Readonly<Record<RulesTarget, number>>,
   lineColumns?: LineColumns,
   lineOffset = 0,
+  hang: Readonly<Record<RulesTarget, number>> = { hd: 0, default: 0 },
 ): RulesLine[] {
   const lines: RulesLine[] = [];
   let current: RulesItem[][] = [];
@@ -326,8 +382,14 @@ function breakRuns(
     default: lineWidthPx(line, metrics.default),
   });
   // The column of the line being built: a float's narrower one where a
-  // float names this line (by its global index), the box's otherwise.
-  const columnsAt = (index: number) => lineColumns?.get(lineOffset + index) ?? columns;
+  // float names this line (by its global index), the box's otherwise —
+  // less a bullet mode's hang on every line after its first (TODO 3.16:
+  // the hung lines start that much further in, so they break that much
+  // shorter).
+  const columnsAt = (index: number) => {
+    const cols = lineColumns?.get(lineOffset + index) ?? columns;
+    return index === 0 ? cols : { hd: cols.hd - hang.hd, default: cols.default - hang.default };
+  };
   for (const run of runs) {
     const cols = columnsAt(lines.length);
     const next = { hd: 0, default: 0 };
@@ -380,11 +442,22 @@ export function breakRulesText(
 
 /** A card's text as runs, once for every ladder step: each rules paragraph's
  *  runs (null for a blank source line), then each flavor source line's. */
-type ParsedText = { rules: (RulesItem[][] | null)[]; flavor: RulesItem[][][] };
+type ParsedText = {
+  rules: (RulesItem[][] | null)[];
+  flavor: RulesItem[][][];
+  /** RulesLayoutInput.bulletModes: "plain" — a bullet mode is a plain
+   *  paragraph (no hang, the ability gap). */
+  plainBullets?: true;
+};
 
-function parseText(rulesText: string | null | undefined, flavorText: string | null | undefined): ParsedText {
+function parseText(
+  rulesText: string | null | undefined,
+  flavorText: string | null | undefined,
+  bulletModes?: "plain",
+): ParsedText {
   const rules = rulesText?.trim() ?? "";
   return {
+    ...(bulletModes === "plain" ? { plainBullets: true as const } : {}),
     rules: rules ? tokenizeRulesText(rules).map((items) => (items.length === 0 ? null : groupTightRuns(items))) : [],
     flavor: (flavorText?.trim() ?? "")
       .split(/\n/)
@@ -410,9 +483,10 @@ function breakParsed(
   let offset = 0;
   const blocks: RulesBlock[] = parsed.rules.map((runs) => {
     if (runs === null) return { kind: "blank", lines: [] };
-    const lines = breakRuns(runs, metrics, columns, lineColumns, offset);
+    const hang = parsed.plainBullets ? { hd: 0, default: 0 } : hangPx(runs, metrics);
+    const lines = breakRuns(runs, metrics, columns, lineColumns, offset, hang);
     offset += lines.length;
-    return { kind: "rules", lines };
+    return hang.hd > 0 ? { kind: "rules", lines, bullet: true } : { kind: "rules", lines };
   });
   if (parsed.flavor.length > 0) {
     const lines = parsed.flavor.flatMap((runs) => {
@@ -524,6 +598,14 @@ export type RulesLayoutInput = {
    *  that fits, as the prints do (TBLB #5 keeps 9 pt with 10–13 px gaps).
    *  Unset: the gap never moves (every other box). */
   paragraphGapMinPx?: number;
+  /** "plain": lay a bullet mode (RulesBlock.bullet, TODO 3.16) out as the
+   *  plain paragraph it was until layout v74 — no hang, an ability's gap.
+   *  The token height rule's measure only (lib/cards/token-height.ts
+   *  tokenTextFitPx): which box a token's text asks for is held to its
+   *  pre-v74 answers (TBLB #5 Warren Warleader prints its modes on the TALL
+   *  box, where the tighter modes would fit the regular box at exactly
+   *  72 px); never a drawn layout. */
+  bulletModes?: "plain";
   /** The paragraph gap (HD px) the layout was placed with — the squeeze's
    *  pick, set by fitRulesLayout; unset, RULES_TEXT.paragraphGapPx. What
    *  linePositions places, so both renderers draw the fitted gap. */
@@ -536,7 +618,9 @@ export type RulesTargetCheck = {
   overflowPx: number;
   /** A line's ink enters a keep-out. */
   keepOutHit: boolean;
-  /** A single run is wider than the column (it can't wrap). */
+  /** A placed line ends past the column — its indent (a bullet mode's
+   *  hang, TODO 3.16) and width wider than the interior: a single run too
+   *  wide for where it starts (it can't wrap). */
   overwideRun: boolean;
   fits: boolean;
 };
@@ -622,8 +706,9 @@ export type RulesPlacement = {
   lines: RulesLinePlacement[];
   /** Blank blocks' boxes (a paragraph break's height). */
   blanks: { block: number; top: number; height: number }[];
-  /** The flavor bar (1 px), when one is drawn. */
-  bar: { top: number; left: number; width: number } | null;
+  /** The flavor bar when one is drawn (layout v74, TODO 3.19): its box,
+   *  `barPx` tall and RULES_TEXT.flavorBarWidth of the column, centred. */
+  bar: { top: number; left: number; width: number; height: number } | null;
 };
 
 /** The ink reach of one line, relative to its line box's top. */
@@ -689,11 +774,16 @@ function targetPad(pad: Sides, scale: number): Sides {
 }
 
 /** The gap drawn before block `i`: none before the first; the flavor gap
- *  (bar or not) before a flavor block that follows rules; the paragraph gap
- *  otherwise. */
-function gapBefore(blocks: readonly RulesBlock[], i: number, m: RulesMetrics, divider: boolean): number {
+ *  (bar or not) before a flavor block that follows rules; the bullet gap
+ *  before a bullet mode that follows a rules paragraph (TODO 3.16 — never
+ *  wider than the paragraph gap, which a tall token box may squeeze); the
+ *  paragraph gap otherwise. Both renderers' row drawers (the walker rows)
+ *  read it too. */
+export function gapBefore(blocks: readonly RulesBlock[], i: number, m: RulesMetrics, divider: boolean): number {
   if (i === 0) return 0;
-  if (blocks[i].kind === "flavor") return divider ? 2 * m.flavorGapPx + m.barPx : m.flavorGapNoBarPx;
+  const block = blocks[i];
+  if (block.kind === "flavor") return divider ? m.flavorBarAbovePx + m.barPx + m.flavorBarBelowPx : m.flavorGapNoBarPx;
+  if (block.kind === "rules" && block.bullet && blocks[i - 1].kind === "rules") return Math.min(m.bulletGapPx, m.paragraphGapPx);
   return m.paragraphGapPx;
 }
 
@@ -867,7 +957,15 @@ function placeBlocks(
   blocks.forEach((b, bi) => {
     const gap = gapBefore(blocks, bi, m, divider);
     if (b.kind === "flavor" && bi > 0 && divider) {
-      bar = { top: y + m.flavorGapPx, left: interior.left, width: interior.width };
+      // The bar (TODO 3.19): RULES_TEXT.flavorBarWidth of the column,
+      // centred on it, whole px.
+      const width = Math.round(interior.width * RULES_TEXT.flavorBarWidth);
+      bar = {
+        top: y + m.flavorBarAbovePx,
+        left: interior.left + Math.floor((interior.width - width) / 2),
+        width,
+        height: m.barPx,
+      };
     }
     y += gap;
     if (b.kind === "blank") {
@@ -878,12 +976,15 @@ function placeBlocks(
     b.lines.forEach((line, li) => {
       const ink = lineInk(line, m);
       const sideInk = lineSideInk(line, m);
+      // A bullet mode's hung line (TODO 3.16) starts its hang in; a centred
+      // block centres every line on the box as it always did (the hung
+      // line broke against the shorter column, so it fits either way).
       let indent =
         blockCentre !== null
           ? centredLineIndentPx(lineColumn(y, sideInk.right), line.widthPx[target], blockCentre)
           : centred
             ? singleLineIndentPx(interior.width, line.widthPx[target])
-            : 0;
+            : hangIndentPx(b, li, m);
       if (blockCentre !== null && heldRects.length > 0) {
         const inkTop = y + ink.top;
         const inkBottom = y + ink.bottom;
@@ -1011,9 +1112,15 @@ function checkPlacement(
   const keepOutHit = placed.lines.some((l) =>
     keepOuts.some((k) => lineHitsKeepOut(l, blocks[l.block].lines[l.line], placed.metrics, k)),
   );
-  const overwideRun = blocks.some((b) =>
-    b.lines.some((l) => l.runs.length === 1 && l.widthPx[placed.target] > interior.width),
-  );
+  // Each PLACED line is judged where it ends — its indent and its width
+  // against the interior — never its width alone: a bullet mode's hung line
+  // (TODO 3.16) starts its hang in, so a lone run that fits the column
+  // unindented can still end past it (v74 review: "• Draw mmm…" ended up to
+  // 41 HD px right of the column, unclipped). A line the breaker built
+  // ends inside its column by construction (a hung one broke against the
+  // column less its hang); a lone run, hung or not, is the only line that
+  // can end past it, and it steps the size down as it always did.
+  const overwideRun = placed.lines.some((l) => l.indent + l.width > interior.width);
   return { overflowPx, keepOutHit, overwideRun, fits: overflowPx <= 0 && !keepOutHit && !overwideRun };
 }
 
@@ -1041,7 +1148,7 @@ function columnsFor(
  * target.
  */
 export function layoutRulesAt(input: RulesLayoutInput, sizePx: number): RulesLayout {
-  return layoutParsedAt(input, sizePx, parseText(input.rulesText, input.flavorText));
+  return layoutParsedAt(input, sizePx, parseText(input.rulesText, input.flavorText, input.bulletModes));
 }
 
 /** How many times the side headroom may grow while the lines settle. */
@@ -1185,7 +1292,7 @@ export function rulesLadderPx(sizePct: number, orientation: CardOrientation = "p
  */
 export function fitRulesLayout(input: RulesLayoutInput): RulesLayout {
   const ladder = rulesLadderPx(input.sizePct, orientationFromAspect(input.aspect));
-  const parsed = parseText(input.rulesText, input.flavorText);
+  const parsed = parseText(input.rulesText, input.flavorText, input.bulletModes);
   if (input.align === "center") {
     // A centred block is set at EXACTLY the size (and squeezed paragraph
     // gap) its left-aligned twin fits at (owner 2026-10-07: Centred never
