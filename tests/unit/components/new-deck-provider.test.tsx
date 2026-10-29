@@ -178,7 +178,7 @@ describe("an empty new deck's page (?new=1)", () => {
         <button ref={other} type="button">
           Edit details
         </button>
-        <button ref={add} type="button">
+        <button ref={add.target} type="button" data-clearing={String(add.clearing)}>
           Import decklist
         </button>
       </>

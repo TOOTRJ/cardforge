@@ -103,7 +103,7 @@ export function DeckOwnerTools({
   const [open, setOpen] = useState<DeckTool | null>(null);
   // A deck the New deck dialog just made, empty (TODO DK4.1): the import is
   // the page's way to add cards today.
-  const importTrigger = useFocusAddOnNewDeck<HTMLButtonElement>();
+  const arrival = useFocusAddOnNewDeck<HTMLButtonElement>();
 
   useEffect(() => {
     const onTool = (event: Event) => {
@@ -123,7 +123,8 @@ export function DeckOwnerTools({
         deckId={deck.id}
         defaultOpen={openImport}
         cardCapacity={capacity}
-        triggerRef={importTrigger}
+        triggerRef={arrival.target}
+        navigating={arrival.clearing}
       />
       {/* The greyed AI tools and the one line that says why, kept together
           on their own row (TODO DK1). */}

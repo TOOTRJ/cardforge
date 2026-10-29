@@ -54,6 +54,9 @@ type ImportDecklistDialogProps = {
   /** The trigger button — the deck page focuses it on a deck the New deck
    *  dialog just made (useFocusAddOnNewDeck). */
   triggerRef?: React.Ref<HTMLButtonElement>;
+  /** The page is dropping a flag of its own (`?new=1`): Preview import
+   *  waits for that navigation as it waits for `clearingFlag`. */
+  navigating?: boolean;
 };
 
 type Step = "paste" | "review";
@@ -64,6 +67,7 @@ export function ImportDecklistDialog({
   defaultOpen = false,
   cardCapacity = null,
   triggerRef,
+  navigating = false,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
@@ -221,7 +225,7 @@ export function ImportDecklistDialog({
               <Button
                 type="button"
                 onClick={handleResolve}
-                disabled={!text.trim() || isResolving || clearingFlag}
+                disabled={!text.trim() || isResolving || clearingFlag || navigating}
               >
                 {isResolving ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

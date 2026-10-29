@@ -1832,6 +1832,23 @@ Rules and gotchas:
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
+- A deck is started through ONE dialog (TODO DK4; the four-step wizard is
+  gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
+  from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
+  `NewDeckButton` (`NewDeckProvider` sits in the root layout; the dialog's
+  code loads on first use); `/dashboard/decks/new` (the header's link) opens
+  it over My Decks. Visibility is PUBLIC by default and private is the
+  maker's choice — "change" opens the card creator's Publish control in deck
+  words (a "Keep it private" box over Unlisted | Public). It reads the
+  viewer from GET `/api/me` (never a server action), makes the deck FIRST
+  and then imports a pasted list through the deck page's resolve → commit (a
+  refused list keeps the deck and offers the list again — never a second
+  create), opens an empty deck as `/deck/<slug>?new=1`
+  (`useFocusAddOnNewDeck` focuses the add control and drops the flag under
+  the rule below), and keeps a signed-out visitor's input in sessionStorage
+  for the trip through sign-in (`lib/decks/new-deck.ts`, never the URL). A
+  new way to start a deck opens it, never a form of its own (the Publish
+  step's inline quick-create moves onto it with DK9.3).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

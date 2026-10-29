@@ -173,6 +173,18 @@ describe("DK0.10 / DK0.12 — the import dialog", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
+  it("Preview import waits while the page drops a flag of its own (?new=1, TODO DK4.1)", async () => {
+    window.history.replaceState(null, "", "/deck/kesh/burn");
+    const view = render(<ImportDecklistDialog deckId="d1" defaultOpen navigating />);
+    await act(async () => {
+      fireEvent.change(screen.getByRole("textbox", { name: "Decklist text" }), { target: { value: "4 Mountain" } });
+    });
+    const preview = () => screen.getByRole("button", { name: /preview import/i }) as HTMLButtonElement;
+    expect(preview().disabled).toBe(true);
+    view.rerender(<ImportDecklistDialog deckId="d1" defaultOpen navigating={false} />);
+    expect(preview().disabled).toBe(false);
+  });
+
   it("a review row's Board change keeps the row — and the focus on its select", async () => {
     window.history.replaceState(null, "", "/deck/kesh/burn");
     importActions.resolveDecklistAction.mockResolvedValue({
