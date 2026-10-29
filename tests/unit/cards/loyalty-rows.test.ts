@@ -12,6 +12,8 @@ import {
   loyaltyRowPx,
   loyaltyRowsDrawing,
   loyaltyShieldRect,
+  LOYALTY_BADGE_ROW_MIN_HD,
+
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
 import { walkerSizePct } from "@/lib/cards/rules-box";
@@ -51,10 +53,15 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const lineCounts = (l: LoyaltyRowsLayout) => l.text.map((t) => sum(t.blocks.map((b) => b.lines.length)));
 
 /** A row's natural height at a target: its text block as drawn (lines,
- *  gaps, ink headroom) or its badge, plus its padding — whole px. */
-const need = (l: LoyaltyRowsLayout, i: number, t: RulesTarget) => {
+ *  gaps, ink headroom) plus its padding, or — on a row with a badge — the
+ *  badge's reach about the row's centre (layout v75), whichever is taller;
+ *  whole px. `rules` is the walker's text (the badges are its costs). */
+const need = (l: LoyaltyRowsLayout, i: number, t: RulesTarget, rules: string) => {
   const a = loyaltyRowPx(t);
-  return Math.max(blockHeightPx(l.text[i], t), a.badgeHeight) + 2 * a.padY;
+  const cost = parseLoyaltyAbilities(rules)[i]?.cost;
+  // (89 px at HD: the old 69 px badge and its padding; 35 + 10 at 750.)
+  const badge = cost ? (t === "hd" ? LOYALTY_BADGE_ROW_MIN_HD : 45) : 0;
+  return Math.max(blockHeightPx(l.text[i], t) + 2 * a.padY, badge);
 };
 
 // The acceptance walker: 1-line / 1-line / 6-line at the 64 px ceiling
@@ -103,9 +110,12 @@ describe("layoutLoyaltyRows (layout v33: the rules layout's lines)", () => {
 
   it("draws the row anatomy at ONE size whatever the text's: the text column starts where the walker prints start theirs", () => {
     expect(LOYALTY_ROW_SIZE_PX).toBe(46);
-    // padding 18 + badge 106 + gap 23: the text at x 275 of an HD card (the
-    // rules box from 128), the prints' 274–276 (BFZ #29, DOM #1, AKH #97).
-    expect(loyaltyRowPx("hd")).toMatchObject({ padX: 18, badgeWidth: 106, badgeGap: 23, rail: 147, badgeHeight: 69 });
+    // padding 18 + the badge's share 106 + gap 23: the text at x 275 of an
+    // HD card (the rules box from 128), the prints' 274–276 (BFZ #29, DOM
+    // #1, AKH #97); a static ability's at x 208, the prints' 207–209 (ONE
+    // #115, MOM #134, WAR #1 — layout v75).
+    expect(loyaltyRowPx("hd")).toEqual({ padX: 18, padY: 10, rail: 147, staticRail: 80 });
+    expect(rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").left + loyaltyRowPx("hd").staticRail).toBe(208);
     expect(rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").left + loyaltyRowPx("hd").rail).toBe(275);
     // A short walker (64 px text) and a long one (at the floor) draw the
     // same badges and start their text on the same margin.
@@ -137,7 +147,7 @@ describe("layoutLoyaltyRows (layout v33: the rules layout's lines)", () => {
     // The long row is taller than a short one by exactly what its lines add
     // (the slack is shared equally).
     const boxHd = rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").height;
-    expect(Math.abs((c - a) * boxHd - (need(l, 2, "hd") - need(l, 0, "hd")))).toBeLessThanOrEqual(2);
+    expect(Math.abs((c - a) * boxHd - (need(l, 2, "hd", WALKER_115) - need(l, 0, "hd", WALKER_115)))).toBeLessThanOrEqual(2);
     expect(l.clipped).toBe(false);
     // It is the largest ladder step at which every row holds its text: from
     // a ceiling one step higher, the size it lands on is the same.
@@ -162,7 +172,7 @@ describe("layoutLoyaltyRows (layout v33: the rules layout's lines)", () => {
           const { edges, boxHeight } = loyaltyRowsDrawing(l, t);
           expect(boxHeight).toBe(rectPx(M15PW.rules.rect, "portrait", ASPECT, t).height);
           expect(edges.at(-1)).toBe(boxHeight);
-          l.text.forEach((_, i) => expect(edges[i + 1] - edges[i], `${rules.slice(0, 20)} row ${i} ${t}`).toBeGreaterThanOrEqual(need(l, i, t)));
+          l.text.forEach((_, i) => expect(edges[i + 1] - edges[i], `${rules.slice(0, 20)} row ${i} ${t}`).toBeGreaterThanOrEqual(need(l, i, t, rules)));
           // And its lines, where the row puts them, inside its stripe.
           l.text.forEach((_, i) => {
             const placed = loyaltyRowLines(l, i, t);
@@ -221,14 +231,21 @@ describe("layoutLoyaltyRows (layout v33: the rules layout's lines)", () => {
     expect(sum(lineCounts(at(CAPS, 42)))).toBeGreaterThan(sum(lineCounts(at(CAPS.toLowerCase(), 42))));
   });
 
-  it("gives a static (unbadged) ability and an empty hint row the badge-height floor", () => {
+  it("gives a static (unbadged) ability no badge floor (layout v75): its row is its text and padding", () => {
     const abilities: LoyaltyAbility[] = [
       { cost: null, text: "" },
       { cost: "+1", text: "Scry 1." },
     ];
     const l = layoutLoyaltyRows({ abilities, rect: M15PW.rules.rect, baseSizePct: walkerSizePct(M15PW), aspect: ASPECT });
-    expect(l.rowFractions[0]).toBeCloseTo(l.rowFractions[1], 10);
+    const boxHd = rectPx(M15PW.rules.rect, "portrait", ASPECT, "hd").height;
+    // The badge row's floor (its badge's reach) over the empty row's
+    // padding — the slack shared equally on top of both.
+    // (the larger of the two targets' shares: 45 px of the 750 px box is 90 of HD)
+    const gap = (Math.max(LOYALTY_BADGE_ROW_MIN_HD, 2 * 45) - 2 * loyaltyRowPx("hd").padY) / boxHd;
+    expect(l.rowFractions[1] - l.rowFractions[0]).toBeCloseTo(gap, 10);
     expect(l.text[0].blocks).toEqual([]);
+    // …and its text column starts at the static rail.
+    expect(loyaltyRowsDrawing(l, "hd").rails).toEqual([loyaltyRowPx("hd").staticRail, loyaltyRowPx("hd").rail]);
   });
 
   it("sets a static ability's paragraphs the fixed paragraph gap apart", () => {
@@ -335,7 +352,7 @@ describe("the last ability wraps before the loyalty shield when its text would r
     expect(after.rowFractions[2] > before.rowFractions[2] || after.sizePx < before.sizePx).toBe(true);
     for (const t of RULES_TARGETS) {
       const { edges } = loyaltyRowsDrawing(after, t);
-      expect(edges[3] - edges[2]).toBeGreaterThanOrEqual(need(after, 2, t));
+      expect(edges[3] - edges[2]).toBeGreaterThanOrEqual(need(after, 2, t, CAPS));
     }
   });
 

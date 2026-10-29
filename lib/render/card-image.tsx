@@ -155,7 +155,6 @@ import {
   footerInk,
   textShadowCopies,
   loyaltyBadgeAssetFor,
-  loyaltyBadgeShapeFor,
   slotInk,
   slotTextDy,
   type FrameProfile,
@@ -183,6 +182,7 @@ import {
 import {
   layoutProfileLoyaltyRows,
   rowsStampKeepOut,
+  loyaltyBadgesDrawing,
   loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
@@ -3026,7 +3026,13 @@ function LoyaltyRowsBake({
     ...(i === 0 ? { borderTopLeftRadius: radius, borderTopRightRadius: radius } : {}),
     ...(i === last ? { borderBottomLeftRadius: radius, borderBottomRightRadius: radius } : {}),
   });
+  // The printed badges and colons (layout v75): card-absolute, in a layer
+  // of their own after the rows — they straddle the frame's edge, outside
+  // the rules box the rows clip to.
+  const badges = loyaltyBadgesDrawing(rowsLayout, abilities, target);
+  const badgeFamily = faceOf({ loyaltyRows: rows }, "badge").bakeFamily;
   return (
+    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
     <div
       style={{
         ...slotBox(slot.rect),
@@ -3065,58 +3071,10 @@ function LoyaltyRowsBake({
               style={{ width: "100%", height: "100%", ...sheenCorners(i) }}
             />
           ) : null}
-          <div
-            style={{
-              position: "relative",
-              display: "flex",
-              flexShrink: 0,
-              alignItems: "center",
-              justifyContent: "center",
-              width: a.badgeWidth,
-              height: a.badgeHeight,
-              // The text column starts where the rail ends: the column the
-              // ability's lines were broken for.
-              marginRight: a.rail - a.padX - a.badgeWidth,
-            }}
-          >
-            {ab.cost ? (
-              // The printed loyalty shield — same MSE asset as the preview.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={getPlateDataUrlForPath(loyaltyBadgeAssetFor(ab.cost), "c") ?? ""}
-                width={a.badgeWidth}
-                height={a.badgeHeight}
-                alt=""
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "fill",
-                }}
-              />
-            ) : null}
-            <span
-              style={{
-                position: "relative",
-                display: "flex",
-                color: rows.badgeTextHex,
-                fontFamily: faceOf({ loyaltyRows: rows }, "badge").bakeFamily,
-                fontSize: a.badgeText,
-                fontWeight: 700,
-                ...(ab.cost
-                  ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: a.badgeNudge }
-                    : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: a.badgeNudge }
-                      : {}
-                  : {}),
-              }}
-            >
-              {ab.cost ? bakeText(ab.cost) : ""}
-            </span>
-          </div>
+          {/* The rail: the text column starts where it ends — the column
+              the ability's lines were broken for (a static ability's
+              starts further left, layout v75). The badge is drawn below. */}
+          <div style={{ display: "flex", flexShrink: 0, width: draw.rails[i] - a.padX, height: 1 }} />
           {/* The ability's lines, in the column they were broken for — the
               last one short of the loyalty shield when its text would reach
               it (lastRowInsetPct) — centred in the row, with the ink
@@ -3139,6 +3097,54 @@ function LoyaltyRowsBake({
           </div>
         </div>
       ))}
+    </div>
+      {badges.flatMap((b) => [
+        // The printed loyalty badge — the MSE art the preview draws, its
+        // face on the print's (lib/cards/loyalty-rows.ts, the badges as printed).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`badge-${b.row}`}
+          src={getPlateDataUrlForPath(loyaltyBadgeAssetFor(abilities[b.row].cost ?? ""), "c") ?? ""}
+          width={b.art.width}
+          height={b.art.height}
+          alt=""
+          style={{ position: "absolute", left: b.art.left, top: b.art.top, width: b.art.width, height: b.art.height, objectFit: "fill" }}
+        />,
+        <div
+          key={`numeral-${b.row}`}
+          style={{
+            position: "absolute",
+            left: b.numeral.left,
+            top: b.numeral.top,
+            width: b.numeral.width,
+            height: b.numeral.fontPx,
+            display: "flex",
+            justifyContent: "center",
+            color: rows.badgeTextHex,
+            fontFamily: badgeFamily,
+            fontSize: b.numeral.fontPx,
+            fontWeight: 700,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {b.label}
+        </div>,
+        ...b.colon.map((dot, j) => (
+          <div
+            key={`colon-${b.row}-${j}`}
+            style={{
+              position: "absolute",
+              left: dot.left,
+              top: dot.top,
+              width: dot.size,
+              height: dot.size,
+              borderRadius: "50%",
+              backgroundColor: slot.colorHex,
+            }}
+          />
+        )),
+      ])}
     </div>
   );
 }
