@@ -134,6 +134,8 @@ describe("computeDeckAnalytics", () => {
     expect(analytics.byColor.C).toBe(1);
     expect(analytics.byColor.W).toBe(2);
     expect(analytics.byColor.U).toBe(2);
+    // A real two-colour card is also a gold card.
+    expect(analytics.multicolor).toBe(2);
   });
 
   it("derives colors and mana value from the linked custom card when the entry has none", () => {
@@ -185,7 +187,8 @@ describe("computeDeckAnalytics", () => {
         card: { cost: "{3}", color_identity: ["colorless"], supertype: null, card_type: "artifact" } as never,
       },
     ]);
-    expect(analytics.multicolor).toBe(2);
+    // The two unnamed gold cards, plus the blue-red card.
+    expect(analytics.multicolor).toBe(3);
     expect(analytics.byColor.C).toBe(1);
     expect(analytics.byColor.U).toBe(1);
     expect(analytics.byColor.R).toBe(1);

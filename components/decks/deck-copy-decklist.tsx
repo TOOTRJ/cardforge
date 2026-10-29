@@ -13,9 +13,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 // ZIP, the print PDF) are Pro — components/decks/deck-export-menu.tsx.
 //
 // Both texts are built on the server from the rows the viewer read
-// (lib/decks/export-text.ts), so each line names a card the way the
-// viewer's deck list does and a private card they can't read keeps its
-// entry name.
+// (lib/decks/export-text.ts): a real card keeps its real name and printing
+// (the list pastes back into Arena or an import), a custom card with no
+// real card takes the title the viewer's list shows, and a private card
+// they can't read keeps its entry name.
 // ---------------------------------------------------------------------------
 
 type DeckCopyDecklistProps = {
@@ -50,7 +51,7 @@ export function DeckCopyDecklist({ plainText, arenaText }: DeckCopyDecklistProps
           Copy decklist
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-1.5">
+      <PopoverContent align="end" className="w-72 p-1.5" aria-label="Copy decklist">
         <div role="group" aria-label="Copy the decklist as" className="flex flex-col gap-0.5">
           {/* Each option is named by its format alone; the line under it
               describes it. */}

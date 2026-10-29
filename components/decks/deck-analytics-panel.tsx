@@ -85,8 +85,9 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
           Colors
         </span>
         <div className="flex flex-col gap-1.5">
-          {/* WUBRG, then the gold cards whose colours aren't named (a custom
-              card saved as "multicolor"), then colorless. */}
+          {/* WUBRG (a gold card counts once per colour), then the gold
+              cards themselves (two or more colours, or a custom card saved
+              as "multicolor"), then colorless. */}
           {colors.map(({ identity, count }) => (
             <div
               key={identity}

@@ -214,7 +214,7 @@ export function DeckExportMenu({
               <Included icon={ImageIcon}>
                 {customCardCount} clean card image{customCardCount === 1 ? "" : "s"}, no watermark
               </Included>
-              <Included icon={ScrollText}>deck.pdf — stats, decklist, how to play &amp; combos</Included>
+              <Included icon={ScrollText}>deck.pdf — stats and decklist, plus the how-to-play guide if the deck has one</Included>
               <Included icon={FileText}>decklist.txt</Included>
               {hasCover ? <Included icon={Sparkles}>Cover art</Included> : null}
             </ul>

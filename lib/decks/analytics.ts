@@ -110,9 +110,10 @@ export type DeckAnalytics = {
   /** WUBRG + colorless pip presence, quantity-weighted (playable boards).
    *  A multicolor card counts once per color in its identity. */
   byColor: Record<"W" | "U" | "B" | "R" | "G" | "C", number>;
-  /** Custom cards whose identity says only "multicolor" — gold, its colours
-   *  not named — quantity-weighted (playable boards). Counted here, never
-   *  as colorless. */
+  /** Gold cards, quantity-weighted (playable boards): every card of two or
+   *  more colours (also counted once per colour in `byColor`), plus a custom
+   *  card saved as only "multicolor", whose colours aren't named — counted
+   *  here alone, never as colorless. */
   multicolor: number;
   /** Cards per type bucket (playable boards). */
   byType: Record<TypeBucket, number>;
@@ -194,6 +195,7 @@ export function computeDeckAnalytics(
           byColor[color as keyof typeof byColor] += entry.quantity;
         }
       }
+      if (new Set(colors).size > 1) multicolor += entry.quantity;
     }
 
     if (bucket === "Land") {

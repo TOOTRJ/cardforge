@@ -442,8 +442,9 @@ async function DeckBody({
 
 /** "Copy decklist" (TODO DK0.7): free for the owner on every plan and for
  *  every visitor who can open the deck. Both texts come from the rows this
- *  viewer read, named as their deck list names them (a private card they
- *  can't read keeps its entry name — lib/decks/export-text.ts). Nothing
+ *  viewer read: real cards by their real name and printing, a custom card
+ *  with no real card by the title the viewer's list shows, a private card
+ *  they can't read by its entry name (lib/decks/export-text.ts). Nothing
  *  to copy outside the maybeboard → no button. */
 async function DeckCopyDecklistSlot({
   deckId,
