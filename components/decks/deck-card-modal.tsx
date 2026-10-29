@@ -43,7 +43,7 @@ import {
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
 } from "@/types/deck";
-import type { DeckItem } from "@/lib/decks/queries";
+import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
@@ -60,7 +60,7 @@ import { typedForMatching } from "@/lib/validation/print-typography";
 // ---------------------------------------------------------------------------
 
 type DeckCardModalProps = {
-  item: DeckItem;
+  item: DeckItem<DeckPageCard>;
   ownerUsername: string | null;
   canManage: boolean;
   open: boolean;
@@ -559,12 +559,19 @@ function pickerThumbOf(card: MyCardLite): string | null {
   return toRenderCdnUrl(card.rendered_thumb_url) ?? card.rendered_thumb_url;
 }
 
+/** The picker as the deck page's "Add from my cards" dialog uses it too
+ *  (components/decks/add-from-my-cards-dialog.tsx). */
+export { LinkCardPicker as MyCardPicker };
+
 function LinkCardPicker({
   onPick,
   disabled,
+  emptyText = "You haven’t created any cards yet — use “Customize” instead.",
 }: {
-  onPick: (cardId: string) => void;
+  onPick: (cardId: string, title: string) => void;
   disabled: boolean;
+  /** What a maker with no cards is told. */
+  emptyText?: string;
 }) {
   const [cards, setCards] = useState<MyCardLite[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -605,9 +612,7 @@ function LinkCardPicker({
   }
   if (cards.length === 0) {
     return (
-      <p className="text-xs text-muted">
-        You haven&apos;t created any cards yet — use “Customize” instead.
-      </p>
+      <p className="text-xs text-muted">{emptyText}</p>
     );
   }
 
@@ -635,7 +640,7 @@ function LinkCardPicker({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => onPick(card.id)}
+                onClick={() => onPick(card.id, card.title)}
                 className="group flex w-full flex-col gap-1 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               >
                 {thumb ? (

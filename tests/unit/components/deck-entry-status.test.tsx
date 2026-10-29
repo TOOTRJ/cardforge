@@ -101,7 +101,8 @@ const ITEMS: DeckItem[] = [
   { entry: entry("Zqx Unknown Relic"), card: null, cardOwner: null },
 ];
 
-const rowOf = (name: string) => screen.getByRole("button", { name: new RegExp(`^Open ${name.replace(/[/]/g, "\\/")}`) });
+// A row's name is "<name>, <n> cop(y|ies), <status>" (TODO DK5.12).
+const rowOf = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name.replace(/[/]/g, "\\/")}, `) });
 
 describe("the deck list's status badges", () => {
   it("each row says its status; the owner sees what's gone", () => {
@@ -111,7 +112,7 @@ describe("the deck list's status badges", () => {
     expect(badge("Solemn Sentinel")).toBe("Edited");
     expect(badge("Broodling")).toBe("Remix");
     expect(badge("Archivist")).toBe("Original");
-    expect(badge("Cinderwing Matriarch")).toBe("Original");
+    expect(badge("Cinderwing Matriarch by @dev_artist")).toBe("Original");
     expect(badge("Tidecaller Apprentice")).toBe("No longer available");
     expect(badge("Ashen Prototype")).toBe("No longer available");
     expect(badge("Zqx Unknown Relic")).toBe("Not found");
@@ -119,7 +120,10 @@ describe("the deck list's status badges", () => {
 
   it("a visitor can't tell another creator's private card from the owner's: no label", () => {
     render(<DeckCardList items={ITEMS} ownerUsername="dev_pro" canManage={false} />);
-    expect(rowOf("Tidecaller Apprentice").querySelector("[data-status]")?.textContent).toBe("Original");
+    // A card the visitor can't read is a "Private card" (D11) — with no
+    // printing behind it, the entry's name is the card's own title: hidden.
+    expect(rowOf("Private card").querySelector("[data-status]")?.textContent).toBe("Original");
+    expect(screen.queryByText("Tidecaller Apprentice")).toBeNull();
     // A deleted card is gone for everyone.
     expect(rowOf("Ashen Prototype").querySelector("[data-status]")?.textContent).toBe("No longer available");
   });
@@ -133,8 +137,8 @@ describe("the deck list's status badges", () => {
 
   it("groups an edited card as what it now is (its effective type line)", () => {
     render(<DeckCardList items={ITEMS} ownerUsername="dev_pro" canManage />);
-    const instants = screen.getByText(/^Instants · /).closest("div");
-    expect(within(instants as HTMLElement).getByRole("button", { name: /^Open Solemn Sentinel/ })).toBeTruthy();
+    const instants = screen.getByRole("heading", { name: /^Instants\b/ }).closest("section");
+    expect(within(instants as HTMLElement).getByRole("button", { name: /^Solemn Sentinel, / })).toBeTruthy();
   });
 });
 

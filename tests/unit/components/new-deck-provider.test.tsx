@@ -69,7 +69,8 @@ vi.mock("next/dynamic", () => ({
 }));
 
 import { NewDeckButton, NewDeckProvider, OpenNewDeckOnMount, useNewDeck } from "@/components/decks/new-deck-provider";
-import { useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
+import { NEW_DECK_FIRST_ADD, useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
+import { DeckStartDoors } from "@/components/decks/deck-start-doors";
 
 beforeEach(() => {
   nav.pathname = "/decks";
@@ -338,5 +339,29 @@ describe("an empty new deck's page (?new=1)", () => {
     });
     expect(document.activeElement).toBe(document.body);
     expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it("the empty deck's doors drawn: its “Paste a decklist” door takes the focus, not the owner bar", async () => {
+    window.history.replaceState(null, "", "/deck/goblin-swarm?new=1");
+    function OwnerWithDoors() {
+      const add = useFocusAddOnNewDeck<HTMLButtonElement>(NEW_DECK_FIRST_ADD);
+      return (
+        <>
+          <button ref={add.target} type="button">
+            Import decklist
+          </button>
+          <DeckStartDoors commander={false} />
+        </>
+      );
+    }
+    await act(async () => {
+      render(
+        <StrictMode>
+          <OwnerWithDoors />
+        </StrictMode>,
+      );
+    });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Paste a decklist/ }));
+    expect(nav.replace).toHaveBeenCalledTimes(1);
   });
 });

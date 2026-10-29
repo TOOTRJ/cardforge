@@ -59,6 +59,7 @@ type EffectiveEntry = StatusEntry & {
   mana_cost?: string | null;
   mana_value?: number | null;
   color_identity?: readonly string[] | null;
+  rarity?: string | null;
 };
 
 type EffectiveCard = StatusCard & {
@@ -68,8 +69,13 @@ type EffectiveCard = StatusCard & {
   printed_types?: string | null;
   cost?: string | null;
   color_identity?: readonly (ColorIdentity | string)[] | null;
+  rarity?: string | null;
   frame_style?: unknown;
 };
+
+/** The card fields the effective fields read — a `Card` has them all, and
+ *  so does the deck page's narrow read (DeckPageCard, lib/decks/queries.ts). */
+export type EffectiveEntryCard = EffectiveCard;
 
 const WORD_LETTER: Readonly<Record<string, EntryColorLetter>> = {
   white: "W",
@@ -153,6 +159,33 @@ function isLand(card: EffectiveCard): boolean {
   return card.card_type === "land";
 }
 
+/** The header's first rule: the ENTRY's printing speaks for the entry — an
+ *  unchanged import of it, or a card with no import provenance linked onto
+ *  a printing. Otherwise the card's own values win. */
+export function printingIsAuthority(
+  entry: EffectiveEntry,
+  card: EffectiveCard,
+  status: DeckEntryStatus = deckEntryStatus(entry, card),
+): boolean {
+  return status === "imported" || (Boolean(entry.scryfall_id) && importEditStateOf(card) === "untracked");
+}
+
+/** The entry's rarity by the same rule (the deck list's "Group by rarity",
+ *  TODO DK5.3): the printing's while it speaks for the entry, else the
+ *  card's own — each falling back to the other when it names none. Kept
+ *  out of EffectiveEntryFields, whose shape the breakdown and the report
+ *  read whole. Lower case, as stored ("mythic", Scryfall's "special"). */
+export function effectiveEntryRarity(
+  entry: EffectiveEntry,
+  card: EffectiveCard | null | undefined,
+  status: DeckEntryStatus = deckEntryStatus(entry, card),
+): string | null {
+  const fromEntry = entry.rarity?.trim() ? entry.rarity.trim().toLowerCase() : null;
+  if (!card) return fromEntry;
+  const fromCard = card.rarity?.trim() ? card.rarity.trim().toLowerCase() : null;
+  return printingIsAuthority(entry, card, status) ? (fromEntry ?? fromCard) : (fromCard ?? fromEntry);
+}
+
 export function effectiveEntryFields(
   entry: EffectiveEntry,
   card: EffectiveCard | null | undefined,
@@ -184,9 +217,7 @@ export function effectiveEntryFields(
     multicolorOnly: (card.color_identity ?? []).includes("multicolor"),
   };
 
-  const entryAuthority =
-    status === "imported" || (Boolean(entry.scryfall_id) && importEditStateOf(card) === "untracked");
-  if (entryAuthority) {
+  if (printingIsAuthority(entry, card, status)) {
     const colors = fromEntry.colors.length > 0 ? fromEntry.colors : fromCard.colors;
     return {
       typeLine: fromEntry.typeLine ?? fromCard.typeLine,

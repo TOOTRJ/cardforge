@@ -189,7 +189,8 @@ describe("the surfaces that draw a picture column", () => {
     ["app/(app)/dashboard/decks/page.tsx", /deckCoverOf\(deck, coverColors\)/],
     ["app/(marketing)/deck/[slug]/opengraph-image.tsx", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
     ["app/api/decks/[id]/download/route.ts", /deckCoverOf\(deck, deckCoverColors\(items\)\)/],
-    ["components/decks/deck-card-list.tsx", /drawableMediaUrl\("deck-card-image", entry\.image_url\)/],
+    // A deck entry's printing at the size a surface draws it (TODO DK5.11).
+    ["lib/decks/entry-image.ts", /drawableMediaUrl\("deck-card-image", imageUrl \?\? null\)/],
     ["components/decks/deck-card-modal.tsx", /drawableMediaUrl\("deck-card-image", entry\.image_url\)/],
   ];
 

@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { cardCornersClass } from "@/lib/cards/card-orientation";
-import type { FeaturedCard } from "@/lib/decks/featured";
-import type { Card } from "@/types/card";
+import type { FeaturableCard, FeaturedCard } from "@/lib/decks/featured";
+import type { PreviewCardColumns } from "@/lib/cards/preview-data";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ export function DeckCardFan({
   cards,
   className,
 }: {
-  cards: readonly FeaturedCard<Card>[];
+  cards: readonly FeaturedCard<FeaturableCard & PreviewCardColumns>[];
   className?: string;
 }) {
   if (cards.length === 0) return null;

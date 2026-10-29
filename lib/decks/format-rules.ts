@@ -91,6 +91,18 @@ const FORMAT_SPECS: Record<DeckFormat, FormatSpec> = {
   casual: { size: {}, copyLimit: null, hasCommander: false, sideboardMax: null },
 };
 
+/** The size a format asks for — exact (Commander's 100) or a floor
+ *  (Standard's 60+); neither for Casual. The deck page's summary bar
+ *  (TODO DK5.9) counts against it, as validateDeck does. */
+export function deckSizeRule(format: DeckFormat): { exact?: number; min?: number } {
+  return FORMAT_SPECS[format].size;
+}
+
+/** True for the formats played with a commander zone. */
+export function formatHasCommander(format: DeckFormat): boolean {
+  return FORMAT_SPECS[format].hasCommander;
+}
+
 type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity">;
 
 export function validateDeck(

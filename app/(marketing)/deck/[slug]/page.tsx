@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { DeckOwnerTools, DeckToolButton } from "@/components/decks/deck-owner-tools";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { batchCardLimit } from "@/lib/ai/generation-limits";
-import { getDeckAiSeed } from "@/lib/ai/generation-jobs";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
 import { getActiveDeckJob, getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
 import { DeckLiveProgress } from "@/components/decks/deck-live-progress";
@@ -10,14 +8,15 @@ import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
-import { after } from "next/server";
-import { AlertTriangle, ArrowLeft, BookOpen, ImagePlus, Pencil } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
+import { cookies, headers } from "next/headers";
+import { after, userAgent } from "next/server";
+import { AlertTriangle, ArrowLeft, ImagePlus, Pencil } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
+import { CommanderSlot, DeckStartDoors } from "@/components/decks/deck-start-doors";
+import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
 import { publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
@@ -32,31 +31,62 @@ import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/de
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import {
   countDeckEntries,
-  countRemixableDeckCards,
   getDeckBySlugWithOwner,
   incrementDeckView,
-  listDeckCards,
+  listDeckPageCards,
   viewerLikesDeck,
+  type DeckItem,
+  type DeckPageCard,
 } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
-import { validateDeck } from "@/lib/decks/format-rules";
+import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
+import {
+  DECK_CARDS_HEADING_ID,
+  DECK_VIEW_COOKIE,
+  deckRowsOf,
+  deckStatusCountsOf,
+  defaultDeckViewPrefs,
+  ENTRY_BADGE_COUNT_LABELS,
+  parseDeckViewPrefs,
+  statusCountRows,
+} from "@/lib/decks/deck-view";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// The deck page (TODO DK5.1) — ONE URL, read-only for visitors, the owner's
+// tools inline. Top to bottom: the hero (cover, featured cards, title, the
+// actions anyone has), the owner's bar, the CARDS — first, in the viewer's
+// view with the sticky summary bar — then the breakdown (the owner's format
+// check with it) and the guide. The whole page is the WIDE frame (TODO WD5,
+// components/layout/wide-frame.ts: up to 1920 px, aligned with the header):
+// the cards spread across it; running text keeps its own measure.
+//
+// Reads: the deck and the viewer first (everything hangs on them), then ONE
+// parallel wave — the rows (listDeckPageCards: only the columns the page
+// draws, TODO DK5.11), the viewer's like, their entitlements, the view
+// cookie and the request headers — while the guide and the owner's AI job
+// state start alongside and stream in under their own Suspense boundaries.
+// The page stays dynamic: the rows are read as the VIEWER may see them (an
+// owner reads their private cards, a visitor gets a "Private card" tile),
+// and the view is the viewer's cookie.
+// ---------------------------------------------------------------------------
 
 type Params = { slug: string };
 
 // The deck's rows as THIS viewer reads them (RLS: a private card linked
-// into the deck is null for a visitor), read once per request — the
-// header's "Copy decklist" and the body's list share the one read.
-const listDeckCardsOnce = cache(listDeckCards);
+// into the deck is null for a visitor), read once per request.
+const listDeckPageCardsOnce = cache(listDeckPageCards);
 
 function titleFromSlug(slug: string): string {
   return slug
@@ -118,6 +148,15 @@ export async function generateMetadata({
   };
 }
 
+/** The owner's own cards in the deck that are private (D11), once each. */
+function ownPrivateCards(items: readonly DeckItem<DeckPageCard>[], ownerId: string): Array<{ id: string; title: string }> {
+  const seen = new Map<string, string>();
+  for (const { card } of items) {
+    if (card && card.owner_id === ownerId && card.visibility === "private") seen.set(card.id, card.title);
+  }
+  return [...seen].map(([id, title]) => ({ id, title }));
+}
+
 export default async function DeckDetailPage({
   params,
   searchParams,
@@ -126,9 +165,6 @@ export default async function DeckDetailPage({
   searchParams: Promise<{ import?: string }>;
 }) {
   const { slug } = await params;
-  // Deck + auth are needed to render the header / owner chip — keep them on
-  // the page shell. The entry list + analytics live behind a Suspense
-  // boundary so the cover + title paint immediately.
   const [deck, user] = await Promise.all([
     isSupabaseConfigured() ? getDeckBySlugWithOwner(slug) : null,
     getCurrentUser(),
@@ -137,19 +173,86 @@ export default async function DeckDetailPage({
 
   const isOwner = Boolean(user && user.id === deck.owner_id);
   const isPublic = deck.visibility === "public";
-  // The hero needs the rows too (the default cover's colours, the fan); the
-  // read is cache()d, so the body below streams from the same one.
-  const [items, likedByViewer] = await Promise.all([
-    listDeckCardsOnce(deck.id),
+
+  // Started now, awaited where they're drawn (their own Suspense
+  // boundaries): the guide, and the owner's AI job state (deck AI is
+  // paused, but a job already running finishes — D6).
+  const guide = getDeckGuide(deck.id).catch(() => null);
+  const jobs = isOwner
+    ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
+    : null;
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity] = await Promise.all([
+    listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
+    getEntitlements(),
+    cookies(),
+    headers(),
+    searchParams,
+    // The owner's saved-card slots: the import's forecast (D2).
+    isOwner ? getCardCapacity() : null,
   ]);
+
+  // The rows as this viewer's list shows them: a private card's title never
+  // reaches a visitor — not in the list, its pop-up, the copied text or the
+  // fan.
+  const shownItems = publicDeckItems(items, isOwner);
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck);
-  const { total: cardCount, linked: madeCount } = computeDeckAnalytics(items);
+  const featured = featuredCardsOf(shownItems, deck);
+  const analytics = computeDeckAnalytics(items);
+  // The breakdown's "Card status": THE status count the list's chips and the
+  // summary bar say (the viewer's rows, each card under the badge it wears).
+  const statusCounts = statusCountRows(deckStatusCountsOf(deckRowsOf(shownItems, isOwner))).map(({ badge, count }) => ({
+    key: badge,
+    label: ENTRY_BADGE_COUNT_LABELS[badge],
+    count,
+  }));
+  const { total: cardCount, linked: madeCount } = analytics;
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
+  const hasCards = items.length > 0;
+  const usesCommander = formatHasCommander(deck.format);
+  const hasCommander = items.some((item) => item.entry.board === "commander");
+
+  // The format check is the owner's to-do list (TODO DK0.9): a visitor
+  // never sees it, and an empty deck has nothing to check (validateDeck).
+  const warnings = isOwner
+    ? validateDeck(
+        deck.format,
+        items.map((i) => i.entry),
+      ).map((warning) => publicDeckWarning(warning, isOwner))
+    : [];
+  // D11 (TODO DK5.17): the owner's private cards in a deck others can open.
+  const privateCards =
+    isOwner && deck.visibility !== "private" ? ownPrivateCards(items, deck.owner_id) : [];
+
+  // The viewer's view: their cookie, else the List on a phone, Stacks
+  // elsewhere — decided on the server, so the first paint is right.
+  const phone = userAgent({ headers: requestHeaders }).device.type === "mobile";
+  const viewPrefs = parseDeckViewPrefs(cookieStore.get(DECK_VIEW_COOKIE)?.value, defaultDeckViewPrefs(phone));
+
+  // "Copy decklist" (TODO DK0.7): free for the owner on every plan and for
+  // every visitor who can open the deck. Both texts come from the rows this
+  // viewer read (lib/decks/export-text.ts). Nothing to copy outside the
+  // maybeboard → no button.
+  const copyEntries = shownItems.some((item) => item.entry.board !== "maybe") ? exportEntriesOf(shownItems) : null;
+  // The export menu (owner-only, its file builds Pro).
+  const exportMenu =
+    isOwner && hasCards ? (
+      <DeckExportMenu
+        deckId={deck.id}
+        deckSlug={deck.slug}
+        allowBatchExport={entitlements.allowBatchExport}
+        customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
+        realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
+        // Every deck has a cover since DK6.2 (an upload or its default).
+        hasCover
+        doubleFacedCount={
+          new Set(items.filter((i) => i.card && i.entry.board !== "maybe" && rowHasBakedBack(i.card)).map((i) => i.card!.id)).size
+        }
+      />
+    ) : null;
 
   // Best-effort lifetime view tally, off the request path; owner views don't
   // count (matches increment_card_view's posture).
@@ -158,7 +261,7 @@ export default async function DeckDetailPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className={cn(WIDE_FRAME_CLASS, "py-6 sm:py-8")}>
       {/* Structured data only for indexable (public) decks — unlisted pages
           are noindex, so schema there is dead weight. */}
       {isPublic ? (
@@ -185,7 +288,7 @@ export default async function DeckDetailPage({
       ) : null}
       <Link
         href="/decks"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to decks
@@ -194,7 +297,7 @@ export default async function DeckDetailPage({
 
       {/* The hero (TODO DK6.5): the cover — the same 16:9 picture every
           deck tile draws (lib/decks/cover.ts) — with the featured cards and
-          the title block; the actions on its bottom strip. */}
+          the title block; the actions anyone has on its bottom strip. */}
       <DeckHero
         cover={cover}
         title={deck.title}
@@ -280,98 +383,140 @@ export default async function DeckDetailPage({
               itemId={deck.id}
             />
             <DeckFeedbackButton deckId={deck.id} signedIn={Boolean(user)} className="h-9" />
-            {/* Free for every viewer (TODO DK0.7); streams in with the
-                card list, so the header still paints at once. */}
-            <Suspense fallback={null}>
-              <DeckCopyDecklistSlot deckId={deck.id} deckTitle={deck.title} isOwner={isOwner} />
-            </Suspense>
-            {isOwner && user ? (
-              <DeckOwnerTools
-                deck={deck}
-                userId={user.id}
-                defaultCoverSrc={cover.kind === "default" ? cover.src : null}
-                aiConfigured={isDesignAiConfigured()}
-                maxCards={await batchCardLimit()}
-                capacity={await getCardCapacity()}
-                remixableCount={await countRemixableDeckCards(deck.id)}
-                aiSeed={await getDeckAiSeed(deck.id)}
-                openImport={(await searchParams).import === "1"}
+            {/* Free for every viewer (TODO DK0.7). */}
+            {copyEntries ? (
+              <DeckCopyDecklist
+                plainText={deckToText({ title: deck.title }, copyEntries, { style: "plain", useProxyNames: true })}
+                arenaText={deckToText({ title: deck.title }, copyEntries, { style: "arena", useProxyNames: true })}
               />
             ) : null}
+            {exportMenu}
           </div>
         }
       />
 
-      <Suspense fallback={<DeckBodySkeleton />}>
-        <DeckBody
-          deckId={deck.id}
-          deckSlug={deck.slug}
-          format={deck.format}
-          ownerUsername={deck.owner?.username ?? null}
-          isOwner={isOwner}
-        />
-      </Suspense>
+      {isOwner && user ? (
+        <div className="mt-4 flex flex-col gap-4">
+          {/* The owner's bar: import, add, details, delete — and the AI
+              tools, greyed while deck AI is paused (TODO DK1). */}
+          <div className="rounded-frame border border-border/60 bg-surface/60 px-3 py-3 sm:px-4">
+            <DeckOwnerTools
+              deck={deck}
+              userId={user.id}
+              defaultCoverSrc={cover.kind === "default" ? cover.src : null}
+              capacity={cardCapacity}
+              openImport={search.import === "1"}
+            />
+          </div>
+          {jobs ? (
+            <Suspense fallback={null}>
+              <DeckJobsSlot deckId={deck.id} jobs={jobs} />
+            </Suspense>
+          ) : null}
+          {privateCards.length > 0 ? (
+            <DeckPrivateCardsNotice cards={privateCards} deckVisibility={deck.visibility === "public" ? "public" : "unlisted"} />
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* The cards, first (TODO DK5.1). */}
+      <section aria-labelledby={DECK_CARDS_HEADING_ID} className="mt-6">
+        {/* tabIndex -1: where a dialog hands the focus back when the control
+            that opened it is gone (DeckOwnerTools). */}
+        <h2
+          id={DECK_CARDS_HEADING_ID}
+          tabIndex={-1}
+          className="mb-3 flex items-baseline gap-2 font-display text-xl font-semibold tracking-tight text-foreground focus:outline-none"
+        >
+          Cards
+          <span className="font-sans text-sm font-normal tabular-nums text-subtle">
+            <span className="sr-only">, </span>
+            {cardCount} in the deck
+          </span>
+        </h2>
+        {!hasCards ? (
+          isOwner ? (
+            <DeckStartDoors commander={usesCommander} />
+          ) : (
+            <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
+          )
+        ) : (
+          <div className="flex flex-col gap-4">
+            {isOwner && usesCommander && !hasCommander ? <CommanderSlot compact /> : null}
+            <DeckCardList
+              items={shownItems}
+              ownerUsername={deck.owner?.username ?? null}
+              canManage={isOwner}
+              initialPrefs={viewPrefs}
+              summary={{
+                format: deck.format,
+                analytics,
+                formatIssues: isOwner ? warnings.length : null,
+              }}
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Stats after the cards: the owner's format check, the breakdown —
+          a reading width, not the page's. */}
+      {hasCards ? (
+        <section aria-labelledby="deck-breakdown-title" className="mt-14 flex max-w-7xl flex-col gap-6">
+          <div className="flex flex-col gap-1 border-b border-gold/20 pb-4">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">Analytics</span>
+            <h2 id="deck-breakdown-title" className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Deck breakdown
+            </h2>
+            <p className="max-w-2xl text-sm leading-6 text-muted">
+              Mana curve, colors, and every card by status: imported, edited, remixed or original.
+            </p>
+          </div>
+          {warnings.length > 0 ? (
+            <SurfaceCard id="format-check" className="flex scroll-mt-24 flex-col gap-2 border-gold/40 bg-gold/5 p-5">
+              <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                Format check — {DECK_FORMAT_LABELS[deck.format]}
+              </h3>
+              <ul className="flex flex-col gap-1 text-sm leading-6 text-muted">
+                {warnings.map((warning, index) => (
+                  <li key={`${warning.code}-${index}`}>{warning.message}</li>
+                ))}
+              </ul>
+            </SurfaceCard>
+          ) : null}
+          <DeckAnalyticsPanel analytics={analytics} statusCounts={statusCounts} />
+        </section>
+      ) : null}
+
+      <div className="max-w-7xl">
+        <Suspense fallback={null}>
+          <DeckGuideSlot
+            deckId={deck.id}
+            guide={guide}
+            isOwner={isOwner}
+            viewerIsPro={entitlements.effectiveTier === "pro"}
+            hasCards={hasCards}
+          />
+        </Suspense>
+      </div>
       <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </div>
   );
 }
 
-async function DeckBody({
+/** The owner's AI job state: a job still running (deck AI is paused, but
+ *  one already started finishes — D6), or the last one's failures. */
+async function DeckJobsSlot({
   deckId,
-  deckSlug,
-  format,
-  ownerUsername,
-  isOwner,
+  jobs,
 }: {
   deckId: string;
-  deckSlug: string;
-  format: DeckFormat;
-  ownerUsername: string | null;
-  isOwner: boolean;
+  jobs: Promise<readonly [Awaited<ReturnType<typeof getLatestFailedDeckJob>>, Awaited<ReturnType<typeof getActiveDeckJob>>]>;
 }) {
-  const [items, failedJob, activeJob, guide, entitlements] = await Promise.all([
-    listDeckCardsOnce(deckId),
-    isOwner ? getLatestFailedDeckJob(deckId) : Promise.resolve(null),
-    isOwner ? getActiveDeckJob(deckId) : Promise.resolve(null),
-    getDeckGuide(deckId),
-    getEntitlements(),
-  ]);
-  const viewerIsPro = entitlements.effectiveTier === "pro";
-  const analytics = computeDeckAnalytics(items);
-  // The format check is the owner's to-do list (TODO DK0.9): a visitor
-  // never sees it, and an empty deck has nothing to check (validateDeck).
-  // A card the strong-language rule kept private shows a neutral name to
-  // anyone but the owner (lib/decks/private-card-name.ts) — in the list, its
-  // pop-up and a warning that quotes it. Judged on the real entries.
-  const warnings = isOwner
-    ? validateDeck(
-        format,
-        items.map((i) => i.entry),
-      ).map((warning) => publicDeckWarning(warning, isOwner))
-    : [];
-  const shownItems = publicDeckItems(items, isOwner);
-
-  // The export menu (owner-only, its file builds Pro) gets the viewer's
-  // batch-export entitlement. Copying the list is the header's, for all.
-  const exportMenu =
-    isOwner && items.length > 0 ? (
-      <DeckExportMenu
-        deckId={deckId}
-        deckSlug={deckSlug}
-        allowBatchExport={entitlements.allowBatchExport}
-        customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
-        realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
-        // Every deck has a cover since DK6.2 (an upload or its default).
-        hasCover
-        doubleFacedCount={
-          new Set(items.filter((i) => i.card && i.entry.board !== "maybe" && rowHasBakedBack(i.card)).map((i) => i.card!.id)).size
-        }
-      />
-    ) : null;
-
+  const [failedJob, activeJob] = await jobs;
   return (
     <>
-      {isOwner ? <DeckLiveProgress deckId={deckId} pendingJob={activeJob} /> : null}
+      <DeckLiveProgress deckId={deckId} pendingJob={activeJob} />
       {failedJob && !activeJob ? (
         <DeckRegenerateBar
           jobId={failedJob.jobId}
@@ -379,144 +524,32 @@ async function DeckBody({
           failedLabels={failedJob.failedLabels}
         />
       ) : null}
-      {warnings.length > 0 ? (
-        <SurfaceCard className="mt-8 flex flex-col gap-2 border-gold/40 bg-gold/5 p-5">
-          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold">
-            <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-            Format check — {DECK_FORMAT_LABELS[format]}
-          </span>
-          <ul className="flex flex-col gap-1 text-sm leading-6 text-muted">
-            {warnings.map((warning, index) => (
-              <li key={`${warning.code}-${index}`}>{warning.message}</li>
-            ))}
-          </ul>
-        </SurfaceCard>
-      ) : null}
-
-      <section className="mt-10">
-        <PageHeader
-          eyebrow="Analytics"
-          title="Deck breakdown"
-          description="Mana curve, colors, and every card by status: imported, edited, remixed or original."
-        />
-        <div className="mt-6">
-          <DeckAnalyticsPanel analytics={analytics} />
-        </div>
-      </section>
-
-      <DeckGuideSection
-        deckId={deckId}
-        guide={guide}
-        isOwner={isOwner}
-        viewerIsPro={viewerIsPro}
-        aiConfigured={isDesignAiConfigured()}
-        hasCards={items.length > 0}
-      />
-
-      <section className="mt-12">
-        <PageHeader
-          eyebrow="Cards"
-          title={`${analytics.total} card${analytics.total === 1 ? "" : "s"}`}
-          description="Click any card for details — customize the real cards, flip between versions, and track what's left."
-          actions={exportMenu}
-        />
-
-        <div className="mt-6">
-          {items.length === 0 ? (
-            <EmptyState
-              icon={BookOpen}
-              title="No cards yet"
-              description={
-                isOwner
-                  ? "Import a decklist or link your own creations."
-                  : "This deck is empty for now."
-              }
-              action={
-                isOwner ? (
-                  <span className="text-sm text-muted">Use Import decklist above to fill it.</span>
-                ) : null
-              }
-            />
-          ) : (
-            <DeckCardList
-              items={shownItems}
-              ownerUsername={ownerUsername}
-              canManage={isOwner}
-            />
-          )}
-        </div>
-      </section>
     </>
   );
 }
 
-/** "Copy decklist" (TODO DK0.7): free for the owner on every plan and for
- *  every visitor who can open the deck. Both texts come from the rows this
- *  viewer read: real cards by their real name and printing, a custom card
- *  with no real card by the title the viewer's list shows, a private card
- *  they can't read by its entry name (lib/decks/export-text.ts). Nothing
- *  to copy outside the maybeboard → no button. */
-async function DeckCopyDecklistSlot({
+async function DeckGuideSlot({
   deckId,
-  deckTitle,
+  guide,
   isOwner,
+  viewerIsPro,
+  hasCards,
 }: {
   deckId: string;
-  deckTitle: string;
+  guide: ReturnType<typeof getDeckGuide>;
   isOwner: boolean;
+  viewerIsPro: boolean;
+  hasCards: boolean;
 }) {
-  // The rows as this viewer's list shows them: a private card's name the
-  // strong-language rule hides stays hidden in the copied text too.
-  const items = publicDeckItems(await listDeckCardsOnce(deckId), isOwner);
-  if (!items.some((item) => item.entry.board !== "maybe")) return null;
-  const entries = exportEntriesOf(items);
   return (
-    <DeckCopyDecklist
-      plainText={deckToText({ title: deckTitle }, entries, { style: "plain", useProxyNames: true })}
-      arenaText={deckToText({ title: deckTitle }, entries, { style: "arena", useProxyNames: true })}
+    <DeckGuideSection
+      deckId={deckId}
+      guide={await guide}
+      isOwner={isOwner}
+      viewerIsPro={viewerIsPro}
+      aiConfigured={isDesignAiConfigured()}
+      hasCards={hasCards}
     />
-  );
-}
-
-function DeckBodySkeleton() {
-  return (
-    <>
-      <section className="mt-10">
-        <header className="mb-6">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Deck breakdown
-          </h2>
-        </header>
-        <SurfaceCard className="p-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-6 w-24" />
-              </div>
-            ))}
-          </div>
-        </SurfaceCard>
-      </section>
-
-      <section className="mt-12">
-        <header className="mb-6">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Cards
-          </h2>
-        </header>
-        <div className="grid gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SurfaceCard key={i} className="flex flex-col gap-2 p-4">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-5/6" />
-              <Skeleton className="h-3 w-2/3" />
-            </SurfaceCard>
-          ))}
-        </div>
-      </section>
-    </>
   );
 }
 

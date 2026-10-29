@@ -17,11 +17,13 @@ import {
   type Card,
 } from "@/types/card";
 import type {
+  Card as CardRow,
   Deck as DeckRow,
   DeckCard as DeckCardRow,
   Profile,
 } from "@/types/supabase";
 import { narrowCard } from "@/lib/cards/narrow";
+import { IMPORT_FINGERPRINT_FIELDS } from "@/lib/cards/import-fingerprint";
 import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
@@ -359,11 +361,11 @@ export const getDeckBySlugWithOwner = cache(async (
 // Entries inside a deck
 // ---------------------------------------------------------------------------
 
-export type DeckItem = {
+export type DeckItem<C = Card> = {
   entry: DeckCardEntry;
   /** The linked PipGlyph card, when the entry has one and it's still
    *  readable by the viewer. */
-  card: Card | null;
+  card: C | null;
   /** The card's maker when it is NOT the deck's owner (owner decision D3,
    *  TODO DK2.9: another creator's public card, credited "by @handle" and
    *  linked at THEIR card page). Null for the owner's own cards and for an
@@ -381,8 +383,86 @@ export type DeckItem = {
  *  shown only while it is PUBLIC (owner decision D3). RLS would hand an
  *  UNLISTED one to anyone — the card is link-only, never a deck's; it reads
  *  as null here, "No longer available" to the deck's owner, exactly as a
- *  card RLS hides. The deck owner's own cards are as RLS returns them. */
+ *  card RLS hides. The deck owner's own cards are as RLS returns them.
+ *  Every column of each card (`*`); the deck page reads listDeckPageCards. */
 export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
+  return readDeckItems(deckId, async (supabase, ids) => {
+    const { data } = await supabase.from("cards").select("*").in("id", ids);
+    return (data ?? []).map(narrowCard);
+  });
+}
+
+/** The card columns the deck PAGE reads (TODO DK5.11) instead of `cards.*`:
+ *  what its list, pop-up, breakdown, fan and cover draw — the card's
+ *  identity, its render pointers, its provenance (an entry's status,
+ *  lib/decks/entry-status.ts) and every field the import fingerprint covers
+ *  (whether an import is still "Imported" hashes them all, and the same
+ *  fields are a tile's live-preview fallback, cardToPreviewData). Left out:
+ *  the search vector, metadata, oracle text, counters and stamps. */
+export const DECK_PAGE_CARD_COLUMNS = [
+  "id",
+  "owner_id",
+  "slug",
+  "visibility",
+  "parent_card_id",
+  "source_scryfall_id",
+  "rendered_image_url",
+  "rendered_thumb_url",
+  "rendered_back_image_url",
+  "rendered_back_thumb_url",
+  ...IMPORT_FINGERPRINT_FIELDS,
+  "import_scryfall_id",
+  "import_fingerprint",
+] as const;
+
+/** The page's columns a database may not have yet, by migration (0137,
+ *  0141, 0144): PostgREST answers a select naming one with 42703, and the
+ *  read runs again without that migration's columns — the row then reads as
+ *  such a database's `*` does. Remove each once its migration is on
+ *  production and on dev. */
+const DECK_PAGE_LATE_COLUMNS: readonly (readonly string[])[] = [
+  ["printed_types"],
+  ["nickname"],
+  ["import_scryfall_id", "import_fingerprint"],
+];
+
+type PageColumn = (typeof DECK_PAGE_CARD_COLUMNS)[number];
+type ProvenanceColumn = "import_scryfall_id" | "import_fingerprint";
+
+/** A card as the deck page reads it (DECK_PAGE_CARD_COLUMNS). A `Card` is
+ *  one; the provenance columns are absent on a database 0144 hasn't reached. */
+export type DeckPageCard = Omit<Pick<Card, PageColumn>, ProvenanceColumn> & Partial<Pick<Card, ProvenanceColumn>>;
+
+/** The deck page's read (TODO DK5.11): listDeckCards' entries and rules —
+ *  the D3 filter, the makers' credit — with only DECK_PAGE_CARD_COLUMNS of
+ *  each card. */
+export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPageCard>[]> {
+  return readDeckItems(deckId, async (supabase, ids) => {
+    let columns: string[] = [...DECK_PAGE_CARD_COLUMNS];
+    for (;;) {
+      const { data, error } = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
+      const missing =
+        error?.code === "42703"
+          ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
+          : undefined;
+      if (missing) {
+        columns = columns.filter((column) => !missing.includes(column));
+        continue;
+      }
+      if (error) return [];
+      return ((data ?? []) as unknown as CardRow[]).map((row) => narrowCard(row) as DeckPageCard);
+    }
+  });
+}
+
+type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: string[]) => Promise<C[]>;
+
+/** The one body of both reads: the entries in list order, each card the
+ *  deck may show (canLinkIntoDeck), each other creator's handle. */
+async function readDeckItems<C extends { id: string; owner_id: string; visibility: string }>(
+  deckId: string,
+  readCards: CardReader<C>,
+): Promise<DeckItem<C>[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
@@ -411,17 +491,12 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
           .filter((id): id is string => Boolean(id)),
       ),
     );
-    const cardById = new Map<string, Card>();
+    const cardById = new Map<string, C>();
     for (const ids of chunkIds(cardIds)) {
-      const { data: cards } = await supabase
-        .from("cards")
-        .select("*")
-        .in("id", ids);
-      for (const row of cards ?? []) {
-        const card = narrowCard(row);
+      for (const card of await readCards(supabase, ids)) {
         // The write rule, read side (canLinkIntoDeck: own, or public).
         if (!canLinkIntoDeck(card, deckOwnerId)) continue;
-        cardById.set(row.id, card);
+        cardById.set(card.id, card);
       }
     }
 

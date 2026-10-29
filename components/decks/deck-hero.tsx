@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { BRAND } from "@/lib/brand/constants";
 import type { DeckCover } from "@/lib/decks/cover";
-import type { FeaturedCard } from "@/lib/decks/featured";
-import type { Card } from "@/types/card";
+import type { FeaturableCard, FeaturedCard } from "@/lib/decks/featured";
+import type { PreviewCardColumns } from "@/lib/cards/preview-data";
 import { DeckCardFan } from "@/components/decks/deck-card-fan";
 import { cn } from "@/lib/utils";
 
@@ -60,8 +60,8 @@ export function DeckHero({
   description?: ReactNode;
   /** The owner's "Change cover" — top right of the picture. */
   coverAction?: ReactNode;
-  featured: readonly FeaturedCard<Card>[];
-  /** Like, share, copy, the owner's tools — the strip under the picture. */
+  featured: readonly FeaturedCard<FeaturableCard & PreviewCardColumns>[];
+  /** Like, share, copy, export — the strip under the picture. */
   actions?: ReactNode;
 }) {
   return (
@@ -76,7 +76,8 @@ export function DeckHero({
           alt=""
           fill
           priority
-          sizes="(min-width: 1280px) 1248px, 100vw"
+          // The deck page is the wide frame (TODO WD5): up to 1920 px less its padding.
+          sizes="(min-width: 1920px) 1856px, 100vw"
           className="-z-10 object-cover"
           style={cover.objectPosition ? { objectPosition: cover.objectPosition } : undefined}
         />
@@ -92,10 +93,12 @@ export function DeckHero({
         {coverAction ? <div className="absolute right-3 top-3 z-20">{coverAction}</div> : null}
 
         {/* Under md the fan stands on top: with the owner's cover button in
-            the corner it starts below that button, never under it. */}
+            the corner it starts below that button, never under it. No
+            taller than the fan needs (TODO DK5.1: the cards come first, so
+            the hero leaves them room on the first screen). */}
         <div
           className={cn(
-            "grid gap-5 px-5 pb-6 sm:px-8 sm:pb-8 md:min-h-[22rem] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:items-center md:gap-8 md:pt-8 lg:min-h-[26rem] lg:px-10",
+            "grid gap-5 px-5 pb-6 sm:px-8 sm:pb-8 md:min-h-[18rem] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:items-center md:gap-8 md:pt-8 lg:min-h-[20rem] lg:px-10",
             coverAction ? "pt-14" : "pt-6 sm:pt-8",
           )}
         >
