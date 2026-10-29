@@ -112,7 +112,7 @@ beforeEach(() => {
 describe("createDeckAction", () => {
   it("refuses a private deck at the cap before any insert, with the upgrade reason", async () => {
     s.cappedCount = 1;
-    const result = await createDeckAction({ title: "Second", visibility: "private" }, { surface: "wizard" });
+    const result = await createDeckAction({ title: "Second", visibility: "private" }, { surface: "dialog" });
     expect(result).toEqual({
       ok: false,
       code: "UPGRADE_REQUIRED",
@@ -123,7 +123,7 @@ describe("createDeckAction", () => {
     expect(s.inserts).toEqual([]);
     expect(s.countedVisibilities).toEqual([["private", "unlisted"]]);
     expect(s.events).toEqual([
-      { event: "deck_cap_hit", userId: USER, props: { kind: "create", visibility: "private", tier: "free", surface: "wizard" } },
+      { event: "deck_cap_hit", userId: USER, props: { kind: "create", visibility: "private", tier: "free", surface: "dialog" } },
     ]);
   });
 

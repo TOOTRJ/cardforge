@@ -15,8 +15,8 @@ import { chipOff } from "../helpers/chip";
 //   D4 — guides that exist stay readable to the same viewers; no new guide
 //        and no refresh; the non-Pro teaser only on a deck that HAS one;
 //   D6 — the Regenerate bar re-runs failed steps for NEW credits: greyed.
-// The wizard starts on "Import a decklist", greys "Generate with AI", and
-// no longer fetches the last AI ideas on mount.
+// The New deck dialog (TODO DK4.1, which replaced the wizard) has no AI path
+// at all: one quiet line says AI deck building is coming back.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({ push: vi.fn(), createDeck: vi.fn() }));
@@ -38,7 +38,10 @@ vi.mock("@/components/decks/deck-creator-form", () => ({
 }));
 vi.mock("@/components/decks/import-decklist-dialog", () => ({
   ImportDecklistDialog: () => <button type="button">Import decklist</button>,
+  ImportSlotForecast: () => null,
 }));
+vi.mock("@/lib/decks/import", () => ({ resolveDecklistAction: vi.fn(), commitDeckImportAction: vi.fn() }));
+vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => true }));
 vi.mock("@/components/decks/delete-deck-dialog", () => ({
   DeleteDeckDialog: () => <button type="button">Delete deck</button>,
 }));
@@ -47,7 +50,7 @@ import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/dec
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
 import { DeckOwnerTools } from "@/components/decks/deck-owner-tools";
-import { DeckWizard } from "@/components/decks/deck-wizard";
+import { NewDeckDialog } from "@/components/decks/new-deck-dialog";
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import type { DeckGuide } from "@/lib/decks/guides";
 import type { Deck } from "@/types/deck";
@@ -188,42 +191,39 @@ describe("the Regenerate bar (D6: a regenerate reserves new credits)", () => {
   });
 });
 
-describe("the new-deck wizard", () => {
-  const toBuildStep = () => {
-    fireEvent.change(screen.getByRole("textbox", { name: /deck name/i }), { target: { value: "Gorgon Gaze" } });
-    fireEvent.click(screen.getByRole("button", { name: /^next$/i }));
-  };
+describe("the New deck dialog", () => {
+  const signedIn = () =>
+    fetchSpy.mockImplementation(
+      async () => new Response(JSON.stringify({ user: { id: "user-1" }, cardCapacity: null }), { status: 200 }),
+    );
 
-  it("starts on Import a decklist, greys Generate with AI, and fetches no AI ideas", () => {
-    render(<DeckWizard userId="user-1" />);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    toBuildStep();
-    expect(screen.getByRole("radio", { name: /import a decklist/i }).getAttribute("aria-checked")).toBe("true");
-    expectComingSoon("Generate with AI — coming soon", "radio");
-    expect(screen.getByRole("radio", { name: "Generate with AI — coming soon" }).getAttribute("aria-checked")).toBe("false");
-    // No AI builder anywhere in the wizard.
-    expect(screen.queryByText(/ai deck builder/i)).toBeNull();
-    expect(screen.queryByRole("button", { name: /theme ideas/i })).toBeNull();
-    // Start empty still picks.
-    fireEvent.click(screen.getByRole("radio", { name: /start empty/i }));
-    expect(screen.getByRole("radio", { name: /start empty/i }).getAttribute("aria-checked")).toBe("true");
+  it("has no AI path — one quiet line says it's coming back, and no AI control or request", async () => {
+    signedIn();
+    render(<NewDeckDialog open request={{ key: 1 }} onClosed={vi.fn()} />);
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/me", expect.anything()));
+    const dialog = screen.getByRole("dialog", { name: "New deck" });
+    expect(dialog.textContent).toContain(DECK_AI_PAUSED_MESSAGE);
+    expect(screen.getAllByText(DECK_AI_PAUSED_MESSAGE)).toHaveLength(1);
+    // A line, not a control: nothing greyed, nothing to press.
+    expect(screen.queryByRole("button", { name: /\bai\b/i })).toBeNull();
+    expect(screen.queryByRole("radio", { name: /\bai\b/i })).toBeNull();
+    expect(screen.queryByText(/coming soon$/i)).toBeNull();
+    // The only request is the dialog's own: no AI ideas, no estimate.
+    expect(fetchSpy.mock.calls.map((call) => String((call as unknown[])[0]))).toEqual(["/api/me"]);
   });
 
-  it("creates the deck with no AI fields and opens the import (the default)", async () => {
-    render(<DeckWizard userId="user-1" />);
-    toBuildStep();
-    fireEvent.click(screen.getByRole("button", { name: /^next$/i })); // Cover
-    fireEvent.click(screen.getByRole("button", { name: /^next$/i })); // Review
+  it("creates the deck with no AI fields and opens it, its add control focused (?new=1)", async () => {
+    signedIn();
+    render(<NewDeckDialog open request={{ key: 1 }} onClosed={vi.fn()} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Deck name" }), { target: { value: "Gorgon Gaze" } });
     fireEvent.click(screen.getByRole("button", { name: /^create deck$/i }));
-    await vi.waitFor(() => expect(s.push).toHaveBeenCalledWith("/deck/gorgon-gaze?import=1"));
+    await vi.waitFor(() => expect(s.push).toHaveBeenCalledWith("/deck/gorgon-gaze?new=1"));
     const [payload] = s.createDeck.mock.calls[0] as [Record<string, unknown>];
-    expect(payload).toMatchObject({ title: "Gorgon Gaze", format: "commander" });
-    expect(payload).not.toHaveProperty("deck_type");
-    expect(payload).not.toHaveProperty("bracket");
+    expect(payload).toEqual({ title: "Gorgon Gaze", format: "commander", visibility: "public" });
   });
 
   it("preselects the format a format hub links with", () => {
-    render(<DeckWizard userId="user-1" initialFormat="standard" />);
-    expect((screen.getByRole("combobox", { name: /format/i }) as HTMLSelectElement).value).toBe("standard");
+    render(<NewDeckDialog open request={{ key: 1, format: "standard" }} onClosed={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "Standard" }).getAttribute("aria-checked")).toBe("true");
   });
 });

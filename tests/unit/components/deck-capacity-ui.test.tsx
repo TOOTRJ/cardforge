@@ -9,9 +9,6 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 //   * My Decks' meter reads "Private decks: N of M"; at the cap it offers
 //     the three ways out — make a deck public, delete one, upgrade (the
 //     modal's "deck_capacity" reason) — and it is null on an unlimited plan;
-//   * the create flow warns before a private / unlisted deck the plan can't
-//     hold, "Make it public" switches the choice, and a server refusal
-//     opens the plans;
 //   * the deck details form warns only for a deck that JOINS the count;
 //   * the import's review says the list uses no slots, how many are left,
 //     links to more when the list has more different cards than slots, and
@@ -51,7 +48,6 @@ vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () =
 vi.mock("@/lib/media/upload-cover", () => ({ uploadCoverImage: vi.fn() }));
 
 import { DeckCapacityMeter } from "@/components/decks/deck-capacity";
-import { DeckWizard } from "@/components/decks/deck-wizard";
 import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { ImportDecklistDialog } from "@/components/decks/import-decklist-dialog";
 import { UpgradeModal } from "@/components/billing/upgrade-modal";
@@ -146,68 +142,6 @@ describe("DeckCapacityMeter (My Decks)", () => {
       </>,
     );
     expect(container.innerHTML).toBe("");
-  });
-});
-
-describe("the create flow (DeckWizard)", () => {
-  const atCap = { used: 1, cap: 1, tier: "free" as const };
-
-  it("shows where the plan stands under Visibility, and warns once a capped choice can't be held", async () => {
-    render(<DeckWizard userId="u1" deckCapacity={atCap} />);
-    const select = screen.getByRole("combobox", { name: "Visibility" }) as HTMLSelectElement;
-    expect(document.getElementById(select.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-      "Private decks: 1 of 1 · All in use on Free. Public decks are unlimited.",
-    );
-    // Public (the default): nothing to warn about.
-    expect(screen.queryByTestId("deck-capacity-notice")).toBeNull();
-
-    await act(async () => {
-      fireEvent.change(select, { target: { value: "unlisted" } });
-    });
-    const notice = screen.getByTestId("deck-capacity-notice");
-    expect(notice.getAttribute("role")).toBe("status");
-    expect(notice.textContent).toContain("Free includes 1 private or unlisted deck, and yours is in use.");
-    expect(within(notice).getByRole("link", { name: "Manage decks" }).getAttribute("href")).toBe("/dashboard/decks");
-    await click(within(notice).getByRole("button", { name: "Upgrade" }));
-    expect(s.open).toHaveBeenCalledWith("deck_capacity");
-
-    await click(within(notice).getByRole("button", { name: "Make it public" }));
-    expect(select.value).toBe("public");
-    expect(screen.queryByTestId("deck-capacity-notice")).toBeNull();
-  });
-
-  it("a server refusal opens the plans with the deck_capacity reason", async () => {
-    s.createDeck.mockResolvedValue({
-      ok: false,
-      code: "UPGRADE_REQUIRED",
-      reason: "deck_capacity",
-      formError: "Free includes 1 private or unlisted deck, and yours is in use.",
-    });
-    render(<DeckWizard userId="u1" deckCapacity={{ used: 0, cap: 1, tier: "free" }} />);
-    await act(async () => {
-      fireEvent.change(screen.getByRole("textbox", { name: "Deck name" }), { target: { value: "Gorgon Gaze" } });
-      fireEvent.change(screen.getByRole("combobox", { name: "Visibility" }), { target: { value: "private" } });
-    });
-    // The last slot: a warning, not a block.
-    expect(screen.getByTestId("deck-capacity-notice").textContent).toContain("This uses your last private deck on Free (1 of 1).");
-    for (let i = 0; i < 3; i += 1) await click(screen.getByRole("button", { name: /^next$/i }));
-    await click(screen.getByRole("button", { name: /create deck/i }));
-    expect(s.createDeck).toHaveBeenCalledWith(expect.objectContaining({ visibility: "private" }), {
-      redirectAfterCreate: false,
-      surface: "wizard",
-    });
-    expect(s.open).toHaveBeenCalledWith("deck_capacity");
-    expect(s.push).not.toHaveBeenCalled();
-  });
-
-  it("an unlimited plan shows no meter and no warning", async () => {
-    render(<DeckWizard userId="u1" deckCapacity={{ used: 9, cap: -1, tier: "pro" }} />);
-    const select = screen.getByRole("combobox", { name: "Visibility" });
-    expect(select.getAttribute("aria-describedby")).toBeNull();
-    await act(async () => {
-      fireEvent.change(select, { target: { value: "private" } });
-    });
-    expect(screen.queryByTestId("deck-capacity-notice")).toBeNull();
   });
 });
 
