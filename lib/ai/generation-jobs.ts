@@ -77,13 +77,14 @@ import {
   layoutColorKeys,
   layoutFitOf,
   layoutFrameBrief,
+  layoutLockedOf,
+  layoutPrecheckError,
   layoutSteerType,
   secondHalfSharesPicture,
   mergedSecondPart,
   type AiLayoutKind,
   type LayoutFit,
 } from "@/lib/ai/layout-design";
-import { sagaFromRulesText } from "@/lib/cards/face-content";
 import type {
   CardBackFace,
   CardType,
@@ -1326,13 +1327,22 @@ async function createLayoutFillJob(
   },
 ): Promise<CreateCardJobResult> {
   const { userId, deckContext, deckBrief, verifiedKeys } = ctx;
+  // The front's stats are pinned only where the kind draws them (a new
+  // card's default 1/1 is no saga's, no spell's).
+  input = { ...input, locked: layoutLockedOf(input.locked, layout) };
   const unfit = (): CreateCardJobResult => ({ ok: false, error: aiFailureMessage("frame_unfit"), code: "frame_unfit" });
   const wants = (field: CardFillField) => input.want.includes(field);
-  // A saga keeping its rules text keeps its chapters: with none there is
-  // nothing to design it around — refused before any model call.
-  if (layout === "saga" && !wants("rules_text") && sagaFromRulesText(input.locked.rules_text).chapters.length === 0) {
-    return unfit();
-  }
+  // What no design can mend is refused before any model call, in its own
+  // words: a kept saga text that is no saga's chapters, a kept colour the
+  // frame isn't published in.
+  const precheck = layoutPrecheckError({
+    kind: layout,
+    want: input.want,
+    lockedRules: input.locked.rules_text,
+    lockedColors: input.locked.color_identity,
+    verifiedKeys,
+  });
+  if (precheck) return { ok: false, error: precheck, code: "frame_unfit" };
   const wantsColors = wants("color_identity");
   // A free colour is held to the colours the frame is published in.
   let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;

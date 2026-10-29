@@ -117,10 +117,11 @@ const click = async (el: Element) => {
 
 /** Run the fill for `kind` on a new card and save it: what the creator's
  *  own save hands the server. */
-async function fillAndSave(kind: string, fill: Record<string, unknown>) {
+async function fillAndSave(kind: string, fill: Record<string, unknown>, verified: string[] = VERIFIED, beforeFill?: () => Promise<void>) {
   dialog.kind = kind;
   jobs.fill = { art_url: ART, artist_credit: "Tester", deck_id: null, rarity: "uncommon", ...fill };
-  render(<CardCreatorForm mode="create" userId={USER} ownerUsername="tester" gameSystems={GAME_SYSTEMS} aiConfigured verifiedFrameKeys={VERIFIED} />);
+  render(<CardCreatorForm mode="create" userId={USER} ownerUsername="tester" gameSystems={GAME_SYSTEMS} aiConfigured verifiedFrameKeys={verified} />);
+  if (beforeFill) await beforeFill();
   await click(screen.getByTestId("run-fill"));
   await waitFor(() => expect(toast.success).toHaveBeenCalled());
   const save = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
@@ -346,5 +347,94 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
       back_face: { title: "Ashen Pyromancer", card_type: "creature", supertype: "Legendary", power: "3", toughness: "3" },
     });
     expect(sent.back_face).not.toHaveProperty("cost");
+  });
+});
+
+// The #636 check, through the real form: the second part the plan judged is
+// the one the form holds — a name and cost the maker didn't tick, no stale
+// field from another kind — and an AI landing is no misleading frame toast.
+describe("the fill the plan judged is the card the form saves (the #636 check)", () => {
+  const SPLIT_FRONT = {
+    title: "Emberlash",
+    cost: "{1}{U}",
+    card_type: "instant",
+    supertype: null,
+    subtypes: [],
+    color_identity: ["blue"],
+    rules_text: "Draw two cards.",
+    flavor_text: null,
+    power: null,
+    toughness: null,
+    frame_template: "split",
+  };
+
+  it("Title and Cost unticked on a new card: the half's name and cost come from the AI, so Save is not blocked", async () => {
+    dialog.want = ["card_type", "color_identity", "rules_text", "art"];
+    // What the step hands for those ticks now (fillSecondPartOf: an unticked
+    // field the card holds no value for is written).
+    const sent = await fillAndSave("split", {
+      card_type: "instant",
+      supertype: null,
+      subtypes: [],
+      color_identity: ["blue"],
+      rules_text: "Draw two cards.",
+      frame_template: "split",
+      back_face: { card_type: "instant", supertype: null, subtypes: [], title: "Frostbind", cost: "{1}{U}", rules_text: "Tap target permanent.", color_identity: ["blue"], art_url: ART },
+      part_color: true,
+    }, VERIFIED, async () => {
+      // The maker's own front title (kept: Title unticked).
+      await click(screen.getAllByTitle("Go to Identity")[0]!);
+      const title = document.querySelector<HTMLInputElement>("input[name='title']")!;
+      await act(async () => {
+        fireEvent.change(title, { target: { value: "Emberlash" } });
+        fireEvent.blur(title);
+      });
+    });
+    expect(jobs.posted[0]!.locked).toMatchObject({ title: "Emberlash" });
+    expect(sent.title).toBe("Emberlash");
+    expect(sent.back_face).toMatchObject({ title: "Frostbind", cost: "{1}{U}", color_identity: ["blue"] });
+    expect(sent.frame_style).toMatchObject({ partColor: true });
+  });
+
+  it("onto another kind: the old second part's fields are gone (a flip side's P/T never rides onto a split half)", async () => {
+    dialog.kind = "flip";
+    jobs.fill = {
+      art_url: ART,
+      title: "Ashen Apprentice",
+      cost: "{1}{R}",
+      card_type: "creature",
+      supertype: "Legendary",
+      subtypes: ["Human"],
+      color_identity: ["red"],
+      rules_text: "Haste",
+      power: "1",
+      toughness: "2",
+      frame_template: "flip",
+      back_face: { card_type: "creature", supertype: "Legendary", subtypes: ["Human"], title: "Ashen Pyromancer", rules_text: "Haste", power: "3", toughness: "3" },
+    };
+    render(<CardCreatorForm mode="create" userId={USER} ownerUsername="tester" gameSystems={GAME_SYSTEMS} aiConfigured verifiedFrameKeys={VERIFIED} />);
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    toast.success.mockClear();
+    dialog.kind = "split";
+    jobs.fill = { ...SPLIT_FRONT, back_face: { card_type: "instant", supertype: null, subtypes: [], title: "Frostbind", cost: "{U}", rules_text: "Tap target permanent.", color_identity: ["blue"], art_url: ART }, part_color: true };
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const sent = JSON.parse(JSON.stringify(actions.createCardAction.mock.calls[0]![0])) as { back_face: Record<string, unknown> };
+    expect(sent.back_face).toMatchObject({ title: "Frostbind", card_type: "instant" });
+    for (const key of ["power", "toughness", "supertype"]) expect(sent.back_face, key).not.toHaveProperty(key);
+  });
+
+  it("a new (colourless) card filled as a blue split: no 'isn't available in colorless' toast — the kind is judged in the fill's colour", async () => {
+    const blueSplitOnly = [...VERIFIED.filter((key) => !key.startsWith("split/")), frameComboKey("split", "u")];
+    await fillAndSave(
+      "split",
+      { ...SPLIT_FRONT, back_face: { card_type: "instant", supertype: null, subtypes: [], title: "Frostbind", cost: "{U}", rules_text: "Tap target permanent.", color_identity: ["blue"], art_url: ART }, part_color: true },
+      blueSplitOnly,
+    );
+    const infos = toast.info.mock.calls.map((call) => String(call[0]));
+    expect(infos.filter((message) => /isn't available in|Switched to/.test(message))).toEqual([]);
   });
 });

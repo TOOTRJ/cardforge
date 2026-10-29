@@ -3292,7 +3292,16 @@ export function CardCreatorForm({
     const fillKind = fill.card_type
       ? kindFromCard(fill.card_type, fill.back_face || fill.frame_template === "saga" ? fill.frame_template : undefined)
       : null;
+    // The kind the card was before the fill: a two-part fill onto ANOTHER
+    // kind starts its second part afresh (below).
+    const kindBeforeFill = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
     if (fill.card_type && fillKind && !isRevise) {
+      // A saga / two-part fill's kind change is judged in the colour the
+      // card is about to take — the old one named a frame the card never
+      // had ("isn't available in colorless") — set again below as ever.
+      if (isAiLayoutKind(fillKind) && fill.color_identity) {
+        setValue("color_identity", normalizeColorSelection(fill.color_identity, { keepPair: drawsTwoColorFrame() }), { shouldDirty: true });
+      }
       applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) ? fill.card_type : undefined);
       if (fill.frame_template) {
         // The colour the card is about to TAKE (the fill's own, set just
@@ -3390,6 +3399,13 @@ export function CardCreatorForm({
     if (fill.back_face) {
       const back = fill.back_face;
       setValue("has_back_face", true, { shouldDirty: true });
+      // Onto another kind, the old second part (a flip side's P/T, a
+      // half's picture, a never-drawn flavour) is not this card's: the
+      // part starts blank and takes the fill's fields — the very card the
+      // plan's fit judged.
+      if (kindBeforeFill !== fillKind && !isRevise) {
+        setValue("back_face", { ...EMPTY_BACK_FACE, card_type: back.card_type ?? EMPTY_BACK_FACE.card_type }, { shouldDirty: true });
+      }
       if (back.title !== undefined) setValue("back_face.title", printTypography(back.title, "name"), { shouldDirty: true });
       if (back.cost !== undefined) setValue("back_face.cost", back.cost, { shouldDirty: true });
       if (back.card_type !== undefined) {

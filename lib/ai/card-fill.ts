@@ -128,7 +128,7 @@ export async function designCardFill(
     // A saga's rows are its rules text (written from them by the engine);
     // a two-part card's second part goes to the creator's back_face paths.
     if (input.layout !== "saga" && designed.second_part) {
-      fields.back_face = fillSecondPartOf(input.layout, designed.second_part, input.want);
+      fields.back_face = fillSecondPartOf(input.layout, designed.second_part, input.want, input.locked.back_face);
     }
     return { fields, art_prompt: designed.art_prompt, second_part: designed.second_part ?? null };
   }

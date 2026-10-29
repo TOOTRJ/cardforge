@@ -3493,7 +3493,7 @@
     "cost": "{1}{R}"
    },
    "deck_id": null,
-   "art_brief": "ONE picture for the whole card: a single scene that holds both halves' ideas together, the first half's subject in front."
+   "art_brief": "ONE picture shown in BOTH halves' windows: a single scene that holds both halves' ideas together, its subject centred so each window reads on its own."
   },
   "steps": [
    {
@@ -3615,7 +3615,7 @@
     "cost": "{2}{R}"
    },
    "deck_id": null,
-   "art_brief": "ONE picture for the whole card: a single scene that holds both halves' ideas together, the first half's subject in front."
+   "art_brief": "ONE picture shown in BOTH halves' windows: a single scene that holds both halves' ideas together, its subject centred so each window reads on its own."
   },
   "steps": [
    {

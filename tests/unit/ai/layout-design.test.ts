@@ -9,6 +9,8 @@ import {
   fillSecondPartOf,
   layoutFitOf,
   layoutFrameBrief,
+  layoutLockedOf,
+  layoutPrecheckError,
   lintLayoutDesign,
   mergedSecondPart,
   normalizeLayoutDesign,
@@ -71,14 +73,59 @@ describe("the kinds and their one frame", () => {
       power: "3",
       toughness: "3",
     });
-    // No P/T on a split half; the title kept by the maker is not written.
-    const half = fillSecondPartOf("split", SPLIT.second_part as never, ["card_type", "cost", "stats"]);
+    // No P/T on a split half; the title and rules the maker KEEPS are not
+    // written.
+    const kept = { title: "Kept Name", rules_text: "Kept rules." };
+    const half = fillSecondPartOf("split", SPLIT.second_part as never, ["card_type", "cost", "stats"], kept);
     expect(half).toEqual({ card_type: "instant", supertype: null, subtypes: [], cost: "{1}{U}" });
-    expect(mergedSecondPart("split", SPLIT.second_part as never, ["card_type"], { title: "Kept Name", rules_text: "Kept rules." })).toMatchObject({
+    expect(mergedSecondPart("split", SPLIT.second_part as never, ["card_type"], kept)).toMatchObject({
       title: "Kept Name",
       rules_text: "Kept rules.",
       cost: "{1}{U}",
     });
+  });
+
+  it("an unticked field the card holds no value for is written — the fit and the fill read the same card (the #636 check)", () => {
+    // Title / Cost unticked on a card that has no second part yet: the AI
+    // writes them; nothing is "kept" that isn't there.
+    const out = fillSecondPartOf("split", SPLIT.second_part as never, ["card_type"]);
+    expect(out).toMatchObject({ title: "Frostbind", cost: "{1}{U}", rules_text: "Tap target permanent. Draw a card." });
+    const merged = mergedSecondPart("split", SPLIT.second_part as never, ["card_type"], undefined)!;
+    for (const key of ["title", "cost", "rules_text"] as const) expect(merged[key]).toBe(out[key]);
+    // A blank kept value is no value.
+    expect(fillSecondPartOf("split", SPLIT.second_part as never, ["card_type"], { title: "  " }).title).toBe("Frostbind");
+  });
+});
+
+describe("the pins a layout fill reads, and what is refused before any model call", () => {
+  it("a saga or spell front drops the form's default stats; a creature front keeps them; loyalty / defense never", () => {
+    const locked = { card_type: "creature" as const, power: "1", toughness: "1", loyalty: "3", defense: "4", title: "Kept" };
+    expect(layoutLockedOf(locked, "saga")).toEqual({ card_type: "creature", title: "Kept" });
+    expect(layoutLockedOf(locked, "split")).toEqual({ card_type: "creature", title: "Kept" });
+    expect(layoutLockedOf(locked, "adventure")).toEqual({ card_type: "creature", power: "1", toughness: "1", title: "Kept" });
+  });
+
+  it("a kept saga text that is no saga's chapters, in its own words", () => {
+    const at = (lockedRules: string) => layoutPrecheckError({ kind: "saga", want: ["card_type"], lockedRules, lockedColors: null, verifiedKeys: EVERY });
+    expect(at("Draw a card.")).toBe(
+      'The rules text you kept can\'t be a saga\'s chapters — A saga needs chapter rows (I, II, III…). Tick Rules text so the AI writes them, or write them as "I — …", "II — …". No credits were used.',
+    );
+    expect(at("I — Draw a card.\nIII — Scry 2.")).toContain("no gap or repeat");
+    expect(at("I — Draw a card.\nII — Scry 2.")).toBeNull();
+    // Writing the rules text: nothing to check.
+    expect(layoutPrecheckError({ kind: "saga", want: ["card_type", "rules_text"], lockedRules: "Draw a card.", lockedColors: null, verifiedKeys: EVERY })).toBeNull();
+  });
+
+  it("a kept colour the frame isn't published in — except a gold split / aftermath, whose first half may take its own", () => {
+    const greenSaga = new Set([...EVERY].filter((key) => !key.startsWith("saga/")).concat("saga/g"));
+    const at = (kind: AiLayoutKind, colors: string[], keys = greenSaga) =>
+      layoutPrecheckError({ kind, want: ["card_type"], lockedRules: "I — A\nII — B", lockedColors: colors as never, verifiedKeys: keys });
+    expect(at("saga", ["red"])).toBe("The Saga frame isn't published in red yet. Tick Colors so the AI picks one it is, or pick another kind. No credits were used.");
+    expect(at("saga", ["green"])).toBeNull();
+    const noGoldSplit = new Set([...EVERY].filter((key) => key !== "split/m"));
+    expect(at("split", ["multicolor"], noGoldSplit)).toBeNull();
+    // An unknown (empty) verified set refuses nothing.
+    expect(at("saga", ["red"], new Set())).toBeNull();
   });
 });
 
@@ -98,7 +145,7 @@ describe("what the designer is told", () => {
 
   it("every kind's frame has art direction (one picture: the second part is text)", () => {
     for (const kind of AI_LAYOUT_KINDS) expect(frameArtBrief(LAYOUT_TEMPLATE[kind]), kind).not.toBe("");
-    expect(frameArtBrief("split")).toContain("ONE picture for the whole card");
+    expect(frameArtBrief("split")).toContain("ONE picture shown in BOTH halves' windows");
     expect(frameArtBrief("adventure")).toContain("creature itself");
   });
 });
@@ -169,6 +216,9 @@ describe("a second part", () => {
     expect(errors("adventure", { subtypes: [] })).toContain('An adventure spell\'s subtypes are ["Adventure"].');
     expect(errors("aftermath", { rules_text: "Draw two cards." })[0]).toMatch(/^The aftermath half's rules begin with/);
     expect(errors("split", {}, { color_identity: ["red"] })[0]).toMatch(/^The second part's mana symbols use U/);
+    // The creator's gold (a two-colour card kept as ["multicolor"]) covers any colours.
+    expect(errors("split", {}, { color_identity: ["multicolor"] })).toEqual([]);
+    expect(layoutFitOf("split", { ...faceOf(card("split")), color_identity: ["multicolor"] }, EVERY)).toMatchObject({ ok: true, partColour: { on: true, first: ["red"], second: ["blue"] } });
     expect(errors("split", {}, { card_type: "creature" })[0]).toMatch(/first part is instant or sorcery/);
   });
 

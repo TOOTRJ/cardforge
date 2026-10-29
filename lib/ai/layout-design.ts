@@ -27,8 +27,9 @@
 // A second part's field the frame NEVER draws is never written (the
 // creator's own rule, lib/creator/second-part-fields.ts): no flavour, artist,
 // loyalty or defense on any second part, a power / toughness on a flip side
-// only, no picture of its own on any of them (the one picture is the card's:
-// split and aftermath are ONE painting, as the deck remix paints them).
+// only. The card is ONE painting (one credit): split and aftermath show it
+// in BOTH halves' windows (owner 2026-10-28, secondHalfSharesPicture); an
+// adventure's or Prepare's page and a flip side have no window of their own.
 // ---------------------------------------------------------------------------
 
 import { z } from "zod";
@@ -442,9 +443,13 @@ export function lintLayoutDesign(card: LayoutDesignCard, kind: AiLayoutKind): { 
   if (kind === "aftermath" && !/^aftermath\b/i.test(second.rules_text.trim())) {
     errors.push(issue("rules_text", `The aftermath half's rules begin with "${AFTERMATH_LINE}".`));
   }
-  // The whole card's colour covers both parts (owner decision M2).
+  // The whole card's colour covers both parts (owner decision M2). The
+  // creator holds a card of two or more colours as gold ("multicolor", its
+  // single-select model — a Fire // Ice import too): gold covers any
+  // colours.
   const declared = new Set(colorLettersFromWords(card.color_identity));
-  const missing = deriveColorLetters(second.cost, second.rules_text).filter((letter) => !declared.has(letter));
+  const gold = card.color_identity.includes("multicolor");
+  const missing = gold ? [] : deriveColorLetters(second.cost, second.rules_text).filter((letter) => !declared.has(letter));
   if (missing.length > 0) {
     errors.push(issue("color_identity", `The second part's mana symbols use ${missing.join(", ")} but the card's color_identity doesn't include them.`));
   }
@@ -662,32 +667,59 @@ export function secondHalfSharesPicture(template: FrameTemplate | string | null 
     Boolean(getFrameProfile(template as FrameTemplate).secondFace?.artSlot);
 }
 
-/** The designed second part, kept to the fields wanted and the frame draws.
- *  (The fill is only offered with the card type written, so the type words
- *  always come with it.) */
+/** The second part's units the fill may write, and the front tick each
+ *  follows. */
+type SecondPartUnit = "title" | "cost" | "rules_text" | "stats";
+const UNIT_FIELD: Record<SecondPartUnit, string> = { title: "title", cost: "cost", rules_text: "rules_text", stats: "stats" };
+
+/** The unit's value the maker KEEPS, or undefined: kept only when its tick
+ *  is off AND the card holds one (a second part with no name keeps none). */
+function keptUnit(unit: SecondPartUnit, want: readonly string[], locked: LockedSecondPart | undefined): boolean {
+  if (want.includes(UNIT_FIELD[unit])) return false;
+  if (unit === "stats") return Boolean(locked?.power?.trim() || locked?.toughness?.trim());
+  return Boolean(locked?.[unit]?.trim());
+}
+
+/** Whether the frame draws the unit on the second part. */
+function drawsUnit(kind: AiLayoutKind, unit: SecondPartUnit): boolean {
+  if (unit === "cost") return secondPartDrawsCost(kind);
+  if (unit === "stats") return secondPartDrawsPt(kind);
+  return true;
+}
+
+/**
+ * The designed second part as the fill hands it: every unit the frame draws
+ * that the maker does not KEEP — a ticked one, and one the card holds no
+ * value for (a card that becomes split has no right half to keep: the AI
+ * writes its name even with Title unticked). The ONE rule mergedSecondPart
+ * reads too, so the plan's fit judges exactly the card the fill makes.
+ * (The fill is only offered with the card type written, so the type words
+ * always come with it.)
+ */
 export function fillSecondPartOf(
   kind: AiLayoutKind,
   second: SecondPartDesign,
   want: readonly string[],
+  locked?: LockedSecondPart,
 ): FillSecondPart {
-  const has = (field: string) => want.includes(field);
+  const writes = (unit: SecondPartUnit) => drawsUnit(kind, unit) && !keptUnit(unit, want, locked);
   const out: FillSecondPart = {
     card_type: second.card_type,
     supertype: second.supertype,
     subtypes: [...second.subtypes],
   };
-  if (has("title")) out.title = second.title;
-  if (has("cost") && secondPartDrawsCost(kind)) out.cost = second.cost;
-  if (has("rules_text")) out.rules_text = second.rules_text;
-  if (has("stats") && secondPartDrawsPt(kind)) {
+  if (writes("title")) out.title = second.title;
+  if (writes("cost")) out.cost = second.cost;
+  if (writes("rules_text")) out.rules_text = second.rules_text;
+  if (writes("stats")) {
     out.power = second.power;
     out.toughness = second.toughness;
   }
   return out;
 }
 
-/** The second part as the card will hold it: the designed fields wanted,
- *  over the ones the maker keeps. */
+/** The second part as the card will hold it: what the fill writes
+ *  (fillSecondPartOf) over what the maker keeps. */
 export function mergedSecondPart(
   kind: AiLayoutKind,
   designed: SecondPartDesign | null | undefined,
@@ -695,13 +727,66 @@ export function mergedSecondPart(
   locked: LockedSecondPart | undefined,
 ): SecondPartDesign | null {
   if (!designed) return null;
-  const has = (field: string) => want.includes(field);
+  const kept = (unit: SecondPartUnit) => keptUnit(unit, want, locked);
   return {
     ...designed,
-    title: has("title") ? designed.title : (locked?.title ?? designed.title),
-    cost: !secondPartDrawsCost(kind) ? "" : has("cost") ? designed.cost : (locked?.cost ?? designed.cost),
-    rules_text: has("rules_text") ? designed.rules_text : (locked?.rules_text ?? designed.rules_text),
-    power: !secondPartDrawsPt(kind) ? null : has("stats") ? designed.power : (locked?.power ?? designed.power),
-    toughness: !secondPartDrawsPt(kind) ? null : has("stats") ? designed.toughness : (locked?.toughness ?? designed.toughness),
+    title: kept("title") ? locked!.title! : designed.title,
+    cost: !secondPartDrawsCost(kind) ? "" : kept("cost") ? locked!.cost! : designed.cost,
+    rules_text: kept("rules_text") ? locked!.rules_text! : designed.rules_text,
+    power: !secondPartDrawsPt(kind) ? null : kept("stats") ? (locked?.power ?? null) : designed.power,
+    toughness: !secondPartDrawsPt(kind) ? null : kept("stats") ? (locked?.toughness ?? null) : designed.toughness,
   };
+}
+
+/**
+ * The pins a layout fill reads: the front's stats only where its kind
+ * draws them. A saga, a split or an aftermath card prints no power /
+ * toughness on its first part, but a new card's form still holds the
+ * default stats — pinned, they refused every saga ("no stats") and told the
+ * designer to keep a 1/1 on a spell. Loyalty and defense never apply.
+ */
+export function layoutLockedOf<T extends { card_type?: CardType; power?: string; toughness?: string; loyalty?: string; defense?: string }>(
+  locked: T,
+  kind: AiLayoutKind,
+): T {
+  const { loyalty: _loyalty, defense: _defense, ...rest } = locked;
+  void _loyalty;
+  void _defense;
+  if (LAYOUT_FRONT_TYPES[kind].includes("creature")) return rest as T;
+  const { power: _power, toughness: _toughness, ...spell } = rest;
+  void _power;
+  void _toughness;
+  return spell as T;
+}
+
+/**
+ * Why a fill must be refused BEFORE any model call, or null: a kept saga
+ * text that is no saga (the designer may not touch it), a kept colour the
+ * kind's frame isn't published in. A split / aftermath card kept gold may
+ * still land on its first half's own colour (4.26), so a gold seam frame is
+ * left to the fit.
+ */
+export function layoutPrecheckError(input: {
+  kind: AiLayoutKind;
+  want: readonly string[];
+  lockedRules: string | null | undefined;
+  lockedColors: readonly ColorIdentity[] | null | undefined;
+  verifiedKeys: ReadonlySet<string>;
+}): string | null {
+  const { kind, want, verifiedKeys } = input;
+  if (kind === "saga" && !want.includes("rules_text")) {
+    const rows = sagaFromRulesText(input.lockedRules);
+    const problems = sagaRowProblems(rows);
+    if (problems.length > 0) {
+      return `The rules text you kept can't be a saga's chapters — ${problems[0]} Tick Rules text so the AI writes them, or write them as "I — …", "II — …". No credits were used.`;
+    }
+  }
+  if (!want.includes("color_identity") && input.lockedColors && input.lockedColors.length > 0 && verifiedKeys.size > 0) {
+    const key = pickFrameColorKey([...input.lockedColors]);
+    const seamGold = key === "m" && getFrameProfile(LAYOUT_TEMPLATE[kind]).partColorSeam !== undefined;
+    if (!seamGold && !layoutColorKeys(kind, verifiedKeys).includes(key)) {
+      return `The ${KIND_DEFS[kind].label} frame isn't published in ${colorWord(key)} yet. Tick Colors so the AI picks one it is, or pick another kind. No credits were used.`;
+    }
+  }
+  return null;
 }

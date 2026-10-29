@@ -107,13 +107,14 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
     templates: ["lotrscroll"],
   },
   // The saga and the two-part cards (the AI dialog, PR 2). Each is ONE
-  // picture: a second part's page or half is text on the card.
+  // painting: split and aftermath show it in BOTH halves' windows (owner
+  // 2026-10-28), an adventure's or Prepare's page is text on the card.
   {
     brief: "A tall storybook scene that captures the saga's tale in one moment: one strong subject composed for a tall, narrow panel.",
     templates: ["saga"],
   },
   {
-    brief: "ONE picture for the whole card: a single scene that holds both halves' ideas together, the first half's subject in front.",
+    brief: "ONE picture shown in BOTH halves' windows: a single scene that holds both halves' ideas together, its subject centred so each window reads on its own.",
     templates: ["split", "aftermath"],
   },
   {

@@ -240,7 +240,7 @@ describe("design → plan → step → what the creator is handed, per kind", ()
     s.answers = [[structuredClone(SPLIT)]];
     await fill("split");
     const step = await stepOf(plan());
-    expect(s.imagePrompts[0]![0]).toContain("ONE picture for the whole card");
+    expect(s.imagePrompts[0]![0]).toContain("ONE picture shown in BOTH halves' windows");
     // Painted ONCE and stored once; the same URL in both windows.
     expect(s.imageCalls).toBe(1);
     expect((step.fill!.back_face as Record<string, unknown>).art_url).toBe(step.fill!.art_url);
@@ -312,6 +312,48 @@ describe("the fit, at plan time — nothing reserved before it", () => {
     s.answers = [[structuredClone(SPLIT)], [structuredClone(SPLIT)]];
     const out = await fill("split", { want: ["card_type", "title", "cost", "rules_text", "art"], locked: { color_identity: ["red"] } });
     expect(out).toMatchObject({ ok: false, code: "frame_unfit" });
+    expect(s.inserted).toEqual([]);
+  });
+});
+
+// The #636 check's four plan / fill disagreements, each as it was probed.
+describe("the plan judges the card the fill makes (the #636 check)", () => {
+  it("a KEPT gold colour (the creator's two-colour card) is no refusal: one design, the parts' own colours on", async () => {
+    s.answers = [[structuredClone(SPLIT)]];
+    const out = await fill("split", { want: ["card_type", "title", "cost", "rules_text", "art"], locked: { color_identity: ["multicolor"] } });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()).toHaveLength(1);
+    expect(plan().fields).toMatchObject({ part_color: true, first_part_color: ["red"], back_face: { color_identity: ["blue"] } });
+    expect(plan().fields).not.toHaveProperty("color_identity");
+  });
+
+  it("a new card's default stats, kept, are no saga's: no refusal, and the designer is never told to keep a 1/1", async () => {
+    s.answers = [[structuredClone(SAGA)]];
+    const out = await fill("saga", { want: ["card_type", "color_identity", "title", "cost", "rules_text", "art"], locked: { power: "1", toughness: "1" } });
+    expect(out.ok).toBe(true);
+    expect(designPrompts()).toHaveLength(1);
+    expect(designPrompts()[0]).not.toContain("stats 1/1");
+  });
+
+  it("Title and Cost unticked on a card with no second part yet: the AI writes the half's name and cost — the very part the fit judged", async () => {
+    s.answers = [[structuredClone(SPLIT)]];
+    const out = await fill("split", { want: ["card_type", "color_identity", "rules_text", "art"] });
+    expect(out.ok).toBe(true);
+    const back = plan().fields.back_face as Record<string, unknown>;
+    expect(back).toMatchObject({ title: "Frostbind", cost: "{1}{U}", color_identity: ["blue"] });
+    // …while the front's own unticked title and cost stay the maker's.
+    expect(plan().fields).not.toHaveProperty("title");
+    expect(plan().fields).not.toHaveProperty("cost");
+  });
+
+  it("a kept colour the frame isn't published in, or a kept saga text that is no saga's: refused before any model call, in its own words", async () => {
+    s.verified = [...EVERY.filter((key) => !key.startsWith("saga/")), "saga/g"];
+    const colour = await fill("saga", { want: ["card_type", "title", "rules_text", "art"], locked: { color_identity: ["red"] } });
+    expect(colour).toMatchObject({ ok: false, code: "frame_unfit", error: expect.stringContaining("isn't published in red yet") });
+    const rows = await fill("saga", { want: ["card_type", "title", "art"], locked: { rules_text: "I — Draw a card.\nIII — Scry 2." } });
+    expect(rows).toMatchObject({ ok: false, code: "frame_unfit", error: expect.stringContaining("Tick Rules text so the AI writes them") });
+    expect(!rows.ok && rows.error).not.toContain("Surprise me");
+    expect(s.prompts).toEqual([]);
     expect(s.inserted).toEqual([]);
   });
 });
