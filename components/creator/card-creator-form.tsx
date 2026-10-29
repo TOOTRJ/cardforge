@@ -4622,9 +4622,17 @@ export function CardCreatorForm({
   // The step panels, the once-mounted dialogs and the action bar are the
   // same in the shipped stepper and in the lab's canvas layout; only the
   // shell around them differs.
+  // The busy overlays sit ABOVE everything they cover (owner 2026-10-28:
+  // the card's pips, set symbol, P/T plate and collector line — positioned
+  // at z 20–50 inside CardPreview — and the form's own positioned pieces
+  // drew sharp over the dim). Each covered box is its own stacking context
+  // (`isolate`), so the overlay's z-[100] beats every z-index inside it and
+  // never climbs over the page around it. Creator chrome only: the card
+  // renders as before (no blend mode reads the isolation).
   const fillOverlay = fillPhase ? (
     <div
-      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
+      data-testid="fill-overlay"
+      className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
       role="status"
       aria-live="polite"
     >
@@ -5607,7 +5615,7 @@ export function CardCreatorForm({
               Live preview · click a part of the card to edit it
             </p>
             {partEditingLabel}
-            <div className="relative w-full max-w-md">
+            <div className="relative isolate w-full max-w-md">
               <MemoCardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
               {previewOverlays}
               {readOnly ? null : (
@@ -5630,7 +5638,7 @@ export function CardCreatorForm({
           </div>
 
           <SurfaceCard
-            className="relative flex flex-col gap-6 p-6"
+            className="relative isolate flex flex-col gap-6 p-6"
             aria-busy={fillPhase !== null || undefined}
           >
             {fillOverlay}
@@ -5670,7 +5678,7 @@ export function CardCreatorForm({
 
         {/* ----- Left: form ----- */}
         <SurfaceCard
-          className="relative flex flex-col gap-6 p-6"
+          className="relative isolate flex flex-col gap-6 p-6"
           aria-busy={fillPhase !== null || undefined}
         >
           {fillOverlay}
@@ -5730,7 +5738,7 @@ export function CardCreatorForm({
               // the part being edited is outlined on it and named above it.
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 {partEditingLabel ? <div className="mb-2 flex">{partEditingLabel}</div> : null}
-                <div className="relative">
+                <div className="relative isolate">
                   <MemoCardPreview {...previewProps} />
                   {previewOverlays}
                 </div>
@@ -5768,7 +5776,7 @@ export function CardCreatorForm({
             ) : (
             <div className="mx-auto w-full max-w-sm">
               {partEditingLabel ? <div className="mb-3 flex">{partEditingLabel}</div> : null}
-              <div className="relative">
+              <div className="relative isolate">
                 <MemoCardPreview {...previewProps} />
                 {previewOverlays}
               </div>
@@ -5869,7 +5877,8 @@ function CardGeneratingOverlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 ${cardCornersClass(landscape)} bg-background/70 backdrop-blur-sm`}
+      data-testid="card-generating-overlay"
+      className={`absolute inset-0 z-[100] flex flex-col items-center justify-center gap-2 ${cardCornersClass(landscape)} bg-background/70 backdrop-blur-sm`}
       role="status"
       aria-live="polite"
     >

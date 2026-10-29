@@ -68,7 +68,9 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
     </p>
   );
   const large = (
-    <div className="relative" data-testid="face-preview-large" data-face={face}>
+    // `isolate`: the busy overlay passed as children covers the card's own
+    // positioned pieces too (z-[100] inside this one stacking context).
+    <div className="relative isolate" data-testid="face-preview-large" data-face={face}>
       <CardPreview {...previewProps} face={face} onFaceChange={undefined} flipOnClick={false} hideFlipControl />
       {children}
     </div>
