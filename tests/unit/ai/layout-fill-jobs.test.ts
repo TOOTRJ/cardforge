@@ -246,6 +246,27 @@ describe("design → plan → step → what the creator is handed, per kind", ()
     expect((step.fill!.back_face as Record<string, unknown>).art_url).toBe(step.fill!.art_url);
   });
 
+  // TODO 4.27b: the card's Variations skin of the frame (the extended-art
+  // Prepare dress) is kept where the filled card fits there — never moved
+  // back to `prepare` without a word.
+  it("a card on the extended-art Prepare dress is planned and handed back on it, where it is verified", async () => {
+    s.answers = [[structuredClone(LAYOUT_DESIGNS.prepare)]];
+    expect((await fill("prepare", { layoutSkin: "extendedartprepare" })).ok).toBe(true);
+    expect(plan().frame_template).toBe("extendedartprepare");
+    expect(plan().art_face).toMatchObject({ template: "extendedartprepare" });
+    expect(plan().art_brief).toBe(frameArtBrief("prepare"));
+    const step = await stepOf(plan());
+    expect(step.fill).toMatchObject({ frame_template: "extendedartprepare" });
+  });
+
+  it("…and on the Prepare frame where the dress isn't verified in the card's colour (one design, no refusal)", async () => {
+    s.verified = EVERY.filter((key) => !key.startsWith("extendedartprepare/"));
+    s.answers = [[structuredClone(LAYOUT_DESIGNS.prepare)]];
+    expect((await fill("prepare", { layoutSkin: "extendedartprepare" })).ok).toBe(true);
+    expect(designPrompts()).toHaveLength(1);
+    expect(plan().frame_template).toBe("prepare");
+  });
+
   it("a fill that doesn't paint leaves the second half's window as it is", async () => {
     s.answers = [[structuredClone(SPLIT)]];
     await fill("split", { want: WANT_ALL.filter((field) => field !== "art") });

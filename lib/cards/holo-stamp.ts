@@ -402,13 +402,79 @@ export const M15UB_HOLO_STAMP_BOX: Rect = roundTriangleBounds(UB_STAMP_HOLE);
  *  arch. */
 export const M15UB_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: pctX(650), topPct: pctY(1897), widthPct: pctX(200), heightPct: pctY(27) };
 
-/** The rules keep-out while the PREPARE stamp is drawn (TODO 4.27b): the
- *  arch over the creature's box and the strip — the lifted bevel's top at
- *  the centre (1927 − 35.8 = 1891.2 px; scripts/lib/prepare-2026.mjs
- *  PREPARE_STAMP) less 1 px of air, down to the black border (1950), over
- *  the piece's 654–846 px. Only the creature's box reaches it (its rules
- *  rect ends at 1923.6; the page's at 1852). */
-export const PREPARE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: pctX(654), topPct: pctY(1890), widthPct: pctX(192), heightPct: pctY(60) };
+/**
+ * The PREPARE arch (TODO 4.27b) — how far the text box's foot is lifted
+ * (HD px) at |x − 750| = 0, 2, 4, … px (linear between; nothing from the
+ * last entry on): 35 prints measured 2026-10-28. The build's own copy is
+ * scripts/lib/prepare-2026.mjs PREPARE_STAMP.lift (the pieces are lifted by
+ * it); a unit test holds the two equal.
+ */
+export const PREPARE_ARCH_LIFT_PX: readonly number[] = [
+  35.8, 35.8, 35.8, 35.8, 35.8, 35.7, 35.6, 35.6, 35.5, 35.4, 35.2, 35.0, 34.7, 34.2, 33.7, 33.3, 32.9, 32.4, 31.8, 31.3,
+  30.8, 30.2, 29.5, 28.8, 28.1, 27.3, 26.5, 25.7, 24.8, 23.8, 22.8, 21.8, 20.8, 19.6, 18.4, 17.3, 16.0, 14.6, 13.1, 11.7,
+  10.2, 8.5, 6.6, 4.7, 2.8, 1.3, 0.4, 0,
+];
+
+/** The Prepare arch's lift at card column `x` (HD px, the pixel's centre). */
+export function prepareArchLiftAt(x: number): number {
+  const d = Math.abs(x + 0.5 - 750) / 2;
+  const i = Math.floor(d);
+  if (i >= PREPARE_ARCH_LIFT_PX.length - 1) return 0;
+  const t = d - i;
+  return PREPARE_ARCH_LIFT_PX[i]! * (1 - t) + PREPARE_ARCH_LIFT_PX[i + 1]! * t;
+}
+
+/** The Prepare masters' first lifted row (PREPARE_STAMP.liftTop: the text
+ *  box's bottom bevel under the strip; under the creature's box the two
+ *  rows above its bevel are the box's own paper, so this is the top of what
+ *  the lift moves — a hair conservative there). */
+const PREPARE_LIFT_TOP_PX = 1927;
+/** Past the creature's rules rect's bottom (1923.6; the page's ends at
+ *  1852, far above the arch). */
+const PREPARE_ARCH_KEEP_OUT_BOTTOM_PX = 1925;
+
+/**
+ * The Prepare stamp's keep-out as the ARCH'S SHAPE (TODO 4.27b, the
+ * borderless rule — borderlessArchKeepOut): 4 px columns over the piece's
+ * 654–846 px, each from BORDERLESS_ARCH_AIR_PX above the lifted foot's top
+ * in that column down past the creature's box — so a line steps down only
+ * where its glyphs would really meet the arch. One rect over the arch's
+ * highest point (1890) made the creature box's last line give way along the
+ * shallow left slope (x 654–700, where the arch tops out at 1906–1925) and
+ * clipped a long text the unstamped box fits at the floor (TLA #112).
+ * Columns whose top falls below the box are left out.
+ */
+export function prepareArchKeepOut(air = BORDERLESS_ARCH_AIR_PX): Rect[] {
+  const out: Rect[] = [];
+  for (let x0 = 654; x0 < 846; x0 += BORDERLESS_ARCH_STRIP_PX) {
+    let lift = 0;
+    for (let x = x0; x < x0 + BORDERLESS_ARCH_STRIP_PX; x += 1) lift = Math.max(lift, prepareArchLiftAt(x));
+    const top = PREPARE_LIFT_TOP_PX - lift - air;
+    if (top >= PREPARE_ARCH_KEEP_OUT_BOTTOM_PX) continue;
+    out.push({
+      leftPct: pctX(x0),
+      topPct: pctY(top),
+      widthPct: pctX(BORDERLESS_ARCH_STRIP_PX),
+      heightPct: pctY(PREPARE_ARCH_KEEP_OUT_BOTTOM_PX - top),
+    });
+  }
+  return out;
+}
+
+/** The Prepare arch's keep-out columns (HoloStampArt.keepOutShape). */
+export const PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE: readonly Rect[] = prepareArchKeepOut();
+
+/** …and their bounds (HoloStampArt.keepOut): from 2 px over the lifted
+ *  foot's top at the centre (1927 − 35.8 − 2 = 1889.2) past the creature's
+ *  rules rect (1925). Only the creature's box reaches it. */
+export const PREPARE_HOLO_STAMP_KEEP_OUT: Rect = (() => {
+  const shape = PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE;
+  const left = Math.min(...shape.map((r) => r.leftPct));
+  const top = Math.min(...shape.map((r) => r.topPct));
+  const right = Math.max(...shape.map((r) => r.leftPct + r.widthPct));
+  const bottom = Math.max(...shape.map((r) => r.topPct + r.heightPct));
+  return { leftPct: left, topPct: top, widthPct: right - left, heightPct: bottom - top };
+})();
 
 /** What a `holoStamp` overlay slot declares beside its notch image
  *  (FrameOverlaySlot, lib/cards/template-layout.ts). */

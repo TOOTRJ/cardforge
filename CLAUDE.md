@@ -1029,9 +1029,11 @@ Rules and gotchas:
   arch), M15's collector line, and the extended-art dress
   `extendedartprepare` (a MERGE of the published extendedart top and
   prepare bottom, `PREPARE_EXTENDED`; the Prepare kind's Variations pick —
-  `TEMPLATE_SKIN_VARIANTS.prepare`, a layout template's skin is its kind's;
-  imports exact on it once verified, else `prepare`, else the creature on
-  `extendedart`). `docs/FRAMES.md` "The Prepare frame (4.27)" and "…stamp,
+  `TEMPLATE_SKIN_VARIANTS.prepare`, a layout template's skin is its kind's,
+  never a default or stand-in — `isLayoutSkin`; an AI fill keeps it where it
+  fits, `layoutFrameFitOf`; imports exact on it once verified, else
+  `prepare`, else the creature on `extendedart`); the stamp's rules
+  keep-out follows the arch (`PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE`). `docs/FRAMES.md` "The Prepare frame (4.27)" and "…stamp,
   collector line and extended-art dress (4.27b)".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /

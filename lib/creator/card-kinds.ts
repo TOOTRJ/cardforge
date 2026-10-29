@@ -370,6 +370,24 @@ const TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
   ),
 );
 
+/** The Variations skins of the layout kinds' frames (TODO 4.27b: the
+ *  extended-art Prepare dress, TEMPLATE_SKIN_VARIANTS.prepare). */
+const LAYOUT_SKINS: ReadonlySet<FrameTemplate> = new Set(
+  (Object.values(KIND_DEFS) as KindDef[]).flatMap((def) =>
+    (def.layoutTemplates ?? []).flatMap((t) => TEMPLATE_SKIN_VARIANTS[t] ?? []),
+  ),
+);
+
+/** True for a layout template's Variations skin (the extended-art Prepare
+ *  dress, TODO 4.27b). Such a skin is a PICK — the Variations section, an
+ *  exact import, a fill or remix that keeps it — and never a default or a
+ *  stand-in: firstAvailableFrame and resolvePublishedFrame's stand-in
+ *  search pass over it, so a skin ticked in a colour the layout's own frame
+ *  isn't never becomes the kind's frame by itself. */
+export function isLayoutSkin(template: FrameTemplate | string | null | undefined): boolean {
+  return Boolean(template) && LAYOUT_SKINS.has(template as FrameTemplate);
+}
+
 /** Derive the kind from persisted/form state. The template wins (a saga
  *  frame IS the saga kind, whatever card_type says); otherwise card_type
  *  maps 1:1. Legacy "spell" displays as sorcery WITHOUT rewriting the stored
@@ -1751,7 +1769,8 @@ export function firstAvailableFrame(
 ): FrameChoice | null {
   return (
     framesForKind(kind, verifiedKeys).find(
-      (f) => f.availableColorKeys.length > 0,
+      // A layout skin is never the default (isLayoutSkin, TODO 4.27b).
+      (f) => f.availableColorKeys.length > 0 && !isLayoutSkin(f.template),
     ) ?? null
   );
 }

@@ -64,6 +64,7 @@ import {
   M15_HOLO_STAMP_KEEP_OUT,
   M15_HOLO_STAMP_OVAL,
   PREPARE_HOLO_STAMP_KEEP_OUT,
+  PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
@@ -6797,7 +6798,15 @@ export const PREPARE_HOLO_STAMP: FrameOverlaySlot = {
     "wu-h", "wb-h", "ub-h", "ur-h", "br-h", "bg-h", "rg-h", "rw-h", "gw-h", "gu-h",
   ],
   keyByMaster: true,
-  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: PREPARE_HOLO_STAMP_KEEP_OUT },
+  // The keep-out FOLLOWS THE ARCH (the borderless rule): 4 px columns from
+  // 2 px above the lifted foot (prepareArchKeepOut); `keepOut` is their
+  // bounds.
+  stamp: {
+    shape: "oval",
+    oval: M15_HOLO_STAMP_OVAL,
+    keepOut: PREPARE_HOLO_STAMP_KEEP_OUT,
+    keepOutShape: PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
+  },
 };
 
 /**

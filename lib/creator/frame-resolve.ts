@@ -47,6 +47,7 @@ import {
   templateIsBasicOnly,
   isSubtypeDress,
   isEnchantmentDress,
+  isLayoutSkin,
   tokenFrameFor,
   type CardKind,
   type FrameColorKey,
@@ -155,6 +156,9 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         !isSubtypeDress(choice.template) &&
         // …nor an enchantment dress (the Nyx frame, TODO 4.7).
         !isEnchantmentDress(choice.template) &&
+        // …nor a layout's Variations skin (the extended-art Prepare dress,
+        // TODO 4.27b): a pick, never a stand-in.
+        !isLayoutSkin(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(keyFor(choice.template)),
     );

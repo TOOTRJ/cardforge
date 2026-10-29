@@ -73,7 +73,7 @@ import {
   type AiFillOptions,
 } from "@/components/creator/ai-fill-dialog";
 import { aiDialogColorKey } from "@/lib/ai/frame-choices";
-import { isAiLayoutKind } from "@/lib/ai/layout-design";
+import { isAiLayoutKind, layoutSkinOf } from "@/lib/ai/layout-design";
 import { fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import {
   EMBLEM_UNFILLED_FIELDS,
@@ -3300,6 +3300,13 @@ export function CardCreatorForm({
     // A double-faced fill (PR 3): a back of its own on a double-faced front
     // body or a token template — the kind its frame IS, as a layout fill's.
     const twoFacedFill = Boolean(fill.back_face) && templateTakesBackBody(fill.frame_template);
+    // A layout fill onto the frame the card WEARS A SKIN of (the extended-art
+    // Prepare dress, TODO 4.27b) keeps the skin where it is verified in the
+    // fill's colour — read before the kind change below moves the frame.
+    const skinBeforeFill =
+      fillKind && isAiLayoutKind(fillKind) && fill.frame_template && fill.frame_template !== getValues("frame_style.template")
+        ? layoutSkinOf(fillKind, getValues("frame_style.template"))
+        : null;
     if (fill.card_type && fillKind && !isRevise) {
       // A saga / two-part fill's kind change is judged in the colour the
       // card is about to take — the old one named a frame the card never
@@ -3319,7 +3326,11 @@ export function CardCreatorForm({
         ) as FrameColorKey;
         const resolution = resolvePublishedFrame({
           kind: fillKind,
-          candidates: [fill.frame_template as FrameTemplate],
+          // (The skin first, the fill's frame behind it: short of the skin
+          // in this colour the card lands on the fill's frame and says so.)
+          candidates: skinBeforeFill
+            ? [skinBeforeFill, fill.frame_template as FrameTemplate]
+            : [fill.frame_template as FrameTemplate],
           colorKey,
           verifiedKeys: new Set(verifiedFrameKeys),
           prefer: "frame",
@@ -3508,6 +3519,12 @@ export function CardCreatorForm({
           // The art is painted in the shape of the frame the card is on
           // (TODO 4.48b) — the frame itself is never changed by it.
           art_frame: fillArtFrameOf(options.want, getValues("frame_style.template")),
+          // A layout fill keeps the card's Variations skin of the kind's frame
+          // (the extended-art Prepare dress, TODO 4.27b) where it fits —
+          // sent only while the card wears one.
+          ...(isAiLayoutKind(options.design_kind) && layoutSkinOf(options.design_kind, getValues("frame_style.template"))
+            ? { layout_skin: getValues("frame_style.template") }
+            : {}),
           deck_id: options.deck_id,
           scope: fillScope,
         }),

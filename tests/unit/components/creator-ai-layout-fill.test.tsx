@@ -327,6 +327,57 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
     });
   });
 
+  // TODO 4.27b: a card on the extended-art Prepare dress (a Variations
+  // skin of `prepare`) keeps it through a fill — the plan is asked to keep
+  // it (layout_skin), and a fill that comes back on `prepare` (the plan's
+  // fallback, an older server) is put back on the dress where the dress is
+  // verified in the fill's colour; short of it, `prepare`, and it says so.
+  const PREPARE_FILL = {
+    title: "Lantern Scholar",
+    cost: "{2}{W}",
+    card_type: "creature",
+    supertype: null,
+    subtypes: ["Human", "Cleric"],
+    color_identity: ["white"],
+    rules_text: "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    flavor_text: null,
+    power: "2",
+    toughness: "3",
+    back_face: { card_type: "sorcery", supertype: null, subtypes: [], title: "Gentle Recall", cost: "{W}", rules_text: "You gain 3 life.", color_identity: ["white"] },
+    part_color: true,
+  };
+  const onTheDress = async () => {
+    // A first fill lands the card on the dress (the plan kept it there).
+    jobs.fill = { ...jobs.fill, frame_template: "extendedartprepare" };
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(jobs.posted[0]).not.toHaveProperty("layout_skin");
+    toast.success.mockClear();
+    jobs.fill = { ...jobs.fill, frame_template: "prepare", title: "Lantern Sage" };
+  };
+  const DRESS = (keys: string[]) => keys.map((k) => frameComboKey("extendedartprepare", k));
+
+  it("prepare on the extended-art dress — a fill keeps the dress where it is verified in the fill's colour", async () => {
+    const verified = [...VERIFIED, ...DRESS(COLOURS)];
+    const sent = await fillAndSave("prepare", { ...PREPARE_FILL, frame_template: "extendedartprepare" }, verified, onTheDress);
+    expect(jobs.posted[1]).toMatchObject({ design_kind: "prepare", layout_skin: "extendedartprepare" });
+    expect(sent).toMatchObject({ title: "Lantern Sage", frame_style: expect.objectContaining({ template: "extendedartprepare" }) });
+    expect(toast.info).not.toHaveBeenCalledWith(expect.stringContaining("isn't available"));
+  });
+
+  it("prepare on the extended-art dress — short of the dress in the fill's colour, the Prepare frame, said in a toast", async () => {
+    // The dress is verified in white for the first fill only… the second
+    // fill comes back blue, where only `prepare` is.
+    const verified = [...VERIFIED, ...DRESS(["w"])];
+    const blue = async () => {
+      await onTheDress();
+      jobs.fill = { ...jobs.fill, color_identity: ["blue"], cost: "{2}{U}", back_face: { ...PREPARE_FILL.back_face, cost: "{U}", color_identity: ["blue"] } };
+    };
+    const sent = await fillAndSave("prepare", { ...PREPARE_FILL, frame_template: "extendedartprepare" }, verified, blue);
+    expect(sent).toMatchObject({ color_identity: ["blue"], frame_style: expect.objectContaining({ template: "prepare" }) });
+    expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/isn't available in blue yet — using /));
+  });
+
   it("flip — the flipped side with its own power / toughness and no cost", async () => {
     const sent = await fillAndSave("flip", {
       title: "Ashen Apprentice",

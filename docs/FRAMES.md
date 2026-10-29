@@ -4196,8 +4196,14 @@ higher, as on every 2015 frame). Keys: the seven masters and the twenty
 pair masters, BOTH dresses — the slot is keyed by the master drawn
 (`FrameOverlaySlot.keyByMaster`), because the lifted bevel's top edge is cut
 against the strip, which the gold-split and hybrid dresses paint
-differently. The rules keep-out (`PREPARE_HOLO_STAMP_KEEP_OUT`) is the
-piece's box: only the creature's box reaches it. New cards start on "auto"
+differently. The rules keep-out FOLLOWS THE ARCH, as on the borderless
+frames: 4 px columns from 2 px above the lifted foot down past the
+creature's rules rect (`PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE`,
+`prepareArchKeepOut`; `PREPARE_HOLO_STAMP_KEEP_OUT` is their bounds) — only
+the creature's box reaches it. One rect over the arch's crown made the last
+line give way along the shallow left slope and clipped a long text the
+unstamped box fits at the floor (TLA #112); `rules-no-clip.test.tsx` holds
+both templates to "the stamp never adds a clip", at 750 and at HD. New cards start on "auto"
 (the oval on a rare or mythic), imports follow `security_stamp`, as on every
 wave-1 frame.
 
@@ -4226,7 +4232,14 @@ with the extended-art top (its art slot, white type ink, the set symbol's
 keyline), the extended-art crown, the pairs, the stamp and the collector
 line. A Variations pick of the Prepare kind (`TEMPLATE_SKIN_VARIANTS.prepare`
 — `framesForKind` lists a layout template's skins, `kindFromCard` reads a
-skin of a layout template as that kind), never a default. Imports: the
+skin of a layout template as that kind), never a default nor a stand-in
+(`isLayoutSkin`: `firstAvailableFrame` and `resolvePublishedFrame`'s
+stand-in search pass over a layout template's skins, so a dress ticked in a
+colour the Prepare frame isn't never becomes the kind's frame by itself). A
+layout AI fill on a card wearing it keeps it where the filled card fits
+there (`layoutFrameFitOf`, the request's `layout_skin`; the creator puts a
+fill back on it where it is verified in the fill's colour, else lands on
+`prepare` and says so); its art brief is the Prepare frame's. Imports: the
 extended family names it for a Prepare printing — EXACT once verified in the
 card's colour; short of it the Prepare frame, nearest, where THAT is
 verified; short of both the creature on `extendedart` with the spell a

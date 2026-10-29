@@ -297,9 +297,9 @@ export const PREPARE_STAMP = {
   measuredOn: "2026-10-28",
   scope: "35 stamped one-colour plain printings of layout:prepare (SOS, SOC, FRA, PSOS, PFRA)",
   /** The lift (HD px) at |x − 750| = 0, 2, 4, … (linear between; 0 from the
-   *  last entry on). The app reads only the piece's box and the keep-out
-   *  (lib/cards/holo-stamp.ts PREPARE_HOLO_STAMP_KEEP_OUT; a unit test holds
-   *  them to this box). */
+   *  last entry on). The app's copy is lib/cards/holo-stamp.ts
+   *  PREPARE_ARCH_LIFT_PX (the rules keep-out's columns,
+   *  PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE); a unit test holds the two equal. */
   lift: [
     35.8, 35.8, 35.8, 35.8, 35.8, 35.7, 35.6, 35.6, 35.5, 35.4, 35.2, 35.0, 34.7, 34.2, 33.7, 33.3, 32.9, 32.4, 31.8, 31.3,
     30.8, 30.2, 29.5, 28.8, 28.1, 27.3, 26.5, 25.7, 24.8, 23.8, 22.8, 21.8, 20.8, 19.6, 18.4, 17.3, 16.0, 14.6, 13.1, 11.7,

@@ -6,7 +6,13 @@ import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { resolveFrameOverlays, resolveHoloStamp } from "@/lib/cards/anatomy";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
-import { M15_HOLO_STAMP_OVAL, PREPARE_HOLO_STAMP_KEEP_OUT } from "@/lib/cards/holo-stamp";
+import {
+  M15_HOLO_STAMP_OVAL,
+  PREPARE_ARCH_LIFT_PX,
+  PREPARE_HOLO_STAMP_KEEP_OUT,
+  PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
+  prepareArchLiftAt,
+} from "@/lib/cards/holo-stamp";
 import {
   EXTENDED_CROWN,
   M15_COLLECTOR,
@@ -52,7 +58,7 @@ const facts = (over: Record<string, unknown> = {}) => ({
 });
 
 describe("the Prepare notch: the slot, the arch, the keys", () => {
-  it("the slot is the build's box, keyed by every master (both pair dresses), with M15's oval and the box as the keep-out", () => {
+  it("the slot is the build's box, keyed by every master (both pair dresses), with M15's oval and the arch's columns as the keep-out", () => {
     const box = PREPARE_STAMP.box;
     expect(PREPARE_HOLO_STAMP.rect).toEqual({
       leftPct: (box.x / 1500) * 100,
@@ -64,8 +70,12 @@ describe("the Prepare notch: the slot, the arch, the keys", () => {
     expect([...PREPARE_HOLO_STAMP.keys]).toEqual(NOTCH_KEYS);
     expect(Object.keys(PREPARE_STAMP_FOLDERS.prepareholostamp.keys).sort()).toEqual([...NOTCH_KEYS].sort());
     expect(PREPARE_HOLO_STAMP.anatomy === "holoStamp" && PREPARE_HOLO_STAMP.keyByMaster).toBe(true);
-    expect(PREPARE_HOLO_STAMP.anatomy === "holoStamp" && PREPARE_HOLO_STAMP.stamp).toEqual({ shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: PREPARE_HOLO_STAMP_KEEP_OUT });
-    expect(PREPARE_HOLO_STAMP_KEEP_OUT).toEqual(PREPARE_HOLO_STAMP.rect);
+    expect(PREPARE_HOLO_STAMP.anatomy === "holoStamp" && PREPARE_HOLO_STAMP.stamp).toEqual({
+      shape: "oval",
+      oval: M15_HOLO_STAMP_OVAL,
+      keepOut: PREPARE_HOLO_STAMP_KEEP_OUT,
+      keepOutShape: PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
+    });
     // M15's own slot keeps one piece per pair.
     expect(M15_HOLO_STAMP.anatomy === "holoStamp" && M15_HOLO_STAMP.keyByMaster).toBeUndefined();
   });
@@ -83,6 +93,34 @@ describe("the Prepare notch: the slot, the arch, the keys", () => {
     expect(archLiftAt(750, PREPARE_ARCH.lift)).toBeCloseTo(35.8, 1);
     expect(y).toBeLessThanOrEqual(Math.floor(PREPARE_STAMP.liftTop - PREPARE_STAMP.lift[0]));
     expect(y + height).toBe(PREPARE_ARCH.barTop);
+  });
+
+  it("the keep-out follows the arch: the build's lift table, 4 px columns 2 px over the lifted foot, inside the piece's box", () => {
+    expect([...PREPARE_ARCH_LIFT_PX]).toEqual([...PREPARE_STAMP.lift]);
+    for (let x = 640; x < 860; x += 1) expect(prepareArchLiftAt(x)).toBeCloseTo(archLiftAt(x, PREPARE_ARCH.lift), 9);
+    const px = (r: { leftPct: number; topPct: number; widthPct: number; heightPct: number }) => ({
+      x0: (r.leftPct / 100) * 1500,
+      x1: ((r.leftPct + r.widthPct) / 100) * 1500,
+      y0: (r.topPct / 100) * 2100,
+      y1: ((r.topPct + r.heightPct) / 100) * 2100,
+    });
+    const box = PREPARE_STAMP.box;
+    expect(PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE.length).toBeGreaterThan(40);
+    for (const r of PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE.map(px)) {
+      expect(r.x1 - r.x0).toBeCloseTo(4, 9);
+      expect(r.y1).toBeCloseTo(1925, 9);
+      expect(r.x0).toBeGreaterThanOrEqual(box.x - 1e-9);
+      expect(r.x1).toBeLessThanOrEqual(box.x + box.width + 1e-9);
+      // Each column's top is 2 px above the highest lifted row inside it.
+      let lift = 0;
+      for (let x = Math.round(r.x0); x < Math.round(r.x1); x += 1) lift = Math.max(lift, prepareArchLiftAt(x));
+      expect(r.y0).toBeCloseTo(PREPARE_STAMP.liftTop - lift - 2, 9);
+      expect(r.y0).toBeGreaterThanOrEqual(box.y - 2);
+    }
+    // The crown is the bounds' top; the shallow slopes sit far lower.
+    expect(px(PREPARE_HOLO_STAMP_KEEP_OUT).y0).toBeCloseTo(1927 - 35.8 - 2, 9);
+    const first = px(PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE[0]!);
+    expect(first.y0).toBeGreaterThan(1915);
   });
 
   it("keys a card by the master it is drawn as — a hybrid pair has its own piece; m15 still keys the pair", () => {

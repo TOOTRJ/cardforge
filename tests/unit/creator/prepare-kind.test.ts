@@ -5,7 +5,10 @@ import {
   KIND_PICKER_KINDS,
   LAYOUT_KIND_CARD_TYPES,
   baseFrameFor,
+  firstAvailableFrame,
   framesForKind,
+  isLayoutSkin,
+  kindHasAvailableFrame,
   skinVariantsFor,
   importedCardTypeForKind,
   kindFromCard,
@@ -25,6 +28,8 @@ import { remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { SECOND_HALF_RELATIONSHIP } from "@/lib/ai/remix";
 import { profileSecondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { resolvePublishedFrame } from "@/lib/creator/frame-resolve";
 
 // ---------------------------------------------------------------------------
 // TODO 4.27 — the Prepare kind and its frame through the ONE gates:
@@ -92,6 +97,39 @@ describe("the Prepare kind", () => {
     expect(skinVariantsFor("prepare", "prepare")).toEqual(["extendedartprepare"]);
     // A card stored on the dress IS the Prepare kind (the template wins).
     expect(kindFromCard("creature", "extendedartprepare")).toBe("prepare");
+  });
+
+  // TODO 4.27b: the dress is a PICK (Variations, an exact import, a fill or
+  // remix that keeps it) — never the kind's default nor a stand-in, even
+  // where it is ticked in a colour the Prepare frame isn't.
+  it("the extended-art dress is never the kind's default or a stand-in — only a pick", () => {
+    expect(isLayoutSkin("extendedartprepare")).toBe(true);
+    for (const t of ["prepare", "extendedart", "m15", "adventure", null, undefined]) expect(isLayoutSkin(t), String(t)).toBe(false);
+    const keys = (template: string, colours: readonly string[]) => colours.map((k) => frameComboKey(template, k));
+    // The dress alone verified (in red): no default, the chip stays dark.
+    const dressOnly = new Set(keys("extendedartprepare", ["r"]));
+    expect(firstAvailableFrame("prepare", dressOnly)).toBeNull();
+    expect(kindHasAvailableFrame("prepare", dressOnly)).toBe(false);
+    // Both verified: the default is the Prepare frame.
+    const both = new Set([...keys("prepare", ["w", "u"]), ...keys("extendedartprepare", ["w", "u", "r"])]);
+    expect(firstAvailableFrame("prepare", both)?.template).toBe("prepare");
+    // A Prepare card in red, where only the dress is ticked: never moved
+    // onto the dress by itself — the Prepare frame in a colour it has.
+    const red = resolvePublishedFrame({ kind: "prepare", candidates: ["prepare"], colorKey: "r", verifiedKeys: both, prefer: "frame" });
+    expect(red).toMatchObject({ template: "prepare", status: "colour-switched" });
+    expect(resolvePublishedFrame({ kind: "prepare", candidates: ["prepare"], colorKey: "r", verifiedKeys: dressOnly, prefer: "frame" })).toEqual({ status: "unavailable" });
+    // …and a card ON the dress whose colour the dress lacks: the Prepare
+    // frame in that colour, never another stand-in.
+    expect(resolvePublishedFrame({ kind: "prepare", candidates: ["extendedartprepare"], colorKey: "g", verifiedKeys: new Set([...both, ...keys("prepare", ["g"])]), prefer: "frame" })).toMatchObject({
+      status: "frame-switched",
+      template: "prepare",
+    });
+    // A pick names it: exact where it is verified.
+    expect(resolvePublishedFrame({ kind: "prepare", candidates: ["extendedartprepare"], colorKey: "r", verifiedKeys: both, prefer: "frame" })).toEqual({
+      status: "exact",
+      template: "extendedartprepare",
+      colorKey: "r",
+    });
   });
 
   it("the server's kind gate: a Prepare card saves on its frame; the frame refuses a card of another kind", () => {
