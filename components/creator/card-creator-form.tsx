@@ -74,7 +74,7 @@ import {
 } from "@/components/creator/ai-fill-dialog";
 import { aiDialogColorKey } from "@/lib/ai/frame-choices";
 import { isAiLayoutKind } from "@/lib/ai/layout-design";
-import { fillCreditsFor } from "@/lib/ai/dfc-design";
+import { fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
@@ -3499,6 +3499,11 @@ export function CardCreatorForm({
           style_preset: options.style_preset,
           style_twist: options.style_twist,
           design_kind: options.design_kind,
+          // A double-faced kind's back follows the card's icon family (the
+          // maker's pick; none = the default) — judged so at plan time.
+          ...(isAiDfcKind(options.design_kind) && getValues("frame_style.dfcIcon")
+            ? { dfc_icon: getValues("frame_style.dfcIcon") }
+            : {}),
           frame: options.frame,
           // The art is painted in the shape of the frame the card is on
           // (TODO 4.48b) — the frame itself is never changed by it.
@@ -3541,8 +3546,8 @@ export function CardCreatorForm({
       };
       // One step; poll while another request holds it (double-click, second
       // tab) instead of counting that as a failure. Null = the answer was
-      // lost (already said).
-      const runFillStep = async (key: string | undefined): Promise<FillStep | undefined | null> => {
+      // lost (said, unless `quiet`: the back's caller words it itself).
+      const runFillStep = async (key: string | undefined, quiet = false): Promise<FillStep | undefined | null> => {
         let found: FillStep | undefined;
         for (let attempt = 0; attempt < 40; attempt += 1) {
           const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
@@ -3555,7 +3560,7 @@ export function CardCreatorForm({
             // No JSON = the answer was lost on the way (a platform timeout
             // page, a dropped connection): the result, if it finishes, is
             // offered back here; a charge with no result comes back by itself.
-            toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
+            if (!quiet) toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
             return null;
           }
           if (typeof payload.credits === "number") publishCredits(payload.credits);
@@ -3586,16 +3591,34 @@ export function CardCreatorForm({
       // the front is still the maker's (its credit stands — its picture
       // was delivered) and the back's credit was returned — said below.
       let backMissed: string | null = null;
+      // The back's answer was lost and the job can't tell yet what became of
+      // it: the result stays UNCLAIMED, so a back the server finishes (and
+      // charged) is offered on this page next time (app/api/ai/card-fill).
+      let backUnknown = false;
       if (backStepKey) {
         setFillPhase("painting-back");
-        const back = await runFillStep(backStepKey);
+        // A lost answer — a dropped connection, a platform timeout page, a
+        // throw — never takes the front with it: the front was painted and
+        // paid for, and is poured in below whatever the back did.
+        let back: FillStep | undefined | null = await runFillStep(backStepKey, true).catch(() => null);
+        if (back === null || back?.status === "running" || back?.status === "pending") {
+          // Ask the job once what the back really did before saying so.
+          back = await fetch(`/api/ai/jobs/${jobId}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: { ok?: boolean; job?: { steps?: FillStep[] } } | null) =>
+              payload?.ok ? (payload.job?.steps ?? []).find((candidate) => candidate.key === backStepKey) ?? null : null,
+            )
+            .catch(() => null);
+        }
         const backArt = back?.status === "done" ? back.fill?.back_face : undefined;
         if (backArt?.art_url && filled.back_face) {
           filled = { ...filled, back_face: { ...filled.back_face, ...backArt } };
+        } else if (back?.status === "failed") {
+          backMissed = `The back face's picture couldn't be painted. ${failedStepMessage(back)} Add a picture for the back face before you save it — or save it as a draft.`;
         } else {
-          backMissed = `The back face's picture couldn't be painted. ${
-            back?.status === "failed" ? failedStepMessage(back) : "If a credit was taken for it, it comes back to you automatically within the hour."
-          } Add a picture for the back face before you save it — or save it as a draft.`;
+          backUnknown = true;
+          backMissed =
+            "We lost the connection while the back face's picture was being painted. If it finishes, it's offered on this page next time you open it; if it doesn't, any credit it took comes back automatically within the hour. Until then, add a picture for the back face before you save it — or save it as a draft.";
         }
       }
       try {
@@ -3609,13 +3632,15 @@ export function CardCreatorForm({
         );
         return;
       }
-      claimFill(jobId);
+      if (!backUnknown) claimFill(jobId);
       // ONE announcement: a card kept on another frame than the one picked
       // says why in it (frame-first, lib/ai/frame-brief.ts); a double-faced
       // card whose back picture failed says so — and what its credit did —
-      // never a silent half (PR 3).
+      // never a silent half (PR 3), the frame's notice beside it.
       if (backMissed) {
-        toast.warning("Generated the card — but not its back face's picture.", { description: backMissed });
+        toast.warning("Generated the card — but not its back face's picture.", {
+          description: [filled.frame_notice, backMissed].filter(Boolean).join(" "),
+        });
       } else {
         toast.success(
           "Generated — look it over and save when you're happy.",

@@ -26,6 +26,7 @@ import {
 } from "@/lib/ai/generation-jobs";
 import {
   COLOR_IDENTITY_VALUES,
+  DFC_ICON_FAMILY_VALUES,
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
 } from "@/types/card";
@@ -202,6 +203,9 @@ const requestSchema = z.discriminatedUnion("kind", [
      *  is designed frame-first (lib/ai/frame-brief.ts). Anything else is
      *  dropped — the fill is then what it always was. */
     design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS, ...AI_DFC_KINDS]).optional().catch(undefined),
+    /** A double-faced kind's icon family as the creator holds it (PR 3):
+     *  the back's body follows it. Anything else is dropped (the default). */
+    dfc_icon: z.enum(DFC_ICON_FAMILY_VALUES).optional().catch(undefined),
     /** The dialog's theme / style presets and the maker's twists: when any
      *  is named they are what the designer and the painter read (the twist
      *  first), in place of `theme` / `style`. */
@@ -552,7 +556,7 @@ export async function POST(request: Request) {
       scope: fill.scope,
       ...(designKind ? { designKind } : {}),
       ...(layout ? { layout } : {}),
-      ...(dfc ? { dfc } : {}),
+      ...(dfc ? { dfc, ...(fill.dfc_icon ? { dfcIcon: fill.dfc_icon } : {}) } : {}),
       ...(assembled ? { assembled: { artStyle: assembled.artStyle, styleArt: assembled.styleArt } } : {}),
     });
     if (!result.ok) {

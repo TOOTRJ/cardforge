@@ -430,6 +430,12 @@ describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
     expect(status).toBe(200);
     const input = s.created.at(-1)!.input as Record<string, unknown> & { steer: Record<string, unknown> };
     expect(input).toMatchObject({ dfc: "transform", frame: "m15dfcfront" });
+    expect(input).not.toHaveProperty("dfcIcon");
+    // The card's icon family travels with it; an unknown one is dropped.
+    await post({ ...body, dfc_icon: "sunmoon" });
+    expect(s.created.at(-1)!.input).toMatchObject({ dfcIcon: "sunmoon" });
+    await post({ ...body, dfc_icon: "spiral" });
+    expect(s.created.at(-1)!.input).not.toHaveProperty("dfcIcon");
     expect(input).not.toHaveProperty("designKind");
     expect(input).not.toHaveProperty("layout");
     expect(input.steer.card_type).toBeUndefined();

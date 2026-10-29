@@ -43,9 +43,13 @@ export async function GET(request: Request) {
     .from("ai_generation_jobs")
     .select("id, owner_id, kind, status, request, steps, created_at")
     .eq("kind", "card_fill")
-    // A double-faced fill (PR 3) has a second step, its back picture: one
-    // whose back failed (refunded) still finished its front — offered too.
-    .in("status", ["done", "done_with_errors"])
+    // A double-faced fill (PR 3) has a second step, its back picture: a job
+    // whose FRONT finished is offered whatever its back did — failed
+    // (refunded), still running, or never reached because the answer was
+    // lost (the job then stays "generating"): the front was paid for. Only
+    // a cancelled job is never offered. A one-step fill is "done" exactly
+    // when its step is (the `steps[0]` test below), as before.
+    .in("status", ["generating", "done", "done_with_errors"])
     .gte("created_at", new Date(Date.now() - UNCLAIMED_WINDOW_MS).toISOString())
     .order("created_at", { ascending: false })
     .limit(10);

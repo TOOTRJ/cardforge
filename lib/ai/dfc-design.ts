@@ -61,7 +61,9 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcLookOf,
+  isDfcIconFamily,
   namesSagaSubtype,
+  type DfcIconFamily,
   type DfcLayout,
 } from "@/lib/cards/dfc";
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
@@ -291,6 +293,12 @@ const backFields = (cost: string) =>
 const NO_WALKER_BACK =
   'The back is a creature, artifact, enchantment, land, instant or sorcery — never a planeswalker, saga or battle, and no "Saga" subtype.';
 
+/** A TRANSFORMED back stays on the battlefield, so print makes it a
+ *  permanent (the creator's rule still admits an instant or sorcery face —
+ *  the brief steers, the lint does not refuse). */
+const PERMANENT_BACK =
+  'The back is a PERMANENT — a creature, artifact, enchantment or land (it is what the card becomes on the battlefield) — never an instant or sorcery, a planeswalker, a saga or a battle, and no "Saga" subtype.';
+
 /** What the designer is told about the kind's shape (one paragraph). */
 export function dfcShapeRules(kind: AiDfcKind, front: FrameTemplate | null): string {
   const landFront = front === "m15dfclandfront" || front === "m15mdfclandfront";
@@ -304,7 +312,7 @@ export function dfcShapeRules(kind: AiDfcKind, front: FrameTemplate | null): str
         "It is a TRANSFORM double-faced card: one card with two faces — it enters front face up and transforms into its back (a villager and the beast it becomes, a hero and the legend it grows into).",
         `The front is the card's own fields: ${frontTypes}; its rules_text says when it transforms ("…, transform it.").`,
         backFields('"" — a transform back has no mana cost'),
-        NO_WALKER_BACK,
+        PERMANENT_BACK,
         borderless
           ? "The back is no land (a land face has no borderless frame)."
           : 'A land back is colorless (color_identity ["colorless"]).',
@@ -326,7 +334,7 @@ export function dfcShapeRules(kind: AiDfcKind, front: FrameTemplate | null): str
         layoutShapeRules("saga"),
         `It is a DOUBLE-FACED saga: its LAST chapter reads "${DFC_SAGA_LAST_CHAPTER}" and the back is what the story becomes; the saga's intro is null (the frame prints "${DFC_SAGA_REMINDER}").`,
         backFields('"" — the back has no mana cost'),
-        `${NO_WALKER_BACK} It is usually a creature with power and toughness.`,
+        `${PERMANENT_BACK} It is usually a creature with power and toughness.`,
       ].join(" ");
     case "dfc_token":
       return [
@@ -586,8 +594,16 @@ export function dfcFitOf(
   kind: AiDfcKind,
   face: DfcFace,
   verifiedKeys: ReadonlySet<string>,
-  opts: { picked: FrameTemplate | null; random?: () => number },
+  opts: {
+    picked: FrameTemplate | null;
+    random?: () => number;
+    /** The card's icon family as the creator holds it
+     *  (`frame_style.dfcIcon` — the maker's pick, else the default): the
+     *  back's body follows it, here as in the save. */
+    family?: DfcIconFamily | null;
+  },
 ): DfcFit {
+  const family: DfcIconFamily = opts.family && isDfcIconFamily(opts.family) ? opts.family : DEFAULT_DFC_ICON;
   const no = (reason: string, front: FrameTemplate | null = null): DfcFit => ({ ok: false, reason, front, exact: false, notice: null, back: null });
   const saga = kind === "dfc_saga" ? sagaFromRulesText(face.rules_text) : null;
   const card: DfcDesignCard = {
@@ -671,7 +687,7 @@ export function dfcFitOf(
         layout,
         backType: back.card_type,
         backSubtypes: back.subtypes,
-        family: DEFAULT_DFC_ICON,
+        family,
         look: dfcLookOf(front),
         backColorIdentity: back.color_identity,
         frontColorIdentity: colour,
@@ -709,7 +725,7 @@ export function dfcFitOf(
       frame_style: { template: backTemplate },
       color_identity: backColour,
     },
-    family: layout === "transform" ? DEFAULT_DFC_ICON : undefined,
+    family: layout === "transform" ? family : undefined,
     frontColorIdentity: colour,
     verifiedKeys,
   });

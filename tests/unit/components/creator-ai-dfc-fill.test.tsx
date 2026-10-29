@@ -102,12 +102,23 @@ const jobs = {
   front: {} as Fill,
   frontStep: {} as Record<string, unknown>,
   back: {} as Record<string, unknown>,
+  /** How the back step's POST answers: as the server would, thrown on the
+   *  way (a dropped connection) or with a page that isn't JSON. */
+  backPost: "ok" as "ok" | "throw" | "nojson",
+  /** What a re-read of the job (GET /api/ai/jobs/job-1) says of the back. */
+  reread: null as Record<string, unknown> | "fail" | null,
+  rereads: 0,
+  claimed: [] as string[],
 };
 
 beforeEach(() => {
   jobs.posted = [];
   jobs.stepBodies = [];
   jobs.frontStep = {};
+  jobs.backPost = "ok";
+  jobs.reread = null;
+  jobs.rereads = 0;
+  jobs.claimed = [];
   confirm.calls = [];
   vi.stubGlobal(
     "fetch",
@@ -119,8 +130,21 @@ beforeEach(() => {
           { status: 200 },
         );
       }
+      if (url === "/api/ai/jobs/job-1") {
+        jobs.rereads += 1;
+        if (jobs.reread === "fail" || jobs.reread === null) throw new TypeError("Failed to fetch");
+        const front = { key: "fill:0", status: "done", fill: jobs.front };
+        return new Response(JSON.stringify({ ok: true, job: { steps: [front, { key: "fill:1", ...jobs.reread }] } }), { status: 200 });
+      }
+      if (url === "/api/ai/card-fill" && (init as { method?: string } | undefined)?.method === "POST") {
+        jobs.claimed.push(String(init?.body));
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
       if (String(url).startsWith("/api/ai/jobs/job-1/step")) {
         jobs.stepBodies.push(init?.body ?? "");
+        const isBack = (init?.body ?? "").includes("fill:1");
+        if (isBack && jobs.backPost === "throw") throw new TypeError("Failed to fetch");
+        if (isBack && jobs.backPost === "nojson") return new Response("<html>504 Gateway Timeout</html>", { status: 504 });
         const front = { key: "fill:0", status: "done", fill: jobs.front, ...jobs.frontStep };
         const back = (init?.body ?? "").includes("fill:1") ? { key: "fill:1", ...jobs.back } : { key: "fill:1", status: "pending" };
         return new Response(JSON.stringify({ ok: true, credits: 3, job: { steps: [front, back] } }), { status: 200 });
@@ -272,5 +296,75 @@ describe("never two credits for one picture, silently", () => {
     expect(String(toast.error.mock.calls[0]![0])).toContain("Your credit was returned.");
     expect(jobs.stepBodies).toEqual(["{}", JSON.stringify({ step: "fill:1" })]);
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("a lost answer about the back never loses the front (review of #639)", () => {
+  const backDone = () => ({ status: "done", fill: recordedFills("transform").back });
+
+  it("the back's request THROWS (a dropped connection): the job is re-read, a finished back merged, the fill claimed", async () => {
+    jobs.backPost = "throw";
+    jobs.reread = backDone();
+    const { payload } = await fillAndSave("transform", "m15dfcfront");
+    expect(jobs.rereads).toBe(1);
+    expect(payload.back_face).toMatchObject({ art_url: BACK_ART });
+    expect(jobs.claimed).toEqual([JSON.stringify({ jobId: "job-1" })]);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("thrown AND the re-read lost too: the front is applied, the fill left UNCLAIMED (offered back later), and the toast says only what's true", async () => {
+    jobs.backPost = "throw";
+    jobs.reread = "fail";
+    await runFill("transform", "m15dfcfront", { expectToast: "warning" });
+    const [, options] = toast.warning.mock.calls[0]! as [string, { description: string }];
+    expect(options.description).toContain("We lost the connection while the back face's picture was being painted");
+    expect(options.description).toContain("offered on this page next time");
+    expect(options.description).not.toContain("couldn't be painted");
+    expect(options.description).not.toContain("was returned");
+    // The front is in the form; nothing claimed, so a back the server
+    // finishes is offered by the unclaimed route.
+    // (The warning is raised only once the fill was poured into the form.)
+    expect(jobs.claimed).toEqual([]);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("the back's answer isn't JSON (a platform timeout page) but the server finished it: merged from the re-read", async () => {
+    jobs.backPost = "nojson";
+    jobs.reread = backDone();
+    const { payload } = await fillAndSave("transform", "m15dfcfront");
+    expect(payload.back_face).toMatchObject({ art_url: BACK_ART });
+    expect(jobs.claimed).toHaveLength(1);
+  });
+
+  it("a back still running on the re-read: unclaimed, said as unknown", async () => {
+    jobs.backPost = "nojson";
+    jobs.reread = { status: "running" };
+    await runFill("transform", "m15dfcfront", { expectToast: "warning" });
+    expect(jobs.claimed).toEqual([]);
+  });
+
+  it("a failed back's warning carries the frame notice too", async () => {
+    dialog.kind = "transform";
+    dialog.frame = "m15dfcfront";
+    const recorded = recordedFills("transform");
+    jobs.front = { ...recorded.front, frame_notice: "Designed as a land, so it's on Transform land front." };
+    jobs.back = { status: "failed", failure: "art_blocked", refunded: 1 };
+    render(<CardCreatorForm mode="create" userId={USER} ownerUsername="tester" gameSystems={GAME_SYSTEMS} aiConfigured verifiedFrameKeys={VERIFIED} />);
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.warning).toHaveBeenCalled());
+    const [, options] = toast.warning.mock.calls[0]! as [string, { description: string }];
+    expect(options.description).toContain("Designed as a land, so it's on Transform land front.");
+    expect(options.description).toContain("Your credit was returned.");
+  });
+});
+
+describe("the icon family travels with a double-faced kind", () => {
+  it("a second run on a transform card sends the card's family; the first (no family yet) sends none", async () => {
+    await runFill("transform", "m15dfcfront");
+    expect(jobs.posted[0]).not.toHaveProperty("dfc_icon");
+    toast.success.mockClear();
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(jobs.posted[1]).toMatchObject({ dfc_icon: "arrows" });
   });
 });

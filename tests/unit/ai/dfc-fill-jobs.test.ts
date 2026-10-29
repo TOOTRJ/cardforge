@@ -312,3 +312,12 @@ describe("the fit, at plan time — nothing reserved before it", () => {
     expect(s.prompts).toEqual([]);
   });
 });
+
+describe("the icon family (review of #639)", () => {
+  it("the plan judges and paints the back on the body the card's family derives", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    const out = await fill("transform", { dfcIcon: "sunmoon" });
+    expect(out.ok).toBe(true);
+    expect(plan().back_art!.face.template).toBe("m15dfcbackleft");
+  });
+});

@@ -98,6 +98,7 @@ import {
   type AiDfcKind,
   type DfcFit,
 } from "@/lib/ai/dfc-design";
+import type { DfcIconFamily } from "@/lib/cards/dfc";
 import type {
   CardBackFace,
   CardType,
@@ -1058,6 +1059,10 @@ export type CreateCardFillJobInput = {
    *  gate a double-faced save runs, and paints TWO pictures — one step and
    *  one credit each. Read only with the card type wanted. */
   dfc?: AiDfcKind;
+  /** The card's icon family as the creator holds it (`frame_style.dfcIcon`)
+   *  for a double-faced fill: the back's body follows it, in the plan's fit
+   *  as in the save. Absent = the default (▲ / ▼). */
+  dfcIcon?: DfcIconFamily;
   /** The theme / style were assembled from the dialog's presets
    *  (lib/ai/presets.ts assemblePrompt): what the painter reads. */
   assembled?: { artStyle?: string; styleArt: string };
@@ -1577,7 +1582,7 @@ async function createDfcFillJob(
         back_face: result.back_face ?? null,
       },
       verifiedKeys,
-      { picked, random: () => roll },
+      { picked, random: () => roll, family: input.dfcIcon ?? null },
     );
   };
   let designs = 0;

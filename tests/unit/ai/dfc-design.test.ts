@@ -246,3 +246,25 @@ describe("refused before any model call", () => {
     ).toMatch(/can't be a saga's chapters.*No credits were used\./);
   });
 });
+
+describe("review of #639", () => {
+  it("the back's body follows the card's icon family (the maker's pick), as the save does", () => {
+    const face = faceOf(normalized("transform"));
+    expect(dfcFitOf("transform", face, EVERY, { picked: "m15dfcfront" }).back?.template).toBe("m15dfcback");
+    expect(dfcFitOf("transform", face, EVERY, { picked: "m15dfcfront", family: "sunmoon" }).back?.template).toBe("m15dfcbackleft");
+    // A family with no borderless back: refused at plan time, never after the art.
+    expect(dfcFitOf("transform", face, EVERY, { picked: "m15borderlessdfcfront", family: "sunmoon" }).ok).toBe(false);
+    // A modal card has no family: the same body whatever it says.
+    expect(dfcFitOf("mdfc", faceOf(normalized("mdfc")), EVERY, { picked: "m15mdfcfront", family: "sunmoon" }).back?.template).toBe("m15mdfclandback");
+  });
+
+  it("the brief steers a transformed back to a PERMANENT (a modal back may be a spell); the lint still admits what the creator does", () => {
+    for (const kind of ["transform", "dfc_saga"] as const) {
+      expect(dfcFrameBrief(kind, null)).toContain("The back is a PERMANENT");
+    }
+    expect(dfcFrameBrief("mdfc", null)).not.toContain("PERMANENT");
+    const card = normalized("transform");
+    const instantBack = { ...card.back_face!, card_type: "instant" as const, power: null, toughness: null, subtypes: [], rules_text: "Draw a card." };
+    expect(lintDfcDesign({ ...card, back_face: instantBack }, "transform").errors).toEqual([]);
+  });
+});
