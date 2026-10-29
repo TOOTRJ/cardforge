@@ -12,7 +12,7 @@ import {
 } from "@/lib/og/shell";
 import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
-import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
+import { featuredCardsOf, missingFeaturedRank, type FeaturableCard } from "@/lib/decks/featured";
 import { withDeckVisibleCards } from "@/lib/decks/entry-status";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import {
@@ -25,8 +25,9 @@ import {
 // Social-preview card for deck pages (TODO DK6.6): the deck page's hero,
 // flat — the cover (an upload, or the default background its colours pick,
 // lib/decks/cover.ts) with up to five of its PipGlyph cards fanned in front
-// (lib/decks/featured.ts: commanders first, then a seeded pick of its custom
-// cards). Every picture is pre-fetched to a data URI, so a dead URL drops
+// (lib/decks/featured.ts: commanders first, then the owner's cover picks,
+// then a seeded pick of its custom cards). Every picture is pre-fetched to a
+// data URI, so a dead URL drops
 // that one picture, never the render. Served as JPEG, under WhatsApp's
 // 600 KB (lib/og/deck-share-image.tsx).
 //
@@ -60,6 +61,8 @@ type OgEntry = {
   image_url: string | null;
   type_line: string | null;
   color_identity: string[];
+  /** Absent on a database 0150 hasn't reached. */
+  featured_rank?: number | null;
   card: OgCard | null;
 };
 
@@ -78,16 +81,18 @@ async function getDeck(
       .eq("slug", slug)
       .maybeSingle();
     if (!deck) return null;
-    const [{ data: entries }, username] = await Promise.all([
+    // The owner's cover picks (0150) too — on a database 0150 hasn't
+    // reached the read runs again without them.
+    const readEntries = (withRank: boolean) =>
       supabase
         .from("deck_cards")
         .select(
-          "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)",
+          `id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, ${withRank ? "featured_rank, " : ""}card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)`,
         )
         .eq("deck_id", deck.id)
-        .order("position", { ascending: true }),
-      lookupUsername(supabase, deck.owner_id),
-    ]);
+        .order("position", { ascending: true });
+    const [first, username] = await Promise.all([readEntries(true), lookupUsername(supabase, deck.owner_id)]);
+    const { data: entries } = missingFeaturedRank(first.error) ? await readEntries(false) : first;
     return { deck, entries: (entries ?? []) as unknown as OgEntry[], username };
   } catch {
     return null;
@@ -123,8 +128,8 @@ export default async function Image({
     deck.owner_id,
   );
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  // The page's rule (commanders first, then the seeded fill, up to five),
-  // filled from the baked PipGlyph cards alone.
+  // The page's rule (commanders first, then the owner's picks, then the
+  // seeded fill, up to five), filled from the baked PipGlyph cards alone.
   const customs = featuredCardsOf(items, deck, { printings: false });
   const [coverUri, ...thumbs] = await Promise.all([
     deckCoverDataUri(cover.src),

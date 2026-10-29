@@ -58,7 +58,7 @@ import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
+import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
 import { cn } from "@/lib/utils";
@@ -354,11 +354,11 @@ export default async function DeckDetailPage({
           isOwner ? (
             <DeckToolButton
               tool="details"
-              label={cover.kind === "upload" ? "Change cover" : "Upload a cover"}
+              label={cover.kind === "upload" ? "Change cover" : "Choose a cover"}
               className="rounded-full border border-white/25 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur hover:bg-black/60 hover:text-white"
             >
               {cover.kind === "upload" ? <Pencil className="h-3.5 w-3.5" aria-hidden /> : <ImagePlus className="h-3.5 w-3.5" aria-hidden />}
-              {cover.kind === "upload" ? "Change cover" : "Upload a cover"}
+              {cover.kind === "upload" ? "Change cover" : "Choose a cover"}
             </DeckToolButton>
           ) : null
         }
@@ -403,7 +403,9 @@ export default async function DeckDetailPage({
             <DeckOwnerTools
               deck={deck}
               userId={user.id}
-              defaultCoverSrc={cover.kind === "default" ? cover.src : null}
+              // What the deck shows with no cover stored — the cover
+              // editor's automatic pick (a stored built-in is its `value`).
+              defaultCoverSrc={defaultDeckCoverFor(deck.id, deckCoverColors(items))}
               capacity={cardCapacity}
               openImport={search.import === "1"}
             />
@@ -447,6 +449,8 @@ export default async function DeckDetailPage({
               items={shownItems}
               ownerUsername={deck.owner?.username ?? null}
               canManage={isOwner}
+              // The owner's cover picks in the card pop-up (TODO DK6.4).
+              coverOwnerId={isOwner ? deck.owner_id : null}
               initialPrefs={viewPrefs}
               summary={{
                 format: deck.format,
