@@ -13,8 +13,9 @@ type DashboardShellProps = {
   children: React.ReactNode;
   className?: string;
   /** A page of forms and short lines (Settings, Notifications, Feedback, AI
-   *  usage, Messages): its column stops at 1024 px, the width a standard
-   *  page gave it, so an input or a row never runs 1,600 px. */
+   *  usage, Messages; the admin inbox, updates, challenges and creator lab):
+   *  its column stops at 1024 px, so an input or a row never runs 1,600 px
+   *  on a wide screen. */
   readable?: boolean;
 };
 

@@ -20,7 +20,7 @@ export default async function CreatorLabAdminPage() {
   if (!profile?.is_admin) notFound();
   const mode = await getCreatorLabMode();
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Admin"
         title="Creator lab"

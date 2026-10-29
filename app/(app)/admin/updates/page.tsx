@@ -20,7 +20,7 @@ export default async function UpdatesAdminPage() {
   if (!profile?.is_admin) notFound();
   const [updates, bannerEnabled] = await Promise.all([listAllUpdatesForAdmin(), isBannerEnabled()]);
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Admin"
         title="Site updates & upcoming features"
