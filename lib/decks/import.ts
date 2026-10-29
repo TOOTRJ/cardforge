@@ -84,6 +84,20 @@ export type ResolveDecklistResult =
 // time at 500ms per /cards/named call.
 const MAX_FUZZY_RESCUES = 15;
 
+/** One /cards/collection request; a transport failure (a rejected fetch:
+ *  DNS, reset, timeout) reads as "Scryfall didn't answer" like a bad
+ *  response does, instead of rejecting the server action into the error
+ *  boundary. */
+async function collectionOrNull(
+  batch: Parameters<typeof getCardCollection>[0],
+): Promise<Awaited<ReturnType<typeof getCardCollection>>> {
+  try {
+    return await getCardCollection(batch);
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveDecklistAction(
   payload: unknown,
 ): Promise<ResolveDecklistResult> {
@@ -143,7 +157,7 @@ export async function resolveDecklistAction(
     Array.from(uniqueIdentifiers.values()),
     SCRYFALL_COLLECTION_MAX,
   )) {
-    const result = await getCardCollection(batch);
+    const result = await collectionOrNull(batch);
     if (result === null) {
       return {
         ok: false,
@@ -159,7 +173,7 @@ export async function resolveDecklistAction(
   const fallbacks = nameFallbackIdentifiers(entries, byKey);
   if (fallbacks.length > 0) {
     for (const batch of chunkIdentifiers(fallbacks, SCRYFALL_COLLECTION_MAX)) {
-      const result = await getCardCollection(batch);
+      const result = await collectionOrNull(batch);
       if (result) allCards.push(...result.cards);
     }
     byKey = reconcileCollection([], allCards).byKey;
@@ -178,7 +192,10 @@ export async function resolveDecklistAction(
     const cacheKey = name.toLowerCase();
     if (fuzzyByName.has(cacheKey)) continue;
     fuzzyBudget -= 1;
-    fuzzyByName.set(cacheKey, await getCardByName({ fuzzy: name }));
+    fuzzyByName.set(
+      cacheKey,
+      await getCardByName({ fuzzy: name }).catch(() => null),
+    );
   }
 
   const lines: ImportReviewLine[] = entries.map((entry) => {
@@ -274,34 +291,33 @@ export async function commitDeckImportAction(
     return { ok: false, error: "Sign in to import a decklist." };
   }
 
-  // A commit is a run too: it calls Scryfall again (below), so it spends
-  // the same `deck_import` quota as the resolve step (SCRYFALL_LIMITS).
-  const rate = await checkScryfallRateLimit(user.id, "deck_import");
-  if (!rate.ok) {
-    return {
-      ok: false,
-      error: rate.message,
-      retryAfterSeconds: rate.retryAfterSeconds,
-    };
-  }
-
   const deck = await getDeckById(parsed.data.deckId);
   if (!deck || deck.owner_id !== user.id) {
     return { ok: false, error: "Deck not found or not yours." };
   }
 
-  await logScryfallCall(user.id, "deck_import");
-
   // Re-resolve every printing on the server, 75 ids a request (the client's
-  // throttle spaces them per Scryfall's limits).
+  // throttle spaces them per Scryfall's limits). The commit has its OWN
+  // quota (`deck_import_commit`, SCRYFALL_LIMITS — twice the resolve's, so
+  // the commit right after a resolve is never the one refused), and a list
+  // of placeholders only makes no call and spends none of it.
+  const ids = commitScryfallIds(parsed.data.lines);
   const cards: ScryfallCard[] = [];
-  for (const batch of scryfallIdBatches(
-    commitScryfallIds(parsed.data.lines),
-    SCRYFALL_COLLECTION_MAX,
-  )) {
-    const result = await getCardCollection(batch);
-    if (result === null) return { ok: false, error: SCRYFALL_DOWN };
-    cards.push(...result.cards);
+  if (ids.length > 0) {
+    const rate = await checkScryfallRateLimit(user.id, "deck_import_commit");
+    if (!rate.ok) {
+      return {
+        ok: false,
+        error: rate.message,
+        retryAfterSeconds: rate.retryAfterSeconds,
+      };
+    }
+    await logScryfallCall(user.id, "deck_import_commit");
+    for (const batch of scryfallIdBatches(ids, SCRYFALL_COLLECTION_MAX)) {
+      const result = await collectionOrNull(batch);
+      if (result === null) return { ok: false, error: SCRYFALL_DOWN };
+      cards.push(...result.cards);
+    }
   }
 
   const plan = planImportEntries(serverResolvedLines(parsed.data.lines, cards));

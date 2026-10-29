@@ -41,7 +41,7 @@ vi.mock("@/lib/supabase/server", () => ({
         const data = Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => ({
           id: `${table}-${from + i}`,
         }));
-        return Promise.resolve({ data, error: null }).then(resolve, reject);
+        return Promise.resolve({ data, error: null, count: total }).then(resolve, reject);
       };
       return chain;
     },
@@ -77,6 +77,12 @@ describe("GET /api/account/export", () => {
     }
     const entryCall = s.calls.find((c) => c.table === "deck_cards");
     expect(entryCall?.ops).toContainEqual(["in", "deck_id", ["decks-0", "decks-1", "decks-2"]]);
+  });
+
+  it("asks each read for its exact count, so a short table is one request", async () => {
+    await GET();
+    for (const call of s.calls) expect(call.ops, call.table).toContainEqual(["select", "*", { count: "exact" }]);
+    expect(s.calls.filter((c) => c.table === "decks")).toHaveLength(1);
   });
 
   it("refuses a partial export", async () => {

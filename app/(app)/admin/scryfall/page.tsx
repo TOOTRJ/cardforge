@@ -37,6 +37,8 @@ const ACTION_LABELS: Record<string, string> = {
   import_art: "Art import",
   // Its cap counts import RUNS, not Scryfall calls (lib/scryfall/rate-limit.ts).
   deck_import: "Deck import (runs)",
+  // One row per commit that re-fetched its printings (migration 0143).
+  deck_import_commit: "Deck import commits",
 };
 
 function StatTile({

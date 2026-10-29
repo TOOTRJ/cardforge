@@ -9,7 +9,8 @@ import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 // Every list is read WHOLE: PostgREST answers an un-ranged select with at
 // most 1000 rows and says nothing about the rest, so a Pro account's 1,001st
 // card (or a deck's 1,001st entry) was silently missing from its own export.
-// Each read pages by id (`selectAllRows`).
+// Each read pages by id (`selectAllRows`), and any failed or cut-short read
+// refuses the export rather than hand back a file that looks complete.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ function readAll(supabase: ExportClient, table: ExportTable, column: string, use
   return selectAllRows<Record<string, unknown>>((from, to) =>
     supabase
       .from(table)
-      .select("*")
+      .select("*", { count: "exact" })
       .eq(column, userId)
       .order("id", { ascending: true })
       .range(from, to),
@@ -69,8 +70,8 @@ export async function GET() {
   ]);
 
   // Deck entries ride along with the user's decks (RLS scopes them to
-  // readable decks; filtering by the owned deck ids keeps it explicit). A
-  // few hundred deck ids a request; each request paged.
+  // readable decks; filtering by the owned deck ids keeps it explicit). 100
+  // deck ids a request (`chunkIds`: the URL stays short), each one paged.
   const deckIds = decks.data.map((deck) => String(deck.id));
   const deckCards: Record<string, unknown>[] = [];
   let readError =
@@ -86,7 +87,7 @@ export async function GET() {
     const page = await selectAllRows<Record<string, unknown>>((from, to) =>
       supabase
         .from("deck_cards")
-        .select("*")
+        .select("*", { count: "exact" })
         .in("deck_id", ids)
         .order("id", { ascending: true })
         .range(from, to),

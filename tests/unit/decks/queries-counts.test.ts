@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     linked_card_count, migration 0143) — no list reads deck_cards at all;
 //   * every public list and count asks for card_count > 0;
 //   * a deck's entries are read in pages, ordered on a unique key last;
-//   * linked cards are looked up a few hundred ids a request.
+//   * linked cards are looked up 100 ids a request (a short URL).
 // ---------------------------------------------------------------------------
 
 type Call = { table: string; ops: Array<[string, ...unknown[]]> };
@@ -17,6 +17,7 @@ const s = vi.hoisted(() => ({
   /** Rows a query answers, by table; deck_cards is answered by range. */
   rows: {} as Record<string, unknown[]>,
   entries: [] as Record<string, unknown>[],
+  withCount: true,
 }));
 
 function client() {
@@ -28,7 +29,11 @@ function client() {
         if (table === "deck_cards") {
           const range = call.ops.find((op) => op[0] === "range");
           const [from, to] = range ? [range[1] as number, range[2] as number] : [0, 999];
-          return { data: s.entries.slice(from, Math.min(to + 1, from + 1000)), error: null };
+          return {
+            data: s.entries.slice(from, Math.min(to + 1, from + 1000)),
+            error: null,
+            count: s.withCount ? s.entries.length : null,
+          };
         }
         if (table === "cards") {
           const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
@@ -95,6 +100,7 @@ beforeEach(() => {
   s.calls = [];
   s.rows = {};
   s.entries = [];
+  s.withCount = true;
 });
 
 describe("deck tiles read their counts off the deck row", () => {
@@ -143,7 +149,7 @@ describe("deck tiles read their counts off the deck row", () => {
 });
 
 describe("listDeckCards reads a whole deck", () => {
-  it("pages past 1000 rows on a unique order, and looks linked cards up in chunks", async () => {
+  it("pages past 1000 rows on a unique order, stops at the exact count, and looks linked cards up in chunks", async () => {
     s.entries = Array.from({ length: 1003 }, (_, i) => ({
       id: `e-${i}`,
       deck_id: "big",
@@ -162,11 +168,20 @@ describe("listDeckCards reads a whole deck", () => {
       ["range", 0, 999],
       ["range", 1000, 1999],
     ]);
-    for (const call of entryCalls) expect(hasOp(call, "order", "id", { ascending: true })).toBe(true);
+    for (const call of entryCalls) {
+      expect(hasOp(call, "order", "id", { ascending: true })).toBe(true);
+      expect(hasOp(call, "select", "*", { count: "exact" })).toBe(true);
+    }
 
     const cardCalls = s.calls.filter((c) => c.table === "cards");
     expect(cardCalls.map((c) => (c.ops.find((op) => op[0] === "in")?.[2] as string[]).length)).toEqual([
-      200, 200, 50,
+      100, 100, 100, 100, 50,
     ]);
+  });
+
+  it("an ordinary deck is ONE request (the exact count says it's all there)", async () => {
+    s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
+    expect(await listDeckCards("d")).toHaveLength(99);
+    expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
   });
 });

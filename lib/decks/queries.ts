@@ -363,7 +363,8 @@ export type DeckItem = {
 
 /** Every entry of a deck, in list order. Paged past PostgREST's 1000-row
  *  cap (a deck holds at most 500 rows since 0143, but one stored before it
- *  may hold more), ordered on a unique key last so pages never overlap. */
+ *  may hold more), ordered on a unique key last so pages never overlap. The
+ *  exact count lets an ordinary deck finish in ONE request. */
 export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
@@ -371,7 +372,7 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
     const { data: entries, error } = await selectAllRows<DeckCardRow>((from, to) =>
       supabase
         .from("deck_cards")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("deck_id", deckId)
         .order("position", { ascending: true })
         .order("created_at", { ascending: true })

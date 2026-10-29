@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // commitDeckImportAction (DK0.3, migration 0143):
-//   (a) it spends the `deck_import` quota like the resolve step, and a
-//       limited user calls neither Scryfall nor the database;
+//   (a) it spends its OWN quota (`deck_import_commit`), never the resolve
+//       step's; a limited user calls neither Scryfall nor the database, and
+//       a list of placeholders only (no Scryfall call) spends nothing;
 //   (c) of the browser's card data only the printing id is read — a uuid —
 //       and what is stored is Scryfall's own answer for it; an id Scryfall
 //       doesn't know becomes a name-only placeholder;
@@ -19,6 +20,9 @@ const GONE_ID = "00000000-0000-4000-8000-0000000000ff";
 const s = vi.hoisted(() => ({
   rate: { ok: true } as { ok: true } | { ok: false; message: string; retryAfterSeconds: number },
   logged: 0,
+  rateActions: [] as string[],
+  logActions: [] as string[],
+  collectionThrows: false,
   collectionCalls: [] as unknown[][],
   collection: [] as Record<string, unknown>[] | null,
   rpcCalls: [] as Array<{ fn: string; args: Record<string, unknown> }>,
@@ -40,9 +44,13 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/decks/queries", () => ({ getDeckById: async () => s.deck }));
 vi.mock("@/lib/scryfall/rate-limit", () => ({
-  checkScryfallRateLimit: async () => s.rate,
-  logScryfallCall: async () => {
+  checkScryfallRateLimit: async (_user: string, action: string) => {
+    s.rateActions.push(action);
+    return s.rate;
+  },
+  logScryfallCall: async (_user: string, action: string) => {
     s.logged += 1;
+    s.logActions.push(action);
   },
 }));
 vi.mock("@/lib/scryfall/client", () => ({
@@ -50,11 +58,12 @@ vi.mock("@/lib/scryfall/client", () => ({
   getCardByName: async () => null,
   getCardCollection: async (identifiers: unknown[]) => {
     s.collectionCalls.push(identifiers);
+    if (s.collectionThrows) throw new TypeError("fetch failed");
     return s.collection === null ? null : { cards: s.collection, notFound: [] };
   },
 }));
 
-import { commitDeckImportAction } from "@/lib/decks/import";
+import { commitDeckImportAction, resolveDecklistAction } from "@/lib/decks/import";
 
 const scryfallBolt = {
   id: BOLT_ID,
@@ -87,6 +96,9 @@ const spoofed = (scryfall_id: string) => ({
 beforeEach(() => {
   s.rate = { ok: true };
   s.logged = 0;
+  s.rateActions = [];
+  s.logActions = [];
+  s.collectionThrows = false;
   s.collectionCalls = [];
   s.collection = [scryfallBolt];
   s.rpcCalls = [];
@@ -106,9 +118,10 @@ describe("commitDeckImportAction", () => {
     });
     expect(result).toEqual({ ok: true, added: 2, merged: 1, placeholders: 2 });
 
-    // One collection request, by id only.
+    // One collection request, by id only, on the commit's own quota.
     expect(s.collectionCalls).toEqual([[{ id: BOLT_ID }, { id: GONE_ID }]]);
-    expect(s.logged).toBe(1);
+    expect(s.rateActions).toEqual(["deck_import_commit"]);
+    expect(s.logActions).toEqual(["deck_import_commit"]);
 
     expect(s.rpcCalls).toHaveLength(1);
     const { fn, args } = s.rpcCalls[0]!;
@@ -155,6 +168,35 @@ describe("commitDeckImportAction", () => {
     expect(s.collectionCalls).toEqual([]);
     expect(s.rpcCalls).toEqual([]);
     expect(s.logged).toBe(0);
+  });
+
+  it("a list of placeholders only calls no Scryfall and spends no quota", async () => {
+    s.rate = { ok: false, message: "Slow down", retryAfterSeconds: 60 };
+    const result = await commitDeckImportAction({
+      deckId: DECK,
+      lines: [
+        { name: "Mystery", quantity: 1, board: "main", resolved: null },
+        { name: "Other", quantity: 2, board: "side", resolved: null },
+      ],
+    });
+    expect(result).toEqual({ ok: true, added: 2, merged: 1, placeholders: 2 });
+    expect(s.rateActions).toEqual([]);
+    expect(s.logged).toBe(0);
+    expect(s.collectionCalls).toEqual([]);
+    expect(s.rpcCalls).toHaveLength(1);
+  });
+
+  it("a network error (a rejected fetch) is the Scryfall-down answer, never a thrown action", async () => {
+    s.collectionThrows = true;
+    const result = await commitDeckImportAction({
+      deckId: DECK,
+      lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "Scryfall didn't respond — nothing was imported. Try again in a moment.",
+    });
+    expect(s.rpcCalls).toEqual([]);
   });
 
   it("writes nothing when Scryfall doesn't answer", async () => {
@@ -223,5 +265,18 @@ describe("commitDeckImportAction", () => {
       lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
     });
     expect(result).toEqual({ ok: false, error: "Couldn't save the import — nothing was added. Try again." });
+  });
+});
+
+describe("resolveDecklistAction", () => {
+  it("keeps one run = one `deck_import` row, and a network error reads as Scryfall being down", async () => {
+    s.collectionThrows = true;
+    const result = await resolveDecklistAction({ text: "4 Lightning Bolt\n2 Counterspell" });
+    expect(result).toEqual({
+      ok: false,
+      error: "Scryfall didn't respond — nothing was imported. Try again in a moment.",
+    });
+    expect(s.rateActions).toEqual(["deck_import"]);
+    expect(s.logActions).toEqual(["deck_import"]);
   });
 });
