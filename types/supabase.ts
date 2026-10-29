@@ -2054,10 +2054,17 @@ export type Database = {
       };
       // Migration 0151 — one view per (deck, viewer, UTC day); true when it
       // counted. Service role only (lib/decks/views.ts). Replaces 0103's
-      // increment_deck_view.
+      // increment_deck_view, which the app calls only while 0151 is missing.
       record_deck_view: {
         Args: { p_deck_id: string; p_viewer: string; p_viewer_id?: string };
         Returns: boolean;
+      };
+      // 0055 / 0103 — the old counter (anon-callable, no dedupe); dropped by
+      // 0151. lib/decks/views.ts falls back to it on a database 0151 hasn't
+      // reached.
+      increment_deck_view: {
+        Args: { p_deck_id: string };
+        Returns: undefined;
       };
       // Migration 0151 — the caller's OWN deck's viewers per UTC day, oldest
       // first, zeros included; no rows for anyone else's deck.

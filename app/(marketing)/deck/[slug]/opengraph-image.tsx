@@ -114,6 +114,7 @@ export default async function Image({
   const result = await getDeck(slug);
 
   if (!result) {
+    // Never cached: no deck read here, which may not be true for long.
     return deckShareImageResponse(
       await renderDeckShareImage(
         <OgShell>
@@ -122,6 +123,7 @@ export default async function Image({
           <OgBody>Real decks rebuilt with custom cards.</OgBody>
         </OgShell>,
       ),
+      { found: false },
     );
   }
 

@@ -13,7 +13,9 @@ import { SLUG_PATTERN } from "@/lib/validation/card";
 // by its id), its share image, the like and the deck feedback. A new one does
 // the same, or a visitor's read of an unlisted deck comes back empty. A
 // public deck sent the header reads as it always did; a private deck is
-// never admitted by it. Pure, client-safe.
+// never admitted by it. The app sends it BEFORE 0151 lands (the rollout's
+// first step): a database without the rule ignores the header, so every
+// read is main's until the rule arrives. Pure, client-safe.
 // ---------------------------------------------------------------------------
 
 /** The request header 0151's decks policy reads (lower case: PostgREST hands

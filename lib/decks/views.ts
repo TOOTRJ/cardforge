@@ -5,6 +5,7 @@ import { ipAddress } from "@vercel/functions";
 import { isbot } from "isbot";
 import { clientNetworkOf } from "@/lib/cards/anon-render-limit";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
 
 // ---------------------------------------------------------------------------
 // A deck page view, counted once per viewer, deck and UTC day (TODO DK0.11,
@@ -22,9 +23,15 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 // an IPv6 /64 — clientNetworkOf) and user agent. No cookie is set and no
 // address, user id or agent is stored: the database keys its row by a
 // SHA-256 of (deck, this value) salted with random bytes of the DAY, which it
-// drops once the day is over. A visitor with no readable address (only possible off Vercel) is not
-// counted, never pooled into one viewer. Best-effort: a failure costs one
-// view, never the page.
+// drops once the day is over. A visitor with no readable address (only
+// possible off Vercel) is not counted, never pooled into one viewer.
+// Best-effort: a failure costs one view, never the page.
+//
+// The app ships BEFORE 0151 (the rollout's first step): on a database
+// without record_deck_view (PostgREST's PGRST202) the view goes to 0103's
+// increment_deck_view as it always did — counted per view, the crawlers and
+// prefetches already left out here — so no view is lost in between. Remove
+// the fallback once 0151 is on production and dev.
 // ---------------------------------------------------------------------------
 
 const KEY_CONTEXT = "pipglyph:deck-view:v1";
@@ -80,13 +87,16 @@ export async function recordDeckView({
   const viewer = deckViewerHash(viewerId, headers, secret);
   if (!viewer) return;
   try {
-    // A database 0151 hasn't reached answers "no such function": no view
-    // is logged there, and nothing else happens.
-    await createAdminClient().rpc("record_deck_view", {
+    const { error } = await createAdminClient().rpc("record_deck_view", {
       p_deck_id: deckId,
       p_viewer: viewer,
       p_viewer_id: viewerId ?? undefined,
     });
+    // A database 0151 hasn't reached: the old counter, as main called it
+    // (cookie-free; it counts public and unlisted decks only).
+    if (error?.code === "PGRST202") {
+      await createPublicClient().rpc("increment_deck_view", { p_deck_id: deckId });
+    }
   } catch {
     // best-effort — a missed view isn't worth surfacing
   }

@@ -5,18 +5,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // (TODO DK0.11, migration 0151's record_deck_view, service role only). What
 // the app owns: which requests count (never a crawler, an empty user agent, a
 // prefetch or the owner) and the viewer it sends — an HMAC under the server's
-// secret, never the user id, the address or the agent itself. The dedupe,
-// the day's salt and the counter are the database's (proved on the local
-// stack, PR body).
+// secret, never the user id, the address or the agent itself — and, on a
+// database 0151 hasn't reached (the rollout's first step), the old counter
+// so no view is lost. The dedupe, the day's salt and the counter are the
+// database's (proved on the local stack, PR body).
 // ---------------------------------------------------------------------------
 
 const state = vi.hoisted(() => ({
   configured: true,
   rpc: vi.fn<(name: string, args: unknown) => Promise<{ data: unknown; error: unknown }>>(async () => ({ data: true, error: null })),
+  /** The cookie-free client's calls (the pre-0151 counter). */
+  publicRpc: vi.fn<(name: string, args: unknown) => Promise<{ data: unknown; error: unknown }>>(async () => ({ data: null, error: null })),
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => state.configured,
   createAdminClient: () => ({ rpc: state.rpc }),
+}));
+vi.mock("@/lib/supabase/public", () => ({
+  createPublicClient: () => ({ rpc: state.publicRpc }),
 }));
 
 import { deckViewerHash, isCountableView, recordDeckView } from "@/lib/decks/views";
@@ -32,6 +38,7 @@ const headers = (init: Record<string, string>) => new Headers(init);
 beforeEach(() => {
   state.configured = true;
   state.rpc.mockClear();
+  state.publicRpc.mockClear();
   vi.stubEnv("SUPABASE_SECRET_KEY", SECRET);
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -133,10 +140,32 @@ describe("recordDeckView", () => {
     expect(state.rpc).not.toHaveBeenCalled();
   });
 
-  it("is best-effort: a failing call (0151 not reached, a network error) never throws", async () => {
-    state.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "no function" } });
-    await expect(view()).resolves.toBeUndefined();
+  it("a database 0151 hasn't reached (PGRST202): the old counter, once, so no view is lost", async () => {
+    state.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "Could not find the function" } });
+    await view();
+    expect(state.publicRpc).toHaveBeenCalledTimes(1);
+    expect(state.publicRpc.mock.calls[0]).toEqual(["increment_deck_view", { p_deck_id: DECK }]);
+    // …and not for a request that never counts.
+    state.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "Could not find the function" } });
+    await view({ viewerId: OWNER });
+    await view({ headers: headers({ "user-agent": "Googlebot/2.1", "x-real-ip": "203.0.113.7" }) });
+    expect(state.publicRpc).toHaveBeenCalledTimes(1);
+    state.rpc.mockResolvedValue({ data: true, error: null });
+  });
+
+  it("0151 there: no fallback — a repeat view (false) or any other error stays uncounted", async () => {
+    state.rpc.mockResolvedValueOnce({ data: false, error: null });
+    await view();
+    state.rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "denied" } });
+    await view();
+    expect(state.publicRpc).not.toHaveBeenCalled();
+  });
+
+  it("is best-effort: a failing call never throws", async () => {
     state.rpc.mockRejectedValueOnce(new Error("offline"));
+    await expect(view()).resolves.toBeUndefined();
+    state.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "no function" } });
+    state.publicRpc.mockRejectedValueOnce(new Error("offline"));
     await expect(view()).resolves.toBeUndefined();
   });
 });
