@@ -291,3 +291,15 @@ instead. Each bullet: what the header says, and what is true now.
 - **0120 ("cron /api/cron/auto-rebake (vercel.json, every 10 minutes on
   production)")** — `vercel.json` schedules it every 5 minutes
   (`*/5 * * * *`), as `/admin/renders` and `docs/FRAMES.md` say.
+- **0103 (4: `touch_deck_from_entry()` touches `decks.updated_at` for each
+  entry row; the guard "honours an EXPLICIT touch")** — since 0143 ONE
+  statement-level trigger function, `sync_deck_from_entries()`, recounts
+  `decks.card_count` / `linked_card_count` and touches `updated_at` once per
+  statement (the per-row function is dropped), and `set_decks_updated_at`
+  honours an explicit `updated_at` from a trusted path only — an API role's
+  is reverted, and so are its writes of the counters and `created_at`
+  (`decks_guard_counters`, `cards_guard_counters`).
+- **0108 (`public_deck_format_counts()` counts "non-empty" decks as decks
+  with any `deck_cards` row)** — since 0143 non-empty is `card_count > 0`
+  (physical cards, maybeboard left out), the test every public deck list,
+  the sitemap and the deck page's robots share.
