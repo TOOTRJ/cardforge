@@ -21,6 +21,7 @@ import {
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   PLANS,
   PRINT_PERK_COPY,
+  privateDecksByPlanSentence,
   SIGNUP_CREDITS,
   TRIAL_CREDITS,
   TRIAL_DAYS,
@@ -32,6 +33,7 @@ export type UpgradeReason =
   | "credits"
   | "premium_frame"
   | "capacity"
+  | "deck_capacity"
   | "hi_res_export"
   | "pdf_export"
   | "batch_export"
@@ -58,6 +60,12 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Card limit reached",
       description:
         "Your forge is full. Upgrade for a much bigger library — up to unlimited saved cards on Pro.",
+    },
+    // The private-deck cap (owner decision D1, migration 0145): public decks
+    // are unlimited on every plan, so the free way out comes first.
+    deck_capacity: {
+      title: "Your private decks are full",
+      description: `Public decks are unlimited on every plan. ${privateDecksByPlanSentence()} Make a deck public or delete one to free a slot — or upgrade. Every deck you have stays exactly as it is.`,
     },
     // The print perks are said from ONE source (TODO 6.26,
     // lib/billing/plans.ts PRINT_PERK_COPY) — the plan cards list the same.

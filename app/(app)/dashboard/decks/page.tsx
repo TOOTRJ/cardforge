@@ -9,6 +9,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
+import { getDeckCapacity } from "@/lib/decks/capacity";
+import { DeckCapacityMeter } from "@/components/decks/deck-capacity";
+import { deckCountsTowardCap } from "@/lib/billing/deck-capacity-copy";
 import { DECK_FORMAT_LABELS, coverObjectPosition } from "@/types/deck";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 
@@ -19,7 +22,12 @@ export const metadata: Metadata = {
 };
 
 export default async function DecksPage() {
-  const decks = await listMyDecks();
+  const [decks, deckCapacity] = await Promise.all([listMyDecks(), getDeckCapacity()]);
+  // The decks the private-deck cap counts — at the cap each gets "Make
+  // public" and "Delete" in the meter (TODO DK3.3).
+  const cappedDecks = decks
+    .filter((deck) => deckCountsTowardCap(deck.visibility))
+    .map((deck) => ({ id: deck.id, title: deck.title, visibility: deck.visibility }));
 
   return (
     <DashboardShell>
@@ -38,6 +46,7 @@ export default async function DecksPage() {
       />
 
       <div className="mt-8">
+        <DeckCapacityMeter capacity={deckCapacity} cappedDecks={cappedDecks} />
       </div>
 
       <div className="mt-6">

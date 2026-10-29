@@ -114,6 +114,31 @@ export function describeUsage(capacity: CardCapacity | null): CapacityMessage | 
   };
 }
 
+/**
+ * The decklist import's slot forecast (owner decision D2, 2026-10-28): an
+ * imported card is a reference to a real card and takes NO saved-card slot;
+ * it takes one when it is first customized (made into the user's own card).
+ * So the import never blocks — it says what customizing the list would use.
+ * `distinctCards` is the number of different cards in the list. null when
+ * there is nothing to say (no list, or no capacity to read).
+ */
+export function describeImportSlots(
+  capacity: CardCapacity | null,
+  distinctCards: number,
+): { message: string; short: boolean } | null {
+  if (!capacity || distinctCards <= 0) return null;
+  const these = distinctCards === 1 ? "This card doesn't" : `These ${distinctCards.toLocaleString("en-US")} cards don't`;
+  const remaining = remainingCapacity(capacity);
+  if (remaining === null) {
+    return { message: `${these} use any saved-card slots.`, short: false };
+  }
+  return {
+    message: `${these} use any saved-card slots. Each one you customize uses 1 — you have ${remaining.toLocaleString("en-US")} left.`,
+    // More different cards than slots: customizing the whole list needs room.
+    short: distinctCards > remaining,
+  };
+}
+
 /** The Postgres error raised by migration 0104's trigger. */
 export function isCapacityViolation(message: string | null | undefined): boolean {
   return typeof message === "string" && message.includes("card_capacity_exceeded");

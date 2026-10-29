@@ -50,6 +50,7 @@ import {
 } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { getDeckCapacity } from "@/lib/decks/capacity";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 type Params = { slug: string };
@@ -286,6 +287,7 @@ export default async function DeckDetailPage({
                 aiConfigured={isDesignAiConfigured()}
                 maxCards={await batchCardLimit()}
                 capacity={await getCardCapacity()}
+                deckCapacity={await getDeckCapacity()}
                 remixableCount={await countRemixableDeckCards(deck.id)}
                 aiSeed={await getDeckAiSeed(deck.id)}
                 openImport={(await searchParams).import === "1"}

@@ -36,6 +36,17 @@ describe("buildFunnel", () => {
     expect(w.sections.find((x) => x.title === "Leaks")!.steps.every((st) => st.rate === null)).toBe(true);
   });
 
+  it("lists the deck plan's upgrade moments as counts (TODO DK3.8)", () => {
+    const w = buildFunnel({ deck_created: { n: 12, users: 9 }, deck_cap_hit: { n: 4, users: 3 } }, 7);
+    const decks = w.sections.find((x) => x.title === "Decks")!;
+    expect(decks.steps.map((st) => [st.key, st.label, st.n, st.rate])).toEqual([
+      ["deck_created", "Decks created", 12, null],
+      ["deck_cap_hit", "Private-deck cap hits", 4, null],
+      ["deck_card_customized", "Deck cards customized", 0, null],
+      ["deck_export_clicked", "Deck export clicks", 0, null],
+    ]);
+  });
+
   it("activation chains signup → first save → first generation → first download", () => {
     const w = buildFunnel({ signup: { n: 20, users: 20 }, first_card_saved: { n: 8, users: 8 }, first_ai_generation: { n: 4, users: 4 }, first_download: { n: 2, users: 2 } }, 30);
     expect(w.sections[0].title).toBe("Activation");

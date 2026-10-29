@@ -7,6 +7,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
@@ -25,12 +27,16 @@ async function getOwnedEntry(
   userId: string,
   deckCardId: string,
 ): Promise<
-  | { ok: true; entry: { id: string; deck_id: string }; deckSlug: string }
+  | {
+      ok: true;
+      entry: { id: string; deck_id: string; card_id: string | null; scryfall_id: string | null };
+      deckSlug: string;
+    }
   | { ok: false; error: string }
 > {
   const { data: entry } = await supabase
     .from("deck_cards")
-    .select("id, deck_id")
+    .select("id, deck_id, card_id, scryfall_id")
     .eq("id", deckCardId)
     .maybeSingle();
   if (!entry) return { ok: false, error: "Deck entry not found." };
@@ -131,10 +137,13 @@ export async function removeDeckCardAction(
 
 /** Link one of the caller's custom cards as this entry's proxy. RLS also
  *  enforces card ownership (the deck_cards UPDATE policy checks it), but the
- *  pre-flight gives a friendlier error. */
+ *  pre-flight gives a friendlier error. `surface` says who linked it — the
+ *  creator's /create?deckCard= save (the card was just made from the entry)
+ *  or the deck page's picker — for the funnel only. */
 export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
+  options: { surface?: "creator" | "deck" } = {},
 ): Promise<DeckCardActionResult> {
   if (!isUuid(deckCardId) || !isUuid(cardId)) {
     return { ok: false, error: "Invalid id." };
@@ -166,6 +175,20 @@ export async function linkDeckCardAction(
     .update({ card_id: cardId })
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
+
+  // Funnel (TODO DK3.8): the entry got its FIRST card of the user's — an
+  // imported card customized (owner decision D2: the moment it takes a
+  // saved-card slot) or a placeholder filled. Re-linking is not counted.
+  if (owned.entry.card_id === null && isAdminConfigured()) {
+    await recordFunnelEvent(createAdminClient(), {
+      event: "deck_card_customized",
+      userId: user.id,
+      props: {
+        surface: options.surface ?? "deck",
+        kind: owned.entry.scryfall_id ? "import" : "placeholder",
+      },
+    });
+  }
 
   await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };

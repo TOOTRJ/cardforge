@@ -13,6 +13,7 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { createDeckAction } from "@/lib/decks/actions";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import {
   DECK_FORMAT_LABELS,
   DECK_FORMAT_VALUES,
@@ -332,6 +333,7 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
   };
 
   const options = [...extraDecks, ...myDecks];
+  const upgrade = useUpgradeModal();
 
   const handleQuickCreate = () => {
     const title = newTitle.trim();
@@ -340,13 +342,17 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
       return;
     }
     startTransition(async () => {
-      const result = await createDeckAction({ title, format: newFormat });
+      // A quick-created deck is public (the schema's default), which the
+      // private-deck cap never counts (D1) — so there is nothing to warn
+      // about first; a refusal still opens the plans (TODO DK3.2).
+      const result = await createDeckAction({ title, format: newFormat }, { surface: "creator" });
       if (!result.ok) {
         toast.error(
           result.formError ??
             Object.values(result.fieldErrors ?? {})[0] ??
             "Could not create the deck.",
         );
+        if (result.reason === "deck_capacity") upgrade.open("deck_capacity");
         return;
       }
       setExtraDecks((prev) => [

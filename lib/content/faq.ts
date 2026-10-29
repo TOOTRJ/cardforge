@@ -11,7 +11,17 @@
 // ---------------------------------------------------------------------------
 
 
+import {
+  CARD_CAPACITY,
+  CARD_CAPACITY_UNLIMITED,
+  privateDecksByPlanSentence,
+} from "@/lib/billing/plans";
+
 export type FaqEntry = { q: string; a: string };
+
+/** A plan's saved-card cap as a word, from CARD_CAPACITY. */
+const cardCap = (tier: keyof typeof CARD_CAPACITY) =>
+  CARD_CAPACITY[tier] === CARD_CAPACITY_UNLIMITED ? "unlimited" : CARD_CAPACITY[tier].toLocaleString("en-US");
 
 export type FaqTopic = {
   /** Anchor slug on /faq (e.g. #card-maker) */
@@ -133,6 +143,12 @@ const SHARING_FAQ: FaqEntry[] = [
     a: "Every card has one of three visibility levels. Private cards are visible only to you, in your dashboard. Unlisted cards are reachable by anyone who has the link — good for sharing with a playgroup — but they don't appear in the community gallery and aren't indexed by search engines. Public cards appear in the gallery, on your profile, in search, and can be liked, commented on, and remixed by other members.",
   },
   {
+    // The private-deck cap (owner decision D1, migration 0145) — the numbers
+    // come from lib/billing/plans.ts DECK_CAPACITY.
+    q: "How many decks can I make?",
+    a: `As many public decks as you like, on every plan. The limit is on private and unlisted decks: ${privateDecksByPlanSentence()} A downgrade or a lapsed plan never locks a deck: every deck you have stays editable, and only a NEW private or unlisted deck needs a free slot — make another deck public, delete one, or upgrade.`,
+  },
+  {
     q: "How do I share a card with my playgroup?",
     a: "Publish the card as public or unlisted, then share its page URL (pipglyph.com/card/your-username/card-name). The link unfurls with a rendered image of the card on Discord, X, and other platforms. Your playgroup can also download the PNG straight from the card page, and you can hand them a print-ready PDF.",
   },
@@ -189,6 +205,12 @@ const IMPORT_REMIX_FAQ: FaqEntry[] = [
   {
     q: "Can I import a real Magic card as a starting point?",
     a: "Yes. The editor's import tool searches Scryfall (the community card database) for any published card and seeds the form with its name, mana cost, type line, and oracle text — optionally pulling its art as a placeholder. From there you edit it into your own design. Imports are for personal remixing and playtesting; the card page tracks the Scryfall lineage and shows other public remixes of the same source card.",
+  },
+  {
+    // Owner decision D2 (2026-10-28): an import takes no slot; customizing
+    // a card does.
+    q: "Does importing a decklist use my saved-card slots?",
+    a: `No. A pasted decklist is a list of real cards, and it uses none of your saved-card slots however long it is. A card takes a slot when you customize it — turn the imported card into your own design — like any card you save (Free holds ${cardCap("free")}, Plus ${cardCap("plus")}, Pro ${cardCap("pro")}). The import's review says how many slots you have left.`,
   },
   {
     q: "What is remixing on PipGlyph?",
