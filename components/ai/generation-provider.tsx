@@ -22,6 +22,7 @@ import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { jobStatusOf, openStepKeys, stepsNeedingCards } from "@/lib/ai/job-queue";
 import { retryCreditNote } from "@/lib/ai/failure";
+import { generatedPrivateInBatchMessage, generatedPrivateMessage } from "@/lib/moderation/profanity";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
@@ -191,6 +192,14 @@ function outcomeOf(
   return { ok: successes > 0, successes, failures, slug, cardId };
 }
 
+/** The one toast for a job that saved a card private for its text. */
+function forcedPrivateToast(kind: JobPayload["kind"], forced: GenerationJobStep[]): string {
+  const first = forced[0];
+  return kind === "card" || kind === "card_remix"
+    ? generatedPrivateMessage(first.label, first.forced_private?.fields ?? [])
+    : generatedPrivateInBatchMessage(first.label);
+}
+
 function slugOf(job: JobPayload): string | undefined {
   const request = job.request ?? {};
   const value = request["deck_slug"];
@@ -230,7 +239,19 @@ export function GenerationJobProvider({
     concurrency: STEP_CONCURRENCY,
   });
   const seenTerminalRef = useRef<Set<string>>(new Set());
+  // A card a step saved PRIVATE for the strong language in its text (owner
+  // policy 2026-10-28): ONE toast per job, the first time a step says so —
+  // the details dialog names every such card.
+  const languageToldRef = useRef<Set<string>>(new Set());
+  const noteForcedPrivate = useCallback((job: JobPayload) => {
+    if (languageToldRef.current.has(job.id)) return;
+    const forced = job.steps.filter((s) => s.status === "done" && s.forced_private);
+    if (forced.length === 0) return;
+    languageToldRef.current.add(job.id);
+    toast.message(forcedPrivateToast(job.kind, forced));
+  }, []);
   const noteTerminal = useCallback((job: JobPayload) => {
+    noteForcedPrivate(job);
     const fresh: number[] = [];
     for (const s of job.steps) {
       if ((s.status === "done" || s.status === "failed") && !seenTerminalRef.current.has(s.key)) {
@@ -241,7 +262,7 @@ export function GenerationJobProvider({
     if (fresh.length > 0) {
       setStats((prev) => ({ ...prev, completions: [...prev.completions, ...fresh] }));
     }
-  }, []);
+  }, [noteForcedPrivate]);
   const beginStats = useCallback((job: JobPayload) => {
     seenTerminalRef.current = new Set(
       job.steps.filter((s) => s.status === "done" || s.status === "failed").map((s) => s.key),
@@ -555,6 +576,7 @@ export function GenerationJobProvider({
         }
         setJob({ ...job, ...result.job });
         setSteps(result.job.steps);
+        noteForcedPrivate({ ...job, ...result.job });
         // A plan-limit failure on the retried step gets the same treatment
         // as in the pool: say why, open the matching upgrade prompt.
         const posted = result.job.steps.find((s) => s.key === stepKey);
@@ -568,7 +590,7 @@ export function GenerationJobProvider({
         runningRef.current = false;
       }
     },
-    [job, steps, slug, confirmSpend, ensureCapacityFor, upgrade],
+    [job, steps, slug, confirmSpend, ensureCapacityFor, upgrade, noteForcedPrivate],
   );
 
   const retryFailed = useCallback(async (): Promise<GenerationJobOutcome> => {

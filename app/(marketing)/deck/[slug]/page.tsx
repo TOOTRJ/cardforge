@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
+import { publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
@@ -324,10 +325,14 @@ async function DeckBody({
   ]);
   const viewerIsPro = entitlements.effectiveTier === "pro";
   const analytics = computeDeckAnalytics(items);
+  // A card the strong-language rule kept private shows a neutral name to
+  // anyone but the owner (lib/decks/private-card-name.ts) — in the list, its
+  // pop-up and a warning that quotes it. Judged on the real entries.
   const warnings = validateDeck(
     format,
     items.map((i) => i.entry),
-  );
+  ).map((warning) => publicDeckWarning(warning, isOwner));
+  const shownItems = publicDeckItems(items, isOwner);
 
   // The export menu (owner-only) gets precomputed decklist text and the
   // viewer's batch-export entitlement.
@@ -422,7 +427,7 @@ async function DeckBody({
             />
           ) : (
             <DeckCardList
-              items={items}
+              items={shownItems}
               ownerUsername={ownerUsername}
               canManage={isOwner}
             />
