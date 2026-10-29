@@ -155,13 +155,26 @@ const recorded: Record<string, unknown> = existsSync(FIXTURE)
   : {};
 const fresh: Record<string, unknown> = {};
 
+/** Main's record as this branch stores it: a new deck job plans NO cover
+ *  step since TODO DK6.3 (the deck shows its default background,
+ *  lib/decks/cover.ts) — the one step the record held that a job no longer
+ *  does. Everything else is main's, byte for byte. */
+function withoutCoverStep<T>(record: T): T {
+  const out = structuredClone(record) as { job?: Array<{ steps?: Array<{ key: string }> }> };
+  for (const row of out.job ?? []) {
+    if (row.steps) row.steps = row.steps.filter((step) => step.key !== "cover");
+  }
+  return out as T;
+}
+
 function pinned(name: string, value: unknown) {
   const wire = JSON.parse(JSON.stringify(value)) as unknown;
   fresh[name] = wire;
   if (UPDATE) return;
   expect(recorded, `no record for "${name}" — run with DECK_PLAN_UPDATE=1 on main's lib/`).toHaveProperty([name]);
-  expect(wire, name).toEqual(recorded[name]);
-  expect(JSON.stringify(wire), name).toBe(JSON.stringify(recorded[name]));
+  const want = withoutCoverStep(recorded[name]);
+  expect(wire, name).toEqual(want);
+  expect(JSON.stringify(wire), name).toBe(JSON.stringify(want));
 }
 
 afterAll(() => {
@@ -274,7 +287,7 @@ type Recorded = {
  *  call asks for no colours (the schema without `colors`, the typed system
  *  line) — nothing else moves while the model's colours were the type's. */
 function asTyped(record: unknown, name?: string): Recorded {
-  const out = structuredClone(record) as Recorded;
+  const out = withoutCoverStep(record) as Recorded;
   // The commander slot's note names the type's colours (the #568 follow-up,
   // owner 2026-10-14): "multicolor" alone let the designer make a
   // two-colour commander for the five-colour Slivers.
@@ -304,6 +317,18 @@ describe("an untyped deck plan is main's", () => {
     }
     s.concepts = [concept(colors)];
     pinned(`plan · ${name}`, await plan(input));
+  });
+
+  it("plans no AI cover step (TODO DK6.3) — main's new decks had one; the guide stays last", async () => {
+    s.concepts = [concept(["blue", "red"])];
+    const out = await plan(COLOURED["standard · no deck type · 12"]!.input);
+    const steps = (out.job[0] as { steps: Array<{ key: string }> }).steps.map((step) => step.key);
+    expect(steps).not.toContain("cover");
+    expect(steps.at(-1)).toBe("guide");
+    expect(steps.filter((key) => key.startsWith("card:"))).toHaveLength(12);
+    // Main's record of the same request did plan one.
+    const main = recorded["plan · standard · no deck type · 12"] as { job: Array<{ steps: Array<{ key: string }> }> };
+    expect(main.job[0]!.steps.map((step) => step.key)).toContain("cover");
   });
 
   it("still refuses an answer with no colours, as main does", async () => {
