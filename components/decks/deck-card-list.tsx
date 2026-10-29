@@ -306,7 +306,9 @@ function BoardGroups({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    // minmax(0, 1fr) columns and min-w-0 groups: a row's badges and pips
+    // never widen the column past a 390 px screen (the title truncates).
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {TYPE_BUCKETS.map((bucket) => {
         const bucketItems = byBucket.get(bucket);
         if (!bucketItems || bucketItems.length === 0) return null;
@@ -315,7 +317,7 @@ function BoardGroups({
           0,
         );
         return (
-          <SurfaceCard key={bucket} className="flex flex-col gap-1 p-4">
+          <SurfaceCard key={bucket} className="flex min-w-0 flex-col gap-1 p-4">
             <span className="mb-1 text-xs font-semibold uppercase tracking-wider text-subtle">
               {TYPE_BUCKET_PLURALS[bucket]} · {bucketCount}
             </span>

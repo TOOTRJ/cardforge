@@ -23,10 +23,13 @@ export type UploadCoverResult =
  * Upload an image to the public `set-covers` bucket under the signed-in
  * user's folder. `_userId` is kept for call-site compatibility; the server
  * derives the owner from the session, never from the argument.
+ * `purpose: "deck-cover"` stores it as the 16:9 cover standard (1600×900
+ * WebP, lib/decks/cover-normalize.ts); a set icon is stored as uploaded.
  */
 export async function uploadCoverImage(
   _userId: string,
   file: File,
+  options: { purpose?: "deck-cover" } = {},
 ): Promise<UploadCoverResult> {
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     return { ok: false, error: "Only PNG, JPEG, WebP, and GIF images are allowed." };
@@ -36,5 +39,6 @@ export async function uploadCoverImage(
   }
   const formData = new FormData();
   formData.append("file", file);
+  if (options.purpose) formData.append("purpose", options.purpose);
   return uploadCoverServerAction(formData);
 }

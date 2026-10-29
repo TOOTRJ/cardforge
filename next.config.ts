@@ -123,8 +123,13 @@ const nextConfig: NextConfig = {
   // disk. Tracing them in put ~1.5 GB of functions into EVERY deployment
   // (save-time bake → nearly every page function) and blew Vercel's
   // Functions Storage quota. Fonts + watermarks (< 2 MB) stay traced.
+  // public/defaults/deck-covers (the 16 default deck backgrounds, ~1.1 MB)
+  // likewise: the CDN serves them, and the one server reader — the deck
+  // share image, lib/og/deck-share-image.tsx — fetches them from it when
+  // they are not on disk. Every function that traces public/ (the card
+  // renderer's readers) would otherwise carry them.
   outputFileTracingExcludes: {
-    "*": ["./public/frames/**"],
+    "*": ["./public/frames/**", "./public/defaults/deck-covers/**"],
   },
   // Allow next/image to optimize user-uploaded card art + set covers from
   // our Supabase Storage origin (per-bucket, see SUPABASE_PUBLIC_BUCKETS).
