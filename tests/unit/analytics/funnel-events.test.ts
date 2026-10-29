@@ -71,3 +71,23 @@ describe("funnel event vocabulary", () => {
     expect(Object.keys(sanitizeFunnelProps(many)).length).toBeLessThanOrEqual(10);
   });
 });
+
+describe("the deck events (TODO DK3.8)", () => {
+  it("are allow-listed on the right side: created / cap hit / customized server-side, the export click from the browser", () => {
+    for (const e of ["deck_created", "deck_cap_hit", "deck_card_customized"]) {
+      expect((SERVER_FUNNEL_EVENTS as readonly string[]).includes(e), e).toBe(true);
+      expect(isClientFunnelEvent(e), e).toBe(false);
+    }
+    expect(isClientFunnelEvent("deck_export_clicked")).toBe(true);
+  });
+
+  it("carry only allow-listed scalar props", () => {
+    expect(sanitizeFunnelProps({ visibility: "private", format: "commander", surface: "wizard", title: "My deck" })).toEqual({
+      visibility: "private",
+      format: "commander",
+      surface: "wizard",
+    });
+    expect(sanitizeFunnelProps({ kind: "create", tier: "free", visibility: undefined })).toEqual({ kind: "create", tier: "free" });
+    expect(sanitizeFunnelProps({ kind: "pdf", preset: "hd", layout: "sheet", deckId: "x" })).toEqual({ kind: "pdf", preset: "hd", layout: "sheet" });
+  });
+});

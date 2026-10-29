@@ -28,6 +28,8 @@ import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
+import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import {
   countDeckEntries,
   countRemixableDeckCards,
@@ -45,6 +47,7 @@ import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { getDeckCapacity } from "@/lib/decks/capacity";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -188,6 +191,7 @@ export default async function DeckDetailPage({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to decks
       </Link>
+      <DeckBetaBanner deckId={deck.id} signedIn={Boolean(user)} className="mb-6" />
 
       {/* The hero (TODO DK6.5): the cover — the same 16:9 picture every
           deck tile draws (lib/decks/cover.ts) — with the featured cards and
@@ -276,6 +280,7 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
+            <DeckFeedbackButton deckId={deck.id} signedIn={Boolean(user)} className="h-9" />
             {/* Free for every viewer (TODO DK0.7); streams in with the
                 card list, so the header still paints at once. */}
             <Suspense fallback={null}>
@@ -289,6 +294,7 @@ export default async function DeckDetailPage({
                 aiConfigured={isDesignAiConfigured()}
                 maxCards={await batchCardLimit()}
                 capacity={await getCardCapacity()}
+                deckCapacity={await getDeckCapacity()}
                 remixableCount={await countRemixableDeckCards(deck.id)}
                 aiSeed={await getDeckAiSeed(deck.id)}
                 openImport={(await searchParams).import === "1"}
@@ -307,6 +313,7 @@ export default async function DeckDetailPage({
           isOwner={isOwner}
         />
       </Suspense>
+      <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </div>
   );
 }

@@ -1557,7 +1557,18 @@ Rules and gotchas:
   hits a plan limit fails with `error_code` (`CARD_CAPACITY` /
   `INSUFFICIENT_CREDITS`); the runner stops on it and opens the matching
   modal, and retries check `/api/me`'s `cardCapacity` before the credit
-  confirm. Change the caps in both places together.
+  confirm. Change the caps in both places together. Private decks follow the
+  same design (TODO DK3, migration 0145): `DECK_CAPACITY` (Free 1 / Plus 3 /
+  Pro unlimited) mirrors `deck_capacity_for()` + `decks_enforce_capacity`
+  (`tests/unit/billing/deck-capacity.test.ts` keeps them in sync); only
+  PRIVATE + UNLISTED decks count (public is unlimited); only a deck JOINING
+  the count is checked (insert, public → private / unlisted, an owner change),
+  so a deck over the cap stays editable and a downgrade locks nothing; every
+  role is capped (service role and seeds too); `createDeckAction` /
+  `updateDeckAction` map `deck_capacity_exceeded` to the upgrade reason
+  `deck_capacity`. With billing off the app reads unlimited while the trigger
+  still caps (local `npm run dev` shows no meter — the refusal is the first
+  sign).
 - SEO contract for public pages: a missing or unreadable entity answers a
   real HTTP 404 — call `notFound()` BEFORE any Suspense/loading boundary (the
   global `loading.tsx` lives in `app/(app)/` for exactly this reason; the card

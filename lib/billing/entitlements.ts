@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
-import { CARD_CAPACITY, TIER_RANK, type PlanTier } from "@/lib/billing/plans";
+import { CARD_CAPACITY, DECK_CAPACITY, TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { planEndingOf, type PlanEnding } from "@/lib/billing/plan-ending";
 
@@ -25,6 +25,9 @@ export type Entitlements = {
   premiumFrames: boolean;
   /** Max saved cards. -1 = unlimited. */
   cardCapacity: number;
+  /** Max PRIVATE + UNLISTED decks (public decks are never capped). -1 =
+   *  unlimited. No override: card_limit_override is a card override. */
+  deckCapacity: number;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   /** The live subscription is cancelled and ends on a date (the profile's
@@ -39,6 +42,7 @@ type Perks = Pick<
   | "allowBatchExport"
   | "premiumFrames"
   | "cardCapacity"
+  | "deckCapacity"
 >;
 
 const BASE_PERKS: Perks = {
@@ -47,6 +51,7 @@ const BASE_PERKS: Perks = {
   allowBatchExport: false,
   premiumFrames: false,
   cardCapacity: CARD_CAPACITY.free,
+  deckCapacity: DECK_CAPACITY.free,
 };
 
 const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
@@ -56,6 +61,7 @@ const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
     maxExportPreset: "hd",
     premiumFrames: true,
     cardCapacity: CARD_CAPACITY.plus,
+    deckCapacity: DECK_CAPACITY.plus,
   },
   pro: {
     removeWatermark: true,
@@ -63,6 +69,7 @@ const TIER_PERKS: Record<PlanTier, Partial<Perks>> = {
     premiumFrames: true,
     allowBatchExport: true,
     cardCapacity: CARD_CAPACITY.pro,
+    deckCapacity: DECK_CAPACITY.pro,
   },
 };
 
@@ -90,6 +97,7 @@ const UNLOCKED: Entitlements = {
   allowBatchExport: true,
   premiumFrames: true,
   cardCapacity: -1,
+  deckCapacity: -1,
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
   planEnding: null,
