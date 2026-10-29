@@ -57,6 +57,23 @@ test("the /learn categories render, index from three guides, and an unknown one 
   }
 });
 
+test("/frames is self-canonical, a CollectionPage under Learn, and links the requested frames", async ({ request }) => {
+  // ISR; without a database it renders its "not available" state, noindex.
+  const response = await request.get("/frames");
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(html).toMatch(/rel="canonical" href="[^"]*\/frames"/);
+  expect(html).toContain('"@type":"CollectionPage"');
+  expect(html).toContain('"@type":"BreadcrumbList"');
+  expect(html).toContain('aria-label="Breadcrumb"');
+  expect(html).toContain('href="/frames/requested"');
+  if (hasDatabase) {
+    // The seeded stack verifies frames (supabase/seed.sql): listed and indexed.
+    expect(html).not.toMatch(/name="robots" content="noindex/);
+    expect(html).toContain("Start with this frame");
+  }
+});
+
 test("the glossary is indexable, self-canonical, and anchors every term", async ({ request }) => {
   // Static — no database needed.
   const response = await request.get("/glossary");

@@ -34,6 +34,7 @@ const PAGES = [
   "/tools",
   "/glossary",
   "/creators",
+  "/frames",
   "/frames/requested",
   "/news",
   "/best-mtg-card-makers",
