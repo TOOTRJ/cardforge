@@ -4316,9 +4316,9 @@ Needs DK0.2.
 
 ### DK10 — Feedback and bug reports for decks
 
-- [ ] **DK10.1 [P1 · S] Deck feedback dialog** — A button in the deck toolbar, My Decks and the deck footer; Idea / Bug / Other plus a message; deck, URL and screen size attached; a new feedback.area column ("decks") the admin inbox filters on. Files: `components/feedback/feedback-form.tsx · 0051 feedback table`.
-- [ ] **DK10.2 [P1 · S] Beta banner** — "New deck builder: tell us what’s missing", for 30 days.
-- [ ] **DK10.3 [P2 · S] "Coming next for decks"** — A short list in What’s new.
+- [x] **DK10.1 [P1 · S] Deck feedback dialog** — A button in the deck toolbar, My Decks and the deck footer; Idea / Bug / Other plus a message; deck, URL and screen size attached; a new feedback.area column ("decks") the admin inbox filters on. Files: `components/feedback/feedback-form.tsx · 0051 feedback table`. Done 2026-10-29 (`feat/deck-feedback`, migration 0146: `feedback.area` / `deck_id` / `viewport`; `components/feedback/deck-feedback-dialog.tsx`, `submitDeckFeedbackAction`, the inbox's Area row + Decks badge + deck link).
+- [x] **DK10.2 [P1 · S] Beta banner** — "New deck builder: tell us what’s missing", for 30 days. Done 2026-10-29 (`components/decks/deck-beta-banner.tsx`; end date `DECK_BETA_BANNER_ENDS_AT` in `lib/decks/beta-banner.ts`, 2026-11-28 by default — OWNER: set it to 30 days after the new deck page ships).
+- [x] **DK10.3 [P2 · S] "Coming next for decks"** — A short list in What’s new. Draft written (in the `feat/deck-feedback` PR body), owner posts it in /admin/updates.
 
 ### NV — Header menu and Learn
 
