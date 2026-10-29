@@ -1,5 +1,6 @@
 import type { DeckBoard, DeckCardEntry } from "@/types/deck";
 import type { Card } from "@/types/card";
+import { manaValueOfCost } from "@/lib/cards/mana-value";
 
 // ---------------------------------------------------------------------------
 // Deck analytics — pure functions over deck entries (quantity-weighted, so
@@ -23,6 +24,20 @@ export const TYPE_BUCKETS = [
 ] as const;
 
 export type TypeBucket = (typeof TYPE_BUCKETS)[number];
+
+/** A bucket's group heading in the deck list ("Sorceries", never
+ *  "Sorcerys"). "Other" stays as it is. */
+export const TYPE_BUCKET_PLURALS: Record<TypeBucket, string> = {
+  Battle: "Battles",
+  Planeswalker: "Planeswalkers",
+  Creature: "Creatures",
+  Instant: "Instants",
+  Sorcery: "Sorceries",
+  Artifact: "Artifacts",
+  Enchantment: "Enchantments",
+  Land: "Lands",
+  Other: "Other",
+};
 
 // Creature still wins over everything (a Land Creature like Dryad Arbor is a
 // creature on every deck site), but Land is matched BEFORE Artifact and
@@ -67,7 +82,9 @@ export function entryTypeLine(
 }
 
 /** Mana value of an entry: the denormalized Scryfall value when present,
- *  otherwise parsed from the linked custom card's cost. */
+ *  otherwise read from the entry's cost, then the linked custom card's
+ *  (`manaValueOfCost`: hybrid, Phyrexian and snow pips count as print
+ *  counts them). */
 export function entryManaValue(
   entry: Pick<DeckCardEntry, "mana_value" | "mana_cost">,
   card?: Pick<Card, "cost"> | null,
@@ -75,9 +92,9 @@ export function entryManaValue(
   if (entry.mana_value !== null && entry.mana_value !== undefined) {
     return entry.mana_value;
   }
-  const fromEntryCost = parseCost(entry.mana_cost);
+  const fromEntryCost = manaValueOfCost(entry.mana_cost);
   if (fromEntryCost !== null) return fromEntryCost;
-  return card ? parseCost(card.cost) : null;
+  return card ? manaValueOfCost(card.cost) : null;
 }
 
 export type DeckAnalytics = {
@@ -93,6 +110,10 @@ export type DeckAnalytics = {
   /** WUBRG + colorless pip presence, quantity-weighted (playable boards).
    *  A multicolor card counts once per color in its identity. */
   byColor: Record<"W" | "U" | "B" | "R" | "G" | "C", number>;
+  /** Custom cards whose identity says only "multicolor" — gold, its colours
+   *  not named — quantity-weighted (playable boards). Counted here, never
+   *  as colorless. */
+  multicolor: number;
   /** Cards per type bucket (playable boards). */
   byType: Record<TypeBucket, number>;
   lands: number;
@@ -124,6 +145,7 @@ export function computeDeckAnalytics(
 
   let total = 0;
   let remixed = 0;
+  let multicolor = 0;
   let lands = 0;
   let mvTotal = 0;
   let mvSample = 0;
@@ -159,7 +181,13 @@ export function computeDeckAnalytics(
               .filter((c): c is "W" | "U" | "B" | "R" | "G" => c !== null)
           : [];
     if (colors.length === 0) {
-      byColor.C += entry.quantity;
+      // A custom card saved as "multicolor" without naming its colours is
+      // gold, not colorless.
+      if (entry.color_identity.length === 0 && card?.color_identity.includes("multicolor")) {
+        multicolor += entry.quantity;
+      } else {
+        byColor.C += entry.quantity;
+      }
     } else {
       for (const color of colors) {
         if (color in byColor) {
@@ -188,33 +216,9 @@ export function computeDeckAnalytics(
     remixed,
     curve,
     byColor,
+    multicolor,
     byType,
     lands,
     averageManaValue: mvSample > 0 ? mvTotal / mvSample : null,
   };
-}
-
-/**
- * Mana value of a cost string (`{2}{W}{W}` → 4). Generic `{N}` adds N, a
- * single-letter pip adds 1, hybrids / `{X}` count 0 but still make the cost
- * parseable. A bare number is accepted; anything else is null.
- */
-function parseCost(cost: string | null | undefined): number | null {
-  if (!cost) return null;
-  const tokens = Array.from(cost.matchAll(/\{([^}]+)\}/g));
-  if (tokens.length === 0) {
-    const bare = cost.trim();
-    if (/^\d+$/.test(bare)) return Number(bare);
-    return null;
-  }
-  let total = 0;
-  for (const token of tokens) {
-    const value = token[1];
-    if (/^\d+$/.test(value)) {
-      total += Number(value);
-    } else if (/^[WUBRGC]$/i.test(value)) {
-      total += 1;
-    }
-  }
-  return total;
 }

@@ -4,6 +4,8 @@ import {
   entryManaValue,
   entryTypeLine,
   typeBucketFor,
+  TYPE_BUCKET_PLURALS,
+  TYPE_BUCKETS,
 } from "@/lib/decks/analytics";
 import type { DeckCardEntry } from "@/types/deck";
 
@@ -55,6 +57,13 @@ describe("typeBucketFor", () => {
   it("uses only the front face of a split type line", () => {
     expect(typeBucketFor("Creature — Human // Land")).toBe("Creature");
   });
+
+  it("each bucket's group heading is its real plural (never “Sorcerys”)", () => {
+    expect(TYPE_BUCKET_PLURALS.Sorcery).toBe("Sorceries");
+    expect(TYPE_BUCKET_PLURALS.Battle).toBe("Battles");
+    expect(TYPE_BUCKET_PLURALS.Other).toBe("Other");
+    expect(Object.keys(TYPE_BUCKET_PLURALS).sort()).toEqual([...TYPE_BUCKETS].sort());
+  });
 });
 
 describe("entryManaValue", () => {
@@ -72,6 +81,15 @@ describe("entryManaValue", () => {
     const bare = makeEntry({ mana_value: null, mana_cost: null });
     expect(entryManaValue(bare, { cost: "{3}{G}" })).toBe(4);
     expect(entryManaValue(bare, null)).toBeNull();
+  });
+
+  it("counts hybrid, Phyrexian and snow pips as print does (audit L1: they counted 0)", () => {
+    const bare = makeEntry({ mana_value: null, mana_cost: null });
+    expect(entryManaValue(bare, { cost: "{W/U}{W/U}" })).toBe(2);
+    expect(entryManaValue(bare, { cost: "{2/W}" })).toBe(2);
+    expect(entryManaValue(bare, { cost: "{1}{W/P}{G/U/P}" })).toBe(3);
+    expect(entryManaValue(bare, { cost: "{S}{S}" })).toBe(2);
+    expect(entryManaValue(bare, { cost: "{X}{R}" })).toBe(1);
   });
 });
 
@@ -139,6 +157,41 @@ describe("computeDeckAnalytics", () => {
     ]);
     expect(analytics.byColor.G).toBe(1);
     expect(analytics.curve[2]).toBe(1);
+  });
+
+  it("a custom card saved as multicolor without its colours is gold, never colorless (audit L2)", () => {
+    const custom = makeEntry({
+      color_identity: [],
+      mana_value: null,
+      mana_cost: null,
+      type_line: null,
+      scryfall_id: null,
+      card_id: "c1",
+      quantity: 2,
+    });
+    const analytics = computeDeckAnalytics([
+      {
+        entry: custom,
+        card: { cost: "{W/B}{R/G}", color_identity: ["multicolor"], supertype: null, card_type: "creature" } as never,
+      },
+      // Named colours beside "multicolor" count as those colours.
+      {
+        entry: { ...custom, id: "e2", quantity: 1 },
+        card: { cost: "{U}{R}", color_identity: ["blue", "red", "multicolor"], supertype: null, card_type: "creature" } as never,
+      },
+      // A colorless custom card is still colorless.
+      {
+        entry: { ...custom, id: "e3", quantity: 1 },
+        card: { cost: "{3}", color_identity: ["colorless"], supertype: null, card_type: "artifact" } as never,
+      },
+    ]);
+    expect(analytics.multicolor).toBe(2);
+    expect(analytics.byColor.C).toBe(1);
+    expect(analytics.byColor.U).toBe(1);
+    expect(analytics.byColor.R).toBe(1);
+    // Two hybrids are mana value 2 (slot 2, beside the {U}{R} card).
+    expect(analytics.curve[2]).toBe(3);
+    expect(analytics.curve[3]).toBe(1);
   });
 });
 

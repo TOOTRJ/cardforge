@@ -8,6 +8,7 @@ const analytics: DeckAnalytics = {
   remixed: 3,
   curve: [0, 8, 12, 10, 6, 3, 1, 1],
   byColor: { W: 0, U: 0, B: 30, R: 0, G: 25, C: 5 },
+  multicolor: 0,
   byType: { Battle: 0, Planeswalker: 0, Creature: 24, Instant: 4, Sorcery: 6, Artifact: 2, Enchantment: 3, Land: 21, Other: 0 },
   lands: 21,
   averageManaValue: 2.9,
