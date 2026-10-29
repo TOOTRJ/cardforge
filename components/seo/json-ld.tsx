@@ -133,3 +133,47 @@ export function faqJsonLd(items: FaqItem[]): Record<string, unknown> {
     })),
   };
 }
+
+export type DefinedTermEntry = {
+  /** The term's anchor on the set's page (`#<id>`). */
+  id: string;
+  name: string;
+  description: string;
+  alternateNames?: readonly string[];
+};
+
+/** DefinedTermSet structured data — a glossary page. Each term is a
+ *  DefinedTerm whose url is its anchor on the page, so an answer engine can
+ *  cite the one definition rather than the whole page. Pass the same terms
+ *  and words the page renders. */
+export function definedTermSetJsonLd({
+  name,
+  description,
+  path,
+  terms,
+}: {
+  name: string;
+  description: string;
+  /** Site-relative path of the glossary page. */
+  path: string;
+  terms: readonly DefinedTermEntry[];
+}): Record<string, unknown> {
+  const url = `${getSiteBaseUrl()}${path}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "DefinedTermSet",
+    "@id": url,
+    name,
+    description,
+    url,
+    hasDefinedTerm: terms.map((term) => ({
+      "@type": "DefinedTerm",
+      "@id": `${url}#${term.id}`,
+      name: term.name,
+      description: term.description,
+      url: `${url}#${term.id}`,
+      ...(term.alternateNames?.length ? { alternateName: [...term.alternateNames] } : {}),
+      inDefinedTermSet: { "@id": url },
+    })),
+  };
+}

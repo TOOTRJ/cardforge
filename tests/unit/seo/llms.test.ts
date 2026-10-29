@@ -40,9 +40,9 @@ describe("/llms.txt", () => {
     expect(line).not.toMatch(/anyone can design/i);
   });
 
-  it("names /learn, /tools and the What's new feed, and lists the guides under their categories", async () => {
+  it("names /learn, /tools, /glossary and the What's new feed, and lists the guides under their categories", async () => {
     const text = await GET().text();
-    for (const path of ["/learn", "/tools", "/news", "/news/feed.xml"]) {
+    for (const path of ["/learn", "/tools", "/glossary", "/news", "/news/feed.xml"]) {
       expect(text).toContain(`https://www.pipglyph.com${path}`);
     }
     for (const { category, articles } of listCategoryShelves()) {
