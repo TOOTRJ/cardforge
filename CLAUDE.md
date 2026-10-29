@@ -1826,6 +1826,25 @@ Rules and gotchas:
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
+  A SAVED card joins or leaves the owner's decks from My Cards, the
+  creator's edit and another creator's card page (TODO DK9) through ONE
+  picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a
+  one-card row's board / copies, "＋ New deck" with its visibility ON SHOW
+  as the card creator's Publish control — "Keep it private" over Unlisted /
+  Public, Public picked (owner 2026-10-29); decks are unlimited) and
+  ONE writer, `changeDeckMembershipAction` (`lib/decks/membership-actions.ts`:
+  one deck, ≤ `MAX_MEMBERSHIP_BATCH` cards, `add_custom_deck_entry` per card
+  with source `link`, D3 refused before the RPC, the 500 cap in words —
+  `deckFullMessage` — a result per card, ONE revalidation). A removal deletes
+  only an entry whose source SAYS the card brought it (no printing) and
+  unlinks every other — a printing, an import / manual source, or NO source
+  (unknown: in doubt the line stays). The creator's
+  "Add to a deck" box (`creator-deck-box.tsx`, under the live preview) gives
+  a NEW card / remix the save's `deck_id` — the payload main sends, pinned;
+  never a remix's "change something" (`hasMeaningfulChange`) — and acts AT
+  ONCE on an edit (D13), never touching the form; never for a
+  guest or a frame preview; a deck that refuses the new card comes back as
+  `deckEntryError` (the card is saved).
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
@@ -1849,9 +1868,7 @@ Rules and gotchas:
   sessionStorage for the trip through sign-in (`lib/decks/new-deck.ts`,
   never the URL; sign-up returns through onboarding's own `next`). Closed,
   the focus goes back to its opener; a render that throws (a chunk that
-  won't load) is caught by the provider, never Next's whole-page error. A
-  new way to start a deck opens it, never a form of its own (the Publish
-  step's inline quick-create moves onto it with DK9.3).
+  won't load) is caught by the provider, never Next's whole-page error.
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

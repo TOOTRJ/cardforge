@@ -1,4 +1,5 @@
 import {
+  UsersRound,
   Activity,
   Bell,
   BookMarked,
@@ -71,6 +72,7 @@ export const NAV_LINK_ICONS: Record<string, LucideIcon> = {
   "community.gallery": Images,
   "community.decks": Layers,
   "community.challenges": Trophy,
+  "community.creators": UsersRound,
   "community.feed": Rss,
   "learn.design": PenTool,
   "learn.reference": BookMarked,

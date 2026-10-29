@@ -9,6 +9,9 @@ type RemixButtonProps = {
   /** When true (no session) the click sends them to /login first, landing
    *  back on the remix editor afterwards. */
   requiresSignIn?: boolean;
+  /** "Remix" unless said: another creator's card that isn't public reads
+   *  "Remix into a deck" — the way such a card reaches a deck (TODO DK9.4). */
+  label?: string;
   className?: string;
 };
 
@@ -19,6 +22,7 @@ type RemixButtonProps = {
 export function RemixButton({
   cardId,
   requiresSignIn = false,
+  label = "Remix",
   className,
 }: RemixButtonProps) {
   const router = useRouter();
@@ -40,7 +44,7 @@ export function RemixButton({
       className={className}
     >
       <GitFork className="h-4 w-4" aria-hidden />
-      Remix
+      {label}
     </Button>
   );
 }

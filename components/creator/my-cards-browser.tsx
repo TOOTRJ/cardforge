@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CheckSquare,
@@ -28,6 +29,8 @@ import {
 } from "@/components/creator/dashboard-card-tile";
 import { DashboardBulkBar } from "@/components/creator/dashboard-bulk-bar";
 import { PrintSelectionDialog } from "@/components/cards/print-selection-dialog";
+import { AddToDeckDialog } from "@/components/decks/add-to-deck-dialog";
+import { isFramePreviewCard } from "@/components/creator/frame-preview-card-badge";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { LikedCardTile } from "@/components/creator/liked-card-tile";
 import {
@@ -76,9 +79,15 @@ import { typedForMatching } from "@/lib/validation/print-typography";
 //     extending (not replacing) the selection — the macOS Finder pattern
 //   - "Select" flips plain clicks from navigate to toggle
 //
-// Bulk actions: "Print / download" (TODO 6.15 — PrintSelectionDialog; Pro
-// like the deck export, the upgrade modal otherwise) on every tab, the
-// Liked tab included; visibility and delete on your own cards only.
+// Bulk actions: "Add to deck…" (TODO DK9.2 — AddToDeckDialog) and "Print /
+// download" (TODO 6.15 — PrintSelectionDialog; Pro like the deck export,
+// the upgrade modal otherwise) on every tab, the Liked tab included;
+// visibility and delete on your own cards only.
+//
+// Decks (TODO DK9.2): every card that may join a deck carries its "In N
+// decks" chip — the OWNER's decks that hold it (`deckCounts`, read with
+// their session) — opening the same picker for that one card. On the Liked
+// tab that is another creator's PUBLIC card (owner decision D3).
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE: Record<MyCardsView, number> = {
@@ -125,6 +134,9 @@ type MyCardsBrowserProps = {
   /** The viewer's plan includes the deck export (Pro) — and so printing a
    *  selection (TODO 6.15). Otherwise the action opens the upgrade modal. */
   canPrint?: boolean;
+  /** card id → how many of the viewer's decks hold it (a card in none is
+   *  absent). Null = couldn't be read: the chips claim no number. */
+  deckCounts?: Record<string, number> | null;
 };
 
 export function MyCardsBrowser({
@@ -136,9 +148,13 @@ export function MyCardsBrowser({
   initialFilter,
   initialSort,
   canPrint = false,
+  deckCounts = null,
 }: MyCardsBrowserProps) {
   const upgrade = useUpgradeModal();
+  const router = useRouter();
   const [printOpen, setPrintOpen] = useState(false);
+  // The cards the deck picker is open for (one tile's, or the selection).
+  const [deckCards, setDeckCards] = useState<Array<{ id: string; title: string }> | null>(null);
   const [view, setView] = useState(initialView);
   const [filter, setFilter] = useState(initialFilter);
   const [sort, setSort] = useState(initialSort);
@@ -324,6 +340,17 @@ export function MyCardsBrowser({
     );
   };
 
+  /** A card's chip: its count, and the picker for it. */
+  const decksFor = (card: { id: string; title: string }) => ({
+    count: deckCounts ? (deckCounts[card.id] ?? 0) : null,
+    onOpen: () => setDeckCards([{ id: card.id, title: card.title }]),
+  });
+  // On the Liked tab: another creator's PUBLIC card only (D3) — an unlisted
+  // or private one can't join a deck.
+  const likedDecksFor = (card: CardWithStats) => (card.visibility === "public" ? decksFor(card) : undefined);
+  // An admin's frame preview never joins a deck.
+  const ownedDecksFor = (card: DashboardCard) => (isFramePreviewCard(card) ? undefined : decksFor(card));
+
   const selectedIds = Array.from(selection);
   // The selection in DISPLAY order, for the print dialog (its copies list
   // and the sheets follow what the user sees).
@@ -454,6 +481,7 @@ export function MyCardsBrowser({
                   card={card}
                   profileOverrides={profileOverrides}
                   selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
+                  decks={likedDecksFor(card)}
                 />
               ))
             : visibleOwned.map((card) => (
@@ -464,6 +492,7 @@ export function MyCardsBrowser({
                   isSelected={selection.has(card.id)}
                   selectMode={selectMode}
                   caption={remixCaption(card)}
+                  decks={ownedDecksFor(card)}
                   onToggle={handleToggle}
                 />
               ))}
@@ -477,6 +506,7 @@ export function MyCardsBrowser({
                   card={card}
                   profileOverrides={profileOverrides}
                   selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
+                  decks={likedDecksFor(card)}
                 />
               ))
             : visibleOwned.map((card) => (
@@ -488,6 +518,7 @@ export function MyCardsBrowser({
                   selectMode={selectMode}
                   density={view === "compact" ? "compact" : "regular"}
                   caption={remixCaption(card)}
+                  decks={ownedDecksFor(card)}
                   onToggle={handleToggle}
                 />
               ))}
@@ -517,6 +548,13 @@ export function MyCardsBrowser({
           onClear={clearSelection}
           onSuccess={exitSelectMode}
           ownedActions={!isLiked}
+          onAddToDeck={() =>
+            setDeckCards(
+              (isLiked ? likedResults : ownedResults)
+                .filter((card) => selection.has(card.id))
+                .map((card) => ({ id: card.id, title: card.title })),
+            )
+          }
           onPrint={() => (canPrint ? setPrintOpen(true) : upgrade.open("batch_export"))}
           printLocked={!canPrint}
         />
@@ -528,6 +566,21 @@ export function MyCardsBrowser({
         cards={printCards}
         onStarted={exitSelectMode}
       />
+
+      {/* Mounted while open: each opening reads the decks afresh. */}
+      {deckCards ? (
+        <AddToDeckDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeckCards(null);
+          }}
+          cards={deckCards}
+          surface="my_cards"
+          signInPath="/dashboard/cards"
+          // The chips are the server's numbers: read them again.
+          onChanged={() => router.refresh()}
+        />
+      ) : null}
     </div>
   );
 }

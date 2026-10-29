@@ -22,6 +22,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { CardWithStats } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
+import { DeckChipButton } from "@/components/decks/deck-chip-button";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,8 @@ type MyCardListRowProps = {
   selectMode: boolean;
   /** "Remixed from …" credit, when the card is a remix. */
   caption?: React.ReactNode;
+  /** The card's decks (TODO DK9.2), as on the grid tile. */
+  decks?: { count: number | null; onOpen: () => void };
   onToggle: (
     cardId: string,
     modifiers: { meta: boolean; shift: boolean },
@@ -108,6 +111,7 @@ export function MyCardListRow({
   isSelected,
   selectMode,
   caption,
+  decks,
   onToggle,
 }: MyCardListRowProps) {
   const editHref = `/card/${card.slug}/edit`;
@@ -193,6 +197,7 @@ export function MyCardListRow({
         {VISIBILITY_LABELS[card.visibility]}
       </Badge>
       <EditedAt value={card.updated_at} className="hidden w-16 text-right md:block" />
+      {decks ? <DeckChipButton count={decks.count} title={card.title} onClick={decks.onOpen} /> : null}
 
       <div className="flex shrink-0 items-center gap-1">
         <Button asChild size="sm" variant="ghost">
@@ -216,10 +221,13 @@ export function LikedCardListRow({
   card,
   profileOverrides = null,
   selection,
+  decks,
 }: {
   card: CardWithStats;
   profileOverrides?: FrameProfileOverridesMap | null;
   selection?: LikedCardSelection;
+  /** As on LikedCardTile: only where the card may join a deck. */
+  decks?: { count: number | null; onOpen: () => void };
 }) {
   const path = buildCardPath(card);
   const selected = selection?.isSelected ?? false;
@@ -283,6 +291,7 @@ export function LikedCardListRow({
           @{card.owner.username}
         </Link>
       ) : null}
+      {decks ? <DeckChipButton count={decks.count} title={card.title} onClick={decks.onOpen} /> : null}
       <QuickLikeButton
         kind="card"
         cardId={card.id}

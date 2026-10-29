@@ -105,6 +105,12 @@ export const siteConfig = {
               liveBadge: "challenge",
             },
             {
+              id: "community.creators",
+              label: "Creators",
+              href: "/creators",
+              description: "Makers with public cards",
+            },
+            {
               id: "community.feed",
               label: "Your feed",
               href: "/feed",
@@ -287,6 +293,7 @@ export const siteConfig = {
         { id: "community.gallery", label: "Card gallery", href: "/gallery" },
         { id: "community.decks", label: "Community decks", href: "/decks" },
         { id: "community.challenges", label: "Design challenges", href: "/challenges" },
+        { id: "community.creators", label: "Creators", href: "/creators" },
       ],
     },
     {

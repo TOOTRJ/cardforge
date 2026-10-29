@@ -180,6 +180,7 @@ import {
   PublishPanel,
   type DeckOption,
 } from "@/components/creator/panels/publish-panel";
+import { CreatorDeckBox } from "@/components/creator/creator-deck-box";
 import {
   createCardAction,
   updateCardAction,
@@ -434,12 +435,14 @@ type CardCreatorFormProps = {
   gameSystems: GameSystem[];
   /** The card being edited (edit) or remixed from (remix). */
   card?: Card | null;
-  /** The current user's decks — the Publish "Add to deck" picker and the AI
-   *  dialog's "For a deck" picker. `null` (the default) hides both. */
+  /** The current user's decks — the "Add to a deck" box of a new card
+   *  (CreatorDeckBox, TODO DK9.3) and the AI dialog's "For a deck" picker.
+   *  `null` (the default) hides both. (An edit's box reads the card's decks
+   *  itself.) */
   myDecks?: DeckOption[] | null;
-  /** Decks for the AI dialog's "For a deck" picker when the Publish deck
-   *  picker must stay hidden (edit mode — deck linkage is create-only).
-   *  Defaults to `myDecks`. */
+  /** Decks for the AI dialog's "For a deck" picker on an edit, which leaves
+   *  `myDecks` out (a stored card has no save-time deck). Defaults to
+   *  `myDecks`. */
   aiDecks?: DeckOption[] | null;
   /** Pro entitlement for deck-aware AI generation (the AI dialog's "For a
    *  deck" picker renders locked without it). */
@@ -4416,6 +4419,11 @@ export function CardCreatorForm({
                   ? `Saved “${payload.title}” as a draft`
                   : `Saved “${payload.title}”`,
         );
+        // The card is saved, but the deck the box named didn't take it (a
+        // deck at its 500 entries used to say nothing — TODO DK9.3).
+        if (result.deckEntryError) {
+          toast.error(`Not added to the deck: ${result.deckEntryError}`);
+        }
         // Every create leaves this page: stop guarding and take the Back
         // sentinel off first, so Back from the saved card doesn't land on a
         // blank /create (TODO 3b.7).
@@ -4979,7 +4987,7 @@ export function CardCreatorForm({
         </>
       ) : isEdit ? (
         <>
-          Nothing changes until you click Save. Visibility and
+          Nothing on the card changes until you click Save. Visibility and
           &ldquo;Save as a draft&rdquo; live on the Publish step.
         </>
       ) : (
@@ -4989,6 +4997,18 @@ export function CardCreatorForm({
       )}
     </p>
   );
+  // "Add to a deck" (TODO DK9.3): its own box under the live preview, on
+  // every step. Never for a guest, nor an admin's frame preview (a test card
+  // never joins a deck — the save skips its deck_id too).
+  const deckBox =
+    readOnly || previewSave || (isEdit && card?.frame_preview === true) ? null : (
+      <CreatorDeckBox
+        mode={mode}
+        cardId={isEdit ? (card?.id ?? null) : null}
+        myDecks={myDecks}
+        deckRemix={deckRemix}
+      />
+    );
   const stepPanels = (
     <div
       // (A focused field scrolls clear of the switch, the site header and
@@ -5468,7 +5488,6 @@ export function CardCreatorForm({
               <PublishPanel
                 userId={userId}
                 activeChallenge={activeChallenge}
-                myDecks={isRevise || deckRemix ? null : myDecks}
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}
@@ -5929,6 +5948,7 @@ export function CardCreatorForm({
               className="w-full max-w-md"
             />
             <div className="max-w-md">{visibilityNote}</div>
+            {deckBox ? <div className="w-full max-w-md">{deckBox}</div> : null}
           </div>
 
           <SurfaceCard
@@ -6042,6 +6062,8 @@ export function CardCreatorForm({
                 </div>
               </div>
               )}
+              {/* Under the preview, folded away with it (TODO DK9.3). */}
+              {deckBox ? <div className="px-4 pb-4">{deckBox}</div> : null}
             </details>
             )}
 
@@ -6081,6 +6103,7 @@ export function CardCreatorForm({
             </div>
             )}
             {visibilityNote}
+            {deckBox}
           </div>
         </aside>
         )}

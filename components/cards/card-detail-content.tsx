@@ -35,6 +35,7 @@ import { DownloadModal } from "@/components/cards/download-modal";
 import { frameTemplateOf } from "@/lib/cards/print-export";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
+import { AddToDeckButton } from "@/components/cards/add-to-deck-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
@@ -397,7 +398,23 @@ export async function CardDetailContent({
               initialCount={likesCount}
               requiresSignIn={!user}
             />
-            <RemixButton cardId={card.id} requiresSignIn={!user} />
+            {/* Another creator's card into one of your decks (TODO DK9.4,
+                owner decision D3): a PUBLIC one by "Add to deck"; one that
+                isn't public only as a remix — the Remix button says so
+                (one button, never two to the same place). */}
+            <RemixButton
+              cardId={card.id}
+              requiresSignIn={!user}
+              label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
+            />
+            {!isOwner && card.visibility === "public" ? (
+              <AddToDeckButton
+                cardId={card.id}
+                cardTitle={card.title}
+                cardPath={`/card/${username}/${card.slug}`}
+                signedIn={Boolean(user)}
+              />
+            ) : null}
             {isOwner ? (
               <Button asChild>
                 <Link href={`/card/${card.slug}/edit`}>
