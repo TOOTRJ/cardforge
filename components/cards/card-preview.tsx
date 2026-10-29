@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
@@ -48,7 +48,7 @@ import {
   loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { pipTopOf, wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
+import { gapBefore, hangIndentPx, pipTopOf, wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import {
   profileSagaRail,
@@ -117,6 +117,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
+import { flavorBarArt } from "@/lib/cards/flavor-bar";
 import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
 import { cardStationLayout, stationDrawing, type StationPiece } from "@/lib/cards/station-layout";
 import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
@@ -130,6 +131,7 @@ import {
 import {
   BRAND_MARK_PILL,
   bandTextStyle,
+  shadowDrawsAsCopies,
   brandMarkLayout,
   footerInk,
   loyaltyBadgeAssetFor,
@@ -2027,7 +2029,11 @@ function BandSlot({
         letterSpacing: `${slot.letterSpacingEm ?? 0}em`,
         textTransform: slot.uppercase ? "uppercase" : "none",
         color: slot.colorHex,
-        ...(slot.shadowCss ? { textShadow: slot.shadowCss } : {}),
+        // A zero-blur outline (OUTLINE_SHADOW) is the text's alone — set by
+        // bandTextStyle on the name / type line, never on the band, whose
+        // pips would inherit it (layout v74, TODO 3.25: the bake draws it
+        // as copies of the text only).
+        ...(slot.shadowCss && !shadowDrawsAsCopies(slot.shadowCss) ? { textShadow: slot.shadowCss } : {}),
       }}
     >
       {children}
@@ -3287,12 +3293,15 @@ function RulesLines({
   const lineHeight = m.linePx / m.fontPx;
   const rows: ReactNode[] = [];
   blocks.forEach((block, bi) => {
-    const gap = bi === 0 ? 0 : block.kind === "flavor" ? m.flavorGapNoBarPx : m.paragraphGapPx;
+    // The layout's gap (no bar on these rows) and a bullet mode's hang
+    // (TODO 3.16) — the bake's RulesLinesBake reads the same two.
+    const gap = gapBefore(blocks, bi, m, false);
     if (block.kind === "blank") {
       rows.push(<div key={`blank-${bi}`} style={{ flexShrink: 0, height: px(m.blankLinePx), marginTop: gap ? px(gap) : undefined }} />);
       return;
     }
     block.lines.forEach((line, li) => {
+      const hang = hangIndentPx(block, li, m);
       rows.push(
         <div
           key={`${bi}-${li}`}
@@ -3305,6 +3314,7 @@ function RulesLines({
             whiteSpace: "nowrap",
             height: px(m.linePx),
             ...(li === 0 && gap ? { marginTop: px(gap) } : {}),
+            ...(hang > 0 ? { marginLeft: px(hang) } : {}),
           }}
         >
           {line.runs.map((run, ri) => (
@@ -3502,30 +3512,39 @@ function RulesBox({
           b.kind === "blank" ? (
             <div key={bi} style={{ flexShrink: 0, height: hd(b.height), marginTop: hd(b.marginTop) }} />
           ) : (
-            <div
-              key={bi}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                flexShrink: 0,
-                ...(b.bar
-                  ? {
-                      marginTop: hd(b.bar.above),
-                      // The bar stays a 1 CSS px line, but the layout
-                      // reserved one HD px for it: the padding makes up the
-                      // difference, so the flavor lands where the bake puts
-                      // it at every editor width (a 1 px border alone set it
-                      // up to 3 HD px low at 330 px).
-                      paddingTop: `calc(${hd(b.bar.below + b.bar.thickness)} - ${b.bar.thickness}px)`,
-                      borderTop: `${b.bar.thickness}px solid ${colorHex}44`,
-                    }
-                  : { marginTop: hd(b.marginTop) }),
-              }}
-            >
-              {b.lines.map((runs, li) => (
-                <RulesBoxLine key={li} runs={runs} indent={b.indents[li]} d={d} hd={hd} overrides={overrides} />
-              ))}
-            </div>
+            <Fragment key={bi}>
+              {/* The flavor bar (layout v74, TODO 3.19): the bake's box and
+                  picture (flavorBarArt: the faded ends), at the HD bake's px
+                  — card-relative at every editor width (it was one CSS px). */}
+              {b.bar ? (
+                <span
+                  aria-hidden
+                  style={{
+                    display: "block",
+                    flexShrink: 0,
+                    height: hd(b.bar.thickness),
+                    width: hd(b.bar.width),
+                    marginTop: hd(b.bar.above),
+                    ...(b.bar.inset > 0 ? { marginLeft: hd(b.bar.inset) } : {}),
+                    backgroundImage: `url("${flavorBarArt(colorHex, b.bar.width, b.bar.thickness)}")`,
+                    backgroundSize: "100% 100%",
+                    backgroundRepeat: "no-repeat",
+                  }}
+                />
+              ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flexShrink: 0,
+                  marginTop: hd(b.bar ? b.bar.below : b.marginTop),
+                }}
+              >
+                {b.lines.map((runs, li) => (
+                  <RulesBoxLine key={li} runs={runs} indent={b.indents[li]} d={d} hd={hd} overrides={overrides} />
+                ))}
+              </div>
+            </Fragment>
           ),
         )}
       </div>

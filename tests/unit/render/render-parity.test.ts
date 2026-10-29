@@ -167,7 +167,7 @@ describe("display-font lines", () => {
     for (const src of [BAKE, PREVIEW]) expect(src).not.toMatch(/["'`]Art: /);
     // The name: whole, or as fitted (fitTitleBand: before a detached cost,
     // and anywhere on a measured slot, TODO 4.20).
-    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title)}");
+    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title);");
     expect(PREVIEW).toContain(": displayLine(titleFit ? titleFit.text : safeTitle)}");
     // …and a small-caps name (TODO 4.53) draws the same line in its runs.
     expect(BAKE).toContain("? smallCapsRunsBake(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width))");
@@ -199,7 +199,10 @@ describe("display-font lines", () => {
     // 3.24; its right half centres).
     // The text's dy (TextSlot.dy, TODO 4.20) is spread last: a transform,
     // which leaves the margin alone.
-    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(2);
+    // (The front's type line builds its style once, typeSpanStyle — its
+    // outline copies, TODO 3.25, lay out from the same object.)
+    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(1);
+    expect(BAKE.match(/const typeSpanStyle: React\.CSSProperties = \{\s*\.\.\.alignedText\(/g)).toHaveLength(1);
     expect(BAKE).toMatch(
       /\.\.\.alignedText\(band, line, fpx\(slot\.sizePct, cardWidth\), bandWidth\(band, cardWidth\)\),\n\s*\.\.\.ink,\n\s*\.\.\.textDyBake\(slot, cardWidth\),\n/,
     );
@@ -358,7 +361,7 @@ describe("the name's fit", () => {
     expect(BAKE).not.toContain("fitDetachedCostTitle(");
     // ...joined for one kerned run like every display line (displayLine).
     expect(PREVIEW).toContain(": displayLine(titleFit ? titleFit.text : safeTitle)}");
-    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title)}");
+    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title);");
     // A measured name the fit shrank shows at the stored HD bake's whole
     // px; the old path (modern) at its fitted size.
     expect(PREVIEW).toContain("slot={titleFit ? { ...layout.title, sizePct: titleSizePct } : layout.title}");

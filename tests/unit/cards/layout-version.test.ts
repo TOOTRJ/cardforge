@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CARD_LAYOUT_VERSION,
+  VERSION_ROLLOUT,
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
@@ -3823,5 +3824,131 @@ describe("v73 — the adventure's left-page paper and the Nyx Constellation's lo
   it("ships only after v72 (#626): no gap below it", async () => {
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.VERSION_ROLLOUT[V - 1], "v72 has no rollout yet").toBeDefined();
+  });
+});
+
+describe("v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 / 3.25)", () => {
+  // Renumbered with RENDERING_CORRECTIONS_1_LAYOUT_VERSION if another bump
+  // merges first (taken as v74 at PR time: v72 is #626's, Beleren's kerns; v73 is #631's).
+  const V = 74;
+  const png = "https://x/y.png";
+  /** A v73 bake: only v74 can be pending. */
+  const at = (over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    nickname: null,
+    ...over,
+  });
+  const AT = { current: V } as const;
+
+  it("is a sweep, never a badge — a card scope, the land title band its only verified slot", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.RENDERING_CORRECTIONS_1_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBe(lv.v74Changed);
+    // The band (3.22) is a slot: those five templates' ticks are re-verified;
+    // the rest of v74 is text and ink inside the slots a tick verified.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["m15land", "m15snowland", "extendedartland", "m15stationland", "m15ubland"]);
+  });
+
+  it("3.19 — the flavour bar: a card that draws rules and flavour, front or back, on any template", async () => {
+    const { v74FlavorBarChanged } = await import("@/lib/cards/layout-version");
+    expect(v74FlavorBarChanged(at({ rules_text: "Flying", flavor_text: "Up." }))).toBe(true);
+    expect(v74FlavorBarChanged(at({ back_face: { title: "Back", rules_text: "Flying", flavor_text: "Up." } }))).toBe(true);
+    // Structured rows and a flavour (a station's top band) — read wider.
+    expect(v74FlavorBarChanged(at({ face_content: { station: [] }, flavor_text: "Up." }))).toBe(true);
+    // No bar: flavour alone, rules alone, a blank flavour.
+    expect(v74FlavorBarChanged(at({ flavor_text: "Up." }))).toBe(false);
+    expect(v74FlavorBarChanged(at({ rules_text: "Flying" }))).toBe(false);
+    expect(v74FlavorBarChanged(at({ rules_text: "Flying", flavor_text: "  " }))).toBe(false);
+    expect(v74FlavorBarChanged(at({ back_face: { title: "Back", flavor_text: "Up." } }))).toBe(false);
+    // Can't tell → affected.
+    expect(v74FlavorBarChanged({ rules_text: null, back_face: null, face_content: null })).toBe(true);
+  });
+
+  it("3.16 — modal bullets: a '•' mode in the rules, a back face's or the rows'; never spree's '+' or a loyalty cost", async () => {
+    const { v74BulletModesChanged } = await import("@/lib/cards/layout-version");
+    const command = "Choose two —\n• Return target creature card from your graveyard to your hand.\n• Target player discards a card.";
+    expect(v74BulletModesChanged(at({ rules_text: command }))).toBe(true);
+    expect(v74BulletModesChanged(at({ back_face: { title: "Back", rules_text: command } }))).toBe(true);
+    expect(v74BulletModesChanged(at({ face_content: { loyalty: [{ cost: "+1", text: "Choose one —\n• Draw a card." }] } }))).toBe(true);
+    for (const rules of [
+      "Spree (Choose one or more additional costs.)\n+ {1} — Draw a card.",
+      "+1: Draw a card.\n−2: Scry 2.",
+      "•Glued to its word.",
+      "A • in the middle.",
+      "•",
+      "Flying",
+    ]) {
+      expect(v74BulletModesChanged(at({ rules_text: rules })), rules).toBe(false);
+    }
+    expect(v74BulletModesChanged({ back_face: null, face_content: null })).toBe(true);
+  });
+
+  it("3.22 — the land title band: a card on the five M15LAND bands whose name the old band shrank, or with a nickname", async () => {
+    const { v74TitleBandChanged, V74_TITLE_BAND_TEMPLATES } = await import("@/lib/cards/layout-version");
+    for (const t of V74_TITLE_BAND_TEMPLATES) {
+      const p = getFrameProfile(t);
+      // Every band ends at M15's 92.2 %W.
+      expect(p.title.rect.leftPct + p.title.rect.widthPct, t).toBeCloseTo(92.2, 9);
+      expect(v74TitleBandChanged(at({ frame_style: { template: t }, title: "Training Ground: Waterfall Basin" })), t).toBe(true);
+      expect(v74TitleBandChanged(at({ frame_style: { template: t }, title: "Forest" })), t).toBe(false);
+      expect(v74TitleBandChanged(at({ frame_style: { template: t }, title: "Forest", nickname: "The Long Way Home" })), t).toBe(true);
+    }
+    // Any other band: never.
+    expect(v74TitleBandChanged(at({ frame_style: { template: "m15" }, title: "Training Ground: Waterfall Basin" }))).toBe(false);
+    expect(v74TitleBandChanged({ frame_style: { template: "m15land" } })).toBe(true);
+  });
+
+  it("3.25 / 3.5 — the shadows: a card on a frame that declared a px shadow; on a walker frame, one that prints its starting loyalty", async () => {
+    const { v74ShadowsChanged, V74_SHADOW_TEMPLATES } = await import("@/lib/cards/layout-version");
+    for (const t of ["tarkirghostfire", "adventure", "prepare", "fullart", "nyx"]) {
+      expect(v74ShadowsChanged(at({ frame_style: { template: t } })), t).toBe(true);
+    }
+    for (const t of ["m15pw", "m15borderlesspw", "m15borderlesspwtall"]) {
+      expect(v74ShadowsChanged(at({ frame_style: { template: t }, loyalty: "4" })), t).toBe(true);
+      expect(v74ShadowsChanged(at({ frame_style: { template: t }, loyalty: null })), t).toBe(false);
+    }
+    expect(v74ShadowsChanged(at({ frame_style: { template: "m15" } }))).toBe(false);
+    // The list is every template whose profile declares a shadow in
+    // card-width px today (cardPx's `cqw`).
+    const declared = FRAME_TEMPLATE_VALUES.filter((t) => JSON.stringify(getFrameProfile(t)).includes("cqw"));
+    expect([...V74_SHADOW_TEMPLATES].sort()).toEqual([...declared].sort());
+  });
+
+  it("re-bakes a card in a part's scope and stamps every other", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      { rules_text: "Flying", flavor_text: "Up." },
+      { rules_text: "Choose one —\n• Draw a card.\n• Scry 2." },
+      { frame_style: { template: "m15land" }, title: "Training Ground: Waterfall Basin" },
+      { frame_style: { template: "nyx" } },
+    ]) {
+      const row = at(over);
+      expect(lv.v74Changed(row), JSON.stringify(over)).toBe(true);
+      expect(sweep(row), JSON.stringify(over)).toBe("rebake");
+      expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+      expect(lv.hasNewerLook(row, AT)).toBe(false);
+    }
+    for (const over of [{}, { rules_text: "Flying" }, { frame_style: { template: "m15land" }, title: "Forest" }, { frame_style: { template: "m15pw" } }]) {
+      const row = at(over);
+      expect(lv.v74Changed(row), JSON.stringify(over)).toBe(false);
+      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
+    }
+  });
+
+  // v73 is #631's (the adventure / Nyx draft). A version with no rollout
+  // and no scope reads as a SWEEP OF EVERY CARD, so v74 never ships over a
+  // gap: merge #631 first, or renumber.
+  it("ships only after v73 (#631): no gap below it", () => {
+    expect(VERSION_ROLLOUT[V - 1], "v73 has no rollout yet").toBeDefined();
   });
 });

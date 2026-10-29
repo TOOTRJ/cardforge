@@ -382,10 +382,35 @@ export const RULES_TEXT = {
   /** Between two abilities (paragraphs): line box to line box, HD px. The
    *  prints add a constant ≈24 px (22.9–25.2, n = 26) from 6.6 to 9 pt. */
   paragraphGapPx: 24,
-  /** Rules → flavor on a frame that draws the hairline: this much above the
-   *  1 px bar and again below it (pitch + 61 baseline to baseline, the
-   *  prints' pitch + 60–65), HD px. */
+  /** Between a modal spell's bullet modes, and before the first after its
+   *  "Choose … —" line (layout v74, TODO 3.16): line box to line box, HD px.
+   *  The prints set the modes closer than abilities — 10–13 px at 64–72 px
+   *  type on DTK #224, STX Prismari Command and MH3 #11 (baselines on
+   *  Scryfall's PNGs at 1500 px, the in-paragraph pitch taken off). Even, so
+   *  the 750 px bake draws exactly half. Spree's `+` modes are NOT this: the
+   *  prints (OTJ #125) set them an ability's gap apart, unhung. */
+  bulletGapPx: 12,
+  /** Rules → flavor on a frame that draws the bar: this much above the
+   *  bar's centre line and again below it, less half the bar (with the v33
+   *  hairline: 30 + 1 + 30 — pitch + 61 baseline to baseline, the prints'
+   *  pitch + 60–65), HD px. Layout v74 (TODO 3.19) draws a thicker bar on
+   *  the SAME centre line: the flavor text does not move. */
   flavorGapPx: 30,
+  /** The flavor bar's thickness, HD px (layout v74, TODO 3.19): ≈ 0.2 % of
+   *  the card's height, as the prints draw it (a 4–5 px core on DOM #33 and
+   *  M19 #38, Scryfall's PNGs at 1500 px) — 2 px at the 750 px bake. Was
+   *  1 px at every target (0.05 % of the HD bake, 0.1 % of the 750 one). */
+  flavorBarPx: 4,
+  /** The bar's width, a fraction of the text column it sits in (centred),
+   *  and how much of that width each faded end takes (layout v74): the
+   *  prints' bar spans 160–1340 px of a 1230 px column (≈ 96 %) and fades
+   *  in over its first ≈ 140 px and out over its last ≈ 90 (DOM #33, M19
+   *  #38) — Card Conjurer's `bar.png` at 96 % of the text width. */
+  flavorBarWidth: 0.96,
+  flavorBarFade: 0.1,
+  /** The bar's ink: the rules text's colour at this opacity in its middle
+   *  (the prints' core is 0.23–0.36 of the ink over the paper). */
+  flavorBarOpacity: 0.3,
   /** Rules → flavor with no hairline (pre-M15 frames, flavorDivider false):
    *  line box to line box, HD px (the pre-bar M15-era prints' pitch + 41). */
   flavorGapNoBarPx: 42,

@@ -62,9 +62,20 @@ const SYMBOL_COST = "{X}{2}{W/U}{2/B}{R/P}{G/U/P}{S}{C}{G}";
 const SYMBOL_RULES =
   "{T}, {Q}: Add {W/U}{2/B} or {R/P}{G/U/P}. You get {E}{E}.\n{S}{C}, {T}: Draw a card — then discard a card unless you pay {X}{G}.\nFlying, trample";
 
+/** DTK #224 Kolaghan's Command's Oracle text (TODO 3.16's acceptance case):
+ *  "Choose two —" and four bullet modes, two of them two lines. */
+const KOLAGHANS_COMMAND =
+  "Choose two —\n• Return target creature card from your graveyard to your hand.\n• Target player discards a card.\n• Destroy target artifact.\n• Kolaghan’s Command deals 2 damage to any target.";
+
 const PICKS: readonly Pick[] = [
   // --- M15 and its symbols -------------------------------------------------
   { from: "m15/b/creature-edge", why: "100/100, a four-mode Command, reversed-hybrid and unknown symbols" },
+  {
+    from: "m15/r/creature-long",
+    as: "@command",
+    why: "a four-mode Command (DTK #224): its modes hung where their first word starts, the bullet gap apart, and the flavour bar under them — 96 % of the column, faded ends (3.16 / 3.19, v74)",
+    row: () => ({ rules_text: KOLAGHANS_COMMAND, flavor_text: "“Hesitation is a sign of weakness.”\n—Kolaghan" }),
+  },
   {
     from: "m15/g/creature-long",
     as: "@symbols",

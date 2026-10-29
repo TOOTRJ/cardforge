@@ -16,6 +16,7 @@ import {
   type DrawnStats,
 } from "@/lib/cards/rules-box";
 import {
+  RULES_TARGETS,
   RULES_TARGET_SCALE,
   layoutRulesAt,
   linePositions,
@@ -27,6 +28,7 @@ import { sagaRail, sagaRailDrawing, type SagaRail } from "@/lib/cards/saga-rail"
 import { M15_HOLO_STAMP_KEEP_OUT } from "@/lib/cards/holo-stamp";
 import { STATION, parseStationText, type StationText } from "@/lib/cards/station";
 import { stationLayout, type StationLayout } from "@/lib/cards/station-layout";
+import { isFlavorBarArt } from "@/lib/cards/flavor-bar";
 import stationOracle from "@/tests/unit/cards/fixtures/station-oracle.json";
 import { getFrameProfile, profileOffersRulesAlign, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_SIZE_PX } from "@/lib/cards/typography";
@@ -86,8 +88,10 @@ type Svg = { words: (Box | null)[]; ink: Box[]; contours: Box[]; bars: number[] 
 
 /** Satori's SVG, read: its glyph paths (absolute M/L/Q/C/Z — opentype's path
  *  data) in document order, every drawn box (a pip's disc and shadow carry
- *  x / y / width / height) and the flavor bar (a 1 px box in the ink at 44
- *  alpha). Masks, clip paths and defs draw nothing. */
+ *  x / y / width / height) and the flavor bar (since layout v74, TODO 3.19:
+ *  its picture, flavorBarArt — an <image> of the bar's own SVG; until then
+ *  a 1 px box in the ink at 44 alpha). Masks, clip paths and defs draw
+ *  nothing. */
 function readSvg(svg: string): Svg {
   const drawn = svg
     .replace(/<defs>[\s\S]*?<\/defs>/g, "")
@@ -97,6 +101,11 @@ function readSvg(svg: string): Svg {
   for (const m of drawn.matchAll(/<rect ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
     if (attrs.fill === `${SENTINEL}44`) out.bars.push(Number(attrs.y));
+  }
+  for (const m of drawn.matchAll(/<image ([^>]*?)\/?>/g)) {
+    const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+    const href = (attrs.href ?? "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    if (isFlavorBarArt(href)) out.bars.push(Number(attrs.y));
   }
   for (const m of drawn.matchAll(/<path ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
@@ -407,12 +416,14 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art
-  // token's textless height.)
+  // token's textless height.) The four-mode Command fits them at the floor
+  // since layout v74 (TODO 3.16): its modes sit the bullet gap apart, not an
+  // ability's.
   [
     ["aftermath/main", "flip/main", "m15token/main", "m15tokenartifact/main"],
-    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets"],
+    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
   ],
-  [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up", "modal bullets"]],
+  [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up"]],
   // (fullart's box is the CC-framed M15 box since layout v63, TODO 4.11.)
   // "typed, as printed" (TODO 6.11): five paragraphs — an ability word, a
   // modal list with its bullets, quoted abilities — over a quoted flavor
@@ -924,6 +935,55 @@ describe("the 750 bake's own whole-px gaps (s = 50 / 58 / 66 / 74)", () => {
     }
     expect(tight).toBe(4);
   }, 60_000);
+});
+
+describe("a bullet mode's hung lone run (layout v74 review) — never ends past its column", () => {
+  // A mode's wrapped lines hang where its first word starts (TODO 3.16). A
+  // run too long to wrap that lands on a hung line must still END inside
+  // the column — the fit judges each line by its indent and its width, as
+  // it judges an unindented over-wide run (it once judged the width alone:
+  // "• Draw mmm…" ended up to 41 HD px past m15's column, unclipped, and
+  // the box's padding hid it from the box check above). The main box, and
+  // a narrow one: the split's halves.
+  const text = (n: number) => `Choose one —\n• Draw ${"m".repeat(n)}`;
+  const consumers = (n: number): [string, RulesLayout][] => {
+    const m15 = getFrameProfile("m15");
+    const split = getFrameProfile("split");
+    return [
+      ["m15/main", mainRulesLayout({ layout: m15, rulesText: text(n), flavorText: null, aspect: 7 / 5, show: { pt: true } })],
+      ["split/main", mainRulesLayout({ layout: split, rulesText: text(n), flavorText: null, aspect: aspectOf(split), show: {} })],
+      ["split/second face", secondFaceRulesLayout({ layout: split, rulesText: text(n), aspect: aspectOf(split), show: {} })!],
+    ];
+  };
+
+  it("lays out and draws every line inside its column, at 750 px and HD", async () => {
+    const hungPerConsumer = new Map<string, number>();
+    for (let n = 8; n <= 30; n += 1) {
+      for (const [key, layout] of consumers(n)) {
+        const label = `${key} · ${n} m's`;
+        if (layout.clipped) {
+          // A run no step of the ladder holds where it hangs: clipped at the
+          // floor, said so — as an unindented over-wide run is.
+          expect(layout.sizePx, label).toBe(RULES_SIZE_PX.floor);
+          expect(RULES_TARGETS.some((t) => layout.checks[t].overwideRun), label).toBe(true);
+          continue;
+        }
+        for (const t of RULES_TARGETS) {
+          const { placed, svg } = await checkDrawn(layout, t, `${label} · ${t}`);
+          const right = placed.interior.left + placed.interior.width;
+          for (const l of placed.lines) expect(l.left + l.width, `${label} · ${t}: a line past the column`).toBeLessThanOrEqual(right);
+          // …and the bake draws each word where the layout ends its line.
+          wordsOf(layout).forEach((w, i) => {
+            const b = svg.words[i];
+            if (b) expect(b.x1, `${label} · ${t}: "${w.v}" past its line`).toBeLessThanOrEqual(placed.lines[w.line].inkRight + EPS);
+          });
+          if (placed.lines.some((l) => l.indent > 0)) hungPerConsumer.set(key, (hungPerConsumer.get(key) ?? 0) + 1);
+        }
+      }
+    }
+    // Every consumer really hung the run on some of the texts.
+    expect([...hungPerConsumer.keys()].sort()).toEqual(["m15/main", "split/main", "split/second face"]);
+  }, 240_000);
 });
 
 describe("a layout clipped at the floor", () => {
