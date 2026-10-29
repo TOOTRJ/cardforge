@@ -4696,11 +4696,9 @@ export function CardCreatorForm({
           &ldquo;Save as a draft&rdquo; live on the Publish step.
         </>
       ) : (
-        <>
-          New cards are <strong className="text-foreground">public</strong> by
-          default — tick &ldquo;Save as a draft&rdquo; on the Publish step
-          to keep it private until it&apos;s ready.
-        </>
+        // ONE string (owner 2026-10-28): the bold word read "publicby" —
+        // no emphasis, and the space can't be lost at a line break.
+        <>{"New cards are public by default — tick “Save as a draft” on the Publish step to keep it private until it's ready."}</>
       )}
     </p>
   );

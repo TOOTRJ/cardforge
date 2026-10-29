@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import type { GameSystem } from "@/types/card";
 
 // ---------------------------------------------------------------------------
-// A piece of creator chrome the owner saw on the live site while an AI
+// Two pieces of creator chrome the owner saw on the live site while an AI
 // generation ran (2026-10-28):
 //
 //   1. The busy overlays dim and blur EVERYTHING they cover. The card's
@@ -18,6 +18,8 @@ import type { GameSystem } from "@/types/card";
 //      z-index the card or the form draws, never above the page around it.
 //      Verified on a forced pending state (dev server, jobs API held open):
 //      before, five card pieces painted above the overlay; after, none.
+//   2. The note under the preview read "New cards are publicby default":
+//      one plain string now, no bold.
 //
 // CardPreview's drawing is untouched (parity): only its wrappers changed.
 // ---------------------------------------------------------------------------
@@ -100,5 +102,17 @@ describe("the busy overlays cover everything they dim", () => {
     }
     expect(values.length).toBeGreaterThan(10);
     expect(Math.max(...values)).toBeLessThan(100);
+  });
+});
+
+describe("the note under the preview", () => {
+  it("reads as one plain sentence: no bold word, a space before \"by\"", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, fill: null }), { status: 200 })));
+    renderForm();
+    const note = screen.getAllByText(
+      "New cards are public by default — tick “Save as a draft” on the Publish step to keep it private until it's ready.",
+    );
+    expect(note.length).toBeGreaterThan(0);
+    for (const node of note) expect(node.querySelector("strong")).toBeNull();
   });
 });
