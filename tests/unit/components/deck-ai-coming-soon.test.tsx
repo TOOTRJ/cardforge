@@ -153,7 +153,7 @@ describe("the deck guide section (D4)", () => {
     expect(screen.queryByText(GUIDE.overview)).toBeNull();
   });
 
-  it("a guide the database withheld (0150: no text for this viewer) is the teaser, never text", () => {
+  it("a guide the database withheld (0151: no text for this viewer) is the teaser, never text", () => {
     section({ guide: null, guideWithheld: true });
     expect(screen.getByText(/deck guides are a pro feature/i)).toBeTruthy();
     expect(screen.queryByText(GUIDE.overview)).toBeNull();

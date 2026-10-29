@@ -1905,7 +1905,7 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
-  What the API hands out matches the page (TODO DK0.11, migration 0150).
+  What the API hands out matches the page (TODO DK0.11, migration 0151).
   An UNLISTED deck is link-only: the decks policy admits it only to a
   request that NAMES it — its slug or id in the `x-pipglyph-deck` header,
   `viaDeckLink` (`lib/decks/deck-link.ts`) — so no list holds it, and its

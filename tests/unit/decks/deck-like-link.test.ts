@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { chainClient, called, type ChainAnswer, type ChainCall } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
-// A deck like names the deck by its link (TODO DK0.11, migration 0150): an
+// A deck like names the deck by its link (TODO DK0.11, migration 0151): an
 // UNLISTED deck is read only that way, and both the like's insert (0055's
 // policy reads the deck) and the count the button settles on (another
 // liker's rows follow the deck) need it. A card like names nothing.

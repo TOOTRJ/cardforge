@@ -1,4 +1,4 @@
--- 0150_deck_privacy_and_views.sql — what the API hands out about a deck
+-- 0151_deck_privacy_and_views.sql — what the API hands out about a deck
 -- matches what its page shows (2026-10-28 deck plan: TODO DK0.11), private
 -- cards out of the old AI guides, and a deck view log (DK0.11 + DK7.4's
 -- groundwork).
@@ -128,7 +128,7 @@ as $$
 $$;
 
 comment on function public.requested_deck_link() is
-  'The deck a request names in its x-pipglyph-deck header (a slug or an id), or NULL. The decks policy admits an unlisted deck only by it (0150).';
+  'The deck a request names in its x-pipglyph-deck header (a slug or an id), or NULL. The decks policy admits an unlisted deck only by it (0151).';
 
 drop policy if exists "Decks: public + unlisted readable, private by owner" on public.decks;
 drop policy if exists "Decks: public, the owner's, and an unlisted one by its link" on public.decks;
@@ -187,7 +187,7 @@ as $$
 $$;
 
 comment on function public.viewer_is_pro() is
-  'Whether the caller gets Pro perks: an admin, an active / trialing Pro subscription or an unexpired Pro comp. Mirrors lib/billing/entitlements.ts effectiveTierForProfile (0150).';
+  'Whether the caller gets Pro perks: an admin, an active / trialing Pro subscription or an unexpired Pro comp. Mirrors lib/billing/entitlements.ts effectiveTierForProfile (0151).';
 
 -- Every whole-word, any-case occurrence of p_names[i] becomes p_subs[i], in
 -- array order (the caller sorts the longest name first). A plural keeps its
@@ -369,7 +369,7 @@ as $$
 $$;
 
 comment on function public.deck_guide_for_viewer(uuid) is
-  'The deck''s AI guide as its page shows it to the caller (0150): no row when they can''t open the deck or it has none; readable = Pro; the text only for Pro, with the deck''s hidden cards'' names redacted for anyone but the owner.';
+  'The deck''s AI guide as its page shows it to the caller (0151): no row when they can''t open the deck or it has none; readable = Pro; the text only for Pro, with the deck''s hidden cards'' names redacted for anyone but the owner.';
 
 drop policy if exists "Deck guides follow their deck's visibility" on public.deck_guides;
 
@@ -385,7 +385,7 @@ create table if not exists public.deck_views (
 );
 
 comment on table public.deck_views is
-  'One row per (deck, viewer, UTC day) of a deck page view (0150). viewer_key is a SHA-256 of (deck, the app''s hashed viewer) under that day''s salt — no address, user id or cookie. Written by record_deck_view (service role) only; read by deck_views_by_day (the owner). Pruned past 400 days.';
+  'One row per (deck, viewer, UTC day) of a deck page view (0151). viewer_key is a SHA-256 of (deck, the app''s hashed viewer) under that day''s salt — no address, user id or cookie. Written by record_deck_view (service role) only; read by deck_views_by_day (the owner). Pruned past 400 days.';
 
 create index if not exists deck_views_day_idx on public.deck_views (day);
 
@@ -397,7 +397,7 @@ create table if not exists public.deck_view_salts (
 );
 
 comment on table public.deck_view_salts is
-  'Today''s random salt for deck_views keys (0150). Older days'' salts are deleted, so an old key can''t be tied to anyone.';
+  'Today''s random salt for deck_views keys (0151). Older days'' salts are deleted, so an old key can''t be tied to anyone.';
 
 alter table public.deck_view_salts enable row level security;
 
@@ -454,12 +454,12 @@ end;
 $$;
 
 comment on function public.record_deck_view(uuid, text, uuid) is
-  'Count one view of a public / unlisted deck: one per (deck, viewer, UTC day), never the owner''s (0150). p_viewer = the app''s 32-hex HMAC of the viewer. Service role only.';
+  'Count one view of a public / unlisted deck: one per (deck, viewer, UTC day), never the owner''s (0151). p_viewer = the app''s 32-hex HMAC of the viewer. Service role only.';
 
 drop function if exists public.increment_deck_view(uuid);
 
 comment on column public.decks.view_count is
-  'Lifetime detail-page views: one per viewer and UTC day since 0150 (record_deck_view, never the owner, a crawler or a prefetch); before 0150 every non-owner render. Server-owned (0143''s guard).';
+  'Lifetime detail-page views: one per viewer and UTC day since 0151 (record_deck_view, never the owner, a crawler or a prefetch); before 0151 every non-owner render. Server-owned (0143''s guard).';
 
 -- ===========================================================================
 -- 5. The owner's views per day
@@ -492,7 +492,7 @@ as $$
 $$;
 
 comment on function public.deck_views_by_day(uuid, integer) is
-  'The caller''s OWN deck''s viewers per UTC day for the last p_days (1–400), zeros included, oldest first; no rows for anyone else''s deck (0150).';
+  'The caller''s OWN deck''s viewers per UTC day for the last p_days (1–400), zeros included, oldest first; no rows for anyone else''s deck (0151).';
 
 -- ===========================================================================
 -- Grants

@@ -255,7 +255,7 @@ export default async function DeckDetailPage({
     ) : null;
 
   // The view, off the request path: once per viewer and day, never the
-  // owner's, a crawler's or a prefetch (lib/decks/views.ts, migration 0150).
+  // owner's, a crawler's or a prefetch (lib/decks/views.ts, migration 0151).
   if (!isOwner) {
     // The request's headers copied now, while the request is in hand.
     const view = { deckId: deck.id, ownerId: deck.owner_id, viewerId: user?.id ?? null, headers: new Headers(requestHeaders) };

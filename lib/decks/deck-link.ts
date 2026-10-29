@@ -2,9 +2,9 @@ import { UUID_PATTERN } from "@/lib/ids";
 import { SLUG_PATTERN } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
-// An unlisted deck is LINK-ONLY (TODO DK0.11, migration 0150): the database
+// An unlisted deck is LINK-ONLY (TODO DK0.11, migration 0151): the database
 // admits it to a read only when the request NAMES it — its slug or its id in
-// the `x-pipglyph-deck` header (0150's requested_deck_link()) — so no list
+// the `x-pipglyph-deck` header (0151's requested_deck_link()) — so no list
 // holds it, and its entries, likes and feedback follow it (their policies
 // read the deck). Public decks and the owner's own read without it.
 //
@@ -16,7 +16,7 @@ import { SLUG_PATTERN } from "@/lib/validation/card";
 // never admitted by it. Pure, client-safe.
 // ---------------------------------------------------------------------------
 
-/** The request header 0150's decks policy reads (lower case: PostgREST hands
+/** The request header 0151's decks policy reads (lower case: PostgREST hands
  *  the database its headers' names lower-cased). */
 export const DECK_LINK_HEADER = "x-pipglyph-deck";
 

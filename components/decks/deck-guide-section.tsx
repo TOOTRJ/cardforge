@@ -19,7 +19,7 @@ const PAUSED_NOTE_ID = "deck-guide-paused-note";
 //     cards: the section with "Analyze this deck" greyed.
 //
 // The database decides what reaches the page (lib/decks/guides.ts, migration
-// 0150): the text only for a Pro viewer, redacted for anyone but the owner
+// 0151): the text only for a Pro viewer, redacted for anyone but the owner
 // (a card gone private since reads "Private card"); `guideWithheld` = a guide
 // exists that this viewer may not read. The text is drawn only for a Pro
 // viewer here as well.

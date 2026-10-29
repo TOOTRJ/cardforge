@@ -3,10 +3,10 @@ import { chainClient, called, type ChainAnswer } from "@/tests/stubs/supabase-ch
 
 // ---------------------------------------------------------------------------
 // getDeckGuide (lib/decks/guides.ts) reads a guide as the deck page shows it
-// (TODO DK0.11, migration 0150's deck_guide_for_viewer): the text for a Pro
+// (TODO DK0.11, migration 0151's deck_guide_for_viewer): the text for a Pro
 // viewer (redacted by the database for anyone but the owner), `withheld`
 // for a guide this viewer may not read (the teaser), nothing otherwise. The
-// table is no API role's since 0150; only a database without the function
+// table is no API role's since 0151; only a database without the function
 // is read through it (0085's rule), never a database that has it.
 // ---------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ describe("getDeckGuide", () => {
     expect(state.stub!.forTable("deck_guides")).toHaveLength(0);
   });
 
-  it("a database without 0150 (no function): 0085's table read, the page withholds the text itself", async () => {
+  it("a database without 0151 (no function): 0085's table read, the page withholds the text itself", async () => {
     state.stub!.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "Could not find the function" } });
     state.table = { data: { ...ROW } };
     const read = await getDeckGuide(DECK);

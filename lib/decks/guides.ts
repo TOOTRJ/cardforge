@@ -17,7 +17,7 @@ import { aiErrorMessage } from "@/lib/ai/structured-output";
 // analyze route (Pro owner, 1 credit). Writes use the service role.
 //
 // Reads go through ONE database function, deck_guide_for_viewer (migration
-// 0150, TODO DK0.11): the guide as the deck page shows it to the caller —
+// 0151, TODO DK0.11): the guide as the deck page shows it to the caller —
 // nothing for a deck they can't open, the TEXT only for a Pro viewer (an
 // admin, an active / trialing Pro plan, a Pro comp: entitlements.ts's rule),
 // and for anyone but the deck's owner the text with the deck's hidden cards'
@@ -71,9 +71,9 @@ export async function getDeckGuide(deckId: string): Promise<DeckGuideRead> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("deck_guide_for_viewer", { p_deck_id: deckId });
   if (error?.code === "PGRST202") {
-    // A database 0150 hasn't reached has no such function: 0085's table read
+    // A database 0151 hasn't reached has no such function: 0085's table read
     // (the page withholds the text from a non-Pro viewer itself). Remove once
-    // 0150 is on production and dev.
+    // 0151 is on production and dev.
     const { data: row } = await supabase
       .from("deck_guides")
       .select("deck_id, overview, game_plan, mulligan, combos, weaknesses, key_cards, source, generated_at")

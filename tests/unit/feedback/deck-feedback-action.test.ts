@@ -70,7 +70,7 @@ describe("submitDeckFeedbackAction", () => {
     expect(called(deckRead.calls, "eq", "id")).toBe(true);
   });
 
-  it("names the deck by its link on the deck read and the insert (an unlisted deck, migration 0150)", async () => {
+  it("names the deck by its link on the deck read and the insert (an unlisted deck, migration 0151)", async () => {
     await submitDeckFeedbackAction(input);
     const deckRead = state.stub!.forTable("decks")[0];
     expect(deckRead.calls.find((c) => c.method === "setHeader")?.args).toEqual(["x-pipglyph-deck", DECK]);

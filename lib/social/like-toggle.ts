@@ -41,7 +41,7 @@ export type LikeTarget = {
    *  when the client-supplied value wasn't a well-formed slug / handle). */
   paths: (slug: string | null, ownerUsername: string | null) => string[];
   /** Names the liked row on a request by its id, where reading it needs
-   *  that: an UNLISTED deck is read only by its link (migration 0150,
+   *  that: an UNLISTED deck is read only by its link (migration 0151,
    *  lib/decks/deck-link.ts) — the insert policy and the count read it. */
   named?: <Q extends { setHeader(name: string, value: string): Q }>(query: Q, id: string) => Q;
 };

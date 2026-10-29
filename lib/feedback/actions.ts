@@ -73,7 +73,7 @@ export async function submitDeckFeedbackAction(
   let deckId = parsed.data.deck_id ?? null;
   if (deckId) {
     const supabase = await createClient();
-    // Named by its link: an unlisted deck is read only that way (0150).
+    // Named by its link: an unlisted deck is read only that way (0151).
     const { data: deck } = await viaDeckLink(
       supabase.from("decks").select("id").eq("id", deckId),
       deckId,
@@ -115,7 +115,7 @@ async function insertFeedback(
   }
 
   // 0146's insert policy reads the deck a row names: an unlisted one only by
-  // its link (migration 0150, lib/decks/deck-link.ts).
+  // its link (migration 0151, lib/decks/deck-link.ts).
   const insert = supabase.from("feedback").insert({ ...row, user_id: userId });
   const { error } = await (row.deck_id ? viaDeckLink(insert, row.deck_id) : insert);
   if (error) {

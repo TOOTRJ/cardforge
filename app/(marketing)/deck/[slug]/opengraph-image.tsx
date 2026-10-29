@@ -72,7 +72,7 @@ async function getDeck(
     const supabase = createPublicClient();
     // Anonymous RLS only surfaces public rows and an unlisted deck named by
     // its link (both reads name it by its slug — lib/decks/deck-link.ts,
-    // migration 0150), so a private deck falls through to the generic
+    // migration 0151), so a private deck falls through to the generic
     // branded card — nothing leaks — and so does every private card in a
     // public deck (its embed is null).
     const { data: deck } = await viaDeckLink(

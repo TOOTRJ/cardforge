@@ -10,7 +10,7 @@ import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
 // at 7/30-day windows; anything older is history the revenue log and Stripe
 // already keep better. Secured by CRON_SECRET like every cron route.
 //
-// The deck view log rides the same run (migration 0150, lib/decks/views.ts):
+// The deck view log rides the same run (migration 0151, lib/decks/views.ts):
 // deck_views rows past 400 days (deck_views_by_day reads at most that far
 // back; decks.view_count keeps the lifetime total) and any salt of a day
 // already over — record_deck_view drops those itself, but only when a view

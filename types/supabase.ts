@@ -1746,7 +1746,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0150 — the deck view log: one row per (deck, viewer, UTC
+      // Migration 0151 — the deck view log: one row per (deck, viewer, UTC
       // day), written by record_deck_view (service role), read by
       // deck_views_by_day (the owner). No API role reads it.
       deck_views: {
@@ -1775,7 +1775,7 @@ export type Database = {
           },
         ];
       };
-      // Migration 0150 — today's salt for deck_views keys (service role).
+      // Migration 0151 — today's salt for deck_views keys (service role).
       deck_view_salts: {
         Row: {
           day: string;
@@ -2047,20 +2047,20 @@ export type Database = {
           calls: number;
         }[];
       };
-      // Migration 0150 — one view per (deck, viewer, UTC day); true when it
+      // Migration 0151 — one view per (deck, viewer, UTC day); true when it
       // counted. Service role only (lib/decks/views.ts). Replaces 0103's
       // increment_deck_view.
       record_deck_view: {
         Args: { p_deck_id: string; p_viewer: string; p_viewer_id?: string };
         Returns: boolean;
       };
-      // Migration 0150 — the caller's OWN deck's viewers per UTC day, oldest
+      // Migration 0151 — the caller's OWN deck's viewers per UTC day, oldest
       // first, zeros included; no rows for anyone else's deck.
       deck_views_by_day: {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; views: number }[];
       };
-      // Migration 0150 — a deck's AI guide as its page shows it to the
+      // Migration 0151 — a deck's AI guide as its page shows it to the
       // caller (lib/decks/guides.ts): no row, or `readable` with the text
       // only for a Pro viewer (redacted for anyone but the owner).
       deck_guide_for_viewer: {

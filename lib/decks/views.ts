@@ -8,7 +8,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 // ---------------------------------------------------------------------------
 // A deck page view, counted once per viewer, deck and UTC day (TODO DK0.11,
-// migration 0150). The page calls recordDeckView from after(): never for the
+// migration 0151). The page calls recordDeckView from after(): never for the
 // deck's owner, a crawler (isbot — the funnel's rule, app/api/events), a
 // request with no user agent, or a prefetch (Next's router, a browser's
 // speculative load). The database logs ONE row per (deck, viewer, day) in
@@ -80,7 +80,7 @@ export async function recordDeckView({
   const viewer = deckViewerHash(viewerId, headers, secret);
   if (!viewer) return;
   try {
-    // A database 0150 hasn't reached answers "no such function": no view
+    // A database 0151 hasn't reached answers "no such function": no view
     // is logged there, and nothing else happens.
     await createAdminClient().rpc("record_deck_view", {
       p_deck_id: deckId,

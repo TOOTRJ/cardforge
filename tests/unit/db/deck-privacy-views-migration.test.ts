@@ -6,7 +6,7 @@ import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import { DECK_VIEW_RETENTION_DAYS } from "@/app/api/cron/prune-funnel-events/route";
 
 // ---------------------------------------------------------------------------
-// 0150 — the API hands out what the deck page shows (TODO DK0.11). What the
+// 0151 — the API hands out what the deck page shows (TODO DK0.11). What the
 // SQL itself must keep, held to the app's constants (its behaviour — link-only
 // unlisted decks, the guide read and its redaction, the deduped views, the
 // owner's read, the grants, the cascades and every current read path before /
@@ -32,7 +32,7 @@ const strip = (sql: string) =>
     .filter((line) => !line.trim().startsWith("--"))
     .join("\n");
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
-const SQL = strip(readFileSync(join(dir, "0150_deck_privacy_and_views.sql"), "utf8"));
+const SQL = strip(readFileSync(join(dir, "0151_deck_privacy_and_views.sql"), "utf8"));
 const FLAT = squash(SQL);
 
 /** The body of `create or replace function public.<name>(` … `$$;`. */
@@ -58,7 +58,7 @@ function policyUsing(name: string): string {
   return squash(SQL.slice(start, end));
 }
 
-describe("0150: an unlisted deck is read by its link only", () => {
+describe("0151: an unlisted deck is read by its link only", () => {
   it("reads the app's header, lower-cased as PostgREST hands it over", () => {
     expect(DECK_LINK_HEADER).toBe(DECK_LINK_HEADER.toLowerCase());
     expect(fnBody("requested_deck_link")).toContain(`->> '${DECK_LINK_HEADER}'`);
@@ -90,7 +90,7 @@ describe("0150: an unlisted deck is read by its link only", () => {
   });
 });
 
-describe("0150: a deck guide is read where the page shows it", () => {
+describe("0151: a deck guide is read where the page shows it", () => {
   it("no API role reads the table; ONE definer function does", () => {
     expect(FLAT).toContain(`drop policy if exists "Deck guides follow their deck's visibility" on public.deck_guides;`);
     expect(SQL).not.toMatch(/create policy[^;]*on public\.deck_guides/);
@@ -151,7 +151,7 @@ describe("0150: a deck guide is read where the page shows it", () => {
   });
 });
 
-describe("0150: views — one per viewer, deck and day", () => {
+describe("0151: views — one per viewer, deck and day", () => {
   it("the counter grows only through record_deck_view, the service role's alone", () => {
     const body = fnBody("record_deck_view");
     expect(body).toContain("on conflict do nothing; if not found then return false;");

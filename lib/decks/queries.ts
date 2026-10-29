@@ -385,7 +385,7 @@ export async function countPublicDecks(): Promise<number> {
 /** Deck + owner profile for the detail page. RLS filters non-readable rows
  *  (viewer-dependent, so the route stays dynamic — matching set pages). The
  *  read names the deck by its slug (lib/decks/deck-link.ts): an UNLISTED
- *  deck opens by its link and is in no list (migration 0150). */
+ *  deck opens by its link and is in no list (migration 0151). */
 export const getDeckBySlugWithOwner = cache(async (
   slug: string,
 ): Promise<DeckWithOwner | null> => {
@@ -522,7 +522,7 @@ type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: s
 /** The one body of both reads: the entries in list order, each card the
  *  deck may show (canLinkIntoDeck), each other creator's handle. Both deck
  *  reads name the deck by its id — its link (lib/decks/deck-link.ts): a
- *  visitor reads an UNLISTED deck's rows by it, never in a list (0150). */
+ *  visitor reads an UNLISTED deck's rows by it, never in a list (0151). */
 async function readDeckItems<C extends { id: string; owner_id: string; visibility: string }>(
   deckId: string,
   readCards: CardReader<C>,

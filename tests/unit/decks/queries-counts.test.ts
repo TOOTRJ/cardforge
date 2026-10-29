@@ -277,7 +277,7 @@ describe("listDeckCards reads a whole deck", () => {
   });
 });
 
-// An unlisted deck is read only by its link (migration 0150,
+// An unlisted deck is read only by its link (migration 0151,
 // lib/decks/deck-link.ts): the page's reads name the deck, a list never does.
 describe("the deck page names its deck by its link", () => {
   const DECK = "B0000000-0000-4000-A000-000000000007";

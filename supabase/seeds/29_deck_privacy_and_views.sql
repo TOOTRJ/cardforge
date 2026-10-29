@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
--- 28_deck_privacy_and_views.sql — what the API hands out about a deck matches
--- its page (TODO DK0.11, migration 0150), so a preview branch, the dev
+-- 29_deck_privacy_and_views.sql — what the API hands out about a deck matches
+-- its page (TODO DK0.11, migration 0151), so a preview branch, the dev
 -- database and the local stack show each case:
 --
 --   Gloomforge Workshop (dev_artist, PUBLIC) — an old AI guide that names
@@ -21,8 +21,9 @@
 --     Cinderwing Dragonstorm (dev_pro's) for deck_views_by_day(); its
 --     lifetime view_count is raised to at least the log's total.
 --
--- Runs after 27_deck_tiles_trending.sql (config.toml → [db.seed] sql_paths,
--- filename order). Never against production. Idempotent: fixed ids + ON
+-- Runs after the earlier deck seeds (config.toml → [db.seed] sql_paths,
+-- filename order) and touches none of their rows. Never against
+-- production. Idempotent: fixed ids + ON
 -- CONFLICT DO NOTHING. No credential in here (the repo is public). Rows whose
 -- accounts, cards or decks are missing are skipped. Card ids …6d1–…6d2, deck
 -- ids …006 / …007, entry ids …6d1–…6d6.

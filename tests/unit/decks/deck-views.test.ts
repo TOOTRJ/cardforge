@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // lib/decks/views.ts — a deck page view, once per viewer, deck and UTC day
-// (TODO DK0.11, migration 0150's record_deck_view, service role only). What
+// (TODO DK0.11, migration 0151's record_deck_view, service role only). What
 // the app owns: which requests count (never a crawler, an empty user agent, a
 // prefetch or the owner) and the viewer it sends — an HMAC under the server's
 // secret, never the user id, the address or the agent itself. The dedupe,
@@ -133,7 +133,7 @@ describe("recordDeckView", () => {
     expect(state.rpc).not.toHaveBeenCalled();
   });
 
-  it("is best-effort: a failing call (0150 not reached, a network error) never throws", async () => {
+  it("is best-effort: a failing call (0151 not reached, a network error) never throws", async () => {
     state.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "no function" } });
     await expect(view()).resolves.toBeUndefined();
     state.rpc.mockRejectedValueOnce(new Error("offline"));

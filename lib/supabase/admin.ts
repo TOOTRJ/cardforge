@@ -16,7 +16,7 @@ import type { Database } from "@/types/supabase";
 // (rendered_image_url / rendered_thumb_url / rendered_at / layout_version —
 // 0126's cards_guard_render_columns lets an API role only clear them; the
 // save bake persists a new one in lib/cards/bake-render.ts), and the deck
-// view log (record_deck_view is the service role's alone since 0150 — the
+// view log (record_deck_view is the service role's alone since 0151 — the
 // page derives the viewer's hashed key itself, lib/decks/views.ts). NEVER import it
 // from a client component, and every non-cron caller must
 // authenticate/authorize the caller itself.

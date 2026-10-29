@@ -21,7 +21,7 @@ const DECK_LIKES: LikeTarget = {
     ...(slug ? [`/deck/${slug}`] : []),
     ...(ownerUsername ? [`/profile/${ownerUsername}`] : []),
   ],
-  // An unlisted deck is liked (and its likes counted) by its link (0150).
+  // An unlisted deck is liked (and its likes counted) by its link (0151).
   named: viaDeckLink,
 };
 
