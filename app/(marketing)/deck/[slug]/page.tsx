@@ -49,7 +49,6 @@ import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { getDeckCapacity } from "@/lib/decks/capacity";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -173,18 +172,15 @@ export default async function DeckDetailPage({
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, ownerCapacity] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
     cookies(),
     headers(),
     searchParams,
-    // The owner's slots: saved cards (the import's forecast, D2) and
-    // private decks (the details form's warning, TODO DK3.2).
-    isOwner
-      ? Promise.all([getCardCapacity(), getDeckCapacity()]).then(([cards, decks]) => ({ cards, decks }))
-      : null,
+    // The owner's saved-card slots: the import's forecast (D2).
+    isOwner ? getCardCapacity() : null,
   ]);
 
   // The rows as this viewer's list shows them: a private card's title never
@@ -392,8 +388,7 @@ export default async function DeckDetailPage({
               deck={deck}
               userId={user.id}
               defaultCoverSrc={cover.kind === "default" ? cover.src : null}
-              capacity={ownerCapacity?.cards ?? null}
-              deckCapacity={ownerCapacity?.decks ?? null}
+              capacity={cardCapacity}
               openImport={search.import === "1"}
             />
           </div>

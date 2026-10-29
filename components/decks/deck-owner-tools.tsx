@@ -46,7 +46,6 @@ import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
-import type { DeckCapacity } from "@/lib/billing/deck-capacity-copy";
 
 /** What a page control can open: the details dialog, the import dialog in
  *  one of its modes, or "Add from my cards" (for the commander zone too). */
@@ -123,7 +122,6 @@ export function DeckOwnerTools({
   deck,
   userId,
   capacity = null,
-  deckCapacity = null,
   defaultCoverSrc = null,
   openImport = false,
 }: {
@@ -135,9 +133,6 @@ export function DeckOwnerTools({
   /** Saved-card slots: the import's forecast (D2 — customizing an imported
    *  card is what takes one). */
   capacity?: CardCapacity | null;
-  /** Private-deck slots: the details form warns before a public deck is
-   *  turned private or unlisted past the cap (TODO DK3.2). */
-  deckCapacity?: DeckCapacity | null;
   openImport?: boolean;
 }) {
   const [details, setDetails] = useState(false);
@@ -249,7 +244,6 @@ export function DeckOwnerTools({
               userId={userId}
               deck={deck}
               defaultCoverSrc={defaultCoverSrc}
-              deckCapacity={deckCapacity}
               embedded
               onSaved={() => setDetails(false)}
             />
