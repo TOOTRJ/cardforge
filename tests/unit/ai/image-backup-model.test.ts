@@ -120,6 +120,17 @@ describe("the models", () => {
     process.env.AI_IMAGE_FALLBACK_MODEL = "bfl/flux-2-flex";
     expect(imageModels().backup).toBeNull();
   });
+  it("a backup override must be a gateway FLUX.2 model; anything else is no backup, warned ONCE (review of #644)", () => {
+    process.env.AI_IMAGE_FALLBACK_MODEL = "bfl/flux-2-max";
+    expect(imageModels().backup).toBe("bfl/flux-2-max");
+    for (const bad of ["bytedance/seedream-4.5", "openai/gpt-image-1", "flux-2-pro", "bfl/flux-pro-1.1"]) {
+      warn.mockClear();
+      process.env.AI_IMAGE_FALLBACK_MODEL = bad;
+      expect(imageModels(), bad).toEqual({ primary: "bfl/flux-2-flex", backup: null });
+      expect(imageModels().backup).toBeNull();
+      expect(warn.mock.calls.filter((call: unknown[]) => String(call[0]).includes("AI_IMAGE_FALLBACK_MODEL")), bad).toHaveLength(1);
+    }
+  });
 });
 
 describe("the race", () => {
@@ -228,13 +239,45 @@ describe("the race", () => {
     expect(s.calls).toHaveLength(2);
   });
 
-  it("the default refused and the backup timed out: the timeout, never a refusal (no rewording)", async () => {
+  it.each([
+    ["a rate limit", BUSY],
+    ["a 5xx", "500 Internal Server Error"],
+    ["a model the gateway lacks", "Model not found: bfl/flux-2-pro"],
+    ["a quick timeout", GATEWAY_TIMEOUT],
+  ])("the default REFUSED and the backup failed with %s: the refusal — the ladder walks on (review of #644)", async (_, backupError) => {
     const out = generateImageWithFallbacks(LADDER, SHAPE);
     await flush();
     s.calls[0].fail(MODERATED);
     await flush();
-    s.calls[1].fail(GATEWAY_TIMEOUT);
-    expect(await out).toMatchObject({ ok: false, failure: "art_timeout", safetyBlocked: false });
+    s.calls[1].fail(backupError);
+    await flush();
+    // ~150 s left: the softer rung runs, on the default alone.
+    expect(s.calls.map((c) => c.model)).toEqual(["bfl/flux-2-flex", "bfl/flux-2-pro", "bfl/flux-2-flex"]);
+    expect(s.calls[2].prompt).toBe(withFullyClothedLine(LADDER[1], 4000));
+    s.calls[2].paint();
+    expect(await out).toMatchObject({ ok: true, promptIndex: 1, model: "bfl/flux-2-flex" });
+  });
+
+  it("the BACKUP refused after the default failed otherwise: the refusal too", async () => {
+    const out = generateImageWithFallbacks(LADDER, SHAPE);
+    await flush();
+    s.calls[0].fail(BUSY);
+    await flush();
+    s.calls[1].fail(MODERATED);
+    await flush();
+    expect(s.calls).toHaveLength(3);
+    s.calls[2].paint();
+    expect(await out).toMatchObject({ ok: true, promptIndex: 1 });
+  });
+
+  it("a refusal with too little budget left ends as art_blocked (MIN_RUNG_MS still bounds the ladder)", async () => {
+    const out = generateImageWithFallbacks(LADDER, SHAPE);
+    await flush();
+    await vi.advanceTimersByTimeAsync(110_000);
+    s.calls[0].fail(MODERATED);
+    await flush();
+    s.calls[1].fail(BUSY);
+    expect(await out).toMatchObject({ ok: false, failure: "art_blocked", safetyBlocked: true });
     expect(s.calls).toHaveLength(2);
   });
 

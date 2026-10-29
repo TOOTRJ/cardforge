@@ -48,28 +48,48 @@ export function isSafetyBlockError(message: string): boolean {
 /** Every art prompt carries this line (lib/ai/image-gen.ts adds it to the
  *  text-to-image AND the restyle prompt): phrased POSITIVELY on purpose —
  *  listing the forbidden things can trip the very classifier it is meant to
- *  pass, and a model paints the words it is given. */
-export const FULLY_CLOTHED_LINE = "Every figure in the image is fully clothed.";
+ *  pass, and a model paints the words it is given. CONDITIONAL on purpose
+ *  (review of #644): "every figure is…" would invite figures into a land's
+ *  or a landscape's picture. */
+export const FULLY_CLOTHED_LINE = "If any figure appears, it is fully clothed.";
 
 /** Rung 2's suffix (owner 2026-10-28: it replaced "Family-friendly stylized
  *  fantasy illustration, wholesome and serene, suitable for all ages", which
  *  softened every dark card into a calm one). Modest dress only — no word
- *  about violence or mood. */
+ *  about violence or mood, and conditional like FULLY_CLOTHED_LINE. */
 export const SAFE_ART_SUFFIX =
-  "Tasteful fantasy illustration: every figure is fully clothed in armour, robes or garments.";
+  "Tasteful fantasy illustration; any figure is fully clothed in armour, robes or garments.";
+
+/** The words a "naked" is a person's next to (up to two words between:
+ *  "a naked elven queen"). Anywhere else "naked" is a thing's — a naked
+ *  blade, a naked flame — and reads "bare". */
+const PERSON_WORDS =
+  "(?:man|men|woman|women|person|people|figures?|body|bodies|torso|form|warriors?|maidens?|girls?|boys?|lady|ladies|nymphs?|" +
+  "witch(?:es)?|queens?|kings?|goddess(?:es)?|gods?|elf|elves|dancers?|models?|priestess(?:es)?|sorceress(?:es)?|sirens?|" +
+  "succubus|succubi|angels?|statues?|bathers?|youths?|heroes|heroine|hero|princess(?:es)?|princes?|vampires?|druids?|mermaids?|dryads?)";
 
 /** The ONLY words the ladder still softens: nudity and sexual content, with
  *  clothed stand-ins. Whole-word, case-insensitive; simple plurals covered.
  *  Violence and dark-theme words are left as written (owner 2026-10-28). The
- *  child words stay: they keep a minor out of any scene the filter refused
- *  (the scan's `sexual/minors` category is the one this guards). */
+ *  child words stay (owner): they keep a minor out of any scene the filter
+ *  refused (the scan's `sexual/minors` category is the one this guards). */
 const SOFTEN_RULES: Array<[RegExp, string]> = [
   [/\b(lingerie|bikinis?|underwear|loincloths?)\b/gi, "flowing robes"],
+  [/\bbare[- ]skin(?:ned)?\b/gi, "flowing garments"],
+  // A person's "naked" is dressed; a thing's is bare (naked blade, flame).
+  [new RegExp(`\\bnaked((?:\\s+[\\w-]+){0,2}?\\s+${PERSON_WORDS})\\b`, "gi"), "fully clothed$1"],
+  [/\bnaked\b/gi, "bare"],
   [
-    /\b(naked|nude|nudes|nudity|topless|bare-chested|bare-breasted|shirtless|unclothed|undressed|disrobed|scantily[- ]clad|half-dressed)\b/gi,
+    /\b(nude|nudes|nudity|topless|bare-chested|bare-breasted|shirtless|unclothed|unclad|undressed|disrobed|scantily[- ]clad|half-dressed)\b/gi,
     "fully clothed",
   ],
-  [/\b(seductive(?:ly)?|sensual(?:ly)?|erotic(?:ally)?|sexy|sexual(?:ly)?|provocative(?:ly)?|lustful|voluptuous|alluring|cleavage)\b/gi, "dignified"],
+  [/\b(breasts?|buttocks|bosoms?)\b/gi, "garments"],
+  // "revealing" only of clothing ("revealing the hidden door" is a verb).
+  [/\b(skimpy|revealing(?=\s+(?:dress|dresses|outfits?|clothes|clothing|garb|attire|robes?|armou?r|costumes?|gowns?)\b))\b/gi, "modest"],
+  [
+    /\b(seductive(?:ly)?|sensual(?:ly)?|erotic(?:ally)?|sexy|sexual(?:ly)?|provocative(?:ly)?|lustful|lewd|nubile|busty|voluptuous|alluring|cleavage)\b/gi,
+    "dignified",
+  ],
   [/\b(children|child|kids?|infants?|babies|baby)\b/gi, "young apprentices"],
 ];
 

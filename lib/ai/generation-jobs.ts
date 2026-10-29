@@ -1763,7 +1763,7 @@ async function runCardFillBackStep(
     }
     const persisted = await persistGeneratedArt(image.bytes, image.contentType);
     if (!persisted.ok) {
-      // A picture our nudity scan blocked (removed) or one not stored.
+      // A picture our nudity scan blocked (never stored) or one not stored.
       return { ...step, status: "failed", attempts: attempt, error: persisted.error, failure: persisted.failure };
     }
     const credit = await aiArtistCredit();
@@ -1821,7 +1821,7 @@ async function runCardFillStep(
       }
       const persisted = await persistGeneratedArt(image.bytes, image.contentType);
       if (!persisted.ok) {
-        // A picture our nudity scan blocked (removed) or one not stored.
+        // A picture our nudity scan blocked (never stored) or one not stored.
         return {
           ...step,
           status: "failed",
@@ -2230,7 +2230,7 @@ async function paintAndPublishCard(
   if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  // A picture our nudity scan blocked (removed) or one not stored.
+  // A picture our nudity scan blocked (never stored) or one not stored.
   if (!persisted.ok) return { ok: false, error: persisted.error, failure: persisted.failure };
 
   const updated = await updateCardAction(cardId, {
@@ -2940,7 +2940,7 @@ async function runCoverStep(
     }
     const persisted = await persistGeneratedArt(bytes, contentType);
     if (!persisted.ok) {
-      // A cover our nudity scan blocked (removed) or one not stored. Free:
+      // A cover our nudity scan blocked (never stored) or one not stored. Free:
       // nothing to refund.
       return { ...step, status: "failed", error: persisted.error, failure: persisted.failure };
     }

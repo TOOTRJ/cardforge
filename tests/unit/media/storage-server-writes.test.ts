@@ -152,13 +152,17 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/moderation/image-scan", () => ({
-  scanImageUrl: async (url: string, opts?: { bytes?: Uint8Array; categories?: ReadonlySet<string>; timeoutMs?: number }) => {
+  scanImageUrl: async (url: string, opts?: { bytes?: Uint8Array }) => {
     state.scans.push(url);
     state.scanBytes.push(opts?.bytes?.byteLength);
-    state.scanOpts.push({
-      ...(opts?.categories ? { categories: [...opts.categories].sort() } : {}),
-      ...(opts?.timeoutMs ? { timeoutMs: opts.timeoutMs } : {}),
-    });
+    return { flagged: state.flagged, categories: [] };
+  },
+  // AI art: its BYTES, before the store (review of #644).
+  scanImageBytes: async (bytes: Uint8Array, contentType: string, opts: { categories: ReadonlySet<string>; timeoutMs: number }) => {
+    state.seq.push("scan-bytes");
+    state.scans.push(`bytes:${contentType}`);
+    state.scanBytes.push(bytes.byteLength);
+    state.scanOpts.push({ categories: [...opts.categories].sort(), timeoutMs: opts.timeoutMs });
     if (state.scanSkipped) return { flagged: false, categories: [], skipped: state.scanSkipped };
     return { flagged: state.flagged, categories: state.flagged ? ["sexual"] : [] };
   },
@@ -417,20 +421,24 @@ describe("AI art lands in the caller's card-art folder", () => {
   });
 
   // The nudity scan on AI art (owner 2026-10-28): the sexual categories
-  // ALONE, on a short timeout; flagged → removed from the same folder and
-  // `art_blocked` with the scan's sentence; unsure → kept (fail open).
+  // ALONE, on a short timeout, on the BYTES before the store (review of
+  // #644); flagged → nothing stored, `art_blocked` with the scan's sentence;
+  // unsure → kept (fail open).
   const jpeg = () => sharp({ create: { width: 4, height: 4, channels: 3, background: "#123" } }).jpeg().toBuffer();
 
-  it("is scanned once stored, for nudity alone, on its own short timeout", async () => {
-    const result = await persistGeneratedArt(new Uint8Array(await jpeg()), "image/jpeg");
+  it("is scanned BEFORE it is stored, for nudity alone, on its own short timeout", async () => {
+    const bytes = await jpeg();
+    const result = await persistGeneratedArt(new Uint8Array(bytes), "image/jpeg");
     expect(result.ok).toBe(true);
-    const [stored] = uploads("card-art");
-    expect(state.scans).toEqual([publicUrl("card-art", stored.keys[0])]);
+    expect(state.scans).toEqual(["bytes:image/jpeg"]);
+    expect(state.scanBytes).toEqual([bytes.byteLength]);
     expect(state.scanOpts).toEqual([{ categories: ["sexual", "sexual/minors"], timeoutMs: 10_000 }]);
+    expect(state.seq[0]).toBe("scan-bytes");
+    expect(uploads("card-art")).toHaveLength(1);
     expect(removes()).toEqual([]);
   });
 
-  it("flagged: the object is removed from the caller's folder and the art is blocked, in our words", async () => {
+  it("flagged: NOTHING is stored (never public) and the art is blocked, in our words", async () => {
     state.flagged = true;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = await persistGeneratedArt(new Uint8Array(await jpeg()), "image/jpeg");
@@ -439,9 +447,8 @@ describe("AI art lands in the caller's card-art folder", () => {
       error: "This artwork was blocked by our nudity filter. Try again or change the prompt.",
       failure: "art_blocked",
     });
-    const [stored] = uploads("card-art");
-    expect(removes()).toEqual([{ bucket: "card-art", op: "remove", keys: stored.keys }]);
-    expect(warn.mock.calls.flat().join(" ")).toMatch(/\[ai:art\] nudity scan flagged ai-.*\(sexual\); removed/);
+    expect(state.ops).toEqual([]);
+    expect(warn.mock.calls.flat().join(" ")).toMatch(/\[ai:art\] nudity scan flagged ai-.*\(sexual\); not stored/);
     warn.mockRestore();
   });
 

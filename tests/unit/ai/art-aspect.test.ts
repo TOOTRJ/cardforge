@@ -271,7 +271,7 @@ describe("what the gateway is asked", () => {
     expect(s.calls[0]).toMatchObject({
       model: "bfl/flux-2-flex",
       // Every art prompt asks for fully clothed figures (owner 2026-10-28).
-      prompt: "A painted scene. Every figure in the image is fully clothed.",
+      prompt: "A painted scene. If any figure appears, it is fully clothed.",
       size: "896x1168",
       providerOptions: { blackForestLabs: { width: 896, height: 1168 } },
     });

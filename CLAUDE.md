@@ -1453,9 +1453,9 @@ Rules and gotchas:
   carries the "fully clothed" line (added at that one door), and violence is
   allowed in art — the ladder softens nudity / sexual words only.
   `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
-  uploads, and on every stored AI picture with the SEXUAL categories alone —
-  `persistGeneratedArt`: flagged → removed, `art_blocked`, refunded once;
-  fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
+  uploads, and on every AI picture's BYTES before it is stored, with the
+  SEXUAL categories alone and one 10 s cap, no retries — `persistGeneratedArt`:
+  flagged → never stored, `art_blocked`, refunded once; fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
   reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
   `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in

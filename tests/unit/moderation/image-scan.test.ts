@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const openai = vi.hoisted(() => ({
   options: [] as unknown[],
   requests: [] as unknown[],
+  /** The per-request options (the AI-art scan's abort signal). */
+  requestOptions: [] as unknown[],
   answer: { results: [{ flagged: false, categories: {} }] } as unknown,
   fail: null as Error | null,
 }));
@@ -23,8 +25,9 @@ vi.mock("openai", () => ({
       openai.options.push(options);
     }
     moderations = {
-      create: async (request: unknown) => {
+      create: async (request: unknown, options?: unknown) => {
         openai.requests.push(request);
+        openai.requestOptions.push(options);
         if (openai.fail) throw openai.fail;
         return openai.answer;
       },
@@ -32,7 +35,7 @@ vi.mock("openai", () => ({
   },
 }));
 
-const { scanImageUrl } = await import("@/lib/moderation/image-scan");
+const { scanImageBytes, scanImageUrl } = await import("@/lib/moderation/image-scan");
 const { AI_ART_BLOCKED_CATEGORIES, BLOCKED_CATEGORIES, IMAGE_MODERATION_MODEL, imageModerationRequest, scanVerdict } = await import("@/lib/moderation/image-scan-core");
 const { moderateOnce } = await import("@/scripts/lib/review-rescan.mjs");
 
@@ -43,6 +46,7 @@ describe("the image moderation scan", () => {
   beforeEach(() => {
     openai.options.length = 0;
     openai.requests.length = 0;
+    openai.requestOptions.length = 0;
     openai.fail = null;
     openai.answer = { results: [{ flagged: false, categories: {} }] };
     process.env.OPENAI_API_KEY = "sk-test-not-a-key";
@@ -81,19 +85,50 @@ describe("the image moderation scan", () => {
     expect(await scanImageUrl(URL_)).toEqual({ flagged: false, categories: [], skipped: "error" });
   });
 
-  it("AI art is scanned for the sexual categories ALONE, on its own timeout (owner 2026-10-28)", async () => {
-    expect([...AI_ART_BLOCKED_CATEGORIES].sort()).toEqual(["sexual", "sexual/minors"]);
+  describe("AI art (owner 2026-10-28): its BYTES, before the store", () => {
     const ai = { categories: AI_ART_BLOCKED_CATEGORIES, timeoutMs: 10_000 };
-    for (const category of ["violence", "violence/graphic", "hate", "self-harm", "harassment"]) {
-      openai.answer = { results: [{ flagged: true, categories: { [category]: true } }] };
-      expect(await scanImageUrl(URL_, ai), category).toEqual({ flagged: false, categories: [] });
-    }
-    openai.answer = { results: [{ flagged: true, categories: { violence: true, "sexual/minors": true, sexual: true } }] };
-    expect(await scanImageUrl(URL_, ai)).toEqual({ flagged: true, categories: ["sexual/minors", "sexual"] });
-    expect(openai.options.at(-1)).toEqual({ apiKey: "sk-test-not-a-key", timeout: 10_000 });
-    // The uploads' list is untouched: hate still blocks an upload.
-    openai.answer = { results: [{ flagged: true, categories: { hate: true } }] };
-    expect(await scanImageUrl(URL_)).toEqual({ flagged: true, categories: ["hate"] });
+    const png = async () => new Uint8Array(await sharp({ create: { width: 4, height: 4, channels: 3, background: "#123" } }).png().toBuffer());
+
+    it("is scanned for the sexual categories ALONE — violence, hate, self-harm never block it", async () => {
+      expect([...AI_ART_BLOCKED_CATEGORIES].sort()).toEqual(["sexual", "sexual/minors"]);
+      const bytes = await png();
+      for (const category of ["violence", "violence/graphic", "hate", "self-harm", "harassment"]) {
+        openai.answer = { results: [{ flagged: true, categories: { [category]: true } }] };
+        expect(await scanImageBytes(bytes, "image/png", ai), category).toEqual({ flagged: false, categories: [] });
+      }
+      openai.answer = { results: [{ flagged: true, categories: { violence: true, "sexual/minors": true, sexual: true } }] };
+      expect(await scanImageBytes(bytes, "image/png", ai)).toEqual({ flagged: true, categories: ["sexual/minors", "sexual"] });
+      // The uploads' list is untouched: hate still blocks an upload.
+      openai.answer = { results: [{ flagged: true, categories: { hate: true } }] };
+      expect(await scanImageUrl(URL_)).toEqual({ flagged: true, categories: ["hate"] });
+    });
+
+    it("the model is sent a data: URL of the bytes — nothing is stored or public yet", async () => {
+      const bytes = await png();
+      await scanImageBytes(bytes, "image/png", ai);
+      const url = (openai.requests[0] as { input: { image_url: { url: string } }[] }).input[0].image_url.url;
+      expect(url).toBe(`data:image/png;base64,${Buffer.from(bytes).toString("base64")}`);
+    });
+
+    it("its timeout is the WHOLE scan: no SDK retries, and one abort signal over the request (the upload scan unchanged)", async () => {
+      await scanImageBytes(await png(), "image/png", ai);
+      expect(openai.options.at(-1)).toEqual({ apiKey: "sk-test-not-a-key", timeout: 10_000, maxRetries: 0 });
+      const options = openai.requestOptions.at(-1) as { signal?: AbortSignal };
+      expect(options.signal).toBeInstanceOf(AbortSignal);
+      // The uploads' scan keeps the SDK's default retries and its 20 s.
+      await scanImageUrl(URL_);
+      expect(openai.options.at(-1)).toEqual({ apiKey: "sk-test-not-a-key", timeout: 20_000 });
+    });
+
+    it("fails open, and says why: no key → no call; an error → not flagged", async () => {
+      const bytes = await png();
+      delete process.env.OPENAI_API_KEY;
+      expect(await scanImageBytes(bytes, "image/png", ai)).toEqual({ flagged: false, categories: [], skipped: "no_key" });
+      expect(openai.requests).toEqual([]);
+      process.env.OPENAI_API_KEY = "sk-test-not-a-key";
+      openai.fail = Object.assign(new Error("Request timed out."), { status: 408 });
+      expect(await scanImageBytes(bytes, "image/png", ai)).toEqual({ flagged: false, categories: [], skipped: "error" });
+    });
   });
 
   it("the owner-run rescan sends the very same request and reaches the same verdict — but an error is never 'clean'", async () => {

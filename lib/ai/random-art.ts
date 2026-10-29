@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { randomId } from "@/lib/ids";
 import { AI_FAILURE_COPY, ART_NUDITY_BLOCKED_COPY } from "@/lib/ai/failure";
-import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { scanImageBytes } from "@/lib/moderation/image-scan";
 import { AI_ART_BLOCKED_CATEGORIES } from "@/lib/moderation/image-scan-core";
 
 // ---------------------------------------------------------------------------
@@ -25,20 +25,21 @@ export type PersistArtResult =
       ok: false;
       /** The user's sentence (no credit words: the step adds those). */
       error: string;
-      /** `art_blocked`: the nudity scan flagged the picture (it was removed);
+      /** `art_blocked`: the nudity scan flagged the picture (never stored);
        *  `art_store`: it couldn't be stored (or storage isn't set up). */
       failure: "art_blocked" | "art_store";
     };
 
-/** How long the nudity scan may hold a step: omni-moderation answers in a
- *  second or two; past this the picture is kept (fail open), so the step's
- *  180 s function keeps room after a picture that took the whole 150 s
- *  image budget (lib/ai/image-gen.ts IMAGE_BUDGET_MS). */
+/** How long the nudity scan may hold a step, ALL of it (no SDK retries, one
+ *  abort signal: scanImageBytes): omni-moderation answers in a second or
+ *  two; past this the picture is kept (fail open), so the step's 180 s
+ *  function keeps room after a picture that took the whole 150 s image
+ *  budget (lib/ai/image-gen.ts IMAGE_BUDGET_MS). */
 export const AI_ART_SCAN_TIMEOUT_MS = 10_000;
 
 /**
- * Upload generated image bytes to the signed-in user's `card-art` folder,
- * then scan the stored picture for nudity. Shared by EVERY AI art flow (the
+ * Scan generated image bytes for nudity, then upload them to the signed-in
+ * user's `card-art` folder. Shared by EVERY AI art flow (the
  * per-field fill and its double-faced back, the card job, deck generation,
  * the deck remix's restyle and fresh pictures, the deck cover), so none can
  * skip the scan. Written with the service role into the folder of the user
@@ -49,10 +50,11 @@ export const AI_ART_SCAN_TIMEOUT_MS = 10_000;
  * The scan (owner 2026-10-28; it replaces the 2026-07-10 decision to scan
  * no AI art): omni-moderation with the SEXUAL categories alone
  * (AI_ART_BLOCKED_CATEGORIES — the old full list flagged benign fantasy
- * violence). Flagged → the object is removed and the call fails
- * `art_blocked`; the step's credit wrapper refunds it once. FAILS OPEN, as
- * the uploads' scan does: no key, an error or a timeout keeps the picture
- * (logged).
+ * violence), run on the BYTES before the store (review of #644): a flagged
+ * picture is never public and is never stored, and a step killed mid-scan
+ * leaves nothing behind. Flagged → the call fails `art_blocked`; the step's
+ * credit wrapper refunds it once. FAILS OPEN, as the uploads' scan does: no
+ * key, an error or a timeout keeps the picture (logged).
  */
 export async function persistGeneratedArt(
   bytes: Uint8Array,
@@ -82,6 +84,20 @@ export async function persistGeneratedArt(
     ] ?? "png";
 
   const name = `ai-${randomId()}.${extension}`;
+
+  const scan = await scanImageBytes(bytes, contentType, {
+    categories: AI_ART_BLOCKED_CATEGORIES,
+    timeoutMs: AI_ART_SCAN_TIMEOUT_MS,
+  });
+  if (scan.skipped) {
+    // Fail open (owner: allow if unsure) — said in the log, never to the user.
+    console.warn(`[ai:art] nudity scan didn't run (${scan.skipped}); keeping ${name}.`);
+  }
+  if (scan.flagged) {
+    console.warn(`[ai:art] nudity scan flagged ${name} (${scan.categories.join(", ")}); not stored.`);
+    return { ok: false, error: ART_NUDITY_BLOCKED_COPY, failure: "art_blocked" };
+  }
+
   const art = userFolder("card-art", user.id);
   const { error: uploadError } = await art.upload(name, bytes, {
     cacheControl: "3600",
@@ -93,26 +109,5 @@ export async function persistGeneratedArt(
     console.error(`[ai:art] storing generated art failed: ${uploadError.message}`);
     return storeFailed();
   }
-  const publicUrl = art.publicUrl(name);
-
-  const scan = await scanImageUrl(publicUrl, {
-    bytes,
-    categories: AI_ART_BLOCKED_CATEGORIES,
-    timeoutMs: AI_ART_SCAN_TIMEOUT_MS,
-  });
-  if (scan.skipped) {
-    // Fail open (owner: allow if unsure) — said in the log, never to the user.
-    console.warn(`[ai:art] nudity scan didn't run (${scan.skipped}); keeping ${name}.`);
-  }
-  if (scan.flagged) {
-    const removed = await art.remove([name]);
-    console.warn(
-      `[ai:art] nudity scan flagged ${name} (${scan.categories.join(", ")}); ${
-        removed.error ? `removing it FAILED: ${removed.error.message}` : "removed"
-      }.`,
-    );
-    return { ok: false, error: ART_NUDITY_BLOCKED_COPY, failure: "art_blocked" };
-  }
-
-  return { ok: true, publicUrl };
+  return { ok: true, publicUrl: art.publicUrl(name) };
 }

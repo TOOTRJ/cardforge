@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FULLY_CLOTHED_LINE,
   SAFE_ART_SUFFIX,
   artPromptForAttempt,
   artPromptLadder,
@@ -43,6 +44,29 @@ describe("softenArtPrompt (owner 2026-10-28: violence allowed, nudity never)", (
     );
     expect(out).toContain("A fully clothed witch");
     expect(out).toContain("flowing robes");
+  });
+  it("dresses the review's words too: bare skin, unclad, breasts, buttocks, lewd, skimpy, revealing (clothing), nubile, busty", () => {
+    const out = softenArtPrompt(
+      "An oracle with bare skin, an unclad nymph, her breasts and buttocks, a lewd glance, a skimpy outfit, " +
+        "a revealing dress, a nubile maiden, a busty barmaid, a bare-skinned dancer",
+    );
+    expect(out).not.toMatch(/bare skin|bare-skinned|unclad|breasts|buttocks|lewd|skimpy|revealing|nubile|busty/i);
+    expect(out).toContain("a modest outfit");
+    expect(out).toContain("a modest dress");
+  });
+  it("a person's 'naked' is dressed; a thing's is bare — never a 'fully clothed blade'", () => {
+    expect(softenArtPrompt("A naked elven queen in the rain")).toContain("A fully clothed elven queen");
+    expect(softenArtPrompt("A naked warrior")).toContain("A fully clothed warrior");
+    const things = softenArtPrompt("A knight raises a naked blade toward a naked flame");
+    expect(things).toContain("a bare blade toward a bare flame");
+    expect(things).not.toMatch(/naked|fully clothed (blade|flame)/i);
+    // "revealing" as a verb is left alone.
+    expect(softenArtPrompt("Dawn revealing the hidden temple")).toContain("Dawn revealing the hidden temple");
+  });
+  it("the clothed lines never INVITE a figure into a landscape (review of #644)", () => {
+    expect(FULLY_CLOTHED_LINE).toBe("If any figure appears, it is fully clothed.");
+    expect(SAFE_ART_SUFFIX).toMatch(/\bany figure\b/);
+    expect(`${FULLY_CLOTHED_LINE} ${SAFE_ART_SUFFIX}`).not.toMatch(/every figure/i);
   });
   it("keeps a minor out of a refused scene (owner: keep the child words)", () => {
     expect(softenArtPrompt("A child and two babies by the fire")).not.toMatch(/child|bab(y|ies)/i);

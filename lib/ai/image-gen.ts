@@ -271,11 +271,28 @@ export const IMAGE_HEDGE_AT_MS = 60_000;
  *  no timed hedge, only the start-on-failure one. */
 export const MIN_BACKUP_MS = 20_000;
 
-/** The default model and its backup (null when they're the same model). */
+/** A backup override we warned about already (once per process). */
+let warnedBackup: string | null = null;
+
+/** The default model and its backup (null when they're the same model). An
+ *  AI_IMAGE_FALLBACK_MODEL override must be a gateway FLUX.2 model — the
+ *  family isSizedFluxModel knows, which takes the window's width × height
+ *  and was sampled — or the default; anything else (a typo, a model the
+ *  gateway lacks, one that would paint the wrong shape) is NO backup, said
+ *  once in the log (review of #644). */
 export function imageModels(): { primary: string; backup: string | null } {
   const primary = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
-  const backup = process.env.AI_IMAGE_FALLBACK_MODEL?.trim() || GATEWAY_IMAGE_BACKUP;
-  return { primary, backup: backup === primary ? null : backup };
+  const override = process.env.AI_IMAGE_FALLBACK_MODEL?.trim();
+  let backup = override || GATEWAY_IMAGE_BACKUP;
+  if (override && !isSizedFluxModel(override) && override !== GATEWAY_IMAGE_DEFAULT) {
+    if (warnedBackup !== override) {
+      warnedBackup = override;
+      console.warn(`[ai:image] AI_IMAGE_FALLBACK_MODEL "${override.slice(0, 80)}" isn't a known gateway FLUX.2 model; no backup.`);
+    }
+    return { primary, backup: null };
+  }
+  if (backup === primary) backup = "";
+  return { primary, backup: backup || null };
 }
 
 const secondsSince = (start: number) => Math.round((Date.now() - start) / 1000);
@@ -317,11 +334,16 @@ async function paintWith(
   }
 }
 
-/** Both models failed on the same prompt: a refusal only when BOTH refused
- *  (the ladder then walks to a softer prompt); else the other failure. */
+/** Both models failed on the same prompt. When EITHER refused, the prompt is
+ *  what failed, so the answer is the refusal and the ladder walks to a
+ *  softer prompt (MIN_RUNG_MS still bounds it) — a backup that then failed
+ *  for its own reason (a 429, a 5xx, a model the gateway lacks) must not end
+ *  the ladder with ~140 s left (review of #644). Neither refused: the
+ *  backup's failure, the last word on that prompt. */
 function bothFailed(primary: PaintResult, backup: PaintResult): PaintResult {
   if (backup.ok || primary.ok) return backup.ok ? backup : primary;
-  return backup.failure !== "art_blocked" ? backup : primary;
+  if (primary.failure === "art_blocked") return primary;
+  return backup;
 }
 
 /**
