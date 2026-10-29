@@ -2522,10 +2522,14 @@ describe("DK0.6 a deck entry's custom card offers no second \"Add to deck\"", ()
     });
   }
 
+  // The picker left the Publish step for the "Add to a deck" box under the
+  // live preview (TODO DK9.3): the rule is the same on every step.
+  const deckPicker = () => screen.queryByRole("combobox", { name: "Deck for this card" });
+
   it("a new card has the picker", async () => {
     renderForm({ myDecks: MY_DECKS });
     await goToPublish();
-    expect(screen.queryByText("Add to deck")).not.toBeNull();
+    expect(deckPicker()).not.toBeNull();
   });
 
   it("the deck entry's flow hides it", async () => {
@@ -2542,7 +2546,8 @@ describe("DK0.6 a deck entry's custom card offers no second \"Add to deck\"", ()
     await goToPublish();
     // On the Publish step (its visibility control is there)…
     expect(screen.getByRole("radiogroup", { name: /visibility/i })).toBeTruthy();
-    // …with no deck picker.
-    expect(screen.queryByText("Add to deck")).toBeNull();
+    // …with no deck picker: the box only says where saving goes.
+    expect(deckPicker()).toBeNull();
+    expect(screen.getByTestId("creator-deck-return").textContent).toBe("Saving returns you to “Burn”.");
   });
 });

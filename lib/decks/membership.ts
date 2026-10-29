@@ -46,31 +46,30 @@ function isMissingOriginSignature(error: { code?: string | null } | null): boole
   return error?.code === "PGRST202";
 }
 
-export async function addCustomCardEntryToDeck(
+/** What the RPC's error carries that its callers read. */
+export type DeckEntryRpcError = { message: string; details?: string | null; code?: string | null };
+
+/**
+ * ONE card into ONE deck, the RPC alone — no ownership pre-flight and no
+ * revalidation: the caller does the first, and the second once for its whole
+ * batch (addCustomCardEntryToDeck below; the membership action,
+ * lib/decks/membership-actions.ts).
+ *
+ * Check-then-insert in ONE transaction under the deck's entry lock
+ * (migration 0143): two saves racing into one deck — parallel AI deck
+ * steps — can no longer both see "not in the deck yet", insert twice, or
+ * take the same position. Already in the deck (any board) → no new entry
+ * (`added: false`); the deck page is the place to adjust quantities. The
+ * entry says how it got there (0144). The error is handed back unread:
+ * `deck_entry_limit` (the 500-entry cap), `deck_card_not_linkable` (D3)…
+ */
+export async function addCardEntryRpc(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
   deckId: string,
   cardId: string,
   cardTitle: string,
   origin?: DeckEntryOrigin | null,
-): Promise<{ ok: boolean; deckSlug?: string; error?: string }> {
-  // Ownership pre-flight (the RPC and RLS enforce it too; this yields the
-  // slug for revalidation and a friendly failure).
-  const { data: deck } = await supabase
-    .from("decks")
-    .select("id, slug, owner_id")
-    .eq("id", deckId)
-    .maybeSingle();
-  if (!deck || deck.owner_id !== userId) {
-    return { ok: false, error: "Deck not found or not yours." };
-  }
-
-  // Check-then-insert in ONE transaction under the deck's entry lock
-  // (migration 0143): two saves racing into one deck — parallel AI deck
-  // steps — can no longer both see "not in the deck yet", insert twice, or
-  // take the same position. Already in the deck (any board) → no new entry;
-  // the deck page is the place to adjust quantities. The entry says how it
-  // got there (0144).
+): Promise<{ added: boolean | null; error: DeckEntryRpcError | null }> {
   const args = deckEntryOriginArgs(origin, cardTitle);
   let { data: added, error } = await supabase.rpc("add_custom_deck_entry", {
     p_deck_id: deckId,
@@ -86,8 +85,44 @@ export async function addCustomCardEntryToDeck(
       p_name: cardTitle,
     }));
   }
+  return { added: typeof added === "boolean" ? added : null, error: error ?? null };
+}
+
+export async function addCustomCardEntryToDeck(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  deckId: string,
+  cardId: string,
+  cardTitle: string,
+  origin?: DeckEntryOrigin | null,
+): Promise<{
+  ok: boolean;
+  deckSlug?: string;
+  error?: string;
+  /** The deck holds the 500 entries it may (`deck_entry_limit`): the
+   *  creator says so in its own words (deckFullMessage). */
+  deckFull?: true;
+  deckTitle?: string;
+}> {
+  // Ownership pre-flight (the RPC and RLS enforce it too; this yields the
+  // slug for revalidation, the title for a refusal, and a friendly failure).
+  const { data: deck } = await supabase
+    .from("decks")
+    .select("id, slug, title, owner_id")
+    .eq("id", deckId)
+    .maybeSingle();
+  if (!deck || deck.owner_id !== userId) {
+    return { ok: false, error: "Deck not found or not yours." };
+  }
+
+  const { added, error } = await addCardEntryRpc(supabase, deckId, cardId, cardTitle, origin);
   if (error) {
-    return { ok: false, error: deckEntryLimitMessage(error) ?? error.message };
+    const limit = deckEntryLimitMessage(error);
+    return {
+      ok: false,
+      error: limit ?? error.message,
+      ...(limit ? { deckFull: true as const, deckTitle: deck.title } : {}),
+    };
   }
   if (added === false) return { ok: true, deckSlug: deck.slug };
 

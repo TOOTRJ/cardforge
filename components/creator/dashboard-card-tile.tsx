@@ -15,6 +15,7 @@ import {
   isFramePreviewCard,
 } from "@/components/creator/frame-preview-card-badge";
 import { Button } from "@/components/ui/button";
+import { DeckChipButton } from "@/components/decks/deck-chip-button";
 import { cn } from "@/lib/utils";
 import type { listMyCards } from "@/lib/cards/queries";
 
@@ -54,6 +55,9 @@ type Props = {
   density?: "regular" | "compact";
   /** Extra line under the tile (e.g. the "Remixed from …" credit). */
   caption?: React.ReactNode;
+  /** The card's decks (TODO DK9.2): "In N decks" / "Add to deck", opening
+   *  the picker. Absent = not offered (an admin's frame preview). */
+  decks?: { count: number | null; onOpen: () => void };
   /** Called for Cmd/Ctrl/Shift-modifier clicks (and plain clicks in select
    *  mode) on the card body, plus any click on the corner checkbox. */
   onToggle: (
@@ -70,6 +74,7 @@ export function DashboardCardTile({
   enableViewTransition = true,
   density = "regular",
   caption,
+  decks,
   onToggle,
 }: Props) {
   const compact = density === "compact";
@@ -244,24 +249,30 @@ export function DashboardCardTile({
           {VISIBILITY_LABELS[card.visibility]}
           {isFramePreviewCard(card) ? <FramePreviewCardBadge /> : null}
         </span>
-        <span
-          className={cn(
-            "transition-opacity",
-            selectMode
+        {/* The card's decks, outside the picture's control. Select mode's
+            footer is the selection's own. */}
+        {decks && !selectMode ? (
+          <DeckChipButton count={decks.count} title={card.title} onClick={decks.onOpen} />
+        ) : (
+          <span
+            className={cn(
+              "transition-opacity",
+              selectMode
+                ? isSelected
+                  ? "text-primary-bright opacity-100"
+                  : "opacity-100"
+                : "opacity-0",
+            )}
+          >
+            {selectMode
               ? isSelected
-                ? "text-primary-bright opacity-100"
-                : "opacity-100"
-              : "opacity-0",
-          )}
-        >
-          {selectMode
-            ? isSelected
-              ? "Selected"
-              : compact
-                ? null
-                : "Click to select"
-            : null}
-        </span>
+                ? "Selected"
+                : compact
+                  ? null
+                  : "Click to select"
+              : null}
+          </span>
+        )}
       </div>
       {caption}
     </div>
