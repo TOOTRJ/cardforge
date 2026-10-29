@@ -139,6 +139,9 @@ describe("frame reference registry", () => {
       // Prepare prints the split frame) and no colourless Prepare card.
       "prepare/m",
       "prepare/c",
+      // …and its extended-art dress (TODO 4.27b): the same.
+      "extendedartprepare/m",
+      "extendedartprepare/c",
       // …and its borderless Spacecraft dress (step 2): gold only (EOC #1 / #2).
       "m15borderlessstation/w",
       "m15borderlessstation/u",
@@ -226,7 +229,8 @@ describe("frame reference registry", () => {
     // + 4.51's six Nyx dresses of the full-art tokens.
     // + 4.55's two tall-box tokens.
     // + 4.27's Prepare frame.
-    expect(m15Templates.length).toBe(71);
+    // + 4.27b's extended-art Prepare dress.
+    expect(m15Templates.length).toBe(72);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

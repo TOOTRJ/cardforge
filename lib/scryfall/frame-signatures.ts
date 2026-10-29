@@ -1050,9 +1050,13 @@ const FAMILIES: Record<
   // The extended-art frame and its land dress (TODO 4.7, owner Round 63):
   // a land prints the pack's land frames (FDN #487, NEO #501–505), every
   // other kind the spell frame.
+  // …and the Prepare kind its own dress (TODO 4.27b: SOS #309–342, SOC
+  // #63–98, FRA #425–430), exact once verified in the card's colour — short
+  // of it the Prepare frame where that is (nearest), else the creature on
+  // the extended-art frame (lib/creator/frame-resolve.ts finalizeImportMatch).
   extended: {
-    produces: ["extendedartland", "extendedart"],
-    pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : "extendedart"),
+    produces: ["extendedartland", "extendedartprepare", "extendedart"],
+    pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : facts.kind === "prepare" ? "extendedartprepare" : "extendedart"),
   },
   // The full-art token design, M20 → today (TODO 4.48 / 4.50).
   m20: {

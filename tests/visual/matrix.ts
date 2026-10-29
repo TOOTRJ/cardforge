@@ -768,6 +768,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // bar: a colour (SOS #170's gold is a pair, 4.6f), the artifact silver on
   // a colourless card (c → a), gold.
   ["prepare", ["r", "c", "wub"]],
+  // TODO 4.27b: the extended-art Prepare dress's extended-art band: a
+  // colour (SOS #318 Jadzi's blue), gold.
+  ["extendedartprepare", ["u", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -1767,6 +1770,10 @@ export function visualCases(): VisualCase[] {
   partCase("prepare", "prepare", "wu", "long", "@pair-part-hybrid", { colors: ["white", "blue"], cost: "{1}{W/U}" }, { style: { twoColor: true } });
   partCase("prepare", "prepare", "wu", "short", "@pair-part-r", { colors: ["red"], cost: "{X}{R}" }, { style: { twoColor: true } });
   partCase("prepare", "prepare", "wu", "short", "@pair-hybrid-part", { colors: ["white", "blue"], cost: "{W/U}" }, { style: { twoColor: true }, row: { cost: "{1}{W/U}{W/U}" } });
+  // TODO 4.27b: the extended-art Prepare dress's page in another colour (its
+  // lower half is the Prepare master's, so the page overlays serve it).
+  partCase("extendedartprepare", "prepare", "r", "short", "@part-u", { colors: ["blue"], cost: "{1}{U}" });
+  partCase("extendedartprepare", "prepare", "wu", "long", "@pair-part-hybrid", { colors: ["white", "blue"], cost: "{1}{W/U}" }, { style: { twoColor: true } });
   // Split's right half and aftermath's lower part in their own colour (Fire
   // // Ice; Cut // Ribbons): the seam, at the default bake and HD, and both
   // finishes' masks on it; a gold second half.
@@ -2038,6 +2045,17 @@ export function visualCases(): VisualCase[] {
   }
   add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
+  // TODO 4.27b: the Prepare notch — its hybrid dress has a piece of its own
+  // (the strip under the arch's edge differs), a full creature box whose
+  // last line enters the arch, the collector line beside the notch at the
+  // stored bake's size on both looks, the extended-art dress in foil.
+  add("prepare", "prepare", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("prepare", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("prepare", "prepare", "b", "long", { suffix: "@stamp-arch", row: stampRow("prepare", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  for (const template of ["prepare", "extendedartprepare"] as const) {
+    const stamped = stampRow(template, "auto", { rarity: "mythic" });
+    add(template, "prepare", "g", "long", { suffix: "@stamp-collector-hd", preset: "hd", row: { ...stamped, ...collectorRow(template, "2023", stamped) } });
+  }
+  add("extendedartprepare", "prepare", "u", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("extendedartprepare", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-hd", preset: "hd", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil", twoColor: true } as CardRowForBake["frame_style"] }) });
   // TODO 4.25: the Universes Beyond TRIANGLE (new templates, no stored
@@ -2602,6 +2620,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "tardis",
   // …and the OTJ Breaking News' oval (TODO 4.11 wave 2: the pack's one tab).
   "breakingnews",
+  // TODO 4.27b: the Prepare frame's (its own lifted foot) and its extended-
+  // art dress's (the same pieces).
+  "prepare", "extendedartprepare",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2626,6 +2647,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the OTJ Breaking News — its pair masters under the
   // pack's one notch tab.
   "breakingnews",
+  // TODO 4.27b: the Prepare pairs (a piece per pair master, either dress)
+  // and the extended-art dress's.
+  "prepare", "extendedartprepare",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -3076,6 +3100,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b): the same pairs under the
+  // extended-art top.
+  "extendedartprepare",
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",

@@ -411,8 +411,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // text on print's columns since Round 79, 5 px narrower than the first
   // cut — "pips + reminder" clips there now, as on the adventure's page) —
   // the prints' boxes; a full card's text clips at the floor, as on print.
-  [["prepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
-  [["prepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder", "typed, as printed"]],
+  // …and its extended-art dress (TODO 4.27b): the same two boxes.
+  [["prepare/main", "extendedartprepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
+  [["prepare/adventure", "extendedartprepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder", "typed, as printed"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art

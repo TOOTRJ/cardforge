@@ -4,7 +4,9 @@ import {
   KIND_DEFS,
   KIND_PICKER_KINDS,
   LAYOUT_KIND_CARD_TYPES,
+  baseFrameFor,
   framesForKind,
+  skinVariantsFor,
   importedCardTypeForKind,
   kindFromCard,
   templatePaintsSecondFace,
@@ -63,8 +65,14 @@ describe("the Prepare kind", () => {
       expect(templateRefusesKind("prepare", kind), `prepare/${kind}`).toBe(kind !== "prepare");
       expect(templateSupportsKind("prepare", kind), `prepare/${kind}`).toBe(kind === "prepare");
     }
+    // (…and its extended-art dress, TODO 4.27b: the Prepare kind's too.)
+    const PREPARE_FRAMES: readonly string[] = ["prepare", "extendedartprepare"];
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(templateRefusesKind(template, "prepare"), `${template}/prepare`).toBe(template !== "prepare");
+      expect(templateRefusesKind(template, "prepare"), `${template}/prepare`).toBe(!PREPARE_FRAMES.includes(template));
+    }
+    for (const kind of CARD_KIND_VALUES) {
+      expect(templateRefusesKind("extendedartprepare", kind), `extendedartprepare/${kind}`).toBe(kind !== "prepare");
+      expect(templateSupportsKind("extendedartprepare", kind), `extendedartprepare/${kind}`).toBe(kind === "prepare");
     }
     expect(templateRefusesKind("adventure", "prepare")).toBe(true);
     expect(templateRefusesKind("prepare", "adventure")).toBe(true);
@@ -73,8 +81,17 @@ describe("the Prepare kind", () => {
       const listed = framesForKind(kind, EVERY_COMBO).map((f) => f.template);
       expect(listed.includes("prepare"), kind).toBe(kind === "prepare");
     }
-    expect(framesForKind("prepare", EVERY_COMBO).map((f) => [f.template, f.group])).toEqual([["prepare", "layout"]]);
-    expect(framesForKind("prepare", new Set()).map((f) => f.availableColorKeys)).toEqual([[]]);
+    // The extended-art dress is the layout template's skin — the Variations
+    // section's (TODO 4.27b).
+    expect(framesForKind("prepare", EVERY_COMBO).map((f) => [f.template, f.group])).toEqual([
+      ["prepare", "layout"],
+      ["extendedartprepare", "skin"],
+    ]);
+    expect(framesForKind("prepare", new Set()).map((f) => f.availableColorKeys)).toEqual([[], []]);
+    expect(baseFrameFor("prepare", "extendedartprepare")).toBe("prepare");
+    expect(skinVariantsFor("prepare", "prepare")).toEqual(["extendedartprepare"]);
+    // A card stored on the dress IS the Prepare kind (the template wins).
+    expect(kindFromCard("creature", "extendedartprepare")).toBe("prepare");
   });
 
   it("the server's kind gate: a Prepare card saves on its frame; the frame refuses a card of another kind", () => {

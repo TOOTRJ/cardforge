@@ -362,9 +362,11 @@ export function importedCardTypeForKind(
 // Reverse map: layout template → its kind (saga → saga, adventure →
 // adventure, …). Skins and standards are deliberately absent — they resolve
 // through the card_type branch of kindFromCard.
+// A layout template's skin (the Prepare frame's extended-art dress, TODO
+// 4.27b: TEMPLATE_SKIN_VARIANTS.prepare) is that kind's too.
 const TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
-  (Object.entries(KIND_DEFS) as [CardKind, KindDef][]).flatMap(
-    ([kind, def]) => (def.layoutTemplates ?? []).map((t) => [t, kind] as const),
+  (Object.entries(KIND_DEFS) as [CardKind, KindDef][]).flatMap(([kind, def]) =>
+    (def.layoutTemplates ?? []).flatMap((t) => [t, ...(TEMPLATE_SKIN_VARIANTS[t] ?? [])].map((u) => [u, kind] as const)),
   ),
 );
 
@@ -636,6 +638,8 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // the Prepare frame never an adventure, though both draw the same
   // `adventure` page anatomy.
   prepare: ["prepare"],
+  // …and its extended-art dress (TODO 4.27b), the Prepare kind's alone too.
+  extendedartprepare: ["prepare"],
 };
 
 /** The extended-art frame's land dress (TODO 4.7, owner Round 63): the one
@@ -1612,14 +1616,19 @@ export function framesForKind(
   const colors = (t: FrameTemplate) =>
     FRAME_COLOR_KEYS.filter((k) => isFrameComboAvailable(t, k, verifiedKeys));
 
-  // Layout kinds are exactly their template family (all M15-era today).
+  // Layout kinds are exactly their template family (all M15-era today) —
+  // each with its skins, the Variations section's (the Prepare frame's
+  // extended-art dress, TODO 4.27b).
   if (def.layoutTemplates) {
-    return def.layoutTemplates.map((t) => ({
-      template: t,
-      era: eraForTemplate(t),
-      group: "layout" as const,
-      availableColorKeys: colors(t),
-    }));
+    return def.layoutTemplates.flatMap((t) => [
+      { template: t, era: eraForTemplate(t), group: "layout" as const, availableColorKeys: colors(t) },
+      ...(TEMPLATE_SKIN_VARIANTS[t] ?? []).map((skin) => ({
+        template: skin,
+        era: eraForTemplate(t),
+        group: "skin" as const,
+        availableColorKeys: colors(skin),
+      })),
+    ]);
   }
   // The emblem (TODO 6.23) comes out of this loop as the M15 era's one
   // emblem frame alone: no other era prints today's emblem, it has no

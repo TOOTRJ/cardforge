@@ -402,6 +402,14 @@ export const M15UB_HOLO_STAMP_BOX: Rect = roundTriangleBounds(UB_STAMP_HOLE);
  *  arch. */
 export const M15UB_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: pctX(650), topPct: pctY(1897), widthPct: pctX(200), heightPct: pctY(27) };
 
+/** The rules keep-out while the PREPARE stamp is drawn (TODO 4.27b): the
+ *  arch over the creature's box and the strip — the lifted bevel's top at
+ *  the centre (1927 − 35.8 = 1891.2 px; scripts/lib/prepare-2026.mjs
+ *  PREPARE_STAMP) less 1 px of air, down to the black border (1950), over
+ *  the piece's 654–846 px. Only the creature's box reaches it (its rules
+ *  rect ends at 1923.6; the page's at 1852). */
+export const PREPARE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: pctX(654), topPct: pctY(1890), widthPct: pctX(192), heightPct: pctY(60) };
+
 /** What a `holoStamp` overlay slot declares beside its notch image
  *  (FrameOverlaySlot, lib/cards/template-layout.ts). */
 export type HoloStampArt = {

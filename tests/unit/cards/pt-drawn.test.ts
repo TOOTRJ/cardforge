@@ -48,6 +48,8 @@ const INLINE_SECOND_FACE: Partial<Record<FrameTemplate, boolean>> = {
   adventure: false,
   // The Prepare page (TODO 4.27): a spell, the adventure's anatomy — no slot.
   prepare: false,
+  // …and its extended-art dress (TODO 4.27b): the same page.
+  extendedartprepare: false,
   flip: true,
   split: false,
   aftermath: false,

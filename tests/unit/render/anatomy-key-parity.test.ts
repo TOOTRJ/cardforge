@@ -86,7 +86,8 @@ describe("bake path = preview path", () => {
     // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
     // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
     // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
-    expect(pairKeys).toBe(460);
+    // …and the extended-art Prepare dress's 20 (4.27b: the Prepare pairs' lower half).
+    expect(pairKeys).toBe(480);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -142,8 +143,9 @@ describe("bake path = preview path", () => {
           slot.anatomy === "dfcIcon"
             ? "dfcicon"
             : slot.anatomy === "partPage"
-              ? // The Prepare spell's page in its own colour (4.26).
-                `${template}/page`
+              ? // The Prepare spell's page in its own colour (4.26) — its
+                // extended-art dress draws the Prepare frame's (4.27b).
+                `${template === "extendedartprepare" ? "prepare" : template}/page`
             : slot.anatomy === "mdfcStrip"
               ? `${template}/strip`
             : slot.anatomy === "holoStamp"
@@ -207,11 +209,14 @@ describe("bake path = preview path", () => {
                                     : template === "breakingnews"
                                       ? // …and the OTJ Breaking News' oval tab (4.11 wave 2).
                                         "breakingnewsholostamp"
+                                    : template === "prepare" || template === "extendedartprepare"
+                                      ? // …and the Prepare frame's lifted foot, both looks (4.27b).
+                                        "prepareholostamp"
                                       : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
                   "fullartcrown"
-                : template === "extendedart" || template === "extendedartland" || template === "extendedartstation"
+                : template === "extendedart" || template === "extendedartland" || template === "extendedartstation" || template === "extendedartprepare"
                 ? "extendedcrown"
                 : ub
                   ? "m15ubcrown"
@@ -305,7 +310,9 @@ describe("bake path = preview path", () => {
     // 7 + 10 pairs (4.11 wave 2, the pack's one trapezoid under every key
     // and pair), and the OTJ Breaking News' 8 + 10 pairs (4.11 wave 2, the
     // pack's one oval tab under every key and pair: a and l).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10));
+    // …and the Prepare frame's lifted foot (4.27b): 7 keys + the 20 pair
+    // masters (keyed by the master: both dresses), on both of its looks.
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10) + (7 + 20) * 2);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

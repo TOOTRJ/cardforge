@@ -20,6 +20,11 @@
 //   prepare/page/<key>      (TODO 4.26) every master's page cut out — the
 //                           overlay a card draws when its SPELL's page key
 //                           is not the creature's (lib/cards/part-color.ts)
+//   extendedartprepare/<key>  (TODO 4.27b, `--only extended`) the extended-
+//                           art dress: the published extendedart/<key>
+//                           above the type bar and beside the box, the
+//                           published prepare/<key> below it — a merge, no
+//                           pixel drawn (PREPARE_EXTENDED)
 //
 // What the run does to the base master (in this order; every painted pixel
 // is a published master's, moved, toned or darkened — the only geometry it
@@ -36,8 +41,8 @@
 //   6. the page's black outline (left, top, bottom).
 //
 //   node scripts/build-prepare-frames.mjs                 # → .frames-build
-//   node scripts/build-prepare-frames.mjs --out <dir> [--masters <dir>] [--dry-run]
-//   npm run frames:publish -- --source .frames-build --only prepare --write
+//   node scripts/build-prepare-frames.mjs --out <dir> [--masters <dir>] [--only prepare|extended] [--dry-run]
+//   npm run frames:publish -- --source .frames-build --only prepare,extendedartprepare --write
 //
 // The sources are local copies of the PUBLISHED masters, each sha256-checked
 // against lib/frames/frame-manifest.json (--masters, FRAMES_BUILD_DIR,
@@ -54,7 +59,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { WEBP } from "./lib/cc-frames.mjs";
-import { PREPARE_RECIPE as R } from "./lib/prepare-2026.mjs";
+import { PREPARE_EXTENDED, PREPARE_RECIPE as R } from "./lib/prepare-2026.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -62,6 +67,10 @@ const flag = (name) => {
   return at >= 0 ? args[at + 1] : undefined;
 };
 const dryRun = args.includes("--dry-run");
+// What to build: the Prepare masters and pages (`prepare`), the extended-art
+// dress (`extended`, TODO 4.27b) — both by default.
+const parts = new Set(flag("--only")?.split(",").filter(Boolean) ?? ["prepare", "extended"]);
+for (const part of parts) if (part !== "prepare" && part !== "extended") throw new Error(`--only ${part}: known prepare, extended`);
 const outDir = path.resolve(flag("--out") ?? ".frames-build");
 const PROVENANCE = "lib/cards/frame-sources.json";
 const MANIFEST = JSON.parse(fs.readFileSync("lib/frames/frame-manifest.json", "utf8")).files;
@@ -463,8 +472,8 @@ function pageOverlay(built) {
   return { buf, w, h };
 }
 
-async function write(rel, out, w = W, h = H) {
-  const png = path.join(outDir, TEMPLATE, `${rel}.png`);
+async function write(rel, out, w = W, h = H, folder = TEMPLATE) {
+  const png = path.join(outDir, folder, `${rel}.png`);
   fs.mkdirSync(path.dirname(png), { recursive: true });
   const image = sharp(out, { raw: { width: w, height: h, channels: 4 } });
   await image.clone().png({ compressionLevel: 9 }).toFile(png);
@@ -490,9 +499,10 @@ async function emit(key, built) {
   console.log(`wrote ${path.relative(process.cwd(), png)} + ${path.relative(process.cwd(), pagePng)} (+ .webp, alpha equal)`);
 }
 
+const fmt = (rgb) => rgb.map((v) => Math.round(v)).join("/");
+if (parts.has("prepare")) {
 const colors = {};
 const sourceFiles = new Set();
-const fmt = (rgb) => rgb.map((v) => Math.round(v)).join("/");
 for (const key of R.keys) {
   const built = await buildKey(key);
   const { baseSha, barSha, gain, bars, stripShift } = built;
@@ -544,7 +554,95 @@ if (!dryRun) {
       "TODO 4.26: the page is the SPELL's (print colours it by the spell — a hybrid spell's grey page, Abigale SOS #170): `page/<key>` is drawn over the creature's master where the spell's page key differs (lib/cards/part-color.ts), opt-in per card (frame_style.partColor).",
     ],
   };
+  writeProvenance(provenance);
+}
+}
+
+function writeProvenance(provenance) {
   const sorted = Object.fromEntries(Object.keys(provenance).sort().map((k) => [k, provenance[k]]));
   fs.writeFileSync(PROVENANCE, `${JSON.stringify(sorted, null, 2)}\n`);
   console.log(`provenance → ${PROVENANCE}`);
+}
+
+// ---- TODO 4.27b: the extended-art Prepare dress -----------------------------------
+// `extendedartprepare/<key>`: the PUBLISHED extended-art master above the
+// type bar and beside the box, the PUBLISHED Prepare master below it (its
+// box, page, strip and outline — wherever its build changed the M15 base, and
+// everywhere inside the side fields, where the extended-art pack is M15's
+// pixels), the extended-art master's own shadow carried onto the shadow rows
+// (scripts/lib/prepare-2026.mjs PREPARE_EXTENDED). No pixel is drawn. It
+// reads the published Prepare masters (sha-checked), not this run's: run it
+// after `prepare` is published.
+
+/** The dress of one key: [buffer, the three sources with their shas]. */
+async function buildExtended(key) {
+  const X = PREPARE_EXTENDED;
+  const extRel = `extendedart/${X.extendedKey[key] ?? key}`;
+  const prepRel = `prepare/${key}`;
+  // (A pair's Prepare master was built on the M15 pair master of its dress:
+  // m15/<pair> or m15/<pair>-h.)
+  const baseRel = R.base[key] ?? `m15/${key}`;
+  const srcs = [published(extRel), published(prepRel), published(baseRel)];
+  const [ext, prep, base] = await Promise.all(srcs.map((s) => raw(s.file)));
+  const out = Buffer.from(ext);
+  let fromPrepare = 0;
+  for (let y = X.cutRow; y < H; y++) {
+    const shadow = y >= X.shadowRows[0] && y <= X.shadowRows[1];
+    for (let x = 0; x < W; x++) {
+      const o = at(x, y);
+      const inside = x >= X.cols[0] && x <= X.cols[1];
+      const touched = !inside && (prep[o] !== base[o] || prep[o + 1] !== base[o + 1] || prep[o + 2] !== base[o + 2] || prep[o + 3] !== base[o + 3]);
+      if (!inside && !touched) continue;
+      fromPrepare++;
+      for (let c = 0; c < 4; c++) {
+        const delta = shadow ? ext[o + c] - base[o + c] : 0;
+        out[o + c] = clamp8(prep[o + c] + delta);
+      }
+    }
+  }
+  return { out, srcs: [extRel, prepRel, baseRel].map((rel, i) => ({ rel, sha: srcs[i].sha })), fromPrepare };
+}
+
+if (parts.has("extended")) {
+  const X = PREPARE_EXTENDED;
+  const keys = [...R.keys, ...PR.list, ...PR.list.map((p) => `${p}-h`)];
+  const colors = {};
+  const sourceFiles = new Set();
+  for (const key of keys) {
+    const built = await buildExtended(key);
+    for (const s of built.srcs) sourceFiles.add(`${s.rel}.png`);
+    colors[key] = [
+      ...built.srcs.map((s, i) => `${s.rel}.png (published, sha256 ${s.sha.slice(0, 12)})${["", " — below the type bar", " — the M15 base it was built on"][i]}`),
+      `${built.fromPrepare} px from the Prepare master; the extended-art shadow carried onto rows ${X.shadowRows.join("–")}`,
+    ];
+    if (dryRun) {
+      console.log(`${X.template}/${key}: built (dry run)`);
+      continue;
+    }
+    const png = await write(key, built.out, W, H, X.template);
+    console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal)`);
+  }
+  if (!dryRun) {
+    const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
+    provenance[X.template] = {
+      source: "pipglyph",
+      converter: "scripts/build-prepare-frames.mjs --only extended",
+      derivedFrom:
+        'the published extendedart/<key> masters (extendedart/a for c; Card Conjurer imports: see "extendedart"), the published prepare/<key> masters (PipGlyph\'s: see "prepare") and the published m15 masters they were built on',
+      output: `${W}x${H}, the extended-art master's corners and art window, webp q${WEBP.quality} with the PNG's alpha exactly`,
+      recipe: {
+        merge: `rows 0..${X.cutRow - 1}: the extended-art master; from row ${X.cutRow}: the Prepare master inside cols ${X.cols.join("..")} and wherever its build changed the M15 base, the extended-art master's own side fields elsewhere`,
+        shadow: `rows ${X.shadowRows.join("..")}: the extended-art master's difference from M15 (its black type bar's shadow) added to the Prepare master's pixels`,
+      },
+      colors,
+      sourceFiles: [...sourceFiles].sort(),
+      notes: [
+        "PipGlyph's own derivation (TODO 4.27b): the extended-art Prepare printings (SOS #309–342, SOC #63–98, FRA #425–430) print the extended-art frame over the Prepare frame's lower half. Card Conjurer's extended-art pack is M15's pixels below its type bar (inside x 100–1400 byte for byte from row 1320 but blue's paper, within 10 levels), so the dress merges two published masters; no pixel is drawn.",
+        `The numbers are scripts/lib/prepare-2026.mjs PREPARE_EXTENDED (measured ${X.measuredOn} on the masters); no scan is read by the build.`,
+        "Below the type bar the dress holds the Prepare master's pixels wherever the holofoil stamp's notch, the page overlays (prepare/page/<key>) and the P/T plate read, so those serve it unchanged.",
+        "c is the pack's silver artifact frame over prepare/c (m15artifact/c's): no colourless Prepare is printed, and the see-through Eldrazi frame has no box under it.",
+      ],
+    };
+    writeProvenance(provenance);
+  }
 }

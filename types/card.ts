@@ -615,6 +615,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // TRK #481): the extended-art bars and black type bar over the station
   // frame's box. A pick, like the borderless one.
   "extendedartstation",
+  // …and the Prepare frame's (TODO 4.27b; SOS #309–342, SOC #63–98, FRA
+  // #425–430): the extended-art bars and black type bar over the Prepare
+  // frame's lower half — PipGlyph's merge of the two published masters. The
+  // Prepare kind's variation (TEMPLATE_SKIN_VARIANTS.prepare), never a
+  // default.
+  "extendedartprepare",
   // Full-art basic lands, Card Conjurer 'Fullart Basics (2022)' (frames plan
   // 4.39): the black-bordered frame of ONE / MOM / … (2023+) and the same
   // frame without its border (fullartland, borderless — owner decision
@@ -685,6 +691,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15station: "Spacecraft",
   m15stationland: "Planet",
   extendedartstation: "Extended Art Spacecraft",
+  extendedartprepare: "Extended Art Prepare",
   m15borderlessstation: "Borderless Spacecraft",
   m15ub: "Universes Beyond",
   m15ubartifact: "Universes Beyond Artifact",
@@ -879,6 +886,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15station: "m15",
   m15stationland: "m15",
   extendedartstation: "extended",
+  extendedartprepare: "extended",
   m15borderlessstation: "borderless",
   m15ub: "m15",
   m15ubartifact: "m15",
@@ -1147,6 +1155,10 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   // The land kind's own borderless dress (frames plan 4.34).
   // …and the station frame (TODO 4.27a), a Planet's.
   m15land: ["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"],
+  // The Prepare frame's extended-art dress (TODO 4.27b): the Prepare kind's
+  // one variation (its frame is its layout template — lib/creator/
+  // card-kinds.ts framesForKind lists a layout template's skins).
+  prepare: ["extendedartprepare"],
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
   // The full-art token design (TODO 4.48) and its heights, variations of the

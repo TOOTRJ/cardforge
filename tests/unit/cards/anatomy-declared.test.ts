@@ -86,6 +86,8 @@ describe("where the pieces are declared", () => {
       "sagadfcfront",
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title bar.
       "prepare",
+      // …and its extended-art dress (TODO 4.27b): the extended-art band.
+      "extendedartprepare",
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",

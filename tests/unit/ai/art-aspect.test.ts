@@ -142,6 +142,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],
+  // The extended-art Prepare dress (TODO 4.27b): extendedart's art slot.
+  extendedartprepare: ["1168x896", "4:3", 1.314],
   m15fullartland: ["880x1184", "3:4", 0.737],
   fullartland: ["864x1200", "3:4", 0.714],
   m15fullartlandzen: ["928x1104", "3:4", 0.841],

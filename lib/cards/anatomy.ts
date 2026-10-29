@@ -849,7 +849,10 @@ export function resolveFrameOverlays(
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
-      const base = look ? look.pair : goldPair ?? facts.colorKey;
+      // (The Prepare notch is keyed by the master itself, either dress —
+      // FrameOverlaySlot.keyByMaster, TODO 4.27b.)
+      const byMaster = slot.anatomy === "holoStamp" && slot.keyByMaster === true;
+      const base = look ? (byMaster ? look.masterKey : look.pair) : goldPair ?? facts.colorKey;
       // A template that dresses a colour key in two masters by type
       // (artifactMasterKeys) keys an artifact's overlay by its own master.
       const artifact = slot.artifactKeyMap?.[base] !== undefined && isArtifactFrameType(facts);

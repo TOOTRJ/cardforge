@@ -36,6 +36,7 @@ import {
   ARCH_LIFT_STEP_PX,
   BORDERLESS_ARCH,
   BORDERLESS_STAMP_FOLDERS,
+  PREPARE_STAMP_FOLDERS,
   SHARED_TOLERANCE,
   SNC_DECO_STAMP_FOLDERS,
   WALKER_STAMP_FOLDERS,
@@ -62,7 +63,8 @@ const MAX_LIFT_ERROR = 5;
 /** Every folder this script builds: the spells', artifact's, land's and
  *  station's (TODO 4.9d) and the borderless walkers' (their own arch, owner
  *  Round 70). */
-const FOLDERS = { ...BORDERLESS_STAMP_FOLDERS, ...WALKER_STAMP_FOLDERS, ...SNC_DECO_STAMP_FOLDERS };
+// …and the Prepare frame's (TODO 4.27b: its opaque masters' foot, lifted).
+const FOLDERS = { ...BORDERLESS_STAMP_FOLDERS, ...WALKER_STAMP_FOLDERS, ...SNC_DECO_STAMP_FOLDERS, ...PREPARE_STAMP_FOLDERS };
 const archOf = (def) => def.arch ?? BORDERLESS_ARCH;
 
 if (only) {
@@ -108,6 +110,13 @@ function regionDiff(a, b, arch) {
   return worst;
 }
 
+/** The worst channel difference between two pieces (8-bit RGBA). */
+function pieceDiff(a, b) {
+  let worst = 0;
+  for (let i = 0; i < a.length; i += 1) worst = Math.max(worst, Math.abs(a[i] - b[i]));
+  return worst;
+}
+
 async function write(folder, key, piece, arch) {
   const box = arch.box;
   const png = path.join(outDir, folder, `${key}.png`);
@@ -134,15 +143,20 @@ for (const [folder, def] of Object.entries(FOLDERS)) {
     const src = published(rel);
     sourceFiles.add(`${rel}.png`);
     const master = await raw(src.file);
+    const { piece, outside } = buildBorderlessNotch(master, W, arch);
     const shared = [];
     for (const other of def.sharedBy[key] ?? []) {
       const o = published(other);
       sourceFiles.add(`${other}.png`);
-      const diff = regionDiff(master, await raw(o.file), arch);
+      const otherMaster = await raw(o.file);
+      // `sharePiece` (the Prepare frame, TODO 4.27b): the piece built over
+      // the other master must be this one — what decides a shared key there
+      // is the foot the lift moves, not the strip above it (a split and a
+      // hybrid Prepare pair master differ in the strip only).
+      const diff = def.sharePiece ? pieceDiff(piece, buildBorderlessNotch(otherMaster, W, arch).piece) : regionDiff(master, otherMaster, arch);
       if (diff > SHARED_TOLERANCE) throw new Error(`${folder}/${key}: ${other} differs from ${rel} by ${diff} levels where the piece reads — it needs its own key`);
-      shared.push(`${other}.png (sha256 ${o.sha.slice(0, 12)}; within ${diff} level${diff === 1 ? "" : "s"})`);
+      shared.push(`${other}.png (sha256 ${o.sha.slice(0, 12)}; ${def.sharePiece ? "its piece " : ""}within ${diff} level${diff === 1 ? "" : "s"})`);
     }
-    const { piece, outside } = buildBorderlessNotch(master, W, arch);
     if (outside > 0) throw new Error(`${folder}/${key}: ${outside} painted px fall outside the box ${JSON.stringify(arch.box)}`);
     const { worst, at } = liftError(master, W, piece, undefined, arch);
     if (worst > MAX_LIFT_ERROR) throw new Error(`${folder}/${key}: the piece over ${rel} lands ${worst.toFixed(1)} levels from the lifted master at ${JSON.stringify(at)}`);

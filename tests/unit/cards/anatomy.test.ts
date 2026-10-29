@@ -342,6 +342,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title
       // bar (SOS #170 Abigale), no pairs.
       "prepare",
+      // …and its extended-art dress (TODO 4.27b): the extended-art band, the pairs.
+      "extendedartprepare",
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -425,6 +427,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       extendedartland: ["split"],
       // The Prepare frame (4.26): m15's two dresses with the page.
       prepare: ["split", "hybrid"],
+      // …and its extended-art dress (4.27b): the same masters' lower half.
+      extendedartprepare: ["split", "hybrid"],
       // The Strixhaven Mystical Archive (4.11 wave 2): the gold frame with
       // the two colours' lines, as STA #59–63 print it.
       mysticalarchive: ["split"],
@@ -532,6 +536,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     "bloomanime",
     // …and the New Capenna Art Deco (4.11 wave 2): its own lifted gold rim.
     "sncartdeco",
+    // …and the Prepare frame and its extended-art dress (4.27b): its own lifted foot.
+    "prepare", "extendedartprepare",
     // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
     "dndsourcebook",
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
@@ -569,7 +575,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront" ? { dfcIcon: "arrows" as const } : {};
       // …and each part in its own colour (TODO 4.26) on split, aftermath
       // and the Prepare frame.
-      const part = template === "split" || template === "aftermath" || template === "prepare" || template === "adventure" ? { partColor: true as const } : {};
+      const part = template === "split" || template === "aftermath" || template === "prepare" || template === "extendedartprepare" || template === "adventure" ? { partColor: true as const } : {};
       expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family, ...part });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,

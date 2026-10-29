@@ -189,6 +189,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Prepare frame (TODO 4.27): a new template, no stored card — M15's
   // bars and the adventure panel's sizes — no bump.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b): a new template, no stored card
+  // — the Prepare frame's slots under extendedart's top — no bump.
+  "extendedartprepare",
   "flip",
   "aftermath",
   "extendedart",

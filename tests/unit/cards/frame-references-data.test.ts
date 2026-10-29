@@ -166,6 +166,9 @@ const DOCUMENTED_NULLS = new Set([
   // 4.6f) and no colourless Prepare card. The two masters exist so no
   // colour resolves to a missing master.
   "prepare/m", "prepare/c",
+  // …and its extended-art dress (TODO 4.27b): the same — SOC #93–98 are
+  // two-colour (judged with the gold key's tick), none is colourless.
+  "extendedartprepare/m", "extendedartprepare/c",
   // The double-faced saga front (TODO 5.5 (b)): no colourless transforming
   // saga was printed (the land frame stands in, as on the saga).
   "sagadfcfront/c",

@@ -257,3 +257,108 @@ export const PREPARE_RECIPE = {
     },
   },
 };
+
+// ---------------------------------------------------------------------------
+// TODO 4.27b — the HOLOFOIL STAMP's notch on the Prepare frame. Every rare
+// and mythic Prepare printing is oval-stamped (79 of 119 paper printings:
+// 60 rare + 19 mythic), and print arches the text box's foot — its bottom
+// bevel, the pinline and the black under it — over the oval right across
+// the creature's box AND the strip under the page (the page's outline ends
+// on the arch). M15's notch piece (m15holostamp) can't serve: it is cut for
+// M15's one box, and the page's outline and strip run through it. Ours is
+// the prepare master's OWN foot LIFTED along the printed arch
+// (scripts/build-borderless-stamp.mjs, the borderless recipe), so the bevel
+// and the rim keep each master's pixels — a pair's ramp included.
+//
+// Measured 2026-10-28 on the 35 stamped one-colour plain printings Scryfall
+// serves (SOS, SOC, FRA, PSOS, PFRA), each PNG (745 × 1040) resampled to
+// 1500 × 2100 with lanczos — measuring only; no scan is read by a build:
+//   • the rim's LOWER edge (rim → black), column by column, both sides: the
+//     straight bar's at 1947.5 px (the promos 1949.4 — Scryfall's renders
+//     sit 2 px apart; the lift is read against each card's own), lifted
+//     37.4 px at the centre (1910.1), the lift starting at x 657 and ending
+//     at x 843, symmetric about x 750 within 0.5 px;
+//   • the rim's UPPER edge (the bevel above → rim), the left side only (the
+//     strip's texture hides it on the right; the 30 non-white prints — a
+//     white rim on white paper can't be read): straight at 1936.9, lifted
+//     34.3 px at the centre — the rim prints 3 px THINNER at the crown;
+//   • the same set's plain M15 mythic (SOS #1, The Dawning Archaic) arches
+//     the same within 1 px (1910.7 at the centre): the Prepare notch is
+//     M15's printed arch, cut round the page. (PipGlyph's M15 piece, Card
+//     Conjurer's, bottoms out 5–7 px lower than print: TODO 4.9c.)
+// The lift below is the MEAN of the two edges per |x − 750| (the rim kept
+// whole, centred on print's), smoothed over three samples (1-2-1).
+// The oval: print's clean renders draw it 7 px higher than any physical
+// print (1919–1986, as on every 2015-frame render — 4.9d's measure), so the
+// slot keeps M15's oval (683–817 × 1926–1993).
+// ---------------------------------------------------------------------------
+
+export const PREPARE_STAMP = {
+  measuredOn: "2026-10-28",
+  scope: "35 stamped one-colour plain printings of layout:prepare (SOS, SOC, FRA, PSOS, PFRA)",
+  /** The lift (HD px) at |x − 750| = 0, 2, 4, … (linear between; 0 from the
+   *  last entry on). The app reads only the piece's box and the keep-out
+   *  (lib/cards/holo-stamp.ts PREPARE_HOLO_STAMP_KEEP_OUT; a unit test holds
+   *  them to this box). */
+  lift: [
+    35.8, 35.8, 35.8, 35.8, 35.8, 35.7, 35.6, 35.6, 35.5, 35.4, 35.2, 35.0, 34.7, 34.2, 33.7, 33.3, 32.9, 32.4, 31.8, 31.3,
+    30.8, 30.2, 29.5, 28.8, 28.1, 27.3, 26.5, 25.7, 24.8, 23.8, 22.8, 21.8, 20.8, 19.6, 18.4, 17.3, 16.0, 14.6, 13.1, 11.7,
+    10.2, 8.5, 6.6, 4.7, 2.8, 1.3, 0.4, 0,
+  ],
+  /** The first row the lift moves: the text box's bottom bevel (1927–1937
+   *  under the strip; under the creature's box 1929–1937, the two rows
+   *  above it the box's own paper), then the pinline (1938–1949) and the
+   *  black border from 1950. Every master is opaque here, so the foot is
+   *  named, not found by its alpha as on the borderless frames. */
+  liftTop: 1927,
+  /** The masters' first black row under the pinline. */
+  barTop: 1950,
+  /** The piece's box on the 1500 × 2100 card (whole, even px: the 750 bake
+   *  halves it exactly): every pixel the lift paints — x 654–845, from the
+   *  lifted bevel's top (1927 − 35.8) down to the pinline's last row. */
+  box: { x: 654, y: 1890, width: 192, height: 60 },
+};
+
+// ---------------------------------------------------------------------------
+// TODO 4.27b — the EXTENDED-ART Prepare dress (`extendedartprepare`): 29
+// printings (SOS #309–342: 13, SOC #63–98: 10, FRA #425–430: 6), every one
+// oval-stamped, 5 of them two-colour (SOC #93–98). Print is the extended-art
+// frame — the art to the card's side edges between the title bar and the
+// BLACK type bar — over the Prepare frame's lower half: the creature's box,
+// the page, the strip, the P/T plate (SOS #332, FRA #428 against SOS #113,
+// FRA #90).
+//
+// Card Conjurer's extended-art pack (the published `extendedart/<key>`) is
+// M15's pixels below its type bar — measured on the masters 2026-10-28:
+// inside x 100–1400 every key is m15's byte for byte from row 1320 (blue's
+// paper within 10 levels — the pack's own re-encode — and nothing else), the
+// black type bar's shadow falls on rows 1312–1318 (15 → 1 levels), and the
+// side fields beside the box (x 56–99, 1401–1444) are the pack's own. So the
+// dress MERGES two published masters and draws no pixel:
+//   • rows above `cutRow`: the extended-art master;
+//   • from `cutRow` down, inside `cols` and wherever the Prepare build
+//     changed its M15 base: the Prepare master (its box, page, strip,
+//     outline, a pair's ramps), PLUS the extended-art master's own
+//     difference from M15 on `shadowRows` — the black type bar's shadow
+//     falls on the page as on the box;
+//   • elsewhere from `cutRow` down (the side fields): the extended-art
+//     master's own.
+// Below the type bar the dress is the Prepare master's pixels wherever the
+// notch, the page overlays and the P/T plate read, so the Prepare holo-stamp
+// pieces and the `prepare/page/<key>` overlays serve it unchanged (the stamp
+// build checks each piece over both masters).
+// The colourless key is the pack's silver ARTIFACT frame (`extendedart/a`)
+// over `prepare/c` (built on `m15artifact/c`): no colourless Prepare is
+// printed, and the see-through Eldrazi frame (`extendedart/c`) has no box
+// under it.
+// ---------------------------------------------------------------------------
+
+export const PREPARE_EXTENDED = {
+  measuredOn: "2026-10-28",
+  template: "extendedartprepare",
+  /** The extended-art master a key merges (else `extendedart/<key>`). */
+  extendedKey: { c: "a" },
+  cutRow: 1312,
+  shadowRows: [1312, 1319],
+  cols: [100, 1400],
+};
