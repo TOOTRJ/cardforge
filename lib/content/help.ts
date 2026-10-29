@@ -237,9 +237,8 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       "Build a deck from a pasted decklist, turn its real cards into versions of your own, and copy, export or print the list.",
     intro:
       "A deck gathers real Magic cards and your own designs in one list, with a format, boards and a cover. Paste a list from another deck site to start, then turn the real cards you want into versions of your own.",
-    // The deck vocabulary of TODO DK2.2 ("Customize", "Imported", "Edited").
-    // TODO(DK4): the stepper below becomes the "New deck" dialog — rewrite
-    // the first two steps with it.
+    // The deck vocabulary of TODO DK2.2 ("Customize", "Imported", "Edited"),
+    // and the New deck dialog of TODO DK4.
     howTo: {
       id: "build-a-deck-from-a-decklist",
       title: "Build a deck from a decklist",
@@ -250,16 +249,12 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
           body: "In My Decks, choose “New deck”. Give it a name and a format — the format sets its size and copy limits — and choose who sees it: public, unlisted or private.",
         },
         {
-          title: "Choose to import",
-          body: "On the Build step keep “Import a decklist”, add a cover if you like, and create the deck. Building with AI shows “Coming soon” while decks are rebuilt.",
-        },
-        {
           title: "Paste your list",
-          body: "Paste the list from MTG Arena, Moxfield, Archidekt, ManaBox or MTGO — or plain lines like “4 Lightning Bolt” — and choose “Preview import”.",
+          body: "Paste the list from MTG Arena, Moxfield, Archidekt, ManaBox or MTGO — or plain lines like “4 Lightning Bolt” — into the same dialog and create the deck: the cards it matches exactly are added with it, and a best guess is kept as the name you typed, for you to check. Or leave it empty and use “Import decklist” on the deck page.",
         },
         {
           title: "Review it",
-          body: "Check each row's quantity and board, the cards marked as a best guess, and the names Scryfall couldn't find, which come in as placeholders. Then add the cards. Importing uses none of your saved-card slots; the review says how many you have left for the cards you customize.",
+          body: "On the deck page, “Import decklist” lets you check each row's quantity and board, the cards marked as a best guess, and the names Scryfall couldn't find, which come in as placeholders, before the cards are added. Importing uses none of your saved-card slots; the dialogs say how many you have left for the cards you customize.",
         },
         {
           title: "Customize a card",

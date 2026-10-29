@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
+import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
 import { listMyDecks } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
@@ -35,12 +34,7 @@ export default async function DecksPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <DeckFeedbackButton signedIn className="h-10" />
-            <Button asChild>
-              <Link href="/dashboard/decks/new">
-                <Plus className="h-4 w-4" aria-hidden />
-                New deck
-              </Link>
-            </Button>
+            <NewDeckButton>New deck</NewDeckButton>
           </div>
         }
       />
@@ -54,11 +48,7 @@ export default async function DecksPage() {
             icon={BookOpen}
             title="No decks yet"
             description="Create your first deck — pick a format, add cards, and customize the real ones."
-            action={
-              <Button asChild>
-                <Link href="/dashboard/decks/new">Create a deck</Link>
-              </Button>
-            }
+            action={<NewDeckButton>Create a deck</NewDeckButton>}
           />
         ) : (
           <div className={DECK_GRID_CLASS}>

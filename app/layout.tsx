@@ -5,6 +5,7 @@ import { UpgradeModalProvider } from "@/components/billing/upgrade-modal-provide
 import { GenerationJobProvider } from "@/components/ai/generation-provider";
 import { CreditConfirmProvider } from "@/components/billing/credit-confirm-provider";
 import { DeckExportProvider } from "@/components/decks/deck-export-provider";
+import { NewDeckProvider } from "@/components/decks/new-deck-provider";
 import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -252,12 +253,15 @@ export default function RootLayout({
               {/* Whole-deck exports (Pro) build in the background the same
                   way, with their own progress card. */}
               <DeckExportProvider>
-                {children}
-                {modal}
-                {/* "A new version is ready" pill — checks /api/version on
-                    focus and reloads at the next safe moment. Sits inside the
-                    runners so it never reloads over an in-flight job/export. */}
-                <UpdatePrompt />
+                {/* The New deck dialog, openable from any page (TODO DK4). */}
+                <NewDeckProvider>
+                  {children}
+                  {modal}
+                  {/* "A new version is ready" pill — checks /api/version on
+                      focus and reloads at the next safe moment. Sits inside the
+                      runners so it never reloads over an in-flight job/export. */}
+                  <UpdatePrompt />
+                </NewDeckProvider>
               </DeckExportProvider>
             </GenerationJobProvider>
           </CreditConfirmProvider>

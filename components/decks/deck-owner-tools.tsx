@@ -6,6 +6,11 @@
 // deck's hero (TODO DK5.1):
 //
 //   Import decklist   → the decklist import dialog (auto-opens with ?import=1)
+//   (a new deck)        `/deck/<slug>?new=1` — an empty deck the New deck
+//                       dialog just made (TODO DK4.1): the first way to add
+//                       cards takes the focus — the empty deck's "Paste a
+//                       decklist" door, else Import decklist
+//                       (useFocusAddOnNewDeck)
 //   Add from my cards → one of the owner's own cards into the deck
 //                       (TODO DK4.4, add-from-my-cards-dialog.tsx)
 //   Edit details      → dialog with the deck form (title, description,
@@ -42,6 +47,7 @@ import { ImportDecklistDialog, type ImportMode } from "@/components/decks/import
 import { AddFromMyCardsDialog } from "@/components/decks/add-from-my-cards-dialog";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
 import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
+import { NEW_DECK_FIRST_ADD, useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
@@ -158,6 +164,10 @@ export function DeckOwnerTools({
   const openFrom = (element: HTMLElement | null) => {
     opener.current = element;
   };
+  // A deck the New deck dialog just made, empty (TODO DK4.1): the focus goes
+  // to the empty deck's "Paste a decklist" door, or — no doors drawn — to
+  // Import decklist; Preview import waits for the flag's replace.
+  const arrival = useFocusAddOnNewDeck<HTMLButtonElement>(NEW_DECK_FIRST_ADD);
 
   useEffect(() => {
     const onTool = (event: Event) => {
@@ -183,6 +193,8 @@ export function DeckOwnerTools({
         request={importRequest}
         onCloseAutoFocus={returnFocus}
         cardCapacity={capacity}
+        triggerRef={arrival.target}
+        navigating={arrival.clearing}
       />
       <Button
         type="button"

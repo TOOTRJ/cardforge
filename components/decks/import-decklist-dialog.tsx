@@ -46,7 +46,7 @@ type ImportDecklistDialogProps = {
   deckId: string;
   /** Rendered as the trigger; defaults to an "Import decklist" button. */
   triggerLabel?: string;
-  /** Open on mount (the wizard's "Import a decklist" path lands here). */
+  /** Open on mount (`?import=1` on the deck page). */
   defaultOpen?: boolean;
   /** Opened from elsewhere on the deck page (TODO DK4.4: the empty deck's
    *  doors, the commander slot): each new `nonce` opens the dialog in its
@@ -58,6 +58,12 @@ type ImportDecklistDialogProps = {
   /** The owner's saved-card slots, for the review's forecast (owner decision
    *  D2): an imported card uses none until it is customized. Never blocks. */
   cardCapacity?: CardCapacity | null;
+  /** The trigger button — the deck page focuses it on a deck the New deck
+   *  dialog just made (useFocusAddOnNewDeck). */
+  triggerRef?: React.Ref<HTMLButtonElement>;
+  /** The page is dropping a flag of its own (`?new=1`): Preview import
+   *  waits for that navigation as it waits for `clearingFlag`. */
+  navigating?: boolean;
 };
 
 /** What the dialog was opened for: a pasted list, cards typed by name, or
@@ -97,6 +103,8 @@ export function ImportDecklistDialog({
   request = null,
   onCloseAutoFocus,
   cardCapacity = null,
+  triggerRef,
+  navigating = false,
 }: ImportDecklistDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
@@ -120,7 +128,7 @@ export function ImportDecklistDialog({
   const [isResolving, startResolving] = useTransition();
   const [isCommitting, startCommitting] = useTransition();
 
-  // Opened by `?import=1` (the new-deck wizard's import path): the flag
+  // Opened by `?import=1` (a link straight to the import): the flag
   // leaves the address bar once the dialog is up, so a reload or a shared
   // link doesn't open it again. Through the router, never a bare
   // history.replaceState: on a hard load this effect runs before the app
@@ -233,7 +241,7 @@ export function ImportDecklistDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button ref={triggerRef} variant="outline">
           <ClipboardPaste className="h-4 w-4" aria-hidden />
           {triggerLabel}
         </Button>
@@ -277,7 +285,7 @@ export function ImportDecklistDialog({
               <Button
                 type="button"
                 onClick={handleResolve}
-                disabled={!text.trim() || isResolving || clearingFlag}
+                disabled={!text.trim() || isResolving || clearingFlag || navigating}
               >
                 {isResolving ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
