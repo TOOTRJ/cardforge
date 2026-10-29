@@ -2,14 +2,16 @@ import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
-import { slugifyTag, type ArticleMeta } from "@/lib/content/articles";
+import { tagHubHref, type ArticleMeta } from "@/lib/content/articles";
 import { formatCalendarDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
-// ArticleCard — one guide in a list (the /articles index and every tag hub
-// share this). Tag badges link to their cluster hubs, so they sit OUTSIDE the
-// article link rather than nesting an <a> inside an <a> (invalid HTML); the
-// title and the "Read the guide" affordance are the links into the article.
+// ArticleCard — one guide in a list (the /articles index, every tag hub and
+// every /learn category share this). Tag badges link to their cluster hubs —
+// or straight to the /learn category a retired hub 308s to (tagHubHref) —
+// so they sit OUTSIDE the article link rather than nesting an <a> inside an
+// <a> (invalid HTML); the title and the "Read the guide" affordance are the
+// links into the article.
 // ---------------------------------------------------------------------------
 
 export function ArticleCard({ article }: { article: ArticleMeta }) {
@@ -40,7 +42,7 @@ export function ArticleCard({ article }: { article: ArticleMeta }) {
             {article.tags.map((tag) => (
               <Link
                 key={tag}
-                href={`/articles/tag/${slugifyTag(tag)}`}
+                href={tagHubHref(tag)}
                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
               >
                 <Badge

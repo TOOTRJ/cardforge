@@ -1,4 +1,5 @@
-import { listArticles } from "@/lib/content/articles";
+import { listArticles, listCategoryShelves, type ArticleMeta } from "@/lib/content/articles";
+import { categoryPath } from "@/lib/content/article-categories";
 import { getSiteBaseUrl } from "@/lib/site-url";
 
 // ---------------------------------------------------------------------------
@@ -20,16 +21,21 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/gallery", "Community Gallery", "Public custom cards — trending, newest and a random discover feed; filter by color, type, rarity and tag."],
   ["/decks", "Community Decks", "Public decks built from custom and real cards: import a decklist, remix cards into custom versions, print proxies."],
   ["/challenges", "Design Challenges", "Community design briefs; entries are public cards wearing the challenge tag."],
-  ["/articles", "Guides", "Long-form guides on custom MTG card design (list below), grouped into topic hubs at /articles/tag/<topic>."],
+  ["/learn", "Learn", "The guides by category (design guides, rules & reference, card maker comparisons, MTG lore — list below), plus help, what's new and the tools."],
+  ["/articles", "All articles", "Every long-form guide, newest first; finer topic hubs at /articles/tag/<topic>."],
+  ["/tools", "Tools", "Directory of the card creator, AI card generator, mana pip editor, deck builder and print sheets."],
   ["/faq", "FAQ", "Every common question answered directly — card making, pips, AI, sharing, printing, remixing, challenges, plans."],
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
-  ["/news", "What's new", "Release notes and upcoming changes."],
+  ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
   ["/about", "About", "What PipGlyph is and the principles behind it."],
 ];
 
 export function GET() {
   const base = getSiteBaseUrl();
+  const guideLine = (article: ArticleMeta) =>
+    `- [${article.title}](${base}/articles/${article.slug}): ${article.description}`;
+  const uncategorized = listArticles().filter((article) => !article.category);
   const lines: string[] = [
     "# PipGlyph",
     "",
@@ -41,13 +47,22 @@ export function GET() {
     "",
     "## Guides",
     "",
-    ...listArticles().map(
-      (article) => `- [${article.title}](${base}/articles/${article.slug}): ${article.description}`,
-    ),
-    "",
+    // One list per /learn category, in menu order (a guide has exactly one).
+    ...listCategoryShelves()
+      .filter((shelf) => shelf.articles.length > 0)
+      .flatMap(({ category, articles }) => [
+        `### [${category.label}](${base}${categoryPath(category.slug)})`,
+        "",
+        ...articles.map(guideLine),
+        "",
+      ]),
+    // A guide without a valid category (the category test fails on one)
+    // still belongs in the map.
+    ...uncategorized.map(guideLine),
+    ...(uncategorized.length > 0 ? [""] : []),
     "## Notes",
     "",
-    `- Sitemap: ${base}/sitemap.xml · RSS: ${base}/articles/feed.xml`,
+    `- Sitemap: ${base}/sitemap.xml · RSS: ${base}/articles/feed.xml (guides), ${base}/news/feed.xml (what's new)`,
     `- Public cards live at ${base}/card/<username>/<slug> (CreativeWork structured data, oEmbed at /api/oembed); public decks at ${base}/deck/<slug> (CollectionPage); creators at ${base}/profile/<username> (ProfilePage).`,
     "- Every displayed card image carries the pipglyph.com mark; clean high-resolution downloads are a paid-plan feature.",
     "",

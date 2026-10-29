@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { ArticleCard } from "@/components/content/article-card";
-import {
-  breadcrumbJsonLd,
-  itemListJsonLd,
-  JsonLd,
-} from "@/components/seo/json-ld";
+import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { getArticlesByTag, listTags } from "@/lib/content/articles";
+import { categoryForTagSlug } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
 
 // ---------------------------------------------------------------------------
@@ -22,8 +20,13 @@ import { getCluster } from "@/lib/content/clusters";
 
 type Params = { tag: string };
 
+// A tag whose hub became a /learn category (card design, reference, card
+// makers, lore) has no page here: proxy.ts 308s /articles/tag/<slug> to
+// /learn/<category> before it would be served.
 export function generateStaticParams(): Params[] {
-  return listTags().map((t) => ({ tag: t.slug }));
+  return listTags()
+    .filter((t) => !categoryForTagSlug(t.slug))
+    .map((t) => ({ tag: t.slug }));
 }
 
 export const dynamic = "error";
@@ -35,7 +38,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { tag } = await params;
-  const found = getArticlesByTag(tag);
+  const found = categoryForTagSlug(tag) ? null : getArticlesByTag(tag);
   if (!found) return { title: "Topic not found" };
   const cluster = getCluster(tag);
   // Index the substantive hubs (defined clusters, or any tag with 2+ guides);
@@ -68,7 +71,7 @@ export default async function ArticleTagPage({
   params: Promise<Params>;
 }) {
   const { tag } = await params;
-  const found = getArticlesByTag(tag);
+  const found = categoryForTagSlug(tag) ? null : getArticlesByTag(tag);
   if (!found) notFound();
   const cluster = getCluster(tag);
 
@@ -79,12 +82,13 @@ export default async function ArticleTagPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <JsonLd
-        data={breadcrumbJsonLd([
+      <Breadcrumbs
+        items={[
           { name: "Home", path: "/" },
-          { name: "Articles", path: "/articles" },
+          { name: "Learn", path: "/learn" },
+          { name: "All articles", path: "/articles" },
           { name: title, path: `/articles/tag/${tag}` },
-        ])}
+        ]}
       />
       <JsonLd
         data={itemListJsonLd({
@@ -96,15 +100,11 @@ export default async function ArticleTagPage({
         })}
       />
 
-      <Link
-        href="/articles"
-        className="mb-8 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        All articles
-      </Link>
-
-      <PageHeader eyebrow="Guides" title={title} description={description} />
+      <PageHeader
+        eyebrow={`Topic · ${found.articles.length} guide${found.articles.length === 1 ? "" : "s"}`}
+        title={title}
+        description={description}
+      />
 
       {cluster?.toolHref ? (
         <div className="mt-6">

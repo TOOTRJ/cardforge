@@ -1,0 +1,109 @@
+import { describe, expect, it, vi } from "vitest";
+
+// ---------------------------------------------------------------------------
+// The /learn pages' SEO contract (TODO NV4): the four categories are the only
+// /learn/<category> pages — anything else is a real 404 (notFound() in the
+// metadata AND the page) — each is self-canonical with OG + Twitter tags,
+// and a shelf is indexed only from CATEGORY_MIN_ARTICLES guides.
+// /news/feed.xml (TODO NV5) carries the released updates only, escaped,
+// each linking to its entry on /news.
+// ---------------------------------------------------------------------------
+
+vi.mock("next/navigation", () => ({
+  notFound: () => {
+    throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
+  },
+}));
+vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://www.pipglyph.com" }));
+vi.mock("@/lib/updates/queries", () => ({
+  getNewsFeed: async () => ({
+    updates: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        kind: "update",
+        title: "Frames & <tokens>",
+        summary: "Arch tokens are \"three heights\" now.",
+        publish_at: "2026-10-20T12:00:00.000Z",
+      },
+    ],
+    upcoming: [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        kind: "upcoming",
+        title: "Not shipped yet",
+        summary: "Soon.",
+        publish_at: "2026-10-21T12:00:00.000Z",
+      },
+    ],
+  }),
+}));
+
+import LearnCategoryPage, {
+  generateMetadata,
+  generateStaticParams,
+} from "@/app/(marketing)/learn/[category]/page";
+import { metadata as learnMetadata } from "@/app/(marketing)/learn/page";
+import { metadata as toolsMetadata } from "@/app/(marketing)/tools/page";
+import { GET as newsFeed } from "@/app/(marketing)/news/feed.xml/route";
+import { ARTICLE_CATEGORY_SLUGS, CATEGORY_MIN_ARTICLES } from "@/lib/content/article-categories";
+import { listArticlesInCategory } from "@/lib/content/articles";
+
+const paramsOf = (category: string) => ({ params: Promise.resolve({ category }) });
+
+describe("/learn/[category]", () => {
+  it("builds exactly the four categories", () => {
+    expect(generateStaticParams()).toEqual(ARTICLE_CATEGORY_SLUGS.map((category) => ({ category })));
+  });
+
+  it.each(ARTICLE_CATEGORY_SLUGS)("%s is self-canonical, shareable, and indexed only from the threshold", async (slug) => {
+    const meta = await generateMetadata(paramsOf(slug));
+    expect(meta.alternates?.canonical).toBe(`/learn/${slug}`);
+    expect(meta.openGraph).toMatchObject({ url: `/learn/${slug}`, type: "website" });
+    expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
+    const indexed = listArticlesInCategory(slug).length >= CATEGORY_MIN_ARTICLES;
+    expect(meta.robots).toEqual(indexed ? undefined : { index: false, follow: true });
+  });
+
+  it("indexes today's two full shelves and keeps the one-guide shelves out", async () => {
+    expect((await generateMetadata(paramsOf("design"))).robots).toBeUndefined();
+    expect((await generateMetadata(paramsOf("reference"))).robots).toBeUndefined();
+    expect((await generateMetadata(paramsOf("lore"))).robots).toEqual({ index: false, follow: true });
+  });
+
+  it("answers a real 404 for anything that is not a category, in the metadata and the page", async () => {
+    for (const junk of ["nope", "card-design", "Design", "articles"]) {
+      await expect(generateMetadata(paramsOf(junk)), junk).rejects.toThrow(/404/);
+      await expect(LearnCategoryPage(paramsOf(junk)), junk).rejects.toThrow(/404/);
+    }
+  });
+});
+
+describe("/learn and /tools", () => {
+  it("are self-canonical with OG and Twitter tags", () => {
+    for (const [meta, path] of [
+      [learnMetadata, "/learn"],
+      [toolsMetadata, "/tools"],
+    ] as const) {
+      expect(meta.alternates?.canonical).toBe(path);
+      expect(meta.openGraph).toMatchObject({ url: path });
+      expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
+      expect(meta.robots).toBeUndefined();
+    }
+  });
+});
+
+describe("/news/feed.xml", () => {
+  it("lists released updates only, escaped, each linking to its entry on /news", async () => {
+    const response = await newsFeed();
+    expect(response.headers.get("content-type")).toContain("application/rss+xml");
+    const xml = await response.text();
+    expect(xml).toContain("<title>Frames &amp; &lt;tokens&gt;</title>");
+    expect(xml).toContain("Arch tokens are &quot;three heights&quot; now.");
+    expect(xml).toContain(
+      "<link>https://www.pipglyph.com/news#update-11111111-1111-4111-8111-111111111111</link>",
+    );
+    expect(xml).toContain('<guid isPermaLink="false">11111111-1111-4111-8111-111111111111</guid>');
+    expect(xml).not.toContain("Not shipped yet");
+    expect(xml.match(/<item>/g)).toHaveLength(1);
+  });
+});

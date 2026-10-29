@@ -20,7 +20,8 @@ vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://www.pipglyph.c
 
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
-import { listArticles } from "@/lib/content/articles";
+import { listArticles, listCategoryShelves } from "@/lib/content/articles";
+import { CATEGORY_MIN_ARTICLES } from "@/lib/content/article-categories";
 
 const BASE = "https://www.pipglyph.com";
 const pathOf = (url: string) => url.slice(BASE.length) || "/";
@@ -58,6 +59,20 @@ describe("sitemap (static layer)", () => {
     for (const article of listArticles()) {
       expect(paths.has(`/articles/${article.slug}`), article.slug).toBe(true);
     }
+  });
+
+  it("lists /learn, /tools and the indexable categories — never a thin one or a tag hub that 308s", async () => {
+    const paths = new Set((await sitemap()).map((e) => pathOf(e.url)));
+    expect(paths.has("/learn")).toBe(true);
+    expect(paths.has("/tools")).toBe(true);
+    for (const { category, articles } of listCategoryShelves()) {
+      expect(paths.has(`/learn/${category.slug}`), category.slug).toBe(
+        articles.length >= CATEGORY_MIN_ARTICLES,
+      );
+      expect(paths.has(`/articles/tag/${category.tagSlug}`), category.tagSlug).toBe(false);
+    }
+    // The hubs that still stand stay listed.
+    expect(paths.has("/articles/tag/oracle-text")).toBe(true);
   });
 
   it("never lists a removed sets URL or an auth-only surface", async () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   breadcrumbJsonLd,
+  collectionPageJsonLd,
   ITEM_LIST_CAP,
   itemListJsonLd,
   serializeJsonLd,
@@ -72,6 +73,37 @@ describe("itemListJsonLd", () => {
       items: [{ name: "A & B", path: "/card/x/y" }],
     });
     expect(JSON.parse(JSON.stringify(schema))).toEqual(schema);
+  });
+});
+
+describe("collectionPageJsonLd", () => {
+  it("is a CollectionPage on the site with its entries as a nested ItemList", () => {
+    const schema = collectionPageJsonLd({
+      name: "Design guides",
+      description: "Guides.",
+      path: "/learn/design",
+      items: [
+        { name: "Guide A", path: "/articles/a" },
+        { name: "Guide B", path: "/articles/b" },
+      ],
+    });
+    expect(schema).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "Design guides",
+      description: "Guides.",
+      url: `${base}/learn/design`,
+      isPartOf: { "@type": "WebSite", name: "PipGlyph", url: base },
+    });
+    const list = schema.mainEntity as Record<string, unknown>;
+    expect(list["@type"]).toBe("ItemList");
+    expect(list["@context"]).toBeUndefined();
+    expect(list.numberOfItems).toBe(2);
+    expect((list.itemListElement as Array<Record<string, unknown>>)[1]).toMatchObject({
+      position: 2,
+      name: "Guide B",
+      url: `${base}/articles/b`,
+    });
   });
 });
 
