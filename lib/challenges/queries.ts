@@ -106,15 +106,17 @@ const loadNavChallenge = unstable_cache(
  *  "Ends in N days" pill (TODO NV1). Cookie-free and cached for 5 minutes
  *  like the what's-new ribbon, so every page that draws the header stays
  *  static; a challenge save purges it. The pill counts the days in the
- *  browser and hides itself once the window has closed. */
-export async function getNavChallenge(): Promise<Pick<Challenge, "starts_at" | "ends_at"> | null> {
+ *  browser and hides itself once the window has closed. React-cached: the
+ *  header draws the pill twice (the Community panel and the drawer), one
+ *  read per render. */
+export const getNavChallenge = cache(async (): Promise<Pick<Challenge, "starts_at" | "ends_at"> | null> => {
   if (!isSupabaseConfigured()) return null;
   try {
     return await loadNavChallenge();
   } catch {
     return null;
   }
-}
+});
 
 /** The challenge the editor's "Enter the challenge" toggle targets: an
  *  active-window challenge, preferring featured, then soonest-closing. */
