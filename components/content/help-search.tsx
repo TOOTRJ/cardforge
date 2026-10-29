@@ -75,7 +75,7 @@ export function HelpSearch({ items }: { items: readonly HelpSearchItem[] }) {
 
   const shown = matches.slice(0, MAX_RESULTS);
   const searching = words.length > 0;
-  const summary = searching ? summaryOf(matches.length, shown.length, deferred.trim()) : "";
+  const summary = searching ? helpSearchSummary(matches.length, shown.length, deferred) : "";
 
   // The live region speaks the summary once the typing pauses.
   const [announced, setAnnounced] = useState("");
@@ -170,8 +170,13 @@ export function HelpSearch({ items }: { items: readonly HelpSearchItem[] }) {
   );
 }
 
-function summaryOf(total: number, shown: number, query: string): string {
-  const quoted = `“${query}”`;
+/** The count line ("9 results for “bleed”."). The query is quoted once: a
+ *  query typed WHOLE in quotes of its own, straight or curly, loses them
+ *  first (never ““bleed””); quotes inside it, or at one end only, stay. */
+export function helpSearchSummary(total: number, shown: number, query: string): string {
+  const typed = query.trim();
+  const inner = /^["'“”‘’]+([\s\S]*?)["'“”‘’]+$/.exec(typed)?.[1].trim();
+  const quoted = `“${inner || typed}”`;
   if (total === 0) return `Nothing matches ${quoted}.`;
   const noun = total === 1 ? "result" : "results";
   if (total > shown) return `${total} ${noun} for ${quoted} — showing the best ${shown}.`;
