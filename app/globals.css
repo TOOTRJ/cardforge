@@ -162,6 +162,16 @@
   --color-mana-g: oklch(0.60 0.18 150);  /* Green  — forest green   */
   --color-mana-c: oklch(0.55 0.01 275);  /* Colorless — neutral     */
 
+  /* ── Chart series (TODO DK7.1) ───────────────────────────────── */
+  /* A chart's two series, in this order (the deck breakdown: creatures /
+     other spells, symbols / sources). The brand's purple and ember, stepped
+     into the dataviz band and VALIDATED in both themes with its
+     validate_palette.js (dark: CVD ΔE 22.0, normal-vision 23.0, ≥ 3:1 on
+     surface; light: 24.3 / 27.4 / ≥ 3:1). chart-1 alone is a one-series
+     chart's colour. Never a mana colour: those mean a colour. */
+  --color-chart-1: oklch(0.6 0.12 300);
+  --color-chart-2: oklch(0.64 0.16 47);
+
   /* ── Typography ──────────────────────────────────────────────── */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
@@ -219,6 +229,9 @@
   --color-gold: oklch(0.52 0.11 84);
   --color-gold-strong: oklch(0.47 0.11 84);
   --color-ember: oklch(0.58 0.16 47);
+  /* The chart series, validated against the light surface (see above). */
+  --color-chart-1: oklch(0.45 0.14 300);
+  --color-chart-2: oklch(0.58 0.16 47);
 }
 
 html,

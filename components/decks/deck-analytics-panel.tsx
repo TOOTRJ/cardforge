@@ -1,192 +1,219 @@
-import { SurfaceCard } from "@/components/ui/surface-card";
-import { statusRows, TYPE_BUCKETS, type DeckAnalytics } from "@/lib/decks/analytics";
+import type { ReactNode } from "react";
+import { DeckChartCard } from "@/components/decks/deck-chart-card";
 import {
-  COLOR_IDENTITY_LABELS,
-  COLOR_LETTER_IDENTITY,
-  type ColorIdentity,
-} from "@/types/card";
-import { BarList, COLOR_DOT_CLASS } from "@/components/analytics/bar-list";
-import { DECK_ENTRY_STATUS_COUNT_LABELS } from "@/types/deck";
+  BarsTable,
+  ChartLegend,
+  ColorBalance,
+  ColorBalanceTable,
+  HorizontalBars,
+  StatTile,
+  type BarRowData,
+} from "@/components/decks/deck-chart-parts";
+import { DeckManaCurve, ManaCurveTable } from "@/components/decks/deck-mana-curve";
+import type { DeckAnalytics } from "@/lib/decks/analytics";
+import type { DeckCharts } from "@/lib/decks/deck-charts";
+import type { KeywordCount, KeywordKind } from "@/lib/decks/keyword-frequency";
 
-// Deck-flavored sibling of SetAnalyticsPanel: mana curve, color pips, type
-// breakdown, and the cards by status (Imported / Edited / Remix / Original).
+// ---------------------------------------------------------------------------
+// The deck page's breakdown (TODO DK7.1 / DK7.3) — free for every viewer.
+// Headline numbers first (the deck's size, its lands, the average and
+// median mana value without lands), then the charts: the curve (its bars
+// filter the list above), colour symbols against sources, types, rarity,
+// the cards by status (THE status count the list's chips and the summary
+// bar say, deckStatusCountsOf) and the keywords. Every number is
+// computeDeckCharts' (lib/decks/deck-charts.ts: the entries' effective
+// fields, the maybeboard never counted; the curve, the averages, the types
+// and the lands the main deck and the commander alone — owner 2026-10-29);
+// every chart has its table. The
+// playtest (draw odds, the sample hand — DK7.2) is the page's next section.
+// ---------------------------------------------------------------------------
 
 type DeckAnalyticsPanelProps = {
   analytics: DeckAnalytics;
-  /** The deck page's "Card status" rows — THE status count its chips and
+  charts: DeckCharts;
+  /** The deck page's "Composition" rows — THE status count its chips and
    *  summary bar say too (deckStatusCountsOf, lib/decks/deck-view.ts: each
-   *  card under the badge it wears, "No longer available" included). Left
-   *  out, the rows come from `analytics.byStatus`. */
-  statusCounts?: Array<{ key: string; label: string; count: number }>;
+   *  card under the badge it wears, "No longer available" included). */
+  statusCounts: Array<{ key: string; label: string; count: number }>;
 };
 
-const WUBRG = ["W", "U", "B", "R", "G"] as const;
+const KIND_TAGS: Partial<Record<KeywordKind, string>> = {
+  action: "action",
+  "ability-word": "ability word",
+  new: "new",
+};
 
-/** The Colors card's rows with a count, in display order. */
-function colorRows(analytics: DeckAnalytics): Array<{ identity: ColorIdentity; count: number }> {
-  const rows: Array<{ identity: ColorIdentity; count: number }> = [
-    ...WUBRG.map((letter) => ({ identity: COLOR_LETTER_IDENTITY[letter], count: analytics.byColor[letter] })),
-    { identity: "multicolor", count: analytics.multicolor },
-    { identity: "colorless", count: analytics.byColor.C },
-  ];
-  return rows.filter((row) => row.count > 0);
-}
+const formatValue = (value: number | null) => (value === null ? "—" : Number.isInteger(value) ? String(value) : value.toFixed(1));
 
-export function DeckAnalyticsPanel({ analytics, statusCounts }: DeckAnalyticsPanelProps) {
-  const colors = colorRows(analytics);
-  const statuses =
-    statusCounts ??
-    statusRows(analytics).map((row) => ({ key: row.status, label: DECK_ENTRY_STATUS_COUNT_LABELS[row.status], count: row.count }));
-
+/** A keyword list: the first `shown` rows, the rest behind a native
+ *  disclosure (no script, every row still in the table). */
+function KeywordBars({ keywords, total, shown = 8 }: { keywords: KeywordCount[]; total: number; shown?: number }) {
+  const rows: BarRowData[] = keywords.map((keyword) => ({
+    key: keyword.key,
+    label: keyword.name,
+    count: keyword.cards,
+    tag: KIND_TAGS[keyword.kind],
+  }));
+  if (rows.length <= shown + 1) return <HorizontalBars rows={rows} total={total} />;
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <SurfaceCard className="flex flex-col gap-2 p-5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Deck size
-        </span>
-        <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {/* Companions live outside the deck proper — match the number the
-              format checker validates against. */}
-          {analytics.total -
-            analytics.byBoard.side -
-            analytics.byBoard.companion}
-        </span>
-        <span className="text-xs text-muted">
-          {analytics.byBoard.side > 0
-            ? `+ ${analytics.byBoard.side} sideboard`
-            : "Commander + mainboard, quantities counted"}
-        </span>
-      </SurfaceCard>
-
-      <SurfaceCard className="flex flex-col gap-3 p-5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Card status
-        </span>
-        {/* Imported / Edited / Remix / Original (+ Not found), physical
-            cards (lib/decks/entry-status.ts) — what replaced "% proxied". */}
-        <dl className="flex flex-col gap-1.5 text-sm">
-          {statuses.map((row) => (
-            <div key={row.key} className="flex items-baseline justify-between gap-3">
-              <dt className="text-muted">{row.label}</dt>
-              <dd className="font-mono text-foreground">{row.count}</dd>
-            </div>
-          ))}
-        </dl>
-      </SurfaceCard>
-
-      <SurfaceCard className="flex flex-col gap-2 p-5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Average mana value
-        </span>
-        <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {analytics.averageManaValue !== null
-            ? analytics.averageManaValue.toFixed(1)
-            : "—"}
-        </span>
-        <span className="text-xs text-muted">
-          Nonland cards · {analytics.lands} land
-          {analytics.lands === 1 ? "" : "s"}
-        </span>
-      </SurfaceCard>
-
-      <SurfaceCard className="flex flex-col gap-3 p-5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Colors
-        </span>
-        <div className="flex flex-col gap-1.5">
-          {/* WUBRG (a gold card counts once per colour), then the gold
-              cards themselves (two or more colours, or a custom card saved
-              as "multicolor"), then colorless. */}
-          {colors.map(({ identity, count }) => (
-            <div
-              key={identity}
-              className="flex items-center justify-between gap-3 text-xs"
-            >
-              <span className="flex items-center gap-2">
-                <span
-                  className={`inline-block h-2.5 w-2.5 rounded-full ${COLOR_DOT_CLASS[identity]}`}
-                  aria-hidden
-                />
-                <span className="text-foreground">{COLOR_IDENTITY_LABELS[identity]}</span>
-              </span>
-              <span className="font-mono text-muted">{count}</span>
-            </div>
-          ))}
-          {colors.length === 0 ? (
-            <span className="text-xs text-muted">Add cards to see colors.</span>
-          ) : null}
+    <div className="flex flex-col gap-2.5">
+      <HorizontalBars rows={rows.slice(0, shown)} total={total} />
+      <details className="group">
+        <summary className="cursor-pointer list-none text-xs font-medium text-primary-bright underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
+          <span className="group-open:hidden">Show {rows.length - shown} more</span>
+          <span className="hidden group-open:inline">Show fewer</span>
+        </summary>
+        <div className="mt-2.5">
+          <HorizontalBars rows={rows.slice(shown)} total={total} />
         </div>
-      </SurfaceCard>
-
-      <SurfaceCard className="flex flex-col gap-3 p-5 md:col-span-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Mana curve
-        </span>
-        <ManaCurve curve={analytics.curve} />
-      </SurfaceCard>
-
-      <SurfaceCard className="flex flex-col gap-3 p-5 md:col-span-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          By type
-        </span>
-        <BarList
-          emptyMessage="Add cards to see types."
-          rows={TYPE_BUCKETS.filter(
-            (bucket) => (analytics.byType[bucket] ?? 0) > 0,
-          ).map((bucket) => ({
-            key: bucket,
-            label: bucket,
-            count: analytics.byType[bucket] ?? 0,
-          }))}
-        />
-      </SurfaceCard>
+      </details>
     </div>
   );
 }
 
-/** The curve's bars are a picture for sighted readers only; the same
- *  numbers are a visually hidden table for a screen reader (every value,
- *  zeros included — the bars' `title`s never reached one). */
-function ManaCurve({ curve }: { curve: number[] }) {
-  const max = curve.reduce((m, v) => Math.max(m, v), 0) || 1;
-  const label = (mv: number) => (mv === 7 ? "7+" : String(mv));
-  return (
-    <>
-      <div className="flex h-28 items-end gap-2" aria-hidden>
-        {curve.map((count, mv) => (
-          <div key={mv} className="flex flex-1 flex-col items-center gap-1">
-            <span className="text-[10px] font-mono text-muted">
-              {count > 0 ? count : ""}
-            </span>
-            <div
-              className="w-full rounded-t bg-linear-to-t from-primary to-accent"
-              style={{
-                height: `${Math.max((count / max) * 80, count > 0 ? 4 : 0)}px`,
-              }}
-              title={`${count} card${count === 1 ? "" : "s"} at mana value ${label(mv)}`}
-            />
-            <span className="text-[10px] text-subtle">{label(mv)}</span>
-          </div>
-        ))}
-      </div>
-      <table className="sr-only">
-        <caption>Mana curve: nonland cards at each mana value</caption>
-        <thead>
-          <tr>
-            <th scope="col">Mana value</th>
-            <th scope="col">Cards</th>
-          </tr>
-        </thead>
-        <tbody>
-          {curve.map((count, mv) => (
-            <tr key={mv}>
-              <th scope="row">{mv === 7 ? "7 or more" : mv}</th>
-              <td>{count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
+function Empty({ children }: { children: ReactNode }) {
+  return <p className="text-xs leading-5 text-muted">{children}</p>;
 }
 
+export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnalyticsPanelProps) {
+  // Companions live outside the deck proper — the number the format check
+  // validates against.
+  const deckSize = analytics.total - analytics.byBoard.side - analytics.byBoard.companion;
+  const statusTotal = statusCounts.reduce((sum, row) => sum + row.count, 0);
+  const statusRows: BarRowData[] = statusCounts.map((row) => ({ key: row.key, label: row.label, count: row.count }));
+  const typeRows: BarRowData[] = charts.types.map((row) => ({ key: row.key, label: row.label, count: row.count }));
+  const rarityRows: BarRowData[] = charts.rarity.map((row) => ({ key: row.key, label: row.label, count: row.count }));
+  const { keywords } = charts;
+  const offCurve = [
+    charts.lands > 0 ? `${charts.lands} land${charts.lands === 1 ? "" : "s"}` : null,
+    charts.noManaValue > 0 ? `${charts.noManaValue} with no mana value` : null,
+  ].filter(Boolean);
+  // What the curve and the types count (countsTowardDeckStats): never the
+  // sideboard.
+  const counted = analytics.byBoard.commander > 0 ? "main deck and commander" : "main deck";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile
+          label="Deck size"
+          value={deckSize}
+          detail={analytics.byBoard.side > 0 ? `+ ${analytics.byBoard.side} sideboard` : "Commander + mainboard, quantities counted"}
+        />
+        <StatTile label="Lands" value={analytics.lands} detail="Kept off the curve and the averages" />
+        <StatTile label="Average mana value" value={formatValue(charts.averageManaValue)} detail="Nonland cards — lands excluded" />
+        <StatTile label="Median mana value" value={formatValue(charts.medianManaValue)} detail="Nonland cards — lands excluded" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <DeckChartCard
+          className="lg:col-span-2"
+          title="Mana curve"
+          description={
+            <>
+              {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} in the {counted}, by mana value
+              {offCurve.length > 0 ? ` — ${offCurve.join(" and ")} left off` : ""}.
+            </>
+          }
+          accessibleChart
+          chart={<DeckManaCurve curve={charts.curve} />}
+          table={<ManaCurveTable curve={charts.curve} />}
+        />
+        <DeckChartCard
+          title="Card types"
+          description={`Every card in the ${counted} — an artifact creature counts as a creature.`}
+          chart={typeRows.length > 0 ? <HorizontalBars rows={typeRows} total={charts.deckCards} /> : <Empty>Add cards to see types.</Empty>}
+          table={<BarsTable caption="Cards by type" label="Type" rows={typeRows} total={charts.deckCards} />}
+        />
+
+        <DeckChartCard
+          className="lg:col-span-2"
+          title="Color symbols and sources"
+          description={
+            <>
+              Each color&rsquo;s share of the symbols in the costs against its share of the mana sources. A source is a land or a
+              PipGlyph card whose text adds mana; a real card not made on PipGlyph counts only as a land.
+            </>
+          }
+          chart={
+            charts.colors.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <ChartLegend
+                  items={[
+                    { label: "Symbols in costs", swatch: "chart-1" },
+                    { label: "Mana sources", swatch: "chart-2" },
+                  ]}
+                />
+                <ColorBalance rows={charts.colors} />
+              </div>
+            ) : (
+              <Empty>No colored mana symbols or sources yet.</Empty>
+            )
+          }
+          table={<ColorBalanceTable rows={charts.colors} />}
+        />
+        <DeckChartCard
+          title="Rarity"
+          description="By each card's printed rarity (an edited card's own)."
+          chart={rarityRows.length > 0 ? <HorizontalBars rows={rarityRows} total={charts.total} /> : <Empty>No rarities yet.</Empty>}
+          table={<BarsTable caption="Cards by rarity" label="Rarity" rows={rarityRows} total={charts.total} />}
+        />
+
+        <DeckChartCard
+          title="Composition"
+          description="Every card by status: imported, edited, remixed or original."
+          chart={<HorizontalBars rows={statusRows} total={statusTotal} />}
+          table={<BarsTable caption="Cards by status" label="Status" rows={statusRows} total={statusTotal} />}
+        />
+        <DeckChartCard
+          className="lg:col-span-2"
+          title="Keywords"
+          description={
+            keywords.cardsRead > 0
+              ? `Read from the rules text of ${keywords.cardsRead} of the ${charts.total} cards: the ones made on PipGlyph (a real card’s text isn’t on the page). Counted in cards.`
+              : "Read from the rules text of the cards made on PipGlyph."
+          }
+          chart={
+            keywords.cardsRead === 0 ? (
+              <Empty>No card made on PipGlyph here yet — customize one to see its keywords.</Empty>
+            ) : keywords.evergreen.length + keywords.mechanics.length === 0 ? (
+              <Empty>No keywords on these cards.</Empty>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-subtle">Evergreen</h4>
+                  {keywords.evergreen.length > 0 ? (
+                    <KeywordBars keywords={keywords.evergreen} total={keywords.cardsRead} />
+                  ) : (
+                    <Empty>None.</Empty>
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-subtle">Mechanics</h4>
+                  {keywords.mechanics.length > 0 ? (
+                    <KeywordBars keywords={keywords.mechanics} total={keywords.cardsRead} />
+                  ) : (
+                    <Empty>None.</Empty>
+                  )}
+                </div>
+              </div>
+            )
+          }
+          table={
+            <BarsTable
+              caption="Keywords, by the cards that print them"
+              label="Keyword"
+              rows={[...keywords.evergreen, ...keywords.mechanics].map((keyword) => ({
+                key: keyword.key,
+                label: keyword.name,
+                count: keyword.cards,
+                tag: keyword.kind === "evergreen" ? "evergreen" : KIND_TAGS[keyword.kind] ?? "keyword",
+              }))}
+              total={keywords.cardsRead}
+            />
+          }
+        />
+      </div>
+    </div>
+  );
+}

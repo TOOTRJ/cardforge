@@ -1,5 +1,5 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
-import { statusRows, type DeckAnalytics } from "@/lib/decks/analytics";
+import { deckStatCards, statusRows, type DeckAnalytics } from "@/lib/decks/analytics";
 import type { DeckGuideContent } from "@/lib/ai/deck-guide";
 import { DECK_ENTRY_STATUS_COUNT_LABELS, type DeckBoard } from "@/types/deck";
 
@@ -169,9 +169,16 @@ export async function buildDeckReportPdf(input: DeckReportInput): Promise<Uint8A
 
   // Stats.
   const a = input.analytics;
+  // The deck page's rule: the cards, the curve, the average and the types
+  // are the main deck and the commander's (owner 2026-10-29); the sideboard
+  // is named beside them.
+  const deckCards = deckStatCards(a);
   w.heading("Deck stats");
   w.columns([
-    ["Cards", `${a.total} (${a.lands} lands, ${a.total - a.lands} spells)`],
+    [
+      "Cards",
+      `${deckCards} (${a.lands} lands, ${deckCards - a.lands} spells)${a.byBoard.side > 0 ? ` + ${a.byBoard.side} sideboard` : ""}`,
+    ],
     ["Average mana value", a.averageManaValue === null ? "n/a" : a.averageManaValue.toFixed(2)],
     ["Mana curve", curveText(a.curve)],
     ["Colors", [...(["W", "U", "B", "R", "G"] as const).map((c) => `${c} ${a.byColor[c]}`), `Gold ${a.multicolor}`, `C ${a.byColor.C}`].join("   ")],

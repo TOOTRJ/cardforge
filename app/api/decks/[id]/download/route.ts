@@ -131,7 +131,8 @@ export async function GET(
   }
 
   if (part === "report") {
-    const [guide, ownerProfile] = await Promise.all([
+    const [{ guide }, ownerProfile] = await Promise.all([
+      // The owner's own guide, as stored (a Pro owner: requireTier above).
       getDeckGuide(id),
       supabase.from("profiles").select("username, display_name").eq("id", user.id).maybeSingle(),
     ]);

@@ -79,13 +79,19 @@ export async function renderDeckShareImage(element: ReactNode): Promise<Buffer> 
   return sharp(png).jpeg({ quality: JPEG_QUALITY, mozjpeg: true }).toBuffer();
 }
 
-/** The route's Response, with the headers the PNG one had. */
-export function deckShareImageResponse(jpeg: Buffer): Response {
+/** The route's Response, with the headers the PNG one had. A deck's own
+ *  image is immutable for a year (its URL carries the deck's version); the
+ *  generic image a slug gets when no deck reads there (missing, private,
+ *  or — while the rollout of migration 0151 is under way, or for a request
+ *  that didn't name an unlisted deck — not readable YET) is never stored: a
+ *  year-long generic answer would outlive the deck it stood in for in
+ *  every unfurler's cache. */
+export function deckShareImageResponse(jpeg: Buffer, { found = true }: { found?: boolean } = {}): Response {
   return new Response(new Uint8Array(jpeg), {
     headers: {
       "content-type": DECK_SHARE_IMAGE_TYPE,
       "cache-control":
-        process.env.NODE_ENV === "development"
+        process.env.NODE_ENV === "development" || !found
           ? "no-cache, no-store"
           : "public, immutable, no-transform, max-age=31536000",
     },

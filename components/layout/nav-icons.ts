@@ -81,6 +81,7 @@ export const NAV_LINK_ICONS: Record<string, LucideIcon> = {
   "learn.help": LifeBuoy,
   "learn.whats-new": Megaphone,
   "learn.tools": Wrench,
+  "learn.frames": Frame,
   "account.sign-in": LogIn,
   "account.sign-up": UserPlus,
   "account.profile": UserCircle,

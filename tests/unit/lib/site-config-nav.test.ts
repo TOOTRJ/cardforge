@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { accountLinkHref, groupLinks, siteConfig, type NavGroup, type NavLink } from "@/lib/site-config";
 import { sanitizeFunnelProps } from "@/lib/analytics/funnel-events";
+import { NAV_LINK_ICONS } from "@/components/layout/nav-icons";
 
 // ---------------------------------------------------------------------------
 // The grouped header and the footer (TODO NV1 / NV2 / NV10), held to the plan
@@ -44,7 +45,7 @@ describe("the header's top level", () => {
     expect(groupLinks(community).find((link) => link.href === "/challenges")?.liveBadge).toBe("challenge");
   });
 
-  it("Learn links the learn hub's pages, the articles, help, what's new and tools — no lore yet (D10)", () => {
+  it("Learn links the learn hub's pages, the articles, help, what's new, tools and frames — no lore yet (D10)", () => {
     const learn = groups.find((group) => group.id === "learn")!;
     expect(groupLinks(learn).map((link) => link.href)).toEqual([
       "/learn/design",
@@ -54,7 +55,13 @@ describe("the header's top level", () => {
       "/help",
       "/news",
       "/tools",
+      "/frames",
     ]);
+    // The frame gallery (TODO NV8) sits with the pages about using PipGlyph,
+    // as on the /learn hub, under its own nav id and icon.
+    const using = learn.sections.find((section) => section.id === "using")!;
+    expect(using.items.map((link) => [link.id, link.label])).toContainEqual(["learn.frames", "Frames"]);
+    expect(NAV_LINK_ICONS["learn.frames"]).toBeDefined();
     expect(groupLinks(learn).some((link) => /lore/i.test(link.label) || link.href.includes("lore"))).toBe(false);
   });
 

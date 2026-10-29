@@ -17,29 +17,32 @@ import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { CommanderSlot, DeckStartDoors } from "@/components/decks/deck-start-doors";
 import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
-import { publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
+import { publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
-import { getDeckGuide } from "@/lib/decks/guides";
+import { getDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
+import { recordDeckView } from "@/lib/decks/views";
 import {
   countDeckEntries,
   getDeckBySlugWithOwner,
-  incrementDeckView,
   listDeckPageCards,
   viewerLikesDeck,
   type DeckItem,
   type DeckPageCard,
 } from "@/lib/decks/queries";
-import { computeDeckAnalytics } from "@/lib/decks/analytics";
-import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
+import { viewerDeckBreakdown } from "@/lib/decks/deck-charts";
+import { DeckCurveFilterProvider } from "@/components/decks/deck-curve-filter";
+import { DeckDrawOdds } from "@/components/decks/deck-draw-odds";
+import { DeckSampleHand } from "@/components/decks/deck-sample-hand";
+import { formatHasCommander, formatHasFreeMulligan, formatIsMultiplayer, validateDeck } from "@/lib/decks/format-rules";
 import {
   DECK_CARDS_HEADING_ID,
   DECK_VIEW_COOKIE,
@@ -194,13 +197,17 @@ export default async function DeckDetailPage({
 
   // The rows as this viewer's list shows them: a private card's title never
   // reaches a visitor — not in the list, its pop-up, the copied text or the
-  // fan.
-  const shownItems = publicDeckItems(items, isOwner);
+  // fan. The breakdown (TODO DK7.1 / DK7.3) counts those SAME rows
+  // (viewerDeckBreakdown): no card is named, a private card is null to a
+  // visitor (no text read), and one with no printing has no type line — so a
+  // visitor's curve and types never say what the list's "Private card" tile
+  // hides. The curve's columns carry their entry ids: the list filters to
+  // exactly what a bar counts.
+  const { shownItems, analytics, charts } = viewerDeckBreakdown(items, isOwner);
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
   const featured = featuredCardsOf(shownItems, deck);
-  const analytics = computeDeckAnalytics(items);
   // The breakdown's "Card status": THE status count the list's chips and the
   // summary bar say (the viewer's rows, each card under the badge it wears).
   const statusCounts = statusCountRows(deckStatusCountsOf(deckRowsOf(shownItems, isOwner))).map(({ badge, count }) => ({
@@ -213,6 +220,7 @@ export default async function DeckDetailPage({
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
   const hasCards = items.length > 0;
   const usesCommander = formatHasCommander(deck.format);
+  const hasMainboard = items.some((item) => item.entry.board === "main" && item.entry.quantity > 0);
 
   // The format check is the owner's to-do list (TODO DK0.9): a visitor
   // never sees it, and an empty deck has nothing to check (validateDeck).
@@ -253,10 +261,12 @@ export default async function DeckDetailPage({
       />
     ) : null;
 
-  // Best-effort lifetime view tally, off the request path; owner views don't
-  // count (matches increment_card_view's posture).
+  // The view, off the request path: once per viewer and day, never the
+  // owner's, a crawler's or a prefetch (lib/decks/views.ts, migration 0151).
   if (!isOwner) {
-    after(() => incrementDeckView(deck.id));
+    // The request's headers copied now, while the request is in hand.
+    const view = { deckId: deck.id, ownerId: deck.owner_id, viewerId: user?.id ?? null, headers: new Headers(requestHeaders) };
+    after(() => recordDeckView(view));
   }
 
   return (
@@ -420,85 +430,114 @@ export default async function DeckDetailPage({
         </div>
       ) : null}
 
-      {/* The cards, first (TODO DK5.1). */}
-      <section aria-labelledby={DECK_CARDS_HEADING_ID} className="mt-6">
-        {/* tabIndex -1: where a dialog hands the focus back when the control
-            that opened it is gone (DeckOwnerTools). */}
-        <h2
-          id={DECK_CARDS_HEADING_ID}
-          tabIndex={-1}
-          className="mb-3 flex items-baseline gap-2 font-display text-xl font-semibold tracking-tight text-foreground focus:outline-none"
-        >
-          Cards
-          <span className="font-sans text-sm font-normal tabular-nums text-subtle">
-            <span className="sr-only">, </span>
-            {cardCount} in the deck
-          </span>
-        </h2>
-        {isOwner ? (
-          // The owner's deck is its editor (TODO DK5 part 2): the add box
-          // first, then the doors of an empty deck or its cards — drawn at
-          // once as they change (components/decks/use-deck-editor).
-          <DeckCardList
-            items={shownItems}
-            ownerUsername={deck.owner?.username ?? null}
-            canManage
-            deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
-            // The owner's cover picks in the card pop-up (TODO DK6.4).
-            coverOwnerId={deck.owner_id}
-            initialPrefs={viewPrefs}
-            summary={{
-              format: deck.format,
-              analytics,
-              formatIssues: warnings.length,
-            }}
-            emptyState={<DeckStartDoors commander={usesCommander} />}
-            commanderSlot={usesCommander ? <CommanderSlot compact /> : null}
-          />
-        ) : !hasCards ? (
-          <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
-        ) : (
-          <DeckCardList
-            items={shownItems}
-            ownerUsername={deck.owner?.username ?? null}
-            canManage={false}
-            initialPrefs={viewPrefs}
-            summary={{
-              format: deck.format,
-              analytics,
-              formatIssues: null,
-            }}
-          />
-        )}
-      </section>
+      {/* The cards and the breakdown share the curve's filter (TODO DK7.1):
+          a bar of the curve filters the list above it. */}
+      <DeckCurveFilterProvider curve={charts.curve}>
+        {/* The cards, first (TODO DK5.1). */}
+        <section aria-labelledby={DECK_CARDS_HEADING_ID} className="mt-6">
+          {/* tabIndex -1: where a dialog hands the focus back when the control
+              that opened it is gone (DeckOwnerTools). */}
+          <h2
+            id={DECK_CARDS_HEADING_ID}
+            tabIndex={-1}
+            className="mb-3 flex items-baseline gap-2 font-display text-xl font-semibold tracking-tight text-foreground focus:outline-none"
+          >
+            Cards
+            <span className="font-sans text-sm font-normal tabular-nums text-subtle">
+              <span className="sr-only">, </span>
+              {cardCount} in the deck
+            </span>
+          </h2>
+          {isOwner ? (
+            // The owner's deck is its editor (TODO DK5 part 2): the add box
+            // first, then the doors of an empty deck or its cards — drawn at
+            // once as they change (components/decks/use-deck-editor). The
+            // list decides the commander slot from its live rows.
+            <DeckCardList
+              items={shownItems}
+              ownerUsername={deck.owner?.username ?? null}
+              canManage
+              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
+              // The owner's cover picks in the card pop-up (TODO DK6.4).
+              coverOwnerId={deck.owner_id}
+              initialPrefs={viewPrefs}
+              summary={{
+                format: deck.format,
+                analytics,
+                formatIssues: warnings.length,
+              }}
+              emptyState={<DeckStartDoors key="doors" commander={usesCommander} />}
+              commanderSlot={usesCommander ? <CommanderSlot key="commander-slot" compact /> : null}
+            />
+          ) : !hasCards ? (
+            <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
+          ) : (
+            <DeckCardList
+              items={shownItems}
+              ownerUsername={deck.owner?.username ?? null}
+              canManage={false}
+              initialPrefs={viewPrefs}
+              summary={{
+                format: deck.format,
+                analytics,
+                formatIssues: null,
+              }}
+            />
+          )}
+        </section>
 
-      {/* Stats after the cards: the owner's format check, the breakdown —
-          a reading width, not the page's. */}
-      {hasCards ? (
-        <section aria-labelledby="deck-breakdown-title" className="mt-14 flex max-w-7xl flex-col gap-6">
+        {/* Stats after the cards: the owner's format check, the breakdown —
+            a reading width, not the page's. */}
+        {hasCards ? (
+          <section aria-labelledby="deck-breakdown-title" className="mt-14 flex max-w-7xl flex-col gap-6">
+            <div className="flex flex-col gap-1 border-b border-gold/20 pb-4">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">Analytics</span>
+              <h2 id="deck-breakdown-title" className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                Deck breakdown
+              </h2>
+              <p className="max-w-2xl text-sm leading-6 text-muted">
+                The curve, colors, types and keywords, and every card by status: imported, edited, remixed or original.
+              </p>
+            </div>
+            {warnings.length > 0 ? (
+              <SurfaceCard id="format-check" className="flex scroll-mt-24 flex-col gap-2 border-gold/40 bg-gold/5 p-5">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                  Format check — {DECK_FORMAT_LABELS[deck.format]}
+                </h3>
+                <ul className="flex flex-col gap-1 text-sm leading-6 text-muted">
+                  {warnings.map((warning, index) => (
+                    <li key={`${warning.code}-${index}`}>{warning.message}</li>
+                  ))}
+                </ul>
+              </SurfaceCard>
+            ) : null}
+            <DeckAnalyticsPanel analytics={analytics} charts={charts} statusCounts={statusCounts} />
+          </section>
+        ) : null}
+      </DeckCurveFilterProvider>
+
+      {/* The playtest (TODO DK7.2): odds and a sample hand off the
+          mainboard, for every viewer — the rows as THIS viewer reads them
+          (a visitor never meets a private card's title or art). */}
+      {hasMainboard ? (
+        <section aria-labelledby="deck-playtest-title" className="mt-14 flex max-w-7xl flex-col gap-4">
           <div className="flex flex-col gap-1 border-b border-gold/20 pb-4">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">Analytics</span>
-            <h2 id="deck-breakdown-title" className="font-display text-2xl font-semibold tracking-tight text-foreground">
-              Deck breakdown
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">Try it</span>
+            <h2 id="deck-playtest-title" className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Playtest
             </h2>
-            <p className="max-w-2xl text-sm leading-6 text-muted">
-              Mana curve, colors, and every card by status: imported, edited, remixed or original.
-            </p>
+            <p className="max-w-2xl text-sm leading-6 text-muted">The odds of a shuffled mainboard, and a hand to try.</p>
           </div>
-          {warnings.length > 0 ? (
-            <SurfaceCard id="format-check" className="flex scroll-mt-24 flex-col gap-2 border-gold/40 bg-gold/5 p-5">
-              <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-                Format check — {DECK_FORMAT_LABELS[deck.format]}
-              </h3>
-              <ul className="flex flex-col gap-1 text-sm leading-6 text-muted">
-                {warnings.map((warning, index) => (
-                  <li key={`${warning.code}-${index}`}>{warning.message}</li>
-                ))}
-              </ul>
-            </SurfaceCard>
-          ) : null}
-          <DeckAnalyticsPanel analytics={analytics} statusCounts={statusCounts} />
+          {/* Commander and Oathbreaker are multiplayer (every player draws
+              on turn one, CR 103.8c); the Brawl formats are 1v1. The first
+              mulligan is free in all four (CR 103.5c). */}
+          <DeckDrawOdds items={shownItems} canManage={isOwner} commander={usesCommander} multiplayer={formatIsMultiplayer(deck.format)} />
+          <DeckSampleHand
+            items={shownItems}
+            canManage={isOwner}
+            freeMulliganFormat={formatHasFreeMulligan(deck.format) ? DECK_FORMAT_LABELS[deck.format] : null}
+          />
         </section>
       ) : null}
 
@@ -550,15 +589,17 @@ async function DeckGuideSlot({
   hasCards,
 }: {
   deckId: string;
-  guide: ReturnType<typeof getDeckGuide>;
+  guide: Promise<DeckGuideRead | null>;
   isOwner: boolean;
   viewerIsPro: boolean;
   hasCards: boolean;
 }) {
+  const read = await guide;
   return (
     <DeckGuideSection
       deckId={deckId}
-      guide={await guide}
+      guide={read?.guide ?? null}
+      guideWithheld={read?.withheld ?? false}
       isOwner={isOwner}
       viewerIsPro={viewerIsPro}
       aiConfigured={isDesignAiConfigured()}

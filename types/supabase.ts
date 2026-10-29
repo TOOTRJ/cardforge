@@ -2007,9 +2007,37 @@ export type Database = {
           calls: number;
         }[];
       };
+      // Migration 0151 — one view per (deck, viewer, UTC day); true when it
+      // counted. Service role only (lib/decks/views.ts). Replaces 0103's
+      // increment_deck_view, which the app calls only while 0151 is missing.
+      record_deck_view: {
+        Args: { p_deck_id: string; p_viewer: string; p_viewer_id?: string };
+        Returns: boolean;
+      };
+      // 0055 / 0103 — the old counter (anon-callable, no dedupe); dropped by
+      // 0151. lib/decks/views.ts falls back to it on a database 0151 hasn't
+      // reached.
       increment_deck_view: {
         Args: { p_deck_id: string };
         Returns: undefined;
+      };
+      // Migration 0151 — a deck's AI guide as its page shows it to the
+      // caller (lib/decks/guides.ts): no row, or `readable` with the text
+      // only for a Pro viewer (redacted for anyone but the owner).
+      deck_guide_for_viewer: {
+        Args: { p_deck_id: string };
+        Returns: {
+          deck_id: string;
+          readable: boolean;
+          overview: string | null;
+          game_plan: Json | null;
+          mulligan: string | null;
+          combos: Json | null;
+          weaknesses: string | null;
+          key_cards: Json | null;
+          source: string | null;
+          generated_at: string | null;
+        }[];
       };
       increment_card_view: {
         Args: { p_card_id: string };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isBasicLand, validateDeck } from "@/lib/decks/format-rules";
-import type { DeckBoard } from "@/types/deck";
+import { formatHasCommander, formatHasFreeMulligan, formatIsMultiplayer, isBasicLand, validateDeck } from "@/lib/decks/format-rules";
+import { DECK_FORMAT_VALUES, type DeckBoard } from "@/types/deck";
 
 type Entry = { name: string; board: DeckBoard; quantity: number };
 
@@ -201,5 +201,18 @@ describe("isBasicLand", () => {
     expect(isBasicLand("snow-covered island")).toBe(true);
     expect(isBasicLand("Wastes")).toBe(true);
     expect(isBasicLand("Steam Vents")).toBe(false);
+  });
+});
+
+describe("the playtest's game: turn order and the free mulligan", () => {
+  it("Commander and Oathbreaker are multiplayer — every player draws on turn one (CR 103.8c); Brawl is 1v1 (103.8a)", () => {
+    expect(DECK_FORMAT_VALUES.filter(formatIsMultiplayer)).toEqual(["commander", "oathbreaker"]);
+    expect(formatIsMultiplayer("brawl")).toBe(false);
+    expect(formatIsMultiplayer("standard_brawl")).toBe(false);
+  });
+
+  it("the first mulligan is free in every commander format, Brawl included (CR 103.5c) — and nowhere else", () => {
+    expect(DECK_FORMAT_VALUES.filter(formatHasFreeMulligan)).toEqual(["commander", "brawl", "standard_brawl", "oathbreaker"]);
+    expect(DECK_FORMAT_VALUES.filter(formatHasFreeMulligan)).toEqual(DECK_FORMAT_VALUES.filter(formatHasCommander));
   });
 });
