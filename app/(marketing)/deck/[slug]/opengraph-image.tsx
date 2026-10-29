@@ -110,7 +110,9 @@ export default async function Image({
   const { deck, entries, username } = result;
   const items = entries.map(({ card, ...entry }) => ({ entry, card }));
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  const customs = featuredCardsOf(items, deck.id).filter((featured) => featured.kind === "custom");
+  // The page's rule (commanders first, then the seeded fill, up to five),
+  // filled from the baked PipGlyph cards alone.
+  const customs = featuredCardsOf(items, deck.id, { printings: false });
   const [coverUri, ...thumbs] = await Promise.all([
     fetchImageAsDataUri(cover.src),
     ...customs.map((featured) =>

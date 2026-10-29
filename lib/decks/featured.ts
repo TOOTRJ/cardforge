@@ -6,27 +6,33 @@ import { stableDeckHash } from "@/lib/decks/cover";
 // The cards a deck's hero (and its share image) fans out in front of the
 // cover — TODO DK6.5, until DK6.4 stores the owner's picks. Pure.
 //
-// In order, up to FAN_MAX distinct cards:
-//   1. the COMMANDERS (and partners), in the deck's order;
+// The fan aims for three and holds five: it fills every slot the deck can,
+// and shows fewer only when the deck has fewer cards that may stand in it.
+// In order, distinct cards:
+//   1. the COMMANDERS (and partners), in the deck's order — always first;
 //   2. — DK6.4: the owner's "Feature on cover" picks slot in HERE, between
 //      the commanders and the fill (deck_cards.featured_rank) —
-//   3. a seeded shuffle (the deck id: the same fan on every visit) of the
-//      deck's own PipGlyph cards with a stored bake thumbnail — the custom
-//      work is what a deck shows off;
+//   3. the fill, a seeded shuffle (the deck id: the same fan on every
+//      visit) of the deck's own PipGlyph cards with a stored bake thumbnail
+//      — the custom work is what a deck shows off —
 //   4. then a seeded shuffle of its real printings (basic lands left out).
 //
 // What may stand in the fan, for EVERY viewer alike (the owner sees what a
 // visitor sees):
 //   * a linked card only when it is readable and NOT private (a private card
 //     is never drawn on a public surface, D11 — a visitor's RLS read has it
-//     null, the owner's has it private: both skip it, and the entry's
-//     printing is not drawn in its place) and only with its 600 px thumb
-//     beside its bake (`isStoredRenderUrl`, checked against the card's own
-//     object names) — never the HD PNG, never a live preview; a card
-//     mid-save (pointers cleared) is left out;
+//     null, the owner's has it private: both skip the entry, and its
+//     printing is not drawn in its place) and with its 600 px thumb beside
+//     its bake (`isStoredRenderUrl`, checked against the card's own object
+//     names) — never the HD PNG, never a live preview;
+//   * a public linked card with no thumb yet (never baked, or mid-save with
+//     its pointers cleared) stands in as the entry's printing when it has
+//     one — what the deck list draws for it — else it is left out;
 //   * a printing only through `drawableMediaUrl("deck-card-image")`
 //     (Scryfall's image host, migration 0127).
-// The maybeboard is not the deck.
+// The maybeboard is not the deck. The share image asks for `printings:
+// false`: it fills from the baked PipGlyph cards alone (never a scan baked
+// into a PipGlyph image — app/(marketing)/deck/[slug]/opengraph-image.tsx).
 // ---------------------------------------------------------------------------
 
 /** The most cards a fan shows. */
@@ -82,14 +88,17 @@ function seededShuffle<T>(items: readonly T[], keyOf: (item: T) => string, rando
 
 const isBasicLand = (typeLine: string | null) => /\bBasic\b[^—]*\bLand\b/i.test(typeLine ?? "");
 
+type Candidate<C extends FeaturableCard> = { entryId: string; typeLine: string | null; featured: FeaturedCard<C> };
+
+/** What an entry may stand in the fan as — its baked card, its printing,
+ *  or nothing (the header's rules). */
 function asFeatured<C extends FeaturableCard>(entry: FeaturableEntry, card: C | null): FeaturedCard<C> | null {
   if (entry.card_id) {
     if (!card || card.visibility === "private") return null;
     const own = { ownerId: card.owner_id, cardId: card.id };
-    if (!isStoredRenderUrl(card.rendered_image_url, own) || !isStoredRenderUrl(card.rendered_thumb_url, own)) {
-      return null;
+    if (isStoredRenderUrl(card.rendered_image_url, own) && isStoredRenderUrl(card.rendered_thumb_url, own)) {
+      return { kind: "custom", key: `card:${card.id}`, title: card.title, card };
     }
-    return { kind: "custom", key: `card:${card.id}`, title: card.title, card };
   }
   const imageUrl = drawableMediaUrl("deck-card-image", entry.image_url);
   if (!imageUrl) return null;
@@ -99,31 +108,52 @@ function asFeatured<C extends FeaturableCard>(entry: FeaturableEntry, card: C | 
 export function featuredCardsOf<C extends FeaturableCard>(
   items: readonly { entry: FeaturableEntry; card: C | null }[],
   deckId: string,
-  max: number = FAN_MAX,
+  options: {
+    /** The most cards (FAN_MAX). */
+    max?: number;
+    /** false = baked PipGlyph cards only (the share image). */
+    printings?: boolean;
+  } = {},
 ): FeaturedCard<C>[] {
-  const playable = items.filter((item) => item.entry.board !== "maybe");
+  const { max = FAN_MAX, printings = true } = options;
   const random = seededRandom(stableDeckHash(deckId));
+  const allowed = (featured: FeaturedCard<C> | null): featured is FeaturedCard<C> =>
+    Boolean(featured) && (printings || featured!.kind === "custom");
+
+  const playable = items.filter((item) => item.entry.board !== "maybe");
+  const candidates = (rows: typeof playable): Candidate<C>[] =>
+    rows.flatMap(({ entry, card }) => {
+      const featured = asFeatured(entry, card);
+      return allowed(featured) ? [{ entryId: entry.id, typeLine: entry.type_line, featured }] : [];
+    });
+
   const chosen: FeaturedCard<C>[] = [];
   const seen = new Set<string>();
-  const take = (candidate: FeaturedCard<C> | null) => {
-    if (!candidate || seen.has(candidate.key) || chosen.length >= max) return;
-    seen.add(candidate.key);
-    chosen.push(candidate);
+  const take = (list: readonly Candidate<C>[]) => {
+    for (const { featured } of list) {
+      if (chosen.length >= max) return;
+      if (seen.has(featured.key)) continue;
+      seen.add(featured.key);
+      chosen.push(featured);
+    }
   };
 
-  const commanders = playable
-    .filter((item) => item.entry.board === "commander")
-    .sort((a, b) => (a.entry.position ?? 0) - (b.entry.position ?? 0));
-  for (const { entry, card } of commanders) take(asFeatured(entry, card));
+  // 1. The commanders, in the deck's order.
+  take(
+    candidates(
+      playable
+        .filter((item) => item.entry.board === "commander")
+        .sort((a, b) => (a.entry.position ?? 0) - (b.entry.position ?? 0)),
+    ),
+  );
 
-  // DK6.4: the owner's picks go here.
+  // 2. DK6.4: the owner's picks go here.
 
-  const rest = playable.filter((item) => item.entry.board !== "commander");
-  const customs = rest.filter((item) => item.entry.card_id);
-  for (const { entry, card } of seededShuffle(customs, (item) => item.entry.id, random)) take(asFeatured(entry, card));
-
-  const printings = rest.filter((item) => !item.entry.card_id && !isBasicLand(item.entry.type_line));
-  for (const { entry, card } of seededShuffle(printings, (item) => item.entry.id, random)) take(asFeatured(entry, card));
+  // 3–4. The fill: baked PipGlyph cards first, then printings.
+  const rest = candidates(playable.filter((item) => item.entry.board !== "commander"));
+  const byEntry = (candidate: Candidate<C>) => candidate.entryId;
+  take(seededShuffle(rest.filter((c) => c.featured.kind === "custom"), byEntry, random));
+  take(seededShuffle(rest.filter((c) => c.featured.kind === "printing" && !isBasicLand(c.typeLine)), byEntry, random));
 
   return chosen;
 }

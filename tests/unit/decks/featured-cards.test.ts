@@ -159,3 +159,82 @@ describe("featuredCardsOf", () => {
     ).toEqual([]);
   });
 });
+
+describe("featuredCardsOf fills to 3–5 behind the commanders", () => {
+  it("a commander plus the fill: the commander first, then baked cards, then printings, five in all", () => {
+    const commander = customItem("commander");
+    const customs = Array.from({ length: 2 }, () => customItem("main"));
+    const printings = Array.from({ length: 4 }, (_, i) => printingItem("main", `Spell ${i}`));
+    const fan = featuredCardsOf([...printings, ...customs, commander], DECK);
+    expect(fan).toHaveLength(5);
+    expect(fan[0].key).toBe(`card:${commander.card.id}`);
+    expect(fan.slice(1, 3).map((c) => c.key).sort()).toEqual(customs.map((c) => `card:${c.card.id}`).sort());
+    expect(fan.slice(3).every((c) => c.kind === "printing")).toBe(true);
+  });
+
+  it("two commanders plus the fill: both partners first, in the deck's order, then three more", () => {
+    const first = printingItem("commander", "Tymna the Weaver", "Legendary Creature — Human Cleric");
+    const second = customItem("commander");
+    const customs = Array.from({ length: 6 }, () => customItem("main"));
+    const fan = featuredCardsOf([second, ...customs, first], DECK);
+    expect(fan).toHaveLength(5);
+    expect(fan.slice(0, 2).map((c) => c.key)).toEqual([`print:${first.entry.scryfall_id}`, `card:${second.card.id}`]);
+    expect(fan.slice(2).every((c) => c.kind === "custom")).toBe(true);
+  });
+
+  it("a deck with only two cards that may stand shows those two — never padded", () => {
+    const privateCommander = customItem("commander", { visibility: "private" });
+    const unbaked = customItem("main", { rendered_image_url: null, rendered_thumb_url: null });
+    const fan = featuredCardsOf(
+      [
+        privateCommander,
+        unbaked,
+        customItem("main"),
+        printingItem("main", "Sol Ring", "Artifact"),
+        printingItem("main", "Mountain", "Basic Land — Mountain"),
+        printingItem("maybe", "Opt"),
+        { entry: { ...printingItem("main", "Placeholder").entry, scryfall_id: null, image_url: null }, card: null },
+      ],
+      DECK,
+    );
+    expect(fan).toHaveLength(2);
+    expect(fan.map((c) => c.kind).sort()).toEqual(["custom", "printing"]);
+  });
+
+  it("a commander that may not stand doesn't stop the fill (dev's Cinderwing: an unbaked commander)", () => {
+    const unbakedCommander = customItem("commander", { rendered_image_url: null, rendered_thumb_url: null });
+    const fan = featuredCardsOf(
+      [unbakedCommander, ...Array.from({ length: 3 }, (_, i) => printingItem("main", `Real ${i}`))],
+      DECK,
+    );
+    expect(fan.map((c) => c.title)).toEqual(expect.arrayContaining(["Real 0", "Real 1", "Real 2"]));
+    expect(fan).toHaveLength(3);
+  });
+
+  it("a PUBLIC card with no thumb yet stands in as its entry's printing; a private one never does", () => {
+    const unbakedRemix = customItem("commander", { rendered_image_url: null, rendered_thumb_url: null });
+    unbakedRemix.entry.scryfall_id = "sf-krenko";
+    unbakedRemix.entry.image_url = "https://cards.scryfall.io/normal/front/k/r/krenko.jpg";
+    const privateRemix = customItem("main", { visibility: "private" });
+    privateRemix.entry.scryfall_id = "sf-secret";
+    privateRemix.entry.image_url = "https://cards.scryfall.io/normal/front/s/e/secret.jpg";
+    const fan = featuredCardsOf([unbakedRemix, privateRemix], DECK);
+    expect(fan).toEqual([{ kind: "printing", key: "print:sf-krenko", title: unbakedRemix.entry.name, imageUrl: unbakedRemix.entry.image_url }]);
+  });
+
+  it("the share image's fill (printings: false): commanders first, filled from baked cards alone, still up to five", () => {
+    const printedCommander = printingItem("commander", "Krenko, Mob Boss", "Legendary Creature — Goblin");
+    const bakedCommander = customItem("commander");
+    const customs = Array.from({ length: 6 }, () => customItem("main"));
+    const fan = featuredCardsOf(
+      [printedCommander, bakedCommander, ...customs, ...Array.from({ length: 4 }, (_, i) => printingItem("main", `Real ${i}`))],
+      DECK,
+      { printings: false },
+    );
+    expect(fan).toHaveLength(5);
+    expect(fan.every((c) => c.kind === "custom")).toBe(true);
+    expect(fan[0].key).toBe(`card:${bakedCommander.card.id}`);
+    // Two baked cards and no others: two, never a printing to pad it.
+    expect(featuredCardsOf([customItem("main"), customItem("main"), printingItem("main", "Opt")], DECK, { printings: false })).toHaveLength(2);
+  });
+});
