@@ -4,6 +4,7 @@ import {
   useGenerationContext,
   type GenerationContextValue,
 } from "@/components/ai/generation-provider";
+import type { ForcedPrivateNotice } from "@/lib/moderation/profanity";
 
 // ---------------------------------------------------------------------------
 // useGenerationJob — panel-facing hook for the AI batch-job pipeline. The
@@ -34,6 +35,10 @@ export type GenerationJobStep = {
   failure?: string | null;
   refunded?: number | null;
   refund_pending?: boolean | null;
+  /** A done step whose card was saved PRIVATE instead of public: its text
+   *  holds strong language (owner policy 2026-10-28,
+   *  lib/moderation/profanity.ts). */
+  forced_private?: ForcedPrivateNotice | null;
 };
 
 export type GenerationJobPhase = "idle" | "planning" | "stepping" | "done";
