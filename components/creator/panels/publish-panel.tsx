@@ -34,6 +34,8 @@ import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
+import type { StrongLanguageChoices } from "@/lib/creator/strong-language";
+import { STRONG_LANGUAGE_CHOICE_REASON, strongLanguageNote } from "@/lib/moderation/profanity";
 
 // Private is not a chip any more — it is the "Save as a draft" checkbox
 // above the chips (owner decision 2026-09-16: drafts simply force private).
@@ -80,6 +82,10 @@ type PublishPanelProps = {
    *  watermark is a subscriber perk on the Subscriber step (free accounts
    *  always carry the PipGlyph Rose there). */
   showWatermark?: boolean;
+  /** The choices the card's text rules out (owner policy 2026-10-28: strong
+   *  language saves private — lib/creator/strong-language.ts) and the
+   *  fields that do it. Absent / empty = both open. */
+  strongLanguage?: StrongLanguageChoices;
 };
 
 export function PublishPanel({
@@ -88,6 +94,7 @@ export function PublishPanel({
   myDecks = null,
   revise = false,
   showWatermark = true,
+  strongLanguage,
 }: PublishPanelProps) {
   const {
     register,
@@ -101,6 +108,21 @@ export function PublishPanel({
   const draftId = useId();
   const draftNameId = `${draftId}-name`;
   const draftNoteId = `${draftId}-note`;
+  const languageNoteId = `${draftId}-language`;
+  // Strong language in the text: the choices it rules out are unavailable
+  // (aria-disabled, the reason in their name), none of them shows as
+  // picked, and ONE polite note under them says why and names the fields.
+  // The save sends private (card-creator-form.tsx runSubmit).
+  const blockedPublic = strongLanguage?.public ?? [];
+  const blockedUnlisted = strongLanguage?.unlisted ?? [];
+  const languageFields = blockedPublic.length > 0 ? blockedPublic : blockedUnlisted;
+  const visibilityOptions = VISIBILITY_OPTIONS.map((option) =>
+    (option.value === "public" ? blockedPublic : blockedUnlisted).length > 0
+      ? { ...option, disabled: true, description: STRONG_LANGUAGE_CHOICE_REASON }
+      : option,
+  );
+  const blockedNow =
+    (visibility === "public" ? blockedPublic : visibility === "unlisted" ? blockedUnlisted : []).length > 0;
   // The checkbox and the visibility field move together: ticking it forces
   // private; unticking a private card offers public (the default) again.
   const setSaveAsDraft = (next: boolean) => {
@@ -210,15 +232,31 @@ export function PublishPanel({
               render={({ field }) => (
                 <ChipGroup
                   ariaLabel="Visibility"
+                  ariaDescribedBy={languageFields.length > 0 ? languageNoteId : undefined}
                   layout="grid-2"
                   size="md"
-                  value={field.value}
+                  // A choice the text rules out is never shown as picked;
+                  // the form keeps it, so removing the words brings it back.
+                  value={blockedNow ? "" : field.value}
                   onChange={(next) => field.onChange(next)}
-                  options={VISIBILITY_OPTIONS}
+                  options={visibilityOptions}
                 />
               )}
             />
           )}
+          {/* Always mounted (and never display:none, which some screen
+              readers then skip), so a change is announced once, politely —
+              never an alert. Empty while the text is clean or the card is a
+              draft (a draft is private anyway); an empty note takes no
+              room (`empty:` cancels the row's gap). */}
+          <p
+            id={languageNoteId}
+            role="status"
+            data-testid="strong-language-note"
+            className="text-xs leading-5 text-accent empty:-mt-3"
+          >
+            {saveAsDraft || languageFields.length === 0 ? null : strongLanguageNote(languageFields)}
+          </p>
         </div>
       </FieldGroup>
 

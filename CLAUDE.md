@@ -115,6 +115,21 @@ Rules and gotchas:
   `safeParse` and return typed field errors. URL fields must be
   https-gated (`HTTPS_URL_BASE` / `isSafeImageUrl`) — bare `z.url()`
   accepts `javascript:` schemes.
+- Strong language (owner policy 2026-10-28): violence and mild words
+  ("damn", "hell") are fine; a card whose TEXT holds strong profanity or a
+  slur is saved PRIVATE, never refused, and its maker is told why. ONE
+  detector, `lib/moderation/profanity.ts` (`containsProfanity`,
+  `profaneFields` over every text field of both faces, rows and tags;
+  per-word, so "Cockatrice" / "Scunthorpe" pass; the list ROT13'd — the
+  repo is public) and ONE rule, `languageForcesPrivate`, applied in BOTH
+  card actions on the row as written (every save path: creator, AI jobs,
+  deck remix, imports) with a typed `forcedPrivate` notice, in My Cards'
+  bulk publish (left as it was, `skippedLanguage`) and by the creator
+  (`lib/creator/strong-language.ts`: the Publish step's one polite note,
+  Public / Unlisted aria-disabled, the save sends private, one toast). An
+  edit of a card already in view that adds none and widens nothing is left
+  alone (no retroactive change); a forced edit leaves view through the
+  existing private path (purge + private bake), never a second hide.
 - Auth: `profiles.username` is NOT NULL + unique (0094) — the signup trigger
   mints a generated handle (`ember_sphinx_4821`) when none/invalid/taken is
   supplied and NEVER derives one from the email. Reserved handles live in

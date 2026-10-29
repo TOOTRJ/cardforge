@@ -82,7 +82,8 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
-import { allFramePreviewsMessage } from "@/lib/cards/bulk-visibility-copy";
+import { allFramePreviewsMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
+import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
 import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
@@ -110,12 +111,18 @@ type CreateCardSuccess = {
   ok: true;
   cardId: string;
   slug: string;
+  /** Set only when the card was stored PRIVATE although the save asked for
+   *  public / unlisted, because its text holds strong language (owner
+   *  policy 2026-10-28, lib/moderation/profanity.ts) — the UI says why. */
+  forcedPrivate?: ForcedPrivateNotice;
 };
 
 type UpdateCardSuccess = {
   ok: true;
   cardId: string;
   slug: string;
+  /** As on a create: the edit was stored private because of its text. */
+  forcedPrivate?: ForcedPrivateNotice;
 };
 
 type DeleteCardSuccess = {
@@ -543,6 +550,15 @@ export async function createCardAction(
     ...(data.lang !== undefined ? { lang: data.lang } : {}),
   };
 
+  // Strong language (owner policy 2026-10-28; lib/moderation/profanity.ts):
+  // a card whose text — any field, either face, its rows, its tags, its
+  // footer as stored — holds strong profanity or a slur is stored PRIVATE,
+  // never refused, and the result says why. Judged on the row as it is
+  // written, so every caller (the creator, the AI jobs, the deck remix, an
+  // import) gets the same rule.
+  const languageFields = languageForcesPrivate({ saved: insert, visibility: insert.visibility });
+  if (languageFields.length > 0) insert.visibility = "private";
+
   const { data: row, error } = await supabase
     .from("cards")
     .insert(insert)
@@ -625,7 +641,12 @@ export async function createCardAction(
     );
   }
 
-  return { ok: true, cardId: row.id, slug: row.slug };
+  return {
+    ok: true,
+    cardId: row.id,
+    slug: row.slug,
+    ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1055,6 +1076,22 @@ export async function updateCardAction(
     update.collector_number = data.collector_number ?? null;
   if (data.lang !== undefined) update.lang = data.lang;
 
+  // Strong language (owner policy 2026-10-28; lib/moderation/profanity.ts),
+  // judged on the card as it will be stored — the patch over the row — at
+  // the visibility every rule above settled on: public / unlisted → private,
+  // never refused. An edit of a card already out in view that adds no
+  // strong language and asks for no wider audience is left as it is (no
+  // retroactive change; an edit never changes what its maker did not touch).
+  // A card made private here leaves view exactly as a hand-made private
+  // edit does: `visibilityChanged` below purges it, and the deferred bake
+  // removes its render objects (bakeAndPersistCardRender, private).
+  const languageFields = languageForcesPrivate({
+    saved: { ...existing, ...update },
+    visibility: update.visibility ?? existing.visibility,
+    stored: { card: existing, visibility: existing.visibility },
+  });
+  if (languageFields.length > 0) update.visibility = "private";
+
   // The stored bake shows the card as it was before this edit, and the
   // re-bake below only lands seconds after the response: in the SAME write,
   // stop pointing at it (lib/cards/bake-core.ts REBAKE_PENDING_RENDER — an
@@ -1131,7 +1168,12 @@ export async function updateCardAction(
     }
   });
 
-  return { ok: true, cardId: row.id, slug: row.slug };
+  return {
+    ok: true,
+    cardId: row.id,
+    slug: row.slug,
+    ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1221,9 +1263,11 @@ type BulkCardsFailure = {
 
 export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
 
-/** A bulk visibility change also says how many frame previews it skipped. */
+/** A bulk visibility change also says how many frame previews it skipped —
+ *  and, only when there were any, how many cards it left as they were
+ *  because their text holds strong language (owner policy 2026-10-28). */
 export type BulkVisibilityResult =
-  | (BulkCardsSuccess & { skippedPreviews: number })
+  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number })
   | BulkCardsFailure;
 
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
@@ -1239,7 +1283,44 @@ type BulkPreflightRow = {
   rendered_image_url: string | null;
   /** Absent until migration 0121 lands. */
   frame_preview?: boolean;
+  /** The card's visibility and text, for the strong-language rule. */
+  visibility?: Visibility;
+  nickname?: string | null;
+  supertype?: string | null;
+  printed_types?: string | null;
+  subtypes?: string[] | null;
+  tags?: string[] | null;
+  rules_text?: string | null;
+  flavor_text?: string | null;
+  artist_credit?: string | null;
+  footer_text?: string | null;
+  face_content?: unknown;
 };
+
+/** The pre-flight's columns. A database that lacks one of the LATE ones
+ *  (frame_preview before 0121, printed_types before 0137, nickname before
+ *  0141) answers that it does not exist, naming it, and the read runs
+ *  again without it. */
+const BULK_PREFLIGHT_COLUMNS: readonly string[] = [
+  "id",
+  "owner_id",
+  "title",
+  "back_face",
+  "rendered_image_url",
+  "frame_preview",
+  "visibility",
+  "nickname",
+  "supertype",
+  "printed_types",
+  "subtypes",
+  "tags",
+  "rules_text",
+  "flavor_text",
+  "artist_credit",
+  "footer_text",
+  "face_content",
+];
+const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname"];
 
 export async function updateCardsVisibilityAction(
   cardIds: string[],
@@ -1269,17 +1350,21 @@ export async function updateCardsVisibilityAction(
   // Between a deploy and migration 0121 landing the column doesn't exist
   // yet (so no card can be a preview): read without it rather than break
   // every user's bulk change in that window.
-  let existing: BulkPreflightRow[] | null;
-  let existingError: { message: string } | null;
-  ({ data: existing, error: existingError } = await supabase
-    .from("cards")
-    .select("id, owner_id, title, back_face, rendered_image_url, frame_preview")
-    .in("id", ids));
-  if (existingError?.message.includes("frame_preview")) {
-    ({ data: existing, error: existingError } = await supabase
-      .from("cards")
-      .select("id, owner_id, title, back_face, rendered_image_url")
-      .in("id", ids));
+  // (The card's visibility and text ride along too, for the strong-language
+  // rule below; a late column that is missing is dropped the same way.)
+  let existing: BulkPreflightRow[] | null = null;
+  let existingError: { message: string } | null = null;
+  let columns = [...BULK_PREFLIGHT_COLUMNS];
+  for (let attempt = 0; attempt <= BULK_LATE_COLUMNS.length; attempt += 1) {
+    const read = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
+    existing = (read.data ?? null) as unknown as BulkPreflightRow[] | null;
+    existingError = read.error;
+    const message = read.error?.message ?? "";
+    const missing = read.error
+      ? BULK_LATE_COLUMNS.find((column) => columns.includes(column) && message.includes(column))
+      : undefined;
+    if (!missing) break;
+    columns = columns.filter((column) => column !== missing);
   }
   if (existingError) {
     return { ok: false, error: existingError.message };
@@ -1301,11 +1386,32 @@ export async function updateCardsVisibilityAction(
   // changes the rest. Decided here from the rows, never from the client.
   const goingPrivate = parsed.data.visibility === "private";
   const previews = goingPrivate ? [] : existing.filter((c) => c.frame_preview === true);
-  const targets = goingPrivate ? existing : existing.filter((c) => c.frame_preview !== true);
+  // A card whose text holds strong language (owner policy 2026-10-28,
+  // lib/moderation/profanity.ts) is never made public / unlisted from here
+  // either: it is left as it is and counted — the single-card rule, read on
+  // the stored row (an already-public one may still be unlisted).
+  const rows = existing;
+  const strongLanguage = goingPrivate
+    ? []
+    : rows.filter(
+        (c) =>
+          c.frame_preview !== true &&
+          languageForcesPrivate({
+            saved: c,
+            visibility: parsed.data.visibility,
+            stored: { card: c, visibility: c.visibility ?? "private" },
+          }).length > 0,
+      );
+  const targets = goingPrivate
+    ? rows
+    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c));
   if (targets.length === 0) {
     return {
       ok: false,
-      error: allFramePreviewsMessage(parsed.data.visibility, previews.length),
+      error:
+        strongLanguage.length > 0
+          ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
+          : allFramePreviewsMessage(parsed.data.visibility, previews.length),
     };
   }
   const targetIds = targets.map((c) => c.id);
@@ -1409,7 +1515,12 @@ export async function updateCardsVisibilityAction(
     }
   }
 
-  return { ok: true, count: targetIds.length, skippedPreviews: previews.length };
+  return {
+    ok: true,
+    count: targetIds.length,
+    skippedPreviews: previews.length,
+    ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
+  };
 }
 
 export async function deleteCardsAction(
