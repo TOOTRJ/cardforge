@@ -25,8 +25,14 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 // ---------------------------------------------------------------------------
 // DeckCardList — the deck's card list grouped by board, then by type bucket.
 // Client component: rows open the deck-card modal (info for everyone,
-// management for the owner), a remix-state filter narrows the list, and the
-// Originals ⇄ Proxies toggle flips which image remixed entries show.
+// management for the owner), a status filter narrows the list, and the
+// real cards ⇄ custom cards toggle flips which image customized entries
+// show. The words are the deck vocabulary (TODO DK2.2,
+// components/creator/card-glossary.tsx): an entry still on its real card is
+// "Imported", one with your version linked is "Edited" — and the filter
+// chips say the same words as the badges, each showing exactly the rows
+// that wear its badge ("Custom" and "Placeholder" rows show under All until
+// the status chips of TODO DK5.6).
 // ---------------------------------------------------------------------------
 
 const BOARD_ORDER: readonly DeckBoard[] = [
@@ -65,8 +71,8 @@ export function DeckCardList({
   //  - a click on the BACKDROP closes the dialog on pointerdown, and the
   //    same click's mousedown then takes the focus off the row again (it
   //    lands on <body>): the hand-back is repeated once the click is over;
-  //  - the row may be GONE — "Remove from deck" in the pop-up, or a proxy
-  //    linked under the "Needs proxy" filter — before or just after the
+  //  - the row may be GONE — "Remove from deck" in the pop-up, or a card
+  //    linked under the "Imported" filter — before or just after the
   //    close: the focus then goes to the row that took its place (the last
   //    one, past the end; the list's first control when no row is left),
   //    never to <body>;
@@ -130,17 +136,19 @@ export function DeckCardList({
   });
 
   const anyRemixed = items.some((i) => i.entry.card_id);
-  const needsCount = items.filter(
+  // "needs" = the Imported badge's rows, "remixed" = the Edited badge's.
+  const importedCount = items.filter(
     (i) => deckEntryState(i.entry) === "real",
+  ).length;
+  const editedCount = items.filter(
+    (i) => deckEntryState(i.entry) === "remixed",
   ).length;
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
     return items.filter((item) => {
       const state = deckEntryState(item.entry);
-      return filter === "remixed"
-        ? state === "remixed" || state === "custom"
-        : state === "real" || state === "unresolved";
+      return filter === "remixed" ? state === "remixed" : state === "real";
     });
   }, [items, filter]);
 
@@ -171,7 +179,7 @@ export function DeckCardList({
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
-          aria-label="Filter by proxy state"
+          aria-label="Filter by card status"
         >
           <FilterChip
             label="All"
@@ -179,12 +187,12 @@ export function DeckCardList({
             onClick={() => setFilter("all")}
           />
           <FilterChip
-            label={`Needs proxy${needsCount > 0 ? ` (${needsCount})` : ""}`}
+            label={`Imported${importedCount > 0 ? ` (${importedCount})` : ""}`}
             active={filter === "needs"}
             onClick={() => setFilter("needs")}
           />
           <FilterChip
-            label="Proxied"
+            label={`Edited${editedCount > 0 ? ` (${editedCount})` : ""}`}
             active={filter === "remixed"}
             onClick={() => setFilter("remixed")}
           />
@@ -197,7 +205,7 @@ export function DeckCardList({
             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
           >
             <Sparkles className="h-3 w-3" aria-hidden />
-            {showProxies ? "Showing my proxies" : "Showing originals"}
+            {showProxies ? "Showing custom cards" : "Showing real cards"}
           </button>
         ) : null}
       </div>
@@ -205,7 +213,7 @@ export function DeckCardList({
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">
           {filter === "needs"
-            ? "Every card here has a proxy. 🎉"
+            ? "Every real card here is edited. 🎉"
             : "No cards match this filter."}
         </p>
       ) : (
@@ -298,7 +306,9 @@ function BoardGroups({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    // minmax(0, 1fr) columns and min-w-0 groups: a row's badges and pips
+    // never widen the column past a 390 px screen (the title truncates).
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {TYPE_BUCKETS.map((bucket) => {
         const bucketItems = byBucket.get(bucket);
         if (!bucketItems || bucketItems.length === 0) return null;
@@ -307,7 +317,7 @@ function BoardGroups({
           0,
         );
         return (
-          <SurfaceCard key={bucket} className="flex flex-col gap-1 p-4">
+          <SurfaceCard key={bucket} className="flex min-w-0 flex-col gap-1 p-4">
             <span className="mb-1 text-xs font-semibold uppercase tracking-wider text-subtle">
               {TYPE_BUCKET_PLURALS[bucket]} · {bucketCount}
             </span>
@@ -402,7 +412,7 @@ function StateBadge({ state }: { state: ReturnType<typeof deckEntryState> }) {
   if (state === "remixed") {
     return (
       <Badge variant="primary" className="shrink-0 gap-1 text-[10px]">
-        <Sparkles className="h-2.5 w-2.5" aria-hidden /> Custom proxy
+        <Sparkles className="h-2.5 w-2.5" aria-hidden /> Edited
       </Badge>
     );
   }
@@ -422,7 +432,7 @@ function StateBadge({ state }: { state: ReturnType<typeof deckEntryState> }) {
   }
   return (
     <Badge variant="outline" className="shrink-0 text-[10px]">
-      Needs proxy
+      Imported
     </Badge>
   );
 }

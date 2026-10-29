@@ -95,9 +95,9 @@ describe("createDeckRemixJob leaves emblems out of the plan", () => {
     ]);
     // An emblem is not "beyond the batch cap".
     expect(plan.skipped).toBe(0);
-    // Three card steps (+ the free cover and guide): the runner finishes
-    // "3 of 3" with no failed or pending emblem step.
-    expect(steps.map((step) => step.label)).toEqual(["walker", "cathar", "own-dfc", "Deck cover", "How to play guide"]);
+    // Three card steps (+ the free guide; no AI cover since TODO DK6.3): the
+    // runner finishes "3 of 3" with no failed or pending emblem step.
+    expect(steps.map((step) => step.label)).toEqual(["walker", "cathar", "own-dfc", "How to play guide"]);
     expect(steps.filter((step) => step.key.startsWith("remix:")).map((step) => step.credits ?? 1)).toEqual([1, 2, 2]);
   });
 
