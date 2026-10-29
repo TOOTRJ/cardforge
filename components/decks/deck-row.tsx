@@ -75,8 +75,9 @@ export function DeckRowSection({
   );
 }
 
-/** "Trending now" — the week's most-liked public decks (list_trending_decks,
- *  migration 0149). Cookie-free reads only, so the /decks and /gallery
+/** "Trending now" — the week's most-liked public decks of real creators
+ *  (list_trending_decks, migration 0149: no admin-owned deck, no throwaway
+ *  account's). Cookie-free reads only, so the /decks and /gallery
  *  landings that draw it stay ISR. Nothing liked this week: no row. */
 export async function TrendingDecksRow({
   id = "trending-decks",

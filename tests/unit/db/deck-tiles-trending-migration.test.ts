@@ -8,12 +8,15 @@ import { describe, expect, it } from "vitest";
 // trending order, the rule matching 0144's list, no private / unlisted /
 // admin / throwaway deck, grants, the triggers — is proved on the local
 // stack in one rolled-back transaction, PR body):
-//   * ONE rule: public_deck_card_pairs holds 0144's predicate word for word,
-//     and the list, the count and the notification all read it — never a
-//     copy of the predicate;
+//   * ONE answer to "a real creator" (owner_is_creator: no admin, a public
+//     card of their own — the owner's anti-spam rule), read by the pairs and
+//     by trending, never restated;
+//   * ONE rule: public_deck_card_pairs is 0144's predicate (its creator
+//     clause through owner_is_creator, word for word otherwise), and the
+//     list, the count and the notification all read it;
 //   * the list keeps 0144's signature, order and cap;
-//   * trending is public, non-empty, admin-free, the last 7 days' likes
-//     without the owner's own, SECURITY INVOKER, capped at 24;
+//   * trending is public, non-empty, real creators only, the last 7 days'
+//     likes without the owner's own, SECURITY INVOKER, capped at 24;
 //   * the notification CHECK is 0140's kinds plus the two; each kind once
 //     (unique partial indexes, ON CONFLICT DO NOTHING); the card-added
 //     trigger is DEFERRED (judged at commit, after 0143's statement
@@ -55,18 +58,31 @@ function rule0144(): string {
   return squash(body.slice(from, to));
 }
 
+/** 0144's creator clause, as it reads there (the deck owner `d.owner_id`). */
+const CREATOR_0144 =
+  "not public.owner_is_admin(d.owner_id) and exists ( select 1 from public.cards own where own.owner_id = d.owner_id and own.visibility = 'public' )";
+
 describe("0149 — one rule for a card's public decks", () => {
-  it("public_deck_card_pairs carries 0144's predicate word for word", () => {
-    expect(squash(fnBody(SQL, "public_deck_card_pairs"))).toContain(rule0144());
+  it("owner_is_creator IS 0144's creator clause (for any owner)", () => {
+    const creator = squash(fnBody(SQL, "owner_is_creator")).replace(/p_owner_id/g, "d.owner_id");
+    expect(rule0144()).toContain(CREATOR_0144);
+    expect(creator).toBe(`select ${CREATOR_0144};`);
   });
 
-  it("the list, the count and the card-added notification read the pairs — and nothing restates the rule", () => {
+  it("public_deck_card_pairs is 0144's predicate, word for word, its creator clause through owner_is_creator", () => {
+    const expected = rule0144().replace(CREATOR_0144, "public.owner_is_creator(d.owner_id)");
+    expect(squash(fnBody(SQL, "public_deck_card_pairs").replace(/--[^\n]*\n/g, "\n"))).toContain(expected);
+  });
+
+  it("the list, the count and the card-added notification read the pairs — and nothing restates a rule", () => {
     expect(squash(fnBody(SQL, "public_decks_containing_card"))).toContain("from public.public_deck_card_pairs(array[p_card_id]) p");
     expect(squash(fnBody(SQL, "public_deck_counts_for_cards"))).toContain("from public.public_deck_card_pairs((p_card_ids)[1:200]) p");
     expect(squash(fnBody(SQL, "notify_deck_cards_added"))).toContain("from public.public_deck_card_pairs(p_card_ids, p_deck_id) p");
-    // The predicate appears ONCE in the file (in the pairs function).
-    expect(SQL.match(/owner_is_admin\(d\.owner_id\)/g)?.length).toBe(2); // pairs + trending
+    // The creator clause lives ONCE (owner_is_creator); the pairs and
+    // trending call it.
+    expect(SQL.match(/owner_is_admin\(/g)?.length).toBe(1);
     expect(SQL.match(/own\.visibility = 'public'/g)?.length).toBe(1);
+    expect(SQL.match(/public\.owner_is_creator\(d\.owner_id\)/g)?.length).toBe(2);
   });
 
   it("the list keeps 0144's signature, order and cap (create or replace keeps its ACL)", () => {
@@ -78,7 +94,13 @@ describe("0149 — one rule for a card's public decks", () => {
   });
 
   it("every reader is SECURITY INVOKER with an empty search_path", () => {
-    for (const name of ["public_deck_card_pairs", "public_decks_containing_card", "public_deck_counts_for_cards", "list_trending_decks"]) {
+    for (const name of [
+      "owner_is_creator",
+      "public_deck_card_pairs",
+      "public_decks_containing_card",
+      "public_deck_counts_for_cards",
+      "list_trending_decks",
+    ]) {
       const head = SQL.slice(SQL.indexOf(`create or replace function public.${name}(`));
       const decl = head.slice(0, head.indexOf("$$"));
       expect(decl, name).toContain("security invoker");
@@ -89,13 +111,14 @@ describe("0149 — one rule for a card's public decks", () => {
 
 describe("0149 — trending decks", () => {
   const body = squash(fnBody(SQL, "list_trending_decks"));
-  it("ranks public, non-empty, non-admin decks by the last 7 days' likes, the owner's own left out", () => {
+  it("ranks public, non-empty decks of real creators by the last 7 days' likes, the owner's own left out", () => {
     expect(body).toContain("l.created_at >= now() - interval '7 days'");
     expect(body).toContain("l.user_id <> d.owner_id");
     expect(body).toContain("d.visibility = 'public'");
     expect(body).toContain("d.card_count > 0");
     expect(body).toContain("likes.recent > 0");
-    expect(body).toContain("not public.owner_is_admin(d.owner_id)");
+    // No admin-owned deck, no throwaway account's: the card page's rule.
+    expect(body).toContain("public.owner_is_creator(d.owner_id)");
     expect(body).toContain("order by likes.recent desc, d.likes_count desc, d.updated_at desc, d.id");
     expect(body).toContain("limit least(greatest(coalesce(p_limit, 8), 1), 24)");
   });
@@ -153,6 +176,7 @@ describe("0149 — grants", () => {
   it("the readers are public reads; the trigger helpers belong to no API role", () => {
     const flat = squash(SQL);
     for (const sig of [
+      "owner_is_creator(uuid)",
       "public_deck_card_pairs(uuid[], uuid)",
       "public_decks_containing_card(uuid, integer)",
       "public_deck_counts_for_cards(uuid[])",

@@ -2093,9 +2093,15 @@ export type Database = {
         Args: { p_card_id: string; p_limit?: number };
         Returns: { slug: string; title: string }[];
       };
-      // Migration 0149 — the ONE rule behind a card's public decks (the
-      // list above is read over it), the gallery's batched "In N decks"
-      // (a card no public deck names is absent), and trending decks.
+      // Migration 0149 — "a real creator" (no admin, a public card of their
+      // own: the anti-spam rule the pairs and trending read), the ONE rule
+      // behind a card's public decks (the list above is read over it), the
+      // gallery's batched "In N decks" (a card no public deck names is
+      // absent), and trending decks (real creators' only).
+      owner_is_creator: {
+        Args: { p_owner_id: string };
+        Returns: boolean;
+      };
       public_deck_card_pairs: {
         Args: { p_card_ids: string[]; p_deck_id?: string | null };
         Returns: { card_id: string; deck_id: string }[];

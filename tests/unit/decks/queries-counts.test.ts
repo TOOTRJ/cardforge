@@ -342,7 +342,8 @@ describe("listPublicDeckTilesContaining", () => {
 });
 
 // TODO DK8.2: "Trending now" is 0149's list_trending_decks (the week's
-// likes, admin-owned and empty decks out — proved on the local stack),
+// likes; real creators' non-empty decks only — no admin-owned deck, no
+// throwaway account's — proved on the local stack),
 // hydrated with owners, cookie-free; nothing to show (or no function yet)
 // lists none, and the row hides itself.
 describe("listTrendingDecks", () => {

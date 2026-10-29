@@ -1,15 +1,21 @@
 -- 0149_deck_tiles_trending.sql — trending decks, "In N decks" on cards, and
 -- two deck notifications (2026-10-28 deck plan: TODO DK8.2, DK8.4, DK8.6).
 --
+-- 0. ONE ANSWER TO "IS THIS A REAL CREATOR" (owner decisions 2026-10-29 and
+--    2026-10-30, the anti-spam rule). owner_is_creator(owner): the account
+--    is no admin (0091's owner_is_admin) and has at least one PUBLIC card of
+--    its own — a creator, not a throwaway account. Every place that asks
+--    reads this function, never a restated predicate: another user's deck
+--    on a card's page (section 1) and the decks that may trend (section 2).
+--
 -- 1. ONE RULE FOR "THE PUBLIC DECKS THAT NAME A CARD" (DK8.4; owner decision
 --    2026-10-29, first written as 0144's public_decks_containing_card). A
 --    card is named by the card OWNER's own public, non-empty decks, and by
---    another user's public, non-empty deck only while the card is PUBLIC,
---    the deck's owner is no admin (0091's owner_is_admin) and has at least
---    one public card of their own (a creator, not a throwaway account).
---    The rule now lives in ONE function, public_deck_card_pairs(cards,
---    deck), the (card, deck) pairs it allows, and everything that asks
---    "which public decks hold this card" reads it:
+--    another user's public, non-empty deck only while the card is PUBLIC
+--    and the deck's owner is a real creator (section 0) — 0144's predicate,
+--    the same answer. The rule now lives in ONE function,
+--    public_deck_card_pairs(cards, deck), the (card, deck) pairs it allows,
+--    and everything that asks "which public decks hold this card" reads it:
 --      * public_decks_containing_card(card, limit) — 0144's list (the card
 --        page's "In decks" row, its JSON-LD isPartOf and, since this PR, its
 --        "Decks with this card" tiles), redefined over the pairs: same
@@ -23,7 +29,9 @@
 --    may read, nothing more (a private card names no deck for a visitor).
 --
 -- 2. TRENDING DECKS (DK8.2). list_trending_decks(limit) ranks public,
---    non-empty decks of non-admin owners by their likes of the LAST 7 DAYS
+--    non-empty decks of real creators (section 0: no admin-owned deck, no
+--    throwaway account's — likes from a few accounts can't put a spam deck
+--    on /decks and the gallery) by their likes of the LAST 7 DAYS
 --    (deck_likes.created_at; the owner's own like doesn't count, as the
 --    cards' trending skips it), then all-time likes, then the newest edit.
 --    Only decks with at least one such like: an empty row hides itself in
@@ -57,9 +65,10 @@
 --    notifications) and never fail the write that fired them: a failure is
 --    a WARNING and the like / entry / deck still saves.
 --
--- Grants: the three readers (and the pairs function they call — an
--- invoker's callee needs EXECUTE too) are public reads: PUBLIC revoked,
--- EXECUTE to anon, authenticated and service_role.
+-- Grants: the three readers and trending (and owner_is_creator and the
+-- pairs function they call — an invoker's callee needs EXECUTE too) are
+-- public reads: PUBLIC revoked, EXECUTE to anon, authenticated and
+-- service_role.
 -- public_decks_containing_card keeps its signature (`create or replace` keeps
 -- its ACL; restated). notify_deck_cards_added and the three trigger
 -- functions are invoked by triggers alone (EXECUTE revoked from PUBLIC and
@@ -69,6 +78,29 @@
 -- functions, and the redefined list returns what 0144's did.
 --
 -- Ships through a PR; never applied ad-hoc. Idempotent.
+
+-- ===========================================================================
+-- 0. A real creator: one answer
+-- ===========================================================================
+
+-- SECURITY INVOKER: a public card is readable by anyone; owner_is_admin is
+-- 0091's definer (anon may call it).
+create or replace function public.owner_is_creator(p_owner_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select not public.owner_is_admin(p_owner_id)
+    and exists (
+      select 1 from public.cards own
+      where own.owner_id = p_owner_id and own.visibility = 'public'
+    );
+$$;
+
+revoke all on function public.owner_is_creator(uuid) from public;
+grant execute on function public.owner_is_creator(uuid) to anon, authenticated, service_role;
 
 -- ===========================================================================
 -- 1. The public decks that name a card: one rule
@@ -95,15 +127,11 @@ as $$
     and (
       -- The card owner's own deck.
       d.owner_id = c.owner_id
-      -- Another user's: only while the card is public, never an admin's,
-      -- and only from a creator with a public card of their own.
+      -- Another user's: only while the card is public, and only from a
+      -- real creator (no admin, a public card of their own — section 0).
       or (
         c.visibility = 'public'
-        and not public.owner_is_admin(d.owner_id)
-        and exists (
-          select 1 from public.cards own
-          where own.owner_id = d.owner_id and own.visibility = 'public'
-        )
+        and public.owner_is_creator(d.owner_id)
       )
     );
 $$;
@@ -172,7 +200,7 @@ as $$
   where d.visibility = 'public'
     and d.card_count > 0
     and likes.recent > 0
-    and not public.owner_is_admin(d.owner_id)
+    and public.owner_is_creator(d.owner_id)
   order by likes.recent desc, d.likes_count desc, d.updated_at desc, d.id
   limit least(greatest(coalesce(p_limit, 8), 1), 24);
 $$;

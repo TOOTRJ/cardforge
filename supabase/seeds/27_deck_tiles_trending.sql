@@ -4,7 +4,8 @@
 -- branch, the dev database and the local stack show each case:
 --
 --   Trending now (/decks, the gallery's "Trending decks") — likes of the
---     last 7 days, the owner's own left out, admin-owned decks left out:
+--     last 7 days, the owner's own left out, real creators' decks only
+--     (0149's owner_is_creator: no admin, a public card of their own):
 --       1. Cinderwing Dragonstorm (dev_pro): 3 this week (+ dev_pro's own,
 --          which doesn't count);
 --       2. Artificer's Arsenal (dev_artist, NEW): 1 this week, 2 in all;

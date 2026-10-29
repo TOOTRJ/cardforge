@@ -1828,7 +1828,10 @@ Rules and gotchas:
   one public card of their own, and only while the card is public
   (0144 `public_decks_containing_card`, read by `listPublicDecksContaining`;
   "In decks", the "Decks with this card" tiles and the JSON-LD `isPartOf`
-  are that one list, never a second read). Since 0149 the rule lives in ONE
+  are that one list, never a second read). Since 0149 "a real creator" is
+  ONE function, `owner_is_creator(owner)` (no admin, a public card of their
+  own — the anti-spam rule; trending reads it too, never a restated
+  predicate), and the rule lives in ONE
   function, `public_deck_card_pairs`, which that list, the gallery tile's
   batched "In N decks" (`public_deck_counts_for_cards` →
   `publicDeckCountsForCards`, `CardWithStats.public_deck_count`) and the
@@ -1846,8 +1849,9 @@ Rules and gotchas:
   private card nowhere, another creator's only while public, thumbs only).
   Its title is its one link, stretched over it; the author and the heart are
   siblings. Trending (DK8.2) is `list_trending_decks` (0149: the last 7
-  days' likes minus the owner's own, public, non-empty, no admin-owned
-  deck), cookie-free on /decks and the gallery (both stay ISR); /decks'
+  days' likes minus the owner's own, public, non-empty, real creators'
+  decks only — `owner_is_creator`), cookie-free on /decks and the gallery
+  (both stay ISR); /decks'
   controls live on /decks/browse alone (sort, ChipGroup formats, `?owner=`).
   Deck notifications (DK8.6, 0149): `deck_like` (a public deck, never the
   owner's own like, once per liker and deck — never retracted, so a like

@@ -271,12 +271,15 @@ export async function listPublicDecks(
 /** How many decks a one-row strip fetches (the CSS shows 1–4 of them). */
 export const DECK_ROW_MAX = 4;
 
-/** "Trending now" (TODO DK8.2): public, non-empty decks of non-admin
- *  owners ranked by their likes of the last 7 days (migration 0149's
- *  `list_trending_decks` — the owner's own like left out; ties by all-time
- *  likes, then the newest edit). Only decks liked this week: an empty
- *  answer hides the row. Cookie-free (the /decks and /gallery landings stay
- *  ISR); a database the function hasn't reached lists none. */
+/** "Trending now" (TODO DK8.2): public, non-empty decks of REAL CREATORS —
+ *  no admin, at least one public card of their own (0149's
+ *  `owner_is_creator`, the card page's anti-spam rule: a throwaway
+ *  account's deck never trends, however liked) — ranked by their likes of
+ *  the last 7 days (migration 0149's `list_trending_decks` — the owner's
+ *  own like left out; ties by all-time likes, then the newest edit). Only
+ *  decks liked this week: an empty answer hides the row. Cookie-free (the
+ *  /decks and /gallery landings stay ISR); a database the function hasn't
+ *  reached lists none. */
 export async function listTrendingDecks(limit = DECK_ROW_MAX): Promise<PublicDeckListing[]> {
   if (!isSupabaseConfigured()) return [];
   try {
