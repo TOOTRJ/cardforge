@@ -1774,6 +1774,25 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //              outline's last layer (a one-sided up-left shadow). A card on
 //              those frames, or on adventure / prepare / fullart / nyx
 //              (v74ShadowsChanged).
+//   v75 — the walker's loyalty badges on print (TODO 4.19's badge rail,
+//            owner 2026-10-28) and the long name at the 750 px bake (3.37
+//            (d)). WALKER_BADGES_LAYOUT_VERSION below — the ONE constant.
+//            A CORRECTION ("sweep"), never a badge. The parts:
+//            * the badges where 13 printings put them
+//              (lib/cards/loyalty-rows.ts LOYALTY_BADGE_PRINT): the black
+//              face at x 89–218 straddling the frame's edge (it was a
+//              106 × 69 px badge inside the rules box at x 146–252), each
+//              shape's height and its place on its row as printed, the
+//              numeral in Beleren at 62 px with the long minus, the colon
+//              after it, a static ability's text at x 208 (it kept the
+//              ability margin, 275); a row with a badge is never shorter
+//              than the badge. A planeswalker that draws ability rows on
+//              the three walker bodies (v75WalkerRowsChanged). The rail is
+//              a SLOT: their ticks are re-verified.
+//            * 3.37 (d): a measured line its fit shrinks is set, at the
+//              750 px bake, at the stored HD bake's px ÷ 2 — the preview's
+//              size. No stored bake is 750 px, so it re-bakes nothing
+//              (LIVE_RENDER_SCOPES: the visual matrix's 750 px cases only).
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -2093,7 +2112,18 @@ export const V74_SHADOW_TEMPLATES: readonly string[] = [
 /** …of which the walkers draw it on the starting loyalty alone. */
 const V74_LOYALTY_SHADOW_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
 
-export const CARD_LAYOUT_VERSION = RENDERING_CORRECTIONS_1_LAYOUT_VERSION;
+/** The walker's loyalty badges on print, and the long name at the 750 px
+ *  bake (TODO 4.19's badge rail + 3.37 (d), owner 2026-10-28): ITS version
+ *  lives here alone — CARD_LAYOUT_VERSION, the scopes, the verification list
+ *  and the rollout below read this constant — so a bump that merges first
+ *  moves it in one place (this constant and the test's `V` move together).
+ *  Frozen once it ships. */
+export const WALKER_BADGES_LAYOUT_VERSION = 75;
+/** v75's stored part: every walker body that draws ability rows. Frozen
+ *  with v75 (a walker body added later is born on the new rail). */
+export const V75_WALKER_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+
+export const CARD_LAYOUT_VERSION = WALKER_BADGES_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2342,6 +2372,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // the nyx masters and type band; every card on the two. Verification
   // narrower (VERIFICATION_TEMPLATE_SCOPES): `nyx` alone.
   [ADVENTURE_NYX_LAYOUT_VERSION]: ADVENTURE_NYX_TEMPLATES,
+  // The walker's loyalty badges on print (4.19's badge rail): the three
+  // walker bodies — card-scoped below to a planeswalker that draws ability
+  // rows (v75WalkerRowsChanged).
+  [WALKER_BADGES_LAYOUT_VERSION]: V75_WALKER_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2457,6 +2491,10 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
   // ink inside the slots a tick verified, as v33 / v36 / v49 — so every
   // other template's ticks stay fresh.
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: V74_TITLE_BAND_TEMPLATES,
+  // v75: the walker's badge rail moves (the badges out to the frame's edge,
+  // larger, with the colon; a static ability's column 67 px left) — a slot a
+  // tick verified, on the three walker bodies. Nothing else moves a slot.
+  [WALKER_BADGES_LAYOUT_VERSION]: V75_WALKER_TEMPLATES,
 };
 
 /**
@@ -2976,6 +3014,26 @@ export function v74ShadowsChanged(card: ScopeCard): boolean {
 }
 
 /**
+ * Whether layout v75 (the walker's loyalty badges on print, TODO 4.19's
+ * badge rail) changed a card's bake, on a template the template scope lets
+ * through (V75_WALKER_TEMPLATES): a planeswalker — the renderers' rows are
+ * a planeswalker's (showsLoyalty) — whose rows hold anything: its stored
+ * rows (`face_content`) or its rules text (resolveLoyaltyRows reads the
+ * rows first, the text as the fallback). Every row moves: a badge to the
+ * print's place and size, a static ability's text 67 px left — and with it
+ * the rows' heights. A walker with no text draws the plain box, as before;
+ * a card of another type on a walker body draws the plain box too. A row
+ * without the columns → affected.
+ */
+export function v75WalkerRowsChanged(card: ScopeCard): boolean {
+  if (card.card_type === undefined || card.rules_text === undefined || card.face_content === undefined) return true;
+  if (card.card_type !== "planeswalker") return false;
+  if (typeof card.rules_text === "string" && card.rules_text.trim()) return true;
+  const content = card.face_content && typeof card.face_content === "object" ? (card.face_content as { loyalty?: { abilities?: unknown } }) : null;
+  return Array.isArray(content?.loyalty?.abilities) && content.loyalty.abilities.length > 0;
+}
+
+/**
  * Whether layout v74 (rendering corrections, round 1) changed a card's
  * bake: the union of its parts, each scoped as narrowly as its own
  * predicate allows (owner 2026-10-28).
@@ -3460,7 +3518,41 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v74 — rendering corrections, round 1: the union of its parts —
   // v74Changed.
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: v74Changed,
+  // v75 — the walker's badges on print: on the three walker bodies (the
+  // template scope), a planeswalker that draws ability rows —
+  // v75WalkerRowsChanged. (Its 750 px part never reaches a stored bake:
+  // LIVE_RENDER_SCOPES.)
+  [WALKER_BADGES_LAYOUT_VERSION]: v75WalkerRowsChanged,
 };
+
+/**
+ * Bumps whose change reached ONLY the live 750 px render — never a stored
+ * bake, which is always the HD preset (lib/cards/bake-render.ts,
+ * rebake-batch.ts; the 600 px thumb and every 750 px surface that has a
+ * bake are that PNG downscaled, lib/render/stored-render.ts
+ * fitStoredRender). The sweep never reads this table: there is nothing
+ * stored to re-bake. What reads it is the visual matrix's bake
+ * (tests/visual/bake.visual.ts), whose 750 px cases are Satori renders:
+ * a 750 px case the probe names counts as in its bump's scope.
+ *
+ *   "measured-line" — v75 (TODO 3.37 (d)): a measured name or type line
+ *   whose fit SHRINKS it, set at the stored HD bake's px ÷ 2 instead of its
+ *   own floored px (lib/cards/render-tiers.ts measuredLinePx) — exactly the
+ *   renders the probe (probeLiveShrunkLines) sees take that path, on every
+ *   template and face: the front's name and type line, the adventure page's,
+ *   a `fitLines` second face's, an unturned measured second face's.
+ */
+export const LIVE_RENDER_SCOPES: Readonly<Record<number, "measured-line">> = {
+  [WALKER_BADGES_LAYOUT_VERSION]: "measured-line",
+};
+
+/** The live-only scopes a render stamped `stampedVersion` has missed since
+ *  (versions above it, up to `currentVersion`). */
+export function liveRenderScopesSince(stampedVersion: number, currentVersion: number = CARD_LAYOUT_VERSION): Array<"measured-line"> {
+  return Object.entries(LIVE_RENDER_SCOPES)
+    .filter(([v]) => Number(v) > stampedVersion && Number(v) <= currentVersion)
+    .map(([, scope]) => scope);
+}
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
 export function finishOfFrameStyle(frameStyle: unknown): string | null {
@@ -3560,6 +3652,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [WALKER_BADGES_LAYOUT_VERSION]: "sweep", // the walker's loyalty badges on print (4.19's badge rail, owner 2026-10-28): the badge at the frame's edge at the print's size with the colon, the long minus, a static ability's text at the print's margin — a correction of what both renderers drew against every walker print, card-scoped to walkers that draw ability rows, never a badge; plus 3.37 (d), the long name at the 750 px live render, which re-bakes nothing (LIVE_RENDER_SCOPES)
   [ADVENTURE_NYX_LAYOUT_VERSION]: "sweep", // the adventure's left-page paper toned onto print (4.26a) and the Nyx Constellation's lower half re-sourced from Card Conjurer onto print, its type band with its bar (4.17f) — corrections of two looks against their own prints after the owner's before / after sheet, never a badge
   [DISPLAY_KERNING_LAYOUT_VERSION]: "sweep", // Beleren's collision-guard kerns at 0 (K→y, R→j, f→l, f→i… — 21 pairs): the letters set tight as every print sets them, no more "K ylox" / "Snuff ler" — a correction of what both renderers printed; card-scoped to the names, type words and credits that hold a pair, never a badge
   [RENDERING_CORRECTIONS_1_LAYOUT_VERSION]: "sweep", // rendering corrections round 1 (3.5 / 3.16 / 3.19 / 3.22 / 3.25, owner 2026-10-28): the flavour bar, modal bullets, the land title band, card-relative shadows and the four-way outline — corrections of what both renderers drew against the prints, one sweep, never a badge

@@ -20,6 +20,8 @@ import {
 import { Button } from "@/components/ui/button";
 import type { GenerationJobPhase, GenerationJobStep } from "@/components/ai/use-generation-job";
 import { cn } from "@/lib/utils";
+import { failedStepMessage } from "@/lib/ai/failure";
+import { GENERATED_PRIVATE_STEP_NOTE, generatedPrivateMessage } from "@/lib/moderation/profanity";
 
 export type GenerationStats = {
   /** When the run (or resume) began, ms epoch. */
@@ -160,9 +162,19 @@ export function GenerationDetailsDialog({
                   <span className={cn("min-w-0 flex-1 truncate", step.status === "pending" && "text-muted")}>
                     {step.label}
                   </span>
+                  {step.status === "done" && step.forced_private ? (
+                    // Saved private for the strong language in its text
+                    // (owner policy 2026-10-28): named on its own row.
+                    <span className="text-xs text-accent" title={generatedPrivateMessage(step.label, step.forced_private.fields)}>
+                      {GENERATED_PRIVATE_STEP_NOTE}
+                    </span>
+                  ) : null}
                   {step.status === "failed" && step.error ? (
-                    <span className="hidden max-w-[40%] truncate text-xs text-danger sm:inline" title={step.error}>
-                      {step.error}
+                    <span
+                      className="hidden max-w-[40%] truncate text-xs text-danger sm:inline"
+                      title={failedStepMessage(step)}
+                    >
+                      {failedStepMessage(step)}
                     </span>
                   ) : null}
                   {step.status === "failed" && !busy ? (

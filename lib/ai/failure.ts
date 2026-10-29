@@ -33,7 +33,8 @@ export const AI_FAILURE_KINDS = [
   "frame_unfit",
   /** The image provider's safety filter refused every prompt we tried. */
   "art_blocked",
-  /** The picture took too long (a quiet refusal looks the same). */
+  /** The picture didn't arrive inside the step's wait — on production a
+   *  slow image service (2026-10-28: 93–168 s renders), never yet a refusal. */
   "art_timeout",
   /** The image provider is rate-limited or overloaded. */
   "art_busy",
@@ -65,13 +66,20 @@ export const AI_FAILURE_COPY: Record<AiFailureKind, string> = {
     "The AI's design didn't fit the frame you picked. Try again, or let it choose the frame with Surprise me.",
   art_blocked:
     "The image service's safety filter declined this artwork. Try again — each try rewords the art prompt — or change the theme.",
-  art_timeout: "The artwork took too long to paint. Try again — each try rewords the art prompt.",
+  art_timeout:
+    "The image service is running slowly right now, so the artwork took too long. Try again in a few minutes.",
   art_busy: "The image service is busy right now. Wait a minute, then try again.",
   art_failed: "The artwork couldn't be painted. Try again.",
   art_store: "The artwork was painted but couldn't be saved. Try again.",
   save_failed: "The card couldn't be saved. Try again.",
   step_failed: "Something went wrong while making this card. Try again.",
 };
+
+/** A picture our own nudity scan blocked after it was painted (owner
+ *  2026-10-28, lib/ai/random-art.ts): an `art_blocked` step whose `error` is
+ *  this sentence says so, not the provider's filter sentence. */
+export const ART_NUDITY_BLOCKED_COPY =
+  "This artwork was blocked by our nudity filter. Try again or change the prompt.";
 
 /**
  * The credit half of a failure message. `refunded` is what the failed
@@ -108,9 +116,13 @@ export function failedStepMessage(step: {
 }): string {
   // A save refusal carries the save's own words (our copy: "That frame
   // isn't available in red yet — …"), which say more than the kind's.
+  // So does our nudity scan's block (the same `art_blocked` kind as a
+  // provider's refusal, its own sentence).
   const own = step.error?.trim();
+  const ownWords =
+    (step.failure === "save_failed" && own) || (step.failure === "art_blocked" && own === ART_NUDITY_BLOCKED_COPY);
   const what =
-    isAiFailureKind(step.failure) && !(step.failure === "save_failed" && own)
+    isAiFailureKind(step.failure) && !ownWords
       ? AI_FAILURE_COPY[step.failure]
       : own || AI_FAILURE_COPY.step_failed;
   return `${what} ${creditOutcome(step.refunded, step.refund_pending)}`;
