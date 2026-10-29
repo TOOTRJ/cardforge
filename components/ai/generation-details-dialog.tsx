@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { GenerationJobPhase, GenerationJobStep } from "@/components/ai/use-generation-job";
 import { cn } from "@/lib/utils";
-import { failedStepMessage } from "@/lib/ai/failure";
+import { creditOutcome, failedStepMessage } from "@/lib/ai/failure";
 import { GENERATED_PRIVATE_STEP_NOTE, generatedPrivateMessage } from "@/lib/moderation/profanity";
 import { DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 
@@ -53,6 +53,20 @@ export function estimateRemainingMs(
   const elapsed = Math.max(1, now - stats.startedAt);
   const perStep = elapsed / stats.completions.length;
   return Math.round(perStep * remaining);
+}
+
+/** A failed step's line on a paused deck job: what happened and the truth
+ *  about its credit, without the "try again" advice — a paused deck step
+ *  can't be tried again (the paused line says so once). `failedStepMessage`
+ *  is shared with the creator, so the advice is cut here: its sentence is
+ *  "<what happened>. <advice>" and only the first sentence is kept. */
+export function pausedFailedStepMessage(step: GenerationJobStep): string {
+  const credit = creditOutcome(step.refunded, step.refund_pending);
+  const full = failedStepMessage(step);
+  const what = full.endsWith(credit) ? full.slice(0, full.length - credit.length).trim() : full;
+  const first = what.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? what;
+  const said = /\btry\b/i.test(first) ? "This card didn't finish." : first;
+  return `${said} ${credit}`;
 }
 
 export function formatDuration(ms: number): string {
@@ -191,9 +205,9 @@ export function GenerationDetailsDialog({
                   {step.status === "failed" && step.error ? (
                     <span
                       className="hidden max-w-[40%] truncate text-xs text-danger sm:inline"
-                      title={failedStepMessage(step)}
+                      title={retryPaused ? pausedFailedStepMessage(step) : failedStepMessage(step)}
                     >
-                      {failedStepMessage(step)}
+                      {retryPaused ? pausedFailedStepMessage(step) : failedStepMessage(step)}
                     </span>
                   ) : null}
                   {step.status === "failed" && canRetry ? (

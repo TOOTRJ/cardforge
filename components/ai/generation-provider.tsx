@@ -162,6 +162,17 @@ async function postStep(
   }
 }
 
+/** The job as the server has it now (GET /api/ai/jobs/[id]), or null. */
+async function fetchJob(jobId: string): Promise<JobPayload | null> {
+  try {
+    const response = await fetch(`/api/ai/jobs/${jobId}`);
+    const payload = await response.json().catch(() => null);
+    return response.ok && payload?.ok && payload.job ? (payload.job as JobPayload) : null;
+  } catch {
+    return null;
+  }
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Credits a set of steps will reserve when (re)run: one per card/icon
@@ -355,6 +366,9 @@ export function GenerationJobProvider({
             latest.set(s.key, s);
           }
         }
+        show();
+      };
+      const show = () => {
         const snap = snapshot();
         setJob(snap);
         setSteps(order.map((k) => snap.steps.find((s) => s.key === k)!));
@@ -369,8 +383,21 @@ export function GenerationJobProvider({
           if ("error" in result) {
             // A deck step that FAILED meanwhile (in another tab, while this
             // worker polled it) is refused while deck AI is paused: it is
-            // done for now, not a blip to count or post again.
-            if (result.code === DECK_AI_PAUSED_CODE) continue;
+            // done for now, not a blip to count or post again. It is shown
+            // as the server has it (one read) — or failed, if that read
+            // fails — never left "running".
+            if (result.code === DECK_AI_PAUSED_CODE) {
+              const fresh = await fetchJob(startJob.id);
+              const settled = fresh?.steps.find((s) => s.key === key);
+              if (fresh && (settled?.status === "failed" || settled?.status === "done")) {
+                publish(fresh);
+              } else {
+                const was = latest.get(key) ?? startJob.steps.find((s) => s.key === key);
+                if (was) terminal.set(key, { ...was, status: "failed" });
+                show();
+              }
+              continue;
+            }
             transportFailures += 1;
             if (transportFailures >= 3) {
               stopped = true;
@@ -654,14 +681,7 @@ export function GenerationJobProvider({
         toast.error("Another generation is already running — let it finish first.");
         return { ok: false, successes: 0, failures: 0 };
       }
-      let adopted: JobPayload | null = null;
-      try {
-        const response = await fetch(`/api/ai/jobs/${jobId}`);
-        const payload = await response.json().catch(() => null);
-        if (response.ok && payload?.ok && payload.job) adopted = payload.job as JobPayload;
-      } catch {
-        adopted = null;
-      }
+      const adopted = await fetchJob(jobId);
       if (!adopted) {
         toast.error("Couldn't load that generation.");
         return { ok: false, successes: 0, failures: 0 };
