@@ -3,6 +3,7 @@ import {
   ACTIVITY_KINDS,
   CLIENT_FUNNEL_EVENTS,
   FIRST_EVENT,
+  NAV_SURFACES,
   PERMANENT_FUNNEL_EVENTS,
   SERVER_FUNNEL_EVENTS,
   isClientFunnelEvent,
@@ -45,6 +46,22 @@ describe("funnel event vocabulary", () => {
       expect((SERVER_FUNNEL_EVENTS as readonly string[]).includes(FIRST_EVENT[kind])).toBe(true);
     }
     expect([...PERMANENT_FUNNEL_EVENTS].sort()).toEqual(["first_ai_generation", "first_card_saved", "first_download", "signup"]);
+  });
+
+  it("nav_click (TODO NV10) is a browser event carrying the link's id, its surface and signedIn — nothing else", () => {
+    expect(isClientFunnelEvent("nav_click")).toBe(true);
+    expect([...NAV_SURFACES]).toEqual(["header", "drawer", "footer"]);
+    expect(
+      sanitizeFunnelProps({
+        item: "community.gallery",
+        surface: "header",
+        signedIn: false,
+        href: "/gallery?q=someone@example.com",
+        label: "Card gallery",
+      }),
+    ).toEqual({ item: "community.gallery", surface: "header", signedIn: false });
+    // An item is an id, never free text.
+    expect(sanitizeFunnelProps({ item: "<img onerror=x>" })).toEqual({});
   });
 
   it("caps the number of props", () => {

@@ -629,6 +629,19 @@ body {
   }
 }
 
+/* The header's disclosure panels (components/layout/nav-disclosure.tsx)
+   drop in from the bar; `motion-safe:` keeps reduced motion still. */
+@keyframes nav-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-modal-overlay[data-state="open"],
   .card-modal-overlay[data-state="closed"],

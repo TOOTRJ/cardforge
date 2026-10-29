@@ -71,7 +71,9 @@ test.describe("onboarding", () => {
     await expect(page.locator("#email-pref-activity")).toBeChecked();
 
     await page.goto(`/profile/${user.handle}`);
-    await expect(page.getByText("Claimed Forger").first()).toBeVisible();
+    // The profile's own name — the header's Account panel (closed panels stay
+    // in the HTML, and come first) carries the display name too.
+    await expect(page.getByRole("main").getByText("Claimed Forger").first()).toBeVisible();
     const banner = page.locator('img[src^="/defaults/banners/"]').first();
     await expect(banner).toBeVisible();
   });

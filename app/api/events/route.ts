@@ -9,7 +9,7 @@ import { isbot } from "isbot";
 
 // ---------------------------------------------------------------------------
 // POST /api/events — the browser's funnel steps (pricing_view, cta_click,
-// upgrade_modal_open). Allow-listed event names, allow-listed scalar props,
+// upgrade_modal_open, nav_click). Allow-listed event names, allow-listed scalar props,
 // a 2 KB body cap, and only same-site callers (a cross-site fetch can't
 // pollute the funnel). Signed-out visitors are recorded with NO identifier;
 // a signed-in visitor's row carries their user id. Always 204: this must

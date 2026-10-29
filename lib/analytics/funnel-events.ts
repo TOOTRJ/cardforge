@@ -43,7 +43,16 @@ export const CLIENT_FUNNEL_EVENTS = [
   "pricing_view",
   "cta_click",
   "upgrade_modal_open",
+  // A header, drawer or footer link (TODO NV10): `item` is the link's id
+  // in lib/site-config.ts (`community.gallery`), `surface` where it sat
+  // (NAV_SURFACES). Owner decision D9: Gallery moved under Community, and
+  // its header clicks are watched.
+  "nav_click",
 ] as const;
+
+/** Where a nav_click's link sat. */
+export const NAV_SURFACES = ["header", "drawer", "footer"] as const;
+export type NavSurface = (typeof NAV_SURFACES)[number];
 
 export type ServerFunnelEvent = (typeof SERVER_FUNNEL_EVENTS)[number];
 
@@ -75,6 +84,7 @@ const PROP_KEYS = new Set([
   "scheduled", "sessionId", "subscriptionId",
   "referrer", "utmSource", "utmMedium", "utmCampaign",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
+  "item",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;

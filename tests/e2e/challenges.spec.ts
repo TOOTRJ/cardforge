@@ -38,6 +38,12 @@ test("challenge detail shows the brief, tag, and entry CTA", async ({
 
 test("header navigates to challenges", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: /^challenges$/i }).first().click();
+  // Design challenges sits in the header's Community panel (TODO NV1): a
+  // disclosure button opens it.
+  const header = page.getByRole("banner");
+  const community = header.getByRole("button", { name: "Community", exact: true });
+  await community.click();
+  await expect(community).toHaveAttribute("aria-expanded", "true");
+  await header.getByRole("link", { name: /design challenges/i }).click();
   await expect(page).toHaveURL(/\/challenges/);
 });

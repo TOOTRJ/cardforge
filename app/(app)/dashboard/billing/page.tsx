@@ -17,7 +17,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
-import { billingViewerFromProfile } from "@/lib/billing/viewer";
+import { DELINQUENT_SUBSCRIPTION_STATUSES, billingViewerFromProfile } from "@/lib/billing/viewer";
 import { isEndingStatus, planStatusOf } from "@/lib/billing/plan-status";
 import {
   CARD_CAPACITY_UNLIMITED,
@@ -91,7 +91,7 @@ export default async function BillingPage() {
   const plan = planForTier(entitlements.effectiveTier);
   const status = entitlements.status;
   const live = viewer.hasLiveSubscription;
-  const delinquent = !live && status != null && ["past_due", "unpaid", "incomplete"].includes(status);
+  const delinquent = !live && status != null && DELINQUENT_SUBSCRIPTION_STATUSES.has(status);
   const comped =
     entitlements.isPaid && !live && !delinquent && (profile?.comp_tier != null || profile?.is_admin);
   const sub = stripeDetails?.subscription ?? null;
