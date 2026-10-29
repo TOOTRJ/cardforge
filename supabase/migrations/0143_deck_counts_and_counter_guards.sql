@@ -44,8 +44,10 @@
 --        makes it now() on a real content change and keeps the old value
 --        otherwise; an explicit touch is honoured from a trusted path only
 --        (0103 honoured it from anyone).
---    cards.updated_at is untouched (0108's guard already ignores an explicit
---    write) and so is the render guard (0126 / 0134).
+--    On cards, an API role's INSERT also starts updated_at at now() (a
+--    forged 2099 pinned a card atop the gallery's Recent sort); an UPDATE
+--    leaves it to 0108's set_cards_updated_at, which already ignores an
+--    explicit write. The render guard (0126 / 0134) is untouched.
 --
 -- 3. ENTRIES PER DECK AND THE IMPORT (DK0.3).
 --      * A deck holds at most 500 entry ROWS. guard_deck_entry_limit(),
@@ -67,11 +69,25 @@
 --    No unique index on deck_cards: production may already hold duplicate
 --    rows, and an index would fail this migration there.
 --
+-- 4. THE COMMIT'S OWN SCRYFALL QUOTA. The commit now re-fetches every
+--    printing it stores from Scryfall, so it is rate-limited — under its
+--    own action, 'deck_import_commit', so 'deck_import' keeps meaning one
+--    resolve RUN and a commit never spends (or is refused by) the quota of
+--    the resolve that came before it. scryfall_calls' CHECK (0056) gains
+--    the label; the limits are the app's (lib/scryfall/rate-limit.ts).
+--
 -- Grants: the new columns ride decks' TABLE grants (0097). The two RPCs are
 -- for signed-in users (and the service role, which they refuse: no
 -- auth.uid() owns a deck); anon may not call them. The trigger functions are
 -- invoked by their triggers alone. public_deck_format_counts() keeps its
 -- signature (`create or replace` keeps its ACL); its grants are restated.
+-- scryfall_calls only changes its CHECK (a superset: every stored row
+-- passes); its grants and RLS are 0013's / 0097's.
+--
+-- Backward compatible with the code before it: nothing in the app writes a
+-- counter or the new columns, the old per-entry counting still reads the
+-- same rows, and the old import's direct inserts work below the cap (past
+-- 500 rows they are refused like any other insert).
 --
 -- Ships through a PR; never applied ad-hoc. Idempotent.
 
@@ -144,12 +160,14 @@ begin
 
   -- Lock first (id order: no deadlock between two multi-deck statements),
   -- then count with a fresh snapshot: a concurrent writer's committed rows
-  -- are seen, never overwritten by a stale sum.
+  -- are seen, never overwritten by a stale sum. NO KEY UPDATE — the lock
+  -- the UPDATE below takes anyway — so a foreign-key check on the deck (a
+  -- like, a new entry) never waits for this transaction.
   perform 1
   from public.decks d
   where d.id = any (v_deck_ids)
   order by d.id
-  for update;
+  for no key update;
 
   update public.decks d
   set card_count = s.card_count,
@@ -285,6 +303,10 @@ begin
     new.view_count := 0;
     new.share_count := 0;
     new.created_at := now();
+    -- A new card is new: a forged future updated_at would pin it at the top
+    -- of the gallery's Recent sort and stamp the sitemap's lastmod. (On an
+    -- UPDATE, 0108's set_cards_updated_at already ignores an explicit one.)
+    new.updated_at := now();
   else
     new.likes_count := old.likes_count;
     new.view_count := old.view_count;
@@ -545,3 +567,15 @@ $$;
 
 revoke all on function public.add_custom_deck_entry(uuid, uuid, text) from public, anon;
 grant execute on function public.add_custom_deck_entry(uuid, uuid, text) to authenticated, service_role;
+
+-- ===========================================================================
+-- 4. The commit's own Scryfall quota (0056's list plus one label; the table
+--    and its grants are unchanged)
+-- ===========================================================================
+
+alter table public.scryfall_calls
+  drop constraint if exists scryfall_calls_action_check;
+
+alter table public.scryfall_calls
+  add constraint scryfall_calls_action_check
+  check (action in ('search', 'named', 'import_art', 'deck_import', 'deck_import_commit'));
