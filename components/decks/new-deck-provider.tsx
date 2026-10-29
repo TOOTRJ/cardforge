@@ -47,8 +47,10 @@ export type OpenNewDeckOptions = {
   format?: DeckFormat;
   /** A saved card the deck starts with — "Build a deck around this card"
    *  (TODO DK8.3) and the creator's deck box (DK9.3). createDeckAction adds
-   *  it once the deck exists: a legendary creature into a Commander-style
-   *  deck's commander zone, else the main board (lib/decks/first-card.ts). */
+   *  it once the deck exists: the card that leads its format (a legendary
+   *  creature; in Brawl a planeswalker too; in Oathbreaker a planeswalker
+   *  alone) into the commander zone, else the main board
+   *  (lib/decks/first-card.ts). */
   cardId?: string;
 };
 

@@ -1,4 +1,4 @@
-import type { DeckAnalytics } from "@/lib/decks/analytics";
+import { deckStatCards, type DeckAnalytics } from "@/lib/decks/analytics";
 import type { ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ export function buildDeckBrief(input: DeckBriefInput): DeckBrief {
   lines.push(
     `This card is being designed FOR the deck "${input.title}"${
       input.description ? ` — ${input.description}` : ""
-    } (${input.format} format, ${analytics.total} cards).`,
+    } (${input.format} format, ${deckStatCards(analytics)} cards).`,
   );
 
   if (colors.length > 0) {

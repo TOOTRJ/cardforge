@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // The deck cover field (TODO DK6.5, components/decks/deck-creator-form.tsx):
@@ -166,6 +166,45 @@ describe("CoverField — the built-in backgrounds", () => {
     expect(screen.queryByRole("status")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Back to the colours/ }));
     expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("'Back to the colours' pick' leaves with the pick — and hands the focus to Shuffle, never <body>", () => {
+    function Stateful() {
+      const [value, setValue] = useState("/defaults/deck-covers/black-2.webp");
+      return (
+        <CoverField
+          userId={OWNER}
+          value={value}
+          defaultCoverSrc={DEFAULT}
+          onChange={setValue}
+          position={null}
+          onPositionChange={vi.fn()}
+        />
+      );
+    }
+    render(<Stateful />);
+    const back = screen.getByRole("button", { name: /Back to the colours/ });
+    back.focus();
+    expect(document.activeElement).toBe(back);
+    act(() => {
+      fireEvent.click(back);
+    });
+    // The button is gone with the stored pick; the focus did not go with it.
+    expect(screen.queryByRole("button", { name: /Back to the colours/ })).toBeNull();
+    expect(screen.getByRole("radio", { name: "Black 2" }).getAttribute("aria-checked")).toBe("false");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Shuffle" }));
+  });
+
+  it("…but leaves the focus alone when it is elsewhere on the page", () => {
+    const onChange = withChange("/defaults/deck-covers/black-2.webp");
+    const elsewhere = document.createElement("input");
+    document.body.appendChild(elsewhere);
+    elsewhere.focus();
+    fireEvent.click(screen.getByRole("button", { name: /Back to the colours/ }));
+    expect(onChange).toHaveBeenCalledWith("");
+    expect(document.activeElement).toBe(elsewhere);
+    elsewhere.remove();
   });
 
   it("an upload offers no built-in grid (Remove goes back to the colours' pick first)", () => {

@@ -11,11 +11,11 @@ import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
-import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
+import { mediaUrlViolationField, refusedDeckCoverMessage } from "@/lib/media/media-url-errors";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
-import { firstCardBoard } from "@/lib/decks/first-card";
+import { FIRST_CARD_NOT_COMMANDER, firstCardBoard } from "@/lib/decks/first-card";
 import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +44,10 @@ type CreateDeckSuccess = {
   /** Only when `firstCardId` was asked for and could not be added: why. The
    *  deck is made all the same. */
   firstCardError?: string;
+  /** Only when the first card WAS added but couldn't be set as the deck's
+   *  commander (lib/decks/first-card.ts): one plain sentence to show. The
+   *  card is on the main board. */
+  firstCardNotice?: string;
 };
 type UpdateDeckSuccess = { ok: true; deckId: string; slug: string };
 type DeleteDeckSuccess = { ok: true; deckId: string };
@@ -173,8 +177,9 @@ export async function createDeckAction(
   }
 
   if (!row && mediaUrlViolationField(lastError)) {
-    // Migration 0127: a cover that isn't one of the user's own uploads.
-    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+    // Migration 0127: a cover that isn't one of the user's own uploads — or
+    // a built-in background on a database 0150 hasn't reached.
+    return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(insert.cover_url) } };
   }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not create deck." };
@@ -192,16 +197,14 @@ export async function createDeckAction(
 
   // add_custom_deck_entry adds nothing when the card is in the deck already
   // (a reused twin), so this is safe to run again.
-  const firstCardError = options.firstCardId
+  const firstCard = options.firstCardId
     ? await addFirstCard(supabase, user.id, row.id, options.firstCardId, parsed.data.format)
     : null;
 
   if (options.redirectAfterCreate) {
     redirect(`/deck/${row.slug}/edit`);
   }
-  return firstCardError
-    ? { ok: true, deckId: row.id, slug: row.slug, firstCardError }
-    : { ok: true, deckId: row.id, slug: row.slug };
+  return { ok: true, deckId: row.id, slug: row.slug, ...firstCard };
 }
 
 /** How far back a lost create's twin is looked for (reuseRecentTwin). */
@@ -232,21 +235,21 @@ async function recentTwinDeck(
  *  RLS reads the caller back ANY card it may see — another creator's
  *  unlisted one included — and the deck_cards policies and 0144's
  *  `deck_card_not_linkable` guard decide whether it may join (the caller's
- *  own at any visibility, another creator's only while public). A
- *  legendary creature starting a Commander-style deck is then moved to the
- *  commander zone (lib/decks/first-card.ts; the RPC adds to the main board
- *  only) — best effort: a refused move leaves it on the main board. Null
- *  when added; else ONE plain sentence — never a database error's words (a
- *  new deck is far from the entry limit, the one refusal worth its own
- *  copy). */
+ *  own at any visibility, another creator's only while public). The card
+ *  that leads a deck of its format (lib/decks/first-card.ts) is then moved
+ *  to the commander zone (the RPC adds to the main board only) — best
+ *  effort: a refused move leaves it on the main board, the add kept, and
+ *  says so (`firstCardNotice`). Null when it all went in; else ONE plain
+ *  sentence — never a database error's words (a new deck is far from the
+ *  entry limit, the one refusal worth its own copy). */
 async function addFirstCard(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   deckId: string,
   cardId: string,
   format: DeckFormat,
-): Promise<string | null> {
-  const unavailable = "That card couldn't be added — add it from the deck page.";
+): Promise<{ firstCardError: string } | { firstCardNotice: string } | null> {
+  const unavailable = { firstCardError: "That card couldn't be added — add it from the deck page." };
   if (!isUuid(cardId)) return unavailable;
   const { data: card } = await supabase
     .from("cards")
@@ -257,12 +260,15 @@ async function addFirstCard(
   const added = await addCustomCardEntryToDeck(supabase, userId, deckId, card.id, card.title);
   if (!added.ok) return unavailable;
   if (firstCardBoard(format, card) === "commander") {
-    await supabase
+    // No row matched is no failure: a reused twin's card is in the zone
+    // already (the RPC added nothing to the main board). An error is.
+    const { error } = await supabase
       .from("deck_cards")
       .update({ board: "commander" })
       .eq("deck_id", deckId)
       .eq("card_id", card.id)
       .eq("board", "main");
+    if (error) return { firstCardNotice: FIRST_CARD_NOT_COMMANDER };
   }
   return null;
 }
@@ -336,8 +342,9 @@ export async function updateDeckAction(
   }
 
   if (!row && mediaUrlViolationField(lastError)) {
-    // Migration 0127: a cover that isn't one of the user's own uploads.
-    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+    // Migration 0127: a cover that isn't one of the user's own uploads — or
+    // a built-in background on a database 0150 hasn't reached.
+    return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(update.cover_url) } };
   }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not update deck." };

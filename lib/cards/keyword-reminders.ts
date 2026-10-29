@@ -67,15 +67,9 @@ export const KEYWORD_REMINDERS: readonly KeywordReminder[] = [
   { name: "Surveil", rule: "701.25", text: "Surveil 1.", reminder: "Look at the top card of your library. You may put that card into your graveyard." },
 ];
 
-/**
- * Every keyword ability of the Comprehensive Rules (section 702, 702.2 →
- * 702.195, CR_SOURCE's release) and the keyword actions of section 701 — by
- * name, for the import's self-name guard (lib/cards/self-name.ts
- * oracleSelfNamesAsTokens): a card named after a keyword ("Storm", "Split
- * Second", "Flash") never has its keyword turned into `~`.
- */
-export const CR_KEYWORD_NAMES: readonly string[] = [
-  // 702 — keyword abilities.
+/** Every keyword ability of the Comprehensive Rules (section 702, 702.2 →
+ *  702.195, CR_SOURCE's release), with the variants its rules name. */
+export const CR_KEYWORD_ABILITY_NAMES: readonly string[] = [
   "Deathtouch", "Defender", "Double Strike", "Enchant", "Equip", "First Strike", "Flash", "Flying", "Haste",
   "Hexproof", "Indestructible", "Intimidate", "Landwalk", "Lifelink", "Protection", "Reach", "Shroud", "Trample",
   "Vigilance", "Ward", "Banding", "Rampage", "Cumulative Upkeep", "Flanking", "Phasing", "Buyback", "Shadow",
@@ -104,7 +98,10 @@ export const CR_KEYWORD_NAMES: readonly string[] = [
   // rest are not in its text); 702.29e–f's cycling examples and "typecycling".
   "Megamorph", "Totem Armor", "Islandwalk", "Artifact Landwalk", "Nonbasic Landwalk", "Snow Swampwalk",
   "Snow Forestwalk", "Mountaincycling", "Basic Landcycling", "Typecycling",
-  // 701 — keyword actions.
+];
+
+/** The keyword actions of the Comprehensive Rules (section 701). */
+export const CR_KEYWORD_ACTION_NAMES: readonly string[] = [
   "Activate", "Attach", "Behold", "Cast", "Counter", "Create", "Destroy", "Discard", "Double", "Triple", "Exchange",
   "Exile", "Fight", "Goad", "Investigate", "Mill", "Play", "Regenerate", "Reveal", "Sacrifice", "Scry", "Search",
   "Shuffle", "Surveil", "Tap", "Untap", "Transform", "Convert", "Fateseal", "Clash", "Planeswalk", "Abandon",
@@ -117,6 +114,16 @@ export const CR_KEYWORD_NAMES: readonly string[] = [
   // Not here: "Prepare" — in this release a card layout and a designation
   // (rule 722, "Preparation cards"; "prepared"), no 701 / 702 keyword.
 ];
+
+/**
+ * Every keyword of the Comprehensive Rules — the abilities (702) then the
+ * actions (701) — by name, for the import's self-name guard
+ * (lib/cards/self-name.ts oracleSelfNamesAsTokens): a card named after a
+ * keyword ("Storm", "Split Second", "Flash") never has its keyword turned
+ * into `~`. The deck's keyword count reads the two lists apart
+ * (lib/decks/keyword-frequency.ts).
+ */
+export const CR_KEYWORD_NAMES: readonly string[] = [...CR_KEYWORD_ABILITY_NAMES, ...CR_KEYWORD_ACTION_NAMES];
 
 const KEYWORD_NAME_SET: ReadonlySet<string> = new Set(CR_KEYWORD_NAMES.map((name) => name.toLowerCase()));
 

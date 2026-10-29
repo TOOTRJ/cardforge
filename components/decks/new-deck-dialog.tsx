@@ -370,7 +370,10 @@ export function NewDeckDialog({
       }
       made = true;
       clearNewDeckDraft();
-      if (result.firstCardError) toast.message(result.firstCardError);
+      // A card that didn't go in, or went in but not as the commander: one
+      // plain sentence either way (the deck is made).
+      const firstCardNote = result.firstCardError ?? result.firstCardNotice;
+      if (firstCardNote) toast.message(firstCardNote);
       setCreated({ deckId: result.deckId, slug: result.slug, title: name });
       if (!decklist.trim()) {
         toast.success("Deck created.");

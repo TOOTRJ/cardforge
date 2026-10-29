@@ -178,6 +178,12 @@ export const siteConfig = {
               href: "/tools",
               description: "Card maker, AI generator, pip editor & more",
             },
+            {
+              id: "learn.frames",
+              label: "Frames",
+              href: "/frames",
+              description: "Every frame in the creator, by era",
+            },
           ],
         },
       ],
@@ -306,6 +312,7 @@ export const siteConfig = {
         { id: "learn.help", label: "Help & FAQ", href: "/help" },
         { id: "learn.whats-new", label: "What's new", href: "/news" },
         { id: "learn.tools", label: "Tools", href: "/tools" },
+        { id: "learn.frames", label: "Frames", href: "/frames" },
       ],
     },
     {

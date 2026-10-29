@@ -38,6 +38,7 @@ import { DeckCardList } from "@/components/decks/deck-card-list";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
+import { computeDeckCharts } from "@/lib/decks/deck-charts";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
 import { DECK_VIEW_COOKIE, deckRowsOf, deckStatusCountsOf, ENTRY_BADGE_COUNT_LABELS, statusCountRows } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
@@ -346,6 +347,7 @@ describe("the sticky summary bar", () => {
         {/* The page's breakdown, fed the way the page feeds it. */}
         <DeckAnalyticsPanel
           analytics={computeDeckAnalytics(items)}
+          charts={computeDeckCharts(items)}
           statusCounts={statusCountRows(counts).map(({ badge, count }) => ({ key: badge, label: ENTRY_BADGE_COUNT_LABELS[badge], count }))}
         />
       </>,
@@ -357,7 +359,12 @@ describe("the sticky summary bar", () => {
     expect(screen.getByRole("region", { name: "Deck summary" }).textContent).toContain(
       "Imported 4 · Edited 0 · Remix 0 · Original 1 · No longer available 1",
     );
-    const breakdown = Array.from(document.querySelectorAll("dl > div")).map((row) => row.textContent);
+    // The breakdown's Composition chart, read through its table twin.
+    const composition = screen.getByRole("table", { name: "Cards by status" });
+    const breakdown = within(composition)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => Array.from(row.querySelectorAll("th, td"), (cell) => cell.textContent).slice(0, 2).join(""));
     expect(breakdown).toEqual([
       "Imported, not changed yet4",
       "Edited imports0",

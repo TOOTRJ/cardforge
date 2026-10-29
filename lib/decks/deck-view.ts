@@ -1,4 +1,4 @@
-import { TYPE_BUCKET_PLURALS, TYPE_BUCKETS, typeBucketFor, type TypeBucket } from "@/lib/decks/analytics";
+import { manaValueSlot, TYPE_BUCKET_PLURALS, TYPE_BUCKETS, typeBucketFor, type TypeBucket } from "@/lib/decks/analytics";
 import {
   effectiveEntryFields,
   effectiveEntryRarity,
@@ -354,13 +354,21 @@ const COLOR_GROUP_LABELS: Record<(typeof COLOR_KEYS)[number], string> = {
   M: COLOR_IDENTITY_LABELS.multicolor,
   C: COLOR_IDENTITY_LABELS.colorless,
 };
-const RARITY_KEYS = ["mythic", "rare", "uncommon", "common", "special", "none"] as const;
+/** The rarities a deck groups and counts by (the list's "Group by rarity",
+ *  the breakdown's Rarity chart, TODO DK7.1), rarest first. */
+export const DECK_RARITY_KEYS = ["mythic", "rare", "uncommon", "common", "special", "none"] as const;
+export type DeckRarityKey = (typeof DECK_RARITY_KEYS)[number];
 
-function rarityKey(rarity: string | null): string {
+/** A row's rarity (effectiveEntryRarity, lower case) as one of the keys. */
+export function deckRarityKey(rarity: string | null): DeckRarityKey {
   if (rarity === "mythic" || rarity === "rare" || rarity === "uncommon" || rarity === "common") return rarity;
   // Scryfall's "special" (timeshifted…) and "bonus" (Power Nine reprints).
   if (rarity === "special" || rarity === "bonus") return "special";
   return "none";
+}
+
+export function deckRarityLabel(key: DeckRarityKey): string {
+  return key === "special" ? "Special" : key === "none" ? "No rarity" : RARITY_LABELS[key];
 }
 
 const GROUP_SPECS: Record<Exclude<DeckGroupBy, "board" | "none">, GroupSpec> = {
@@ -373,7 +381,8 @@ const GROUP_SPECS: Record<Exclude<DeckGroupBy, "board" | "none">, GroupSpec> = {
     keyOf: (row) => {
       if (row.bucket === "Land") return "land";
       const mv = row.fields.manaValue;
-      return mv === null ? "unknown" : String(Math.min(Math.max(Math.floor(mv), 0), 7));
+      // The curve's own column (manaValueSlot): a group is a bar's cards.
+      return mv === null ? "unknown" : String(manaValueSlot(mv));
     },
     order: MANA_KEYS,
     labelOf: (key) => (key === "land" ? "Lands" : key === "unknown" ? "No mana value" : key === "7" ? "Mana value 7+" : `Mana value ${key}`),
@@ -393,9 +402,9 @@ const GROUP_SPECS: Record<Exclude<DeckGroupBy, "board" | "none">, GroupSpec> = {
     labelOf: (key) => ENTRY_BADGE_LABELS[key as EntryBadge],
   },
   rarity: {
-    keyOf: (row) => rarityKey(row.rarity),
-    order: RARITY_KEYS,
-    labelOf: (key) => (key === "special" ? "Special" : key === "none" ? "No rarity" : RARITY_LABELS[key as keyof typeof RARITY_LABELS]),
+    keyOf: (row) => deckRarityKey(row.rarity),
+    order: DECK_RARITY_KEYS,
+    labelOf: (key) => deckRarityLabel(key as DeckRarityKey),
   },
 };
 

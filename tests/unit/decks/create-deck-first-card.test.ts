@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     made and the result says so in ONE plain sentence, never a database
 //     error's words (RLS reads another creator's UNLISTED card back, and
 //     0144's deck_card_not_linkable trigger refuses it);
+//   * the card that leads its format goes on to the commander zone; a
+//     refused move keeps the add and says so (`firstCardNotice`);
 //   * reuseRecentTwin (the dialog's press after a lost answer) returns the
 //     same deck made in the last minute instead of a second one, and adds
 //     no second funnel row; without it a create always inserts;
@@ -32,6 +34,8 @@ const s = vi.hoisted(() => ({
   events: 0,
   /** deck_cards updates: the patch and its filters (the commander move). */
   moves: [] as Array<{ patch: unknown; filters: Array<[string, unknown]> }>,
+  /** What the commander move answers (null = it went through). */
+  moveError: null as { message: string } | null,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -75,6 +79,9 @@ function table(name: string) {
     },
     order: () => q,
     limit: () => q,
+    // The commander move is awaited on its filter chain (no single()).
+    then: (resolve: (value: unknown) => void) =>
+      resolve({ data: null, error: name === "deck_cards" && move ? s.moveError : null }),
     insert: () => {
       s.inserts += 1;
       return q;
@@ -110,6 +117,7 @@ beforeEach(() => {
   s.inserts = 0;
   s.events = 0;
   s.moves = [];
+  s.moveError = null;
 });
 
 describe("createDeckAction — the card a deck starts with", () => {
@@ -191,6 +199,40 @@ describe("createDeckAction — a legendary creature leads a Commander deck (TODO
     s.card = legend;
     s.added = { ok: false, error: "deck_card_not_linkable" };
     await createDeckAction({ title: "Around Zoey", format: "commander" }, { firstCardId: CARD });
+    expect(s.moves).toEqual([]);
+  });
+
+  it("a refused MOVE keeps the add and says so, in plain words — never the database's", async () => {
+    s.card = legend;
+    s.moveError = { message: "new row violates row-level security policy for table \"deck_cards\"" };
+    const result = await createDeckAction({ title: "Around Zoey", format: "commander" }, { firstCardId: CARD });
+    expect(result).toEqual({
+      ok: true,
+      deckId: "deck-new",
+      slug: "around-zoey",
+      firstCardNotice: "Added to the deck, but it couldn't be set as the commander — set it from the deck page.",
+    });
+    expect(s.addCalls).toHaveLength(1);
+    expect(s.moves).toHaveLength(1);
+  });
+});
+
+describe("createDeckAction — a planeswalker leads Brawl and Oathbreaker", () => {
+  const walker = { id: CARD, title: "Zoey, Lyric Mage", card_type: "planeswalker", supertype: "Legendary" };
+
+  it.each(["brawl", "standard_brawl", "oathbreaker"])("moves into the commander zone in %s", async (format) => {
+    s.card = walker;
+    const result = await createDeckAction({ title: "Around Zoey", format }, { firstCardId: CARD });
+    expect(result).toEqual({ ok: true, deckId: "deck-new", slug: "around-zoey" });
+    expect(s.moves).toEqual([
+      { patch: { board: "commander" }, filters: [["deck_id", "deck-new"], ["card_id", CARD], ["board", "main"]] },
+    ]);
+  });
+
+  it.each(["commander", "modern", "casual"])("stays on the main board in %s", async (format) => {
+    s.card = walker;
+    await createDeckAction({ title: "Around Zoey", format }, { firstCardId: CARD });
+    expect(s.addCalls).toHaveLength(1);
     expect(s.moves).toEqual([]);
   });
 });
