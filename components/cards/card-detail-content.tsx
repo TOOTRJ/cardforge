@@ -398,19 +398,23 @@ export async function CardDetailContent({
               initialCount={likesCount}
               requiresSignIn={!user}
             />
-            <RemixButton cardId={card.id} requiresSignIn={!user} />
             {/* Another creator's card into one of your decks (TODO DK9.4,
-                owner decision D3) — or a remix of it, for a card that
-                isn't public. */}
-            {isOwner ? null : (
+                owner decision D3): a PUBLIC one by "Add to deck"; one that
+                isn't public only as a remix — the Remix button says so
+                (one button, never two to the same place). */}
+            <RemixButton
+              cardId={card.id}
+              requiresSignIn={!user}
+              label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
+            />
+            {!isOwner && card.visibility === "public" ? (
               <AddToDeckButton
                 cardId={card.id}
                 cardTitle={card.title}
                 cardPath={`/card/${username}/${card.slug}`}
-                isPublic={card.visibility === "public"}
                 signedIn={Boolean(user)}
               />
-            )}
+            ) : null}
             {isOwner ? (
               <Button asChild>
                 <Link href={`/card/${card.slug}/edit`}>

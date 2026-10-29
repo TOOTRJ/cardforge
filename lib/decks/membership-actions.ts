@@ -43,12 +43,14 @@ import type {
 //            one after it "deck_full", in words (deckFullMessage) — the
 //            calls stop there. A new entry is the RPC's: main board, ×1
 //            (one card's picker then edits it through updateDeckCardAction).
-//   remove   the card's entries in the deck. An entry the card BROUGHT
-//            (the creator's add, a link, the AI — or one from before 0144
-//            that says nothing) goes; an entry that holds a decklist line
-//            (a printing — an import, an AI restyle — or an import /
-//            manual source) keeps it and loses the card, as the deck page's
-//            Unlink does (unlinkDeckCardAction): the real card stays.
+//   remove   the card's entries in the deck. An entry whose source says the
+//            card BROUGHT it (the creator's add, a link, the AI) with no
+//            printing goes; every other one — a printing (an import, an AI
+//            restyle), an import / manual source, or NO source (a row from
+//            before 0144: unknown, so the line stays) — keeps its line and
+//            loses the card, as the deck page's Unlink does
+//            (unlinkDeckCardAction). Each write counts on its own: one that
+//            lands is revalidated even if the other fails.
 // ---------------------------------------------------------------------------
 
 export type DeckMembershipActionResult =
@@ -82,6 +84,11 @@ const membershipSchema = z
     remove: cardIdsSchema(MAX_MEMBERSHIP_BATCH).default([]),
   })
   .refine((input) => input.add.length + input.remove.length > 0, { message: "No cards to change." })
+  // The cap is the CALL's (one RPC or write per card), adds and removes
+  // together.
+  .refine((input) => input.add.length + input.remove.length <= MAX_MEMBERSHIP_BATCH, {
+    message: `At most ${MAX_MEMBERSHIP_BATCH} cards at a time.`,
+  })
   .refine((input) => !input.add.some((id) => input.remove.includes(id)), {
     message: "A card can't join and leave a deck at once.",
   });
@@ -90,10 +97,15 @@ type CardRow = { id: string; title: string; owner_id: string; visibility: string
 type EntryRow = { id: string; deck_id: string; card_id: string | null; board: string; quantity: number };
 type RemovableEntry = { id: string; card_id: string | null; scryfall_id: string | null; source?: string | null };
 
-/** The entry holds a decklist line the deck keeps without the card. */
+/** The entry may hold a decklist line the deck keeps without the card. Only
+ *  an entry whose source SAYS the card brought it, with no printing, is the
+ *  card's alone: a NULL / missing source is unknown — a pre-0144 import line
+ *  linked to a card later reads the same as the creator's add — and in
+ *  doubt the line stays (a leftover name can be removed by hand; a deleted
+ *  line can't be brought back). */
 function keepsLine(entry: RemovableEntry): boolean {
   if (entry.scryfall_id) return true;
-  return typeof entry.source === "string" && !bringsCard(entry.source);
+  return !bringsCard(entry.source);
 }
 
 const unique = (ids: readonly string[]) => Array.from(new Set(ids.map((id) => id.toLowerCase())));
@@ -213,21 +225,26 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
     }
     const unlink = found.filter(keepsLine).map((entry) => entry.id);
     const drop = found.filter((entry) => !keepsLine(entry)).map((entry) => entry.id);
-    let writeError: string | null = readFailed ? "Couldn't read the deck." : null;
-    if (!writeError && unlink.length > 0) {
-      const { error } = await supabase.from("deck_cards").update({ card_id: null }).in("id", unlink);
-      if (error) writeError = error.message;
+    // Each write on its own: one that lands is a change (revalidated, its
+    // cards reported removed) even when the other fails.
+    const failedEntries = new Map<string, string>();
+    const write = async (ids: string[], run: (ids: string[]) => PromiseLike<{ error: { message: string } | null }>) => {
+      if (ids.length === 0) return;
+      const { error } = await run(ids);
+      if (error) for (const id of ids) failedEntries.set(id, error.message);
+      else changed = true;
+    };
+    if (!readFailed) {
+      await write(unlink, (ids) => supabase.from("deck_cards").update({ card_id: null }).in("id", ids));
+      await write(drop, (ids) => supabase.from("deck_cards").delete().in("id", ids));
     }
-    if (!writeError && drop.length > 0) {
-      const { error } = await supabase.from("deck_cards").delete().in("id", drop);
-      if (error) writeError = error.message;
-    }
-    const holders = new Set(found.map((entry) => entry.card_id?.toLowerCase()));
     for (const cardId of removeIds) {
-      if (writeError) results.push({ cardId, status: "failed", error: writeError });
-      else results.push({ cardId, status: holders.has(cardId) ? "removed" : "not_in_deck" });
+      const own = found.filter((entry) => entry.card_id?.toLowerCase() === cardId);
+      const failure = own.map((entry) => failedEntries.get(entry.id)).find(Boolean);
+      if (readFailed) results.push({ cardId, status: "failed", error: "Couldn't read the deck." });
+      else if (failure) results.push({ cardId, status: "failed", error: failure });
+      else results.push({ cardId, status: own.length > 0 ? "removed" : "not_in_deck" });
     }
-    if (!writeError && found.length > 0) changed = true;
   }
 
   if (changed) {

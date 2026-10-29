@@ -230,6 +230,7 @@ describe("the creator's Add to a deck box (TODO DK9.3)", () => {
     renderForm("remix", { card: savedCard(), myDecks: MY_DECKS });
     await act(async () => {
       fireEvent.change(deckSelect(), { target: { value: DECK } });
+      fireEvent.change(document.querySelector('[name="title"]')!, { target: { value: "Kesh Reforged" } });
     });
     await save();
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
@@ -237,6 +238,25 @@ describe("the creator's Add to a deck box (TODO DK9.3)", () => {
       "Not added to the deck: “Burn” is full — a deck holds at most 500 different entries. Remove some from it, or add the card to another deck.",
     );
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it("a deck alone doesn't make a remix the maker's own: Save stays off", async () => {
+    renderForm("remix", { card: savedCard(), myDecks: MY_DECKS });
+    const saveButton = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
+    expect(saveButton().disabled).toBe(true);
+    await act(async () => {
+      fireEvent.change(deckSelect(), { target: { value: DECK } });
+    });
+    expect(deckSelect().value).toBe(DECK);
+    // "Change something": the deck is where the card goes, not a change to it.
+    expect(saveButton().disabled).toBe(true);
+    await save();
+    expect(actions.createCardAction).not.toHaveBeenCalled();
+    // …and a real change still saves, with the deck.
+    await act(async () => {
+      fireEvent.change(document.querySelector('[name="title"]')!, { target: { value: "Kesh Reforged" } });
+    });
+    expect(saveButton().disabled).toBe(false);
   });
 
   it("the deck flow says where saving goes, and offers no deck", () => {

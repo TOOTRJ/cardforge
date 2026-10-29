@@ -28,6 +28,8 @@ const state = vi.hoisted(() => ({
   cards: [] as CardRow[],
   /** deck_cards rows the reads answer (read-back and removals). */
   entries: [] as Array<Record<string, unknown>>,
+  /** A deck_cards write that fails ("update" / "delete"). */
+  failWrite: null as null | "update" | "delete",
   /** The RPC's answer per card id; default "added". */
   rpc: {} as Record<string, { data: unknown; error: null | { message: string; details?: string; code?: string } }>,
   revalidated: [] as string[],
@@ -61,7 +63,9 @@ function db() {
       return { data: state.cards.filter((card) => ids.includes(card.id)), error: null };
     }
     if (table === "deck_cards") {
-      if (called(calls, "update") || called(calls, "delete")) return { data: null, error: null };
+      for (const op of ["update", "delete"] as const) {
+        if (called(calls, op)) return { data: null, error: state.failWrite === op ? { message: `${op} refused` } : null };
+      }
       const ids = inArg(calls, "card_id");
       return { data: state.entries.filter((e) => ids.includes(e.card_id as string)), error: null };
     }
@@ -92,6 +96,7 @@ beforeEach(() => {
   state.cards = [];
   state.entries = [];
   state.rpc = {};
+  state.failWrite = null;
   state.revalidated = [];
   state.profileRevalidations = 0;
   state.signedIn = true;
@@ -209,7 +214,7 @@ describe("changeDeckMembershipAction — add", () => {
 });
 
 describe("changeDeckMembershipAction — remove", () => {
-  it("drops an entry the card brought; keeps a decklist line without the card", async () => {
+  it("drops an entry its source says the card brought; keeps every other line without the card", async () => {
     state.entries = [
       { id: "brought", deck_id: DECK, card_id: id(1), scryfall_id: null, source: "creator" },
       { id: "printing", deck_id: DECK, card_id: id(2), scryfall_id: PRINTING, source: "import" },
@@ -227,9 +232,50 @@ describe("changeDeckMembershipAction — remove", () => {
     const writes = stub.forTable("deck_cards");
     const unlink = writes.find((e) => called(e.calls, "update"))!;
     expect(payloadOf(unlink.calls, "update")).toEqual({ card_id: null });
-    expect(inArg(unlink.calls, "id")).toEqual(["printing", "restyle", "placeholder"]);
+    // A row with no source (before 0144) is unknown — it may be an import
+    // line linked to a card later: its line stays.
+    expect(inArg(unlink.calls, "id")).toEqual(["printing", "restyle", "placeholder", "old"]);
     const drop = writes.find((e) => called(e.calls, "delete"))!;
-    expect(inArg(drop.calls, "id")).toEqual(["brought", "old"]);
+    expect(inArg(drop.calls, "id")).toEqual(["brought"]);
+    expect(state.revalidated.filter((p) => p === "/dashboard/cards")).toHaveLength(1);
+  });
+
+  it("every card-brought source with no printing goes; a NULL source never does", async () => {
+    state.entries = [
+      ...["creator", "link", "ai_generate", "ai_remix"].map((source, i) => ({
+        id: `brought-${source}`,
+        deck_id: DECK,
+        card_id: id(i + 1),
+        scryfall_id: null,
+        source,
+      })),
+      { id: "unknown", deck_id: DECK, card_id: id(9), scryfall_id: null, source: null, name: "Lightning Bolt" },
+    ];
+    const stub = db();
+    await changeDeckMembershipAction({ deckId: DECK, remove: [id(1), id(2), id(3), id(4), id(9)] });
+    const writes = stub.forTable("deck_cards");
+    expect(inArg(writes.find((e) => called(e.calls, "delete"))!.calls, "id")).toEqual([
+      "brought-creator",
+      "brought-link",
+      "brought-ai_generate",
+      "brought-ai_remix",
+    ]);
+    expect(inArg(writes.find((e) => called(e.calls, "update"))!.calls, "id")).toEqual(["unknown"]);
+  });
+
+  it("a write that lands counts even when the other fails: its cards removed, revalidated", async () => {
+    state.entries = [
+      { id: "printing", deck_id: DECK, card_id: id(1), scryfall_id: PRINTING, source: "import" },
+      { id: "brought", deck_id: DECK, card_id: id(2), scryfall_id: null, source: "link" },
+    ];
+    state.failWrite = "delete";
+    db();
+    const result = await changeDeckMembershipAction({ deckId: DECK, remove: [id(1), id(2)] });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.results).toEqual([
+      { cardId: id(1), status: "removed" },
+      { cardId: id(2), status: "failed", error: "delete refused" },
+    ]);
     expect(state.revalidated.filter((p) => p === "/dashboard/cards")).toHaveLength(1);
   });
 
@@ -249,6 +295,17 @@ describe("changeDeckMembershipAction — input", () => {
     const many = Array.from({ length: MAX_MEMBERSHIP_BATCH + 1 }, (_, i) => id(i + 1));
     const result = await changeDeckMembershipAction({ deckId: DECK, add: many });
     expect(result).toEqual({ ok: false, error: `At most ${MAX_MEMBERSHIP_BATCH} cards at a time.` });
+  });
+
+  it("the cap is the call's: adds and removes together", async () => {
+    db();
+    const half = Math.ceil(MAX_MEMBERSHIP_BATCH / 2);
+    const add = Array.from({ length: half }, (_, i) => id(i + 1));
+    const remove = Array.from({ length: half + 1 }, (_, i) => id(i + 1000));
+    expect(await changeDeckMembershipAction({ deckId: DECK, add, remove })).toEqual({
+      ok: false,
+      error: `At most ${MAX_MEMBERSHIP_BATCH} cards at a time.`,
+    });
   });
 
   it("refuses a card asked to join and leave at once, and an empty batch", async () => {

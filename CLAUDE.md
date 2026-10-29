@@ -1842,11 +1842,13 @@ Rules and gotchas:
   one deck, ≤ `MAX_MEMBERSHIP_BATCH` cards, `add_custom_deck_entry` per card
   with source `link`, D3 refused before the RPC, the 500 cap in words —
   `deckFullMessage` — a result per card, ONE revalidation). A removal deletes
-  the entry the card BROUGHT and unlinks one that holds a decklist line (a
-  printing, an import / manual source): the real card stays. The creator's
+  only an entry whose source SAYS the card brought it (no printing) and
+  unlinks every other — a printing, an import / manual source, or NO source
+  (unknown: in doubt the line stays). The creator's
   "Add to a deck" box (`creator-deck-box.tsx`, under the live preview) gives
-  a NEW card / remix the save's `deck_id` — the payload main sends, pinned —
-  and acts AT ONCE on an edit (D13), never touching the form; never for a
+  a NEW card / remix the save's `deck_id` — the payload main sends, pinned;
+  never a remix's "change something" (`hasMeaningfulChange`) — and acts AT
+  ONCE on an edit (D13), never touching the form; never for a
   guest or a frame preview; a deck that refuses the new card comes back as
   `deckEntryError` (the card is saved).
 

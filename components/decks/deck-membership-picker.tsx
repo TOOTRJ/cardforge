@@ -257,9 +257,10 @@ function EntryControls({
     setShownFor(entry.quantity);
     setDraft(String(entry.quantity));
   }
+  // Busy: `aria-disabled` stops nothing by itself — the handlers do.
   const commit = () => {
     const next = Number(draft);
-    if (!Number.isInteger(next) || next < 1 || next > MAX_ENTRY_QUANTITY) {
+    if (busy || !Number.isInteger(next) || next < 1 || next > MAX_ENTRY_QUANTITY) {
       setDraft(String(entry.quantity));
       return;
     }
@@ -269,7 +270,9 @@ function EntryControls({
     <div className="flex flex-wrap items-center gap-2 pl-7">
       <select
         value={entry.board}
-        onChange={(event) => onChange({ board: event.target.value as DeckBoard })}
+        onChange={(event) => {
+          if (!busy) onChange({ board: event.target.value as DeckBoard });
+        }}
         aria-label={`Board in ${deck.title}`}
         aria-disabled={busy || undefined}
         className={cn(inputClass(false), "h-8 w-auto py-0 text-xs")}

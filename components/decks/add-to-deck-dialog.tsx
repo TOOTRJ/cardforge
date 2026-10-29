@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -128,10 +128,25 @@ export function AddToDeckDialog({
     onOpenChange(next);
     if (!next && membership.changed) onChanged?.();
   };
+  // The decks arrive after the dialog opens: the focus waits on its title
+  // (read first), then moves to the first deck — or "＋ New deck" when there
+  // is none — once they are there. Never onto Done, the first control at
+  // open (and never off a control the reader has moved to meanwhile).
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const ready = membership.state === "ready";
+  useEffect(() => {
+    if (!ready || document.activeElement !== titleRef.current) return;
+    bodyRef.current?.querySelector<HTMLElement>('input[type="checkbox"], button')?.focus();
+  }, [ready]);
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent
         size="md"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          titleRef.current?.focus();
+        }}
         onCloseAutoFocus={(event) => {
           if (!opener?.isConnected || opener === document.body) return;
           event.preventDefault();
@@ -139,14 +154,16 @@ export function AddToDeckDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{single ? `Add “${single.title}” to a deck` : `Add ${cards.length} cards to a deck`}</DialogTitle>
+          <DialogTitle ref={titleRef} tabIndex={-1} className="focus-visible:outline-none">
+            {single ? `Add “${single.title}” to a deck` : `Add ${cards.length} cards to a deck`}
+          </DialogTitle>
           <DialogDescription>
             {single
               ? "Tick a deck to add the card, untick it to take the card out. Each change is saved at once."
               : "Tick a deck to add every selected card, untick it to take them out. New entries go on the main board, one copy each. Each change is saved at once."}
           </DialogDescription>
         </DialogHeader>
-        <div className="px-5 py-4">
+        <div ref={bodyRef} className="px-5 py-4">
           <DeckMembershipPanel
             membership={membership}
             cardCount={cards.length}

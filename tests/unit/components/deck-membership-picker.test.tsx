@@ -34,11 +34,13 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import { DECK_SEARCH_FROM, DeckMembershipPicker } from "@/components/decks/deck-membership-picker";
 import { AddToDeckDialog } from "@/components/decks/add-to-deck-dialog";
 import { AddToDeckButton } from "@/components/cards/add-to-deck-button";
+import { RemixButton } from "@/components/cards/remix-button";
 import type { DeckRowState, PickerDeck } from "@/lib/decks/membership-state";
 
 const DECKS: PickerDeck[] = [
@@ -157,6 +159,30 @@ describe("DeckMembershipPicker", () => {
     expect(copies.value).toBe("1");
     expect(onEntryChange).toHaveBeenCalledTimes(2);
   });
+
+  it("a busy row's board and copies write nothing (aria-disabled stops nothing by itself)", () => {
+    const onEntryChange = vi.fn();
+    const entry = { deckId: "d1", entryId: "e1", board: "main" as const, quantity: 1 };
+    render(
+      <DeckMembershipPicker
+        decks={DECKS}
+        rows={{ d1: { tick: "all", holders: 1, entry } }}
+        cardCount={1}
+        onToggle={vi.fn()}
+        onEntryChange={onEntryChange}
+        pending={new Set(["d1"])}
+      />,
+    );
+    const board = screen.getByRole("combobox", { name: "Board in Goblins" });
+    expect(board.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.change(board, { target: { value: "side" } });
+    const copies = screen.getByRole("spinbutton", { name: "Copies in Goblins" }) as HTMLInputElement;
+    fireEvent.change(copies, { target: { value: "3" } });
+    fireEvent.keyDown(copies, { key: "Enter" });
+    fireEvent.blur(copies);
+    expect(onEntryChange).not.toHaveBeenCalled();
+    expect(copies.value).toBe("1");
+  });
 });
 
 describe("AddToDeckDialog", () => {
@@ -266,31 +292,37 @@ describe("AddToDeckButton (the gallery, TODO DK9.4)", () => {
   const props = { cardId: CARD, cardTitle: "Bolt", cardPath: "/card/someone/bolt" };
 
   it("a visitor is offered sign-in, back to the card", () => {
-    render(<AddToDeckButton {...props} isPublic signedIn={false} />);
+    render(<AddToDeckButton {...props} signedIn={false} />);
     expect(screen.getByRole("link", { name: "Sign in to add to a deck" }).getAttribute("href")).toBe(
       "/login?redirectTo=%2Fcard%2Fsomeone%2Fbolt",
     );
   });
 
-  it("a card that isn't public can't join a deck: Remix into a deck instead", () => {
-    const { rerender } = render(<AddToDeckButton {...props} isPublic={false} signedIn />);
-    expect(screen.getByRole("link", { name: "Remix into a deck" }).getAttribute("href")).toBe(`/create?remix=${CARD}`);
-    rerender(<AddToDeckButton {...props} isPublic={false} signedIn={false} />);
-    expect(screen.getByRole("link", { name: "Remix into a deck" }).getAttribute("href")).toBe(
-      `/login?redirectTo=${encodeURIComponent(`/create?remix=${CARD}`)}`,
-    );
-    expect(screen.queryByRole("button", { name: "Add to deck" })).toBeNull();
+  it("a card that isn't public reaches a deck as a remix: the ONE Remix button says so", () => {
+    // (The card page passes the label for another creator's card that isn't
+    // public, and renders no Add to deck there.)
+    const { rerender } = render(<RemixButton cardId={CARD} label="Remix into a deck" />);
+    fireEvent.click(screen.getByRole("button", { name: "Remix into a deck" }));
+    expect(router.push).toHaveBeenLastCalledWith(`/create?remix=${CARD}`);
+    rerender(<RemixButton cardId={CARD} label="Remix into a deck" requiresSignIn />);
+    fireEvent.click(screen.getByRole("button", { name: "Remix into a deck" }));
+    expect(router.push).toHaveBeenLastCalledWith(`/login?redirectTo=${encodeURIComponent(`/create?remix=${CARD}`)}`);
+    // Its own card page says "Remix" as ever.
+    rerender(<RemixButton cardId={CARD} />);
+    expect(screen.getByRole("button", { name: "Remix" })).toBeTruthy();
   });
 
   it("signed in, a public card: the picker, and the focus back on the button when it closes", async () => {
     actions.getDeckPickerDataAction.mockResolvedValue({ ok: true, decks: DECKS, memberships: {} });
-    render(<AddToDeckButton {...props} isPublic signedIn />);
+    render(<AddToDeckButton {...props} signedIn />);
     const button = screen.getByRole("button", { name: "Add to deck" });
     button.focus();
     fireEvent.click(button);
     await screen.findByRole("dialog", { name: "Add “Bolt” to a deck" });
     expect(actions.getDeckPickerDataAction).toHaveBeenCalledWith([CARD]);
-    await waitFor(() => expect(box("Goblins")).toBeTruthy());
+    // The focus waits on the title while the decks load, then moves to the
+    // first deck — never onto Done.
+    await waitFor(() => expect(document.activeElement).toBe(box("Goblins")));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Done" }));
     });

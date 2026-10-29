@@ -105,11 +105,13 @@ describe("My Cards — a card's decks", () => {
     browser();
     const chips = screen.getAllByTestId("deck-chip");
     expect(chips.map((chip) => chip.getAttribute("aria-label"))).toEqual([
-      "In 2 decks — change the decks for Card 1",
-      "Add Card 2 to a deck",
+      "In 2 decks: Card 1",
+      "Add to deck: Card 2",
     ]);
     expect(chips[0]!.textContent).toBe("In 2 decks");
     expect(chips[1]!.textContent).toBe("Add to deck");
+    // Label in name (WCAG 2.5.3): the name starts with the words on the chip.
+    for (const chip of chips) expect(chip.getAttribute("aria-label")!.startsWith(chip.textContent!)).toBe(true);
   });
 
   it("the list view carries the same chips", () => {
@@ -125,7 +127,7 @@ describe("My Cards — a card's decks", () => {
   it("the Liked tab: another creator's PUBLIC card only (D3)", () => {
     browser({ initialFilter: "liked" });
     expect(screen.getAllByTestId("deck-chip").map((chip) => chip.getAttribute("aria-label"))).toEqual([
-      "Add Card 10 to a deck",
+      "Add to deck: Card 10",
     ]);
   });
 
@@ -139,7 +141,7 @@ describe("My Cards — a card's decks", () => {
       entries: [{ cardId: id(2), deckId: DECK, entryId: "e1", board: "main", quantity: 1 }],
     });
     browser();
-    fireEvent.click(screen.getByRole("button", { name: "Add Card 2 to a deck" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to deck: Card 2" }));
     const dialog = await screen.findByRole("dialog", { name: "Add “Card 2” to a deck" });
     expect(actions.getDeckPickerDataAction).toHaveBeenCalledWith([id(2)]);
     const burn = await within(dialog).findByRole("checkbox", { name: "Burn" });

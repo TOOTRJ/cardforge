@@ -26,12 +26,9 @@ export function DeckChipButton({
 }) {
   const inDecks = count === null ? null : inDecksLabel(count);
   const text = count === null ? "Decks" : (inDecks ?? "Add to deck");
-  const name =
-    count === null
-      ? `Decks for ${title}`
-      : inDecks
-        ? `${inDecks} — change the decks for ${title}`
-        : `Add ${title} to a deck`;
+  // The name STARTS with the words on the chip (WCAG 2.5.3, label in name:
+  // "click In 2 decks" works by voice), then says which card.
+  const name = `${text}: ${title}`;
   const Icon = inDecks || count === null ? Layers : Plus;
   return (
     <button
