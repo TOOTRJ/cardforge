@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { breakerAfterBatch, breakerForPoison, POISON_MAX } from "@/lib/cards/auto-rebake-state";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
-import { FAQ_TOPICS } from "@/lib/content/faq";
+import { faqEntryById, helpEntryHref } from "@/lib/content/help";
 import { CC_TEMPLATES } from "@/scripts/lib/cc-frames.mjs";
 
 // ---------------------------------------------------------------------------
@@ -280,12 +280,16 @@ describe("docs/FRAMES.md", () => {
     expect(read("scripts/rebake-renders.mjs")).toMatch(/resolveRebakeSecret\(URL_/);
   });
 
-  it("points at a FAQ entry that exists, under the anchor it gives", () => {
+  it("points at a FAQ entry that exists, under the help-centre anchor it gives", () => {
     const text = section("Announcing a change").replace(/\s+/g, " ");
     const question = /The FAQ entry "([^"]+)"/.exec(text)?.[1];
-    const anchor = /`\/faq#([\w-]+)`/.exec(text)?.[1];
-    const topic = FAQ_TOPICS.find((t) => t.slug === anchor);
-    expect(topic, `/faq#${anchor}`).toBeDefined();
-    expect(topic!.entries.map((e) => e.q)).toContain(question);
+    const link = /`(\/help\/[\w-]+#[\w-]+)`/.exec(text)?.[1];
+    expect(link, "a /help/<section>#<answer> link").toBeDefined();
+    const id = link!.split("#")[1];
+    // The answer lives under that id, on that section page (TODO NV6).
+    expect(helpEntryHref(id), link).toBe(link);
+    expect(faqEntryById(id)?.q).toBe(question);
+    // Every link the section names is that one.
+    for (const match of text.matchAll(/`(\/help\/[^`]+)`/g)) expect(match[1]).toBe(link);
   });
 });

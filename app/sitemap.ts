@@ -9,6 +9,7 @@ import {
   isIndexableCategory,
 } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
+import { HELP_PATH, HELP_SECTION_SLUGS, helpSectionPath } from "@/lib/content/help";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -28,7 +29,7 @@ import {
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
 //      /decks, /challenges, /news, /learn + its indexable categories, /tools,
-//      guides + their indexable topic hubs, …).
+//      /help + its sections, guides + their indexable topic hubs, …).
 //      They carry NO lastModified: stamping "now" on every hourly rebuild
 //      taught crawlers the date was noise and made them ignore the real
 //      ones on cards and guides.
@@ -92,7 +93,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/decks", "daily", 0.8),
     staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
-    staticEntry(baseUrl, "/faq", "monthly", 0.85),
+    // The help centre (/faq 308s to it): the hub, then every section — each
+    // is indexed and self-canonical.
+    staticEntry(baseUrl, HELP_PATH, "monthly", 0.85),
+    ...HELP_SECTION_SLUGS.map((slug) => staticEntry(baseUrl, helpSectionPath(slug), "monthly", 0.75)),
     // The /learn hub and the tools directory, then the category shelves that
     // are indexable (CATEGORY_MIN_ARTICLES guides — a thinner one is noindex
     // on its own page, so it stays out of here too).
@@ -243,30 +247,24 @@ async function fetchChallengeEntries(
   }
 }
 
-type DeckSitemapRow = {
-  slug: string;
-  updated_at: string;
-  deck_cards: { count: number }[] | null;
-};
-
 async function fetchPublicDeckEntries(
   baseUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = createPublicClient();
-    // deck_cards(count) is PostgREST's embedded aggregate — one round trip
-    // for the entry counts that decide indexability (an empty deck page is
-    // noindex, see app/(marketing)/deck/[slug]/page.tsx).
+    // Only decks with cards: an empty deck page is noindex (see
+    // app/(marketing)/deck/[slug]/page.tsx). `card_count` is the stored
+    // count (migration 0143) every public list and hub count reads — and
+    // filtering in the query means the cap counts indexable decks only.
     const { data } = await supabase
       .from("decks")
-      .select("slug, updated_at, deck_cards(count)")
+      .select("slug, updated_at")
       .eq("visibility", "public")
+      .gt("card_count", 0)
       .order("updated_at", { ascending: false })
       .limit(MAX_DYNAMIC_DECKS);
-    const rows = (data ?? []) as unknown as DeckSitemapRow[];
-    return rows
-      .filter((d) => (d.deck_cards?.[0]?.count ?? 0) > 0)
+    return (data ?? [])
       .map((d) => ({
         url: `${baseUrl}/deck/${d.slug}`,
         lastModified: new Date(d.updated_at),
