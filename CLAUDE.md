@@ -1821,6 +1821,28 @@ Rules and gotchas:
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
+  The deck PAGE (TODO DK5, part 1) is one wide screen (`WIDE_FRAME_CLASS`):
+  hero, the owner's bar, the CARDS first, then the breakdown and the guide.
+  It reads `listDeckPageCards` — `listDeckCards`' rules (D3 filter, credits)
+  with only `DECK_PAGE_CARD_COLUMNS` (identity, render pointers, provenance
+  and every fingerprinted field; a late column missing on a database is
+  dropped on 42703) — never `cards.*`. Views (Stacks / Grid / List / Table),
+  grouping, sorting and the status filter are `lib/decks/deck-view.ts`
+  (rows built on `deckEntryStatus` + `effectiveEntryFields`; rarity through
+  `effectiveEntryRarity`), the view / group / sort remembered in ONE cookie
+  (`pg_deck_view`, path `/deck`; no cookie = List on a phone UA, else
+  Stacks). Every opener carries `data-deck-entry` (the pop-up's focus
+  hand-back) and a name with its quantity and status (`deckRowLabel`);
+  custom cards draw through `DeckEntryTile` → `CardTile`, printings on their
+  own 5:7 tile (Scryfall "normal"), list rows at Scryfall "small"
+  (`entryPrintingImage`). A visitor never reads a private card's title:
+  `publicDeckItems` hides the entry name of a card they can't read unless
+  the entry stands for a printing (then it is the REAL card's name), and the
+  views draw a "Private card" tile — no art; the owner gets
+  `DeckPrivateCardsNotice` ("Make public" is `updateCardsVisibilityAction`,
+  its strong-language rule included). The sticky summary bar's format check
+  and "Edit next" are the owner's. Past 150 entries each group is
+  `content-visibility: auto` (every row stays in the DOM).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode
