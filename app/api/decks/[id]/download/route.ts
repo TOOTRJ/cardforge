@@ -5,7 +5,7 @@ import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
-import { deckToText } from "@/lib/decks/export-text";
+import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getDeckGuide } from "@/lib/decks/guides";
 import { buildDeckReportPdf } from "@/lib/decks/deck-report-pdf";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
@@ -113,7 +113,9 @@ export async function GET(
   const playable = items.filter((item) => item.entry.board !== "maybe");
 
   if (part === "decklist") {
-    const text = deckToText({ title: deck.title }, toExportEntries(items), { style: "plain" });
+    // The same names as the deck page's free "Copy decklist" (DK0.7): real
+    // cards by their real name, a custom-only entry by its card's title.
+    const text = deckToText({ title: deck.title }, exportEntriesOf(items), { style: "plain", useProxyNames: true });
     return new NextResponse(text, {
       status: 200,
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "private, no-store" },

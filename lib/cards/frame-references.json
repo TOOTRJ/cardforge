@@ -3277,7 +3277,7 @@
     }
   },
   "m15mdfcfront": {
-    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c: NO reference — no colourless modal front was printed on the plain 2015 frame (the design's STX #154 Pestilent Cauldron is a BLACK artifact, {2}{B}, on the black body; STX #6 Wandering Archaic, the only colourless modal face, is an Avatar on the see-through colourless frame, wave 2 / TODO 5.11): the artifact stand-in (design D2) is never offered, as on the back. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Egon #92 — not Valki #114, whose Tibalt back is a walker face the import keeps off the bodies (5.13, dfc/walker) — r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
+    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c: STX #6 Wandering Archaic (TODO 5.11a) — the only colourless modal face with no Artifact word, a Creature — Avatar on the SEE-THROUGH colourless frame, which the body's `c` master is since 5.11a (PipGlyph's composite of m15/c and this body's housing and strip); alternate PSTX #6s (the prerelease stamp; its scan reads a blue cast). The design's STX #154 Pestilent Cauldron is a BLACK artifact, {2}{B}, on the black body; a colourless ARTIFACT face wears the artifact master `a` (artifactMasterKeys), never `c`. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Egon #92 — not Valki #114, whose Tibalt back is a walker face the import keeps off the bodies (5.13, dfc/walker) — r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
     "colors": {
       "w": [
         {
@@ -3359,7 +3359,18 @@
           "scryfallId": "b76bed98-30b1-4572-b36c-684ada06826c"
         }
       ],
-      "c": null,
+      "c": [
+        {
+          "name": "Wandering Archaic",
+          "set": "stx",
+          "scryfallId": "18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312"
+        },
+        {
+          "name": "Wandering Archaic",
+          "set": "pstx",
+          "scryfallId": "a662a862-c592-4c5b-9728-279d04be22bf"
+        }
+      ],
       "m": [
         {
           "name": "Bloodsoaked Insight",
@@ -3375,7 +3386,7 @@
     }
   },
   "m15mdfcback": {
-    "note": "The modal BACK body (TODO 5.1b): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). The only 2015-frame modal backs that are spells are STX's (two-colour cards, one colour per face — the back's strip prints in the FRONT's colour, which the master's own-colour strip does not: a 5.1b review question) and the Marvel sets' creatures: w STX #150 Revel in Silence, u STX #147 Echoing Equation, b STX #148 Search for Blex, r STX #159 Flamethrower Sonata, g STX #151 Journey to the Oracle, m MSH #18 The Sensational She-Hulk (a GW back with a cost and the dark gold plate; its strip prints the Marvel '2/2 Creature' form, not built). c: NO reference — no colourless modal back was printed on the plain 2015 frame (every KHM artifact back is a COLOURED artifact: KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black — drawn on their colour's body in wave 1); the artifact stand-in is never offered. Alternates: the KHM Gods' backs — coloured artifacts drawn on their colour's body (w Sword of the Realms #15 / Valkmira #21, b Tergrid's Lantern #112 / Throne of Death #92, r Toralf's Hammer #154 / Harnfel #123, g The Ringhart Crest #181) and u Hakka, Whispering Raven #40 (a creature back: the dark plate).",
+    "note": "The modal BACK body (TODO 5.1b): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). The only 2015-frame modal backs that are spells are STX's (two-colour cards, one colour per face — the back's strip prints in the FRONT's colour, which the master's own-colour strip does not: a 5.1b review question) and the Marvel sets' creatures: w STX #150 Revel in Silence, u STX #147 Echoing Equation, b STX #148 Search for Blex, r STX #159 Flamethrower Sonata, g STX #151 Journey to the Oracle, m MSH #18 The Sensational She-Hulk (a GW back with a cost and the dark gold plate; its strip prints the Marvel '2/2 Creature' form, not built). c: STX #6's back, Explore the Vastlands (TODO 5.11a) — a colourless Sorcery on the SEE-THROUGH colourless frame (the body's `c` master since 5.11a), its bars and box darker than the front's as every modal back's; alternate PSTX #6s. Every KHM artifact back is a COLOURED artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black — drawn on their colour's body); a colourless ARTIFACT back would wear the artifact master `a`. Alternates: the KHM Gods' backs — coloured artifacts drawn on their colour's body (w Sword of the Realms #15 / Valkmira #21, b Tergrid's Lantern #112 / Throne of Death #92, r Toralf's Hammer #154 / Harnfel #123, g The Ringhart Crest #181) and u Hakka, Whispering Raven #40 (a creature back: the dark plate).",
     "colors": {
       "w": [
         {
@@ -3465,7 +3476,20 @@
           "face": 1
         }
       ],
-      "c": null,
+      "c": [
+        {
+          "name": "Explore the Vastlands",
+          "set": "stx",
+          "scryfallId": "18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312",
+          "face": 1
+        },
+        {
+          "name": "Explore the Vastlands",
+          "set": "pstx",
+          "scryfallId": "a662a862-c592-4c5b-9728-279d04be22bf",
+          "face": 1
+        }
+      ],
       "m": [
         {
           "name": "The Sensational She-Hulk",
@@ -3979,6 +4003,90 @@
       ]
     }
   },
+  "sagacreature": {
+    "note": "The saga creature (TODO 4.5d): Final Fantasy's black-bordered \"Summon:\" cards (FIN 2025) — the textured saga with the reminder as a band across the top, the type bar raised 173 px, a second box for the creature's abilities or flavour and the P/T plate; every one Universes Beyond's triangle stamp. Two references a colour where FIN prints two (the box holding an ability and its flavour). Colourless is FIN #1 Summon: Bahamut — its rail and box let the art through, which the body doesn't draw yet (TODO 4.5d part B); m: no multicolour one-faced summon was printed.",
+    "colors": {
+      "w": [
+        {
+          "name": "Summon: Knights of Round",
+          "set": "fin",
+          "scryfallId": "44d23652-077e-4c1f-b640-b284685db911",
+          "curated": true
+        },
+        {
+          "name": "Summon: Primal Garuda",
+          "set": "fin",
+          "scryfallId": "e44497a8-067e-454e-a9c0-684f03df55ff",
+          "curated": true
+        }
+      ],
+      "u": [
+        {
+          "name": "Summon: Leviathan",
+          "set": "fin",
+          "scryfallId": "ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb",
+          "curated": true
+        },
+        {
+          "name": "Summon: Shiva",
+          "set": "fin",
+          "scryfallId": "a80511f8-7cb1-4974-afde-8a5cebe13ad7",
+          "curated": true
+        }
+      ],
+      "b": [
+        {
+          "name": "Summon: Anima",
+          "set": "fin",
+          "scryfallId": "aa4f6703-21f8-4c29-ad5a-5afb54188ade",
+          "curated": true
+        },
+        {
+          "name": "Summon: Primal Odin",
+          "set": "fin",
+          "scryfallId": "8b1b5f06-e34d-44a3-976e-5157c4b7a0f4",
+          "curated": true
+        }
+      ],
+      "r": [
+        {
+          "name": "Summon: Brynhildr",
+          "set": "fin",
+          "scryfallId": "8ab5429a-1075-49aa-9608-0610080fbf7a",
+          "curated": true
+        },
+        {
+          "name": "Summon: G.F. Ifrit",
+          "set": "fin",
+          "scryfallId": "c6c73092-5195-4bdc-b039-a699f6e297b2",
+          "curated": true
+        }
+      ],
+      "g": [
+        {
+          "name": "Summon: Titan",
+          "set": "fin",
+          "scryfallId": "5ce6ea96-7293-496d-b9c8-8ed6d6109a4d",
+          "curated": true
+        },
+        {
+          "name": "Summon: Fat Chocobo",
+          "set": "fin",
+          "scryfallId": "32eb192b-de6b-4814-8077-628d343d014e",
+          "curated": true
+        }
+      ],
+      "c": [
+        {
+          "name": "Summon: Bahamut",
+          "set": "fin",
+          "scryfallId": "95318d85-4a08-47ac-a43d-ea83c0bea81c",
+          "curated": true
+        }
+      ],
+      "m": null
+    }
+  },
   "adventure": {
     "colors": {
       "w": [
@@ -4083,7 +4191,7 @@
     }
   },
   "prepare": {
-    "note": "The Prepare frame (TODO 4.27): Secrets of Strixhaven's (2026) black-bordered Prepare creatures — M15's frame with the spell on a page on the right. Each reference is a mono-coloured creature whose spell is its own colour (a hybrid or gold spell prints its own page colour, 4.26) and carries no holofoil stamp (no notch is drawn yet). m and c: no plain printing (a two-colour Prepare prints the split frame; none is colourless).",
+    "note": "The Prepare frame (TODO 4.27): Secrets of Strixhaven's (2026) black-bordered Prepare creatures — M15's frame with the spell on a page on the right. Each reference is a mono-coloured creature whose spell is its own colour (a hybrid or gold spell prints its own page colour, 4.26) and carries no holofoil stamp (the notch, TODO 4.27b, is judged on the extended-art dress's stamped prints and the sheet). m and c: no plain printing (a two-colour Prepare prints the split frame; none is colourless).",
     "colors": {
       "w": [
         {
@@ -4168,6 +4276,103 @@
           "name": "Studious First-Year // Rampant Growth",
           "set": "sos",
           "scryfallId": "24f888dd-785c-4089-a89c-03f9080130ed"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "extendedartprepare": {
+    "note": "The Prepare frame's extended-art dress (TODO 4.27b): Secrets of Strixhaven's extended-art Prepare creatures (SOS #309–342, the SOC commander decks' #63–98, FRA #425–430) — the extended-art pack's bars and black type bar over the Prepare frame's lower half (the creature's box, the spell's page). Every listed print is mono-coloured and oval-stamped (the stamp drawn with it on: the notch is the Prepare frame's, TODO 4.27b). m and c: no such printing (SOC #93–98 are two-colour, judged with the gold key's tick as on the plain frame; none is colourless).",
+    "colors": {
+      "w": [
+        {
+          "name": "Emeritus of Truce // Swords to Plowshares",
+          "set": "sos",
+          "scryfallId": "bfd607c0-7ed7-4a4e-abdd-508080f40ef2",
+          "curated": true
+        },
+        {
+          "name": "Joined Researchers // Secret Rendezvous",
+          "set": "sos",
+          "scryfallId": "15d99a75-939e-4584-9b4a-8afd115bab2c"
+        },
+        {
+          "name": "Eiganjo Dynastorian // Replenish",
+          "set": "soc",
+          "scryfallId": "f6a504a6-2501-4384-9db9-da6abe1cf81d"
+        }
+      ],
+      "u": [
+        {
+          "name": "Emeritus of Ideation // Ancestral Recall",
+          "set": "sos",
+          "scryfallId": "d8e1e20c-03b9-446b-84d4-466377e50310",
+          "curated": true
+        },
+        {
+          "name": "Harmonized Trio // Brainstorm",
+          "set": "sos",
+          "scryfallId": "c8f1baae-dd81-4e10-841e-15531ea1ffaa"
+        },
+        {
+          "name": "Dirgur Focusmage // Braingeyser",
+          "set": "soc",
+          "scryfallId": "baae3f8f-f282-40db-a1e0-cf6efc70bff0"
+        }
+      ],
+      "b": [
+        {
+          "name": "Emeritus of Woe // Demonic Tutor",
+          "set": "sos",
+          "scryfallId": "26156da4-1ec3-4702-bded-9868af3026b5",
+          "curated": true
+        },
+        {
+          "name": "Grave Researcher // Reanimate",
+          "set": "sos",
+          "scryfallId": "1d12804c-dda0-4dae-9eb8-f670e72c17e7"
+        },
+        {
+          "name": "Stensian Sanguinist // Exsanguinate",
+          "set": "soc",
+          "scryfallId": "66d88104-c69d-4349-a4ae-4a3d855a3536"
+        }
+      ],
+      "r": [
+        {
+          "name": "Emeritus of Conflict // Lightning Bolt",
+          "set": "sos",
+          "scryfallId": "f11b8d24-375d-40dc-8497-c1ee779e156a",
+          "curated": true
+        },
+        {
+          "name": "Maelstrom Artisan // Rocket Volley",
+          "set": "sos",
+          "scryfallId": "8463c38a-0441-404e-b183-1f871f61f250"
+        },
+        {
+          "name": "Naktamun Lorespinner // Wheel of Fortune",
+          "set": "soc",
+          "scryfallId": "f562fbca-9446-4074-bf00-faf581a18c72"
+        }
+      ],
+      "g": [
+        {
+          "name": "Emeritus of Abundance // Regrowth",
+          "set": "sos",
+          "scryfallId": "2b7e8e07-b3ff-496e-923f-42d703f20a1e",
+          "curated": true
+        },
+        {
+          "name": "Vastlands Scavenger // Bind to Life",
+          "set": "sos",
+          "scryfallId": "91db5c3d-45ab-440f-8568-a2837aee1fca"
+        },
+        {
+          "name": "Yavimaya Bloomsage // Channel",
+          "set": "soc",
+          "scryfallId": "c243c2c4-f227-42a8-8b78-5f4b761106c2"
         }
       ],
       "c": null,

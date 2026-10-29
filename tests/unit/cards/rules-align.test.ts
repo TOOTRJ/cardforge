@@ -141,6 +141,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       "sagadfcfront",
       // …and its back (5.5 (b) PR 2): the same rail.
       "sagadfcback",
+      // The saga creature (TODO 4.5d): the saga's rail — its second box sets
+      // ONE line centred by itself (alignSingleLine "centerAny"), as print.
+      "sagacreature",
       "extendedartstation", "m15textless", "m15textlessland",
       // The Nyx dress's textless heights (TODO 4.51), as their plain twins.
       "m20tokennyx", "m20tokenartifactnyx",
@@ -151,7 +154,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // bordered twins do.)
     // (…and the Nyx dress's regular and tall heights, TODO 4.51.)
     // (…and the arch's tall box, TODO 4.55, as the text box does.)
-    // (…and the Prepare frame, TODO 4.27: both boxes, as the adventure's.)
+    // (…and the Prepare frame, TODO 4.27: both boxes, as the adventure's —
+    // its extended-art dress too, TODO 4.27b.)
     // (…and the 2015 Expeditions, TODO 4.11 wave 1, as the 2020 look.)
     // (…and the New Capenna Art Deco, TODO 4.11 wave 2, as every showcase.)
     // (…and the D&D Sourcebook, TODO 4.11 wave 2, as every showcase.)
@@ -159,7 +163,7 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the Enchanting Tales, the Dominaria United Stained Glass and the
     // Strixhaven Mystical Archive, TODO 4.11 wave 2, as every showcase.)
     // (…and the Doctor Who TARDIS and the OTJ Breaking News, TODO 4.11 wave 2, as every showcase.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(81);
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(82);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

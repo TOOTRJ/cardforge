@@ -101,14 +101,14 @@ describe("the predicates by role", () => {
 
   it("colorlessFaceAllowed (D2): on a DFC body only a face whose type line says Artifact; elsewhere always", () => {
     for (const body of ["m15", "m15artifact", "m15snow", "m15devoid"]) {
-      expect(colorlessFaceAllowed(body, { cardType: "artifact" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Artifact" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Legendary Artifact" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }), body).toBe(false);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Legendary" }), body).toBe(false);
-      expect(colorlessFaceAllowed(body, null), body).toBe(false);
+      expect(colorlessFaceAllowed(body, { cardType: "artifact" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Artifact" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Legendary Artifact" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }, new Set<string>()), body).toBe(false);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Legendary" }, new Set<string>()), body).toBe(false);
+      expect(colorlessFaceAllowed(body, null, new Set<string>()), body).toBe(false);
     }
-    expect(colorlessFaceAllowed("m15borderless", { cardType: "creature" })).toBe(true);
+    expect(colorlessFaceAllowed("m15borderless", { cardType: "creature" }, new Set<string>())).toBe(true);
   });
 
   it("backBodyError: a back body under a DFC front; a front body as a back, or a body under a plain front, is refused", () => {

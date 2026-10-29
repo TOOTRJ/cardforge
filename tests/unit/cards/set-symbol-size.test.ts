@@ -94,7 +94,7 @@ describe("the family's set-symbol boxes", () => {
   it("are set on every M15-era family profile and on nothing else", () => {
     // …and 4.33's borderless planeswalkers, which keep m15pw's box.
     // (…and the double-faced saga front, TODO 5.5 (b): the saga's box.)
-    const thin = new Set(["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga", "sagadfcfront", "sagadfcback"]);
+    const thin = new Set(["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga", "sagadfcfront", "sagadfcback", "sagacreature"]);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (!M15_FAMILY_TEMPLATES.includes(template)) {
@@ -230,7 +230,8 @@ describe("setSymbolSize on the family", () => {
     // …and the Spacecraft's two dresses on them (TODO 4.27a step 2).
     // …and the borderless double-faced bodies (TODO 5.7).
     // …and the Zendikar Rising hedron showcase (TODO 4.11).
-    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "extendedartstation", "fullart", "m15borderless", "m15borderlessartifact", "m15borderlessdfcback", "m15borderlessdfcfront", "m15borderlessland", "m15borderlessmdfcback", "m15borderlessmdfcfront", "m15borderlessstation"]);
+    // …and the Prepare frame's extended-art dress (TODO 4.27b).
+    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "extendedartprepare", "extendedartstation", "fullart", "m15borderless", "m15borderlessartifact", "m15borderlessdfcback", "m15borderlessdfcfront", "m15borderlessland", "m15borderlessmdfcback", "m15borderlessmdfcfront", "m15borderlessstation"]);
     const m15 = getFrameProfile("m15");
     for (const template of keylined) {
       const p = getFrameProfile(template);

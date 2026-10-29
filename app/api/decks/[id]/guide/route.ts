@@ -15,12 +15,16 @@ import {
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // POST /api/decks/[id]/guide — analyze the owner's deck into a how-to-play
 // guide with combos. Pro only (the third tier-gated AI feature), 1 credit,
 // refunded if the analysis fails. AI-generated decks get theirs free at
 // generation time; this is for every other deck, or a refresh.
+// Refused while AI deck building is paused (owner 2026-10-28, TODO DK1 — D4:
+// no new guide and no refresh; the guides that exist stay readable) —
+// before the tier check, any limit or charge (lib/ai/deck-ai-pause.ts).
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -33,6 +37,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false, error: "Sign in first." }, { status: 401 });
+  if (isDeckAiPaused()) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
+  }
   if (!isDesignAiConfigured()) {
     return NextResponse.json({ ok: false, error: "AI isn't configured on this deployment." }, { status: 503 });
   }

@@ -238,6 +238,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   sagadfcfront: ALL_BORDER,
   // …and its back (TODO 5.5 (b), PR 2): the saga master's border, whole.
   sagadfcback: ALL_BORDER,
+  // The saga creature (TODO 4.5d): the textured saga's border over the type
+  // bar, m15nyx's (M15's) from the box down — black all round.
+  sagacreature: ALL_BORDER,
   adventure: ALL_BORDER,
   // The Prepare frame (TODO 4.27): M15's own border, whole (its masters are
   // m15/<key> and m15artifact/c with the text area re-dressed).
@@ -260,6 +263,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The Spacecraft's extended-art dress (TODO 4.27a step 2): the same pack
   // with the station's cuts, which never reach the border.
   extendedartstation: EXTENDED_ART_EDGES,
+  // …and the Prepare frame's (TODO 4.27b): the pack's top over the Prepare
+  // master's lower half, whose border is M15's.
+  extendedartprepare: EXTENDED_ART_EDGES,
   // The black-bordered textless promos (TODO 4.35 / 4.42, CC 'Magic Fest
   // Promos', frames bucket): the black ring on every edge, as SCH / PF print
   // it. (The borderless textless printings are one-off designs that land

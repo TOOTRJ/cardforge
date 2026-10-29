@@ -274,6 +274,12 @@ function consumersOf(template: FrameTemplate, text: RulesCase, rulesAlign?: "cen
   if (!layout.chapters && !layout.textless && !layout.tiers) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
   }
+  // …but the saga CREATURE's rail has a second box beside it (TODO 4.5d:
+  // ChapterSlot.creatureBox) — the plain rules box under the raised type
+  // bar, clear of the P/T plate.
+  if (layout.chapters?.creatureBox) {
+    out.push({ key: `${template}/creature box`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
+  }
   if (layout.loyalty) {
     // A planeswalker with no abilities: its text in the plain box, clear of
     // its loyalty shield.
@@ -411,8 +417,18 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // text on print's columns since Round 79, 5 px narrower than the first
   // cut — "pips + reminder" clips there now, as on the adventure's page) —
   // the prints' boxes; a full card's text clips at the floor, as on print.
-  [["prepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
-  [["prepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder", "typed, as printed"]],
+  // …and its extended-art dress (TODO 4.27b): the same two boxes.
+  [["prepare/main", "extendedartprepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
+  [["prepare/adventure", "extendedartprepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder", "typed, as printed"]],
+  // The saga creature's second box (TODO 4.5d): 1742–1937 px under the
+  // raised type bar, the P/T plate a float in its corner — four or five
+  // lines (FIN prints ONE: an ability or its flavour). An ability with its
+  // flavour, 200 characters or a two-line flavour fit; the long texts and
+  // the four- and five-paragraph ones clip at the floor, as on any short box.
+  [
+    ["sagacreature/creature box"],
+    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets", "pips + reminder", "typed, as printed"],
+  ],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art
@@ -582,6 +598,107 @@ describe("the borderless walkers' arch (TODO 4.9d, owner Round 70) — the plain
   }, 240_000);
 });
 
+describe("the holofoil stamp's arch on the Prepare frame (TODO 4.27b) — the arch's columns add no clip to the matrix", () => {
+  // The Prepare notch lifts the creature box's foot along print's arch;
+  // the renderers pass its keep-out as the ARCH'S SHAPE (4 px columns 2 px
+  // above the lifted foot, keepOutShape — the borderless rule). One rect
+  // over the arch's crown clipped TLA #112, which the unstamped box fits at
+  // the floor. Only the creature's box reaches it; the page's ends above.
+  const TEMPLATES = ["prepare", "extendedartprepare"] as const;
+  const stampedText = (template: FrameTemplate, rulesText: string | null | undefined, flavorText: string | null | undefined) => {
+    const layout = getFrameProfile(template);
+    const slot = (layout.overlays ?? []).find((o) => o.anatomy === "holoStamp");
+    if (!slot || slot.anatomy !== "holoStamp") throw new Error(`${template} has no notch`);
+    expect(slot.stamp.keepOutShape?.length, template).toBeGreaterThan(40);
+    const show: DrawnStats = { pt: Boolean(layout.pt) };
+    const stampShow: DrawnStats = { ...show, stamp: slot.stamp.keepOutShape ?? slot.stamp.keepOut };
+    const aspect = aspectOf(layout);
+    const plain = mainRulesLayout({ layout, rulesText, flavorText, aspect, show });
+    const arch = mainRulesLayout({ layout, rulesText, flavorText, aspect, show: stampShow });
+    const pagePlain = adventureRulesLayout({ layout, rulesText: rulesText ?? flavorText, aspect, show });
+    const pageArch = adventureRulesLayout({ layout, rulesText: rulesText ?? flavorText, aspect, show: stampShow });
+    return { plain, arch, pagePlain, pageArch };
+  };
+  const stamped = (template: FrameTemplate, text: RulesCase) => stampedText(template, text.rules, text.flavor);
+  const SWEEP_WORDS =
+    "Whenever this creature attacks each opponent loses two life and you gain two life then draw a card and discard a card unless you control an artifact Flying vigilance and trample until end of turn target creature gets plus three plus three and gains first strike when it dies return it to the battlefield under its owner's control at the beginning of your upkeep scry two then you may sacrifice a land if you do create a treasure token search your library for a basic land card reveal it put it into your hand then shuffle".split(" ");
+  const sweepText = (n: number) => `${Array.from({ length: n }, (_, i) => SWEEP_WORDS[i % SWEEP_WORDS.length]).join(" ")}.`;
+
+  it("clips exactly the texts the box clips without the stamp, never sets one larger — the creature's box and the page", () => {
+    for (const template of TEMPLATES) {
+      for (const text of RULES_MATRIX) {
+        const { plain, arch, pagePlain, pageArch } = stamped(template, text);
+        expect(arch.clipped, `${template} · ${text.name}`).toBe(plain.clipped);
+        expect(arch.sizePx, `${template} · ${text.name}`).toBeLessThanOrEqual(plain.sizePx);
+        // The page ends far above the arch: the stamp never touches it.
+        expect(pageArch?.sizePx, `${template} page · ${text.name}`).toBe(pagePlain?.sizePx);
+        expect(pageArch?.clipped, `${template} page · ${text.name}`).toBe(pagePlain?.clipped);
+      }
+    }
+  });
+
+  it("TLA #112 (390 characters) fits the stamped box at the floor, as it fits the unstamped one", () => {
+    const tla = RULES_MATRIX.find((t) => t.name === "TLA #112")!;
+    for (const template of TEMPLATES) {
+      const { plain, arch } = stamped(template, tla);
+      expect(plain.clipped, template).toBe(false);
+      expect(arch.clipped, template).toBe(false);
+    }
+  });
+
+  it("the sweep of 1 … 95 words: the one text the stamp costs runs its last line, at the floor, into the arch's high side", () => {
+    // The creature's box ENDS under the arch's high side (its right edge
+    // x 736, the lift 35 px there): the arch takes the bottom-right corner
+    // of the unstamped box. A text the floor sets with its LAST line run to
+    // the box's right edge meets it wherever the centred block puts that
+    // line — the sweep's 77 words (13 lines, the last 607 of 607 px; 78
+    // words break onto a 14th short line and fit again). Glyph-level
+    // keep-outs only step the size, so past the floor that is a clip. The
+    // arch's columns keep every other text (one rect over the crown also
+    // clipped 76 words, and TLA #112 above).
+    for (const template of TEMPLATES) {
+      const lost: number[] = [];
+      for (let n = 1; n <= 95; n += 1) {
+        const { plain, arch } = stampedText(template, sweepText(n), null);
+        expect(arch.sizePx, `${template} · ${n} words`).toBeLessThanOrEqual(plain.sizePx);
+        if (plain.clipped) expect(arch.clipped, `${template} · ${n} words`).toBe(true);
+        if (arch.clipped && !plain.clipped) {
+          expect(plain.sizePx, `${template} · ${n} words`).toBe(RULES_SIZE_PX.floor);
+          lost.push(n);
+        }
+      }
+      expect(lost, template).toEqual([77]);
+    }
+  });
+
+  /** The stamped layouts both templates draw, once per distinct input (the
+   *  two share the creature's box). */
+  const drawnStamped = () => {
+    const seen = new Map<string, { label: string; layout: RulesLayout }>();
+    for (const template of TEMPLATES) {
+      for (const text of RULES_MATRIX) {
+        const { arch } = stamped(template, text);
+        if (arch.clipped) continue;
+        const sig = JSON.stringify([arch.input, arch.sizePx]);
+        if (!seen.has(sig)) seen.set(sig, { label: `${template} stamped · ${text.name}`, layout: arch });
+      }
+    }
+    return [...seen.values()];
+  };
+
+  it("draws every stamped layout inside its box, clear of the arch and the plate, line for line (750 px)", async () => {
+    const drawn = drawnStamped();
+    for (const d of drawn) await checkDrawn(d.layout, "default", d.label);
+    expect(drawn.length).toBeGreaterThan(15);
+  }, 240_000);
+
+  it("draws every stamped layout inside its box, clear of the arch and the plate, line for line (HD)", async () => {
+    const drawn = drawnStamped();
+    for (const d of drawn) await checkDrawn(d.layout, "hd", d.label);
+    expect(drawn.length).toBeGreaterThan(15);
+  }, 240_000);
+});
+
 describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
   // "symbols as printed" (layout v49): the Phyrexian pip's larger disc is drawn
@@ -672,7 +789,9 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 // …on the saga AND on the double-faced saga front (TODO 5.5 (b)), whose
 // rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX), and on its BACK
 // (5.5 (b) PR 2: the saga's rail, read from a back face's plain text).
-for (const template of ["saga", "sagadfcfront", "sagadfcback"] as const)
+// …and on the saga CREATURE (TODO 4.5d): the reminder in its band across
+// the card, the rail 173 px shorter, ending at the raised type bar.
+for (const template of ["saga", "sagadfcfront", "sagadfcback", "sagacreature"] as const)
 describe(`the saga rail on ${template} — its reminder block and every chapter row (TODO 4.21c, 5.5 (b))`, () => {
   const SLOT = getFrameProfile(template).chapters!;
   const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";

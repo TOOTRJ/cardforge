@@ -129,6 +129,7 @@ import {
   resolveLoyaltyRows,
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
+import { resolveSagaCreature } from "@/lib/cards/saga-creature";
 import {
   BRAND_MARK_PILL,
   bandTextStyle,
@@ -1124,11 +1125,19 @@ function CardFace({
   // printed rail laid out for it (lib/cards/saga-rail.ts sagaRail: the
   // reminder block, the content-sized rows, the badge stacks), drawn at the
   // HD bake's px — the bake's twin. A textless frame prints none of it.
+  // A saga creature (ChapterSlot.creatureBox, TODO 4.5d) splits its text:
+  // the chapters on the rail, the lines after them in its second box
+  // (lib/cards/saga-creature.ts) — the bake's twin.
+  const sagaCreature = useMemo(
+    () => (layout.chapters?.creatureBox && !textless ? resolveSagaCreature(face.faceContent, face.rulesText) : null),
+    [layout.chapters, textless, face.faceContent, face.rulesText],
+  );
+  const boxRulesText = sagaCreature ? sagaCreature.creatureText : face.rulesText;
   const sagaRail = useMemo(() => {
     if (!layout.chapters || textless) return null;
-    const rail = profileSagaRail(layout, resolveSagaChapters(face.faceContent, face.rulesText), aspect);
+    const rail = profileSagaRail(layout, sagaCreature ?? resolveSagaChapters(face.faceContent, face.rulesText), aspect);
     return rail ? sagaRailDrawing(rail, "hd") : null;
-  }, [layout, textless, face.faceContent, face.rulesText, aspect]);
+  }, [layout, textless, sagaCreature, face.faceContent, face.rulesText, aspect]);
   // Its badges and dividers: frame pieces, drawn with the frame and under
   // both finishes (the bake's railPieces).
   const railPieces = useMemo(
@@ -1169,14 +1178,14 @@ function CardFace({
   const hasRulesContent =
     !isBasicLand &&
     !textless &&
-    hasRulesBoxText(face);
+    hasRulesBoxText({ rulesText: boxRulesText, flavorText: face.flavorText });
   // The plain rules box's ONE layout (layout v33, lib/cards/rules-box.ts) —
   // the bake's twin: its size, every line and every position, clear of the
   // drawn stat badges. The editor shows a sample (real type, size and pips)
   // in a card with no text yet; never the gallery or the bake. Not on a
   // textless frame, a basic land, the saga rail or ability rows (an empty
   // walker in the editor shows hint rows instead).
-  const rulesPlaceholder = staticInEditor && !face.rulesText?.trim() && !face.flavorText?.trim();
+  const rulesPlaceholder = staticInEditor && !layout.chapters && !face.rulesText?.trim() && !face.flavorText?.trim();
   // The station frame's tiers (TODO 4.27a; lib/cards/station-layout.ts) —
   // the bake's twin: the whole text box laid out once; its bands, badge
   // discs and plate are frame pieces under both finishes (StationPieces),
@@ -1191,10 +1200,11 @@ function CardFace({
   // The nickname plate (TODO 6.3): a frame piece under both finishes, as
   // the station's — the bake's twin.
   const nicknamePieces = nicknameDrawn ? [nicknameDrawn.plate] : NO_NICKNAME_PIECES;
+  // A saga creature's second box is one (ChapterSlot.creatureBox).
   const drawsRulesBox =
     !textless &&
     !isBasicLand &&
-    !layout.chapters &&
+    (!layout.chapters || Boolean(layout.chapters.creatureBox)) &&
     !layout.tiers &&
     !(layout.loyaltyRows && (loyaltyAbilities.length > 0 || (usesLoyaltyRows && staticInEditor)));
   // (Memoised: a long text's fit takes a millisecond or two, and a face
@@ -1208,14 +1218,14 @@ function CardFace({
       drawsRulesBox
         ? mainRulesLayout({
             layout,
-            rulesText: rulesPlaceholder ? PLACEHOLDER_RULES_TEXT : face.rulesText,
+            rulesText: rulesPlaceholder ? PLACEHOLDER_RULES_TEXT : boxRulesText,
             flavorText: rulesPlaceholder ? PLACEHOLDER_FLAVOR_TEXT : face.flavorText,
             aspect,
             show: drawnStats,
             rulesAlign,
           })
         : null,
-    [drawsRulesBox, layout, rulesPlaceholder, face.rulesText, face.flavorText, aspect, drawnStats, rulesAlign],
+    [drawsRulesBox, layout, rulesPlaceholder, boxRulesText, face.flavorText, aspect, drawnStats, rulesAlign],
   );
   // The adventure page's and a second face's rules — the same layout. The
   // editor's empty adventure page shows a hint, laid out like flavor text.
@@ -1832,6 +1842,13 @@ function CardFace({
           overrides={pipOverrides}
           opacity={rulesPlaceholder ? 0.5 : undefined}
         />
+      ) : null}
+
+      {/* A saga creature's second box (ChapterSlot.creatureBox, TODO 4.5d):
+          the creature's own abilities and its flavour under the raised type
+          bar, beside the rail above — the bake's twin. */}
+      {!textless && layout.chapters?.creatureBox && hasRulesLines(rulesLayout) ? (
+        <RulesBox layout={rulesLayout} colorHex={layout.rules.colorHex} overrides={pipOverrides} />
       ) : null}
 
       {/* The borderless walkers' stamp, above the rows (TODO 4.9d). */}

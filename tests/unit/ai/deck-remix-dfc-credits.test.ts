@@ -209,7 +209,7 @@ describe("a double-faced remix step priced at two credits (owner Q4)", () => {
     const frameStyle = card!.frame_style as { template: FrameTemplate; dfcIcon?: DfcIconFamily };
     expect(frameKindGateError(frameStyle.template, cardFieldsFace(card as never))).toBeNull();
     expect(dfcFrontTypeError(frameStyle.template, card!.card_type as string)).toBeNull();
-    expect(dfcFrontColorError(frameStyle.template, { cardType: card!.card_type as string }, card!.color_identity as never)).toBeNull();
+    expect(dfcFrontColorError(frameStyle.template, { cardType: card!.card_type as string }, card!.color_identity as never, new Set<string>())).toBeNull();
     const stored = normalizeAnatomy(frameStyle, frameStyle.template, card!.card_type as string);
     const gate = resolveDfcBackFace({
       frontTemplate: frameStyle.template,

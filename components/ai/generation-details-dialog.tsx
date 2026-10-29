@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { GenerationJobPhase, GenerationJobStep } from "@/components/ai/use-generation-job";
 import { cn } from "@/lib/utils";
+import { failedStepMessage } from "@/lib/ai/failure";
 import { GENERATED_PRIVATE_STEP_NOTE, generatedPrivateMessage } from "@/lib/moderation/profanity";
 
 export type GenerationStats = {
@@ -169,8 +170,11 @@ export function GenerationDetailsDialog({
                     </span>
                   ) : null}
                   {step.status === "failed" && step.error ? (
-                    <span className="hidden max-w-[40%] truncate text-xs text-danger sm:inline" title={step.error}>
-                      {step.error}
+                    <span
+                      className="hidden max-w-[40%] truncate text-xs text-danger sm:inline"
+                      title={failedStepMessage(step)}
+                    >
+                      {failedStepMessage(step)}
                     </span>
                   ) : null}
                   {step.status === "failed" && !busy ? (

@@ -9,8 +9,13 @@ import type { DeckBoard } from "@/types/deck";
 //             sideboard. Maximum compatibility.
 //
 // Pure + unit-tested; the deck page precomputes both variants server-side
-// for the copy buttons. `useProxyNames` swaps in the custom card's title
-// for remixed entries (share your build as YOUR cards).
+// for its free "Copy decklist" button (owner and visitors alike). The page
+// passes `useProxyNames`: an entry with a real card keeps the real name and
+// printing (the copied list must paste back into Arena or an import); an
+// entry with no real card takes its custom card's title where the viewer can
+// read it, the entry's own name otherwise (a private card the viewer can't
+// read is null in their rows, so it never leaks its title). A line that
+// swaps in a custom title drops the printing.
 // ---------------------------------------------------------------------------
 
 export type ExportEntry = {
@@ -36,15 +41,38 @@ function lineFor(
   entry: ExportEntry,
   opts: { withPrinting: boolean; useProxyNames: boolean },
 ): string {
-  const name =
-    opts.useProxyNames && entry.proxyTitle?.trim()
-      ? entry.proxyTitle.trim()
-      : entry.name;
+  const proxy = opts.useProxyNames ? (entry.proxyTitle?.trim() ?? "") : "";
+  const name = proxy || entry.name;
+  // The custom card is not the printing the entry was imported from.
+  const renamed = proxy !== "" && proxy !== entry.name.trim();
   const printing =
-    opts.withPrinting && entry.set_code && entry.collector_number
+    opts.withPrinting && !renamed && entry.set_code && entry.collector_number
       ? ` (${entry.set_code.toUpperCase()}) ${entry.collector_number}`
       : "";
   return `${entry.quantity} ${name}${printing}`;
+}
+
+/** Export entries from deck rows AS THE VIEWER READ THEM (`card` is null
+ *  where RLS hid a private card). A copied list has to paste back into
+ *  Arena, Moxfield or PipGlyph's own import, so an entry with a real card
+ *  keeps the real card's name and printing even when it is linked to a
+ *  custom version; only an entry with NO real card (a custom card of your
+ *  own) takes the custom title the viewer's list shows, which also follows
+ *  a rename the stored entry name doesn't. */
+export function exportEntriesOf(
+  items: ReadonlyArray<{
+    entry: Omit<ExportEntry, "proxyTitle"> & { scryfall_id?: string | null };
+    card: { title: string } | null;
+  }>,
+): ExportEntry[] {
+  return items.map(({ entry, card }) => ({
+    name: entry.name,
+    quantity: entry.quantity,
+    board: entry.board,
+    set_code: entry.set_code,
+    collector_number: entry.collector_number,
+    proxyTitle: entry.scryfall_id ? null : (card?.title ?? null),
+  }));
 }
 
 export function deckToText(

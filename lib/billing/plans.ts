@@ -241,13 +241,15 @@ export const PLANS: PlanDisplay[] = [
     name: "Pro",
     priceUsd: 15,
     annualUsd: 150,
-    tagline: "For power users building whole decks with AI.",
+    tagline: "For power users who design for their decks and print them.",
     // Every AI tool is open to every tier and credits are the limiter; the
     // ONLY tier-gated AI features are the deck-aware ones (owner decision,
     // 2026-09-15). Never list perks that aren't shipped (the old "priority
-    // AI queue" line had no implementation behind it).
+    // AI queue" line had no implementation behind it) — nor ones that are
+    // paused: AI deck building is (TODO DK1, lib/ai/deck-ai-pause.ts), so the
+    // tagline and the credits line no longer sell a whole AI deck.
     features: [
-      "100 AI credits every month — a full Commander deck",
+      "100 AI credits every month",
       "AI cards & ideas designed for a specific deck",
       ...PRO_PRINT_PERKS,
       "Unlimited saved cards",

@@ -63,6 +63,8 @@ import {
   M15PW_HOLO_STAMP_OVAL,
   M15_HOLO_STAMP_KEEP_OUT,
   M15_HOLO_STAMP_OVAL,
+  PREPARE_HOLO_STAMP_KEEP_OUT,
+  PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
@@ -241,8 +243,21 @@ export type TextSlot = {
    *  lines start at the box's left, as ever. The layout places the line
    *  (its whole-px indent at each target), so both renderers draw it where
    *  the fit checked it. Unset: every line starts at the left (every
-   *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
-  alignSingleLine?: "center";
+   *  profile before 4.49 (b)). "centerAny" centres ONE flavour line alone
+   *  too (the saga creature's box, TODO 4.5d). Code-owned: not part of the
+   *  override schema. */
+  alignSingleLine?: "center" | "centerAny";
+  /** RULES boxes only (TODO 4.5d): the padding a layout of ONE line is
+   *  placed with instead of `padPx` — the saga creature's box centres its
+   *  one line where print does (above the P/T plate's top), while a longer
+   *  text keeps the whole box. Code-owned. */
+  singleLinePadPx?: { left: number; right: number; top: number; bottom: number };
+  /** RULES boxes only (TODO 4.5d): the drawn P/T plate is a FLOAT of this
+   *  box (RulesLayoutInput.floats), not a keep-out — the saga creature's
+   *  box runs down beside the plate, so the lines whose rows meet it break
+   *  short of it, as on print, where a keep-out could only shrink the text.
+   *  Code-owned. */
+  ptFloat?: true;
   /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
    *  squeezed to before its size steps down — the full-art token's TALL box,
    *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
@@ -562,6 +577,12 @@ export type FrameOverlaySlot =
       /** The stamp this notch is cut for: its shape, the oval the art
        *  bitmap fills and the rules keep-out over the arch. */
       stamp: HoloStampArt;
+      /** Key a two-colour card's notch by the MASTER drawn (`wu`, or the
+       *  hybrid dress's `wu-h`), not by the pair alone: the Prepare notch
+       *  (TODO 4.27b) is its master's foot lifted, and its top edge is cut
+       *  against the strip under the page, which the two dresses paint
+       *  differently. Absent: one piece per pair serves both dresses. */
+      keyByMaster?: true;
     });
 
 export type FrameOverlayAnatomy = FrameOverlaySlot["anatomy"];
@@ -1009,6 +1030,13 @@ export type FrameProfile = {
     /** The row divider — the pack's bitmap, drawn centred on each row's top
      *  edge (a first row at the rail's own top has none). */
     divider: { assetPath: string; leftPct: number; widthPct: number; heightPct: number };
+    /** The SAGA CREATURE's second box (TODO 4.5d, FIN's "Summon:" cards):
+     *  the frame's plain rules box (`rules`, under the raised type bar) is
+     *  drawn beside the rail, holding the creature's own abilities — the
+     *  lines after the last chapter (lib/cards/saga-creature.ts) — and the
+     *  card's flavour, clear of the drawn P/T plate. Unset: the rail replaces
+     *  the rules box, as on every other saga. */
+    creatureBox?: true;
   };
   /** Adventure (Eldraine) sub-panel. When set, the frame is a creature whose
    *  lower text area is an open storybook: this LEFT page holds an "adventure"
@@ -5745,6 +5773,24 @@ const EXTENDEDARTLAND: FrameProfile = {
   artifactMasterKeys: undefined,
 };
 
+// The extended-art PREPARE dress (TODO 4.27b): 29 printings (SOS #309–342,
+// SOC #63–98, FRA #425–430) print the extended-art frame — the art to the
+// side edges between the title bar and the BLACK type bar — over the Prepare
+// frame's lower half. Masters: PipGlyph's merge of the published extendedart
+// and prepare masters (scripts/build-prepare-frames.mjs --only extended,
+// PREPARE_EXTENDED in scripts/lib/prepare-2026.mjs: the pack is M15's pixels
+// below its type bar), so the slots are the Prepare frame's with the
+// extended-art top: its art slot, white type ink and the set symbol's
+// keyline. The colourless key is the pack's silver artifact frame (no
+// see-through master, no artifact master key).
+const EXTENDEDARTPREPARE: FrameProfile = {
+  ...PREPARE,
+  label: "Extended Art Prepare",
+  setSymbolKeyline: SET_SYMBOL_KEYLINE,
+  artSlot: EXTENDED_ART_SLOT,
+  type: { ...PREPARE.type, colorHex: "#ffffff" },
+};
+
 // The Zendikar Expeditions (TODO 4.11 wave 1, layout
 // EXPEDITION_CC_LAYOUT_VERSION) — Card Conjurer's two Expedition packs,
 // 1500 × 2100 native (frames bucket; the 375 px MSE masters left git). Both
@@ -6739,6 +6785,48 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The holofoil stamp's notch on the PREPARE frame (TODO 4.27b): print
+ * arches the text box's foot — its bottom bevel, the pinline and the black
+ * border — over the oval across the creature's box AND the strip under the
+ * page (the page's outline ends on the arch; 79 of 119 paper printings, every
+ * rare and mythic). M15's piece is cut for one box, so ours is PipGlyph's
+ * own derivation (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/prepare-2026.mjs PREPARE_STAMP): each Prepare master's own
+ * foot LIFTED along print's arch (35.8 px at the centre, from x 657 to 843 —
+ * the same set's M15 arch within 1 px), 192 × 60 px at 654, 1890, 1:1 at
+ * HD. Keys: the masters' seven and the twenty pair masters, BOTH dresses
+ * (`keyByMaster`: the lifted bevel's top edge is cut against the strip,
+ * which the gold-split and the hybrid dress paint differently); every
+ * piece serves the extended-art Prepare dress too (its foot is the Prepare
+ * master's, checked by the build). The oval is M15's (print's clean
+ * renders draw it 7 px higher, as on every 2015 frame). Opt-in per card
+ * like every stamp ("auto" = a rare or mythic). Set on the prepare and
+ * extendedartprepare entries only.
+ */
+export const PREPARE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // PREPARE_STAMP.box in scripts/lib/prepare-2026.mjs (a unit test holds
+  // them together).
+  rect: { leftPct: (654 / 1500) * 100, topPct: (1890 / 2100) * 100, widthPct: (192 / 1500) * 100, heightPct: (60 / 2100) * 100 },
+  assetPathTemplate: "/frames/prepareholostamp/{key}.png",
+  keys: [
+    "w", "u", "b", "r", "g", "m", "c",
+    "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu",
+    "wu-h", "wb-h", "ub-h", "ur-h", "br-h", "bg-h", "rg-h", "rw-h", "gw-h", "gu-h",
+  ],
+  keyByMaster: true,
+  // The keep-out FOLLOWS THE ARCH (the borderless rule): 4 px columns from
+  // 2 px above the lifted foot (prepareArchKeepOut); `keepOut` is their
+  // bounds.
+  stamp: {
+    shape: "oval",
+    oval: M15_HOLO_STAMP_OVAL,
+    keepOut: PREPARE_HOLO_STAMP_KEEP_OUT,
+    keepOutShape: PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
+  },
 };
 
 /**
@@ -7756,6 +7844,97 @@ const SAGADFCBACK: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
+// The SAGA CREATURE (TODO 4.5d): Final Fantasy's "Summon:" cards (FIN / FIC
+// / PFIN 2025) — a saga that is also a creature, on a body no Card Conjurer
+// or MSE pack draws. PipGlyph's own masters (scripts/build-saga-creature-
+// frames.mjs, scripts/lib/saga-creature.mjs): Card Conjurer's TEXTURED saga
+// (the starfield frame field) with its reminder box widened into a BAND
+// over the art column, the rail and the window 173 px shorter, the type bar
+// RAISED 173 px, and M15's text box and P/T plate under it (m15nyx's rows).
+// Against the prints (Scryfall PNGs at 1500 × 2100, 22 black-bordered FIN /
+// FIC summons read 2026-10-28):
+//   • the band: 237–433 px, the reminder across the card (two lines); the
+//     window's top outline at 433–438 (ours 434–437) and the first divider
+//     on 438–446 (FIN #36: the rows start on 442);
+//   • the type bar's outline at 1587–1722 (the saga's 1759–1895, − 173):
+//     the type line, its baseline and the set symbol ride it;
+//   • the second box (1723–≈1947, x 99–1402 on print; m15nyx's 98–1409):
+//     the creature's own abilities or its flavour, ONE centred line on every
+//     print, centred on ≈ 1811 px (the box above the plate's top) —
+//     ChapterSlot.creatureBox, its text the lines after the last chapter
+//     (lib/cards/saga-creature.ts);
+//   • the P/T on M15's plate at M15's spot (m15nyx's plates, as the CC-
+//     framed M15 profiles draw them).
+// An ADDITION: a new template no stored card sits on. Set on the PROFILES
+// entry only.
+// ---------------------------------------------------------------------------
+
+/** How far the saga creature raises the type bar, HD px (the prints' type
+ *  bar outline 1587–1722 against the saga's 1759–1895). */
+export const SAGA_CREATURE_RAISE_PX = 173;
+/** The band's foot (the reminder's box ends here; the window's top outline
+ *  is under it) and the first row's top (the first divider's centre), HD px. */
+const SAGA_CREATURE_BAND_FOOT_PX = 433;
+const SAGA_CREATURE_ROWS_TOP_PX = 442;
+/** The rail's foot: the type bar's top outline (the saga's 1759, raised). */
+const SAGA_CREATURE_RAIL_FOOT_PX = 1759 - SAGA_CREATURE_RAISE_PX;
+/** The fold's corner in the band: SAGA_FOLD_CORNER_PX squeezed with the
+ *  fold's rows (237–597 → 237–433, scripts/lib/saga-creature.mjs). */
+const sagaCreatureFoldRow = (row: number) => 237 + ((row - 237) * (SAGA_CREATURE_BAND_FOOT_PX - 237)) / (597 - 237);
+
+const SAGACREATURE: FrameProfile = {
+  ...SAGA,
+  label: "Saga creature",
+  // The window: 438–1585 px (its top rule 434–437, the bar's outline from
+  // 1586), with the saga slot's 2 px above and 2 below.
+  artSlot: { ...SAGA.artSlot, topPct: 436 / 21, heightPct: (SAGA_CREATURE_RAIL_FOOT_PX + 2 - 436) / 21 },
+  type: { ...SAGA.type, rect: { ...SAGA.type.rect, topPct: SAGA.type.rect.topPct - SAGA_CREATURE_RAISE_PX / 21 } },
+  symbolRect: { ...SAGA.symbolRect!, topPct: SAGA.symbolRect!.topPct - SAGA_CREATURE_RAISE_PX / 21 },
+  // The second box: m15nyx's paper from the left rim (110 px) to the right
+  // inner shadow (1383), from under its top rim and shadow (1742) to the
+  // box's foot (1937),
+  // the P/T plate a keep-out in its corner. 8 pt, the reduced rung: the
+  // prints' "Indestructible" is 391 px wide where 76 px sets 445 (0.88).
+  rules: {
+    ...M15.rules,
+    rect: { topPct: 1742 / 21, leftPct: 110 / 15, widthPct: (1383 - 110) / 15, heightPct: (1937 - 1742) / 21 },
+    padPx: { x: 4, y: 0 },
+    // …its ONE line centred 20 px above the paper's centre — its capitals on
+    // the prints' 1792–1837 (FIN #36's "I").
+    singleLinePadPx: { left: 4, right: 4, top: 0, bottom: 40 },
+    // The plate in the box's corner: its lines break short of it.
+    ptFloat: true,
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
+    // ONE line centred, its flavour too (FIN #160 "A name in blood, a pact
+    // of flame." as #36 "Indestructible"); longer texts from the left.
+    alignSingleLine: "centerAny",
+  },
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15nyx/pt/{color}.png" },
+  chapters: {
+    ...SAGA.chapters!,
+    rect: {
+      ...SAGA.chapters!.rect,
+      topPct: SAGA_CREATURE_ROWS_TOP_PX / 21,
+      heightPct: (SAGA_CREATURE_RAIL_FOOT_PX - SAGA_CREATURE_ROWS_TOP_PX) / 21,
+    },
+    intro: {
+      ...SAGA.chapters!.intro,
+      // The band: from the reminder box's left edge (132 px) to the
+      // window's right outline (1384), 237–433 px.
+      rect: { topPct: 11.29, leftPct: 8.8, widthPct: (1384 - 132) / 15, heightPct: (SAGA_CREATURE_BAND_FOOT_PX - 237) / 21 },
+      keepOuts: SAGA_FOLD_CORNER_PX.map(([right, top, bottom]) => ({
+        leftPct: 0,
+        widthPct: right / 15,
+        topPct: sagaCreatureFoldRow(top) / 21,
+        heightPct: (sagaCreatureFoldRow(bottom) - sagaCreatureFoldRow(top)) / 21,
+      })),
+    },
+    rowsTopPct: SAGA_CREATURE_ROWS_TOP_PX / 21,
+    creatureBox: true,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
 // §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
 // CC-framed M15 skeleton as the transform bodies — the drop housing with its
@@ -7837,17 +8016,20 @@ export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
  *  fronts print the land grey) and, on a back, a front in the hybrid dress
  *  (MH3's land backs: a warm light grey, never gold); the land bodies map
  *  `l` to their own grey `c`. A two-colour spell other face is gold `m`
- *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless one
- *  the artifact stand-in (`c` → `a`, no print). */
+ *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless
+ *  ARTIFACT one the artifact frame's `a` (STX #154 Pestilent Cauldron's
+ *  back), a colourless one with no Artifact word the see-through frame's
+ *  own `c` (TODO 5.11a: STX #6 Wandering Archaic's warm grey tab — a card
+ *  colourless on both faces draws none); the land bodies map `a` to their
+ *  grey `c` as before. */
 const MDFC_STRIP_RIDER_RECT: Rect = { leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 };
-const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"] as const;
+const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"] as const;
 const MDFC_STRIP_RIDER_LAND_KEYS = ["w", "u", "b", "r", "g", "m", "c"] as const;
 export const MDFC_STRIP_RIDER_FRONT: FrameOverlaySlot = {
   anatomy: "mdfcStrip",
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfcfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_SPELL_KEYS,
-  keyMap: { c: "a" },
 };
 export const MDFC_STRIP_RIDER_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_FRONT,
@@ -7858,7 +8040,7 @@ export const MDFC_STRIP_RIDER_LAND_FRONT: FrameOverlaySlot = {
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfclandfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_LAND_KEYS,
-  keyMap: { l: "c" },
+  keyMap: { l: "c", a: "c" },
 };
 export const MDFC_STRIP_RIDER_LAND_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_LAND_FRONT,
@@ -8430,9 +8612,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // crown cut round the housing and the pairs (5.1d) on the spell faces —
   // the front draws both dresses (STX #149 / MSH #219 the split, MH3's ten
   // hybrid fronts the hybrid), the back the split (STX #149's back, MSH's
-  // crowned pair backs); the land pair draws neither (no print).
-  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT], twoColorMasters: ["split", "hybrid"] },
-  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK], twoColorMasters: ["split"] },
+  // crowned pair backs); the land pair draws neither (no print). Their `c`
+  // is the SEE-THROUGH colourless frame (TODO 5.11a, STX #6 Wandering
+  // Archaic: m15/c's field, bars and box with the modal housing and strip —
+  // PipGlyph's composite, scripts/build-mdfc-colourless-frames.mjs), so the
+  // art is drawn under the frame for `c` as m15 draws it; a colourless
+  // ARTIFACT face still wears the opaque artifact master `a`
+  // (artifactMasterKeys), which draws no under-frame layer. The crown keeps
+  // its `c` → `a` band (no legendary colourless non-artifact modal face was
+  // printed).
+  m15mdfcfront: {
+    ...M15MDFCFRONT,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT],
+    twoColorMasters: ["split", "hybrid"],
+  },
+  m15mdfcback: {
+    ...M15MDFCBACK,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK],
+    twoColorMasters: ["split"],
+  },
   m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_FRONT] },
   m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_BACK] },
   // The borderless double-faced bodies (TODO 5.7): m15borderless's crowned
@@ -8520,20 +8722,48 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
+  // The saga creature (TODO 4.5d): see SAGACREATURE. FIN's summons are
+  // Universes Beyond: the TRIANGLE stamp on every rarity (51 of 51
+  // printings, Scryfall's security_stamp; the notch pieces fit the body's
+  // bar, which is m15nyx's — M15's — pixel for pixel at their feet), `c`
+  // on the artifact silver's piece as m15nyx's; and the collector line on
+  // M15's rows (the body's foot is M15's). Opt-in per card like every
+  // frame's pieces.
+  sagacreature: {
+    ...SAGACREATURE,
+    overlays: [{ ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
   // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
   // per card (frame_style.partColor).
   adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },
   // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
   // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
   // the colourless key is the artifact frame, so its crown is the
-  // artifact's. No stamp notch (the page's outline runs through M15's) and
-  // no collector line yet (TODO 4.27 follow-ups).
+  // artifact's.
   // TODO 4.26: the two-colour Prepare (M15's pair masters with the page,
   // both dresses) and the spell's page in its own colour (PREPARE_PAGE).
+  // TODO 4.27b: the holofoil stamp's notch (PREPARE_HOLO_STAMP) and the
+  // collector line — SOS / FRA / SOC set both lines on M15's rows, as the
+  // set's plain M15 cards (line 1's ink 1965–1989, line 2's 1999–2028, from
+  // x 98, the © line ending at 1396–1397 on all 22 measured) — each opt-in
+  // per card, so no stored card changes by them.
   prepare: {
     ...PREPARE,
     twoColorMasters: ["split", "hybrid"],
-    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, PREPARE_PAGE],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, PREPARE_PAGE, PREPARE_HOLO_STAMP],
+    collector: M15_COLLECTOR,
+  },
+  // …and its extended-art dress (TODO 4.27b): the extended-art crown, the
+  // Prepare frame's page overlays and notch (its lower half is the Prepare
+  // master's pixels), the collector line on the same rows (SOS #309, #318,
+  // SOC #63, FRA #425 measured with the plain ones). A Variations pick of
+  // the Prepare kind, never a default.
+  extendedartprepare: {
+    ...EXTENDEDARTPREPARE,
+    twoColorMasters: ["split", "hybrid"],
+    overlays: [EXTENDED_CROWN, PREPARE_PAGE, PREPARE_HOLO_STAMP],
+    collector: M15_COLLECTOR,
   },
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and

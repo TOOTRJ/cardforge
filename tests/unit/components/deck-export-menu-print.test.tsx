@@ -44,8 +44,6 @@ async function openMenu() {
     <DeckExportMenu
       deckId="d1"
       deckSlug="gorgon-gaze"
-      arenaText=""
-      plainText=""
       allowBatchExport
       customCardCount={12}
       realCardCount={0}

@@ -109,6 +109,7 @@ export async function FrameTemplateSignOffPage({
         verified: review?.verified ?? false,
         verifiedLayoutVersion: review?.verifiedLayoutVersion ?? null,
         verifiedOverrideHash: review?.verifiedOverrideHash ?? null,
+        colorKey,
       },
       template,
       currentHash,

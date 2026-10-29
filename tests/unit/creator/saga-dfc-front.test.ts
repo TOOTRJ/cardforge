@@ -102,9 +102,10 @@ describe("the profile", () => {
 
 describe("the kinds", () => {
   it("is the Saga kind's second frame — the kind's default stays the one-faced saga", () => {
-    expect(KIND_DEFS.saga.layoutTemplates).toEqual(["saga", "sagadfcfront"]);
+    // (…and the saga creature, TODO 4.5d, its third.)
+    expect(KIND_DEFS.saga.layoutTemplates).toEqual(["saga", "sagadfcfront", "sagacreature"]);
     expect(KIND_DEFS.saga.inlineSecondFace).toBe(false);
-    expect(framesForKind("saga", EVERYTHING).map((f) => f.template)).toEqual(["saga", "sagadfcfront"]);
+    expect(framesForKind("saga", EVERYTHING).map((f) => f.template)).toEqual(["saga", "sagadfcfront", "sagacreature"]);
     expect(templateRefusesKind("sagadfcfront", "saga")).toBe(false);
     expect(frameKindGateError("sagadfcfront", { cardType: "enchantment" } as never)).toBeNull();
     // (A crafted creature on it is the Saga kind by its template — the type

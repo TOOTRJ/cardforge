@@ -50,7 +50,7 @@ function JsonLd() {
           "Oracle text editor",
           "WUBRG color identity",
           "Planeswalker loyalty abilities",
-          "Deck builder with AI generation",
+          "Deck builder with decklist import",
           "AI rules text assistant",
           "PNG export",
           "Community gallery",

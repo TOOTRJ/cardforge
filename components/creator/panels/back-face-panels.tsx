@@ -53,8 +53,8 @@ import { statVisibility } from "@/lib/creator/steps";
 import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
-import { DFC_FACE_TYPES, colorlessFaceAllowed, dfcLookOf, type DfcLayout } from "@/lib/cards/dfc";
-import { DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { DFC_FACE_TYPES, dfcLookOf, type DfcLayout } from "@/lib/cards/dfc";
+import { dfcColorlessRefusal } from "@/lib/cards/dfc-gate";
 import {
   EMPTY_BACK_FACE,
   type BackFaceFormValues,
@@ -197,7 +197,7 @@ export function BackFaceColorSection({
   if (!backBody) return null;
   const ownColour = (backColour ?? []).length > 0;
   const colour = ownColour ? (backColour as ColorIdentity[]) : frontColorIdentity;
-  const colourlessRefused = !colorlessFaceAllowed(backBody, { cardType: backType, supertype: backSupertype });
+  const colourlessRefusal = dfcColorlessRefusal(backBody, { cardType: backType, supertype: backSupertype }, verifiedFrameKeys, "back");
   return (
     <Controller
       control={control}
@@ -215,7 +215,7 @@ export function BackFaceColorSection({
           }}
           verifiedKeys={verifiedFrameKeys}
           frameType={{ cardType: backType, supertype: backSupertype }}
-          colorlessDisabledReason={colourlessRefused ? DFC_COLORLESS_NEEDS_ARTIFACT : null}
+          colorlessDisabledReason={colourlessRefusal}
           testId="dfc-back-color"
         />
       )}

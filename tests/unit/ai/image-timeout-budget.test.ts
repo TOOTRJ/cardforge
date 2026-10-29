@@ -14,6 +14,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 //
 // The gateway is MOCKED (`ai`'s experimental_generateImage): no picture is
 // generated and no key is read.
+//
+// These pin the LADDER with no backup model (AI_IMAGE_FALLBACK_MODEL set to
+// the default: imageModels() then has none). The backup model's hedge —
+// started at 60 s or on the default's failure, once per picture — is
+// image-backup-model.test.ts.
 // ---------------------------------------------------------------------------
 
 type Answer = { kind: "ok" } | { kind: "throw"; message: string };
@@ -39,6 +44,7 @@ import {
   CARD_STEP_IMAGE_BUDGET_MS,
   IMAGE_BUDGET_MS,
   generateImageWithFallbacks,
+  withFullyClothedLine,
 } from "@/lib/ai/image-gen";
 import { AI_FAILURE_COPY, aiFailureMessage } from "@/lib/ai/failure";
 import { artPromptLadder } from "@/lib/ai/art-prompt-safety";
@@ -50,7 +56,10 @@ const MODERATED = "Request Moderated: the prompt was flagged by the content filt
 
 let timeoutSpy: ReturnType<typeof vi.spyOn>;
 
+const savedFallback = process.env.AI_IMAGE_FALLBACK_MODEL;
+
 beforeEach(() => {
+  process.env.AI_IMAGE_FALLBACK_MODEL = "bfl/flux-2-flex";
   s.calls = [];
   s.answers = [];
   s.timeouts = [];
@@ -63,6 +72,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (savedFallback === undefined) delete process.env.AI_IMAGE_FALLBACK_MODEL;
+  else process.env.AI_IMAGE_FALLBACK_MODEL = savedFallback;
   timeoutSpy.mockRestore();
   vi.restoreAllMocks();
 });
@@ -109,7 +120,7 @@ describe("one picture's wait", () => {
     s.answers = [{ kind: "throw", message: MODERATED }, { kind: "ok" }];
     const result = await generateImageWithFallbacks(LADDER, "square");
     expect(s.calls).toHaveLength(2);
-    expect(s.calls[1].prompt).toBe(LADDER[1]);
+    expect(s.calls[1].prompt).toBe(withFullyClothedLine(LADDER[1], 4000));
     expect(result).toMatchObject({ ok: true, promptIndex: 1 });
   });
 

@@ -119,7 +119,9 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
   },
   {
     brief: "Show the creature itself, mid-adventure — the spell on its page is told in words, not in the picture.",
-    templates: ["adventure", "prepare"],
+    // A layout's skins (TEMPLATE_SKIN_VARIANTS) share its brief, as the
+    // station's dresses do: the extended-art Prepare dress (TODO 4.27b).
+    templates: ["adventure", "prepare", "extendedartprepare"],
   },
   {
     brief: "Show the creature as it is now, with a hint of what it becomes when it flips.",

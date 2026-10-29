@@ -48,6 +48,8 @@
 //                                            crowned twin: the station box)
 // ---------------------------------------------------------------------------
 
+import { PREPARE_STAMP } from "./prepare-2026.mjs";
+
 /** The ten two-colour pairs in printed order (TWO_COLOR_PAIRS). */
 export const BORDERLESS_STAMP_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
 
@@ -127,7 +129,7 @@ export const READ_ROWS = Object.freeze([BORDERLESS_NOTCH_BOX.y, BLACK_BAR_TOP]);
 /** The borderless spells', artifact's, land's and station's arch: the lift
  *  table, the first black row under the pinline and the piece's box — what
  *  every function below reads (their default). */
-/** @typedef {{ lift: readonly number[]; barTop: number; box: { x: number; y: number; width: number; height: number }; boxAlphaRow?: number }} ArchSpec */
+/** @typedef {{ lift: readonly number[]; barTop: number; box: { x: number; y: number; width: number; height: number }; boxAlphaRow?: number; liftTop?: number }} ArchSpec */
 /** @type {ArchSpec} */
 export const BORDERLESS_ARCH = Object.freeze({ lift: ARCH_LIFT_PX, barTop: BLACK_BAR_TOP, box: BORDERLESS_NOTCH_BOX });
 
@@ -200,6 +202,9 @@ const PINLINE_ALPHA_STEP = 10;
  * its own texture), only the bevel and the rim.
  */
 export function pinlineTop(m, width, x, arch = BORDERLESS_ARCH) {
+  // An OPAQUE master names its foot's first row (the Prepare frame, TODO
+  // 4.27b: no alpha step to find it by).
+  if (arch.liftTop !== undefined) return arch.liftTop;
   // The box's own alpha, read on its box row — or (the New Capenna Art Deco
   // box, whose ornaments are opaque where the arch rises) on the arch's
   // `boxAlphaRow`, a row of the box every column of the piece holds clear.
@@ -402,6 +407,59 @@ export const SNC_DECO_STAMP_FOLDERS = {
       "PipGlyph's own derivation (TODO 4.11 wave 2): the holofoil stamp's notch on the New Capenna Art Deco showcase — the text box's gold foot rim arched over the oval as every stamped print of the run draws it (SNC #296–340 and #361–405: the rares and mythics). Card Conjurer's 'Golden Age (SNC)' pack has no stamp piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram itself, never read); no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, gold rim and black border, moved up.",
       "The arch is scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH_LIFT_PX: the 25 stamped plain prints measured 2026-10-27 (the rim lifted 35.3 px at the centre against the straight 1938–1948, rising from x 664 to x 836). Above it the box keeps its own pixels — its brown arcs ride over the arch, as on print.",
       "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at 683–817 × 1924–1988 (SNCARTDECO_HOLO_STAMP_OVAL). Nothing of a hologram is in a piece.",
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// The PREPARE frame's arch (TODO 4.27b): print arches the text box's foot —
+// the bottom bevel, the pinline and the black under it — over the oval across
+// the creature's box AND the strip under the page; the numbers and the
+// measure are scripts/lib/prepare-2026.mjs PREPARE_STAMP. The prepare masters
+// are opaque, so the lifted foot starts on a NAMED row (`liftTop`: the bevel's
+// first, 1927) rather than one found by alpha.
+// ---------------------------------------------------------------------------
+
+/** The Prepare arch: the lift table, the bevel's first row, the first black
+ *  row and the piece's box. */
+/** @type {ArchSpec} */
+export const PREPARE_ARCH = Object.freeze({
+  lift: Object.freeze([...PREPARE_STAMP.lift]),
+  barTop: PREPARE_STAMP.barTop,
+  box: Object.freeze({ ...PREPARE_STAMP.box }),
+  liftTop: PREPARE_STAMP.liftTop,
+});
+
+const PREPARE_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "c"];
+
+/** The Prepare pieces: prepareholostamp/<key> over prepare/<key> — the seven
+ *  keys and the twenty pair masters, BOTH dresses (the lifted bevel's top
+ *  edge is cut against the strip under the page, which the gold-split and
+ *  the hybrid dress paint differently: the slot is keyed by the master,
+ *  FrameOverlaySlot.keyByMaster). Each is drawn over the extended-art
+ *  Prepare dress (extendedartprepare/<key>, TODO 4.27b) too: `sharePiece` —
+ *  the build builds the piece over that master and refuses one that
+ *  differs. */
+export const PREPARE_STAMP_FOLDERS = {
+  prepareholostamp: {
+    keys: {
+      ...Object.fromEntries(PREPARE_MONO_KEYS.map((k) => [k, `prepare/${k}`])),
+      ...Object.fromEntries(BORDERLESS_STAMP_PAIRS.map((p) => [p, `prepare/${p}`])),
+      ...Object.fromEntries(BORDERLESS_STAMP_PAIRS.map((p) => [`${p}-h`, `prepare/${p}-h`])),
+    },
+    sharedBy: {
+      ...Object.fromEntries(PREPARE_MONO_KEYS.map((k) => [k, [`extendedartprepare/${k}`]])),
+      ...Object.fromEntries(BORDERLESS_STAMP_PAIRS.map((p) => [p, [`extendedartprepare/${p}`]])),
+      ...Object.fromEntries(BORDERLESS_STAMP_PAIRS.map((p) => [`${p}-h`, [`extendedartprepare/${p}-h`]])),
+    },
+    sharePiece: true,
+    arch: PREPARE_ARCH,
+    liftTable: "PREPARE_STAMP.lift (scripts/lib/prepare-2026.mjs)",
+    derivedFrom: 'the published Prepare masters named per key below (PipGlyph\'s own: see "prepare")',
+    notes: [
+      "PipGlyph's own derivation (TODO 4.27b): the holofoil stamp's notch on the Prepare frame — the text box's foot (its bottom bevel, the pinline and the black border) arched over the oval across the creature's box and the strip under the page, as every stamped Prepare print draws it (79 of 119 paper printings, every rare and mythic). M15's piece (Card Conjurer's m15holostamp) is cut for one box: the page's outline and strip run through it. No CC piece and no scan is read by the build — every painted pixel is the published master's own bevel, pinline and black, moved up.",
+      "The arch is scripts/lib/prepare-2026.mjs PREPARE_STAMP.lift: 35 stamped plain prints measured 2026-10-28 (the rim's lower edge lifted 37.4 px at the centre against the straight 1947.5, its upper edge 34.3 — the lift is their mean, 35.8 — rising from x 657 to x 843); the same set's plain M15 mythic arches the same within 1 px.",
+      "Each piece is built over its master and checked over the other master drawn under its key — the extended-art Prepare dress — by building it there too (sharePiece); the two pair dresses each have their own piece (their strips differ where the lifted bevel's top edge is cut). The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15's oval. Nothing of a hologram is in a piece.",
     ],
   },
 };

@@ -3,6 +3,7 @@
 // Extracted from components/creator/card-creator-form.tsx; nothing here may
 // read component state.
 
+import { sagaCreatureTextAfterRows, splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
@@ -35,7 +36,7 @@ import {
   loyaltyFromRulesText,
   sagaEditorRows,
 } from "@/lib/cards/face-content";
-import { KIND_DEFS, dfcLayoutForKind, extendedArtDressFor, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, dfcLayoutForKind, extendedArtDressFor, isSagaCreatureDress, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
@@ -57,6 +58,7 @@ function structuredRowsFrom(card: Card): {
   loyalty_abilities: LoyaltyRowFormValues[];
   saga_intro: string;
   saga_chapters: SagaChapterFormValues[];
+  saga_creature_text: string;
 } {
   const kind = kindFromCard(
     card.card_type,
@@ -70,19 +72,84 @@ function structuredRowsFrom(card: Card): {
       loyalty_abilities: rows.map((r) => ({ cost: r.cost ?? "", text: r.text })),
       saga_intro: "",
       saga_chapters: [],
+      saga_creature_text: "",
     };
   }
   if (kind === "saga") {
     // (A marker the numbers alone would not give back — "II, I", "I, XI" —
     // rides on its row: lib/cards/face-content.ts sagaEditorRows.)
+    // A saga CREATURE (TODO 4.5d) opens its box with what the box draws
+    // (lib/cards/saga-creature.ts): beside stored rows, the text after their
+    // serialization — on ANY frame, so lines a maker kept there on another
+    // frame open in their field again, never under the last chapter — and
+    // with no rows, on that frame only, the lines after the last chapter.
+    if (!card.face_content?.saga) {
+      return { loyalty_abilities: [], ...sagaRowsFromText(card.rules_text, (card.frame_style as FrameStyle | null)?.template) };
+    }
     const saga = sagaEditorRows(card.face_content, card.rules_text);
     return {
       loyalty_abilities: [],
       saga_intro: saga.intro ?? "",
       saga_chapters: saga.chapters,
+      saga_creature_text: sagaCreatureTextAfterRows(card.face_content, card.rules_text) ?? "",
     };
   }
-  return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };
+  return { loyalty_abilities: [], saga_intro: "", saga_chapters: [], saga_creature_text: "" };
+}
+
+/** A saga's editor rows read from a rules text alone (no stored rows) on
+ *  `template`: on the saga creature frame the lines after the last chapter
+ *  are its box's (lib/cards/saga-creature.ts); on every other frame they
+ *  continue the chapter, as that frame draws them. What an edit opens a
+ *  plain-text card with, and what a text that ARRIVES (an import, an AI
+ *  fill, a kind switch) seeds the editor with. */
+export function sagaRowsFromText(
+  rulesText: string | null | undefined,
+  template: string | null | undefined,
+): { saga_intro: string; saga_chapters: SagaChapterFormValues[]; saga_creature_text: string } {
+  const split = isSagaCreatureDress(normalizeFrameTemplate(template))
+    ? splitSagaCreatureText(rulesText)
+    : { railText: rulesText ?? null, creatureText: null };
+  const saga = sagaEditorRows(null, split.railText);
+  return { saga_intro: saga.intro ?? "", saga_chapters: saga.chapters, saga_creature_text: split.creatureText ?? "" };
+}
+
+/**
+ * The rows an EDIT opened with, read for the frame the card is on NOW (TODO
+ * 4.5d): a saga stored as plain text splits its text one way on the saga
+ * creature frame (the lines after the last chapter are its box's) and
+ * another everywhere else (they continue the chapter), so a card moved
+ * between them is "untouched" against the stored text read for its NEW
+ * frame — and the form re-reads its rows that way on the move
+ * (`sagaRowsForFrame`). The very `opened` object whenever the move changes
+ * nothing: every other card and frame.
+ */
+export function openedForFrame<T extends Pick<FormValues, "saga_intro" | "saga_chapters" | "saga_creature_text">>(
+  opened: T,
+  card: Card | null | undefined,
+  template: string | null | undefined,
+): T {
+  if (!card) return opened;
+  const storedTemplate = (card.frame_style as FrameStyle | null)?.template;
+  if (isSagaCreatureDress(normalizeFrameTemplate(storedTemplate)) === isSagaCreatureDress(normalizeFrameTemplate(template))) {
+    return opened;
+  }
+  if (kindFromCard(card.card_type, template) !== "saga") return opened;
+  const rows = sagaRowsForFrame(card, template);
+  return { ...opened, ...rows } as T;
+}
+
+/** A stored saga's editor rows and box as the editor opens them on
+ *  `template` (structuredRowsFrom with that frame). */
+export function sagaRowsForFrame(
+  card: Card,
+  template: string | null | undefined,
+): Pick<FormValues, "saga_intro" | "saga_chapters" | "saga_creature_text"> {
+  const rows = structuredRowsFrom({
+    ...card,
+    frame_style: { ...((card.frame_style as FrameStyle | null) ?? {}), template } as Card["frame_style"],
+  });
+  return { saga_intro: rows.saga_intro, saga_chapters: rows.saga_chapters, saga_creature_text: rows.saga_creature_text };
 }
 
 /** A blank second face for a card of `kind` (TODO 3b.8). A frame that
@@ -210,6 +277,7 @@ export function defaultValuesFor(
       loyalty_abilities: [],
       saga_intro: "",
       saga_chapters: [],
+      saga_creature_text: "",
       station_pt_tier: null,
       flavor_text: "",
       // A fresh card is a 1/1 creature until the maker says otherwise — the

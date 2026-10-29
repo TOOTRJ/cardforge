@@ -278,7 +278,10 @@ describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
     // then the drawing at the renderer's target.
     expect(BAKE).toContain("const sagaRailLayout = profileSagaRail(layout, sagaContent, aspect);");
     expect(BAKE).toContain("sagaRailDrawing(sagaRailLayout, rulesTarget)");
-    expect(PREVIEW).toContain("profileSagaRail(layout, resolveSagaChapters(face.faceContent, face.rulesText), aspect)");
+    // (A saga creature's rail reads the chapters its text splits off the
+    // creature box — TODO 4.5d, lib/cards/saga-creature.ts — in both.)
+    expect(PREVIEW).toContain("profileSagaRail(layout, sagaCreature ?? resolveSagaChapters(face.faceContent, face.rulesText), aspect)");
+    expect(BAKE).toContain("(sagaCreature ?? resolveSagaChapters(card.faceContent, card.rulesText))");
     expect(PREVIEW).toContain('sagaRailDrawing(rail, "hd")');
     // Neither renderer computes a row, a badge or a divider itself.
     for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {

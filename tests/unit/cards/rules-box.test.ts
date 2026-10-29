@@ -116,8 +116,11 @@ describe("the main box on every template", () => {
         // M15's; the textless promo pair spreads M15 and draws no box.
         "extendedart", "extendedartland", "m15textless", "m15textlessland",
         // The Prepare frame (TODO 4.27): the creature's half of M15's box,
-        // the prints' margins (ink from x 127, M15's 4 px inside the rect).
-        "prepare",
+        // the prints' margins (ink from x 127, M15's 4 px inside the rect) —
+        // and its extended-art dress's (TODO 4.27b), the same box.
+        "prepare", "extendedartprepare",
+        // The saga creature (TODO 4.5d): M15's box under the raised bar.
+        "sagacreature",
         // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
         // text layout is M15's, its box and margins.
         "lotrscroll",

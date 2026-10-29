@@ -121,12 +121,9 @@ describe("frame reference registry", () => {
       "m15dfclandback/r",
       "m15dfclandback/g",
       "m15dfclandback/m",
-      // 5.1b's modal bodies: no colourless modal front or back (STX #154
-      // Pestilent Cauldron is a BLACK artifact; STX #6 Wandering Archaic an
-      // Avatar on the see-through frame), no colourless or gold modal land
-      // printed on the plain 2015 frame.
-      "m15mdfcfront/c",
-      "m15mdfcback/c",
+      // 5.1b's modal land pair: no colourless or gold modal land printed on
+      // the plain 2015 frame. (The spell bodies' `c` is STX #6 Wandering
+      // Archaic's see-through frame since TODO 5.11a: referenced.)
       "m15mdfclandfront/c",
       "m15mdfclandfront/m",
       "m15mdfclandback/c",
@@ -139,6 +136,9 @@ describe("frame reference registry", () => {
       // Prepare prints the split frame) and no colourless Prepare card.
       "prepare/m",
       "prepare/c",
+      // …and its extended-art dress (TODO 4.27b): the same.
+      "extendedartprepare/m",
+      "extendedartprepare/c",
       // …and its borderless Spacecraft dress (step 2): gold only (EOC #1 / #2).
       "m15borderlessstation/w",
       "m15borderlessstation/u",
@@ -201,6 +201,8 @@ describe("frame reference registry", () => {
       "sagadfcfront/c",
       // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
       "sagadfcback/c",
+      // The saga creature (TODO 4.5d): no multicolour one-faced summon.
+      "sagacreature/m",
       // The arch's tall box (TODO 4.55): white, black and red tokens and the
       // colourless Clues (the artifact dress) are all that printed it.
       ...["u", "g", "c", "m"].map((k) => `m15tokentall/${k}`),
@@ -226,7 +228,9 @@ describe("frame reference registry", () => {
     // + 4.51's six Nyx dresses of the full-art tokens.
     // + 4.55's two tall-box tokens.
     // + 4.27's Prepare frame.
-    expect(m15Templates.length).toBe(71);
+    // + 4.5d's saga creature.
+    // + 4.27b's extended-art Prepare dress.
+    expect(m15Templates.length).toBe(73);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

@@ -69,6 +69,8 @@ import {
   enchantmentDressReason,
   enchantmentFrameFits,
   isEnchantmentDress,
+  sagaCreatureDressReason,
+  sagaCreatureFrameFits,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
@@ -116,12 +118,12 @@ import {
   frameSubstitutionLabel,
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
-import { colorlessFaceAllowed, dfcLookOf } from "@/lib/cards/dfc";
+import { dfcLookOf } from "@/lib/cards/dfc";
 import {
   LegendaryVariationChip,
   useLegendaryVariation,
 } from "@/components/creator/panels/legendary-variation";
-import { DFC_COLORLESS_FRONT_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { dfcColorlessRefusal } from "@/lib/cards/dfc-gate";
 
 const KIND_HINTS: Partial<Record<CardKind, string>> = {
   saga: "Chapter rail (I–IV)",
@@ -200,6 +202,8 @@ const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
   m15textless: "Name and art only: no type line or text box",
   m15textlessland: "Name and art only: no type line or text box",
   nyx: "Theros Beyond Death showcase",
+  // The saga creature (TODO 4.5d): FIN's "Summon:" layout.
+  sagacreature: "A saga that is also a creature: a box for its abilities and a P/T",
 };
 
 export function CardSetupPanel({
@@ -617,6 +621,9 @@ export function CardSetupPanel({
             const enchantmentRefused =
               !borrowedWord &&
               !enchantmentFrameFits(choice.template, { cardType, supertype });
+            // The saga creature body (TODO 4.5d) is for a saga whose type
+            // words say Creature — the server's rule too.
+            const sagaCreatureRefused = !sagaCreatureFrameFits(choice.template, { cardType, supertype });
             return {
               value: choice.template,
               label,
@@ -626,6 +633,8 @@ export function CardSetupPanel({
                   ? (subtypeDressReason(choice.template) ?? undefined)
                 : enchantmentRefused
                   ? (enchantmentDressReason(choice.template) ?? undefined)
+                : sagaCreatureRefused
+                  ? (sagaCreatureDressReason(choice.template) ?? undefined)
                 : !available
                   ? "Awaiting verification"
                   : !colorAvailable
@@ -666,7 +675,7 @@ export function CardSetupPanel({
                   anatomy={frameAnatomy}
                 />
               ),
-              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused,
+              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused || sagaCreatureRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };
@@ -831,11 +840,11 @@ export function CardSetupPanel({
             template={normalizeFrameTemplate(watchedTemplate)}
             // A double-faced front may be colourless only with "Artifact"
             // on its type line (design D2: the body's `c` is the artifact
-            // stand-in) — the same rule the back-face panel's chips apply.
+            // stand-in; the modal front's see-through `c` once ticked, TODO
+            // 5.11a) — the same rule the back-face panel's chips apply.
             colorlessDisabledReason={
-              dfcLayoutForKind(kind) &&
-              !colorlessFaceAllowed(normalizeFrameTemplate(watchedTemplate), frameType)
-                ? DFC_COLORLESS_FRONT_NEEDS_ARTIFACT
+              dfcLayoutForKind(kind)
+                ? dfcColorlessRefusal(normalizeFrameTemplate(watchedTemplate), frameType, verifiedKeys, "front")
                 : null
             }
             onPairTouched={onPairTouched}

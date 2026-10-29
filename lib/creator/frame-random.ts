@@ -18,6 +18,7 @@ import {
   followsTokenNyxDressIn,
   isEnchantmentDress,
   isPickOnlyDress,
+  sagaCreatureFrameFor,
   subtypeFrameFits,
   subtypeFrameFor,
   subtypesSay,
@@ -328,8 +329,9 @@ export function deckCardFrameRequest(cardType: CardType): FrameRequest {
  *
  *   - a SAGA (an enchantment whose subtypes say Saga and whose text has at
  *     least one chapter line, read as the renderers read it) → the `saga`
- *     frame. A text with no chapter would leave its rail empty: it keeps the
- *     standard's landing.
+ *     frame — a saga whose words say Creature the saga creature body
+ *     (TODO 4.5d) where that is verified too. A text with no chapter would
+ *     leave its rail empty: it keeps the standard's landing.
  *   - a SNOW card (a Snow word in its type line) → `m15snow`, or
  *     `m15snowland` for a land — only where the standard's landing is the
  *     plain frame the snow skin re-dresses (m15, m15land, and the artifact
@@ -359,6 +361,17 @@ export function resolveDeckCardFrame(
       (choice) => choice.template === "saga" && choice.availableColorKeys.includes(colorKey as never),
     )
   ) {
+    // …a saga whose words say Creature (TODO 4.5d) on the saga creature body
+    // where IT is verified in the card's colour (sagaCreatureFrameFor).
+    const creature = sagaCreatureFrameFor("saga", "saga", { cardType, supertype: face?.supertype });
+    if (
+      creature !== "saga" &&
+      framesForKind("saga", verifiedKeys).some(
+        (choice) => choice.template === creature && choice.availableColorKeys.includes(colorKey as never),
+      )
+    ) {
+      return creature;
+    }
     return "saga";
   }
 

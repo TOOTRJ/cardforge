@@ -6,6 +6,7 @@ import {
   FRAME_TEMPLATE_SET,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_TEMPLATE_VALUES,
+  TEMPLATE_SKIN_VARIANTS,
   type CardType,
   type ColorIdentity,
   type FrameTemplate,
@@ -46,6 +47,8 @@ import {
   templateIsBasicOnly,
   isSubtypeDress,
   isEnchantmentDress,
+  isSagaCreatureDress,
+  isLayoutSkin,
   tokenFrameFor,
   type CardKind,
   type FrameColorKey,
@@ -154,6 +157,11 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         !isSubtypeDress(choice.template) &&
         // …nor an enchantment dress (the Nyx frame, TODO 4.7).
         !isEnchantmentDress(choice.template) &&
+        // …nor the saga creature body (TODO 4.5d).
+        !isSagaCreatureDress(choice.template) &&
+        // …nor a layout's Variations skin (the extended-art Prepare dress,
+        // TODO 4.27b): a pick, never a stand-in.
+        !isLayoutSkin(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(keyFor(choice.template)),
     );
@@ -673,10 +681,22 @@ export function finalizeImportMatch<
   // printing's own landing (M15, or the extended-art frame), the spell a
   // legacy back — and the match still names the Prepare frame, so the
   // chooser and the request log say what is missing.
-  if (
-    finalized.kind === "prepare" &&
-    !isFrameComboAvailable("prepare", pickFrameColorKey(patch.color_identity), verifiedKeys)
-  ) {
+  // An extended-art Prepare printing (TODO 4.27b) is exact on the
+  // extended-art Prepare dress once THAT is verified in its colour; short of
+  // it the import is what it was before 4.27b — the Prepare frame, nearest,
+  // where it is verified (the match saying the dress isn't yet), else the
+  // creature on the extended-art frame (below).
+  const prepareKey = pickFrameColorKey(patch.color_identity);
+  const prepareVerified = isFrameComboAvailable("prepare", prepareKey, verifiedKeys);
+  const onExtendedDress = finalized.kind === "prepare" && match.template === "extendedartprepare";
+  if (onExtendedDress && !isFrameComboAvailable("extendedartprepare", prepareKey, verifiedKeys)) {
+    if (prepareVerified) return { ...finalized, frame_match: { ...match, status: "nearest", landOn: "prepare" } };
+    // (Short of both, the extended-art frame the printing landed on before
+    // 4.27b — the creature kind, the spell a legacy back.)
+    const fallbackMatch: FrameMatch = { ...match, landOn: "extendedart" };
+    return { ...finalized, kind: "creature", frame_template: "extendedart", frame_match: fallbackMatch };
+  }
+  if (finalized.kind === "prepare" && !onExtendedDress && !prepareVerified) {
     const landing: FrameTemplate = match.template === "prepare" ? "m15" : match.template;
     const fallbackMatch: FrameMatch = { ...match };
     if (landing === match.template) delete fallbackMatch.landOn;
@@ -744,6 +764,20 @@ export function finalizeImportMatch<
       }
       const unverifiedBack =
         landing.reason === "back-unverified" && (match.status === "exact" || match.unverified === true);
+      // The see-through `c` (TODO 5.11a: STX #6 Wandering Archaic) waits for
+      // its own tick on either face: said so, by face.
+      if (landing.seeThrough && (match.status === "exact" || match.unverified === true)) {
+        return {
+          ...fallback,
+          frame_match: {
+            ...match,
+            status: "nearest",
+            ...(fallback.frame_template ? { landOn: fallback.frame_template } : {}),
+            reason: `the ${landing.reason === "front-unverified" ? "front" : "back"} face's see-through colourless frame isn't verified yet`,
+            unverified: true as const,
+          },
+        } as P;
+      }
       const downgraded: FrameMatch = {
         ...match,
         status: "nearest",
@@ -861,7 +895,20 @@ export function remixFrameFor(
   const cardType = importedCardTypeForKind(kind, patch.card_type);
   const savedType = known ? cardType : undefined;
   const colors: readonly ColorIdentity[] = patch.color_identity ?? ["colorless"];
-  const layoutTemplate = KIND_DEFS[kind].layoutTemplates?.[0];
+  // A saga creature (TODO 4.5d) lands where its import does: the saga
+  // creature body once the finalized match names it (`saga/creature/2015`,
+  // verified in the card's colour), else the kind's saga frame.
+  // (A layout template's skin the finalized match names — the extended-art
+  // Prepare dress, TODO 4.27b — is the landing, as the import's.)
+  const importLanding = patch.frame_match ? (patch.frame_match.landOn ?? patch.frame_match.template) : undefined;
+  const kindLayout = KIND_DEFS[kind].layoutTemplates?.[0];
+  const matched = patch.frame_match && !patch.frame_match.reject ? (patch.frame_match.landOn ?? patch.frame_match.template) : undefined;
+  const layoutTemplate =
+    kind === "saga" && importLanding === "sagacreature"
+      ? importLanding
+      : kindLayout && matched && (TEMPLATE_SKIN_VARIANTS[kindLayout] ?? []).includes(matched)
+        ? matched
+        : kindLayout;
 
   if (layoutTemplate) {
     // (A split / aftermath card with each part in its own colour, TODO

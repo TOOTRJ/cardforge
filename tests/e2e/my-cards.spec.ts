@@ -25,9 +25,17 @@ async function saveDraft(page: Page, title: string) {
   await page.getByTestId("save-as-draft").check();
   await page.getByRole("button", { name: /^save$/i }).dispatchEvent("click");
   await page.waitForURL(/\/card\/.+\/edit/);
-  // The editor follows its redirect with a router.refresh(); navigating away
-  // mid-refresh aborts the next goto (net::ERR_ABORTED).
-  await page.waitForLoadState("networkidle");
+  // The draft save's SOFT redirect to /card/<slug>/edit is caught by the
+  // card-detail interceptor (app/@modal/(.)card/[username]/[slug]: "edit"
+  // lands in [slug]), whose HardNavigate RELOADS the page to reach the real
+  // editor. The URL changes before that reload starts, and
+  // waitForLoadState("networkidle") answers at once for the old document —
+  // so a goto made then is aborted by the reload (net::ERR_ABORTED). Wait
+  // for what only the reloaded editor draws: its <h1> is the card's title
+  // (/create's says "Forge a new card").
+  await expect(
+    page.getByRole("heading", { level: 1, name: title, exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe("dashboard overview + My Cards", () => {
@@ -77,7 +85,12 @@ test.describe("dashboard overview + My Cards", () => {
     await signIn(page);
     await saveDraft(page, title);
 
-    await page.goto("/dashboard/cards");
+    // The editor's post-save router.refresh() can start after networkidle on
+    // a busy runner, and a goto it overtakes is aborted (net::ERR_ABORTED):
+    // retry the navigation until it lands.
+    await expect(async () => {
+      await page.goto("/dashboard/cards");
+    }).toPass({ timeout: 20_000 });
     await expect(page.getByRole("heading", { name: /^my cards$/i })).toBeVisible();
 
     // Default: large grid, newest edit first.

@@ -28,6 +28,7 @@
 import {
   RULES_TARGETS,
   fitRulesLayout,
+  isSingleRulesLine,
   keepOutInBoxFrame,
   linePositions,
   statInkRect,
@@ -84,6 +85,13 @@ export type DrawnStats = {
  *  reverse P/T's digits while drawn. */
 export function drawnFloats(show: DrawnStats): Rect[] {
   return show.reversePt ? [show.reversePt] : [];
+}
+
+/** …and, in a box whose slot says so (TextSlot.ptFloat — the saga
+ *  creature's, TODO 4.5d), the drawn P/T plate: its lines break short of
+ *  it rather than step down for it. */
+function boxFloats(slot: TextSlot, layout: FrameProfile, show: DrawnStats): Rect[] {
+  return [...drawnFloats(show), ...(slot.ptFloat && show.pt ? statKeepOuts(layout, { pt: true }) : [])];
 }
 
 /**
@@ -152,8 +160,24 @@ export function rulesAlignOf(
 
 function fitSlot(
   slot: TextSlot,
+  input: BoxInput,
+  defaults: { pad: { x: number; y: number }; rotation: number; sizePct?: number },
+): RulesLayout {
+  const fitted = fitSlotWith(slot, input, defaults, slot.padPx ?? defaults.pad);
+  // A box whose ONE line sits on padding of its own (TextSlot.singleLinePadPx
+  // — the saga creature's, TODO 4.5d): a layout of a single line is placed
+  // again with it; any longer text keeps the whole box.
+  if (slot.singleLinePadPx && isSingleRulesLine(fitted.blocks, slot.alignSingleLine === "centerAny")) {
+    return fitSlotWith(slot, input, defaults, slot.singleLinePadPx);
+  }
+  return fitted;
+}
+
+function fitSlotWith(
+  slot: TextSlot,
   { layout, rulesText, flavorText, aspect, show, rulesAlign, bulletModes }: BoxInput,
   defaults: { pad: { x: number; y: number }; rotation: number; sizePct?: number },
+  padPx: NonNullable<TextSlot["padPx"]>,
 ): RulesLayout {
   return fromTopWhenOverflowing(
     fitRulesLayout({
@@ -163,7 +187,7 @@ function fitSlot(
       aspect,
       sizePct: defaults.sizePct ?? slot.sizePct,
       lineHeight: slot.lineHeight,
-      padPx: slot.padPx ?? defaults.pad,
+      padPx,
       vAlign: slot.vAlign ?? "start",
       ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
       ...(rulesAlignOf(layout, rulesAlign) ? { align: "center" as const } : {}),
@@ -172,8 +196,8 @@ function fitSlot(
       divider: layout.flavorDivider !== false,
       // The frame's symbol style: the inline pip's shadow (TODO 4.8.0).
       ...(layout.symbolStyle ? { symbolStyle: layout.symbolStyle } : {}),
-      keepOuts: rulesKeepOuts(drawnStatInk(layout, show, aspect), slot.rect, defaults.rotation, aspect),
-      ...(drawnFloats(show).length ? { floats: rulesKeepOuts(drawnFloats(show), slot.rect, defaults.rotation, aspect) } : {}),
+      keepOuts: rulesKeepOuts(drawnStatInk(layout, slot.ptFloat ? { ...show, pt: false } : show, aspect), slot.rect, defaults.rotation, aspect),
+      ...(boxFloats(slot, layout, show).length ? { floats: rulesKeepOuts(boxFloats(slot, layout, show), slot.rect, defaults.rotation, aspect) } : {}),
     }),
   );
 }

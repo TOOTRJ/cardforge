@@ -431,8 +431,15 @@ Rules and gotchas:
   (`lib/scryfall/dfc-import.ts`, `finalizeImportMatch`), else as before
   (standard frame + legacy back); a walker face imports the front alone
   (toast + a `dfc/walker` request row), a colourless face without an
-  Artifact word and a devoid / snow dress keep today's landing (5.11,
-  `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The AI deck remix of such an
+  Artifact word on a TRANSFORM body and a devoid / snow dress keep today's
+  landing (5.11, `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The
+  modal spell bodies' `c` is the SEE-THROUGH frame (5.11a, STX #6 Wandering
+  Archaic: `scripts/build-mdfc-colourless-frames.mjs`), offered to a face
+  with no Artifact word only once its `c` row is ticked at
+  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` or later — the older ticks
+  verified the artifact stand-in (`seeThroughTickKeys`; every gate reads
+  `colorlessFaceAllowed(template, face, verifiedKeys)`, the mapper and the
+  references `colorlessFaceFits`). The AI deck remix of such an
   entry costs 2 credits (two pictures), priced at plan time
   (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
   only, behind the AI rate limit: it calls Scryfall) and shown in the
@@ -1042,8 +1049,45 @@ Rules and gotchas:
   colour, main's import (the creature kind on M15 / extended art, a legacy
   back: `finalizeImportMatch`); a textless printing keeps the
   creature kind; a spell page of another colour is the `part-colour` gap
-  (4.26). An ADDITION: no bump, no sweep. `docs/FRAMES.md` "The Prepare
-  frame (4.27)".
+  (4.26). An ADDITION: no bump, no sweep. Since 4.27b (additions, opt-in
+  per card): the oval stamp's notch `prepareholostamp/<key>` (each master's
+  own foot LIFTED along print's arch, `PREPARE_STAMP`; keyed by the MASTER
+  drawn, `keyByMaster` — the two pair dresses' strips differ under the
+  arch), M15's collector line, and the extended-art dress
+  `extendedartprepare` (a MERGE of the published extendedart top and
+  prepare bottom, `PREPARE_EXTENDED`; the Prepare kind's Variations pick —
+  `TEMPLATE_SKIN_VARIANTS.prepare`, a layout template's skin is its kind's,
+  never a default or stand-in — `isLayoutSkin`; an AI fill keeps it where it
+  fits, `layoutFrameFitOf`; imports exact on it once verified, else
+  `prepare`, else the creature on `extendedart`); the stamp's rules
+  keep-out follows the arch (`PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE`). `docs/FRAMES.md` "The Prepare frame (4.27)" and "…stamp,
+  collector line and extended-art dress (4.27b)".
+- The saga creature (`sagacreature`; TODO 4.5d): FIN / FIC's "Summon:"
+  cards — a saga whose type words say Creature (the card type or a
+  supertype word, never `printed_types`), the Saga kind's third layout frame
+  (`TREATMENT_KINDS` + ONE gate, `sagaCreatureFrameFits` in
+  `lib/creator/card-kinds.ts`: the server's kind gate, the Frame tile, the
+  import chooser, the reference validator, stand-in picks). Masters: OUR OWN
+  composite (`scripts/build-saga-creature-frames.mjs`, numbers in
+  `scripts/lib/saga-creature.mjs`: Card Conjurer's textured saga read from
+  the pinned commit — never published as it is — rows cut, the reminder
+  widened into a band, m15nyx's rows from the box down; bucket only). The
+  profile is the saga's rail raised with its type bar 173 px, m15nyx's
+  plates, and a SECOND box (`ChapterSlot.creatureBox`): the plain rules box,
+  its text the lines AFTER the last chapter (`lib/cards/saga-creature.ts`,
+  both renderers — a "•" line stays with its chapter; every other saga reads
+  its text as before) and the flavour, ONE line centred on print's row
+  (`alignSingleLine: "centerAny"`, `singleLinePadPx`), the plate a float
+  (`TextSlot.ptFloat`). In the creator that text is the saga editor's
+  **Creature abilities** field on this frame only (`saga_creature_text`,
+  form-only; `submittedRulesOf` `sagaCreatureFrame` writes it after the
+  chapters — never a field of its own in the row). Its PROFILES entry adds
+  the Universes Beyond triangle stamp and M15's collector line (opt-in). An
+  ADDITION: a new saga follows its Creature word onto it where verified
+  (`sagaCreatureFrameFor`: the creator's effect, the AI deck), a stored saga
+  keeps its frame; imports `saga/creature/2015`, exact once verified, the
+  borderless printings nearest as before. The ▼-back variant and the
+  colourless see-through are part B. `docs/FRAMES.md` "The saga creature".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
   m15artifact / m15land under Variations — never a render-time pick, never
@@ -1466,8 +1510,16 @@ Rules and gotchas:
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
   missing key returns a clear error, never a silent gpt-image-1 fallback.
+  Text-to-image is HEDGED by ONE backup gateway model (owner 2026-10-28:
+  `bfl/flux-2-pro`, started at 60 s or on the default's failure, once per
+  picture, inside the caller's budget — `generatePlainImage`); one credit per
+  picture whichever model paints, `image_model` on the step. Every art prompt
+  carries the "fully clothed" line (added at that one door), and violence is
+  allowed in art — the ladder softens nudity / sexual words only.
   `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
-  uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
+  uploads, and on every AI picture's BYTES before it is stored, with the
+  SEXUAL categories alone and one 10 s cap, no retries — `persistGeneratedArt`:
+  flagged → never stored, `art_blocked`, refunded once; fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
   reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
   `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in

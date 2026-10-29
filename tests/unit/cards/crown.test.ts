@@ -83,6 +83,8 @@ describe("which card draws the crown", () => {
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // The Prepare frame (TODO 4.27): M15's band over its M15 title bar.
       "prepare",
+      // …and its extended-art dress (TODO 4.27b): the extended-art band.
+      "extendedartprepare",
       // The full-art tokens' own floating crown (TODO 4.48).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       // …and their Nyx dress (TODO 4.51).
