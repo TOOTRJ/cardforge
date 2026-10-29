@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { MANA_PIP_FAQ } from "@/lib/content/faq";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /mana-pip-editor
@@ -26,12 +27,12 @@ export const metadata: Metadata = {
   description:
     "PipGlyph's mana pip editor builds precise MTG-style mana costs — generic, hybrid, twobrid, phyrexian, snow, and energy — and lets you upload your own custom pip icons that render on every card you own.",
   alternates: { canonical: "/mana-pip-editor" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "Mana Pip Editor — Custom MTG Mana Symbols | PipGlyph",
     description:
       "Click-to-build mana costs with the full symbol vocabulary, then upload custom pip icons that replace the standard symbols on your cards — in the editor, the gallery, and exports.",
     type: "article",
-  },
+  }),
 };
 
 const FEATURES = [

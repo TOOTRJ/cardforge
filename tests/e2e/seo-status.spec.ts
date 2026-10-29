@@ -39,6 +39,24 @@ test.describe("browse hubs", () => {
   });
 });
 
+test("the /learn categories render, index from three guides, and an unknown one is a real 404", async ({
+  request,
+}) => {
+  // Static pages — no database needed.
+  const design = await request.get("/learn/design");
+  expect(design.status()).toBe(200);
+  const html = await design.text();
+  expect(html).toMatch(/rel="canonical" href="[^"]*\/learn\/design"/);
+  expect(html).not.toMatch(/name="robots" content="noindex/);
+  expect(html).toContain('aria-label="Breadcrumb"');
+  // One guide on the lore shelf today: rendered, noindex + follow.
+  const lore = await (await request.get("/learn/lore")).text();
+  expect(lore).toMatch(/name="robots" content="noindex, follow"/);
+  for (const path of ["/learn/nope", "/learn/card-design"]) {
+    expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(404);
+  }
+});
+
 test("retired URLs 308 to living pages", async ({ request }) => {
   for (const [from, to] of [
     ["/preview", "/create"],
@@ -46,6 +64,11 @@ test("retired URLs 308 to living pages", async ({ request }) => {
     ["/set/anything-at-all", "/decks"],
     ["/set/anything/edit", "/decks"],
     ["/pricing-member", "/pricing"],
+    // The guide tag hubs that became /learn categories (TODO NV4).
+    ["/articles/tag/card-design", "/learn/design"],
+    ["/articles/tag/reference", "/learn/reference"],
+    ["/articles/tag/card-makers", "/learn/comparisons"],
+    ["/articles/tag/lore", "/learn/lore"],
   ]) {
     const response = await request.get(from, { maxRedirects: 0 });
     expect(response.status(), from).toBe(308);
