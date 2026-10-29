@@ -267,10 +267,12 @@ function ProfileChip({
     </>
   );
 
-  // Wraps: on a phone's two-column row (a ~150 px tile) the counts drop
-  // under the chip instead of squeezing the creator's name away.
+  // Wraps only in a phone's two-column row (a ~150 px tile, the row's query
+  // container under 36rem): the counts drop under the chip instead of
+  // squeezing the creator's name away. Wider tiles keep one line, the name
+  // truncated as it always was.
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 @xl:flex-nowrap">
       {owner?.username ? (
         <Link
           href={`/profile/${owner.username}`}
