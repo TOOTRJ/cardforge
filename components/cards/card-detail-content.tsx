@@ -36,6 +36,7 @@ import { frameTemplateOf } from "@/lib/cards/print-export";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
 import { AddToDeckButton } from "@/components/cards/add-to-deck-button";
+import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
@@ -223,6 +224,9 @@ export async function CardDetailContent({
     listPublicDeckTilesContaining(card.id),
   ]);
   const deckTileArt = await listDeckTileArt(deckTiles, { anonymous: true });
+  // "Build a deck around this card" (TODO DK8.3): where the card may join
+  // the viewer's new deck — a PUBLIC card (anyone's, D3), or their own.
+  const canBuildAround = card.visibility === "public" || isOwner;
   // The stat counts every deck the list stands for (it shows the newest few);
   // unread (a database 0149 hasn't reached), the list's own length.
   const deckCount = publicDeckCount ?? inDecks.length;
@@ -529,12 +533,13 @@ export async function CardDetailContent({
         />
       </div>
 
-      {deckTiles.length > 0 ? (
+      {deckTiles.length > 0 || canBuildAround ? (
         <DecksWithCard
           decks={deckTiles}
           art={deckTileArt}
           total={Math.max(deckCount, deckTiles.length)}
           cardPath={`/card/${username}/${card.slug}`}
+          buildAround={canBuildAround ? { cardId: card.id, cardTitle: card.title } : null}
         />
       ) : null}
 
@@ -599,8 +604,9 @@ function CardMissingNotice() {
 // the public decks the card's page names (listPublicDecksContaining — the
 // one list, by its one rule; the JSON-LD isPartOf reads it too) as
 // DeckTiles. The heading counts every such deck; the tiles are the newest.
-// SEAM (DK8.3, not built here): "Build a deck around this card" sits beside
-// the heading once the create-deck dialog lands (another builder's PR).
+// "Build a deck around this card" (DK8.3) sits beside the heading wherever
+// the card may join the viewer's deck — then the section shows with no deck
+// yet too, as the way to make the first.
 // ---------------------------------------------------------------------------
 
 function DecksWithCard({
@@ -608,34 +614,42 @@ function DecksWithCard({
   art,
   total,
   cardPath,
+  buildAround,
 }: {
   decks: Awaited<ReturnType<typeof listPublicDeckTilesContaining>>;
   art: Awaited<ReturnType<typeof listDeckTileArt>>;
   total: number;
   cardPath: string;
+  buildAround: { cardId: string; cardTitle: string } | null;
 }) {
   return (
     <section aria-labelledby="decks-with-card-heading" className="mt-14">
-      <div className="mb-4 flex flex-col gap-1">
-        <h2 id="decks-with-card-heading" className="font-display text-lg font-semibold text-foreground">
-          Decks with this card
-        </h2>
-        <p className="text-xs text-muted">
-          In {total} public deck{total === 1 ? "" : "s"}
-          {total > decks.length ? ` — the newest ${decks.length}` : ""}.
-        </p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id="decks-with-card-heading" className="font-display text-lg font-semibold text-foreground">
+            Decks with this card
+          </h2>
+          <p className="text-xs text-muted">
+            {decks.length === 0
+              ? "Not in any public deck yet."
+              : `In ${total} public deck${total === 1 ? "" : "s"}${total > decks.length ? ` — the newest ${decks.length}` : ""}.`}
+          </p>
+        </div>
+        {buildAround ? <BuildDeckAroundButton cardId={buildAround.cardId} cardTitle={buildAround.cardTitle} /> : null}
       </div>
-      <DeckGrid>
-        {decks.map((deck) => (
-          <DeckTile
-            key={deck.id}
-            deck={deck}
-            art={art.get(deck.id)}
-            sizes={DECK_GRID_SIZES}
-            likeRedirect={cardPath}
-          />
-        ))}
-      </DeckGrid>
+      {decks.length > 0 ? (
+        <DeckGrid>
+          {decks.map((deck) => (
+            <DeckTile
+              key={deck.id}
+              deck={deck}
+              art={art.get(deck.id)}
+              sizes={DECK_GRID_SIZES}
+              likeRedirect={cardPath}
+            />
+          ))}
+        </DeckGrid>
+      ) : null}
     </section>
   );
 }

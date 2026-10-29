@@ -1868,6 +1868,18 @@ Rules and gotchas:
   neither trigger can fail the write that fired it. The maybeboard is not
   the deck there either: `public_deck_card_pairs` leaves it out, as
   `card_count`, the tiles and the fans do.
+  A deck's fan (`featuredCardsOf`: the hero, the tiles, the share image) is
+  the commanders, then the owner's "Feature on cover" picks
+  (`deck_cards.featured_rank`, 0150: 1–5, one entry per rank and deck,
+  written by `set_deck_featured_entries` — the WHOLE list, rank 1 first,
+  under the entry lock — or the owner's own UPDATE), then the seeded fill;
+  a pick obeys the fan's rules (no private card for anyone, another
+  creator's only while public). `decks.cover_url` may also hold one of the
+  sixteen built-in backgrounds ("Shuffle" / a pick in the cover editor):
+  0150's ONE `media_url_allowed` branch, site-relative and anchored, never
+  a host — the app's twin `isDefaultDeckCover`
+  (`lib/decks/default-covers.ts`); `deckCoverOf` draws a stored one as a
+  default, never as an upload.
   A SAVED card joins or leaves the owner's decks from My Cards, the
   creator's edit and another creator's card page (TODO DK9) through ONE
   picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a

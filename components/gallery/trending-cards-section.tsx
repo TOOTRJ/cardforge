@@ -46,6 +46,9 @@ type TrendingCardsSectionProps = {
   /** Rendered under the row, inside the surface — the landing page's
    *  "live from the forge" pulse + calls to action. */
   footer?: React.ReactNode;
+  /** One control under each tile, outside its link (CardTile's rule) — the
+   *  /decks row's "Build a deck around this card" (TODO DK8.3). */
+  cardAction?: (card: CardWithStats) => React.ReactNode;
 };
 
 export function TrendingCardsSection({
@@ -58,6 +61,7 @@ export function TrendingCardsSection({
   priority = false,
   variant = "plain",
   footer,
+  cardAction,
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
@@ -113,6 +117,7 @@ export function TrendingCardsSection({
               siteBase={siteBase}
               isAuthed={isAuthed}
               className={rowTileClass(index)}
+              action={cardAction?.(card)}
             />
           ))}
         </div>
@@ -152,6 +157,7 @@ function TrendingTile({
   siteBase,
   isAuthed,
   className,
+  action,
 }: {
   card: CardWithStats;
   rank: number | null;
@@ -159,6 +165,7 @@ function TrendingTile({
   siteBase: string;
   isAuthed: boolean;
   className?: string;
+  action?: React.ReactNode;
 }) {
   const cardUrl = buildCardUrl(card, siteBase);
 
@@ -218,6 +225,7 @@ function TrendingTile({
           </span>
         }
       />
+      {action}
     </div>
   );
 }

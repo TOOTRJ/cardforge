@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // The deck cover field (TODO DK6.5, components/decks/deck-creator-form.tsx):
@@ -88,5 +88,88 @@ describe("CoverField", () => {
     field("");
     expect(screen.getByRole("img", { name: "The deck's default background" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Use your own picture/ })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The built-in backgrounds (migration 0150): "Shuffle" and a grid of the
+// sixteen — one radio group, ChipGroup's keyboard (one tab stop, arrows move
+// the focus, Space / Enter picks). A pick STORES the path, so a stored one
+// is shown picked, with the way back to the colours' pick.
+// ---------------------------------------------------------------------------
+
+const withChange = (value: string) => {
+  const onChange = vi.fn();
+  render(
+    <CoverField
+      userId={OWNER}
+      value={value}
+      defaultCoverSrc={DEFAULT}
+      onChange={onChange}
+      position={null}
+      onPositionChange={vi.fn()}
+    />,
+  );
+  return onChange;
+};
+
+describe("CoverField — the built-in backgrounds", () => {
+  it("lists the sixteen as one radio group, none picked while the deck stores none", () => {
+    withChange("");
+    const group = screen.getByRole("radiogroup", { name: "Built-in backgrounds" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios).toHaveLength(16);
+    expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual([
+      "White 1", "White 2", "Blue 1", "Blue 2", "Black 1", "Black 2", "Red 1", "Red 2",
+      "Green 1", "Green 2", "Multicolor 1", "Multicolor 2", "Colorless 1", "Colorless 2", "Neutral 1", "Neutral 2",
+    ]);
+    expect(radios.filter((r) => r.getAttribute("aria-checked") === "true")).toHaveLength(0);
+    // One tab stop.
+    expect(radios.filter((r) => r.tabIndex === 0)).toHaveLength(1);
+  });
+
+  it("a click picks one — its path is the cover", () => {
+    const onChange = withChange("");
+    fireEvent.click(screen.getByRole("radio", { name: "Green 2" }));
+    expect(onChange).toHaveBeenCalledWith("/defaults/deck-covers/green-2.webp");
+  });
+
+  it("the arrows move the focus and never pick; Enter (a click) picks", () => {
+    const onChange = withChange("/defaults/deck-covers/blue-1.webp");
+    const picked = screen.getByRole("radio", { name: "Blue 1" });
+    expect(picked.tabIndex).toBe(0);
+    picked.focus();
+    fireEvent.keyDown(picked, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Blue 2" }));
+    fireEvent.keyDown(document.activeElement!, { key: "End" });
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Neutral 2" }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("Shuffle stores another of the sixteen than the one shown", () => {
+    const onChange = withChange("");
+    fireEvent.click(screen.getByRole("button", { name: "Shuffle" }));
+    const [next] = onChange.mock.calls[0];
+    expect(next).toMatch(/^\/defaults\/deck-covers\/[a-z]+-[12]\.webp$/);
+    expect(next).not.toBe(DEFAULT);
+  });
+
+  it("a stored built-in is shown picked, named, with the way back to the colours' pick — never as an upload", () => {
+    const onChange = withChange("/defaults/deck-covers/black-2.webp");
+    expect(screen.getByRole("img", { name: "The deck's default background" }).getAttribute("src")).toBe(
+      "/defaults/deck-covers/black-2.webp",
+    );
+    expect(screen.getByText(/Black 2, your pick/)).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Black 2" }).getAttribute("aria-checked")).toBe("true");
+    // No focal-point drag, no "older cover" notice.
+    expect(screen.queryByRole("application")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Back to the colours/ }));
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("an upload offers no built-in grid (Remove goes back to the colours' pick first)", () => {
+    withChange(UPLOAD);
+    expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 });

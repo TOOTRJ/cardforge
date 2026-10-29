@@ -346,3 +346,13 @@ instead. Each bullet: what the header says, and what is true now.
   `owner_is_creator(owner)` (no admin, a public card of their own — the
   card pages' and trending's anti-spam rule); the same people, signature,
   result and order.
+- **0127 (`decks.cover_url` "may hold `set-covers/{uid}/…` (upload) or
+  `card-art/{uid}/…` (AI cover)"; the media guards take "only our storage
+  objects in the writer's own folder")** — since 0150 a deck's cover may
+  also hold one of the sixteen built-in backgrounds,
+  `/defaults/deck-covers/<white|blue|black|red|green|multicolor|colorless|neutral>-<1|2>.webp`
+  (site-relative, anchored, no host): an owner who shuffles or picks one
+  stores it. `media_url_allowed` is 0127's but for that one branch;
+  `guard_deck_media_columns` is unchanged (its refusal still says "one of
+  your own uploads"). The app's twin is `isDefaultDeckCover`
+  (`lib/decks/default-covers.ts`), also accepted by `isAllowedMediaUrl`.

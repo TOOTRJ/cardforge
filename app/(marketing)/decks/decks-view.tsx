@@ -8,6 +8,7 @@ import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
+import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import {
   DeckGrid,
@@ -180,11 +181,10 @@ export function DecksLanding() {
 }
 
 /** "Trending cards" on /decks (TODO DK8.3) — the gallery's own trending
- *  query and section, cookie-free so the landing stays ISR.
- *  SEAM (DK8.3, not built here): "Build a deck around this card" joins each
- *  tile once the create-deck dialog lands (another builder's PR) — it takes
- *  the card as the deck's first entry; pass it as the section's per-card
- *  action then. */
+ *  query and section, cookie-free so the landing stays ISR — each tile with
+ *  "Build a deck around this card" (the New deck dialog, the card as the
+ *  deck's first entry) while it is public — what lets anyone build around
+ *  another creator's card (D3); the trending pool is public cards. */
 async function DecksTrendingCards() {
   const trending = await listTrendingCards({ limit: ROW_MAX, anonymous: true });
   if (trending.length === 0) return null;
@@ -194,7 +194,16 @@ async function DecksTrendingCards() {
       isAuthed={false}
       eyebrow="Trending cards"
       heading="Cards to build around"
-      description="The community's hottest cards this week — open one to add it to a deck."
+      description="The community's hottest cards this week — start a deck around one, or open it to add it to a deck you have."
+      cardAction={(card) =>
+        card.visibility === "public" ? (
+          <BuildDeckAroundButton
+            cardId={card.id}
+            cardTitle={card.title}
+            className="h-auto min-h-9 w-full whitespace-normal py-1.5 text-xs"
+          />
+        ) : null
+      }
       action={
         <Link href="/gallery" className="text-sm font-medium text-primary-bright underline-offset-4 hover:underline">
           Open the gallery

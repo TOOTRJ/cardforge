@@ -71,6 +71,7 @@ vi.mock("next/dynamic", () => ({
 import { NewDeckButton, NewDeckProvider, OpenNewDeckOnMount, useNewDeck } from "@/components/decks/new-deck-provider";
 import { NEW_DECK_FIRST_ADD, useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
 import { DeckStartDoors } from "@/components/decks/deck-start-doors";
+import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
 
 beforeEach(() => {
   nav.pathname = "/decks";
@@ -120,6 +121,22 @@ describe("NewDeckButton", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Build a deck around this card" })));
     expect(dialog()?.getAttribute("data-card")).toBe("card-1");
     expect(dialog()?.getAttribute("data-format")).toBe("commander");
+  });
+
+  it("BuildDeckAroundButton (the trending tiles, Decks with this card) opens it with ITS card", async () => {
+    render(
+      <NewDeckProvider>
+        <BuildDeckAroundButton cardId="card-7" cardTitle="Cinderwing Matriarch" />
+        <BuildDeckAroundButton cardId="card-8" cardTitle="Sol Ring" />
+      </NewDeckProvider>,
+    );
+    // The visible words first (a voice user says them), then which card.
+    const button = screen.getByRole("button", { name: /^Build a deck around this card\s?: Cinderwing Matriarch$/ });
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+    await act(async () => fireEvent.click(button));
+    expect(dialog()?.getAttribute("data-card")).toBe("card-7");
+    // No format of its own: the dialog's default (Commander).
+    expect(dialog()?.getAttribute("data-format")).toBe("");
   });
 
   it("outside the provider it does nothing (never a crash)", () => {
