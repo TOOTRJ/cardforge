@@ -161,11 +161,14 @@ describe("the creature's box in the creator — the text after the chapters", ()
     });
   });
 
-  it("off the body the box's field writes nothing (the saga frame would append it to the last chapter)", () => {
-    expect(submittedRulesOf("saga", values(), {}).rulesText).toBe(`${REMINDER}\nI — Draw a card.\nII — Scry 2.`);
+  it("an empty box writes nothing; off the body a box that HOLDS lines keeps them (never dropped in silence)", () => {
     expect(submittedRulesOf("saga", values({ saga_creature_text: "" }), { sagaCreatureFrame: true }).rulesText).toBe(
       `${REMINDER}\nI — Draw a card.\nII — Scry 2.`,
     );
+    expect(submittedRulesOf("saga", values({ saga_creature_text: "" }), {}).rulesText).toBe(`${REMINDER}\nI — Draw a card.\nII — Scry 2.`);
+    // (The field stays shown there while it holds them, and says the frame
+    // doesn't print them — components/creator/panels/saga-editor.tsx.)
+    expect(submittedRulesOf("saga", values(), {}).rulesText).toBe(`${REMINDER}\nI — Draw a card.\nII — Scry 2.\nFlying`);
   });
 
   it("an EDIT opens the rows from the rail's text and the box from the lines after it; untouched, the stored text is kept", () => {

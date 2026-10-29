@@ -9885,20 +9885,38 @@ kept in the row and not drawn).
   per card like every frame's, a new card starting with them on; on a
   triangle frame "auto" stamps every rarity, as FIN prints (matte on a common
   or uncommon, silver on a rare or mythic).
-- **Its text** (owner 2026-10-28: no new field). On the body the lines AFTER
-  the last chapter are the box's (`lib/cards/saga-creature.ts`
-  `splitSagaCreatureText` / `resolveSagaCreature`, both renderers) — exactly
-  how Scryfall's Oracle text sets a summon ("…\nV — Ultimate End — …
-  \nIndestructible") — except a modal chapter's "•" lines, which stay with
-  their chapter (FIC #71). The flavour is the card's own field, in the box
-  too. On every other saga a line after a chapter continues it, as before.
+- **Its text** (owner 2026-10-28: no new field). With NO stored rows (an
+  import, a card saved as plain text) the lines AFTER the last chapter are
+  the box's on the body (`lib/cards/saga-creature.ts`
+  `splitSagaCreatureText`, both renderers) — exactly how Scryfall's Oracle
+  text sets a summon ("…\nV — Ultimate End — …\nIndestructible") — except a
+  modal chapter's "•" lines, which stay with their chapter (FIC #71). BESIDE
+  stored rows (`face_content.saga`, which the rail draws first) the box's
+  text is what the rules text holds after the rows' EXACT serialization
+  (`serializeSaga(rows)` + a newline — `sagaCreatureTextAfterRows`, the rule
+  the server's typography pass reads too), and nothing when the text does
+  not start with it: a line split there drew an ability twice (a row that
+  had joined the trailing line into its chapter on the saga frame; a
+  chapter's second line typed with Enter, growing on every save) and
+  dropped a box line that read as a chapter ("Vivi — …") or a bullet. The
+  flavour is the card's own field, in the box too. On every other saga a
+  line after a chapter continues it, as before.
   In the creator the saga editor shows a **Creature abilities** field under
-  the chapters on this frame only (`saga_creature_text`, form-only): opened
-  from the stored text's lines after the chapters, saved after the
-  serialized chapters (`submittedRulesOf`, `sagaCreatureFrame`), typeset as
-  rules text on blur and on the server (`print-typography.ts` reads the
-  rows' copy and then the box's lines), an untouched edit keeping the stored
-  text byte for byte.
+  the chapters on this frame (`saga_creature_text`, form-only) — and on any
+  other while it holds a value, saying the frame doesn't print it (a card
+  moved off the body keeps lines its maker did not touch): opened with what
+  the box draws (`structuredRowsFrom`; with no rows, `sagaRowsFromText` for
+  the frame — what a text that arrives seeds too), saved after the
+  serialized chapters on any frame while it holds a value
+  (`submittedRulesOf`), and with no chapter to follow the save waits
+  (`SAGA_CREATURE_NEEDS_CHAPTER`). A saga moved on or off the body re-reads
+  its rows for the new frame while they still read as its text
+  (`sagaRowsForFrame`, `openedForFrame`: an untouched edit is untouched
+  against the stored text read for its CURRENT frame). Typeset as rules
+  text on blur and on the server (`print-typography.ts` reads the rows'
+  copy and then the box's lines); an untouched edit keeps the stored text
+  byte for byte, and its dual write is made only where the rows draw the
+  same box (`resolveSagaCreature`), else `keepsStored`.
 - **The kind gate** — ONE rule, `sagaCreatureFrameFits` (`lib/creator/card-kinds.ts`):
   the Saga kind's third layout frame (`KIND_DEFS.saga.layoutTemplates`;
   `TREATMENT_KINDS.sagacreature = ["saga"]`), for a saga whose type words

@@ -37,9 +37,9 @@
 // Pure; shared client + server.
 // ---------------------------------------------------------------------------
 
-import { splitSagaCreatureText } from "@/lib/cards/saga-creature";
+import { sagaCreatureTextAfterRows, splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import { capitalizeTypeWords, typesFieldText } from "@/lib/cards/type-line-field";
-import type { CardType } from "@/types/card";
+import type { CardType, FaceContent } from "@/types/card";
 import {
   loyaltyFromRulesText,
   sagaFromRulesText,
@@ -293,6 +293,7 @@ export function printTypographyPatch<
   T extends TextPatch & {
     back_face?: TextPatch | null;
     saga_intro?: string;
+    saga_creature_text?: string;
     loyalty_abilities?: ReadonlyArray<{ text: string }>;
     saga_chapters?: ReadonlyArray<{ text: string }>;
   },
@@ -300,6 +301,7 @@ export function printTypographyPatch<
   const out = textPatch(patch);
   if (out.back_face) out.back_face = textPatch(out.back_face);
   if (typeof out.saga_intro === "string") out.saga_intro = printTypography(out.saga_intro, "rules");
+  if (typeof out.saga_creature_text === "string") out.saga_creature_text = printTypography(out.saga_creature_text, "rules");
   if (out.loyalty_abilities) {
     out.loyalty_abilities = out.loyalty_abilities.map((row) => ({ ...row, text: printTypography(row.text, "rules") }));
   }
@@ -465,6 +467,10 @@ function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
     // a field of the editor of their own.
     const creature = splitSagaCreatureText(text).creatureText;
     if (creature) texts.add(asResent(creature));
+    // …and, beside stored rows, the text after their serialization (what the
+    // editor opens that field with: lib/cards/saga-creature.ts).
+    const afterRows = sagaCreatureTextAfterRows(face as unknown as FaceContent | null, text);
+    if (afterRows) texts.add(asResent(afterRows));
   }
   return texts;
 }

@@ -76,7 +76,7 @@
 //
 // Pure: no form, no React (tests/unit/creator/structured-rules.test.ts).
 
-import { splitSagaCreatureText } from "@/lib/cards/saga-creature";
+import { resolveSagaCreature } from "@/lib/cards/saga-creature";
 import {
   keepsStoredMarker,
   markerNumerals,
@@ -136,9 +136,10 @@ export type SubmittedRulesOptions = {
    *  Planet's rows used to carry `pt: true` on the last tier: never drawn,
    *  noise in the row — the independent check of #549.) */
   stationShowsPt?: boolean;
-  /** The card is on the SAGA CREATURE frame (TODO 4.5d): its rows are the
-   *  rail's, and `saga_creature_text` is written after the last chapter —
-   *  the lines its second box draws (lib/cards/saga-creature.ts). */
+  /** The card is on the SAGA CREATURE frame (TODO 4.5d): an untouched
+   *  edit's dual write must draw the same box too (lib/cards/saga-creature.ts).
+   *  (`saga_creature_text` is written after the last chapter on any frame
+   *  while it holds a value.) */
   sagaCreatureFrame?: boolean;
 };
 
@@ -376,10 +377,12 @@ export function submittedRulesOf(
     const textRows = sagaTextRowsOf(values.saga_chapters);
     const chapters = textRows.filter((r) => r.numerals.length > 0);
     const intro = values.saga_intro.trim() || null;
-    // The saga creature (TODO 4.5d): the lines its box draws go after the
-    // last chapter, and the rows are compared with the rail's text alone.
-    const creatureText = options.sagaCreatureFrame ? (values.saga_creature_text ?? "").trim() : "";
-    const railOf = (text: string) => (options.sagaCreatureFrame ? (splitSagaCreatureText(text).railText ?? "") : text);
+    // The saga creature's box (TODO 4.5d): its lines go after the last
+    // chapter — on ANY frame while the field holds them (a card moved off
+    // the saga creature frame keeps the text its maker did not touch; the
+    // field stays shown and says the frame doesn't print it). Empty on
+    // every other saga, whose save is as before.
+    const creatureText = (values.saga_creature_text ?? "").trim();
     const withCreature = (rulesText: string) => (creatureText ? `${rulesText}\n${creatureText}` : rulesText);
     if (untouched && chapters.length > 0) {
       const content: FaceContent = { v: 1, saga: { intro, chapters } };
@@ -390,11 +393,17 @@ export function submittedRulesOf(
       // it is stored. Writing the numbered rows alone as `face_content` —
       // which the renderers read BEFORE the text — took that chapter off
       // the card on a save that only retitled it.
+      // (On the saga creature frame "draws what it draws today" is the box
+      // too: beside rows its text is what follows their serialization,
+      // lib/cards/saga-creature.ts — a stored text spelled otherwise
+      // would lose its box to the dual write.)
       const writable =
         textRows.length === chapters.length &&
         fits(content) &&
         ((!stored && !textarea) ||
-          same(resolveSagaChapters(content, railOf(textarea)), resolveSagaChapters(stored, railOf(textarea))));
+          (options.sagaCreatureFrame
+            ? same(resolveSagaCreature(content, textarea), resolveSagaCreature(stored, textarea))
+            : same(resolveSagaChapters(content, textarea), resolveSagaChapters(stored, textarea))));
       return writable
         ? { rulesText: textarea, faceContent: content }
         : { rulesText: textarea, faceContent: stored, keepsStored: true };

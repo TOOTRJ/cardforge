@@ -5,7 +5,7 @@
 // Replaces the raw rules textarea on the Text step for sagas; rows serialize
 // into face_content AND a canonical rules_text on save.
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   useController,
   useFieldArray,
@@ -61,11 +61,28 @@ export function SagaChaptersEditor() {
   const insertSymbol = (token: string) =>
     (focusedBox.current ?? introBox.current)?.insertToken(token);
   const intro = useController({ control, name: "saga_intro" });
-  // The saga creature's box (TODO 4.5d): its field shows on that frame only.
+  // The saga creature's box (TODO 4.5d): its field shows on that frame — and
+  // on any other while it holds a value (a card moved off the frame keeps
+  // the lines its maker did not touch; the save writes them after the last
+  // chapter on every frame), staying once shown there, so clearing it never
+  // takes the field from under the cursor (the second part's rule:
+  // lib/creator/second-part-fields.ts).
   const template = useWatch({ control, name: "frame_style.template" });
   const sagaCreature = isSagaCreatureDress(normalizeFrameTemplate(template));
   const creature = useController({ control, name: "saga_creature_text" });
   const creatureBox = useRef<PipTextEditorHandle | null>(null);
+  const creatureHeld = Boolean((creature.field.value ?? "").trim());
+  const [creatureKept, setCreatureKept] = useState(false);
+  if (!sagaCreature && creatureHeld && !creatureKept) setCreatureKept(true);
+  const showCreature = sagaCreature || creatureHeld || creatureKept;
+  // …and its lines follow the last chapter: with none, the save waits
+  // (lib/creator/form-schema.ts SAGA_CREATURE_NEEDS_CHAPTER) — said here first.
+  const hasChapter = rows.some((row) => row.text.trim() && (row.numerals.length > 0 || keepsStoredMarker(row)));
+  const creatureHelper = !sagaCreature
+    ? "This frame doesn’t print them — the Saga creature frame does. They stay in the card’s text after the last chapter; clear the field to remove them."
+    : !hasChapter
+      ? "Add a chapter first: these lines are saved after the last chapter. Printed in the box under the type line — e.g. “Flying”."
+      : "Printed in the box under the type line — e.g. “Flying” or “Indestructible”. Optional; flavour text goes in the box too.";
   // A row told to pick a number is asked again when a row's text changes:
   // emptied, it no longer needs one (the message stayed until the next save).
   const recheckNumbers = () => {
@@ -289,12 +306,12 @@ export function SagaChaptersEditor() {
 
       {/* The saga creature's second box (TODO 4.5d): the creature's own
           abilities, printed under the raised type bar — saved after the
-          last chapter in the rules text. Only on that frame. */}
-      {sagaCreature ? (
+          last chapter in the rules text. On that frame, or holding a value. */}
+      {showCreature ? (
         <FieldGroup
           kind="control"
           label="Creature abilities"
-          helper="Printed in the box under the type line — e.g. “Flying” or “Indestructible”. Optional; flavour text goes in the box too."
+          helper={creatureHelper}
           error={errors.saga_creature_text?.message}
         >
           {(aria) => (
