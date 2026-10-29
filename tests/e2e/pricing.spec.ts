@@ -96,7 +96,11 @@ test.describe("pricing page — signed in", () => {
     page,
   }) => {
     await signIn(page, { as: "free" });
-    await expect(page.getByRole("link", { name: /^upgrade$/i })).toHaveAttribute("href", "/pricing");
+    // The header's path to plans is Pricing in the bar, from 1024 px (TODO NV1;
+    // the owner kept the Upgrade button out of the header).
+    const header = page.getByRole("banner");
+    await expect(header.getByRole("link", { name: /^pricing$/i })).toHaveAttribute("href", "/pricing");
+    await expect(header.getByRole("link", { name: /^upgrade$/i })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: /upgrade or buy a credit pack for more/i }),
     ).toHaveAttribute("href", "/pricing");
@@ -144,7 +148,9 @@ test.describe("billing page", () => {
     await page.getByRole("navigation", { name: /dashboard navigation/i }).getByRole("link", { name: "Billing" }).click();
     await expect(page).toHaveURL(/\/dashboard\/billing$/);
     await expect(page.getByRole("heading", { name: /billing & subscription/i })).toBeVisible();
-    await expect(page.getByText("Free plan", { exact: true })).toBeVisible();
+    // The page's own plan card — the header's Account panel (closed panels
+    // stay in the HTML) carries a "Free plan" line too.
+    await expect(page.getByRole("main").getByText("Free plan", { exact: true })).toBeVisible();
     // Free doesn't refill (2026-09-24): the plan card states the one-time starter credits.
     await expect(page.getByText("5 at sign-up", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 10 credits/i })).toBeVisible();
