@@ -26,6 +26,7 @@ import { listTrendingCards } from "@/lib/cards/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
+import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
@@ -60,9 +61,11 @@ export type DecksViewParams = {
   owner: string | undefined;
 };
 
-/** A handle as profiles store it (0094: lowercase letters, digits and
- *  underscores) — anything else is no filter. */
-const OWNER_PARAM = /^[a-z0-9_]{3,32}$/;
+/** A handle as profiles store it (lib/auth/usernames.ts, the 0094 rule) —
+ *  anything else is no filter. */
+function isOwnerHandle(value: string): boolean {
+  return value.length >= USERNAME_MIN && value.length <= USERNAME_MAX && USERNAME_PATTERN.test(value);
+}
 
 export function parseDecksParams(
   params: Record<string, string | string[] | undefined>,
@@ -77,7 +80,7 @@ export function parseDecksParams(
   const sort: PublicDecksSort =
     sortParam === "popular" || sortParam === "viewed" ? sortParam : "recent";
   const ownerParam = firstString(params.owner)?.trim().toLowerCase().replace(/^@/, "");
-  const owner = ownerParam && OWNER_PARAM.test(ownerParam) ? ownerParam : undefined;
+  const owner = ownerParam && isOwnerHandle(ownerParam) ? ownerParam : undefined;
   return { page, search, format, sort, owner };
 }
 

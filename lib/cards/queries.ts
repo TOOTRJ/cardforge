@@ -1134,20 +1134,26 @@ export async function listTrendingCards(
     // One card per creator: dedupe AFTER ranking (so each creator's best
     // card is the one that survives) and BEFORE the limit (so the row still
     // fills up from the next creators down).
-    return onePerCreator(sortTrending(scored))
-      .slice(0, limit)
-      .map(({ card, likesTotal, score, signals }) => ({
-        ...narrowCard(card),
-        owner: ownerProfileById.get(card.owner_id) ?? null,
-        likes_count: likesTotal,
-        liked_by_viewer: viewerLiked.has(card.id),
-        trending: {
-          likes7d: signals.likes_7d,
-          comments7d: signals.comments_7d,
-          remixes7d: signals.remixes_7d,
-          score,
-        },
-      }));
+    const ranked = onePerCreator(sortTrending(scored)).slice(0, limit);
+    // "In N decks" for the row's cards only, as attachStats gives every
+    // other list (one batched RPC, viewer-independent — migration 0149).
+    const deckCounts = await publicDeckCountsForCards(
+      supabase,
+      ranked.map(({ card }) => card.id),
+    );
+    return ranked.map(({ card, likesTotal, score, signals }) => ({
+      ...narrowCard(card),
+      owner: ownerProfileById.get(card.owner_id) ?? null,
+      likes_count: likesTotal,
+      liked_by_viewer: viewerLiked.has(card.id),
+      ...(deckCounts ? { public_deck_count: deckCounts.get(card.id) ?? 0 } : {}),
+      trending: {
+        likes7d: signals.likes_7d,
+        comments7d: signals.comments_7d,
+        remixes7d: signals.remixes_7d,
+        score,
+      },
+    }));
   } catch {
     return [];
   }

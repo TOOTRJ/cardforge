@@ -268,8 +268,8 @@ export function GalleryLanding() {
           <Suspense fallback={<DeckRowSkeleton />}>
             <TrendingDecksRow
               id="gallery-trending-decks"
-              eyebrow="Trending decks"
-              heading="Decks built with these cards"
+              eyebrow="Community decks"
+              heading="Trending decks"
               description="The community's most-liked decks this week — custom cards in play."
               href="/decks"
               hrefLabel="All community decks"

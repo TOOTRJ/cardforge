@@ -326,8 +326,11 @@ instead. Each bullet: what the header says, and what is true now.
   (no admin, a public card of their own), now the shared
   `owner_is_creator(owner)` that `list_trending_decks` reads too; the pairs
   are read as well by `public_deck_counts_for_cards` (the gallery's "In N
-  decks") and the `deck_card_added` notification. The list's signature,
-  result and order are unchanged.
+  decks") and the `deck_card_added` notification. The list's signature and
+  order are unchanged; its result is narrowed on purpose: a card on a
+  deck's MAYBEBOARD alone no longer names that deck (0144 counted it; the
+  stored `card_count`, the tiles and the fans already left the maybeboard
+  out).
 - **0055 (`deck_likes_deck_id_idx` on `deck_likes (deck_id)`)** — since
   0149 the index is `deck_likes_deck_id_created_at_idx` on
   `(deck_id, created_at)` (trending decks count the week's likes per deck);

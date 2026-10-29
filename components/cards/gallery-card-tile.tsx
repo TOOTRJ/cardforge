@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Layers, Repeat2, Sparkles } from "lucide-react";
+import { Repeat2, Sparkles } from "lucide-react";
+import { InDecksCount } from "@/components/cards/in-decks-count";
 import { CardTile } from "@/components/cards/card-tile";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { buildCardPath } from "@/lib/cards/utils";
@@ -79,15 +80,8 @@ export function GalleryCardTile({
         )}
         <div className="flex shrink-0 items-center gap-2.5">
           {/* "In N decks" (TODO DK8.4): text in the footer, outside the
-              CardTile link — the public decks the card's page lists, by
-              their one rule (publicDeckCountsForCards). None, or not read:
-              nothing. */}
-          {card.public_deck_count ? (
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-muted">
-              <Layers className="h-3 w-3" aria-hidden />
-              In {card.public_deck_count} deck{card.public_deck_count === 1 ? "" : "s"}
-            </span>
-          ) : null}
+              CardTile link. */}
+          <InDecksCount count={card.public_deck_count} />
           <QuickLikeButton
             kind="card"
             cardId={card.id}

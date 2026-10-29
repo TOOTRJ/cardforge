@@ -183,14 +183,16 @@ export function DeckTile({
         <p className="text-xs text-subtle">{deckTileCardLine(deck)}</p>
       </div>
 
-      {/* Siblings of the stretched link, lifted over it. */}
-      <div className="relative z-10 flex items-center justify-between gap-2 border-t border-border/40 px-4 py-2.5 text-xs">
+      {/* Siblings of the stretched link, lifted over it. The strip itself
+          lets a click through to the link under it (no dead band along the
+          tile's foot); only the author link and the heart take their own. */}
+      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-2 border-t border-border/40 px-4 py-2.5 text-xs">
         {owner ? (
           <span className="truncate text-muted">{deck.updated_at ? `Updated ${formatRelativeTime(deck.updated_at)}` : null}</span>
         ) : deck.owner?.username ? (
           <Link
             href={`/profile/${deck.owner.username}`}
-            className="truncate font-mono text-muted transition-colors hover:text-foreground"
+            className="pointer-events-auto truncate font-mono text-muted transition-colors hover:text-foreground"
           >
             @{deck.owner.username}
           </Link>
@@ -210,6 +212,7 @@ export function DeckTile({
               initialCount={deck.likes_count}
               requiresSignIn
               redirectAfterLogin={likeRedirect}
+              className="pointer-events-auto"
             />
           )}
           <Stat icon={Eye} value={deck.view_count} label={deck.view_count === 1 ? "view" : "views"} />

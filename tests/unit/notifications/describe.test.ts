@@ -305,17 +305,33 @@ describe("describeNotification — deck likes and cards added to decks", () => {
     });
   });
 
-  it("deck_card_added: who added which card to which deck, linking the deck", () => {
+  it("deck_card_added, one card: who added which card to which deck, linking the deck", () => {
+    const one = { ...deckPayload, cardIds: ["c1"], count: 1 };
     expect(
-      notificationSentence({ type: "deck_card_added", actor, card, threadId: null, payload: deckPayload }, { isAdmin: false }),
-    ).toBe('Ana added Storm Crow to their deck "Artificer\'s Arsenal".');
+      notificationSentence({ type: "deck_card_added", actor, card, threadId: null, payload: one }, { isAdmin: false }),
+    ).toBe('Ana added Storm Crow to "Artificer\'s Arsenal".');
     expect(
-      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: deckPayload }, { isAdmin: false }).href,
+      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: one }, { isAdmin: false }).href,
     ).toBe("/deck/artificers-arsenal");
     // No deck slug (never written so, but read defensively): the card.
     expect(
-      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: {} }, { isAdmin: false }),
+      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: { count: 1 } }, { isAdmin: false }),
     ).toEqual({ subject: "Ana", body: "added Storm Crow to their deck.", href: "/card/me/storm-crow" });
+  });
+
+  it("deck_card_added, many cards: ONE row per deck says how many (0149 merges them)", () => {
+    const many = { ...deckPayload, cardIds: Array.from({ length: 14 }, (_, i) => `c${i}`), count: 14 };
+    // The row carries no single card when it stands for several.
+    expect(
+      describeNotification({ type: "deck_card_added", actor, card: null, threadId: null, payload: many }, { isAdmin: false }),
+    ).toEqual({ subject: "Ana", body: 'added 14 of your cards to "Artificer\'s Arsenal".', href: "/deck/artificers-arsenal" });
+    // The count falls back to the ids when it is missing.
+    expect(
+      describeNotification(
+        { type: "deck_card_added", actor, card: null, threadId: null, payload: { ...deckPayload, cardIds: ["a", "b"] } },
+        { isAdmin: false },
+      ).body,
+    ).toBe('added 2 of your cards to "Artificer\'s Arsenal".');
   });
 });
 

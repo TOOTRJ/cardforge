@@ -143,18 +143,28 @@ export function describeNotification(
       };
     }
     case "deck_card_added": {
-      // Another creator's public deck now holds your card (D3) — once per
-      // card and deck, by the card page's own rule (0149).
+      // Another creator's public deck now holds your cards (D3) — ONE row
+      // per deck, its cards merged in (0149: payload.cardIds / count; the
+      // row's card is the card when there is one), by the card page's own
+      // rule.
       const title = str(payload.title);
       const slug = str(payload.slug);
+      const count = num(payload.count) ?? (Array.isArray(payload.cardIds) ? payload.cardIds.length : 1);
+      const deck = title ? `"${title}"` : "their deck";
+      const what =
+        count > 1
+          ? `${count.toLocaleString("en-US")} of your cards`
+          : item.card
+            ? item.card.title
+            : "your card";
       return {
         subject: actorName,
-        body: `added ${item.card ? item.card.title : "your card"} to their deck${title ? ` "${title}"` : ""}.`,
+        body: `added ${what} to ${deck}.`,
         href: slug
           ? `/deck/${slug}`
-          : item.card && item.card.ownerUsername
+          : count <= 1 && item.card && item.card.ownerUsername
             ? `/card/${item.card.ownerUsername}/${item.card.slug}`
-            : "#",
+            : "/dashboard/cards",
       };
     }
     case "deck_generated": {

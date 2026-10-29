@@ -12,15 +12,16 @@ import { describe, expect, it } from "vitest";
 //     card of their own — the owner's anti-spam rule), read by the pairs and
 //     by trending, never restated;
 //   * ONE rule: public_deck_card_pairs is 0144's predicate (its creator
-//     clause through owner_is_creator, word for word otherwise), and the
-//     list, the count and the notification all read it;
+//     clause through owner_is_creator, word for word otherwise) with the
+//     maybeboard left out and 200 ids a call, and the list, the count and
+//     the notification all read it;
 //   * the list keeps 0144's signature, order and cap;
 //   * trending is public, non-empty, real creators only, the last 7 days'
 //     likes without the owner's own, SECURITY INVOKER, capped at 24;
-//   * the notification CHECK is 0140's kinds plus the two; each kind once
-//     (unique partial indexes, ON CONFLICT DO NOTHING); the card-added
-//     trigger is DEFERRED (judged at commit, after 0143's statement
-//     trigger stores card_count); no trigger can fail its write;
+//   * the notification CHECK is 0140's kinds plus the two; a like once per
+//     liker and deck, cards added ONE row per recipient and deck (merged);
+//     the card-added trigger is DEFERRED (judged at commit, after 0143's
+//     statement trigger stores card_count); no trigger can fail its write;
 //   * grants: the readers to anon / authenticated / service_role, the
 //     trigger helpers to no API role.
 // ---------------------------------------------------------------------------
@@ -69,15 +70,22 @@ describe("0149 — one rule for a card's public decks", () => {
     expect(creator).toBe(`select ${CREATOR_0144};`);
   });
 
-  it("public_deck_card_pairs is 0144's predicate, word for word, its creator clause through owner_is_creator", () => {
-    const expected = rule0144().replace(CREATOR_0144, "public.owner_is_creator(d.owner_id)");
-    expect(squash(fnBody(SQL, "public_deck_card_pairs").replace(/--[^\n]*\n/g, "\n"))).toContain(expected);
+  it("public_deck_card_pairs is 0144's predicate, word for word, its creator clause through owner_is_creator — the maybeboard out", () => {
+    const expected = `and dc.board <> 'maybe' ${rule0144().replace(CREATOR_0144, "public.owner_is_creator(d.owner_id)")}`;
+    expect(squash(fnBody(SQL, "public_deck_card_pairs"))).toContain(expected);
+  });
+
+  it("the pairs take at most 200 card ids a call, whoever calls (anon included)", () => {
+    expect(squash(fnBody(SQL, "public_deck_card_pairs"))).toContain("where c.id = any((p_card_ids)[1:200])");
   });
 
   it("the list, the count and the card-added notification read the pairs — and nothing restates a rule", () => {
     expect(squash(fnBody(SQL, "public_decks_containing_card"))).toContain("from public.public_deck_card_pairs(array[p_card_id]) p");
     expect(squash(fnBody(SQL, "public_deck_counts_for_cards"))).toContain("from public.public_deck_card_pairs((p_card_ids)[1:200]) p");
-    expect(squash(fnBody(SQL, "notify_deck_cards_added"))).toContain("from public.public_deck_card_pairs(p_card_ids, p_deck_id) p");
+    // The notification reads a big deck in the pairs' 200-id slices.
+    const notify = squash(fnBody(SQL, "notify_deck_cards_added"));
+    expect(notify).toContain("v_ids := p_card_ids[v_slice * 200 + 1 : (v_slice + 1) * 200];");
+    expect(notify).toContain("from public.public_deck_card_pairs(v_ids, p_deck_id) p");
     // The creator clause lives ONCE (owner_is_creator); the pairs and
     // trending call it.
     expect(SQL.match(/owner_is_admin\(/g)?.length).toBe(1);
@@ -135,18 +143,28 @@ describe("0149 — notifications", () => {
     expect(typeCheckKinds(SQL)).toEqual([...before, "deck_like", "deck_card_added"]);
   });
 
-  it("each kind is written once ever: a unique partial index and ON CONFLICT DO NOTHING on it", () => {
-    const flat = squash(SQL);
-    expect(flat).toContain(
+  it("deck_like is written once per liker and deck, ever: a unique partial index and ON CONFLICT DO NOTHING", () => {
+    expect(squash(SQL)).toContain(
       "create unique index if not exists notifications_deck_like_once_idx on public.notifications (actor_id, (payload ->> 'deckId')) where type = 'deck_like';",
     );
-    expect(flat).toContain(
-      "create unique index if not exists notifications_deck_card_added_once_idx on public.notifications (card_id, (payload ->> 'deckId')) where type = 'deck_card_added';",
-    );
     expect(squash(fnBody(SQL, "notify_on_deck_like"))).toContain("on conflict (actor_id, (payload ->> 'deckId')) where type = 'deck_like' do nothing");
-    expect(squash(fnBody(SQL, "notify_deck_cards_added"))).toContain(
-      "on conflict (card_id, (payload ->> 'deckId')) where type = 'deck_card_added' do nothing",
+  });
+
+  it("deck_card_added is ONE row per recipient and deck — later cards MERGE into it (no second insert, no second toast)", () => {
+    expect(squash(SQL)).toContain(
+      "create unique index if not exists notifications_deck_card_added_per_deck_idx on public.notifications (recipient_id, (payload ->> 'deckId')) where type = 'deck_card_added';",
     );
+    // Never one row per card.
+    expect(SQL).not.toMatch(/on public\.notifications \(card_id, \(payload ->> 'deckId'\)\)/);
+    const notify = squash(fnBody(SQL, "notify_deck_cards_added"));
+    // Grouped by recipient; the cards and their count in the payload.
+    expect(notify).toContain("array_agg(c.id order by c.id) as card_ids");
+    expect(notify).toContain("group by c.owner_id, d.owner_id, d.id, d.slug, d.title");
+    expect(notify).toContain("'cardIds', to_jsonb(v_merged), 'count', cardinality(v_merged)");
+    // Unread again only when the set grew; the single card only for one.
+    expect(notify).toContain("read_at = case when cardinality(v_merged) > v_before then null else n.read_at end");
+    expect(notify).toContain("card_id = case when cardinality(v_merged) = 1 then v_merged[1] end");
+    expect(notify).toContain("on conflict (recipient_id, (payload ->> 'deckId')) where type = 'deck_card_added' do nothing");
   });
 
   it("a like notifies only a public deck's owner, never for their own like", () => {

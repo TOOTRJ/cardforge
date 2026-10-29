@@ -13,13 +13,17 @@
 --    card is named by the card OWNER's own public, non-empty decks, and by
 --    another user's public, non-empty deck only while the card is PUBLIC
 --    and the deck's owner is a real creator (section 0) — 0144's predicate,
---    the same answer. The rule now lives in ONE function,
---    public_deck_card_pairs(cards, deck), the (card, deck) pairs it allows,
+--    with ONE narrowing: a card on the MAYBEBOARD alone is not in the deck
+--    (0144 counted it). Everything else already says so — the stored
+--    card_count (0143), the tiles' colours and fan, the deck page's own
+--    fan — so the decks on a card's page now agree with them. The rule
+--    lives in ONE function, public_deck_card_pairs(cards, deck), the (card,
+--    deck) pairs it allows (at most 200 card ids a call, capped inside it),
 --    and everything that asks "which public decks hold this card" reads it:
 --      * public_decks_containing_card(card, limit) — 0144's list (the card
 --        page's "In decks" row, its JSON-LD isPartOf and, since this PR, its
 --        "Decks with this card" tiles), redefined over the pairs: same
---        signature, same result, same order;
+--        signature and order, the same result but for the maybeboard;
 --      * public_deck_counts_for_cards(cards[]) — NEW: the batched count the
 --        gallery tile's "In N decks" reads (at most 200 ids a call; a card
 --        no public deck names is left out — the app reads it as 0);
@@ -50,17 +54,27 @@
 --        deck) and ON CONFLICT DO NOTHING. Not retracted on unlike — a
 --        retraction would let a like / unlike loop toast the owner again
 --        (users can't delete notifications since 0088, so the index holds).
---      * deck_card_added — someone ELSE's public deck now names your card,
+--      * deck_card_added — someone ELSE's public deck now names your cards,
 --        by section 1's rule (so never your own deck, a private or unlisted
---        one, an admin's, or one from an account with no public card).
---        card_id = the card, actor = the deck's owner, payload { deckId,
---        slug, title }. ONE per card and deck, ever (unique partial index on
---        (card, deck)). Fired when an entry gains the card (an insert, or an
---        update that changes card_id) — as a DEFERRED constraint trigger, so
---        it runs at commit, after 0143's statement trigger has stored the
---        deck's card_count (the rule reads it) — and when a deck turns
---        public (its other creators' cards, at once). Not fired when a card
---        or the adder's first card turns public later.
+--        one, an admin's, or one from an account with no public card). ONE
+--        row per RECIPIENT AND DECK (unique partial index on (recipient,
+--        deck)) — never one per card: a deck published with 14 of your
+--        cards, or a batch "Add to deck", is ONE toast, ONE bell row, ONE
+--        digest line. actor = the deck's owner; payload { deckId, slug,
+--        title, cardIds, count } (your cards in that deck, sorted, and how
+--        many); card_id = the card when there is ONE, else NULL. Later
+--        additions to the same deck MERGE into that row (cardIds / count
+--        grow, slug / title refresh) and, only when the set grew, mark it
+--        unread again — an UPDATE, which raises no realtime toast (the
+--        stream listens to INSERTs) — rather than a new row: the news is
+--        kept without a second toast, and an add / remove / add loop of the
+--        same card changes nothing. Fired when an entry gains a card (an
+--        insert, or an update that changes card_id) — as a DEFERRED
+--        constraint trigger, so it runs at commit, after 0143's statement
+--        trigger has stored the deck's card_count (the rule reads it), every
+--        entry of one commit merging into the one row — and when a deck
+--        turns public (its other creators' cards, at once). Not fired when a
+--        card or the adder's first card turns public later.
 --    Both writers are SECURITY DEFINER triggers (users have no INSERT on
 --    notifications) and never fail the write that fired them: a failure is
 --    a WARNING and the like / entry / deck still saves.
@@ -75,7 +89,8 @@
 -- the API roles). The CHECK and the indexes carry no privileges.
 --
 -- Backward compatible with the code before it: nothing old calls the new
--- functions, and the redefined list returns what 0144's did.
+-- functions, and the redefined list returns what 0144's did but for the
+-- maybeboard-only decks (intended, section 1).
 --
 -- Ships through a PR; never applied ad-hoc. Idempotent.
 
@@ -120,8 +135,11 @@ as $$
   from public.cards c
   join public.deck_cards dc on dc.card_id = c.id
   join public.decks d on d.id = dc.deck_id
-  where c.id = any(p_card_ids)
+  -- At most 200 card ids a call, whoever asks (anon included).
+  where c.id = any((p_card_ids)[1:200])
     and (p_deck_id is null or d.id = p_deck_id)
+    -- The maybeboard is not the deck (card_count, the tiles, the fans).
+    and dc.board <> 'maybe'
     and d.visibility = 'public'
     and d.card_count > 0
     and (
@@ -230,8 +248,8 @@ create unique index if not exists notifications_deck_like_once_idx
   on public.notifications (actor_id, (payload ->> 'deckId'))
   where type = 'deck_like';
 
-create unique index if not exists notifications_deck_card_added_once_idx
-  on public.notifications (card_id, (payload ->> 'deckId'))
+create unique index if not exists notifications_deck_card_added_per_deck_idx
+  on public.notifications (recipient_id, (payload ->> 'deckId'))
   where type = 'deck_card_added';
 
 -- deck_like: the liker, the deck's owner, a public deck only.
@@ -276,24 +294,87 @@ create trigger deck_likes_notify
   after insert on public.deck_likes
   for each row execute function public.notify_on_deck_like();
 
--- deck_card_added: every pair of section 1's rule in this deck whose card
--- is another user's, once per card and deck. Called by the two triggers
--- below (their SECURITY DEFINER owner runs it: it reads every row).
+-- deck_card_added: the pairs of section 1's rule in this deck whose card is
+-- another user's, as ONE row per recipient and deck — merged into the row
+-- that recipient already has for the deck (cardIds / count grow; unread
+-- again only when they grew), else inserted. The pairs read takes 200 ids a
+-- call, so a big deck is read in slices (each merging into the one row).
+-- Called by the two triggers below (their SECURITY DEFINER owner runs it:
+-- it reads every row).
 create or replace function public.notify_deck_cards_added(p_deck_id uuid, p_card_ids uuid[])
 returns void
-language sql
+language plpgsql
 security invoker
 set search_path = ''
 as $$
-  insert into public.notifications (recipient_id, actor_id, type, card_id, payload)
-  select c.owner_id, d.owner_id, 'deck_card_added', c.id,
-         jsonb_build_object('deckId', d.id, 'slug', d.slug, 'title', d.title)
-  from public.public_deck_card_pairs(p_card_ids, p_deck_id) p
-  join public.cards c on c.id = p.card_id
-  join public.decks d on d.id = p.deck_id
-  where c.owner_id <> d.owner_id
-  on conflict (card_id, (payload ->> 'deckId')) where type = 'deck_card_added'
-  do nothing;
+declare
+  v_slice integer := 0;
+  v_ids uuid[];
+  r record;
+  v_merged uuid[];
+  v_before integer;
+begin
+  while v_slice * 200 < coalesce(cardinality(p_card_ids), 0) loop
+    v_ids := p_card_ids[v_slice * 200 + 1 : (v_slice + 1) * 200];
+    v_slice := v_slice + 1;
+    for r in
+      select c.owner_id as recipient, d.owner_id as actor, d.id as deck_id, d.slug, d.title,
+             array_agg(c.id order by c.id) as card_ids
+      from public.public_deck_card_pairs(v_ids, p_deck_id) p
+      join public.cards c on c.id = p.card_id
+      join public.decks d on d.id = p.deck_id
+      where c.owner_id <> d.owner_id
+      group by c.owner_id, d.owner_id, d.id, d.slug, d.title
+    loop
+      -- Twice at most: a row a concurrent commit inserted between the read
+      -- and the insert is merged into on the second pass.
+      for attempt in 1..2 loop
+        select array(
+                 select x from (
+                   select jsonb_array_elements_text(coalesce(n.payload -> 'cardIds', '[]'::jsonb))::uuid as x
+                   union
+                   select unnest(r.card_ids)
+                 ) u
+                 order by x
+               ),
+               jsonb_array_length(coalesce(n.payload -> 'cardIds', '[]'::jsonb))
+          into v_merged, v_before
+        from public.notifications n
+        where n.type = 'deck_card_added'
+          and n.recipient_id = r.recipient
+          and n.payload ->> 'deckId' = r.deck_id::text
+        for update;
+
+        if found then
+          update public.notifications n
+          set payload = jsonb_build_object(
+                'deckId', r.deck_id, 'slug', r.slug, 'title', r.title,
+                'cardIds', to_jsonb(v_merged), 'count', cardinality(v_merged)
+              ),
+              card_id = case when cardinality(v_merged) = 1 then v_merged[1] end,
+              read_at = case when cardinality(v_merged) > v_before then null else n.read_at end
+          where n.type = 'deck_card_added'
+            and n.recipient_id = r.recipient
+            and n.payload ->> 'deckId' = r.deck_id::text;
+          exit;
+        end if;
+
+        insert into public.notifications (recipient_id, actor_id, type, card_id, payload)
+        values (
+          r.recipient, r.actor, 'deck_card_added',
+          case when cardinality(r.card_ids) = 1 then r.card_ids[1] end,
+          jsonb_build_object(
+            'deckId', r.deck_id, 'slug', r.slug, 'title', r.title,
+            'cardIds', to_jsonb(r.card_ids), 'count', cardinality(r.card_ids)
+          )
+        )
+        on conflict (recipient_id, (payload ->> 'deckId')) where type = 'deck_card_added'
+        do nothing;
+        exit when found;
+      end loop;
+    end loop;
+  end loop;
+end;
 $$;
 
 revoke all on function public.notify_deck_cards_added(uuid, uuid[]) from public, anon, authenticated;

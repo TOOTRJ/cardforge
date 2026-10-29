@@ -34,15 +34,23 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/components/cards/quick-like-button", () => ({
-  QuickLikeButton: ({ initialCount }: { initialCount: number }) => <button type="button">Like ({initialCount})</button>,
+  QuickLikeButton: ({ initialCount, className }: { initialCount: number; className?: string }) => (
+    <button type="button" className={className}>
+      Like ({initialCount})
+    </button>
+  ),
 }));
 vi.mock("@/components/cards/card-preview", () => ({ CardPreview: () => <div data-testid="live-preview" /> }));
+vi.mock("@/components/gallery/trending-share-button", () => ({
+  TrendingShareButton: () => <button type="button">Share</button>,
+}));
 vi.mock("@/lib/cards/preview-data", () => ({
   cardToPreviewData: (row: { title: string; frame_style: unknown }) => ({ title: row.title, frameStyle: row.frame_style }),
 }));
 
 import { DeckTile, deckTileCardLine, deckTileFormatLine, deckTilePips, type DeckTileDeck } from "@/components/decks/deck-tile";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
+import { TrendingCardsSection } from "@/components/gallery/trending-cards-section";
 import type { DeckTileArt } from "@/lib/decks/tile-art";
 import type { CardWithStats } from "@/lib/cards/queries";
 import type { Card } from "@/types/card";
@@ -117,6 +125,17 @@ describe("DeckTile", () => {
     }
     expect(within(tile).getByRole("button", { name: /like/i }).closest("a")).toBeNull();
     expect(within(tile).getAllByRole("link")).toHaveLength(2);
+  });
+
+  it("the footer strip lets a click through to the stretched link; only the author and the heart take their own", () => {
+    render(<DeckTile deck={deck()} art={art} />);
+    const tile = screen.getByRole("article");
+    const author = within(tile).getByRole("link", { name: "@storm_griffin" });
+    const strip = author.parentElement!;
+    expect(strip.className).toContain("pointer-events-none");
+    expect(strip.className).toContain("z-10");
+    expect(author.className).toContain("pointer-events-auto");
+    expect(within(tile).getByRole("button", { name: /like/i }).className).toContain("pointer-events-auto");
   });
 
   it("the picture is decorative; a PipGlyph card in its fan is the 600 px thumb, never the HD PNG", () => {
@@ -218,6 +237,12 @@ describe("GalleryCardTile — In N decks (TODO DK8.4)", () => {
     const text = screen.getByText("In 3 decks");
     expect(text.closest("a")).toBeNull();
     expect(screen.getByText("In 3 decks").closest("a, button")).toBeNull();
+  });
+
+  it("the trending tile draws the same count, outside its link", () => {
+    render(<TrendingCardsSection cards={[card(2)]} isAuthed={false} />);
+    const text = screen.getByText("In 2 decks");
+    expect(text.closest("a, button")).toBeNull();
   });
 
   it("one deck is singular; none, or not read, says nothing", () => {

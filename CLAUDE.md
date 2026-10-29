@@ -1855,10 +1855,14 @@ Rules and gotchas:
   controls live on /decks/browse alone (sort, ChipGroup formats, `?owner=`).
   Deck notifications (DK8.6, 0149): `deck_like` (a public deck, never the
   owner's own like, once per liker and deck — never retracted, so a like
-  loop can't toast again) and `deck_card_added` (once per card and deck, a
-  DEFERRED constraint trigger judged at commit, when 0143's statement
-  trigger has stored `card_count`, and when a deck turns public); neither
-  trigger can fail the write that fired it.
+  loop can't toast again) and `deck_card_added` (ONE row per recipient and
+  deck, never per card — payload `cardIds` / `count`; later cards MERGE
+  into it, unread again only when the set grew, and an UPDATE raises no
+  toast — a DEFERRED constraint trigger judged at commit, when 0143's
+  statement trigger has stored `card_count`, and when a deck turns public);
+  neither trigger can fail the write that fired it. The maybeboard is not
+  the deck there either: `public_deck_card_pairs` leaves it out, as
+  `card_count`, the tiles and the fans do.
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode
