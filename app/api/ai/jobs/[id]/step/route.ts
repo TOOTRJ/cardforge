@@ -6,7 +6,7 @@ import { checkAiRateLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 import { notifyDeckJobFinished } from "@/lib/ai/job-notify";
 import { rateLimitedResponse } from "@/lib/api/responses";
-import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiJobKind, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ async function isPausedDeckRetry(jobId: string, stepKey: string): Promise<boolea
     .select("kind, steps")
     .eq("id", jobId)
     .maybeSingle();
-  if (!data || (data.kind !== "deck" && data.kind !== "deck_remix")) return false;
+  if (!data || !isDeckAiJobKind(data.kind)) return false;
   const steps = Array.isArray(data.steps) ? (data.steps as Array<{ key?: unknown; status?: unknown }>) : [];
   return steps.some((step) => step?.key === stepKey && step?.status === "failed");
 }

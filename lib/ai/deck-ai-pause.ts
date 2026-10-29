@@ -39,6 +39,20 @@ export function isDeckAiPaused(): boolean {
   return DECK_AI_PAUSED;
 }
 
+/** The AI job kinds that are deck AI: a deck build (and "Add with AI") and
+ *  the deck restyle. */
+export function isDeckAiJobKind(kind: unknown): kind is "deck" | "deck_remix" {
+  return kind === "deck" || kind === "deck_remix";
+}
+
+/** Whether a FAILED step of a job of this kind can't be re-run right now:
+ *  the step route refuses it, so the runner (components/ai/
+ *  generation-provider.tsx) offers no Retry and promises none. Running
+ *  steps still finish (D6); card jobs are never paused. */
+export function isDeckAiRetryPaused(kind: unknown): boolean {
+  return isDeckAiPaused() && isDeckAiJobKind(kind);
+}
+
 /** The JSON body every paused route answers with. */
 export function deckAiPausedBody(): { ok: false; code: typeof DECK_AI_PAUSED_CODE; error: string } {
   return {

@@ -50,10 +50,11 @@ import { typedForMatching } from "@/lib/validation/print-typography";
 
 // ---------------------------------------------------------------------------
 // DeckCardModal — the "more info" view for one deck entry. Everyone gets the
-// original⇄proxy image flipper and source links; the deck owner additionally
-// gets the management actions (remix, link/unlink proxy, quantity, board,
-// remove). Mutations refresh the route so the server-rendered list reflects
-// the change.
+// real card ⇄ custom card image flipper and source links; the deck owner
+// additionally gets the management actions (customize, link / unlink a card,
+// quantity, board, remove). Mutations refresh the route so the
+// server-rendered list reflects the change. Its words are the deck
+// vocabulary (TODO DK2.2, components/creator/card-glossary.tsx).
 // ---------------------------------------------------------------------------
 
 type DeckCardModalProps = {
@@ -249,12 +250,12 @@ export function DeckCardModal({
                 aria-label="Image version"
               >
                 <FlipButton
-                  label="Original"
+                  label="Real card"
                   active={!showProxy}
                   onClick={() => setShowProxy(false)}
                 />
                 <FlipButton
-                  label="My proxy"
+                  label="Custom card"
                   active={showProxy}
                   onClick={() => setShowProxy(true)}
                 />
@@ -279,7 +280,7 @@ export function DeckCardModal({
                   className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
                 >
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                  View the original on Scryfall
+                  View the real card on Scryfall
                 </a>
               ) : null}
               {cardPath ? (
@@ -296,12 +297,12 @@ export function DeckCardModal({
 
             {canManage ? (
               <div className="flex flex-col gap-4 border-t border-border/40 pt-4">
-                {/* The headline action: turn the real card into a proxy. */}
+                {/* The headline action: make your own version of the real card. */}
                 {entry.scryfall_id && !card ? (
                   <Button asChild size="lg">
                     <Link href={`/create?deckCard=${entry.id}`}>
                       <Sparkles className="h-4 w-4" aria-hidden />
-                      Create a custom proxy
+                      Customize
                     </Link>
                   </Button>
                 ) : null}
@@ -365,7 +366,9 @@ export function DeckCardModal({
                       }
                     >
                       <Unlink className="h-3.5 w-3.5" aria-hidden />
-                      Unlink proxy
+                      {/* Unlinking puts a real card back; an entry with no
+                          real card behind it keeps only its name. */}
+                      {entry.scryfall_id ? "Use the real card" : "Unlink card"}
                     </Button>
                   ) : (
                     <Button
@@ -517,13 +520,13 @@ function StateBadgeLarge({
   if (state === "remixed")
     return (
       <Badge variant="primary" className="gap-1">
-        <Sparkles className="h-3 w-3" aria-hidden /> Custom proxy
+        <Sparkles className="h-3 w-3" aria-hidden /> Edited
       </Badge>
     );
   if (state === "custom") return <Badge variant="accent">Custom card</Badge>;
   if (state === "unresolved")
     return <Badge variant="outline">Placeholder</Badge>;
-  return <Badge variant="outline">Needs proxy</Badge>;
+  return <Badge variant="outline">Imported</Badge>;
 }
 
 // ---------------------------------------------------------------------------
@@ -588,7 +591,7 @@ function LinkCardPicker({
   if (cards.length === 0) {
     return (
       <p className="text-xs text-muted">
-        You haven&apos;t created any cards yet — use “Remix this card” instead.
+        You haven&apos;t created any cards yet — use “Customize” instead.
       </p>
     );
   }

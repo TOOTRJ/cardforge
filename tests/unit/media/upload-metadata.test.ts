@@ -223,6 +223,26 @@ describe("every upload path stores the file without camera metadata", () => {
     await expectLossless(webp, up.body);
   });
 
+  it("a DECK cover is stored as the cover standard — 1600×900 WebP, still with no camera metadata (TODO DK6.5)", async () => {
+    // A portrait phone photo, tagged sideways: upright first, then cropped.
+    const jpeg = await cameraPhoto("jpeg", { orientation: 6 });
+    expect((await uploadCoverServerAction(form(jpeg, "jpeg", { purpose: "deck-cover" }))).ok).toBe(true);
+    const up = lastUpload("set-covers");
+    expect(up.path).toMatch(/\.webp$/);
+    expect(up.contentType).toBe("image/webp");
+    const meta = await sharp(up.body).metadata();
+    expect([meta.format, meta.width, meta.height, meta.orientation]).toEqual(["webp", 1600, 900, undefined]);
+    await expectNoCameraMetadata(up.body);
+  });
+
+  it("a set icon (no purpose) keeps its own shape and format", async () => {
+    const png = await cleanPhoto("png");
+    expect((await uploadCoverServerAction(form(png, "png"))).ok).toBe(true);
+    const up = lastUpload("set-covers");
+    expect(up.path).toMatch(/\.png$/);
+    expect(up.body.equals(png)).toBe(true);
+  });
+
   it("avatar (JPEG with GPS) and banner (PNG with a GPS eXIf)", async () => {
     const jpeg = await cameraPhoto("jpeg");
     expect((await uploadProfileMediaServerAction("avatar", form(jpeg, "jpeg"))).ok).toBe(true);

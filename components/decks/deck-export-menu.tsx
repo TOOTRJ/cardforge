@@ -72,7 +72,7 @@ type DeckExportMenuProps = {
   allowBatchExport: boolean;
   /** Unique custom (remixed) cards — what gets rendered. */
   customCardCount: number;
-  /** Entries without a custom proxy — listed, not printed. */
+  /** Real cards not customized yet — listed, not printed. */
   realCardCount: number;
   hasCover: boolean;
   /** Custom cards with a back face of their own (TODO 5.3): the "Include
@@ -296,7 +296,7 @@ export function DeckExportMenu({
             />
             {realCardCount > 0 ? (
               <p className="text-xs leading-5 text-subtle">
-                {realCardCount} real card{realCardCount === 1 ? "" : "s"} without a custom proxy go on a checklist page instead of printing.
+                {realCardCount} real card{realCardCount === 1 ? " not customized yet goes" : "s not customized yet go"} on a checklist page instead of printing.
               </p>
             ) : null}
             <div className="mt-auto flex items-center justify-end">

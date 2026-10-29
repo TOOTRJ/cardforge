@@ -6,6 +6,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { COMPARISON_FAQ } from "@/lib/content/faq";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /best-mtg-card-makers
@@ -25,12 +26,12 @@ export const metadata: Metadata = {
   description:
     "The best MTG card makers compared, and a free CardConjurer alternative. How PipGlyph, MTG Cardsmith, MTGNexus, and Magic Set Editor stack up for custom Magic cards.",
   alternates: { canonical: "/best-mtg-card-makers" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "Best MTG Card Makers in 2026, Compared | PipGlyph",
     description:
       "An honest comparison of custom MTG card makers — and a free, browser-based CardConjurer alternative with live preview, custom pips, AI, and proxy export.",
     type: "article",
-  },
+  }),
 };
 
 const CRITERIA = [

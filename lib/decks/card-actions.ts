@@ -167,7 +167,7 @@ export async function linkDeckCardAction(
   if (!card || card.owner_id !== user.id) {
     return {
       ok: false,
-      error: "You can only link cards you own as proxies.",
+      error: "You can only link cards you own.",
     };
   }
 

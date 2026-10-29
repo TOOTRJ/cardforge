@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { listArticles, listTags, slugifyTag } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
+import { categoryForTagSlug, isArticleCategory } from "@/lib/content/article-categories";
 
 // ---------------------------------------------------------------------------
 // Every guide: complete frontmatter, a FAQ block that mirrors the visible
@@ -108,9 +109,10 @@ describe("guides", () => {
       for (const tag of article.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
     for (const [tag, count] of counts) {
-      // A defined cluster may have a single member today ("card makers",
-      // "lore"): its hub has pillar copy of its own.
-      if (getCluster(slugifyTag(tag))) continue;
+      // A defined cluster may have a single member today: its hub has pillar
+      // copy of its own. So may a tag whose hub became a /learn category
+      // ("card makers", "lore"): its badge links to the category page.
+      if (getCluster(slugifyTag(tag)) || categoryForTagSlug(slugifyTag(tag))) continue;
       expect(count, `tag "${tag}" is a one-off hub`).toBeGreaterThanOrEqual(2);
     }
   });
@@ -125,9 +127,14 @@ describe("guides", () => {
           if (segments.length === 1) continue;
           if (segments[1] === "tag") {
             expect(tagSlugs.has(segments[2]), `${file} → ${path}`).toBe(true);
+            // A hub that became a /learn category is a 308 now: link the
+            // category page itself.
+            expect(categoryForTagSlug(segments[2]), `${file} → ${path} (link /learn/… instead)`).toBeNull();
           } else {
             expect(slugs.has(segments[1]), `${file} → ${path}`).toBe(true);
           }
+        } else if (segments[0] === "learn" && segments.length > 1) {
+          expect(isArticleCategory(segments[1]), `${file} → ${path}`).toBe(true);
         } else if (segments.length > 0) {
           expect(routeRoots.has(segments[0]), `${file} → ${path}`).toBe(true);
         }
