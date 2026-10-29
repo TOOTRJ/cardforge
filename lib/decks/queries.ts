@@ -22,6 +22,7 @@ import type {
 } from "@/types/supabase";
 import { narrowCard } from "@/lib/cards/narrow";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 
 // ---------------------------------------------------------------------------
 // Narrowers — keep enum-typed text columns honest (types/deck.ts convention).
@@ -42,47 +43,27 @@ function narrowDeckCard(row: DeckCardRow): DeckCardEntry {
   };
 }
 
-
-type DecksClient =
-  | Awaited<ReturnType<typeof createClient>>
-  | ReturnType<typeof createPublicClient>;
-
 type DeckCounts = {
   /** Physical cards across playable boards (quantities summed, maybeboard
-   *  excluded) — the "99 cards" number. */
+   *  excluded) — the "99 cards" number. `decks.card_count`. */
   cards_count: number;
-  /** Physical cards (same boards) whose entry has a linked custom proxy. */
+  /** Physical cards (same boards) whose entry has a linked custom proxy.
+   *  `decks.linked_card_count`. */
   remixed_count: number;
 };
 
 export type DeckWithCounts = Deck & DeckCounts;
 
-async function countCardsForDecks(
-  deckIds: string[],
-  supabase: DecksClient,
-): Promise<Map<string, DeckCounts>> {
-  const counts = new Map<string, DeckCounts>();
-  if (deckIds.length === 0) return counts;
-
-  try {
-    const { data } = await supabase
-      .from("deck_cards")
-      .select("deck_id, board, quantity, card_id")
-      .in("deck_id", deckIds);
-    for (const row of data ?? []) {
-      if (row.board === "maybe") continue;
-      const entry = counts.get(row.deck_id) ?? {
-        cards_count: 0,
-        remixed_count: 0,
-      };
-      entry.cards_count += row.quantity;
-      if (row.card_id) entry.remixed_count += row.quantity;
-      counts.set(row.deck_id, entry);
-    }
-  } catch {
-    // swallow — caller treats missing counts as 0.
-  }
-  return counts;
+/** The tile counts, straight off the deck row: migration 0143 keeps them in
+ *  the database (a statement trigger on deck_cards recounts both), so a list
+ *  never reads entry rows — that read hit PostgREST's 1000-row cap once a
+ *  page of decks held more entries, and the decks past it showed 0 cards. */
+function withCounts(row: DeckRow): DeckWithCounts {
+  return {
+    ...narrowDeck(row),
+    cards_count: row.card_count ?? 0,
+    remixed_count: row.linked_card_count ?? 0,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,15 +83,7 @@ export async function listMyDecks(): Promise<DeckWithCounts[]> {
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false });
     if (!decks || decks.length === 0) return [];
-
-    const counts = await countCardsForDecks(
-      decks.map((d) => d.id),
-      supabase,
-    );
-    return decks.map((row) => ({
-      ...narrowDeck(row),
-      ...(counts.get(row.id) ?? { cards_count: 0, remixed_count: 0 }),
-    }));
+    return decks.map(withCounts);
   } catch {
     return [];
   }
@@ -178,10 +151,13 @@ export async function listPublicDecks(
 
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
+    // An empty deck is thin content: the sitemap, the hub counts and the
+    // deck page's robots already skip it, and the list does too (DK0.8).
     let query = supabase
       .from("decks")
       .select("*")
-      .eq("visibility", "public");
+      .eq("visibility", "public")
+      .gt("card_count", 0);
 
     if (format) {
       query = query.eq("format", format);
@@ -204,14 +180,18 @@ export async function listPublicDecks(
             })
           : query.order("updated_at", { ascending: false });
 
-    const { data: decks } = await query.range(offset, offset + limit - 1);
+    // A unique key last, so offset pages never repeat or skip a deck that
+    // ties another on the sort (decks made in one transaction share an
+    // updated_at).
+    const { data: decks } = await query
+      .order("id", { ascending: true })
+      .range(offset, offset + limit - 1);
     if (!decks || decks.length === 0) return [];
 
     const deckIds = decks.map((d) => d.id);
     const viewer = anonymous ? null : await getCurrentUser();
 
-    const [counts, owners, viewerLikes] = await Promise.all([
-      countCardsForDecks(deckIds, supabase),
+    const [owners, viewerLikes] = await Promise.all([
       (async () => {
         const ownerIds = Array.from(new Set(decks.map((d) => d.owner_id)));
         const { data } = await supabase
@@ -246,8 +226,7 @@ export async function listPublicDecks(
     // likes_count comes straight off the row — the deck_likes triggers keep
     // it exact (migration 0055), so no aggregation query is needed here.
     return decks.map((row) => ({
-      ...narrowDeck(row),
-      ...(counts.get(row.id) ?? { cards_count: 0, remixed_count: 0 }),
+      ...withCounts(row),
       owner: owners.get(row.owner_id) ?? null,
       liked_by_viewer: viewerLiked.has(row.id),
     }));
@@ -258,7 +237,8 @@ export async function listPublicDecks(
 
 /** Public decks by one creator — the profile page's "Decks by X" section.
  *  Cookie-free public client + likes off the denormalized column, so the
- *  caller stays viewer-independent. */
+ *  caller stays viewer-independent. Empty decks are left out (DK0.8), as
+ *  `countPublicDecksByOwner` leaves them out of its number. */
 export async function listPublicDecksByOwner(
   ownerId: string,
   limit = 6,
@@ -271,23 +251,19 @@ export async function listPublicDecksByOwner(
       .select("*")
       .eq("owner_id", ownerId)
       .eq("visibility", "public")
+      .gt("card_count", 0)
       .order("updated_at", { ascending: false })
       .limit(limit);
     if (!decks || decks.length === 0) return [];
-    const counts = await countCardsForDecks(
-      decks.map((d) => d.id),
-      supabase,
-    );
-    return decks.map((row) => ({
-      ...narrowDeck(row),
-      ...(counts.get(row.id) ?? { cards_count: 0, remixed_count: 0 }),
-    }));
+    return decks.map(withCounts);
   } catch {
     return [];
   }
 }
 
-/** Count of a creator's public decks (profile badge). */
+/** Count of a creator's public, non-empty decks (profile badge) — the decks
+ *  `listPublicDecksByOwner` lists, so the section never shows a number over
+ *  nothing. */
 export async function countPublicDecksByOwner(ownerId: string): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
@@ -296,7 +272,8 @@ export async function countPublicDecksByOwner(ownerId: string): Promise<number> 
       .from("decks")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", ownerId)
-      .eq("visibility", "public");
+      .eq("visibility", "public")
+      .gt("card_count", 0);
     return count ?? 0;
   } catch {
     return 0;
@@ -320,7 +297,8 @@ export async function countDecksForCard(cardId: string): Promise<number> {
   }
 }
 
-/** Sitewide public deck count (homepage stats). Cookie-free. */
+/** Sitewide public, non-empty deck count (homepage stats) — what /decks
+ *  lists. Cookie-free. */
 export async function countPublicDecks(): Promise<number> {
   if (!isSupabaseConfigured()) return 0;
   try {
@@ -328,7 +306,8 @@ export async function countPublicDecks(): Promise<number> {
     const { count } = await supabase
       .from("decks")
       .select("id", { count: "exact", head: true })
-      .eq("visibility", "public");
+      .eq("visibility", "public")
+      .gt("card_count", 0);
     return count ?? 0;
   } catch {
     return 0;
@@ -382,27 +361,38 @@ export type DeckItem = {
   card: Card | null;
 };
 
+/** Every entry of a deck, in list order. Paged past PostgREST's 1000-row
+ *  cap (a deck holds at most 500 rows since 0143, but one stored before it
+ *  may hold more), ordered on a unique key last so pages never overlap. */
 export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = await createClient();
-    const { data: entries } = await supabase
-      .from("deck_cards")
-      .select("*")
-      .eq("deck_id", deckId)
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true });
-    if (!entries || entries.length === 0) return [];
+    const { data: entries, error } = await selectAllRows<DeckCardRow>((from, to) =>
+      supabase
+        .from("deck_cards")
+        .select("*")
+        .eq("deck_id", deckId)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    if (error || entries.length === 0) return [];
 
-    const cardIds = entries
-      .map((e) => e.card_id)
-      .filter((id): id is string => Boolean(id));
+    const cardIds = Array.from(
+      new Set(
+        entries
+          .map((e) => e.card_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
     const cardById = new Map<string, Card>();
-    if (cardIds.length > 0) {
+    for (const ids of chunkIds(cardIds)) {
       const { data: cards } = await supabase
         .from("cards")
         .select("*")
-        .in("id", cardIds);
+        .in("id", ids);
       for (const row of cards ?? []) {
         cardById.set(row.id, narrowCard(row));
       }
@@ -502,18 +492,22 @@ export async function countRemixableDeckCards(deckId: string): Promise<number> {
   }
 }
 
-/** How many entries a deck holds — the indexing gate for /deck/[slug]: an
+/** How many cards a deck holds — the indexing gate for /deck/[slug]: an
  *  empty deck page is thin and stays out of the index (noindex, follow) until
- *  it has cards. Viewer-independent, cookie-free, cache()-deduped per request. */
+ *  it has cards. "Empty" is the stored `card_count` (0143: physical cards,
+ *  maybeboard left out) — the same test the public lists, the sitemap and
+ *  the format hubs' counts use. Viewer-independent, cookie-free,
+ *  cache()-deduped per request. */
 export const countDeckEntries = cache(async (deckId: string): Promise<number> => {
   if (!isSupabaseConfigured()) return 0;
   try {
     const supabase = createPublicClient();
-    const { count } = await supabase
-      .from("deck_cards")
-      .select("id", { count: "exact", head: true })
-      .eq("deck_id", deckId);
-    return count ?? 0;
+    const { data } = await supabase
+      .from("decks")
+      .select("card_count")
+      .eq("id", deckId)
+      .maybeSingle();
+    return data?.card_count ?? 0;
   } catch {
     return 0;
   }

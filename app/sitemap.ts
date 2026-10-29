@@ -227,30 +227,24 @@ async function fetchChallengeEntries(
   }
 }
 
-type DeckSitemapRow = {
-  slug: string;
-  updated_at: string;
-  deck_cards: { count: number }[] | null;
-};
-
 async function fetchPublicDeckEntries(
   baseUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = createPublicClient();
-    // deck_cards(count) is PostgREST's embedded aggregate — one round trip
-    // for the entry counts that decide indexability (an empty deck page is
-    // noindex, see app/(marketing)/deck/[slug]/page.tsx).
+    // Only decks with cards: an empty deck page is noindex (see
+    // app/(marketing)/deck/[slug]/page.tsx). `card_count` is the stored
+    // count (migration 0143) every public list and hub count reads — and
+    // filtering in the query means the cap counts indexable decks only.
     const { data } = await supabase
       .from("decks")
-      .select("slug, updated_at, deck_cards(count)")
+      .select("slug, updated_at")
       .eq("visibility", "public")
+      .gt("card_count", 0)
       .order("updated_at", { ascending: false })
       .limit(MAX_DYNAMIC_DECKS);
-    const rows = (data ?? []) as unknown as DeckSitemapRow[];
-    return rows
-      .filter((d) => (d.deck_cards?.[0]?.count ?? 0) > 0)
+    return (data ?? [])
       .map((d) => ({
         url: `${baseUrl}/deck/${d.slug}`,
         lastModified: new Date(d.updated_at),

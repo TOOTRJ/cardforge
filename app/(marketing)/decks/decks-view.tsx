@@ -216,14 +216,17 @@ async function PublicDecksResults({
   // Anonymous mode (public client, no cookie read) keeps the landing
   // ISR-cacheable. liked_by_viewer is false on the cached page; the
   // QuickLikeButton re-checks the session cookie at click time.
-  const decks = await listPublicDecks({
-    limit: PAGE_SIZE,
+  // One row past the page: it says whether a next page exists. "A full page"
+  // alone sent a list of exactly 24, 48… decks to an empty page.
+  const fetched = await listPublicDecks({
+    limit: PAGE_SIZE + 1,
     offset: (page - 1) * PAGE_SIZE,
     search,
     format,
     sort,
     anonymous: true,
   });
+  const decks = fetched.slice(0, PAGE_SIZE);
 
   if (decks.length === 0) {
     return (
@@ -244,7 +247,7 @@ async function PublicDecksResults({
     );
   }
 
-  const hasMore = decks.length === PAGE_SIZE;
+  const hasMore = fetched.length > PAGE_SIZE;
   const hasPrev = page > 1;
   // Page links stay within the browse route — the landing is static and
   // would ignore (and, via proxy.ts, 308 away from) the query.

@@ -25,25 +25,34 @@ import {
 import {
   cardNameMatchesEntry,
   chunkIdentifiers,
+  commitScryfallIds,
   identifierFor,
   lookupEntry,
   nameFallbackIdentifiers,
   reconcileCollection,
+  scryfallIdBatches,
+  serverResolvedLines,
   toResolvedCardData,
   type ResolvedCardData,
 } from "@/lib/decks/import-resolution";
 import { getDeckById } from "@/lib/decks/queries";
-import { isSafeImageUrl } from "@/lib/validation/card";
+import { isUuid } from "@/lib/ids";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import { revalidateProfilePage } from "@/lib/profile/username";
-import { planImportWrites } from "@/lib/decks/import-plan";
+import {
+  deckEntryLimitMessage,
+  isDeckNotOwnedError,
+  planImportEntries,
+} from "@/lib/decks/import-plan";
 
 // ---------------------------------------------------------------------------
 // Decklist import — two-step, review-before-commit:
 //   1. resolveDecklistAction(text): parse + resolve against Scryfall,
 //      returning a review payload. NO WRITES.
-//   2. commitDeckImportAction(deckId, lines): validate + write the entries
-//      the user confirmed, merging quantities into existing rows.
+//   2. commitDeckImportAction(deckId, lines): re-fetch the confirmed lines'
+//      printings from Scryfall by id (the browser's copy is never stored)
+//      and write them in ONE transaction (`import_deck_entries`, migration
+//      0143), merging quantities into existing rows.
 // A resolve run costs a handful of /cards/collection calls (75 identifiers
 // each, 500ms spacing) plus a bounded fuzzy rescue — all server-side.
 // ---------------------------------------------------------------------------
@@ -214,33 +223,22 @@ export async function resolveDecklistAction(
   return { ok: true, title, lines, parseWarnings: warnings };
 }
 
+
 // ---------------------------------------------------------------------------
 // Commit
 // ---------------------------------------------------------------------------
 
+// The browser sends the review lines back; of the card data only the
+// printing's id is READ (validated as a uuid) — every other field is fetched
+// again from Scryfall by that id below and only Scryfall's answer is stored
+// (DK0.3). The rest of the `resolved` object the dialog posts is dropped.
 const commitLineSchema = z.object({
   name: z.string().trim().min(1).max(200),
   quantity: z.number().int().min(1).max(MAX_ENTRY_QUANTITY),
   board: z.enum(DECK_BOARD_VALUES),
   resolved: z
     .object({
-      scryfall_id: z.string().min(1).max(64),
-      name: z.string().min(1).max(200),
-      set_code: z.string().max(10).nullable(),
-      collector_number: z.string().max(20).nullable(),
-      type_line: z.string().max(300).nullable(),
-      mana_cost: z.string().max(100).nullable(),
-      mana_value: z.number().nullable(),
-      color_identity: z.array(z.enum(["W", "U", "B", "R", "G"])).max(5),
-      rarity: z.string().max(20).nullable(),
-      // https-gated (isSafeImageUrl) like every other stored image URL —
-      // a bare z.url() would accept javascript:/data: schemes. Scryfall
-      // image hosts are already normalized by the client.
-      image_url: z
-        .string()
-        .max(2048)
-        .refine(isSafeImageUrl, "Image URL must be https.")
-        .nullable(),
+      scryfall_id: z.string().refine(isUuid, "That card's Scryfall id isn't valid."),
     })
     .nullable(),
 });
@@ -252,7 +250,10 @@ const commitSchema = z.object({
 
 export type CommitDeckImportResult =
   | { ok: true; added: number; merged: number; placeholders: number }
-  | { ok: false; error: string };
+  | { ok: false; error: string; retryAfterSeconds?: number };
+
+const SCRYFALL_DOWN =
+  "Scryfall didn't respond — nothing was imported. Try again in a moment.";
 
 export async function commitDeckImportAction(
   payload: unknown,
@@ -273,47 +274,55 @@ export async function commitDeckImportAction(
     return { ok: false, error: "Sign in to import a decklist." };
   }
 
+  // A commit is a run too: it calls Scryfall again (below), so it spends
+  // the same `deck_import` quota as the resolve step (SCRYFALL_LIMITS).
+  const rate = await checkScryfallRateLimit(user.id, "deck_import");
+  if (!rate.ok) {
+    return {
+      ok: false,
+      error: rate.message,
+      retryAfterSeconds: rate.retryAfterSeconds,
+    };
+  }
+
   const deck = await getDeckById(parsed.data.deckId);
   if (!deck || deck.owner_id !== user.id) {
     return { ok: false, error: "Deck not found or not yours." };
   }
 
+  await logScryfallCall(user.id, "deck_import");
+
+  // Re-resolve every printing on the server, 75 ids a request (the client's
+  // throttle spaces them per Scryfall's limits).
+  const cards: ScryfallCard[] = [];
+  for (const batch of scryfallIdBatches(
+    commitScryfallIds(parsed.data.lines),
+    SCRYFALL_COLLECTION_MAX,
+  )) {
+    const result = await getCardCollection(batch);
+    if (result === null) return { ok: false, error: SCRYFALL_DOWN };
+    cards.push(...result.cards);
+  }
+
+  const plan = planImportEntries(serverResolvedLines(parsed.data.lines, cards));
+
+  // ONE transaction under a per-deck lock (migration 0143): merges into the
+  // rows the deck holds, inserts the rest, refuses past the entry cap. A
+  // double submit waits for the first and then merges into its rows.
   const supabase = await createClient();
-  const { data: existingRows, error: existingError } = await supabase
-    .from("deck_cards")
-    .select("id, board, quantity, position, scryfall_id, name")
-    .eq("deck_id", deck.id);
-  if (existingError) {
-    return { ok: false, error: existingError.message };
-  }
-
-  // Merge keys, in-payload duplicates, per-row quantity accumulation and
-  // the Scryfall-only image guard all live in the (unit-tested) planner.
-  const plan = planImportWrites(deck.id, existingRows ?? [], parsed.data.lines);
-
-  if (plan.inserts.length > 0) {
-    const { error: insertError } = await supabase
-      .from("deck_cards")
-      .insert(plan.inserts);
-    if (insertError) {
-      return { ok: false, error: insertError.message };
+  const { data, error } = await supabase.rpc("import_deck_entries", {
+    p_deck_id: deck.id,
+    p_entries: plan.entries,
+  });
+  if (error) {
+    const limit = deckEntryLimitMessage(error);
+    if (limit) return { ok: false, error: limit };
+    if (isDeckNotOwnedError(error)) {
+      return { ok: false, error: "Deck not found or not yours." };
     }
+    return { ok: false, error: "Couldn't save the import — nothing was added. Try again." };
   }
-  if (plan.quantityUpdates.length > 0) {
-    const results = await Promise.all(
-      plan.quantityUpdates.map(({ id, quantity }) =>
-        supabase
-          .from("deck_cards")
-          .update({ quantity })
-          .eq("id", id)
-          .eq("deck_id", deck.id),
-      ),
-    );
-    const failure = results.find((r) => r.error);
-    if (failure?.error) {
-      return { ok: false, error: failure.error.message };
-    }
-  }
+  const counts = importCounts(data);
 
   revalidatePath(`/deck/${deck.slug}`);
   revalidatePath(`/deck/${deck.slug}/edit`);
@@ -324,8 +333,17 @@ export async function commitDeckImportAction(
 
   return {
     ok: true,
-    added: plan.inserts.length,
-    merged: plan.quantityUpdates.length,
+    added: counts.added,
+    merged: counts.merged,
     placeholders: plan.placeholders,
+  };
+}
+
+/** `import_deck_entries` answers {"added": n, "merged": m}. */
+function importCounts(data: unknown): { added: number; merged: number } {
+  const row = (data ?? {}) as { added?: unknown; merged?: unknown };
+  return {
+    added: typeof row.added === "number" ? row.added : 0,
+    merged: typeof row.merged === "number" ? row.merged : 0,
   };
 }
