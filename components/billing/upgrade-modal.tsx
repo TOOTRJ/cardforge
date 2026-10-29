@@ -94,7 +94,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     deck_export: {
       title: "Download the whole deck",
       description:
-        "Exporting a deck — the card images as a ZIP, print-ready PDFs, and the deck report with its stats (and its how-to-play guide, if the deck has one) — is a Pro feature. Sharing the deck stays free.",
+        "Exporting a deck — the card images as a ZIP, print-ready PDFs, and the deck report with its stats (and its how-to-play guide, if the deck has one) — is a Pro feature. Copying and sharing the decklist stays free.",
     },
     deck_guide: {
       title: "How to play & combos",

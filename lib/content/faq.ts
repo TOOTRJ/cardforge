@@ -97,7 +97,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "How do I generate a random MTG card with AI?",
-    a: "Open the card creator at /create and choose 'Generate with AI'. Pick a theme and art style — or hit 'Surprise me' — and the AI fills every field and paints the art, then drops the card into the editor. Each generation costs one AI credit (Free accounts get 5 a month). Want just ideas first? 'Get ideas' gives you three concepts to pick from for a single credit.",
+    a: "Open the card creator at /create and choose 'Generate with AI'. Pick a theme and art style — or hit 'Surprise me' — and the AI fills every field and paints the art, then drops the card into the editor. Each generation costs one AI credit (a free account starts with 5). Want just ideas first? 'Get ideas' gives you three concepts to pick from for a single credit.",
   },
   {
     q: "Does the AI use real MTG keyword abilities?",
