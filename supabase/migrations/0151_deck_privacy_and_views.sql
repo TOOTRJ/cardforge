@@ -59,11 +59,23 @@
 --    what the visitor's list shows for it: the printing's REAL name when the
 --    entry stands for one, else "Private card" (lib/decks/private-card-name
 --    .ts PRIVATE_CARD_NAME). Whole words only (a plural keeps its ending),
---    any case, longest name first; a name the visitor's list shows anyway
---    (another entry's) is left alone. Every string of the guide is read,
---    the lists included. What it can't catch: a name the guide spelled
---    otherwise (a nickname, a title the card had before a rename the entry
---    never saw), or a card no longer in the deck.
+--    any case, and FOLDED both sides (guide_name_fold: the printed ’ ‘ “ ”
+--    – — read as the typed ' " - — typedForMatching's six, 0136 — common
+--    Latin accents, æ / œ / ß, runs of spaces), so "Vael’s Forge" is found
+--    as "Vael's Forge" and "Æther" as "Aether". ONE pass of ONE
+--    longest-first pattern: a replacement is never read again, and a name
+--    the visitor's list shows (another entry's) is never touched — it is
+--    left alone when a hidden card shares it, and GUARDED (matched and kept
+--    as written) when a hidden name sits inside it ("Bolt" in "Lightning
+--    Bolt"). Every string of the guide is read, the lists included. What
+--    it can't catch: a name the guide spelled otherwise (a paraphrase, a
+--    title the card had before a rename the entry never saw), or a card no
+--    longer in the deck. And one thing it can't check: a hidden card whose
+--    entry stands for a printing reads as that entry's name — the page hides
+--    such a name when it holds strong language (hidesEntryName,
+--    lib/moderation/profanity.ts), which SQL can't test (the detector's
+--    database twin is TODO 7.17); the name is the printing's real one unless
+--    the deck's owner renamed their own entry.
 --    Hiding the whole guide while the deck holds a private card was the
 --    other option: it can't miss a name, but it takes D4's guides away from
 --    every deck with one private card (D11 makes that common); the
@@ -189,9 +201,96 @@ $$;
 comment on function public.viewer_is_pro() is
   'Whether the caller gets Pro perks: an admin, an active / trialing Pro subscription or an unexpired Pro comp. Mirrors lib/billing/entitlements.ts effectiveTierForProfile (0151).';
 
--- Every whole-word, any-case occurrence of p_names[i] becomes p_subs[i], in
--- array order (the caller sorts the longest name first). A plural keeps its
--- ending ("two Ember Signets" → "two Sol Rings").
+-- ONE fold for every name a guide's words are matched against (and every
+-- comparison of two names below): lower case; the typed forms of the
+-- printed apostrophes, quotes and dashes — the six characters 0136's
+-- gallery search and typedForMatching() fold (’ ‘ → ', “ ” → ", – — → -),
+-- plus ʼ; the common Latin letters' accented forms dropped (Æther, Lim-Dûl);
+-- æ / œ / ß spelled out; a run of white space as one space. Titles are
+-- stored with the printed ’ (print typography, TODO 6.11) while AI text
+-- writes ' — without the fold a renamed card's name passed through.
+create or replace function public.guide_name_fold(p_name text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select regexp_replace(
+    replace(replace(replace(replace(replace(
+      translate(lower(p_name),
+        'àáâãäåāăąÀÁÂÃÄÅĀĂĄçćčÇĆČèéêëēĕėęěÈÉÊËĒĔĖĘĚìíîïīĭįÌÍÎÏĪĬĮñńňÑŃŇòóôõöøōŏőÒÓÔÕÖØŌŎŐùúûüūŭůűųÙÚÛÜŪŬŮŰŲýÿÝŸśšşŚŠŞźżžŹŻŽłŁ’‘ʼ“”–—',
+        'aaaaaaaaaaaaaaaaaacccccceeeeeeeeeeeeeeeeeeiiiiiiiiiiiiiinnnnnnoooooooooooooooooouuuuuuuuuuuuuuuuuuyyyysssssszzzzzzll''''''""--'),
+      'æ', 'ae'), 'Æ', 'ae'), 'œ', 'oe'), 'Œ', 'oe'), 'ß', 'ss'),
+    '[[:space:]]+', ' ', 'g');
+$$;
+
+-- A name as a pattern that matches every text guide_name_fold() folds to
+-- the same name: each of those letters with its accented forms, ae / oe /
+-- ss with æ / œ / ß, every apostrophe, quote and dash with its typed form,
+-- any run of white space for a space; every other ASCII sign escaped, every
+-- other character literal (never a backslash before a letter — an ARE
+-- escape).
+create or replace function public.guide_name_pattern(p_name text)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_fold text := public.guide_name_fold(btrim(p_name));
+  v_out text := '';
+  v_ch text;
+  v_pair text;
+  i integer := 1;
+begin
+  while i <= char_length(v_fold) loop
+    v_ch := substr(v_fold, i, 1);
+    v_pair := substr(v_fold, i, 2);
+    if v_pair in ('ae', 'oe', 'ss') then
+      v_out := v_out || case v_pair
+        when 'ae' then '(?:ae|æ|Æ)'
+        when 'oe' then '(?:oe|œ|Œ)'
+        else '(?:ss|ß)'
+      end;
+      i := i + 2;
+      continue;
+    end if;
+    v_out := v_out || case
+      when v_ch = 'a' then '[aAàáâãäåāăąÀÁÂÃÄÅĀĂĄ]'
+      when v_ch = 'c' then '[cCçćčÇĆČ]'
+      when v_ch = 'e' then '[eEèéêëēĕėęěÈÉÊËĒĔĖĘĚ]'
+      when v_ch = 'i' then '[iIìíîïīĭįÌÍÎÏĪĬĮ]'
+      when v_ch = 'n' then '[nNñńňÑŃŇ]'
+      when v_ch = 'o' then '[oOòóôõöøōŏőÒÓÔÕÖØŌŎŐ]'
+      when v_ch = 'u' then '[uUùúûüūŭůűųÙÚÛÜŪŬŮŰŲ]'
+      when v_ch = 'y' then '[yYýÿÝŸ]'
+      when v_ch = 's' then '[sSśšşŚŠŞ]'
+      when v_ch = 'z' then '[zZźżžŹŻŽ]'
+      when v_ch = 'l' then '[lLłŁ]'
+      when v_ch = '''' then '[''’‘ʼ]'
+      when v_ch = '"' then '["“”]'
+      when v_ch = '-' then '[-–—]'
+      when v_ch = ' ' then '[[:space:]]+'
+      when v_ch ~ '^[a-z0-9]$' then v_ch
+      when ascii(v_ch) < 128 then '\' || v_ch
+      else v_ch
+    end;
+    i := i + 1;
+  end loop;
+  return v_out;
+end;
+$$;
+
+-- The redaction: ONE pass of ONE pattern — every name, longest first (and
+-- POSIX's rule: the longest alternative wins at each place), as a whole
+-- word, a plural keeping its ending ("two Ember Signets" → "two Sol Rings";
+-- in lower case after a replacement)
+-- — cut out with regexp_split_to_array and regexp_matches over the same
+-- pattern, so a replacement is never read again (a hidden "Sol" can't touch
+-- the "Sol Ring" just written). A name whose sub is NULL is a GUARD: a name
+-- the visitor's list shows, matched only to be kept as written (a hidden
+-- "Bolt" never reaches into "Lightning Bolt"). Each match is tied to its
+-- name by that name's own pattern, anchored, in array order.
 create or replace function public.redact_guide_text(p_text text, p_names text[], p_subs text[])
 returns text
 language plpgsql
@@ -199,24 +298,41 @@ immutable
 set search_path = ''
 as $$
 declare
-  v_out text := p_text;
-  i integer;
+  v_pats text[];
+  v_pattern text;
+  v_parts text[];
+  v_out text;
+  v_hit text[];
+  v_sub text;
+  v_found boolean;
+  i integer := 0;
+  j integer;
 begin
-  if v_out is null or p_names is null then
-    return v_out;
+  if p_text is null or coalesce(cardinality(p_names), 0) = 0 then
+    return p_text;
   end if;
-  for i in 1 .. coalesce(array_length(p_names, 1), 0) loop
-    v_out := regexp_replace(
-      v_out,
-      -- The name as literal text (every character but a letter, a digit or
-      -- a space escaped), an optional plural ending, and no letter, digit
-      -- or underscore either side.
-      '(?<![[:alnum:]_])'
-        || regexp_replace(p_names[i], '([^[:alnum:][:space:]])', '\\\1', 'g')
-        || '((?:e?s)?)(?![[:alnum:]_])',
-      replace(p_subs[i], '\', '\\') || '\1',
-      'gi'
-    );
+  select array_agg(public.guide_name_pattern(t.name) order by t.o) into v_pats
+  from unnest(p_names) with ordinality as t(name, o);
+  v_pattern := '(?<![[:alnum:]_])('
+    || (select string_agg('(?:' || t.pat || ')', '|' order by t.o)
+          from unnest(v_pats) with ordinality as t(pat, o))
+    || ')((?:e?s)?)(?![[:alnum:]_])';
+  v_parts := regexp_split_to_array(p_text, v_pattern, 'i');
+  v_out := v_parts[1];
+  for v_hit in select m.hit from regexp_matches(p_text, v_pattern, 'gi') as m(hit) loop
+    i := i + 1;
+    v_found := false;
+    v_sub := null;
+    for j in 1 .. cardinality(p_names) loop
+      if v_hit[1] ~* ('^(?:' || v_pats[j] || ')$') then
+        v_found := true;
+        v_sub := p_subs[j];
+        exit;
+      end if;
+    end loop;
+    v_out := v_out
+      || case when v_found and v_sub is not null then v_sub || lower(v_hit[2]) else v_hit[1] || v_hit[2] end
+      || v_parts[i + 1];
   end loop;
   return v_out;
 end;
@@ -301,11 +417,14 @@ as $$
     where not deck.is_owner
   ),
   -- Every name the visitor's list draws (lib/decks/private-card-name.ts:
-  -- an entry's own name unless it is a hidden card's with no printing).
+  -- an entry's own name unless it is a hidden card's with no printing),
+  -- with its fold.
   shown as (
-    select lower(entry_name) as name from entries where not (hidden and not printed)
+    select public.guide_name_fold(entry_name) as key, entry_name as name
+    from entries where not (hidden and not printed)
     union
-    select lower(card_title) from entries where card_title is not null and not hidden
+    select public.guide_name_fold(card_title), card_title
+    from entries where card_title is not null and not hidden
   ),
   -- A hidden card's names, and what the list shows in their place.
   hidden_names as (
@@ -328,16 +447,32 @@ as $$
     where position(',' in name) > 1
       and char_length(btrim(split_part(name, ',', 1))) >= 3
   ),
+  -- The names to replace: once per fold, never one the list shows anyway,
+  -- never one that reads as its own replacement.
+  hidden as (
+    select distinct on (public.guide_name_fold(ws.name))
+           ws.name, ws.sub, public.guide_name_fold(ws.name) as key
+    from with_short ws
+    where public.guide_name_fold(ws.name) <> public.guide_name_fold(ws.sub)
+      and not exists (select 1 from shown s where s.key = public.guide_name_fold(ws.name))
+    order by public.guide_name_fold(ws.name), ws.sub
+  ),
+  -- The GUARDS: the shown names a hidden one could reach into, matched in
+  -- the same pass and kept as written (a NULL sub).
+  guards as (
+    select distinct on (s.key) s.name, null::text as sub
+    from shown s
+    where exists (select 1 from hidden h where position(h.key in s.key) > 0)
+    order by s.key, s.name
+  ),
   scrub as (
-    select array_agg(w.name order by char_length(w.name) desc, w.name) as names,
-           array_agg(w.sub order by char_length(w.name) desc, w.name) as subs
+    select array_agg(x.name order by char_length(x.name) desc, x.name) as names,
+           array_agg(x.sub order by char_length(x.name) desc, x.name) as subs
     from (
-      select distinct on (lower(ws.name)) ws.name, ws.sub
-      from with_short ws
-      where lower(ws.name) <> lower(ws.sub)
-        and not exists (select 1 from shown s where s.name = lower(ws.name))
-      order by lower(ws.name), ws.sub
-    ) w
+      select name, sub from hidden
+      union all
+      select name, sub from guards
+    ) x
   )
   select
     g.deck_id,
@@ -504,6 +639,10 @@ grant execute on function public.requested_deck_link() to anon, authenticated, s
 revoke all on function public.viewer_is_pro() from public, anon, authenticated;
 grant execute on function public.viewer_is_pro() to service_role;
 
+revoke all on function public.guide_name_fold(text) from public, anon, authenticated;
+grant execute on function public.guide_name_fold(text) to service_role;
+revoke all on function public.guide_name_pattern(text) from public, anon, authenticated;
+grant execute on function public.guide_name_pattern(text) to service_role;
 revoke all on function public.redact_guide_text(text, text[], text[]) from public, anon, authenticated;
 grant execute on function public.redact_guide_text(text, text[], text[]) to service_role;
 revoke all on function public.redact_guide_jsonb(jsonb, text[], text[]) from public, anon, authenticated;

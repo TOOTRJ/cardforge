@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DECK_LINK_HEADER } from "@/lib/decks/deck-link";
 import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
+import { TYPED_FORMS } from "@/lib/validation/typed-forms";
 import { DECK_VIEW_RETENTION_DAYS } from "@/app/api/cron/prune-funnel-events/route";
 
 // ---------------------------------------------------------------------------
@@ -141,13 +142,48 @@ describe("0151: a deck guide is read where the page shows it", () => {
     );
     // A printing's real name, else the deck page's own words.
     expect(body).toContain(`case when entries.printed then entries.entry_name else '${PRIVATE_CARD_NAME}' end as sub`);
-    // Longest first, so a full name goes before its short form.
-    expect(body).toContain("array_agg(w.name order by char_length(w.name) desc, w.name) as names");
+    // Longest first, so a full name goes before its short form; the
+    // guards (shown names a hidden one could reach into) in the same list.
+    expect(body).toContain("array_agg(x.name order by char_length(x.name) desc, x.name) as names");
+    expect(body).toContain("where exists (select 1 from hidden h where position(h.key in s.key) > 0)");
+    // Every comparison of two names goes through the one fold.
+    expect(body).toContain("not exists (select 1 from shown s where s.key = public.guide_name_fold(ws.name))");
+    expect(body).not.toMatch(/lower\(ws\.name\)|lower\(entry_name\)/);
+  });
+
+  it("folds the printed quotes and dashes as typedForMatching does (0136's six), plus ʼ", () => {
+    const fold = fnBody("guide_name_fold");
+    const [src, dst] = [...fold.matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1].replace(/''/g, "'")).slice(0, 2);
+    expect(src.length).toBe(dst.length);
+    for (const [printed, typed] of Object.entries(TYPED_FORMS)) {
+      const at = src.indexOf(printed);
+      expect(at, printed).toBeGreaterThanOrEqual(0);
+      expect(dst[at], printed).toBe(typed);
+    }
+    expect(dst[src.indexOf("ʼ")]).toBe("'");
+    // Each pattern class is the fold's own letters, so a match folds alike.
+    const pattern = fnBody("guide_name_pattern");
+    for (const letter of new Set(dst)) {
+      if (!/[a-z]/.test(letter)) continue;
+      const variants = [...src].filter((_, i) => dst[i] === letter).join("");
+      expect(pattern, letter).toContain(`when v_ch = '${letter}' then '[${letter}${letter.toUpperCase()}${variants}]'`);
+    }
+  });
+
+  it("ONE pass of ONE pattern: a replacement is never read again", () => {
+    const body = fnBody("redact_guide_text");
+    expect(body).toContain("v_parts := regexp_split_to_array(p_text, v_pattern, 'i');");
+    expect(body).toContain("from regexp_matches(p_text, v_pattern, 'gi')");
+    expect(body).not.toContain("regexp_replace");
+    // A guard (NULL sub) is kept as written.
+    expect(body).toContain("case when v_found and v_sub is not null then v_sub || lower(v_hit[2]) else v_hit[1] || v_hit[2] end");
   });
 
   it("the helpers are the service role's; nothing else may call them", () => {
     expect(FLAT).toContain("revoke all on function public.redact_guide_text(text, text[], text[]) from public, anon, authenticated;");
     expect(FLAT).toContain("revoke all on function public.redact_guide_jsonb(jsonb, text[], text[]) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.guide_name_fold(text) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.guide_name_pattern(text) from public, anon, authenticated;");
   });
 });
 
@@ -187,7 +223,7 @@ describe("0151: views — one per viewer, deck and day", () => {
     expect(FLAT).toContain("grant execute on function public.deck_views_by_day(uuid, integer) to authenticated, service_role;");
   });
 
-  it("no app code still calls increment_deck_view", () => {
+  it("no app code calls increment_deck_view but the pre-0151 fallback (lib/decks/views.ts)", () => {
     const hits: string[] = [];
     const walk = (path: string) => {
       for (const name of readdirSync(path)) {
@@ -197,6 +233,9 @@ describe("0151: views — one per viewer, deck and day", () => {
       }
     };
     for (const root of ["app", "lib", "components", "scripts"]) walk(join(process.cwd(), root));
-    expect(hits).toEqual([]);
+    expect(hits.map((f) => f.slice(process.cwd().length + 1))).toEqual(["lib/decks/views.ts"]);
+    // …and only on PGRST202, the code PostgREST gives a missing function.
+    const views = readFileSync(join(process.cwd(), "lib/decks/views.ts"), "utf8");
+    expect(views).toContain('if (error?.code === "PGRST202") {');
   });
 });

@@ -1930,7 +1930,11 @@ Rules and gotchas:
   (`viewer_is_pro()`, held to entitlements.ts by a test), redacted for
   anyone but the owner — a card the visitor's list hides reads "Private
   card", or its printing's name — and `withheld` (the teaser) otherwise; no
-  API role reads `deck_guides`, and the stored text is never rewritten. A
+  API role reads `deck_guides`, and the stored text is never rewritten. The
+  redaction matches names FOLDED (`guide_name_fold`: typedForMatching's
+  six, accents, æ / œ / ß, spaces) in ONE pass of ONE longest-first pattern,
+  the shown names that hold a hidden one as guards kept whole — never a
+  chain of replaces (a replacement was read again). A
   VIEW counts once per viewer, deck and UTC day (`recordDeckView`,
   `lib/decks/views.ts` → `record_deck_view`, service role only): never the
   owner, a crawler (isbot), an empty user agent or a prefetch; the viewer is
@@ -1939,7 +1943,9 @@ Rules and gotchas:
   address, id or cookie is stored. `deck_views_by_day` is the owner's
   per-day read (DK7.4's data); the weekly prune cron keeps 400 days.
   Unlisted CARDS are still listable through the API (the same shape; a
-  follow-up).
+  follow-up). The app shipped BEFORE 0151 (#679): `getDeckGuide` and
+  `recordDeckView` fall back to main's calls on PGRST202 — remove both once
+  0151 is on production and dev.
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
