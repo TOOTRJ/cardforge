@@ -1,7 +1,7 @@
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { KeepPlanButton } from "@/components/billing/keep-plan-button";
 import { ResumePlanButton } from "@/components/billing/resume-plan-button";
-import { CARD_CAPACITY, SIGNUP_CREDITS, planForTier, privateDecksPhrase } from "@/lib/billing/plans";
+import { CARD_CAPACITY, SIGNUP_CREDITS, planForTier } from "@/lib/billing/plans";
 import { isEndingStatus, type PlanStatus } from "@/lib/billing/plan-status";
 import { formatMoney } from "@/lib/format/money";
 import { LocalDate } from "@/components/ui/local-date";
@@ -130,13 +130,13 @@ export function PlanStatusLine({
     case "ended":
       return (
         <>
-          {`Your previous plan has ended. You're on the free plan: every tool, up to ${CARD_CAPACITY.free} saved cards, unlimited public decks and ${privateDecksPhrase("free")}, and the credits you have left — Free doesn't refill; a pack tops you up any time and a plan refills every month. Every card and deck you made stays yours.`}
+          {`Your previous plan has ended. You're on the free plan: every tool, up to ${CARD_CAPACITY.free} saved cards, unlimited decks, and the credits you have left — Free doesn't refill; a pack tops you up any time and a plan refills every month. Every card and deck you made stays yours.`}
         </>
       );
     default:
       return (
         <>
-          {`Every tool is yours for free: all frames, the gallery, unlimited public decks and ${privateDecksPhrase("free")}, ${SIGNUP_CREDITS} AI credits to start and up to ${CARD_CAPACITY.free} saved cards. Free doesn't refill — a credit pack tops you up any time, and plans add monthly credits, clean hi-res downloads and more room.`}
+          {`Every tool is yours for free: all frames, the gallery, unlimited decks, ${SIGNUP_CREDITS} AI credits to start and up to ${CARD_CAPACITY.free} saved cards. Free doesn't refill — a credit pack tops you up any time, and plans add monthly credits, clean hi-res downloads and more room.`}
         </>
       );
   }

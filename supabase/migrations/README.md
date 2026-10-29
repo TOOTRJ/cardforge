@@ -320,3 +320,9 @@ instead. Each bullet: what the header says, and what is true now.
   dropped; a 3-argument call resolves to the new one). 0143's
   `import_deck_entries` is redefined by 0144 unchanged but for writing
   `source = 'import'` on the rows it adds.
+- **0145 (the private-deck cap: `deck_capacity_for(uuid)` and
+  `decks_enforce_capacity` hold Free to 1 and Plus to 3 private or unlisted
+  decks)** — dropped by 0147 (owner decision 2026-10-29: decks are unlimited
+  on every plan; paid conversion is saved-card capacity, 0104). The trigger,
+  `enforce_deck_capacity()` and the helper are gone; 0145 never changed a
+  row, so nothing was restored.
