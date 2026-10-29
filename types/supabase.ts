@@ -2027,6 +2027,27 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { format: string; deck_count: number }[];
       };
+      // Migration 0147 — the /creators directory and the public requested-
+      // frames list (public reads; aggregates only).
+      list_public_creators: {
+        Args: { p_sort?: string; p_limit?: number; p_offset?: number };
+        Returns: {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          public_cards: number;
+          public_decks: number;
+          likes: number;
+          last_card_at: string;
+          recent_card_ids: string[];
+          total: number;
+        }[];
+      };
+      requested_frame_counts: {
+        Args: { p_signatures: string[]; p_answered?: string[] };
+        Returns: { signature: string; people: number; latest_cause: string }[];
+      };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;

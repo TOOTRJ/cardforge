@@ -8,8 +8,14 @@
 -- NOTHING. Most rows have no user (no account made those imports, so they
 -- count 0 distinct users); a few are dev_* accounts from 10_dev_data.sql, so
 -- the page's order — distinct users first, then requests (D4) — shows: the
--- Japan showcase (2 users, 2 requests) outranks Sheoldred (0 users, 3). A
+-- Japan showcase (3 users, 3 requests) outranks Zilortha (1 user, 5). A
 -- row whose dev account is missing (this file run on its own) is skipped.
+--
+-- The public /frames/requested list (migration 0147, TODO NV12) counts the
+-- same rows by PEOPLE: only rows with an account, never an admin's — the
+-- Japan showcase reads "2 people" there although dev_admin logged it too
+-- (…0013, on purpose), and Zilortha and Oko have one dev_free row each so
+-- the list has a "Requested" frame with a gap to show.
 --
 -- Both groups (D1): cause 'missing' (the registry has no exact frame) and
 -- 'unverified' (its exact frame isn't verified in the card's colour: Heliod
@@ -54,9 +60,11 @@ from (values
   ('fa000000-0000-4000-a000-000000000002', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', null, 'import', now() - interval '6 days'),
   ('fa000000-0000-4000-a000-000000000003', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'deck_prefill', now() - interval '45 days'),
   ('fa000000-0000-4000-a000-00000000000c', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '1 day'),
+  ('fa000000-0000-4000-a000-000000000011', 'd0000000-0000-4000-a000-000000000003', 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '3 days'),
   -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33) in two
   -- colours, whose split frame is 4.6's
   ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
+  ('fa000000-0000-4000-a000-000000000012', 'd0000000-0000-4000-a000-000000000003', 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '11 days'),
   -- Plains ZNR #266: split-bar full-art basic (4.40) — Zendikar Rising's
   -- type line sits further right than the stone-ring frame (owner Round 64)
   ('fa000000-0000-4000-a000-000000000005', null, 'fullart/basic/split-bar+znr-type-line', 'Zendikar-style full-art basic land (split type bar)', 'znr', '266', '9591fd15-78d9-4089-a075-031ab2affd2d', 'nearest', 'missing', 'm15fullartland', 'frame-in-crop', 'import', now() - interval '9 days'),
@@ -68,6 +76,8 @@ from (values
   -- Overlord of the Floodpits DSK #389: Japan showcase, full art — two dev accounts
   ('fa000000-0000-4000-a000-000000000009', 'd0000000-0000-4000-a000-000000000002', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '15 days'),
   ('fa000000-0000-4000-a000-00000000000f', 'd0000000-0000-4000-a000-000000000004', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '10 days'),
+  -- …and dev_admin: counted on the admin page, never on the public list (0147)
+  ('fa000000-0000-4000-a000-000000000013', 'd0000000-0000-4000-a000-000000000001', 'japan-showcase', 'Japan showcase', 'dsk', '389', '3194a6f4-f994-494c-aa29-1de8af48a3f1', 'nearest', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '6 days'),
   -- A key no registry rule has (a renamed / removed rule): flagged on the page (D6)
   ('fa000000-0000-4000-a000-000000000010', null, 'retired/seed-example', 'Retired rule (seeded example)', null, null, null, 'nearest', 'missing', 'm15', null, 'import', now() - interval '25 days'),
   -- Not yet verified ----------------------------------------------------------
