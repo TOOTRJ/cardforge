@@ -168,7 +168,7 @@ describe("the deck actions never count decks or read the plan", () => {
     for (let i = 0; i < 10; i += 1) {
       const result = await createDeckAction(
         { title: `Deck ${i}`, visibility: i % 2 ? "unlisted" : "private" },
-        { surface: "wizard" },
+        { surface: "dialog" },
       );
       expect(result, `deck ${i}`).toMatchObject({ ok: true });
     }
@@ -177,7 +177,7 @@ describe("the deck actions never count decks or read the plan", () => {
     expect(s.entitlementReads).toBe(0);
     // The funnel keeps deck_created (and has no cap event to write).
     expect(s.events.map((e) => e.event)).toEqual(Array(10).fill("deck_created"));
-    expect(s.events[0].props).toMatchObject({ visibility: "private", format: "commander", surface: "wizard" });
+    expect(s.events[0].props).toMatchObject({ visibility: "private", format: "commander", surface: "dialog" });
   });
 
   it("a public deck turns private or unlisted without a count", async () => {

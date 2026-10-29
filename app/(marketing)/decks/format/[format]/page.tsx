@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
+import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { listPublicDecks } from "@/lib/decks/queries";
 import { FORMAT_HUB_MIN_DECKS, formatHubCopy, isDeckFormat, listFormatHubs } from "@/lib/cards/hubs";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
@@ -84,12 +85,9 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
         ))}
       </div>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
-        <Button asChild size="sm">
-          <Link href={`/dashboard/decks/new?format=${format}`}>
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Build a {copy.title.replace("Custom ", "").replace(" decks", "")} deck
-          </Link>
-        </Button>
+        <NewDeckButton format={format} size="sm">
+          Build a {copy.title.replace("Custom ", "").replace(" decks", "")} deck
+        </NewDeckButton>
         <Button asChild variant="ghost" size="sm">
           <Link href={`/decks/browse?format=${format}`}>
             Every deck in this format

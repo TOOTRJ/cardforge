@@ -59,7 +59,8 @@ type FormValues = {
 const FOCUSABLE_FIELDS = ["title", "format", "description"] as const;
 
 type DeckCreatorFormProps = {
-  /** Only "edit" exists: creation goes through the wizard (DeckWizard). */
+  /** Only "edit" exists: creation goes through the New deck dialog
+   *  (components/decks/new-deck-dialog.tsx). */
   mode: "edit";
   userId: string | null;
   deck?: Deck | null;
