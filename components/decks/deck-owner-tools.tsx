@@ -8,8 +8,11 @@
 //                    visibility, cover + focal point)
 //   Import         → the decklist import dialog (auto-opens with ?import=1)
 //   Add with AI    → "Coming soon" while deck AI is paused (TODO DK1,
-//   Remix with AI     lib/ai/deck-ai-pause.ts): greyed, no dialog, with the
-//                     one visible line that says why
+//   Restyle with AI   lib/ai/deck-ai-pause.ts): greyed, no dialog, with the
+//                     one visible line that says why. "Restyle" is the deck
+//                     remix (job kind `deck_remix`) in the UI's words since
+//                     TODO DK2.3 — "Remix" now means a card started from
+//                     another PipGlyph card
 //   Delete         → the existing confirm dialog
 //
 // Pencil icons elsewhere on the page open the same dialogs by dispatching
@@ -109,7 +112,7 @@ export function DeckOwnerTools({
           describedBy={PAUSED_NOTE_ID}
         />
         <DeckAiComingSoonButton
-          label="Remix with AI"
+          label="Restyle with AI"
           icon={<Wand2 className="h-4 w-4" aria-hidden />}
           describedBy={PAUSED_NOTE_ID}
         />
