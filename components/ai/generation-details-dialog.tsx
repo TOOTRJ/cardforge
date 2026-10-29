@@ -4,6 +4,11 @@
 // GenerationDetailsDialog — opened by clicking the floating progress widget.
 // Live counts, elapsed time, an estimate from the measured pace of finished
 // steps, the per-step list with Retry, and a link to the target.
+//
+// `retryPaused`: a deck job's failed steps can't be re-run while deck AI is
+// paused (TODO DK1, lib/ai/deck-ai-pause.ts — the step route refuses them).
+// The dialog then offers no Retry and promises none: it says ONCE, with the
+// deck pages' own line (DeckAiPausedNote), why. Card jobs never pass it.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
@@ -22,6 +27,10 @@ import type { GenerationJobPhase, GenerationJobStep } from "@/components/ai/use-
 import { cn } from "@/lib/utils";
 import { failedStepMessage } from "@/lib/ai/failure";
 import { GENERATED_PRIVATE_STEP_NOTE, generatedPrivateMessage } from "@/lib/moderation/profanity";
+import { DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
+
+/** The paused line's id (one dialog is mounted at a time). */
+const RETRY_PAUSED_NOTE_ID = "generation-retry-paused-note";
 
 export type GenerationStats = {
   /** When the run (or resume) began, ms epoch. */
@@ -67,6 +76,7 @@ export function GenerationDetailsDialog({
   targetLabel,
   onRetryStep,
   onRetryFailed,
+  retryPaused = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -78,6 +88,8 @@ export function GenerationDetailsDialog({
   targetLabel?: string;
   onRetryStep: (key: string) => void;
   onRetryFailed: () => void;
+  /** No Retry: the job is deck AI, paused (see the header). */
+  retryPaused?: boolean;
 }) {
   // A ticking clock for elapsed / remaining while the job runs.
   const [now, setNow] = useState(() => Date.now());
@@ -95,6 +107,10 @@ export function GenerationDetailsDialog({
   const busy = phase === "planning" || phase === "stepping";
   const elapsed = stats.startedAt ? now - stats.startedAt : 0;
   const eta = busy ? estimateRemainingMs(stats, remaining, now) : 0;
+  // Retry is offered once the run is over and something failed — unless the
+  // job is paused deck AI, where the one paused line takes its place.
+  const canRetry = !busy && failed > 0 && !retryPaused;
+  const showPausedNote = !busy && failed > 0 && retryPaused;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,9 +132,12 @@ export function GenerationDetailsDialog({
               : busy
                 ? "Each card is designed and painted in turn. Safe to keep browsing; it continues in the background."
                 : failed > 0
-                  ? "Finished with some failures — retry them below; nothing is generated twice."
+                  ? retryPaused
+                    ? "Finished with some failures."
+                    : "Finished with some failures — retry them below; nothing is generated twice."
                   : "All done."}
           </DialogDescription>
+          {showPausedNote ? <DeckAiPausedNote id={RETRY_PAUSED_NOTE_ID} className="text-sm" /> : null}
         </DialogHeader>
 
         <div className="grid gap-3 px-5 py-4 sm:grid-cols-4">
@@ -177,7 +196,7 @@ export function GenerationDetailsDialog({
                       {failedStepMessage(step)}
                     </span>
                   ) : null}
-                  {step.status === "failed" && !busy ? (
+                  {step.status === "failed" && canRetry ? (
                     <Button type="button" size="sm" variant="outline" onClick={() => onRetryStep(step.key)}>
                       <RotateCcw className="h-3 w-3" aria-hidden />
                       Retry
@@ -194,7 +213,7 @@ export function GenerationDetailsDialog({
             {busy ? "Closing this keeps the job running." : `${done} done · ${failed} failed`}
           </span>
           <div className="flex items-center gap-2">
-            {!busy && failed > 0 ? (
+            {canRetry ? (
               <Button type="button" variant="secondary" onClick={onRetryFailed}>
                 <RotateCcw className="h-4 w-4" aria-hidden />
                 Retry all failed

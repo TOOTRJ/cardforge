@@ -29,6 +29,7 @@ import type {
   GenerationJobStep,
 } from "@/components/ai/use-generation-job";
 import { describeCapacity, remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-copy";
+import { DECK_AI_PAUSED_CODE, DECK_AI_PAUSED_MESSAGE, isDeckAiRetryPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // GenerationJobProvider — the AI batch-job runner, lifted to the ROOT layout
@@ -40,6 +41,13 @@ import { describeCapacity, remainingCapacity, type CardCapacity } from "@/lib/bi
 //
 // Panels talk to this through useGenerationJob() (components/ai/
 // use-generation-job.ts) — same API the panels always had.
+//
+// While deck AI is paused (TODO DK1, lib/ai/deck-ai-pause.ts) a deck or
+// deck-restyle job's steps that are still open finish as before (D6), but
+// its FAILED steps can't be re-run — the step route refuses them. For those
+// jobs (`isDeckAiRetryPaused`) the runner offers no Retry, never promises
+// one in a toast or the widget, and the details say once why. Card jobs are
+// untouched.
 // ---------------------------------------------------------------------------
 
 type JobPayload = {
@@ -107,18 +115,20 @@ export function useGenerationContext(): GenerationContextValue {
 // 100-step job peaks around 16 calls/min on this pool.
 const STEP_CONCURRENCY = 3;
 
+// The `*_remix` kinds are "Restyle with AI" in the UI's words (TODO DK2.3);
+// the stored kinds stay.
 const KIND_LABELS: Record<JobPayload["kind"], string> = {
   deck: "Generating deck cards",
-  deck_remix: "Remixing deck",
+  deck_remix: "Restyling deck",
   card: "Forging your card",
-  card_remix: "Remixing your card",
+  card_remix: "Restyling your card",
   card_fill: "Generating card fields",
 };
 
 async function postStep(
   jobId: string,
   stepKey?: string,
-): Promise<{ job: JobPayload; inFlight: boolean } | { error: string }> {
+): Promise<{ job: JobPayload; inFlight: boolean } | { error: string; code?: string }> {
   try {
     // keepalive: a reload or navigation must not tear down the socket while
     // a card is mid-paint — a reset connection failed the step server-side
@@ -133,7 +143,10 @@ async function postStep(
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) {
-      return { error: payload?.error ?? "Generation step failed." };
+      return {
+        error: payload?.error ?? "Generation step failed.",
+        code: typeof payload?.code === "string" ? payload.code : undefined,
+      };
     }
     // Every step response carries the live post-spend/refund balance —
     // broadcast it so credit meters track the job in real time.
@@ -354,11 +367,17 @@ export function GenerationJobProvider({
           if (key === undefined) return;
           const result = await postStep(startJob.id, key);
           if ("error" in result) {
+            // A deck step that FAILED meanwhile (in another tab, while this
+            // worker polled it) is refused while deck AI is paused: it is
+            // done for now, not a blip to count or post again.
+            if (result.code === DECK_AI_PAUSED_CODE) continue;
             transportFailures += 1;
             if (transportFailures >= 3) {
               stopped = true;
               toast.error(
-                `${result.error} Generation paused — it resumes automatically next time you open the app, or use Retry.`,
+                isDeckAiRetryPaused(startJob.kind)
+                  ? `${result.error} Generation paused — it resumes automatically next time you open the app.`
+                  : `${result.error} Generation paused — it resumes automatically next time you open the app, or use Retry.`,
               );
               return;
             }
@@ -548,6 +567,10 @@ export function GenerationJobProvider({
   const retryStep = useCallback(
     async (stepKey: string): Promise<GenerationJobOutcome> => {
       if (!job || runningRef.current) return outcomeOf(steps, slug);
+      if (isDeckAiRetryPaused(job.kind)) {
+        toast.message(DECK_AI_PAUSED_MESSAGE);
+        return outcomeOf(steps, slug);
+      }
       const retrying = steps.filter((s) => s.key === stepKey);
       if (!(await ensureCapacityFor(retrying))) return outcomeOf(steps, slug);
       const stepCost = creditedStepCount(retrying);
@@ -595,6 +618,10 @@ export function GenerationJobProvider({
 
   const retryFailed = useCallback(async (): Promise<GenerationJobOutcome> => {
     if (!job || runningRef.current) return outcomeOf(steps, slug);
+    if (isDeckAiRetryPaused(job.kind)) {
+      toast.message(DECK_AI_PAUSED_MESSAGE);
+      return outcomeOf(steps, slug);
+    }
     const failedSteps = steps.filter((s) => s.status === "failed");
     if (!(await ensureCapacityFor(failedSteps))) return outcomeOf(steps, slug);
     const retryCost = creditedStepCount(failedSteps);
@@ -622,7 +649,7 @@ export function GenerationJobProvider({
   }, [job, steps, slug, stepUntilDone, confirmSpend, ensureCapacityFor]);
 
   const adoptJob = useCallback(
-    async (jobId: string, options: { includeFailed: boolean }): Promise<GenerationJobOutcome> => {
+    async (jobId: string, asked: { includeFailed: boolean }): Promise<GenerationJobOutcome> => {
       if (runningRef.current) {
         toast.error("Another generation is already running — let it finish first.");
         return { ok: false, successes: 0, failures: 0 };
@@ -638,6 +665,13 @@ export function GenerationJobProvider({
       if (!adopted) {
         toast.error("Couldn't load that generation.");
         return { ok: false, successes: 0, failures: 0 };
+      }
+      // A paused deck job's failed steps stay as they are; its open steps
+      // still run (D6).
+      const retryPaused = asked.includeFailed && isDeckAiRetryPaused(adopted.kind);
+      const options = retryPaused ? { includeFailed: false } : asked;
+      if (retryPaused && adopted.steps.some((s) => s.status === "failed")) {
+        toast.message(DECK_AI_PAUSED_MESSAGE);
       }
       if (openStepKeys(adopted.steps, options).length === 0) {
         setJob(adopted);
@@ -781,6 +815,9 @@ export function GenerationJobProvider({
     (phase === "planning" ||
       (job !== null && (busy || (phase === "done" && (failedCount > 0 || runningCount > 0)))));
   const widgetLabel = job ? KIND_LABELS[job.kind] : "Designing…";
+  // No Retry for a paused deck job (see the header): the widget and the
+  // details promise none.
+  const retryPaused = job !== null && isDeckAiRetryPaused(job.kind);
   const href = job ? targetHref(job, slug, doneCardId) : undefined;
   const targetLabel = job
     ? `Open ${job.kind === "card" || job.kind === "card_remix" ? "card" : "deck"}`
@@ -853,6 +890,10 @@ export function GenerationJobProvider({
                 <>The AI is designing the deck — painting starts in a moment.</>
               ) : busy ? (
                 <>Tap for stats and time left. Safe to keep browsing.</>
+              ) : failedCount > 0 && retryPaused ? (
+                <>
+                  {failedCount} step{failedCount === 1 ? "" : "s"} failed — tap for details.
+                </>
               ) : failedCount > 0 ? (
                 <>
                   {failedCount} step{failedCount === 1 ? "" : "s"} failed
@@ -891,6 +932,7 @@ export function GenerationJobProvider({
         targetLabel={targetLabel}
         onRetryStep={(key) => void retryStep(key)}
         onRetryFailed={() => void retryFailed()}
+        retryPaused={retryPaused}
       />
     </GenerationContext.Provider>
   );
