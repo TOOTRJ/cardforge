@@ -179,7 +179,7 @@ export default async function CreatePage({
         eyebrow={remixParent ? "Remix" : "Creator"}
         title={
           deckRemix
-            ? `Create a custom proxy of “${deckRemix.entryName}”`
+            ? `Customize “${deckRemix.entryName}”`
             : remixParent
               ? `Remix “${remixParent.title}”`
               : "Forge a new card"

@@ -12,32 +12,37 @@ import {
 
 // ---------------------------------------------------------------------------
 // CardGlossary — the shared "what do these words mean?" key. One source of
-// truth for the site's card-provenance vocabulary:
+// truth for the site's card-origin vocabulary (owner 2026-10-28, TODO DK2):
 //
-//   Remix        — any card altered from another card on the site, whether
-//                  that source was pulled from Scryfall or made by another
-//                  PipGlyph creator.
-//   Proxy        — an exact stand-in for a real MTG card (imported from
-//                  Scryfall and left unchanged). Tagged `proxy` automatically.
-//   Custom proxy — a real card you altered in any way: your art, your
-//                  wording, your frame — your version of the real thing.
+//   Proxy    — any card made on PipGlyph, including one started from a real
+//              card. The umbrella word (and the one people print).
+//   Import   — a card started from a real card through Scryfall.
+//   Remix    — a new card started from another PipGlyph card, anyone's.
+//   Original — a card made from scratch.
+//
+// "Custom proxy" is retired: every card made here is a proxy. Nothing tags a
+// card by these words — they describe where it started.
 // ---------------------------------------------------------------------------
 
-const GLOSSARY_TERMS = [
-  {
-    term: "Remix",
-    definition:
-      "Any card altered from another card on the site — a Scryfall import you changed, or your take on another creator's custom card.",
-  },
+export const GLOSSARY_TERMS = [
   {
     term: "Proxy",
     definition:
-      "An exact stand-in for a real MTG card, imported from Scryfall and left as-is. These are tagged “proxy” automatically.",
+      "Any card made on PipGlyph. A card you start from a real Magic card is a proxy too, and any proxy can be printed for your table.",
   },
   {
-    term: "Custom proxy",
+    term: "Import",
     definition:
-      "A real card you altered in any way — new art, new wording, new frame. Your version of the real thing, and what deck printing uses.",
+      "A card started from a real card, pulled in from Scryfall. Change its art, words or frame and it becomes your version.",
+  },
+  {
+    term: "Remix",
+    definition:
+      "A new card started from another card made on PipGlyph, whether someone else's or one of yours. The card it came from keeps its credit.",
+  },
+  {
+    term: "Original",
+    definition: "A card made from scratch.",
   },
 ] as const;
 
@@ -47,7 +52,7 @@ type CardGlossaryProps = {
 };
 
 export function CardGlossary({
-  triggerLabel = "Remix vs. proxy?",
+  triggerLabel = "Proxy, import or remix?",
 }: CardGlossaryProps) {
   return (
     <Dialog>
@@ -62,9 +67,9 @@ export function CardGlossary({
       </DialogTrigger>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Remix, proxy, custom proxy</DialogTitle>
+          <DialogTitle>Proxy, import, remix, original</DialogTitle>
           <DialogDescription>
-            How PipGlyph talks about cards that start from other cards.
+            The words PipGlyph uses for where a card starts.
           </DialogDescription>
         </DialogHeader>
         <dl className="flex flex-col gap-4">

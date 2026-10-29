@@ -412,7 +412,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Cards"
           title={`${analytics.total} card${analytics.total === 1 ? "" : "s"}`}
-          description="Click any card for details — remix originals into custom proxies, flip between versions, and track what's left."
+          description="Click any card for details — customize the real cards, flip between versions, and track what's left."
           actions={exportMenu}
         />
 

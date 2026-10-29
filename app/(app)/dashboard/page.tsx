@@ -300,7 +300,7 @@ async function DashboardStats() {
     {
       label: "Decks",
       value: String(myDecks.length),
-      helper: "Decks built from real cards + proxies",
+      helper: "Decks of real cards and your own",
       tone: "purple" as const,
       icon: <BookOpen aria-hidden />,
       href: "/dashboard/decks",
