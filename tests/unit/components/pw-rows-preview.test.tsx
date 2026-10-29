@@ -5,9 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine, parseLoyaltyAbilities } from "@/lib/cards/card-display";
 import {
-  LOYALTY_ROW,
-  LOYALTY_ROW_SIZE_PX,
   layoutProfileLoyaltyRows,
+  loyaltyBadgesDrawing,
   loyaltyRowPx,
   loyaltyRowsDrawing,
 } from "@/lib/cards/loyalty-rows";
@@ -67,13 +66,12 @@ describe("CardPreview — m15pw ability rows", () => {
       // The badge stays centred on its own row.
       expect(row.style.alignItems).toBe("center");
     });
-    // (happy-dom drops `cqw` lengths: the text size and the badge's 1.5 em
-    // box — the LOYALTY_ROW constant both renderers read — are pinned on the
-    // server markup below.)
-    expect(LOYALTY_ROW.badgeHeightEm).toBe(1.5);
+    // (happy-dom drops `cqw` lengths: the text size and the badges — what
+    // loyaltyBadgesDrawing gives both renderers — are pinned on the server
+    // markup below.)
   });
 
-  it("sets the rows' text at the layout's size, with the 1.5 em badge box — the HD bake's px (server markup keeps cqw)", () => {
+  it("sets the rows' text at the layout's size, and each badge where print draws it — the HD bake's px (server markup keeps cqw)", () => {
     const html = renderToStaticMarkup(
       <CardPreview
         title="Probe"
@@ -87,15 +85,23 @@ describe("CardPreview — m15pw ability rows", () => {
     );
     const rows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(WALKER_115), 7 / 5);
     const a = loyaltyRowPx();
-    // The badge keeps the anatomy's one size, whatever the text's.
-    expect(a.badgeHeight).toBe(Math.round(LOYALTY_ROW_SIZE_PX * LOYALTY_ROW.badgeHeightEm));
-    // The row's badge box: the first div inside the first stripe row.
+    // The row's rail: the first div inside the first stripe row — the text
+    // column starts where it ends (layout v75: the badge is drawn apart).
     const firstRow = html.indexOf(`background:${P.loyaltyRows!.stripeAHex}`);
     expect(firstRow).toBeGreaterThan(0);
     const rowTag = html.indexOf("<div", firstRow);
-    const badge = html.slice(rowTag, html.indexOf(">", rowTag));
-    expect(badge).toContain(`width:${hd(a.badgeWidth)}`);
-    expect(badge).toContain(`height:${hd(a.badgeHeight)}`);
+    const rail = html.slice(rowTag, html.indexOf(">", rowTag));
+    expect(rail).toContain(`width:${hd(a.rail - a.padX)}`);
+    // Each badge at the HD bake's px: its art, its numeral (the long minus)
+    // and its colon's two dots.
+    const badges = loyaltyBadgesDrawing(rows, parseLoyaltyAbilities(WALKER_115), "hd");
+    expect(badges).toHaveLength(3);
+    for (const b of badges) {
+      expect(html).toContain(`left:${hd(b.art.left)};top:${hd(b.art.top)};width:${hd(b.art.width)};height:${hd(b.art.height)}`);
+      expect(html).toContain(`left:${hd(b.numeral.left)};top:${hd(b.numeral.top)};width:${hd(b.numeral.width)};height:${hd(b.numeral.fontPx)}`);
+      for (const dot of b.colon) expect(html).toContain(`left:${hd(dot.left)};top:${hd(dot.top)};width:${hd(dot.size)};height:${hd(dot.size)}`);
+    }
+    expect(badges.map((b) => b.label)).toEqual(["+1", "\u22122", "\u22128"]);
     // Each ability's lines at the HD bake's size (RulesLines' box).
     expect(html).toContain(`font-size:${hd(rows.sizePx)}`);
   });

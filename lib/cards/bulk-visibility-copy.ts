@@ -41,3 +41,25 @@ export function allFramePreviewsMessage(visibility: Visibility, previews: number
     ? `${nothing}: the selected card is a frame preview, and frame previews stay private.`
     : `${nothing}: all ${previews} selected cards are frame previews, and frame previews stay private.`;
 }
+
+/** The cards a publish / unlist left as they were because their text holds
+ *  strong language (owner policy 2026-10-28, lib/moderation/profanity.ts),
+ *  as a sentence the toast adds — "" when there were none. */
+export function strongLanguageSkippedLine(skipped: number | undefined): string {
+  if (!skipped || skipped <= 0) return "";
+  return skipped === 1
+    ? "1 card stayed as it was: its text includes strong language. Remove it to publish."
+    : `${skipped} cards stayed as they were: their text includes strong language. Remove it to publish.`;
+}
+
+/** Every selected card is held back — by its text, or as a frame preview. */
+export function allStrongLanguageMessage(visibility: Visibility, strongLanguage: number, previews: number): string {
+  const nothing =
+    visibility === "public" ? "Nothing was published" : `Nothing was made ${visibility}`;
+  const text =
+    strongLanguage === 1 && previews === 0
+      ? "the selected card's text includes strong language"
+      : `${cards(strongLanguage)} ${plural(strongLanguage, "has", "have")} strong language in ${plural(strongLanguage, "its", "their")} text`;
+  const rest = previews > 0 ? `, and ${previews} ${plural(previews, "is a frame preview", "are frame previews")}` : "";
+  return `${nothing}: ${text}${rest}. Remove the strong language to publish.`;
+}

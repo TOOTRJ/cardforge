@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   allFramePreviewsMessage,
+  allStrongLanguageMessage,
   bulkVisibilityMessage,
+  strongLanguageSkippedLine,
 } from "@/lib/cards/bulk-visibility-copy";
 
 // ---------------------------------------------------------------------------
@@ -39,5 +41,25 @@ describe("allFramePreviewsMessage", () => {
       "Nothing was published: the selected card is a frame preview, and frame previews stay private.",
     );
     expect(allFramePreviewsMessage("unlisted", 3)).toMatch(/^Nothing was made unlisted: all 3/);
+  });
+});
+
+// Owner policy 2026-10-28: a card whose text holds strong language is never
+// published / unlisted from My Cards — the toast and the refusal say so.
+describe("strong language in the batch", () => {
+  it("adds one sentence for the cards left as they were, none when there were none", () => {
+    expect(strongLanguageSkippedLine(undefined)).toBe("");
+    expect(strongLanguageSkippedLine(0)).toBe("");
+    expect(strongLanguageSkippedLine(1)).toBe("1 card stayed as it was: its text includes strong language. Remove it to publish.");
+    expect(strongLanguageSkippedLine(3)).toBe("3 cards stayed as they were: their text includes strong language. Remove it to publish.");
+  });
+
+  it("says why nothing changed", () => {
+    expect(allStrongLanguageMessage("public", 1, 0)).toBe(
+      "Nothing was published: the selected card's text includes strong language. Remove the strong language to publish.",
+    );
+    expect(allStrongLanguageMessage("unlisted", 2, 1)).toBe(
+      "Nothing was made unlisted: 2 cards have strong language in their text, and 1 is a frame preview. Remove the strong language to publish.",
+    );
   });
 });

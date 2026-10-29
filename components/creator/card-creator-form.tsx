@@ -384,6 +384,8 @@ import {
   UndrawableSymbolNotice,
 } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
+import { creatorLanguageFields, strongLanguageChoices } from "@/lib/creator/strong-language";
+import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
 import {
   isFramePreviewSave,
   withPreviewFramesParam,
@@ -1314,6 +1316,16 @@ export function CardCreatorForm({
         });
   const previewSave = previewSaveFor(watched);
   const savesAsDraft = watched.save_as_draft || previewSave;
+  // Strong language in the card's text (owner policy 2026-10-28): the save
+  // goes PRIVATE, whatever the Publish step says — the same detector and
+  // rule as the server (lib/creator/strong-language.ts). The footer counts
+  // as the row will hold it: a subscriber's new card sends it as typed, an
+  // edit only when it changed.
+  const languageContextFor = (values: Pick<FormValues, "footer_text">) => ({
+    stored: isEdit && card ? card : null,
+    footerStored: isEdit ? values.footer_text.trim() !== footerBaseline.text : isPaid,
+  });
+  const languageChoices = strongLanguageChoices(watched, languageContextFor(watched));
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -3771,8 +3783,11 @@ export function CardCreatorForm({
     // No artwork → no gallery (server-enforced in create/updateCardAction).
     // The Save button already refuses a public save without art, so this
     // is only a belt-and-braces mirror of the server rule.
+    // …and strong language in the text makes it private too (the Publish
+    // step says so; the server applies the same rule).
+    const languageFields = creatorLanguageFields(values, chosenVisibility, languageContextFor(values));
     const finalVisibility =
-      chosenVisibility === "public" && !values.art_url.trim()
+      languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
         ? "private"
         : chosenVisibility;
 
@@ -4172,14 +4187,20 @@ export function CardCreatorForm({
           handleUpgradeOrError(result);
           return;
         }
+        // Kept private for the strong language in its text — by this form
+        // (the note on the Publish step) or by the server: ONE toast says so.
+        const languageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
+        const savedVisibility = result.forcedPrivate ? "private" : finalVisibility;
         toast.success(
           previewSaveNow
             ? `Saved “${payload.title}” as a frame preview (private).`
-            : finalVisibility === "public"
-              ? `Published “${payload.title}”`
-              : finalVisibility === "private"
-                ? `Saved “${payload.title}” as a draft`
-                : `Saved “${payload.title}”`,
+            : languageNotice
+              ? strongLanguageSavedMessage(payload.title, languageNotice)
+              : savedVisibility === "public"
+                ? `Published “${payload.title}”`
+                : savedVisibility === "private"
+                  ? `Saved “${payload.title}” as a draft`
+                  : `Saved “${payload.title}”`,
         );
         // Every create leaves this page: stop guarding and take the Back
         // sentinel off first, so Back from the saved card doesn't land on a
@@ -4224,7 +4245,7 @@ export function CardCreatorForm({
           return;
         }
 
-        if (intent === "save" && finalVisibility === "public") {
+        if (intent === "save" && savedVisibility === "public") {
           // A published card's moment of glory: offer the share while the
           // pride is fresh, then land on its public page when the dialog
           // closes. (Without a username we can't build the canonical share
@@ -4273,7 +4294,11 @@ export function CardCreatorForm({
         handleUpgradeOrError(result);
         return;
       }
-      toast.success("Changes saved.");
+      // Kept private for the strong language in its text (the Publish
+      // step's note, or the server): ONE toast says so.
+      const editLanguageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
+      const editSavedVisibility = result.forcedPrivate ? "private" : finalVisibility;
+      toast.success(editLanguageNotice ? strongLanguageSavedMessage(payload.title, editLanguageNotice) : "Changes saved.");
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
       // …and its nickname (TODO 6.3), when this save sent one.
@@ -4319,13 +4344,13 @@ export function CardCreatorForm({
       // with unsent keystrokes, which keep their guard.
       const staysInEditor =
         !options.afterSave &&
-        !(intent === "save" && finalVisibility === "public");
+        !(intent === "save" && editSavedVisibility === "public");
       if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
         return;
       }
-      if (intent === "save" && finalVisibility === "public") {
+      if (intent === "save" && editSavedVisibility === "public") {
         // Only a FIRST publish (private draft → public) earns the share
         // prompt — re-saving an already-public card goes straight to the
         // page, no nagging.
@@ -5205,6 +5230,7 @@ export function CardCreatorForm({
                 myDecks={isRevise ? null : myDecks}
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
+                strongLanguage={languageChoices}
               />
             ) : null}
       </div>

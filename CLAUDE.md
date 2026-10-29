@@ -115,6 +115,26 @@ Rules and gotchas:
   `safeParse` and return typed field errors. URL fields must be
   https-gated (`HTTPS_URL_BASE` / `isSafeImageUrl`) — bare `z.url()`
   accepts `javascript:` schemes.
+- Strong language (owner policy 2026-10-28): violence and mild words
+  ("damn", "hell") are fine; a card whose TEXT holds strong profanity or a
+  slur is saved PRIVATE, never refused, and its maker is told why. ONE
+  detector, `lib/moderation/profanity.ts` (`containsProfanity`,
+  `profaneFields` over every text field of both faces, rows, tags and the
+  stats / collector line; per-word (plus prefix stems no English word
+  starts with), so "Cockatrice" / "Scunthorpe" pass; a match needs a real
+  letter, so "600k" does not; the list ROT13'd — the repo is public) and
+  ONE rule, `languageForcesPrivate`, applied in BOTH
+  card actions on the row as written (every save path: creator, AI jobs,
+  deck remix, imports) with a typed `forcedPrivate` notice, in My Cards'
+  bulk publish (left as it was, `skippedLanguage`) and by the creator
+  (`lib/creator/strong-language.ts`: the Publish step's one polite note,
+  Public / Unlisted aria-disabled, the save sends private, one toast). An
+  edit of a card already in view is left alone only while every flagged
+  field's text is UNCHANGED (its normalised words) and it widens nothing
+  (no retroactive change); a forced edit leaves view through the existing
+  private path (purge + private bake), never a second hide. A public deck
+  shows such a card's entry as "Private card" to everyone but its owner
+  (`lib/decks/private-card-name.ts`). The database trigger is TODO 7.17.
 - Auth: `profiles.username` is NOT NULL + unique (0094) — the signup trigger
   mints a generated handle (`ember_sphinx_4821`) when none/invalid/taken is
   supplied and NEVER derives one from the email. Reserved handles live in
@@ -1453,8 +1473,16 @@ Rules and gotchas:
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
   missing key returns a clear error, never a silent gpt-image-1 fallback.
+  Text-to-image is HEDGED by ONE backup gateway model (owner 2026-10-28:
+  `bfl/flux-2-pro`, started at 60 s or on the default's failure, once per
+  picture, inside the caller's budget — `generatePlainImage`); one credit per
+  picture whichever model paints, `image_model` on the step. Every art prompt
+  carries the "fully clothed" line (added at that one door), and violence is
+  allowed in art — the ladder softens nudity / sexual words only.
   `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
-  uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
+  uploads, and on every AI picture's BYTES before it is stored, with the
+  SEXUAL categories alone and one 10 s cap, no retries — `persistGeneratedArt`:
+  flagged → never stored, `art_blocked`, refunded once; fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
   reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
   `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in

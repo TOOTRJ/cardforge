@@ -392,8 +392,9 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       const fill = svg.querySelector("mask rect")?.getAttribute("fill");
       expect(norm(fill)).toBe(norm(i % 2 === 0 ? p.loyaltyRows!.stripeAHex : p.loyaltyRows!.stripeBHex));
       expect(norm(row.style.background)).toBe(norm(fill));
-      // Stacking: the sheen is the row's first child; the badge and the text
-      // after it are positioned, so they paint over it (the bake's order).
+      // Stacking: the sheen is the row's first child; the text after it is
+      // positioned, so it paints over it (the bake's order) — and the badges
+      // are a layer of their own after the rows (layout v75).
       expect(row.style.position).toBe("relative");
       expect(row.firstElementChild).toBe(svg);
       // It fills the whole row (padding included), stretched to it.
@@ -401,8 +402,8 @@ describe("foil finish — planeswalker ability stripes in the preview", () => {
       expect(svg.getAttribute("height")).toBe("100%");
       expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
       expect([svg.style.position, svg.style.top, svg.style.left]).toEqual(["absolute", "0px", "0px"]);
-      const [, badge, text] = Array.from(row.children) as HTMLElement[];
-      expect(badge.style.position).toBe("relative");
+      const [, rail, text] = Array.from(row.children) as HTMLElement[];
+      expect(rail.children).toHaveLength(0);
       expect(text.style.position).toBe("relative");
       // (RulesLines sets words as spans: compare without whitespace.)
       expect(norm(text.textContent)).toContain(norm(PW_LINES[i]));
@@ -476,7 +477,8 @@ describe("foil stripes — one component, both renderers", () => {
       expect(rows, file).toContain("fill={stripe(i)}");
       const sheen = rows.indexOf("<FoilStripeSheen");
       expect(sheen, file).toBeGreaterThan(rows.indexOf("background: stripe(i),"));
-      expect(sheen, file).toBeLessThan(rows.indexOf("loyaltyBadgeAssetFor(ab.cost)"));
+      // …and the badges are drawn after the rows (layout v75).
+      expect(sheen, file).toBeLessThan(rows.indexOf("loyaltyBadgeAssetFor(abilities[b.row].cost"));
     }
   });
 

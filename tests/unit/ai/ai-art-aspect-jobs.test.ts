@@ -35,6 +35,8 @@ const s = vi.hoisted(() => ({
   /** create / image, in the order they ran. */
   order: [] as string[],
   shapes: [] as unknown[],
+  /** Each image call's options (its wait). */
+  imageOptions: [] as unknown[],
   fillAnswer: null as unknown,
   printing: null as unknown,
 }));
@@ -92,9 +94,10 @@ vi.mock("@/lib/scryfall/client", async (importOriginal) => ({
   getCardById: async () => s.printing,
 }));
 vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
-  const image = async (_prompt: unknown, shape: unknown) => {
+  const image = async (_prompt: unknown, shape: unknown, options?: unknown) => {
     s.order.push("image");
     s.shapes.push(shape);
+    s.imageOptions.push(options);
     return { ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/jpeg", promptIndex: 0 };
   };
   return {
@@ -120,6 +123,7 @@ vi.mock("@/lib/cards/actions", () => ({
 }));
 
 import { createCardFillJob, runNextJobStep } from "@/lib/ai/generation-jobs";
+import { CARD_STEP_IMAGE_BUDGET_MS } from "@/lib/ai/image-gen";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 
 const EVERY = FRAME_TEMPLATE_VALUES.flatMap((template) =>
@@ -170,6 +174,7 @@ beforeEach(() => {
   s.created = [];
   s.order = [];
   s.shapes = [];
+  s.imageOptions = [];
   s.fillAnswer = null;
   s.printing = null;
   vi.restoreAllMocks();
@@ -183,6 +188,12 @@ describe("the single-card job paints for plan.frame_template", () => {
     expect(s.shapes).toHaveLength(1);
     expect(size(s.shapes[0])).toBe(sizeOf(frame));
     expect(s.order).toEqual(["create", "image"]);
+  });
+
+  it("the picture waits the card step's budget: the card is created, attached and baked in the same 180 s", async () => {
+    job("card", { card: designed(), style: null, frame_template: "m15", deck_id: null }, "card:0");
+    await run();
+    expect(s.imageOptions[0]).toEqual({ budgetMs: CARD_STEP_IMAGE_BUDGET_MS });
   });
 
   it("a colourless card on M15 paints for the see-through master's window", async () => {
