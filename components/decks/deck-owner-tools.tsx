@@ -70,10 +70,14 @@ export function DeckToolButton({
 export function DeckOwnerTools({
   deck,
   userId,
+  defaultCoverSrc = null,
   openImport = false,
 }: {
   deck: Deck;
   userId: string;
+  /** The default background the deck shows while it has no upload
+   *  (deckCoverOf) — the cover field previews it. */
+  defaultCoverSrc?: string | null;
   // The deck AI's inputs (the AI panel's, before the pause). Still passed by
   // the deck page and unread while deck AI is paused (TODO DK1).
   aiConfigured: boolean;
@@ -127,7 +131,7 @@ export function DeckOwnerTools({
             <DialogDescription>Name, description, format, visibility and cover.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <DeckCreatorForm mode="edit" userId={userId} deck={deck} embedded onSaved={() => setOpen(null)} />
+            <DeckCreatorForm mode="edit" userId={userId} deck={deck} defaultCoverSrc={defaultCoverSrc} embedded onSaved={() => setOpen(null)} />
           </div>
         </DialogContent>
       </Dialog>

@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Controller, useForm, useWatch, type SubmitHandler } from "react-hook-form";
 import {
   ArrowLeft,
@@ -20,6 +21,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { updateDeckAction } from "@/lib/decks/actions";
 import { slugify } from "@/lib/validation/card";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
+import { DECK_COVER_HEIGHT, DECK_COVER_WIDTH } from "@/lib/decks/cover";
 import { cn } from "@/lib/utils";
 import {
   DECK_FORMAT_LABELS,
@@ -54,6 +56,9 @@ type DeckCreatorFormProps = {
   mode: "edit";
   userId: string | null;
   deck?: Deck | null;
+  /** The default background the deck shows without an upload
+   *  (lib/decks/cover.ts deckCoverOf), previewed in the cover field. */
+  defaultCoverSrc?: string | null;
   /** Inside a dialog on the deck page: no card chrome, no "All decks" link,
    *  and a successful save calls `onSaved` instead of navigating. */
   embedded?: boolean;
@@ -103,6 +108,7 @@ function defaultValuesFor(deck: Deck | null | undefined): FormValues {
 }
 
 export function DeckCreatorForm({ mode, userId, deck,
+  defaultCoverSrc = null,
   embedded = false,
   onSaved }: DeckCreatorFormProps) {
   const router = useRouter();
@@ -284,6 +290,7 @@ export function DeckCreatorForm({ mode, userId, deck,
             <CoverField
               userId={userId}
               value={field.value}
+              defaultCoverSrc={defaultCoverSrc}
               onChange={(next) => {
                 field.onChange(next);
                 setValue("cover_url", next, { shouldDirty: true });
@@ -350,6 +357,7 @@ export function DeckCreatorForm({ mode, userId, deck,
 export function CoverField({
   userId,
   value,
+  defaultCoverSrc = null,
   onChange,
   position,
   onPositionChange,
@@ -357,6 +365,9 @@ export function CoverField({
 }: {
   userId: string | null;
   value: string;
+  /** Shown (never stored) while there is no upload: the default background
+   *  the deck's colours pick (lib/decks/cover.ts). */
+  defaultCoverSrc?: string | null;
   onChange: (next: string) => void;
   position: DeckCoverPosition | null;
   onPositionChange: (next: DeckCoverPosition) => void;
@@ -379,7 +390,7 @@ export function CoverField({
     }
     setUploading(true);
     try {
-      const result = await uploadCoverImage(userId, file);
+      const result = await uploadCoverImage(userId, file, { purpose: "deck-cover" });
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -434,7 +445,7 @@ export function CoverField({
             ref={previewRef}
             role="application"
             aria-label="Cover preview — drag to reposition"
-            className="relative aspect-[5/2] w-full cursor-grab touch-none overflow-hidden rounded-lg border border-border/60 bg-elevated active:cursor-grabbing"
+            className="relative aspect-video w-full cursor-grab touch-none overflow-hidden rounded-lg border border-border/60 bg-elevated active:cursor-grabbing"
             onPointerDown={(event) => {
               draggingRef.current = true;
               event.currentTarget.setPointerCapture(event.pointerId);
@@ -447,12 +458,14 @@ export function CoverField({
               draggingRef.current = false;
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* The real 16:9 box every deck surface draws (lib/decks/cover.ts). */}
+            <Image
               src={value}
               alt="Deck cover preview"
+              fill
+              sizes="(min-width: 768px) 640px, 100vw"
               draggable={false}
-              className="pointer-events-none h-full w-full select-none object-cover"
+              className="pointer-events-none select-none object-cover"
               style={{
                 objectPosition: coverObjectPosition(position) ?? "50% 50%",
               }}
@@ -488,6 +501,21 @@ export function CoverField({
           </div>
         </>
       ) : (
+        <div className="flex flex-col gap-2">
+        {defaultCoverSrc ? (
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/60 bg-elevated">
+            <Image
+              src={defaultCoverSrc}
+              alt="The deck's default background"
+              fill
+              sizes="(min-width: 768px) 640px, 100vw"
+              className="object-cover"
+            />
+            <span className="absolute bottom-2 left-2 rounded-full bg-background/75 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted backdrop-blur">
+              Default background · picked by the deck&apos;s colours
+            </span>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -504,7 +532,8 @@ export function CoverField({
           }}
           disabled={uploading || !userId}
           className={cn(
-            "flex aspect-[5/2] w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-sm transition-colors",
+            "flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-sm transition-colors",
+            defaultCoverSrc ? "py-5" : "aspect-video",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
             dragOver
               ? "border-primary bg-primary/10 text-foreground"
@@ -517,12 +546,17 @@ export function CoverField({
             <ImagePlus className="h-6 w-6" aria-hidden />
           )}
           <span className="font-medium">
-            {uploading ? "Uploading…" : "Drag a cover here, or click to choose"}
+            {uploading
+              ? "Uploading…"
+              : defaultCoverSrc
+                ? "Use your own picture — drag it here, or click to choose"
+                : "Drag a cover here, or click to choose"}
           </span>
           <span className="text-[11px] text-subtle">
-            Best results: 1600 × 640 px or larger — shown as a wide banner
+            {`Shown at 16:9 and stored at ${DECK_COVER_WIDTH} × ${DECK_COVER_HEIGHT} px — a picture of another shape is cropped to fit`}
           </span>
         </button>
+        </div>
       )}
       {error ? <span className="text-xs text-danger">{error}</span> : null}
     </div>

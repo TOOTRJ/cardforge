@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
+import { normalizeDeckCover } from "@/lib/decks/cover-normalize";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import {
   checkUploadRateLimit,
@@ -85,11 +86,28 @@ export async function uploadCoverServerAction(
     return { ok: false, error: "That doesn't look like an image." };
   }
 
-  const name = `${crypto.randomUUID()}.${EXTENSION_BY_FORMAT[format]}`;
+  // A DECK cover is stored as the cover standard (TODO DK6.5): 1600×900
+  // WebP, centre-cropped to 16:9 — the box every deck surface draws — from
+  // the upright, metadata-free bytes above (sharp writes no metadata of its
+  // own). A card's set icon keeps its own shape and format.
+  let extension = EXTENSION_BY_FORMAT[format];
+  let contentType = CONTENT_TYPE_BY_FORMAT[format];
+  if (formData.get("purpose") === "deck-cover") {
+    try {
+      const normalized = await normalizeDeckCover(stored);
+      stored = Buffer.from(normalized.bytes);
+      extension = "webp";
+      contentType = normalized.contentType;
+    } catch {
+      return { ok: false, error: "That doesn't look like an image." };
+    }
+  }
+
+  const name = `${crypto.randomUUID()}.${extension}`;
   const covers = userFolder("set-covers", user.id);
   const { error } = await covers.upload(name, stored, {
     cacheControl: "3600",
-    contentType: CONTENT_TYPE_BY_FORMAT[format],
+    contentType,
     upsert: false,
   });
   if (error) return { ok: false, error: error.message };

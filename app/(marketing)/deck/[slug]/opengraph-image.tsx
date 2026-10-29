@@ -6,46 +6,81 @@ import {
   fetchImageAsDataUri,
   OG_SIZE,
   OgBody,
-  OgCoverHero,
+  OgDeckHero,
   OgEyebrow,
   OgShell,
   OgTitle,
-  ogExcerpt,
 } from "@/lib/og/shell";
 import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
-import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
+import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
 
-// Social-preview card for deck pages (the set version is its twin). An
-// uploaded cover is embedded full-bleed — pre-fetched to a data URI so a dead
-// storage URL degrades to the branded fallback instead of failing the render.
+// Social-preview card for deck pages (TODO DK6.6): the deck page's hero,
+// flat — the cover (an upload, or the default background its colours pick,
+// lib/decks/cover.ts) with up to five of its PipGlyph cards fanned in front
+// (lib/decks/featured.ts: commanders first, then a seeded pick of its custom
+// cards). Every picture is pre-fetched to a data URI, so a dead URL drops
+// that one picture, never the render.
+//
+// The fan here is the deck's OWN cards only — their stored bake thumbs,
+// which carry the pipglyph.com mark like every display surface. A real
+// printing's scan is drawn on the deck page (Scryfall's image, linked) but
+// never baked into a PipGlyph share image.
 
 export const alt = "A custom card deck on PipGlyph";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
+type OgCard = FeaturableCard & { color_identity: string[] | null };
+
 type OgDeck = {
+  id: string;
   title: string;
-  description: string | null;
   cover_url: string | null;
+  cover_position: unknown;
   format: string;
   owner_id: string;
 };
 
+type OgEntry = {
+  id: string;
+  board: string;
+  name: string;
+  position: number;
+  card_id: string | null;
+  scryfall_id: string | null;
+  image_url: string | null;
+  type_line: string | null;
+  color_identity: string[];
+  card: OgCard | null;
+};
+
 async function getDeck(
   slug: string,
-): Promise<{ deck: OgDeck; username: string | null } | null> {
+): Promise<{ deck: OgDeck; entries: OgEntry[]; username: string | null } | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = createPublicClient();
     // Anonymous RLS only surfaces public/unlisted rows, so a private deck
-    // falls through to the generic branded card — nothing leaks.
+    // falls through to the generic branded card — nothing leaks — and so
+    // does every private card in a public deck (its embed is null).
     const { data: deck } = await supabase
       .from("decks")
-      .select("title, description, cover_url, format, owner_id")
+      .select("id, title, cover_url, cover_position, format, owner_id")
       .eq("slug", slug)
       .maybeSingle();
     if (!deck) return null;
-    return { deck, username: await lookupUsername(supabase, deck.owner_id) };
+    const [{ data: entries }, username] = await Promise.all([
+      supabase
+        .from("deck_cards")
+        .select(
+          "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity)",
+        )
+        .eq("deck_id", deck.id)
+        .order("position", { ascending: true }),
+      lookupUsername(supabase, deck.owner_id),
+    ]);
+    return { deck, entries: (entries ?? []) as unknown as OgEntry[], username };
   } catch {
     return null;
   }
@@ -72,37 +107,32 @@ export default async function Image({
     );
   }
 
-  const { deck, username } = result;
-  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
-  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
-  const cover = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
+  const { deck, entries, username } = result;
+  const items = entries.map(({ card, ...entry }) => ({ entry, card }));
+  const cover = deckCoverOf(deck, deckCoverColors(items));
+  const customs = featuredCardsOf(items, deck.id).filter((featured) => featured.kind === "custom");
+  const [coverUri, ...thumbs] = await Promise.all([
+    fetchImageAsDataUri(cover.src),
+    ...customs.map((featured) =>
+      featured.kind === "custom" && featured.card.rendered_thumb_url
+        ? fetchImageAsDataUri(featured.card.rendered_thumb_url)
+        : Promise.resolve(null),
+    ),
+  ]);
   const byline = username ? `by @${username}` : "on PipGlyph";
   const formatLabel = isDeckFormat(deck.format)
     ? DECK_FORMAT_LABELS[deck.format]
     : "Deck";
 
-  if (cover) {
-    return ogImageResponse(
-      (
-        <OgCoverHero
-          cover={cover}
-          eyebrow={`${formatLabel} deck · PipGlyph`}
-          title={deck.title}
-          byline={byline}
-        />
-      ),
-      size,
-    );
-  }
-
   return ogImageResponse(
     (
-      <OgShell>
-        <OgEyebrow>{`${formatLabel} deck`}</OgEyebrow>
-        <OgTitle text={deck.title} />
-        {deck.description ? <OgBody>{ogExcerpt(deck.description)}</OgBody> : null}
-        <OgBody tone="dim">{byline}</OgBody>
-      </OgShell>
+      <OgDeckHero
+        cover={coverUri}
+        cards={thumbs.filter((thumb): thumb is string => Boolean(thumb))}
+        eyebrow={`${formatLabel} deck`}
+        title={deck.title}
+        byline={byline}
+      />
     ),
     size,
   );
