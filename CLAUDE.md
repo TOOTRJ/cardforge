@@ -1779,8 +1779,11 @@ Rules and gotchas:
   NEW `card_id` only, so an entry whose card stopped being public stays
   editable) and the read (`listDeckCards`, the one deck read every surface
   and export uses, withholds another creator's card that isn't public: RLS
-  hands an unlisted card to anyone); `canLinkIntoDeck` is the one rule —
-  never widen either side to unlisted. Another creator's card is credited
+  hands an unlisted card to anyone; a surface that reads its own rows —
+  the share image, the tiles' cover colours — goes through
+  `withDeckVisibleCards`, and the hero's fan, `featuredCardsOf`, takes the
+  deck's owner); `canLinkIntoDeck` is the one rule — never widen either
+  side to unlisted. Another creator's card is credited
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
