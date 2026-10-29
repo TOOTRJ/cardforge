@@ -91,6 +91,11 @@ import {
   listPublicDecks,
   listPublicDecksByOwner,
   listPublicDecksContaining,
+  listPublicDeckTilesContaining,
+  listTrendingDecks,
+  publicDeckCountsForCards,
+  countPublicDecksForCard,
+  CARD_PAGE_DECKS_MAX,
 } from "@/lib/decks/queries";
 
 const deckRow = (id: string, card_count: number, linked_card_count: number) => ({
@@ -330,10 +335,10 @@ describe("listDeckPageCards", () => {
 // card is public; the throwaway account's deck is proved left out on the
 // local stack, PR body). No table is read around it.
 describe("listPublicDecksContaining", () => {
-  it("is the 0144 function, five at most, mapped as it answers", async () => {
+  it("is the 0144 function (since 0149 over the shared pairs), six at most, mapped as it answers", async () => {
     s.rpcAnswer = { data: [{ slug: "dev_pro/elves", title: "Elves" }], error: null };
     expect(await listPublicDecksContaining("card-in-decks")).toEqual([{ slug: "dev_pro/elves", title: "Elves" }]);
-    expect(s.rpcCalls).toEqual([["public_decks_containing_card", { p_card_id: "card-in-decks", p_limit: 5 }]]);
+    expect(s.rpcCalls).toEqual([["public_decks_containing_card", { p_card_id: "card-in-decks", p_limit: CARD_PAGE_DECKS_MAX }]]);
     expect(s.calls).toHaveLength(0);
   });
 
@@ -341,5 +346,100 @@ describe("listPublicDecksContaining", () => {
     s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
     expect(await listPublicDecksContaining("card-before-0144")).toEqual([]);
     expect(s.calls).toHaveLength(0);
+  });
+});
+
+// TODO DK8.4: the gallery's "In N decks" — ONE batched call per page of
+// cards, the card page's own rule (0149 public_deck_counts_for_cards over
+// public_deck_card_pairs, the function the list reads too). A card no deck
+// names is absent (0); an unreadable answer is null — the tile says nothing.
+describe("publicDeckCountsForCards / countPublicDecksForCard", () => {
+  it("is one call for the page, mapped by card", async () => {
+    s.rpcAnswer = { data: [{ card_id: "c1", deck_count: 3 }], error: null };
+    const counts = await publicDeckCountsForCards(client() as never, ["c1", "c2"]);
+    expect(s.rpcCalls).toEqual([["public_deck_counts_for_cards", { p_card_ids: ["c1", "c2"] }]]);
+    expect(counts?.get("c1")).toBe(3);
+    expect(counts?.get("c2")).toBeUndefined();
+    expect(s.calls).toHaveLength(0);
+  });
+
+  it("no ids, no call; an unreadable answer (0149 not reached) is null, never a wrong 0", async () => {
+    expect(await publicDeckCountsForCards(client() as never, [])).toEqual(new Map());
+    expect(s.rpcCalls).toHaveLength(0);
+    s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+    expect(await publicDeckCountsForCards(client() as never, ["c1"])).toBeNull();
+    expect(await countPublicDecksForCard("c1")).toBeNull();
+  });
+
+  it("one card: its count, 0 when no public deck names it", async () => {
+    s.rpcAnswer = { data: [], error: null };
+    expect(await countPublicDecksForCard("c9")).toBe(0);
+    s.rpcAnswer = { data: [{ card_id: "c9", deck_count: 2 }], error: null };
+    expect(await countPublicDecksForCard("c9")).toBe(2);
+  });
+});
+
+// The card page's "Decks with this card" tiles are the SAME list as its
+// "In decks" row and JSON-LD isPartOf — hydrated by slug, in the list's
+// order, never a second rule.
+describe("listPublicDeckTilesContaining", () => {
+  it("hydrates the list's decks in the list's order, public rows only, anonymously", async () => {
+    s.rpcAnswer = { data: [{ slug: "b", title: "B" }, { slug: "a", title: "A" }], error: null };
+    s.rows.decks = [deckRow("a", 60, 10), deckRow("b", 99, 50)];
+    const decks = await listPublicDeckTilesContaining("card-x");
+    expect(decks.map((d) => d.slug)).toEqual(["b", "a"]);
+    expect(decks[0]).toMatchObject({ cards_count: 99, linked_count: 50, liked_by_viewer: false });
+    const deckQuery = s.calls.find((c) => c.table === "decks");
+    expect(hasOp(deckQuery, "in", "slug", ["b", "a"])).toBe(true);
+    expect(hasOp(deckQuery, "eq", "visibility", "public")).toBe(true);
+    // No viewer read: the like hearts hydrate client-side.
+    expect(s.calls.some((c) => c.table === "deck_likes")).toBe(false);
+  });
+
+  it("an empty list reads no deck", async () => {
+    s.rpcAnswer = { data: [], error: null };
+    expect(await listPublicDeckTilesContaining("card-y")).toEqual([]);
+    expect(s.calls).toHaveLength(0);
+  });
+});
+
+// TODO DK8.2: "Trending now" is 0149's list_trending_decks (the week's
+// likes; real creators' non-empty decks only — no admin-owned deck, no
+// throwaway account's — proved on the local stack),
+// hydrated with owners, cookie-free; nothing to show (or no function yet)
+// lists none, and the row hides itself.
+describe("listTrendingDecks", () => {
+  it("asks the function for a row's worth, in its order, with owners", async () => {
+    s.rpcAnswer = { data: [deckRow("hot", 60, 20), deckRow("warm", 40, 0)], error: null };
+    s.rows.profiles = [{ id: "owner-1", username: "dev_pro", display_name: "Priya", avatar_url: null }];
+    const decks = await listTrendingDecks();
+    expect(s.rpcCalls).toEqual([["list_trending_decks", { p_limit: 4 }]]);
+    expect(decks.map((d) => d.id)).toEqual(["hot", "warm"]);
+    expect(decks[0].owner?.username).toBe("dev_pro");
+    expect(s.calls.some((c) => c.table === "deck_likes")).toBe(false);
+  });
+
+  it("lists none on an error or an empty week", async () => {
+    s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+    expect(await listTrendingDecks()).toEqual([]);
+    s.rpcAnswer = { data: [], error: null };
+    expect(await listTrendingDecks()).toEqual([]);
+  });
+});
+
+// TODO DK8.5: a profile's "See all decks" — /decks/browse?owner=<handle>.
+describe("listPublicDecks — one creator's decks", () => {
+  it("resolves the handle and filters on its owner id; an unknown handle lists nothing", async () => {
+    s.rows.profiles = [{ id: "owner-9" }];
+    s.rows.decks = [deckRow("a", 60, 0)];
+    await listPublicDecks({ ownerUsername: "Dev_Artist", anonymous: true });
+    const profileQuery = s.calls.find((c) => c.table === "profiles");
+    expect(hasOp(profileQuery, "eq", "username", "dev_artist")).toBe(true);
+    expect(hasOp(s.calls.find((c) => c.table === "decks"), "eq", "owner_id", "owner-9")).toBe(true);
+
+    s.calls = [];
+    s.rows.profiles = [];
+    expect(await listPublicDecks({ ownerUsername: "nobody_here", anonymous: true })).toEqual([]);
+    expect(s.calls.some((c) => c.table === "decks" && hasOp(c, "range", 0, 23))).toBe(false);
   });
 });

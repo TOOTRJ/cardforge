@@ -31,6 +31,7 @@ import {
 import { narrowCard } from "@/lib/cards/narrow";
 import { lookupUsername } from "@/lib/profile/username";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { publicDeckCountsForCards } from "@/lib/decks/queries";
 
 // Composed shape: card + owner profile + like count + viewer's like state.
 // Used by the gallery and any "card tile" listing.
@@ -50,6 +51,11 @@ export type CardWithStats = CardWithOwner & {
   trending?: TrendingStats;
   likes_count: number;
   liked_by_viewer: boolean;
+  /** How many public decks name the card (TODO DK8.4 — the gallery tile's
+   *  "In N decks", `publicDeckCountsForCards`: the card page's rule).
+   *  Absent = not read (a list that doesn't ask, or a database migration
+   *  0149 hasn't reached): the tile then says nothing. */
+  public_deck_count?: number;
 };
 
 export type ProfileWithStats = Profile & {
@@ -320,7 +326,9 @@ async function attachStats(
   // Like COUNTS come from the materialized cards.likes_count column (0043), so
   // we no longer scan the whole card_likes table. We still need the viewer's
   // OWN likes for the heart state — a small query scoped to this user + page.
-  const [viewerLikesResult, ownersResult] = await Promise.all([
+  // The "In N decks" counts ride along in the same round trip (one batched
+  // RPC per page, viewer-independent — migration 0149).
+  const [viewerLikesResult, ownersResult, deckCounts] = await Promise.all([
     viewer
       ? supabase
           .from("card_likes")
@@ -332,6 +340,7 @@ async function attachStats(
       .from("profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", ownerIds),
+    publicDeckCountsForCards(supabase, cardIds),
   ]);
 
   const viewerLiked = new Set<string>();
@@ -353,6 +362,7 @@ async function attachStats(
     owner: ownerById.get(row.owner_id) ?? null,
     likes_count: row.likes_count ?? 0,
     liked_by_viewer: viewerLiked.has(row.id),
+    ...(deckCounts ? { public_deck_count: deckCounts.get(row.id) ?? 0 } : {}),
   }));
 
   if (sort === "popular") {
@@ -1124,20 +1134,26 @@ export async function listTrendingCards(
     // One card per creator: dedupe AFTER ranking (so each creator's best
     // card is the one that survives) and BEFORE the limit (so the row still
     // fills up from the next creators down).
-    return onePerCreator(sortTrending(scored))
-      .slice(0, limit)
-      .map(({ card, likesTotal, score, signals }) => ({
-        ...narrowCard(card),
-        owner: ownerProfileById.get(card.owner_id) ?? null,
-        likes_count: likesTotal,
-        liked_by_viewer: viewerLiked.has(card.id),
-        trending: {
-          likes7d: signals.likes_7d,
-          comments7d: signals.comments_7d,
-          remixes7d: signals.remixes_7d,
-          score,
-        },
-      }));
+    const ranked = onePerCreator(sortTrending(scored)).slice(0, limit);
+    // "In N decks" for the row's cards only, as attachStats gives every
+    // other list (one batched RPC, viewer-independent — migration 0149).
+    const deckCounts = await publicDeckCountsForCards(
+      supabase,
+      ranked.map(({ card }) => card.id),
+    );
+    return ranked.map(({ card, likesTotal, score, signals }) => ({
+      ...narrowCard(card),
+      owner: ownerProfileById.get(card.owner_id) ?? null,
+      likes_count: likesTotal,
+      liked_by_viewer: viewerLiked.has(card.id),
+      ...(deckCounts ? { public_deck_count: deckCounts.get(card.id) ?? 0 } : {}),
+      trending: {
+        likes7d: signals.likes_7d,
+        comments7d: signals.comments_7d,
+        remixes7d: signals.remixes_7d,
+        score,
+      },
+    }));
   } catch {
     return [];
   }

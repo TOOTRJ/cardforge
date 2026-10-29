@@ -78,12 +78,12 @@ test.describe("browse search and filters", () => {
 
     await page.goto("/decks/browse");
     await expect(page.getByRole("link", { name: /cinderwing dragonstorm/i }).first()).toBeVisible();
-    await page.getByRole("button", { name: "Standard", exact: true }).click();
+    await page.getByRole("radio", { name: "Standard", exact: true }).click();
     await expect(page).toHaveURL(/\/decks\/browse\?format=standard$/);
     await expect(page.getByText(/no decks match/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /cinderwing dragonstorm/i })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Commander", exact: true }).click();
+    await page.getByRole("radio", { name: "Commander", exact: true }).click();
     await expect(page).toHaveURL(/\/decks\/browse\?format=commander$/);
     await expect(page.getByRole("link", { name: /cinderwing dragonstorm/i }).first()).toBeVisible();
   });

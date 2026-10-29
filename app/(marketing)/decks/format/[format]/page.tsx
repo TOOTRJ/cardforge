@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { PublicDeckTile } from "@/app/(marketing)/decks/decks-view";
-import { listDeckCoverColors } from "@/lib/decks/cover-colors";
+import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
+import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { listPublicDecks } from "@/lib/decks/queries";
@@ -52,10 +52,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
     listFormatHubs(),
   ]);
   const count = hubs.find((hub) => hub.format === format)?.count ?? 0;
-  const coverColors = await listDeckCoverColors(
-    decks.map((deck) => deck.id),
-    { anonymous: true },
-  );
+  const art = await listDeckTileArt(decks, { anonymous: true });
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -76,9 +73,15 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
       <p className="mt-4 text-sm text-muted">
         {count} public deck{count === 1 ? "" : "s"} in this format so far.
       </p>
-      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={`mt-8 ${DECK_GRID_CLASS}`}>
         {decks.map((deck) => (
-          <PublicDeckTile key={deck.id} deck={deck} coverColors={coverColors.get(deck.id) ?? null} />
+          <DeckTile
+            key={deck.id}
+            deck={deck}
+            art={art.get(deck.id)}
+            sizes={DECK_GRID_SIZES}
+            likeRedirect={`/decks/format/${format}`}
+          />
         ))}
       </div>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">

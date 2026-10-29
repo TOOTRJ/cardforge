@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Repeat2, Sparkles } from "lucide-react";
+import { InDecksCount } from "@/components/cards/in-decks-count";
 import { CardTile } from "@/components/cards/card-tile";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { buildCardPath } from "@/lib/cards/utils";
@@ -70,23 +71,28 @@ export function GalleryCardTile({
         {card.owner?.username ? (
           <Link
             href={`/profile/${card.owner.username}`}
-            className="truncate font-mono text-muted transition-colors hover:text-foreground"
+            className="min-w-0 truncate font-mono text-muted transition-colors hover:text-foreground"
           >
             @{card.owner.username}
           </Link>
         ) : (
-          <span className="truncate text-muted">{ownerLabel}</span>
+          <span className="min-w-0 truncate text-muted">{ownerLabel}</span>
         )}
-        <QuickLikeButton
-          kind="card"
-          cardId={card.id}
-          cardSlug={card.slug}
-          ownerUsername={card.owner?.username ?? null}
-          initialLiked={card.liked_by_viewer}
-          initialCount={card.likes_count}
-          requiresSignIn={!isAuthed}
-          redirectAfterLogin={buildCardPath(card)}
-        />
+        <div className="flex shrink-0 items-center gap-2.5">
+          {/* "In N decks" (TODO DK8.4): text in the footer, outside the
+              CardTile link. */}
+          <InDecksCount count={card.public_deck_count} />
+          <QuickLikeButton
+            kind="card"
+            cardId={card.id}
+            cardSlug={card.slug}
+            ownerUsername={card.owner?.username ?? null}
+            initialLiked={card.liked_by_viewer}
+            initialCount={card.likes_count}
+            requiresSignIn={!isAuthed}
+            redirectAfterLogin={buildCardPath(card)}
+          />
+        </div>
       </div>
     </div>
   );

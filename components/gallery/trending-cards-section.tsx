@@ -6,6 +6,7 @@ import { rowTileClass, ROW_GRID_CLASS } from "@/components/gallery/card-row";
 import { CardTile } from "@/components/cards/card-tile";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
+import { InDecksCount } from "@/components/cards/in-decks-count";
 import { TrendingShareButton } from "@/components/gallery/trending-share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildCardPath, buildCardUrl } from "@/lib/cards/utils";
@@ -197,16 +198,21 @@ function TrendingTile({
       <ProfileChip
         owner={card.owner}
         likeNode={
-          <QuickLikeButton
-            kind="card"
-            cardId={card.id}
-            cardSlug={card.slug}
-            ownerUsername={card.owner?.username ?? null}
-            initialLiked={card.liked_by_viewer}
-            initialCount={card.likes_count}
-            requiresSignIn={!isAuthed}
-            redirectAfterLogin={buildCardPath(card)}
-          />
+          <span className="flex shrink-0 items-center gap-2.5">
+            {/* "In N decks" (TODO DK8.4) — as on every gallery tile: text,
+                outside the tile's link. */}
+            <InDecksCount count={card.public_deck_count} />
+            <QuickLikeButton
+              kind="card"
+              cardId={card.id}
+              cardSlug={card.slug}
+              ownerUsername={card.owner?.username ?? null}
+              initialLiked={card.liked_by_viewer}
+              initialCount={card.likes_count}
+              requiresSignIn={!isAuthed}
+              redirectAfterLogin={buildCardPath(card)}
+            />
+          </span>
         }
       />
     </div>

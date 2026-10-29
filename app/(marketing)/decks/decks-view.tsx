@@ -1,39 +1,49 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Sparkles, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SurfaceCard } from "@/components/ui/surface-card";
-import { Badge } from "@/components/ui/badge";
-import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
+import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
+import {
+  DECK_GRID_CLASS,
+  DECK_GRID_SIZES,
+  DeckTile,
+  DeckTileSkeleton,
+} from "@/components/decks/deck-tile";
+import {
+  TrendingCardsSection,
+  TrendingCardsSectionSkeleton,
+} from "@/components/gallery/trending-cards-section";
+import { ROW_MAX } from "@/components/gallery/card-row";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
-import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
+import { listDeckTileArt } from "@/lib/decks/tile-art";
+import { listTrendingCards } from "@/lib/cards/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { DECK_FORMAT_LABELS, isDeckFormat, type DeckFormat } from "@/types/deck";
+import { isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
-import { deckCoverOf } from "@/lib/decks/cover";
-import { listDeckCoverColors } from "@/lib/decks/cover-colors";
+import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
 //
 //   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
-//     on top, then the newest public decks. Never reads searchParams, so it
-//     stays on the CDN.
-//   - /decks/browse (DecksBrowse) → dynamic. Search + format chips and the
-//     results; every search/filter/page control navigates WITHIN this route
+//     on top, then "Trending now" (the week's most-liked decks, TODO DK8.2),
+//     "Trending cards" (the gallery's trending query, DK8.3) and the newest
+//     public decks. Never reads searchParams, so it stays on the CDN.
+//   - /decks/browse (DecksBrowse) → dynamic. Search, the sort, the format
+//     chips and one creator's decks (?owner=, a profile's "See all decks";
+//     DK8.5) with the results; every control navigates WITHIN this route
 //     (see lib/routing/browse-params.ts for why the landing can't host them).
 //
 // All reads are anonymous (public client, no cookies); like-state hydrates
 // client-side (QuickLikeButton re-checks the session cookie at click time).
+// Every tile is DeckTile (DK8.1).
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
@@ -48,7 +58,15 @@ export type DecksViewParams = {
   search: string | undefined;
   format: DeckFormat | undefined;
   sort: PublicDecksSort;
+  /** One creator's decks — their handle (?owner=). */
+  owner: string | undefined;
 };
+
+/** A handle as profiles store it (lib/auth/usernames.ts, the 0094 rule) —
+ *  anything else is no filter. */
+function isOwnerHandle(value: string): boolean {
+  return value.length >= USERNAME_MIN && value.length <= USERNAME_MAX && USERNAME_PATTERN.test(value);
+}
 
 export function parseDecksParams(
   params: Record<string, string | string[] | undefined>,
@@ -62,7 +80,21 @@ export function parseDecksParams(
   const sortParam = firstString(params.sort);
   const sort: PublicDecksSort =
     sortParam === "popular" || sortParam === "viewed" ? sortParam : "recent";
-  return { page, search, format, sort };
+  const ownerParam = firstString(params.owner)?.trim().toLowerCase().replace(/^@/, "");
+  const owner = ownerParam && isOwnerHandle(ownerParam) ? ownerParam : undefined;
+  return { page, search, format, sort, owner };
+}
+
+/** /decks/browse with these params (the defaults left out). */
+export function decksBrowseHref(params: Partial<Omit<DecksViewParams, "page">> & { page?: number }): string {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("q", params.search);
+  if (params.format) qs.set("format", params.format);
+  if (params.sort && params.sort !== "recent") qs.set("sort", params.sort);
+  if (params.owner) qs.set("owner", params.owner);
+  if (params.page && params.page > 1) qs.set("page", String(params.page));
+  const query = qs.toString();
+  return query ? `${DECKS_BROWSE_PATH}?${query}` : DECKS_BROWSE_PATH;
 }
 
 const DECKS_DESCRIPTION =
@@ -105,7 +137,28 @@ export function DecksLanding() {
         </Suspense>
       ) : null}
 
-      <div className="mt-10 flex flex-col gap-1">
+      {/* The week's most-liked decks, then the cards to build around. Both
+          rows hide themselves when they have nothing to show. */}
+      {configured ? (
+        <div className="mt-10">
+          <Suspense fallback={<DeckRowSkeleton />}>
+            <TrendingDecksRow
+              description="Public decks picking up likes in the last 7 days."
+              href={`${DECKS_BROWSE_PATH}?sort=popular`}
+              hrefLabel="See the most liked"
+            />
+          </Suspense>
+        </div>
+      ) : null}
+      {configured ? (
+        <div className="mt-12">
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
+            <DecksTrendingCards />
+          </Suspense>
+        </div>
+      ) : null}
+
+      <div className="mt-12 flex flex-col gap-1">
         <h2 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           Newest public decks
         </h2>
@@ -126,8 +179,33 @@ export function DecksLanding() {
   );
 }
 
+/** "Trending cards" on /decks (TODO DK8.3) — the gallery's own trending
+ *  query and section, cookie-free so the landing stays ISR.
+ *  SEAM (DK8.3, not built here): "Build a deck around this card" joins each
+ *  tile once the create-deck dialog lands (another builder's PR) — it takes
+ *  the card as the deck's first entry; pass it as the section's per-card
+ *  action then. */
+async function DecksTrendingCards() {
+  const trending = await listTrendingCards({ limit: ROW_MAX, anonymous: true });
+  if (trending.length === 0) return null;
+  return (
+    <TrendingCardsSection
+      cards={trending}
+      isAuthed={false}
+      eyebrow="Trending cards"
+      heading="Cards to build around"
+      description="The community's hottest cards this week — open one to add it to a deck."
+      action={
+        <Link href="/gallery" className="text-sm font-medium text-primary-bright underline-offset-4 hover:underline">
+          Open the gallery
+        </Link>
+      }
+    />
+  );
+}
+
 /** /decks/browse — the dynamic search + filter surface. */
-export function DecksBrowse({ page, search, format, sort }: DecksViewParams) {
+export function DecksBrowse({ page, search, format, sort, owner }: DecksViewParams) {
   const configured = isSupabaseConfigured();
 
   return (
@@ -142,7 +220,7 @@ export function DecksBrowse({ page, search, format, sort }: DecksViewParams) {
       <PageHeader
         eyebrow="Community decks"
         title="Browse decks"
-        description="Search every public deck by name or description and narrow by format."
+        description="Search every public deck by name or description, sort it and narrow by format."
         actions={
           <Button asChild variant="outline">
             <Link href="/decks">
@@ -161,12 +239,30 @@ export function DecksBrowse({ page, search, format, sort }: DecksViewParams) {
         </Suspense>
       </div>
 
+      {owner ? (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-4 py-2.5 text-xs text-foreground">
+          <span>
+            Showing decks by{" "}
+            <Link href={`/profile/${owner}`} className="font-mono font-semibold underline-offset-4 hover:underline">
+              @{owner}
+            </Link>
+          </span>
+          <Link
+            href={decksBrowseHref({ search, format, sort })}
+            className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-muted transition-colors hover:text-foreground"
+          >
+            <X className="h-3 w-3" aria-hidden />
+            Every creator
+          </Link>
+        </div>
+      ) : null}
+
       <div className="mt-8">
         {!configured ? (
           <DecksOffline />
         ) : (
           <Suspense
-            key={`${search ?? ""}-${format ?? ""}-${sort}-${page}`}
+            key={`${search ?? ""}-${format ?? ""}-${sort}-${owner ?? ""}-${page}`}
             fallback={<DecksSkeletonGrid count={PAGE_SIZE} />}
           >
             <PublicDecksResults
@@ -174,6 +270,7 @@ export function DecksBrowse({ page, search, format, sort }: DecksViewParams) {
               search={search}
               format={format}
               sort={sort}
+              owner={owner}
             />
           </Suspense>
         )}
@@ -203,11 +300,13 @@ async function PublicDecksResults({
   search,
   format,
   sort,
+  owner,
 }: {
   page: number;
   search?: string;
   format?: DeckFormat;
   sort: PublicDecksSort;
+  owner?: string;
 }) {
   // Anonymous mode (public client, no cookie read) keeps the landing
   // ISR-cacheable. liked_by_viewer is false on the cached page; the
@@ -220,19 +319,23 @@ async function PublicDecksResults({
     search,
     format,
     sort,
+    ownerUsername: owner,
     anonymous: true,
   });
   const decks = fetched.slice(0, PAGE_SIZE);
+  const filtered = Boolean(search || format || owner);
 
   if (decks.length === 0) {
     return (
       <EmptyState
         icon={BookOpen}
-        title={search || format ? "No decks match" : "No public decks yet"}
+        title={filtered ? "No decks match" : "No public decks yet"}
         description={
-          search || format
-            ? "Try a different search or format, or be the first to publish a deck that matches."
-            : "Be the first to publish a public deck — they'll show up here for everyone."
+          owner && !search && !format
+            ? `@${owner} has no public decks yet.`
+            : filtered
+              ? "Try a different search or format, or be the first to publish a deck that matches."
+              : "Be the first to publish a public deck — they'll show up here for everyone."
         }
         action={
           <NewDeckButton>Build a deck</NewDeckButton>
@@ -245,27 +348,16 @@ async function PublicDecksResults({
   const hasPrev = page > 1;
   // Page links stay within the browse route — the landing is static and
   // would ignore (and, via proxy.ts, 308 away from) the query.
-  const pageHref = (p: number) => {
-    const parts = [
-      search ? `q=${encodeURIComponent(search)}` : "",
-      format ? `format=${format}` : "",
-      sort !== "recent" ? `sort=${sort}` : "",
-      p > 1 ? `page=${p}` : "",
-    ].filter(Boolean);
-    return parts.length ? `${DECKS_BROWSE_PATH}?${parts.join("&")}` : DECKS_BROWSE_PATH;
-  };
-  // The colours each deck's default cover is picked by — the same answer
-  // its own page reads (lib/decks/cover-colors.ts).
-  const coverColors = await listDeckCoverColors(
-    decks.map((deck) => deck.id),
-    { anonymous: true },
-  );
+  const pageHref = (p: number) => decksBrowseHref({ search, format, sort, owner, page: p });
+  // Each deck's colours (its default cover's pick, its pips) and fan — the
+  // same answers its own page reads (lib/decks/tile-art.ts).
+  const art = await listDeckTileArt(decks, { anonymous: true });
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={DECK_GRID_CLASS}>
         {decks.map((deck) => (
-          <PublicDeckTile key={deck.id} deck={deck} coverColors={coverColors.get(deck.id) ?? null} />
+          <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} sizes={DECK_GRID_SIZES} />
         ))}
       </div>
       {hasPrev || hasMore ? (
@@ -295,116 +387,11 @@ async function PublicDecksResults({
   );
 }
 
-export function PublicDeckTile({
-  deck,
-  coverColors,
-}: {
-  deck: Awaited<ReturnType<typeof listPublicDecks>>[number];
-  /** listDeckCoverColors' answer for this deck (null = unknown). */
-  coverColors: readonly string[] | null;
-}) {
-  const ownerLabel =
-    deck.owner?.display_name?.trim() ||
-    deck.owner?.username ||
-    "Anonymous forger";
-  const made = madeOnPipGlyph(deck);
-
-  // Avoid nesting <a> inside <a> (invalid HTML): the cover + title/description
-  // are wrapped in one Link, then the owner chip is a sibling Link below.
-  // The owner's upload (only one we store, migration 0127) or the default
-  // its colours pick — the picture the deck's own page draws.
-  const cover = deckCoverOf(deck, coverColors);
-  return (
-    <SurfaceCard className="flex h-full flex-col gap-0 overflow-hidden p-0 transition-colors hover:border-border-strong">
-      <Link
-        href={`/deck/${deck.slug}`}
-        className="group flex flex-1 flex-col rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label={`Open ${deck.title}`}
-      >
-        <div className="relative aspect-video w-full overflow-hidden bg-elevated">
-          <Image
-            src={cover.src}
-            alt={`${deck.title} — custom card deck cover`}
-            fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition-transform group-hover:scale-[1.03]"
-            style={cover.objectPosition ? { objectPosition: cover.objectPosition } : undefined}
-          />
-          <div className="absolute left-3 top-3">
-            <Badge variant="outline" className="bg-background/70 backdrop-blur">
-              {DECK_FORMAT_LABELS[deck.format]}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-3 p-5 pb-3">
-          <h3 className="font-display text-lg font-semibold tracking-tight text-foreground [overflow-wrap:anywhere]">
-            {deck.title}
-          </h3>
-          {deck.description ? (
-            <p className="line-clamp-2 text-sm leading-6 text-muted">
-              {deck.description}
-            </p>
-          ) : null}
-          {made.total > 0 ? (
-            <div className="mt-auto flex items-center gap-2 text-[11px] text-subtle">
-              {/* The share of the deck made on PipGlyph (stored counts,
-                  lib/decks/tile-counts.ts) — the meter is decoration; the
-                  words beside it say the numbers. */}
-              <div className="h-1 flex-1 overflow-hidden rounded-full bg-elevated" aria-hidden>
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${made.pct}%` }}
-                />
-              </div>
-              <span className="shrink-0">{made.label}</span>
-            </div>
-          ) : null}
-        </div>
-      </Link>
-      <div className="flex items-center justify-between gap-2 border-t border-border/40 px-5 py-3 text-xs">
-        {deck.owner?.username ? (
-          <Link
-            href={`/profile/${deck.owner.username}`}
-            className="truncate font-mono text-muted transition-colors hover:text-foreground"
-          >
-            @{deck.owner.username}
-          </Link>
-        ) : (
-          <span className="truncate text-muted">{ownerLabel}</span>
-        )}
-        <div className="flex items-center gap-3 text-muted">
-          <span>
-            {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
-          </span>
-          <QuickLikeButton
-            kind="deck"
-            deckId={deck.id}
-            deckSlug={deck.slug}
-            ownerUsername={deck.owner?.username ?? null}
-            initialLiked={deck.liked_by_viewer}
-            initialCount={deck.likes_count}
-            requiresSignIn
-            redirectAfterLogin="/decks"
-          />
-        </div>
-      </div>
-    </SurfaceCard>
-  );
-}
-
 function DecksSkeletonGrid({ count }: { count: number }) {
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className={DECK_GRID_CLASS}>
       {Array.from({ length: count }).map((_, i) => (
-        <SurfaceCard key={i} className="flex flex-col gap-0 overflow-hidden p-0">
-          <Skeleton className="aspect-video w-full rounded-none" />
-          <div className="flex flex-col gap-3 p-5">
-            <Skeleton className="h-5 w-2/3" />
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-3/4" />
-          </div>
-        </SurfaceCard>
+        <DeckTileSkeleton key={i} />
       ))}
     </div>
   );
