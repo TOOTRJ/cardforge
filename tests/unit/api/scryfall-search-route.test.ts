@@ -101,6 +101,13 @@ describe("GET /api/scryfall/search — per-user quota", () => {
     expect(body.results.map((c: { name: string }) => c.name)).toEqual(["Serra Angel"]);
   });
 
+  it("sorts by EDHREC rank only when asked (the deck page's add box, TODO DK5.2); anything else is the name order", async () => {
+    await get("q=sol&limit=20&order=edhrec");
+    expect(state.search).toHaveBeenLastCalledWith({ query: "sol", limit: 20, order: "edhrec" });
+    await get("q=sol&limit=20&order=price");
+    expect(state.search).toHaveBeenLastCalledWith({ query: "sol", limit: 20 });
+  });
+
   it("refuses a normal account over its quota before calling Scryfall", async () => {
     state.check.mockResolvedValue({
       ok: false,

@@ -149,7 +149,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const order = request.nextUrl.searchParams.get("order") === "edhrec" ? "edhrec" : "name";
+  // Only the add box asks for another order; every other call is as it was.
+  const order = request.nextUrl.searchParams.get("order") === "edhrec" ? { order: "edhrec" as const } : {};
 
   const limitRaw = Number(request.nextUrl.searchParams.get("limit") ?? "12");
   const limit = Number.isFinite(limitRaw)
@@ -175,8 +176,8 @@ export async function GET(request: NextRequest) {
   const search = async (scope: SearchScope) => {
     const outcome = await searchCardsWithOutcome(
       scope === "tokens"
-        ? { query: tokensScopeQuery(query), limit, includeExtras: true, order }
-        : { query, limit, order },
+        ? { query: tokensScopeQuery(query), limit, includeExtras: true, ...order }
+        : { query, limit, ...order },
     );
     if (!quotaExempt) {
       await logScryfallCall(user.id, "search");
