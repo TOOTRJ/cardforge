@@ -126,7 +126,7 @@ describe("the footer (NV2)", () => {
   it("Create holds the tool pages; Company the about, press, feedback and legal pages", () => {
     const hrefs = (title: string) => siteConfig.footerNav.find((column) => column.title === title)!.links.map((link) => link.href);
     expect(hrefs("Create")).toEqual(
-      expect.arrayContaining(["/mtg-card-maker", "/ai-mtg-card-generator", "/mana-pip-editor", "/dashboard/decks/new"]),
+      expect.arrayContaining(["/mtg-card-maker", "/ai-mtg-card-generator", "/mana-pip-editor", "/decks"]),
     );
     expect(hrefs("Company")).toEqual(["/about", "/press", "/feedback", "/disclaimer", "/terms", "/privacy"]);
   });
@@ -135,6 +135,12 @@ describe("the footer (NV2)", () => {
     const learn = groups.find((group) => group.id === "learn")!;
     const footer = siteConfig.footerNav.find((column) => column.title === "Learn")!;
     expect(footer.links.map((link) => [link.id, link.href])).toEqual(groupLinks(learn).map((link) => [link.id, link.href]));
+  });
+
+  it("links only public pages — the footer is on every page, crawled (no /dashboard, robots.txt disallows it)", () => {
+    for (const link of siteConfig.footerNav.flatMap((column) => [...column.links])) {
+      expect(link.href, link.label).not.toMatch(/^\/(dashboard|settings|admin|notifications|messages|feed)(\/|$)/);
+    }
   });
 });
 
@@ -145,13 +151,18 @@ describe("nav_click ids (NV10)", () => {
     }
   });
 
-  it("one destination, one id — on every surface", () => {
+  it("one link, one id on every surface; an id names one destination", () => {
+    // The same link (destination + words) keeps its id in the header, the
+    // drawer and the footer, so a surface can be compared with another; two
+    // different links to one page ("Deck builder", "Community decks") keep
+    // their own ids.
     const idOf = new Map<string, string>();
     const hrefOf = new Map<string, string>();
     for (const link of everyLink) {
-      expect(idOf.get(link.href) ?? link.id, link.href).toBe(link.id);
+      const key = `${link.href} ${link.label}`;
+      expect(idOf.get(key) ?? link.id, key).toBe(link.id);
       expect(hrefOf.get(link.id) ?? link.href, link.id).toBe(link.href);
-      idOf.set(link.href, link.id);
+      idOf.set(key, link.id);
       hrefOf.set(link.id, link.href);
     }
   });

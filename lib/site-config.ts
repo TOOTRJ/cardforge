@@ -11,7 +11,7 @@
 // Every link carries a stable `id` — the `item` the nav_click event reports
 // (TODO NV10, owner decision D9: Gallery moved under Community and its
 // header clicks are watched). Never rename an id: the funnel compares
-// clicks across releases by it. A destination keeps ONE id on every surface
+// clicks across releases by it. A link keeps ONE id on every surface
 // (header, drawer, footer); the event's `surface` tells them apart.
 // ---------------------------------------------------------------------------
 
@@ -211,7 +211,7 @@ export const siteConfig = {
           { id: "account.dashboard", label: "Dashboard", href: "/dashboard" },
           { id: "account.my-cards", label: "My cards", href: "/dashboard/cards" },
           { id: "account.my-decks", label: "My decks", href: "/dashboard/decks" },
-          { id: "new-deck", label: "New deck", href: "/dashboard/decks/new" },
+          { id: "account.new-deck", label: "New deck", href: "/dashboard/decks/new" },
         ],
       },
       {
@@ -274,7 +274,9 @@ export const siteConfig = {
         { id: "create.card-maker", label: "Card maker", href: "/mtg-card-maker" },
         { id: "create.ai-generator", label: "AI card generator", href: "/ai-mtg-card-generator" },
         { id: "create.pip-editor", label: "Mana pip editor", href: "/mana-pip-editor" },
-        { id: "new-deck", label: "Deck builder", href: "/dashboard/decks/new" },
+        // Public: the decks landing ("Build a deck" there). Never an auth-only
+        // route on every page (/dashboard is disallowed in robots.txt).
+        { id: "create.deck-builder", label: "Deck builder", href: "/decks" },
         { id: "create.print-proxies", label: "Print proxies", href: "/articles/how-to-print-proxy-mtg-cards" },
         { id: "pricing", label: "Pricing", href: "/pricing" },
       ],
