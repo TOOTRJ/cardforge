@@ -42,6 +42,7 @@ vi.mock("@/components/decks/import-decklist-dialog", () => ({
 vi.mock("@/components/decks/delete-deck-dialog", () => ({
   DeleteDeckDialog: () => <button type="button">Delete deck</button>,
 }));
+vi.mock("@/components/decks/add-from-my-cards-dialog", () => ({ AddFromMyCardsDialog: () => null }));
 
 import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
@@ -108,15 +109,9 @@ describe("the Coming soon button", () => {
 describe("the deck page's owner tools", () => {
   it("Add with AI and Restyle with AI are Coming soon beside ONE visible reason; edit, import and delete are untouched", () => {
     render(
-      <DeckOwnerTools
-        deck={{ id: "deck-1", title: "Gorgon Gaze" } as Deck}
-        userId="user-1"
-        aiConfigured
-        maxCards={100}
-        capacity={null}
-        remixableCount={12}
-        aiSeed={{ theme: "gorgons", style: "ink" }}
-      />,
+      // The deck AI's inputs (cap, capacity, remixable count, last seed) are
+      // no longer read for the page while deck AI is paused (TODO DK5.1).
+      <DeckOwnerTools deck={{ id: "deck-1", title: "Gorgon Gaze" } as Deck} userId="user-1" />,
     );
     const add = expectComingSoon("Add with AI — coming soon");
     const remix = expectComingSoon("Restyle with AI — coming soon");

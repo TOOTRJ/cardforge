@@ -175,10 +175,13 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
 
   const list = (items: DeckItem[]) => render(<DeckCardList items={items} ownerUsername="kesh" canManage={false} />);
   const imgs = () => Array.from(document.querySelectorAll("img")).map((img) => img.getAttribute("src"));
+  // A row's name says its quantity and status too (TODO DK5.12):
+  // "Village Elder, 2 copies, Original".
+  const ROW_ELDER = /^Village Elder, /;
 
   it("a row whose proxy has a back picture carries the mark, and draws the 600 px thumb — never the HD PNG", () => {
     list([item()]);
-    const row = screen.getByRole("button", { name: "Open Village Elder" });
+    const row = screen.getByRole("button", { name: ROW_ELDER });
     expect(row.querySelector("[data-testid=two-faces-mark]")?.textContent).toBe("2 faces");
     expect(imgs()).toEqual([`/render-cdn/owner-1/${ID}.thumb.webp?v=1`]);
   });
@@ -196,7 +199,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     // A card mid-save (no pointers at all): the placeholder, nothing broken.
     list([item(MID_SAVE)]);
     expect(imgs()).toEqual([]);
-    expect(screen.getByRole("button", { name: "Open Village Elder" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: ROW_ELDER })).toBeTruthy();
     expect(screen.queryByTestId("two-faces-mark")).toBeNull();
   });
 
@@ -204,7 +207,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     list([item(LEGACY)]);
     expect(screen.queryByTestId("two-faces-mark")).toBeNull();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.queryByTestId("deck-card-face-switch")).toBeNull();
@@ -214,7 +217,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
   it("the pop-up shows the front with a Front / Back switch; the back's file is asked for only once Back is chosen", async () => {
     list([item()]);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     const dialog = screen.getByRole("dialog");
     const group = screen.getByRole("group", { name: "Card face" });
@@ -246,7 +249,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
   it("the pop-up's PICTURE link opens the face it shows: the card page on its back with Back chosen (TODO 5.17)", async () => {
     list([item()]);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     const dialog = screen.getByRole("dialog");
     const pictureLink = () => dialog.querySelector("img")!.closest("a")!;
@@ -270,7 +273,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
   it("an older two-faced proxy's picture link never names a face", async () => {
     list([item(LEGACY)]);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     const link = screen.getByRole("dialog").querySelector("img")!.closest("a")!;
     expect(link.getAttribute("href")).toBe("/card/kesh/village-elder");
@@ -279,7 +282,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
   it("closing the pop-up returns the focus to the row that opened it (TODO 5.17) — Escape, and the close button", async () => {
     const second = "55555555-5555-4555-8555-555555555555";
     list([item(), item({ title: "Other Card", slug: "other-card" }, { id: second, name: "Other Card" })]);
-    const row = screen.getByRole("button", { name: "Open Other Card" });
+    const row = screen.getByRole("button", { name: /^Other Card, / });
     expect(row.getAttribute("data-deck-entry")).toBe(second);
     row.focus();
     await act(async () => {
@@ -290,25 +293,25 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
       fireEvent.keyDown(dialog, { key: "Escape" });
     });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Other Card" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Other Card, / }));
 
     // Opened by a click with the focus elsewhere: still the row that opened it.
     (document.activeElement as HTMLElement).blur();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /close/i }));
     });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Village Elder" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: ROW_ELDER }));
   });
 
   describe("the focus after the pop-up when the plain hand-back is not enough (the check of #536)", () => {
     const ids = ["a", "b", "c"].map((_, i) => `6666666${i}-6666-4666-8666-666666666666`);
     const three = () =>
       ids.map((id, i) => item({ title: `Card ${i + 1}`, slug: `card-${i + 1}` }, { id, name: `Card ${i + 1}` }));
-    const rowOf = (n: number) => screen.getByRole("button", { name: `Open Card ${n}` });
+    const rowOf = (n: number) => screen.getByRole("button", { name: new RegExp(`^Card ${n}, `) });
     const openRow = async (n: number) => {
       rowOf(n).focus();
       await act(async () => {
@@ -399,7 +402,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     });
     expect(screen.queryByTestId("two-faces-mark")).toBeNull();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+      fireEvent.click(screen.getByRole("button", { name: ROW_ELDER }));
     });
     expect(screen.queryByTestId("deck-card-face-switch")).toBeNull();
     await act(async () => {

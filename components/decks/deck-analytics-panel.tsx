@@ -13,6 +13,11 @@ import { DECK_ENTRY_STATUS_COUNT_LABELS } from "@/types/deck";
 
 type DeckAnalyticsPanelProps = {
   analytics: DeckAnalytics;
+  /** The deck page's "Card status" rows — THE status count its chips and
+   *  summary bar say too (deckStatusCountsOf, lib/decks/deck-view.ts: each
+   *  card under the badge it wears, "No longer available" included). Left
+   *  out, the rows come from `analytics.byStatus`. */
+  statusCounts?: Array<{ key: string; label: string; count: number }>;
 };
 
 const WUBRG = ["W", "U", "B", "R", "G"] as const;
@@ -27,8 +32,11 @@ function colorRows(analytics: DeckAnalytics): Array<{ identity: ColorIdentity; c
   return rows.filter((row) => row.count > 0);
 }
 
-export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
+export function DeckAnalyticsPanel({ analytics, statusCounts }: DeckAnalyticsPanelProps) {
   const colors = colorRows(analytics);
+  const statuses =
+    statusCounts ??
+    statusRows(analytics).map((row) => ({ key: row.status, label: DECK_ENTRY_STATUS_COUNT_LABELS[row.status], count: row.count }));
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -57,9 +65,9 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
         {/* Imported / Edited / Remix / Original (+ Not found), physical
             cards (lib/decks/entry-status.ts) — what replaced "% proxied". */}
         <dl className="flex flex-col gap-1.5 text-sm">
-          {statusRows(analytics).map((row) => (
-            <div key={row.status} className="flex items-baseline justify-between gap-3">
-              <dt className="text-muted">{DECK_ENTRY_STATUS_COUNT_LABELS[row.status]}</dt>
+          {statuses.map((row) => (
+            <div key={row.key} className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted">{row.label}</dt>
               <dd className="font-mono text-foreground">{row.count}</dd>
             </div>
           ))}
