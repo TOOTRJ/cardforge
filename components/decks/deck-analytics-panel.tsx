@@ -106,7 +106,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
           title="Mana curve"
           description={
             <>
-              {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} by mana value
+              {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} by mana value, sideboard included
               {offCurve.length > 0 ? ` — ${offCurve.join(" and ")} left off` : ""}.
             </>
           }

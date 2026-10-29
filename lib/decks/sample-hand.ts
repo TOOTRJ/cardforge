@@ -4,8 +4,10 @@ import { OPENING_HAND } from "@/lib/decks/draw-odds";
 // The sample opening hand (TODO DK7.2) — a shuffled library, seven cards and
 // the London mulligan (CR 103.5): shuffle the hand back, draw seven again,
 // then put one card on the bottom for each mulligan taken. In a multiplayer
-// game the first mulligan is free (CR 103.5c) — the deck page passes it for
-// a commander format. Then "draw a card" off the top.
+// game and in any Brawl game the first mulligan is free (CR 103.5c) — the
+// deck page passes it for every commander format (formatHasFreeMulligan).
+// Then "draw a card" off the top. A hand once KEPT — by Keep, or by drawing
+// a card, which keeps it — takes no more mulligans: only a new hand.
 //
 // Every step is a pure function of a state and a random source, so a test
 // replays a hand from a seed (seededRandom: mulberry32, a 32-bit generator
@@ -60,12 +62,14 @@ export type HandState = {
   toBottom: number;
   /** Cards drawn after the hand was kept. */
   drawn: number;
+  /** The hand is kept (Keep, or a card drawn): no more mulligans. */
+  kept: boolean;
 };
 
 /** A fresh seven from the whole deck. */
 export function openingHand(deck: readonly string[], random: Random): HandState {
   const order = shuffle(deck, random);
-  return { hand: order.slice(0, OPENING_HAND), library: order.slice(OPENING_HAND), mulligans: 0, toBottom: 0, drawn: 0 };
+  return { hand: order.slice(0, OPENING_HAND), library: order.slice(OPENING_HAND), mulligans: 0, toBottom: 0, drawn: 0, kept: false };
 }
 
 /** How many cards a hand after `mulligans` mulligans puts on the bottom. */
@@ -73,14 +77,24 @@ export function bottomCountFor(mulligans: number, freeFirst: boolean): number {
   return Math.min(OPENING_HAND, Math.max(0, mulligans - (freeFirst ? 1 : 0)));
 }
 
-/** Whether one more mulligan leaves a card to keep. */
+/** Whether the hand is kept — by Keep, or by a card drawn. */
+export function isHandKept(state: HandState): boolean {
+  return state.kept || state.drawn > 0;
+}
+
+/** Whether the hand can still be mulliganed: it isn't kept yet, and one
+ *  more mulligan leaves a card to keep. */
 export function canMulligan(state: HandState, deckSize: number, freeFirst: boolean): boolean {
-  return deckSize > 0 && bottomCountFor(state.mulligans + 1, freeFirst) < Math.min(OPENING_HAND, deckSize);
+  return (
+    !isHandKept(state) && deckSize > 0 && bottomCountFor(state.mulligans + 1, freeFirst) < Math.min(OPENING_HAND, deckSize)
+  );
 }
 
 /** A London mulligan: the whole deck shuffled again, seven drawn, and the
- *  bottom count owed for every mulligan so far. */
+ *  bottom count owed for every mulligan so far. Refused (the state
+ *  unchanged) once the hand is kept. */
 export function mulligan(state: HandState, deck: readonly string[], random: Random, freeFirst: boolean): HandState {
+  if (isHandKept(state)) return state;
   const mulligans = state.mulligans + 1;
   const order = shuffle(deck, random);
   const hand = order.slice(0, OPENING_HAND);
@@ -90,28 +104,30 @@ export function mulligan(state: HandState, deck: readonly string[], random: Rand
     mulligans,
     toBottom: Math.min(bottomCountFor(mulligans, freeFirst), hand.length),
     drawn: 0,
+    kept: false,
   };
 }
 
 /** Keep the hand: the chosen cards go to the bottom, in the order given.
  *  Refused (the state unchanged) unless exactly the owed number of cards of
- *  the hand is chosen. */
+ *  the hand is chosen, or once the hand is kept. */
 export function keepHand(state: HandState, bottom: readonly string[]): HandState {
   const chosen = [...new Set(bottom)];
-  if (chosen.length !== state.toBottom || !chosen.every((key) => state.hand.includes(key))) return state;
+  if (isHandKept(state) || chosen.length !== state.toBottom || !chosen.every((key) => state.hand.includes(key))) return state;
   return {
     ...state,
     hand: state.hand.filter((key) => !chosen.includes(key)),
     library: [...state.library, ...chosen],
     toBottom: 0,
+    kept: true,
   };
 }
 
-/** Draw the library's top card (none while the hand isn't kept, or the
- *  library is empty). */
+/** Draw the library's top card (none while cards are still owed to the
+ *  bottom, or the library is empty). A draw keeps the hand. */
 export function drawCard(state: HandState): HandState {
   if (state.toBottom > 0 || state.library.length === 0) return state;
-  return { ...state, hand: [...state.hand, state.library[0]], library: state.library.slice(1), drawn: state.drawn + 1 };
+  return { ...state, hand: [...state.hand, state.library[0]], library: state.library.slice(1), drawn: state.drawn + 1, kept: true };
 }
 
 /** A seed for a new random source, from the browser's crypto when there is

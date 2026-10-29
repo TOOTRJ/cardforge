@@ -38,7 +38,7 @@ import { DeckCurveFilterProvider } from "@/components/decks/deck-curve-filter";
 import { DeckDrawOdds } from "@/components/decks/deck-draw-odds";
 import { DeckSampleHand } from "@/components/decks/deck-sample-hand";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
-import { computeDeckCharts } from "@/lib/decks/deck-charts";
+import { computeDeckCharts, viewerDeckBreakdown } from "@/lib/decks/deck-charts";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
 
@@ -208,6 +208,53 @@ describe("the mana curve filters the list", () => {
   });
 });
 
+describe("a visitor's breakdown counts the rows their list shows", () => {
+  it("a private card with no printing: its type is in neither the charts nor the list — a Private card, Other", async () => {
+    // The owner's private planeswalker, added from the creator: the entry's
+    // name and type line are the card's own; RLS hands a visitor null.
+    const items = [
+      ...deck(),
+      item({
+        name: "Jace, Hidden Mind",
+        card_id: "c-private",
+        scryfall_id: null,
+        source: "creator",
+        type_line: "Legendary Planeswalker — Jace",
+        mana_cost: "{2}{U}{U}",
+        mana_value: 4,
+        color_identity: ["U"],
+        rarity: "mythic",
+        image_url: null,
+      }),
+    ];
+    // What the deck page does for a visitor (isOwner false).
+    const { shownItems, analytics, charts } = viewerDeckBreakdown(items, false);
+    render(
+      <DeckCurveFilterProvider curve={charts.curve}>
+        <h2 id={DECK_CARDS_HEADING_ID} tabIndex={-1}>
+          Cards
+        </h2>
+        <DeckCardList items={shownItems} ownerUsername="kesh" canManage={false} initialPrefs={{ view: "list", group: "type", sort: "mana" }} />
+        <DeckAnalyticsPanel analytics={analytics} charts={charts} statusCounts={[]} />
+      </DeckCurveFilterProvider>,
+    );
+    expect(document.body.textContent).not.toMatch(/Planeswalker|Jace/);
+    const types = screen.getByRole("table", { name: "Cards by type" });
+    expect(
+      within(types)
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => row.querySelector("th")?.textContent),
+    ).toEqual(["Creatures", "Instants", "Lands", "Other"]);
+    // The 4 bar: one other spell, no creature — and it filters to the tile.
+    const curve = screen.getByRole("toolbar", { name: "Mana curve" });
+    const four = within(curve).getByRole("button", { name: /^Mana value 4:/ });
+    expect(four.getAttribute("aria-label")).toBe("Mana value 4: 1 card, 0 creatures and 1 other spell. Show them in the card list");
+    fireEvent.click(four);
+    await waitFor(() => expect(listNames()).toEqual(["Private card"]));
+  });
+});
+
 describe("every chart has its table", () => {
   it("a picture-only chart has its table for a screen reader, and the Table switch shows it", () => {
     renderPage(deck());
@@ -259,7 +306,7 @@ describe("every chart has its table", () => {
 
 describe("the playtest", () => {
   it("lands by turn on the play / on the draw, and a picked card's odds", () => {
-    render(<DeckDrawOdds items={deck()} canManage multiplayer={false} />);
+    render(<DeckDrawOdds items={deck()} canManage commander={false} multiplayer={false} />);
     const lands = screen.getByRole("table", { name: /^Chance of at least 1 to 7 lands by turn, on the play/ });
     // Turn 1 on the play sees the opening seven.
     expect(within(lands).getAllByRole("rowheader")[0].textContent).toBe("Turn 17 cards");
@@ -272,13 +319,34 @@ describe("the playtest", () => {
     expect(screen.getByRole("table", { name: "Chance to draw Llanowar Elves by turn, on the draw" })).toBeTruthy();
   });
 
+  it("a multiplayer format (Commander, Oathbreaker) is on the draw, with no turn order to pick (CR 103.8c)", () => {
+    render(<DeckDrawOdds items={deck()} canManage commander multiplayer />);
+    expect(screen.queryByRole("radiogroup", { name: "Turn order" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "On the play" })).toBeNull();
+    expect(screen.getByText(/In multiplayer every player draws on their first turn, so the odds are on the draw\./)).toBeTruthy();
+    expect(screen.getByText(/the commander waits in the command zone/)).toBeTruthy();
+    const lands = screen.getByRole("table", { name: /^Chance of at least 1 to 7 lands by turn, on the draw/ });
+    expect(within(lands).getAllByRole("rowheader")[0].textContent).toBe("Turn 18 cards");
+    expect(screen.queryByText(/on the play/)).toBeNull();
+  });
+
+  it("a Brawl deck is a 1v1 game: on the play by default, the choice kept (CR 103.8a)", () => {
+    render(<DeckDrawOdds items={deck()} canManage commander multiplayer={false} />);
+    const order = screen.getByRole("radiogroup", { name: "Turn order" });
+    expect(within(order).getByRole("radio", { name: "On the play" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByText(/In multiplayer/)).toBeNull();
+    expect(screen.getByText(/the commander waits in the command zone/)).toBeTruthy();
+    const lands = screen.getByRole("table", { name: /^Chance of at least 1 to 7 lands by turn, on the play/ });
+    expect(within(lands).getAllByRole("rowheader")[0].textContent).toBe("Turn 17 cards");
+  });
+
   it("a sample hand, the London mulligan and a draw — keyboard-ready, said aloud", async () => {
-    render(<DeckSampleHand items={deck()} canManage freeMulligan={false} seed={7} />);
+    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={7} />);
     // Nothing shuffled, no picture loaded, until asked.
     expect(screen.queryByRole("list", { name: /^Hand/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
     expect(screen.getByRole("list", { name: "Hand, 7 cards" })).toBeTruthy();
-    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^New hand: \d+ lands?, \d+ spells?\.$/);
+    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Hand 1: \d+ lands?, \d+ spells?\.$/);
 
     fireEvent.click(screen.getByRole("button", { name: "Mulligan" }));
     const keep = screen.getByRole("button", { name: /^Keep 6 cards/ });
@@ -293,16 +361,61 @@ describe("the playtest", () => {
     expect(picks.map((pick) => pick.getAttribute("aria-pressed"))).toEqual(["false", "true", "false", "false", "false", "false", "false"]);
     fireEvent.click(screen.getByRole("button", { name: "Keep 6 cards" }));
     expect(screen.getByRole("list", { name: "Hand, 6 cards" })).toBeTruthy();
+    // Kept: no more mulligans — the button stays (the focus never drops), off,
+    // its reason in its name, and a click does nothing.
+    const mulliganOff = screen.getByRole("button", { name: "Mulligan (the hand is kept: deal a new hand)" });
+    expect(mulliganOff.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(mulliganOff);
+    expect(screen.getByRole("list", { name: "Hand, 6 cards" })).toBeTruthy();
     const draw = screen.getByRole("button", { name: "Draw a card" });
     await waitFor(() => expect(document.activeElement).toBe(draw));
     fireEvent.click(draw);
     expect(screen.getByRole("list", { name: "Hand, 7 cards" })).toBeTruthy();
-    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Drew /);
+    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Drew .+: 7 cards in hand\.$/);
+    expect(screen.getByRole("button", { name: /^Mulligan/ }).getAttribute("aria-disabled")).toBe("true");
+    // New hand starts again: Mulligan is back.
+    fireEvent.click(screen.getByRole("button", { name: "New hand" }));
+    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("a card drawn keeps the hand: no mulligan after a draw", () => {
+    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={3} />);
+    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
+    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Draw a card" }));
+    expect(screen.getByRole("list", { name: "Hand, 8 cards" })).toBeTruthy();
+    const mulligan = screen.getByRole("button", { name: "Mulligan (the hand is kept: deal a new hand)" });
+    expect(mulligan.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(mulligan);
+    expect(screen.getByRole("list", { name: "Hand, 8 cards" })).toBeTruthy();
+    expect(screen.getByText(/^Kept · /)).toBeTruthy();
+  });
+
+  it("every New hand is said aloud — the hand's number makes each line new", () => {
+    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={11} />);
+    const live = () => document.querySelector("[aria-live]")?.textContent;
+    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
+    expect(live()).toMatch(/^Hand 1: /);
+    fireEvent.click(screen.getByRole("button", { name: "New hand" }));
+    expect(live()).toMatch(/^Hand 2: /);
+    fireEvent.click(screen.getByRole("button", { name: "New hand" }));
+    expect(live()).toMatch(/^Hand 3: \d+ lands?, \d+ spells?\.$/);
+  });
+
+  it("a Brawl deck's first mulligan is free in Brawl — never 'multiplayer Commander' (CR 103.5c)", () => {
+    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat="Brawl" seed={5} />);
+    expect(screen.getByText(/the first is free in Brawl\./)).toBeTruthy();
+    expect(screen.queryByText(/multiplayer/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mulligan" }));
+    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/The first mulligan is free in Brawl: nothing goes to the bottom\.$/);
+    // Nothing owed and nothing kept: another mulligan is there.
+    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
   });
 
   it("the same seed deals the same hand", () => {
     const hand = () => {
-      render(<DeckSampleHand items={deck()} canManage freeMulligan={false} seed={42} />);
+      render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={42} />);
       fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
       const names = within(screen.getByRole("list", { name: /^Hand/ }))
         .getAllByRole("img")
@@ -317,7 +430,7 @@ describe("the playtest", () => {
     const items = [
       item({ name: "Private card", card_id: "c-private", scryfall_id: null, source: "creator", image_url: null, quantity: 7 }),
     ];
-    render(<DeckSampleHand items={items} canManage={false} freeMulligan={false} seed={1} />);
+    render(<DeckSampleHand items={items} canManage={false} freeMulliganFormat={null} seed={1} />);
     fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
     const hand = screen.getByRole("list", { name: "Hand, 7 cards" });
     expect(within(hand).getAllByText("Private card").length).toBeGreaterThan(0);

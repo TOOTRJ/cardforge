@@ -7,7 +7,9 @@
 //
 // "By turn T" counts the cards SEEN: the opening seven, plus one draw a turn
 // — on the play the first turn has no draw (CR 103.8a, a two-player game),
-// on the draw it has. Mulligans are not modelled (the odds of a kept seven).
+// on the draw it has — and so has every player's in a multiplayer game (CR
+// 103.8c: the deck page asks on the draw for Commander and Oathbreaker,
+// formatIsMultiplayer). Mulligans are not modelled (the odds of a kept seven).
 // The library is the mainboard (a commander waits in the command zone).
 // Pure and client-safe.
 // ---------------------------------------------------------------------------

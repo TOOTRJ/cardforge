@@ -17,7 +17,7 @@ import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { CommanderSlot, DeckStartDoors } from "@/components/decks/deck-start-doors";
 import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
-import { publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
+import { publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
@@ -38,12 +38,11 @@ import {
   type DeckItem,
   type DeckPageCard,
 } from "@/lib/decks/queries";
-import { computeDeckAnalytics } from "@/lib/decks/analytics";
-import { computeDeckCharts } from "@/lib/decks/deck-charts";
+import { viewerDeckBreakdown } from "@/lib/decks/deck-charts";
 import { DeckCurveFilterProvider } from "@/components/decks/deck-curve-filter";
 import { DeckDrawOdds } from "@/components/decks/deck-draw-odds";
 import { DeckSampleHand } from "@/components/decks/deck-sample-hand";
-import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
+import { formatHasCommander, formatHasFreeMulligan, formatIsMultiplayer, validateDeck } from "@/lib/decks/format-rules";
 import {
   DECK_CARDS_HEADING_ID,
   DECK_VIEW_COOKIE,
@@ -198,18 +197,17 @@ export default async function DeckDetailPage({
 
   // The rows as this viewer's list shows them: a private card's title never
   // reaches a visitor — not in the list, its pop-up, the copied text or the
-  // fan.
-  const shownItems = publicDeckItems(items, isOwner);
+  // fan. The breakdown (TODO DK7.1 / DK7.3) counts those SAME rows
+  // (viewerDeckBreakdown): no card is named, a private card is null to a
+  // visitor (no text read), and one with no printing has no type line — so a
+  // visitor's curve and types never say what the list's "Private card" tile
+  // hides. The curve's columns carry their entry ids: the list filters to
+  // exactly what a bar counts.
+  const { shownItems, analytics, charts } = viewerDeckBreakdown(items, isOwner);
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
   const featured = featuredCardsOf(shownItems, deck);
-  const analytics = computeDeckAnalytics(items);
-  // The breakdown's charts (TODO DK7.1 / DK7.3): counts over the rows this
-  // viewer read — no card is named, and a private card is null to a visitor
-  // (no text read). The curve's columns carry their entry ids: the list
-  // filters to exactly what a bar counts.
-  const charts = computeDeckCharts(items);
   // The breakdown's "Card status": THE status count the list's chips and the
   // summary bar say (the viewer's rows, each card under the badge it wears).
   const statusCounts = statusCountRows(deckStatusCountsOf(deckRowsOf(shownItems, isOwner))).map(({ badge, count }) => ({
@@ -514,8 +512,15 @@ export default async function DeckDetailPage({
             </h2>
             <p className="max-w-2xl text-sm leading-6 text-muted">The odds of a shuffled mainboard, and a hand to try.</p>
           </div>
-          <DeckDrawOdds items={shownItems} canManage={isOwner} multiplayer={usesCommander} />
-          <DeckSampleHand items={shownItems} canManage={isOwner} freeMulligan={usesCommander} />
+          {/* Commander and Oathbreaker are multiplayer (every player draws
+              on turn one, CR 103.8c); the Brawl formats are 1v1. The first
+              mulligan is free in all four (CR 103.5c). */}
+          <DeckDrawOdds items={shownItems} canManage={isOwner} commander={usesCommander} multiplayer={formatIsMultiplayer(deck.format)} />
+          <DeckSampleHand
+            items={shownItems}
+            canManage={isOwner}
+            freeMulliganFormat={formatHasFreeMulligan(deck.format) ? DECK_FORMAT_LABELS[deck.format] : null}
+          />
         </section>
       ) : null}
 

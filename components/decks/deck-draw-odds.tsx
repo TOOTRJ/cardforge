@@ -13,7 +13,10 @@ import { cn } from "@/lib/utils";
 // Draw odds (TODO DK7.2): the chance of at least N lands by each turn, and
 // of drawing a picked card by each turn — hypergeometric, over the
 // MAINBOARD as a library (lib/decks/draw-odds.ts; a commander waits in the
-// command zone), on the play or on the draw. Both are real tables — the
+// command zone), on the play or on the draw — in a multiplayer format
+// (Commander, Oathbreaker: formatIsMultiplayer) on the draw alone, with no
+// choice to make (CR 103.8c: no player skips their first draw); the Brawl
+// formats are 1v1 games and keep the choice. Both are real tables — the
 // numbers ARE the chart — each cell washed in chart-1 by its chance (a
 // one-hue sequential scale into the surface; the text stays the
 // foreground colour, readable at the deepest step in both themes). The
@@ -36,14 +39,19 @@ const HEAD = "px-0.5 pb-1.5 text-center text-[11px] font-medium text-subtle sm:p
 export function DeckDrawOdds({
   items,
   canManage,
+  commander,
   multiplayer,
 }: {
   items: DeckItem<DeckPageCard>[];
   canManage: boolean;
-  /** A commander format: every player draws on turn one in multiplayer. */
+  /** A commander format: the commander waits in the command zone. */
+  commander: boolean;
+  /** A multiplayer format (formatIsMultiplayer): every player draws on
+   *  their first turn, so the odds are on the draw and there is no turn
+   *  order to pick. */
   multiplayer: boolean;
 }) {
-  const [onThePlay, setOnThePlay] = useState<"play" | "draw">(multiplayer ? "draw" : "play");
+  const [turnOrder, setTurnOrder] = useState<"play" | "draw">("play");
   const library = useMemo(() => deckLibraryOf(deckRowsOf(items, canManage)), [items, canManage]);
   const librarySize = library.reduce((sum, card) => sum + card.quantity, 0);
   const lands = library.reduce((sum, card) => sum + (card.isLand ? card.quantity : 0), 0);
@@ -52,7 +60,7 @@ export function DeckDrawOdds({
   const defaultPick = useMemo(() => defaultDrawPick(options)?.key ?? "", [options]);
   const [picked, setPicked] = useState<string>("");
   const pick = options.find((option) => option.key === (picked || defaultPick)) ?? null;
-  const play = onThePlay === "play";
+  const play = !multiplayer && turnOrder === "play";
   const landRows = useMemo(() => landOddsTable(librarySize, lands, { turns: TURNS, maxLands: MAX_LANDS, onThePlay: play }), [librarySize, lands, play]);
   const cardRows = useMemo(
     () => (pick ? cardOddsByTurn(librarySize, pick.copies, { turns: TURNS, onThePlay: play }) : []),
@@ -75,21 +83,22 @@ export function DeckDrawOdds({
             Draw odds
           </h3>
           <p className="mt-1 text-xs leading-5 text-muted">
-            {multiplayer
-              ? `From the ${librarySize}-card mainboard (the commander waits in the command zone), for a kept opening seven. In multiplayer every player draws on their first turn.`
-              : `From the ${librarySize}-card mainboard, for a kept opening seven.`}
+            {`From the ${librarySize}-card mainboard${commander ? " (the commander waits in the command zone)" : ""}, for a kept opening seven.`}
+            {multiplayer ? " In multiplayer every player draws on their first turn, so the odds are on the draw." : null}
           </p>
         </div>
-        <ChipGroup
-          ariaLabel="Turn order"
-          options={[
-            { value: "play", label: "On the play" },
-            { value: "draw", label: "On the draw" },
-          ]}
-          value={onThePlay}
-          onChange={setOnThePlay}
-          keepCase
-        />
+        {multiplayer ? null : (
+          <ChipGroup
+            ariaLabel="Turn order"
+            options={[
+              { value: "play", label: "On the play" },
+              { value: "draw", label: "On the draw" },
+            ]}
+            value={turnOrder}
+            onChange={setTurnOrder}
+            keepCase
+          />
+        )}
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">

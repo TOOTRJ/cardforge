@@ -4,6 +4,7 @@ import {
   canMulligan,
   drawCard,
   entryIdOfKey,
+  isHandKept,
   keepHand,
   libraryKeys,
   mulligan,
@@ -15,7 +16,7 @@ import {
 // ---------------------------------------------------------------------------
 // The sample hand (TODO DK7.2): a seeded shuffle, the opening seven and the
 // London mulligan (CR 103.5: draw seven, bottom one per mulligan; the first
-// free in multiplayer, 103.5c).
+// free in multiplayer and Brawl, 103.5c) — none once the hand is kept.
 // ---------------------------------------------------------------------------
 
 const DECK = libraryKeys([
@@ -57,7 +58,7 @@ describe("the opening hand and the London mulligan", () => {
     expect(state.hand).toHaveLength(7);
     expect(state.library).toHaveLength(53);
     expect([...state.hand, ...state.library].sort()).toEqual([...DECK].sort());
-    expect(state).toMatchObject({ mulligans: 0, toBottom: 0, drawn: 0 });
+    expect(state).toMatchObject({ mulligans: 0, toBottom: 0, drawn: 0, kept: false });
   });
 
   it("each mulligan draws seven again and owes one more card to the bottom", () => {
@@ -116,6 +117,37 @@ describe("the opening hand and the London mulligan", () => {
   it("a deck smaller than seven deals what it has", () => {
     const tiny = libraryKeys([{ id: "a", quantity: 3 }]);
     expect(openingHand(tiny, seededRandom(1)).hand).toHaveLength(3);
+  });
+
+  it("a kept hand takes no more mulligans — after Keep, or after a draw (which keeps it)", () => {
+    const random = seededRandom(13);
+    const opening = openingHand(DECK, random);
+    expect(isHandKept(opening)).toBe(false);
+    expect(canMulligan(opening, DECK.length, false)).toBe(true);
+
+    // Keep: the owed card to the bottom, and the hand is kept.
+    const owed = mulligan(opening, DECK, random, false);
+    expect(canMulligan(owed, DECK.length, false)).toBe(true);
+    const kept = keepHand(owed, [owed.hand[0]]);
+    expect(kept.kept).toBe(true);
+    expect(canMulligan(kept, DECK.length, false)).toBe(false);
+    expect(mulligan(kept, DECK, random, false)).toBe(kept);
+    // Kept once: a second Keep changes nothing.
+    expect(keepHand(kept, [])).toBe(kept);
+
+    // A draw from an opening seven (nothing owed) keeps it too.
+    const drawn = drawCard(opening);
+    expect(drawn.kept).toBe(true);
+    expect(canMulligan(drawn, DECK.length, false)).toBe(false);
+    expect(mulligan(drawn, DECK, random, false)).toBe(drawn);
+
+    // A free mulligan owes nothing and keeps nothing: another is still there.
+    const free = mulligan(openingHand(DECK, random), DECK, random, true);
+    expect(free).toMatchObject({ toBottom: 0, kept: false });
+    expect(canMulligan(free, DECK.length, true)).toBe(true);
+
+    // A new hand starts again.
+    expect(canMulligan(openingHand(DECK, random), DECK.length, false)).toBe(true);
   });
 
   it("a mulligan always leaves a card to keep", () => {

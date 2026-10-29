@@ -8,6 +8,7 @@ import {
   defaultDrawPick,
   drawPickOptions,
   manaProduced,
+  viewerDeckBreakdown,
   weightedMedian,
 } from "@/lib/decks/deck-charts";
 import { deckRowsOf, groupDeckRows } from "@/lib/decks/deck-view";
@@ -159,6 +160,51 @@ describe("computeDeckCharts", () => {
       item({ card_id: "c2" }, { id: "c2", title: "Elf", card_type: "creature", cost: "{G}", rules_text: "{T}: Add {G}.", color_identity: ["green"] }),
     ]);
     expect(elves.colors).toEqual([expect.objectContaining({ color: "G", symbols: 1, sources: 1 })]);
+  });
+});
+
+describe("viewerDeckBreakdown: a visitor's counts are their list's", () => {
+  // The owner's private planeswalker, added from the creator: no printing, so
+  // its entry's name and type line are the card's own. RLS hands a visitor
+  // its card as null.
+  const privateWalker = { name: "Jace, Hidden Mind", card_id: "c-private", scryfall_id: null, source: "creator", type_line: "Legendary Planeswalker — Jace", mana_cost: "{2}{U}{U}", mana_value: 4, color_identity: ["U"], rarity: "mythic" } as const;
+  const items = [
+    item({ name: "Llanowar Elves", quantity: 4 }),
+    item({ name: "Wind Drake", type_line: "Creature — Drake", mana_cost: "{2}{U}{U}", mana_value: 4, color_identity: ["U"] }),
+    item({ ...privateWalker, color_identity: [...privateWalker.color_identity] }),
+    item({ name: "Island", type_line: "Basic Land — Island", mana_cost: null, mana_value: 0, color_identity: ["U"], quantity: 8 }),
+  ];
+
+  it("a private card with no printing shows no type in a visitor's charts — it is Other, as its tile is", () => {
+    const visitor = viewerDeckBreakdown(items, false);
+    expect(visitor.charts.types.map((t) => t.label)).not.toContain("Planeswalkers");
+    expect(visitor.charts.types.map((t) => [t.label, t.count])).toEqual([
+      ["Creatures", 5],
+      ["Lands", 8],
+      ["Other", 1],
+    ]);
+    // The 4 column: the drake a creature, the private card "other" — never a second creature.
+    expect(visitor.charts.curve[4]).toMatchObject({ creatures: 1, other: 1, total: 2 });
+    expect(visitor.analytics.byType.Planeswalker).toBe(0);
+    expect(visitor.analytics.byType.Other).toBe(1);
+    // The list's rows are the same rows: its tile says "Private card", no type line.
+    const shown = visitor.shownItems.find((i) => i.entry.card_id === "c-private")!;
+    expect(shown.entry).toMatchObject({ name: "Private card", type_line: null });
+    expect(deckRowsOf(visitor.shownItems, false).find((row) => row.item === shown)?.bucket).toBe("Other");
+    // Nothing else moves: the same cards, the same curve total.
+    expect(visitor.charts.total).toBe(14);
+    expect(visitor.analytics.total).toBe(14);
+  });
+
+  it("the owner reads their own rows", () => {
+    const owner = viewerDeckBreakdown(items, true);
+    expect(owner.shownItems).toEqual(items);
+    expect(owner.charts.types.map((t) => [t.label, t.count])).toEqual([
+      ["Planeswalkers", 1],
+      ["Creatures", 5],
+      ["Lands", 8],
+    ]);
+    expect(owner.analytics.byType.Planeswalker).toBe(1);
   });
 });
 

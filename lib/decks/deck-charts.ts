@@ -1,4 +1,13 @@
-import { curveSlotLabel, CURVE_SLOTS, manaValueSlot, TYPE_BUCKET_PLURALS, TYPE_BUCKETS, type TypeBucket } from "@/lib/decks/analytics";
+import {
+  computeDeckAnalytics,
+  curveSlotLabel,
+  CURVE_SLOTS,
+  manaValueSlot,
+  TYPE_BUCKET_PLURALS,
+  TYPE_BUCKETS,
+  type DeckAnalytics,
+  type TypeBucket,
+} from "@/lib/decks/analytics";
 import {
   DECK_RARITY_KEYS,
   deckRarityKey,
@@ -9,7 +18,9 @@ import {
   type ViewItem,
 } from "@/lib/decks/deck-view";
 import { keywordFrequency, type KeywordFrequency } from "@/lib/decks/keyword-frequency";
+import { publicDeckItems } from "@/lib/decks/private-card-name";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY, type ColorLetter } from "@/types/card";
+import type { DeckCardEntry } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // The deck breakdown's charts (TODO DK7.1 / DK7.3) — pure, over the deck's
@@ -260,6 +271,23 @@ export function computeDeckCharts(items: readonly ChartItem[]): DeckCharts {
       rows.filter((row) => row.item.card).map((row) => ({ texts: cardTexts(row.item.card as TextCard), quantity: row.quantity })),
     ),
   };
+}
+
+/**
+ * The deck page's rows and counts as THIS viewer reads the deck: the items
+ * through publicDeckItems (a visitor's private card with no printing has no
+ * name and no type line), and the breakdown's analytics and charts over
+ * those same items — so a visitor's curve, types and land count agree with
+ * the list they see (a private planeswalker is "Other" in both, never
+ * "Planeswalkers 1" beside a "Private card" tile). The owner's rows are
+ * untouched.
+ */
+export function viewerDeckBreakdown<T extends ChartItem & { entry: DeckCardEntry }>(
+  items: readonly T[],
+  viewerIsOwner: boolean,
+): { shownItems: T[]; analytics: DeckAnalytics; charts: DeckCharts } {
+  const shownItems = publicDeckItems(items, viewerIsOwner);
+  return { shownItems, analytics: computeDeckAnalytics(shownItems), charts: computeDeckCharts(shownItems) };
 }
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ import {
   drawCard,
   entryIdOfKey,
   freshSeed,
+  isHandKept,
   keepHand,
   libraryKeys,
   mulligan,
@@ -30,8 +31,11 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // The sample hand (TODO DK7.2): seven cards off the shuffled MAINBOARD, the
 // London mulligan (lib/decks/sample-hand.ts — draw seven, then pick the
-// cards that go to the bottom: one per mulligan, the first free in a
-// commander format's multiplayer game), then a card at a time.
+// cards that go to the bottom: one per mulligan, the first free in every
+// commander format — a multiplayer game or a Brawl one, CR 103.5c), then a
+// card at a time. A kept hand (Keep, or a card drawn) takes no more
+// mulligans: Mulligan stays where it is, off (aria-disabled, its reason in
+// its name — the focus never drops), and New hand starts again.
 //
 // The deck's own pictures, as the list draws them (DeckEntryTile's rule): a
 // PipGlyph card through BakedCardThumbnail — its 600 px thumb, never the HD
@@ -39,8 +43,10 @@ import { cn } from "@/lib/utils";
 // visitor's private card the "Private card" face (the rows are the page's
 // publicDeckItems: never its title or art). Nothing is shuffled — no
 // picture loaded — until the reader asks for a hand. Every change is said
-// once in a polite live region; the button that disappears (Keep) hands the
-// focus to the one that follows (Draw a card).
+// once in a polite live region, each line its own ("Hand 3: …", "Drew
+// Forest: 8 cards in hand." — a line said twice in a row is silence); the
+// button that disappears (Keep) hands the focus to the one that follows
+// (Draw a card).
 // ---------------------------------------------------------------------------
 
 type HandItem = DeckItem<DeckPageCard>;
@@ -93,16 +99,19 @@ function handSummary(keys: readonly string[], rowById: ReadonlyMap<string, DeckR
 export function DeckSampleHand({
   items,
   canManage,
-  freeMulligan,
+  freeMulliganFormat,
   seed,
 }: {
   items: HandItem[];
   canManage: boolean;
-  /** A commander format: the first mulligan is free (CR 103.5c). */
-  freeMulligan: boolean;
+  /** The format's name where the first mulligan is free (CR 103.5c,
+   *  formatHasFreeMulligan: "Commander", "Brawl"…) — what the copy says;
+   *  null where it isn't. */
+  freeMulliganFormat: string | null;
   /** Tests replay a hand from a seed; the page seeds from crypto. */
   seed?: number;
 }) {
+  const freeMulligan = freeMulliganFormat !== null;
   const rows = useMemo(() => deckRowsOf(publicDeckItems(items, canManage), canManage), [items, canManage]);
   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const deck = useMemo(() => libraryKeys(deckLibraryOf(rows)), [rows]);
@@ -111,6 +120,9 @@ export function DeckSampleHand({
   const [hand, setHand] = useState<HandState | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [said, setSaid] = useState("");
+  // Hands dealt so far: "Hand 3: …" — a second New hand never says the
+  // line the first one did.
+  const [deals, setDeals] = useState(0);
   const drawButton = useRef<HTMLButtonElement | null>(null);
 
   if (deck.length === 0) return null;
@@ -120,14 +132,17 @@ export function DeckSampleHand({
     return row ? (row.privateName ?? row.name) : "a card";
   };
   const choosing = hand !== null && hand.toBottom > 0;
+  const kept = hand !== null && isHandKept(hand);
   const mulliganOk = hand !== null && canMulligan(hand, deck.length, freeMulligan);
   const drawOk = hand !== null && !choosing && hand.library.length > 0;
 
   const newHand = () => {
     const next = openingHand(deck, rng());
+    const deal = deals + 1;
+    setDeals(deal);
     setHand(next);
     setChosen([]);
-    setSaid(`New hand: ${handSummary(next.hand, rowById)}.`);
+    setSaid(`Hand ${deal}: ${handSummary(next.hand, rowById)}.`);
   };
   const takeMulligan = () => {
     if (!hand) return;
@@ -138,7 +153,7 @@ export function DeckSampleHand({
       `Mulligan ${next.mulligans}: seven new cards, ${handSummary(next.hand, rowById)}. ` +
         (next.toBottom > 0
           ? `Choose ${next.toBottom} to put on the bottom.`
-          : "The first mulligan in multiplayer is free: nothing goes to the bottom."),
+          : `The first mulligan is free in ${freeMulliganFormat}: nothing goes to the bottom.`),
     );
   };
   // Picking past the owed count lets go of the earliest pick: with one card
@@ -163,12 +178,13 @@ export function DeckSampleHand({
     const next = drawCard(hand);
     if (next === hand) return;
     setHand(next);
-    setSaid(`Drew ${nameOf(next.hand[next.hand.length - 1])}.`);
+    // The hand's size makes each draw's line its own (two Forests in a row).
+    setSaid(`Drew ${nameOf(next.hand[next.hand.length - 1])}: ${next.hand.length} cards in hand.`);
   };
 
   const status = !hand
     ? `A seven-card hand from the ${deck.length}-card mainboard.`
-    : `${hand.mulligans > 0 ? `Mulligan ${hand.mulligans} · ` : ""}${handSummary(hand.hand, rowById)} · ${hand.library.length} in the library`;
+    : `${hand.mulligans > 0 ? `Mulligan ${hand.mulligans} · ` : ""}${kept ? "Kept · " : ""}${handSummary(hand.hand, rowById)} · ${hand.library.length} in the library`;
 
   return (
     <section
@@ -181,7 +197,8 @@ export function DeckSampleHand({
         </h3>
         <p className="text-xs leading-5 text-muted">
           Seven cards from the shuffled mainboard. A mulligan is the London one: seven new cards, then one to the bottom for each
-          mulligan{freeMulligan ? " — the first is free in multiplayer Commander" : ""}.
+          mulligan{freeMulliganFormat ? ` — the first is free in ${freeMulliganFormat}` : ""}. A kept hand takes no more
+          mulligans.
         </p>
       </header>
 
@@ -200,6 +217,8 @@ export function DeckSampleHand({
             >
               <Shuffle className="h-4 w-4" aria-hidden />
               Mulligan
+              {kept ? <span className="sr-only"> (the hand is kept: deal a new hand)</span> : null}
+              {!kept && !mulliganOk ? <span className="sr-only"> (no card would be left to keep)</span> : null}
             </button>
             <button
               ref={drawButton}
