@@ -9119,7 +9119,7 @@ without the Artifact word (design D2).
   Production's `c` ticks on both bodies were made at v41 against the
   artifact stand-in, so the see-through master is published by a NEW tick:
   the verified-key readers add the key for a `c` row ticked at
-  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` (74) or later
+  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` (75) or later
   (`seeThroughTickKeys`), and the admin checklist shows those two rows as
   "re-verify" until then. Server (`dfcFrontColorError`, `resolveDfcBackFace`:
   an `unverified` refusal an admin preview skips; a stored card keeps

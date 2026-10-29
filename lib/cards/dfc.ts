@@ -381,7 +381,8 @@ export function backBodyFor(
 
 /**
  * The layout version the modal spell bodies' SEE-THROUGH `c` shipped at
- * (TODO 5.11a, no bump: CARD_LAYOUT_VERSION when it merged). Their `c` combo
+ * (TODO 5.11a, no bump: CARD_LAYOUT_VERSION when it merged — v75, the
+ * walker badges, #640). Their `c` combo
  * was ticked before (production, 2026-10-06, at v41) against the ARTIFACT
  * stand-in — STX #154 Pestilent Cauldron, whose face wears `a` — so that
  * tick never looked at the see-through master: a colourless face with no
@@ -389,7 +390,7 @@ export function backBodyFor(
  * this version or later (seeThroughTickKeys), and the admin checklist asks
  * for it (lib/cards/frame-verification-state.ts).
  */
-export const SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION = 74;
+export const SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION = 75;
 
 /** Whether `template` is a double-faced body whose `c` master is the
  *  SEE-THROUGH colourless frame (TODO 5.11a: the modal spell bodies) — the
