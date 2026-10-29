@@ -404,7 +404,7 @@ export async function runDeckExport(
       .filter((card) => pngs.get(card.id)?.front)
       .map((card) => ({ png: pngs.get(card.id)!.front as Uint8Array, copies: card.copies, back: pngs.get(card.id)!.back ?? null }));
     if (entries.length === 0 && manifest.checklist.length === 0) {
-      throw new DeckExportError("Nothing to print — remix some cards into custom proxies first.");
+      throw new DeckExportError("Nothing to print — customize some cards first.");
     }
     const bytes = await buildDeckPdf(entries, {
       title: manifest.deck.title,
@@ -412,7 +412,7 @@ export async function runDeckExport(
       checklist:
         manifest.checklist.length > 0
           ? {
-              heading: `${manifest.deck.title} — not yet remixed (originals to supply yourself)`,
+              heading: `${manifest.deck.title} — not customized yet (real cards to supply yourself)`,
               lines: manifest.checklist,
             }
           : null,
@@ -462,13 +462,13 @@ export async function runDeckExport(
   }
   const notes: string[] = [];
   if (manifest.cards.length === 0) {
-    notes.push("No custom card images yet — remix cards into your own proxies and they will be included here.");
+    notes.push("No custom card images yet — customize cards and they will be included here.");
   }
   if (progress.failed.length > 0) {
     notes.push(`These cards failed to render and were skipped:\n${progress.failed.join("\n")}`);
   }
   if (manifest.checklist.length > 0) {
-    notes.push(`Real cards in this deck (no custom proxy yet):\n${manifest.checklist.join("\n")}`);
+    notes.push(`Real cards in this deck (not customized yet):\n${manifest.checklist.join("\n")}`);
   }
   if (notes.length > 0) zip.file("MISSING.txt", `${notes.join("\n\n")}\n`);
 

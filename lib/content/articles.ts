@@ -3,6 +3,14 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import {
+  ARTICLE_CATEGORIES,
+  categoryForTagSlug,
+  categoryPath,
+  isArticleCategory,
+  type ArticleCategory,
+  type ArticleCategorySlug,
+} from "@/lib/content/article-categories";
 
 // ---------------------------------------------------------------------------
 // Articles — long-form guides as MDX files in content/articles/.
@@ -23,6 +31,11 @@ export type ArticleMeta = {
    *  schema.org dateModified so a revised guide signals freshness. */
   updated?: string;
   tags: string[];
+  /** The ONE shelf the guide sits on (`category` frontmatter, TODO NV3) —
+   *  /learn/<category> lists it and its breadcrumb names it. Undefined only
+   *  for a missing or unknown value, which tests/unit/content/
+   *  article-categories.test.ts fails on; the page still renders. */
+  category?: ArticleCategorySlug;
   /** Optional `faq` frontmatter — the questions the guide also renders as
    *  headings; the article page emits them as FAQPage JSON-LD. */
   faq?: Array<{ q: string; a: string }>;
@@ -106,6 +119,7 @@ function readArticleFile(filename: string): Article | null {
           ? new Date(data.updated as string | Date).toISOString()
           : undefined,
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+        category: isArticleCategory(data.category) ? data.category : undefined,
         faq: parseFaq(data.faq),
         seoTitle: data.seoTitle ? String(data.seoTitle) : undefined,
         excerpt: data.excerpt ? String(data.excerpt) : undefined,
@@ -148,6 +162,32 @@ export function getArticle(slug: string): Article | null {
 }
 
 // ---------------------------------------------------------------------------
+// Categories — the /learn shelves (lib/content/article-categories.ts holds
+// their words). One category per guide; the lists keep listArticles' order,
+// newest first.
+// ---------------------------------------------------------------------------
+
+export type CategoryShelf = {
+  category: ArticleCategory;
+  /** The category's guides, newest first (may be empty). */
+  articles: ArticleMeta[];
+};
+
+/** Every category in menu order, each with its guides. */
+export function listCategoryShelves(): CategoryShelf[] {
+  const all = listArticles();
+  return ARTICLE_CATEGORIES.map((category) => ({
+    category,
+    articles: all.filter((article) => article.category === category.slug),
+  }));
+}
+
+/** One category's guides, newest first. */
+export function listArticlesInCategory(slug: ArticleCategorySlug): ArticleMeta[] {
+  return listArticles().filter((article) => article.category === slug);
+}
+
+// ---------------------------------------------------------------------------
 // Tags & clusters — the hub-and-spoke layer. A tag is shared across articles
 // to form a topical cluster; /articles/tag/[slug] renders the hub. Slugs use
 // the GitHub-style algorithm so the SAME function ids article headings (TOC)
@@ -161,6 +201,15 @@ export function slugifyTag(value: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/** Where a tag badge links: its /articles/tag/<slug> hub — or, for the four
+ *  tags whose hubs became categories (card design, reference, card makers,
+ *  lore), the category page itself, so no internal link walks a 308. */
+export function tagHubHref(tag: string): string {
+  const slug = slugifyTag(tag);
+  const category = categoryForTagSlug(slug);
+  return category ? categoryPath(category.slug) : `/articles/tag/${slug}`;
 }
 
 /** Every tag across all articles, most-used first. */

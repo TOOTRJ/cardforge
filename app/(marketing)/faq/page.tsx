@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { allFaqEntries, FAQ_TOPICS } from "@/lib/content/faq";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /faq — the site-wide Q&A hub.
@@ -25,12 +26,12 @@ export const metadata: Metadata = {
   description:
     "Every common question about making custom Magic: The Gathering cards on PipGlyph — the card maker, mana pips and custom symbols, AI generation, sharing, decks, printing, remixing, and challenges.",
   alternates: { canonical: "/faq" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "PipGlyph FAQ — Custom MTG Card Making, Answered",
     description:
       "Direct answers about the card maker, mana pip editor, AI generation, exports and printing, decks, sharing, and community challenges.",
     type: "article",
-  },
+  }),
 };
 
 export default function FaqPage() {

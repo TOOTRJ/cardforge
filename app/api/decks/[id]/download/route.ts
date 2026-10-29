@@ -14,7 +14,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import type { DeckExportManifest } from "@/lib/decks/export-client";
 import { exportFacesOf } from "@/lib/cards/faces";
 import { isUuid } from "@/lib/ids";
-import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 
 // ---------------------------------------------------------------------------
 // /api/decks/[id]/download — the pieces of a Pro whole-deck export.
@@ -33,7 +33,8 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 //                    whether a cover exists
 //   ?part=report   → deck.pdf (stats, decklist by board, AI guide + combos)
 //   ?part=decklist → decklist.txt
-//   ?part=cover    → the cover image bytes (proxied from our storage host)
+//   ?part=cover    → the cover image: an upload's bytes (proxied from our
+//                    storage host), or a redirect to its built-in default
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -86,15 +87,22 @@ export async function GET(
   }
 
   const part = request.nextUrl.searchParams.get("part") ?? "manifest";
-  // Only a cover we store (migration 0127, lib/media/media-urls.ts), and
-  // only from a host the server may fetch.
-  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
-  const hasCover = Boolean(coverUrl && isAllowedServerImageFetchUrl(coverUrl));
+  const items = await listDeckCards(id);
+  // The cover the deck's page draws (lib/decks/cover.ts): an upload we store
+  // (migration 0127) fetched only from a host the server may fetch, else the
+  // built-in default its colours pick — one of our own static files.
+  const cover = deckCoverOf(deck, deckCoverColors(items));
+  const hasCover = cover.kind === "default" || isAllowedServerImageFetchUrl(cover.src);
 
   if (part === "cover") {
     if (!hasCover) return NextResponse.json({ error: "No cover" }, { status: 404 });
+    if (cover.kind === "default") {
+      // A public static file of this deployment: the export fetches it
+      // itself (same origin), never through this function.
+      return NextResponse.redirect(new URL(cover.src, request.nextUrl.origin), 307);
+    }
     try {
-      const response = await fetch(coverUrl as string, { cache: "no-store" });
+      const response = await fetch(cover.src, { cache: "no-store" });
       if (!response.ok) return NextResponse.json({ error: "Cover unavailable" }, { status: 502 });
       const type = response.headers.get("content-type") ?? "image/png";
       return new NextResponse(Buffer.from(await response.arrayBuffer()), {
@@ -106,7 +114,6 @@ export async function GET(
     }
   }
 
-  const items = await listDeckCards(id);
   if (items.length === 0) {
     return NextResponse.json({ error: "This deck has no cards yet — add some first." }, { status: 404 });
   }

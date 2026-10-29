@@ -15,6 +15,13 @@ const RETIRED_TAG_HUBS: Record<string, string> = {
   "/articles/tag/templating": "/articles/tag/oracle-text",
   "/articles/tag/abilities": "/articles/tag/oracle-text",
   "/articles/tag/proxies": "/articles/tag/printing",
+  // The four broad hubs became /learn categories (TODO NV4) — each
+  // category's `tagSlug` in lib/content/article-categories.ts; the proxy
+  // test walks that list so the two can't drift.
+  "/articles/tag/card-design": "/learn/design",
+  "/articles/tag/reference": "/learn/reference",
+  "/articles/tag/card-makers": "/learn/comparisons",
+  "/articles/tag/lore": "/learn/lore",
 };
 
 export async function proxy(request: NextRequest) {
@@ -42,7 +49,8 @@ export async function proxy(request: NextRequest) {
   // inbound links and indexed copy for /sets and /set/<slug>. Send that
   // equity to the nearest living collection surface instead of 404ing.
   // Guide tag hubs were consolidated on 2026-09-22 (content refresh): the
-  // three retired hubs that had been indexable keep resolving.
+  // three retired hubs that had been indexable keep resolving — and on
+  // 2026-10-29 four more became the /learn categories.
   const retiredTagHub = RETIRED_TAG_HUBS[requestPath];
   if (retiredTagHub) {
     const url = request.nextUrl.clone();

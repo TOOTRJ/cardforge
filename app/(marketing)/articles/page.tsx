@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { ArticleCard } from "@/components/content/article-card";
-import {
-  breadcrumbJsonLd,
-  itemListJsonLd,
-  JsonLd,
-} from "@/components/seo/json-ld";
-import { listArticles } from "@/lib/content/articles";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
+import { CategoryLinks } from "@/components/content/category-links";
+import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { listArticles, listCategoryShelves } from "@/lib/content/articles";
 
 // ---------------------------------------------------------------------------
-// /articles — the guides index. Fully static: the list is read from
+// /articles — the guides index, every guide newest first; the /learn
+// category shelves sit above the list. Fully static: the list is read from
 // content/articles/ at build time.
 // ---------------------------------------------------------------------------
 
@@ -30,11 +29,12 @@ export default function ArticlesIndexPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <JsonLd
-        data={breadcrumbJsonLd([
+      <Breadcrumbs
+        items={[
           { name: "Home", path: "/" },
-          { name: "Articles", path: "/articles" },
-        ])}
+          { name: "Learn", path: "/learn" },
+          { name: "All articles", path: "/articles" },
+        ]}
       />
       {articles.length > 0 ? (
         <JsonLd
@@ -49,9 +49,15 @@ export default function ArticlesIndexPage() {
       ) : null}
 
       <PageHeader
-        eyebrow="Guides"
+        eyebrow={`Learn · ${articles.length} guides`}
         title="Articles"
-        description="Long-form guides on the craft of custom card design — templating rules text, mana symbols, balance, frame history, and community challenges."
+        description="Long-form guides on the craft of custom card design — templating rules text, mana symbols, balance, frame history, and community challenges. Newest first."
+      />
+
+      <CategoryLinks
+        shelves={listCategoryShelves()}
+        label="Browse by topic"
+        className="mt-8"
       />
 
       <div className="mt-10 grid gap-5 lg:grid-cols-2">

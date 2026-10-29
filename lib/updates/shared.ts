@@ -77,6 +77,13 @@ export function toDateTimeLocal(iso: string | null | undefined): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+/** The id /news gives an update's entry — the fragment the /learn hub's
+ *  "What's new" strip and the /news RSS feed link to (an update has no page
+ *  of its own yet). */
+export function updateAnchorId(id: string): string {
+  return `update-${id}`;
+}
+
 export function formatReleaseDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",

@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import {
-  DECK_COVER_HEIGHT,
-  DECK_COVER_WIDTH,
-  normalizeDeckCover,
-} from "@/lib/decks/cover";
+import { DECK_COVER_HEIGHT, DECK_COVER_WIDTH } from "@/lib/decks/cover";
+import { normalizeDeckCover } from "@/lib/decks/cover-normalize";
 
 describe("normalizeDeckCover", () => {
   it("turns any image into an exact 16:9 WebP cover", async () => {

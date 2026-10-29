@@ -106,7 +106,7 @@ describe("the Coming soon button", () => {
 });
 
 describe("the deck page's owner tools", () => {
-  it("Add with AI and Remix with AI are Coming soon beside ONE visible reason; edit, import and delete are untouched", () => {
+  it("Add with AI and Restyle with AI are Coming soon beside ONE visible reason; edit, import and delete are untouched", () => {
     render(
       <DeckOwnerTools
         deck={{ id: "deck-1", title: "Gorgon Gaze" } as Deck}
@@ -119,7 +119,7 @@ describe("the deck page's owner tools", () => {
       />,
     );
     const add = expectComingSoon("Add with AI — coming soon");
-    const remix = expectComingSoon("Remix with AI — coming soon");
+    const remix = expectComingSoon("Restyle with AI — coming soon");
     expect(add).toBe(remix);
     expect(screen.getAllByText(DECK_AI_PAUSED_MESSAGE)).toHaveLength(1);
     for (const name of [/edit details/i, /import decklist/i, /delete deck/i]) {

@@ -391,11 +391,11 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     });
   });
 
-  it("the switch belongs to the proxy: showing the ORIGINAL printing hides it (and the row's mark)", async () => {
+  it("the switch belongs to the custom card: showing the REAL card's printing hides it (and the row's mark)", async () => {
     const original = "https://cards.scryfall.io/normal/front/a/b/abc.jpg";
     list([item({}, { scryfall_id: "44444444-4444-4444-8444-444444444444", image_url: original })]);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Showing my proxies" }));
+      fireEvent.click(screen.getByRole("button", { name: "Showing custom cards" }));
     });
     expect(screen.queryByTestId("two-faces-mark")).toBeNull();
     await act(async () => {
@@ -403,7 +403,7 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     });
     expect(screen.queryByTestId("deck-card-face-switch")).toBeNull();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "My proxy" }));
+      fireEvent.click(screen.getByRole("button", { name: "Custom card" }));
     });
     expect(screen.getByTestId("deck-card-face-switch")).toBeTruthy();
   });
