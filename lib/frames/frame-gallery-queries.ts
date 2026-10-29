@@ -29,7 +29,9 @@ import type { CardType, ColorIdentity, FrameStyle, FrameTemplate, Rarity } from 
 //     for the templates still without an example, so a page full of the
 //     common frame never hides a rare one: the next read leaves that frame
 //     out. Usually one or two reads; a template still missing after
-//     EXAMPLE_ROUNDS shows its empty master.
+//     EXAMPLE_ROUNDS shows its empty master. Never a staff card (0091's
+//     rule for the community rows): each picked card's owner is checked
+//     once through owner_is_admin().
 //
 // Fail-soft like the other public lists: an error leaves the list empty (the
 // page says so and is noindex) or a frame without its example — never a
@@ -37,7 +39,7 @@ import type { CardType, ColorIdentity, FrameStyle, FrameTemplate, Rarity } from 
 // ---------------------------------------------------------------------------
 
 /** Rows per example read. */
-const EXAMPLE_PAGE = 200;
+export const EXAMPLE_PAGE = 200;
 /** The most example reads one build makes. */
 const EXAMPLE_ROUNDS = 4;
 
@@ -92,15 +94,45 @@ async function readFrameExamples(
   if (templates.length === 0) return {};
   const supabase = createPublicClient();
   const rows = new Map<FrameTemplate, FrameExampleRow>();
+  // Staff cards stay out of the community's showcase rows (migration 0091:
+  // trending and newest leave out every card whose owner_is_admin()). The
+  // table read can't call that predicate, so each owner a pick would show
+  // is asked once through the same function (granted to anon); an admin —
+  // or an owner whose check failed: fail closed — is never picked, and
+  // later reads leave their cards out. A frame whose only examples are
+  // staff cards shows its empty master.
+  const ownerChecked = new Set<string>();
+  const excludedOwners = new Set<string>();
+  const checkOwners = async (ownerIds: readonly string[]) => {
+    const answers = await Promise.all(
+      ownerIds.map(async (ownerId) => {
+        try {
+          const { data, error } = await supabase.rpc("owner_is_admin", { p_owner_id: ownerId });
+          if (error) console.warn("readFrameExamples: owner check failed", error.message);
+          return { ownerId, community: !error && data === false };
+        } catch (error) {
+          console.warn("readFrameExamples: owner check failed", error instanceof Error ? error.message : error);
+          return { ownerId, community: false };
+        }
+      }),
+    );
+    for (const { ownerId, community } of answers) {
+      ownerChecked.add(ownerId);
+      if (!community) excludedOwners.add(ownerId);
+    }
+  };
+
   let missing = [...templates];
   for (let round = 0; round < EXAMPLE_ROUNDS && missing.length > 0; round++) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("cards")
       .select(FRAME_EXAMPLE_COLUMNS)
       .eq("visibility", "public")
       .not("rendered_image_url", "is", null)
       .not("rendered_thumb_url", "is", null)
-      .in("frame_style->>template", missing)
+      .in("frame_style->>template", missing);
+    if (excludedOwners.size > 0) query = query.not("owner_id", "in", `(${[...excludedOwners].join(",")})`);
+    const { data, error } = await query
       .order("likes_count", { ascending: false })
       .order("updated_at", { ascending: false })
       .order("id", { ascending: true })
@@ -110,11 +142,23 @@ async function readFrameExamples(
       break;
     }
     const page = (data ?? []) as unknown as FrameExampleRow[];
-    const picked = pickFrameExamples(page, missing);
+    const excludedBefore = excludedOwners.size;
+    // Pick, check the owners of the picks, and pick again without the staff
+    // among them, until every pick's owner is a checked community member.
+    let picked = pickFrameExamples(page, missing, excludedOwners);
+    for (;;) {
+      const unchecked = [...new Set([...picked.values()].map((row) => row.owner_id))].filter(
+        (ownerId) => !ownerChecked.has(ownerId),
+      );
+      if (unchecked.length === 0) break;
+      await checkOwners(unchecked);
+      picked = pickFrameExamples(page, missing, excludedOwners);
+    }
     for (const [template, row] of picked) rows.set(template, row);
-    // A short page held every candidate left; a full one found at least one
-    // more frame (or none at all — then another read would see the same).
-    if (page.length < EXAMPLE_PAGE || picked.size === 0) break;
+    // A short page held every candidate left. A full one found at least one
+    // more frame or one more staff owner (the next read leaves them out);
+    // with neither, another read would see the same page.
+    if (page.length < EXAMPLE_PAGE || (picked.size === 0 && excludedOwners.size === excludedBefore)) break;
     missing = missing.filter((template) => !rows.has(template));
   }
   if (rows.size === 0) return {};

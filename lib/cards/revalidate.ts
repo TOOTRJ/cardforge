@@ -71,7 +71,8 @@ export function revalidateCardListSurfaces(options: { afterBake?: boolean } = {}
   revalidatePath("/dashboard/cards");
   revalidatePath("/gallery");
   // The frame gallery's examples (TODO NV8): a card made private, hidden or
-  // deleted leaves its tile on the next request, not at the hour's end.
+  // deleted leaves its tile on the next request, not at the end of the
+  // page's 5-minute ISR window.
   revalidatePath("/frames");
   revalidateDiscoverySurfaces();
   if (options.afterBake) revalidateBakedTilePages();

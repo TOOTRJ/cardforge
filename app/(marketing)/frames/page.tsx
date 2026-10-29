@@ -38,8 +38,8 @@ import type { FrameTemplate } from "@/types/card";
 // — fewer than FRAME_GALLERY_MIN_INDEXED frames, or a failed read — =
 // noindex, and the sitemap applies the same bar.
 //
-// "Start with this frame" opens the creator: it takes no starting frame from
-// its URL yet (lib/frames/frame-gallery.ts startWithFrameHref), so each
+// A frame's "Make a card" opens the creator: it takes no starting frame from
+// its URL yet (lib/frames/frame-gallery.ts creatorHrefForFrame), so each
 // group says where in the Card step its frames are.
 // ---------------------------------------------------------------------------
 
@@ -47,7 +47,12 @@ export const revalidate = 300;
 
 const TITLE = "MTG Card Frames — Every Frame in the PipGlyph Creator";
 const DESCRIPTION =
-  "Every Magic card frame you can design on in PipGlyph, from the 1993 border to borderless, layouts and showcases — checked colour by colour against printed cards.";
+  "Every Magic card frame you can design on in PipGlyph, from the 1993 border to borderless, layouts and showcases — checked color by color against printed cards.";
+/** The CollectionPage's own description: its ItemList holds only the first
+ *  ITEM_LIST_CAP frames in page order (the older borders come last and are
+ *  cut), so it names no group the list may leave out. */
+const COLLECTION_DESCRIPTION =
+  "Card frames you can design on in PipGlyph, each checked color by color against printed cards.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { sections, error } = await getFrameGalleryFrames();
@@ -85,7 +90,7 @@ export default async function FramesPage() {
       <JsonLd
         data={collectionPageJsonLd({
           name: "Card frames on PipGlyph",
-          description: DESCRIPTION,
+          description: COLLECTION_DESCRIPTION,
           path: "/frames",
           items: entries.map((entry) => ({
             name: `${entry.fullName} frame`,
@@ -105,8 +110,8 @@ export default async function FramesPage() {
         title="Every frame in the creator"
         description={
           entries.length > 0
-            ? `The ${entries.length} frames you can design on today, from the 1993 border to borderless, double-faced and full-art cards. A frame is offered in a colour only once it has been checked against printed cards, and each is shown on a public card made with it, where there is one.`
-            : "Every frame you can design on, from the 1993 border to borderless, double-faced and full-art cards — each checked colour by colour against printed cards."
+            ? `The ${entries.length} frames you can design on today, from the 1993 border to borderless, double-faced and full-art cards. A frame is offered in a color only once it has been checked against printed cards, and each is shown on a public card made with it, where there is one.`
+            : "Every frame you can design on, from the 1993 border to borderless, double-faced and full-art cards — each checked color by color against printed cards."
         }
         actions={
           <>
@@ -160,7 +165,7 @@ export default async function FramesPage() {
               ))}
             </ul>
             <p className="text-xs leading-5 text-subtle">
-              The dots under a frame are the colours it is verified in; gold is a multicolour card.
+              The dots under a frame are the colors it is verified in; gold is a multicolor card.
             </p>
           </nav>
 

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // self-canonical with the site's share images, CollectionPage + ItemList and
 // BreadcrumbList JSON-LD (Home › Learn › Frames), indexed only while it has
 // frames to list; each frame's tile with its example card (or its empty
-// master), its verified colours and "Start with this frame"; and the link to
+// master), its verified colours and "Make a card"; and the link to
 // /frames/requested.
 // ---------------------------------------------------------------------------
 
@@ -30,6 +30,7 @@ import FramesPage, { generateMetadata, revalidate } from "@/app/(marketing)/fram
 import { buildFrameGallery } from "@/lib/frames/frame-gallery";
 import { FRAME_COLOR_KEYS } from "@/lib/creator/card-kinds";
 import { SITE_OG_IMAGE, SITE_TWITTER_IMAGE } from "@/lib/seo/share-metadata";
+import { ITEM_LIST_CAP } from "@/components/seo/json-ld";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -112,13 +113,37 @@ describe("/frames page", () => {
     expect(html).toContain("No example yet");
   });
 
-  it("anchors every frame and group, says its colours, and starts the creator", async () => {
+  it("anchors every frame and group, says its colors, and opens the creator as 'Make a card' — never promising the frame", async () => {
     const html = await render();
     expect(html).toContain('id="frame-m15borderless"');
     expect(html).toContain('href="#frames-variations"');
     expect(html).toContain('id="frames-variations"');
-    expect(html).toContain("Verified in all seven colours");
-    expect(html).toMatch(/href="\/create"[^>]*>Start with this frame<span class="sr-only">: M15 \(2015\) Borderless<\/span>/);
+    expect(html).toContain("Verified in all seven colors");
+    expect(html).not.toMatch(/colours/);
+    // Visible "Make a card"; its name "Make a card in the creator: <frame>".
+    expect(html).toMatch(
+      /href="\/create"[^>]*>Make a card<span class="sr-only"> in the creator: M15 \(2015\) Borderless<\/span>/,
+    );
+    expect(html).not.toContain("Start with this frame");
+    // The section still says where the creator keeps its frames.
+    expect(html).toContain("In the creator: pick the card type, then a dress under Variations.");
+  });
+
+  it("an emblem's tile says colorless alone", async () => {
+    const html = await render();
+    const emblem = html.slice(html.indexOf('id="frame-emblem"'));
+    expect(emblem.slice(0, emblem.indexOf("</li>"))).toContain("Verified in colorless");
+  });
+
+  it("the CollectionPage's description names no group its capped ItemList may leave out", async () => {
+    const blocks = jsonLdOf(await render());
+    const collection = blocks.find((block) => block["@type"] === "CollectionPage");
+    expect(collection.mainEntity.numberOfItems).toBe(ITEM_LIST_CAP);
+    const listed = collection.mainEntity.itemListElement.map((item: { name: string }) => item.name).join(" ");
+    // The older borders come last and are cut from the list…
+    expect(listed).not.toMatch(/1993|1997|2003/);
+    // …so the description doesn't promise them.
+    expect(collection.description).not.toMatch(/1993|1997|2003|older border/i);
   });
 
   it("links the requested frames", async () => {
@@ -130,6 +155,6 @@ describe("/frames page", () => {
     const html = await render();
     expect(html).toContain("The frames aren&#x27;t available right now");
     expect(html).toContain('href="/create"');
-    expect(html).not.toContain("Start with this frame");
+    expect(html).not.toContain("Make a card");
   });
 });

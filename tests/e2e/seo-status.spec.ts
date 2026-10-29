@@ -70,7 +70,10 @@ test("/frames is self-canonical, a CollectionPage under Learn, and links the req
   if (hasDatabase) {
     // The seeded stack verifies frames (supabase/seed.sql): listed and indexed.
     expect(html).not.toMatch(/name="robots" content="noindex/);
-    expect(html).toContain("Start with this frame");
+    // Each frame's link opens the creator as "Make a card" (it takes no
+    // starting frame yet), named for the frame.
+    expect(html).toContain('Make a card<span class="sr-only"> in the creator: ');
+    expect(html).not.toContain("Start with this frame");
   }
 });
 

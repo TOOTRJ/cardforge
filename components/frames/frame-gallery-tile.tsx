@@ -7,7 +7,7 @@ import {
   frameAnchorId,
   kindsLine,
   placeholderColorKey,
-  startWithFrameHref,
+  creatorHrefForFrame,
   verifiedColorsPhrase,
   type FrameGalleryEntry,
 } from "@/lib/frames/frame-gallery";
@@ -16,7 +16,8 @@ import type { FrameExample } from "@/lib/frames/frame-gallery-queries";
 // ---------------------------------------------------------------------------
 // One frame on /frames (TODO NV8): its example card (or its empty master),
 // its name, its era or set, the card types it dresses, the colours it is
-// verified in, and "Start with this frame".
+// verified in, and "Make a card" (the creator; its section says where the
+// frame is picked there — creatorHrefForFrame).
 //
 // The example is a gallery tile like any other — CardTile around a
 // BakedCardThumbnail, the card's 600 px thumbnail, its link to the card's
@@ -101,11 +102,11 @@ export function FrameGalleryTile({ entry, example }: { entry: FrameGalleryEntry;
               </p>
             ) : null}
             <Link
-              href={startWithFrameHref(entry.template)}
+              href={creatorHrefForFrame(entry.template)}
               className="inline-flex items-center gap-1 self-start rounded-sm text-sm font-medium text-primary-bright hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
             >
-              Start with this frame
-              <span className="sr-only">: {entry.fullName}</span>
+              Make a card
+              <span className="sr-only">{` in the creator: ${entry.fullName}`}</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>

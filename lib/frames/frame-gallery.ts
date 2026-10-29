@@ -2,6 +2,7 @@ import {
   CARD_KIND_VALUES,
   FRAME_COLOR_KEYS,
   KIND_DEFS,
+  frameColorKeyForKind,
   framesForKind,
   isRowDress,
   isTypeWordDress,
@@ -107,13 +108,15 @@ export function frameAnchorId(template: FrameTemplate): string {
 }
 
 /**
- * Where "Start with this frame" goes. The creator takes no starting frame
- * from its URL today (the admin walkthrough's `template` is admin-only, and
- * the guest creator never reads searchParams), so every frame opens the
- * creator itself; the section's `whereInCreator` line says where the frame
- * is. Once the creator reads one, this is the one place to pass it.
+ * Where a frame's "Make a card" link goes. The creator takes no starting
+ * frame from its URL today (the admin walkthrough's `template` is
+ * admin-only, and the guest creator never reads searchParams), so every
+ * frame opens the creator itself — which is why the link says "Make a card",
+ * never "Start with this frame" — and the section's `whereInCreator` line
+ * says where to pick the frame. Once the creator reads one, this is the one
+ * place to pass it (and the link may then promise the frame).
  */
-export function startWithFrameHref(template: FrameTemplate): string {
+export function creatorHrefForFrame(template: FrameTemplate): string {
   void template;
   return "/create";
 }
@@ -143,6 +146,18 @@ export type FrameGallerySection = {
  *  standard, then its layout, then a variation, then a showcase. */
 const ROLE_RANK: Record<FrameChoice["group"], number> = { standard: 0, layout: 1, skin: 2, showcase: 3 };
 
+/**
+ * The verified colours a card of `kind` can really be SAVED in on a frame —
+ * the creator resolves a kind's frame in `frameColorKeyForKind`'s key. An
+ * emblem is colourless whatever its walker's colour (CR 114: every save is
+ * `["colorless"]`, lib/cards/emblem.ts EMBLEM_FIXED_FIELDS), so the emblem
+ * frame's tile says `c` alone although its one master is published under
+ * every key; every other kind keeps the frame's verified colours.
+ */
+function savableColorKeys(kind: CardKind, availableColorKeys: readonly FrameColorKey[]): FrameColorKey[] {
+  return availableColorKeys.filter((key) => frameColorKeyForKind(kind, key) === key);
+}
+
 function sectionOf(choice: Pick<FrameChoice, "group" | "era">): FrameGallerySectionId {
   if (choice.group === "showcase" || choice.era === "showcase") return "showcase";
   if (choice.group === "layout") return "layouts";
@@ -158,26 +173,28 @@ function sectionOf(choice: Pick<FrameChoice, "group" | "era">): FrameGallerySect
  * Empty groups are dropped.
  */
 export function buildFrameGallery(verifiedKeys: ReadonlySet<string>): FrameGallerySection[] {
-  const found = new Map<FrameTemplate, { choice: FrameChoice; kinds: CardKind[] }>();
+  const found = new Map<FrameTemplate, { choice: FrameChoice; kinds: CardKind[]; colors: Set<FrameColorKey> }>();
   for (const kind of CARD_KIND_VALUES) {
     // A dark kind chip can't be picked, so neither can its frames (a
     // double-faced front whose default back isn't verified yet).
     if (!kindHasAvailableFrame(kind, verifiedKeys)) continue;
     for (const choice of framesForKind(kind, verifiedKeys)) {
-      if (choice.availableColorKeys.length === 0) continue;
+      const colors = savableColorKeys(kind, choice.availableColorKeys);
+      if (colors.length === 0) continue;
       if (isTypeWordDress(kind, choice.template) || isRowDress(kind, choice.template)) continue;
       const seen = found.get(choice.template);
       if (!seen) {
-        found.set(choice.template, { choice, kinds: [kind] });
+        found.set(choice.template, { choice, kinds: [kind], colors: new Set(colors) });
         continue;
       }
       if (!seen.kinds.includes(kind)) seen.kinds.push(kind);
+      for (const key of colors) seen.colors.add(key);
       if (ROLE_RANK[choice.group] < ROLE_RANK[seen.choice.group]) seen.choice = choice;
     }
   }
 
   const bySection = new Map<FrameGallerySectionId, FrameGalleryEntry[]>();
-  for (const [template, { choice, kinds }] of found) {
+  for (const [template, { choice, kinds, colors }] of found) {
     const section = sectionOf(choice);
     const showcase = section === "showcase";
     const list = bySection.get(section) ?? [];
@@ -188,7 +205,7 @@ export function buildFrameGallery(verifiedKeys: ReadonlySet<string>): FrameGalle
       fullName: describeFrame(template),
       origin: showcase ? FRAME_SET_LABELS[FRAME_TEMPLATE_SET[template]] : FRAME_ERA_LABELS[choice.era],
       kinds,
-      colorKeys: [...choice.availableColorKeys],
+      colorKeys: FRAME_COLOR_KEYS.filter((key) => colors.has(key)),
     });
     bySection.set(section, list);
   }
@@ -209,11 +226,13 @@ export function kindsLine(kinds: readonly CardKind[]): string {
 }
 
 /** "Verified in white, blue and multicolor" / "Verified in all seven
- *  colours" — what the colour dots say to a screen reader. */
+ *  colors" — what the colour dots say to a screen reader. Spelled as the
+ *  site's copy spells it ("color": COLOR_KEY_WORDS' "multicolor" /
+ *  "colorless", the gallery's Color filter). */
 export function verifiedColorsPhrase(colorKeys: readonly FrameColorKey[]): string {
-  if (colorKeys.length === FRAME_COLOR_KEYS.length) return "Verified in all seven colours";
+  if (colorKeys.length === FRAME_COLOR_KEYS.length) return "Verified in all seven colors";
   const words = colorKeys.map((key) => COLOR_KEY_WORDS[key] ?? key);
-  if (words.length <= 1) return `Verified in ${words[0] ?? "no colour yet"}`;
+  if (words.length <= 1) return `Verified in ${words[0] ?? "no color yet"}`;
   return `Verified in ${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
@@ -260,16 +279,20 @@ function storedTemplateOf(row: Pick<FrameExampleRow, "frame_style">): string | n
  * preference order — most liked first) that is PUBLIC, stored on that very
  * template, and has its own stored bake AND 600 px thumbnail (a tile never
  * draws the live preview or the HD PNG here). Unlisted and private rows
- * never qualify, whatever the read returned.
+ * never qualify, whatever the read returned, and neither does a row of an
+ * `excludedOwners` owner (the read's staff accounts — migration 0091's
+ * owner_is_admin(): staff cards stay out of the community's showcase rows).
  */
 export function pickFrameExamples<Row extends FrameExampleRow>(
   rows: readonly Row[],
   templates: Iterable<FrameTemplate>,
+  excludedOwners: ReadonlySet<string> = new Set(),
 ): Map<FrameTemplate, Row> {
   const wanted = new Set<string>(templates);
   const picked = new Map<FrameTemplate, Row>();
   for (const row of rows) {
     if (row.visibility !== "public") continue;
+    if (excludedOwners.has(row.owner_id)) continue;
     const template = storedTemplateOf(row);
     if (!template || !wanted.has(template) || picked.has(template as FrameTemplate)) continue;
     const own = { ownerId: row.owner_id, cardId: row.id };

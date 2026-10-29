@@ -15,7 +15,7 @@ import {
   kindsLine,
   pickFrameExamples,
   placeholderColorKey,
-  startWithFrameHref,
+  creatorHrefForFrame,
   verifiedColorsPhrase,
   type FrameExampleRow,
 } from "@/lib/frames/frame-gallery";
@@ -109,6 +109,18 @@ describe("the frames are the creator's (buildFrameGallery)", () => {
     expect(buildFrameGallery(new Set())).toEqual([]);
   });
 
+  it("lists only the colours the kind can save: an emblem is colourless whatever key its master is published under", () => {
+    // CR 114: every emblem saves ["colorless"] (lib/cards/emblem.ts), and the
+    // creator resolves the emblem kind's frame in `c` (frameColorKeyForKind).
+    expect(entryOf("emblem")?.colorKeys).toEqual(["c"]);
+    expect(verifiedColorsPhrase(entryOf("emblem")!.colorKeys)).toBe("Verified in colorless");
+    expect(entryOf("emblem", keysOf({ m15: "u", emblem: "wubrgmc" }))?.colorKeys).toEqual(["c"]);
+    // Published in colours but not in `c`: no emblem can be saved on it.
+    expect(entryOf("emblem", keysOf({ m15: "u", emblem: "wubrgm" }))).toBeUndefined();
+    // Every other kind keeps the frame's verified colours.
+    expect(entryOf("m15")?.colorKeys).toEqual([...FRAME_COLOR_KEYS]);
+  });
+
   it("a double-faced front waits for its kind's chip — its default back verified too", () => {
     expect(entryOf("m15dfcfront", keysOf({ m15: "w", m15dfcfront: "w" }))).toBeUndefined();
     expect(entryOf("m15dfcfront")).toBeDefined();
@@ -127,10 +139,11 @@ describe("the frames are the creator's (buildFrameGallery)", () => {
 });
 
 describe("the tile's words", () => {
-  it("says the verified colours to a screen reader", () => {
-    expect(verifiedColorsPhrase([...FRAME_COLOR_KEYS])).toBe("Verified in all seven colours");
+  it("says the verified colours to a screen reader, spelled as the site spells them (color)", () => {
+    expect(verifiedColorsPhrase([...FRAME_COLOR_KEYS])).toBe("Verified in all seven colors");
     expect(verifiedColorsPhrase(["w", "u", "m"])).toBe("Verified in white, blue and multicolor");
     expect(verifiedColorsPhrase(["c"])).toBe("Verified in colorless");
+    expect(verifiedColorsPhrase([])).toBe("Verified in no color yet");
   });
 
   it("shows an empty master in the picker's blue where it can, colourless last", () => {
@@ -139,8 +152,8 @@ describe("the tile's words", () => {
     expect(placeholderColorKey(["c"])).toBe("c");
   });
 
-  it("starts the creator (it takes no starting frame from its URL yet)", () => {
-    expect(startWithFrameHref("m15borderless")).toBe("/create");
+  it("'Make a card' opens the creator (it takes no starting frame from its URL yet)", () => {
+    expect(creatorHrefForFrame("m15borderless")).toBe("/create");
   });
 
   it("the empty master's sample art is the picker's", () => {
@@ -190,6 +203,19 @@ describe("the examples (pickFrameExamples)", () => {
     const shown = row();
     expect(pickFrameExamples([unlisted, hidden], ["m15"]).size).toBe(0);
     expect(pickFrameExamples([unlisted, hidden, shown], ["m15"]).get("m15")).toBe(shown);
+  });
+
+  it("never a card of an excluded (staff) owner — the next qualifying row instead, or none", () => {
+    const STAFF = "33333333-3333-4333-8333-333333333333";
+    const staff = row({ owner_id: STAFF });
+    staff.rendered_image_url = `${HOST}/${STAFF}/${staff.id}.png?v=1`;
+    staff.rendered_thumb_url = `${HOST}/${STAFF}/${staff.id}.thumb.webp?v=1`;
+    const community = row();
+    // Qualifies when nobody is excluded…
+    expect(pickFrameExamples([staff, community], ["m15"]).get("m15")).toBe(staff);
+    // …never once its owner is.
+    expect(pickFrameExamples([staff, community], ["m15"], new Set([STAFF])).get("m15")).toBe(community);
+    expect(pickFrameExamples([staff], ["m15"], new Set([STAFF])).size).toBe(0);
   });
 
   it("only a card stored on that very template — not a default, a retired or an unasked one", () => {
