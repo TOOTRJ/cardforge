@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -49,7 +50,7 @@ import LearnCategoryPage, {
   generateMetadata,
   generateStaticParams,
 } from "@/app/(marketing)/learn/[category]/page";
-import { metadata as learnMetadata } from "@/app/(marketing)/learn/page";
+import LearnPage, { metadata as learnMetadata } from "@/app/(marketing)/learn/page";
 import { metadata as toolsMetadata } from "@/app/(marketing)/tools/page";
 import { metadata as newsMetadata } from "@/app/(marketing)/news/page";
 import { GET as newsFeed } from "@/app/(marketing)/news/feed.xml/route";
@@ -108,6 +109,13 @@ describe("/learn, /tools and /news", () => {
       });
       expect(meta.robots).toBeUndefined();
     }
+  });
+
+  it("/learn links the glossary among its pages about using PipGlyph (TODO NV9)", async () => {
+    const html = renderToStaticMarkup(await LearnPage());
+    const using = html.slice(html.indexOf('id="using-heading"'));
+    expect(using).toContain('href="/glossary"');
+    expect(using).toContain("Glossary");
   });
 
   it("/tools links public pages only — nothing robots.txt disallows (an account page)", () => {

@@ -217,13 +217,13 @@ export function checkoutReminderEmail(
     "You're receiving this because you started a checkout on PipGlyph that wasn't completed.",
   );
   const price = input.priceLabel ? escapeHtml(input.priceLabel) : null;
-  const faq = emailLink(`${site}/faq`, "the FAQ");
+  const help = emailLink(`${site}/help/ai-and-credits#credits-and-plans`, "The help centre");
   if (input.kind === "pack") {
     const cta = { label: "Get the credits", url: `${site}/dashboard/billing#packs` };
     const paragraphs = [
       `You started buying <strong>${input.credits} AI credits</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
       "Purchased credits never expire and stack with any plan credits — pick them up whenever you're ready.",
-      `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
+      `Something go wrong at checkout? ${help} covers plans and credits, and you can message us from your dashboard.`,
     ];
     return {
       to: recipient.email,
@@ -258,7 +258,7 @@ export function checkoutReminderEmail(
     input.trialEligible
       ? `Your <strong>7-day free trial</strong> is still waiting — nothing is charged until it ends, and you can cancel in one click before then. ${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards.`
       : `${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards — and you can cancel any time.`,
-    `Something go wrong at checkout? ${faq} covers plans and billing, and you can message us from your dashboard.`,
+    `Something go wrong at checkout? ${help} covers plans and credits, and you can message us from your dashboard.`,
   ];
   return {
     to: recipient.email,

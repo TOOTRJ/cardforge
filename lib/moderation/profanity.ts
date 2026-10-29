@@ -83,24 +83,36 @@ const LEET: Readonly<Record<string, string>> = {
 };
 
 const escapeClass = (chars: string) => chars.replace(/[\\\]^-]/g, "\\$&");
-const classOf = (letter: string) => `[${escapeClass(`${LEET[letter] ?? letter}*`)}]`;
+/** The characters that may stand for `letter`: itself, its leetspeak, `*`. */
+const classChars = (letter: string) => `${LEET[letter] ?? letter}*`;
+const classOf = (letter: string) => `[${escapeClass(classChars(letter))}]`;
 
-/** A form's letters, each run of k equal letters allowing k or more. */
-function compactPattern(word: string): string {
-  let out = "";
+/** A form's letters as runs: each run of k equal letters is one step, its
+ *  letter's class k or more times ("ass…" → a once, s twice). */
+function runsOf(word: string): Array<{ letter: string; min: number }> {
+  const runs: Array<{ letter: string; min: number }> = [];
   for (let i = 0; i < word.length; ) {
     let run = 1;
     while (word[i + run] === word[i]) run += 1;
-    out += `${classOf(word[i])}${run === 1 ? "+" : `{${run},}`}`;
+    runs.push({ letter: word[i], min: run });
     i += run;
   }
-  return out;
+  return runs;
+}
+
+/** A form's letters, each run of k equal letters allowing k or more. */
+function compactPattern(word: string): string {
+  return runsOf(word)
+    .map(({ letter, min }) => `${classOf(letter)}${min === 1 ? "+" : `{${min},}`}`)
+    .join("");
 }
 
 /** Every letter spaced out by the same kind of gap: "f u c k", "f.u.c.k". */
 function spacedPattern(word: string): string {
   return [...word].map(classOf).join("[ \\t._~·•-]{1,2}");
 }
+/** The gap's characters, as `spacedPattern`'s class holds them. */
+const GAP_CHARS = " \t._~·•-";
 
 const WORD_FORMS: readonly string[] = WORDS_ROT13.flatMap((group) => group.split(" ")).map(rot13);
 const PREFIX_FORMS: readonly string[] = PREFIX_ROT13.split(" ").map(rot13);
@@ -110,16 +122,28 @@ const INFIX_FORMS: readonly string[] = INFIX_ROT13.split(" ").map(rot13);
 const BEFORE = "(?<![\\p{L}\\p{N}])";
 const AFTER = "(?![\\p{L}\\p{N}])";
 
-const MATCHERS: readonly RegExp[] = [
+/** One matcher: the forms of its alternation in order, whether no letter or
+ *  digit may stand before / after a match, and how a form is spelled —
+ *  its runs of letters (`compactPattern`) or spaced out (`spacedPattern`). */
+type MatcherSpec = { forms: readonly string[]; before: boolean; after: boolean; spaced: boolean };
+const MATCHER_SPECS: readonly MatcherSpec[] = [
   // A listed form on its own.
-  new RegExp(`${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(compactPattern).join("|")})${AFTER}`, "gu"),
+  { forms: [...WORD_FORMS, ...INFIX_FORMS], before: true, after: true, spaced: false },
   // A stem at a word's start, whatever follows.
-  new RegExp(`${BEFORE}(?:${PREFIX_FORMS.map(compactPattern).join("|")})`, "gu"),
+  { forms: PREFIX_FORMS, before: true, after: false, spaced: false },
   // An infix stem anywhere.
-  new RegExp(`(?:${INFIX_FORMS.map(compactPattern).join("|")})`, "gu"),
+  { forms: INFIX_FORMS, before: false, after: false, spaced: false },
   // A form spelled out letter by letter.
-  new RegExp(`${BEFORE}(?:${[...WORD_FORMS, ...INFIX_FORMS].map(spacedPattern).join("|")})${AFTER}`, "gu"),
+  { forms: [...WORD_FORMS, ...INFIX_FORMS], before: true, after: true, spaced: true },
 ];
+
+const MATCHERS: readonly RegExp[] = MATCHER_SPECS.map(
+  ({ forms, before, after, spaced }) =>
+    new RegExp(
+      `${before ? BEFORE : ""}(?:${forms.map(spaced ? spacedPattern : compactPattern).join("|")})${after ? AFTER : ""}`,
+      "gu",
+    ),
+);
 
 /** A match is a word only with real letters in it: one at least ("$h1t"
  *  has two, "5007" none), two once a `*` masks any ("f**k" yes, "c***" no,
@@ -128,6 +152,534 @@ function realEnough(match: string): boolean {
   const letters = match.match(/\p{L}/gu)?.length ?? 0;
   return match.includes("*") ? letters >= 2 : letters >= 1;
 }
+
+// ---------------------------------------------------------------------------
+// Matching in linear time (perf, 2026-10-29) — the SAME matches as the
+// regexes above, found without their backtracking.
+//
+// The regexes backtrack badly: every class holds `*`, so a long stretch of
+// one class ("*s*s*s…", "ffff…") or of two ("*|*|…", "*c*c…") lets each `+`
+// split it at every place, and the engine retries every split from every
+// start. A 4000-character field cost 0.1–0.3 s ("*s" repeated) and up to
+// 33 s ("*|" repeated) per call — on every keystroke in the creator and on
+// every save on the server.
+//
+// Bounding the quantifiers or collapsing repeated characters would be
+// faster, but it changes verdicts ("f*u*u*u*ck", a vowel run of u and v
+// mixed), so neither is done. Instead such text is matched by an exact
+// emulation of what the engine computes (`RunSearch`), with memoization:
+//
+// - Every form is a sequence of steps "characters of set X, at least m and
+//   at most M times" (a letter's class m+ times; spaced out: a class once,
+//   a gap once or twice). The engine returns, at the LEFTMOST start where
+//   any form matches, the FIRST form in the alternation's order that
+//   matches there, and for it the lengths a backtracking search meets
+//   first: the longest first step that lets the rest match, then the
+//   longest second step, and so on. A global search resumes at the match's
+//   end. The emulation computes exactly that, in that order.
+// - For a step at position p whose run of X ends at E, the engine tries
+//   ends min(E, p+M), …, p+m and takes the first where the rest matches: the
+//   answer is the LARGEST such q, with the rest's own match there. For an
+//   unbounded step every start in the run shares E, so each (step, run) is
+//   searched down from E only once, however many starts ask; each
+//   (step, position) is evaluated once. The forms are a trie of shared
+//   suffixes. Linear in the text times the steps that can match it.
+// - Exact filters skip what cannot match: the next character must fit the
+//   step or the one after it, and enough characters in classes must follow.
+// - The look-behind / look-ahead read one code point each, as the engine
+//   does under the `u` flag.
+//
+// Ordinary text keeps the regexes (fast, and what this file always ran):
+// the emulation runs only where the regexes could be slow
+// (`needsLinearSearch`) — real card text never is. Either way the matches,
+// and so every verdict, are the same: tests/unit/moderation/
+// profanity-linear.test.ts holds both engines to the regexes as `matchAll`
+// ran them, match for match, on thousands of disguised words, near misses
+// and adversarial strings.
+// ---------------------------------------------------------------------------
+
+/** For each ASCII code, the letters (bit 0 = a … bit 25 = z) of the forms
+ *  whose class holds it — `*` holds them all. A letter no form spells has no
+ *  class in any pattern, so it is in none here; nothing outside ASCII is. */
+const CLASS_MEMBERS = new Int32Array(128);
+const letterBit = (letter: string) => 1 << (letter.charCodeAt(0) - 97);
+for (const letter of new Set([...WORD_FORMS, ...PREFIX_FORMS, ...INFIX_FORMS].join(""))) {
+  for (const char of classChars(letter)) CLASS_MEMBERS[char.charCodeAt(0)] |= letterBit(letter);
+}
+const classMask = (code: number) => (code < 128 ? CLASS_MEMBERS[code] : 0);
+/** The spaced-out forms' gap, as one more set (bit 26). */
+const GAP_BIT = 1 << 26;
+const LETTER_BITS = GAP_BIT - 1;
+const GAP_CODES = new Set([...GAP_CHARS].map((char) => char.charCodeAt(0)));
+/** Every set a character is in: the letters' classes and the gap. */
+const setMask = (code: number) => classMask(code) | (GAP_CODES.has(code) ? GAP_BIT : 0);
+
+/** One matcher as a trie of shared suffixes. Node 0 is a form's end; every
+ *  other node is a step — a character of set `bit`, at least `min` and at
+ *  most `max` times (0 = no limit), then node `next`. */
+type RunMatcher = {
+  before: boolean;
+  after: boolean;
+  bit: Int32Array;
+  min: Int32Array;
+  max: Int32Array;
+  next: Int32Array;
+  /** The sets the character after a step's first one must be in for the
+   *  step to match (0 = any): its own when it needs two or more, the next
+   *  step's when it takes one only, either when it may take one or more,
+   *  none when a form may end there. */
+  then: Int32Array;
+  /** Spelled out letter by letter (`spacedPattern`)? */
+  spaced: boolean;
+  /** What a step and the steps after it need from where it starts, held to
+   *  RunText's `stretch` (runs: the fewest characters they take) or
+   *  `spelled` (spaced out: the letters still to spell; 0 on a gap). */
+  reach: Int32Array;
+  /** Per ASCII code, the forms' first nodes whose set holds it, in the
+   *  alternation's order (a repeated node kept once: it answers the same). */
+  firstNodes: readonly Int32Array[];
+};
+
+type Step = { bit: number; min: number; max: number };
+/** A form's steps as the regex spells it (`compactPattern` / `spacedPattern`). */
+function stepsOf(form: string, spaced: boolean): Step[] {
+  if (!spaced) return runsOf(form).map(({ letter, min }) => ({ bit: letterBit(letter), min, max: 0 }));
+  return [...form].flatMap((letter, i) => [
+    ...(i > 0 ? [{ bit: GAP_BIT, min: 1, max: 2 }] : []),
+    { bit: letterBit(letter), min: 1, max: 1 },
+  ]);
+}
+
+function buildRunMatcher({ forms, before, after, spaced }: MatcherSpec): RunMatcher {
+  const bit = [0];
+  const min = [0];
+  const max = [0];
+  const next = [0];
+  const ids = new Map<string, number>();
+  const node = (step: Step, rest: number) => {
+    const key = `${step.bit} ${step.min} ${step.max} ${rest}`;
+    let id = ids.get(key);
+    if (id === undefined) {
+      id = bit.length;
+      bit.push(step.bit);
+      min.push(step.min);
+      max.push(step.max);
+      next.push(rest);
+      ids.set(key, id);
+    }
+    return id;
+  };
+  const roots = forms.map((form) => stepsOf(form, spaced).reduceRight((rest, step) => node(step, rest), 0));
+  const then = bit.map((b, id) =>
+    id === 0 ? 0 : min[id] > 1 ? b : next[id] === 0 ? 0 : max[id] === 1 ? bit[next[id]] : b | bit[next[id]],
+  );
+  // A node's next is always made before it, so one pass in id order works.
+  const reach = min.map(() => 0);
+  const letters = min.map(() => 0);
+  for (let id = 1; id < bit.length; id++) {
+    letters[id] = (bit[id] === GAP_BIT ? 0 : 1) + letters[next[id]];
+    reach[id] = spaced ? (bit[id] === GAP_BIT ? 0 : letters[id]) : min[id] + reach[next[id]];
+  }
+  const firstNodes = Array.from({ length: 128 }, (_, code) =>
+    Int32Array.from(new Set(roots.filter((root) => CLASS_MEMBERS[code] & bit[root]))),
+  );
+  return {
+    before,
+    after,
+    bit: Int32Array.from(bit),
+    min: Int32Array.from(min),
+    max: Int32Array.from(max),
+    next: Int32Array.from(next),
+    then: Int32Array.from(then),
+    spaced,
+    reach: Int32Array.from(reach),
+    firstNodes,
+  };
+}
+
+/** Built on the first text that needs them, never at import: the module is
+ *  in every page's client graph (the root layout's AI provider) and the
+ *  tries cost a few ms to build on a phone. */
+let runMatchers: readonly RunMatcher[] | undefined;
+const runMatchersOf = () => (runMatchers ??= MATCHER_SPECS.map(buildRunMatcher));
+
+/** Text the regexes could be slow on goes to the emulation (see above): a
+ *  character sharing a class with the one before it more than SAFE_CHAIN
+ *  times in a row, or more than MANY_STARS `*` (each one opens every form
+ *  of the alternation at once). Real card text has neither. */
+const SAFE_CHAIN = 12;
+const MANY_STARS = 64;
+const STAR = 42; // "*"
+
+function needsLinearSearch(value: string): boolean {
+  let chain = 0;
+  let previous = 0;
+  let stars = 0;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    const mask = classMask(code);
+    chain = mask & previous ? chain + 1 : 0;
+    if (code === STAR) stars += 1;
+    if (chain > SAFE_CHAIN || stars > MANY_STARS) return true;
+    previous = mask;
+  }
+  return false;
+}
+
+const WORD_CODE_POINT = /^[\p{L}\p{N}]$/u;
+/** `[\p{L}\p{N}]` for one code point. */
+function isWordCodePoint(cp: number): boolean {
+  if (cp < 128) return (cp >= 48 && cp <= 57) || (cp >= 65 && cp <= 90) || (cp >= 97 && cp <= 122);
+  return WORD_CODE_POINT.test(String.fromCodePoint(cp));
+}
+
+// ---------------------------------------------------------------------------
+// The emulation's memory is bounded: its memos hold one entry per position
+// for each step it touches, so it reads one WINDOW of the text at a time —
+// LINEAR_WINDOW characters where the text allows, one unbroken stretch of
+// up to LINEAR_MAX where it does not — and every entry fits in 16 bits.
+//
+// A matcher's text is cut only at characters in none of ITS sets (a run
+// form's: no letter's class — so a space or a dot is a cut; a spaced-out
+// form's: no class and no gap): its matches never hold one, and the
+// look-around reads the real character either side (positions are the
+// text's), so each window meets exactly the matches the whole text's search
+// meets there, in the same order — nothing past a cut goes unread.
+//
+// LINEAR_MAX is above any card field: they stop at 4000 UTF-16 units, and
+// the normalisation makes one unit at most four class characters ("Ⅷ" →
+// "viii"; every code point checked). A longer unbroken stretch goes to the
+// regexes, as all text did before — the same matches, without the time
+// bound for a run form (a spaced-out form's regex has bounded steps and
+// stays linear).
+// ---------------------------------------------------------------------------
+
+const LINEAR_WINDOW = 4096;
+const LINEAR_MAX = 16384;
+
+type RunWindow = { start: number; end: number; linear: boolean };
+
+/** A matcher's text cut into windows (see above), in order. `sets` are the
+ *  sets its matches are made of: a character in none of them is a cut. */
+function runWindowsOf(value: string, sets: number): RunWindow[] {
+  const n = value.length;
+  if (n <= LINEAR_WINDOW) return [{ start: 0, end: n, linear: true }];
+  const isCut = (i: number) => (setMask(value.charCodeAt(i)) & sets) === 0;
+  const windows: RunWindow[] = [];
+  for (let start = 0; start < n; ) {
+    if (n - start <= LINEAR_WINDOW) {
+      windows.push({ start, end: n, linear: true });
+      break;
+    }
+    let end = start + LINEAR_WINDOW;
+    while (end > start && !isCut(end)) end -= 1;
+    if (end === start) {
+      // One unbroken stretch longer than a window: one window to its end,
+      // by regex past LINEAR_MAX.
+      end = start + LINEAR_WINDOW;
+      while (end < n && !isCut(end)) end += 1;
+      windows.push({ start, end, linear: end - start <= LINEAR_MAX });
+    } else {
+      windows.push({ start, end, linear: true });
+    }
+    start = end;
+  }
+  return windows;
+}
+
+const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
+const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+
+/** The text as the emulation reads it, one window of it: each character's
+ *  sets, and the run ends per set, filled as they are asked for. Positions
+ *  are the window's (0 = `start`); the look-around reads the whole text. */
+class RunText {
+  readonly value: string;
+  readonly start: number;
+  readonly n: number;
+  /** Per position, its sets (`setMask`); past the end reads as in none (the
+   *  window ends at a character in none, or at the text's end). */
+  readonly masks: Int32Array;
+  /** Per position, how many characters from it on are in a letter's class —
+   *  the most a run form starting there can take. */
+  readonly stretch: Int16Array;
+  /** Per position, the most letters a spaced-out form starting there can
+   *  spell: a class character, then (one or two gap characters and a class
+   *  character) as often as the text allows. */
+  readonly spelled: Int16Array;
+  private readonly runEnds: Array<Int16Array | undefined> = [];
+
+  constructor(value: string, start: number, end: number) {
+    this.value = value;
+    this.start = start;
+    this.n = end - start;
+    const n = this.n;
+    // Three spare zeros past the end: the reads below look up to i + 3.
+    const masks = (this.masks = new Int32Array(n + 4));
+    const stretch = (this.stretch = new Int16Array(n + 4));
+    const spelled = (this.spelled = new Int16Array(n + 4));
+    for (let i = 0; i < n; i++) masks[i] = setMask(value.charCodeAt(start + i));
+    for (let i = n - 1; i >= 0; i--) {
+      if (!(masks[i] & LETTER_BITS)) continue;
+      stretch[i] = stretch[i + 1] + 1;
+      let most = 1;
+      if (masks[i + 1] & GAP_BIT) {
+        if (masks[i + 2] & LETTER_BITS) most = Math.max(most, 1 + spelled[i + 2]);
+        if (masks[i + 2] & GAP_BIT && masks[i + 3] & LETTER_BITS) most = Math.max(most, 1 + spelled[i + 3]);
+      }
+      spelled[i] = most;
+    }
+  }
+
+  /** `(?<![\p{L}\p{N}])` at `p`: the code point before it is no letter or digit. */
+  beforeOk(p: number): boolean {
+    const at = this.start + p;
+    if (at === 0) return true;
+    const low = this.value.charCodeAt(at - 1);
+    if (isLowSurrogate(low) && at >= 2) {
+      const high = this.value.charCodeAt(at - 2);
+      if (isHighSurrogate(high)) return !isWordCodePoint((high - 0xd800) * 0x400 + (low - 0xdc00) + 0x10000);
+    }
+    return !isWordCodePoint(low);
+  }
+
+  /** `(?![\p{L}\p{N}])` at `p`: the code point at it is no letter or digit. */
+  afterOk(p: number): boolean {
+    const at = this.start + p;
+    return at >= this.value.length || !isWordCodePoint(this.value.codePointAt(at) as number);
+  }
+
+  /** Where the run of `bit`'s set holding `p` ends (p is in it). */
+  runEnd(bit: number, p: number): number {
+    const index = 31 - Math.clz32(bit);
+    let ends = this.runEnds[index];
+    if (!ends) ends = this.runEnds[index] = new Int16Array(this.n + 1);
+    if (ends[p] !== 0) return ends[p] - 1;
+    let end = p;
+    while (this.masks[end] & bit && ends[end] === 0) end += 1;
+    const runEnd = this.masks[end] & bit ? ends[end] - 1 : end;
+    for (let i = p; i < end; i++) ends[i] = runEnd + 1;
+    return runEnd;
+  }
+}
+
+/** The forms' first nodes that may match at a character `code` followed
+ *  by one in the sets `nextMask` — `firstNodes[code]` with those the next
+ *  character rules out (`then`) left out, in the same order. Cached: a few
+ *  dozen distinct masks exist. */
+const FIRST_NODES_BEFORE = new Map<RunMatcher, Map<number, Int32Array>>();
+function firstNodesBefore(matcher: RunMatcher, code: number, nextMask: number): Int32Array {
+  let cache = FIRST_NODES_BEFORE.get(matcher);
+  if (!cache) FIRST_NODES_BEFORE.set(matcher, (cache = new Map()));
+  const key = code * 0x8000000 + nextMask; // 27 set bits
+  let nodes = cache.get(key);
+  if (!nodes) {
+    nodes = matcher.firstNodes[code].filter((node) => matcher.then[node] === 0 || (nextMask & matcher.then[node]) !== 0);
+    cache.set(key, nodes);
+  }
+  return nodes;
+}
+
+/** One matcher's emulated search over a text, with each node's memo. */
+class RunSearch {
+  private readonly matcher: RunMatcher;
+  private readonly text: RunText;
+  private readonly size: number;
+  /** What the text offers each position, as `matcher.reach` counts it. */
+  private readonly reach: Int16Array;
+  private readonly memos: Array<Int16Array | undefined> = [];
+
+  constructor(matcher: RunMatcher, text: RunText) {
+    this.matcher = matcher;
+    this.text = text;
+    this.size = text.n + 1;
+    this.reach = matcher.spaced ? text.spelled : text.stretch;
+  }
+
+  /** Where the regex's match of `node` (and the steps after it) starting at
+   *  `p` ends — -1 for none. A node's memo: [0, n] its answer at p (+2;
+   *  0 = not asked yet), then, for an unbounded step only, per run end E how
+   *  far down from E the next node has been tried: 0 = not yet, v > 0 = down
+   *  to v − 1 with no match, v < 0 = it matches at −v − 1 (the largest such
+   *  q ≤ E). A window is at most LINEAR_MAX long: every entry fits in
+   *  16 bits. */
+  matchEnd(node: number, p: number): number {
+    const { matcher, text } = this;
+    if (node === 0) return !matcher.after || text.afterOk(p) ? p : -1;
+    if (!this.mayMatch(node, p)) return -1;
+    const size = this.size;
+    const max = matcher.max[node];
+    let memo = this.memos[node];
+    if (!memo) memo = this.memos[node] = new Int16Array(max === 0 ? 2 * size : size);
+    if (memo[p] !== 0) return memo[p] - 2;
+
+    const next = matcher.next[node];
+    const end = text.runEnd(matcher.bit[node], p);
+    const lowest = p + matcher.min[node];
+    let answer = -1;
+    if (max !== 0) {
+      // A bounded step (spaced out): at most `max` ends, longest first.
+      for (let q = Math.min(end, p + max); q >= lowest && answer < 0; q--) {
+        if (next === 0 || this.mayMatch(next, q)) answer = this.matchEnd(next, q);
+      }
+    } else if (lowest <= end) {
+      const slot = size + end;
+      let found = memo[slot] < 0 ? -memo[slot] - 1 : -1;
+      if (found < 0) {
+        // Down from the run's end, as the engine backtracks.
+        let q = memo[slot] === 0 ? end + 1 : memo[slot] - 1;
+        while (q > lowest) {
+          q -= 1;
+          if ((next === 0 || this.mayMatch(next, q)) && this.matchEnd(next, q) >= 0) {
+            found = q;
+            break;
+          }
+        }
+        memo[slot] = found >= 0 ? -found - 1 : q + 1;
+      }
+      if (found >= lowest) answer = this.matchEnd(next, found);
+    }
+    memo[p] = answer + 2;
+    return answer;
+  }
+
+  /** False when step `node` (not a form's end) cannot match at `p`: the
+   *  character there, or the one after it, is in none of the sets it needs
+   *  (`RunMatcher.then`), or the text from p cannot hold what it takes
+   *  (`RunMatcher.reach`). Exact — it never refuses a match. */
+  private mayMatch(node: number, p: number): boolean {
+    const { matcher, text } = this;
+    const then = matcher.then[node];
+    return (
+      (text.masks[p] & matcher.bit[node]) !== 0 &&
+      (then === 0 || (text.masks[p + 1] & then) !== 0) &&
+      matcher.reach[node] <= this.reach[p]
+    );
+  }
+
+  /** Every match a global search of the window meets, in order, handed to
+   *  `visit` (in the text's positions) until it says stop (true) — the
+   *  regex's matches there. */
+  matches(visit: (start: number, end: number) => boolean): boolean {
+    const { matcher, text, reach } = this;
+    const { value, n, masks } = text;
+    const offset = text.start;
+    for (let from = 0; ; ) {
+      let start = -1;
+      let end = -1;
+      for (let p = from; p < n && start < 0; p++) {
+        const code = value.charCodeAt(offset + p);
+        if (code >= 128) continue;
+        const nodes = firstNodesBefore(matcher, code, masks[p + 1]);
+        if (nodes.length === 0 || (matcher.before && !text.beforeOk(p))) continue;
+        for (let i = 0; i < nodes.length; i++) {
+          if (matcher.reach[nodes[i]] > reach[p]) continue; // the text cannot hold it (mayMatch)
+          const e = this.matchEnd(nodes[i], p);
+          if (e >= 0) {
+            start = p;
+            end = e;
+            break;
+          }
+        }
+      }
+      if (start < 0) return false;
+      if (visit(offset + start, offset + end)) return true;
+      from = end; // never empty: each step takes a character
+    }
+  }
+}
+
+/** Every match of a global regex, in order, handed to `visit` until it says
+ *  stop — what `matchAll` iterates, without cloning the regex per call. The
+ *  regexes are module-level and stateful (`lastIndex`): each search resets
+ *  it first and runs to its end synchronously, so no two searches share it. */
+function regexMatches(matcher: RegExp, value: string, visit: (start: number, end: number) => boolean): boolean {
+  matcher.lastIndex = 0;
+  for (let match = matcher.exec(value); match; match = matcher.exec(value)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (end === start) matcher.lastIndex = end + ((value.codePointAt(end) ?? 0) > 0xffff ? 2 : 1); // as matchAll steps
+    if (visit(start, end)) return true;
+  }
+  return false;
+}
+
+type Engine = "regex" | "runs";
+
+/** One matcher's regex over the window [start, end) alone — a window that
+ *  starts and ends at characters in no set (`runWindowsOf`) — read with the
+ *  code point either side as its context, in the text's positions. */
+function regexMatchesIn(
+  regex: RegExp,
+  value: string,
+  start: number,
+  end: number,
+  visit: (start: number, end: number) => boolean,
+): boolean {
+  if (start === 0 && end === value.length) return regexMatches(regex, value, visit);
+  const from = start > 0 && isLowSurrogate(value.charCodeAt(start)) && isHighSurrogate(value.charCodeAt(start - 1)) ? start - 1 : start;
+  const to =
+    end >= value.length
+      ? value.length
+      : end + (isHighSurrogate(value.charCodeAt(end)) && isLowSurrogate(value.charCodeAt(end + 1)) ? 2 : 1);
+  return regexMatches(regex, value.slice(from, to), (s, e) => visit(from + s, from + e));
+}
+
+/** Each matcher's search over the normalised text, as [matcher, start, end]
+ *  handed to `visit` until it says stop. `engine` picks the regexes or the
+ *  emulation (window by window); both meet the same matches. */
+function searchAll(value: string, engine: Engine, visit: (matcher: number, start: number, end: number) => boolean): boolean {
+  if (engine === "regex") {
+    return MATCHERS.some((regex, index) => regexMatches(regex, value, (start, end) => visit(index, start, end)));
+  }
+  const matchers = runMatchersOf();
+  // One window (every card field): its text is read once for all four.
+  const only = value.length <= LINEAR_WINDOW ? new RunText(value, 0, value.length) : null;
+  const windowsBy = new Map<number, RunWindow[]>();
+  return MATCHERS.some((regex, index) => {
+    const sets = matchers[index].spaced ? LETTER_BITS | GAP_BIT : LETTER_BITS;
+    let windows = windowsBy.get(sets);
+    if (!windows) windowsBy.set(sets, (windows = runWindowsOf(value, sets)));
+    return windows.some(({ start, end, linear }) => {
+      const at = (s: number, e: number) => visit(index, s, e);
+      if (!linear) return regexMatchesIn(regex, value, start, end, at);
+      return new RunSearch(matchers[index], only ?? new RunText(value, start, end)).matches(at);
+    });
+  });
+}
+
+/** For the equivalence tests only: every match each matcher meets in
+ *  `text` (normalised), through the chosen engine. */
+export function profanityMatchesForTests(text: string, engine: Engine): Array<[number, number, number]> {
+  const out: Array<[number, number, number]> = [];
+  searchAll(normalized(text), engine, (matcher, start, end) => {
+    out.push([matcher, start, end]);
+    return false;
+  });
+  return out;
+}
+
+/** For the equivalence tests only: the verdict through the chosen engine. */
+export function containsProfanityForTests(text: string | null | undefined, engine: Engine): boolean {
+  if (!text) return false;
+  const value = normalized(text);
+  return searchAll(value, engine, (_matcher, start, end) => realEnough(value.slice(start, end)));
+}
+
+/** For the equivalence tests only: the regexes' sources (the oracle builds
+ *  the ones this file shipped with and compares). */
+export function profanityPatternSourcesForTests(): string[] {
+  return MATCHERS.map((regex) => regex.source);
+}
+
+/** For the tests only: which engine the detector picks for `text`. */
+export function profanityEngineForTests(text: string): Engine {
+  return needsLinearSearch(normalized(text)) ? "runs" : "regex";
+}
+
+/** For the equivalence tests only: the lists, decoded (the oracle builds its
+ *  regexes from them, so a list change keeps it in step). */
+export const PROFANITY_FORMS_FOR_TESTS = { words: WORD_FORMS, prefixes: PREFIX_FORMS, infixes: INFIX_FORMS } as const;
 
 // Characters that draw nothing: a soft hyphen or a zero-width joiner inside
 // a word must not split it.
@@ -159,13 +711,9 @@ function normalized(text: string): string {
 export function containsProfanity(text: string | null | undefined): boolean {
   if (!text) return false;
   const value = normalized(text);
-  for (const matcher of MATCHERS) {
-    matcher.lastIndex = 0;
-    for (const match of value.matchAll(matcher)) {
-      if (realEnough(match[0])) return true;
-    }
-  }
-  return false;
+  return searchAll(value, needsLinearSearch(value) ? "runs" : "regex", (_matcher, start, end) =>
+    realEnough(value.slice(start, end)),
+  );
 }
 
 /** A field's text as an EDIT compares it (lib/cards/actions.ts, the
@@ -374,6 +922,38 @@ export function languageForcesPrivate(input: {
     (stored.get(field) ?? []).some(containsProfanity) &&
     wordsOf(stored.get(field) ?? []) === wordsOf(saved.get(field) ?? []);
   return fields.every(untouched) ? [] : fields;
+}
+
+/** `languageForcesPrivate` for a public AND an unlisted save at once (the
+ *  creator's Publish step shows both choices), reading the text ONCE: the
+ *  same rule, step for step, so each answer equals its own call. */
+export function languageForcesPrivateByVisibility(input: {
+  saved: ProfanityScanInput;
+  stored?: { card: ProfanityScanInput; visibility: VisibilityValue | string | null | undefined } | null;
+}): { public: ProfanityField[]; unlisted: ProfanityField[] } {
+  const saved = fieldTextsOf(input.saved);
+  const fields = profaneIn(saved);
+  const both = () => ({ public: fields, unlisted: [...fields] });
+  if (fields.length === 0 || !input.stored) return both();
+  const storedVisibility = input.stored.visibility as VisibilityValue;
+  if (!(storedVisibility in AUDIENCE) || storedVisibility === "private") return both();
+  const storedCard = input.stored.card;
+  // Asked at most once, and only when an answer needs it.
+  let leftAlone: boolean | undefined;
+  const untouched = () => {
+    if (leftAlone === undefined) {
+      const stored = fieldTextsOf(storedCard);
+      leftAlone = fields.every(
+        (field) =>
+          (stored.get(field) ?? []).some(containsProfanity) &&
+          wordsOf(stored.get(field) ?? []) === wordsOf(saved.get(field) ?? []),
+      );
+    }
+    return leftAlone;
+  };
+  const at = (visibility: "public" | "unlisted") =>
+    AUDIENCE[visibility] > AUDIENCE[storedVisibility] || !untouched() ? [...fields] : [];
+  return { public: at("public"), unlisted: at("unlisted") };
 }
 
 // ---------------------------------------------------------------------------

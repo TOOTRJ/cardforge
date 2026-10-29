@@ -9,42 +9,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { CARD_ORIGIN_TERMS } from "@/lib/content/glossary";
 
 // ---------------------------------------------------------------------------
-// CardGlossary — the shared "what do these words mean?" key. One source of
-// truth for the site's card-origin vocabulary (owner 2026-10-28, TODO DK2):
-//
-//   Proxy    — any card made on PipGlyph, including one started from a real
-//              card. The umbrella word (and the one people print).
-//   Import   — a card started from a real card through Scryfall.
-//   Remix    — a new card started from another PipGlyph card, anyone's.
-//   Original — a card made from scratch.
-//
-// "Custom proxy" is retired: every card made here is a proxy. Nothing tags a
-// card by these words — they describe where it started.
+// CardGlossary — the shared "what do these words mean?" key: the site's
+// card-origin vocabulary (owner 2026-10-28, TODO DK2) — Proxy, Import, Remix,
+// Original. The words live in lib/content/glossary.ts (`CARD_ORIGIN_TERMS`),
+// the one list /glossary reads too (TODO NV9).
 // ---------------------------------------------------------------------------
 
-export const GLOSSARY_TERMS = [
-  {
-    term: "Proxy",
-    definition:
-      "Any card made on PipGlyph. A card you start from a real Magic card is a proxy too, and any proxy can be printed for your table.",
-  },
-  {
-    term: "Import",
-    definition:
-      "A card started from a real card, pulled in from Scryfall. Change its art, words or frame and it becomes your version.",
-  },
-  {
-    term: "Remix",
-    definition:
-      "A new card started from another card made on PipGlyph, whether someone else's or one of yours. The card it came from keeps its credit.",
-  },
-  {
-    term: "Original",
-    definition: "A card made from scratch.",
-  },
-] as const;
+export const GLOSSARY_TERMS = CARD_ORIGIN_TERMS;
 
 type CardGlossaryProps = {
   /** Trigger label; defaults to a compact help chip. */
