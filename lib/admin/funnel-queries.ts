@@ -62,7 +62,6 @@ const LABEL: Record<FunnelEvent, string> = {
   nav_click: "Nav clicks",
   pack_purchased: "Packs purchased",
   deck_created: "Decks created",
-  deck_cap_hit: "Private-deck cap hits",
   deck_card_customized: "Deck cards customized",
   deck_export_clicked: "Deck export clicks",
 };
@@ -77,7 +76,7 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Money", chain: ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled", "subscription_resumed"] },
   { title: "Leaks", chain: ["checkout_expired", "trial_lapsed", "payment_failed"] },
   // Counts only: the deck plan's upgrade moments (TODO DK3.8).
-  { title: "Decks", chain: ["deck_created", "deck_cap_hit", "deck_card_customized", "deck_export_clicked"] },
+  { title: "Decks", chain: ["deck_created", "deck_card_customized", "deck_export_clicked"] },
 ];
 
 /** Rates are chained inside a section except in the last three, which are

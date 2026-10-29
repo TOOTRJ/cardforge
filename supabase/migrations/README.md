@@ -335,3 +335,9 @@ instead. Each bullet: what the header says, and what is true now.
   0149 the index is `deck_likes_deck_id_created_at_idx` on
   `(deck_id, created_at)` (trending decks count the week's likes per deck);
   the single-column index is dropped.
+- **0145 (the private-deck cap: `deck_capacity_for(uuid)` and
+  `decks_enforce_capacity` hold Free to 1 and Plus to 3 private or unlisted
+  decks)** — dropped by 0147 (owner decision 2026-10-29: decks are unlimited
+  on every plan; paid conversion is saved-card capacity, 0104). The trigger,
+  `enforce_deck_capacity()` and the helper are gone; 0145 never changed a
+  row, so nothing was restored.
