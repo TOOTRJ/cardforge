@@ -303,3 +303,20 @@ instead. Each bullet: what the header says, and what is true now.
   with any `deck_cards` row)** — since 0143 non-empty is `card_count > 0`
   (physical cards, maybeboard left out), the test every public deck list,
   the sitemap and the deck page's robots share.
+- **0055 (the derived entry states "real / remixed / custom / unresolved",
+  `card_id` = "the owner's custom proxy"; the insert and update policies'
+  "linking a custom card additionally requires owning that card")** — since
+  0144 an entry's status is Imported / Edited / Remix / Original / Not
+  found (`lib/decks/entry-status.ts`, reading the card's import provenance,
+  `cards.import_scryfall_id` / `import_fingerprint`), how it got into the
+  deck is `deck_cards.source`, and a deck may link its owner's card at any
+  visibility or another creator's PUBLIC card (owner decision D3): the
+  insert policy says so, and an update's card rule is
+  `deck_cards_guard_card_link`, which checks a `card_id` only when it is new.
+- **0143 (`linked_card_count` is "the app's `remixed_count`";
+  `add_custom_deck_entry(deck, card, name)`)** — the app's name is
+  `linked_count` since 0144's PR, and 0144 gave the RPC two defaulted
+  parameters, `p_source` and `p_scryfall_id` (the 3-argument function is
+  dropped; a 3-argument call resolves to the new one). 0143's
+  `import_deck_entries` is redefined by 0144 unchanged but for writing
+  `source = 'import'` on the rows it adds.

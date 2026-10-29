@@ -1742,4 +1742,38 @@ Rules and gotchas:
   the sibling) and never bring back a hidden rewrite: Next's client router
   reuses the cached static tree for a same-path query change and never calls
   the server, so the URL changed while the grid stayed frozen (2026-09-22).
+- Decks (2026-10-28 plan, TODO DK0–DK2; owner decisions D1–D13): a deck
+  STORES `card_count` / `linked_card_count` (0143: physical cards,
+  maybeboard out; kept by ONE statement trigger, `sync_deck_from_entries`,
+  which also touches `updated_at`) — tiles, lists, hubs and robots read
+  them, never the entry rows (PostgREST's 1000-row cap). Counters
+  (`likes_count`, `view_count`, the two counts, `created_at`; cards' too)
+  are the SERVER's: 0143's guards revert an API role's write. Entry INSERTS
+  go through the RPCs — `import_deck_entries` (the decklist commit, ONE
+  transaction, merge-or-insert) and `add_custom_deck_entry` (a card added to
+  a deck) — under the per-deck advisory lock and the 500-entry cap. Deck AI
+  is PAUSED (`lib/ai/deck-ai-pause.ts`, `DECK_AI_PAUSED`: every new deck job,
+  remix, estimate, idea and guide refused before any charge; running jobs
+  finish, D6); the creator's card AI is untouched (D5). Vocabulary: proxy =
+  any card made on PipGlyph; an entry is Imported (a real card, unchanged),
+  Edited, Remix, Original or Not found — ONE `deckEntryStatus(entry, card)`
+  (`lib/decks/entry-status.ts`) every surface reads, never a second
+  derivation; "No longer available" is `deckEntryUnavailable`. Where an entry
+  came from is `deck_cards.source` (0144: both RPCs write it; NULL = an older
+  row; descriptive, never a gate). A card's import provenance is
+  `cards.import_scryfall_id` + `import_fingerprint` (0144): INSERT-ONLY (the
+  0126-style guard refuses an API role's change), written by
+  createCardAction's insert alone — never a trigger, never an edit — the
+  fingerprint the ONE hash of `lib/cards/import-fingerprint.ts` (its field
+  list is a version: a new field is `v2`, never a silent change), stored only
+  when the creator says the card is still the import's
+  (`lib/creator/import-baseline.ts`). An entry's type line, cost, colours and
+  mana value are `effectiveEntryFields` (`lib/decks/effective-entry.ts`: the
+  card's own win unless it is an unchanged import). D3: a deck links its
+  owner's own cards at any visibility or ANOTHER creator's PUBLIC card —
+  the insert policy and `deck_cards_guard_card_link` (a NEW `card_id`
+  only, so an entry whose card went private stays editable); never widen it
+  to unlisted. Another creator's card is credited ("by @handle",
+  `DeckItem.cardOwner`) and linked at its maker's card page; its downloads
+  are the card routes' (the viewer's plan).
 
