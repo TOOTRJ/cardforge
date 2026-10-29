@@ -50,7 +50,7 @@ describe("the header's top level", () => {
       "/learn/reference",
       "/learn/comparisons",
       "/articles",
-      "/faq",
+      "/help",
       "/news",
       "/tools",
     ]);

@@ -157,7 +157,7 @@ export const siteConfig = {
             {
               id: "learn.help",
               label: "Help & FAQ",
-              href: "/faq",
+              href: "/help",
               description: "The creator, exports, credits, printing",
             },
             {
@@ -296,7 +296,7 @@ export const siteConfig = {
         { id: "learn.reference", label: "Rules & reference", href: "/learn/reference" },
         { id: "learn.comparisons", label: "Reviews & comparisons", href: "/learn/comparisons" },
         { id: "learn.articles", label: "All articles", href: "/articles" },
-        { id: "learn.help", label: "Help & FAQ", href: "/faq" },
+        { id: "learn.help", label: "Help & FAQ", href: "/help" },
         { id: "learn.whats-new", label: "What's new", href: "/news" },
         { id: "learn.tools", label: "Tools", href: "/tools" },
       ],
