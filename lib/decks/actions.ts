@@ -29,7 +29,7 @@ type DeckActionFailure = {
 
 /** Where a deck was made from — a funnel prop only (allow-listed, sanitized
  *  again by recordFunnelEvent); it never changes what the action does. */
-export type DeckCreateSurface = "wizard" | "creator" | "ai";
+export type DeckCreateSurface = "wizard" | "creator" | "ai" | "my_cards" | "gallery";
 
 type CreateDeckSuccess = { ok: true; deckId: string; slug: string };
 type UpdateDeckSuccess = { ok: true; deckId: string; slug: string };

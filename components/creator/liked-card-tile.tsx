@@ -8,6 +8,7 @@ import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { DeckChipButton } from "@/components/decks/deck-chip-button";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -30,10 +31,14 @@ export function LikedCardTile({
   card,
   profileOverrides = null,
   selection,
+  decks,
 }: {
   card: CardWithStats;
   profileOverrides?: FrameProfileOverridesMap | null;
   selection?: LikedCardSelection;
+  /** The card's decks (TODO DK9.2) — only where it may join one: another
+   *  creator's PUBLIC card (owner decision D3), or the viewer's own. */
+  decks?: { count: number | null; onOpen: () => void };
 }) {
   const ownerLabel =
     card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
@@ -123,6 +128,9 @@ export function LikedCardTile({
           redirectAfterLogin={buildCardPath(card)}
         />
       </div>
+      {decks && !selectMode ? (
+        <DeckChipButton count={decks.count} title={card.title} onClick={decks.onOpen} className="self-start" />
+      ) : null}
     </div>
   );
 }

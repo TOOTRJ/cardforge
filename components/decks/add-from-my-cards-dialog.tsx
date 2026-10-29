@@ -5,15 +5,21 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MyCardPicker } from "@/components/decks/deck-card-modal";
-import { addMyCardToDeckAction } from "@/lib/decks/add-card-action";
+import { updateDeckCardAction } from "@/lib/decks/card-actions";
+import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
 
 // ---------------------------------------------------------------------------
 // "Add from my cards" (TODO DK4.4) — the owner's own cards, newest first,
-// with a filter; a pick adds that card ×1 (lib/decks/add-card-action.ts)
-// and the dialog stays open for the next one. From the commander slot the
-// pick becomes the deck's commander, and the dialog closes. A Radix dialog
-// (focus trap, Escape, the focus back where it came from — DK5.12).
-// Opened by DeckOwnerTools on the page's `pipglyph:deck-tool` event.
+// with a filter; a pick adds that card ×1 through the ONE membership writer
+// (changeDeckMembershipAction, lib/decks/membership-actions.ts: the RPC,
+// the D3 and frame-preview refusals, the full deck in words, one
+// revalidation) and the dialog stays open for the next one. From the
+// commander slot the pick becomes the deck's commander — its mainboard
+// entry, new or already there, moves to the zone (updateDeckCardAction) —
+// and the dialog closes. A Radix dialog (focus trap, Escape, the focus back
+// where it came from — DK5.12). Opened by DeckOwnerTools on the page's
+// `pipglyph:deck-tool` event. The picker lists the 200 most recently
+// edited cards; the DK5.2 add box (one search) replaces it.
 // ---------------------------------------------------------------------------
 
 export function AddFromMyCardsDialog({
@@ -41,26 +47,47 @@ export function AddFromMyCardsDialog({
     if (open) setOpens((n) => n + 1);
   }
 
-  const pick = (cardId: string) => {
+  const pick = (cardId: string, title: string) => {
     startTransition(async () => {
-      const result = await addMyCardToDeckAction(deckId, cardId, board);
+      const result = await changeDeckMembershipAction({ deckId, add: [cardId] });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      // A commander pick: the card is the commander now, new or moved from
-      // the mainboard (else it already was, or sits on another board).
-      if (board === "commander" && result.commander) {
-        toast.success(`${result.title} is your commander.`);
-        onOpenChange(false);
-        router.refresh();
+      const same = (id: string) => id.toLowerCase() === cardId.toLowerCase();
+      const outcome = result.results.find((row) => same(row.cardId));
+      if (!outcome || (outcome.status !== "added" && outcome.status !== "already")) {
+        toast.error(outcome?.error ?? `Couldn't add ${title}.`);
         return;
       }
-      if (!result.added) {
-        toast(`${result.title} is already in this deck.`);
+
+      if (board === "commander") {
+        // Its mainboard entry — just added, or already there — moves to the
+        // commander zone. A card that already is the commander stays; one
+        // only on another board is left where the owner put it.
+        const entries = result.entries.filter((entry) => same(entry.cardId));
+        const onMain = entries.find((entry) => entry.board === "main");
+        if (onMain) {
+          const moved = await updateDeckCardAction(onMain.entryId, { board: "commander" });
+          if (!moved.ok) {
+            toast.error(`Couldn't make ${title} the commander: ${moved.error}`);
+            router.refresh();
+            return;
+          }
+        }
+        if (onMain || entries.some((entry) => entry.board === "commander")) {
+          toast.success(`${title} is your commander.`);
+          onOpenChange(false);
+          router.refresh();
+          return;
+        }
+      }
+
+      if (outcome.status === "already") {
+        toast(`${title} is already in this deck.`);
         return;
       }
-      toast.success(`Added ${result.title}.`);
+      toast.success(`Added ${title}.`);
       router.refresh();
     });
   };

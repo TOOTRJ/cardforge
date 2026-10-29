@@ -135,15 +135,21 @@ export function pickRevisablePayload<T extends Record<string, unknown>>(
   return out as Pick<T, Extract<keyof T, RevisablePayloadKey>>;
 }
 
-/** Whether a remix has been made the user's own. Visibility is a publishing
- *  choice, not a change to the card, so it doesn't count (owner decision);
- *  for a plain edit every dirty field counts, visibility included. */
+/** What a remix's "change something" never counts: choices about the card,
+ *  not changes to it — its visibility (owner decision) and the deck the
+ *  "Add to a deck" box puts it in (TODO DK9.3). */
+const NOT_A_REMIX_CHANGE: ReadonlySet<string> = new Set(["visibility", "deck_id"]);
+
+/** Whether a remix has been made the user's own. Visibility and the deck
+ *  are publishing choices, not changes to the card, so they don't count;
+ *  for a plain edit every dirty field counts, visibility included (an edit
+ *  never sets a deck — its box acts at once, apart from the form). */
 export function hasMeaningfulChange(
   dirtyFieldNames: readonly string[],
   mode: "edit" | "remix",
 ): boolean {
   return dirtyFieldNames.some(
-    (name) => mode === "edit" || name !== "visibility",
+    (name) => mode === "edit" || !NOT_A_REMIX_CHANGE.has(name),
   );
 }
 

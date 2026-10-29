@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 // cards" for the commander zone.
 // ---------------------------------------------------------------------------
 
-const s = vi.hoisted(() => ({ addMyCard: vi.fn() }));
+const s = vi.hoisted(() => ({ change: vi.fn(), move: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }) }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
@@ -26,7 +26,7 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), err
 vi.mock("@/components/decks/deck-creator-form", () => ({ DeckCreatorForm: () => null }));
 vi.mock("@/components/decks/delete-deck-dialog", () => ({ DeleteDeckDialog: () => <button type="button">Delete deck</button> }));
 vi.mock("@/lib/decks/import", () => ({ resolveDecklistAction: vi.fn(), commitDeckImportAction: vi.fn() }));
-vi.mock("@/lib/decks/add-card-action", () => ({ addMyCardToDeckAction: s.addMyCard }));
+vi.mock("@/lib/decks/membership-actions", () => ({ changeDeckMembershipAction: s.change }));
 vi.mock("@/lib/decks/card-actions", () => ({
   listMyCardsLiteAction: vi.fn(async () => ({
     ok: true,
@@ -35,7 +35,7 @@ vi.mock("@/lib/decks/card-actions", () => ({
   linkDeckCardAction: vi.fn(),
   removeDeckCardAction: vi.fn(),
   unlinkDeckCardAction: vi.fn(),
-  updateDeckCardAction: vi.fn(),
+  updateDeckCardAction: s.move,
 }));
 
 import { DeckOwnerTools } from "@/components/decks/deck-owner-tools";
@@ -98,8 +98,15 @@ describe("the empty deck's doors", () => {
     expect((within(dialog).getByRole("textbox", { name: "Decklist text" }) as HTMLTextAreaElement).value).toBe("Commander\n1 ");
   });
 
-  it("“Pick a commander from my cards” adds the pick to the commander zone; the dialog closes", async () => {
-    s.addMyCard.mockResolvedValue({ ok: true, added: true, commander: true, title: "Ember Wyrm" });
+  const membership = (status: "added" | "already", board = "main") => ({
+    ok: true,
+    deckId: "deck-1",
+    deckTitle: "Ness",
+    deckSlug: "ness",
+    results: [{ cardId: "c-1", status }],
+    entries: [{ cardId: "c-1", deckId: "deck-1", entryId: "entry-1", board, quantity: 1 }],
+  });
+  const pickCommander = async () => {
     page(true);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Pick a commander from my cards" }));
@@ -110,8 +117,38 @@ describe("the empty deck's doors", () => {
       fireEvent.click(tile);
     });
     await settle();
-    expect(s.addMyCard).toHaveBeenCalledWith("deck-1", "c-1", "commander");
+  };
+
+  it("“Pick a commander from my cards” adds the pick through the ONE membership writer, then moves it to the commander zone", async () => {
+    s.change.mockReset().mockResolvedValue(membership("added"));
+    s.move.mockReset().mockResolvedValue({ ok: true, deckCardId: "entry-1" });
+    await pickCommander();
+    expect(s.change).toHaveBeenCalledWith({ deckId: "deck-1", add: ["c-1"] });
+    expect(s.move).toHaveBeenCalledWith("entry-1", { board: "commander" });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("a pick already in the deck: its mainboard entry moves to the zone; already the commander: nothing moves", async () => {
+    s.change.mockReset().mockResolvedValue(membership("already"));
+    s.move.mockReset().mockResolvedValue({ ok: true, deckCardId: "entry-1" });
+    await pickCommander();
+    expect(s.move).toHaveBeenCalledWith("entry-1", { board: "commander" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    cleanup();
+
+    s.change.mockReset().mockResolvedValue(membership("already", "commander"));
+    s.move.mockReset();
+    await pickCommander();
+    expect(s.move).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("a refused pick (a full deck, a frame preview) says why and moves nothing", async () => {
+    s.change.mockReset().mockResolvedValue({ ...membership("added"), results: [{ cardId: "c-1", status: "deck_full", error: "“Ness” is full." }], entries: [] });
+    s.move.mockReset();
+    await pickCommander();
+    expect(s.move).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Choose your commander" })).toBeTruthy();
   });
 
   it("the compact slot over a deck with cards and no commander says so", () => {

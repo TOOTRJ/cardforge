@@ -568,7 +568,7 @@ function LinkCardPicker({
   disabled,
   emptyText = "You haven’t created any cards yet — use “Customize” instead.",
 }: {
-  onPick: (cardId: string) => void;
+  onPick: (cardId: string, title: string) => void;
   disabled: boolean;
   /** What a maker with no cards is told. */
   emptyText?: string;
@@ -640,7 +640,7 @@ function LinkCardPicker({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => onPick(card.id)}
+                onClick={() => onPick(card.id, card.title)}
                 className="group flex w-full flex-col gap-1 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               >
                 {thumb ? (
