@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
-import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
+import { DASHBOARD_DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
 import { listMyDecks } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { DeckFeedbackButton } from "@/components/feedback/deck-feedback-dialog";
@@ -53,7 +53,7 @@ export default async function DecksPage() {
         ) : (
           <DeckGrid>
             {decks.map((deck) => (
-              <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} variant="owner" sizes={DECK_GRID_SIZES} />
+              <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} variant="owner" sizes={DASHBOARD_DECK_GRID_SIZES} />
             ))}
           </DeckGrid>
         )}

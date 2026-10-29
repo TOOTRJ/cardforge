@@ -57,7 +57,12 @@ import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { CardWithStats, RemixParentLink } from "@/lib/cards/queries";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
-import { CARD_GRID_CLASS, CARD_GRID_COMPACT_CLASS } from "@/components/cards/card-grid";
+import {
+  CARD_GRID_CLASS,
+  CARD_GRID_COMPACT_CLASS,
+  DASHBOARD_CARD_GRID_SIZES,
+  DASHBOARD_COMPACT_GRID_SIZES,
+} from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // MyCardsBrowser — the whole /dashboard/cards library: filter tabs (All /
@@ -98,11 +103,16 @@ const PAGE_SIZE: Record<MyCardsView, number> = {
 };
 
 // The card grids' columns by the width of the list (TODO WD4,
-// components/cards/card-grid.tsx): 2 / 3 / 4 / 6 large tiles, up to 8
-// compact ones, inside the `@container` below.
+// components/cards/card-grid.tsx): 2 – 6 large tiles, 2 – 8 compact ones,
+// inside the `@container` below — and their tiles' `sizes` in the
+// dashboard's column.
 const GRID_CLASS: Record<Exclude<MyCardsView, "list">, string> = {
   grid: CARD_GRID_CLASS,
   compact: CARD_GRID_COMPACT_CLASS,
+};
+const GRID_SIZES: Record<Exclude<MyCardsView, "list">, string> = {
+  grid: DASHBOARD_CARD_GRID_SIZES,
+  compact: DASHBOARD_COMPACT_GRID_SIZES,
 };
 
 const VIEW_OPTIONS: Array<{ value: MyCardsView; label: string; icon: LucideIcon }> = [
@@ -512,6 +522,7 @@ export function MyCardsBrowser({
                     profileOverrides={profileOverrides}
                     selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
                     decks={likedDecksFor(card)}
+                    sizes={GRID_SIZES[view]}
                   />
                 ))
               : visibleOwned.map((card) => (
@@ -524,6 +535,7 @@ export function MyCardsBrowser({
                     density={view === "compact" ? "compact" : "regular"}
                     caption={remixCaption(card)}
                     decks={ownedDecksFor(card)}
+                    sizes={GRID_SIZES[view]}
                     onToggle={handleToggle}
                   />
                 ))}

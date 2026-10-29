@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
-import { CardGrid } from "@/components/cards/card-grid";
+import { CardGrid, DASHBOARD_CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { listFollowingFeed } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -45,7 +45,7 @@ export default async function FeedPage() {
         ) : (
           <CardGrid>
             {cards.map((card) => (
-              <GalleryCardTile key={card.id} card={card} isAuthed />
+              <GalleryCardTile key={card.id} card={card} isAuthed sizes={DASHBOARD_CARD_GRID_SIZES} />
             ))}
           </CardGrid>
         )}

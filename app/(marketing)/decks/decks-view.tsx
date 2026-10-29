@@ -21,6 +21,7 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { ROW_MAX } from "@/components/gallery/card-row";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
@@ -192,6 +193,7 @@ async function DecksTrendingCards() {
     <TrendingCardsSection
       cards={trending}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
       eyebrow="Trending cards"
       heading="Cards to build around"
       description="The community's hottest cards this week — start a deck around one, or open it to add it to a deck you have."

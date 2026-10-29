@@ -39,7 +39,7 @@ import {
 import { isUuid } from "@/lib/ids";
 import { firstString } from "@/lib/routing/search-params";
 import { PageContainer } from "@/components/layout/page-container";
-import { CardGrid } from "@/components/cards/card-grid";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // The community gallery is two routes with one result grid:
@@ -391,6 +391,7 @@ async function GalleryTrending() {
     <TrendingCardsSection
       cards={trending}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
       eyebrow="Trending now"
       heading="Hot this week"
       description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
@@ -418,6 +419,7 @@ async function GalleryNewest() {
       hrefLabel="See all newest"
       cards={newest}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
     />
   );
 }
@@ -539,7 +541,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
       ) : null}
       <CardGrid>
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
       </CardGrid>
       {hasPrev || hasMore ? (

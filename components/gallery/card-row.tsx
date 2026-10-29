@@ -9,10 +9,11 @@ import type { CardWithStats } from "@/lib/cards/queries";
 
 // ---------------------------------------------------------------------------
 // One-row card strips. The card grid's columns (components/cards/card-grid
-// .tsx: 2 / 3 / 4 / 6 by the width of the strip, TODO WD3) and the tiles
-// past the last column hidden (never wrapped), so a phone sees two cards and
-// a wide page six — the row never becomes two. Fetch ROW_MAX cards; the CSS
-// decides how many are visible. The grid sits in its own `@container`.
+// .tsx: 2 / 3 / 4 / 5 / 6 by the width of the strip, TODO WD3) and the
+// tiles past the last column hidden (never wrapped), so a phone sees two
+// cards and a wide page six — the row never becomes two. Fetch ROW_MAX
+// cards; the CSS decides how many are visible. The grid sits in its own
+// `@container`. A strip on a WIDE page passes CARD_GRID_SIZES as `sizes`.
 // ---------------------------------------------------------------------------
 
 export const ROW_MAX = 6;
@@ -20,6 +21,7 @@ export const ROW_GRID_CLASS = CARD_GRID_CLASS;
 
 /** Visibility class for the tile at `index` — matches ROW_GRID_CLASS. */
 export function rowTileClass(index: number): string {
+  if (index >= 5) return "hidden @min-[100rem]:flex";
   if (index >= 4) return "hidden @min-[84rem]:flex";
   if (index >= 3) return "hidden @4xl:flex";
   if (index >= 2) return "hidden @xl:flex";
@@ -36,6 +38,7 @@ export function CardRowSection({
   hrefLabel,
   cards,
   isAuthed,
+  sizes,
 }: {
   id: string;
   icon: LucideIcon;
@@ -46,6 +49,8 @@ export function CardRowSection({
   hrefLabel?: string;
   cards: CardWithStats[];
   isAuthed: boolean;
+  /** The strip's frame's `sizes` (CARD_GRID_SIZES on a wide page). */
+  sizes?: string;
 }) {
   if (cards.length === 0) return null;
   return (
@@ -74,7 +79,7 @@ export function CardRowSection({
         <div className={ROW_GRID_CLASS}>
           {cards.slice(0, ROW_MAX).map((card, index) => (
             <div key={card.id} className={cn("flex-col", rowTileClass(index))}>
-              <GalleryCardTile card={card} isAuthed={isAuthed} />
+              <GalleryCardTile card={card} isAuthed={isAuthed} sizes={sizes} />
             </div>
           ))}
         </div>

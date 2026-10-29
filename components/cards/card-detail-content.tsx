@@ -73,7 +73,7 @@ import {
   listPublicDecksContaining,
 } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
-import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
+import { DECK_NARROW_FRAME_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
 import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
@@ -644,7 +644,7 @@ function DecksWithCard({
               key={deck.id}
               deck={deck}
               art={art.get(deck.id)}
-              sizes={DECK_GRID_SIZES}
+              sizes={DECK_NARROW_FRAME_SIZES}
               likeRedirect={cardPath}
             />
           ))}

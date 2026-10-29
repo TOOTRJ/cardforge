@@ -10,7 +10,7 @@ import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-
 import { listGalleryCards } from "@/lib/cards/queries";
 import { isIndexableTagHub, listTagHubs, resolveTagHub, TAG_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import { PageContainer } from "@/components/layout/page-container";
-import { CardGrid } from "@/components/cards/card-grid";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // /gallery/tag/[tag] — a real page per discovery tag, built from the public
@@ -84,7 +84,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
       />
       <CardGrid className="mt-6">
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
       </CardGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">

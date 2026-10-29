@@ -49,6 +49,9 @@ type TrendingCardsSectionProps = {
   /** One control under each tile, outside its link (CardTile's rule) — the
    *  /decks row's "Build a deck around this card" (TODO DK8.3). */
   cardAction?: (card: CardWithStats) => React.ReactNode;
+  /** The row's frame's `sizes` (components/cards/card-grid.tsx:
+   *  CARD_GRID_SIZES on a wide page); else the thumbnail's generous default. */
+  sizes?: string;
 };
 
 export function TrendingCardsSection({
@@ -62,6 +65,7 @@ export function TrendingCardsSection({
   variant = "plain",
   footer,
   cardAction,
+  sizes,
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
@@ -118,6 +122,7 @@ export function TrendingCardsSection({
               isAuthed={isAuthed}
               className={rowTileClass(index)}
               action={cardAction?.(card)}
+              sizes={sizes}
             />
           ))}
         </div>
@@ -158,6 +163,7 @@ function TrendingTile({
   isAuthed,
   className,
   action,
+  sizes,
 }: {
   card: CardWithStats;
   rank: number | null;
@@ -166,6 +172,7 @@ function TrendingTile({
   isAuthed: boolean;
   className?: string;
   action?: React.ReactNode;
+  sizes?: string;
 }) {
   const cardUrl = buildCardUrl(card, siteBase);
 
@@ -192,6 +199,7 @@ function TrendingTile({
             title: card.title,
             priority,
             previewData: cardToPreviewData(card, null),
+            sizes,
           }}
         />
         <div className="absolute right-2 top-2 z-10">

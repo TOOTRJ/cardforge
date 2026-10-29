@@ -11,7 +11,7 @@ import { listGalleryCards } from "@/lib/cards/queries";
 import { HUB_TYPES, isHubType, listTypeHubs, TYPE_HUB_COPY, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import { CARD_TYPE_LABELS } from "@/types/card";
 import { PageContainer } from "@/components/layout/page-container";
-import { CardGrid } from "@/components/cards/card-grid";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // /gallery/type/[type] — one page per card type (creature, instant, …) with a
@@ -89,7 +89,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
       </p>
       <CardGrid className="mt-6">
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
       </CardGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
