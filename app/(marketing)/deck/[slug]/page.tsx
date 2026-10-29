@@ -22,17 +22,17 @@ import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
-import { getDeckGuide } from "@/lib/decks/guides";
+import { getDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
+import { recordDeckView } from "@/lib/decks/views";
 import {
   countDeckEntries,
   getDeckBySlugWithOwner,
-  incrementDeckView,
   listDeckPageCards,
   viewerLikesDeck,
   type DeckItem,
@@ -254,10 +254,12 @@ export default async function DeckDetailPage({
       />
     ) : null;
 
-  // Best-effort lifetime view tally, off the request path; owner views don't
-  // count (matches increment_card_view's posture).
+  // The view, off the request path: once per viewer and day, never the
+  // owner's, a crawler's or a prefetch (lib/decks/views.ts, migration 0150).
   if (!isOwner) {
-    after(() => incrementDeckView(deck.id));
+    // The request's headers copied now, while the request is in hand.
+    const view = { deckId: deck.id, ownerId: deck.owner_id, viewerId: user?.id ?? null, headers: new Headers(requestHeaders) };
+    after(() => recordDeckView(view));
   }
 
   return (
@@ -536,15 +538,17 @@ async function DeckGuideSlot({
   hasCards,
 }: {
   deckId: string;
-  guide: ReturnType<typeof getDeckGuide>;
+  guide: Promise<DeckGuideRead | null>;
   isOwner: boolean;
   viewerIsPro: boolean;
   hasCards: boolean;
 }) {
+  const read = await guide;
   return (
     <DeckGuideSection
       deckId={deckId}
-      guide={await guide}
+      guide={read?.guide ?? null}
+      guideWithheld={read?.withheld ?? false}
       isOwner={isOwner}
       viewerIsPro={viewerIsPro}
       aiConfigured={isDesignAiConfigured()}

@@ -1905,6 +1905,28 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+  What the API hands out matches the page (TODO DK0.11, migration 0150).
+  An UNLISTED deck is link-only: the decks policy admits it only to a
+  request that NAMES it — its slug or id in the `x-pipglyph-deck` header,
+  `viaDeckLink` (`lib/decks/deck-link.ts`) — so no list holds it, and its
+  entries, likes and feedback follow (their policies ask the decks policy,
+  never a visibility list of their own). A read or write that reaches an
+  unlisted deck as a visitor names it (the page's deck by slug and rows by
+  id, the share image, the like, the deck feedback); without it the deck
+  reads as missing. A deck GUIDE is read through ONE function,
+  `deck_guide_for_viewer` (`getDeckGuide`): the text only for a Pro viewer
+  (`viewer_is_pro()`, held to entitlements.ts by a test), redacted for
+  anyone but the owner — a card the visitor's list hides reads "Private
+  card", or its printing's name — and `withheld` (the teaser) otherwise; no
+  API role reads `deck_guides`, and the stored text is never rewritten. A
+  VIEW counts once per viewer, deck and UTC day (`recordDeckView`,
+  `lib/decks/views.ts` → `record_deck_view`, service role only): never the
+  owner, a crawler (isbot), an empty user agent or a prefetch; the viewer is
+  an HMAC of the user id, else the network + agent, re-keyed in the database
+  under the day's salt, which it drops after the day — no address, id or
+  cookie is stored. `deck_views_by_day` is the owner's per-day read (DK7.4's
+  data); the weekly prune cron keeps 400 days. Unlisted CARDS are still
+  listable through the API (the same shape; a follow-up).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

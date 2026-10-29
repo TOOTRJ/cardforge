@@ -40,6 +40,10 @@ export type LikeTarget = {
   /** Paths to revalidate. Both arguments are already shape-checked (null
    *  when the client-supplied value wasn't a well-formed slug / handle). */
   paths: (slug: string | null, ownerUsername: string | null) => string[];
+  /** Names the liked row on a request by its id, where reading it needs
+   *  that: an UNLISTED deck is read only by its link (migration 0150,
+   *  lib/decks/deck-link.ts) — the insert policy and the count read it. */
+  named?: <Q extends { setHeader(name: string, value: string): Q }>(query: Q, id: string) => Q;
 };
 
 /** Both values come from the client; only well-formed ones become paths (a
@@ -73,11 +77,15 @@ export async function toggleLike(
   // typing the builder through card_likes keeps every other column checked
   // while the FK column goes through the string-typed .filter() overload.
   const likes = () => supabase.from(target.table as "card_likes");
+  const named = <Q extends { setHeader(name: string, value: string): Q }>(query: Q): Q =>
+    target.named ? target.named(query, id) : query;
 
   const settle = async (liked: boolean): Promise<ToggleLikeResult> => {
-    const { count } = await likes()
-      .select("id", { count: "exact", head: true })
-      .filter(target.column, "eq", id);
+    const { count } = await named(
+      likes()
+        .select("id", { count: "exact", head: true })
+        .filter(target.column, "eq", id),
+    );
     for (const path of target.paths(safeSlug(slug), safeUsername(ownerUsername))) {
       revalidatePath(path);
     }
@@ -102,7 +110,7 @@ export async function toggleLike(
     user_id: user.id,
     [target.column]: id,
   } as unknown as Database["public"]["Tables"]["card_likes"]["Insert"];
-  const { error } = await likes().insert(row);
+  const { error } = await named(likes().insert(row));
   if (error) {
     // Unique-constraint race: the row appeared between SELECT and INSERT.
     if (error.code === "23505") return settle(true);

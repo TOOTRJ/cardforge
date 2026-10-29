@@ -5,6 +5,7 @@ import {
   type LikeTarget,
   type ToggleLikeResult,
 } from "@/lib/social/like-toggle";
+import { viaDeckLink } from "@/lib/decks/deck-link";
 
 // Deck likes — see lib/social/like-toggle. Paths: the deck page and the
 // owner's profile. (decks.likes_count is trigger-synced for listings; the
@@ -20,6 +21,8 @@ const DECK_LIKES: LikeTarget = {
     ...(slug ? [`/deck/${slug}`] : []),
     ...(ownerUsername ? [`/profile/${ownerUsername}`] : []),
   ],
+  // An unlisted deck is liked (and its likes counted) by its link (0150).
+  named: viaDeckLink,
 };
 
 export async function toggleDeckLikeAction(

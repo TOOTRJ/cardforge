@@ -14,6 +14,7 @@ import { DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { deckCoverColors, deckCoverOf } from "@/lib/decks/cover";
 import { featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
 import { withDeckVisibleCards } from "@/lib/decks/entry-status";
+import { viaDeckLink } from "@/lib/decks/deck-link";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import {
   DECK_SHARE_IMAGE_TYPE,
@@ -69,23 +70,27 @@ async function getDeck(
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = createPublicClient();
-    // Anonymous RLS only surfaces public/unlisted rows, so a private deck
-    // falls through to the generic branded card — nothing leaks — and so
-    // does every private card in a public deck (its embed is null).
-    const { data: deck } = await supabase
-      .from("decks")
-      .select("id, title, cover_url, cover_position, format, owner_id")
-      .eq("slug", slug)
-      .maybeSingle();
+    // Anonymous RLS only surfaces public rows and an unlisted deck named by
+    // its link (both reads name it by its slug — lib/decks/deck-link.ts,
+    // migration 0150), so a private deck falls through to the generic
+    // branded card — nothing leaks — and so does every private card in a
+    // public deck (its embed is null).
+    const { data: deck } = await viaDeckLink(
+      supabase.from("decks").select("id, title, cover_url, cover_position, format, owner_id").eq("slug", slug),
+      slug,
+    ).maybeSingle();
     if (!deck) return null;
     const [{ data: entries }, username] = await Promise.all([
-      supabase
-        .from("deck_cards")
-        .select(
-          "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)",
-        )
-        .eq("deck_id", deck.id)
-        .order("position", { ascending: true }),
+      viaDeckLink(
+        supabase
+          .from("deck_cards")
+          .select(
+            "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)",
+          )
+          .eq("deck_id", deck.id)
+          .order("position", { ascending: true }),
+        slug,
+      ),
       lookupUsername(supabase, deck.owner_id),
     ]);
     return { deck, entries: (entries ?? []) as unknown as OgEntry[], username };

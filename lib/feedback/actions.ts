@@ -12,6 +12,7 @@ import {
   type FeedbackStatus,
 } from "@/lib/feedback/schemas";
 import type { Database } from "@/types/supabase";
+import { viaDeckLink } from "@/lib/decks/deck-link";
 
 export type FeedbackActionResult =
   | { ok: true }
@@ -72,11 +73,11 @@ export async function submitDeckFeedbackAction(
   let deckId = parsed.data.deck_id ?? null;
   if (deckId) {
     const supabase = await createClient();
-    const { data: deck } = await supabase
-      .from("decks")
-      .select("id")
-      .eq("id", deckId)
-      .maybeSingle();
+    // Named by its link: an unlisted deck is read only that way (0150).
+    const { data: deck } = await viaDeckLink(
+      supabase.from("decks").select("id").eq("id", deckId),
+      deckId,
+    ).maybeSingle();
     if (!deck) deckId = null;
   }
 
@@ -113,7 +114,10 @@ async function insertFeedback(
     };
   }
 
-  const { error } = await supabase.from("feedback").insert({ ...row, user_id: userId });
+  // 0146's insert policy reads the deck a row names: an unlisted one only by
+  // its link (migration 0150, lib/decks/deck-link.ts).
+  const insert = supabase.from("feedback").insert({ ...row, user_id: userId });
+  const { error } = await (row.deck_id ? viaDeckLink(insert, row.deck_id) : insert);
   if (error) {
     console.warn("insertFeedback: insert error", error.message);
     return { ok: false, error: "Couldn't save your feedback. Try again." };

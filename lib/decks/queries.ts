@@ -25,6 +25,7 @@ import type {
 import { narrowCard } from "@/lib/cards/narrow";
 import { IMPORT_FINGERPRINT_FIELDS } from "@/lib/cards/import-fingerprint";
 import { canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { viaDeckLink } from "@/lib/decks/deck-link";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 
@@ -382,18 +383,19 @@ export async function countPublicDecks(): Promise<number> {
 }
 
 /** Deck + owner profile for the detail page. RLS filters non-readable rows
- *  (viewer-dependent, so the route stays dynamic — matching set pages). */
+ *  (viewer-dependent, so the route stays dynamic — matching set pages). The
+ *  read names the deck by its slug (lib/decks/deck-link.ts): an UNLISTED
+ *  deck opens by its link and is in no list (migration 0150). */
 export const getDeckBySlugWithOwner = cache(async (
   slug: string,
 ): Promise<DeckWithOwner | null> => {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createClient();
-    const { data: deck } = await supabase
-      .from("decks")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
+    const { data: deck } = await viaDeckLink(
+      supabase.from("decks").select("*").eq("slug", slug),
+      slug,
+    ).maybeSingle();
     if (!deck) return null;
 
     const { data: ownerRow } = await supabase
@@ -518,7 +520,9 @@ export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPa
 type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: string[]) => Promise<C[]>;
 
 /** The one body of both reads: the entries in list order, each card the
- *  deck may show (canLinkIntoDeck), each other creator's handle. */
+ *  deck may show (canLinkIntoDeck), each other creator's handle. Both deck
+ *  reads name the deck by its id — its link (lib/decks/deck-link.ts): a
+ *  visitor reads an UNLISTED deck's rows by it, never in a list (0150). */
 async function readDeckItems<C extends { id: string; owner_id: string; visibility: string }>(
   deckId: string,
   readCards: CardReader<C>,
@@ -528,16 +532,19 @@ async function readDeckItems<C extends { id: string; owner_id: string; visibilit
     const supabase = await createClient();
     const [{ data: entries, error }, { data: deck }] = await Promise.all([
       selectAllRows<DeckCardRow>((from, to) =>
-        supabase
-          .from("deck_cards")
-          .select("*", { count: "exact" })
-          .eq("deck_id", deckId)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to),
+        viaDeckLink(
+          supabase
+            .from("deck_cards")
+            .select("*", { count: "exact" })
+            .eq("deck_id", deckId)
+            .order("position", { ascending: true })
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+          deckId,
+        ),
       ),
-      supabase.from("decks").select("owner_id").eq("id", deckId).maybeSingle(),
+      viaDeckLink(supabase.from("decks").select("owner_id").eq("id", deckId), deckId).maybeSingle(),
     ]);
     // No readable deck row, no entries: without the owner, another
     // creator's card could not be told from the owner's own.
@@ -633,21 +640,6 @@ export async function viewerLikesDeck(deckId: string): Promise<boolean> {
     return Boolean(data);
   } catch {
     return false;
-  }
-}
-
-/**
- * Bump a deck's lifetime view tally (best-effort, fire-and-forget). Uses the
- * public client + a SECURITY DEFINER RPC so it never touches auth/session —
- * safe to call from after(). Skip owner views at the call site.
- */
-export async function incrementDeckView(deckId: string): Promise<void> {
-  if (!isSupabaseConfigured()) return;
-  try {
-    const supabase = createPublicClient();
-    await supabase.rpc("increment_deck_view", { p_deck_id: deckId });
-  } catch {
-    // best-effort — a missed view tick isn't worth surfacing
   }
 }
 
