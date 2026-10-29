@@ -95,46 +95,52 @@ export function DeckDrawOdds({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-subtle">Lands by turn</h4>
-          <p id={landsCaptionId} className="text-xs leading-5 text-muted">
-            The chance of at least that many lands among the cards seen by each turn, {when} — {lands} land{lands === 1 ? "" : "s"} in
-            the library. Outlined: a land for every turn so far.
-          </p>
-          <table className="w-full table-fixed border-separate border-spacing-[2px]" aria-describedby={landsCaptionId}>
-            <caption className="sr-only">
-              Chance of at least 1 to {MAX_LANDS} lands by turn, {when}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col" className={cn(HEAD, "w-[4.25rem] text-left sm:w-20")}>
-                  Turn
-                </th>
-                {Array.from({ length: MAX_LANDS }, (_, i) => (
-                  <th key={i} scope="col" className={HEAD}>
-                    {i + 1}+<span className="sr-only"> lands</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {landRows.map((row) => (
-                <tr key={row.turn}>
-                  <th scope="row" className="py-1 pr-1 text-left text-[11px] font-normal leading-tight text-foreground sm:text-xs">
-                    Turn {row.turn}
-                    <span className="block text-[10px] text-subtle">{row.seen} cards</span>
-                  </th>
-                  {row.odds.map((odds, i) => (
-                    <td
-                      key={i}
-                      className={cn(CELL, "rounded-[3px]", i + 1 === row.turn && "outline outline-1 -outline-offset-1 outline-foreground/60")}
-                      style={washStyle(odds)}
-                    >
-                      {formatOdds(odds)}
-                    </td>
+          {lands === 0 ? (
+            // A table of zeros says nothing a sentence doesn't.
+            <p className="text-xs leading-5 text-muted">No lands in the mainboard yet: the odds fill in as lands join it.</p>
+          ) : (
+            <>
+              <p id={landsCaptionId} className="text-xs leading-5 text-muted">
+                {`The chance of at least that many lands among the cards seen by each turn, ${when} — ${lands} land${lands === 1 ? "" : "s"} in the library. Outlined: a land for every turn so far.`}
+              </p>
+              <table className="w-full table-fixed border-separate border-spacing-[2px]" aria-describedby={landsCaptionId}>
+                <caption className="sr-only">
+                  Chance of at least 1 to {MAX_LANDS} lands by turn, {when}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className={cn(HEAD, "w-[4.25rem] text-left sm:w-20")}>
+                      Turn
+                    </th>
+                    {Array.from({ length: MAX_LANDS }, (_, i) => (
+                      <th key={i} scope="col" className={HEAD}>
+                        {i + 1}+<span className="sr-only"> lands</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {landRows.map((row) => (
+                    <tr key={row.turn}>
+                      <th scope="row" className="py-1 pr-1 text-left text-[11px] font-normal leading-tight text-foreground sm:text-xs">
+                        Turn {row.turn}
+                        <span className="block text-[10px] text-subtle">{row.seen} cards</span>
+                      </th>
+                      {row.odds.map((odds, i) => (
+                        <td
+                          key={i}
+                          className={cn(CELL, "rounded-[3px]", i + 1 === row.turn && "outline outline-1 -outline-offset-1 outline-foreground/60")}
+                          style={washStyle(odds)}
+                        >
+                          {formatOdds(odds)}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
 
         <div className="flex min-w-0 flex-col gap-2">
