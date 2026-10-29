@@ -1835,8 +1835,9 @@ Rules and gotchas:
   A SAVED card joins or leaves the owner's decks from My Cards, the
   creator's edit and another creator's card page (TODO DK9) through ONE
   picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a
-  one-card row's board / copies, "＋ New deck" with its visibility SAID —
-  Public unless changed; decks are unlimited on every plan) and
+  one-card row's board / copies, "＋ New deck" with its visibility ON SHOW
+  as the card creator's Publish control — "Keep it private" over Unlisted /
+  Public, Public picked (owner 2026-10-29); decks are unlimited) and
   ONE writer, `changeDeckMembershipAction` (`lib/decks/membership-actions.ts`:
   one deck, ≤ `MAX_MEMBERSHIP_BATCH` cards, `add_custom_deck_entry` per card
   with source `link`, D3 refused before the RPC, the 500 cap in words —

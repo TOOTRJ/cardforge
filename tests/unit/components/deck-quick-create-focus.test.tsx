@@ -12,9 +12,11 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 // focus is handed on both ways — to the name input, and back to "＋ New
 // deck" on Cancel or once the deck is made — never dropped on the page.
 //
-// The DK0.8 remainder: the deck's visibility is SAID (Public unless
-// changed) and sent as chosen. Decks are unlimited on every plan (owner,
-// 2026-10-29): nothing is checked first and no plan is offered; a refusal
+// The DK0.8 remainder (owner 2026-10-29: "decks default to public; the user
+// chooses private — the same as create card"): the deck's visibility is ON
+// SHOW, as the card creator's Publish control — a "Keep it private" box over
+// Unlisted / Public, Public picked — and sent as chosen. Decks are unlimited
+// on every plan: nothing is checked first and no plan is offered; a refusal
 // keeps the row with what was typed.
 // ---------------------------------------------------------------------------
 
@@ -113,27 +115,56 @@ describe("＋ New deck keeps the keyboard focus", () => {
 });
 
 describe("the new deck's visibility (TODO DK0.8)", () => {
-  it("says Public, and only changes when the maker changes it", () => {
+  const privateBox = () => screen.getByRole("checkbox", { name: "Keep it private" }) as HTMLInputElement;
+  const visibilityRow = () => screen.queryByRole("radiogroup", { name: "New deck visibility" });
+
+  it("is on show as the card creator's: the private box, then Unlisted / Public — Public picked", () => {
     render(<Harness />);
     fireEvent.click(openButton());
-    expect(screen.getByText("Public").closest("p")?.textContent).toMatch(/^Public — listed in the community decks\./);
-    // The choice is behind "Change" — a disclosure, not a dropped default.
-    const change = screen.getByRole("button", { name: "Change the new deck's visibility" });
-    expect(change.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(change);
-    const group = screen.getByRole("radiogroup", { name: "New deck visibility" });
-    expect(within(group).getByRole("radio", { name: /Public/ }).getAttribute("aria-checked")).toBe("true");
+    expect(privateBox().checked).toBe(false);
+    // Named by its words, described by the line under them.
+    const note = document.getElementById(privateBox().getAttribute("aria-describedby")!);
+    expect(note?.textContent).toMatch(/^Private — only you can see it\./);
+    const radios = within(visibilityRow()!).getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual([
+      expect.stringMatching(/^Unlisted/),
+      expect.stringMatching(/^Public/),
+    ]);
+    expect(radios[1]!.getAttribute("aria-checked")).toBe("true");
+    // The box comes before the chips, as on the card's Publish step.
+    expect(privateBox().compareDocumentPosition(visibilityRow()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("a private deck is made private — nothing checked first, no plan offered", async () => {
+  it("left alone, the deck is made Public", async () => {
+    createDeckAction.mockResolvedValue({ ok: true, deckId: "d4", slug: "open" });
+    render(<Harness />);
+    fireEvent.click(openButton());
+    fireEvent.change(nameInput()!, { target: { value: "Open" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Create deck/ }));
+    });
+    expect(createDeckAction).toHaveBeenCalledWith({ title: "Open", format: "commander", visibility: "public" }, { surface: "creator" });
+  });
+
+  it("Unlisted is a pick of its own", async () => {
+    createDeckAction.mockResolvedValue({ ok: true, deckId: "d5", slug: "link" });
+    render(<Harness />);
+    fireEvent.click(openButton());
+    fireEvent.change(nameInput()!, { target: { value: "By link" } });
+    fireEvent.click(within(visibilityRow()!).getByRole("radio", { name: /Unlisted/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Create deck/ }));
+    });
+    expect(createDeckAction).toHaveBeenCalledWith({ title: "By link", format: "commander", visibility: "unlisted" }, { surface: "creator" });
+  });
+
+  it("the private box makes it private — the chips step aside, nothing is checked first, no plan offered", async () => {
     createDeckAction.mockResolvedValue({ ok: true, deckId: "d3", slug: "secret-tech" });
     render(<Harness />);
     fireEvent.click(openButton());
     fireEvent.change(nameInput()!, { target: { value: "Secret tech" } });
-    fireEvent.click(screen.getByRole("button", { name: "Change the new deck's visibility" }));
-    fireEvent.click(screen.getByRole("radio", { name: /Private/ }));
-    // The line that says it (the chip says "Private" too).
-    expect(screen.getByText(/only you can see it/).textContent).toMatch(/^Private — only you can see it\./);
+    fireEvent.click(privateBox());
+    expect(visibilityRow()).toBeNull();
     expect(screen.queryByTestId("deck-capacity-notice")).toBeNull();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /Create deck/ }));

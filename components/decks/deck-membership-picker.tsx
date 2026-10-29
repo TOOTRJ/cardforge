@@ -34,31 +34,39 @@ import { cn } from "@/lib/utils";
 //                         gallery, the creator's box on an edit).
 //   DeckChoice            ONE deck or none — the creator's NEW card, whose
 //                         save carries one `deck_id` (main board, ×1).
-//   DeckQuickCreate       "＋ New deck": a name, a format and a VISIBLE
-//                         visibility (Public by default, "Change" for
-//                         Unlisted / Private — the TODO DK0.8 remainder: it
-//                         used to make a public deck without a word). Decks
-//                         are unlimited on every plan (owner, 2026-10-29),
-//                         so nothing is checked first. Both pickers take it
-//                         through their `newDeck` slot, so the create-deck
-//                         dialog (feat/new-deck-dialog) can take its place
-//                         later.
+//   DeckQuickCreate       "＋ New deck": a name, a format and the deck's
+//                         visibility ON SHOW (the TODO DK0.8 remainder; owner
+//                         2026-10-29: "default to public, the user chooses
+//                         private — the same as create card"): the card
+//                         creator's Publish control in the same order and
+//                         words — a "Keep it private" box over Unlisted /
+//                         Public, Public picked. Decks are unlimited on every
+//                         plan, so nothing is checked first. Both pickers
+//                         take it through their `newDeck` slot, so the
+//                         create-deck dialog (feat/new-deck-dialog) can take
+//                         its place later.
 // ---------------------------------------------------------------------------
 
 /** The list offers a search from this many decks. */
 export const DECK_SEARCH_FROM = 6;
 
-const VISIBILITY_OPTIONS: ChipOption<Visibility>[] = [
-  { value: "public", label: "Public", icon: Globe2 },
-  { value: "unlisted", label: "Unlisted", icon: Link2 },
-  { value: "private", label: "Private", icon: Lock },
+// The card creator's two chips (components/creator/panels/publish-panel.tsx
+// VISIBILITY_OPTIONS — its own words, said of a deck): private is the box
+// above them, as the card's "Save as a draft" is.
+const LISTING_OPTIONS: ChipOption<"unlisted" | "public">[] = [
+  {
+    value: "unlisted",
+    label: "Unlisted",
+    description: "Anyone with the link can view, hidden from the deck listings.",
+    icon: Link2,
+  },
+  {
+    value: "public",
+    label: "Public",
+    description: "Listed in the community decks and your profile. The default.",
+    icon: Globe2,
+  },
 ];
-
-const VISIBILITY_NOTES: Record<Visibility, string> = {
-  public: "listed in the community decks.",
-  unlisted: "anyone with the link can view it; not listed.",
-  private: "only you can see it.",
-};
 
 /** "Commander · Public" — a deck's line under its name. */
 function deckMeta(deck: PickerDeck): string {
@@ -385,12 +393,15 @@ export function DeckQuickCreate({
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState<DeckFormat>("commander");
-  const [visibility, setVisibility] = useState<Visibility>("public");
-  const [choosingVisibility, setChoosingVisibility] = useState(false);
+  // Public unless the maker picks otherwise (owner 2026-10-29): the box
+  // makes it private, the chips choose how a shared deck is shared.
+  const [keepPrivate, setKeepPrivate] = useState(false);
+  const [listing, setListing] = useState<"unlisted" | "public">("public");
+  const visibility: Visibility = keepPrivate ? "private" : listing;
   const [isPending, startTransition] = useTransition();
   const id = useId();
-  const visibilityNoteId = `${id}-visibility`;
-  const visibilityChoiceId = `${id}-visibility-choice`;
+  const privateNameId = `${id}-private`;
+  const privateNoteId = `${id}-private-note`;
   // Closing the row (Cancel, or the deck was made) removes the control that
   // held the focus: hand it back to "＋ New deck" instead of dropping it on
   // the page — only a focus that was lost with the row (or is still in this
@@ -407,7 +418,6 @@ export function DeckQuickCreate({
   }, [closes]);
   const close = () => {
     setCreating(false);
-    setChoosingVisibility(false);
     setCloses((count) => count + 1);
   };
 
@@ -428,7 +438,8 @@ export function DeckQuickCreate({
       await onCreated({ id: result.deckId, title: name, format, visibility, slug: result.slug });
       close();
       setTitle("");
-      setVisibility("public");
+      setKeepPrivate(false);
+      setListing("public");
     });
   };
 
@@ -469,36 +480,42 @@ export function DeckQuickCreate({
               ))}
             </select>
           </div>
-          {/* The deck's visibility is said, never assumed (TODO DK0.8):
-              Public unless the maker changes it. */}
-          <p id={visibilityNoteId} className="text-xs leading-5 text-muted">
-            <span className="font-medium text-foreground">{VISIBILITY_LABELS[visibility]}</span>
-            {` — ${VISIBILITY_NOTES[visibility]} `}
-            <button
-              type="button"
-              onClick={() => setChoosingVisibility((open) => !open)}
-              aria-expanded={choosingVisibility}
-              aria-controls={choosingVisibility ? visibilityChoiceId : undefined}
-              aria-label={choosingVisibility ? "Done choosing the visibility" : "Change the new deck's visibility"}
+          {/* The deck's visibility, on show (TODO DK0.8): the card
+              creator's Publish control in its order — the private box,
+              then Unlisted / Public with Public picked. */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5">
+            {/* Named by its words alone and DESCRIBED by the line under them
+                (TODO 3b.36, as the card's "Save as a draft"); the label
+                still makes the whole box a click target. */}
+            <input
+              type="checkbox"
+              checked={keepPrivate}
+              onChange={(event) => setKeepPrivate(event.target.checked)}
+              aria-labelledby={privateNameId}
+              aria-describedby={privateNoteId}
               disabled={isPending}
-              className="font-semibold text-primary-bright underline-offset-2 hover:underline"
-            >
-              {choosingVisibility ? "Done" : "Change"}
-            </button>
-          </p>
-          {choosingVisibility ? (
-            <div id={visibilityChoiceId}>
-              <ChipGroup
-                ariaLabel="New deck visibility"
-                ariaDescribedBy={visibilityNoteId}
-                layout="grid-3"
-                size="sm"
-                value={visibility}
-                onChange={setVisibility}
-                options={VISIBILITY_OPTIONS}
-              />
-            </div>
-          ) : null}
+              className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span id={privateNameId} className="inline-flex items-center gap-1.5 font-medium">
+                <Lock className="h-4 w-4 text-muted" aria-hidden />
+                Keep it private
+              </span>
+              <span id={privateNoteId} className="text-xs leading-5 text-muted">
+                Private — only you can see it. Untick it whenever you&apos;re ready to share it.
+              </span>
+            </span>
+          </label>
+          {keepPrivate ? null : (
+            <ChipGroup
+              ariaLabel="New deck visibility"
+              layout="grid-2"
+              size="sm"
+              value={listing}
+              onChange={setListing}
+              options={LISTING_OPTIONS}
+            />
+          )}
           <div className="flex items-center gap-3">
             <button
               type="button"
