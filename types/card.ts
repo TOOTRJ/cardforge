@@ -531,6 +531,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // own composite of the saga body and the ▼ back's bars. A back body, never
   // a card's own template. An addition: no stored card changes.
   "sagadfcback",
+  // The SAGA CREATURE (TODO 4.5d): Final Fantasy's "Summon:" cards — the
+  // textured saga with the reminder as a band across the top, the type bar
+  // raised 173 px and M15's text box and P/T plate under it. PipGlyph's own
+  // composite (scripts/build-saga-creature-frames.mjs): no Card Conjurer or
+  // MSE source. An addition: no stored card changes.
+  "sagacreature",
   "adventure",
   // The Prepare frame (TODO 4.27, Secrets of Strixhaven 2026): the M15
   // frame with the spell on a PAGE on the right — its own name, cost and
@@ -744,6 +750,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   saga: "Saga",
   sagadfcfront: "Saga (transform front)",
   sagadfcback: "Saga (transform back)",
+  sagacreature: "Saga creature",
   adventure: "Adventure",
   prepare: "Prepare",
   flip: "Flip",
@@ -927,6 +934,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   saga: "m15",
   sagadfcfront: "m15",
   sagadfcback: "m15",
+  sagacreature: "m15",
   adventure: "m15",
   prepare: "m15",
   flip: "m15",

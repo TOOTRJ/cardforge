@@ -76,6 +76,7 @@ import {
   resolveLoyaltyRows,
   resolveSagaChapters,
 } from "@/lib/cards/face-content";
+import { resolveSagaCreature } from "@/lib/cards/saga-creature";
 import {
   basicLandManaKey,
   resolveWatermark,
@@ -756,9 +757,14 @@ function CardImage({
   // reminder block, the content-sized rows, the badge stacks), then its px
   // at this bake's target — the preview's twin. Its badges and dividers are
   // the pack's bitmaps: drawn with the frame, under the finishes (railPieces).
+  // A saga creature (ChapterSlot.creatureBox, TODO 4.5d) splits its text:
+  // the chapters on the rail, the lines after them in its second box
+  // (lib/cards/saga-creature.ts) — the preview's twin.
+  const sagaCreature = layout.chapters?.creatureBox && !textless ? resolveSagaCreature(card.faceContent, card.rulesText) : null;
   const sagaContent = layout.chapters && !textless
-    ? resolveSagaChapters(card.faceContent, card.rulesText)
+    ? (sagaCreature ?? resolveSagaChapters(card.faceContent, card.rulesText))
     : null;
+  const boxRulesText = sagaCreature ? sagaCreature.creatureText : card.rulesText;
   const sagaRailLayout = profileSagaRail(layout, sagaContent, aspect);
   const sagaDrawing = sagaRailLayout ? sagaRailDrawing(sagaRailLayout, rulesTarget) : null;
   const railPieces =
@@ -806,14 +812,19 @@ function CardImage({
   const hasRulesContent =
     !isBasicLand &&
     !textless &&
-    hasRulesBoxText(card);
+    hasRulesBoxText({ rulesText: boxRulesText, flavorText: card.flavorText });
   // The plain rules box's ONE layout (layout v33, lib/cards/rules-box.ts):
   // its size, every line (rules and flavor) and every position, fitted at
   // both bake targets, clear of the drawn stat badges — a walker drawn here
   // (no abilities) keeps out of its loyalty shield — the preview's twin. Not
   // on a textless frame, a basic land, the saga rail or ability rows.
+  // A saga creature's second box is one (ChapterSlot.creatureBox).
   const drawsRulesBox =
-    !textless && !isBasicLand && !layout.chapters && !layout.tiers && !(layout.loyaltyRows && loyaltyAbilities.length > 0);
+    !textless &&
+    !isBasicLand &&
+    (!layout.chapters || Boolean(layout.chapters.creatureBox)) &&
+    !layout.tiers &&
+    !(layout.loyaltyRows && loyaltyAbilities.length > 0);
   // The station frame's tiers (TODO 4.27a; lib/cards/station-layout.ts): the
   // whole text box laid out once — bands, badges, plate, every band's lines
   // — the preview's twin. Its bands, badge discs and plate are frame pieces
@@ -826,7 +837,7 @@ function CardImage({
   // offers the choice (lib/cards/rules-box.ts rulesAlignOf).
   const rulesAlign = card.frameStyle?.rulesAlign;
   const rulesLayout = drawsRulesBox
-    ? mainRulesLayout({ layout, rulesText: card.rulesText, flavorText: card.flavorText, aspect, show: drawnStats, rulesAlign })
+    ? mainRulesLayout({ layout, rulesText: boxRulesText, flavorText: card.flavorText, aspect, show: drawnStats, rulesAlign })
     : null;
   // The adventure page's and a second face's rules — the same layout.
   const adventureRules =
@@ -1477,6 +1488,19 @@ function CardImage({
                 symbols,
               })
             : null}
+
+      {/* A saga creature's second box (ChapterSlot.creatureBox, TODO 4.5d):
+          the creature's own abilities and its flavour under the raised type
+          bar, beside the rail drawn above — the preview's twin. */}
+      {!textless && layout.chapters?.creatureBox && hasRulesLines(rulesLayout)
+        ? RulesBoxBake({
+            layout: rulesLayout,
+            target: rulesTarget,
+            colorHex: layout.rules.colorHex,
+            overrides: card.pipOverrides,
+            symbols,
+          })
+        : null}
 
       {/* The borderless walkers' stamp (TODO 4.9d, HoloStampArt.aboveRows):
           the notch ABOVE the ability rows and the rules backdrop — their

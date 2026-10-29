@@ -552,8 +552,11 @@ export type RulesLayoutInput = {
   /** "center": a layout of ONE rules line in all (no flavor, no second
    *  paragraph) sets it centred in the column — TextSlot.alignSingleLine
    *  (TODO 4.49 (b)). Each target indents it by its own whole px
-   *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
-  alignSingleLine?: "center";
+   *  (singleLineIndentPx), and the keep-outs are judged where it lands.
+   *  "centerAny": the same, and ONE flavour line alone is centred too (the
+   *  saga creature's box, TODO 4.5d: FIN #160 / #78 centre their flavour
+   *  as #36 its "Indestructible"). */
+  alignSingleLine?: "center" | "centerAny";
   /** "center": EVERY line of the block — rules, reminder and flavor alike —
    *  is set centred on the box's own centre line (TODO 4.21e: a split
    *  half's short text as MH2 #123, TSR #156 / #161 / #186 and C16 #239 /
@@ -800,8 +803,8 @@ function blocksHeight(blocks: readonly RulesBlock[], m: RulesMetrics, divider: b
  *  (RulesLayoutInput.alignSingleLine): a single rules block of a single
  *  line, nothing else — a flavor text, a blank line or a second paragraph
  *  keeps every line at the left. */
-export function isSingleRulesLine(blocks: readonly RulesBlock[]): boolean {
-  return blocks.length === 1 && blocks[0].kind === "rules" && blocks[0].lines.length === 1;
+export function isSingleRulesLine(blocks: readonly RulesBlock[], flavorToo = false): boolean {
+  return blocks.length === 1 && (blocks[0].kind === "rules" || (flavorToo && blocks[0].kind === "flavor")) && blocks[0].lines.length === 1;
 }
 
 /** A centred single line's indent at a target: half the room the line
@@ -917,7 +920,7 @@ function placeBlocks(
   const blanks: RulesPlacement["blanks"] = [];
   let bar: RulesPlacement["bar"] = null;
   let y = top + insetTop;
-  const centred = input.alignSingleLine === "center" && isSingleRulesLine(blocks);
+  const centred = input.alignSingleLine !== undefined && isSingleRulesLine(blocks, input.alignSingleLine === "centerAny");
   // A centred BLOCK (TODO 4.21e): the box's centre line — the middle of the
   // box less its padding — from the interior's left edge.
   const blockCentre =

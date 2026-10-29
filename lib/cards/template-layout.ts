@@ -241,8 +241,10 @@ export type TextSlot = {
    *  lines start at the box's left, as ever. The layout places the line
    *  (its whole-px indent at each target), so both renderers draw it where
    *  the fit checked it. Unset: every line starts at the left (every
-   *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
-  alignSingleLine?: "center";
+   *  profile before 4.49 (b)). "centerAny" centres ONE flavour line alone
+   *  too (the saga creature's box, TODO 4.5d). Code-owned: not part of the
+   *  override schema. */
+  alignSingleLine?: "center" | "centerAny";
   /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
    *  squeezed to before its size steps down — the full-art token's TALL box,
    *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
@@ -1009,6 +1011,13 @@ export type FrameProfile = {
     /** The row divider — the pack's bitmap, drawn centred on each row's top
      *  edge (a first row at the rail's own top has none). */
     divider: { assetPath: string; leftPct: number; widthPct: number; heightPct: number };
+    /** The SAGA CREATURE's second box (TODO 4.5d, FIN's "Summon:" cards):
+     *  the frame's plain rules box (`rules`, under the raised type bar) is
+     *  drawn beside the rail, holding the creature's own abilities — the
+     *  lines after the last chapter (lib/cards/saga-creature.ts) — and the
+     *  card's flavour, clear of the drawn P/T plate. Unset: the rail replaces
+     *  the rules box, as on every other saga. */
+    creatureBox?: true;
   };
   /** Adventure (Eldraine) sub-panel. When set, the frame is a creature whose
    *  lower text area is an open storybook: this LEFT page holds an "adventure"
@@ -7756,6 +7765,91 @@ const SAGADFCBACK: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
+// The SAGA CREATURE (TODO 4.5d): Final Fantasy's "Summon:" cards (FIN / FIC
+// / PFIN 2025) — a saga that is also a creature, on a body no Card Conjurer
+// or MSE pack draws. PipGlyph's own masters (scripts/build-saga-creature-
+// frames.mjs, scripts/lib/saga-creature.mjs): Card Conjurer's TEXTURED saga
+// (the starfield frame field) with its reminder box widened into a BAND
+// over the art column, the rail and the window 173 px shorter, the type bar
+// RAISED 173 px, and M15's text box and P/T plate under it (m15nyx's rows).
+// Against the prints (Scryfall PNGs at 1500 × 2100, 22 black-bordered FIN /
+// FIC summons read 2026-10-28):
+//   • the band: 237–433 px, the reminder across the card (two lines); the
+//     window's top outline at 433–438 (ours 434–437) and the first divider
+//     on 438–446 (FIN #36: the rows start on 442);
+//   • the type bar's outline at 1587–1722 (the saga's 1759–1895, − 173):
+//     the type line, its baseline and the set symbol ride it;
+//   • the second box (1723–≈1947, x 99–1402 on print; m15nyx's 98–1409):
+//     the creature's own abilities or its flavour, ONE centred line on every
+//     print, centred on ≈ 1811 px (the box above the plate's top) —
+//     ChapterSlot.creatureBox, its text the lines after the last chapter
+//     (lib/cards/saga-creature.ts);
+//   • the P/T on M15's plate at M15's spot (m15nyx's plates, as the CC-
+//     framed M15 profiles draw them).
+// An ADDITION: a new template no stored card sits on. Set on the PROFILES
+// entry only.
+// ---------------------------------------------------------------------------
+
+/** How far the saga creature raises the type bar, HD px (the prints' type
+ *  bar outline 1587–1722 against the saga's 1759–1895). */
+export const SAGA_CREATURE_RAISE_PX = 173;
+/** The band's foot (the reminder's box ends here; the window's top outline
+ *  is under it) and the first row's top (the first divider's centre), HD px. */
+const SAGA_CREATURE_BAND_FOOT_PX = 433;
+const SAGA_CREATURE_ROWS_TOP_PX = 442;
+/** The rail's foot: the type bar's top outline (the saga's 1759, raised). */
+const SAGA_CREATURE_RAIL_FOOT_PX = 1759 - SAGA_CREATURE_RAISE_PX;
+/** The fold's corner in the band: SAGA_FOLD_CORNER_PX squeezed with the
+ *  fold's rows (237–597 → 237–433, scripts/lib/saga-creature.mjs). */
+const sagaCreatureFoldRow = (row: number) => 237 + ((row - 237) * (SAGA_CREATURE_BAND_FOOT_PX - 237)) / (597 - 237);
+
+const SAGACREATURE: FrameProfile = {
+  ...SAGA,
+  label: "Saga creature",
+  // The window: 438–1585 px (its top rule 434–437, the bar's outline from
+  // 1586), with the saga slot's 2 px above and 2 below.
+  artSlot: { ...SAGA.artSlot, topPct: 436 / 21, heightPct: (SAGA_CREATURE_RAIL_FOOT_PX + 2 - 436) / 21 },
+  type: { ...SAGA.type, rect: { ...SAGA.type.rect, topPct: SAGA.type.rect.topPct - SAGA_CREATURE_RAISE_PX / 21 } },
+  symbolRect: { ...SAGA.symbolRect!, topPct: SAGA.symbolRect!.topPct - SAGA_CREATURE_RAISE_PX / 21 },
+  // The second box: m15nyx's paper from the left rim (110 px) to the right
+  // inner shadow (1383); 1731–1908 px, so its one line sits where the
+  // prints' does (FIN #36's "I" inks 1792–1837 px — ours at 76 px inked
+  // 1781–1832 from a box centred 8 px higher). 8 pt, the reduced rung: the
+  // prints' "Indestructible" is 391 px wide where 76 px sets 445 (0.88).
+  rules: {
+    ...M15.rules,
+    rect: { topPct: 1731 / 21, leftPct: 110 / 15, widthPct: (1383 - 110) / 15, heightPct: (1908 - 1731) / 21 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
+    // ONE line centred, its flavour too (FIN #160 "A name in blood, a pact
+    // of flame." as #36 "Indestructible"); longer texts from the left.
+    alignSingleLine: "centerAny",
+  },
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15nyx/pt/{color}.png" },
+  chapters: {
+    ...SAGA.chapters!,
+    rect: {
+      ...SAGA.chapters!.rect,
+      topPct: SAGA_CREATURE_ROWS_TOP_PX / 21,
+      heightPct: (SAGA_CREATURE_RAIL_FOOT_PX - SAGA_CREATURE_ROWS_TOP_PX) / 21,
+    },
+    intro: {
+      ...SAGA.chapters!.intro,
+      // The band: from the reminder box's left edge (132 px) to the
+      // window's right outline (1384), 237–433 px.
+      rect: { topPct: 11.29, leftPct: 8.8, widthPct: (1384 - 132) / 15, heightPct: (SAGA_CREATURE_BAND_FOOT_PX - 237) / 21 },
+      keepOuts: SAGA_FOLD_CORNER_PX.map(([right, top, bottom]) => ({
+        leftPct: 0,
+        widthPct: right / 15,
+        topPct: sagaCreatureFoldRow(top) / 21,
+        heightPct: (sagaCreatureFoldRow(bottom) - sagaCreatureFoldRow(top)) / 21,
+      })),
+    },
+    rowsTopPct: SAGA_CREATURE_ROWS_TOP_PX / 21,
+    creatureBox: true,
+  },
+};
+
+// ---------------------------------------------------------------------------
 // The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
 // §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
 // CC-framed M15 skeleton as the transform bodies — the drop housing with its
@@ -8520,6 +8614,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
+  // The saga creature (TODO 4.5d): see SAGACREATURE.
+  sagacreature: SAGACREATURE,
   // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
   // per card (frame_style.partColor).
   adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },

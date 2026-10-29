@@ -26476,6 +26476,104 @@
       "width": 1500,
       "height": 2100
     },
+    "sagacreature/b.png": {
+      "hash": "3c7c0b402167",
+      "sha256": "3c7c0b402167aec0d57399669e666741e763f5b20d226a6b633fefc950c07265",
+      "bytes": 2384112,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/b.webp": {
+      "hash": "37e226c10416",
+      "sha256": "37e226c104161b14b5019bf751b43563dee1c277d0bd9b4e606c6277090ae918",
+      "bytes": 91626,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/c.png": {
+      "hash": "2aeddac83a88",
+      "sha256": "2aeddac83a8870bd79020d2fa5c0ffcd21b336cbba69551a6a0ba186d0227715",
+      "bytes": 2392651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/c.webp": {
+      "hash": "c53fd909c508",
+      "sha256": "c53fd909c5083a5edebc285550eb52ca18ed61f2236ed4ce71b78db185b1c47a",
+      "bytes": 126876,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/g.png": {
+      "hash": "eaefaa4a4fc7",
+      "sha256": "eaefaa4a4fc7c84da43757eeb753fe326483c578f0083c4e3cac108ed00d771f",
+      "bytes": 2415750,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/g.webp": {
+      "hash": "87f4eed2b013",
+      "sha256": "87f4eed2b0139dbc9aa0d448d5c73e98e985ed417765b1c19a9bd123dd7ba2d8",
+      "bytes": 102936,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/m.png": {
+      "hash": "63bb638aa1f7",
+      "sha256": "63bb638aa1f7195be621daa76a005ac32bd46114d7d71f832cc1ffa85e5414bd",
+      "bytes": 2185906,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/m.webp": {
+      "hash": "580a1a1b5af0",
+      "sha256": "580a1a1b5af05b25a46ec0e6de632dc9053b32e4be37d1d5599d490ad2c72f65",
+      "bytes": 90580,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/r.png": {
+      "hash": "40c065b1d3ab",
+      "sha256": "40c065b1d3abef4d4320cb0e5e55de487e3910600e88bcf6fb5bae73f0769867",
+      "bytes": 2519943,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/r.webp": {
+      "hash": "69da9fcc8809",
+      "sha256": "69da9fcc8809751bd840955d9ad83082beb6ca66ce596f881476663270d741a8",
+      "bytes": 132480,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/u.png": {
+      "hash": "896c3b8c7592",
+      "sha256": "896c3b8c759290864411600dab1eb930fae270e00cfffc7cc36e871a11fb84d0",
+      "bytes": 1479614,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/u.webp": {
+      "hash": "a7e0cf8a503e",
+      "sha256": "a7e0cf8a503e57f710b306a24602cf36c19dbe63c947db90c1479e27f22f185e",
+      "bytes": 74538,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/w.png": {
+      "hash": "a38001cabfc0",
+      "sha256": "a38001cabfc00965afa9b5c677bcc0a8242ee21b75dc43debf32977643d98783",
+      "bytes": 1724221,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagacreature/w.webp": {
+      "hash": "2e6578390095",
+      "sha256": "2e65783900953ce061f46474733c284254ede3e2eaba2a73ba10627dc7181fab",
+      "bytes": 66994,
+      "width": 1500,
+      "height": 2100
+    },
     "sagadfcback/b.png": {
       "hash": "3e115ad0d49d",
       "sha256": "3e115ad0d49db9ff9746981616178b8023e9953b7c31297e078d4b7be621e541",

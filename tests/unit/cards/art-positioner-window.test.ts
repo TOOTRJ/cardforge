@@ -111,6 +111,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The double-faced saga front (TODO 5.5 (b)): the saga's window.
   sagadfcfront: { front: [636, 1526] },
   sagadfcback: { front: [636, 1526] },
+  sagacreature: { front: [636, 1152] },
   adventure: { front: [1273, 933] },
   // The Prepare frame (TODO 4.27): M15's window (its masters are M15's above the type bar).
   prepare: { front: M15_WINDOW },
@@ -283,8 +284,9 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // before the Expeditions' window + panel, TODO 4.11 wave 1: the 2020
     // look's 1382 × 1500 and the new 2015 look's 1276 × 1471; 47 before the
     // Enchanting Tales showcase, TODO 4.11 wave 2: the art under its whole
-    // frame, 1500 × 1821.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(48);
+    // frame, 1500 × 1821; 48 before the saga creature, TODO 4.5d: its art
+    // column, 636 × 1152.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(49);
   });
 });
 

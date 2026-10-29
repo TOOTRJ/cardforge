@@ -325,6 +325,11 @@ export type SagaChapter = { marker: string; text: string };
 const CHAPTER_LINE =
   /^\s*([ivx]+(?:\s*,\s*[ivx]+)*)\s*[—:–-]\s*(.+)$/i;
 
+/** A line that opens a chapter ("I — …", "II, III — …", "IV: …"). */
+export function isChapterLine(line: string): boolean {
+  return CHAPTER_LINE.test(line.trim());
+}
+
 export function parseChapters(
   rulesText: string | null | undefined,
 ): SagaChapter[] {
