@@ -558,28 +558,26 @@ export const countDeckEntries = cache(async (deckId: string): Promise<number> =>
   }
 });
 
-/** The public decks a card appears in — the card page's "In decks" row and
- *  its CreativeWork `isPartOf`. Cookie-free; cache()-deduped per request. */
+/** The public decks a card's page names — its "In decks" row AND its
+ *  CreativeWork `isPartOf`, one list (card-detail-content.tsx). Since D3
+ *  anyone's public deck may hold a creator's public card, so the page names
+ *  the card owner's own public, non-empty decks and another user's only
+ *  from a real creator: no admin, at least one public card of their own,
+ *  and only while the card is public (migration 0144's
+ *  `public_decks_containing_card`, the ONE rule). Newest first, at most 5.
+ *  A database the function hasn't reached names none. Cookie-free;
+ *  cache()-deduped per request. */
 export const listPublicDecksContaining = cache(
   async (cardId: string): Promise<Array<{ slug: string; title: string }>> => {
     if (!isSupabaseConfigured()) return [];
     try {
       const supabase = createPublicClient();
-      const { data: rows } = await supabase
-        .from("deck_cards")
-        .select("deck_id")
-        .eq("card_id", cardId)
-        .limit(50);
-      const deckIds = Array.from(new Set((rows ?? []).map((r) => r.deck_id)));
-      if (deckIds.length === 0) return [];
-      const { data: decks } = await supabase
-        .from("decks")
-        .select("slug, title")
-        .in("id", deckIds)
-        .eq("visibility", "public")
-        .order("updated_at", { ascending: false })
-        .limit(5);
-      return (decks ?? []).map((d) => ({ slug: d.slug, title: d.title }));
+      const { data, error } = await supabase.rpc("public_decks_containing_card", {
+        p_card_id: cardId,
+        p_limit: 5,
+      });
+      if (error || !Array.isArray(data)) return [];
+      return data.map((d) => ({ slug: d.slug, title: d.title }));
     } catch {
       return [];
     }

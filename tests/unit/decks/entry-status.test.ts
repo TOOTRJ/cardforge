@@ -107,15 +107,19 @@ describe("deckEntryStatus — every entry × card shape", () => {
     expect([...seen].sort()).toEqual([...DECK_ENTRY_STATUS_VALUES].sort());
   });
 
-  it("an unchanged import turns Edited with any printed change, and back", () => {
+  it("an unchanged import turns Edited with ANY change to the card (owner 2026-10-29), and back", () => {
     const fingerprint = importFingerprintOf(CARD);
     const entry = { scryfall_id: PRINTING, card_id: "c" };
     const card = { ...CARD, import_scryfall_id: PRINTING, import_fingerprint: fingerprint };
     expect(deckEntryStatus(entry, card)).toBe("imported");
     expect(deckEntryStatus(entry, { ...card, art_url: "https://x/new.png" })).toBe("edited");
     expect(deckEntryStatus(entry, { ...card, title: "Llanowar Elder" })).toBe("edited");
-    // Frame, colour, rarity: not printed fields of the fingerprint.
-    expect(deckEntryStatus(entry, { ...card, frame_style: { template: "m15nyx" }, color_identity: ["blue"] } as never)).toBe("imported");
+    // The frame, the colour, the rarity alone: Edited too.
+    expect(deckEntryStatus(entry, { ...card, frame_style: { template: "m15nyx" } } as never)).toBe("edited");
+    expect(deckEntryStatus(entry, { ...card, color_identity: ["blue"] } as never)).toBe("edited");
+    expect(deckEntryStatus(entry, { ...card, rarity: "mythic" } as never)).toBe("edited");
+    // Not what isn't the card: its visibility, its tags.
+    expect(deckEntryStatus(entry, { ...card, visibility: "private", tags: ["elves"] } as never)).toBe("imported");
   });
 
   it("an unchanged import of ANOTHER printing is Edited — Imported only for the entry's own printing (L1)", () => {

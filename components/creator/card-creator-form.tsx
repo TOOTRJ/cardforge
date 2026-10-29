@@ -340,7 +340,7 @@ import {
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
-import { importBaselineOf, importUnchangedPayload, type ImportBaseline } from "@/lib/creator/import-baseline";
+import { importBaselineOf, importUnchangedPayload, matchesBaseline, type ImportBaseline } from "@/lib/creator/import-baseline";
 import { editBackFacePayload } from "@/lib/creator/back-face-edit";
 import { cancelsImplicitSubmit } from "@/lib/creator/enter-key";
 import {
@@ -876,9 +876,13 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
-  // The printed values the last import landed with (TODO DK2.5): a new
-  // card's save says whether it still prints them (lib/creator/import-baseline.ts).
+  // The values the last import landed with, once the form's own automatic
+  // steps have run on them (TODO DK2.5): a new card's save says whether it
+  // is still exactly that (lib/creator/import-baseline.ts). Re-taken after
+  // every commit while `importBaselineOpen` — from the import until the
+  // maker's first input, click or key in the form.
   const [importBaseline, setImportBaseline] = useState<ImportBaseline | null>(null);
+  const importBaselineOpen = useRef(false);
   // Session-only import facts (never saved): the Card step's "Frame
   // substituted (imported …)" chip while the card sits on a frame that
   // isn't the printing's own (TODO 1.5), and the Art step's note on
@@ -1027,6 +1031,22 @@ export function CardCreatorForm({
         callback: ({ isDirty: dirty }) => setGuardArmed(Boolean(dirty)),
       }),
     [subscribe],
+  );
+  // An import's automatic steps (the art's fit, the frame follows, anatomy
+  // and kind defaults) all write the form in effects, before any input can
+  // reach it: the import baseline (TODO DK2.5) follows every value change
+  // until the maker's first input, click or key closes it.
+  useEffect(
+    () =>
+      subscribe({
+        formState: { values: true },
+        callback: () => {
+          if (!importBaselineOpen.current) return;
+          const values = getValues();
+          setImportBaseline((prev) => (matchesBaseline(prev, values) ? prev : importBaselineOf(values)));
+        },
+      }),
+    [subscribe, getValues],
   );
 
   // Signed-out visitors may LOOK at the creator (every step, the live
@@ -3124,6 +3144,7 @@ export function CardCreatorForm({
     // an import made from the Back face tab would otherwise land there.
     setPreviewFace("front");
     setImportBaseline(importBaselineOf(getValues()));
+    importBaselineOpen.current = true;
     return notice;
   };
 
@@ -3839,6 +3860,7 @@ export function CardCreatorForm({
     forgetBorrowedWords();
     setRemixSource(null);
     setImportBaseline(null);
+    importBaselineOpen.current = false;
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
     setPreviewFace("front");
@@ -5713,6 +5735,10 @@ export function CardCreatorForm({
     }
   };
 
+  const closeImportBaseline = () => {
+    importBaselineOpen.current = false;
+  };
+
   const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     tidyTypographyOnBlur(event);
     clearRemixNicknameOnRename(event);
@@ -5775,6 +5801,10 @@ export function CardCreatorForm({
           onSubmit={onFormSubmit}
           onBlur={onFormBlur}
           onKeyDown={onFormKeyDown}
+          onClickCapture={closeImportBaseline}
+          onInputCapture={closeImportBaseline}
+          onChangeCapture={closeImportBaseline}
+          onKeyDownCapture={closeImportBaseline}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -5832,6 +5862,10 @@ export function CardCreatorForm({
         onSubmit={onFormSubmit}
         onBlur={onFormBlur}
         onKeyDown={onFormKeyDown}
+        onClickCapture={closeImportBaseline}
+        onInputCapture={closeImportBaseline}
+        onChangeCapture={closeImportBaseline}
+        onKeyDownCapture={closeImportBaseline}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}

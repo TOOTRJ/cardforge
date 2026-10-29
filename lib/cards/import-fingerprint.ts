@@ -1,46 +1,60 @@
 // ---------------------------------------------------------------------------
 // A card's import provenance (TODO DK2.5, migration 0144): the Scryfall
 // printing it was started from (`cards.import_scryfall_id`) and a fingerprint
-// of what it printed when it was first saved from that import
-// (`cards.import_fingerprint`). Both are written ONCE, by createCardAction's
+// of the card as it was first saved from that import
+// (`cards.import_fingerprint`). Both are written by createCardAction's
 // insert (lib/cards/import-provenance.ts) — never by a trigger, never by an
-// edit: the 0144 guard refuses an API role's change, so a platform migration
-// that rewrites a card can't move them and neither can the editor.
+// edit: the 0144 guard refuses an API role's change, so neither the editor
+// nor a client can move them. The one later writer is a PLATFORM rewrite of
+// a covered field, on the trusted path (fingerprintAfterRewrite, below).
 //
-// "Edited" = the card's printed fields today hash to something else than the
-// stored fingerprint. ONE fingerprint, this module, read everywhere: the
-// create action computes it from the row it inserts, the deck pages
-// (lib/decks/entry-status.ts) recompute it from the row they read. Both
-// sides are ROW-shaped (the insert and the stored row), so the only
-// normalisation is "no text" = "".
+// "Edited" = ANY change to the card (owner 2026-10-29: "Edited should be
+// counted when anything is changed on the card"): the fingerprint covers
+// every column a maker can set — the printed text, the colour, the rarity,
+// the frame and every anatomy switch in `frame_style` (crown, two-colour,
+// collector line, stamp, border, text alignment, self-name, part colour…),
+// the picture and its crop / zoom / position, the set icon and collector
+// fields, the watermark, the footer text, the structured rows
+// (`face_content`: walker, saga and station rows, the station P/T tier), the
+// Types field (`printed_types`) and the whole second face (`back_face`). It
+// leaves out only what the maker can't set or what isn't the card: ids and
+// owner, slug, visibility, tags, the provenance columns themselves, render
+// pointers and stamps, counters, timestamps, derived columns.
+// IMPORT_FINGERPRINT_FIELDS and IMPORT_FINGERPRINT_EXCLUDED name every
+// column of `cards` between them (a test reads types/supabase.ts), so a new
+// column is a decision, never a miss.
 //
-// The fields are the ones the card PRINTS, as stored (already through print
-// typography, TODO 6.11, and the cost through normalizeManaCost — the create
-// action's own pipeline), plus its picture: a card whose only change is new
-// art is no longer the plain import (owner vocabulary 2026-10-28: Imported =
-// "a real card, not yet changed"). Not the frame, the colour, the rarity or
-// the set symbol: platform migrations move those on stored cards (0129's
-// token text box, the retired templates) and they would turn every such
-// import "Edited" by themselves. A face's structured rows
-// (`face_content`) are left out too: the editor writes them beside the
-// canonical `rules_text`, and an untouched edit's dual write adds them to a
-// plain-text walker — the text is what prints.
+// ONE fingerprint, this module, read everywhere: the create action computes
+// it from the row it inserts, the deck pages (lib/decks/entry-status.ts)
+// recompute it from the row they read. Both sides are ROW-shaped, so the
+// normalisation is only what a database round trip can change: a blank text,
+// an empty array or object and an absent key are one "nothing"; an absent
+// `lang` is the column's default; a jsonb object's key order never counts.
+// `printed_types` and `footer_text` keep "" apart from NULL — there the two
+// are different choices (CLAUDE.md "The type line", migration 0090).
 //
-// Versioned ("v1:" + SHA-256 hex): a later change of the field list is a
-// new version, and a stored v1 is still compared the v1 way. Pure and
-// synchronous (its own SHA-256, no node:crypto), so the deck list computes a
-// status in the browser too.
+// Versioned ("v1:" + SHA-256 hex). v1's field list was widened before any
+// fingerprint was stored in production (0144 ships with it), so v1 stays v1;
+// from here on a change of the field list is a NEW version, and a stored v1
+// is compared the v1 way. A platform rewrite of a covered field (a frame
+// sweep, a typography fix) keeps an untouched import untouched only by
+// re-fingerprinting the rows it changes: fingerprintAfterRewrite, below.
+// Pure and synchronous (its own SHA-256, no node:crypto), so the deck list
+// computes a status in the browser too.
 // ---------------------------------------------------------------------------
 
-/** The front-face columns the fingerprint covers, in hashing order. */
+/** The `cards` columns the fingerprint covers, in hashing order: everything
+ *  a maker can set on the card. */
 export const IMPORT_FINGERPRINT_FIELDS = [
   "title",
   "nickname",
   "cost",
+  "color_identity",
   "supertype",
   "card_type",
   "subtypes",
   "printed_types",
+  "rarity",
   "rules_text",
   "flavor_text",
   "power",
@@ -49,38 +63,61 @@ export const IMPORT_FINGERPRINT_FIELDS = [
   "defense",
   "artist_credit",
   "art_url",
+  "art_position",
+  "frame_style",
+  "face_content",
+  "back_face",
+  "watermark",
+  "footer_text",
+  "set_icon_url",
+  "set_icon_code",
+  "set_code",
+  "collector_number",
+  "lang",
 ] as const;
 
-/** The second face's keys (`cards.back_face`), in hashing order. The
- *  front's minus the nickname (a front-face field, TODO 6.3). */
-export const IMPORT_FINGERPRINT_BACK_FIELDS = [
-  "title",
-  "cost",
-  "supertype",
-  "card_type",
-  "subtypes",
-  "printed_types",
-  "rules_text",
-  "flavor_text",
-  "power",
-  "toughness",
-  "loyalty",
-  "defense",
-  "artist_credit",
-  "art_url",
+/** The `cards` columns it leaves out — the maker can't set them, or they
+ *  aren't the card. */
+export const IMPORT_FINGERPRINT_EXCLUDED = [
+  "id",
+  "owner_id",
+  "slug",
+  "visibility",
+  "tags",
+  "game_system_id",
+  "template_id",
+  "parent_card_id",
+  "back_card_id",
+  "source_scryfall_id",
+  "import_scryfall_id",
+  "import_fingerprint",
+  "frame_preview",
+  "metadata",
+  "oracle_text",
+  "mana_value",
+  "layout",
+  "color_count",
+  "search_vector",
+  "rendered_image_url",
+  "rendered_thumb_url",
+  "rendered_back_image_url",
+  "rendered_back_thumb_url",
+  "rendered_at",
+  "layout_version",
+  "view_count",
+  "likes_count",
+  "share_count",
+  "created_at",
+  "updated_at",
 ] as const;
 
 export const IMPORT_FINGERPRINT_VERSION = 1;
 
-type FrontField = (typeof IMPORT_FINGERPRINT_FIELDS)[number];
-type BackField = (typeof IMPORT_FINGERPRINT_BACK_FIELDS)[number];
+type Field = (typeof IMPORT_FINGERPRINT_FIELDS)[number];
 
 /** What the fingerprint reads: a card row, an insert, or anything with the
- *  same columns (absent = no text). */
-export type FingerprintCard = Partial<Record<Exclude<FrontField, "subtypes">, string | null>> & {
-  subtypes?: readonly string[] | null;
-  back_face?: unknown;
-};
+ *  same columns (absent = nothing). */
+export type FingerprintCard = Partial<Record<Field, unknown>>;
 
 /** The provenance columns as a row carries them (absent on a database 0144
  *  has not reached: read as "not tracked"). */
@@ -91,46 +128,54 @@ export type ImportProvenanceColumns = {
 
 const FINGERPRINT_FORMAT = /^v([1-9][0-9]*):([0-9a-f]{64})$/;
 
-function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+/** Keys whose "" is a choice of its own, never "nothing". */
+const BLANK_IS_A_VALUE: ReadonlySet<string> = new Set(["printed_types", "footer_text"]);
+
+/** The language a row has when an insert names none (the column default). */
+const DEFAULT_LANG = "en";
+
+/** A value as a database round trip leaves it: trimmed text, "nothing" for
+ *  a blank, an empty array or object, objects with sorted keys and their
+ *  "nothing" keys dropped. */
+function canonical(value: unknown, key?: string): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+    return key && BLANK_IS_A_VALUE.has(key) ? "" : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) {
+    const items = value.map((item) => canonical(item));
+    return items.length > 0 ? items : null;
+  }
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const inner of Object.keys(value as Record<string, unknown>).sort()) {
+      const settled = canonical((value as Record<string, unknown>)[inner], inner);
+      if (settled !== null) out[inner] = settled;
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  }
+  return null;
 }
 
-function words(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((word): word is string => typeof word === "string").map((word) => word.trim()).filter(Boolean);
+function fieldValue(card: Record<string, unknown>, field: Field): unknown {
+  const value = canonical(card[field], field);
+  if (field === "lang") return value ?? DEFAULT_LANG;
+  return value;
 }
 
-/** `printed_types` keeps its two "empty" meanings apart (CLAUDE.md "The type
- *  line": NULL = the built line, "" = the maker emptied the field). */
-function printedTypes(value: unknown): string | null {
-  return typeof value === "string" ? value.trim() : null;
-}
-
-function fieldValue(source: Record<string, unknown>, field: FrontField | BackField): unknown {
-  const value = source[field];
-  if (field === "subtypes") return words(value);
-  if (field === "printed_types") return printedTypes(value);
-  return text(value);
-}
-
-/** The canonical text the fingerprint hashes: arrays in a fixed order, so
- *  no key order of a row or a jsonb object can move it. Exported for the
+/** The canonical text the fingerprint hashes: the fields in a fixed order,
+ *  so no key order of a row or a jsonb object can move it. Exported for the
  *  tests and the seeds' check. */
 export function importFingerprintText(card: FingerprintCard): string {
-  const front = card as Record<string, unknown>;
-  const back =
-    card.back_face && typeof card.back_face === "object" && !Array.isArray(card.back_face)
-      ? (card.back_face as Record<string, unknown>)
-      : null;
-  return JSON.stringify([
-    IMPORT_FINGERPRINT_VERSION,
-    IMPORT_FINGERPRINT_FIELDS.map((field) => fieldValue(front, field)),
-    back ? IMPORT_FINGERPRINT_BACK_FIELDS.map((field) => fieldValue(back, field)) : null,
-  ]);
+  const row = card as Record<string, unknown>;
+  return JSON.stringify([IMPORT_FINGERPRINT_VERSION, IMPORT_FINGERPRINT_FIELDS.map((field) => fieldValue(row, field))]);
 }
 
-/** The fingerprint of what this card prints (the stored value's format,
- *  0144's CHECK: `v<version>:<64 hex>`). */
+/** The fingerprint of the card as it is (the stored value's format, 0144's
+ *  CHECK: `v<version>:<64 hex>`). */
 export function importFingerprintOf(card: FingerprintCard): string {
   return `v${IMPORT_FINGERPRINT_VERSION}:${sha256Hex(importFingerprintText(card))}`;
 }
@@ -146,8 +191,8 @@ export function fingerprintMatches(card: FingerprintCard, stored: string | null 
 
 /**
  * What a card's provenance says about it:
- *   "unchanged"  started from a Scryfall printing and still prints what it
- *                printed then;
+ *   "unchanged"  started from a Scryfall printing and nothing on it changed
+ *                since its first save;
  *   "edited"     started from a printing and changed since — or already
  *                changed when it was first saved (an import the maker
  *                altered before saving, an AI restyle: the row keeps the
@@ -162,6 +207,26 @@ export type ImportEditState = "unchanged" | "edited" | "untracked";
 export function importEditStateOf(card: FingerprintCard & ImportProvenanceColumns): ImportEditState {
   if (!card.import_scryfall_id) return "untracked";
   return fingerprintMatches(card, card.import_fingerprint) ? "unchanged" : "edited";
+}
+
+/**
+ * The fingerprint to store beside a PLATFORM rewrite of a card (a frame
+ * sweep, a typography fix — not the maker's edit): an untouched import stays
+ * untouched (the rewritten row's fingerprint), anything else keeps what it
+ * has (an edited import stays edited, an untracked card untracked). Written
+ * on the trusted path in the same UPDATE as the change (the service role, a
+ * script), which 0144's insert-only guard allows. SQL can't compute it (the
+ * canonical text is this module's JSON), so a SQL migration rewrites only
+ * rows `where import_fingerprint is null` and leaves the fingerprinted rows
+ * to a script that calls this; CLAUDE.md "Decks".
+ */
+export function fingerprintAfterRewrite(
+  before: FingerprintCard & ImportProvenanceColumns,
+  after: FingerprintCard,
+): string | null {
+  const stored = before.import_fingerprint ?? null;
+  if (!before.import_scryfall_id || !fingerprintMatches(before, stored)) return stored;
+  return importFingerprintOf(after);
 }
 
 // ---------------------------------------------------------------------------

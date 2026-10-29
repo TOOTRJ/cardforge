@@ -22,10 +22,17 @@ const s = vi.hoisted(() => ({
   cardOwner: {} as Record<string, string>,
   /** A linked card's visibility, by card id (default: public). */
   cardVisibility: {} as Record<string, string>,
+  /** RPC calls made, and what the next one answers. */
+  rpcCalls: [] as Array<[string, unknown]>,
+  rpcAnswer: { data: null as unknown, error: null as unknown },
 }));
 
 function client() {
   return {
+    async rpc(name: string, args: unknown) {
+      s.rpcCalls.push([name, args]);
+      return s.rpcAnswer;
+    },
     from(table: string) {
       const call: Call = { table, ops: [] };
       s.calls.push(call);
@@ -75,6 +82,7 @@ import {
   listMyDecks,
   listPublicDecks,
   listPublicDecksByOwner,
+  listPublicDecksContaining,
 } from "@/lib/decks/queries";
 
 const deckRow = (id: string, card_count: number, linked_card_count: number) => ({
@@ -107,6 +115,8 @@ beforeEach(() => {
   s.withCount = true;
   s.cardOwner = {};
   s.cardVisibility = {};
+  s.rpcCalls = [];
+  s.rpcAnswer = { data: null, error: null };
 });
 
 describe("deck tiles read their counts off the deck row", () => {
@@ -249,5 +259,25 @@ describe("listDeckCards reads a whole deck", () => {
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
     expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
+  });
+});
+
+// The card page's "In decks" and its JSON-LD isPartOf (D3, the reviewer's
+// L3): ONE read, the database's rule (0144 public_decks_containing_card —
+// the owner's own public non-empty decks, another real creator's while the
+// card is public; the throwaway account's deck is proved left out on the
+// local stack, PR body). No table is read around it.
+describe("listPublicDecksContaining", () => {
+  it("is the 0144 function, five at most, mapped as it answers", async () => {
+    s.rpcAnswer = { data: [{ slug: "dev_pro/elves", title: "Elves" }], error: null };
+    expect(await listPublicDecksContaining("card-in-decks")).toEqual([{ slug: "dev_pro/elves", title: "Elves" }]);
+    expect(s.rpcCalls).toEqual([["public_decks_containing_card", { p_card_id: "card-in-decks", p_limit: 5 }]]);
+    expect(s.calls).toHaveLength(0);
+  });
+
+  it("names none on a database the function hasn't reached (never the old any-deck read)", async () => {
+    s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+    expect(await listPublicDecksContaining("card-before-0144")).toEqual([]);
+    expect(s.calls).toHaveLength(0);
   });
 });

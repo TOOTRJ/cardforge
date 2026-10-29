@@ -2069,6 +2069,13 @@ export type Database = {
         };
         Returns: boolean;
       };
+      /** 0144 — the decks a card's page names (D3): the owner's own public,
+       *  non-empty decks, and another real creator's while the card is
+       *  public. p_limit defaults to 5, at most 24. */
+      public_decks_containing_card: {
+        Args: { p_card_id: string; p_limit?: number };
+        Returns: { slug: string; title: string }[];
+      };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;

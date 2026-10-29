@@ -125,6 +125,38 @@ describe("0144 — other creators' public cards (DK2.9, D3)", () => {
     );
     expect(FLAT).toContain("revoke all on function public.guard_deck_card_link() from public, anon, authenticated;");
   });
+
+  it("the card page names the owner's own decks, and another user's only from a real creator (L3)", () => {
+    const body = fn(SQL, "public_decks_containing_card");
+    expect(body).toContain("(p_card_id uuid, p_limit integer default 5) returns table (slug text, title text)");
+    // Reads only what its caller (the page's anon client) may read.
+    expect(body).toContain("security invoker");
+    expect(body).not.toContain("security definer");
+    expect(body).toContain("set search_path = ''");
+    // Public, non-empty decks that hold the card.
+    expect(body).toContain("join public.deck_cards dc on dc.card_id = c.id join public.decks d on d.id = dc.deck_id");
+    expect(body).toContain("where c.id = p_card_id and d.visibility = 'public' and d.card_count > 0");
+    // The owner's own; else a public card, no admin, a public card of the deck owner's own.
+    expect(body).toContain(
+      "d.owner_id = c.owner_id or ( c.visibility = 'public' and not public.owner_is_admin(d.owner_id) and exists ( select 1 from public.cards own where own.owner_id = d.owner_id and own.visibility = 'public' ) )",
+    );
+    expect(body).toContain("order by d.updated_at desc, d.id limit least(greatest(coalesce(p_limit, 5), 1), 24);");
+    expect(FLAT).toContain("revoke all on function public.public_decks_containing_card(uuid, integer) from public;");
+    expect(FLAT).toContain(
+      "grant execute on function public.public_decks_containing_card(uuid, integer) to anon, authenticated, service_role;",
+    );
+  });
+
+  it("the card page reads that ONE list for both its \"In decks\" row and its JSON-LD isPartOf", () => {
+    const queries = readFileSync(join(process.cwd(), "lib/decks/queries.ts"), "utf8");
+    const reader = /export const listPublicDecksContaining = cache\([\s\S]*?\n\);/.exec(queries)?.[0] ?? "";
+    expect(reader).toContain('rpc("public_decks_containing_card"');
+    expect(reader).not.toContain(".from(");
+    const page = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
+    expect(page.match(/listPublicDecksContaining\(/g)).toHaveLength(1);
+    expect(page).toContain("schema.isPartOf = inDecks.map(");
+    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} />");
+  });
 });
 
 describe("0144 — the entry RPCs", () => {

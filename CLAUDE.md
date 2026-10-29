@@ -1763,11 +1763,30 @@ Rules and gotchas:
   row; descriptive, never a gate). A card's import provenance is
   `cards.import_scryfall_id` + `import_fingerprint` (0144): INSERT-ONLY (the
   0126-style guard refuses an API role's change), written by
-  createCardAction's insert alone — never a trigger, never an edit — the
-  fingerprint the ONE hash of `lib/cards/import-fingerprint.ts` (its field
-  list is a version: a new field is `v2`, never a silent change), stored only
-  when the creator says the card is still the import's
-  (`lib/creator/import-baseline.ts`). An entry's type line, cost, colours and
+  createCardAction's insert — never a trigger, never an edit — the
+  fingerprint the ONE hash of `lib/cards/import-fingerprint.ts`. "Edited" is
+  ANY change to the card (owner 2026-10-29): it covers every field a maker
+  can set — text, colour, rarity, frame + every `frame_style` switch, art +
+  crop, collector fields, watermark, footer, `face_content`,
+  `printed_types`, the whole `back_face` — and leaves out only what isn't
+  the card (ids, owner, slug, visibility, tags, render pointers, stamps,
+  counters, timestamps); its two lists name every `cards` column (a test
+  reads `types/supabase.ts`), so a new column is a decision. Its field list
+  is a version (v1 was widened before production stored one; the next
+  change is `v2`, never a silent one). It is stored only when the creator
+  says the card is still the import's (`lib/creator/import-baseline.ts`:
+  form values against the import AFTER its own automatic steps — art fit,
+  frame follows, part colour, anatomy — re-taken on every value change until
+  the maker's first input, click or key; every fixture printing proves an
+  untouched save, `creator-import-unchanged-printings.test.tsx`). A
+  PLATFORM rewrite of a fingerprinted field (a frame sweep, a typography
+  fix) re-fingerprints the untouched imports it changes, in the same UPDATE
+  on the trusted path (the guard allows it): `fingerprintAfterRewrite(before,
+  after)`. SQL can't compute the hash (the canonical text is that module's
+  JSON), so a SQL migration rewrites only rows `where import_fingerprint is
+  null` and leaves the fingerprinted ones to a service-role script that
+  calls the helper — else every untouched import it touches reads Edited.
+  An entry's type line, cost, colours and
   mana value are `effectiveEntryFields` (`lib/decks/effective-entry.ts`: the
   printing is the authority for an unchanged import of it and for any card
   with no provenance linked onto a printing; else the card's own win — but
@@ -1783,8 +1802,21 @@ Rules and gotchas:
   the share image, the tiles' cover colours — goes through
   `withDeckVisibleCards`, and the hero's fan, `featuredCardsOf`, takes the
   deck's owner); `canLinkIntoDeck` is the one rule — never widen either
-  side to unlisted. Another creator's card is credited
+  side to unlisted. A card's PAGE names the owner's own public, non-empty
+  decks, and another user's only from a real creator — no admin, at least
+  one public card of their own, and only while the card is public
+  (0144 `public_decks_containing_card`, read by `listPublicDecksContaining`;
+  "In decks" and the JSON-LD `isPartOf` are that one list, never a second
+  read). Another creator's card is credited
   ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
   its downloads are the card routes' (the viewer's plan). A gone card reads
   "No longer available" and never says why.
 
+- A router navigation a component makes BY ITSELF (an effect's
+  `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode
+  runs effects twice in dev) and the component's own server actions wait
+  for it (`useTransition`
+  around the navigation, the button disabled while it is pending): Next
+  16.2's router queue loses an action dispatched while a navigation that
+  pre-empted another is pending — it is chained after the pre-empted node
+  (`components/decks/import-decklist-dialog.tsx`; e2e `decks.spec.ts`).

@@ -6,17 +6,23 @@
 --      import_scryfall_id  the Scryfall printing the card was started from
 --                          (uuid; NULL = from scratch, a remix, or any card
 --                          saved before this migration — "not tracked");
---      import_fingerprint  "v<version>:<sha-256 hex>" of what the card
---                          printed when it was first saved from that import
---                          (lib/cards/import-fingerprint.ts, the ONE place
---                          the field list lives). NULL beside a source = the
---                          import was already changed when it was saved (an
---                          import altered before the first save, an AI
---                          restyle): "Edited" from the start.
+--      import_fingerprint  "v<version>:<sha-256 hex>" of the card — every
+--                          field a maker can set: text, colour, rarity,
+--                          frame and anatomy, art and crop, collector
+--                          fields, rows, the second face (owner 2026-10-29:
+--                          "Edited" = ANY change) — when it was first saved
+--                          from that import (lib/cards/import-fingerprint.ts,
+--                          the ONE place the field list lives). NULL beside
+--                          a source = the import was already changed when it
+--                          was saved (an import altered before the first
+--                          save, an AI restyle): "Edited" from the start.
 --    Both are written by createCardAction's insert (the user's own client),
---    never by a trigger and never by an edit: platform migrations rewrite
---    cards, and a fingerprint recomputed then would call a changed card
---    unchanged. cards_guard_provenance (0126's style: `current_user in
+--    never by a trigger and never by an edit. A later PLATFORM rewrite of a
+--    fingerprinted field (a frame sweep, a typography fix) recomputes the
+--    fingerprint of the untouched imports it changes, on the trusted path
+--    (fingerprintAfterRewrite; SQL can't compute the hash, so a SQL
+--    migration rewrites only rows without one — CLAUDE.md "Decks").
+--    cards_guard_provenance (0126's style: `current_user in
 --    ('anon', 'authenticated')` = an API role, anything else is a trusted
 --    path — the service role, SECURITY DEFINER functions, FK actions,
 --    migrations, seeds) REFUSES an API role's UPDATE that changes either
@@ -79,6 +85,19 @@
 --    reads as null: "No longer available" to the deck's owner); when it is
 --    deleted, 0055's ON DELETE SET NULL keeps the entry's name and printing.
 --
+-- 4. THE DECKS ON A CARD'S PAGE (D3; the reviewer's L3). With D3 anyone's
+--    public deck can hold a creator's public card, so "In decks" (and the
+--    page's JSON-LD isPartOf) could carry any throwaway account's deck.
+--    public_decks_containing_card(card, limit) is the page's ONE read
+--    (lib/decks/queries.ts listPublicDecksContaining): public, non-empty
+--    decks (card_count > 0, DK0.8) holding the card that are either the
+--    card OWNER's own, or — while the card is PUBLIC (an unlisted card's
+--    foreign entries are withheld by the deck read too) — another user's
+--    whose owner is no admin (0091's owner_is_admin) and has at least one
+--    public card of their own (a creator, not a throwaway account). Newest
+--    first, at most 24. SECURITY INVOKER: it reads what its caller (the
+--    page's anon client) may read, nothing more.
+--
 -- Grants: the new columns ride the tables' grants (0097). The two guard
 -- functions are invoked by their triggers alone (EXECUTE revoked from the
 -- API roles). import_deck_entries keeps its signature (`create or replace`
@@ -86,6 +105,8 @@
 -- defaults: the 3-argument function is dropped and the 5-argument one is
 -- granted to authenticated and service_role only (a NEW function is
 -- PUBLIC-executable by default) — a 3-argument call still resolves to it.
+-- public_decks_containing_card is a public read: PUBLIC revoked, EXECUTE to
+-- anon, authenticated and service_role.
 --
 -- Backward compatible with the code before it: nothing old writes the new
 -- columns, the old 3-argument RPC call still works, and the widened policy
@@ -104,7 +125,7 @@ alter table public.cards
 comment on column public.cards.import_scryfall_id is
   'The Scryfall printing this card was started from (TODO DK2.5). Written by createCardAction''s insert only; API roles cannot change it (cards_guard_provenance, 0144). NULL = from scratch, a remix, or saved before 0144.';
 comment on column public.cards.import_fingerprint is
-  'v<version>:<sha-256 hex> of the printed fields at the first save from the import (lib/cards/import-fingerprint.ts). NULL beside import_scryfall_id = changed before that save. Insert-only (0144).';
+  'v<version>:<sha-256 hex> of every maker-settable field at the first save from the import (lib/cards/import-fingerprint.ts). NULL beside import_scryfall_id = changed before that save. Insert-only for API roles (0144); a platform rewrite re-fingerprints the untouched imports it changes.';
 
 alter table public.cards drop constraint if exists cards_import_fingerprint_format;
 alter table public.cards
@@ -509,3 +530,43 @@ $$;
 
 revoke all on function public.add_custom_deck_entry(uuid, uuid, text, text, text) from public, anon;
 grant execute on function public.add_custom_deck_entry(uuid, uuid, text, text, text) to authenticated, service_role;
+
+-- ===========================================================================
+-- 6. The decks on a card's page (header §4)
+-- ===========================================================================
+
+create or replace function public.public_decks_containing_card(p_card_id uuid, p_limit integer default 5)
+returns table (slug text, title text)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select d.slug, d.title
+  from public.cards c
+  join public.deck_cards dc on dc.card_id = c.id
+  join public.decks d on d.id = dc.deck_id
+  where c.id = p_card_id
+    and d.visibility = 'public'
+    and d.card_count > 0
+    and (
+      -- The card owner's own deck.
+      d.owner_id = c.owner_id
+      -- Another user's: only while the card is public, never an admin's,
+      -- and only from a creator with a public card of their own.
+      or (
+        c.visibility = 'public'
+        and not public.owner_is_admin(d.owner_id)
+        and exists (
+          select 1 from public.cards own
+          where own.owner_id = d.owner_id and own.visibility = 'public'
+        )
+      )
+    )
+  group by d.id, d.slug, d.title, d.updated_at
+  order by d.updated_at desc, d.id
+  limit least(greatest(coalesce(p_limit, 5), 1), 24);
+$$;
+
+revoke all on function public.public_decks_containing_card(uuid, integer) from public;
+grant execute on function public.public_decks_containing_card(uuid, integer) to anon, authenticated, service_role;

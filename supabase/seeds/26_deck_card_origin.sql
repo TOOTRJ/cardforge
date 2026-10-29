@@ -61,11 +61,11 @@ from (values
   -- Saved straight from its import (DOM #168).
   ('c0000000-0000-4000-a000-0000000006b1'::uuid, 'Llanowar Elves', 'llanowar-elves', '{G}', array['green'], null, 'creature', array['Elf','Druid'], 'common',
      E'{T}: Add {G}.', '1', '1', 'Chris Rahn', 7, 'm15',
-     '581b7327-3215-4a4f-b4ae-d9d4002ba882'::uuid, '581b7327-3215-4a4f-b4ae-d9d4002ba882'::uuid, 'v1:47c88d901e09fe252e72f186610cefa67a5adc3e2ed6866b155b03ca208ca386'),
+     '581b7327-3215-4a4f-b4ae-d9d4002ba882'::uuid, '581b7327-3215-4a4f-b4ae-d9d4002ba882'::uuid, 'v1:dee024fd1d55c97f5a5dfb15ee30737f92f9b62427a5de41040ddfaff767170c'),
   -- Renamed since its import (M21 #239): the fingerprint is the printing's.
   ('c0000000-0000-4000-a000-0000000006b2'::uuid, 'Solemn Sentinel', 'solemn-sentinel', '{4}', array['colorless'], 'Artifact', 'creature', array['Golem'], 'rare',
      E'When Solemn Sentinel enters, you may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nWhen Solemn Sentinel dies, you may draw a card.', '2', '2', 'Donato Giancola', 12, 'm15artifact',
-     '7bbd2cab-538e-4932-a828-150e3e9d52ad'::uuid, '7bbd2cab-538e-4932-a828-150e3e9d52ad'::uuid, 'v1:3187572140abf2b2984baf842e15cbb2d0c3d5f7317947b87abd9399d3d043aa'),
+     '7bbd2cab-538e-4932-a828-150e3e9d52ad'::uuid, '7bbd2cab-538e-4932-a828-150e3e9d52ad'::uuid, 'v1:a464b438a96e7c8130f8147742d75f24eeaaffb62b897df6fcdac79b5050d03b'),
   -- An AI restyle of OGW #9: saved changed, so no fingerprint.
   ('c0000000-0000-4000-a000-0000000006b3'::uuid, 'Thicket Seer', 'thicket-seer', '{3}{C}', array['colorless'], null, 'creature', array['Eldrazi'], 'rare',
      E'When Thicket Seer enters, target opponent reveals their hand. You choose a nonland card from it and exile that card.\nWhen Thicket Seer leaves the battlefield, target opponent draws a card.', '4', '4', 'PipGlyph AI', 19, 'm15',

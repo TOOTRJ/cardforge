@@ -119,14 +119,18 @@ const CARDS: SeedCard[] = [
 /** The row as the database stores it (what deckEntryStatus reads). */
 function rowOf(card: SeedCard, over: Partial<SeedCard> = {}) {
   const c = { ...card, ...over };
+  // Every column the seed's insert names, and the column default of every
+  // other fingerprinted one (art_position '{}', lang 'en', the rest NULL).
   return {
     title: c.title,
     nickname: null,
     cost: c.cost,
+    color_identity: c.colors,
     supertype: c.supertype,
     card_type: c.card_type,
     subtypes: c.subtypes,
     printed_types: null,
+    rarity: c.rarity,
     rules_text: c.rules_text,
     flavor_text: null,
     power: c.power,
@@ -135,7 +139,17 @@ function rowOf(card: SeedCard, over: Partial<SeedCard> = {}) {
     defense: null,
     artist_credit: c.artist_credit,
     art_url: ART(c.art),
+    art_position: {},
+    frame_style: { template: c.template, finish: "regular" },
+    face_content: null,
     back_face: null,
+    watermark: null,
+    footer_text: null,
+    set_icon_url: null,
+    set_icon_code: null,
+    set_code: null,
+    collector_number: null,
+    lang: "en",
     parent_card_id: null,
     source_scryfall_id: c.source_scryfall_id,
     import_scryfall_id: c.import_scryfall_id,

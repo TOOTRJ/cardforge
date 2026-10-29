@@ -11,11 +11,13 @@ import importPrintings from "../scryfall/fixtures/import-printings.json";
 // ---------------------------------------------------------------------------
 // The creator's half of the import fingerprint (TODO DK2.5), driven through
 // the real CardCreatorForm: a NEW card started from a Scryfall printing says
-// `import_unchanged` — true while every printed field is still the import's
-// (a change of frame, colour, rarity or visibility doesn't count), false once
-// one moved — and a card with no import this session never names the key, so
-// its payload is what it always was. The server stores the fingerprint only
-// on true (tests/unit/cards/import-provenance-save.test.ts).
+// `import_unchanged` — true while the card is still exactly the import's (its
+// visibility, decks and tags aside), false once anything on it moved (owner
+// 2026-10-29: the frame, colour, rarity or crop alone too — every printing,
+// tests/unit/components/creator-import-unchanged-printings.test.tsx) — and a
+// card with no import this session never names the key, so its payload is
+// what it always was. The server stores the fingerprint only on true
+// (tests/unit/cards/import-provenance-save.test.ts).
 // Harness: tests/unit/components/creator-form-reliability.test.tsx.
 // ---------------------------------------------------------------------------
 
