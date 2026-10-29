@@ -45,6 +45,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estimate";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -328,6 +329,15 @@ export async function POST(request: Request) {
       { ok: false, error: "This generation request couldn't be read — reload the page and try again. No credits were used." },
       { status: 400 },
     );
+  }
+
+  // AI deck building is paused (owner 2026-10-28, TODO DK1): a NEW deck
+  // build, "Add with AI" or deck remix is refused here — before the rate
+  // limit, the remix's Scryfall estimate and any credit. A job that is
+  // already running finishes through the step route, which reads no pause
+  // (D6); the creator's deck-aware `card` / `card_fill` stay open (D5).
+  if ((parsed.data.kind === "deck" || parsed.data.kind === "deck_remix") && isDeckAiPaused()) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
   }
 
   // The AI rate limit comes FIRST: sizing a deck remix resolves the deck's

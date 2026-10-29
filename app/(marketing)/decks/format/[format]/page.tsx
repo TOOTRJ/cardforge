@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   if (!isDeckFormat(format)) notFound();
   const copy = formatHubCopy(format);
   const count = (await listFormatHubs()).find((hub) => hub.format === format)?.count ?? 0;
-  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists, remixed proxies and AI builds. Browse, copy a list, or build your own.`;
+  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists and remixed proxies. Browse, copy a list, or build your own.`;
   return {
     title: `${copy.title} — browse and build`,
     description,
@@ -77,7 +77,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
       </div>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
         <Button asChild size="sm">
-          <Link href="/dashboard/decks/new">
+          <Link href={`/dashboard/decks/new?format=${format}`}>
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Build a {copy.title.replace("Custom ", "").replace(" decks", "")} deck
           </Link>

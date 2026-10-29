@@ -1,28 +1,35 @@
-import { Lightbulb, Sparkles, Swords, Shield, Hand } from "lucide-react";
+import { Lightbulb, RefreshCw, Sparkles, Swords, Shield, Hand } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
-import { DeckAnalyzeButton, DeckGuideUpgradeButton } from "@/components/decks/deck-analyze-button";
+import { DeckGuideUpgradeButton } from "@/components/decks/deck-analyze-button";
+import { DeckAiComingSoonButton } from "@/components/decks/deck-ai-coming-soon";
 import type { DeckGuide } from "@/lib/decks/guides";
 
 // ---------------------------------------------------------------------------
 // DeckGuideSection — the AI "how to play" section on the deck page.
 //   Pro viewer + guide exists → the full guide (overview, game plan,
 //     mulligan, key cards, combos, weaknesses).
-//   Pro owner, no guide     → "Analyze this deck · 1 credit" (AI-generated
-//     decks arrive with one; imported/hand-built decks pay once).
-//   Non-Pro viewer          → teaser + upgrade CTA (owner decision
+//   Non-Pro viewer + guide    → teaser + upgrade CTA (owner decision
 //     2026-09-15: Pro viewers only).
+//   No guide                  → nothing, but for the Pro owner of a deck with
+//     cards: the section with "Analyze this deck" greyed.
+//
+// While deck AI is paused (owner 2026-10-28, TODO DK1 — D4,
+// lib/ai/deck-ai-pause.ts) no guide is written or refreshed: "Analyze this
+// deck" and "Refresh analysis" are "Coming soon", and the guides that exist
+// stay readable to the same viewers. The teaser shows only on a deck that
+// HAS a guide — it used to promise one on every deck.
 // ---------------------------------------------------------------------------
 
 export function DeckGuideSection({
-  deckId,
   guide,
   isOwner,
   viewerIsPro,
   aiConfigured,
   hasCards,
 }: {
+  /** The analyze button's target; unread while deck AI is paused (DK1). */
   deckId: string;
   guide: DeckGuide | null;
   isOwner: boolean;
@@ -31,12 +38,13 @@ export function DeckGuideSection({
   hasCards: boolean;
 }) {
   if (!viewerIsPro) {
+    if (!guide) return null;
     return (
       <section className="mt-12">
         <PageHeader
           eyebrow="How to play"
           title="Game plan & combos"
-          description="An AI-written primer for this deck — sequencing, mulligans, the combos in the list and what to play around."
+          description="This deck has an AI-written primer — sequencing, mulligans, the combos in the list and what to play around."
         />
         <SurfaceCard className="mt-6 flex flex-col gap-3 border-gold/30 bg-gold/5 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
@@ -46,7 +54,7 @@ export function DeckGuideSection({
               <Badge variant="accent" className="text-[10px]">Pro</Badge>
             </span>
             <p className="text-sm leading-6 text-muted">
-              Pro members see how to pilot every deck on PipGlyph — including this one.
+              Pro members can read this deck&apos;s guide, and the guide on any other deck that has one.
             </p>
           </div>
           <DeckGuideUpgradeButton />
@@ -55,22 +63,28 @@ export function DeckGuideSection({
     );
   }
 
+  // The owner's analyze / refresh, greyed while deck AI is paused (D4). The
+  // same viewers as before the pause see it: a Pro owner, AI configured, a
+  // deck with cards.
   const ownerAction =
     isOwner && aiConfigured && hasCards ? (
-      <DeckAnalyzeButton deckId={deckId} refresh={Boolean(guide)} />
+      guide ? (
+        <DeckAiComingSoonButton label="Refresh analysis" icon={<RefreshCw className="h-4 w-4" aria-hidden />} />
+      ) : (
+        <DeckAiComingSoonButton label="Analyze this deck" icon={<Sparkles className="h-4 w-4" aria-hidden />} />
+      )
     ) : null;
 
   if (!guide) {
+    // No guide and none can be written: only the owner who could have asked
+    // for one sees the section, and why it is empty.
+    if (!ownerAction) return null;
     return (
       <section className="mt-12">
         <PageHeader
           eyebrow="How to play"
           title="Game plan & combos"
-          description={
-            isOwner
-              ? "Let the AI read the whole list and write the primer: game plan, mulligans, combos and weaknesses."
-              : "The owner hasn't analyzed this deck yet."
-          }
+          description="An AI primer for this deck — game plan, mulligans, combos and weaknesses. New deck guides are paused while we rebuild decks; they're coming back soon."
           actions={ownerAction}
         />
       </section>

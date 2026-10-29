@@ -14,10 +14,12 @@ import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
 // card generator", "ChatGPT custom magic card", etc. Mirrors the structure
 // of /mtg-card-maker but with copy and FAQ focused on the AI features that
 // actually ship: per-field "Generate with AI" in the creator (kind card_fill),
-// the "Get ideas" batches, concept-to-card / random-card jobs, AI remix (i2i)
-// and deck generation — all on the card-design engine (Claude via the Vercel
+// the "Get ideas" batches, concept-to-card / random-card jobs and AI remix
+// (i2i) — all on the card-design engine (Claude via the Vercel
 // AI Gateway, lib/ai/provider.ts) with FLUX text-to-image and Gemini
-// image-to-image (lib/ai/image-gen.ts). Never list a tool that doesn't exist.
+// image-to-image (lib/ai/image-gen.ts). Never list a tool that doesn't exist
+// — AI deck generation is paused (TODO DK1, lib/ai/deck-ai-pause.ts), so it
+// is not listed until it is back.
 // ---------------------------------------------------------------------------
 
 // Hard guarantee of static rendering: if a future change introduces a
@@ -46,7 +48,6 @@ const FEATURES = [
   "Generate with AI on any single field — rules text, flavor, cost, stats, or the art",
   "Get ideas — three costed concepts for a theme; keep the fields you like",
   "AI remix — restyle a card's art in one click, lineage kept",
-  "Deck generation — up to 100 cards from a theme, with a how-to-play guide",
   "All work stays editable — the AI seeds the form, you ship the design",
 ];
 
