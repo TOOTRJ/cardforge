@@ -30,18 +30,20 @@ import type { FrameTemplate } from "@/types/card";
 //
 // The frames and their groups are the creator's own answer
 // (lib/frames/frame-gallery.ts); the reads go through the cookie-free public
-// client (lib/frames/frame-gallery-queries.ts), so the page is ISR: rebuilt
-// at most hourly, and at once when a card changes (lib/cards/revalidate.ts
-// purges /frames with the other tile pages, so a card made private leaves
-// its tile on the next request). Thin — fewer than FRAME_GALLERY_MIN_INDEXED
-// frames, or a failed read — = noindex, and the sitemap applies the same bar.
+// client (lib/frames/frame-gallery-queries.ts), so the page is ISR: re-baked
+// at most every 5 minutes like the other marketing pages (the header's
+// "What's new" feed holds them all to that window anyway), and at once when
+// a card changes (lib/cards/revalidate.ts purges /frames with the other tile
+// pages, so a card made private leaves its tile on the next request). Thin
+// — fewer than FRAME_GALLERY_MIN_INDEXED frames, or a failed read — =
+// noindex, and the sitemap applies the same bar.
 //
 // "Start with this frame" opens the creator: it takes no starting frame from
 // its URL yet (lib/frames/frame-gallery.ts startWithFrameHref), so each
 // group says where in the Card step its frames are.
 // ---------------------------------------------------------------------------
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 const TITLE = "MTG Card Frames — Every Frame in the PipGlyph Creator";
 const DESCRIPTION =
