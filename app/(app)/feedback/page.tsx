@@ -33,7 +33,7 @@ export default async function FeedbackPage() {
   const myFeedback = await listMyFeedback();
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Feedback"
         title="Help us forge better"

@@ -56,7 +56,7 @@ export default async function SettingsPage({
   const profileIncomplete = isGeneratedUsername(profile?.username);
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       {isBillingEnabled() ? (
         <Suspense fallback={null}>
           <BillingReturnToast />

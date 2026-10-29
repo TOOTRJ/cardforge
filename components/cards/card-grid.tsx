@@ -35,6 +35,13 @@ export const CARD_GRID_CLASS =
 export const CARD_GRID_SIZES =
   "(min-width: 1920px) 300px, (min-width: 1408px) calc((100vw - 164px) / 6), (min-width: 944px) calc((100vw - 108px) / 4), (min-width: 608px) calc((100vw - 72px) / 3), calc((100vw - 48px) / 2)";
 
+/** My Cards' "Compact grid" (TODO WD4): up to EIGHT columns of ~150–230 px
+ *  tiles — 2 / 3 / 4 / 6 / 8 at 30 / 40 / 60 / 90rem of its container,
+ *  every count a divisor of its 48-card page. On a 1920 px dashboard that
+ *  is eight 190 px tiles beside the rail. */
+export const CARD_GRID_COMPACT_CLASS =
+  "grid grid-cols-2 gap-3 @min-[30rem]:grid-cols-3 @min-[40rem]:grid-cols-4 @min-[60rem]:grid-cols-6 @min-[90rem]:grid-cols-8";
+
 export function CardGrid({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className="@container">

@@ -29,6 +29,7 @@ import { getMyDeckCounts } from "@/lib/decks/membership-queries";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { CARD_GRID_CLASS, CARD_GRID_COMPACT_CLASS } from "@/components/cards/card-grid";
 
 export const metadata: Metadata = {
   title: "My cards",
@@ -134,16 +135,12 @@ function MyCardsSkeleton({ view }: { view: MyCardsView }) {
           ))}
         </div>
       ) : (
-        <div
-          className={
-            view === "compact"
-              ? "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
-              : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          }
-        >
-          {Array.from({ length: view === "compact" ? 10 : 6 }).map((_, i) => (
-            <CardPreviewSkeleton key={i} />
-          ))}
+        <div className="@container">
+          <div className={view === "compact" ? CARD_GRID_COMPACT_CLASS : CARD_GRID_CLASS}>
+            {Array.from({ length: view === "compact" ? 16 : 12 }).map((_, i) => (
+              <CardPreviewSkeleton key={i} />
+            ))}
+          </div>
         </div>
       )}
     </div>

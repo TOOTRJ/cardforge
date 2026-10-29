@@ -25,9 +25,10 @@ import { cn } from "@/lib/utils";
 // <Measure> below for long reading).
 // ---------------------------------------------------------------------------
 
-/** Each size's cap — for a bar that lines its content up with a page's
- *  frame without being one (My Cards' fixed bulk bar). */
-export const PAGE_CONTAINER_MAX_WIDTH = {
+/** Each size's cap. A bar that lines its content up with the page (My
+ *  Cards' fixed bulk bar) renders a PageContainer of the page's size inside
+ *  its full-bleed box. */
+const PAGE_CONTAINER_MAX_WIDTH = {
   standard: "max-w-7xl",
   wide: "max-w-[1920px]",
   full: "max-w-none",

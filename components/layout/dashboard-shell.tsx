@@ -12,14 +12,24 @@ import { PageContainer } from "@/components/layout/page-container";
 type DashboardShellProps = {
   children: React.ReactNode;
   className?: string;
+  /** A page of forms and short lines (Settings, Notifications, Feedback, AI
+   *  usage, Messages): its column stops at 1024 px, the width a standard
+   *  page gave it, so an input or a row never runs 1,600 px. */
+  readable?: boolean;
 };
 
 // Server component: resolves the caller's profile once (getCurrentProfile is
 // request-cached) so the rail can show the Admin section on every dashboard
 // page for admins — not just on the admin pages themselves.
+//
+// The WIDE frame (TODO WD4): My Cards, My Decks, the overview, the feed,
+// billing and the admin tables are workspaces — more width is more columns,
+// not longer lines. The rail sits at the frame's left edge on every
+// dashboard page; a `readable` page caps its own column instead.
 export async function DashboardShell({
   children,
   className,
+  readable = false,
 }: DashboardShellProps) {
   const profile = await getCurrentProfile();
   const isAdmin = Boolean(profile?.is_admin);
@@ -34,7 +44,7 @@ export async function DashboardShell({
   ]);
 
   return (
-    <PageContainer className="py-8">
+    <PageContainer size="wide" className="py-8">
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
         {/* min-w-0: a grid item defaults to min-width:auto, which lets the
             nav's one-line mobile strip widen the whole page instead of
@@ -52,7 +62,7 @@ export async function DashboardShell({
           />
         </aside>
 
-        <div className={cn("min-w-0", className)}>{children}</div>
+        <div className={cn("min-w-0", readable && "max-w-5xl", className)}>{children}</div>
       </div>
     </PageContainer>
   );
