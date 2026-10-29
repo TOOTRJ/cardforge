@@ -40,6 +40,7 @@ import { entryShortcutOf } from "@/lib/decks/entry-shortcuts";
 import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { publicDeckItems } from "@/lib/decks/private-card-name";
+import { coverPickRowsOf, standsInFan } from "@/lib/decks/featured";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { entryEditTarget, parseDeckEntryAnchor } from "@/lib/decks/return-to";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,9 @@ type DeckCardListProps = {
   canManage: boolean;
   /** The owner's deck: with it, the list is the deck's editor. */
   deck?: { id: string; slug: string; title: string; format: DeckFormat } | null;
+  /** The deck's owner, given to the OWNER's list only: the pop-up's cover
+   *  picks (TODO DK6.4, components/decks/deck-cover-picks.tsx). */
+  coverOwnerId?: string | null;
   /** The viewer's remembered view (the cookie). The List when left out. */
   initialPrefs?: DeckViewPrefs;
   /** The sticky summary bar's numbers; no bar when left out. */
@@ -128,7 +132,16 @@ function rememberPrefs(prefs: DeckViewPrefs) {
   document.cookie = `${DECK_VIEW_COOKIE}=${serializeDeckViewPrefs(prefs)}; path=${DECK_VIEW_COOKIE_PATH}; max-age=${DECK_VIEW_COOKIE_MAX_AGE}; samesite=lax`;
 }
 
-function DeckCardArea({ items: given, ownerUsername, canManage, initialPrefs, summary, emptyState, commanderSlot }: DeckCardListProps) {
+function DeckCardArea({
+  items: given,
+  ownerUsername,
+  canManage,
+  coverOwnerId = null,
+  initialPrefs,
+  summary,
+  emptyState,
+  commanderSlot,
+}: DeckCardListProps) {
   const editor = useDeckEditor();
   const editing = Boolean(editor);
   const items: EditorItem[] = editor?.items ?? (given as EditorItem[]);
@@ -450,6 +463,11 @@ function DeckCardArea({ items: given, ownerUsername, canManage, initialPrefs, su
   // The modal reads the CURRENT item from the rows by id, so an edit (drawn
   // at once, then the server's answer) re-renders it instead of a stale copy.
   const selected = selectedId ? (shown.find((i) => i.entry.id === selectedId) ?? null) : null;
+  // The owner's cover picks, rank 1 first, from the rows the list reads.
+  const coverPicks = useMemo(
+    () => (canManage && coverOwnerId ? coverPickRowsOf(items, coverOwnerId) : null),
+    [items, canManage, coverOwnerId],
+  );
 
   // The bar's numbers: the server's for a visitor; the owner's own rows —
   // edits on their way included — on the owner's page, so the bar moves
@@ -615,6 +633,11 @@ function DeckCardArea({ items: given, ownerUsername, canManage, initialPrefs, su
             if (!open) setSelectedId(null);
           }}
           preferProxy={showProxies}
+          cover={
+            coverPicks && coverOwnerId
+              ? { picks: coverPicks, shown: standsInFan(selected.entry, selected.card, coverOwnerId) }
+              : null
+          }
         />
       ) : null}
 

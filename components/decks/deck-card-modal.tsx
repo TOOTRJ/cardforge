@@ -29,6 +29,7 @@ import { CardGlossary } from "@/components/creator/card-glossary";
 import {
   linkDeckCardAction,
   listMyCardsLiteAction,
+  setDeckCoverPicksAction,
   unlinkDeckCardAction,
   type MyCardLite,
 } from "@/lib/decks/card-actions";
@@ -47,6 +48,8 @@ import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
+import { DeckCoverPicks } from "@/components/decks/deck-cover-picks";
+import type { CoverPickRow } from "@/lib/decks/featured";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
 import { useMediaQuery } from "@/components/creator/use-media-query";
@@ -61,10 +64,11 @@ const SHEET_QUERY = "(max-width: 639px), (hover: none) and (pointer: coarse)";
 // or the card's editor, and back to this card on the deck), link / unlink a
 // card, and — through the page's editor (components/decks/use-deck-editor:
 // drawn at once, saved in the background, rolled back and said if it fails,
-// TODO DK5.8) — the quantity, the board and Remove (with its Undo). A link
-// or an unlink revalidates the deck page, which brings the new rows back
-// with its answer: no router.refresh(). Its words are the deck vocabulary
-// (TODO DK2.2, components/creator/card-glossary.tsx).
+// TODO DK5.8) — the quantity, the board and Remove (with its Undo), and
+// "Feature on cover" (DeckCoverPicks, TODO DK6.4). A link, an unlink or a
+// cover pick revalidates the deck page, which brings the new rows back with
+// its answer: no router.refresh(). Its words are the deck vocabulary (TODO
+// DK2.2, components/creator/card-glossary.tsx).
 //
 // On a phone or a touch screen it is a BOTTOM SHEET (TODO DK5.7): the same
 // dialog, the same actions, risen from the bottom edge with a smaller
@@ -80,6 +84,9 @@ type DeckCardModalProps = {
   /** Which image the list was showing when opened — keeps the flip state
    *  consistent between grid and modal. */
   preferProxy: boolean;
+  /** The owner's cover picks (TODO DK6.4) and whether this entry can stand
+   *  in the fan; null = no "Feature on cover" (a visitor). */
+  cover?: { picks: readonly CoverPickRow[]; shown: boolean } | null;
 };
 
 export function DeckCardModal({
@@ -89,6 +96,7 @@ export function DeckCardModal({
   open,
   onOpenChange,
   preferProxy,
+  cover = null,
 }: DeckCardModalProps) {
   const { entry, card } = item;
   const status = deckEntryStatus(entry, card);
@@ -465,6 +473,17 @@ export function DeckCardModal({
                     />
                   ) : null}
                 </div>
+
+                {cover ? (
+                  <DeckCoverPicks
+                    entryId={entry.id}
+                    board={entry.board}
+                    picks={cover.picks}
+                    shown={cover.shown}
+                    pending={isPending}
+                    onChange={(ids) => mutate(() => setDeckCoverPicksAction(entry.deck_id, ids))}
+                  />
+                ) : null}
 
                 {linkPickerOpen && !card ? (
                   <LinkCardPicker

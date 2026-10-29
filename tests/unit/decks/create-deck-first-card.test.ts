@@ -30,6 +30,8 @@ const s = vi.hoisted(() => ({
   twinFilters: [] as Array<[string, unknown]>,
   inserts: 0,
   events: 0,
+  /** deck_cards updates: the patch and its filters (the commander move). */
+  moves: [] as Array<{ patch: unknown; filters: Array<[string, unknown]> }>,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -53,10 +55,17 @@ vi.mock("@/lib/decks/membership", () => ({
 }));
 
 function table(name: string) {
+  let move: { patch: unknown; filters: Array<[string, unknown]> } | null = null;
   const q = {
     select: () => q,
     eq: (column: string, value: unknown) => {
       if (name === "decks") s.twinFilters.push([column, value]);
+      move?.filters.push([column, value]);
+      return q;
+    },
+    update: (patch: unknown) => {
+      move = { patch, filters: [] };
+      if (name === "deck_cards") s.moves.push(move);
       return q;
     },
     in: () => q,
@@ -100,6 +109,7 @@ beforeEach(() => {
   s.twinFilters = [];
   s.inserts = 0;
   s.events = 0;
+  s.moves = [];
 });
 
 describe("createDeckAction — the card a deck starts with", () => {
@@ -142,6 +152,46 @@ describe("createDeckAction — the card a deck starts with", () => {
       slug: "around-zoey",
       firstCardError: "That card couldn't be added — add it from the deck page.",
     });
+  });
+});
+
+describe("createDeckAction — a legendary creature leads a Commander deck (TODO DK8.3)", () => {
+  const legend = { id: CARD, title: "Zoey, the Lyricist", card_type: "creature", supertype: "Legendary" };
+
+  it("moves into the commander zone once added (the RPC adds to the main board)", async () => {
+    s.card = legend;
+    const result = await createDeckAction({ title: "Around Zoey", format: "commander" }, { firstCardId: CARD });
+    expect(result).toEqual({ ok: true, deckId: "deck-new", slug: "around-zoey" });
+    expect(s.addCalls).toEqual([[USER, "deck-new", CARD, "Zoey, the Lyricist"]]);
+    expect(s.moves).toEqual([
+      { patch: { board: "commander" }, filters: [["deck_id", "deck-new"], ["card_id", CARD], ["board", "main"]] },
+    ]);
+  });
+
+  it.each(["brawl", "standard_brawl"])("…in %s too", async (format) => {
+    s.card = legend;
+    await createDeckAction({ title: "Around Zoey", format }, { firstCardId: CARD });
+    expect(s.moves).toHaveLength(1);
+  });
+
+  it.each([
+    ["a 60-card format", { format: "modern" }, legend],
+    ["Oathbreaker (a planeswalker leads)", { format: "oathbreaker" }, legend],
+    ["a non-legendary creature", { format: "commander" }, { ...legend, supertype: null }],
+    ["a legendary sorcery", { format: "commander" }, { ...legend, card_type: "sorcery" }],
+    ["a legendary creature TOKEN", { format: "commander" }, { ...legend, card_type: "token", supertype: "Legendary Creature" }],
+  ])("stays on the main board: %s", async (_, deck, card) => {
+    s.card = card;
+    await createDeckAction({ title: "Around Zoey", ...deck }, { firstCardId: CARD });
+    expect(s.addCalls).toHaveLength(1);
+    expect(s.moves).toEqual([]);
+  });
+
+  it("a refused add moves nothing", async () => {
+    s.card = legend;
+    s.added = { ok: false, error: "deck_card_not_linkable" };
+    await createDeckAction({ title: "Around Zoey", format: "commander" }, { firstCardId: CARD });
+    expect(s.moves).toEqual([]);
   });
 });
 

@@ -1816,6 +1816,9 @@ export type Database = {
           color_identity: string[];
           created_at: string;
           deck_id: string;
+          /** The owner's "Feature on cover" pick, 1–5 (migration 0150,
+           *  TODO DK6.4); null = not picked. */
+          featured_rank: number | null;
           id: string;
           image_url: string | null;
           mana_cost: string | null;
@@ -1839,6 +1842,7 @@ export type Database = {
           color_identity?: string[];
           created_at?: string;
           deck_id: string;
+          featured_rank?: number | null;
           id?: string;
           image_url?: string | null;
           mana_cost?: string | null;
@@ -1860,6 +1864,7 @@ export type Database = {
           color_identity?: string[];
           created_at?: string;
           deck_id?: string;
+          featured_rank?: number | null;
           id?: string;
           image_url?: string | null;
           mana_cost?: string | null;
@@ -2093,6 +2098,12 @@ export type Database = {
       import_deck_entries: {
         Args: { p_deck_id: string; p_entries: Json };
         Returns: Json;
+      };
+      /** 0150 — the owner's cover picks, replaced: the entry ids in rank
+       *  order (at most five, '{}' clears). Returns how many are picked. */
+      set_deck_featured_entries: {
+        Args: { p_deck_id: string; p_entry_ids: string[] };
+        Returns: number;
       };
       /** 0143; 0144 added the entry's origin (p_source: creator | link |
        *  ai_generate | ai_remix, default creator) and the printing an AI
