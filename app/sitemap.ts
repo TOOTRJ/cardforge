@@ -11,6 +11,9 @@ import {
 import { getCluster } from "@/lib/content/clusters";
 import { HELP_PATH, HELP_SECTION_SLUGS, helpSectionPath } from "@/lib/content/help";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getRequestedFrames } from "@/lib/frames/requested-frames-queries";
+import { listPublicCreators } from "@/lib/creators/queries";
+import { REQUESTED_FRAMES_MIN_INDEXED } from "@/lib/frames/requested-frames";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import {
@@ -29,7 +32,8 @@ import {
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
 //      /decks, /challenges, /news, /learn + its indexable categories, /tools,
-//      /help + its sections, guides + their indexable topic hubs, …).
+//      /help + its sections, guides + their indexable topic hubs, …), plus
+//      /creators and /frames/requested while their own pages are indexable.
 //      They carry NO lastModified: stamping "now" on every hourly rebuild
 //      taught crawlers the date was noise and made them ignore the real
 //      ones on cards and guides.
@@ -138,14 +142,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/signup", "yearly", 0.2),
   ];
 
-  const [{ cards, profiles }, challengePages, deckPages, hubPages] = await Promise.all([
+  const [{ cards, profiles }, challengePages, deckPages, hubPages, communityPages] = await Promise.all([
     fetchCardAndProfileEntries(baseUrl),
     fetchChallengeEntries(baseUrl),
     fetchPublicDeckEntries(baseUrl),
     fetchHubEntries(baseUrl),
+    fetchCommunityEntries(baseUrl),
   ]);
 
-  return [...staticPages, ...hubPages, ...challengePages, ...deckPages, ...profiles, ...cards];
+  return [
+    ...staticPages,
+    ...communityPages,
+    ...hubPages,
+    ...challengePages,
+    ...deckPages,
+    ...profiles,
+    ...cards,
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +306,27 @@ async function fetchHubEntries(baseUrl: string): Promise<MetadataRoute.Sitemap> 
       ...formats
         .filter((hub) => hub.count >= FORMAT_HUB_MIN_DECKS)
         .map((hub) => staticEntry(baseUrl, `/decks/format/${hub.format}`, "weekly", 0.65)),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+/** The community pages that are indexable today, on the answers their own
+ *  pages read: /creators while it lists a creator (its /creators/browse
+ *  views are noindex and canonicalize there), /frames/requested once it
+ *  lists REQUESTED_FRAMES_MIN_INDEXED frames. Below its bar — the directory
+ *  missing included — each is noindex on its own page, so it stays out. */
+async function fetchCommunityEntries(baseUrl: string): Promise<MetadataRoute.Sitemap> {
+  try {
+    const [directory, roadmap] = await Promise.all([listPublicCreators("cards", 1), getRequestedFrames()]);
+    return [
+      ...(directory.error === null && directory.creators.length > 0
+        ? [staticEntry(baseUrl, "/creators", "daily", 0.6)]
+        : []),
+      ...(roadmap.error === null && roadmap.frames.length >= REQUESTED_FRAMES_MIN_INDEXED
+        ? [staticEntry(baseUrl, "/frames/requested", "weekly", 0.5)]
+        : []),
     ];
   } catch {
     return [];

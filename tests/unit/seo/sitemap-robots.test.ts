@@ -8,6 +8,12 @@ import { describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 const flags = vi.hoisted(() => ({ billing: true }));
+// What /creators and /frames/requested read (their own pages decide their
+// robots on the same answers): none, offline, unless a test sets them.
+const community = vi.hoisted(() => ({
+  creators: { creators: [] as unknown[], total: 0, error: "offline" as string | null },
+  frames: { frames: [] as unknown[], error: "offline" as string | null },
+}));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => false }));
 vi.mock("@/lib/supabase/public", () => ({
@@ -17,6 +23,8 @@ vi.mock("@/lib/supabase/public", () => ({
 }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => flags.billing }));
 vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://www.pipglyph.com" }));
+vi.mock("@/lib/creators/queries", () => ({ listPublicCreators: async () => community.creators }));
+vi.mock("@/lib/frames/requested-frames-queries", () => ({ getRequestedFrames: async () => community.frames }));
 
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
@@ -75,6 +83,29 @@ describe("sitemap (static layer)", () => {
     }
     // The hubs that still stand stay listed.
     expect(paths.has("/articles/tag/oracle-text")).toBe(true);
+  });
+
+  it("lists /creators and /frames/requested only while their own pages are indexable, never /creators/browse", async () => {
+    const pathsNow = async () => new Set((await sitemap()).map((e) => pathOf(e.url)));
+    // Offline (or the directory function missing): both pages are noindex.
+    let paths = await pathsNow();
+    expect(paths.has("/creators")).toBe(false);
+    expect(paths.has("/frames/requested")).toBe(false);
+
+    community.creators = { creators: [{ id: "x" }], total: 1, error: null };
+    community.frames = { frames: [{}, {}], error: null };
+    paths = await pathsNow();
+    expect(paths.has("/creators")).toBe(true);
+    expect(paths.has("/creators/browse")).toBe(false);
+    // Two frames is below the bar (REQUESTED_FRAMES_MIN_INDEXED, 3).
+    expect(paths.has("/frames/requested")).toBe(false);
+
+    community.frames = { frames: [{}, {}, {}], error: null };
+    expect((await pathsNow()).has("/frames/requested")).toBe(true);
+
+    community.creators = { creators: [], total: 0, error: null };
+    community.frames = { frames: [], error: "offline" };
+    expect((await pathsNow()).has("/creators")).toBe(false);
   });
 
   it("lists the help centre and every section — never /faq, which 308s there", async () => {

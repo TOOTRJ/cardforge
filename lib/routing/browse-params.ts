@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
 // Query params that belong to the browse pages.
 //
-// /gallery and /decks are prerendered (ISR) landings that never read
-// searchParams. Searching, filtering, sorting and paging happen on their
-// visible dynamic siblings (/gallery/browse, /decks/browse), and every in-app
-// control navigates WITHIN those routes. When a landing request still
-// carries one of THESE params (an old link), proxy.ts 308s it to the sibling
-// with the query intact. The list is deliberately explicit so junk params
+// /gallery, /decks and /creators are prerendered (ISR) landings that never
+// read searchParams. Searching, filtering, sorting and paging happen on their
+// visible dynamic siblings (/gallery/browse, /decks/browse, /creators/browse),
+// and every in-app control navigates WITHIN those routes. When a landing
+// request still carries one of THESE params (an old link), proxy.ts 308s it
+// to the sibling with the query intact. The list is deliberately explicit so junk params
 // (utm_*, fbclid, …) keep hitting the CDN-cached static page.
 //
 // Why a redirect and not a rewrite: Next's client router reuses the cached
@@ -15,8 +15,8 @@
 // changed and the grid didn't (2026-09-22).
 //
 // Keep in sync with the params parsed in
-// app/(marketing)/gallery/gallery-view.tsx and
-// app/(marketing)/decks/decks-view.tsx.
+// app/(marketing)/gallery/gallery-view.tsx,
+// app/(marketing)/decks/decks-view.tsx and lib/creators/directory.ts.
 //
 // Imported by proxy.ts — must stay dependency-free (edge runtime).
 // ---------------------------------------------------------------------------
@@ -35,6 +35,9 @@ export const GALLERY_FILTER_PARAMS = [
 ] as const;
 
 export const DECKS_FILTER_PARAMS = ["q", "format", "sort", "page"] as const;
+
+/** /creators → /creators/browse (TODO NV11; lib/creators/directory.ts). */
+export const CREATORS_FILTER_PARAMS = ["sort", "page"] as const;
 
 export function hasAnyParam(
   searchParams: URLSearchParams,
