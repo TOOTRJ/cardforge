@@ -1550,8 +1550,8 @@ Rules and gotchas:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
   (a unit test keeps the SQL in sync), `getCardCapacity()` +
-  `describeCapacity()` feed the `CapacityNotice` warnings (creator, deck
-  wizard, in-deck AI panel, My Cards meter), the jobs route refuses an
+  `describeCapacity()` feed the `CapacityNotice` warnings (creator, in-deck
+  AI panel, My Cards meter), the jobs route refuses an
   over-cap batch with `code: "CARD_CAPACITY"`, and `createCardAction` maps the
   trigger's `card_capacity_exceeded` to the upgrade prompt. A batch step that
   hits a plan limit fails with `error_code` (`CARD_CAPACITY` /
@@ -1905,6 +1905,31 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+- A deck is started through ONE dialog (TODO DK4; the four-step wizard is
+  gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
+  from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
+  `NewDeckButton` (`NewDeckProvider` sits in the root layout; the dialog's
+  code loads on first use); `/dashboard/decks/new` (the header's link) opens
+  it over My Decks. Visibility is PUBLIC by default and private is the
+  maker's choice — "change" opens the card creator's Publish control in deck
+  words (a "Keep it private" box over Unlisted | Public). It reads the
+  viewer from GET `/api/me` (never a server action), makes the deck FIRST
+  and then imports a pasted list through the deck page's resolve → commit
+  with NO review step — so only an EXACT match goes in as its card; a best
+  guess is committed as the name typed (a placeholder) and the toast names
+  it and the skipped lines. Never twice: a refused list keeps the deck and
+  offers the list again under the commit's `firstImportOnly` (refused once
+  the deck holds an imported entry), and a press after a lost create
+  answer sends `reuseRecentTwin` (the same deck made in the last minute
+  comes back). An empty deck opens as `/deck/<slug>?new=1`
+  (`useFocusAddOnNewDeck` focuses the empty deck's "Paste a decklist" door —
+  else the owner bar's Import decklist — and drops the flag under the rule
+  below; the addresses are `lib/decks/new-deck-paths.ts`, kept
+  free of the parser); a signed-out visitor's input waits in
+  sessionStorage for the trip through sign-in (`lib/decks/new-deck.ts`,
+  never the URL; sign-up returns through onboarding's own `next`). Closed,
+  the focus goes back to its opener; a render that throws (a chunk that
+  won't load) is caught by the provider, never Next's whole-page error.
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

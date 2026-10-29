@@ -9,7 +9,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //       and what is stored is Scryfall's own answer for it; an id Scryfall
 //       doesn't know becomes a name-only placeholder;
 //   (d) the write is ONE call of import_deck_entries (the transaction and
-//       the lock live in the database), and its refusals read as words.
+//       the lock live in the database), and its refusals read as words;
+//   (e) the New deck dialog's `firstImportOnly` (TODO DK4.1): a deck that
+//       holds an entry the import wrote refuses the commit before any
+//       Scryfall call — a retry after a lost answer never doubles the list.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -28,6 +31,8 @@ const s = vi.hoisted(() => ({
   rpcCalls: [] as Array<{ fn: string; args: Record<string, unknown> }>,
   rpcResult: { data: { added: 2, merged: 1 } as unknown, error: null as null | { message: string; details?: string } },
   deck: { id: "", owner_id: "", slug: "my-deck" } as { id: string; owner_id: string; slug: string } | null,
+  importedCount: 0,
+  countFilters: [] as Array<[string, unknown]>,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -39,6 +44,18 @@ vi.mock("@/lib/supabase/server", () => ({
     rpc: async (fn: string, args: Record<string, unknown>) => {
       s.rpcCalls.push({ fn, args });
       return s.rpcResult;
+    },
+    // firstImportOnly's head count of the import's own entries.
+    from: (table: string) => {
+      const q = {
+        select: () => q,
+        eq: (column: string, value: unknown) => {
+          s.countFilters.push([`${table}.${column}`, value]);
+          return q;
+        },
+        then: (resolve: (value: unknown) => void) => resolve({ count: s.importedCount, error: null }),
+      };
+      return q;
     },
   }),
 }));
@@ -104,6 +121,8 @@ beforeEach(() => {
   s.rpcCalls = [];
   s.rpcResult = { data: { added: 2, merged: 1 }, error: null };
   s.deck = { id: DECK, owner_id: USER, slug: "my-deck" };
+  s.importedCount = 0;
+  s.countFilters = [];
 });
 
 describe("commitDeckImportAction", () => {
@@ -265,6 +284,43 @@ describe("commitDeckImportAction", () => {
       lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
     });
     expect(result).toEqual({ ok: false, error: "Couldn't save the import — nothing was added. Try again." });
+  });
+
+  it("firstImportOnly: a deck already holding the import's entries refuses — no Scryfall call, no write", async () => {
+    s.importedCount = 6;
+    const result = await commitDeckImportAction({
+      deckId: DECK,
+      lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
+      firstImportOnly: true,
+    });
+    expect(result).toEqual({ ok: false, error: "The list is already in — open the deck.", alreadyImported: true });
+    expect(s.countFilters).toEqual([
+      ["deck_cards.deck_id", DECK],
+      ["deck_cards.source", "import"],
+    ]);
+    expect(s.rateActions).toEqual([]);
+    expect(s.collectionCalls).toEqual([]);
+    expect(s.rpcCalls).toEqual([]);
+  });
+
+  it("firstImportOnly on a deck with no imported entry (a first card it started with is fine) commits", async () => {
+    const result = await commitDeckImportAction({
+      deckId: DECK,
+      lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
+      firstImportOnly: true,
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(s.rpcCalls).toHaveLength(1);
+  });
+
+  it("the deck page's import never reads the count (a second import there merges, on purpose)", async () => {
+    s.importedCount = 6;
+    const result = await commitDeckImportAction({
+      deckId: DECK,
+      lines: [{ name: "Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }],
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(s.countFilters).toEqual([]);
   });
 });
 
