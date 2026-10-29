@@ -18,11 +18,15 @@ import { aiErrorMessage, withAiTimeBudget } from "@/lib/ai/structured-output";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/deck-ideas — three deck concepts (name, theme, art style,
 // pitch) for the deck wizard. 1 credit per batch, charged up front and
 // refunded if the call fails; rate-limited like every AI call. Text only.
+// Refused while AI deck building is paused (owner 2026-10-28, TODO DK1,
+// lib/ai/deck-ai-pause.ts) — before any limit or charge. GET /last (the
+// stored batch, free) still answers.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -43,6 +47,9 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ ok: false, error: "Sign in to get deck ideas." }, { status: 401 });
+  }
+  if (isDeckAiPaused()) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
   }
   if (!isDesignAiConfigured()) {
     return NextResponse.json({ ok: false, error: "AI design isn't configured on this deployment." }, { status: 503 });

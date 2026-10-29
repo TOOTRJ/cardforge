@@ -13,7 +13,7 @@ export const dynamic = "force-static";
 
 const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/mtg-card-maker", "MTG Card Maker", "What the card creator does, how to make a custom card, FAQ with direct answers."],
-  ["/ai-mtg-card-generator", "AI MTG Card Generator", "Concept-to-card AI generation, per-field AI fill, idea batches and AI deck generation, with FAQ."],
+  ["/ai-mtg-card-generator", "AI MTG Card Generator", "Concept-to-card AI generation, per-field AI fill and idea batches, with FAQ."],
   ["/mana-pip-editor", "Mana Pip Editor", "The full mana symbol vocabulary (hybrid, twobrid, Phyrexian, snow, energy) and custom pip uploads, with FAQ."],
   ["/best-mtg-card-makers", "Best MTG Card Makers", "Honest comparison of custom MTG card makers and a free Card Conjurer alternative, with FAQ."],
   ["/create", "Card Creator", "The creator itself. Anyone can design a card without an account; saving, sharing and downloads need a free account."],

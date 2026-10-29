@@ -6,9 +6,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // omission), the saved-card cap (403 CARD_CAPACITY with the numbers), the
 // credit balance (402 INSUFFICIENT_CREDITS), the one Pro gate (deck-aware
 // card design), and the deck-remix refusal for an empty/foreign deck.
+//
+// The AI deck pause (TODO DK1, lib/ai/deck-ai-pause.ts) is mocked OFF by
+// default so the deck checks above keep being held for the day it lifts;
+// its own block at the end turns it on.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
+  /** isDeckAiPaused()'s answer. */
+  deckAiPaused: false,
   tier: "free" as "free" | "plus" | "pro",
   credits: 10,
   capacity: { used: 0, cap: 50, tier: "free" } as { used: number; cap: number; tier: "free" | "plus" | "pro" } | null,
@@ -26,6 +32,10 @@ const s = vi.hoisted(() => ({
   fillRefusal: null as Record<string, unknown> | null,
 }));
 
+vi.mock("@/lib/ai/deck-ai-pause", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai/deck-ai-pause")>()),
+  isDeckAiPaused: () => s.deckAiPaused,
+}));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => ({ id: "user-1" }),
@@ -100,6 +110,7 @@ const post = async (body: unknown) => {
 };
 
 beforeEach(() => {
+  s.deckAiPaused = false;
   s.tier = "free";
   s.credits = 10;
   s.capacity = { used: 0, cap: 50, tier: "free" };
@@ -486,5 +497,48 @@ describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
     const { status, json } = await post({ kind: "card_fill", want: ["card_type"], locked: {}, design_kind: "creature", frame: "m15nyx" });
     expect(status).toBe(422);
     expect(json).toEqual(s.fillRefusal);
+  });
+});
+
+// AI deck building is paused (owner 2026-10-28, TODO DK1): a NEW deck build,
+// "Add with AI" into a deck and a deck remix are refused with DECK_AI_PAUSED
+// before the rate limit, the remix's Scryfall estimate and any credit check —
+// and the creator's AI, deck-aware design included, stays open (D5).
+describe("POST /api/ai/jobs — while AI deck building is paused", () => {
+  beforeEach(() => {
+    s.deckAiPaused = true;
+  });
+
+  it.each([
+    ["a new deck build", { kind: "deck", theme: "goblins", format: "commander", size: 3 }],
+    ["Add with AI into a deck", { kind: "deck", deck_id: DECK_ID, size: 3 }],
+    ["a deck remix", { kind: "deck_remix", deck_id: DECK_ID, style: "ink" }],
+  ])("refuses %s with 403 DECK_AI_PAUSED, before any limit, estimate or credit", async (_label, body) => {
+    // A caller the rate limit would refuse, with no credits: the pause still
+    // answers first, so neither is looked at.
+    s.rate = { ok: false, reason: "per_minute", retryAfterSeconds: 30, message: "Slow down." };
+    s.credits = 0;
+    const { status, json } = await post(body);
+    expect(status).toBe(403);
+    expect(json).toEqual({
+      ok: false,
+      code: "DECK_AI_PAUSED",
+      error: "AI deck building is paused while we rebuild decks. It's coming back soon. No credits were used.",
+    });
+    expect(s.estimateCalls).toBe(0);
+    expect(s.created).toHaveLength(0);
+  });
+
+  it("a malformed deck request is still the malformed-request answer", async () => {
+    expect((await post({ kind: "deck_remix", deck_id: "not-a-uuid", style: "ink" })).status).toBe(400);
+  });
+
+  it("the creator's AI stays open — a card, a fill, and deck-aware design on Pro (D5)", async () => {
+    s.tier = "pro";
+    expect((await post({ kind: "card", theme: "x" })).status).toBe(200);
+    expect((await post({ kind: "card", theme: "x", deck_id: DECK_ID })).status).toBe(200);
+    expect((await post({ kind: "card_fill", want: ["title"], locked: {}, deck_id: DECK_ID })).status).toBe(200);
+    expect(s.created.map((c) => c.kind)).toEqual(["card", "card", "card_fill"]);
+    expect(s.created[1].input).toMatchObject({ deckId: DECK_ID });
   });
 });

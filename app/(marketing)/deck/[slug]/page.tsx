@@ -423,12 +423,12 @@ async function DeckBody({
               title="No cards yet"
               description={
                 isOwner
-                  ? "Import a decklist, add cards with AI, or link your own creations."
+                  ? "Import a decklist or link your own creations."
                   : "This deck is empty for now."
               }
               action={
                 isOwner ? (
-                  <span className="text-sm text-muted">Use Import decklist or Add with AI above to fill it.</span>
+                  <span className="text-sm text-muted">Use Import decklist above to fill it.</span>
                 ) : null
               }
             />

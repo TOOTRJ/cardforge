@@ -9,6 +9,8 @@
 //   2. Pick up an interrupted build: the page loads knowing a job is still
 //      "generating" (a reload mid-build, or a reload during the long plan
 //      request); if the runner isn't already on it, resume it here.
+// Both keep working while deck AI is paused (owner 2026-10-28, TODO DK1 —
+// D6): a job already running finishes; only new deck AI is refused.
 // ---------------------------------------------------------------------------
 
 import { useRouter } from "next/navigation";
@@ -96,7 +98,7 @@ export function DeckLiveProgress({
           <span className="block h-full rounded-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
         </span>
         <span className="text-xs leading-5 text-muted">
-          Cards appear below as they finish{failed > 0 ? ` · ${failed} failed so far — Regenerate them when the run ends` : ""}. Safe to browse elsewhere; the run continues.
+          Cards appear below as they finish{failed > 0 ? ` · ${failed} failed so far` : ""}. Safe to browse elsewhere; the run continues.
         </span>
       </div>
       {mine ? (

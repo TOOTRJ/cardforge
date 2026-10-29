@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // TODO 5.4 skeptic pass — GET /api/ai/remix-estimate: signed-in only, a
 // uuid deck_id, the AI rate limit BEFORE any Scryfall work, the estimate's
-// numbers through, never cached.
+// numbers through, never cached. The AI deck pause (TODO DK1) is mocked OFF
+// for those, and ON for its own case at the end.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
+  deckAiPaused: false,
   user: { id: "user-1" } as { id: string } | null,
   rate: { ok: true } as Record<string, unknown>,
   estimate: vi.fn(),
@@ -17,6 +19,10 @@ vi.mock("@/lib/supabase/server", () => ({ getCurrentUser: async () => s.user }))
 vi.mock("@/lib/ai/rate-limit", () => ({ checkAiRateLimit: async () => s.rate }));
 vi.mock("@/lib/ai/generation-limits", () => ({ batchCardLimit: async () => 100 }));
 vi.mock("@/lib/ai/remix-estimate", () => ({ estimateDeckRemix: s.estimate }));
+vi.mock("@/lib/ai/deck-ai-pause", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai/deck-ai-pause")>()),
+  isDeckAiPaused: () => s.deckAiPaused,
+}));
 
 import { NextRequest } from "next/server";
 import { GET } from "@/app/api/ai/remix-estimate/route";
@@ -26,6 +32,7 @@ const get = (query: string) =>
   GET(new NextRequest(`http://x/api/ai/remix-estimate?${query}`));
 
 beforeEach(() => {
+  s.deckAiPaused = false;
   s.user = { id: "user-1" };
   s.rate = { ok: true };
   s.estimate.mockReset().mockResolvedValue({
@@ -67,5 +74,18 @@ describe("GET /api/ai/remix-estimate", () => {
     const body = await res.json();
     expect(body).toEqual({ ok: true, cards: 3, credits: 5, doubleFaced: 2, skipped: 1, emblems: 1, unresolved: 0, cardLimit: 100 });
     expect(s.estimate).toHaveBeenCalledWith(DECK, 100);
+  });
+
+  it("while AI deck building is paused (TODO DK1): 403 DECK_AI_PAUSED, uncached, before the rate limit and any Scryfall work", async () => {
+    s.deckAiPaused = true;
+    s.rate = { ok: false, reason: "per_minute", retryAfterSeconds: 30, message: "Slow down." };
+    const res = await get(`deck_id=${DECK}`);
+    expect(res.status).toBe(403);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(await res.json()).toMatchObject({ ok: false, code: "DECK_AI_PAUSED" });
+    expect(s.estimate).not.toHaveBeenCalled();
+    // Signed out is still a sign-in answer.
+    s.user = null;
+    expect((await get(`deck_id=${DECK}`)).status).toBe(401);
   });
 });
