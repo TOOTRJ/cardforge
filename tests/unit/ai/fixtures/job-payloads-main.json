@@ -3110,5 +3110,685 @@
     "status": "pending"
    }
   ]
+ },
+ "layout fill plan · saga": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "The Long Thaw",
+    "cost": "{2}{G}",
+    "card_type": "enchantment",
+    "supertype": null,
+    "subtypes": [
+     "Saga"
+    ],
+    "color_identity": [
+     "green"
+    ],
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Draw a card.\nII, III — Create a 2/2 green Bear creature token.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null
+   },
+   "art_prompt": "A frozen river cracking open under a spring sun, bears waking on its banks.",
+   "style": null,
+   "frame_template": "saga",
+   "art_face": {
+    "template": "saga",
+    "color_identity": [
+     "green"
+    ],
+    "card_type": "enchantment",
+    "supertype": null,
+    "cost": "{2}{G}"
+   },
+   "deck_id": null,
+   "art_brief": "A tall storybook scene that captures the saga's tale in one moment: one strong subject composed for a tall, narrow panel."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "The Long Thaw",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type enchantment. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Saga\", the modern frame (2015 on). It is a SAGA: card_type \"enchantment\", subtypes include \"Saga\", supertype without \"Creature\", no power or toughness. Write `saga`: `chapters` — two to four rows (never more than six), chapter numbers I, II, III… in order from I with no gap or repeat, a row may cover two chapters ([1, 2] prints \"I, II —\"); each chapter ONE short effect under about 120 characters, building a small story; `intro` null (the frame prints the lore-counter reminder). rules_text: the same chapters as lines \"I — effect\"."
+  ]
+ },
+ "layout fill step · saga": {
+  "status": "done",
+  "fill": {
+   "title": "The Long Thaw",
+   "cost": "{2}{G}",
+   "card_type": "enchantment",
+   "supertype": null,
+   "subtypes": [
+    "Saga"
+   ],
+   "color_identity": [
+    "green"
+   ],
+   "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Draw a card.\nII, III — Create a 2/2 green Bear creature token.",
+   "flavor_text": null,
+   "power": null,
+   "toughness": null,
+   "loyalty": null,
+   "defense": null,
+   "frame_template": "saga",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "layout fill plan · adventure": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Hearthwood Giant",
+    "cost": "{3}{G}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Giant"
+    ],
+    "color_identity": [
+     "green"
+    ],
+    "rules_text": "Reach",
+    "flavor_text": "It never minded the birds.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "card_type": "instant",
+     "supertype": null,
+     "subtypes": [
+      "Adventure"
+     ],
+     "title": "Stomp Through",
+     "cost": "{1}{G}",
+     "rules_text": "Target creature you control gets +2/+2 until end of turn.",
+     "color_identity": [
+      "green"
+     ]
+    },
+    "part_color": true
+   },
+   "art_prompt": "A mossy giant striding through a misty forest at dawn.",
+   "style": null,
+   "frame_template": "adventure",
+   "art_face": {
+    "template": "adventure",
+    "color_identity": [
+     "green"
+    ],
+    "card_type": "creature",
+    "supertype": null,
+    "cost": "{3}{G}"
+   },
+   "deck_id": null,
+   "art_brief": "Show the creature itself, mid-adventure — the spell on its page is told in words, not in the picture."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Hearthwood Giant // Stomp Through",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type creature. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Adventure\", the modern frame (2015 on). It is an ADVENTURE card: a creature, and the adventure spell on its storybook page (\"Bonecrusher Giant // Stomp\"). The first part is the creature: card_type \"creature\" with its power and toughness. Write `second_part` with: title (its OWN original name, never the first part's), cost, card_type, supertype, subtypes, rules_text, power and toughness. The second part is an \"instant\" or \"sorcery\" whose subtypes are [\"Adventure\"], with its own mana cost and no power / toughness (null); its rules_text one short effect under about 120 characters. color_identity covers BOTH parts' mana symbols (the whole card)."
+  ]
+ },
+ "layout fill step · adventure": {
+  "status": "done",
+  "fill": {
+   "title": "Hearthwood Giant",
+   "cost": "{3}{G}",
+   "card_type": "creature",
+   "supertype": null,
+   "subtypes": [
+    "Giant"
+   ],
+   "color_identity": [
+    "green"
+   ],
+   "rules_text": "Reach",
+   "flavor_text": "It never minded the birds.",
+   "power": "4",
+   "toughness": "4",
+   "loyalty": null,
+   "defense": null,
+   "back_face": {
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [
+     "Adventure"
+    ],
+    "title": "Stomp Through",
+    "cost": "{1}{G}",
+    "rules_text": "Target creature you control gets +2/+2 until end of turn.",
+    "color_identity": [
+     "green"
+    ]
+   },
+   "part_color": true,
+   "frame_template": "adventure",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "layout fill plan · prepare": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Lantern Scholar",
+    "cost": "{2}{W}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Human",
+     "Cleric"
+    ],
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "flavor_text": "It never minded the birds.",
+    "power": "2",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "card_type": "sorcery",
+     "supertype": null,
+     "subtypes": [],
+     "title": "Gentle Recall",
+     "cost": "{W}",
+     "rules_text": "You gain 3 life.",
+     "color_identity": [
+      "white"
+     ]
+    },
+    "part_color": true
+   },
+   "art_prompt": "A robed scholar holding a lantern in a library tower.",
+   "style": null,
+   "frame_template": "prepare",
+   "art_face": {
+    "template": "prepare",
+    "color_identity": [
+     "white"
+    ],
+    "card_type": "creature",
+    "supertype": null,
+    "cost": "{2}{W}"
+   },
+   "deck_id": null,
+   "art_brief": "Show the creature itself, mid-adventure — the spell on its page is told in words, not in the picture."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Lantern Scholar // Gentle Recall",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type creature. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Prepare\", the modern frame (2015 on). It is a PREPARE card: a creature, and the spell on its page it can cast a copy of while it is prepared. The first part is the creature: card_type \"creature\" with its power and toughness; its rules_text says how it becomes prepared — usually the line \"This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\" Write `second_part` with: title (its OWN original name, never the first part's), cost, card_type, supertype, subtypes, rules_text, power and toughness. The second part is an \"instant\" or \"sorcery\" with its own mana cost, no subtypes and no power / toughness (null); its rules_text one short effect under about 120 characters. color_identity covers BOTH parts' mana symbols (the whole card)."
+  ]
+ },
+ "layout fill step · prepare": {
+  "status": "done",
+  "fill": {
+   "title": "Lantern Scholar",
+   "cost": "{2}{W}",
+   "card_type": "creature",
+   "supertype": null,
+   "subtypes": [
+    "Human",
+    "Cleric"
+   ],
+   "color_identity": [
+    "white"
+   ],
+   "rules_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+   "flavor_text": "It never minded the birds.",
+   "power": "2",
+   "toughness": "3",
+   "loyalty": null,
+   "defense": null,
+   "back_face": {
+    "card_type": "sorcery",
+    "supertype": null,
+    "subtypes": [],
+    "title": "Gentle Recall",
+    "cost": "{W}",
+    "rules_text": "You gain 3 life.",
+    "color_identity": [
+     "white"
+    ]
+   },
+   "part_color": true,
+   "frame_template": "prepare",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "layout fill plan · split": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Emberlash",
+    "cost": "{1}{R}",
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [],
+    "color_identity": [
+     "red",
+     "blue",
+     "multicolor"
+    ],
+    "rules_text": "Emberlash deals 2 damage to any target.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "card_type": "instant",
+     "supertype": null,
+     "subtypes": [],
+     "title": "Frostbind",
+     "cost": "{1}{U}",
+     "rules_text": "Tap target permanent. Draw a card.",
+     "color_identity": [
+      "blue"
+     ]
+    },
+    "part_color": true,
+    "first_part_color": [
+     "red"
+    ]
+   },
+   "art_prompt": "A duel of fire and ice above a frozen lake.",
+   "style": null,
+   "frame_template": "split",
+   "art_face": {
+    "template": "split",
+    "color_identity": [
+     "red",
+     "blue",
+     "multicolor"
+    ],
+    "card_type": "instant",
+    "supertype": null,
+    "cost": "{1}{R}"
+   },
+   "deck_id": null,
+   "art_brief": "ONE picture shown in BOTH halves' windows: a single scene that holds both halves' ideas together, its subject centred so each window reads on its own."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Emberlash // Frostbind",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Split\", the modern frame (2015 on). It is a SPLIT card: two spells side by side, read together (\"Fire // Ice\"). The first part is the card's own fields: card_type \"instant\" or \"sorcery\". Write `second_part` with: title (its OWN original name, never the first part's), cost, card_type, supertype, subtypes, rules_text, power and toughness. The second part is an \"instant\" or \"sorcery\" with its own mana cost and no power / toughness (null). Each half: one short effect, under about 150 characters. The two halves are a matched pair: one idea told two ways, each castable on its own. color_identity covers BOTH parts' mana symbols (the whole card)."
+  ]
+ },
+ "layout fill step · split": {
+  "status": "done",
+  "fill": {
+   "title": "Emberlash",
+   "cost": "{1}{R}",
+   "card_type": "instant",
+   "supertype": null,
+   "subtypes": [],
+   "color_identity": [
+    "red",
+    "blue",
+    "multicolor"
+   ],
+   "rules_text": "Emberlash deals 2 damage to any target.",
+   "flavor_text": null,
+   "power": null,
+   "toughness": null,
+   "loyalty": null,
+   "defense": null,
+   "back_face": {
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [],
+    "title": "Frostbind",
+    "cost": "{1}{U}",
+    "rules_text": "Tap target permanent. Draw a card.",
+    "color_identity": [
+     "blue"
+    ],
+    "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png"
+   },
+   "part_color": true,
+   "first_part_color": [
+    "red"
+   ],
+   "frame_template": "split",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "layout fill plan · aftermath": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Cleave",
+    "cost": "{2}{R}",
+    "card_type": "sorcery",
+    "supertype": null,
+    "subtypes": [],
+    "color_identity": [
+     "red",
+     "green",
+     "multicolor"
+    ],
+    "rules_text": "Cleave deals 4 damage to target creature.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "card_type": "sorcery",
+     "supertype": null,
+     "subtypes": [],
+     "title": "Regrowth Rite",
+     "cost": "{3}{G}",
+     "rules_text": "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nCreate two 2/2 green Wolf creature tokens.",
+     "color_identity": [
+      "green"
+     ]
+    },
+    "part_color": true,
+    "first_part_color": [
+     "red"
+    ]
+   },
+   "art_prompt": "An axe splitting a boulder, saplings sprouting from the crack.",
+   "style": null,
+   "frame_template": "aftermath",
+   "art_face": {
+    "template": "aftermath",
+    "color_identity": [
+     "red",
+     "green",
+     "multicolor"
+    ],
+    "card_type": "sorcery",
+    "supertype": null,
+    "cost": "{2}{R}"
+   },
+   "deck_id": null,
+   "art_brief": "ONE picture shown in BOTH halves' windows: a single scene that holds both halves' ideas together, its subject centred so each window reads on its own."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Cleave // Regrowth Rite",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Aftermath\", the modern frame (2015 on). It is an AFTERMATH card: the top half is cast from the hand, the aftermath half from the graveyard (\"Cut // Ribbons\"). The first part is the card's own fields: card_type \"instant\" or \"sorcery\". Write `second_part` with: title (its OWN original name, never the first part's), cost, card_type, supertype, subtypes, rules_text, power and toughness. The second part is an \"instant\" or \"sorcery\" with its own mana cost and no power / toughness (null); its rules_text begins with the line \"Aftermath (Cast this spell only from your graveyard. Then exile it.)\". Each half: under about 150 characters. color_identity covers BOTH parts' mana symbols (the whole card)."
+  ]
+ },
+ "layout fill step · aftermath": {
+  "status": "done",
+  "fill": {
+   "title": "Cleave",
+   "cost": "{2}{R}",
+   "card_type": "sorcery",
+   "supertype": null,
+   "subtypes": [],
+   "color_identity": [
+    "red",
+    "green",
+    "multicolor"
+   ],
+   "rules_text": "Cleave deals 4 damage to target creature.",
+   "flavor_text": null,
+   "power": null,
+   "toughness": null,
+   "loyalty": null,
+   "defense": null,
+   "back_face": {
+    "card_type": "sorcery",
+    "supertype": null,
+    "subtypes": [],
+    "title": "Regrowth Rite",
+    "cost": "{3}{G}",
+    "rules_text": "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nCreate two 2/2 green Wolf creature tokens.",
+    "color_identity": [
+     "green"
+    ],
+    "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png"
+   },
+   "part_color": true,
+   "first_part_color": [
+    "red"
+   ],
+   "frame_template": "aftermath",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "layout fill plan · flip": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Ashen Apprentice",
+    "cost": "{1}{R}",
+    "card_type": "creature",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Human",
+     "Wizard"
+    ],
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Whenever you cast an instant or sorcery spell, put a ki counter on Ashen Apprentice. Then if it has two or more ki counters on it, flip it.",
+    "flavor_text": "It never minded the birds.",
+    "power": "1",
+    "toughness": "2",
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "card_type": "creature",
+     "supertype": "Legendary",
+     "subtypes": [
+      "Human",
+      "Wizard"
+     ],
+     "title": "Ashen Pyromancer",
+     "rules_text": "Whenever you cast an instant or sorcery spell, Ashen Pyromancer deals 1 damage to each opponent.",
+     "power": "3",
+     "toughness": "3"
+    }
+   },
+   "art_prompt": "A young wizard wreathed in ash and embers.",
+   "style": null,
+   "frame_template": "flip",
+   "art_face": {
+    "template": "flip",
+    "color_identity": [
+     "red"
+    ],
+    "card_type": "creature",
+    "supertype": "Legendary",
+    "cost": "{1}{R}"
+   },
+   "deck_id": null,
+   "art_brief": "Show the creature as it is now, with a hint of what it becomes when it flips."
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Ashen Apprentice // Ashen Pyromancer",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type creature. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Flip\", the modern frame (2015 on). It is a FLIP card: a creature that flips into another when a condition is met (the flipped side is printed upside down). The first part is the creature: card_type \"creature\" with its power and toughness; its rules_text ends with the condition that flips it (\"…, flip it.\"). Write `second_part` with: title (its OWN original name, never the first part's), cost, card_type, supertype, subtypes, rules_text, power and toughness. The second part is the flipped side: card_type \"creature\", usually supertype \"Legendary\", cost \"\" (a flipped side has no mana cost), its OWN power and toughness, rules_text under about 120 characters. color_identity covers BOTH parts' mana symbols (the whole card)."
+  ]
+ },
+ "layout fill step · flip": {
+  "status": "done",
+  "fill": {
+   "title": "Ashen Apprentice",
+   "cost": "{1}{R}",
+   "card_type": "creature",
+   "supertype": "Legendary",
+   "subtypes": [
+    "Human",
+    "Wizard"
+   ],
+   "color_identity": [
+    "red"
+   ],
+   "rules_text": "Whenever you cast an instant or sorcery spell, put a ki counter on Ashen Apprentice. Then if it has two or more ki counters on it, flip it.",
+   "flavor_text": "It never minded the birds.",
+   "power": "1",
+   "toughness": "2",
+   "loyalty": null,
+   "defense": null,
+   "back_face": {
+    "card_type": "creature",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Human",
+     "Wizard"
+    ],
+    "title": "Ashen Pyromancer",
+    "rules_text": "Whenever you cast an instant or sorcery spell, Ashen Pyromancer deals 1 damage to each opponent.",
+    "power": "3",
+    "toughness": "3"
+   },
+   "frame_template": "flip",
+   "deck_id": null,
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "artist_credit": "Tester"
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
  }
 }

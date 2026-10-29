@@ -4,11 +4,12 @@
 // and the unit tests share it.
 //
 // Kinds: the creator's kind list (lib/creator/card-kinds.ts), but only the
-// ONE-FACED kinds the design engine can write today. Sagas and the two-part
-// layouts (split, aftermath, adventure, flip, Prepare) are PR 2, the
-// double-faced kinds PR 3; a battle has no published frame and the emblem is
-// pin-only (owner decision). A kind with no frame published in any colour is
-// still listed, as an off chip with its reason.
+// kinds the design engine can write: the one-faced kinds (PR 1) and, since
+// PR 2, the saga and the one-picture two-part layouts (adventure, Prepare,
+// split, aftermath, flip — lib/ai/layout-design.ts). The double-faced kinds
+// are PR 3; a battle has no published frame and the emblem is pin-only
+// (owner decision). A kind with no frame published in any colour is still
+// listed, as an off chip with its reason.
 //
 // Frames: every frame the creator's gallery offers for the kind
 // (framesForKind — eras, skins, borrowed frames, dresses, treatments and
@@ -26,6 +27,7 @@ import {
   kindHasAvailableFrame,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
+import { AI_LAYOUT_KINDS, LAYOUT_TEMPLATE, isAiLayoutKind, type AiLayoutKind } from "@/lib/ai/layout-design";
 import {
   FRAME_ERA_LABELS,
   FRAME_TEMPLATE_LABELS,
@@ -53,9 +55,18 @@ export function isAiDesignKind(value: unknown): value is AiDesignKind {
   return typeof value === "string" && (AI_DESIGN_KINDS as readonly string[]).includes(value);
 }
 
-/** Why a kind chip is off, or null when the kind can be generated. */
-export function aiKindOffReason(kind: AiDesignKind, verifiedKeys: ReadonlySet<string>): string | null {
-  return kindHasAvailableFrame(kind, verifiedKeys) ? null : "No frame published yet";
+/** Every kind the dialog's Card kind row offers, in the creator's order:
+ *  the one-faced kinds, then the saga and the two-part layouts (PR 2). */
+export type AiDialogKind = AiDesignKind | AiLayoutKind;
+export const AI_DIALOG_KINDS: readonly AiDialogKind[] = [...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS];
+
+/** Why a kind chip is off, or null when the kind can be generated. A layout
+ *  kind is judged on its ONE frame (never the double-faced saga front). */
+export function aiKindOffReason(kind: AiDialogKind, verifiedKeys: ReadonlySet<string>): string | null {
+  const published = isAiLayoutKind(kind)
+    ? aiFrameOptions(kind, verifiedKeys, null).length > 0
+    : kindHasAvailableFrame(kind, verifiedKeys);
+  return published ? null : "No frame published yet";
 }
 
 export type AiFrameOption = {
@@ -76,11 +87,14 @@ export type AiFrameOption = {
  * the showcases).
  */
 export function aiFrameOptions(
-  kind: AiDesignKind,
+  kind: AiDialogKind,
   verifiedKeys: ReadonlySet<string>,
   colorKey: FrameColorKey | null,
 ): AiFrameOption[] {
   return framesForKind(kind, verifiedKeys)
+    // A layout kind is made on its one frame (the double-faced saga front
+    // is PR 3's).
+    .filter((choice) => !isAiLayoutKind(kind) || choice.template === LAYOUT_TEMPLATE[kind])
     .filter((choice) => choice.availableColorKeys.length > 0)
     .map((choice) => ({
       template: choice.template,

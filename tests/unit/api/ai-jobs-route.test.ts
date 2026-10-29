@@ -390,6 +390,26 @@ describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
     expect(s.created.at(-1)!.input).not.toHaveProperty("designKind");
   });
 
+  it("a saga or two-part kind (PR 2) names its layout, never a card type; the second part's pins are read leniently", async () => {
+    await post({
+      kind: "card_fill",
+      want: ["card_type", "title"],
+      locked: { back_face: { title: "Frostbind", rules_text: "x".repeat(5000) } },
+      steer: { card_type: "creature" },
+      design_kind: "split",
+      frame: "split",
+    });
+    const input = s.created.at(-1)!.input as Record<string, unknown> & { steer: Record<string, unknown>; locked: { back_face: Record<string, string> } };
+    expect(input).toMatchObject({ layout: "split", frame: "split" });
+    expect(input).not.toHaveProperty("designKind");
+    expect(input.steer.card_type).toBeUndefined();
+    expect(input.locked.back_face.title).toBe("Frostbind");
+    expect(input.locked.back_face.rules_text).toHaveLength(4000);
+    // …and not while the type isn't being written.
+    await post({ kind: "card_fill", want: ["title"], locked: {}, design_kind: "saga" });
+    expect(s.created.at(-1)!.input).not.toHaveProperty("layout");
+  });
+
   it("a request that names none of them reaches the job as before (its own theme and style)", async () => {
     await post({ kind: "card_fill", want: ["title"], locked: {}, theme: "embers", style: "oil" });
     const input = s.created.at(-1)!.input as Record<string, unknown>;

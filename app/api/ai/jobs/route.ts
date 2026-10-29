@@ -31,6 +31,7 @@ import {
 } from "@/types/card";
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
 import { AI_DESIGN_KINDS } from "@/lib/ai/frame-choices";
+import { AI_LAYOUT_KINDS, isAiLayoutKind } from "@/lib/ai/layout-design";
 import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
@@ -160,6 +161,18 @@ const requestSchema = z.discriminatedUnion("kind", [
         // being generated and already has tiers (TODO 4.27a, PR 3). Never
         // clipped: a cut tier would be merged back as written.
         station_text: z.string().max(4000).optional().catch(undefined),
+        // A two-part card's second part as the maker keeps it (the AI
+        // dialog, PR 2) — context, clipped like every other pin.
+        back_face: z
+          .object({
+            title: clipped(CARD_TITLE_MAX).optional(),
+            cost: clipped(64).optional(),
+            rules_text: clipped(4000).optional(),
+            power: clipped(16).optional(),
+            toughness: clipped(16).optional(),
+          })
+          .optional()
+          .catch(undefined),
       })
       .default({}),
     steer: z
@@ -187,7 +200,7 @@ const requestSchema = z.discriminatedUnion("kind", [
     /** The AI dialog's kind ("surprise" or one it can make): set, the fill
      *  is designed frame-first (lib/ai/frame-brief.ts). Anything else is
      *  dropped — the fill is then what it always was. */
-    design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS]).optional().catch(undefined),
+    design_kind: z.enum([SURPRISE_PRESET_ID, ...AI_DESIGN_KINDS, ...AI_LAYOUT_KINDS]).optional().catch(undefined),
     /** The dialog's theme / style presets and the maker's twists: when any
      *  is named they are what the designer and the painter read (the twist
      *  first), in place of `theme` / `style`. */
@@ -508,11 +521,19 @@ export async function POST(request: Request) {
     const assembled = assemblePrompt(fill);
     // The dialog's kind is the type it steers (a kind of PR 1 is its own
     // card type); "surprise" leaves the type to the AI, battles excluded.
-    const designKind = fill.design_kind && fill.want.includes("card_type") ? fill.design_kind : undefined;
+    const asked = fill.design_kind && fill.want.includes("card_type") ? fill.design_kind : undefined;
+    // A saga or a two-part kind (PR 2) is no card type: it names its
+    // layout, and the plan steers the type its frame takes.
+    const layout = isAiLayoutKind(asked) ? asked : undefined;
+    const designKind = asked && !isAiLayoutKind(asked) ? asked : undefined;
     const result = await createCardFillJob({
       want: fill.want,
       locked: fill.locked,
-      steer: designKind && designKind !== SURPRISE_PRESET_ID ? { ...fill.steer, card_type: designKind } : fill.steer,
+      steer: designKind && designKind !== SURPRISE_PRESET_ID
+        ? { ...fill.steer, card_type: designKind }
+        : layout
+          ? { ...fill.steer, card_type: undefined }
+          : fill.steer,
       theme: assembled ? assembled.theme : fill.theme,
       style: assembled ? assembled.style : fill.style,
       frame: fill.frame,
@@ -520,6 +541,7 @@ export async function POST(request: Request) {
       deckId: fill.deck_id,
       scope: fill.scope,
       ...(designKind ? { designKind } : {}),
+      ...(layout ? { layout } : {}),
       ...(assembled ? { assembled: { artStyle: assembled.artStyle, styleArt: assembled.styleArt } } : {}),
     });
     if (!result.ok) {

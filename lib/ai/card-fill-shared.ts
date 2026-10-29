@@ -14,6 +14,7 @@ import {
 } from "@/types/card";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { stationFillNote } from "@/lib/ai/station-design";
+import type { FillSecondPart, LockedSecondPart } from "@/lib/ai/layout-design";
 
 export const CARD_FILL_FIELDS = [
   "title",
@@ -112,6 +113,10 @@ export type CardFillLocked = {
    *  written, every other line kept byte for byte (lib/ai/station-design.ts
    *  mergeStationFill). */
   station_text?: string;
+  /** A two-part card's SECOND part as the maker keeps it (the AI dialog,
+   *  PR 2): sent only while the open card is already of the kind asked for,
+   *  with the fields the fill is NOT writing. Absent on every other fill. */
+  back_face?: LockedSecondPart;
 };
 
 /** Steering for fields that ARE being generated (the dialog's selects). */
@@ -146,6 +151,17 @@ export type CardFillResult = {
    *  on Nyx.") — the creator tells the maker in its one toast. */
   frame_notice?: string;
   deck_id?: string | null;
+  /** A two-part card (split, aftermath, adventure, flip, Prepare — the AI
+   *  dialog, PR 2): its second part, poured into the creator's own
+   *  `back_face.*` paths. Only the fields the frame draws. */
+  back_face?: FillSecondPart;
+  /** Each part in its own colour (TODO 4.26) on a frame that draws it:
+   *  `frame_style.partColor` — on where both parts' colours are verified,
+   *  off (the card's whole colour) where they are not. */
+  part_color?: boolean;
+  /** `frame_style.firstPartColor`: a split / aftermath first half's own
+   *  colour where it is not the whole card's (M2). */
+  first_part_color?: ColorIdentity[];
 };
 
 /** The designer's output shape (a superset of what we keep). */

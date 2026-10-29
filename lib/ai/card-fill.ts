@@ -19,6 +19,7 @@ import {
   stationWordOf,
 } from "@/lib/ai/station-design";
 import type { DesignVariety } from "@/lib/ai/design-variety";
+import { fillSecondPartOf, secondPartPinNote, type AiLayoutKind, type SecondPartDesign } from "@/lib/ai/layout-design";
 import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,10 @@ export type DesignCardFillInput = {
   frameBrief?: string;
   /** The theme / style were assembled from the dialog's presets. */
   assembled?: boolean;
+  /** A saga or a two-part card (the AI dialog, PR 2): the design writes
+   *  its chapter rows or its second part (lib/ai/layout-design.ts). The
+   *  shape is in `frameBrief`. Absent on every other fill. */
+  layout?: AiLayoutKind;
 };
 
 /**
@@ -87,7 +92,7 @@ function stationFillRules(input: DesignCardFillInput, designed: DesignedLike, te
 
 export async function designCardFill(
   input: DesignCardFillInput,
-): Promise<{ fields: CardFillResult; art_prompt: string }> {
+): Promise<{ fields: CardFillResult; art_prompt: string; second_part?: SecondPartDesign | null }> {
   const wantsType = input.want.includes("card_type");
   const wantsRarity = input.want.includes("rarity");
   const wantsColors = input.want.includes("color_identity");
@@ -106,8 +111,11 @@ export async function designCardFill(
           input.colorHint ??
           (!wantsColors ? input.locked.color_identity?.[0] : undefined),
         note: input.frameBrief
-          ? [fillPromptNote(input.locked, input.want), input.frameBrief].filter(Boolean).join(" ")
+          ? [fillPromptNote(input.locked, input.want), input.frameBrief, input.layout ? secondPartPinNote(input.locked.back_face) : null]
+              .filter(Boolean)
+              .join(" ")
           : fillPromptNote(input.locked, input.want),
+        ...(input.layout ? { layout: input.layout } : {}),
       },
     ],
   });
@@ -115,6 +123,14 @@ export async function designCardFill(
   const fields = pickFillResult(designed, input.want);
   if (fields.rules_text !== undefined) {
     fields.rules_text = stationFillRules(input, designed, fields.rules_text);
+  }
+  if (input.layout) {
+    // A saga's rows are its rules text (written from them by the engine);
+    // a two-part card's second part goes to the creator's back_face paths.
+    if (input.layout !== "saga" && designed.second_part) {
+      fields.back_face = fillSecondPartOf(input.layout, designed.second_part, input.want, input.locked.back_face);
+    }
+    return { fields, art_prompt: designed.art_prompt, second_part: designed.second_part ?? null };
   }
   return { fields, art_prompt: designed.art_prompt };
 }
