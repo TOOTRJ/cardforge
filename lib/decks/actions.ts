@@ -15,6 +15,8 @@ import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/med
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
+import { firstCardBoard } from "@/lib/decks/first-card";
+import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // Result shapes — discriminated unions so callers pattern-match without throwing.
@@ -191,7 +193,7 @@ export async function createDeckAction(
   // add_custom_deck_entry adds nothing when the card is in the deck already
   // (a reused twin), so this is safe to run again.
   const firstCardError = options.firstCardId
-    ? await addFirstCard(supabase, user.id, row.id, options.firstCardId)
+    ? await addFirstCard(supabase, user.id, row.id, options.firstCardId, parsed.data.format)
     : null;
 
   if (options.redirectAfterCreate) {
@@ -230,21 +232,39 @@ async function recentTwinDeck(
  *  RLS reads the caller back ANY card it may see — another creator's
  *  unlisted one included — and the deck_cards policies and 0144's
  *  `deck_card_not_linkable` guard decide whether it may join (the caller's
- *  own at any visibility, another creator's only while public). Null when
- *  added; else ONE plain sentence — never a database error's words (a new
- *  deck is far from the entry limit, the one refusal worth its own copy). */
+ *  own at any visibility, another creator's only while public). A
+ *  legendary creature starting a Commander-style deck is then moved to the
+ *  commander zone (lib/decks/first-card.ts; the RPC adds to the main board
+ *  only) — best effort: a refused move leaves it on the main board. Null
+ *  when added; else ONE plain sentence — never a database error's words (a
+ *  new deck is far from the entry limit, the one refusal worth its own
+ *  copy). */
 async function addFirstCard(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   deckId: string,
   cardId: string,
+  format: DeckFormat,
 ): Promise<string | null> {
   const unavailable = "That card couldn't be added — add it from the deck page.";
   if (!isUuid(cardId)) return unavailable;
-  const { data: card } = await supabase.from("cards").select("id, title").eq("id", cardId).maybeSingle();
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, title, card_type, supertype")
+    .eq("id", cardId)
+    .maybeSingle();
   if (!card) return unavailable;
   const added = await addCustomCardEntryToDeck(supabase, userId, deckId, card.id, card.title);
-  return added.ok ? null : unavailable;
+  if (!added.ok) return unavailable;
+  if (firstCardBoard(format, card) === "commander") {
+    await supabase
+      .from("deck_cards")
+      .update({ board: "commander" })
+      .eq("deck_id", deckId)
+      .eq("card_id", card.id)
+      .eq("board", "main");
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

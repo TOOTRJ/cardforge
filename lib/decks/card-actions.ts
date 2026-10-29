@@ -8,6 +8,7 @@ import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
 import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { FEATURED_PICKS_MAX } from "@/lib/decks/featured";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 
@@ -240,6 +241,62 @@ export async function unlinkDeckCardAction(
 
   await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);
   return { ok: true, deckCardId };
+}
+
+// ---------------------------------------------------------------------------
+// The cover's picks (TODO DK6.4) — the deck card modal's "Feature on cover",
+// "Remove from cover" and its Earlier / Later buttons all send the deck's
+// WHOLE list of picks, rank 1 first, and the database replaces them in one
+// transaction (migration 0150's set_deck_featured_entries: the deck's
+// entry lock, its owner only, five distinct entries of that deck at most).
+// ---------------------------------------------------------------------------
+
+export type DeckCoverPicksResult = { ok: true; picks: number } | { ok: false; error: string };
+
+const coverPicksSchema = z
+  .array(z.string().refine(isUuid, "Invalid deck entry id."))
+  .max(FEATURED_PICKS_MAX, `A cover features at most ${FEATURED_PICKS_MAX} cards.`)
+  .refine((ids) => new Set(ids).size === ids.length, "A card is picked twice.");
+
+/** The words for what the database refuses (never its own text). */
+function coverPicksError(error: { code?: string | null; message?: string | null }): string {
+  const message = error.message ?? "";
+  if (error.code === "PGRST202") return "Cover picks aren't available here yet.";
+  if (message.includes("deck_featured_limit")) return `A cover features at most ${FEATURED_PICKS_MAX} cards.`;
+  if (message.includes("deck_not_owned")) return "Deck not found or not yours.";
+  if (message.includes("deck_featured_invalid")) return "That card isn't in this deck any more — reload the page.";
+  return "The cover's cards couldn't be saved. Try again.";
+}
+
+export async function setDeckCoverPicksAction(
+  deckId: string,
+  entryIds: unknown,
+): Promise<DeckCoverPicksResult> {
+  if (!isUuid(deckId)) return { ok: false, error: "Invalid deck id." };
+  const parsed = coverPicksSchema.safeParse(entryIds);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid cover picks." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase isn't configured." };
+  }
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to edit decks." };
+
+  const supabase = await createClient();
+  // Ownership pre-flight for the slug and a friendly refusal (the RPC and
+  // RLS hold the same line).
+  const { data: deck } = await supabase.from("decks").select("id, slug, owner_id").eq("id", deckId).maybeSingle();
+  if (!deck || deck.owner_id !== user.id) return { ok: false, error: "Deck not found or not yours." };
+
+  const { data, error } = await supabase.rpc("set_deck_featured_entries", {
+    p_deck_id: deckId,
+    p_entry_ids: parsed.data,
+  });
+  if (error) return { ok: false, error: coverPicksError(error) };
+
+  await revalidateDeckCardPaths(supabase, user.id, deck.slug);
+  return { ok: true, picks: typeof data === "number" ? data : parsed.data.length };
 }
 
 // ---------------------------------------------------------------------------

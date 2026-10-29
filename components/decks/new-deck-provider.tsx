@@ -47,8 +47,8 @@ export type OpenNewDeckOptions = {
   format?: DeckFormat;
   /** A saved card the deck starts with — "Build a deck around this card"
    *  (TODO DK8.3) and the creator's deck box (DK9.3). createDeckAction adds
-   *  it to the main board once the deck exists; the commander slot is
-   *  DK8.3's to decide. */
+   *  it once the deck exists: a legendary creature into a Commander-style
+   *  deck's commander zone, else the main board (lib/decks/first-card.ts). */
   cardId?: string;
 };
 

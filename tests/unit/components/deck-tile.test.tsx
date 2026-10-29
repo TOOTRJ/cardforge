@@ -211,6 +211,24 @@ describe("every deck list draws DeckTile (no tile of its own)", () => {
   });
 });
 
+describe("Build a deck around this card (TODO DK8.3) — where it is wired", () => {
+  const read = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
+
+  it("/decks' trending cards: one per PUBLIC card, carrying its id", () => {
+    const source = read("app/(marketing)/decks/decks-view.tsx");
+    expect(source).toMatch(
+      /cardAction=\{\(card\) =>\s*card\.visibility === "public" \? \(\s*<BuildDeckAroundButton\s*cardId=\{card\.id\}\s*cardTitle=\{card\.title\}/,
+    );
+  });
+
+  it("the card page's Decks with this card: a public card (anyone's, D3) or the viewer's own", () => {
+    const source = read("components/cards/card-detail-content.tsx");
+    expect(source).toContain('const canBuildAround = card.visibility === "public" || isOwner;');
+    expect(source).toContain("buildAround={canBuildAround ? { cardId: card.id, cardTitle: card.title } : null}");
+    expect(source).toMatch(/<BuildDeckAroundButton cardId=\{buildAround\.cardId\} cardTitle=\{buildAround\.cardTitle\} \/>/);
+  });
+});
+
 describe("GalleryCardTile — In N decks (TODO DK8.4)", () => {
   const card = (count: number | undefined) =>
     ({
@@ -243,6 +261,22 @@ describe("GalleryCardTile — In N decks (TODO DK8.4)", () => {
     render(<TrendingCardsSection cards={[card(2)]} isAuthed={false} />);
     const text = screen.getByText("In 2 decks");
     expect(text.closest("a, button")).toBeNull();
+  });
+
+  it("the trending tile's per-card action (DK8.3) sits under the tile, outside its link", () => {
+    render(
+      <TrendingCardsSection
+        cards={[card(2)]}
+        isAuthed={false}
+        cardAction={(c) => <button type="button">Build a deck around this card: {c.title}</button>}
+      />,
+    );
+    const action = screen.getByRole("button", { name: "Build a deck around this card: Vipara" });
+    expect(action.parentElement?.closest("a, button")).toBeNull();
+    // None unless asked for (the gallery's and the home page's rows).
+    cleanup();
+    render(<TrendingCardsSection cards={[card(2)]} isAuthed={false} />);
+    expect(screen.queryByRole("button", { name: /Build a deck around/ })).toBeNull();
   });
 
   it("one deck is singular; none, or not read, says nothing", () => {
