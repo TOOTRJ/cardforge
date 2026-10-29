@@ -39,6 +39,7 @@ import {
 import { isUuid } from "@/lib/ids";
 import { firstString } from "@/lib/routing/search-params";
 import { PageContainer } from "@/components/layout/page-container";
+import { CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // The community gallery is two routes with one result grid:
@@ -198,7 +199,7 @@ export function GalleryLanding() {
   const filters = parseGalleryFilters({});
 
   return (
-    <PageContainer className="py-12">
+    <PageContainer size="wide" className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -311,7 +312,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer className="py-12">
+    <PageContainer size="wide" className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -534,11 +535,11 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
           </Link>
         </div>
       ) : null}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <CardGrid>
         {cards.map((card) => (
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}
-      </div>
+      </CardGrid>
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
@@ -574,7 +575,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
 
 function GallerySkeletonGrid({ count }: { count: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <CardGrid>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <CardPreviewSkeleton />
@@ -584,7 +585,7 @@ function GallerySkeletonGrid({ count }: { count: number }) {
           </div>
         </div>
       ))}
-    </div>
+    </CardGrid>
   );
 }
 

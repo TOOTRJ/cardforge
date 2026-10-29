@@ -2,25 +2,27 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
+import { CARD_GRID_CLASS } from "@/components/cards/card-grid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
 
 // ---------------------------------------------------------------------------
-// One-row card strips. The grid shows 2 / 3 / 4 / 5 columns as the viewport
-// grows and the tiles past the last column are hidden (never wrapped), so
-// a phone sees two cards and a desktop five — the row never becomes two.
-// Fetch ROW_MAX cards; the CSS decides how many are visible.
+// One-row card strips. The card grid's columns (components/cards/card-grid
+// .tsx: 2 / 3 / 4 / 6 by the width of the strip, TODO WD3) and the tiles
+// past the last column hidden (never wrapped), so a phone sees two cards and
+// a wide page six — the row never becomes two. Fetch ROW_MAX cards; the CSS
+// decides how many are visible. The grid sits in its own `@container`.
 // ---------------------------------------------------------------------------
 
-export const ROW_MAX = 5;
-export const ROW_GRID_CLASS = "grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5";
+export const ROW_MAX = 6;
+export const ROW_GRID_CLASS = CARD_GRID_CLASS;
 
 /** Visibility class for the tile at `index` — matches ROW_GRID_CLASS. */
 export function rowTileClass(index: number): string {
-  if (index >= 4) return "hidden xl:flex";
-  if (index >= 3) return "hidden lg:flex";
-  if (index >= 2) return "hidden sm:flex";
+  if (index >= 4) return "hidden @min-[84rem]:flex";
+  if (index >= 3) return "hidden @4xl:flex";
+  if (index >= 2) return "hidden @xl:flex";
   return "flex";
 }
 
@@ -68,12 +70,14 @@ export function CardRowSection({
           </Link>
         ) : null}
       </div>
-      <div className={ROW_GRID_CLASS}>
-        {cards.slice(0, ROW_MAX).map((card, index) => (
-          <div key={card.id} className={cn("flex-col", rowTileClass(index))}>
-            <GalleryCardTile card={card} isAuthed={isAuthed} />
-          </div>
-        ))}
+      <div className="@container">
+        <div className={ROW_GRID_CLASS}>
+          {cards.slice(0, ROW_MAX).map((card, index) => (
+            <div key={card.id} className={cn("flex-col", rowTileClass(index))}>
+              <GalleryCardTile card={card} isAuthed={isAuthed} />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -86,13 +90,15 @@ export function CardRowSkeleton() {
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-48" />
       </div>
-      <div className={ROW_GRID_CLASS}>
-        {Array.from({ length: ROW_MAX }).map((_, i) => (
-          <div key={i} className={cn("flex-col gap-2", rowTileClass(i))}>
-            <CardPreviewSkeleton />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        ))}
+      <div className="@container">
+        <div className={ROW_GRID_CLASS}>
+          {Array.from({ length: ROW_MAX }).map((_, i) => (
+            <div key={i} className={cn("flex-col gap-2", rowTileClass(i))}>
+              <CardPreviewSkeleton />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

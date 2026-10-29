@@ -80,7 +80,9 @@ function RibbonBody({ dismissKey, headline, upcoming }: BannerSliceProps) {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-linear-to-r from-gold/15 via-primary/10 to-gold/15"
       />
-      <PageContainer className="relative flex items-stretch">
+      {/* The header's wide frame (owner decision D7): the ribbon is chrome
+          right under it, so its text lines up with the logo on every page. */}
+      <PageContainer size="wide" className="relative flex items-stretch">
         <Link
           href={href}
           className="group flex min-w-0 flex-1 flex-col gap-1 py-3 pr-10 text-sm sm:flex-row sm:items-center sm:gap-4"

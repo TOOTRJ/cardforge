@@ -10,6 +10,7 @@ import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-
 import { listGalleryCards } from "@/lib/cards/queries";
 import { isIndexableTagHub, listTagHubs, resolveTagHub, TAG_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import { PageContainer } from "@/components/layout/page-container";
+import { CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // /gallery/tag/[tag] — a real page per discovery tag, built from the public
@@ -56,7 +57,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
   const galleryHref = `/gallery/browse?tag=${encodeURIComponent(hub.tag)}`;
 
   return (
-    <PageContainer className="py-12">
+    <PageContainer size="wide" className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -80,11 +81,11 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
           hub.count < TAG_HUB_MIN_CARDS ? "A young tag: add yours to grow it." : "Sorted by what the community liked most."
         }`}
       />
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <CardGrid className="mt-8">
         {cards.map((card) => (
           <GalleryCardTile key={card.id} card={card} isAuthed={false} />
         ))}
-      </div>
+      </CardGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
         <Button asChild size="sm">
           <Link href="/create">

@@ -99,20 +99,23 @@ export function TrendingCardsSection({
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      {/* ONE row, always: the grid's column count follows the viewport and
-          tiles past the last column are hidden, never wrapped. */}
-      <div className={ROW_GRID_CLASS}>
-        {cards.map((card, index) => (
-          <TrendingTile
-            key={card.id}
-            card={card}
-            rank={hero ? index + 1 : null}
-            priority={priority}
-            siteBase={siteBase}
-            isAuthed={isAuthed}
-            className={rowTileClass(index)}
-          />
-        ))}
+      {/* ONE row, always: the grid's column count follows the row's own
+          width (its query container) and tiles past the last column are
+          hidden, never wrapped. */}
+      <div className="@container">
+        <div className={ROW_GRID_CLASS}>
+          {cards.map((card, index) => (
+            <TrendingTile
+              key={card.id}
+              card={card}
+              rank={hero ? index + 1 : null}
+              priority={priority}
+              siteBase={siteBase}
+              isAuthed={isAuthed}
+              className={rowTileClass(index)}
+            />
+          ))}
+        </div>
       </div>
       {footer ? <div className="mt-6 border-t border-border/40 pt-5">{footer}</div> : null}
     </section>
@@ -264,8 +267,10 @@ function ProfileChip({
     </>
   );
 
+  // Wraps: on a phone's two-column row (a ~150 px tile) the counts drop
+  // under the chip instead of squeezing the creator's name away.
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
       {owner?.username ? (
         <Link
           href={`/profile/${owner.username}`}
@@ -284,8 +289,8 @@ function ProfileChip({
 
 // ---------------------------------------------------------------------------
 // Skeleton matched to the section above so layout doesn't shift while the
-// query streams in. Defaults to 4 columns since both the home and gallery
-// surfaces use the same grid breakpoints.
+// query streams in. Pass the row's ROW_MAX; the row's own columns hide the
+// rest.
 // ---------------------------------------------------------------------------
 
 export function TrendingCardsSectionSkeleton({ count = 4 }: { count?: number }) {
@@ -295,16 +300,18 @@ export function TrendingCardsSectionSkeleton({ count = 4 }: { count?: number }) 
         <Skeleton className="h-3 w-28" />
         <Skeleton className="h-7 w-56" />
       </div>
-      <div className={ROW_GRID_CLASS}>
-        {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className={cn("flex flex-col gap-2", rowTileClass(i))}>
-            <CardPreviewSkeleton />
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <Skeleton shape="circle" className="h-6 w-6" />
-              <Skeleton className="h-3 w-8" />
+      <div className="@container">
+        <div className={ROW_GRID_CLASS}>
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className={cn("flex flex-col gap-2", rowTileClass(i))}>
+              <CardPreviewSkeleton />
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <Skeleton shape="circle" className="h-6 w-6" />
+                <Skeleton className="h-3 w-8" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

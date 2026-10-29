@@ -10,7 +10,7 @@ import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import {
-  DECK_GRID_CLASS,
+  DeckGrid,
   DECK_GRID_SIZES,
   DeckTile,
   DeckTileSkeleton,
@@ -104,7 +104,7 @@ export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer className="py-12">
+    <PageContainer size="wide" className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -208,7 +208,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer className="py-12">
+    <PageContainer size="wide" className="py-12">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -354,11 +354,11 @@ async function PublicDecksResults({
 
   return (
     <>
-      <div className={DECK_GRID_CLASS}>
+      <DeckGrid>
         {decks.map((deck) => (
           <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} sizes={DECK_GRID_SIZES} />
         ))}
-      </div>
+      </DeckGrid>
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
@@ -388,10 +388,10 @@ async function PublicDecksResults({
 
 function DecksSkeletonGrid({ count }: { count: number }) {
   return (
-    <div className={DECK_GRID_CLASS}>
+    <DeckGrid>
       {Array.from({ length: count }).map((_, i) => (
         <DeckTileSkeleton key={i} />
       ))}
-    </div>
+    </DeckGrid>
   );
 }

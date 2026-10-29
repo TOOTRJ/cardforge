@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { BakedCardFlip } from "@/components/cards/baked-card-flip";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -106,8 +107,10 @@ export type BakedCardThumbnailProps = {
   priority?: boolean;
 };
 
-const DEFAULT_SIZES =
-  "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
+// A tile of the card grids (components/cards/card-grid.tsx: 2 / 3 / 4 / 6
+// columns on a wide page, TODO WD3). Only the PNG fallback reads it — a
+// stored thumb is the 600 px WebP itself.
+const DEFAULT_SIZES = CARD_GRID_SIZES;
 
 export function BakedCardThumbnail({
   renderedImageUrl,

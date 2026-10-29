@@ -30,7 +30,7 @@ import {
 } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import {
-  DECK_GRID_CLASS,
+  DeckGrid,
   DECK_GRID_SIZES,
   DeckTile,
   DeckTileSkeleton,
@@ -45,6 +45,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { PageContainer } from "@/components/layout/page-container";
+import { CardGrid } from "@/components/cards/card-grid";
 
 type Params = { username: string };
 
@@ -126,7 +127,7 @@ export default async function ProfilePage({
     : undefined;
 
   return (
-    <PageContainer className="py-12" style={accentStyle}>
+    <PageContainer size="wide" className="py-12" style={accentStyle}>
       <JsonLd data={buildProfileJsonLd(profile, displayName)} />
       <Link
         href="/gallery"
@@ -164,7 +165,7 @@ export default async function ProfilePage({
       />
 
       <div className="mt-8">
-        <Suspense fallback={<ProfileCardsSkeleton count={8} />}>
+        <Suspense fallback={<ProfileCardsSkeleton count={12} />}>
           <ProfileCards
             ownerId={profile.id}
             ownerUsername={profile.username ?? username}
@@ -219,10 +220,10 @@ async function ProfileDecks({
 
   return (
     <>
-      {/* DECK_GRID_CLASS is grid-cols-1 (minmax(0, 1fr)) and DeckTile is
+      {/* DeckGrid is grid-cols-1 (minmax(0, 1fr)) and DeckTile is
           min-w-0: a long one-word deck title wraps instead of widening a
           390 px page. */}
-      <div className={DECK_GRID_CLASS}>
+      <DeckGrid>
         {decks.map((deck) => (
           <DeckTile
             key={deck.id}
@@ -232,7 +233,7 @@ async function ProfileDecks({
             likeRedirect={`/profile/${username}`}
           />
         ))}
-      </div>
+      </DeckGrid>
       {total > decks.length ? (
         <div className="mt-6">
           <Button asChild variant="outline" size="sm">
@@ -249,11 +250,11 @@ async function ProfileDecks({
 
 function ProfileDecksSkeleton() {
   return (
-    <div className={DECK_GRID_CLASS}>
+    <DeckGrid>
       {Array.from({ length: 3 }).map((_, i) => (
         <DeckTileSkeleton key={i} />
       ))}
-    </div>
+    </DeckGrid>
   );
 }
 
@@ -465,7 +466,7 @@ async function PinnedRow({
         <Pin className="h-3.5 w-3.5" aria-hidden />
         <span id="pinned-heading">Pinned</span>
       </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <CardGrid>
         {cards.map((card) => (
           <ProfileCardTile
             profileOverrides={profileOverrides}
@@ -474,7 +475,7 @@ async function PinnedRow({
             ownerUsername={ownerUsername}
           />
         ))}
-      </div>
+      </CardGrid>
     </section>
   );
 }
@@ -483,11 +484,11 @@ function PinnedRowSkeleton() {
   return (
     <section className="mt-8" aria-busy="true">
       <Skeleton className="mb-3 h-3 w-16" />
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <CardGrid>
         {[0, 1, 2].map((i) => (
           <CardPreviewSkeleton key={i} />
         ))}
-      </div>
+      </CardGrid>
     </section>
   );
 }
@@ -515,7 +516,7 @@ async function ProfileCards({
     );
   }
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <CardGrid>
       {cards.map((card) => (
         <ProfileCardTile
             profileOverrides={profileOverrides}
@@ -524,13 +525,13 @@ async function ProfileCards({
           ownerUsername={ownerUsername}
         />
       ))}
-    </div>
+    </CardGrid>
   );
 }
 
 function ProfileCardsSkeleton({ count }: { count: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <CardGrid>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <CardPreviewSkeleton />
@@ -540,7 +541,7 @@ function ProfileCardsSkeleton({ count }: { count: number }) {
           </div>
         </div>
       ))}
-    </div>
+    </CardGrid>
   );
 }
 

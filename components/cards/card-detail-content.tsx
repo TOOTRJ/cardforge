@@ -72,7 +72,7 @@ import {
   listPublicDecksContaining,
 } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
-import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
+import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
 import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
@@ -625,7 +625,7 @@ function DecksWithCard({
           {total > decks.length ? ` — the newest ${decks.length}` : ""}.
         </p>
       </div>
-      <div className={DECK_GRID_CLASS}>
+      <DeckGrid>
         {decks.map((deck) => (
           <DeckTile
             key={deck.id}
@@ -635,7 +635,7 @@ function DecksWithCard({
             likeRedirect={cardPath}
           />
         ))}
-      </div>
+      </DeckGrid>
     </section>
   );
 }
