@@ -33,7 +33,7 @@ vi.mock("openai", () => ({
 }));
 
 const { scanImageUrl } = await import("@/lib/moderation/image-scan");
-const { BLOCKED_CATEGORIES, IMAGE_MODERATION_MODEL, imageModerationRequest, scanVerdict } = await import("@/lib/moderation/image-scan-core");
+const { AI_ART_BLOCKED_CATEGORIES, BLOCKED_CATEGORIES, IMAGE_MODERATION_MODEL, imageModerationRequest, scanVerdict } = await import("@/lib/moderation/image-scan-core");
 const { moderateOnce } = await import("@/scripts/lib/review-rescan.mjs");
 
 const URL_ = "https://auth.pipglyph.com/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/a.png";
@@ -74,11 +74,26 @@ describe("the image moderation scan", () => {
 
   it("the upload path fails open: no key → no call; an API error → not flagged", async () => {
     delete process.env.OPENAI_API_KEY;
-    expect(await scanImageUrl(URL_)).toEqual({ flagged: false, categories: [] });
+    expect(await scanImageUrl(URL_)).toEqual({ flagged: false, categories: [], skipped: "no_key" });
     expect(openai.requests).toEqual([]);
     process.env.OPENAI_API_KEY = "sk-test-not-a-key";
     openai.fail = Object.assign(new Error("boom"), { status: 500 });
-    expect(await scanImageUrl(URL_)).toEqual({ flagged: false, categories: [] });
+    expect(await scanImageUrl(URL_)).toEqual({ flagged: false, categories: [], skipped: "error" });
+  });
+
+  it("AI art is scanned for the sexual categories ALONE, on its own timeout (owner 2026-10-28)", async () => {
+    expect([...AI_ART_BLOCKED_CATEGORIES].sort()).toEqual(["sexual", "sexual/minors"]);
+    const ai = { categories: AI_ART_BLOCKED_CATEGORIES, timeoutMs: 10_000 };
+    for (const category of ["violence", "violence/graphic", "hate", "self-harm", "harassment"]) {
+      openai.answer = { results: [{ flagged: true, categories: { [category]: true } }] };
+      expect(await scanImageUrl(URL_, ai), category).toEqual({ flagged: false, categories: [] });
+    }
+    openai.answer = { results: [{ flagged: true, categories: { violence: true, "sexual/minors": true, sexual: true } }] };
+    expect(await scanImageUrl(URL_, ai)).toEqual({ flagged: true, categories: ["sexual/minors", "sexual"] });
+    expect(openai.options.at(-1)).toEqual({ apiKey: "sk-test-not-a-key", timeout: 10_000 });
+    // The uploads' list is untouched: hate still blocks an upload.
+    openai.answer = { results: [{ flagged: true, categories: { hate: true } }] };
+    expect(await scanImageUrl(URL_)).toEqual({ flagged: true, categories: ["hate"] });
   });
 
   it("the owner-run rescan sends the very same request and reaches the same verdict — but an error is never 'clean'", async () => {

@@ -27,6 +27,13 @@ export const BLOCKED_CATEGORIES: ReadonlySet<string> = new Set([
   "hate/threatening",
 ]);
 
+/** What blocks an AI-GENERATED picture (owner 2026-10-28): nudity only. The
+ *  owner's policy allows violence and dark themes in card art, and a
+ *  picture we painted from our own prompt has no hate or self-harm upload
+ *  to stop — the scan exists to catch the nude figure a model drew anyway
+ *  (lib/ai/random-art.ts). */
+export const AI_ART_BLOCKED_CATEGORIES: ReadonlySet<string> = new Set(["sexual", "sexual/minors"]);
+
 export type ImageScanResult = { flagged: boolean; categories: string[] };
 
 /** The moderation request for the image at `url` (OpenAI fetches it). */
@@ -37,13 +44,15 @@ export function imageModerationRequest(url: string) {
   };
 }
 
-/** One moderation result → the verdict: flagged only for a blocked category. */
+/** One moderation result → the verdict: flagged only for a blocked category
+ *  (`blocked`: the uploads' list unless a caller names its own). */
 export function scanVerdict(
   result: { flagged?: boolean; categories?: object | null } | null | undefined,
+  blocked: ReadonlySet<string> = BLOCKED_CATEGORIES,
 ): ImageScanResult {
   if (!result?.flagged) return { flagged: false, categories: [] };
   const categories = Object.entries(result.categories ?? {})
-    .filter(([name, on]) => Boolean(on) && BLOCKED_CATEGORIES.has(name))
+    .filter(([name, on]) => Boolean(on) && blocked.has(name))
     .map(([name]) => name);
   return { flagged: categories.length > 0, categories };
 }

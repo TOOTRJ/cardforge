@@ -75,6 +75,12 @@ export const AI_FAILURE_COPY: Record<AiFailureKind, string> = {
   step_failed: "Something went wrong while making this card. Try again.",
 };
 
+/** A picture our own nudity scan blocked after it was painted (owner
+ *  2026-10-28, lib/ai/random-art.ts): an `art_blocked` step whose `error` is
+ *  this sentence says so, not the provider's filter sentence. */
+export const ART_NUDITY_BLOCKED_COPY =
+  "This artwork was blocked by our nudity filter. Try again or change the prompt.";
+
 /**
  * The credit half of a failure message. `refunded` is what the failed
  * attempt returned (a job step records it); null/0 means nothing was taken
@@ -110,9 +116,13 @@ export function failedStepMessage(step: {
 }): string {
   // A save refusal carries the save's own words (our copy: "That frame
   // isn't available in red yet — …"), which say more than the kind's.
+  // So does our nudity scan's block (the same `art_blocked` kind as a
+  // provider's refusal, its own sentence).
   const own = step.error?.trim();
+  const ownWords =
+    (step.failure === "save_failed" && own) || (step.failure === "art_blocked" && own === ART_NUDITY_BLOCKED_COPY);
   const what =
-    isAiFailureKind(step.failure) && !(step.failure === "save_failed" && own)
+    isAiFailureKind(step.failure) && !ownWords
       ? AI_FAILURE_COPY[step.failure]
       : own || AI_FAILURE_COPY.step_failed;
   return `${what} ${creditOutcome(step.refunded, step.refund_pending)}`;

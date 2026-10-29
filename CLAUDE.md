@@ -1446,8 +1446,16 @@ Rules and gotchas:
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
   missing key returns a clear error, never a silent gpt-image-1 fallback.
+  Text-to-image is HEDGED by ONE backup gateway model (owner 2026-10-28:
+  `bfl/flux-2-pro`, started at 60 s or on the default's failure, once per
+  picture, inside the caller's budget — `generatePlainImage`); one credit per
+  picture whichever model paints, `image_model` on the step. Every art prompt
+  carries the "fully clothed" line (added at that one door), and violence is
+  allowed in art — the ladder softens nudity / sexual words only.
   `OPENAI_API_KEY` is moderation-only (the omni-moderation scan on human
-  uploads). AI batch jobs (deck/set/card) step through `patch_job_step`
+  uploads, and on every stored AI picture with the SEXUAL categories alone —
+  `persistGeneratedArt`: flagged → removed, `art_blocked`, refunded once;
+  fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
   reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
   `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in

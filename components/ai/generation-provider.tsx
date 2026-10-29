@@ -21,7 +21,7 @@ import {
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { jobStatusOf, openStepKeys, stepsNeedingCards } from "@/lib/ai/job-queue";
-import { retryCreditNote } from "@/lib/ai/failure";
+import { failedStepMessage, retryCreditNote } from "@/lib/ai/failure";
 import type {
   GenerationJobOutcome,
   GenerationJobPhase,
@@ -746,9 +746,9 @@ export function GenerationJobProvider({
   const doneCount = steps.filter((s) => s.status === "done").length;
   const failedCount = steps.filter((s) => s.status === "failed").length;
   const runningCount = steps.filter((s) => s.status === "running").length;
-  const firstFailureError = steps.find(
-    (s) => s.status === "failed" && s.error,
-  )?.error;
+  // The creator's wording: the failure's sentence and what its credit did.
+  const firstFailedStep = steps.find((s) => s.status === "failed" && s.error);
+  const firstFailureError = firstFailedStep ? failedStepMessage(firstFailedStep) : undefined;
   const doneCardId = steps.find(
     (s) => s.status === "done" && s.card_id,
   )?.card_id;

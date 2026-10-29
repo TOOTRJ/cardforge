@@ -5,6 +5,7 @@ import type {
   GenerationJobPhase,
   GenerationJobStep,
 } from "@/components/ai/use-generation-job";
+import { failedStepMessage } from "@/lib/ai/failure";
 
 /** Live step list for an AI batch-generation job, with per-step retry for
  *  anything that failed (usually an image that didn't generate). */
@@ -48,8 +49,10 @@ export function GenerationProgress({
             {step.label}
           </span>
           {step.status === "failed" ? (
-            <span className="min-w-0 flex-1 truncate text-xs text-danger" title={step.error}>
-              {step.error}
+            // The creator's wording: the failure's sentence and what its
+            // credit did (lib/ai/failure.ts failedStepMessage).
+            <span className="min-w-0 flex-1 truncate text-xs text-danger" title={failedStepMessage(step)}>
+              {failedStepMessage(step)}
             </span>
           ) : null}
           {step.status === "failed" && canRetry ? (

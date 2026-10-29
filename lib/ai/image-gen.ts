@@ -12,6 +12,7 @@ import { autoOrientBytes } from "@/lib/media/orientation";
 import { imageWithoutMetadata } from "@/lib/media/upload-bytes";
 import { modelInputImage } from "@/lib/media/model-input";
 import type { ArtShape } from "@/lib/ai/art-aspect";
+import { FULLY_CLOTHED_LINE } from "@/lib/ai/art-prompt-safety";
 
 // ---------------------------------------------------------------------------
 // Image generation + image-to-image restyle. ALL image generation goes through
@@ -24,7 +25,10 @@ import type { ArtShape } from "@/lib/ai/art-aspect";
 // falling back. gpt-image-1 is never used.
 //
 //   - Text-to-image (batch/deck/set art): FLUX via the gateway
-//     (default bfl/flux-2-flex, override AI_IMAGE_MODEL).
+//     (default bfl/flux-2-flex, override AI_IMAGE_MODEL), HEDGED by ONE
+//     backup gateway model (bfl/flux-2-pro, override AI_IMAGE_FALLBACK_MODEL;
+//     owner 2026-10-28) — see generatePlainImage. That is a second GATEWAY
+//     model, never a provider outside the gateway.
 //   - Image-to-image restyle ("AI remix"): a multimodal gateway model
 //     (default google/gemini-2.5-flash-image, override AI_IMAGE_REMIX_MODEL)
 //     via generateText — the edited image comes back in result.files.
@@ -52,6 +56,13 @@ export type ImageCallOptions = {
   timeoutMs?: number;
 };
 
+export type PaintOptions = ImageCallOptions & {
+  /** May the backup model be started for this picture (default true)? */
+  backup?: boolean;
+  /** Told when the backup model is started (the ladder spends it once). */
+  onBackupStarted?: () => void;
+};
+
 /** Map a raw provider error to its failure kind and the user's sentence.
  *  The raw text is logged here (server only, truncated) and NEVER returned:
  *  it used to reach the user as "Image generation failed: <detail>", and a
@@ -62,8 +73,25 @@ export function imageFailure(detail: string, model: string): { kind: AiFailureKi
   return { kind, error: AI_FAILURE_COPY[kind] };
 }
 
+/** The prompt a model is sent: the caller's, cut to `max` characters with
+ *  room kept for the "fully clothed" line (owner 2026-10-28: on EVERY art
+ *  prompt, text-to-image and restyle alike — added here, at the one gateway
+ *  door, so no path can forget it). A prompt that already ends with it is
+ *  sent as is. */
+export function withFullyClothedLine(prompt: string, max: number): string {
+  const trimmed = prompt.trim();
+  if (trimmed.endsWith(FULLY_CLOTHED_LINE)) return trimmed.slice(0, max);
+  return `${trimmed.slice(0, max - FULLY_CLOTHED_LINE.length - 1).trimEnd()} ${FULLY_CLOTHED_LINE}`;
+}
+
 export type RestyleResult =
-  | { ok: true; bytes: Uint8Array; contentType: string }
+  | { ok: true; bytes: Uint8Array; contentType: string; model?: string }
+  | { ok: false; error: string; failure: AiFailureKind };
+
+/** A text-to-image answer: the picture and the gateway model that PAINTED
+ *  it (logged and stored on the step as `image_model`, for analytics). */
+export type PaintResult =
+  | { ok: true; bytes: Uint8Array; contentType: string; model: string }
   | { ok: false; error: string; failure: AiFailureKind };
 
 /** How long ONE picture may take, all prompts included: the WHOLE wait is
@@ -101,13 +129,16 @@ const MIN_RUNG_MS = 45_000;
  *  is a refusal moves to the next, safer prompt while the budget allows;
  *  a timeout or any other failure stops (rewording cures neither a slow
  *  provider nor a rate limit). The first prompt is given the whole budget.
- *  `promptIndex` says which rung succeeded. */
+ *  `promptIndex` says which rung succeeded, `model` which model painted.
+ *
+ *  The backup model (generatePlainImage) is spent ONCE per picture: the
+ *  rung that started it used it, later rungs run the default alone. */
 export async function generateImageWithFallbacks(
   prompts: readonly string[],
   aspect: ImageAspect = "square",
   options: ImageCallOptions & { budgetMs?: number } = {},
 ): Promise<
-  | { ok: true; bytes: Uint8Array; contentType: string; promptIndex: number }
+  | { ok: true; bytes: Uint8Array; contentType: string; promptIndex: number; model: string }
   | { ok: false; error: string; failure: AiFailureKind; safetyBlocked: boolean }
 > {
   const started = Date.now();
@@ -115,12 +146,17 @@ export async function generateImageWithFallbacks(
   let lastError = AI_FAILURE_COPY.art_failed;
   let lastFailure: AiFailureKind = "art_failed";
   let blocked = false;
+  let backupSpent = false;
   for (let i = 0; i < prompts.length; i += 1) {
     const remaining = budget - (Date.now() - started);
     // Don't start a rung we can't finish inside the step budget.
     if (i > 0 && remaining < MIN_RUNG_MS) break;
     const result = await generatePlainImage(prompts[i], aspect, {
       timeoutMs: Math.min(options.timeoutMs ?? remaining, Math.max(remaining, 10_000)),
+      backup: !backupSpent,
+      onBackupStarted: () => {
+        backupSpent = true;
+      },
     });
     if (result.ok) return { ...result, promptIndex: i };
     lastError = result.error;
@@ -140,8 +176,8 @@ export async function restyleImage(input: {
   prompt: string;
   timeoutMs?: number;
 }): Promise<RestyleResult> {
-  const prompt = input.prompt.trim().slice(0, 2000);
-  if (!prompt) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
+  if (!input.prompt.trim()) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
+  const prompt = withFullyClothedLine(input.prompt, 2000);
 
   if (!isGatewayConfigured()) {
     console.warn("[ai:image] restyle refused: the AI Gateway isn't configured on this deployment.");
@@ -170,7 +206,8 @@ export async function restyleImage(input: {
 
 // ---------------------------------------------------------------------------
 // Text-to-image through the gateway (batch/set art). FLUX is the default —
-// cheap (~$0.03/image), fast, and strong at consistent painterly fantasy.
+// cheap (~$0.05/image), and strong at consistent painterly fantasy — with
+// FLUX.2 [pro] as its hedge (generatePlainImage).
 // ---------------------------------------------------------------------------
 
 const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
@@ -215,60 +252,161 @@ export function imageShapeArgs(
   };
 }
 
-async function generateStyledImage(
+/** The backup text-to-image model (owner 2026-10-28, sampled on the dev
+ *  key: design-backup/ai-image-models/sheet.jpg). FLUX.2 [pro] answered in
+ *  9.9–14.9 s while [flex] took 114 s for the same kind of picture, painted
+ *  the dark prompt [flex] refused, takes the same width × height
+ *  (isSizedFluxModel) and costs less ($0.03 vs $0.05). Seedream 4.5 was
+ *  rejected: square only through the gateway and an "AI generated" stamp. */
+export const GATEWAY_IMAGE_BACKUP = "bfl/flux-2-pro";
+
+/** When the backup is started if the default hasn't answered: healthy
+ *  [flex] renders take 9–33 s, the slow windows 93–168 s. 60 s rarely
+ *  fires on a healthy render and leaves the backup ~90 s (80 s on a card
+ *  step) for a render that normally takes ~15 s. */
+export const IMAGE_HEDGE_AT_MS = 60_000;
+
+/** The backup is not started with less than this left before the deadline
+ *  (it could not finish): a call budget under IMAGE_HEDGE_AT_MS + this has
+ *  no timed hedge, only the start-on-failure one. */
+export const MIN_BACKUP_MS = 20_000;
+
+/** The default model and its backup (null when they're the same model). */
+export function imageModels(): { primary: string; backup: string | null } {
+  const primary = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
+  const backup = process.env.AI_IMAGE_FALLBACK_MODEL?.trim() || GATEWAY_IMAGE_BACKUP;
+  return { primary, backup: backup === primary ? null : backup };
+}
+
+const secondsSince = (start: number) => Math.round((Date.now() - start) / 1000);
+
+/** ONE gateway call. `stop` aborts it when the other model won: that is
+ *  logged as such, never as the model failing. Never throws. */
+async function paintWith(
+  model: string,
   prompt: string,
-  aspect: ImageAspect = "square",
-  options: ImageCallOptions = {},
-): Promise<RestyleResult> {
-  if (!isGatewayConfigured()) {
-    console.warn("[ai:image] refused: the AI Gateway isn't configured on this deployment.");
-    return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
-  }
-  const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
+  aspect: ImageAspect,
+  timeoutMs: number,
+  stop: AbortSignal,
+): Promise<PaintResult> {
   const started = Date.now();
   try {
     const { image } = await generateImage({
       model,
-      abortSignal: AbortSignal.timeout(
-        options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS,
-      ),
+      abortSignal: AbortSignal.any([AbortSignal.timeout(Math.max(1, timeoutMs)), stop]),
       // One retry within the abort budget — the SDK default (2) can push a
       // slow-failing call past the timeout for no user-visible benefit.
       maxRetries: 1,
-      prompt: prompt.trim().slice(0, 4000),
+      prompt,
       ...imageShapeArgs(model, aspect),
     });
     // A shape the model didn't take comes back as a warning, not an error —
     // the AI SDK already logs every one ("AI SDK Warning (…)", logWarnings),
     // so a run shows it without a second line of ours. The picture still
     // lands fitted to its window.
-    return {
-      ok: true,
-      bytes: image.uint8Array,
-      contentType: image.mediaType ?? "image/png",
-    };
+    return { ok: true, bytes: image.uint8Array, contentType: image.mediaType ?? "image/png", model };
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "Image generation failed.";
+    if (stop.aborted) {
+      console.info(`[ai:image] ${model} stopped after ${secondsSince(started)} s: the other model answered first.`);
+      return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
+    }
+    const detail = error instanceof Error ? error.message : "Image generation failed.";
     // How long it waited, so a slow provider shows in the log as one.
-    const failure = imageFailure(`${detail} (after ${Math.round((Date.now() - started) / 1000)} s)`, model);
+    const failure = imageFailure(`${detail} (after ${secondsSince(started)} s)`, model);
     return { ok: false, error: failure.error, failure: failure.kind };
   }
 }
 
+/** Both models failed on the same prompt: a refusal only when BOTH refused
+ *  (the ladder then walks to a softer prompt); else the other failure. */
+function bothFailed(primary: PaintResult, backup: PaintResult): PaintResult {
+  if (backup.ok || primary.ok) return backup.ok ? backup : primary;
+  return backup.failure !== "art_blocked" ? backup : primary;
+}
+
 /**
  * Text-to-image returning raw bytes (batch jobs persist via
- * persistGeneratedArt). Gateway-only — a thin alias over generateStyledImage
- * so callers read as "plain image, no style extras". Never touches OpenAI.
+ * persistGeneratedArt). Gateway-only. Never touches OpenAI.
+ *
+ * HEDGED (owner 2026-10-28): the default model starts at once; the backup
+ * (GATEWAY_IMAGE_BACKUP) starts — once, on the same prompt and shape — when
+ * the default has no answer after IMAGE_HEDGE_AT_MS, or as soon as the
+ * default FAILS (a refusal included) if that comes first. The first picture
+ * wins and the other call is aborted; nothing outlives `timeoutMs`, so the
+ * caller's budget (IMAGE_BUDGET_MS / CARD_STEP_IMAGE_BUDGET_MS) holds. The
+ * CREDIT is the caller's step's: one per picture whichever model painted
+ * it (the provider may still bill the aborted render — a few cents, only
+ * on a slow default). `model` names the painter.
  */
 export async function generatePlainImage(
   prompt: string,
   aspect: ImageAspect = "square",
-  options: ImageCallOptions = {},
-): Promise<RestyleResult> {
-  const trimmed = prompt.trim().slice(0, 4000);
-  if (!trimmed) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
-  return generateStyledImage(trimmed, aspect, options);
+  options: PaintOptions = {},
+): Promise<PaintResult> {
+  if (!prompt.trim()) return { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
+  if (!isGatewayConfigured()) {
+    console.warn("[ai:image] refused: the AI Gateway isn't configured on this deployment.");
+    return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
+  }
+  const text = withFullyClothedLine(prompt, 4000);
+  const { primary, backup } = imageModels();
+  const timeoutMs = options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS;
+  const started = Date.now();
+  const deadline = started + timeoutMs;
+
+  return new Promise<PaintResult>((resolve) => {
+    const stopPrimary = new AbortController();
+    const stopBackup = new AbortController();
+    let settled = false;
+    let primaryResult: PaintResult | null = null;
+    let backupResult: PaintResult | null = null;
+    let backupRunning = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const finish = (result: PaintResult) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      // The loser (if any) is still on the wire: stop it.
+      if (!primaryResult) stopPrimary.abort();
+      if (backupRunning && !backupResult) stopBackup.abort();
+      if (result.ok) {
+        console.info(
+          `[ai:image] painted by ${result.model} in ${secondsSince(started)} s${result.model === primary ? "" : " (backup)"}.`,
+        );
+      }
+      resolve(result);
+    };
+
+    const startBackup = (why: string): boolean => {
+      if (!backup || options.backup === false || backupRunning || settled) return false;
+      const left = deadline - Date.now();
+      if (left < MIN_BACKUP_MS) return false;
+      backupRunning = true;
+      options.onBackupStarted?.();
+      console.warn(`[ai:image] starting the backup ${backup} after ${secondsSince(started)} s: ${why}.`);
+      void paintWith(backup, text, aspect, left, stopBackup.signal).then((result) => {
+        backupResult = result;
+        if (result.ok) return finish(result);
+        // The default is still painting: it may yet answer.
+        if (primaryResult) finish(bothFailed(primaryResult, result));
+      });
+      return true;
+    };
+
+    void paintWith(primary, text, aspect, timeoutMs, stopPrimary.signal).then((result) => {
+      primaryResult = result;
+      if (result.ok) return finish(result);
+      // A deployment that can't reach the gateway can't reach the backup.
+      if (!backupRunning && result.failure !== "ai_unavailable" && startBackup(`${primary} failed (${result.failure})`)) return;
+      if (backupRunning && !backupResult) return; // the backup may yet answer
+      finish(backupResult ? bothFailed(result, backupResult) : result);
+    });
+
+    if (backup && options.backup !== false && timeoutMs >= IMAGE_HEDGE_AT_MS + MIN_BACKUP_MS) {
+      timer = setTimeout(() => startBackup(`${primary} had no answer`), IMAGE_HEDGE_AT_MS);
+    }
+  });
 }
 
 async function restyleViaGateway(
@@ -307,6 +445,7 @@ async function restyleViaGateway(
       ok: true,
       bytes: file.uint8Array,
       contentType: file.mediaType ?? "image/png",
+      model,
     };
   } catch (error) {
     const detail =
