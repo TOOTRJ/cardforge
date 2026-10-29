@@ -520,8 +520,56 @@ export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPa
 
 type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: string[]) => Promise<C[]>;
 
-/** The one body of both reads: the entries in list order, each card the
- *  deck may show (canLinkIntoDeck), each other creator's handle. */
+/** The function the deck's rows are read through (migration 0152). */
+export const DECK_ENTRIES_FUNCTION = "deck_entries_for_viewer";
+
+/** PostgREST's "no such function" (PGRST202), or Postgres' own (42883): a
+ *  database migration 0152 hasn't reached. */
+function isMissingEntriesFunction(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === "PGRST202" || code === "42883";
+}
+
+/**
+ * A deck's entries, every row, in list order, as its page shows them to THIS
+ * viewer — migration 0152's deck_entries_for_viewer: the deck's owner gets
+ * the rows as stored; anyone else gets every row, an entry that links a card
+ * the deck doesn't show them (a private card, another creator's card that is
+ * no longer public) with no printing behind it MASKED — "Private card"
+ * (PRIVATE_CARD_NAME), none of the card's text, cost, colours or rarity. The
+ * table itself no longer hands such a row to anyone but the owner (0152's
+ * read policy), so a visitor's list keeps its "Private card" rows only
+ * through the function. A database 0152 hasn't reached: the table, as before.
+ */
+async function readDeckEntryRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  deckId: string,
+) {
+  const viaFunction = await selectAllRows<DeckCardRow>((from, to) =>
+    supabase
+      .rpc(DECK_ENTRIES_FUNCTION, { p_deck_id: deckId }, { count: "exact" })
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  if (!isMissingEntriesFunction(viaFunction.error)) return viaFunction;
+  // Remove once 0152 is on production and dev.
+  return selectAllRows<DeckCardRow>((from, to) =>
+    supabase
+      .from("deck_cards")
+      .select("*", { count: "exact" })
+      .eq("deck_id", deckId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+}
+
+/** The one body of both reads: the entries in list order (as this viewer
+ *  may read them, readDeckEntryRows), each card the deck may show
+ *  (canLinkIntoDeck), each other creator's handle. */
 async function readDeckItems<C extends { id: string; owner_id: string; visibility: string }>(
   deckId: string,
   readCards: CardReader<C>,
@@ -530,16 +578,7 @@ async function readDeckItems<C extends { id: string; owner_id: string; visibilit
   try {
     const supabase = await createClient();
     const [{ data: entries, error }, { data: deck }] = await Promise.all([
-      selectAllRows<DeckCardRow>((from, to) =>
-        supabase
-          .from("deck_cards")
-          .select("*", { count: "exact" })
-          .eq("deck_id", deckId)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to),
-      ),
+      readDeckEntryRows(supabase, deckId),
       supabase.from("decks").select("owner_id").eq("id", deckId).maybeSingle(),
     ]);
     // No readable deck row, no entries: without the owner, another

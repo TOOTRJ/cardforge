@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //   * tile counts come off the deck row (decks.card_count /
 //     linked_card_count, migration 0143) — no list reads deck_cards at all;
 //   * every public list and count asks for card_count > 0;
-//   * a deck's entries are read in pages, ordered on a unique key last;
+//   * a deck's entries are read in pages, ordered on a unique key last —
+//     through migration 0152's deck_entries_for_viewer (a visitor's rows
+//     masked where a private card stands), the table where it is missing;
 //   * linked cards are looked up 100 ids a request (a short URL).
 // ---------------------------------------------------------------------------
 
@@ -27,48 +29,70 @@ const s = vi.hoisted(() => ({
   rpcAnswer: { data: null as unknown, error: null as unknown },
   /** A cards column the database doesn't have (42703 when a select names it). */
   missingColumn: null as string | null,
+  /** A database 0152 hasn't reached: deck_entries_for_viewer answers PGRST202. */
+  entriesFunctionMissing: false,
+  /** Any other error deck_entries_for_viewer answers. */
+  entriesFunctionError: null as { code: string; message: string } | null,
 }));
 
+/** The deck's rows through migration 0152's function (the call is recorded
+ *  as table "rpc:deck_entries_for_viewer"). */
+const ENTRIES_RPC = "rpc:deck_entries_for_viewer";
+
 function client() {
+  // A query chain; `call.table` says what answers it.
+  const chainFor = (call: Call) => {
+    const answer = () => {
+      const { table } = call;
+      if (table === ENTRIES_RPC && s.entriesFunctionError) return { data: null, error: s.entriesFunctionError };
+      if (table === ENTRIES_RPC && s.entriesFunctionMissing) {
+        return { data: null, error: { code: "PGRST202", message: "Could not find the function public.deck_entries_for_viewer" } };
+      }
+      if (table === "deck_cards" || table === ENTRIES_RPC) {
+        const range = call.ops.find((op) => op[0] === "range");
+        const [from, to] = range ? [range[1] as number, range[2] as number] : [0, 999];
+        return {
+          data: s.entries.slice(from, Math.min(to + 1, from + 1000)),
+          error: null,
+          count: s.withCount ? s.entries.length : null,
+        };
+      }
+      if (table.startsWith("rpc:")) return s.rpcAnswer;
+      if (table === "cards") {
+        const select = String(call.ops.find((op) => op[0] === "select")?.[1] ?? "");
+        if (s.missingColumn && select.split(", ").includes(s.missingColumn)) {
+          return { data: null, error: { code: "42703", message: `column cards.${s.missingColumn} does not exist` } };
+        }
+        const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
+        return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
+      }
+      return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
+    };
+    const chain: Record<string, unknown> = {};
+    for (const op of ["select", "eq", "gt", "in", "or", "order", "range", "limit"]) {
+      chain[op] = (...args: unknown[]) => {
+        call.ops.push([op, ...args]);
+        return chain;
+      };
+    }
+    chain.maybeSingle = async () => ({ data: (s.rows[call.table] ?? [])[0] ?? null, error: null });
+    chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+      Promise.resolve(answer()).then(resolve, reject);
+    return chain;
+  };
   return {
-    async rpc(name: string, args: unknown) {
+    rpc(name: string, args: unknown, options?: unknown) {
       s.rpcCalls.push([name, args]);
-      return s.rpcAnswer;
+      const call: Call = { table: `rpc:${name}`, ops: [["rpc", args, options]] };
+      // The deck's rows are a read like the tables'; the other functions are
+      // asserted through rpcCalls.
+      if (call.table === ENTRIES_RPC) s.calls.push(call);
+      return chainFor(call);
     },
     from(table: string) {
       const call: Call = { table, ops: [] };
       s.calls.push(call);
-      const answer = () => {
-        if (table === "deck_cards") {
-          const range = call.ops.find((op) => op[0] === "range");
-          const [from, to] = range ? [range[1] as number, range[2] as number] : [0, 999];
-          return {
-            data: s.entries.slice(from, Math.min(to + 1, from + 1000)),
-            error: null,
-            count: s.withCount ? s.entries.length : null,
-          };
-        }
-        if (table === "cards") {
-          const select = String(call.ops.find((op) => op[0] === "select")?.[1] ?? "");
-          if (s.missingColumn && select.split(", ").includes(s.missingColumn)) {
-            return { data: null, error: { code: "42703", message: `column cards.${s.missingColumn} does not exist` } };
-          }
-          const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
-          return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
-        }
-        return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
-      };
-      const chain: Record<string, unknown> = {};
-      for (const op of ["select", "eq", "gt", "in", "or", "order", "range", "limit"]) {
-        chain[op] = (...args: unknown[]) => {
-          call.ops.push([op, ...args]);
-          return chain;
-        };
-      }
-      chain.maybeSingle = async () => ({ data: (s.rows[table] ?? [])[0] ?? null, error: null });
-      chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-        Promise.resolve(answer()).then(resolve, reject);
-      return chain;
+      return chainFor(call);
     },
   };
 }
@@ -84,6 +108,7 @@ import {
   countDeckEntries,
   countPublicDecks,
   countPublicDecksByOwner,
+  DECK_ENTRIES_FUNCTION,
   DECK_PAGE_CARD_COLUMNS,
   listDeckCards,
   listDeckPageCards,
@@ -131,6 +156,8 @@ beforeEach(() => {
   s.rpcCalls = [];
   s.rpcAnswer = { data: null, error: null };
   s.missingColumn = null;
+  s.entriesFunctionMissing = false;
+  s.entriesFunctionError = null;
 });
 
 describe("deck tiles read their counts off the deck row", () => {
@@ -194,14 +221,18 @@ describe("listDeckCards reads a whole deck", () => {
     expect(items).toHaveLength(1003);
     expect(items.filter((item) => item.card)).toHaveLength(450);
 
-    const entryCalls = s.calls.filter((c) => c.table === "deck_cards");
+    // Through 0152's function, never the table.
+    expect(s.calls.some((c) => c.table === "deck_cards")).toBe(false);
+    const entryCalls = s.calls.filter((c) => c.table === ENTRIES_RPC);
     expect(entryCalls.map((c) => c.ops.find((op) => op[0] === "range"))).toEqual([
       ["range", 0, 999],
       ["range", 1000, 1999],
     ]);
     for (const call of entryCalls) {
+      expect(hasOp(call, "rpc", { p_deck_id: "big" }, { count: "exact" })).toBe(true);
+      expect(hasOp(call, "order", "position", { ascending: true })).toBe(true);
+      expect(hasOp(call, "order", "created_at", { ascending: true })).toBe(true);
       expect(hasOp(call, "order", "id", { ascending: true })).toBe(true);
-      expect(hasOp(call, "select", "*", { count: "exact" })).toBe(true);
     }
 
     const cardCalls = s.calls.filter((c) => c.table === "cards");
@@ -272,7 +303,45 @@ describe("listDeckCards reads a whole deck", () => {
     s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
-    expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
+    expect(s.calls.filter((c) => c.table === ENTRIES_RPC)).toHaveLength(1);
+  });
+
+  it("reads the rows through 0152's function, as it hands them back (a visitor's private card masked there)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.cardVisibility = { "card-private": "private" };
+    // What the function answers a visitor: the entry, never the card's text.
+    s.entries = [
+      { id: "e1", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-private", scryfall_id: null, name: "Private card", type_line: null, mana_cost: null, mana_value: null, color_identity: [], rarity: null, source: "creator" },
+      { id: "e2", deck_id: "d", board: "main", quantity: 4, position: 1, card_id: null, scryfall_id: "bolt", name: "Lightning Bolt", type_line: "Instant", mana_cost: "{R}", mana_value: 1, color_identity: ["R"], rarity: "common", source: "import" },
+    ];
+    const items = await listDeckCards("d");
+    expect(s.rpcCalls.filter(([name]) => name === DECK_ENTRIES_FUNCTION)).toEqual([[DECK_ENTRIES_FUNCTION, { p_deck_id: "d" }]]);
+    expect(items.map((item) => [item.entry.name, item.entry.type_line, item.entry.mana_cost, item.entry.card_id, item.entry.quantity])).toEqual([
+      ["Private card", null, null, "card-private", 1],
+      ["Lightning Bolt", "Instant", "{R}", null, 4],
+    ]);
+  });
+
+  it("a database 0152 hasn't reached (PGRST202): the table, read as before — ONE retry, never a loop", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entriesFunctionMissing = true;
+    s.entries = Array.from({ length: 3 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
+    expect((await listDeckCards("d")).map((item) => item.entry.name)).toEqual(["C0", "C1", "C2"]);
+    expect(s.calls.filter((c) => c.table === ENTRIES_RPC)).toHaveLength(1);
+    const tableCalls = s.calls.filter((c) => c.table === "deck_cards");
+    expect(tableCalls).toHaveLength(1);
+    expect(hasOp(tableCalls[0], "select", "*", { count: "exact" })).toBe(true);
+    expect(hasOp(tableCalls[0], "eq", "deck_id", "d")).toBe(true);
+    expect(hasOp(tableCalls[0], "order", "id", { ascending: true })).toBe(true);
+  });
+
+  it("any other error of the function reads no entries — never the table behind it (it would skip the mask)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: null, name: "C" }];
+    s.entriesFunctionError = { code: "57014", message: "canceling statement due to statement timeout" };
+    expect(await listDeckCards("d")).toEqual([]);
+    expect(await listDeckPageCards("d")).toEqual([]);
+    expect(s.calls.some((c) => c.table === "deck_cards")).toBe(false);
   });
 });
 

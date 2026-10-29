@@ -2099,6 +2099,21 @@ export type Database = {
         Args: { p_deck_id: string; p_entries: Json };
         Returns: Json;
       };
+      /** 0152 — a deck's entries as its page shows them to the caller: the
+       *  owner's rows as stored; anyone else who may open the deck (public,
+       *  unlisted by its id, their own) every row, an entry linking a card
+       *  the deck doesn't show them with no printing masked ("Private card",
+       *  the card's values cleared). Filterable, orderable, rangeable. */
+      deck_entries_for_viewer: {
+        Args: { p_deck_id: string };
+        Returns: Database["public"]["Tables"]["deck_cards"]["Row"][];
+      };
+      /** 0152 — whether a deck shows a card to anyone but its owner: a
+       *  public card, or the deck owner's own unlisted one. */
+      deck_shows_card: {
+        Args: { p_card_visibility: string; p_card_owner: string; p_deck_owner: string };
+        Returns: boolean;
+      };
       /** 0150 — the owner's cover picks, replaced: the entry ids in rank
        *  order (at most five, '{}' clears). Returns how many are picked. */
       set_deck_featured_entries: {
