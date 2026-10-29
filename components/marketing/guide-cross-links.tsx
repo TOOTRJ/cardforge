@@ -13,7 +13,7 @@ export const GUIDE_LINKS = [
   { href: "/mana-pip-editor", label: "Mana pip editor" },
   { href: "/best-mtg-card-makers", label: "Best card makers" },
   { href: "/articles", label: "Articles" },
-  { href: "/faq", label: "FAQ" },
+  { href: "/help", label: "Help & FAQ" },
 ] as const;
 
 export function GuideCrossLinks({ current }: { current: string }) {
