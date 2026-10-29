@@ -19,8 +19,10 @@
 -- Accounts (username → what it exists to test):
 --   dev_admin   is_admin + comped Pro — /admin/*, challenge authoring
 --   dev_pro     paid Pro, 200 credits — premium/AI/export surfaces
---   dev_free    free tier, 5 credits  — upgrade prompts, card limits, drafts
---   dev_artist  prolific free creator — gallery, profile, follows, trending
+--   dev_free    free tier, 5 credits  — upgrade prompts, card limits, drafts;
+--               no private deck (its first is allowed, a second refused)
+--   dev_artist  prolific free creator — gallery, profile, follows, trending;
+--               AT the private-deck cap (1 of 1, migration 0145)
 --   dev_new     NOT onboarded         — the first-run wizard redirect
 -- ---------------------------------------------------------------------------
 
@@ -797,13 +799,31 @@ where cards.id = v.id and cards.view_count = 0;
 -- ---------------------------------------------------------------------------
 -- 4. Decks: one public Commander deck mixing custom cards with real-card rows
 --    (no Scryfall ids → they render as "needs proxy"), one private draft.
+--    The draft is dev_artist's, a free account, so dev_artist sits AT the
+--    private-deck cap (Free: 1 private or unlisted deck, migration 0145) and
+--    dev_free holds none: it can make its first private deck and see the
+--    second refused (TODO DK3.6).
 -- ---------------------------------------------------------------------------
 
 insert into public.decks (id, owner_id, title, slug, description, format, visibility, deck_type, bracket)
 values
   ('b0000000-0000-4000-a000-000000000001', 'd0000000-0000-4000-a000-000000000002', 'Cinderwing Dragonstorm', 'cinderwing-dragonstorm', 'Dragons, ramp, and one very angry matriarch.', 'commander', 'public', 'Dragons', 3),
-  ('b0000000-0000-4000-a000-000000000002', 'd0000000-0000-4000-a000-000000000003', 'Merfolk Tempo (WIP)', 'merfolk-tempo-wip', null, 'modern', 'private', null, null)
+  ('b0000000-0000-4000-a000-000000000002', 'd0000000-0000-4000-a000-000000000004', 'Merfolk Tempo (WIP)', 'merfolk-tempo-wip', null, 'modern', 'private', null, null)
 on conflict (id) do nothing;
+
+-- A database seeded before 0145 holds the draft under dev_free, which would
+-- leave dev_free at the cap: hand it to dev_artist — unless dev_artist
+-- already holds a private or unlisted deck of a tester's, where the move
+-- would cross the cap (0145 checks an owner change) and fail the seed.
+update public.decks d
+set owner_id = 'd0000000-0000-4000-a000-000000000004'
+where d.id = 'b0000000-0000-4000-a000-000000000002'
+  and d.owner_id = 'd0000000-0000-4000-a000-000000000003'
+  and not exists (
+    select 1 from public.decks other
+    where other.owner_id = 'd0000000-0000-4000-a000-000000000004'
+      and other.visibility in ('private', 'unlisted')
+  );
 
 insert into public.deck_cards (id, deck_id, board, quantity, position, card_id, name, type_line, mana_cost, mana_value, color_identity, rarity)
 values

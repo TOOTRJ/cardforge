@@ -24,6 +24,51 @@ export const CARD_CAPACITY: Record<PlanTier, number> = {
   plus: 500,
   pro: CARD_CAPACITY_UNLIMITED,
 };
+
+/** PRIVATE + UNLISTED decks per tier (owner decision D1, 2026-10-28) — public
+ *  decks are unlimited on every plan; same unlimited sentinel as cards. The
+ *  database enforces the same numbers (migration 0145, deck_capacity_for) —
+ *  change both together; tests/unit/billing/deck-capacity.test.ts checks. */
+export const DECK_CAPACITY: Record<PlanTier, number> = {
+  free: 1,
+  plus: 3,
+  pro: CARD_CAPACITY_UNLIMITED,
+};
+
+/** The visibilities a deck cap counts; a public deck never does (D1). The
+ *  trigger in 0145 names the same two. */
+export const CAPPED_DECK_VISIBILITIES = ["private", "unlisted"] as const;
+
+/** "Up to 50 saved cards" / "Unlimited saved cards" — a plan's card line,
+ *  from CARD_CAPACITY (the plan cards, the billing page's free-plan copy). */
+export function savedCardsLine(tier: PlanTier): string {
+  const cap = CARD_CAPACITY[tier];
+  return cap === CARD_CAPACITY_UNLIMITED ? "Unlimited saved cards" : `Up to ${cap.toLocaleString("en-US")} saved cards`;
+}
+
+/** "1 private or unlisted deck" / "3 private or unlisted decks" — the capped
+ *  part of a plan's deck line, from DECK_CAPACITY. */
+export function privateDecksPhrase(tier: PlanTier): string {
+  const cap = DECK_CAPACITY[tier];
+  if (cap === CARD_CAPACITY_UNLIMITED) return "unlimited private and unlisted decks";
+  return `${cap} private or unlisted deck${cap === 1 ? "" : "s"}`;
+}
+
+/** "Free includes 1 private or unlisted deck, Plus 3, and Pro as many as you
+ *  like." — every plan's cap in one sentence (the upgrade modal, the FAQ). */
+export function privateDecksByPlanSentence(): string {
+  const count = (tier: PlanTier) =>
+    DECK_CAPACITY[tier] === CARD_CAPACITY_UNLIMITED ? "as many as you like" : String(DECK_CAPACITY[tier]);
+  return `Free includes ${privateDecksPhrase("free")}, Plus ${count("plus")}, and Pro ${count("pro")}.`;
+}
+
+/** A plan's deck line: public decks are unlimited on every plan; the cap is
+ *  on private and unlisted ones. */
+export function decksLine(tier: PlanTier): string {
+  return DECK_CAPACITY[tier] === CARD_CAPACITY_UNLIMITED
+    ? "Unlimited decks — public, unlisted or private"
+    : `Unlimited public decks, plus ${privateDecksPhrase(tier)}`;
+}
 export type PaidTier = "plus" | "pro";
 export type PackKey = "mini" | "small" | "large";
 export type BillingPeriod = "monthly" | "annual";
@@ -217,8 +262,9 @@ export const PLANS: PlanDisplay[] = [
       "5 AI credits at sign-up (no monthly refill — packs and plans add more)",
       "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
-      "Up to 50 saved cards",
-      "Community gallery, decks & sharing",
+      savedCardsLine("free"),
+      decksLine("free"),
+      "Community gallery & sharing",
     ],
   },
   {
@@ -231,7 +277,8 @@ export const PLANS: PlanDisplay[] = [
     features: [
       "30 AI credits every month",
       ...PLUS_PRINT_PERKS,
-      "Up to 500 saved cards",
+      savedCardsLine("plus"),
+      decksLine("plus"),
       "Everything in Free",
     ],
     comingSoon: PAID_COMING_SOON,
@@ -252,7 +299,8 @@ export const PLANS: PlanDisplay[] = [
       "100 AI credits every month",
       "AI cards & ideas designed for a specific deck",
       ...PRO_PRINT_PERKS,
-      "Unlimited saved cards",
+      savedCardsLine("pro"),
+      decksLine("pro"),
       "Everything in Plus",
     ],
     comingSoon: PRO_COMING_SOON,
