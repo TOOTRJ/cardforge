@@ -17,6 +17,7 @@ import { IconTile } from "@/components/ui/icon-tile";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { TOOL_COMPARISON, TOOLS, type ToolEntry } from "@/lib/content/tools";
+import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /tools — the directory of what PipGlyph lets you do (TODO NV7): one card
@@ -38,18 +39,17 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/tools" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: `${TITLE} · PipGlyph`,
     description: DESCRIPTION,
     type: "website",
     siteName: "PipGlyph",
     url: "/tools",
-  },
-  twitter: {
-    card: "summary_large_image",
+  }),
+  twitter: siteTwitter({
     title: `${TITLE} · PipGlyph`,
     description: DESCRIPTION,
-  },
+  }),
 };
 
 const TOOL_ICONS: Record<string, LucideIcon> = {

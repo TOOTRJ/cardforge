@@ -24,6 +24,7 @@ import {
   tagHubHref,
   type ArticleMeta,
 } from "@/lib/content/articles";
+import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /learn/[category] — one shelf of guides (TODO NV4): the category's intro
@@ -62,18 +63,17 @@ export async function generateMetadata({
     description: category.blurb,
     alternates: { canonical: path },
     robots: isIndexableCategory(count) ? undefined : { index: false, follow: true },
-    openGraph: {
+    openGraph: siteOpenGraph({
       title: `${title} · PipGlyph`,
       description: category.blurb,
       type: "website",
       siteName: "PipGlyph",
       url: path,
-    },
-    twitter: {
-      card: "summary_large_image",
+    }),
+    twitter: siteTwitter({
       title: `${title} · PipGlyph`,
       description: category.blurb,
-    },
+    }),
   };
 }
 
@@ -162,7 +162,7 @@ export default async function LearnCategoryPage({
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
             {articles.map((article) => (
-              <ArticleCard key={article.slug} article={article} />
+              <ArticleCard key={article.slug} article={article} currentPath={path} />
             ))}
           </div>
         )}

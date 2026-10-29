@@ -6,15 +6,17 @@
 //   * the AI generator and the pip editor live INSIDE the creator, so their
 //     home is their landing page (/ai-mtg-card-generator, /mana-pip-editor),
 //     which explains them and opens /create;
-//   * the deck builder is /decks (community decks; a new deck starts at
-//     /dashboard/decks/new);
+//   * the deck builder is /decks (community decks, and where a deck starts);
 //   * print sheets are a Pro option of My Cards' "Print / download" and the
 //     card download dialog — the public page that explains them is the
 //     printing guide.
 //
-// Together with the comparison page, every SEO landing page is linked from
-// here (/mtg-card-maker as the creator's "more"). Pure data, so the header
-// menu or the footer can list the same tools in the same words later.
+// Every link is a PUBLIC page: /tools is indexed, so it never sends a
+// visitor (or a crawler) to an account page that redirects to /login and
+// that robots.txt disallows. Together with the comparison page, every SEO
+// landing page is linked from here (/mtg-card-maker as the creator's
+// "more"). Pure data, so the header menu or the footer can list the same
+// tools in the same words later.
 // ---------------------------------------------------------------------------
 
 export type ToolEntry = {
@@ -66,7 +68,6 @@ export const TOOLS: readonly ToolEntry[] = [
       "Paste a decklist, swap in cards you designed, and keep the whole deck in one place to share.",
     href: "/decks",
     cta: "Browse community decks",
-    more: { href: "/dashboard/decks/new", label: "Start a deck" },
   },
   {
     slug: "print-sheets",
@@ -75,7 +76,6 @@ export const TOOLS: readonly ToolEntry[] = [
       "Lay your cards out on Letter or A4 pages with cut guides and an optional bleed, ready to print at home.",
     href: "/articles/how-to-print-proxy-mtg-cards",
     cta: "Read the printing guide",
-    more: { href: "/dashboard/cards", label: "Print from My cards" },
     plan: "Pro",
   },
 ];

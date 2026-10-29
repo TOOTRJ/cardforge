@@ -20,7 +20,11 @@ export async function GET(): Promise<Response> {
   const base = getSiteBaseUrl();
   const { updates } = await getNewsFeed();
   const items = updates.slice(0, MAX_ITEMS);
-  const lastBuild = items[0]?.publish_at ?? new Date(0).toISOString();
+  // The newest item's date; with no items there is no honest date, so the
+  // element is left out (it is optional in RSS 2.0).
+  const lastBuild = items[0]
+    ? `\n    <lastBuildDate>${new Date(items[0].publish_at).toUTCString()}</lastBuildDate>`
+    : "";
 
   const body = items
     .map((update) =>
@@ -43,8 +47,7 @@ export async function GET(): Promise<Response> {
     <link>${base}/news</link>
     <atom:link href="${base}/news/feed.xml" rel="self" type="application/rss+xml" />
     <description>Every PipGlyph update as it ships — new tools, frames and fixes.</description>
-    <language>en-us</language>
-    <lastBuildDate>${new Date(lastBuild).toUTCString()}</lastBuildDate>
+    <language>en-us</language>${lastBuild}
 ${body}
   </channel>
 </rss>

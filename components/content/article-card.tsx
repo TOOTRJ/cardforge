@@ -11,10 +11,19 @@ import { formatCalendarDate } from "@/lib/format/dates";
 // or straight to the /learn category a retired hub 308s to (tagHubHref) —
 // so they sit OUTSIDE the article link rather than nesting an <a> inside an
 // <a> (invalid HTML); the title and the "Read the guide" affordance are the
-// links into the article.
+// links into the article. A badge that would link to the page the card is
+// drawn on (the "card design" badge on /learn/design, "oracle text" on its
+// own hub) is plain text: pass that page as `currentPath`.
 // ---------------------------------------------------------------------------
 
-export function ArticleCard({ article }: { article: ArticleMeta }) {
+export function ArticleCard({
+  article,
+  currentPath,
+}: {
+  article: ArticleMeta;
+  /** The listing page's own path — its badge is not a link. */
+  currentPath?: string;
+}) {
   return (
     <SurfaceCard className="p-0 transition-colors hover:border-border-strong">
       <div className="flex flex-col gap-3 p-6">
@@ -39,20 +48,30 @@ export function ArticleCard({ article }: { article: ArticleMeta }) {
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className="flex flex-wrap gap-1.5">
-            {article.tags.map((tag) => (
-              <Link
-                key={tag}
-                href={tagHubHref(tag)}
-                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
-              >
-                <Badge
-                  variant="outline"
-                  className="transition-colors hover:border-primary-bright/60 hover:text-foreground"
+            {article.tags.map((tag) => {
+              const href = tagHubHref(tag);
+              if (href === currentPath) {
+                return (
+                  <Badge key={tag} variant="outline">
+                    {tag}
+                  </Badge>
+                );
+              }
+              return (
+                <Link
+                  key={tag}
+                  href={href}
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
                 >
-                  {tag}
-                </Badge>
-              </Link>
-            ))}
+                  <Badge
+                    variant="outline"
+                    className="transition-colors hover:border-primary-bright/60 hover:text-foreground"
+                  >
+                    {tag}
+                  </Badge>
+                </Link>
+              );
+            })}
           </div>
           <Link
             href={`/articles/${article.slug}`}

@@ -10,6 +10,7 @@ import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { getArticlesByTag, listTags } from "@/lib/content/articles";
 import { categoryForTagSlug } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /articles/tag/[tag] — a cluster hub. Every tag across the articles becomes
@@ -56,12 +57,12 @@ export async function generateMetadata({
     // Self-canonical so the hub isn't treated as a duplicate of /articles.
     alternates: { canonical: `/articles/tag/${tag}` },
     robots: indexable ? undefined : { index: false, follow: true },
-    openGraph: {
+    openGraph: siteOpenGraph({
       title: `${title} · PipGlyph`,
       description,
       type: "website",
       url: `/articles/tag/${tag}`,
-    },
+    }),
   };
 }
 
@@ -119,7 +120,11 @@ export default async function ArticleTagPage({
 
       <div className="mt-10 grid gap-5 lg:grid-cols-2">
         {found.articles.map((article) => (
-          <ArticleCard key={article.slug} article={article} />
+          <ArticleCard
+            key={article.slug}
+            article={article}
+            currentPath={`/articles/tag/${tag}`}
+          />
         ))}
       </div>
     </div>

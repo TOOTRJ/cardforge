@@ -9,6 +9,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { getNewsFeed } from "@/lib/updates/queries";
 import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
+import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /news — "What's new" (TODO NV5): every released update, newest first, and
@@ -29,18 +30,17 @@ export const metadata: Metadata = {
     canonical: "/news",
     types: { "application/rss+xml": "/news/feed.xml" },
   },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "What's new · PipGlyph",
     description: DESCRIPTION,
     type: "website",
     siteName: "PipGlyph",
     url: "/news",
-  },
-  twitter: {
-    card: "summary_large_image",
+  }),
+  twitter: siteTwitter({
     title: "What's new · PipGlyph",
     description: DESCRIPTION,
-  },
+  }),
 };
 
 // ISR over the cached public feed; admin saves purge it (lib/updates/actions).

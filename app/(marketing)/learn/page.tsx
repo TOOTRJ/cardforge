@@ -12,6 +12,7 @@ import { categoryPath } from "@/lib/content/article-categories";
 import { listCategoryShelves, type CategoryShelf } from "@/lib/content/articles";
 import { getNewsFeed } from "@/lib/updates/queries";
 import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
+import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // /learn — the hub of everything a reader learns from (TODO NV4): the four
@@ -36,18 +37,17 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/learn" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: `${TITLE} · PipGlyph`,
     description: DESCRIPTION,
     type: "website",
     siteName: "PipGlyph",
     url: "/learn",
-  },
-  twitter: {
-    card: "summary_large_image",
+  }),
+  twitter: siteTwitter({
     title: `${TITLE} · PipGlyph`,
     description: DESCRIPTION,
-  },
+  }),
 };
 
 /** The newest guides a category card names. */
