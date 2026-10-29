@@ -151,8 +151,8 @@ function unionOf(items: readonly { entry: CoverColorEntry; card: CoverColorCard 
  * commander board says anything, else every playable board's (the
  * maybeboard is not the deck). Null when nothing is known. Pure; the deck
  * page, the share image and the export read it from their own rows, the
- * tiles from `listDeckCoverColors` (lib/decks/cover-colors.ts), which reads
- * the same rows.
+ * tiles from `listDeckTileArt` (lib/decks/tile-art.ts), which reads the
+ * same rows.
  */
 export function deckCoverColors(
   items: readonly { entry: CoverColorEntry; card: CoverColorCard }[],

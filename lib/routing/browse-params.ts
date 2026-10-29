@@ -34,7 +34,7 @@ export const GALLERY_FILTER_PARAMS = [
   "seed",
 ] as const;
 
-export const DECKS_FILTER_PARAMS = ["q", "format", "sort", "page"] as const;
+export const DECKS_FILTER_PARAMS = ["q", "format", "sort", "owner", "page"] as const;
 
 export function hasAnyParam(
   searchParams: URLSearchParams,

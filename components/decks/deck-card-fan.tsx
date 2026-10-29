@@ -27,6 +27,13 @@ import { cn } from "@/lib/utils";
 const FAN_SIZES =
   "[--fan-card:84px] [--fan-step:46px] [--fan-drop:7px] sm:[--fan-card:112px] sm:[--fan-step:60px] md:[--fan-card:104px] md:[--fan-step:46px] lg:[--fan-card:136px] lg:[--fan-step:64px] lg:[--fan-drop:9px] xl:[--fan-card:156px] xl:[--fan-step:80px]";
 
+/** A deck TILE's fan (components/decks/deck-tile.tsx, TODO DK8.1): sized by
+ *  the tile's own width — the tile's picture is the query container — so a
+ *  tile in a one-column phone grid and one in a four-column row hold the
+ *  same composition (21 % of the tile per card, 58 % of a card apart). */
+const TILE_FAN_SIZES =
+  "[--fan-card:clamp(52px,21cqw,104px)] [--fan-step:calc(var(--fan-card)*0.58)] [--fan-drop:5px]";
+
 /** The top card's z-index (the fan is its own stacking context's content). */
 const FAN_MAX_LAYER = 10;
 
@@ -39,17 +46,22 @@ function slotsFor(n: number): number[] {
 export function DeckCardFan({
   cards,
   className,
+  size = "hero",
 }: {
   cards: readonly FeaturedCard<Card>[];
   className?: string;
+  /** "tile" = a deck tile's small fan, sized by its container (an
+   *  `@container` ancestor) and never eager. */
+  size?: "hero" | "tile";
 }) {
   if (cards.length === 0) return null;
   const slots = slotsFor(cards.length);
+  const tile = size === "tile";
   return (
     <ul
       aria-label="Featured cards"
       className={cn(
-        FAN_SIZES,
+        tile ? TILE_FAN_SIZES : FAN_SIZES,
         "relative mx-auto h-[calc(var(--fan-card)*1.4_+_var(--fan-drop)*4_+_12px)] w-full max-w-full",
         className,
       )}
@@ -76,8 +88,8 @@ export function DeckCardFan({
                 renderedThumbUrl={featured.card.rendered_thumb_url}
                 title={featured.title}
                 previewData={cardToPreviewData(featured.card)}
-                sizes="150px"
-                priority={index === 0}
+                sizes={tile ? "104px" : "150px"}
+                priority={!tile && index === 0}
                 // The hero is dark in both themes: the card's own dark rim
                 // and backdrop, never the theme's pale border / page colour
                 // (the backdrop shows only at a rounded bake's corners).
@@ -94,7 +106,7 @@ export function DeckCardFan({
                 <img
                   src={featured.imageUrl}
                   alt={featured.title}
-                  loading={index === 0 ? "eager" : "lazy"}
+                  loading={!tile && index === 0 ? "eager" : "lazy"}
                   decoding="async"
                   className="absolute inset-0 h-full w-full object-cover"
                 />

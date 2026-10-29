@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, ExternalLink, Heart, Pin } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Heart, Pin } from "lucide-react";
 import { CardTile } from "@/components/cards/card-tile";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -28,8 +28,14 @@ import {
   countPublicDecksByOwner,
   listPublicDecksByOwner,
 } from "@/lib/decks/queries";
-import { madeOnPipGlyph } from "@/lib/decks/tile-counts";
-import { DECK_FORMAT_LABELS } from "@/types/deck";
+import { listDeckTileArt } from "@/lib/decks/tile-art";
+import {
+  DECK_GRID_CLASS,
+  DECK_GRID_SIZES,
+  DeckTile,
+  DeckTileSkeleton,
+} from "@/components/decks/deck-tile";
+import { Button } from "@/components/ui/button";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
@@ -179,7 +185,12 @@ export default async function ProfilePage({
           />
           <div className="mt-8">
             <Suspense fallback={<ProfileDecksSkeleton />}>
-              <ProfileDecks ownerId={profile.id} />
+              <ProfileDecks
+                ownerId={profile.id}
+                username={profile.username ?? username}
+                total={publicDeckCount}
+                owner={{ username: profile.username ?? username, display_name: profile.display_name }}
+              />
             </Suspense>
           </div>
         </>
@@ -188,56 +199,61 @@ export default async function ProfilePage({
   );
 }
 
-async function ProfileDecks({ ownerId }: { ownerId: string }) {
-  const decks = await listPublicDecksByOwner(ownerId, 6);
+/** How many decks the profile shows; past it, "See all decks". */
+const PROFILE_DECKS_MAX = 6;
+
+async function ProfileDecks({
+  ownerId,
+  username,
+  total,
+  owner,
+}: {
+  ownerId: string;
+  username: string;
+  /** countPublicDecksByOwner — the decks listPublicDecksByOwner lists. */
+  total: number;
+  owner: { username: string; display_name: string | null };
+}) {
+  const decks = await listPublicDecksByOwner(ownerId, PROFILE_DECKS_MAX);
   if (decks.length === 0) return null;
+  // Cookie-free like the list (the page's like states hydrate client-side).
+  const art = await listDeckTileArt(decks, { anonymous: true });
 
   return (
-    // grid-cols-1 (minmax(0, 1fr)) + min-w-0: a long one-word deck title
-    // wraps instead of widening a 390 px page.
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {decks.map((deck) => {
-        const made = madeOnPipGlyph(deck);
-        return (
-          <Link
+    <>
+      {/* DECK_GRID_CLASS is grid-cols-1 (minmax(0, 1fr)) and DeckTile is
+          min-w-0: a long one-word deck title wraps instead of widening a
+          390 px page. */}
+      <div className={DECK_GRID_CLASS}>
+        {decks.map((deck) => (
+          <DeckTile
             key={deck.id}
-            href={`/deck/${deck.slug}`}
-            className="group block min-w-0 rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label={`Open ${deck.title}`}
-          >
-            <SurfaceCard className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-border-strong">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-subtle" aria-hidden />
-                <Badge variant="outline">
-                  {DECK_FORMAT_LABELS[deck.format]}
-                </Badge>
-              </div>
-              <h3 className="font-display text-lg font-semibold text-foreground [overflow-wrap:anywhere]">
-                {deck.title}
-              </h3>
-              <div className="mt-auto flex items-center justify-between text-xs text-muted">
-                <span>
-                  {deck.cards_count} card{deck.cards_count === 1 ? "" : "s"}
-                </span>
-                <span>{made.made} made on PipGlyph</span>
-              </div>
-            </SurfaceCard>
-          </Link>
-        );
-      })}
-    </div>
+            deck={{ ...deck, owner }}
+            art={art.get(deck.id)}
+            sizes={DECK_GRID_SIZES}
+            likeRedirect={`/profile/${username}`}
+          />
+        ))}
+      </div>
+      {total > decks.length ? (
+        <div className="mt-6">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/decks/browse?owner=${encodeURIComponent(username)}`}>
+              See all {total} decks
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 }
 
 function ProfileDecksSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className={DECK_GRID_CLASS}>
       {Array.from({ length: 3 }).map((_, i) => (
-        <SurfaceCard key={i} className="flex flex-col gap-3 p-5">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-5 w-2/3" />
-          <Skeleton className="h-3 w-1/2" />
-        </SurfaceCard>
+        <DeckTileSkeleton key={i} />
       ))}
     </div>
   );

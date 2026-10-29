@@ -131,6 +131,61 @@ export type PublicDeckListing = DeckWithCounts & {
 
 export type PublicDecksSort = "recent" | "popular" | "viewed";
 
+type DeckReadClient =
+  | ReturnType<typeof createPublicClient>
+  | Awaited<ReturnType<typeof createClient>>;
+
+/** Owners and the viewer's hearts for a page of public deck rows — the
+ *  one hydration every public deck list shares (browse, trending, a card's
+ *  "Decks with this card"). `viewerId` null = anonymous (no like read). */
+async function hydratePublicDecks(
+  supabase: DeckReadClient,
+  decks: DeckRow[],
+  viewerId: string | null,
+): Promise<PublicDeckListing[]> {
+  if (decks.length === 0) return [];
+  const deckIds = decks.map((d) => d.id);
+  const [owners, viewerLikes] = await Promise.all([
+    (async () => {
+      const ownerIds = Array.from(new Set(decks.map((d) => d.owner_id)));
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", ownerIds);
+      const byId = new Map<string, DeckOwner>();
+      for (const row of data ?? []) {
+        byId.set(row.id, {
+          username: row.username,
+          display_name: row.display_name,
+          // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+          avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
+        });
+      }
+      return byId;
+    })(),
+    viewerId
+      ? supabase
+          .from("deck_likes")
+          .select("deck_id")
+          .eq("user_id", viewerId)
+          .in("deck_id", deckIds)
+      : Promise.resolve({ data: [] as Array<{ deck_id: string }> }),
+  ]);
+
+  const viewerLiked = new Set<string>();
+  for (const row of viewerLikes.data ?? []) {
+    viewerLiked.add(row.deck_id);
+  }
+
+  // likes_count comes straight off the row — the deck_likes triggers keep
+  // it exact (migration 0055), so no aggregation query is needed here.
+  return decks.map((row) => ({
+    ...withCounts(row),
+    owner: owners.get(row.owner_id) ?? null,
+    liked_by_viewer: viewerLiked.has(row.id),
+  }));
+}
+
 export async function listPublicDecks(
   options: {
     limit?: number;
@@ -138,6 +193,9 @@ export async function listPublicDecks(
     search?: string;
     format?: DeckFormat;
     sort?: PublicDecksSort;
+    /** One creator's decks (/decks/browse?owner=<handle>, a profile's "See
+     *  all decks"). An unknown handle lists nothing. */
+    ownerUsername?: string;
     /** Skip the viewer lookup AND the cookie read entirely — for static/ISR
      *  pages (e.g. /decks). `liked_by_viewer` is `false` for every row; the
      *  like button re-checks the session cookie at click time. */
@@ -151,6 +209,7 @@ export async function listPublicDecks(
     search,
     format,
     sort = "recent",
+    ownerUsername,
     anonymous = false,
   } = options;
 
@@ -164,6 +223,15 @@ export async function listPublicDecks(
       .eq("visibility", "public")
       .gt("card_count", 0);
 
+    if (ownerUsername) {
+      const { data: owner } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", ownerUsername.toLowerCase())
+        .maybeSingle();
+      if (!owner) return [];
+      query = query.eq("owner_id", owner.id);
+    }
     if (format) {
       query = query.eq("format", format);
     }
@@ -193,48 +261,29 @@ export async function listPublicDecks(
       .range(offset, offset + limit - 1);
     if (!decks || decks.length === 0) return [];
 
-    const deckIds = decks.map((d) => d.id);
     const viewer = anonymous ? null : await getCurrentUser();
+    return await hydratePublicDecks(supabase, decks, viewer?.id ?? null);
+  } catch {
+    return [];
+  }
+}
 
-    const [owners, viewerLikes] = await Promise.all([
-      (async () => {
-        const ownerIds = Array.from(new Set(decks.map((d) => d.owner_id)));
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, username, display_name, avatar_url")
-          .in("id", ownerIds);
-        const byId = new Map<string, DeckOwner>();
-        for (const row of data ?? []) {
-          byId.set(row.id, {
-            username: row.username,
-            display_name: row.display_name,
-            // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
-            avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
-          });
-        }
-        return byId;
-      })(),
-      viewer
-        ? supabase
-            .from("deck_likes")
-            .select("deck_id")
-            .eq("user_id", viewer.id)
-            .in("deck_id", deckIds)
-        : Promise.resolve({ data: [] as Array<{ deck_id: string }> }),
-    ]);
+/** How many decks a one-row strip fetches (the CSS shows 1–4 of them). */
+export const DECK_ROW_MAX = 4;
 
-    const viewerLiked = new Set<string>();
-    for (const row of viewerLikes.data ?? []) {
-      viewerLiked.add(row.deck_id);
-    }
-
-    // likes_count comes straight off the row — the deck_likes triggers keep
-    // it exact (migration 0055), so no aggregation query is needed here.
-    return decks.map((row) => ({
-      ...withCounts(row),
-      owner: owners.get(row.owner_id) ?? null,
-      liked_by_viewer: viewerLiked.has(row.id),
-    }));
+/** "Trending now" (TODO DK8.2): public, non-empty decks of non-admin
+ *  owners ranked by their likes of the last 7 days (migration 0149's
+ *  `list_trending_decks` — the owner's own like left out; ties by all-time
+ *  likes, then the newest edit). Only decks liked this week: an empty
+ *  answer hides the row. Cookie-free (the /decks and /gallery landings stay
+ *  ISR); a database the function hasn't reached lists none. */
+export async function listTrendingDecks(limit = DECK_ROW_MAX): Promise<PublicDeckListing[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_trending_decks", { p_limit: limit });
+    if (error || !Array.isArray(data) || data.length === 0) return [];
+    return await hydratePublicDecks(supabase, data, null);
   } catch {
     return [];
   }
@@ -285,20 +334,28 @@ export async function countPublicDecksByOwner(ownerId: string): Promise<number> 
   }
 }
 
-/** How many distinct decks (readable by the viewer) contain this card as a
- *  proxy/custom entry — the card detail page's "Decks" stat. A card can sit
- *  on multiple boards of one deck; that still counts once. */
-export async function countDecksForCard(cardId: string): Promise<number> {
-  if (!isSupabaseConfigured()) return 0;
+/** How many public decks name each card — the gallery tile's "In N decks"
+ *  and the card page's "Decks" stat (TODO DK8.4). ONE batched call per page
+ *  of cards (migration 0149's `public_deck_counts_for_cards`, at most 200
+ *  ids), counted by the same rule as the card page's list
+ *  (`listPublicDecksContaining`: 0149's `public_deck_card_pairs`), so a
+ *  count and the decks it stands for never disagree. A card no public deck
+ *  names is absent (read it as 0). A failed call — a database 0149 hasn't
+ *  reached — answers null: the caller shows no count rather than a wrong 0.
+ *  Pass the caller's client; the answer doesn't depend on the viewer. */
+export async function publicDeckCountsForCards(
+  supabase: DeckReadClient,
+  cardIds: readonly string[],
+): Promise<Map<string, number> | null> {
+  if (cardIds.length === 0) return new Map();
   try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("deck_cards")
-      .select("deck_id")
-      .eq("card_id", cardId);
-    return new Set((data ?? []).map((row) => row.deck_id)).size;
+    const { data, error } = await supabase.rpc("public_deck_counts_for_cards", {
+      p_card_ids: [...cardIds],
+    });
+    if (error || !Array.isArray(data)) return null;
+    return new Map(data.map((row) => [row.card_id, row.deck_count]));
   } catch {
-    return 0;
+    return null;
   }
 }
 
@@ -558,15 +615,30 @@ export const countDeckEntries = cache(async (deckId: string): Promise<number> =>
   }
 });
 
-/** The public decks a card's page names — its "In decks" row AND its
- *  CreativeWork `isPartOf`, one list (card-detail-content.tsx). Since D3
- *  anyone's public deck may hold a creator's public card, so the page names
- *  the card owner's own public, non-empty decks and another user's only
- *  from a real creator: no admin, at least one public card of their own,
- *  and only while the card is public (migration 0144's
- *  `public_decks_containing_card`, the ONE rule). Newest first, at most 5.
- *  A database the function hasn't reached names none. Cookie-free;
- *  cache()-deduped per request. */
+/** One card's public deck count — the card page's "Decks" stat, the total
+ *  behind its "Decks with this card" (which shows the newest few). Null
+ *  when it couldn't be read. Cookie-free. */
+export async function countPublicDecksForCard(cardId: string): Promise<number | null> {
+  if (!isSupabaseConfigured()) return null;
+  const counts = await publicDeckCountsForCards(createPublicClient(), [cardId]);
+  return counts ? (counts.get(cardId) ?? 0) : null;
+}
+
+/** How many decks a card's page names (its "Decks with this card" tiles —
+ *  two rows of three — the "In decks" row and the JSON-LD). */
+export const CARD_PAGE_DECKS_MAX = 6;
+
+/** The public decks a card's page names — its "Decks with this card"
+ *  tiles, its "In decks" row AND its CreativeWork `isPartOf`, one list
+ *  (card-detail-content.tsx). Since D3 anyone's public deck may hold a
+ *  creator's public card, so the page names the card owner's own public,
+ *  non-empty decks and another user's only from a real creator: no admin,
+ *  at least one public card of their own, and only while the card is public
+ *  (migration 0144's `public_decks_containing_card`, since 0149 over
+ *  `public_deck_card_pairs` — the ONE rule, which the "In N decks" count
+ *  reads too). Newest first, at most CARD_PAGE_DECKS_MAX. A database the
+ *  function hasn't reached names none. Cookie-free; cache()-deduped per
+ *  request. */
 export const listPublicDecksContaining = cache(
   async (cardId: string): Promise<Array<{ slug: string; title: string }>> => {
     if (!isSupabaseConfigured()) return [];
@@ -574,7 +646,7 @@ export const listPublicDecksContaining = cache(
       const supabase = createPublicClient();
       const { data, error } = await supabase.rpc("public_decks_containing_card", {
         p_card_id: cardId,
-        p_limit: 5,
+        p_limit: CARD_PAGE_DECKS_MAX,
       });
       if (error || !Array.isArray(data)) return [];
       return data.map((d) => ({ slug: d.slug, title: d.title }));
@@ -583,3 +655,28 @@ export const listPublicDecksContaining = cache(
     }
   },
 );
+
+/** The same list as deck rows for the tiles — `listPublicDecksContaining`
+ *  (the ONE list, in its order) hydrated by slug (decks' slugs are
+ *  unique), never a second rule. Cookie-free. */
+export async function listPublicDeckTilesContaining(cardId: string): Promise<PublicDeckListing[]> {
+  const named = await listPublicDecksContaining(cardId);
+  if (named.length === 0) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("decks")
+      .select("*")
+      .in("slug", named.map((deck) => deck.slug))
+      .eq("visibility", "public");
+    if (error || !data) return [];
+    const bySlug = new Map(data.map((row) => [row.slug, row]));
+    const rows = named.flatMap((deck) => {
+      const row = bySlug.get(deck.slug);
+      return row ? [row] : [];
+    });
+    return await hydratePublicDecks(supabase, rows, null);
+  } catch {
+    return [];
+  }
+}

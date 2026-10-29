@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Repeat2, Sparkles } from "lucide-react";
+import { Layers, Repeat2, Sparkles } from "lucide-react";
 import { CardTile } from "@/components/cards/card-tile";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { buildCardPath } from "@/lib/cards/utils";
@@ -70,23 +70,35 @@ export function GalleryCardTile({
         {card.owner?.username ? (
           <Link
             href={`/profile/${card.owner.username}`}
-            className="truncate font-mono text-muted transition-colors hover:text-foreground"
+            className="min-w-0 truncate font-mono text-muted transition-colors hover:text-foreground"
           >
             @{card.owner.username}
           </Link>
         ) : (
-          <span className="truncate text-muted">{ownerLabel}</span>
+          <span className="min-w-0 truncate text-muted">{ownerLabel}</span>
         )}
-        <QuickLikeButton
-          kind="card"
-          cardId={card.id}
-          cardSlug={card.slug}
-          ownerUsername={card.owner?.username ?? null}
-          initialLiked={card.liked_by_viewer}
-          initialCount={card.likes_count}
-          requiresSignIn={!isAuthed}
-          redirectAfterLogin={buildCardPath(card)}
-        />
+        <div className="flex shrink-0 items-center gap-2.5">
+          {/* "In N decks" (TODO DK8.4): text in the footer, outside the
+              CardTile link — the public decks the card's page lists, by
+              their one rule (publicDeckCountsForCards). None, or not read:
+              nothing. */}
+          {card.public_deck_count ? (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-muted">
+              <Layers className="h-3 w-3" aria-hidden />
+              In {card.public_deck_count} deck{card.public_deck_count === 1 ? "" : "s"}
+            </span>
+          ) : null}
+          <QuickLikeButton
+            kind="card"
+            cardId={card.id}
+            cardSlug={card.slug}
+            ownerUsername={card.owner?.username ?? null}
+            initialLiked={card.liked_by_viewer}
+            initialCount={card.likes_count}
+            requiresSignIn={!isAuthed}
+            redirectAfterLogin={buildCardPath(card)}
+          />
+        </div>
       </div>
     </div>
   );

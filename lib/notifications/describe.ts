@@ -132,6 +132,31 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "deck_like": {
+      // Someone liked your PUBLIC deck — once per liker and deck (0149).
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      return {
+        subject: actorName,
+        body: `liked your deck${title ? ` "${title}"` : ""}.`,
+        href: slug ? `/deck/${slug}` : "/dashboard/decks",
+      };
+    }
+    case "deck_card_added": {
+      // Another creator's public deck now holds your card (D3) — once per
+      // card and deck, by the card page's own rule (0149).
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      return {
+        subject: actorName,
+        body: `added ${item.card ? item.card.title : "your card"} to their deck${title ? ` "${title}"` : ""}.`,
+        href: slug
+          ? `/deck/${slug}`
+          : item.card && item.card.ownerUsername
+            ? `/card/${item.card.ownerUsername}/${item.card.slug}`
+            : "#",
+      };
+    }
     case "deck_generated": {
       const title = str(payload.title);
       const slug = str(payload.slug);

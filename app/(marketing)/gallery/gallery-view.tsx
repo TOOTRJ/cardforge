@@ -17,6 +17,7 @@ import {
 } from "@/components/gallery/trending-cards-section";
 import { listGalleryCards, listTrendingCards, type GalleryListSort } from "@/lib/cards/queries";
 import { CardRowSection, CardRowSkeleton, ROW_MAX } from "@/components/gallery/card-row";
+import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import { discoverSeedNow, normalizeDiscoverSeed } from "@/lib/cards/discover";
 import { buildCardPath } from "@/lib/cards/utils";
 import { daysLeft, getFeaturedActiveChallenge } from "@/lib/challenges/queries";
@@ -42,8 +43,9 @@ import { firstString } from "@/lib/routing/search-params";
 // The community gallery is two routes with one result grid:
 //
 //   - /gallery (GalleryLanding) → static/ISR. Search box + browse-by hub chips
-//     on top, then the curated rows (trending, featured, newest) and the
-//     discover shuffle. Never reads searchParams, so it stays on the CDN.
+//     on top, then the curated rows (trending, featured, newest, trending
+//     decks) and the discover shuffle. Never reads searchParams, so it stays
+//     on the CDN.
 //   - /gallery/browse (GalleryBrowse) → dynamic. The search + filter bar and
 //     the results; every filter/sort/search/page control navigates WITHIN
 //     this route (see lib/routing/browse-params.ts for why the landing can't
@@ -254,6 +256,25 @@ export function GalleryLanding() {
         <div className="mt-10">
           <Suspense fallback={<CardRowSkeleton />}>
             <GalleryNewest />
+          </Suspense>
+        </div>
+      ) : null}
+
+      {/* Trending decks (TODO DK8.3) — the /decks row, so the gallery leads
+          into the decks built from its cards. Hidden when no deck was liked
+          this week. */}
+      {configured ? (
+        <div className="mt-12">
+          <Suspense fallback={<DeckRowSkeleton />}>
+            <TrendingDecksRow
+              id="gallery-trending-decks"
+              eyebrow="Trending decks"
+              heading="Decks built with these cards"
+              description="The community's most-liked decks this week — custom cards in play."
+              href="/decks"
+              hrefLabel="All community decks"
+              likeRedirect="/gallery"
+            />
           </Suspense>
         </div>
       ) : null}

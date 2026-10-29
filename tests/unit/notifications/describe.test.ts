@@ -284,3 +284,38 @@ describe("describeNotification — deck generated", () => {
   });
 });
 
+// TODO DK8.6 (migration 0149): the two deck kinds — written by triggers with
+// payload { deckId, slug, title }; the card is the added card's own row.
+describe("describeNotification — deck likes and cards added to decks", () => {
+  const deckPayload = { deckId: "b0000000-0000-4000-a000-000000000004", slug: "artificers-arsenal", title: "Artificer's Arsenal" };
+
+  it("deck_like: the liker liked your deck, linking the deck", () => {
+    expect(
+      describeNotification({ type: "deck_like", actor, card: null, threadId: null, payload: deckPayload }, { isAdmin: false }),
+    ).toEqual({
+      subject: "Ana",
+      body: 'liked your deck "Artificer\'s Arsenal".',
+      href: "/deck/artificers-arsenal",
+    });
+    // A payload without its words still reads, and goes to My decks.
+    expect(describeNotification({ type: "deck_like", actor: null, card: null, threadId: null, payload: {} }, { isAdmin: false })).toEqual({
+      subject: "Someone",
+      body: "liked your deck.",
+      href: "/dashboard/decks",
+    });
+  });
+
+  it("deck_card_added: who added which card to which deck, linking the deck", () => {
+    expect(
+      notificationSentence({ type: "deck_card_added", actor, card, threadId: null, payload: deckPayload }, { isAdmin: false }),
+    ).toBe('Ana added Storm Crow to their deck "Artificer\'s Arsenal".');
+    expect(
+      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: deckPayload }, { isAdmin: false }).href,
+    ).toBe("/deck/artificers-arsenal");
+    // No deck slug (never written so, but read defensively): the card.
+    expect(
+      describeNotification({ type: "deck_card_added", actor, card, threadId: null, payload: {} }, { isAdmin: false }),
+    ).toEqual({ subject: "Ana", body: "added Storm Crow to their deck.", href: "/card/me/storm-crow" });
+  });
+});
+
