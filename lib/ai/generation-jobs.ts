@@ -17,6 +17,7 @@ import {
   type CreateCardResult,
 } from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
+import type { ForcedPrivateNotice } from "@/lib/moderation/profanity";
 import { createDeckAction, updateDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
@@ -233,6 +234,11 @@ export type JobStep = {
    *  2026-10-28). Analytics only: nothing reads it to decide anything.
    *  Two pictures painted by two models read "a + b". */
   image_model?: string | null;
+  /** On a DONE step whose card was saved private instead of public because
+   *  its text holds strong language (owner policy 2026-10-28,
+   *  lib/moderation/profanity.ts — the card action's notice, passed on):
+   *  the runner says so. Absent on every other step. */
+  forced_private?: ForcedPrivateNotice | null;
 };
 
 export type GenerationJobRow = {
@@ -626,6 +632,9 @@ async function runGeneratedCardStep(
   return withCreditedStep(userId, jobId, 1, config.reason, step, async () => {
     const card = config.card;
     let cardId = step.card_id;
+    // The create is private, so only a flow's own extras could ask for more;
+    // the publish below is where the strong-language rule usually speaks.
+    let forcedPrivate: ForcedPrivateNotice | undefined;
 
     if (!cardId) {
       const gameSystemId = await activeGameSystemId();
@@ -691,6 +700,7 @@ async function runGeneratedCardStep(
         };
       }
       cardId = result.cardId;
+      forcedPrivate = result.forcedPrivate;
       await config.afterCreate?.(cardId);
     }
 
@@ -720,6 +730,9 @@ async function runGeneratedCardStep(
         failure: published.failure,
       };
     }
+    // A card the publish kept private for the strong language in its text
+    // (lib/moderation/profanity.ts) says so on its step.
+    const notice = published.forcedPrivate ?? forcedPrivate;
     return {
       ...step,
       status: "done",
@@ -727,6 +740,7 @@ async function runGeneratedCardStep(
       attempts: attempt,
       error: undefined,
       image_model: published.model,
+      ...(notice ? { forced_private: notice } : {}),
     };
   });
 }
@@ -2222,7 +2236,7 @@ async function paintAndPublishCard(
   cardId: string,
   prompts: readonly string[],
   shape: ArtShape,
-): Promise<{ ok: true; model: string } | { ok: false; error: string; failure: AiFailureKind }> {
+): Promise<{ ok: true; model: string; forcedPrivate?: ForcedPrivateNotice } | { ok: false; error: string; failure: AiFailureKind }> {
   // Painted in the shape of the card's own art window (TODO 4.48b).
   // The card is created before and attached + baked after, in the same
   // 180 s function: the picture waits a little less than a fill's.
@@ -2247,7 +2261,9 @@ async function paintAndPublishCard(
       "Couldn't attach the art.";
     return { ok: false, error: detail, failure: "save_failed" };
   }
-  return { ok: true, model: image.model };
+  // The card's text held strong language: the action stored it private
+  // instead (owner policy 2026-10-28) — never a failed step.
+  return updated.forcedPrivate ? { ok: true, model: image.model, forcedPrivate: updated.forcedPrivate } : { ok: true, model: image.model };
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {
@@ -2863,6 +2879,9 @@ async function executeDeckRemixStep(
       : named.title,
     error: undefined,
     image_model: [...new Set(imageModels)].join(" + ") || null,
+    // Saved private for the strong language in its text (the action's
+    // notice; owner policy 2026-10-28) — the runner says so.
+    ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
   };
 }
 
@@ -3010,6 +3029,9 @@ async function patchJobStep(
     // — a done step is never run again, so there is no stale value to clear
     // — so a step that paints nothing writes exactly what it did before.
     ...(step.image_model ? { image_model: step.image_model } : {}),
+    // A card saved private for its text (owner policy 2026-10-28): only
+    // a step that says so names the key, so every other patch is as before.
+    ...(step.forced_private ? { forced_private: step.forced_private } : {}),
   };
   // The work (credit spend, card insert, image) is already committed by the
   // time we get here — losing this write means a stale reclaim would re-run
