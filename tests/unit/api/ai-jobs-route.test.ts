@@ -410,6 +410,43 @@ describe("POST /api/ai/jobs — the dialog's presets, twists and kind", () => {
     expect(s.created.at(-1)!.input).not.toHaveProperty("layout");
   });
 
+  it("a double-faced kind (PR 3) names its kind, never a card type, and is priced at TWO credits before anything is planned", async () => {
+    const body = {
+      kind: "card_fill",
+      want: ["card_type", "title", "art"],
+      locked: { back_face: { title: "Kept" } },
+      steer: { card_type: "creature" },
+      design_kind: "transform",
+      frame: "m15dfcfront",
+    };
+    s.credits = 1;
+    const short = await post(body);
+    expect(short.status).toBe(402);
+    expect(short.json).toMatchObject({ code: "INSUFFICIENT_CREDITS", needed: 2, balance: 1 });
+    expect(String(short.json.error)).toContain("one picture per face");
+    expect(s.created).toHaveLength(0);
+    s.credits = 2;
+    const { status } = await post(body);
+    expect(status).toBe(200);
+    const input = s.created.at(-1)!.input as Record<string, unknown> & { steer: Record<string, unknown> };
+    expect(input).toMatchObject({ dfc: "transform", frame: "m15dfcfront" });
+    expect(input).not.toHaveProperty("dfcIcon");
+    // The card's icon family travels with it; an unknown one is dropped.
+    await post({ ...body, dfc_icon: "sunmoon" });
+    expect(s.created.at(-1)!.input).toMatchObject({ dfcIcon: "sunmoon" });
+    await post({ ...body, dfc_icon: "spiral" });
+    expect(s.created.at(-1)!.input).not.toHaveProperty("dfcIcon");
+    expect(input).not.toHaveProperty("designKind");
+    expect(input).not.toHaveProperty("layout");
+    expect(input.steer.card_type).toBeUndefined();
+    // Without the artwork ticked nothing is painted: one credit, as any fill.
+    s.credits = 1;
+    expect((await post({ ...body, want: ["card_type", "title"] })).status).toBe(200);
+    // …and not while the type isn't being written.
+    await post({ kind: "card_fill", want: ["title", "art"], locked: {}, design_kind: "transform" });
+    expect(s.created.at(-1)!.input).not.toHaveProperty("dfc");
+  });
+
   it("a request that names none of them reaches the job as before (its own theme and style)", async () => {
     await post({ kind: "card_fill", want: ["title"], locked: {}, theme: "embers", style: "oil" });
     const input = s.created.at(-1)!.input as Record<string, unknown>;

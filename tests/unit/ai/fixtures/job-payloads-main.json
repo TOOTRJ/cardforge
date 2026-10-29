@@ -3790,5 +3790,634 @@
    }
   ],
   "refunds": 0
+ },
+ "dfc fill plan · transform": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Hollow Village Smith",
+    "cost": "{2}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Human",
+     "Werewolf"
+    ],
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "At the beginning of each upkeep, if no spells were cast last turn, transform this creature.",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "2",
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "title": "Moonlit Ravager",
+     "cost": "",
+     "card_type": "creature",
+     "supertype": null,
+     "subtypes": [
+      "Werewolf"
+     ],
+     "rules_text": "Trample",
+     "flavor_text": null,
+     "power": "5",
+     "toughness": "4",
+     "color_identity": [
+      "red"
+     ]
+    }
+   },
+   "art_prompt": "A soot-stained village blacksmith at a glowing forge, glancing nervously at the rising moon.",
+   "style": null,
+   "frame_template": "m15dfcfront",
+   "art_face": {
+    "template": "m15dfcfront",
+    "color_identity": [
+     "red"
+    ],
+    "card_type": "creature",
+    "supertype": null,
+    "cost": "{2}{R}"
+   },
+   "deck_id": null,
+   "art_brief": "The FRONT face of a two-faced card: show this face's own subject as it is now — the back face has a picture of its own.",
+   "back_art": {
+    "prompt": "A huge grey werewolf howling on a moonlit hill above a burning village.",
+    "face": {
+     "template": "m15dfcback",
+     "color_identity": [
+      "red"
+     ],
+     "card_type": "creature",
+     "supertype": null,
+     "cost": null
+    },
+    "brief": "The BACK face of a two-faced card: show this face's own subject — what the front became, or the other side of the choice — never the front's picture again."
+   }
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Hollow Village Smith // Moonlit Ravager",
+    "status": "pending"
+   },
+   {
+    "key": "fill:1",
+    "label": "Moonlit Ravager",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Transform front\", the modern frame (2015 on). It is a TRANSFORM double-faced card: one card with two faces — it enters front face up and transforms into its back (a villager and the beast it becomes, a hero and the legend it grows into). The front is the card's own fields: card_type \"creature\", \"artifact\", \"enchantment\", \"instant\" or \"sorcery\" (never a land on this front); its rules_text says when it transforms (\"…, transform it.\"). Write `back_face` — the BACK face, a card of its own: title (its OWN original name, never the front's), cost (\"\" — a transform back has no mana cost), card_type, supertype, subtypes, rules_text, flavor_text (or null), power and toughness (a creature's; else null), color_identity (the back's own colors — [] when they are the front's) and art_prompt (the back face's OWN picture, 60–100 words: what this face shows — never the front's picture again). The back is a PERMANENT — a creature, artifact, enchantment or land (it is what the card becomes on the battlefield) — never an instant or sorcery, a planeswalker, a saga or a battle, and no \"Saga\" subtype. A land back is colorless (color_identity [\"colorless\"]). Each face: rules text under about 200 characters."
+  ]
+ },
+ "dfc fill steps · transform": {
+  "steps": [
+   {
+    "key": "fill:0",
+    "status": "done",
+    "fill": {
+     "title": "Hollow Village Smith",
+     "cost": "{2}{R}",
+     "card_type": "creature",
+     "supertype": null,
+     "subtypes": [
+      "Human",
+      "Werewolf"
+     ],
+     "color_identity": [
+      "red"
+     ],
+     "rules_text": "At the beginning of each upkeep, if no spells were cast last turn, transform this creature.",
+     "flavor_text": null,
+     "power": "3",
+     "toughness": "2",
+     "loyalty": null,
+     "defense": null,
+     "back_face": {
+      "title": "Moonlit Ravager",
+      "cost": "",
+      "card_type": "creature",
+      "supertype": null,
+      "subtypes": [
+       "Werewolf"
+      ],
+      "rules_text": "Trample",
+      "flavor_text": null,
+      "power": "5",
+      "toughness": "4",
+      "color_identity": [
+       "red"
+      ]
+     },
+     "frame_template": "m15dfcfront",
+     "deck_id": null,
+     "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+     "artist_credit": "Tester"
+    }
+   },
+   {
+    "key": "fill:1",
+    "status": "done",
+    "fill": {
+     "back_face": {
+      "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+      "artist_credit": "Tester"
+     }
+    }
+   }
+  ],
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   },
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "dfc fill plan · mdfc": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Tidecaller's Summons",
+    "cost": "{1}{U}",
+    "card_type": "sorcery",
+    "supertype": null,
+    "subtypes": [],
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "Draw two cards.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "title": "Tidecaller's Grotto",
+     "cost": "",
+     "card_type": "land",
+     "supertype": null,
+     "subtypes": [],
+     "rules_text": "This land enters tapped.\n{T}: Add {U}.",
+     "flavor_text": null,
+     "power": null,
+     "toughness": null,
+     "color_identity": [
+      "blue"
+     ]
+    }
+   },
+   "art_prompt": "A robed mage raising her arms as a great wave curls over a stone jetty.",
+   "style": null,
+   "frame_template": "m15mdfcfront",
+   "art_face": {
+    "template": "m15mdfcfront",
+    "color_identity": [
+     "blue"
+    ],
+    "card_type": "sorcery",
+    "supertype": null,
+    "cost": "{1}{U}"
+   },
+   "deck_id": null,
+   "art_brief": "The FRONT face of a two-faced card: show this face's own subject as it is now — the back face has a picture of its own.",
+   "back_art": {
+    "prompt": "A hidden sea cave lit by glowing blue water, waves washing over smooth rocks.",
+    "face": {
+     "template": "m15mdfclandback",
+     "color_identity": [
+      "blue"
+     ],
+     "card_type": "land",
+     "supertype": null,
+     "cost": null
+    },
+    "brief": "The BACK face of a two-faced card: show this face's own subject — what the front became, or the other side of the choice — never the front's picture again."
+   }
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Tidecaller's Summons // Tidecaller's Grotto",
+    "status": "pending"
+   },
+   {
+    "key": "fill:1",
+    "label": "Tidecaller's Grotto",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Modal front\", the modern frame (2015 on). It is a MODAL double-faced card: one card with two faces, and its owner casts or plays EITHER face (a spell on one side and a land on the other; two sides of one legend). The front is the card's own fields: card_type \"creature\", \"artifact\", \"enchantment\", \"instant\" or \"sorcery\" (never a land on this front), with its own mana cost. Write `back_face` — the BACK face, a card of its own: title (its OWN original name, never the front's), cost (its OWN curly-brace mana cost — a land back has none: \"\"), card_type, supertype, subtypes, rules_text, flavor_text (or null), power and toughness (a creature's; else null), color_identity (the back's own colors — [] when they are the front's) and art_prompt (the back face's OWN picture, 60–100 words: what this face shows — never the front's picture again). The back is a creature, artifact, enchantment, land, instant or sorcery — never a planeswalker, saga or battle, and no \"Saga\" subtype. A land back enters tapped or asks for life, taps for one color, and its color_identity is that color. Each face: rules text under about 200 characters."
+  ]
+ },
+ "dfc fill steps · mdfc": {
+  "steps": [
+   {
+    "key": "fill:0",
+    "status": "done",
+    "fill": {
+     "title": "Tidecaller's Summons",
+     "cost": "{1}{U}",
+     "card_type": "sorcery",
+     "supertype": null,
+     "subtypes": [],
+     "color_identity": [
+      "blue"
+     ],
+     "rules_text": "Draw two cards.",
+     "flavor_text": null,
+     "power": null,
+     "toughness": null,
+     "loyalty": null,
+     "defense": null,
+     "back_face": {
+      "title": "Tidecaller's Grotto",
+      "cost": "",
+      "card_type": "land",
+      "supertype": null,
+      "subtypes": [],
+      "rules_text": "This land enters tapped.\n{T}: Add {U}.",
+      "flavor_text": null,
+      "power": null,
+      "toughness": null,
+      "color_identity": [
+       "blue"
+      ]
+     },
+     "frame_template": "m15mdfcfront",
+     "deck_id": null,
+     "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+     "artist_credit": "Tester"
+    }
+   },
+   {
+    "key": "fill:1",
+    "status": "done",
+    "fill": {
+     "back_face": {
+      "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+      "artist_credit": "Tester"
+     }
+    }
+   }
+  ],
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   },
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "dfc fill plan · dfc_saga": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "The Lantern's Oath",
+    "cost": "{2}{W}",
+    "card_type": "enchantment",
+    "supertype": null,
+    "subtypes": [
+     "Saga"
+    ],
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter.)\nI — You gain 3 life.\nII — Exile this Saga, then return it to the battlefield transformed under your control.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "title": "Lantern Oathkeeper",
+     "cost": "",
+     "card_type": "creature",
+     "supertype": null,
+     "subtypes": [
+      "Human",
+      "Knight"
+     ],
+     "rules_text": "Vigilance",
+     "flavor_text": null,
+     "power": "3",
+     "toughness": "3",
+     "color_identity": [
+      "white"
+     ]
+    }
+   },
+   "art_prompt": "A young knight kneeling before a shrine of paper lanterns, swearing an oath at dusk.",
+   "style": null,
+   "frame_template": "sagadfcfront",
+   "art_face": {
+    "template": "sagadfcfront",
+    "color_identity": [
+     "white"
+    ],
+    "card_type": "enchantment",
+    "supertype": null,
+    "cost": "{2}{W}"
+   },
+   "deck_id": null,
+   "art_brief": "A tall storybook scene for one face of a two-faced saga: one strong subject composed for a tall, narrow panel — the other face has a picture of its own.",
+   "back_art": {
+    "prompt": "A shining knight in white armour holding a glowing lantern aloft on a mountain path.",
+    "face": {
+     "template": "m15dfcback",
+     "color_identity": [
+      "white"
+     ],
+     "card_type": "creature",
+     "supertype": null,
+     "cost": null
+    },
+    "brief": "The BACK face of a two-faced card: show this face's own subject — what the front became, or the other side of the choice — never the front's picture again."
+   }
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "The Lantern's Oath // Lantern Oathkeeper",
+    "status": "pending"
+   },
+   {
+    "key": "fill:1",
+    "label": "Lantern Oathkeeper",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type enchantment. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Saga (transform front)\", the modern frame (2015 on). It is a SAGA: card_type \"enchantment\", subtypes include \"Saga\", supertype without \"Creature\", no power or toughness. Write `saga`: `chapters` — two to four rows (never more than six), chapter numbers I, II, III… in order from I with no gap or repeat, a row may cover two chapters ([1, 2] prints \"I, II —\"); each chapter ONE short effect under about 120 characters, building a small story; `intro` null (the frame prints the lore-counter reminder). rules_text: the same chapters as lines \"I — effect\". It is a DOUBLE-FACED saga: its LAST chapter reads \"Exile this Saga, then return it to the battlefield transformed under your control.\" and the back is what the story becomes; the saga's intro is null (the frame prints \"(As this Saga enters and after your draw step, add a lore counter.)\"). Write `back_face` — the BACK face, a card of its own: title (its OWN original name, never the front's), cost (\"\" — the back has no mana cost), card_type, supertype, subtypes, rules_text, flavor_text (or null), power and toughness (a creature's; else null), color_identity (the back's own colors — [] when they are the front's) and art_prompt (the back face's OWN picture, 60–100 words: what this face shows — never the front's picture again). The back is a PERMANENT — a creature, artifact, enchantment or land (it is what the card becomes on the battlefield) — never an instant or sorcery, a planeswalker, a saga or a battle, and no \"Saga\" subtype. It is usually a creature with power and toughness."
+  ]
+ },
+ "dfc fill steps · dfc_saga": {
+  "steps": [
+   {
+    "key": "fill:0",
+    "status": "done",
+    "fill": {
+     "title": "The Lantern's Oath",
+     "cost": "{2}{W}",
+     "card_type": "enchantment",
+     "supertype": null,
+     "subtypes": [
+      "Saga"
+     ],
+     "color_identity": [
+      "white"
+     ],
+     "rules_text": "(As this Saga enters and after your draw step, add a lore counter.)\nI — You gain 3 life.\nII — Exile this Saga, then return it to the battlefield transformed under your control.",
+     "flavor_text": null,
+     "power": null,
+     "toughness": null,
+     "loyalty": null,
+     "defense": null,
+     "back_face": {
+      "title": "Lantern Oathkeeper",
+      "cost": "",
+      "card_type": "creature",
+      "supertype": null,
+      "subtypes": [
+       "Human",
+       "Knight"
+      ],
+      "rules_text": "Vigilance",
+      "flavor_text": null,
+      "power": "3",
+      "toughness": "3",
+      "color_identity": [
+       "white"
+      ]
+     },
+     "frame_template": "sagadfcfront",
+     "deck_id": null,
+     "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+     "artist_credit": "Tester"
+    }
+   },
+   {
+    "key": "fill:1",
+    "status": "done",
+    "fill": {
+     "back_face": {
+      "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+      "artist_credit": "Tester"
+     }
+    }
+   }
+  ],
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   },
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "dfc fill plan · dfc_token": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "cost",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "art"
+   ],
+   "fields": {
+    "title": "Goblin",
+    "cost": "—",
+    "card_type": "token",
+    "supertype": "Creature",
+    "subtypes": [
+     "Goblin"
+    ],
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "",
+    "flavor_text": null,
+    "power": "1",
+    "toughness": "1",
+    "loyalty": null,
+    "defense": null,
+    "back_face": {
+     "title": "Soldier",
+     "cost": "",
+     "card_type": "token",
+     "supertype": "Creature",
+     "subtypes": [
+      "Soldier"
+     ],
+     "rules_text": "",
+     "flavor_text": null,
+     "power": "1",
+     "toughness": "1",
+     "color_identity": [
+      "white"
+     ]
+    }
+   },
+   "art_prompt": "A grinning goblin with a crooked spear leaping out of a cave mouth.",
+   "style": null,
+   "frame_template": "m20token",
+   "art_face": {
+    "template": "m20token",
+    "color_identity": [
+     "red"
+    ],
+    "card_type": "token",
+    "supertype": "Creature",
+    "cost": "—"
+   },
+   "deck_id": null,
+   "art_brief": "A clear single subject — one creature or object, centred and readable at a glance — on a simple background. The picture fills the WHOLE card edge to edge: keep the subject in the middle, with calm open space at the top where the name sits and in the lower third behind the text.",
+   "back_art": {
+    "prompt": "A lone shield-bearing soldier standing guard on a sunlit city wall.",
+    "face": {
+     "template": "m20token",
+     "color_identity": [
+      "white"
+     ],
+     "card_type": "token",
+     "supertype": "Creature",
+     "cost": null
+    },
+    "brief": "A clear single subject — one creature or object, centred and readable at a glance — on a simple background. The picture fills the WHOLE card edge to edge: keep the subject in the middle, with calm open space at the top where the name sits and in the lower third behind the text."
+   }
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Goblin // Soldier",
+    "status": "pending"
+   },
+   {
+    "key": "fill:1",
+    "label": "Soldier",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type token. color: white. Design only: card type, colors, title, mana cost, rules text, flavor text, power / toughness — make them fit the kept parts naturally. FRAME (the maker picked it — design the card FOR it): \"Token\", M15 (2015). It is a modern card (2015 on). Its supertype must NOT include \"Artifact\". This frame has NO text box: rules_text must be empty and flavor_text null. It is a DOUBLE-SIDED TOKEN: two tokens printed back to back (a Goblin on one side, a Soldier on the other) — nothing transforms: each face is an ordinary token. The front is the card's own fields: card_type \"token\", cost \"—\", supertype its card types (\"Creature\", \"Artifact\"…). Write `back_face` — the BACK face, a card of its own: title (its OWN original name, never the front's), cost (\"\" — a token has no mana cost), card_type, supertype, subtypes, rules_text, flavor_text (or null), power and toughness (a creature's; else null), color_identity (the back's own colors — [] when they are the front's) and art_prompt (the back face's OWN picture, 60–100 words: what this face shows — never the front's picture again). The back is card_type \"token\" too: supertype its card types (\"Creature\", \"Artifact Creature\", \"Artifact\"…), its subtypes, its own short text, and power and toughness for a creature token. Its frame follows its own words and text, as the front's does.",
+   "Card 1: {\"title\":\"Goblin\",\"cost\":\"—\",\"card_type\":\"token\",\"supertype\":\"Creature\",\"subtypes\":[\"Goblin\"],\"rarity\":\"common\",\"color_identity\":[\"red\"],\"rules_text\":\"\",\"flavor_text\":null,\"power\":\"1\",\"toughness\":\"1\",\"loyalty\":null,\"defense\":null,\"art_prompt\":\"A grinning goblin with a crooked spear leaping out of a cave mouth.\",\"back_face\":{\"title\":\"Soldier\",\"cost\":\"\",\"card_type\":\"token\",\"supertype\":\"Creature\",\"subtypes\":[\"Soldier\"],\"rules_text\":\"\",\"flavor_text\":null,\"power\":\"1\",\"toughness\":\"1\",\"color_identity\":[\"white\"],\"art_prompt\":\"A lone shield-bearing soldier standing guard on a sunlit city wall.\"}}\nFindings: [color_identity] No colored mana symbols anywhere — should this be colorless?"
+  ]
+ },
+ "dfc fill steps · dfc_token": {
+  "steps": [
+   {
+    "key": "fill:0",
+    "status": "done",
+    "fill": {
+     "title": "Goblin",
+     "cost": "—",
+     "card_type": "token",
+     "supertype": "Creature",
+     "subtypes": [
+      "Goblin"
+     ],
+     "color_identity": [
+      "red"
+     ],
+     "rules_text": "",
+     "flavor_text": null,
+     "power": "1",
+     "toughness": "1",
+     "loyalty": null,
+     "defense": null,
+     "back_face": {
+      "title": "Soldier",
+      "cost": "",
+      "card_type": "token",
+      "supertype": "Creature",
+      "subtypes": [
+       "Soldier"
+      ],
+      "rules_text": "",
+      "flavor_text": null,
+      "power": "1",
+      "toughness": "1",
+      "color_identity": [
+       "white"
+      ]
+     },
+     "frame_template": "m20token",
+     "deck_id": null,
+     "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+     "artist_credit": "Tester"
+    }
+   },
+   {
+    "key": "fill:1",
+    "status": "done",
+    "fill": {
+     "back_face": {
+      "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+      "artist_credit": "Tester"
+     }
+    }
+   }
+  ],
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   },
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
  }
 }

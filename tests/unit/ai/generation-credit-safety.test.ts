@@ -146,6 +146,7 @@ import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/li
 import { failedStepMessage } from "@/lib/ai/failure";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import { LAYOUT_DESIGNS, WANT_ALL } from "./fixtures/layout-designs";
+import { DFC_DESIGNS, DFC_FRONT, TRANSFORM } from "./fixtures/dfc-designs";
 
 const EVERY = FRAME_TEMPLATE_VALUES.flatMap((template) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template as FrameTemplate, colour)),
@@ -482,5 +483,110 @@ describe("sagas and two-part cards from the AI dialog", () => {
     expect(s.refund).toHaveBeenCalledTimes(1);
     expect(s.imageCalls).toBe(1);
     expect(failedStepMessage(step)).toContain("Your credit was returned.");
+  });
+});
+
+// The AI dialog's double-faced cards (PR 3): TWO pictures, two credits — one
+// step and one charge per face, each under its own ledger ref and refunded
+// under `refund:{that ref}`. Every gate the save runs is read at PLAN time,
+// so a design that can't be saved never reserves anything; a back that fails
+// after the front succeeded returns the back's credit (the front's picture
+// was delivered and its credit stands); a front that fails takes the back
+// with it, uncharged.
+describe("double-faced cards from the AI dialog: one credit per picture", () => {
+  const KINDS = ["transform", "mdfc", "dfc_saga", "dfc_token"] as const;
+  type Kind = (typeof KINDS)[number];
+  const dfcFill = (kind: Kind) =>
+    createCardFillJob({ want: WANT_ALL as never, locked: {}, steer: {}, frame: DFC_FRONT[kind] as FrameTemplate, dfc: kind });
+  /** The two-step job as planned, with its front step in `front`'s state. */
+  const twoStepJob = (plan: Record<string, unknown>, front: Record<string, unknown>, back: Record<string, unknown> = {}) => {
+    job("card_fill", plan, "fill:1");
+    s.job.steps = [
+      { key: "fill:0", label: "Front", ...front },
+      { key: "fill:1", label: "Back (back face)", ...back, status: "running" },
+    ];
+  };
+  const refundKeys = () => s.refund.mock.calls.map((call) => call[3]);
+  const spendRefs = () => s.spend.mock.calls.map((call) => (call[2] as { ref: string }).ref);
+
+  it.each(KINDS)("%s: a design that can't be saved, twice — refused at plan time, neither credit reserved", async (kind) => {
+    const broken = { ...structuredClone(DFC_DESIGNS[kind]), back_face: null };
+    s.answers = [[structuredClone(broken)], [], [structuredClone(broken)], []];
+    const out = await dfcFill(kind);
+    expect(out).toMatchObject({ ok: false, code: "frame_unfit" });
+    expect(!out.ok && out.error).toContain("No credits were used.");
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(s.imageCalls).toBe(0);
+  });
+
+  it.each(KINDS)("%s: the front OK and the back refused — the back's credit returned once, the front's stands", async (kind) => {
+    s.answers = [[structuredClone(DFC_DESIGNS[kind])]];
+    expect((await dfcFill(kind)).ok).toBe(true);
+    const plan = s.inserted.at(-1)!.plan as Record<string, unknown>;
+    job("card_fill", plan, "fill:0");
+    const front = await runStep("fill:0");
+    expect(front).toMatchObject({ status: "done" });
+    twoStepJob(plan, front);
+    s.image = { ok: false, error: "x", failure: "art_blocked", safetyBlocked: true };
+    const back = await runStep("fill:1");
+    expect(back).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1, spend_ref: null });
+    expect(s.spend.mock.calls.map((call) => call[0])).toEqual([1, 1]);
+    // Refunded exactly once, under the BACK's own charge — never the front's.
+    const [frontRef, backRef] = spendRefs();
+    expect(refundKeys()).toEqual([`refund:${backRef}`]);
+    expect(front.spend_ref).toBe(frontRef);
+    expect(failedStepMessage(back)).toContain("Your credit was returned.");
+  });
+
+  it("both faces fail: the front's credit returned, the back never charged — every credit taken comes back", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    expect((await dfcFill("transform")).ok).toBe(true);
+    const plan = s.inserted.at(-1)!.plan as Record<string, unknown>;
+    s.image = { ok: false, error: "x", failure: "art_timeout" };
+    job("card_fill", plan, "fill:0");
+    const front = await runStep("fill:0");
+    expect(front).toMatchObject({ status: "failed", refunded: 1 });
+    twoStepJob(plan, front);
+    const back = await runStep("fill:1");
+    expect(back).toMatchObject({ status: "failed", refunded: 0, spend_ref: null });
+    expect(failedStepMessage(back)).toContain("No credits were used.");
+    // One charge, one refund under its own key; one picture tried.
+    expect(s.spend.mock.calls.map((call) => call[0])).toEqual([1]);
+    expect(refundKeys()).toEqual([`refund:${spendRefs()[0]}`]);
+    expect(s.imageCalls).toBe(1);
+  });
+
+  it("both pictures fail after their own charges (a back retried after a refused one): each refunded once, under its own key", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    expect((await dfcFill("transform")).ok).toBe(true);
+    const plan = s.inserted.at(-1)!.plan as Record<string, unknown>;
+    job("card_fill", plan, "fill:0");
+    const front = await runStep("fill:0");
+    twoStepJob(plan, front);
+    s.image = { ok: false, error: "x", failure: "art_blocked", safetyBlocked: true };
+    const first = await runStep("fill:1");
+    twoStepJob(plan, front, first);
+    s.imageThrows = new Error("socket hang up");
+    const second = await runStep("fill:1");
+    expect(first).toMatchObject({ status: "failed", refunded: 1 });
+    expect(second).toMatchObject({ status: "failed", refunded: 1 });
+    const refs = spendRefs();
+    expect(refs).toHaveLength(3);
+    expect(new Set(refs).size).toBe(3);
+    // No double refund: one per failed charge, never the front's.
+    expect(refundKeys()).toEqual([`refund:${refs[1]}`, `refund:${refs[2]}`]);
+  });
+
+  it("a finished back asked again is never charged again", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    expect((await dfcFill("transform")).ok).toBe(true);
+    const plan = s.inserted.at(-1)!.plan as Record<string, unknown>;
+    twoStepJob(plan, { status: "done" }, { fill: { back_face: { art_url: "https://example.supabase.co/x.png" } } });
+    const again = await runStep("fill:1");
+    expect(again).toMatchObject({ status: "done" });
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.imageCalls).toBe(0);
   });
 });

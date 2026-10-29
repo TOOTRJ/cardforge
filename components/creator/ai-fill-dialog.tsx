@@ -7,8 +7,11 @@ import {
   Coins,
   Columns2,
   Dices,
+  Copy,
   FlipVertical2,
+  Layers,
   Loader2,
+  RefreshCw,
   Rows2,
   ScrollText,
   Sparkles,
@@ -51,6 +54,7 @@ import {
   type AiDialogKind,
 } from "@/lib/ai/frame-choices";
 import { isAiLayoutKind, type AiLayoutKind } from "@/lib/ai/layout-design";
+import { DFC_KIND_LABELS, fillCreditsFor, isAiDfcKind, type AiDfcKind } from "@/lib/ai/dfc-design";
 import { KIND_DEFS, type FrameColorKey } from "@/lib/creator/card-kinds";
 import {
   RARITY_VALUES,
@@ -71,7 +75,8 @@ import { cn } from "@/lib/utils";
 // The tick-set (which fields the AI writes) is unchanged: everything
 // unticked stays exactly as it is in the form and is fed to the designer as
 // fixed context (owner decision 2026-09-16). One credit per run whatever is
-// ticked. Opened from the Start-with hero (everything ticked), the Identity
+// ticked — except a double-faced kind with the artwork ticked (PR 3): two
+// pictures, two credits, said in the footer and the confirm. Opened from the Start-with hero (everything ticked), the Identity
 // step's "Generate AI artwork and title", and the Text & stats step's
 // button; also on edit and remix, where the structural fields aren't
 // offered.
@@ -170,8 +175,17 @@ const LAYOUT_KIND_ICONS: Record<AiLayoutKind, LucideIcon> = {
   flip: FlipVertical2,
 };
 
-/** The kind's chip label ("Creature", "Saga", "Split"). */
+/** The double-faced kinds' chip icons (PR 3). */
+const DFC_KIND_ICONS: Record<AiDfcKind, LucideIcon> = {
+  transform: RefreshCw,
+  mdfc: Layers,
+  dfc_saga: ScrollText,
+  dfc_token: Copy,
+};
+
+/** The kind's chip label ("Creature", "Saga", "Split", "Transform"). */
 function kindLabel(kind: AiDialogKind): string {
+  if (isAiDfcKind(kind)) return DFC_KIND_LABELS[kind];
   return isAiLayoutKind(kind)
     ? KIND_DEFS[kind].label
     : (CARD_TYPE_OPTIONS.find((option) => option.value === kind)?.label ?? kind);
@@ -234,7 +248,9 @@ function AiFillDialogBody({
     () => [
       surpriseChip(),
       ...AI_DIALOG_KINDS.map((value) => {
-        const icon = isAiLayoutKind(value)
+        const icon = isAiDfcKind(value)
+          ? DFC_KIND_ICONS[value]
+          : isAiLayoutKind(value)
           ? LAYOUT_KIND_ICONS[value]
           : CARD_TYPE_OPTIONS.find((option) => option.value === value)?.icon;
         const reason = aiKindOffReason(value, verified);
@@ -314,7 +330,7 @@ function AiFillDialogBody({
       design_kind: wantsType ? kind : undefined,
       // A saga or a two-part kind names its layout, never a card type: the
       // server steers the type its frame takes.
-      card_type: wantsType && kind !== SURPRISE && !isAiLayoutKind(kind) ? kind : undefined,
+      card_type: wantsType && kind !== SURPRISE && !isAiLayoutKind(kind) && !isAiDfcKind(kind) ? kind : undefined,
       rarity: wantsRarity && rarity !== "random" ? rarity : undefined,
       frame: wantsType ? (frameValue === SURPRISE ? "random" : frameValue) : undefined,
       deck_id: canDesignForDeck && deckId ? deckId : undefined,
@@ -328,6 +344,9 @@ function AiFillDialogBody({
   const kindArticle = /^[aeiou]/.test(kindWord) ? "an" : "a";
   // A two-part card is still ONE picture (one credit): said beside the price.
   const onePicture = wantsType && kind !== SURPRISE && isAiLayoutKind(kind) && kind !== "saga" && want.has("art");
+  // A double-faced card is TWO pictures, one credit each (PR 3) — priced
+  // here, before anyone pays, as the confirm and the server price it.
+  const credits = fillCreditsFor(wantsType ? kind : undefined, [...want]);
   const frameHelper =
     pickedFrame && frameValue !== SURPRISE
       ? pinnedColor || frameColorWords(pickedFrame.colorKeys) === "any color"
@@ -583,7 +602,11 @@ function AiFillDialogBody({
         {isBillingEnabled() ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-strong">
             <Coins className="h-3.5 w-3.5" aria-hidden />
-            {onePicture ? "Uses 1 credit — one picture for both parts" : "Uses 1 credit"}
+            {credits > 1
+              ? `Uses ${credits} credits — one picture per face`
+              : onePicture
+                ? "Uses 1 credit — one picture for both parts"
+                : "Uses 1 credit"}
           </span>
         ) : null}
         <Button

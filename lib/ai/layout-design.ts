@@ -656,8 +656,14 @@ export type FillSecondPart = {
   color_identity?: ColorIdentity[];
   /** A split / aftermath half's own window: the SAME stored picture as the
    *  card's (owner 2026-10-28 — still one picture, one credit). Set by the
-   *  step once the picture is painted (secondHalfSharesPicture). */
+   *  step once the picture is painted (secondHalfSharesPicture). A
+   *  double-faced card's back (PR 3, lib/ai/dfc-design.ts): its OWN
+   *  picture, painted by the back's step. */
   art_url?: string;
+  /** A double-faced card's back (PR 3): its flavour, and the credit of its
+   *  own picture. Never on a two-part card's second part (never drawn). */
+  flavor_text?: string | null;
+  artist_credit?: string;
 };
 
 /** True when the frame paints the second half in a window of its own (split,

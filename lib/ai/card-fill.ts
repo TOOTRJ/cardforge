@@ -20,6 +20,7 @@ import {
 } from "@/lib/ai/station-design";
 import type { DesignVariety } from "@/lib/ai/design-variety";
 import { fillSecondPartOf, secondPartPinNote, type AiLayoutKind, type SecondPartDesign } from "@/lib/ai/layout-design";
+import { isAiDfcKind, type AiDfcKind, type BackFaceDesign } from "@/lib/ai/dfc-design";
 import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -48,8 +49,10 @@ export type DesignCardFillInput = {
   assembled?: boolean;
   /** A saga or a two-part card (the AI dialog, PR 2): the design writes
    *  its chapter rows or its second part (lib/ai/layout-design.ts). The
-   *  shape is in `frameBrief`. Absent on every other fill. */
-  layout?: AiLayoutKind;
+   *  shape is in `frameBrief`. A double-faced kind (PR 3) writes its back
+   *  face (lib/ai/dfc-design.ts) — handed back as `back_face`, which the
+   *  plan judges and pours into the fill. Absent on every other fill. */
+  layout?: AiLayoutKind | AiDfcKind;
 };
 
 /**
@@ -92,7 +95,7 @@ function stationFillRules(input: DesignCardFillInput, designed: DesignedLike, te
 
 export async function designCardFill(
   input: DesignCardFillInput,
-): Promise<{ fields: CardFillResult; art_prompt: string; second_part?: SecondPartDesign | null }> {
+): Promise<{ fields: CardFillResult; art_prompt: string; second_part?: SecondPartDesign | null; back_face?: BackFaceDesign | null }> {
   const wantsType = input.want.includes("card_type");
   const wantsRarity = input.want.includes("rarity");
   const wantsColors = input.want.includes("color_identity");
@@ -111,7 +114,7 @@ export async function designCardFill(
           input.colorHint ??
           (!wantsColors ? input.locked.color_identity?.[0] : undefined),
         note: input.frameBrief
-          ? [fillPromptNote(input.locked, input.want), input.frameBrief, input.layout ? secondPartPinNote(input.locked.back_face) : null]
+          ? [fillPromptNote(input.locked, input.want), input.frameBrief, input.layout && !isAiDfcKind(input.layout) ? secondPartPinNote(input.locked.back_face) : null]
               .filter(Boolean)
               .join(" ")
           : fillPromptNote(input.locked, input.want),
@@ -123,6 +126,11 @@ export async function designCardFill(
   const fields = pickFillResult(designed, input.want);
   if (fields.rules_text !== undefined) {
     fields.rules_text = stationFillRules(input, designed, fields.rules_text);
+  }
+  if (input.layout && isAiDfcKind(input.layout)) {
+    // A double-faced card's back (PR 3): the plan judges it and writes the
+    // fill's back_face from it, with the colour its gate stores.
+    return { fields, art_prompt: designed.art_prompt, back_face: designed.back_face ?? null };
   }
   if (input.layout) {
     // A saga's rows are its rules text (written from them by the engine);

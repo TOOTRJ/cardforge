@@ -74,6 +74,7 @@ import {
 } from "@/components/creator/ai-fill-dialog";
 import { aiDialogColorKey } from "@/lib/ai/frame-choices";
 import { isAiLayoutKind } from "@/lib/ai/layout-design";
+import { fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
@@ -298,6 +299,7 @@ import {
   isSagaFront,
   isDfcBackBody,
   templateHasBackFace,
+  templateTakesBackBody,
   withTransformBackShape,
   type DfcIconFamily,
 } from "@/lib/cards/dfc";
@@ -770,7 +772,7 @@ export function CardCreatorForm({
   // leaving mid-generation used to lose the credit silently).
   const [guardArmed, setGuardArmed] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
-  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting">(
+  const [fillPhase, setFillPhase] = useState<null | "designing" | "painting" | "painting-back">(
     null,
   );
   const aiBusy = fillPhase !== null || ideasBusy;
@@ -3295,14 +3297,17 @@ export function CardCreatorForm({
     // The kind the card was before the fill: a two-part fill onto ANOTHER
     // kind starts its second part afresh (below).
     const kindBeforeFill = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
+    // A double-faced fill (PR 3): a back of its own on a double-faced front
+    // body or a token template — the kind its frame IS, as a layout fill's.
+    const twoFacedFill = Boolean(fill.back_face) && templateTakesBackBody(fill.frame_template);
     if (fill.card_type && fillKind && !isRevise) {
       // A saga / two-part fill's kind change is judged in the colour the
       // card is about to take — the old one named a frame the card never
       // had ("isn't available in colorless") — set again below as ever.
-      if (isAiLayoutKind(fillKind) && fill.color_identity) {
+      if ((isAiLayoutKind(fillKind) || twoFacedFill) && fill.color_identity) {
         setValue("color_identity", normalizeColorSelection(fill.color_identity, { keepPair: drawsTwoColorFrame() }), { shouldDirty: true });
       }
-      applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) ? fill.card_type : undefined);
+      applyKindProgrammatic(fillKind, isAiLayoutKind(fillKind) || twoFacedFill ? fill.card_type : undefined);
       if (fill.frame_template) {
         // The colour the card is about to TAKE (the fill's own, set just
         // below) — never the form's colour before it: a frame the server
@@ -3418,6 +3423,12 @@ export function CardCreatorForm({
       if (back.power !== undefined) setValue("back_face.power", back.power ?? "", { shouldDirty: true });
       if (back.toughness !== undefined) setValue("back_face.toughness", back.toughness ?? "", { shouldDirty: true });
       if (back.color_identity !== undefined) setValue("back_face.color_identity", back.color_identity, { shouldDirty: true });
+      // A double-faced card's back (PR 3): its flavour, and its OWN picture
+      // with its credit (the back's step).
+      if (back.flavor_text !== undefined) {
+        setValue("back_face.flavor_text", printTypography(back.flavor_text ?? "", "flavor"), { shouldDirty: true });
+      }
+      if (back.artist_credit) setValue("back_face.artist_credit", back.artist_credit, { shouldDirty: true });
       // A split / aftermath half's own window: the card's one picture,
       // fitted to that window as any picture that lands is (TODO 3b.18).
       if (back.art_url) {
@@ -3428,6 +3439,11 @@ export function CardCreatorForm({
     // Each part in its own colour (TODO 4.26): the switch the plan judged —
     // on where both parts are verified, off where they are not — and a
     // split / aftermath first half's own colour (M2).
+    // A double-faced saga's front starts on today's look (the arrows), as a
+    // maker's "Two faces" pick does (handleSagaFaces).
+    if (twoFacedFill && templateHasBackFace(fill.frame_template) && !getValues("frame_style.dfcIcon") && !isRevise) {
+      setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
+    }
     if (fill.part_color !== undefined && !isRevise) {
       setValue("frame_style.partColor", fill.part_color, { shouldDirty: true });
       setValue("frame_style.firstPartColor", fill.first_part_color, { shouldDirty: true });
@@ -3445,12 +3461,17 @@ export function CardCreatorForm({
       return;
     }
     const wantsArt = options.want.includes("art");
+    // One credit per picture: a double-faced card that paints is two (PR 3),
+    // priced before anyone pays, as the dialog and the server price it.
+    const fillCost = fillCreditsFor(options.design_kind, options.want);
     if (
       !(await confirmSpend({
-        cost: 1,
+        cost: fillCost,
         title: "Generate with AI?",
         description: wantsArt
-          ? options.design_kind && isAiLayoutKind(options.design_kind) && options.design_kind !== "saga"
+          ? fillCost > 1
+            ? "Writes the ticked fields into both faces of this card and paints a picture for each face — one credit per picture. Nothing is saved until you click Save."
+            : options.design_kind && isAiLayoutKind(options.design_kind) && options.design_kind !== "saga"
             ? // A two-part card is ONE picture, one credit (PR 2).
               "Writes the ticked fields into both parts of this card and paints its one picture. Nothing is saved until you click Save."
             : "Writes the ticked fields into this card and paints its artwork. Nothing is saved until you click Save."
@@ -3478,6 +3499,11 @@ export function CardCreatorForm({
           style_preset: options.style_preset,
           style_twist: options.style_twist,
           design_kind: options.design_kind,
+          // A double-faced kind's back follows the card's icon family (the
+          // maker's pick; none = the default) — judged so at plan time.
+          ...(isAiDfcKind(options.design_kind) && getValues("frame_style.dfcIcon")
+            ? { dfc_icon: getValues("frame_style.dfcIcon") }
+            : {}),
           frame: options.frame,
           // The art is painted in the shape of the frame the card is on
           // (TODO 4.48b) — the frame itself is never changed by it.
@@ -3499,54 +3525,104 @@ export function CardCreatorForm({
         }
         return;
       }
-      if (typeof plan.credits === "number") publishCredits(plan.credits - 1);
+      if (typeof plan.credits === "number") publishCredits(plan.credits - (typeof plan.cost === "number" ? plan.cost : 1));
       const jobId: string = plan.job.id;
       jobStarted = true;
       if (wantsArt) setFillPhase("painting");
 
+      // A double-faced fill that paints has a second step, its back picture
+      // (PR 3): run after the front's, one credit of its own.
+      const backStepKey: string | undefined = (plan.job?.steps as Array<{ key?: string }> | undefined)
+        ?.map((planned) => planned.key)
+        .find((key) => key === "fill:1");
+      type FillStep = {
+        key?: string;
+        status?: string;
+        error?: string;
+        failure?: string | null;
+        refunded?: number | null;
+        refund_pending?: boolean | null;
+        fill?: CardFillResult;
+      };
       // One step; poll while another request holds it (double-click, second
-      // tab) instead of counting that as a failure.
-      let step:
-        | {
-            status?: string;
-            error?: string;
-            failure?: string | null;
-            refunded?: number | null;
-            refund_pending?: boolean | null;
-            fill?: CardFillResult;
+      // tab) instead of counting that as a failure. Null = the answer was
+      // lost (said, unless `quiet`: the back's caller words it itself).
+      const runFillStep = async (key: string | undefined, quiet = false): Promise<FillStep | undefined | null> => {
+        let found: FillStep | undefined;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: key ? JSON.stringify({ step: key }) : "{}",
+          });
+          const payload = await stepResponse.json().catch(() => null);
+          if (!stepResponse.ok || !payload?.ok) {
+            // No JSON = the answer was lost on the way (a platform timeout
+            // page, a dropped connection): the result, if it finishes, is
+            // offered back here; a charge with no result comes back by itself.
+            if (!quiet) toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
+            return null;
           }
-        | undefined;
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        const stepResponse = await fetch(`/api/ai/jobs/${jobId}/step`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
-        const payload = await stepResponse.json().catch(() => null);
-        if (!stepResponse.ok || !payload?.ok) {
-          // No JSON = the answer was lost on the way (a platform timeout
-          // page, a dropped connection): the result, if it finishes, is
-          // offered back here; a charge with no result comes back by itself.
-          toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
-          return;
+          if (typeof payload.credits === "number") publishCredits(payload.credits);
+          const steps = (payload.job?.steps ?? []) as FillStep[];
+          found = key ? steps.find((candidate) => candidate.key === key) : (steps.find((candidate) => candidate.key === "fill:0") ?? steps[0]);
+          if (payload.inFlight || found?.status === "running") {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            continue;
+          }
+          break;
         }
-        if (typeof payload.credits === "number") publishCredits(payload.credits);
-        step = payload.job?.steps?.[0];
-        if (payload.inFlight || step?.status === "running") {
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          continue;
-        }
-        break;
-      }
+        return found;
+      };
+      const step = await runFillStep(undefined);
+      if (step === null) return;
       if (!step || step.status !== "done" || !step.fill) {
         // A FAILED step says what failed and what its credit did (returned,
         // or never taken) — from the step's own record, never assumed. A
         // missing result claims nothing it can't prove.
         toast.error(step?.status === "failed" ? failedStepMessage(step) : AI_FILL_NO_ANSWER_MESSAGE);
+        // The back is never painted for a front that wasn't made: its step
+        // closes the job, uncharged (best effort).
+        if (backStepKey) await runFillStep(backStepKey).catch(() => undefined);
         return;
       }
+      let filled: CardFillResult = step.fill;
+      // The back's picture: merged in when it was painted; when it wasn't,
+      // the front is still the maker's (its credit stands — its picture
+      // was delivered) and the back's credit was returned — said below.
+      let backMissed: string | null = null;
+      // The back's answer was lost and the job can't tell yet what became of
+      // it: the result stays UNCLAIMED, so a back the server finishes (and
+      // charged) is offered on this page next time (app/api/ai/card-fill).
+      let backUnknown = false;
+      if (backStepKey) {
+        setFillPhase("painting-back");
+        // A lost answer — a dropped connection, a platform timeout page, a
+        // throw — never takes the front with it: the front was painted and
+        // paid for, and is poured in below whatever the back did.
+        let back: FillStep | undefined | null = await runFillStep(backStepKey, true).catch(() => null);
+        if (back === null || back?.status === "running" || back?.status === "pending") {
+          // Ask the job once what the back really did before saying so.
+          back = await fetch(`/api/ai/jobs/${jobId}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: { ok?: boolean; job?: { steps?: FillStep[] } } | null) =>
+              payload?.ok ? (payload.job?.steps ?? []).find((candidate) => candidate.key === backStepKey) ?? null : null,
+            )
+            .catch(() => null);
+        }
+        const backArt = back?.status === "done" ? back.fill?.back_face : undefined;
+        if (backArt?.art_url && filled.back_face) {
+          filled = { ...filled, back_face: { ...filled.back_face, ...backArt } };
+        } else if (back?.status === "failed") {
+          backMissed = `The back face's picture couldn't be painted. ${failedStepMessage(back)} Add a picture for the back face before you save it — or save it as a draft.`;
+        } else {
+          backUnknown = true;
+          backMissed =
+            "We lost the connection while the back face's picture was being painted. If it finishes, it's offered on this page next time you open it; if it doesn't, any credit it took comes back automatically within the hour. Until then, add a picture for the back face before you save it — or save it as a draft.";
+        }
+      }
       try {
-        applyFill(step.fill);
+        applyFill(filled);
       } catch (error) {
         // The result is safe on the job: left unclaimed, it is offered back
         // on this page after a reload — never reported as a network error.
@@ -3556,13 +3632,21 @@ export function CardCreatorForm({
         );
         return;
       }
-      claimFill(jobId);
+      if (!backUnknown) claimFill(jobId);
       // ONE announcement: a card kept on another frame than the one picked
-      // says why in it (frame-first, lib/ai/frame-brief.ts).
-      toast.success(
-        "Generated — look it over and save when you're happy.",
-        step.fill.frame_notice ? { description: step.fill.frame_notice } : undefined,
-      );
+      // says why in it (frame-first, lib/ai/frame-brief.ts); a double-faced
+      // card whose back picture failed says so — and what its credit did —
+      // never a silent half (PR 3), the frame's notice beside it.
+      if (backMissed) {
+        toast.warning("Generated the card — but not its back face's picture.", {
+          description: [filled.frame_notice, backMissed].filter(Boolean).join(" "),
+        });
+      } else {
+        toast.success(
+          "Generated — look it over and save when you're happy.",
+          filled.frame_notice ? { description: filled.frame_notice } : undefined,
+        );
+      }
     } catch {
       toast.error(jobStarted ? AI_FILL_NO_ANSWER_MESSAGE : AI_PLAN_NO_ANSWER_MESSAGE);
     } finally {
@@ -4563,9 +4647,17 @@ export function CardCreatorForm({
   // The step panels, the once-mounted dialogs and the action bar are the
   // same in the shipped stepper and in the lab's canvas layout; only the
   // shell around them differs.
+  // The busy overlays sit ABOVE everything they cover (owner 2026-10-28:
+  // the card's pips, set symbol, P/T plate and collector line — positioned
+  // at z 20–50 inside CardPreview — and the form's own positioned pieces
+  // drew sharp over the dim). Each covered box is its own stacking context
+  // (`isolate`), so the overlay's z-[100] beats every z-index inside it and
+  // never climbs over the page around it. Creator chrome only: the card
+  // renders as before (no blend mode reads the isolation).
   const fillOverlay = fillPhase ? (
     <div
-      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
+      data-testid="fill-overlay"
+      className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-background/60 backdrop-blur-[1px]"
       role="status"
       aria-live="polite"
     >
@@ -4573,7 +4665,9 @@ export function CardCreatorForm({
       <span className="text-xs font-semibold uppercase tracking-wider text-muted">
         {fillPhase === "painting"
           ? "Painting the artwork — this takes about a minute"
-          : "Designing your card…"}
+          : fillPhase === "painting-back"
+            ? "Painting the back face — about a minute more"
+            : "Designing your card…"}
       </span>
     </div>
   ) : null;
@@ -4595,7 +4689,7 @@ export function CardCreatorForm({
       {partOutline}
       {fillPhase ? (
         <CardGeneratingOverlay
-          label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
+          label={fillPhase === "painting" ? "Painting art…" : fillPhase === "painting-back" ? "Painting the back…" : "Designing…"}
           landscape={previewLandscape}
         />
       ) : null}
@@ -4627,11 +4721,9 @@ export function CardCreatorForm({
           &ldquo;Save as a draft&rdquo; live on the Publish step.
         </>
       ) : (
-        <>
-          New cards are <strong className="text-foreground">public</strong> by
-          default — tick &ldquo;Save as a draft&rdquo; on the Publish step
-          to keep it private until it&apos;s ready.
-        </>
+        // ONE string (owner 2026-10-28): the bold word read "publicby" —
+        // no emphasis, and the space can't be lost at a line break.
+        <>{"New cards are public by default — tick “Save as a draft” on the Publish step to keep it private until it's ready."}</>
       )}
     </p>
   );
@@ -5546,7 +5638,7 @@ export function CardCreatorForm({
               Live preview · click a part of the card to edit it
             </p>
             {partEditingLabel}
-            <div className="relative w-full max-w-md">
+            <div className="relative isolate w-full max-w-md">
               <MemoCardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
               {previewOverlays}
               {readOnly ? null : (
@@ -5569,7 +5661,7 @@ export function CardCreatorForm({
           </div>
 
           <SurfaceCard
-            className="relative flex flex-col gap-6 p-6"
+            className="relative isolate flex flex-col gap-6 p-6"
             aria-busy={fillPhase !== null || undefined}
           >
             {fillOverlay}
@@ -5609,7 +5701,7 @@ export function CardCreatorForm({
 
         {/* ----- Left: form ----- */}
         <SurfaceCard
-          className="relative flex flex-col gap-6 p-6"
+          className="relative isolate flex flex-col gap-6 p-6"
           aria-busy={fillPhase !== null || undefined}
         >
           {fillOverlay}
@@ -5669,7 +5761,7 @@ export function CardCreatorForm({
               // the part being edited is outlined on it and named above it.
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 {partEditingLabel ? <div className="mb-2 flex">{partEditingLabel}</div> : null}
-                <div className="relative">
+                <div className="relative isolate">
                   <MemoCardPreview {...previewProps} />
                   {previewOverlays}
                 </div>
@@ -5707,7 +5799,7 @@ export function CardCreatorForm({
             ) : (
             <div className="mx-auto w-full max-w-sm">
               {partEditingLabel ? <div className="mb-3 flex">{partEditingLabel}</div> : null}
-              <div className="relative">
+              <div className="relative isolate">
                 <MemoCardPreview {...previewProps} />
                 {previewOverlays}
               </div>
@@ -5808,7 +5900,8 @@ function CardGeneratingOverlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 ${cardCornersClass(landscape)} bg-background/70 backdrop-blur-sm`}
+      data-testid="card-generating-overlay"
+      className={`absolute inset-0 z-[100] flex flex-col items-center justify-center gap-2 ${cardCornersClass(landscape)} bg-background/70 backdrop-blur-sm`}
       role="status"
       aria-live="polite"
     >

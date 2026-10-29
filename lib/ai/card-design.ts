@@ -35,6 +35,20 @@ import {
   type AiLayoutKind,
   type LayoutDesignFields,
 } from "@/lib/ai/layout-design";
+import {
+  autofixDfcFront,
+  autofixDfcParts,
+  backFaceDesignSchema,
+  isAiDfcKind,
+  lintDfcDesign,
+  normalizeDfcDesign,
+  type AiDfcKind,
+  type DfcDesignFields,
+} from "@/lib/ai/dfc-design";
+
+/** A slot's layout: a saga or a two-part card (PR 2), or a double-faced
+ *  card (PR 3, lib/ai/dfc-design.ts). */
+export type DesignLayout = AiLayoutKind | AiDfcKind;
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
@@ -144,17 +158,23 @@ const freshDesignedCardSchema = designedCardSchema.extend({
 
 /** A design — and, for a saga or a two-part card (lib/ai/layout-design.ts),
  *  its chapter rows or its second part. */
-export type DesignedCard = z.infer<typeof designedCardSchema> & LayoutDesignFields;
+export type DesignedCard = z.infer<typeof designedCardSchema> & LayoutDesignFields & DfcDesignFields;
 
 /** The `cards` object a design or repair call asks for: an emblem only when
  *  `allowEmblem` (a slot pinned one, or the card under repair is one); a
  *  saga's rows or a second part only for a slot of that layout (PR 2 of the
  *  AI dialog) — every other call asks for the one-faced card it always
  *  did. */
-export function designedCardsSchema(allowEmblem: boolean, layout?: AiLayoutKind | null) {
+export function designedCardsSchema(allowEmblem: boolean, layout?: DesignLayout | null) {
   const base = allowEmblem ? designedCardSchema : freshDesignedCardSchema;
+  // A double-faced card (PR 3): its back face, and a double-faced saga's
+  // rows with it.
   const card = !layout
     ? base
+    : isAiDfcKind(layout)
+      ? layout === "dfc_saga"
+        ? base.extend({ saga: sagaDesignSchema.nullable(), back_face: backFaceDesignSchema.nullable() })
+        : base.extend({ back_face: backFaceDesignSchema.nullable() })
     : layoutDesignPart(layout) === "saga"
       ? base.extend({ saga: sagaDesignSchema.nullable() })
       : base.extend({ second_part: secondPartDesignSchema.nullable() });
@@ -199,7 +219,7 @@ export function fixupDesignedCards(root: unknown): unknown {
 export const DESIGN_STAT_FIELDS: ReadonlySet<string> = new Set(["power", "toughness", "loyalty", "defense"]);
 
 /** The repair for a design / judge answer. */
-export function designRepair(allowEmblem: boolean, layout?: AiLayoutKind | null) {
+export function designRepair(allowEmblem: boolean, layout?: DesignLayout | null) {
   // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
   // cost (and the autofix then read it as colourless).
   // A missing STAT is never nulled: the autofix fills a creature's null
@@ -258,21 +278,30 @@ export type DesignSlot = {
   /** A saga or a two-part card (lib/ai/layout-design.ts): the design also
    *  writes its chapter rows or its second part, and is linted, judged and
    *  repaired for them. The slot's note carries the shape
-   *  (layoutFrameBrief). Absent on every other slot. */
-  layout?: AiLayoutKind;
+   *  (layoutFrameBrief). A double-faced kind (PR 3) writes its back face
+   *  (lib/ai/dfc-design.ts). Absent on every other slot. */
+  layout?: DesignLayout;
 };
 
 /** The lint of one design: the one-faced rules, and its layout's. */
-function lintDesign(card: DesignedCard, layout: AiLayoutKind | undefined) {
+function lintDesign(card: DesignedCard, layout: DesignLayout | undefined) {
   const lint = lintCardDesign(card);
   if (!layout) return lint;
-  const own = lintLayoutDesign(card, layout);
+  const own = isAiDfcKind(layout) ? lintDfcDesign(card, layout) : lintLayoutDesign(card, layout);
   return { errors: [...lint.errors, ...own.errors], warnings: [...lint.warnings, ...own.warnings] };
 }
 
+/** Always, before the lint: a saga's rows into its text, a back face's
+ *  printed shape. */
+function normalizeDesign(card: DesignedCard, layout: DesignLayout | undefined): DesignedCard {
+  if (layout && isAiDfcKind(layout)) return normalizeDfcDesign(card, layout);
+  return normalizeLayoutDesign(card, layout);
+}
+
 /** The last-resort repair of one design, its layout's fields included. */
-function autofixDesign(card: DesignedCard, layout: AiLayoutKind | undefined): DesignedCard {
+function autofixDesign(card: DesignedCard, layout: DesignLayout | undefined): DesignedCard {
   if (!layout) return autofixCard(card);
+  if (isAiDfcKind(layout)) return autofixDfcParts(autofixCard(autofixDfcFront(card, layout)), layout);
   return autofixLayoutParts(autofixCard(autofixLayoutFront(card, layout)), layout);
 }
 
@@ -371,9 +400,13 @@ const JUDGE_SYSTEM = `You are the rules editor for a Magic: The Gathering-style 
 const LAYOUT_JUDGE_RULE =
   "A card with `saga` keeps its chapter rows (numbers I, II, III… in order) and rules_text the same chapters as lines; a card with `second_part` keeps it complete — fix its shape the same way as the first part's.";
 
+/** What the judge is told about a double-faced card's back face. */
+const DFC_JUDGE_RULE =
+  'A card with `back_face` keeps it complete — its own name, type line, rules, stats, colors and art_prompt — and fixes its shape the same way as the front\'s (a back face that prints no mana cost keeps cost ""); a card with `saga` keeps its chapter rows.';
+
 async function judgeRepair(
   flawed: Array<{ card: DesignedCard; issues: LintIssue[] }>,
-  layout?: AiLayoutKind,
+  layout?: DesignLayout,
 ): Promise<DesignedCard[] | null> {
   const prompt = flawed
     .map(({ card, issues }, index) =>
@@ -395,7 +428,7 @@ async function judgeRepair(
         generateObject({
           model: judgeModel(),
           schema: designedCardsSchema(allowEmblem, layout),
-          system: layout ? `${JUDGE_SYSTEM} ${LAYOUT_JUDGE_RULE}` : JUDGE_SYSTEM,
+          system: layout ? `${JUDGE_SYSTEM} ${isAiDfcKind(layout) ? DFC_JUDGE_RULE : LAYOUT_JUDGE_RULE}` : JUDGE_SYSTEM,
           prompt,
           temperature: 0.2,
           experimental_repairText,
@@ -507,7 +540,7 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   // (A saga's rules text is its rows: written from them before the lint.)
   let cards = (object.cards as DesignedCard[])
     .slice(0, input.slots.length)
-    .map((card, index) => normalizeLayoutDesign(card, layoutOf(index)));
+    .map((card, index) => normalizeDesign(card, layoutOf(index)));
 
   // ---- Lint ----
   let lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
@@ -530,7 +563,7 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
     if (repaired) {
       cards = cards.map((card, index) => {
         const repairIndex = flawedIndexes.indexOf(index);
-        return repairIndex === -1 ? card : normalizeLayoutDesign(repaired[repairIndex]!, layoutOf(index));
+        return repairIndex === -1 ? card : normalizeDesign(repaired[repairIndex]!, layoutOf(index));
       });
       lints = cards.map((card, index) => lintDesign(card, layoutOf(index)));
     }

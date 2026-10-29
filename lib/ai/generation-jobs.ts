@@ -85,6 +85,20 @@ import {
   type AiLayoutKind,
   type LayoutFit,
 } from "@/lib/ai/layout-design";
+import {
+  dfcColorHints,
+  dfcColorKeys,
+  dfcFitOf,
+  dfcFrameBrief,
+  dfcLockedOf,
+  dfcPrecheckError,
+  dfcSteerType,
+  fillBackFaceOf,
+  isDfcKindFront,
+  type AiDfcKind,
+  type DfcFit,
+} from "@/lib/ai/dfc-design";
+import type { DfcIconFamily } from "@/lib/cards/dfc";
 import type {
   CardBackFace,
   CardType,
@@ -290,7 +304,26 @@ type CardFillJobPlan = {
    *  (lib/ai/frame-brief.ts frameMoveNotice) — handed to the creator with
    *  the fill, which tells the maker. Absent otherwise. */
   frame_notice?: string;
+  /** A double-faced card's BACK picture (the AI dialog, PR 3): painted by
+   *  the job's second step (`fill:1`, one credit of its own) from its own
+   *  prompt, in its own body's window, with its body's art direction.
+   *  Absent on every other plan — and on a double-faced fill that doesn't
+   *  paint (one step, as ever). */
+  back_art?: {
+    prompt: string;
+    face: {
+      template: string;
+      color_identity: string[];
+      card_type: string | null;
+      supertype: string | null;
+      cost: string | null;
+    };
+    brief?: string;
+  };
 };
+
+/** The step key of a double-faced fill's BACK picture (PR 3). */
+export const FILL_BACK_STEP_KEY = "fill:1";
 
 
 type DeckJobPlan = {
@@ -495,7 +528,10 @@ async function executeJobStep(
           "AI remix has been retired — open the card and use Remix, then Generate with AI.",
       };
     case "card_fill":
-      return runCardFillStep(userId, job.id, step, job.plan as CardFillJobPlan);
+      // A double-faced fill's back picture is its own step (PR 3).
+      return step.key === FILL_BACK_STEP_KEY
+        ? runCardFillBackStep(userId, job, step, job.plan as CardFillJobPlan)
+        : runCardFillStep(userId, job.id, step, job.plan as CardFillJobPlan);
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -1018,6 +1054,15 @@ export type CreateCardFillJobInput = {
    *  or its second part with it — and kept there, or refused at plan time.
    *  Read only with the card type wanted. */
   layout?: AiLayoutKind;
+  /** The AI dialog's double-faced kind (PR 3): the fill is designed with
+   *  its back face (lib/ai/dfc-design.ts), judged at plan time by every
+   *  gate a double-faced save runs, and paints TWO pictures — one step and
+   *  one credit each. Read only with the card type wanted. */
+  dfc?: AiDfcKind;
+  /** The card's icon family as the creator holds it (`frame_style.dfcIcon`)
+   *  for a double-faced fill: the back's body follows it, in the plan's fit
+   *  as in the save. Absent = the default (▲ / ▼). */
+  dfcIcon?: DfcIconFamily;
   /** The theme / style were assembled from the dialog's presets
    *  (lib/ai/presets.ts assemblePrompt): what the painter reads. */
   assembled?: { artStyle?: string; styleArt: string };
@@ -1051,6 +1096,9 @@ export async function createCardFillJob(
 
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
   const wantsType = input.want.includes("card_type");
+  if (input.dfc && wantsType) {
+    return createDfcFillJob(input, input.dfc, { userId: user.id, deckContext, deckBrief, verifiedKeys });
+  }
   if (input.layout && wantsType) {
     return createLayoutFillJob(input, input.layout, { userId: user.id, deckContext, deckBrief, verifiedKeys });
   }
@@ -1264,6 +1312,9 @@ async function insertFillJob(
   deckContext: OwnedDeckContext | null,
   plan: CardFillJobPlan,
   label: string,
+  /** A double-faced fill's back picture (PR 3): its own step, after the
+   *  front's. */
+  backLabel?: string,
 ): Promise<CreateCardJobResult> {
   const steps: JobStep[] = [
     {
@@ -1271,6 +1322,7 @@ async function insertFillJob(
       label,
       status: "pending",
     },
+    ...(backLabel ? [{ key: FILL_BACK_STEP_KEY, label: backLabel, status: "pending" as const }] : []),
   ];
 
   const supabase = await createClient();
@@ -1455,6 +1507,261 @@ async function createLayoutFillJob(
     .join(" // ");
   return insertFillJob(userId, input, deckContext, plan, label || "Your card");
 }
+
+/**
+ * PLAN a fill of a double-faced card (the AI dialog, PR 3): a transform or
+ * modal card on its published bodies, a double-faced saga, a double-sided
+ * token. The design writes the back face whole — its own name, cost (none
+ * where it prints none), type line, rules, P/T, flavour, colour and art
+ * prompt — and the card AS THE CREATOR WILL HOLD IT must pass every gate a
+ * double-faced save runs (dfcFitOf: the front's body and gates, the back's
+ * body from the creator's own derivation, the server's back gate in the
+ * back's colour). A design off the frame picked is redone once with why,
+ * then kept where the creator's rules put it (and told); one that can't be
+ * saved at all is redone once, then refused with `frame_unfit` — before the
+ * job exists, so nothing is reserved.
+ *
+ * The price is one credit per picture: with the artwork ticked the job has
+ * TWO steps — `fill:0` (the text and the front's picture) and `fill:1` (the
+ * back's picture) — each reserving, settling and refunding its own credit
+ * under its own ledger ref. Without it, one step and one credit, as any fill.
+ */
+async function createDfcFillJob(
+  input: CreateCardFillJobInput,
+  kind: AiDfcKind,
+  ctx: {
+    userId: string;
+    deckContext: OwnedDeckContext | null;
+    deckBrief: ReturnType<typeof buildDeckBrief> | null;
+    verifiedKeys: ReadonlySet<string>;
+  },
+): Promise<CreateCardJobResult> {
+  const { userId, deckContext, deckBrief, verifiedKeys } = ctx;
+  input = { ...input, locked: dfcLockedOf(input.locked, kind) };
+  const wants = (field: CardFillField) => input.want.includes(field);
+  const picked: FrameTemplate | null =
+    input.frame && input.frame !== "random" && isDfcKindFront(kind, input.frame) ? input.frame : null;
+  const precheck = dfcPrecheckError({
+    kind,
+    picked,
+    want: input.want,
+    lockedRules: input.locked.rules_text,
+    lockedColors: input.locked.color_identity,
+    verifiedKeys,
+  });
+  if (precheck) return { ok: false, error: precheck, code: "frame_unfit" };
+  const wantsColors = wants("color_identity");
+  let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
+  if (wantsColors) {
+    const hints = dfcColorHints(kind, picked, verifiedKeys);
+    if (hints.length > 0) colorHint = hints[Math.floor(Math.random() * hints.length)];
+  }
+  const brief = dfcFrameBrief(kind, picked, wantsColors ? dfcColorKeys(kind, picked, verifiedKeys) : undefined);
+  // One draw for a Surprise-me token frame, read by every fit below (the
+  // fit the redo judged is the frame the card keeps).
+  const roll = Math.random();
+
+  await logAiCall(userId, "fill_card");
+  const recent = await recentAiTitles(userId);
+  type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
+  const fitOf = (result: DesignedFill): DfcFit => {
+    const f = result.fields;
+    return dfcFitOf(
+      kind,
+      {
+        card_type: f.card_type ?? input.locked.card_type ?? "creature",
+        supertype: designedOver(f.supertype, input.locked.supertype),
+        subtypes: f.subtypes ?? input.locked.subtypes,
+        title: f.title ?? input.locked.title,
+        cost: designedOver(f.cost, input.locked.cost),
+        rules_text: f.rules_text ?? input.locked.rules_text,
+        flavor_text: designedOver(f.flavor_text, input.locked.flavor_text),
+        color_identity: f.color_identity ?? input.locked.color_identity ?? [],
+        power: designedOver(f.power, input.locked.power),
+        toughness: designedOver(f.toughness, input.locked.toughness),
+        back_face: result.back_face ?? null,
+      },
+      verifiedKeys,
+      { picked, random: () => roll, family: input.dfcIcon ?? null },
+    );
+  };
+  let designs = 0;
+  let redoNote: string | null = null;
+  let designed: DesignedFill;
+  try {
+    designed = await designFreshly(
+      recent,
+      (variety) => {
+        designs += 1;
+        return designCardFill({
+          want: input.want,
+          locked: input.locked,
+          steer: { ...input.steer, card_type: dfcSteerType(kind, picked) },
+          theme: input.theme,
+          style: input.style,
+          context: deckBrief?.context,
+          colorHint,
+          variety,
+          frameBrief: designs > 1 && redoNote ? `${brief} ${redoNote}` : brief,
+          layout: kind,
+          ...(input.assembled ? { assembled: true } : {}),
+        });
+      },
+      (result) => (wants("title") ? result.fields.title : null),
+      {
+        // Exactly the frame picked (any frame, for Surprise me) — else
+        // redone once with why; still off the frame but savable, kept and
+        // told (frame_notice); unsavable twice, refused.
+        acceptable: (result) => {
+          const fit = fitOf(result);
+          if (designs === 1 && !(fit.ok && fit.exact)) {
+            redoNote = fit.ok
+              ? `YOUR LAST DESIGN MISSED THIS FRAME: ${(fit.notice ?? "").replace(/, so it's on .*$/, "")}. This time follow every frame rule above exactly.`
+              : `YOUR LAST DESIGN COULD NOT BE SAVED AS THIS DOUBLE-FACED CARD: ${fit.reason ?? "it broke a frame rule."} This time follow every rule above exactly, the back face included.`;
+          }
+          return fit.ok && fit.exact;
+        },
+        fallbackAcceptable: (result) => fitOf(result).ok,
+        secondFits: planRedesignFits,
+      },
+    );
+  } catch (error) {
+    if (error instanceof DesignNotUsableError) {
+      console.warn(`[ai:design] card_fill didn't fit the ${kind} frames twice`);
+      return { ok: false, error: aiFailureMessage("frame_unfit"), code: "frame_unfit" };
+    }
+    return planDesignFailure(error, "card_fill");
+  }
+
+  const fit = fitOf(designed);
+  if (!fit.ok || !fit.front || !fit.back || !designed.back_face) {
+    // (designFreshly only returns a design one of the two judged savable.)
+    return { ok: false, error: aiFailureMessage("frame_unfit"), code: "frame_unfit" };
+  }
+  const back = designed.back_face;
+  const fields: CardFillResult = {
+    ...designed.fields,
+    back_face: fillBackFaceOf(kind, back, fit.back.color_identity),
+  };
+  const paints = wants("art");
+  const frontColour = fields.color_identity ?? input.locked.color_identity ?? [];
+  const plan: CardFillJobPlan = {
+    want: input.want,
+    fields,
+    art_prompt: designed.art_prompt,
+    style: (input.assembled ? input.assembled.artStyle : input.style)?.trim() || null,
+    frame_template: fit.front,
+    ...(paints
+      ? {
+          art_face: {
+            template: fit.front,
+            color_identity: frontColour,
+            card_type: fields.card_type ?? input.locked.card_type ?? null,
+            supertype: (fields.supertype !== undefined ? fields.supertype : input.locked.supertype) ?? null,
+            cost: (fields.cost !== undefined ? fields.cost : input.locked.cost) ?? null,
+          },
+        }
+      : {}),
+    deck_id: deckContext?.deck.id ?? null,
+    ...(fit.notice && !fit.exact ? { frame_notice: fit.notice } : {}),
+  };
+  if (paints) {
+    // Each face gets the art direction of its own body (and the style
+    // preset's look); the back is painted from its OWN prompt.
+    const frontBrief = [input.assembled?.styleArt ?? "", frameArtBrief(fit.front)].filter(Boolean).join(" ");
+    if (frontBrief) plan.art_brief = frontBrief;
+    const backBrief = [input.assembled?.styleArt ?? "", frameArtBrief(fit.back.template)].filter(Boolean).join(" ");
+    plan.back_art = {
+      prompt: back.art_prompt,
+      face: {
+        template: fit.back.template,
+        color_identity: fit.back.color_identity,
+        card_type: back.card_type,
+        supertype: back.supertype,
+        cost: fields.back_face?.cost || null,
+      },
+      ...(backBrief ? { brief: backBrief } : {}),
+    };
+  }
+  const frontTitle = fields.title ?? input.locked.title ?? "Your card";
+  return insertFillJob(
+    userId,
+    input,
+    deckContext,
+    plan,
+    `${frontTitle} // ${back.title}`,
+    // (The back's own name: the recent-titles list reads every step label.)
+    paints ? back.title : undefined,
+  );
+}
+
+/** A double-faced fill's BACK picture (PR 3) — its own step and its own
+ *  credit, run after the front's. A front that didn't finish takes the back
+ *  with it, uncharged (no reserve, no ledger row): a back picture for a card
+ *  the maker never receives is never sold. A failed back is refunded once
+ *  by the credit wrapper, like every step; the front's credit stands (its
+ *  picture was delivered) and the creator says so. */
+async function runCardFillBackStep(
+  userId: string,
+  job: GenerationJobRow,
+  step: JobStep,
+  plan: CardFillJobPlan,
+): Promise<JobStep> {
+  if (step.fill) return { ...step, status: "done", error: undefined };
+  const backArt = plan.back_art;
+  const front = job.steps.find((candidate) => candidate.key === "fill:0");
+  if (!backArt || front?.status !== "done") {
+    return {
+      ...step,
+      status: "failed",
+      error: FILL_BACK_SKIPPED,
+      failure: null,
+      spend_ref: null,
+      refunded: 0,
+      refund_pending: false,
+    };
+  }
+  return withCreditedStep(userId, job.id, 1, "fill_card", step, async () => {
+    const attempt = (step.attempts ?? 0) + 1;
+    const style = plan.style?.trim() ? ` Rendered strictly in ${plan.style.trim()} style.` : "";
+    const direction = backArt.brief?.trim() ? ` ${backArt.brief.trim()}` : "";
+    await logAiCall(userId, "generate_random_art");
+    const image = await generateImageWithFallbacks(
+      artPromptLadder(
+        attempt,
+        `${backArt.prompt}${style}${direction} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
+        {
+          title: plan.fields.back_face?.title ?? step.label,
+          typeLine: backArt.face.card_type,
+          colors: backArt.face.color_identity as ColorIdentity[],
+          style: plan.style,
+        },
+      ),
+      artShapeForFace({
+        template: backArt.face.template,
+        colorIdentity: backArt.face.color_identity as ColorIdentity[],
+        cardType: backArt.face.card_type as CardType | null,
+        supertype: backArt.face.supertype,
+        cost: backArt.face.cost,
+      }),
+    );
+    if (!image.ok) {
+      return { ...step, status: "failed", attempts: attempt, error: image.error, failure: image.failure };
+    }
+    const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+    if (!persisted.ok) {
+      return { ...step, status: "failed", attempts: attempt, error: AI_FAILURE_COPY.art_store, failure: "art_store" };
+    }
+    const credit = await aiArtistCredit();
+    const fill: CardFillResult = {
+      back_face: { art_url: persisted.publicUrl, ...(credit ? { artist_credit: credit } : {}) },
+    };
+    return { ...step, status: "done", fill, attempts: attempt, error: undefined };
+  });
+}
+
+/** The back step's words when the front didn't finish (nothing charged). */
+export const FILL_BACK_SKIPPED = "The front face wasn't made, so its back wasn't painted.";
 
 /** The fill job's single step: paint the art when it was wanted, then hand
  *  every generated field back on the step. One credit either way. */
