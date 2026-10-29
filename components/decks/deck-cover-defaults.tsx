@@ -30,6 +30,7 @@ export function DeckCoverDefaults({
   shown,
   onPick,
   disabled = false,
+  shuffleRef,
 }: {
   /** The stored built-in, or "" while the deck has none (automatic). */
   value: string;
@@ -37,6 +38,9 @@ export function DeckCoverDefaults({
   shown: string | null;
   onPick: (path: string) => void;
   disabled?: boolean;
+  /** The Shuffle button — where the cover field hands the focus when the
+   *  control that was pressed leaves the page ("Back to the colours' pick"). */
+  shuffleRef?: React.Ref<HTMLButtonElement>;
 }) {
   const labelId = useId();
   const [focused, setFocused] = useState<string | null>(null);
@@ -61,6 +65,7 @@ export function DeckCoverDefaults({
           Built-in backgrounds
         </span>
         <Button
+          ref={shuffleRef}
           type="button"
           variant="outline"
           size="sm"

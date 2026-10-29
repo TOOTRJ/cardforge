@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeDeckAnalytics,
+  deckStatCards,
   statusRows,
   typeBucketFor,
   TYPE_BUCKET_PLURALS,
@@ -107,7 +108,31 @@ describe("computeDeckAnalytics", () => {
     // edited; the bare printing: imported. The maybeboard counts nowhere.
     expect(analytics.byStatus).toEqual({ imported: 2, edited: 4, remix: 0, original: 0, not_found: 0 });
     expect(analytics.byBoard.maybe).toBe(10);
-    expect(analytics.byType.Creature).toBe(6);
+    // The types count the main deck and the commander only: the sideboard's
+    // two are on their board and in the total, never in a type (owner
+    // 2026-10-29).
+    expect(analytics.byType.Creature).toBe(4);
+    expect(analytics.byBoard.side).toBe(2);
+  });
+
+  it("counts the curve, the average, the types and the lands over the main deck and the commander", () => {
+    const analytics = computeDeckAnalytics([
+      { entry: makeEntry({ quantity: 1, board: "commander", mana_value: 5 }) },
+      { entry: makeEntry({ quantity: 3, mana_value: 1 }) },
+      { entry: makeEntry({ quantity: 4, board: "side", mana_value: 2 }) },
+      { entry: makeEntry({ quantity: 2, board: "side", type_line: "Basic Land — Island", mana_value: 0, mana_cost: null }) },
+      { entry: makeEntry({ quantity: 1, board: "companion", mana_value: 3 }) },
+      { entry: makeEntry({ quantity: 5, type_line: "Basic Land — Forest", mana_value: 0, mana_cost: null }) },
+    ]);
+    expect(analytics.curve).toEqual([0, 3, 0, 0, 0, 1, 0, 0]);
+    expect(analytics.averageManaValue).toBeCloseTo((3 + 5) / 4, 10);
+    expect(analytics.byType.Creature).toBe(4);
+    expect(analytics.byType.Land).toBe(5);
+    expect(analytics.lands).toBe(5);
+    expect(deckStatCards(analytics)).toBe(9);
+    // Still on their boards and in the total.
+    expect(analytics.total).toBe(16);
+    expect(analytics.byBoard).toMatchObject({ side: 6, companion: 1 });
   });
 
   it("builds the curve with a 7+ bucket and keeps lands out", () => {

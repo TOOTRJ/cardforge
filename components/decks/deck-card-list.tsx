@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ChartColumn, X } from "lucide-react";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
+import { CURVE_FILTER_NOTICE_ID, useDeckCurveFilter } from "@/components/decks/deck-curve-filter";
 import { DeckGroupViews } from "@/components/decks/deck-card-views";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
 import { DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
@@ -41,6 +43,9 @@ import type { DeckFormat } from "@/types/deck";
 // publicDeckItems here too — the page already did; a list rendered on its
 // own is held to the same rule — and the card is a "Private card" tile.
 // ---------------------------------------------------------------------------
+
+const NOTICE_BUTTON_CLASS =
+  "inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60";
 
 /** The view a list rendered without the viewer's prefs starts on. */
 const LIST_PREFS: DeckViewPrefs = { view: "list", group: "type", sort: "mana" };
@@ -88,16 +93,22 @@ export function DeckCardList({ items, ownerUsername, canManage, coverOwnerId = n
   const counts = useMemo(() => deckStatusCountsOf(rows), [rows]);
   const chips = statusFilterOptions(counts, filter);
   const allGroups = useMemo(() => groupDeckRows(rows, prefs.group, prefs.sort), [rows, prefs.group, prefs.sort]);
+  // The breakdown's mana curve may filter the list too (TODO DK7.1): to the
+  // entries its bar counts — on top of the status filter.
+  const curve = useDeckCurveFilter();
+  const curveFilter = curve?.filter ?? null;
+  const curveIds = useMemo(() => (curveFilter ? new Set(curveFilter.entryIds) : null), [curveFilter]);
   const groups = useMemo(
     () =>
-      filter === "all"
+      filter === "all" && !curveIds
         ? allGroups
         : allGroups.flatMap((group) => {
-            const kept = filterDeckRows(group.rows, filter);
+            const kept = filterDeckRows(group.rows, filter).filter((row) => !curveIds || curveIds.has(row.id));
             return kept.length > 0 ? [{ ...group, rows: kept, count: kept.reduce((sum, row) => sum + row.quantity, 0) }] : [];
           }),
-    [allGroups, filter],
+    [allGroups, filter, curveIds],
   );
+  const shownCount = groups.reduce((sum, group) => sum + group.count, 0);
 
   // Closing the pop-up hands the focus back to the card that opened it
   // (TODO 5.17). The dialog has no Dialog.Trigger — a card opens it through
@@ -219,9 +230,43 @@ export function DeckCardList({ items, ownerUsername, canManage, coverOwnerId = n
       {/* The bar sticks within the CARDS only: it never sits over the
           toolbar, and it rests under the last card. */}
       <div className="flex flex-col gap-5">
+        {curve?.filter ? (
+          // Where a bar of the curve takes the reader (the focus lands here):
+          // what the list shows, the way out, and the way back.
+          <div
+            id={CURVE_FILTER_NOTICE_ID}
+            tabIndex={-1}
+            className="flex scroll-mt-28 flex-wrap items-center gap-x-4 gap-y-2 rounded-frame border border-chart-1/40 bg-chart-1/10 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 sm:px-4"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <ChartColumn className="h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
+              <span>
+                <span className="font-medium text-foreground">Mana value {curve.filter.label}</span>
+                <span className="text-muted">
+                  {" "}
+                  from the curve · {shownCount} card{shownCount === 1 ? "" : "s"} shown
+                </span>
+              </span>
+            </span>
+            <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <button type="button" onClick={() => curve.clear("heading")} className={NOTICE_BUTTON_CLASS}>
+                <X className="h-3.5 w-3.5" aria-hidden />
+                Clear filter
+              </button>
+              <button type="button" onClick={curve.backToCurve} className={NOTICE_BUTTON_CLASS}>
+                <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+                Back to the curve
+              </button>
+            </span>
+          </div>
+        ) : null}
         {groups.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">
-            {filter === "imported" ? "Every real card here is edited. 🎉" : "No cards match this filter."}
+            {filter === "imported" && !curveIds
+              ? "Every real card here is edited. 🎉"
+              : curveIds && filter !== "all"
+                ? "No cards match both filters."
+                : "No cards match this filter."}
           </p>
         ) : (
           <DeckGroupViews

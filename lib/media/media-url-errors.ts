@@ -9,10 +9,23 @@
 // form or a crafted payload sees.
 // ---------------------------------------------------------------------------
 
-export const MEDIA_URL_NOT_ALLOWED = "media_url_not_allowed";
+import { isDefaultDeckCover } from "@/lib/decks/default-covers";
+
+export const MEDIA_URL_NOT_ALLOWED ="media_url_not_allowed";
 
 export const MEDIA_URL_NOT_ALLOWED_MESSAGE =
   "That picture isn't one of your uploads — upload it again and save.";
+
+/** A deck's built-in background (migration 0150) refused by the same guard:
+ *  only a database 0150 hasn't reached refuses one (a preview branch, the
+ *  dev database before its migrate) — there is no upload to do again. */
+export const BUILT_IN_COVER_UNAVAILABLE_MESSAGE = "Built-in backgrounds aren't available here yet.";
+
+/** What a deck cover the guard refused is told: a built-in background is
+ *  never "one of your uploads". */
+export function refusedDeckCoverMessage(coverUrl: string | null | undefined): string {
+  return isDefaultDeckCover(coverUrl) ? BUILT_IN_COVER_UNAVAILABLE_MESSAGE : MEDIA_URL_NOT_ALLOWED_MESSAGE;
+}
 
 /** The form field a guard refusal names (`art_url`, `back_face.art_url`,
  *  `watermark`, `set_icon_url`, `cover_url`…), or null when `message` isn't

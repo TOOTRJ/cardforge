@@ -39,6 +39,7 @@ export const BAKED_TILE_PAGE_ROUTES = [
   "/(marketing)/gallery",
   "/(marketing)/challenges",
   "/(marketing)/challenges/[slug]",
+  "/(marketing)/frames",
 ] as const;
 
 /**
@@ -69,6 +70,10 @@ export function revalidateCardListSurfaces(options: { afterBake?: boolean } = {}
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/cards");
   revalidatePath("/gallery");
+  // The frame gallery's examples (TODO NV8): a card made private, hidden or
+  // deleted leaves its tile on the next request, not at the end of the
+  // page's 5-minute ISR window.
+  revalidatePath("/frames");
   revalidateDiscoverySurfaces();
   if (options.afterBake) revalidateBakedTilePages();
 }

@@ -331,8 +331,13 @@ describe("a picker-tile thing only — no card surface draws the sample", () => 
 
   it("the sample art path lives in the picker alone", () => {
     const file = path.basename(FRAME_THUMB_SAMPLE_ART);
+    // …and in the frame gallery's empty frame (/frames, TODO NV8): a
+    // picker-style tile of a frame no public card wears yet — no card, no
+    // preview, no bake. Its copy of the path is held to this one by
+    // tests/unit/frames/frame-gallery.test.ts.
     expect(ALL.filter((f) => f.text.includes(file)).map((f) => f.rel)).toEqual([
       "components/creator/frame-pickers.tsx",
+      "components/frames/frame-master-placeholder.tsx",
     ]);
     expect(
       ALL.filter((f) => f.text.includes("FRAME_THUMB_SAMPLE_ART")).map((f) => f.rel),
