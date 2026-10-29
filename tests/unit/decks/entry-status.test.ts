@@ -118,6 +118,16 @@ describe("deckEntryStatus — every entry × card shape", () => {
     expect(deckEntryStatus(entry, { ...card, frame_style: { template: "m15nyx" }, color_identity: ["blue"] } as never)).toBe("imported");
   });
 
+  it("an unchanged import of ANOTHER printing is Edited — Imported only for the entry's own printing (L1)", () => {
+    const fingerprint = importFingerprintOf(CARD);
+    const card = { ...CARD, import_scryfall_id: PRINTING, import_fingerprint: fingerprint };
+    expect(deckEntryStatus({ scryfall_id: "e3285e6b-3e79-4d7c-bf96-d920f973b122", card_id: "c" }, card)).toBe("edited");
+    // The same printing, whatever its case.
+    expect(deckEntryStatus({ scryfall_id: PRINTING.toUpperCase(), card_id: "c" }, card)).toBe("imported");
+    // No printing on the entry (the creator's add): the card's own import.
+    expect(deckEntryStatus({ scryfall_id: null, card_id: "c" }, card)).toBe("imported");
+  });
+
   it("reads a row from a database 0144 has not reached (no provenance columns) as not tracked", () => {
     expect(deckEntryStatus({ scryfall_id: null, card_id: "c" }, { ...CARD })).toBe("original");
     expect(deckEntryStatus({ scryfall_id: PRINTING, card_id: "c" }, { ...CARD })).toBe("edited");
@@ -132,6 +142,11 @@ describe("deckEntryUnavailable (D3: No longer available)", () => {
 
   it("a visitor can't tell it from the owner's own private card: no label", () => {
     expect(deckEntryUnavailable({ scryfall_id: null, card_id: "c", source: "link" }, null, false)).toBe(false);
+  });
+
+  it("an entry its owner UNLINKED (source cleared by unlinkDeckCardAction) is a plain name, not unavailable", () => {
+    expect(deckEntryUnavailable({ scryfall_id: null, card_id: null, source: null }, null, true)).toBe(false);
+    expect(deckEntryStatus({ scryfall_id: null, card_id: null, source: null }, null)).toBe("not_found");
   });
 
   it("a deleted card: an entry that came with a card, nothing left, no printing", () => {

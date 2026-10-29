@@ -32,12 +32,15 @@
 --    "add this card to my deck"), 'link' (an existing card added to the
 --    deck), 'ai_generate' / 'ai_remix' (the AI deck jobs and the creator's
 --    card AI designed for a deck), 'manual' (a real card added by hand —
---    no writer yet: DK5.2's add box). NULL = an entry written before this
---    migration that the backfill can't place. Written by every path that
+--    no writer yet: DK5.2's add box). NULL = not known: an entry written
+--    before this migration that the backfill can't place, or a card-brought
+--    entry whose card its owner unlinked (unlinkDeckCardAction clears it:
+--    a plain name, never "No longer available"). Written by every path that
 --    INSERTS an entry: import_deck_entries (redefined below: every new row
 --    'import', its checks, lock, cap and grants exactly 0143's) and
 --    add_custom_deck_entry (redefined below with p_source and p_scryfall_id,
---    so an AI restyle keeps its printing). Linking a card onto an existing
+--    so an AI restyle keeps its printing, and refusing a NULL card — 0143
+--    let one through). Linking a card onto an existing
 --    entry is an UPDATE and keeps the entry's source: the entry still came
 --    from where it came from. It is the deck owner's own descriptive data
 --    (their RLS lets them PATCH any column of their entries), so no guard.
@@ -68,10 +71,13 @@
 --    merges into it refused by the WITH CHECK. ('deck_card_not_linkable',
 --    insufficient_privilege; SECURITY INVOKER, so another creator's private
 --    card is not even visible to the check.) Everything else is unchanged:
---    reads follow the deck (0055), deletes need the deck. When a linked card
---    goes private its row stays (the viewer reads `card` as null: "No longer
---    available" to the deck's owner); when it is deleted, 0055's ON DELETE
---    SET NULL keeps the entry's name and printing.
+--    reads follow the deck (0055), deletes need the deck. The READ side of
+--    the rule is the app's one deck read (lib/decks/queries.ts
+--    listDeckCards): another creator's card shows only while it is public —
+--    RLS hands an UNLISTED card to anyone, and a link-only card is never a
+--    deck's. When a linked card stops being public its row stays (the card
+--    reads as null: "No longer available" to the deck's owner); when it is
+--    deleted, 0055's ON DELETE SET NULL keeps the entry's name and printing.
 --
 -- Grants: the new columns ride the tables' grants (0097). The two guard
 -- functions are invoked by their triggers alone (EXECUTE revoked from the
@@ -143,7 +149,7 @@ alter table public.deck_cards
   add column if not exists source text;
 
 comment on column public.deck_cards.source is
-  'How the entry got into the deck (TODO DK2.6): import, creator, link, ai_generate, ai_remix, manual. NULL = written before 0144 and not placed by its backfill.';
+  'How the entry got into the deck (TODO DK2.6): import, creator, link, ai_generate, ai_remix, manual. NULL = not known (written before 0144 and not placed by its backfill, or a card-brought entry whose card its owner unlinked).';
 
 alter table public.deck_cards drop constraint if exists deck_cards_source_valid;
 alter table public.deck_cards
@@ -463,6 +469,12 @@ as $$
 declare
   v_position integer;
 begin
+  -- The RPC adds a CARD (0143 let a NULL through: a name-only row with a
+  -- card's source).
+  if p_card_id is null then
+    raise exception 'deck_entry_card_missing: add_custom_deck_entry adds a card; pass its id'
+      using errcode = 'invalid_parameter_value';
+  end if;
   if p_source is null or p_source not in ('creator', 'link', 'ai_generate', 'ai_remix') then
     raise exception 'deck_entry_source_invalid: a card is added by the creator, a link or the AI'
       using errcode = 'invalid_parameter_value';

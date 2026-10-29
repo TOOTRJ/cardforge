@@ -189,6 +189,7 @@ describe("the seeded entries", () => {
     ["6b8", "Tidecaller Apprentice — another creator's card that went private"],
     ["6b9", "Ashen Prototype — a deleted card"],
     ["6ba", "Zqx Unknown Relic — Not found"],
+    ["6bb", "Void Tithe — another creator's UNLISTED card, withheld by the deck read"],
   ];
   it.each(ENTRIES)("…%s is in the seed (%s)", (suffix) => {
     expect(seed).toContain(`'a0000000-0000-4000-a000-000000000${suffix}'`);

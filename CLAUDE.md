@@ -1769,11 +1769,19 @@ Rules and gotchas:
   when the creator says the card is still the import's
   (`lib/creator/import-baseline.ts`). An entry's type line, cost, colours and
   mana value are `effectiveEntryFields` (`lib/decks/effective-entry.ts`: the
-  card's own win unless it is an unchanged import). D3: a deck links its
-  owner's own cards at any visibility or ANOTHER creator's PUBLIC card —
-  the insert policy and `deck_cards_guard_card_link` (a NEW `card_id`
-  only, so an entry whose card went private stays editable); never widen it
-  to unlisted. Another creator's card is credited ("by @handle",
-  `DeckItem.cardOwner`) and linked at its maker's card page; its downloads
-  are the card routes' (the viewer's plan).
+  printing is the authority for an unchanged import of it and for any card
+  with no provenance linked onto a printing; else the card's own win — but
+  a card's `color_identity` is its FRAME colour, so the entry's real
+  letters win over a gold / colourless / land frame, and a split or
+  aftermath card sums both halves' costs). D3: a deck holds its owner's
+  own cards at any visibility or ANOTHER creator's PUBLIC card, on BOTH
+  sides — the write (the insert policy and `deck_cards_guard_card_link`, a
+  NEW `card_id` only, so an entry whose card stopped being public stays
+  editable) and the read (`listDeckCards`, the one deck read every surface
+  and export uses, withholds another creator's card that isn't public: RLS
+  hands an unlisted card to anyone); `canLinkIntoDeck` is the one rule —
+  never widen either side to unlisted. Another creator's card is credited
+  ("by @handle", `DeckItem.cardOwner`) and linked at its maker's card page;
+  its downloads are the card routes' (the viewer's plan). A gone card reads
+  "No longer available" and never says why.
 

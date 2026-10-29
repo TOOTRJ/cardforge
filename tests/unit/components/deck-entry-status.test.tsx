@@ -84,7 +84,9 @@ const ITEMS: DeckItem[] = [
   { entry: entry("Fire // Ice", { scryfall_id: "sf-1", type_line: "Instant // Instant" }), card: null, cardOwner: null },
   {
     entry: entry("Solemn Simulacrum", { scryfall_id: "sf-2", card_id: "c-ed", type_line: "Artifact Creature — Golem" }),
-    card: card("Solemn Sentinel", { card_type: "instant" }),
+    // Edited since its import of this printing (0144 provenance; the
+    // fingerprint is of what it printed then, so it no longer matches).
+    card: card("Solemn Sentinel", { card_type: "instant", import_scryfall_id: "sf-2", import_fingerprint: `v1:${"0".repeat(64)}` }),
     cardOwner: null,
   },
   { entry: entry("Broodling", { card_id: "c-rx", source: "creator" }), card: card("Broodling", { parent_card_id: "p" }), cardOwner: null },
@@ -156,14 +158,15 @@ describe("the pop-up", () => {
     render(<DeckCardModal item={ITEMS[5]!} ownerUsername="dev_pro" canManage open onOpenChange={() => {}} preferProxy />);
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("No longer available")).toBeTruthy();
-    expect(within(dialog).getByTestId("deck-card-unavailable").textContent).toMatch(/made this card private/);
+    // Never WHY (private, unlisted, hidden, deleted): the deck can't know.
+    expect(within(dialog).getByTestId("deck-card-unavailable").textContent).toBe("This card is no longer available.");
     expect(within(dialog).getByRole("link", { name: /Make your own version/ }).getAttribute("href")).toBe("/create?deckCard=Tidecaller Apprentice");
   });
 
-  it("a deleted card says so; a visitor gets no action", () => {
+  it("a card that's gone says the same neutral words; a visitor gets no action", () => {
     render(<DeckCardModal item={ITEMS[6]!} ownerUsername="dev_pro" canManage={false} open onOpenChange={() => {}} preferProxy />);
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByTestId("deck-card-unavailable").textContent).toMatch(/has been deleted/);
+    expect(within(dialog).getByTestId("deck-card-unavailable").textContent).toBe("This card is no longer available.");
     expect(within(dialog).queryByRole("link", { name: /Make your own version/ })).toBeNull();
   });
 

@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DECK_BOARD_VALUES } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
-import { canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
 // Deck entry actions — the deck-card modal's mutations: quantity/board
@@ -19,21 +19,30 @@ export type DeckCardActionResult =
   | { ok: true; deckCardId: string }
   | { ok: false; error: string };
 
+type OwnedEntry = {
+  id: string;
+  deck_id: string;
+  scryfall_id?: string | null;
+  /** Absent on a database 0144 has not reached. */
+  source?: string | null;
+};
+
 /** Load an entry + prove the caller owns its deck. Returns the deck slug
- *  for revalidation. */
+ *  for revalidation. (`*`: the row reads the same whether or not the
+ *  database has 0144's `source` yet.) */
 async function getOwnedEntry(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   deckCardId: string,
 ): Promise<
-  | { ok: true; entry: { id: string; deck_id: string }; deckSlug: string }
+  | { ok: true; entry: OwnedEntry; deckSlug: string }
   | { ok: false; error: string }
 > {
-  const { data: entry } = await supabase
+  const { data: entry } = (await supabase
     .from("deck_cards")
-    .select("id, deck_id")
+    .select("*")
     .eq("id", deckCardId)
-    .maybeSingle();
+    .maybeSingle()) as { data: OwnedEntry | null };
   if (!entry) return { ok: false, error: "Deck entry not found." };
 
   const { data: deck } = await supabase
@@ -192,9 +201,15 @@ export async function unlinkDeckCardAction(
   const owned = await getOwnedEntry(supabase, user.id, deckCardId);
   if (!owned.ok) return owned;
 
+  // An entry the card itself brought (the creator's add, a link, the AI)
+  // with no printing is a plain name once its card is unlinked: its source
+  // goes too, so it never reads "No longer available" — that is a card the
+  // OWNER didn't take away (lib/decks/entry-status.ts deckEntryUnavailable).
+  // An import keeps its source: it is the real card again.
+  const clearsSource = !owned.entry.scryfall_id && bringsCard(owned.entry.source);
   const { error } = await supabase
     .from("deck_cards")
-    .update({ card_id: null })
+    .update(clearsSource ? { card_id: null, source: null } : { card_id: null })
     .eq("id", deckCardId);
   if (error) return { ok: false, error: error.message };
 

@@ -14,9 +14,11 @@
 --   Original      Archivist of Lost Hours (dev_pro's own);
 --   by @dev_artist  Cinderwing Matriarch — another creator's PUBLIC card;
 --   No longer available
---                 Tidecaller Apprentice — dev_free's card, PRIVATE (another
---                 creator's card that went private), and "Ashen Prototype",
---                 the entry of a card that was deleted;
+--                 Tidecaller Apprentice — dev_free's card, PRIVATE (RLS
+--                 hides it); Void Tithe — dev_artist's card, UNLISTED (RLS
+--                 shows it, the deck read withholds it: a link-only card is
+--                 never a deck's); and "Ashen Prototype", the entry of a card
+--                 whose row is gone;
 --   Not found     a pasted name that matched nothing.
 --
 -- The three provenance cards are dev_pro's, UNLISTED (as 22 / 24 / 25: the
@@ -27,7 +29,7 @@
 -- (config.toml → [db.seed] sql_paths, filename order). Never against
 -- production. Idempotent: fixed ids + ON CONFLICT DO NOTHING. No credential in
 -- here (the repo is public). Rows whose accounts are missing (this file run
--- on its own) are skipped. Card ids …6b1–…6b3, entry ids …6b1–…6ba
+-- on its own) are skipped. Card ids …6b1–…6b3, entry ids …6b1–…6bb
 -- (tests/unit/devops/seed-card-ids.test.ts).
 -- ---------------------------------------------------------------------------
 
@@ -116,6 +118,10 @@ from (values
   ('a0000000-0000-4000-a000-0000000006b9'::uuid, 1, 8, null, 'creator', null, 'Ashen Prototype',
      null, null, null, null, null, array[]::text[], null, null),
   ('a0000000-0000-4000-a000-0000000006ba'::uuid, 1, 9, null, 'import', null, 'Zqx Unknown Relic',
+     null, null, null, null, null, array[]::text[], null, null),
+  -- dev_artist's UNLISTED card (linked while it was public, say): withheld
+  -- by listDeckCards, "No longer available" to dev_pro, a name to visitors.
+  ('a0000000-0000-4000-a000-0000000006bb'::uuid, 1, 10, 'c0000000-0000-4000-a000-000000000014'::uuid, 'link', null, 'Void Tithe',
      null, null, null, null, null, array[]::text[], null, null)
 ) as e (id, quantity, position, card_id, source, scryfall_id, name, set_code,
         collector_number, type_line, mana_cost, mana_value, colors, rarity, image_url)

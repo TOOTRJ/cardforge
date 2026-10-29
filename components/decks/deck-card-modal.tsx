@@ -285,11 +285,11 @@ export function DeckCardModal({
               </Badge>
             </div>
 
+            {/* Never WHY (made private or unlisted, hidden by moderation,
+                deleted): the deck can't tell these apart for sure. */}
             {unavailable ? (
               <p className="text-sm leading-6 text-muted" data-testid="deck-card-unavailable">
-                {entry.card_id
-                  ? "Its creator made this card private, so it can't be shown here any more. The entry keeps its name."
-                  : "The card that was here has been deleted. The entry keeps its name."}
+                This card is no longer available.
               </p>
             ) : null}
 

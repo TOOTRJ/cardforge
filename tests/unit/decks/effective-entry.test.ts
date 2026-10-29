@@ -111,9 +111,16 @@ describe("effectiveEntryFields", () => {
     expect(effectiveEntryFields(entry(), card as never).typeLine).toBe("Artifact Golem Thing — Golem");
   });
 
-  it("a card's colours are its whole answer when it wins — colourless included", () => {
+  it("an edited card's colourless or gold FRAME never hides the real letters the entry knows", () => {
     const card = tracked({ ...SOLEMN, title: "Renamed" });
-    expect(effectiveEntryFields(entry({ color_identity: ["U"] }), card as never).colors).toEqual([]);
+    expect(effectiveEntryFields(entry({ color_identity: ["U"] }), card as never).colors).toEqual(["U"]);
+    const gold = tracked({ ...SOLEMN, title: "Renamed", color_identity: ["multicolor", "red", "green"] });
+    expect(effectiveEntryFields(entry({ color_identity: ["R", "G"] }), gold as never).colors).toEqual(["R", "G"]);
+  });
+
+  it("an edited card whose frame names a colour is that colour", () => {
+    const card = tracked({ ...SOLEMN, title: "Solemn Ember", color_identity: ["red"] });
+    expect(effectiveEntryFields(entry({ color_identity: ["U"] }), card as never).colors).toEqual(["R"]);
   });
 
   it("a card saved as only 'multicolor' is gold", () => {
@@ -133,6 +140,137 @@ describe("effectiveEntryFields", () => {
 
   it("an unreadable linked card: the entry's own values", () => {
     expect(effectiveEntryFields(entry(), null)).toMatchObject({ typeLine: "Artifact Creature — Golem", manaValue: 4 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The independent check's cards (M1): a card's color_identity is its FRAME's
+// — an import stores Kessig Wolf Run colourless, Rootbound Crag gold, and
+// Fire // Ice gold with its front half's cost only — so the deck must not
+// read the game's colours or a split card's mana value off it.
+// ---------------------------------------------------------------------------
+
+const KESSIG = { id: "4a8447fe-7368-470a-911a-1083ec6cc831", type: "Land", letters: ["G", "R"] };
+const CRAG = { id: "c7d8a3e4-1111-4c1d-9c9e-6a4d9b0b2c11", type: "Land", letters: ["R", "G"] };
+const FIRE_ICE = { id: "18303862-4726-4136-814f-157aa7006579", type: "Instant // Instant", cost: "{1}{R} // {1}{U}", mv: 4, letters: ["R", "U"] };
+const COMMIT = { id: "c1a6e2a4-2222-4d55-9e0e-7f1f2b3c4d5e", type: "Instant // Sorcery", cost: "{3}{U} // {4}{U}{U}", mv: 10, letters: ["U"] };
+
+/** The deck entry the import wrote for a printing. */
+function printingEntry(p: { id: string; type: string; cost?: string; mv?: number; letters: string[] }) {
+  return entry({
+    scryfall_id: p.id,
+    type_line: p.type,
+    mana_cost: p.cost ?? null,
+    mana_value: p.mv ?? 0,
+    color_identity: p.letters,
+  });
+}
+
+/** The PipGlyph card an import of it saves (its frame colour, its front cost). */
+const KESSIG_CARD = { title: "Kessig Wolf Run", cost: null, supertype: null, card_type: "land", subtypes: [], printed_types: null, rules_text: "{T}: Add {C}.", color_identity: ["colorless"], art_url: "a", frame_style: { template: "m15land" } };
+const CRAG_CARD = { ...KESSIG_CARD, title: "Rootbound Crag", rules_text: "{T}: Add {R} or {G}.", color_identity: ["multicolor"] };
+const FIRE_ICE_CARD = {
+  title: "Fire",
+  cost: "{1}{R}",
+  supertype: null,
+  card_type: "instant",
+  subtypes: [],
+  printed_types: null,
+  rules_text: "Fire deals 2 damage divided as you choose among one or two targets.",
+  color_identity: ["multicolor"],
+  art_url: "a",
+  frame_style: { template: "split" },
+  back_face: { title: "Ice", cost: "{1}{U}", card_type: "instant", rules_text: "Tap target permanent. Draw a card." },
+};
+const COMMIT_CARD = {
+  ...FIRE_ICE_CARD,
+  title: "Commit",
+  cost: "{3}{U}",
+  color_identity: ["blue"],
+  frame_style: { template: "aftermath" },
+  back_face: { title: "Memory", cost: "{4}{U}{U}", card_type: "sorcery", rules_text: "Aftermath" },
+};
+
+/** The same card, edited since its import of `printing` (tracked, 0144). */
+const editedFrom = (card: Record<string, unknown>, printing: string) => ({
+  ...card,
+  rules_text: `${String(card.rules_text)} (edited)`,
+  import_scryfall_id: printing,
+  import_fingerprint: importFingerprintOf(card),
+});
+
+describe("the frame colour and split halves (M1)", () => {
+  it("a LEGACY link (no provenance) onto a printing counts as the printing, as before 0144", () => {
+    for (const [p, card] of [
+      [KESSIG, KESSIG_CARD],
+      [CRAG, CRAG_CARD],
+      [FIRE_ICE, FIRE_ICE_CARD],
+      [COMMIT, COMMIT_CARD],
+    ] as const) {
+      const fields = effectiveEntryFields(printingEntry(p), card as never);
+      expect(fields.colors).toEqual(p.letters);
+      expect(fields.typeLine).toBe(p.type);
+    }
+    expect(effectiveEntryFields(printingEntry(FIRE_ICE), FIRE_ICE_CARD as never).manaValue).toBe(4);
+    expect(effectiveEntryFields(printingEntry(COMMIT), COMMIT_CARD as never).manaValue).toBe(10);
+  });
+
+  it("an EDITED Fire // Ice: both halves' mana value and cost, and R/U — not 2 and gold", () => {
+    const fields = effectiveEntryFields(printingEntry(FIRE_ICE), editedFrom(FIRE_ICE_CARD, FIRE_ICE.id) as never);
+    expect(fields).toEqual({ typeLine: "Instant", cost: "{1}{R} // {1}{U}", manaValue: 4, colors: ["R", "U"], multicolorOnly: false });
+  });
+
+  it("an EDITED Commit // Memory (aftermath): 10, not 4", () => {
+    const fields = effectiveEntryFields(printingEntry(COMMIT), editedFrom(COMMIT_CARD, COMMIT.id) as never);
+    expect(fields).toMatchObject({ cost: "{3}{U} // {4}{U}{U}", manaValue: 10, colors: ["U"] });
+  });
+
+  it("EDITED dual lands keep their real letters (a land's frame is its mana's, or grey)", () => {
+    expect(effectiveEntryFields(printingEntry(KESSIG), editedFrom(KESSIG_CARD, KESSIG.id) as never).colors).toEqual(["G", "R"]);
+    expect(effectiveEntryFields(printingEntry(CRAG), editedFrom(CRAG_CARD, CRAG.id) as never)).toMatchObject({
+      colors: ["R", "G"],
+      multicolorOnly: false,
+    });
+  });
+
+  it("the breakdown: a deck of the four, legacy and edited alike, counts real colours and mana values", () => {
+    const items = [
+      { entry: printingEntry(FIRE_ICE), card: FIRE_ICE_CARD },
+      { entry: printingEntry(COMMIT), card: editedFrom(COMMIT_CARD, COMMIT.id) },
+      { entry: printingEntry(KESSIG), card: editedFrom(KESSIG_CARD, KESSIG.id) },
+      { entry: printingEntry(CRAG), card: CRAG_CARD },
+    ];
+    const analytics = computeDeckAnalytics(items as never);
+    expect(analytics.byColor).toMatchObject({ R: 3, U: 2, G: 2, C: 0 });
+    expect(analytics.multicolor).toBe(3); // Fire // Ice and both lands
+    expect(analytics.lands).toBe(2);
+    expect(analytics.curve[4]).toBe(1);
+    expect(analytics.curve[7]).toBe(1); // Commit // Memory is 10
+  });
+
+  it("a split card of one's own (no printing) still sums its halves; its gold frame stays gold", () => {
+    const own = effectiveEntryFields(entry({ scryfall_id: null, type_line: null, mana_cost: null, mana_value: null, color_identity: [] }), FIRE_ICE_CARD as never);
+    expect(own).toMatchObject({ manaValue: 4, cost: "{1}{R} // {1}{U}", colors: [], multicolorOnly: true });
+  });
+
+  it("an adventure / flip card's second part never adds to its mana value", () => {
+    const adventure = { ...FIRE_ICE_CARD, frame_style: { template: "adventure" } };
+    expect(effectiveEntryFields(entry({ scryfall_id: null, mana_value: null, mana_cost: null }), adventure as never).manaValue).toBe(2);
+  });
+});
+
+describe("an import of ANOTHER printing (L1)", () => {
+  it("a Llanowar Elves card on a Lightning Bolt entry counts as the Elves, not as Instant {R}", () => {
+    const ELVES = { title: "Llanowar Elves", cost: "{G}", supertype: null, card_type: "creature", subtypes: ["Elf", "Druid"], printed_types: null, rules_text: "{T}: Add {G}.", color_identity: ["green"], art_url: "a" };
+    const unchangedElves = { ...ELVES, import_scryfall_id: "581b7327-3215-4a4f-b4ae-d9d4002ba882", import_fingerprint: importFingerprintOf(ELVES) };
+    const boltEntry = entry({ scryfall_id: "e3285e6b-3e79-4d7c-bf96-d920f973b122", type_line: "Instant", mana_cost: "{R}", mana_value: 1, color_identity: ["R"] });
+    expect(effectiveEntryFields(boltEntry, unchangedElves as never)).toEqual({
+      typeLine: "Creature — Elf Druid",
+      cost: "{G}",
+      manaValue: 1,
+      colors: ["G"],
+      multicolorOnly: false,
+    });
   });
 });
 

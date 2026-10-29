@@ -12,14 +12,18 @@ import type { DeckEntrySource, DeckEntryStatus } from "@/types/deck";
 // its own synchronous SHA-256).
 //
 // `card` is the entry's PipGlyph card AS THIS VIEWER READ IT: null when the
-// entry has none, and also when RLS hides it (another creator's card that
-// went private, the owner's own private card in a visitor's view). In order:
+// entry has none, when RLS hides it (another creator's card that went
+// private, the owner's own private card in a visitor's view), and when
+// listDeckCards withholds it (another creator's card that is no longer
+// public, D3). In order:
 //
 //   a card the viewer reads
 //     with a parent card              → remix (another PipGlyph card's,
 //                                       anyone's: cards.parent_card_id)
 //     with a tracked import (0144)    → imported while it still prints what
-//                                       it was imported as, else edited
+//                                       it was imported as AND it is the
+//                                       entry's own printing (or the entry
+//                                       has none), else edited
 //                                       (lib/cards/import-fingerprint.ts)
 //     untracked, but the entry knows its printing, or the card names a
 //     source printing                 → edited: an import from before 0144
@@ -32,7 +36,7 @@ import type { DeckEntrySource, DeckEntryStatus } from "@/types/deck";
 //                                       card stands in, unseen
 //   no card: a printing               → imported (the real card)
 //   no card, no printing              → not_found (a pasted name; also what
-//                                       is left of a deleted card — its
+//                                       is left of a card that's gone — its
 //                                       label says "No longer available",
 //                                       deckEntryUnavailable)
 // ---------------------------------------------------------------------------
@@ -56,7 +60,9 @@ export function deckEntryStatus(
   if (card) {
     if (card.parent_card_id) return "remix";
     const importState = importEditStateOf(card);
-    if (importState === "unchanged") return "imported";
+    // An unchanged import of ANOTHER printing than the entry's is not that
+    // printing: the card stands in for it, edited.
+    if (importState === "unchanged") return isEntryPrinting(entry, card) ? "imported" : "edited";
     if (importState === "edited") return "edited";
     if (entry.scryfall_id || card.source_scryfall_id) return "edited";
     return "original";
@@ -65,9 +71,19 @@ export function deckEntryStatus(
   return entry.scryfall_id ? "imported" : "not_found";
 }
 
-/** Which card a deck may link (owner decision D3, TODO DK2.9; the database's
- *  rule, migration 0144): the deck owner's own at any visibility, or
- *  another creator's PUBLIC card — never their private or unlisted one. */
+/** The card was imported from the entry's own printing — or the entry names
+ *  none (a card added straight from the creator). */
+export function isEntryPrinting(entry: Pick<StatusEntry, "scryfall_id">, card: ImportProvenanceColumns): boolean {
+  if (!entry.scryfall_id) return true;
+  return Boolean(card.import_scryfall_id) && entry.scryfall_id.toLowerCase() === card.import_scryfall_id!.toLowerCase();
+}
+
+/** Which card a deck may link AND show (owner decision D3, TODO DK2.9): the
+ *  deck owner's own at any visibility, or another creator's PUBLIC card —
+ *  never their private or unlisted one. The write side is the database's
+ *  (migration 0144's insert policy and deck_cards_guard_card_link) and
+ *  linkDeckCardAction's pre-flight; the read side is listDeckCards, which
+ *  withholds a linked card that no longer passes. */
 export function canLinkIntoDeck(card: { owner_id: string; visibility: string }, deckOwnerId: string): boolean {
   return card.owner_id === deckOwnerId || card.visibility === "public";
 }
@@ -76,15 +92,25 @@ export function canLinkIntoDeck(card: { owner_id: string; visibility: string }, 
  *  add_custom_deck_entry, migration 0144). */
 const CARD_SOURCES: ReadonlySet<string> = new Set(["creator", "link", "ai_generate", "ai_remix"]);
 
+/** The entry came WITH a card (its source is one of those). */
+export function bringsCard(source: unknown): boolean {
+  return typeof source === "string" && CARD_SOURCES.has(source);
+}
+
 /**
  * Whether the entry's PipGlyph card is "No longer available" (D3, TODO
- * DK2.9): its name stays, the card behind it is gone.
+ * DK2.9): its name stays, the card behind it is gone. Never says WHY (the
+ * creator made it private or unlisted, moderation hid it, it was deleted —
+ * the deck can't tell these apart for sure):
  *   * linked but unreadable — for the deck's OWNER only, who reads every
- *     card of their own: it is another creator's card that went private. (A
- *     visitor can't tell that from the owner's own private card: no label.)
+ *     card of their own: it is another creator's card that is no longer
+ *     public. (A visitor can't tell that from the owner's own private card:
+ *     no label.)
  *   * no card left, no printing, and the entry came WITH a card (its source
- *     says so) — the card was deleted (0055's ON DELETE SET NULL). An entry
- *     written before 0144 has no source and reads as a plain "Not found".
+ *     says so) — the card's row is gone (0055's ON DELETE SET NULL). The
+ *     owner's own unlink clears that source (unlinkDeckCardAction), so an
+ *     unlinked entry reads as a plain name; an entry written before 0144
+ *     has no source and reads as a plain "Not found" too.
  * An entry with a printing is never unavailable: the real card is still
  * there to show (a deleted AI restyle reverts to its printing).
  */
@@ -95,5 +121,5 @@ export function deckEntryUnavailable(
 ): boolean {
   if (card) return false;
   if (entry.card_id) return viewerIsOwner;
-  return !entry.scryfall_id && typeof entry.source === "string" && CARD_SOURCES.has(entry.source);
+  return !entry.scryfall_id && bringsCard(entry.source);
 }

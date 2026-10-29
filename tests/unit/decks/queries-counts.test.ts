@@ -20,6 +20,8 @@ const s = vi.hoisted(() => ({
   withCount: true,
   /** A linked card's maker, by card id (default: the deck's owner). */
   cardOwner: {} as Record<string, string>,
+  /** A linked card's visibility, by card id (default: public). */
+  cardVisibility: {} as Record<string, string>,
 }));
 
 function client() {
@@ -39,7 +41,7 @@ function client() {
         }
         if (table === "cards") {
           const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
-          return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1" })), error: null };
+          return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
         }
         return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
       };
@@ -104,6 +106,7 @@ beforeEach(() => {
   s.entries = [];
   s.withCount = true;
   s.cardOwner = {};
+  s.cardVisibility = {};
 });
 
 describe("deck tiles read their counts off the deck row", () => {
@@ -153,6 +156,7 @@ describe("deck tiles read their counts off the deck row", () => {
 
 describe("listDeckCards reads a whole deck", () => {
   it("pages past 1000 rows on a unique order, stops at the exact count, and looks linked cards up in chunks", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = Array.from({ length: 1003 }, (_, i) => ({
       id: `e-${i}`,
       deck_id: "big",
@@ -201,6 +205,35 @@ describe("listDeckCards reads a whole deck", () => {
     expect(items.map((item) => item.entry.source)).toEqual(["creator", "link", null]);
   });
 
+  it("another creator's card that is no longer PUBLIC is withheld (M2: RLS hands an unlisted card to anyone)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.rows.profiles = [{ id: "artist-1", username: "dev_artist" }];
+    s.cardOwner = { "card-unlisted": "artist-1", "card-public": "artist-1" };
+    s.cardVisibility = { "card-unlisted": "unlisted", "card-public": "public", "card-own-unlisted": "unlisted", "card-own-private": "private" };
+    s.entries = [
+      { id: "e1", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-unlisted", name: "Theirs, unlisted", source: "link" },
+      { id: "e2", deck_id: "d", board: "main", quantity: 1, position: 1, card_id: "card-public", name: "Theirs, public", source: "link" },
+      { id: "e3", deck_id: "d", board: "main", quantity: 1, position: 2, card_id: "card-own-unlisted", name: "Mine, unlisted", source: "creator" },
+      { id: "e4", deck_id: "d", board: "main", quantity: 1, position: 3, card_id: "card-own-private", name: "Mine, private", source: "creator" },
+    ];
+    const items = await listDeckCards("d");
+    // Withheld: no card, no credit — the entry keeps its card_id and name
+    // ("No longer available" to the owner).
+    expect(items.map((item) => [item.entry.name, item.card?.id ?? null, item.cardOwner])).toEqual([
+      ["Theirs, unlisted", null, null],
+      ["Theirs, public", "card-public", { username: "dev_artist" }],
+      ["Mine, unlisted", "card-own-unlisted", null],
+      ["Mine, private", "card-own-private", null],
+    ]);
+    expect(items[0]!.entry.card_id).toBe("card-unlisted");
+  });
+
+  it("no readable deck row: no entries (another creator's card can't be told from the owner's)", async () => {
+    s.rows.decks = [];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    expect(await listDeckCards("d")).toEqual([]);
+  });
+
   it("a deck with only its owner's cards reads no profile", async () => {
     s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
@@ -212,6 +245,7 @@ describe("listDeckCards reads a whole deck", () => {
   });
 
   it("an ordinary deck is ONE request (the exact count says it's all there)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
     expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);

@@ -146,6 +146,10 @@ describe("0144 — the entry RPCs", () => {
     expect(body).toContain("p_source text default 'creator', p_scryfall_id text default null");
     expect(body).toContain("security invoker");
     expect(body).toContain("if p_source is null or p_source not in ('creator', 'link', 'ai_generate', 'ai_remix') then");
+    // A card is required (0143 let a NULL make a name-only row), refused
+    // before the lock.
+    expect(body).toContain("if p_card_id is null then raise exception 'deck_entry_card_missing");
+    expect(body.indexOf("deck_entry_card_missing")).toBeLessThan(body.indexOf("pg_advisory_xact_lock"));
     // 0143's lock, ownership check and dedupe, unchanged.
     expect(body).toContain("perform pg_advisory_xact_lock(hashtextextended('deck_entries:' || p_deck_id::text, 0));");
     expect(body).toContain("where d.id = p_deck_id and d.owner_id = (select auth.uid())");

@@ -22,6 +22,7 @@ import type {
   Profile,
 } from "@/types/supabase";
 import { narrowCard } from "@/lib/cards/narrow";
+import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 
@@ -373,7 +374,14 @@ export type DeckItem = {
 /** Every entry of a deck, in list order. Paged past PostgREST's 1000-row
  *  cap (a deck holds at most 500 rows since 0143, but one stored before it
  *  may hold more), ordered on a unique key last so pages never overlap. The
- *  exact count lets an ordinary deck finish in ONE request. */
+ *  exact count lets an ordinary deck finish in ONE request.
+ *
+ *  The ONE deck read every surface uses (the page, its copied decklist, the
+ *  exports and report, the AI's deck context): another creator's card is
+ *  shown only while it is PUBLIC (owner decision D3). RLS would hand an
+ *  UNLISTED one to anyone — the card is link-only, never a deck's; it reads
+ *  as null here, "No longer available" to the deck's owner, exactly as a
+ *  card RLS hides. The deck owner's own cards are as RLS returns them. */
 export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
   if (!isSupabaseConfigured()) return [];
   try {
@@ -391,7 +399,10 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
       ),
       supabase.from("decks").select("owner_id").eq("id", deckId).maybeSingle(),
     ]);
-    if (error || entries.length === 0) return [];
+    // No readable deck row, no entries: without the owner, another
+    // creator's card could not be told from the owner's own.
+    if (error || !deck || entries.length === 0) return [];
+    const deckOwnerId = deck.owner_id;
 
     const cardIds = Array.from(
       new Set(
@@ -407,13 +418,15 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
         .select("*")
         .in("id", ids);
       for (const row of cards ?? []) {
-        cardById.set(row.id, narrowCard(row));
+        const card = narrowCard(row);
+        // The write rule, read side (canLinkIntoDeck: own, or public).
+        if (!canLinkIntoDeck(card, deckOwnerId)) continue;
+        cardById.set(row.id, card);
       }
     }
 
     // Another creator's card (D3): its maker's handle, for the credit and
     // the link to their card page.
-    const deckOwnerId = deck?.owner_id ?? null;
     const makerIds = Array.from(
       new Set([...cardById.values()].map((card) => card.owner_id).filter((id) => id !== deckOwnerId)),
     );
@@ -429,7 +442,7 @@ export async function listDeckCards(deckId: string): Promise<DeckItem[]> {
         entry: narrowDeckCard(row),
         card,
         cardOwner:
-          card && deckOwnerId && card.owner_id !== deckOwnerId
+          card && card.owner_id !== deckOwnerId
             ? { username: usernameOf.get(card.owner_id) ?? null }
             : null,
       };
