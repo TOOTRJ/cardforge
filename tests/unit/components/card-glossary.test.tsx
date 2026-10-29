@@ -31,8 +31,10 @@ describe("the card glossary", () => {
   });
 
   // Since TODO NV9 the words come from lib/content/glossary.ts, the list
-  // /glossary reads too: the dialog must still say exactly what #654 wrote —
-  // the same four entries, the same words, the same order, nothing added.
+  // /glossary reads too: the dialog says what #654 wrote — the same four
+  // entries, the same order, nothing added — but for Import, which no longer
+  // names the frame (a frame change alone doesn't make a card your version;
+  // review of #659, 2026-10-29).
   it("renders the four entries word for word, in order, and nothing else", async () => {
     render(<CardGlossary />);
     await act(async () => {
@@ -51,7 +53,7 @@ describe("the card glossary", () => {
       ],
       [
         "Import",
-        "A card started from a real card, pulled in from Scryfall. Change its art, words or frame and it becomes your version.",
+        "A card started from a real card, pulled in from Scryfall. Change its art or words and it becomes your version.",
       ],
       [
         "Remix",

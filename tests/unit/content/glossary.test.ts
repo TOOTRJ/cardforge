@@ -145,6 +145,8 @@ describe("the glossary's entries", () => {
 });
 
 describe("the creator's card-origin words", () => {
+  // DK2.1's words, but for Import's frame clause (dropped in #659's review:
+  // a frame change alone doesn't make a card your version).
   it("are the four, in the creator's order, word for word (TODO DK2.1)", () => {
     expect(CARD_ORIGIN_TERM_IDS).toEqual(["proxy", "import", "remix", "original"]);
     expect(CARD_ORIGIN_TERMS.map(({ term, definition }) => ({ term, definition }))).toEqual([
@@ -156,7 +158,7 @@ describe("the creator's card-origin words", () => {
       {
         term: "Import",
         definition:
-          "A card started from a real card, pulled in from Scryfall. Change its art, words or frame and it becomes your version.",
+          "A card started from a real card, pulled in from Scryfall. Change its art or words and it becomes your version.",
       },
       {
         term: "Remix",

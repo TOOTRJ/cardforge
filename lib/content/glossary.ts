@@ -187,7 +187,7 @@ export const GLOSSARY_TERMS: readonly GlossaryTerm[] = [
     id: "import",
     term: "Import",
     definition:
-      "A card started from a real card, pulled in from Scryfall. Change its art, words or frame and it becomes your version.",
+      "A card started from a real card, pulled in from Scryfall. Change its art or words and it becomes your version.",
     source: "pipglyph",
     guide: IMPORT_REMIX,
     tryIt: CREATOR,
@@ -198,7 +198,7 @@ export const GLOSSARY_TERMS: readonly GlossaryTerm[] = [
     term: "Keyword ability",
     aliases: ["keyword"],
     definition:
-      "A word that stands for a longer rule, like Flying, Trample or Lifelink. Keywords are capitalized and often carry reminder text.",
+      "A word that stands for a longer rule, like flying, trample or lifelink. A keyword usually sits on its own line, capitalized there, often with reminder text.",
     source: "magic",
     guide: {
       href: "/articles/mtg-keyword-abilities-list",
@@ -281,7 +281,7 @@ export const GLOSSARY_TERMS: readonly GlossaryTerm[] = [
     id: "phyrexian-mana",
     term: "Phyrexian mana",
     definition:
-      "A mana symbol with a slash through it that you can pay with one mana of its color or with 2 life.",
+      "A mana symbol marked with the Phyrexian glyph, paid with one mana of its color or 2 life.",
     source: "magic",
     guide: MANA_SYMBOLS,
     related: ["pip", "hybrid-mana"],
