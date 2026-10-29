@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
@@ -12,13 +12,19 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 //     keys move the focus and never pick, a press picks; Commander first;
 //     "More" adds the other formats to the same row, and a preselected one
 //     outside the first five is shown even folded;
-//   * a pasted list: the saved-card forecast as the textarea's description;
-//     on Create the deck is made, THEN the list goes through the import
-//     (resolve → commit) and the deck opens; a list the import refuses keeps
+//   * a pasted list: the saved-card forecast as the textarea's description,
+//     the lines it can't read named; on Create the deck is made, THEN the
+//     list goes through the import (resolve → commit) and the deck opens —
+//     only EXACT matches as cards: a best guess is kept as the name typed (a
+//     placeholder), never the guessed card, and the toast names those lines
+//     and the skipped ones; a list the import refuses keeps
 //     the deck, says the import's own words, and offers the list again or
 //     the deck page — and so does a lost connection once the deck exists;
 //     nothing ever makes a second deck (Create holds the focus,
-//     aria-disabled, while the first is made);
+//     aria-disabled, while the first is made; a press after a lost answer
+//     asks for that deck back) or adds the list twice (firstImportOnly);
+//   * closed, the focus goes back to what opened it — not after a create,
+//     which opens the deck;
 //   * an empty deck opens with `?new=1` (its add control focused);
 //   * signed out, Create asks to sign up or sign in, keeps the input in
 //     sessionStorage (never the URL) and brings it back on the next open; a
@@ -259,11 +265,47 @@ describe("a pasted list", () => {
         { name: "Mountain", quantity: 4, board: "main", resolved: RESOLVED_LINES[0].resolved },
         { name: "Island", quantity: 2, board: "main", resolved: RESOLVED_LINES[1].resolved },
       ],
+      firstImportOnly: true,
     });
     expect(s.createDeck.mock.invocationCallOrder[0]).toBeLessThan(s.resolve.mock.invocationCallOrder[0]);
-    expect(s.toastSuccess).toHaveBeenCalledWith("Deck created — 2 added.", { description: undefined });
+    expect(s.toastSuccess).toHaveBeenCalledWith("Deck created — 2 added.", { description: undefined, duration: undefined });
     expect(onClosed).toHaveBeenCalledWith("created");
     expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm");
+  });
+
+  it("only an EXACT match goes in as a card: a best guess is kept as the name typed, and the toast names it and the skipped lines", async () => {
+    s.resolve.mockResolvedValueOnce({
+      ok: true,
+      title: null,
+      parseWarnings: [{ line: 4, raw: "just some words", reason: "No quantity found — expected lines like “4 Lightning Bolt”." }],
+      lines: [
+        RESOLVED_LINES[0],
+        // "Lightning Blot" → Scryfall's fuzzy rescue says Lightning Blow.
+        { line: 2, raw: "1 Lightning Blot", name: "Lightning Blot", quantity: 1, board: "main", status: "fuzzy", resolved: { scryfall_id: "b0000000-0000-4000-8000-000000000003", name: "Lightning Blow" } },
+        // A set + number that points at another card than the name says.
+        { line: 3, raw: "1 Sol Ring (CMR) 999", name: "Sol Ring", quantity: 1, board: "main", status: "fuzzy", resolved: { scryfall_id: "b0000000-0000-4000-8000-000000000004", name: "Some Other Card" } },
+        { line: 5, raw: "1 Zzzyx Card", name: "Zzzyx Card", quantity: 1, board: "main", status: "unresolved", resolved: null },
+      ],
+    });
+    s.commit.mockResolvedValueOnce({ ok: true, added: 4, merged: 0, placeholders: 3 });
+    await openDialog();
+    await type(nameInput(), "Goblin Swarm");
+    await type(listInput(), "4 Mountain\n1 Lightning Blot\n1 Sol Ring (CMR) 999\njust some words\n1 Zzzyx Card");
+    // Before Create, the forecast names the line it can't read.
+    expect(screen.getByText("1 line skipped or adjusted: line 4 (“just some words”).")).toBeTruthy();
+    await press(createButton());
+    const [{ lines }] = s.commit.mock.calls[0] as [{ lines: Array<{ name: string; resolved: unknown }> }];
+    expect(lines.map((line) => [line.name, line.resolved])).toEqual([
+      ["Mountain", RESOLVED_LINES[0].resolved],
+      ["Lightning Blot", null],
+      ["Sol Ring", null],
+      ["Zzzyx Card", null],
+    ]);
+    expect(s.toastSuccess).toHaveBeenCalledWith("Deck created — 4 added, 3 placeholders.", {
+      description:
+        "3 lines kept as names to check: Lightning Blot, Sol Ring, Zzzyx Card. 1 line skipped or adjusted: line 4 (“just some words”).",
+      duration: 12_000,
+    });
   });
 
   it("a list the import can't read keeps the deck: the import's words, then the list again or the deck", async () => {
@@ -284,7 +326,7 @@ describe("a pasted list", () => {
     expect(screen.queryByRole("button", { name: /^create deck$/i })).toBeNull();
 
     // Fixed in place and added to the SAME deck — no second deck.
-    await type(listInput(), "4 Mountain\n2 Island");
+    await type(screen.getByRole("textbox", { name: "Decklist" }), "4 Mountain\n2 Island");
     await press(retry);
     expect(s.createDeck).toHaveBeenCalledTimes(1);
     expect(s.commit).toHaveBeenCalledWith(expect.objectContaining({ deckId: "deck-1" }));
@@ -302,6 +344,35 @@ describe("a pasted list", () => {
     expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm?new=1");
   });
 
+  it("the kept deck's list is its Decklist — no longer “optional”", async () => {
+    s.commit.mockResolvedValueOnce({ ok: false, error: "Scryfall didn't respond — nothing was imported. Try again in a moment." });
+    await openDialog();
+    await type(nameInput(), "Goblin Swarm");
+    await type(listInput(), "4 Mountain");
+    await press(createButton());
+    expect(screen.queryByRole("textbox", { name: /optional/i })).toBeNull();
+    expect((screen.getByRole("textbox", { name: "Decklist" }) as HTMLTextAreaElement).value).toBe("4 Mountain");
+  });
+
+  it("a retry whose list already went in (a lost answer) adds nothing: only the deck is offered", async () => {
+    s.commit
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ok: false, error: "The list is already in — open the deck.", alreadyImported: true });
+    await openDialog();
+    await type(nameInput(), "Goblin Swarm");
+    await type(listInput(), "4 Mountain");
+    await press(createButton());
+    await press(screen.getByRole("button", { name: "Add the list" }));
+    expect(s.commit).toHaveBeenCalledTimes(2);
+    expect(s.commit.mock.calls[1][0]).toMatchObject({ firstImportOnly: true });
+    expect(screen.getByRole("alert").textContent).toContain("“Goblin Swarm” is created and its list is in");
+    expect(screen.queryByRole("button", { name: "Add the list" })).toBeNull();
+    const open = screen.getByRole("button", { name: "Open the deck" });
+    expect(document.activeElement).toBe(open);
+    await press(open);
+    expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm");
+  });
+
   it("a lost connection after the deck was made keeps it — the next press adds the list, never a second deck", async () => {
     s.resolve.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     await openDialog();
@@ -315,14 +386,17 @@ describe("a pasted list", () => {
     expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm");
   });
 
-  it("a lost connection before the deck was made says so, and Create tries again", async () => {
+  it("a lost connection before the deck was made says so; the next press asks for that deck back", async () => {
     s.createDeck.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     await openDialog();
     await type(nameInput(), "Goblin Swarm");
     await press(createButton());
+    expect(s.createDeck.mock.calls[0][1]).not.toHaveProperty("reuseRecentTwin");
     expect(screen.getByRole("alert").textContent).toContain("Couldn't reach PipGlyph");
     await press(createButton());
     expect(s.createDeck).toHaveBeenCalledTimes(2);
+    // The create may have landed: the server returns that deck, not a twin.
+    expect(s.createDeck.mock.calls[1][1]).toMatchObject({ reuseRecentTwin: true });
     expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm?new=1");
   });
 });
@@ -392,6 +466,61 @@ describe("the visibility (the card creator's control, in deck words)", () => {
   });
 });
 
+describe("closing hands the focus back (it opens from context, not a trigger)", () => {
+  /** The provider's part: told it closed, it closes. */
+  function Closable({ opener }: { opener: HTMLElement }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <NewDeckDialog
+        open={open}
+        request={{ key: 1, returnFocusTo: opener }}
+        onClosed={(reason) => {
+          onClosed(reason);
+          setOpen(false);
+        }}
+      />
+    );
+  }
+
+  /** Radix hands the focus on a tick after the content unmounts. */
+  const afterUnmountFocus = () =>
+    act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+  function opener() {
+    const button = document.createElement("button");
+    button.textContent = "New deck";
+    document.body.append(button);
+    return button;
+  }
+
+  it("a dismissal: to what opened it", async () => {
+    const button = opener();
+    render(<Closable opener={button} />);
+    await act(async () => {});
+    await press(screen.getByRole("button", { name: "Cancel" }));
+    await afterUnmountFocus();
+    expect(onClosed).toHaveBeenCalledWith("dismiss");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(button);
+    button.remove();
+  });
+
+  it("a create: not back — the deck's page opens and takes the focus", async () => {
+    const button = opener();
+    render(<Closable opener={button} />);
+    await act(async () => {});
+    await type(nameInput(), "Goblin Swarm");
+    await press(createButton());
+    await afterUnmountFocus();
+    expect(onClosed).toHaveBeenCalledWith("created");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).not.toBe(button);
+    button.remove();
+  });
+});
+
 describe("an empty deck", () => {
   it("opens its page with ?new=1, and a kept draft is gone", async () => {
     saveNewDeckDraft({ title: "Kept", format: "modern", visibility: "public", decklist: "", cardId: null });
@@ -403,11 +532,25 @@ describe("an empty deck", () => {
     expect(readNewDeckDraft()).toBeNull();
   });
 
-  it("starts with the card it was opened for", async () => {
+  it("starts with the card it was opened for — and, holding it, opens without ?new=1", async () => {
     await openDialog({ cardId: "c0000000-0000-4000-8000-000000000001" });
     await type(nameInput(), "Around Zoey");
     await press(createButton());
     expect(s.createDeck.mock.calls[0][1]).toMatchObject({ firstCardId: "c0000000-0000-4000-8000-000000000001" });
+    expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm");
+  });
+
+  it("a first card that couldn't go in leaves it empty: ?new=1", async () => {
+    s.createDeck.mockResolvedValue({
+      ok: true,
+      deckId: "deck-1",
+      slug: "goblin-swarm",
+      firstCardError: "That card couldn't be added — add it from the deck page.",
+    });
+    await openDialog({ cardId: "c0000000-0000-4000-8000-000000000001" });
+    await type(nameInput(), "Around Zoey");
+    await press(createButton());
+    expect(s.push).toHaveBeenCalledWith("/deck/goblin-swarm?new=1");
   });
 });
 
@@ -427,7 +570,10 @@ describe("signed out (TODO DK4.3)", () => {
 
     const signUp = screen.getByRole("link", { name: "Sign up free" });
     const signIn = screen.getByRole("link", { name: "Sign in" });
-    expect(signUp.getAttribute("href")).toBe("/signup?redirectTo=%2Fdashboard%2Fdecks%2Fnew%3Fformat%3Dstandard");
+    // A new account goes through onboarding, which ends on the dialog.
+    expect(signUp.getAttribute("href")).toBe(
+      `/signup?redirectTo=${encodeURIComponent(`/onboarding?next=${encodeURIComponent("/dashboard/decks/new?format=standard")}`)}`,
+    );
     expect(signIn.getAttribute("href")).toBe("/login?redirectTo=%2Fdashboard%2Fdecks%2Fnew%3Fformat%3Dstandard");
     expect(signUp.getAttribute("href")).not.toMatch(/Bolt/);
     expect(document.activeElement).toBe(signUp);

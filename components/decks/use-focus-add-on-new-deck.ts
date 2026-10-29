@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useTransition, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { NEW_DECK_PARAM } from "@/lib/decks/new-deck";
+import { NEW_DECK_PARAM } from "@/lib/decks/new-deck-paths";
 
 // ---------------------------------------------------------------------------
 // A deck the New deck dialog just made, empty, opens as `/deck/<slug>?new=1`

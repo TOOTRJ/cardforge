@@ -8,7 +8,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     the creator's membership helper (the `add_custom_deck_entry` RPC) once
 //     the deck exists;
 //   * an unreadable or refused card never fails the create — the deck is
-//     made and the result says why the card isn't in it;
+//     made and the result says so in ONE plain sentence, never a database
+//     error's words (RLS reads another creator's UNLISTED card back, and
+//     0144's deck_card_not_linkable trigger refuses it);
+//   * reuseRecentTwin (the dialog's press after a lost answer) returns the
+//     same deck made in the last minute instead of a second one, and adds
+//     no second funnel row; without it a create always inserts;
 //   * nobody signed in → AUTH_REQUIRED, so the dialog asks to sign in.
 // ---------------------------------------------------------------------------
 
@@ -21,6 +26,10 @@ const s = vi.hoisted(() => ({
   added: { ok: true } as { ok: boolean; error?: string },
   addCalls: [] as unknown[][],
   cardReads: 0,
+  twin: null as { id: string; slug: string } | null,
+  twinFilters: [] as Array<[string, unknown]>,
+  inserts: 0,
+  events: 0,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -29,8 +38,13 @@ vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/decks/revalidate", () => ({ revalidateDeckPaths: () => {} }));
 vi.mock("@/lib/decks/queries", () => ({ getDeckById: async () => null }));
 vi.mock("@/lib/billing/entitlements", () => ({ getEntitlements: async () => ({ deckCapacity: -1, effectiveTier: "pro" }) }));
-vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => false, createAdminClient: () => ({}) }));
-vi.mock("@/lib/analytics/funnel-server", () => ({ recordFunnelEvent: async () => "row" }));
+vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => true, createAdminClient: () => ({}) }));
+vi.mock("@/lib/analytics/funnel-server", () => ({
+  recordFunnelEvent: async () => {
+    s.events += 1;
+    return "row";
+  },
+}));
 vi.mock("@/lib/decks/membership", () => ({
   addCustomCardEntryToDeck: async (...args: unknown[]) => {
     s.addCalls.push(args.slice(1));
@@ -41,13 +55,28 @@ vi.mock("@/lib/decks/membership", () => ({
 function table(name: string) {
   const q = {
     select: () => q,
-    eq: () => q,
+    eq: (column: string, value: unknown) => {
+      if (name === "decks") s.twinFilters.push([column, value]);
+      return q;
+    },
     in: () => q,
-    insert: () => q,
+    gte: (column: string, value: unknown) => {
+      s.twinFilters.push([column, value]);
+      return q;
+    },
+    order: () => q,
+    limit: () => q,
+    insert: () => {
+      s.inserts += 1;
+      return q;
+    },
     single: async () => ({ data: { id: "deck-new", slug: "around-zoey" }, error: null }),
     maybeSingle: async () => {
-      if (name === "cards") s.cardReads += 1;
-      return { data: name === "cards" ? s.card : null, error: null };
+      if (name === "cards") {
+        s.cardReads += 1;
+        return { data: s.card, error: null };
+      }
+      return { data: name === "decks" ? s.twin : null, error: null };
     },
   };
   return q;
@@ -67,6 +96,10 @@ beforeEach(() => {
   s.added = { ok: true };
   s.addCalls = [];
   s.cardReads = 0;
+  s.twin = null;
+  s.twinFilters = [];
+  s.inserts = 0;
+  s.events = 0;
 });
 
 describe("createDeckAction — the card a deck starts with", () => {
@@ -96,10 +129,63 @@ describe("createDeckAction — the card a deck starts with", () => {
     expect(s.addCalls).toEqual([]);
   });
 
-  it("a refused add (the entry cap, a policy) keeps the deck with the helper's reason", async () => {
-    s.added = { ok: false, error: "That deck already holds 500 entries." };
+  it("a refused add keeps the deck — in plain words, never the database's", async () => {
+    // RLS reads another creator's UNLISTED card back; 0144's trigger refuses it.
+    s.added = {
+      ok: false,
+      error: "deck_card_not_linkable: a deck links your own cards or another creator's public card",
+    };
     const result = await createDeckAction({ title: "Around Zoey" }, { firstCardId: CARD });
-    expect(result).toMatchObject({ ok: true, slug: "around-zoey", firstCardError: "That deck already holds 500 entries." });
+    expect(result).toEqual({
+      ok: true,
+      deckId: "deck-new",
+      slug: "around-zoey",
+      firstCardError: "That card couldn't be added — add it from the deck page.",
+    });
+  });
+});
+
+describe("createDeckAction — a press after a lost answer (reuseRecentTwin)", () => {
+  it("returns the deck that create made — no second insert, no second funnel row", async () => {
+    s.twin = { id: "deck-made", slug: "around-zoey" };
+    const result = await createDeckAction(
+      { title: "Around Zoey", format: "modern", visibility: "private" },
+      { surface: "dialog", reuseRecentTwin: true },
+    );
+    expect(result).toEqual({ ok: true, deckId: "deck-made", slug: "around-zoey" });
+    expect(s.inserts).toBe(0);
+    expect(s.events).toBe(0);
+    // The same owner, name, format and visibility, made within the minute.
+    expect(s.twinFilters.slice(0, 4)).toEqual([
+      ["owner_id", USER],
+      ["title", "Around Zoey"],
+      ["format", "modern"],
+      ["visibility", "private"],
+    ]);
+    const since = Date.parse(String(s.twinFilters[4]?.[1]));
+    expect(s.twinFilters[4]?.[0]).toBe("created_at");
+    expect(Date.now() - since).toBeGreaterThanOrEqual(59_000);
+    expect(Date.now() - since).toBeLessThan(61_000);
+  });
+
+  it("…adds its first card again only if it isn't in (the RPC adds nothing twice)", async () => {
+    s.twin = { id: "deck-made", slug: "around-zoey" };
+    await createDeckAction({ title: "Around Zoey" }, { reuseRecentTwin: true, firstCardId: CARD });
+    expect(s.addCalls).toEqual([[USER, "deck-made", CARD, "Zoey, the Lyricist"]]);
+  });
+
+  it("no twin: a new deck as usual", async () => {
+    const result = await createDeckAction({ title: "Around Zoey" }, { reuseRecentTwin: true });
+    expect(result).toEqual({ ok: true, deckId: "deck-new", slug: "around-zoey" });
+    expect(s.inserts).toBe(1);
+    expect(s.events).toBe(1);
+  });
+
+  it("a first press never looks for one", async () => {
+    s.twin = { id: "deck-made", slug: "around-zoey" };
+    const result = await createDeckAction({ title: "Around Zoey" }, { surface: "dialog" });
+    expect(result).toEqual({ ok: true, deckId: "deck-new", slug: "around-zoey" });
+    expect(s.twinFilters).toEqual([]);
   });
 });
 

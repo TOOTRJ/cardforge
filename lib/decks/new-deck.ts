@@ -1,4 +1,3 @@
-import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { MAX_DECKLIST_CHARS } from "@/lib/decks/parse-decklist";
 import { isDeckFormat, isDeckVisibility, type DeckFormat } from "@/types/deck";
 import type { Visibility } from "@/types/card";
@@ -6,8 +5,9 @@ import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
 // The New deck dialog's data (TODO DK4): what it reads from GET /api/me when
-// it opens, the `?new=1` its deck page reads, and the signed-out round trip.
-// Client-safe: no server imports.
+// it opens, and the signed-out round trip's draft. Its addresses (`?new=1`,
+// the way back) are lib/decks/new-deck-paths.ts. Client-safe: no server
+// imports.
 // ---------------------------------------------------------------------------
 
 /** Who is asking, and their saved-card slots — the pasted list's forecast
@@ -32,15 +32,6 @@ export function newDeckContextOf(body: unknown): NewDeckContext {
   return { signedIn: Boolean(value.user), cardCapacity: value.user ? cardCapacity : null };
 }
 
-/** `/deck/<slug>?new=1` — a deck the dialog just made, empty: the deck page
- *  focuses its first way to add cards and drops the flag
- *  (useFocusAddOnNewDeck). */
-export const NEW_DECK_PARAM = "new";
-
-export function newDeckPageHref(slug: string, empty: boolean): string {
-  return empty ? `/deck/${slug}?${NEW_DECK_PARAM}=1` : `/deck/${slug}`;
-}
-
 // ---------------------------------------------------------------------------
 // The signed-out round trip (TODO DK4.3). A visitor who
 // fills the dialog and presses Create is asked to sign up or sign in; what
@@ -52,18 +43,14 @@ export function newDeckPageHref(slug: string, empty: boolean): string {
 //     link opened elsewhere, storage blocked).
 //   * Every storage call is wrapped: a private window, a full quota or
 //     blocked site data means no draft, never a broken dialog.
-//   * The return path goes through safeRedirectPath, like every post-auth
-//     redirect (CLAUDE.md "Auth").
+//   * The return path (lib/decks/new-deck-paths.ts) goes through
+//     safeRedirectPath, like every post-auth redirect (CLAUDE.md "Auth").
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = "pipglyph:new-deck-draft";
 
 /** A draft older than this is dropped: the visitor has moved on. */
 export const NEW_DECK_DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
-
-/** The route that opens the dialog — the header's "New deck" and the auth
- *  round trip's way back. */
-export const NEW_DECK_PATH = "/dashboard/decks/new";
 
 export type NewDeckDraft = {
   title: string;
@@ -142,15 +129,4 @@ export function clearNewDeckDraft(): void {
   } catch {
     // Nothing to clear where storage is blocked.
   }
-}
-
-/** /dashboard/decks/new, with the format the page preselects. */
-export function newDeckReturnPath(format?: DeckFormat | null): string {
-  const path = format ? `${NEW_DECK_PATH}?format=${format}` : NEW_DECK_PATH;
-  return safeRedirectPath(path, NEW_DECK_PATH);
-}
-
-/** Sign up / sign in, then back to the dialog. */
-export function newDeckAuthHref(kind: "signup" | "login", format?: DeckFormat | null): string {
-  return `/${kind}?redirectTo=${encodeURIComponent(newDeckReturnPath(format))}`;
 }

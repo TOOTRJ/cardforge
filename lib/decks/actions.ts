@@ -117,6 +117,11 @@ export async function createDeckAction(
      *  "Build a deck around this card", TODO DK8.3). Added to the main board
      *  once the deck exists — best effort, never fails the create. */
     firstCardId?: string;
+    /** The New deck dialog's retry after a create whose ANSWER was lost (the
+     *  network): the same owner's deck with the same name, format and
+     *  visibility made in the last minute is that create — it is returned
+     *  instead of a second deck. Never sent on a first press. */
+    reuseRecentTwin?: boolean;
   } = {},
 ): Promise<CreateDeckResult> {
   const parsed = createDeckSchema.safeParse(payload);
@@ -146,9 +151,12 @@ export async function createDeckAction(
     bracket: parsed.data.bracket ?? null,
   };
 
-  let row: { id: string; slug: string } | null = null;
+  let row: { id: string; slug: string } | null = options.reuseRecentTwin
+    ? await recentTwinDeck(supabase, insert)
+    : null;
+  const reused = row !== null;
   let lastError: string | null = null;
-  for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
+  for (let attempt = 1; !row && attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
     const { data, error } = await supabase
       .from("decks")
       .insert({ ...insert, slug: slugCandidate(desired, attempt) })
@@ -170,14 +178,18 @@ export async function createDeckAction(
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
 
-  const ownerUsername = await getCurrentUsername();
-  revalidateDeckPaths(row.slug, ownerUsername);
-  await recordDeckEvent("deck_created", user.id, {
-    visibility: insert.visibility,
-    format: insert.format,
-    surface: options.surface,
-  });
+  if (!reused) {
+    const ownerUsername = await getCurrentUsername();
+    revalidateDeckPaths(row.slug, ownerUsername);
+    await recordDeckEvent("deck_created", user.id, {
+      visibility: insert.visibility,
+      format: insert.format,
+      surface: options.surface,
+    });
+  }
 
+  // add_custom_deck_entry adds nothing when the card is in the deck already
+  // (a reused twin), so this is safe to run again.
   const firstCardError = options.firstCardId
     ? await addFirstCard(supabase, user.id, row.id, options.firstCardId)
     : null;
@@ -190,11 +202,37 @@ export async function createDeckAction(
     : { ok: true, deckId: row.id, slug: row.slug };
 }
 
+/** How far back a lost create's twin is looked for (reuseRecentTwin). */
+const TWIN_WINDOW_MS = 60_000;
+
+/** The caller's deck with this name, format and visibility made within the
+ *  last minute — the create a lost answer hid — or null. */
+async function recentTwinDeck(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  insert: DeckInsert,
+): Promise<{ id: string; slug: string } | null> {
+  const { data } = await supabase
+    .from("decks")
+    .select("id, slug")
+    .eq("owner_id", insert.owner_id)
+    .eq("title", insert.title)
+    .eq("format", insert.format ?? "commander")
+    .eq("visibility", insert.visibility ?? "public")
+    .gte("created_at", new Date(Date.now() - TWIN_WINDOW_MS).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
+}
+
 /** The card a new deck starts with, through the RPC the creator's "add to
  *  deck" uses (`add_custom_deck_entry`: the per-deck lock, the entry cap).
- *  The card is read through RLS — the caller's own, or a public one — and
- *  the deck_cards policies decide whether it may join. Null when added,
- *  else why not. */
+ *  RLS reads the caller back ANY card it may see — another creator's
+ *  unlisted one included — and the deck_cards policies and 0144's
+ *  `deck_card_not_linkable` guard decide whether it may join (the caller's
+ *  own at any visibility, another creator's only while public). Null when
+ *  added; else ONE plain sentence — never a database error's words (a new
+ *  deck is far from the entry limit, the one refusal worth its own copy). */
 async function addFirstCard(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -206,7 +244,7 @@ async function addFirstCard(
   const { data: card } = await supabase.from("cards").select("id, title").eq("id", cardId).maybeSingle();
   if (!card) return unavailable;
   const added = await addCustomCardEntryToDeck(supabase, userId, deckId, card.id, card.title);
-  return added.ok ? null : (added.error ?? unavailable);
+  return added.ok ? null : unavailable;
 }
 
 // ---------------------------------------------------------------------------

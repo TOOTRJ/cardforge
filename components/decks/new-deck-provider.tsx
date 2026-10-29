@@ -1,11 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Component, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { NewDeckCloseReason, NewDeckDialogRequest } from "@/components/decks/new-deck-dialog";
+import { NEW_DECK_PATH, newDeckReturnPath } from "@/lib/decks/new-deck-paths";
 import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
@@ -24,7 +26,11 @@ import type { DeckFormat } from "@/types/deck";
 // The dialog's code loads on first use (it pulls in the decklist parser and
 // the import actions), never with every page; a button warms it on hover or
 // focus. It closes itself when the page changes under it — a link inside it
-// (Manage decks, Get more slots) must not leave it open over the next page.
+// (Get more slots) must not leave it open over the next page. It sits in the
+// ROOT layout, outside every app/error.tsx: a render that throws — above all
+// a chunk that won't load (a tab older than the last deploy, a phone that
+// lost the network) — is caught here and never takes the page with it.
+// Closed, the focus goes back to what opened it.
 // ---------------------------------------------------------------------------
 
 const loadDialog = () => import("@/components/decks/new-deck-dialog");
@@ -50,7 +56,30 @@ type OpenRequest = OpenNewDeckOptions & {
   /** A dismissal (Cancel, Escape, the X, a click outside) — not a create, a
    *  trip to sign in, or a page change. */
   onDismiss?: () => void;
+  /** What the focus goes back to when the dialog closes. Default: whatever
+   *  held it when openNewDeck was called (not <body>) — Safari doesn't
+   *  focus a clicked button, so a button passes itself. */
+  opener?: HTMLElement | null;
 };
+
+/** The element that holds the focus, unless that is nobody (<body>). */
+function focusedElement(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const active = document.activeElement;
+  return active instanceof HTMLElement && active !== document.body ? active : null;
+}
+
+// /dashboard/decks/new's dismissal swaps the page for /dashboard/decks, so
+// what opened the dialog is gone: the new page's first NewDeckButton takes
+// the focus instead — a one-shot hand-off, dropped if nothing claims it soon.
+let focusHandOffAt = 0;
+const HAND_OFF_MS = 5000;
+
+function claimFocusHandOff(): boolean {
+  const pending = focusHandOffAt > 0 && Date.now() - focusHandOffAt < HAND_OFF_MS;
+  focusHandOffAt = 0;
+  return pending;
+}
 
 type NewDeckContextValue = {
   openNewDeck: (options?: OpenRequest) => void;
@@ -78,6 +107,7 @@ export function NewDeckProvider({ children }: { children: React.ReactNode }) {
         format: options.format,
         cardId: options.cardId,
         onDismiss: options.onDismiss,
+        returnFocusTo: options.opener ?? focusedElement(),
       });
       setOpen(true);
     },
@@ -101,13 +131,50 @@ export function NewDeckProvider({ children }: { children: React.ReactNode }) {
     [request],
   );
 
+  // The dialog failed to draw (a chunk that won't load): close it, and try
+  // the route that opens it with a fresh page — unless this IS that route,
+  // where the same failure would only come back: then say so.
+  const onDialogError = useCallback(() => {
+    const format = request?.format;
+    setOpen(false);
+    setRequest(null);
+    if (window.location.pathname !== NEW_DECK_PATH) {
+      window.location.assign(newDeckReturnPath(format));
+      return;
+    }
+    toast.error("The New deck dialog didn't load. Reload the page and try again.");
+  }, [request]);
+
   const value = useMemo(() => ({ openNewDeck }), [openNewDeck]);
   return (
     <NewDeckContext.Provider value={value}>
       {children}
-      {request ? <NewDeckDialog key={request.key} open={open} request={request} onClosed={onClosed} /> : null}
+      {request ? (
+        <NewDeckDialogBoundary key={request.key} onError={onDialogError}>
+          <NewDeckDialog open={open} request={request} onClosed={onClosed} />
+        </NewDeckDialogBoundary>
+      ) : null}
     </NewDeckContext.Provider>
   );
+}
+
+/** Catches what the dialog throws while it draws — its lazy chunk failing
+ *  above all — so the root layout's page stays (there is no error boundary
+ *  above the root layout but Next's own whole-page one). */
+class NewDeckDialogBoundary extends Component<{ onError: () => void; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  componentDidCatch(): void {
+    this.props.onError();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** Opens the dialog. A button, not a link: it opens a dialog in place. */
@@ -128,8 +195,15 @@ export function NewDeckButton({
   icon?: boolean;
 }) {
   const { openNewDeck } = useNewDeck();
+  const self = useRef<HTMLButtonElement>(null);
+  // Back from /dashboard/decks/new's dialog: this page's first button takes
+  // the focus the dismissal left nowhere.
+  useEffect(() => {
+    if (claimFocusHandOff()) self.current?.focus();
+  }, []);
   return (
     <Button
+      ref={self}
       type="button"
       variant={variant}
       size={size}
@@ -137,7 +211,7 @@ export function NewDeckButton({
       aria-haspopup="dialog"
       onPointerEnter={preloadNewDeckDialog}
       onFocus={preloadNewDeckDialog}
-      onClick={() => openNewDeck({ format, cardId })}
+      onClick={(event) => openNewDeck({ format, cardId, opener: event.currentTarget })}
     >
       {icon ? <Plus aria-hidden /> : null}
       {children}
@@ -156,7 +230,10 @@ export function OpenNewDeckOnMount({ format }: { format?: DeckFormat }) {
     opened.current = true;
     openNewDeck({
       format,
-      onDismiss: () => router.replace("/dashboard/decks", { scroll: false }),
+      onDismiss: () => {
+        focusHandOffAt = Date.now();
+        router.replace("/dashboard/decks", { scroll: false });
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, []);

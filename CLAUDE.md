@@ -1835,12 +1835,21 @@ Rules and gotchas:
   maker's choice — "change" opens the card creator's Publish control in deck
   words (a "Keep it private" box over Unlisted | Public). It reads the
   viewer from GET `/api/me` (never a server action), makes the deck FIRST
-  and then imports a pasted list through the deck page's resolve → commit (a
-  refused list keeps the deck and offers the list again — never a second
-  create), opens an empty deck as `/deck/<slug>?new=1`
+  and then imports a pasted list through the deck page's resolve → commit
+  with NO review step — so only an EXACT match goes in as its card; a best
+  guess is committed as the name typed (a placeholder) and the toast names
+  it and the skipped lines. Never twice: a refused list keeps the deck and
+  offers the list again under the commit's `firstImportOnly` (refused once
+  the deck holds an imported entry), and a press after a lost create
+  answer sends `reuseRecentTwin` (the same deck made in the last minute
+  comes back). An empty deck opens as `/deck/<slug>?new=1`
   (`useFocusAddOnNewDeck` focuses the add control and drops the flag under
-  the rule below), and keeps a signed-out visitor's input in sessionStorage
-  for the trip through sign-in (`lib/decks/new-deck.ts`, never the URL). A
+  the rule below; the addresses are `lib/decks/new-deck-paths.ts`, kept
+  free of the parser); a signed-out visitor's input waits in
+  sessionStorage for the trip through sign-in (`lib/decks/new-deck.ts`,
+  never the URL; sign-up returns through onboarding's own `next`). Closed,
+  the focus goes back to its opener; a render that throws (a chunk that
+  won't load) is caught by the provider, never Next's whole-page error. A
   new way to start a deck opens it, never a form of its own (the Publish
   step's inline quick-create moves onto it with DK9.3).
 

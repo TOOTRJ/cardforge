@@ -3,22 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   NEW_DECK_DRAFT_TTL_MS,
   clearNewDeckDraft,
-  newDeckAuthHref,
   newDeckContextOf,
-  newDeckPageHref,
-  newDeckReturnPath,
   readNewDeckDraft,
   saveNewDeckDraft,
   type NewDeckDraft,
 } from "@/lib/decks/new-deck";
+import { newDeckAuthHref, newDeckPageHref, newDeckReturnPath } from "@/lib/decks/new-deck-paths";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { MAX_DECKLIST_CHARS } from "@/lib/decks/parse-decklist";
 
 // ---------------------------------------------------------------------------
 // The New deck dialog's signed-out round trip (TODO DK4.3,
-// lib/decks/new-deck.ts): the input waits in this tab's sessionStorage —
-// never a URL — for a few hours, anything else in the slot is dropped, a
-// blocked storage is no draft (never a throw), and the way back is
-// /dashboard/decks/new through safeRedirectPath with the format only.
+// lib/decks/new-deck.ts + new-deck-paths.ts): the input waits in this tab's
+// sessionStorage — never a URL — for a few hours, anything else in the slot
+// is dropped, a blocked storage is no draft (never a throw), and the way
+// back is /dashboard/decks/new through safeRedirectPath with the format
+// only — for a new account by way of onboarding's own `next`.
 // ---------------------------------------------------------------------------
 
 const DRAFT: NewDeckDraft = {
@@ -103,8 +103,24 @@ describe("the way back", () => {
   it("is /dashboard/decks/new with the format only", () => {
     expect(newDeckReturnPath()).toBe("/dashboard/decks/new");
     expect(newDeckReturnPath("pauper")).toBe("/dashboard/decks/new?format=pauper");
-    expect(newDeckAuthHref("signup", "pauper")).toBe("/signup?redirectTo=%2Fdashboard%2Fdecks%2Fnew%3Fformat%3Dpauper");
     expect(newDeckAuthHref("login")).toBe("/login?redirectTo=%2Fdashboard%2Fdecks%2Fnew");
+    expect(newDeckAuthHref("login", "pauper")).toBe("/login?redirectTo=%2Fdashboard%2Fdecks%2Fnew%3Fformat%3Dpauper");
+  });
+
+  it("a NEW account goes through onboarding, which ends on the dialog (its own `next`)", () => {
+    const href = new URL(newDeckAuthHref("signup", "pauper"), "https://pipglyph.test");
+    expect(href.pathname).toBe("/signup");
+    const redirectTo = href.searchParams.get("redirectTo")!;
+    // What the sign-up action redirects to — a safe same-origin path…
+    expect(safeRedirectPath(redirectTo, "/fallback")).toBe(redirectTo);
+    const onboarding = new URL(redirectTo, "https://pipglyph.test");
+    expect(onboarding.pathname).toBe("/onboarding");
+    // …and where onboarding sends the new account when it is done.
+    const next = onboarding.searchParams.get("next")!;
+    expect(next).toBe("/dashboard/decks/new?format=pauper");
+    expect(safeRedirectPath(next, "/fallback")).toBe(next);
+    // Never the decklist: only the format travels.
+    expect(href.search).not.toMatch(/decklist|Bolt/i);
   });
 
   it("reads /api/me's answer: signed in with valid card slots, or signed out with none", () => {

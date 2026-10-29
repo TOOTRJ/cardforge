@@ -19,18 +19,17 @@ import { FieldGroup, inputClass, joinIds, textareaClass } from "@/components/cre
 import { DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { ImportSlotForecast } from "@/components/decks/import-decklist-dialog";
 import { createDeckAction } from "@/lib/decks/actions";
-import { commitDeckImportAction, resolveDecklistAction } from "@/lib/decks/import";
+import { commitDeckImportAction, resolveDecklistAction, type ImportReviewLine } from "@/lib/decks/import";
 import { frontFaceName, MAX_DECKLIST_CHARS, parseDecklist, type ParseWarning } from "@/lib/decks/parse-decklist";
 import {
   clearNewDeckDraft,
   NEW_DECK_CONTEXT_PATH,
-  newDeckAuthHref,
   newDeckContextOf,
-  newDeckPageHref,
   readNewDeckDraft,
   saveNewDeckDraft,
   type NewDeckContext,
 } from "@/lib/decks/new-deck";
+import { newDeckAuthHref, newDeckPageHref } from "@/lib/decks/new-deck-paths";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { cn } from "@/lib/utils";
 import { DECK_FORMAT_LABELS, DECK_FORMAT_VALUES, type DeckFormat } from "@/types/deck";
@@ -46,10 +45,14 @@ import type { Visibility } from "@/types/card";
 //               Standard, Modern, Pauper, Brawl; "More" adds the rest
 //   Paste       optional. On Create the deck is made FIRST, then the list
 //               goes through the deck page's import (resolve → commit, the
-//               `import_deck_entries` RPC) without the review step. A list
+//               `import_deck_entries` RPC) without the review step — so only
+//               EXACT matches go in as cards: a best guess is kept as a
+//               name to check (a placeholder), never a guessed card, and
+//               the toast names those lines and the ones skipped. A list
 //               that can't be read keeps the deck: the dialog says what the
-//               import said and offers it again or the deck page. The
-//               saved-card forecast (owner decision D2) never blocks.
+//               import said and offers it again (never twice — the commit's
+//               `firstImportOnly`) or the deck page. The saved-card forecast
+//               (owner decision D2) never blocks.
 //   Visibility  "Visibility: Public · change". Public by default; the
 //               maker CHOOSES private (owner 2026-10-29: "same as how
 //               create card is"), so "change" opens the creator's Publish
@@ -73,6 +76,9 @@ export type NewDeckDialogRequest = {
   key: number;
   format?: DeckFormat;
   cardId?: string;
+  /** What opened it: the focus goes back there when it closes (it opens
+   *  from context, so Radix has no trigger of its own to return to). */
+  returnFocusTo?: HTMLElement | null;
 };
 
 /** The chips shown before "More": the formats most decks are built for. */
@@ -108,7 +114,43 @@ const OFFLINE = "Couldn't reach PipGlyph. Check your connection and try again.";
 
 type Phase = "form" | "creating" | "importing" | "created";
 
-type ImportFeedback = { error: string; warnings: ParseWarning[] };
+type ImportFeedback = {
+  error: string;
+  warnings: ParseWarning[];
+  /** The commit found the list in the deck already (a lost answer): there
+   *  is nothing left to add. */
+  listIn?: boolean;
+};
+
+/** Up to three names, then how many more. */
+function someNames(names: readonly string[]): string {
+  return names.length <= 3 ? names.join(", ") : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+}
+
+const lines = (n: number) => `${n} line${n === 1 ? "" : "s"}`;
+
+/** The parser's skipped / adjusted lines, by number and words. */
+function skippedLines(warnings: readonly ParseWarning[]): string {
+  return someNames(warnings.map((warning) => (warning.raw ? `${warning.line} (“${warning.raw.slice(0, 40)}”)` : `${warning.line}`)));
+}
+
+/**
+ * What a quick import left for the maker to check (TODO DK4.1): the lines
+ * kept as NAMES — a best guess or a name Scryfall didn't find; a guess is
+ * never committed as a card without the review step — and the lines the
+ * parser skipped or adjusted. Undefined when there is nothing to say.
+ */
+export function quickImportNotes(
+  reviewLines: readonly ImportReviewLine[],
+  warnings: readonly ParseWarning[],
+): string | undefined {
+  const toCheck = reviewLines.filter((line) => line.quantity > 0 && line.status !== "resolved").map((line) => line.name);
+  const notes = [
+    toCheck.length > 0 ? `${lines(toCheck.length)} kept as names to check: ${someNames(toCheck)}.` : null,
+    warnings.length > 0 ? `${lines(warnings.length)} skipped or adjusted: line ${skippedLines(warnings)}.` : null,
+  ].filter(Boolean);
+  return notes.length > 0 ? notes.join(" ") : undefined;
+}
 
 export function NewDeckDialog({
   open,
@@ -159,7 +201,14 @@ export function NewDeckDialog({
   const nameRef = useRef<HTMLInputElement>(null);
   const signUpRef = useRef<HTMLAnchorElement>(null);
   const retryRef = useRef<HTMLButtonElement>(null);
+  const openDeckRef = useRef<HTMLButtonElement>(null);
   const submitting = useRef(false);
+  // A create whose ANSWER was lost may have made the deck: the next press
+  // asks for that deck back instead of a second one (reuseRecentTwin).
+  const createLost = useRef(false);
+  // How the dialog last closed — a "created" close navigates away, so the
+  // focus is not handed back to the opener.
+  const closedAs = useRef<NewDeckCloseReason | null>(null);
 
   // The paste, read as the import will read it — for the forecast only.
   const deferredList = useDeferredValue(decklist);
@@ -172,7 +221,7 @@ export function NewDeckDialog({
       cards,
       distinct,
       entries: entries.length,
-      skipped: warnings.length,
+      warnings,
       firstWarning: warnings[0]?.reason ?? null,
     };
   }, [deferredList]);
@@ -182,7 +231,8 @@ export function NewDeckDialog({
     if (askToSignIn) signUpRef.current?.focus();
   }, [askToSignIn]);
   useEffect(() => {
-    if (phase === "created") retryRef.current?.focus();
+    if (phase !== "created") return;
+    (importFeedback?.listIn ? openDeckRef.current : retryRef.current)?.focus();
   }, [phase, importFeedback]);
 
   const busy = phase === "creating" || phase === "importing";
@@ -202,6 +252,7 @@ export function NewDeckDialog({
   const currentDraft = () => ({ title, format, visibility, decklist, cardId });
 
   const close = (reason: NewDeckCloseReason) => {
+    closedAs.current = reason;
     if (reason === "dismiss") {
       // A deliberate close drops what a signed-out visitor kept.
       clearNewDeckDraft();
@@ -228,12 +279,26 @@ export function NewDeckDialog({
     }
     const committed = await commitDeckImportAction({
       deckId: deck.deckId,
+      // Only an EXACT match goes in as its card. Without the review step a
+      // best guess ("Lightning Blot" → Lightning Blow, a set + number that
+      // points at another card) is kept as the name typed — a placeholder
+      // the maker can check — never as the guessed card.
       lines: resolved.lines
         .filter((line) => line.quantity > 0)
-        .map((line) => ({ name: line.name, quantity: line.quantity, board: line.board, resolved: line.resolved })),
+        .map((line) => ({
+          name: line.name,
+          quantity: line.quantity,
+          board: line.board,
+          resolved: line.status === "resolved" ? line.resolved : null,
+        })),
+      firstImportOnly: true,
     });
     if (!committed.ok) {
-      setImportFeedback({ error: committed.error, warnings: resolved.parseWarnings });
+      setImportFeedback({
+        error: committed.error,
+        warnings: committed.alreadyImported ? [] : resolved.parseWarnings,
+        listIn: committed.alreadyImported === true,
+      });
       setPhase("created");
       return;
     }
@@ -244,12 +309,11 @@ export function NewDeckDialog({
         ? `${committed.placeholders} placeholder${committed.placeholders === 1 ? "" : "s"}`
         : null,
     ].filter(Boolean);
-    const skipped = resolved.parseWarnings.length;
+    const notes = quickImportNotes(resolved.lines, resolved.parseWarnings);
     toast.success(`Deck created — ${bits.join(", ")}.`, {
-      description:
-        skipped > 0
-          ? `${skipped} line${skipped === 1 ? "" : "s"} of the list couldn't be read. Import decklist on the deck page shows why.`
-          : undefined,
+      description: notes,
+      // Long enough to read the names it lists.
+      duration: notes ? 12_000 : undefined,
     });
     openDeck(deck.slug, false);
   };
@@ -276,8 +340,14 @@ export function NewDeckDialog({
     try {
       const result = await createDeckAction(
         { title: name, format, visibility },
-        { redirectAfterCreate: false, surface: "dialog", firstCardId: cardId ?? undefined },
+        {
+          redirectAfterCreate: false,
+          surface: "dialog",
+          firstCardId: cardId ?? undefined,
+          ...(createLost.current ? { reuseRecentTwin: true } : {}),
+        },
       );
+      createLost.current = false;
       if (!result.ok) {
         setPhase("form");
         if (result.code === "AUTH_REQUIRED") {
@@ -302,7 +372,9 @@ export function NewDeckDialog({
       setCreated({ deckId: result.deckId, slug: result.slug, title: name });
       if (!decklist.trim()) {
         toast.success("Deck created.");
-        openDeck(result.slug, true);
+        // Empty unless its first card went in: only an empty deck asks the
+        // page to focus its way to add cards.
+        openDeck(result.slug, !(cardId && !result.firstCardError));
         return;
       }
       await importList(result);
@@ -313,6 +385,9 @@ export function NewDeckDialog({
         setImportFeedback({ error: OFFLINE, warnings: [] });
         setPhase("created");
       } else {
+        // The deck may have been made all the same: the next press asks for
+        // it back before making another.
+        createLost.current = true;
         setPhase("form");
         setFormError(OFFLINE);
       }
@@ -322,7 +397,7 @@ export function NewDeckDialog({
   };
 
   const retryImport = async () => {
-    if (!created || busy || submitting.current || !decklist.trim()) return;
+    if (!created || busy || submitting.current || !decklist.trim() || importFeedback?.listIn) return;
     submitting.current = true;
     try {
       await importList(created);
@@ -349,7 +424,23 @@ export function NewDeckDialog({
       }}
     >
       {/* A 1 rem gutter on a phone; 36 rem wide on a desk. */}
-      <DialogContent size="md" className="w-[calc(100%-2rem)] max-w-xl" closeDisabled={busy}>
+      <DialogContent
+        size="md"
+        className="w-[calc(100%-2rem)] max-w-xl"
+        closeDisabled={busy}
+        onCloseAutoFocus={(event) => {
+          // Created: the deck's page opens and takes the focus itself.
+          if (closedAs.current === "created") {
+            event.preventDefault();
+            return;
+          }
+          const opener = request.returnFocusTo;
+          if (opener?.isConnected) {
+            event.preventDefault();
+            opener.focus();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>New deck</DialogTitle>
           <DialogDescription>
@@ -442,9 +533,9 @@ export function NewDeckDialog({
                             {`${parsed.cards} card${parsed.cards === 1 ? "" : "s"} found — added when you create the deck.`}
                           </p>
                         )}
-                        {parsed.skipped > 0 ? (
+                        {parsed.warnings.length > 0 ? (
                           <p className="text-xs leading-5 text-gold">
-                            {`${parsed.skipped} line${parsed.skipped === 1 ? "" : "s"} skipped or adjusted — Import decklist on the deck page shows which.`}
+                            {`${lines(parsed.warnings.length)} skipped or adjusted: line ${skippedLines(parsed.warnings)}.`}
                           </p>
                         ) : null}
                       </>
@@ -555,8 +646,9 @@ export function NewDeckDialog({
                 <DeckAiPausedNote id={`${ids}-ai`} />
               </>
             )}
-            {deckKept ? (
+            {deckKept && !importFeedback.listIn ? (
               <DecklistField
+                label="Decklist"
                 value={decklist}
                 onChange={setDecklist}
                 readOnly={busy}
@@ -569,7 +661,11 @@ export function NewDeckDialog({
           <DialogFooter>
             {/* While the deck is made the submit button is aria-disabled, never
                 disabled — it keeps the focus; a second press does nothing. */}
-            {deckKept ? (
+            {deckKept && importFeedback.listIn ? (
+              <Button ref={openDeckRef} type="button" onClick={() => openDeck(created.slug, false)}>
+                Open the deck
+              </Button>
+            ) : deckKept ? (
               <>
                 <Button type="button" variant="outline" disabled={busy} onClick={() => openDeck(created.slug, true)}>
                   Open the deck
@@ -618,12 +714,15 @@ async function fetchNewDeckContext(signal?: AbortSignal): Promise<NewDeckContext
 /** The optional decklist. Its note is the forecast (or what the import will
  *  say about a list it can't read), read as the textarea's description. */
 function DecklistField({
+  label = "Paste a decklist (optional)",
   value,
   onChange,
   readOnly,
   forecastId,
   forecast,
 }: {
+  /** The kept deck's list is no longer optional: it is what is added. */
+  label?: string;
   value: string;
   onChange: (next: string) => void;
   readOnly: boolean;
@@ -633,7 +732,7 @@ function DecklistField({
   return (
     <div className="flex flex-col gap-1.5">
       <FieldGroup
-        label="Paste a decklist (optional)"
+        label={label}
         helper="From MTG Arena, Moxfield, Archidekt, ManaBox or MTGO. You can add cards on the deck page too."
       >
         {(aria) => (
@@ -657,8 +756,19 @@ function DecklistField({
 }
 
 /** The deck is made; its list wasn't added. The import's own words, the
- *  lines it skipped, and (in the footer) the two ways on. */
+ *  lines it skipped, and (in the footer) the two ways on — or, when a lost
+ *  answer hid a list that DID go in, only the way to the deck. */
 function CreatedFeedback({ deckTitle, feedback }: { deckTitle: string; feedback: ImportFeedback | null }) {
+  if (feedback?.listIn) {
+    return (
+      <div role="alert" className="flex flex-col gap-2 rounded-lg border border-border/60 bg-elevated/40 px-4 py-3 text-sm">
+        <p className="leading-6 text-foreground">
+          <span className="font-semibold">“{deckTitle}” is created</span> and its list is in — open the deck to see
+          it.
+        </p>
+      </div>
+    );
+  }
   return (
     <div role="alert" className="flex flex-col gap-2 rounded-lg border border-gold/50 bg-gold/10 px-4 py-3 text-sm">
       <p className="leading-6 text-foreground">

@@ -263,11 +263,22 @@ const commitLineSchema = z.object({
 const commitSchema = z.object({
   deckId: z.string().uuid("Invalid deck id."),
   lines: z.array(commitLineSchema).min(1).max(MAX_DECKLIST_ENTRIES),
+  /** The New deck dialog's commit (TODO DK4.1): refused once the deck holds
+   *  an entry the import wrote, so a retry after a lost answer never doubles
+   *  the list. The deck page's import never sends it (a second import there
+   *  merges, on purpose). */
+  firstImportOnly: z.boolean().optional(),
 });
 
 export type CommitDeckImportResult =
   | { ok: true; added: number; merged: number; placeholders: number }
-  | { ok: false; error: string; retryAfterSeconds?: number };
+  | {
+      ok: false;
+      error: string;
+      retryAfterSeconds?: number;
+      /** firstImportOnly found the list already in the deck. */
+      alreadyImported?: true;
+    };
 
 const SCRYFALL_DOWN =
   "Scryfall didn't respond — nothing was imported. Try again in a moment.";
@@ -294,6 +305,20 @@ export async function commitDeckImportAction(
   const deck = await getDeckById(parsed.data.deckId);
   if (!deck || deck.owner_id !== user.id) {
     return { ok: false, error: "Deck not found or not yours." };
+  }
+
+  // The dialog's retry: an entry the import wrote (deck_cards.source, 0144)
+  // means the first commit landed and only its answer was lost. Read before
+  // any Scryfall call; an unreadable count lets the commit go on.
+  if (parsed.data.firstImportOnly) {
+    const { count } = await (await createClient())
+      .from("deck_cards")
+      .select("id", { count: "exact", head: true })
+      .eq("deck_id", deck.id)
+      .eq("source", "import");
+    if ((count ?? 0) > 0) {
+      return { ok: false, error: "The list is already in — open the deck.", alreadyImported: true };
+    }
   }
 
   // Re-resolve every printing on the server, 75 ids a request (the client's

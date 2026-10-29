@@ -250,7 +250,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Paste your list",
-          body: "Paste the list from MTG Arena, Moxfield, Archidekt, ManaBox or MTGO — or plain lines like “4 Lightning Bolt” — into the same dialog and create the deck: the cards are added with it. Or leave it empty and use “Import decklist” on the deck page.",
+          body: "Paste the list from MTG Arena, Moxfield, Archidekt, ManaBox or MTGO — or plain lines like “4 Lightning Bolt” — into the same dialog and create the deck: the cards it matches exactly are added with it, and a best guess is kept as the name you typed, for you to check. Or leave it empty and use “Import decklist” on the deck page.",
         },
         {
           title: "Review it",
