@@ -1,4 +1,4 @@
--- 0151_deck_cover_picks.sql — what a deck's cover shows: the owner's
+-- 0150_deck_cover_picks.sql — what a deck's cover shows: the owner's
 -- featured cards, and the built-in background they pick (2026-10-28 deck
 -- plan: TODO DK6.4, and the shuffle DK6.2 left for a migration; owner
 -- decision D12).
@@ -66,7 +66,7 @@ alter table public.deck_cards
   add column if not exists featured_rank smallint;
 
 comment on column public.deck_cards.featured_rank is
-  'The owner''s "Feature on cover" pick (TODO DK6.4): 1–5, the order the deck''s card fan shows it after the commanders; NULL = not picked. One entry per rank and deck. Written by set_deck_featured_entries (0151) or the owner''s own UPDATE.';
+  'The owner''s "Feature on cover" pick (TODO DK6.4): 1–5, the order the deck''s card fan shows it after the commanders; NULL = not picked. One entry per rank and deck. Written by set_deck_featured_entries (0150) or the owner''s own UPDATE.';
 
 alter table public.deck_cards drop constraint if exists deck_cards_featured_rank_range;
 alter table public.deck_cards
@@ -156,7 +156,7 @@ grant execute on function public.set_deck_featured_entries(uuid, uuid[]) to auth
 -- public object URL on one of our storage origins, in a bucket of this kind,
 -- directly inside `p_owner`'s folder, under a plain file name (optionally
 -- `?v=<digits>`, the pip's cache-buster) — or a built-in profile image, a
--- built-in deck background (0151), or a Scryfall printing image for a deck
+-- built-in deck background (0150), or a Scryfall printing image for a deck
 -- entry. Mirrors lib/media/media-urls.ts.
 create or replace function public.media_url_allowed(p_kind text, p_url text, p_owner uuid)
 returns boolean
@@ -177,7 +177,7 @@ begin
   if p_kind = 'banner' and p_url ~ '^/defaults/banners/banner-(0[1-9]|1[0-9]|2[0-5])\.webp$' then
     return true;
   end if;
-  -- The sixteen built-in deck backgrounds (0151, public/defaults/deck-covers):
+  -- The sixteen built-in deck backgrounds (0150, public/defaults/deck-covers):
   -- a default the owner shuffled to or picked.
   if p_kind = 'deck-cover'
      and p_url ~ '^/defaults/deck-covers/(white|blue|black|red|green|multicolor|colorless|neutral)-[12]\.webp$' then

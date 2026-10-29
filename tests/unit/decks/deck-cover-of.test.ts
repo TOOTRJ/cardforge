@@ -197,7 +197,7 @@ describe("deckCoverOf", () => {
     expect(deckCoverOf(deck(null), null).src).toMatch(/\/neutral-[12]\.webp$/);
   });
 
-  it("a stored built-in (0151's shuffle / pick) is a DEFAULT, never an upload — though the media guard draws it", () => {
+  it("a stored built-in (0150's shuffle / pick) is a DEFAULT, never an upload — though the media guard draws it", () => {
     const stored = deckCoverOf(deck("/defaults/deck-covers/green-1.webp", { cover_position: { focalX: 0.1, focalY: 0.9 } }), ["R"]);
     expect(stored).toEqual({ src: "/defaults/deck-covers/green-1.webp", kind: "default", objectPosition: undefined });
     // isAllowedMediaUrl takes it (it is a value the column may hold) …

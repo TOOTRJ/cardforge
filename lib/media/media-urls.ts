@@ -85,7 +85,7 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
  *   * avatar / banner: also a built-in image (`/defaults/…`, 0095); an avatar
  *     also a Google account picture (Google sign-ups).
  *   * deck-cover: also one of the sixteen built-in backgrounds an owner
- *     stored (0151, isDefaultDeckCover — deckCoverOf tells it from an
+ *     stored (0150, isDefaultDeckCover — deckCoverOf tells it from an
  *     upload).
  *   * card-art: also PipGlyph's own built-in images (the seed cards).
  *   * deck-card-image: a Scryfall printing image only.

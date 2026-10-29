@@ -16,7 +16,7 @@ import type { Card } from "@/types/card";
 // deck's own page computes from its rows (`deckCoverColors`,
 // `featuredCardsOf`, lib/decks/cover.ts + featured.ts), so a deck shows the
 // same default and the first three cards of the same fan — the commanders,
-// the owner's cover picks (0151), then the fill — on its tile and on its
+// the owner's cover picks (0150), then the fill — on its tile and on its
 // page.
 //
 // ONE read for the page of decks: every playable entry (the maybeboard is
@@ -43,7 +43,7 @@ export const TILE_FAN_MAX = 3;
 const ENTRY_CAP = 1000;
 
 /** The entry columns the colours and the fan read — the owner's cover pick
- *  too (0151), left out on a database that migration hasn't reached. */
+ *  too (0150), left out on a database that migration hasn't reached. */
 const entryColumns = (withRank: boolean) =>
   "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, " +
   (withRank ? "featured_rank, " : "") +
@@ -61,7 +61,7 @@ type EntryRow = {
   image_url: string | null;
   type_line: string | null;
   color_identity: string[] | null;
-  /** Absent on a database 0151 hasn't reached. */
+  /** Absent on a database 0150 hasn't reached. */
   featured_rank?: number | null;
   card: LiteCard | null;
 };

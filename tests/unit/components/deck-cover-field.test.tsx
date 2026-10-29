@@ -92,7 +92,7 @@ describe("CoverField", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The built-in backgrounds (migration 0151): "Shuffle" and a grid of the
+// The built-in backgrounds (migration 0150): "Shuffle" and a grid of the
 // sixteen — one radio group, ChipGroup's keyboard (one tab stop, arrows move
 // the focus, Space / Enter picks). A pick STORES the path, so a stored one
 // is shown picked, with the way back to the colours' pick.

@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
 -- 28_deck_cover_picks.sql — the owner's cover picks and a stored built-in
--- background (TODO DK6.4, migration 0151), so a preview branch, the dev
+-- background (TODO DK6.4, migration 0150), so a preview branch, the dev
 -- database and the local stack show each case on dev_pro's decks:
 --
 --   Cinderwing Dragonstorm (seed 10, Commander) — the fan is the commander

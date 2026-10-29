@@ -42,7 +42,7 @@ function narrowDeck(row: DeckRow): Deck {
 }
 
 function narrowDeckCard(row: DeckCardRow): DeckCardEntry {
-  // `source` (migration 0144) and `featured_rank` (0151) are absent on a
+  // `source` (migration 0144) and `featured_rank` (0150) are absent on a
   // database that migration hasn't reached.
   const source = (row as { source?: unknown }).source;
   return {

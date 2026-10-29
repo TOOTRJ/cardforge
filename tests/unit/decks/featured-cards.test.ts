@@ -273,7 +273,7 @@ describe("featuredCardsOf and other creators' cards (D3)", () => {
 
 // ---------------------------------------------------------------------------
 // TODO DK6.4: the owner's "Feature on cover" picks (deck_cards.featured_rank,
-// migration 0151) — after the commanders, before the seeded fill, by rank;
+// migration 0150) — after the commanders, before the seeded fill, by rank;
 // held to the same rules as every other card in the fan.
 // ---------------------------------------------------------------------------
 
@@ -346,7 +346,7 @@ describe("featuredCardsOf — the owner's picks (DK6.4)", () => {
     expect(fan.every((c) => c.kind === "custom")).toBe(true);
   });
 
-  it("a database without 0151 (no featured_rank) draws today's fan; a stray value is no rank", () => {
+  it("a database without 0150 (no featured_rank) draws today's fan; a stray value is no rank", () => {
     const items = [...Array.from({ length: 6 }, () => customItem("main")), printingItem("main", "Opt")];
     const before = keys(featuredCardsOf(items, DECK));
     const junk = items.map((item, i) => ({

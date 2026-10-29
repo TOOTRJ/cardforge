@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // pop-up (DeckCardModal): pick the card for the deck's cover fan, take it
 // off, or move it earlier / later among the picks, with the picks' order
 // shown. Buttons, never a drag (WCAG 2.5.7). Every change sends the deck's
-// WHOLE list, rank 1 first (setDeckCoverPicksAction → migration 0151's
+// WHOLE list, rank 1 first (setDeckCoverPicksAction → migration 0150's
 // set_deck_featured_entries). The fan is commanders → picks → the seeded
 // fill (lib/decks/featured.ts): a pick the fan can't show (a private card,
 // one with no picture) stays picked and says so.

@@ -28,7 +28,7 @@ import {
 // card's colours when that card is not private. A commander deck is its
 // commander's colours, as the format defines a deck's colour identity.
 //
-// An owner may also STORE a default (migration 0151: "Shuffle", or a pick
+// An owner may also STORE a default (migration 0150: "Shuffle", or a pick
 // among the sixteen in the cover editor): `decks.cover_url` then holds its
 // site-relative path, which the database takes exactly as it takes a
 // profile's built-in avatar (media_url_allowed('deck-cover', …)) and the app

@@ -3,7 +3,7 @@
 // public/defaults/deck-covers, scripts/build-deck-covers.mjs): two per colour
 // identity plus two neutrals — the twin of lib/profile/default-media.ts for
 // a deck's cover. lib/decks/cover.ts picks one by a deck's colours when it
-// has no cover of its own; since migration 0151 an owner may also STORE one
+// has no cover of its own; since migration 0150 an owner may also STORE one
 // ("Shuffle", or a pick in the cover editor), and the database takes exactly
 // these sixteen site-relative paths (media_url_allowed('deck-cover', …): the
 // same list as a pattern, held to this one by

@@ -43,7 +43,7 @@ const deckDescriptionSchema = clearableString(
 
 // An upload's https URL (the database holds it to the owner's own storage,
 // 0127), or one of the sixteen built-in backgrounds by its site-relative
-// path (0151: "Shuffle" / a pick in the cover editor) — that exact list,
+// path (0150: "Shuffle" / a pick in the cover editor) — that exact list,
 // never another relative path.
 const httpsCoverUrlSchema = z
   .string()

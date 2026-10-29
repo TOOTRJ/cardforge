@@ -5,7 +5,7 @@ import { DEFAULT_DECK_COVERS, isDefaultDeckCover } from "@/lib/decks/default-cov
 import { FEATURED_PICKS_MAX } from "@/lib/decks/featured";
 
 // ---------------------------------------------------------------------------
-// 0151 — the deck's cover picks and the built-in backgrounds (TODO DK6.4,
+// 0150 — the deck's cover picks and the built-in backgrounds (TODO DK6.4,
 // DK6.2's shuffle). What the SQL itself must keep (its behaviour — rank
 // uniqueness, the owner-only writes, the RPC's refusals, the cover guard
 // taking the sixteen defaults and refusing every crafted value, the grants —
@@ -27,7 +27,7 @@ const strip = (sql: string) =>
     .split("\n")
     .filter((line) => !line.trim().startsWith("--"))
     .join("\n");
-const SQL = strip(readFileSync(join(dir, "0151_deck_cover_picks.sql"), "utf8"));
+const SQL = strip(readFileSync(join(dir, "0150_deck_cover_picks.sql"), "utf8"));
 const SQL_0127 = strip(readFileSync(join(dir, "0127_media_url_guards.sql"), "utf8"));
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
 
@@ -47,7 +47,7 @@ const BRANCH =
   "if p_kind = 'deck-cover' and p_url ~ '^/defaults/deck-covers/(white|blue|black|red|green|multicolor|colorless|neutral)-[12]\\.webp$' then return true; end if;";
 const PATTERN = new RegExp(/p_url ~ '(\^\/defaults\/deck-covers\/[^']+)'/.exec(fn(SQL, "media_url_allowed"))![1]);
 
-describe("0151 — featured_rank", () => {
+describe("0150 — featured_rank", () => {
   it("a nullable smallint, 1–5, one entry per rank and deck — idempotent", () => {
     expect(statements).toContain("alter table public.deck_cards add column if not exists featured_rank smallint");
     expect(statements).toContain("alter table public.deck_cards drop constraint if exists deck_cards_featured_rank_range");
@@ -66,7 +66,7 @@ describe("0151 — featured_rank", () => {
   });
 });
 
-describe("0151 — set_deck_featured_entries", () => {
+describe("0150 — set_deck_featured_entries", () => {
   const body = fn(SQL, "set_deck_featured_entries");
 
   it("SECURITY INVOKER with an empty search_path: RLS applies to its updates", () => {
@@ -118,7 +118,7 @@ describe("0151 — set_deck_featured_entries", () => {
   });
 });
 
-describe("0151 — media_url_allowed: 0127's, plus the sixteen defaults", () => {
+describe("0150 — media_url_allowed: 0127's, plus the sixteen defaults", () => {
   it("is 0127's function word for word but for ONE added branch", () => {
     const now = fn(SQL, "media_url_allowed");
     const before = fn(SQL_0127, "media_url_allowed");

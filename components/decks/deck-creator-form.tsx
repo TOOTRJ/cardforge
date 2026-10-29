@@ -379,7 +379,7 @@ export function CoverField({
   value: string;
   /** Shown (never stored) while the deck stores no cover: the default
    *  background the deck's colours pick (lib/decks/cover.ts). A built-in
-   *  the owner shuffled to or picked IS stored (`value`, migration 0151). */
+   *  the owner shuffled to or picked IS stored (`value`, migration 0150). */
   defaultCoverSrc?: string | null;
   onChange: (next: string) => void;
   position: DeckCoverPosition | null;
@@ -416,7 +416,7 @@ export function CoverField({
     }
   };
 
-  // A stored built-in background (migration 0151) is no upload: no focal
+  // A stored built-in background (migration 0150) is no upload: no focal
   // point, and the picker below shows it picked.
   const storedDefault = isDefaultDeckCover(value);
   // Only a cover a surface may draw (migration 0127): an older cover on

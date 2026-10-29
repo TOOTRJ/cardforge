@@ -61,7 +61,7 @@ type OgEntry = {
   image_url: string | null;
   type_line: string | null;
   color_identity: string[];
-  /** Absent on a database 0151 hasn't reached. */
+  /** Absent on a database 0150 hasn't reached. */
   featured_rank?: number | null;
   card: OgCard | null;
 };
@@ -81,7 +81,7 @@ async function getDeck(
       .eq("slug", slug)
       .maybeSingle();
     if (!deck) return null;
-    // The owner's cover picks (0151) too — on a database 0151 hasn't
+    // The owner's cover picks (0150) too — on a database 0150 hasn't
     // reached the read runs again without them.
     const readEntries = (withRank: boolean) =>
       supabase

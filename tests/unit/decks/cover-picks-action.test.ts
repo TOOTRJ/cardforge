@@ -4,11 +4,11 @@ import { chainClient, type ChainAnswer } from "@/tests/stubs/supabase-chain";
 // ---------------------------------------------------------------------------
 // setDeckCoverPicksAction (TODO DK6.4) — the deck card pop-up's "Feature on
 // cover" / "Remove from cover" / Earlier / Later. It sends the deck's WHOLE
-// list of picks to migration 0151's set_deck_featured_entries (which holds
+// list of picks to migration 0150's set_deck_featured_entries (which holds
 // the same rules in the database: the owner, five distinct entries of the
 // deck — proved on the local stack), after a friendly pre-flight: ids are
 // uuids, five at most, no repeat, a deck the caller owns. A refusal is the
-// app's own words, never the database's; a database 0151 hasn't reached
+// app's own words, never the database's; a database 0150 hasn't reached
 // says the feature isn't there yet.
 // ---------------------------------------------------------------------------
 

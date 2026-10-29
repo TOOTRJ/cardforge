@@ -35,7 +35,7 @@ function chain(table: string) {
   }
   c.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
     if (s.fail) return Promise.reject(new Error("network")).then(resolve, reject);
-    // A database 0151 hasn't reached: a select naming featured_rank is 42703.
+    // A database 0150 hasn't reached: a select naming featured_rank is 42703.
     const select = String(call.ops.find((op) => op[0] === "select")?.[1] ?? "");
     if (s.noRank && select.includes("featured_rank")) {
       return Promise.resolve({
@@ -197,7 +197,7 @@ describe("listDeckTileArt — the fan", () => {
     expect(String(s.calls[0].ops.find((op) => op[0] === "select")?.[1])).toContain("featured_rank");
   });
 
-  it("a database 0151 hasn't reached: the read runs again without the rank — today's fan, never no art", async () => {
+  it("a database 0150 hasn't reached: the read runs again without the rank — today's fan, never no art", async () => {
     s.noRank = true;
     s.decks = [{ id: "d7", owner_id: OWNER, deck_cards: [entry("e70", "commander", null), entry("e71", "main", null)] }];
     const art = await listDeckTileArt([{ id: "d7", owner_id: OWNER }], { anonymous: true });

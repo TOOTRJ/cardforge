@@ -114,8 +114,8 @@ export type DeckCardEntry = Omit<DeckCardRow, "board" | "source" | "featured_ran
   board: DeckBoard;
   /** Absent on a database 0144 has not reached. */
   source?: DeckEntrySource | null;
-  /** The owner's cover pick, 1-5 (migration 0151, TODO DK6.4); null = not
-   *  picked. Absent on a database 0151 has not reached. */
+  /** The owner's cover pick, 1-5 (migration 0150, TODO DK6.4); null = not
+   *  picked. Absent on a database 0150 has not reached. */
   featured_rank?: number | null;
 };
 

@@ -81,7 +81,7 @@ describe("createDeckSchema", () => {
     ).toBe(true);
   });
 
-  it("takes one of the sixteen built-in backgrounds by its site-relative path (0151) — that list, no other path", () => {
+  it("takes one of the sixteen built-in backgrounds by its site-relative path (0150) — that list, no other path", () => {
     for (const cover_url of ["/defaults/deck-covers/red-1.webp", "/defaults/deck-covers/neutral-2.webp"]) {
       expect(createDeckSchema.safeParse({ title: "Deck", cover_url }).success, cover_url).toBe(true);
       expect(updateDeckSchema.safeParse({ cover_url }).success, cover_url).toBe(true);

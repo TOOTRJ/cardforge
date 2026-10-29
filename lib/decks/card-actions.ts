@@ -247,7 +247,7 @@ export async function unlinkDeckCardAction(
 // The cover's picks (TODO DK6.4) — the deck card modal's "Feature on cover",
 // "Remove from cover" and its Earlier / Later buttons all send the deck's
 // WHOLE list of picks, rank 1 first, and the database replaces them in one
-// transaction (migration 0151's set_deck_featured_entries: the deck's
+// transaction (migration 0150's set_deck_featured_entries: the deck's
 // entry lock, its owner only, five distinct entries of that deck at most).
 // ---------------------------------------------------------------------------
 

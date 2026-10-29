@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // The sixteen built-in backgrounds in the cover editor (owner decision D12;
-// stored since migration 0151): "Shuffle" picks another at random, the grid
+// stored since migration 0150): "Shuffle" picks another at random, the grid
 // picks one by hand. Both only set the form's cover (saved with the form,
 // like an upload). The grid is ONE radio group with ChipGroup's keyboard
 // (components/ui/chip-group.tsx, TODO 3b.10): one tab stop, the arrows move

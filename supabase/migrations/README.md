@@ -348,7 +348,7 @@ instead. Each bullet: what the header says, and what is true now.
   result and order.
 - **0127 (`decks.cover_url` "may hold `set-covers/{uid}/…` (upload) or
   `card-art/{uid}/…` (AI cover)"; the media guards take "only our storage
-  objects in the writer's own folder")** — since 0151 a deck's cover may
+  objects in the writer's own folder")** — since 0150 a deck's cover may
   also hold one of the sixteen built-in backgrounds,
   `/defaults/deck-covers/<white|blue|black|red|green|multicolor|colorless|neutral>-<1|2>.webp`
   (site-relative, anchored, no host): an owner who shuffles or picks one

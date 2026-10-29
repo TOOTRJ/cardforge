@@ -12,7 +12,7 @@ import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 // In order, distinct cards:
 //   1. the COMMANDERS (and partners), in the deck's order — always first;
 //   2. the owner's "Feature on cover" picks (deck_cards.featured_rank,
-//      migration 0151: up to five, 1 first) — by rank, whichever board
+//      migration 0150: up to five, 1 first) — by rank, whichever board
 //      they are on but the maybeboard;
 //   3. the fill, a seeded shuffle (the deck id: the same fan on every
 //      visit) of the deck's own PipGlyph cards with a stored bake thumbnail
@@ -47,7 +47,7 @@ import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 /** The most cards a fan shows. */
 export const FAN_MAX = 5;
 
-/** The most cards an owner may feature (0151's CHECK: ranks 1–5). */
+/** The most cards an owner may feature (0150's CHECK: ranks 1–5). */
 export const FEATURED_PICKS_MAX = 5;
 
 /** A stored rank as the app reads it: 1–5, else none. */
@@ -58,8 +58,8 @@ export function featuredRankOf(value: unknown): number | null {
 }
 
 /** PostgREST's "no such column" (42703) for `featured_rank`: a database
- *  0151 has not reached. Its readers ask again without the column (the fan
- *  then has no picks). Remove once 0151 is on production and on dev. */
+ *  0150 has not reached. Its readers ask again without the column (the fan
+ *  then has no picks). Remove once 0150 is on production and on dev. */
 export function missingFeaturedRank(error: { code?: string | null; message?: string | null } | null): boolean {
   return error?.code === "42703" && (error.message ?? "").includes("featured_rank");
 }
@@ -83,7 +83,7 @@ type FeaturableEntry = {
   scryfall_id: string | null;
   image_url: string | null;
   type_line: string | null;
-  /** The owner's pick (0151); absent on a database 0151 hasn't reached. */
+  /** The owner's pick (0150); absent on a database 0150 hasn't reached. */
   featured_rank?: number | null;
 };
 
