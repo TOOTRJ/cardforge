@@ -3,6 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyIndexNow } from "@/lib/seo/indexnow";
+import { lookupUsername, type ProfileClient } from "@/lib/profile/username";
 
 // ---------------------------------------------------------------------------
 // Cache invalidation for a deck mutation — shared by the owner's deck actions
@@ -28,4 +29,17 @@ export function revalidateDeckPaths(slug: string, ownerUsername?: string | null)
       ...(ownerUsername ? [`/profile/${ownerUsername}`] : []),
     ]),
   );
+}
+
+/** After the deck page's own entry writes (TODO DK5.4, lib/decks/
+ *  card-actions.ts): the deck's paths and its IndexNow ping (above), and
+ *  My Cards — its tiles' "In N decks" chips (TODO DK9) count entries.
+ *  Once per call, however many entries the call wrote. */
+export async function revalidateDeckEntryChange(
+  supabase: ProfileClient,
+  ownerId: string,
+  slug: string,
+): Promise<void> {
+  revalidateDeckPaths(slug, await lookupUsername(supabase, ownerId));
+  revalidatePath("/dashboard/cards");
 }

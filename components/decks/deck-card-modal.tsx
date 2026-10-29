@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ExternalLink,
   Link2,
   Loader2,
   Maximize2,
+  Pencil,
   Search,
   Sparkles,
   Trash2,
@@ -29,34 +29,46 @@ import { CardGlossary } from "@/components/creator/card-glossary";
 import {
   linkDeckCardAction,
   listMyCardsLiteAction,
-  removeDeckCardAction,
   unlinkDeckCardAction,
-  updateDeckCardAction,
   type MyCardLite,
 } from "@/lib/decks/card-actions";
+import { EntryStepper } from "@/components/decks/deck-entry-controls";
+import { useDeckEditor } from "@/components/decks/use-deck-editor";
+import { entryEditTarget } from "@/lib/decks/return-to";
+import { moveTargets } from "@/lib/decks/entry-ops";
+import { formatHasCommander } from "@/lib/decks/format-rules";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { hasBackPicture } from "@/lib/cards/tile-faces";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
-import {
-  DECK_BOARD_LABELS,
-  DECK_BOARD_VALUES,
-} from "@/types/deck";
+import { DECK_BOARD_LABELS, isDeckBoard } from "@/types/deck";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
+import { useMediaQuery } from "@/components/creator/use-media-query";
+
+/** Where the pop-up rises as a bottom sheet: a phone, or a touch screen. */
+const SHEET_QUERY = "(max-width: 639px), (hover: none) and (pointer: coarse)";
 
 // ---------------------------------------------------------------------------
 // DeckCardModal — the "more info" view for one deck entry. Everyone gets the
 // real card ⇄ custom card image flipper and source links; the deck owner
-// additionally gets the management actions (customize, link / unlink a card,
-// quantity, board, remove). Mutations refresh the route so the
-// server-rendered list reflects the change. Its words are the deck
-// vocabulary (TODO DK2.2, components/creator/card-glossary.tsx).
+// additionally gets the management actions: Edit (TODO DK5.5 — the creator
+// or the card's editor, and back to this card on the deck), link / unlink a
+// card, and — through the page's editor (components/decks/use-deck-editor:
+// drawn at once, saved in the background, rolled back and said if it fails,
+// TODO DK5.8) — the quantity, the board and Remove (with its Undo). A link
+// or an unlink revalidates the deck page, which brings the new rows back
+// with its answer: no router.refresh(). Its words are the deck vocabulary
+// (TODO DK2.2, components/creator/card-glossary.tsx).
+//
+// On a phone or a touch screen it is a BOTTOM SHEET (TODO DK5.7): the same
+// dialog, the same actions, risen from the bottom edge with a smaller
+// picture — never a page of its own.
 // ---------------------------------------------------------------------------
 
 type DeckCardModalProps = {
@@ -86,7 +98,10 @@ export function DeckCardModal({
   const fields = effectiveEntryFields(entry, card, status);
   // Another creator's card (D3): their handle, and THEIR card page.
   const maker = item.cardOwner?.username ?? null;
-  const router = useRouter();
+  const editor = useDeckEditor();
+  // A phone or a touch screen: a bottom sheet (TODO DK5.7). The pop-up opens
+  // only on a press, so the answer is in before it is drawn.
+  const sheet = useMediaQuery(SHEET_QUERY) === true;
   const [isPending, startTransition] = useTransition();
 
   // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
@@ -139,21 +154,39 @@ export function DeckCardModal({
 
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
 
+  // A link or an unlink: the action revalidates the deck page, whose new
+  // rows come back with its answer. A request that throws (offline, a
+  // deploy) is said, never handed to the error boundary.
   const mutate = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     startTransition(async () => {
-      const result = await fn();
-      if (!result.ok) {
-        toast.error(result.error ?? "Something went wrong.");
-        return;
+      try {
+        const result = await fn();
+        if (!result.ok) toast.error(result.error ?? "Something went wrong.");
+      } catch {
+        toast.error("The change didn't reach the server — check your connection.");
       }
-      router.refresh();
     });
   };
+  // The entry's Edit and its way back (TODO DK5.5) — on the deck page; a
+  // pop-up drawn on its own keeps the plain creator link.
+  const edit = editor ? entryEditTarget(item, editor.deck.slug) : null;
+  const boards = editor ? moveTargets(formatHasCommander(editor.deck.format)) : [];
+  if (editor && !boards.includes(entry.board)) boards.unshift(entry.board);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* xl, like the gallery's card modal — the card is the point here. */}
-      <DialogContent size="xl" className="min-h-0">
+      {/* xl, like the gallery's card modal — the card is the point here; on
+          a phone or a touch screen, a sheet from the bottom edge. */}
+      <DialogContent
+        size="xl"
+        className={cn(
+          "min-h-0",
+          sheet &&
+            "bottom-0 left-0 top-auto max-h-[88dvh] w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl pb-[env(safe-area-inset-bottom)] data-[state=closed]:translate-y-8 data-[state=closed]:scale-100",
+        )}
+        data-presentation={sheet ? "sheet" : "dialog"}
+      >
+        {sheet ? <span aria-hidden className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-border-strong" /> : null}
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {cardPath ? (
@@ -212,6 +245,7 @@ export function DeckCardModal({
                   : "View on Scryfall"
               }
               onNavigate={() => onOpenChange(false)}
+              compact={sheet}
             >
               {shownImage && landscapeProxy ? (
                 <span className="flex h-full w-full items-center">
@@ -320,8 +354,17 @@ export function DeckCardModal({
 
             {canManage ? (
               <div className="flex flex-col gap-4 border-t border-border/40 pt-4">
-                {/* The headline action: make your own version of the real card. */}
-                {entry.scryfall_id && !card ? (
+                {/* The headline action: make your own version of the card —
+                    a real card's, a placeholder's (TODO DK5.5: placeholders
+                    too), one that's gone (D3) — or edit the one you made. */}
+                {edit ? (
+                  <Button asChild size={card && !item.cardOwner ? "md" : "lg"} variant={card && !item.cardOwner ? "outline" : "primary"}>
+                    <Link href={edit.href} onClick={() => onOpenChange(false)}>
+                      {card && !item.cardOwner ? <Pencil className="h-4 w-4" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+                      {edit.label}
+                    </Link>
+                  </Button>
+                ) : entry.scryfall_id && !card ? (
                   <Button asChild size="lg">
                     <Link href={`/create?deckCard=${entry.id}`}>
                       <Sparkles className="h-4 w-4" aria-hidden />
@@ -339,52 +382,35 @@ export function DeckCardModal({
                   </Button>
                 ) : null}
 
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="flex flex-col gap-1 text-xs text-subtle">
-                    Quantity
-                    <input
-                      type="number"
-                      min={1}
-                      max={250}
-                      defaultValue={entry.quantity}
-                      key={`qty-${entry.id}-${entry.quantity}`}
-                      disabled={isPending}
-                      onBlur={(event) => {
-                        const next = Number.parseInt(event.target.value, 10);
-                        if (!Number.isFinite(next) || next === entry.quantity)
-                          return;
-                        mutate(() =>
-                          updateDeckCardAction(entry.id, {
-                            quantity: Math.max(1, Math.min(next, 250)),
-                          }),
-                        );
-                      }}
-                      className="h-9 w-20 rounded-md border border-border bg-background/60 px-2 text-center text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-subtle">
-                    Board
-                    <select
-                      value={entry.board}
-                      disabled={isPending}
-                      onChange={(event) =>
-                        mutate(() =>
-                          updateDeckCardAction(entry.id, {
-                            board: event.target
-                              .value as (typeof DECK_BOARD_VALUES)[number],
-                          }),
-                        )
-                      }
-                      className="h-9 rounded-md border border-border bg-background/60 px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-                    >
-                      {DECK_BOARD_VALUES.map((board) => (
-                        <option key={board} value={board}>
-                          {DECK_BOARD_LABELS[board]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                {editor ? (
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-1 text-xs text-subtle">
+                      <span aria-hidden>Quantity</span>
+                      <EntryStepper
+                        entryId={entry.id}
+                        name={card?.title ?? entry.name}
+                        quantity={entry.quantity}
+                        size="md"
+                      />
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs text-subtle">
+                      Board
+                      <select
+                        value={entry.board}
+                        onChange={(event) => {
+                          if (isDeckBoard(event.target.value)) editor.move([entry.id], event.target.value);
+                        }}
+                        className="h-9 rounded-md border border-border bg-background/60 px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 pointer-coarse:h-11"
+                      >
+                        {boards.map((board) => (
+                          <option key={board} value={board}>
+                            {DECK_BOARD_LABELS[board]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
 
                 <div className="flex flex-wrap items-center gap-2">
                   {card ? (
@@ -414,26 +440,24 @@ export function DeckCardModal({
                       Link an existing card
                     </Button>
                   )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => {
-                      mutate(async () => {
-                        const result = await removeDeckCardAction(entry.id);
-                        if (result.ok) {
-                          toast.success(`Removed ${entry.name}.`);
-                          onOpenChange(false);
-                        }
-                        return result;
-                      });
-                    }}
-                    className="text-danger hover:text-danger"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                    Remove from deck
-                  </Button>
+                  {editor ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // Out at once, with an Undo in the toast; the
+                        // pop-up closes and the focus goes to the row that
+                        // took this one's place.
+                        editor.remove([entry.id]);
+                        onOpenChange(false);
+                      }}
+                      className="text-danger hover:text-danger"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      Remove from deck
+                    </Button>
+                  ) : null}
                   {isPending ? (
                     <Loader2
                       className="h-4 w-4 animate-spin text-muted"
@@ -469,6 +493,7 @@ function CardImageLink({
   external,
   label,
   onNavigate,
+  compact = false,
   children,
 }: {
   href: string | null;
@@ -476,14 +501,17 @@ function CardImageLink({
   label: string;
   /** Called when an in-app link is followed (closes the deck dialog). */
   onNavigate?: () => void;
+  /** The bottom sheet's smaller picture (TODO DK5.7). */
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   // On wide screens the card is sized to the viewport height (5:7 kept), so
   // the whole dialog — padding included — fits without scrolling. The frame
   // IS the 5:7 card box, so it takes the ONE card corner (a fixed 12 px
   // radius left a sliver of a rounded bake's transparent corner showing).
-  const frame =
-    "relative block aspect-[5/7] w-full overflow-hidden card-corners border border-border/60 bg-elevated md:h-[min(60dvh,36rem)] md:w-auto";
+  const frame = compact
+    ? "relative mx-auto block aspect-[5/7] h-[min(40dvh,22rem)] w-auto overflow-hidden card-corners border border-border/60 bg-elevated"
+    : "relative block aspect-[5/7] w-full overflow-hidden card-corners border border-border/60 bg-elevated md:h-[min(60dvh,36rem)] md:w-auto";
   if (!href) return <div className={frame}>{children}</div>;
   const hint = (
     <span className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t from-background/85 to-transparent px-3 pb-3 pt-8 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
@@ -558,10 +586,6 @@ function pickerThumbOf(card: MyCardLite): string | null {
   if (!isStoredRenderUrl(card.rendered_image_url) || !isStoredRenderUrl(card.rendered_thumb_url)) return null;
   return toRenderCdnUrl(card.rendered_thumb_url) ?? card.rendered_thumb_url;
 }
-
-/** The picker as the deck page's "Add from my cards" dialog uses it too
- *  (components/decks/add-from-my-cards-dialog.tsx). */
-export { LinkCardPicker as MyCardPicker };
 
 function LinkCardPicker({
   onPick,

@@ -213,7 +213,6 @@ export default async function DeckDetailPage({
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
   const hasCards = items.length > 0;
   const usesCommander = formatHasCommander(deck.format);
-  const hasCommander = items.some((item) => item.entry.board === "commander");
 
   // The format check is the owner's to-do list (TODO DK0.9): a visitor
   // never sees it, and an empty deck has nothing to check (validateDeck).
@@ -434,27 +433,38 @@ export default async function DeckDetailPage({
             {cardCount} in the deck
           </span>
         </h2>
-        {!hasCards ? (
-          isOwner ? (
-            <DeckStartDoors commander={usesCommander} />
-          ) : (
-            <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
-          )
+        {isOwner ? (
+          // The owner's deck is its editor (TODO DK5 part 2): the add box
+          // first, then the doors of an empty deck or its cards — drawn at
+          // once as they change (components/decks/use-deck-editor).
+          <DeckCardList
+            items={shownItems}
+            ownerUsername={deck.owner?.username ?? null}
+            canManage
+            deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
+            initialPrefs={viewPrefs}
+            summary={{
+              format: deck.format,
+              analytics,
+              formatIssues: warnings.length,
+            }}
+            emptyState={<DeckStartDoors commander={usesCommander} />}
+            commanderSlot={usesCommander ? <CommanderSlot compact /> : null}
+          />
+        ) : !hasCards ? (
+          <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
         ) : (
-          <div className="flex flex-col gap-4">
-            {isOwner && usesCommander && !hasCommander ? <CommanderSlot compact /> : null}
-            <DeckCardList
-              items={shownItems}
-              ownerUsername={deck.owner?.username ?? null}
-              canManage={isOwner}
-              initialPrefs={viewPrefs}
-              summary={{
-                format: deck.format,
-                analytics,
-                formatIssues: isOwner ? warnings.length : null,
-              }}
-            />
-          </div>
+          <DeckCardList
+            items={shownItems}
+            ownerUsername={deck.owner?.username ?? null}
+            canManage={false}
+            initialPrefs={viewPrefs}
+            summary={{
+              format: deck.format,
+              analytics,
+              formatIssues: null,
+            }}
+          />
         )}
       </section>
 

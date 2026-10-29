@@ -30,6 +30,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { deckReturnPath } from "@/lib/decks/return-to";
 
 // File-system param name is `username` because the sibling
 // `(marketing)/card/[username]/[slug]` route uses the same first
@@ -42,7 +43,9 @@ type EditCardPageProps = {
   // Admin frame preview (TODO 2.1) — ignored for everyone else. `step` is
   // the creator's own (read client-side); it is listed so the banner's
   // "Exit preview" link keeps it.
-  searchParams?: Promise<{ previewFrames?: string | string[]; step?: string }>;
+  // `returnTo`: opened from a deck page's Edit (TODO DK5.5) — a save goes
+  // back to that card on the deck (lib/decks/return-to.ts deckReturnPath).
+  searchParams?: Promise<{ previewFrames?: string | string[]; step?: string; returnTo?: string }>;
 };
 
 export async function generateMetadata({
@@ -184,6 +187,7 @@ export default async function EditCardPage({
       <div className="mt-10">
         <CardCreatorForm
           mode="edit"
+          returnTo={deckReturnPath(search.returnTo)}
           userId={user.id}
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}
