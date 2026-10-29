@@ -222,6 +222,12 @@ const PICKS: readonly Pick[] = [
   // --- the other bodies ----------------------------------------------------
   { from: "m15pw/g/planeswalker-long", why: "walker: loyalty rows, badges, the shield" },
   { from: "saga/g/saga-long", why: "saga: the rail, chapter badges, the reminder block" },
+  // The saga creature (TODO 4.5d): the reminder as a band, the rail and the
+  // type bar raised, and its second box — one line centred on print's row,
+  // a longer text beside the plate (a float) — with the triangle stamp.
+  { from: "sagacreature/w/saga-short", why: "saga creature: the band, a four-badge stack, ONE centred line in the second box, the P/T" },
+  { from: "sagacreature/g/saga-long", why: "saga creature: two abilities and a flavour in the second box, the plate a float beside them" },
+  { from: "sagacreature/u/saga-short@stamp", why: "saga creature: the Universes Beyond triangle stamp over its M15 bar" },
   { from: "split/r/split-long", why: "split: two turned halves (landscape master)" },
   { from: "aftermath/b/aftermath-long", why: "aftermath: the turned second half and its art" },
   { from: "adventure/g/adventure-long", why: "adventure: the inline page" },

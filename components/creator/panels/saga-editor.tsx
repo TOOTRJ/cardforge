@@ -31,6 +31,8 @@ import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
 import { keepsStoredMarker, markerText, unreadableMarkerParts } from "@/lib/cards/face-content";
 import { listPhrase } from "@/lib/creator/save-needs";
 import { SAGA_ROW_NEEDS_NUMBER } from "@/lib/creator/form-schema";
+import { isSagaCreatureDress } from "@/lib/creator/card-kinds";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 
 const MAX_CHAPTERS = 6; // Long List of the Ents runs I–VI.
 // I–VI are offered; VII–X only on a card whose text already has one (no
@@ -59,6 +61,11 @@ export function SagaChaptersEditor() {
   const insertSymbol = (token: string) =>
     (focusedBox.current ?? introBox.current)?.insertToken(token);
   const intro = useController({ control, name: "saga_intro" });
+  // The saga creature's box (TODO 4.5d): its field shows on that frame only.
+  const template = useWatch({ control, name: "frame_style.template" });
+  const sagaCreature = isSagaCreatureDress(normalizeFrameTemplate(template));
+  const creature = useController({ control, name: "saga_creature_text" });
+  const creatureBox = useRef<PipTextEditorHandle | null>(null);
   // A row told to pick a number is asked again when a row's text changes:
   // emptied, it no longer needs one (the message stayed until the next save).
   const recheckNumbers = () => {
@@ -279,6 +286,40 @@ export function SagaChaptersEditor() {
           ) : null}
         </div>
       </FieldGroup>
+
+      {/* The saga creature's second box (TODO 4.5d): the creature's own
+          abilities, printed under the raised type bar — saved after the
+          last chapter in the rules text. Only on that frame. */}
+      {sagaCreature ? (
+        <FieldGroup
+          kind="control"
+          label="Creature abilities"
+          helper="Printed in the box under the type line — e.g. “Flying” or “Indestructible”. Optional; flavour text goes in the box too."
+          error={errors.saga_creature_text?.message}
+        >
+          {(aria) => (
+            <PipTextEditor
+              ref={(handle) => {
+                creatureBox.current = handle;
+                creature.field.ref(handle);
+              }}
+              name={creature.field.name}
+              value={creature.field.value ?? ""}
+              onChange={creature.field.onChange}
+              onBlur={creature.field.onBlur}
+              onFocus={() => {
+                focusedBox.current = creatureBox.current;
+              }}
+              placeholder="Flying"
+              rows={2}
+              aria-label="Creature abilities"
+              aria-describedby={aria["aria-describedby"]}
+              aria-invalid={Boolean(errors.saga_creature_text)}
+              className={textareaClass(Boolean(errors.saga_creature_text))}
+            />
+          )}
+        </FieldGroup>
+      ) : null}
     </>
   );
 }

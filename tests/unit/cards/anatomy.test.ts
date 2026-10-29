@@ -520,6 +520,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll",
     // …and the Zendikar Rising hedron showcase (TODO 4.11): the notch split off its own masters.
     "fullart",
+    // …and the saga creature (TODO 4.5d): the Universes Beyond triangle's piece.
+    "sagacreature",
     // …and the Lord of the Rings ring (4.11): the pack's own triangle piece.
     "lotr",
     // …and the MUL Tarkir dragon wings (4.11): the pack's own oval piece.

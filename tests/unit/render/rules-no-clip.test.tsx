@@ -274,6 +274,12 @@ function consumersOf(template: FrameTemplate, text: RulesCase, rulesAlign?: "cen
   if (!layout.chapters && !layout.textless && !layout.tiers) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
   }
+  // …but the saga CREATURE's rail has a second box beside it (TODO 4.5d:
+  // ChapterSlot.creatureBox) — the plain rules box under the raised type
+  // bar, clear of the P/T plate.
+  if (layout.chapters?.creatureBox) {
+    out.push({ key: `${template}/creature box`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
+  }
   if (layout.loyalty) {
     // A planeswalker with no abilities: its text in the plain box, clear of
     // its loyalty shield.
@@ -413,6 +419,15 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // the prints' boxes; a full card's text clips at the floor, as on print.
   [["prepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
   [["prepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder", "typed, as printed"]],
+  // The saga creature's second box (TODO 4.5d): 1742–1937 px under the
+  // raised type bar, the P/T plate a float in its corner — four or five
+  // lines (FIN prints ONE: an ability or its flavour). An ability with its
+  // flavour, 200 characters or a two-line flavour fit; the long texts and
+  // the four- and five-paragraph ones clip at the floor, as on any short box.
+  [
+    ["sagacreature/creature box"],
+    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets", "pips + reminder", "typed, as printed"],
+  ],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art
@@ -672,7 +687,9 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 // …on the saga AND on the double-faced saga front (TODO 5.5 (b)), whose
 // rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX), and on its BACK
 // (5.5 (b) PR 2: the saga's rail, read from a back face's plain text).
-for (const template of ["saga", "sagadfcfront", "sagadfcback"] as const)
+// …and on the saga CREATURE (TODO 4.5d): the reminder in its band across
+// the card, the rail 173 px shorter, ending at the raised type bar.
+for (const template of ["saga", "sagadfcfront", "sagadfcback", "sagacreature"] as const)
 describe(`the saga rail on ${template} — its reminder block and every chapter row (TODO 4.21c, 5.5 (b))`, () => {
   const SLOT = getFrameProfile(template).chapters!;
   const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";

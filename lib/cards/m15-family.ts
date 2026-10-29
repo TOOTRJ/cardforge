@@ -123,6 +123,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // …and its back (TODO 5.5 (b), PR 2): a new template, no stored card —
   // the saga's slots and the family's sizes — no bump.
   "sagadfcback",
+  // The saga creature (TODO 4.5d): a new template, no stored card — the
+  // saga's slots raised with its type bar and the family's sizes — no bump.
+  "sagacreature",
   // The battle (TODO 4.21b, CC's 'Battle' pack; layout v43): the family's
   // sizes on a landscape card — it joined WITH its bump (0 stored public or
   // unlisted cards).

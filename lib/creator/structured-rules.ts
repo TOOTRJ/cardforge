@@ -76,6 +76,7 @@
 //
 // Pure: no form, no React (tests/unit/creator/structured-rules.test.ts).
 
+import { splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import {
   keepsStoredMarker,
   markerNumerals,
@@ -96,7 +97,7 @@ import type { FaceContent, LoyaltyRowContent, SagaChapterContent } from "@/types
 
 export type StructuredRulesValues = Pick<
   FormValues,
-  "rules_text" | "loyalty_abilities" | "saga_intro" | "saga_chapters"
+  "rules_text" | "loyalty_abilities" | "saga_intro" | "saga_chapters" | "saga_creature_text"
 > & {
   /** The station frame's "which tier carries the P/T" choice (null / absent
    *  = as the text says; lib/creator/station-rows.ts). */
@@ -135,6 +136,10 @@ export type SubmittedRulesOptions = {
    *  Planet's rows used to carry `pt: true` on the last tier: never drawn,
    *  noise in the row — the independent check of #549.) */
   stationShowsPt?: boolean;
+  /** The card is on the SAGA CREATURE frame (TODO 4.5d): its rows are the
+   *  rail's, and `saga_creature_text` is written after the last chapter —
+   *  the lines its second box draws (lib/cards/saga-creature.ts). */
+  sagaCreatureFrame?: boolean;
 };
 
 /** The rows a save carries: trimmed, textless ones dropped, the cost with
@@ -246,6 +251,8 @@ export function structuredRowsUntouched(
   if (kind === "saga") {
     return (
       (from.saga_intro.trim() || null) === (values.saga_intro.trim() || null) &&
+      // …and the saga creature's box as it opened (TODO 4.5d).
+      (from.saga_creature_text ?? "").trim() === (values.saga_creature_text ?? "").trim() &&
       same(sagaTextRowsOf(values.saga_chapters), sagaTextRowsOf(from.saga_chapters)) &&
       // …and each still carries the stored marker it opened with: one the
       // maker dropped by name ("Drop XI") is an edit, whatever the numbers.
@@ -369,6 +376,11 @@ export function submittedRulesOf(
     const textRows = sagaTextRowsOf(values.saga_chapters);
     const chapters = textRows.filter((r) => r.numerals.length > 0);
     const intro = values.saga_intro.trim() || null;
+    // The saga creature (TODO 4.5d): the lines its box draws go after the
+    // last chapter, and the rows are compared with the rail's text alone.
+    const creatureText = options.sagaCreatureFrame ? (values.saga_creature_text ?? "").trim() : "";
+    const railOf = (text: string) => (options.sagaCreatureFrame ? (splitSagaCreatureText(text).railText ?? "") : text);
+    const withCreature = (rulesText: string) => (creatureText ? `${rulesText}\n${creatureText}` : rulesText);
     if (untouched && chapters.length > 0) {
       const content: FaceContent = { v: 1, saga: { intro, chapters } };
       // Untouched: the dual write only where the rows are storable and
@@ -382,7 +394,7 @@ export function submittedRulesOf(
         textRows.length === chapters.length &&
         fits(content) &&
         ((!stored && !textarea) ||
-          same(resolveSagaChapters(content, textarea), resolveSagaChapters(stored, textarea)));
+          same(resolveSagaChapters(content, railOf(textarea)), resolveSagaChapters(stored, railOf(textarea))));
       return writable
         ? { rulesText: textarea, faceContent: content }
         : { rulesText: textarea, faceContent: stored, keepsStored: true };
@@ -397,7 +409,7 @@ export function submittedRulesOf(
         v: 1,
         saga: { intro, chapters: written.map((r) => ({ numerals: r.numerals, text: r.text })) },
       };
-      const rulesText = serializeSagaMarkers(intro, written);
+      const rulesText = withCreature(serializeSagaMarkers(intro, written));
       const storable = written.every((r) => unreadableMarkerParts(r.marker).length === 0) && fits(content);
       return storable ? { rulesText, faceContent: content } : { rulesText, faceContent: null };
     }

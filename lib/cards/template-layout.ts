@@ -245,6 +245,17 @@ export type TextSlot = {
    *  too (the saga creature's box, TODO 4.5d). Code-owned: not part of the
    *  override schema. */
   alignSingleLine?: "center" | "centerAny";
+  /** RULES boxes only (TODO 4.5d): the padding a layout of ONE line is
+   *  placed with instead of `padPx` — the saga creature's box centres its
+   *  one line where print does (above the P/T plate's top), while a longer
+   *  text keeps the whole box. Code-owned. */
+  singleLinePadPx?: { left: number; right: number; top: number; bottom: number };
+  /** RULES boxes only (TODO 4.5d): the drawn P/T plate is a FLOAT of this
+   *  box (RulesLayoutInput.floats), not a keep-out — the saga creature's
+   *  box runs down beside the plate, so the lines whose rows meet it break
+   *  short of it, as on print, where a keep-out could only shrink the text.
+   *  Code-owned. */
+  ptFloat?: true;
   /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
    *  squeezed to before its size steps down — the full-art token's TALL box,
    *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
@@ -7812,13 +7823,19 @@ const SAGACREATURE: FrameProfile = {
   type: { ...SAGA.type, rect: { ...SAGA.type.rect, topPct: SAGA.type.rect.topPct - SAGA_CREATURE_RAISE_PX / 21 } },
   symbolRect: { ...SAGA.symbolRect!, topPct: SAGA.symbolRect!.topPct - SAGA_CREATURE_RAISE_PX / 21 },
   // The second box: m15nyx's paper from the left rim (110 px) to the right
-  // inner shadow (1383); 1731–1908 px, so its one line sits where the
-  // prints' does (FIN #36's "I" inks 1792–1837 px — ours at 76 px inked
-  // 1781–1832 from a box centred 8 px higher). 8 pt, the reduced rung: the
+  // inner shadow (1383), from under its top rim and shadow (1742) to the
+  // box's foot (1937),
+  // the P/T plate a keep-out in its corner. 8 pt, the reduced rung: the
   // prints' "Indestructible" is 391 px wide where 76 px sets 445 (0.88).
   rules: {
     ...M15.rules,
-    rect: { topPct: 1731 / 21, leftPct: 110 / 15, widthPct: (1383 - 110) / 15, heightPct: (1908 - 1731) / 21 },
+    rect: { topPct: 1742 / 21, leftPct: 110 / 15, widthPct: (1383 - 110) / 15, heightPct: (1937 - 1742) / 21 },
+    padPx: { x: 4, y: 0 },
+    // …its ONE line centred 20 px above the paper's centre — its capitals on
+    // the prints' 1792–1837 (FIN #36's "I").
+    singleLinePadPx: { left: 4, right: 4, top: 0, bottom: 40 },
+    // The plate in the box's corner: its lines break short of it.
+    ptFloat: true,
     sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     // ONE line centred, its flavour too (FIN #160 "A name in blood, a pact
     // of flame." as #36 "Indestructible"); longer texts from the left.
@@ -8614,8 +8631,18 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
-  // The saga creature (TODO 4.5d): see SAGACREATURE.
-  sagacreature: SAGACREATURE,
+  // The saga creature (TODO 4.5d): see SAGACREATURE. FIN's summons are
+  // Universes Beyond: the TRIANGLE stamp on every rarity (51 of 51
+  // printings, Scryfall's security_stamp; the notch pieces fit the body's
+  // bar, which is m15nyx's — M15's — pixel for pixel at their feet), `c`
+  // on the artifact silver's piece as m15nyx's; and the collector line on
+  // M15's rows (the body's foot is M15's). Opt-in per card like every
+  // frame's pieces.
+  sagacreature: {
+    ...SAGACREATURE,
+    overlays: [{ ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
   // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
   // per card (frame_style.partColor).
   adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },

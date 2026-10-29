@@ -46,6 +46,7 @@ import {
   templateIsBasicOnly,
   isSubtypeDress,
   isEnchantmentDress,
+  isSagaCreatureDress,
   tokenFrameFor,
   type CardKind,
   type FrameColorKey,
@@ -154,6 +155,8 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         !isSubtypeDress(choice.template) &&
         // …nor an enchantment dress (the Nyx frame, TODO 4.7).
         !isEnchantmentDress(choice.template) &&
+        // …nor the saga creature body (TODO 4.5d).
+        !isSagaCreatureDress(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(keyFor(choice.template)),
     );
@@ -861,7 +864,12 @@ export function remixFrameFor(
   const cardType = importedCardTypeForKind(kind, patch.card_type);
   const savedType = known ? cardType : undefined;
   const colors: readonly ColorIdentity[] = patch.color_identity ?? ["colorless"];
-  const layoutTemplate = KIND_DEFS[kind].layoutTemplates?.[0];
+  // A saga creature (TODO 4.5d) lands where its import does: the saga
+  // creature body once the finalized match names it (`saga/creature/2015`,
+  // verified in the card's colour), else the kind's saga frame.
+  const importLanding = patch.frame_match ? (patch.frame_match.landOn ?? patch.frame_match.template) : undefined;
+  const layoutTemplate =
+    kind === "saga" && importLanding === "sagacreature" ? importLanding : KIND_DEFS[kind].layoutTemplates?.[0];
 
   if (layoutTemplate) {
     // (A split / aftermath card with each part in its own colour, TODO

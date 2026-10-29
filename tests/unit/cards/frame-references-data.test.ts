@@ -166,6 +166,8 @@ const DOCUMENTED_NULLS = new Set([
   // 4.6f) and no colourless Prepare card. The two masters exist so no
   // colour resolves to a missing master.
   "prepare/m", "prepare/c",
+  // The saga creature (TODO 4.5d): no multicolour one-faced summon.
+  "sagacreature/m",
   // The double-faced saga front (TODO 5.5 (b)): no colourless transforming
   // saga was printed (the land frame stands in, as on the saga).
   "sagadfcfront/c",

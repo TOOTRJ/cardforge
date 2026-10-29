@@ -37,6 +37,7 @@
 // Pure; shared client + server.
 // ---------------------------------------------------------------------------
 
+import { splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import { capitalizeTypeWords, typesFieldText } from "@/lib/cards/type-line-field";
 import type { CardType } from "@/types/card";
 import {
@@ -255,7 +256,8 @@ export function typographyFieldOf(name: string): TypographyField | null {
   const key = name.replace(/^back_face\./, "");
   if (key === "title") return "name";
   if (key === "supertype" || key === "subtypes_text" || key === "printed_types") return "type";
-  if (key === "rules_text" || key === "saga_intro") return "rules";
+  // (…and the saga creature's box, TODO 4.5d: rules text after the chapters.)
+  if (key === "rules_text" || key === "saga_intro" || key === "saga_creature_text") return "rules";
   if (/^(?:loyalty_abilities|saga_chapters)\.\d+\.text$/.test(key)) return "rules";
   if (key === "flavor_text") return "flavor";
   return null;
@@ -459,6 +461,10 @@ function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
     const saga = sagaFromRulesText(text);
     for (const row of saga.chapters) texts.add(asResent(row.text));
     if (saga.intro) texts.add(asResent(saga.intro));
+    // …and a saga creature's box (TODO 4.5d): the lines after its chapters,
+    // a field of the editor of their own.
+    const creature = splitSagaCreatureText(text).creatureText;
+    if (creature) texts.add(asResent(creature));
   }
   return texts;
 }
@@ -546,12 +552,19 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
     // …and so does the text of a walker / saga saved WITHOUT rows beside it
     // (more of them than face_content stores): its lines are still the
     // editor's rows.
+    // …and a saga CREATURE's (TODO 4.5d): the rows' copy, then its box's
+    // lines after the last chapter — a field of the editor of their own.
+    const rowsText = rawFace ? serializedRows(rawFace) : null;
+    const creatureBox =
+      rawFace?.saga && rowsText !== null && out.rules_text.startsWith(`${rowsText}\n`) ? out.rules_text.slice(rowsText.length + 1) : null;
     const copyOfRows =
-      rawFace && face && serializedRows(rawFace) === out.rules_text
+      rawFace && face && rowsText === out.rules_text
         ? serializedRows(face)
-        : rawFace
-          ? null
-          : plainTextRows(out.rules_text, stored, row);
+        : rawFace && face && creatureBox !== null
+          ? `${serializedRows(face)}\n${row(creatureBox, ROW_MAX)}`
+          : rawFace
+            ? null
+            : plainTextRows(out.rules_text, stored, row);
     out.rules_text =
       copyOfRows !== null && copyOfRows.length <= RULES_MAX ? copyOfRows : within(out.rules_text, "rules", RULES_MAX);
   }

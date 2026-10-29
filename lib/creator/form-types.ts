@@ -91,6 +91,11 @@ export type FormValues = {
   /** Saga intro line + chapter rows — the Text step's editor for sagas. */
   saga_intro: string;
   saga_chapters: SagaChapterFormValues[];
+  /** The saga CREATURE's second box (TODO 4.5d): the creature's own
+   *  abilities, written after the last chapter in the rules text — what the
+   *  body draws in its box (lib/cards/saga-creature.ts). Shown and saved on
+   *  the saga creature frame only; "" / absent = none. */
+  saga_creature_text?: string;
   /** The station frame's tier that carries the power / toughness (TODO
    *  4.27a): an index into the tiers the rules text holds; null = as the
    *  text says (the tier its reminder names, else the last). The tiers

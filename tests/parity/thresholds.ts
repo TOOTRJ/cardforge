@@ -189,6 +189,33 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The © slot's pipglyph.com mark on line 1 (a card that draws no plate: its right end at 93.54 %W, inside the P/T slot's region) is NARROWER in the preview at 750 px: the right end agrees, the star starts 3 px further right. At HD the region measures +2 across, within the limit. It is the mark as 4.9b draws it on every collector card without a plate — m15's no-plate instant measures the same +3 — seen here because this is the first parity case whose line-1 mark falls inside a scored region. A width difference of the 750 px bake's mark text, like the other 750-only entries; not traced to a constant.",
   },
+  // --- TODO 4.5d: the saga creature's short cases print FIN #36's long type
+  // line ("Enchantment Creature — Saga Knight"), which its measured fit
+  // shrinks: the first parity cases with a SHRUNK type line on a saga's
+  // band. (The plain saga's band is the same width — the saga creature only
+  // raises it — and no saga case had a type line long enough to shrink.) ---
+  ...(["dx", "mad", "hot"] as const).map(
+    (metric): KnownDifference => ({
+      name: `750-shrunk-saga-type-line-${metric}`,
+      size: "750",
+      cases: /^sagacreature\/(w\/saga-short|u\/saga-short@stamp)$/,
+      regions: ["type"],
+      metric,
+      ...(metric === "dx" ? { min: -5, max: -4 } : metric === "mad" ? { min: 32, max: 41 } : { min: 0.26, max: 0.31 }),
+      why:
+        "The shrunk type line (TODO 4.5d's short saga creature: \"Enchantment Creature — Saga Knight\", set at the stored HD bake's px halved since layout v75) ends 4 px further LEFT in the preview at 750 px — the Satori line is WIDER at that one fractional size, as 750-emblem-title-end's name; the region's difference follows its glyphs (mad 33–39, hot 27–30 %). At HD the same line agrees (0 across, mad ≤ 9). A difference of the two text engines at a half-pixel size, not of the saga creature's band; not traced to a constant.",
+    }),
+  ),
+  {
+    name: "750-shrunk-saga-type-line-tile",
+    size: "750",
+    cases: /^sagacreature\/w\/saga-short$/,
+    regions: ["card"],
+    metric: "tileMad",
+    min: 95,
+    max: 97,
+    why: "The worst tile of the short white saga creature at 750 px is the shrunk type line's end (750-shrunk-saga-type-line-dx): 95.6, the limit's 95 plus the one tile.",
+  },
   // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
   // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
   // row and the bake's now agree there, as 750-cost-row-width's did.)

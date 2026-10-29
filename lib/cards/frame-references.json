@@ -3979,6 +3979,90 @@
       ]
     }
   },
+  "sagacreature": {
+    "note": "The saga creature (TODO 4.5d): Final Fantasy's black-bordered \"Summon:\" cards (FIN 2025) — the textured saga with the reminder as a band across the top, the type bar raised 173 px, a second box for the creature's abilities or flavour and the P/T plate; every one Universes Beyond's triangle stamp. Two references a colour where FIN prints two (the box holding an ability and its flavour). Colourless is FIN #1 Summon: Bahamut — its rail and box let the art through, which the body doesn't draw yet (TODO 4.5d part B); m: no multicolour one-faced summon was printed.",
+    "colors": {
+      "w": [
+        {
+          "name": "Summon: Knights of Round",
+          "set": "fin",
+          "scryfallId": "44d23652-077e-4c1f-b640-b284685db911",
+          "curated": true
+        },
+        {
+          "name": "Summon: Primal Garuda",
+          "set": "fin",
+          "scryfallId": "e44497a8-067e-454e-a9c0-684f03df55ff",
+          "curated": true
+        }
+      ],
+      "u": [
+        {
+          "name": "Summon: Leviathan",
+          "set": "fin",
+          "scryfallId": "ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb",
+          "curated": true
+        },
+        {
+          "name": "Summon: Shiva",
+          "set": "fin",
+          "scryfallId": "a80511f8-7cb1-4974-afde-8a5cebe13ad7",
+          "curated": true
+        }
+      ],
+      "b": [
+        {
+          "name": "Summon: Anima",
+          "set": "fin",
+          "scryfallId": "aa4f6703-21f8-4c29-ad5a-5afb54188ade",
+          "curated": true
+        },
+        {
+          "name": "Summon: Primal Odin",
+          "set": "fin",
+          "scryfallId": "8b1b5f06-e34d-44a3-976e-5157c4b7a0f4",
+          "curated": true
+        }
+      ],
+      "r": [
+        {
+          "name": "Summon: Brynhildr",
+          "set": "fin",
+          "scryfallId": "8ab5429a-1075-49aa-9608-0610080fbf7a",
+          "curated": true
+        },
+        {
+          "name": "Summon: G.F. Ifrit",
+          "set": "fin",
+          "scryfallId": "c6c73092-5195-4bdc-b039-a699f6e297b2",
+          "curated": true
+        }
+      ],
+      "g": [
+        {
+          "name": "Summon: Titan",
+          "set": "fin",
+          "scryfallId": "5ce6ea96-7293-496d-b9c8-8ed6d6109a4d",
+          "curated": true
+        },
+        {
+          "name": "Summon: Fat Chocobo",
+          "set": "fin",
+          "scryfallId": "32eb192b-de6b-4814-8077-628d343d014e",
+          "curated": true
+        }
+      ],
+      "c": [
+        {
+          "name": "Summon: Bahamut",
+          "set": "fin",
+          "scryfallId": "95318d85-4a08-47ac-a43d-ea83c0bea81c",
+          "curated": true
+        }
+      ],
+      "m": null
+    }
+  },
   "adventure": {
     "colors": {
       "w": [

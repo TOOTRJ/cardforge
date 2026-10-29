@@ -1,0 +1,4495 @@
+{
+ "_note": "TODO 4.5d: every paper printing of a one-faced saga creature (Scryfall t:saga t:creature layout:saga, 2026-10-28): FIN / FIC / PFIN \"Summon:\" cards, 29 black-bordered + 22 borderless.",
+ "fic-26": {
+  "object": "card",
+  "id": "c14098d6-28ae-492f-8ffc-7d115d83ce6a",
+  "oracle_id": "2148820c-85b6-4598-adf2-10873001a779",
+  "resource_id": "F32B5740120FEA47427018119CBA82E948BF53FC052DD0FB9572D43F5308231B",
+  "name": "Summon: Good King Mog XII",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365",
+   "normal": "https://cards.scryfall.io/normal/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365",
+   "large": "https://cards.scryfall.io/large/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365",
+   "png": "https://cards.scryfall.io/png/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.png?1783906365",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365",
+   "thumb": "https://cards.scryfall.io/thumb/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.webp?1783906365",
+   "grid": "https://cards.scryfall.io/grid/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.webp?1783906365",
+   "display": "https://cards.scryfall.io/display/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.webp?1783906365",
+   "art": "https://cards.scryfall.io/art/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.webp?1783906365",
+   "crop": "https://cards.scryfall.io/crop/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.webp?1783906365",
+   "jpeg": "https://cards.scryfall.io/normal/front/c/1/c14098d6-28ae-492f-8ffc-7d115d83ce6a.jpg?1783906365"
+  },
+  "mana_cost": "{4}{W}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Moogle",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Create two 1/2 white Moogle creature tokens with lifelink.\nII, III \u2014 Whenever you cast a noncreature spell this turn, create a token that's a copy of a non-Saga token you control.\nIV \u2014 Put two +1/+1 counters on each other Moogle you control.\nFlying, lifelink",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Lifelink"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "26",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Andrea Radeck",
+  "artist_ids": [
+   "2560b932-96b5-4308-9d32-298641ef326e"
+  ],
+  "illustration_id": "a58a14c3-a980-4848-9849-9729f15a7e6d",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiv",
+   "surgefoil",
+   "universesbeyond"
+  ]
+ },
+ "fic-27": {
+  "object": "card",
+  "id": "acb35dcb-0bee-4deb-88bf-ffa1f110c67b",
+  "oracle_id": "1ccb8122-9135-4b8d-b1d1-18997fd7e9d2",
+  "resource_id": "A5749705C42957B7B2050991AE4A5C7BD8606D477AF9B0B43AA030340E9289E4",
+  "name": "Summon: Ixion",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365",
+   "normal": "https://cards.scryfall.io/normal/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365",
+   "large": "https://cards.scryfall.io/large/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365",
+   "png": "https://cards.scryfall.io/png/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.png?1783906365",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.webp?1783906365",
+   "grid": "https://cards.scryfall.io/grid/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.webp?1783906365",
+   "display": "https://cards.scryfall.io/display/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.webp?1783906365",
+   "art": "https://cards.scryfall.io/art/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.webp?1783906365",
+   "crop": "https://cards.scryfall.io/crop/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.webp?1783906365",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/c/acb35dcb-0bee-4deb-88bf-ffa1f110c67b.jpg?1783906365"
+  },
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Unicorn",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Aerospark \u2014 Exile target creature an opponent controls until this Saga leaves the battlefield.\nII, III \u2014 Put a +1/+1 counter on each of up to two target creatures you control. You gain 2 life.\nFirst strike",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "First strike"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "27",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Ben Wootten",
+  "artist_ids": [
+   "31cdca96-ecde-4245-bfb6-653929d57d9c"
+  ],
+  "illustration_id": "54e9dc50-e1be-4ef9-ae23-6b75afb0d5a9",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fic-28": {
+  "object": "card",
+  "id": "cdbc2d28-ea35-47c6-af7e-07924e9d5794",
+  "oracle_id": "ff70d743-280e-476f-a3b8-92026419419d",
+  "resource_id": "B4841ED85D0A0551C09E0353B4B821536B2AE368805283E85FCA0D678ADC257D",
+  "name": "Summon: Yojimbo",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365",
+   "normal": "https://cards.scryfall.io/normal/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365",
+   "large": "https://cards.scryfall.io/large/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365",
+   "png": "https://cards.scryfall.io/png/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.png?1783906365",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365",
+   "thumb": "https://cards.scryfall.io/thumb/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.webp?1783906365",
+   "grid": "https://cards.scryfall.io/grid/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.webp?1783906365",
+   "display": "https://cards.scryfall.io/display/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.webp?1783906365",
+   "art": "https://cards.scryfall.io/art/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.webp?1783906365",
+   "crop": "https://cards.scryfall.io/crop/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.webp?1783906365",
+   "jpeg": "https://cards.scryfall.io/normal/front/c/d/cdbc2d28-ea35-47c6-af7e-07924e9d5794.jpg?1783906365"
+  },
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Samurai",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Exile target artifact, enchantment, or tapped creature an opponent controls.\nII, III \u2014 Until your next turn, creatures can't attack you unless their controller pays {2} for each of those creatures.\nIV \u2014 Create X Treasure tokens, where X is the number of opponents who control a creature with power 4 or greater.\nVigilance",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Vigilance",
+   "Treasure"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "28",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Benjamin Ee",
+  "artist_ids": [
+   "7bb27cca-e4ee-43b9-be92-a181c9164204"
+  ],
+  "illustration_id": "96518799-9f7c-412f-b9c7-bc3af605f0cb",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fic-42": {
+  "object": "card",
+  "id": "e0474d99-48e5-4e60-8cd6-537a10bcfea5",
+  "oracle_id": "67d29e56-9ca8-46bc-9ee0-20184e867ce4",
+  "resource_id": "24A88A3A55C0FAB546961AD55DCE2B83C9834F5530F4D0AFDF78302540C85A2C",
+  "name": "Summon: Valefor",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:39Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359",
+   "normal": "https://cards.scryfall.io/normal/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359",
+   "large": "https://cards.scryfall.io/large/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359",
+   "png": "https://cards.scryfall.io/png/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.png?1783906359",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359",
+   "thumb": "https://cards.scryfall.io/thumb/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.webp?1783906359",
+   "grid": "https://cards.scryfall.io/grid/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.webp?1783906359",
+   "display": "https://cards.scryfall.io/display/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.webp?1783906359",
+   "art": "https://cards.scryfall.io/art/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.webp?1783906359",
+   "crop": "https://cards.scryfall.io/crop/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.webp?1783906359",
+   "jpeg": "https://cards.scryfall.io/normal/front/e/0/e0474d99-48e5-4e60-8cd6-537a10bcfea5.jpg?1783906359"
+  },
+  "mana_cost": "{4}{U}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Drake",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Sonic Wings \u2014 Each opponent chooses a creature with the greatest mana value among creatures they control. Return those creatures to their owners' hands.\nII, III, IV \u2014 Tap up to one target creature and put a stun counter on it.\nFlying",
+  "power": "5",
+  "toughness": "4",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "42",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "SENNSU",
+  "artist_ids": [
+   "68d66ccc-04f9-4283-af7d-8f48f99b8525"
+  ],
+  "illustration_id": "8bdd2d77-6cdc-4de3-97e3-a3ef562240a7",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fic-60": {
+  "object": "card",
+  "id": "7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5",
+  "oracle_id": "cecd2f49-8ccb-472d-9cf1-fd0f4d93546d",
+  "resource_id": "6E6C8078FDA17AFC28520C08752CA24646ABA68D1519FEC8E0297A1645459413",
+  "name": "Summon: Esper Valigarmanda",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:34Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354",
+   "normal": "https://cards.scryfall.io/normal/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354",
+   "large": "https://cards.scryfall.io/large/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354",
+   "png": "https://cards.scryfall.io/png/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.png?1783906354",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354",
+   "thumb": "https://cards.scryfall.io/thumb/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.webp?1783906354",
+   "grid": "https://cards.scryfall.io/grid/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.webp?1783906354",
+   "display": "https://cards.scryfall.io/display/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.webp?1783906354",
+   "art": "https://cards.scryfall.io/art/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.webp?1783906354",
+   "crop": "https://cards.scryfall.io/crop/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.webp?1783906354",
+   "jpeg": "https://cards.scryfall.io/normal/front/7/f/7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5.jpg?1783906354"
+  },
+  "mana_cost": "{3}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Drake",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Exile an instant or sorcery card from each graveyard.\nII, III, IV \u2014 Add {R} for each lore counter on this Saga. You may cast an instant or sorcery card exiled with this Saga, and mana of any type can be spent to cast that spell.\nFlying, haste",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Flying",
+   "Haste"
+  ],
+  "produced_mana": [
+   "R"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "60",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Fiona Hsieh",
+  "artist_ids": [
+   "22211c1d-e15e-4db3-9350-e4a9862928bb"
+  ],
+  "illustration_id": "2bd02e77-bec3-4018-8bce-9b0b9c6f62ad",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "ffvi",
+   "universesbeyond"
+  ]
+ },
+ "fic-61": {
+  "object": "card",
+  "id": "ba934866-efd0-4126-b1ff-9c7e82b73bd6",
+  "oracle_id": "9fe77f70-85cf-4a18-9451-2fad4c341f07",
+  "resource_id": "EEF498346805C9D192B6636DAFBE0B7336EBA787055B84F963A7E93BAD5EB12F",
+  "name": "Summon: Kujata",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:33Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353",
+   "normal": "https://cards.scryfall.io/normal/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353",
+   "large": "https://cards.scryfall.io/large/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353",
+   "png": "https://cards.scryfall.io/png/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.png?1783906353",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353",
+   "thumb": "https://cards.scryfall.io/thumb/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.webp?1783906353",
+   "grid": "https://cards.scryfall.io/grid/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.webp?1783906353",
+   "display": "https://cards.scryfall.io/display/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.webp?1783906353",
+   "art": "https://cards.scryfall.io/art/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.webp?1783906353",
+   "crop": "https://cards.scryfall.io/crop/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.webp?1783906353",
+   "jpeg": "https://cards.scryfall.io/normal/front/b/a/ba934866-efd0-4126-b1ff-9c7e82b73bd6.jpg?1783906353"
+  },
+  "mana_cost": "{5}{R}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Ox",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Lightning \u2014 This creature deals 3 damage to each of up to two target creatures.\nII \u2014 Ice \u2014 Up to three target creatures can't block this turn.\nIII \u2014 Fire \u2014 Discard a card, then draw two cards. When you discard a card this way, this creature deals damage equal to that card's mana value to each opponent.\nTrample, haste",
+  "power": "7",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Haste",
+   "Trample"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "61",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Alexandre Honor\u00e9",
+  "artist_ids": [
+   "82ae431c-d7fa-438b-9611-01f704c3a958"
+  ],
+  "illustration_id": "f758c1f6-7036-401d-91d4-1e52dc928261",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "universesbeyond",
+   "ffvii"
+  ]
+ },
+ "fic-71": {
+  "object": "card",
+  "id": "76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6",
+  "oracle_id": "06f11ff8-cc99-411d-b00b-464ba4b7b87d",
+  "resource_id": "0CB2F64C1886418D6CE3B86D051B8C678852E9B8C15268F57E645056AD90DA2C",
+  "name": "Summon: Magus Sisters",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:32:30Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350",
+   "normal": "https://cards.scryfall.io/normal/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350",
+   "large": "https://cards.scryfall.io/large/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350",
+   "png": "https://cards.scryfall.io/png/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.png?1783906350",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350",
+   "thumb": "https://cards.scryfall.io/thumb/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.webp?1783906350",
+   "grid": "https://cards.scryfall.io/grid/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.webp?1783906350",
+   "display": "https://cards.scryfall.io/display/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.webp?1783906350",
+   "art": "https://cards.scryfall.io/art/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.webp?1783906350",
+   "crop": "https://cards.scryfall.io/crop/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.webp?1783906350",
+   "jpeg": "https://cards.scryfall.io/normal/front/7/6/76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6.jpg?1783906350"
+  },
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Faerie",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II, III \u2014 Choose one at random \u2014\n\u2022 Combine Powers! \u2014 Put three +1/+1 counters on target creature.\n\u2022 Defense! \u2014 Put a shield counter on target creature. You gain 3 life.\n\u2022 Fight! \u2014 This creature fights up to one target creature an opponent controls.\nHaste",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Combine Powers!",
+   "Haste",
+   "Fight",
+   "Defense!"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "71",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Rui Maruyama",
+  "artist_ids": [
+   "d647223e-f8d6-4325-93a7-6dea50dac6af"
+  ],
+  "illustration_id": "06f72595-a9ae-4461-82f9-ab7c86d50807",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "surgefoil",
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fic-194": {
+  "object": "card",
+  "id": "3aabb93a-7fa2-4fb5-a683-db1d274ac367",
+  "oracle_id": "2148820c-85b6-4598-adf2-10873001a779",
+  "resource_id": "3D762B342B0B0DA27FA93F05E93B2D3AAD361C610945F5FCBDAD73EAC58D3BBF",
+  "name": "Summon: Good King Mog XII",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:46Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306",
+   "normal": "https://cards.scryfall.io/normal/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306",
+   "large": "https://cards.scryfall.io/large/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306",
+   "png": "https://cards.scryfall.io/png/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.png?1783906306",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306",
+   "thumb": "https://cards.scryfall.io/thumb/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.webp?1783906306",
+   "grid": "https://cards.scryfall.io/grid/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.webp?1783906306",
+   "display": "https://cards.scryfall.io/display/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.webp?1783906306",
+   "art": "https://cards.scryfall.io/art/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.webp?1783906306",
+   "crop": "https://cards.scryfall.io/crop/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.webp?1783906306",
+   "jpeg": "https://cards.scryfall.io/normal/front/3/a/3aabb93a-7fa2-4fb5-a683-db1d274ac367.jpg?1783906306"
+  },
+  "mana_cost": "{4}{W}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Moogle",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Create two 1/2 white Moogle creature tokens with lifelink.\nII, III \u2014 Whenever you cast a noncreature spell this turn, create a token that's a copy of a non-Saga token you control.\nIV \u2014 Put two +1/+1 counters on each other Moogle you control.\nFlying, lifelink",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Lifelink"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "194",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Minoru",
+  "artist_ids": [
+   "f7abe855-87f3-448a-adb3-aa41e69f8a64"
+  ],
+  "illustration_id": "12d8935c-7ee6-4f20-ae10-94b24245e6c8",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiv",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fic-195": {
+  "object": "card",
+  "id": "92c0bfc2-ba98-48b6-82a4-95a2321c8df4",
+  "oracle_id": "1ccb8122-9135-4b8d-b1d1-18997fd7e9d2",
+  "resource_id": "6E0BA337083D114477D181F04DCA0D99F28A76FDCEC9DE8629C2BB1D11C6535B",
+  "name": "Summon: Ixion",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:46Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306",
+   "normal": "https://cards.scryfall.io/normal/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306",
+   "large": "https://cards.scryfall.io/large/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306",
+   "png": "https://cards.scryfall.io/png/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.png?1783906306",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306",
+   "thumb": "https://cards.scryfall.io/thumb/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.webp?1783906306",
+   "grid": "https://cards.scryfall.io/grid/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.webp?1783906306",
+   "display": "https://cards.scryfall.io/display/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.webp?1783906306",
+   "art": "https://cards.scryfall.io/art/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.webp?1783906306",
+   "crop": "https://cards.scryfall.io/crop/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.webp?1783906306",
+   "jpeg": "https://cards.scryfall.io/normal/front/9/2/92c0bfc2-ba98-48b6-82a4-95a2321c8df4.jpg?1783906306"
+  },
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Unicorn",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Aerospark \u2014 Exile target creature an opponent controls until this Saga leaves the battlefield.\nII, III \u2014 Put a +1/+1 counter on each of up to two target creatures you control. You gain 2 life.\nFirst strike",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "First strike"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "195",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Yoshiya",
+  "artist_ids": [
+   "4803d72e-26fc-4989-8b2b-65e53613d005"
+  ],
+  "illustration_id": "9c936e0a-7ead-4246-9a67-6a7cd8faa16d",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fic-196": {
+  "object": "card",
+  "id": "fb7f1e73-183f-4041-907d-700e248ac5af",
+  "oracle_id": "ff70d743-280e-476f-a3b8-92026419419d",
+  "resource_id": "4688A40E4DBE955FBE1DB5041CE141D01A73ECA6479A6961B57794A2B97B9ACF",
+  "name": "Summon: Yojimbo",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:47Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307",
+   "normal": "https://cards.scryfall.io/normal/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307",
+   "large": "https://cards.scryfall.io/large/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307",
+   "png": "https://cards.scryfall.io/png/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.png?1783906307",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307",
+   "thumb": "https://cards.scryfall.io/thumb/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.webp?1783906307",
+   "grid": "https://cards.scryfall.io/grid/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.webp?1783906307",
+   "display": "https://cards.scryfall.io/display/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.webp?1783906307",
+   "art": "https://cards.scryfall.io/art/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.webp?1783906307",
+   "crop": "https://cards.scryfall.io/crop/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.webp?1783906307",
+   "jpeg": "https://cards.scryfall.io/normal/front/f/b/fb7f1e73-183f-4041-907d-700e248ac5af.jpg?1783906307"
+  },
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Samurai",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Exile target artifact, enchantment, or tapped creature an opponent controls.\nII, III \u2014 Until your next turn, creatures can't attack you unless their controller pays {2} for each of those creatures.\nIV \u2014 Create X Treasure tokens, where X is the number of opponents who control a creature with power 4 or greater.\nVigilance",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Vigilance",
+   "Treasure"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "196",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Hisashi Momose",
+  "artist_ids": [
+   "09bc6de8-c99c-406a-9da6-8ece7112e496"
+  ],
+  "illustration_id": "d3bbcb67-812c-41e9-9fa6-9fed58ce9364",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fic-197": {
+  "object": "card",
+  "id": "c95c1a97-4c9e-4d38-8b12-193f8ff0d556",
+  "oracle_id": "67d29e56-9ca8-46bc-9ee0-20184e867ce4",
+  "resource_id": "4710E717731D4C7F29A96EF5FEC66614CB76FD7EDE7E71F7795A5D5692EAF193",
+  "name": "Summon: Valefor",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:46Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306",
+   "normal": "https://cards.scryfall.io/normal/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306",
+   "large": "https://cards.scryfall.io/large/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306",
+   "png": "https://cards.scryfall.io/png/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.png?1783906306",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306",
+   "thumb": "https://cards.scryfall.io/thumb/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.webp?1783906306",
+   "grid": "https://cards.scryfall.io/grid/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.webp?1783906306",
+   "display": "https://cards.scryfall.io/display/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.webp?1783906306",
+   "art": "https://cards.scryfall.io/art/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.webp?1783906306",
+   "crop": "https://cards.scryfall.io/crop/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.webp?1783906306",
+   "jpeg": "https://cards.scryfall.io/normal/front/c/9/c95c1a97-4c9e-4d38-8b12-193f8ff0d556.jpg?1783906306"
+  },
+  "mana_cost": "{4}{U}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Drake",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Sonic Wings \u2014 Each opponent chooses a creature with the greatest mana value among creatures they control. Return those creatures to their owners' hands.\nII, III, IV \u2014 Tap up to one target creature and put a stun counter on it.\nFlying",
+  "power": "5",
+  "toughness": "4",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "197",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Maiko Aoji",
+  "artist_ids": [
+   "0f984cfd-16e0-4edb-b9ed-881c98539397"
+  ],
+  "illustration_id": "26dcd1b5-e127-4466-92bf-653cf9584326",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fic-198": {
+  "object": "card",
+  "id": "e34b664c-2e80-4672-83ae-51babf28cf6c",
+  "oracle_id": "cecd2f49-8ccb-472d-9cf1-fd0f4d93546d",
+  "resource_id": "8C7E5987FF3915005CBD68F7DBD5CCA70A4F074EEF113E5D4B1319F888BF8960",
+  "name": "Summon: Esper Valigarmanda",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:44Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304",
+   "normal": "https://cards.scryfall.io/normal/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304",
+   "large": "https://cards.scryfall.io/large/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304",
+   "png": "https://cards.scryfall.io/png/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.png?1783906304",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304",
+   "thumb": "https://cards.scryfall.io/thumb/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.webp?1783906304",
+   "grid": "https://cards.scryfall.io/grid/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.webp?1783906304",
+   "display": "https://cards.scryfall.io/display/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.webp?1783906304",
+   "art": "https://cards.scryfall.io/art/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.webp?1783906304",
+   "crop": "https://cards.scryfall.io/crop/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.webp?1783906304",
+   "jpeg": "https://cards.scryfall.io/normal/front/e/3/e34b664c-2e80-4672-83ae-51babf28cf6c.jpg?1783906304"
+  },
+  "mana_cost": "{3}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Drake",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Exile an instant or sorcery card from each graveyard.\nII, III, IV \u2014 Add {R} for each lore counter on this Saga. You may cast an instant or sorcery card exiled with this Saga, and mana of any type can be spent to cast that spell.\nFlying, haste",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Flying",
+   "Haste"
+  ],
+  "produced_mana": [
+   "R"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "198",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "TAKUMI",
+  "artist_ids": [
+   "bd0af168-d850-4b40-9c81-f57a0e2d67a6"
+  ],
+  "illustration_id": "5dc4ab2d-2ac1-4282-b8fd-8f55c94a2e80",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffvi",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fic-199": {
+  "object": "card",
+  "id": "a469904f-f144-4e70-b689-c7869e40bcb2",
+  "oracle_id": "9fe77f70-85cf-4a18-9451-2fad4c341f07",
+  "resource_id": "A243F701E825D464767344B968A7F36082FF05822C31E827503F467FD3CD79DF",
+  "name": "Summon: Kujata",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305",
+   "normal": "https://cards.scryfall.io/normal/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305",
+   "large": "https://cards.scryfall.io/large/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305",
+   "png": "https://cards.scryfall.io/png/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.png?1783906305",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.webp?1783906305",
+   "grid": "https://cards.scryfall.io/grid/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.webp?1783906305",
+   "display": "https://cards.scryfall.io/display/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.webp?1783906305",
+   "art": "https://cards.scryfall.io/art/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.webp?1783906305",
+   "crop": "https://cards.scryfall.io/crop/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.webp?1783906305",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/4/a469904f-f144-4e70-b689-c7869e40bcb2.jpg?1783906305"
+  },
+  "mana_cost": "{5}{R}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Ox",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Lightning \u2014 This creature deals 3 damage to each of up to two target creatures.\nII \u2014 Ice \u2014 Up to three target creatures can't block this turn.\nIII \u2014 Fire \u2014 Discard a card, then draw two cards. When you discard a card this way, this creature deals damage equal to that card's mana value to each opponent.\nTrample, haste",
+  "power": "7",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Haste",
+   "Trample"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "199",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Yoshiya",
+  "artist_ids": [
+   "4803d72e-26fc-4989-8b2b-65e53613d005"
+  ],
+  "illustration_id": "6f911acb-0e1d-4d5f-8735-fef248282e38",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii",
+   "boosterfun"
+  ]
+ },
+ "fic-200": {
+  "object": "card",
+  "id": "83ba525d-d38e-4e68-9516-b6239a1b0b09",
+  "oracle_id": "06f11ff8-cc99-411d-b00b-464ba4b7b87d",
+  "resource_id": "CE21013BD06A0395F0D59C068BD358AEE81A3E22F67EBFE0D6C0EE2A15585F62",
+  "name": "Summon: Magus Sisters",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:31:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305",
+   "normal": "https://cards.scryfall.io/normal/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305",
+   "large": "https://cards.scryfall.io/large/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305",
+   "png": "https://cards.scryfall.io/png/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.png?1783906305",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305",
+   "thumb": "https://cards.scryfall.io/thumb/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.webp?1783906305",
+   "grid": "https://cards.scryfall.io/grid/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.webp?1783906305",
+   "display": "https://cards.scryfall.io/display/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.webp?1783906305",
+   "art": "https://cards.scryfall.io/art/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.webp?1783906305",
+   "crop": "https://cards.scryfall.io/crop/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.webp?1783906305",
+   "jpeg": "https://cards.scryfall.io/normal/front/8/3/83ba525d-d38e-4e68-9516-b6239a1b0b09.jpg?1783906305"
+  },
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Faerie",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II, III \u2014 Choose one at random \u2014\n\u2022 Combine Powers! \u2014 Put three +1/+1 counters on target creature.\n\u2022 Defense! \u2014 Put a shield counter on target creature. You gain 3 life.\n\u2022 Fight! \u2014 This creature fights up to one target creature an opponent controls.\nHaste",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Combine Powers!",
+   "Haste",
+   "Fight",
+   "Defense!"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "30659956-4558-4cbf-a65f-34cd00c89579",
+  "set": "fic",
+  "set_name": "Final Fantasy Commander",
+  "set_type": "commander",
+  "collector_number": "200",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Karo ARAI",
+  "artist_ids": [
+   "35031172-8ac9-4a63-958c-97f0644f013f"
+  ],
+  "illustration_id": "9095a973-67ba-4afb-848e-a1b3b3ef70ba",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fin-1": {
+  "object": "card",
+  "id": "95318d85-4a08-47ac-a43d-ea83c0bea81c",
+  "oracle_id": "fe9f6825-597b-4d80-ab7c-f4ee4e824b6f",
+  "resource_id": "F5905A59A763D0AF143331FE4ADF757AAE8BA4C5AFED39CEEBFDCDF6379350F3",
+  "name": "Summon: Bahamut",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:37:36Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656",
+   "normal": "https://cards.scryfall.io/normal/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656",
+   "large": "https://cards.scryfall.io/large/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656",
+   "png": "https://cards.scryfall.io/png/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.png?1783906656",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656",
+   "thumb": "https://cards.scryfall.io/thumb/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.webp?1783906656",
+   "grid": "https://cards.scryfall.io/grid/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.webp?1783906656",
+   "display": "https://cards.scryfall.io/display/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.webp?1783906656",
+   "art": "https://cards.scryfall.io/art/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.webp?1783906656",
+   "crop": "https://cards.scryfall.io/crop/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.webp?1783906656",
+   "jpeg": "https://cards.scryfall.io/normal/front/9/5/95318d85-4a08-47ac-a43d-ea83c0bea81c.jpg?1783906656"
+  },
+  "mana_cost": "{9}",
+  "cmc": 9.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dragon",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II \u2014 Destroy up to one target nonland permanent.\nIII \u2014 Draw two cards.\nIV \u2014 Mega Flare \u2014 This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+  "power": "9",
+  "toughness": "9",
+  "colors": [],
+  "color_identity": [],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "1",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Arif Wijaya",
+  "artist_ids": [
+   "a1d47f27-cbf6-4a7b-bbbb-8f051c9069d6"
+  ],
+  "illustration_id": "6ff7fd42-b5e5-484c-8e9b-9572d239f08d",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fin-35": {
+  "object": "card",
+  "id": "00546117-018a-4286-bc20-b5446c5be56f",
+  "oracle_id": "8b4bfdc5-8c0a-40c3-abbf-ada4a536dc34",
+  "resource_id": "1759EE13261521983E1A08C03B6AF40CC20535C39B9C312AFF3B803561E1CBAB",
+  "name": "Summon: Choco/Mog",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-16T06:22:38Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958",
+   "normal": "https://cards.scryfall.io/normal/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958",
+   "large": "https://cards.scryfall.io/large/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958",
+   "png": "https://cards.scryfall.io/png/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.png?1784182958",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958",
+   "thumb": "https://cards.scryfall.io/thumb/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.webp?1784182958",
+   "grid": "https://cards.scryfall.io/grid/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.webp?1784182958",
+   "display": "https://cards.scryfall.io/display/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.webp?1784182958",
+   "art": "https://cards.scryfall.io/art/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.webp?1784182958",
+   "crop": "https://cards.scryfall.io/crop/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.webp?1784182958",
+   "jpeg": "https://cards.scryfall.io/normal/front/0/0/00546117-018a-4286-bc20-b5446c5be56f.jpg?1784182958"
+  },
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Bird Moogle",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III, IV \u2014 Stampede! \u2014 Other creatures you control get +1/+0 until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "35",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "\"Wark? Kupo!\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Madeline Boni",
+  "artist_ids": [
+   "2fa2d8ae-dd11-46ab-9ef2-fa1ec0082a45"
+  ],
+  "illustration_id": "69f6c839-1400-481c-abee-8bf2663283de",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii"
+  ],
+  "preview": {
+   "source": "The Pool Shark",
+   "source_uri": "https://bsky.app/profile/thepoolshark.bsky.social/post/3lqad7sph5k27",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-36": {
+  "object": "card",
+  "id": "44d23652-077e-4c1f-b640-b284685db911",
+  "oracle_id": "73122880-d7f4-422f-a336-18773bcb7bfe",
+  "resource_id": "245C511CEF9FA81C1BE4ADCD256CB0F267EDAA09CAFE161F7F1CE26C6436B2D8",
+  "name": "Summon: Knights of Round",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:37:24Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644",
+   "normal": "https://cards.scryfall.io/normal/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644",
+   "large": "https://cards.scryfall.io/large/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644",
+   "png": "https://cards.scryfall.io/png/front/4/4/44d23652-077e-4c1f-b640-b284685db911.png?1783906644",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644",
+   "thumb": "https://cards.scryfall.io/thumb/front/4/4/44d23652-077e-4c1f-b640-b284685db911.webp?1783906644",
+   "grid": "https://cards.scryfall.io/grid/front/4/4/44d23652-077e-4c1f-b640-b284685db911.webp?1783906644",
+   "display": "https://cards.scryfall.io/display/front/4/4/44d23652-077e-4c1f-b640-b284685db911.webp?1783906644",
+   "art": "https://cards.scryfall.io/art/front/4/4/44d23652-077e-4c1f-b640-b284685db911.webp?1783906644",
+   "crop": "https://cards.scryfall.io/crop/front/4/4/44d23652-077e-4c1f-b640-b284685db911.webp?1783906644",
+   "jpeg": "https://cards.scryfall.io/normal/front/4/4/44d23652-077e-4c1f-b640-b284685db911.jpg?1783906644"
+  },
+  "mana_cost": "{6}{W}{W}",
+  "cmc": 8.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV \u2014 Create three 2/2 white Knight creature tokens.\nV \u2014 Ultimate End \u2014 Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Indestructible"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "36",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Takayama Toshiaki",
+  "artist_ids": [
+   "a4879110-33bc-4261-8e00-30b897df509b"
+  ],
+  "illustration_id": "2aa26d05-0da7-4208-bb4c-263be3cdef23",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii"
+  ],
+  "preview": {
+   "source": "Brandon Sanderson",
+   "source_uri": "https://www.youtube.com/watch?v=KGSqNnoNtHo",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-37": {
+  "object": "card",
+  "id": "e44497a8-067e-454e-a9c0-684f03df55ff",
+  "oracle_id": "aaf9e711-94e1-4869-81b0-baa6380ee873",
+  "resource_id": "6FB396A03BABE2E67155B48592E0613DB9EA35695F575216E51D69F86F5D4B9F",
+  "name": "Summon: Primal Garuda",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:37:23Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643",
+   "normal": "https://cards.scryfall.io/normal/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643",
+   "large": "https://cards.scryfall.io/large/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643",
+   "png": "https://cards.scryfall.io/png/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.png?1783906643",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643",
+   "thumb": "https://cards.scryfall.io/thumb/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.webp?1783906643",
+   "grid": "https://cards.scryfall.io/grid/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.webp?1783906643",
+   "display": "https://cards.scryfall.io/display/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.webp?1783906643",
+   "art": "https://cards.scryfall.io/art/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.webp?1783906643",
+   "crop": "https://cards.scryfall.io/crop/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.webp?1783906643",
+   "jpeg": "https://cards.scryfall.io/normal/front/e/4/e44497a8-067e-454e-a9c0-684f03df55ff.jpg?1783906643"
+  },
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Harpy",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Aerial Blast \u2014 This creature deals 4 damage to target tapped creature an opponent controls.\nII, III \u2014 Slipstream \u2014 Another target creature you control gets +1/+0 and gains flying until end of turn.\nFlying",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "37",
+  "digital": false,
+  "rarity": "uncommon",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Madeline Boni",
+  "artist_ids": [
+   "2fa2d8ae-dd11-46ab-9ef2-fa1ec0082a45"
+  ],
+  "illustration_id": "2a93bf78-433c-4250-b7b1-bb335cb13b75",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiv",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "Brandon Sanderson",
+   "source_uri": "https://www.youtube.com/watch?v=KGSqNnoNtHo",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-77": {
+  "object": "card",
+  "id": "ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb",
+  "oracle_id": "b38d1811-64d7-4a35-a86c-3291eecd8391",
+  "resource_id": "D4D2DDB1D8107B9E19431080B2D1A7AC95D6C451212A29AD83F86301371E8605",
+  "name": "Summon: Leviathan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:37:07Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627",
+   "normal": "https://cards.scryfall.io/normal/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627",
+   "large": "https://cards.scryfall.io/large/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627",
+   "png": "https://cards.scryfall.io/png/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.png?1783906627",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627",
+   "thumb": "https://cards.scryfall.io/thumb/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.webp?1783906627",
+   "grid": "https://cards.scryfall.io/grid/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.webp?1783906627",
+   "display": "https://cards.scryfall.io/display/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.webp?1783906627",
+   "art": "https://cards.scryfall.io/art/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.webp?1783906627",
+   "crop": "https://cards.scryfall.io/crop/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.webp?1783906627",
+   "jpeg": "https://cards.scryfall.io/normal/front/e/a/ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb.jpg?1783906627"
+  },
+  "mana_cost": "{4}{U}{U}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Leviathan",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III \u2014 Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "77",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "OTUMAMI",
+  "artist_ids": [
+   "7ba92777-51ca-4b09-ad20-782e28007a7d"
+  ],
+  "illustration_id": "2ccdf15c-b407-41c0-a6b2-df9c746ffc32",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxv",
+   "universesbeyond"
+  ]
+ },
+ "fin-78": {
+  "object": "card",
+  "id": "a80511f8-7cb1-4974-afde-8a5cebe13ad7",
+  "oracle_id": "5846718c-7d31-4d2c-80a2-b1534e2aebc1",
+  "resource_id": "3B2AB699DDEBCADAAB5920F9B6E157D858831DD56B070DC3D9AD1BA9253762C9",
+  "name": "Summon: Shiva",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:37:08Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628",
+   "normal": "https://cards.scryfall.io/normal/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628",
+   "large": "https://cards.scryfall.io/large/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628",
+   "png": "https://cards.scryfall.io/png/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.png?1783906628",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.webp?1783906628",
+   "grid": "https://cards.scryfall.io/grid/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.webp?1783906628",
+   "display": "https://cards.scryfall.io/display/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.webp?1783906628",
+   "art": "https://cards.scryfall.io/art/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.webp?1783906628",
+   "crop": "https://cards.scryfall.io/crop/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.webp?1783906628",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/8/a80511f8-7cb1-4974-afde-8a5cebe13ad7.jpg?1783906628"
+  },
+  "mana_cost": "{3}{U}{U}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Elemental",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II \u2014 Heavenly Strike \u2014 Tap target creature an opponent controls. Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)\nIII \u2014 Diamond Dust \u2014 Draw a card for each tapped creature your opponents control.",
+  "power": "4",
+  "toughness": "5",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "78",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"Let us summon a sea in a new dream world.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Fajareka Setiawan",
+  "artist_ids": [
+   "0cc534e0-be18-4cb1-8521-50fabd0dac6f"
+  ],
+  "illustration_id": "424091b1-40d5-4ac0-a84a-28f03d475f05",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond"
+  ]
+ },
+ "fin-120": {
+  "object": "card",
+  "id": "aa4f6703-21f8-4c29-ad5a-5afb54188ade",
+  "oracle_id": "0990e57f-279e-4348-a049-e06187cc38d4",
+  "resource_id": "A171CBBBD5F965479FAC1301EFC4430C1E05B89C4221A411CEC0D4E745B47248",
+  "name": "Summon: Anima",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:36:50Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610",
+   "normal": "https://cards.scryfall.io/normal/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610",
+   "large": "https://cards.scryfall.io/large/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610",
+   "png": "https://cards.scryfall.io/png/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.png?1783906610",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.webp?1783906610",
+   "grid": "https://cards.scryfall.io/grid/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.webp?1783906610",
+   "display": "https://cards.scryfall.io/display/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.webp?1783906610",
+   "art": "https://cards.scryfall.io/art/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.webp?1783906610",
+   "crop": "https://cards.scryfall.io/crop/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.webp?1783906610",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/a/aa4f6703-21f8-4c29-ad5a-5afb54188ade.jpg?1783906610"
+  },
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Horror",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III \u2014 Pain \u2014 You draw a card and you lose 1 life.\nIV \u2014 Oblivion \u2014 Each opponent sacrifices a creature of their choice and loses 3 life.\nMenace",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [
+   "Menace"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "120",
+  "digital": false,
+  "rarity": "uncommon",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Esuthio",
+  "artist_ids": [
+   "3d32f438-ba33-4f37-b7ac-9a0cc913ae60"
+  ],
+  "illustration_id": "b0120382-8fb7-4d5c-bdaf-0eaae07960f1",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "Travis Gafford",
+   "source_uri": "https://x.com/TravisGafford/status/1923456130887401535",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-121": {
+  "object": "card",
+  "id": "8b1b5f06-e34d-44a3-976e-5157c4b7a0f4",
+  "oracle_id": "032f59c3-9f47-4db3-a43c-065a99ed7efe",
+  "resource_id": "0F7D97063EC8046F675403D60F1F27A5707DBA8AD31F99D712DD30D7E138355F",
+  "name": "Summon: Primal Odin",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:36:51Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611",
+   "normal": "https://cards.scryfall.io/normal/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611",
+   "large": "https://cards.scryfall.io/large/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611",
+   "png": "https://cards.scryfall.io/png/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.png?1783906611",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611",
+   "thumb": "https://cards.scryfall.io/thumb/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.webp?1783906611",
+   "grid": "https://cards.scryfall.io/grid/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.webp?1783906611",
+   "display": "https://cards.scryfall.io/display/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.webp?1783906611",
+   "art": "https://cards.scryfall.io/art/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.webp?1783906611",
+   "crop": "https://cards.scryfall.io/crop/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.webp?1783906611",
+   "jpeg": "https://cards.scryfall.io/normal/front/8/b/8b1b5f06-e34d-44a3-976e-5157c4b7a0f4.jpg?1783906611"
+  },
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Gungnir \u2014 Destroy target creature an opponent controls.\nII \u2014 Zantetsuken \u2014 This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII \u2014 Hall of Sorrow \u2014 Draw two cards. Each player loses 2 life.",
+  "power": "5",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "121",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "The elder primal Odin has returned to Eorzea.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Nino Is",
+  "artist_ids": [
+   "ae717001-28ec-46e3-a07e-f16b6deaf9e2"
+  ],
+  "illustration_id": "8c021637-7b5d-4dfb-822f-c87b7c1f0cc8",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiv",
+   "universesbeyond"
+  ]
+ },
+ "fin-160": {
+  "object": "card",
+  "id": "8ab5429a-1075-49aa-9608-0610080fbf7a",
+  "oracle_id": "bab5e9ce-6d55-4d1e-a9ac-c2b954191be9",
+  "resource_id": "07B4D7BD1392B63AAABDF875AF8985AE9CD5747CCBF4AC1E3CF5479A02F01B1A",
+  "name": "Summon: Brynhildr",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-16T06:22:33Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953",
+   "normal": "https://cards.scryfall.io/normal/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953",
+   "large": "https://cards.scryfall.io/large/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953",
+   "png": "https://cards.scryfall.io/png/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.png?1784182953",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953",
+   "thumb": "https://cards.scryfall.io/thumb/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.webp?1784182953",
+   "grid": "https://cards.scryfall.io/grid/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.webp?1784182953",
+   "display": "https://cards.scryfall.io/display/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.webp?1784182953",
+   "art": "https://cards.scryfall.io/art/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.webp?1784182953",
+   "crop": "https://cards.scryfall.io/crop/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.webp?1784182953",
+   "jpeg": "https://cards.scryfall.io/normal/front/8/a/8ab5429a-1075-49aa-9608-0610080fbf7a.jpg?1784182953"
+  },
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Chain \u2014 Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III \u2014 Gestalt Mode \u2014 When you next cast a creature spell this turn, it gains haste until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "160",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "A name in blood, a pact of flame.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kevin Glint",
+  "artist_ids": [
+   "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+  ],
+  "illustration_id": "25144f42-0dc1-4731-b11e-2ac049cb6fc3",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiii",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "Rapsolo",
+   "source_uri": "https://x.com/RapsoloM/status/1927786946404741137",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-161": {
+  "object": "card",
+  "id": "840659ee-1493-4190-a514-c2c9ae14e331",
+  "oracle_id": "0d054301-8465-4a4c-91e7-9a28dda92e57",
+  "resource_id": "FBF133BAFA33E7E8EA5992285035C168B3868CA6654DA8CCA5D3D02EC622997F",
+  "name": "Summon: Esper Ramuh",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:36:36Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596",
+   "normal": "https://cards.scryfall.io/normal/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596",
+   "large": "https://cards.scryfall.io/large/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596",
+   "png": "https://cards.scryfall.io/png/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.png?1783906596",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596",
+   "thumb": "https://cards.scryfall.io/thumb/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.webp?1783906596",
+   "grid": "https://cards.scryfall.io/grid/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.webp?1783906596",
+   "display": "https://cards.scryfall.io/display/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.webp?1783906596",
+   "art": "https://cards.scryfall.io/art/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.webp?1783906596",
+   "crop": "https://cards.scryfall.io/crop/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.webp?1783906596",
+   "jpeg": "https://cards.scryfall.io/normal/front/8/4/840659ee-1493-4190-a514-c2c9ae14e331.jpg?1783906596"
+  },
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Wizard",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Judgment Bolt \u2014 This creature deals damage equal to the number of noncreature, nonland cards in your graveyard to target creature an opponent controls.\nII, III \u2014 Wizards you control get +1/+0 until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "161",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"I am Ramuh\u2014the esper.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Justyna Dura",
+  "artist_ids": [
+   "d2340aef-8ca9-4e0d-864c-6a4e8d5e350a"
+  ],
+  "illustration_id": "a1a4eb0b-5e43-4442-882a-afe376fcb3e7",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffvi",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "Yunalescka",
+   "source_uri": "https://bsky.app/profile/yunalescka.bsky.social/post/3lp5ux7fr222o",
+   "previewed_at": "2025-05-14"
+  }
+ },
+ "fin-162": {
+  "object": "card",
+  "id": "d0e5cbd4-401b-4456-80bf-d90beadfd1f8",
+  "oracle_id": "b6b22bac-853a-45a8-a74d-9904ec2b34fd",
+  "resource_id": "298AE59C53F445C6AD9675E6C5214D02F35ECA795DEB53384FC214A2FE63CFE5",
+  "name": "Summon: G.F. Cerberus",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-16T06:22:50Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970",
+   "normal": "https://cards.scryfall.io/normal/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970",
+   "large": "https://cards.scryfall.io/large/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970",
+   "png": "https://cards.scryfall.io/png/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.png?1784182970",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970",
+   "thumb": "https://cards.scryfall.io/thumb/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.webp?1784182970",
+   "grid": "https://cards.scryfall.io/grid/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.webp?1784182970",
+   "display": "https://cards.scryfall.io/display/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.webp?1784182970",
+   "art": "https://cards.scryfall.io/art/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.webp?1784182970",
+   "crop": "https://cards.scryfall.io/crop/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.webp?1784182970",
+   "jpeg": "https://cards.scryfall.io/normal/front/d/0/d0e5cbd4-401b-4456-80bf-d90beadfd1f8.jpg?1784182970"
+  },
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dog",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII \u2014 Double \u2014 When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII \u2014 Triple \u2014 When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Double"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "162",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kevin Glint",
+  "artist_ids": [
+   "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+  ],
+  "illustration_id": "dc7f221a-dddf-4730-b60d-aad481de3408",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffviii"
+  ],
+  "preview": {
+   "source": "NGA",
+   "source_uri": "https://weibo.com/3973248709/PtTGnpira",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-163": {
+  "object": "card",
+  "id": "c6c73092-5195-4bdc-b039-a699f6e297b2",
+  "oracle_id": "96d1bfc1-b80f-466f-b07d-df1ab361e8e0",
+  "resource_id": "248111B4ED2021C8368C61FD65529C89E7B371205F39E2A63AE5E18E910BE303",
+  "name": "Summon: G.F. Ifrit",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-16T06:22:54Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974",
+   "normal": "https://cards.scryfall.io/normal/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974",
+   "large": "https://cards.scryfall.io/large/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974",
+   "png": "https://cards.scryfall.io/png/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.png?1784182974",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974",
+   "thumb": "https://cards.scryfall.io/thumb/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.webp?1784182974",
+   "grid": "https://cards.scryfall.io/grid/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.webp?1784182974",
+   "display": "https://cards.scryfall.io/display/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.webp?1784182974",
+   "art": "https://cards.scryfall.io/art/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.webp?1784182974",
+   "crop": "https://cards.scryfall.io/crop/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.webp?1784182974",
+   "jpeg": "https://cards.scryfall.io/normal/front/c/6/c6c73092-5195-4bdc-b039-a699f6e297b2.jpg?1784182974"
+  },
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Demon",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II \u2014 You may discard a card. If you do, draw a card.\nIII, IV \u2014 Add {R}.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "produced_mana": [
+   "R"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "163",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "\"Hm! Not bad for a human.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Lordigan",
+  "artist_ids": [
+   "eae339a0-a8be-40b9-9878-55f7de9256f9"
+  ],
+  "illustration_id": "a3fd4975-9167-4374-ba23-b161788efd5f",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffviii"
+  ]
+ },
+ "fin-202": {
+  "object": "card",
+  "id": "32eb192b-de6b-4814-8077-628d343d014e",
+  "oracle_id": "b5d2f8e7-89d3-4015-ab99-ba4d66918e37",
+  "resource_id": "5E35A8A549600F097514DE4F5681E909A3A496D3365065A4EA3BDDB23E4ADB14",
+  "name": "Summon: Fat Chocobo",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-16T06:22:47Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967",
+   "normal": "https://cards.scryfall.io/normal/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967",
+   "large": "https://cards.scryfall.io/large/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967",
+   "png": "https://cards.scryfall.io/png/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.png?1784182967",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967",
+   "thumb": "https://cards.scryfall.io/thumb/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.webp?1784182967",
+   "grid": "https://cards.scryfall.io/grid/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.webp?1784182967",
+   "display": "https://cards.scryfall.io/display/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.webp?1784182967",
+   "art": "https://cards.scryfall.io/art/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.webp?1784182967",
+   "crop": "https://cards.scryfall.io/crop/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.webp?1784182967",
+   "jpeg": "https://cards.scryfall.io/normal/front/3/2/32eb192b-de6b-4814-8077-628d343d014e.jpg?1784182967"
+  },
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Bird",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Wark \u2014 Create a 2/2 green Bird creature token with \"Whenever a land you control enters, this token gets +1/+0 until end of turn.\"\nII, III, IV \u2014 Kerplunk \u2014 Creatures you control gain trample until end of turn.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "202",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "A pleasingly plump summon.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Joseph Weston",
+  "artist_ids": [
+   "50365a81-fa9f-4fcf-aa83-6a57c63ad43e"
+  ],
+  "illustration_id": "cb502f75-ef90-4922-a081-0f47ef05ff20",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii"
+  ],
+  "preview": {
+   "source": "The Pool Shark",
+   "source_uri": "https://bsky.app/profile/thepoolshark.bsky.social/post/3lqadclmj5c27",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-203": {
+  "object": "card",
+  "id": "93feb9d5-d004-4598-a448-b3488c869c05",
+  "oracle_id": "3509171e-8d7d-4e9e-97a1-58e6c7d225ed",
+  "resource_id": "5F743976E48F3C16B69FDB5D17AEA530F2E6B0AA4BCDD9F7CD4F2084C77AB6F8",
+  "name": "Summon: Fenrir",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:36:21Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581",
+   "normal": "https://cards.scryfall.io/normal/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581",
+   "large": "https://cards.scryfall.io/large/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581",
+   "png": "https://cards.scryfall.io/png/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.png?1783906581",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581",
+   "thumb": "https://cards.scryfall.io/thumb/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.webp?1783906581",
+   "grid": "https://cards.scryfall.io/grid/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.webp?1783906581",
+   "display": "https://cards.scryfall.io/display/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.webp?1783906581",
+   "art": "https://cards.scryfall.io/art/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.webp?1783906581",
+   "crop": "https://cards.scryfall.io/crop/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.webp?1783906581",
+   "jpeg": "https://cards.scryfall.io/normal/front/9/3/93feb9d5-d004-4598-a448-b3488c869c05.jpg?1783906581"
+  },
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Wolf",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Crescent Fang \u2014 Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nII \u2014 Heavenward Howl \u2014 When you next cast a creature spell this turn, that creature enters with an additional +1/+1 counter on it.\nIII \u2014 Ecliptic Growl \u2014 Draw a card if you control the creature with the greatest power or tied for the greatest power.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "203",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"Who dares summon me from the darkness?\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Chun Lo",
+  "artist_ids": [
+   "d787344e-3bae-43bd-89d3-232752b1006b"
+  ],
+  "illustration_id": "e5972f40-c0c4-4505-8a7b-735438ab80f8",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffxi"
+  ]
+ },
+ "fin-204": {
+  "object": "card",
+  "id": "5ce6ea96-7293-496d-b9c8-8ed6d6109a4d",
+  "oracle_id": "66ce0c60-f406-4ece-915f-675da4e8b16d",
+  "resource_id": "A98ED86540BE9301057F9CB23A87864F5DB38B0176AD1EFF5D98B8B754088548",
+  "name": "Summon: Titan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:36:20Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580",
+   "normal": "https://cards.scryfall.io/normal/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580",
+   "large": "https://cards.scryfall.io/large/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580",
+   "png": "https://cards.scryfall.io/png/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.png?1783906580",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580",
+   "thumb": "https://cards.scryfall.io/thumb/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.webp?1783906580",
+   "grid": "https://cards.scryfall.io/grid/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.webp?1783906580",
+   "display": "https://cards.scryfall.io/display/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.webp?1783906580",
+   "art": "https://cards.scryfall.io/art/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.webp?1783906580",
+   "crop": "https://cards.scryfall.io/crop/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.webp?1783906580",
+   "jpeg": "https://cards.scryfall.io/normal/front/5/c/5ce6ea96-7293-496d-b9c8-8ed6d6109a4d.jpg?1783906580"
+  },
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Giant",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Mill five cards.\nII \u2014 Return all land cards from your graveyard to the battlefield tapped.\nIII \u2014 Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+  "power": "7",
+  "toughness": "7",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Reach",
+   "Trample",
+   "Mill"
+  ],
+  "games": [
+   "paper",
+   "arena",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "204",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Andreia Ugrai",
+  "artist_ids": [
+   "f72c1593-751b-45a4-ba65-205509b81b93"
+  ],
+  "illustration_id": "f9fbbf22-469e-48eb-8ad5-16cca2661aa4",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": true,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxv",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "The Command Zone",
+   "source_uri": "https://www.youtube.com/watch?v=iyTTFy9cXYo",
+   "previewed_at": "2025-05-20"
+  }
+ },
+ "fin-356": {
+  "object": "card",
+  "id": "fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1",
+  "oracle_id": "fe9f6825-597b-4d80-ab7c-f4ee4e824b6f",
+  "resource_id": "567510C8F948866C4B0F29E3C4B75A0AF12E4CAAF48973E66C5D64F40CD5DEAF",
+  "name": "Summon: Bahamut",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:21Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521",
+   "normal": "https://cards.scryfall.io/normal/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521",
+   "large": "https://cards.scryfall.io/large/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521",
+   "png": "https://cards.scryfall.io/png/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.png?1783906521",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521",
+   "thumb": "https://cards.scryfall.io/thumb/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.webp?1783906521",
+   "grid": "https://cards.scryfall.io/grid/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.webp?1783906521",
+   "display": "https://cards.scryfall.io/display/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.webp?1783906521",
+   "art": "https://cards.scryfall.io/art/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.webp?1783906521",
+   "crop": "https://cards.scryfall.io/crop/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.webp?1783906521",
+   "jpeg": "https://cards.scryfall.io/normal/front/f/d/fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1.jpg?1783906521"
+  },
+  "mana_cost": "{9}",
+  "cmc": 9.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dragon",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II \u2014 Destroy up to one target nonland permanent.\nIII \u2014 Draw two cards.\nIV \u2014 Mega Flare \u2014 This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+  "power": "9",
+  "toughness": "9",
+  "colors": [],
+  "color_identity": [],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "356",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kota Nakatsubo",
+  "artist_ids": [
+   "df956356-a145-47d5-8691-ebee39478174"
+  ],
+  "illustration_id": "094b902a-9c00-4388-99d1-2c77ab74c962",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fin-358": {
+  "object": "card",
+  "id": "b95481b1-1780-4cf9-b910-dd0a4461f818",
+  "oracle_id": "8b4bfdc5-8c0a-40c3-abbf-ada4a536dc34",
+  "resource_id": "559CF6DF2C6361A515ECFE68B9AD6CF9E82422BDCE6C817DE896E6C0F539B978",
+  "name": "Summon: Choco/Mog",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:20Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520",
+   "normal": "https://cards.scryfall.io/normal/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520",
+   "large": "https://cards.scryfall.io/large/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520",
+   "png": "https://cards.scryfall.io/png/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.png?1783906520",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520",
+   "thumb": "https://cards.scryfall.io/thumb/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.webp?1783906520",
+   "grid": "https://cards.scryfall.io/grid/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.webp?1783906520",
+   "display": "https://cards.scryfall.io/display/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.webp?1783906520",
+   "art": "https://cards.scryfall.io/art/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.webp?1783906520",
+   "crop": "https://cards.scryfall.io/crop/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.webp?1783906520",
+   "jpeg": "https://cards.scryfall.io/normal/front/b/9/b95481b1-1780-4cf9-b910-dd0a4461f818.jpg?1783906520"
+  },
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Bird Moogle",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III, IV \u2014 Stampede! \u2014 Other creatures you control get +1/+0 until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "358",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "\"Wark? Kupo!\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Yoshiya",
+  "artist_ids": [
+   "4803d72e-26fc-4989-8b2b-65e53613d005"
+  ],
+  "illustration_id": "c223c174-e1a3-4b27-97f6-94d4f888e200",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "The Pool Shark",
+   "source_uri": "https://bsky.app/profile/thepoolshark.bsky.social/post/3lqad7sph5k27",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-359": {
+  "object": "card",
+  "id": "b8a48466-6dc1-4874-9328-c7358e642f39",
+  "oracle_id": "73122880-d7f4-422f-a336-18773bcb7bfe",
+  "resource_id": "41D1912E5BEC44389DF651F4BDCB2D52E8045DC7C903008A52029F34B2CD443C",
+  "name": "Summon: Knights of Round",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:19Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519",
+   "normal": "https://cards.scryfall.io/normal/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519",
+   "large": "https://cards.scryfall.io/large/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519",
+   "png": "https://cards.scryfall.io/png/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.png?1783906519",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519",
+   "thumb": "https://cards.scryfall.io/thumb/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.webp?1783906519",
+   "grid": "https://cards.scryfall.io/grid/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.webp?1783906519",
+   "display": "https://cards.scryfall.io/display/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.webp?1783906519",
+   "art": "https://cards.scryfall.io/art/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.webp?1783906519",
+   "crop": "https://cards.scryfall.io/crop/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.webp?1783906519",
+   "jpeg": "https://cards.scryfall.io/normal/front/b/8/b8a48466-6dc1-4874-9328-c7358e642f39.jpg?1783906519"
+  },
+  "mana_cost": "{6}{W}{W}",
+  "cmc": 8.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV \u2014 Create three 2/2 white Knight creature tokens.\nV \u2014 Ultimate End \u2014 Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Indestructible"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "359",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Hisashi Momose",
+  "artist_ids": [
+   "09bc6de8-c99c-406a-9da6-8ece7112e496"
+  ],
+  "illustration_id": "30cab0e3-1090-46db-82cd-3850b5a0c911",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "Brandon Sanderson",
+   "source_uri": "https://www.youtube.com/watch?v=KGSqNnoNtHo",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-360": {
+  "object": "card",
+  "id": "f6ee6624-79be-4a76-8c12-80bf31f81ae2",
+  "oracle_id": "aaf9e711-94e1-4869-81b0-baa6380ee873",
+  "resource_id": "73786023C10CEC995EA7C332E335D36895D85A6B5D281B6ECDD77EB95E937E29",
+  "name": "Summon: Primal Garuda",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:19Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519",
+   "normal": "https://cards.scryfall.io/normal/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519",
+   "large": "https://cards.scryfall.io/large/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519",
+   "png": "https://cards.scryfall.io/png/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.png?1783906519",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519",
+   "thumb": "https://cards.scryfall.io/thumb/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.webp?1783906519",
+   "grid": "https://cards.scryfall.io/grid/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.webp?1783906519",
+   "display": "https://cards.scryfall.io/display/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.webp?1783906519",
+   "art": "https://cards.scryfall.io/art/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.webp?1783906519",
+   "crop": "https://cards.scryfall.io/crop/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.webp?1783906519",
+   "jpeg": "https://cards.scryfall.io/normal/front/f/6/f6ee6624-79be-4a76-8c12-80bf31f81ae2.jpg?1783906519"
+  },
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Harpy",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Aerial Blast \u2014 This creature deals 4 damage to target tapped creature an opponent controls.\nII, III \u2014 Slipstream \u2014 Another target creature you control gets +1/+0 and gains flying until end of turn.\nFlying",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "360",
+  "digital": false,
+  "rarity": "uncommon",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Tokima",
+  "artist_ids": [
+   "d503b3c7-2ff1-4053-8704-489030c292c2"
+  ],
+  "illustration_id": "25f517c0-203f-47d3-b100-c44d0273acf7",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "boosterfun",
+   "ffxiv",
+   "universesbeyond"
+  ],
+  "preview": {
+   "source": "Brandon Sanderson",
+   "source_uri": "https://www.youtube.com/watch?v=KGSqNnoNtHo",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-361": {
+  "object": "card",
+  "id": "4c6738f5-55cb-48f0-8e70-296d1c549cd3",
+  "oracle_id": "b38d1811-64d7-4a35-a86c-3291eecd8391",
+  "resource_id": "2264AEC9294C677272BB5B1397F8494FF670026411C24DC02A93B57C6660E714",
+  "name": "Summon: Leviathan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:18Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518",
+   "normal": "https://cards.scryfall.io/normal/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518",
+   "large": "https://cards.scryfall.io/large/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518",
+   "png": "https://cards.scryfall.io/png/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.png?1783906518",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518",
+   "thumb": "https://cards.scryfall.io/thumb/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.webp?1783906518",
+   "grid": "https://cards.scryfall.io/grid/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.webp?1783906518",
+   "display": "https://cards.scryfall.io/display/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.webp?1783906518",
+   "art": "https://cards.scryfall.io/art/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.webp?1783906518",
+   "crop": "https://cards.scryfall.io/crop/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.webp?1783906518",
+   "jpeg": "https://cards.scryfall.io/normal/front/4/c/4c6738f5-55cb-48f0-8e70-296d1c549cd3.jpg?1783906518"
+  },
+  "mana_cost": "{4}{U}{U}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Leviathan",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III \u2014 Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "361",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kota Nakatsubo",
+  "artist_ids": [
+   "df956356-a145-47d5-8691-ebee39478174"
+  ],
+  "illustration_id": "f90016dd-82fb-457c-884c-f465c5ee7b2f",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxv",
+   "universesbeyond",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "Wizards of the Coast",
+   "source_uri": "https://magic.wizards.com/en/products/final-fantasy",
+   "previewed_at": "2025-05-10"
+  }
+ },
+ "fin-362": {
+  "object": "card",
+  "id": "340b2b03-1b20-411c-ba30-2be77655290a",
+  "oracle_id": "5846718c-7d31-4d2c-80a2-b1534e2aebc1",
+  "resource_id": "58597C980A72D9263A41D252BBC7B1A0CD18BD9BF20413696612D776DC62F588",
+  "name": "Summon: Shiva",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:20Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520",
+   "normal": "https://cards.scryfall.io/normal/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520",
+   "large": "https://cards.scryfall.io/large/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520",
+   "png": "https://cards.scryfall.io/png/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.png?1783906520",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520",
+   "thumb": "https://cards.scryfall.io/thumb/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.webp?1783906520",
+   "grid": "https://cards.scryfall.io/grid/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.webp?1783906520",
+   "display": "https://cards.scryfall.io/display/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.webp?1783906520",
+   "art": "https://cards.scryfall.io/art/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.webp?1783906520",
+   "crop": "https://cards.scryfall.io/crop/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.webp?1783906520",
+   "jpeg": "https://cards.scryfall.io/normal/front/3/4/340b2b03-1b20-411c-ba30-2be77655290a.jpg?1783906520"
+  },
+  "mana_cost": "{3}{U}{U}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Elemental",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II \u2014 Heavenly Strike \u2014 Tap target creature an opponent controls. Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)\nIII \u2014 Diamond Dust \u2014 Draw a card for each tapped creature your opponents control.",
+  "power": "4",
+  "toughness": "5",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "362",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"Let us summon a sea in a new dream world.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Taku Haruno",
+  "artist_ids": [
+   "a33fcb90-0f09-4767-bea3-3dc3128a7325"
+  ],
+  "illustration_id": "00257aef-2bb5-41c6-83f1-c2f2ec907f74",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fin-364": {
+  "object": "card",
+  "id": "d4aa9f4e-cba9-41fa-8c65-3e263988f90d",
+  "oracle_id": "0990e57f-279e-4348-a049-e06187cc38d4",
+  "resource_id": "55A4B2B55378621D2FDF03C00110B34ED9EF37687A06F34A3C1E84B986458888",
+  "name": "Summon: Anima",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:18Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518",
+   "normal": "https://cards.scryfall.io/normal/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518",
+   "large": "https://cards.scryfall.io/large/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518",
+   "png": "https://cards.scryfall.io/png/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.png?1783906518",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518",
+   "thumb": "https://cards.scryfall.io/thumb/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.webp?1783906518",
+   "grid": "https://cards.scryfall.io/grid/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.webp?1783906518",
+   "display": "https://cards.scryfall.io/display/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.webp?1783906518",
+   "art": "https://cards.scryfall.io/art/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.webp?1783906518",
+   "crop": "https://cards.scryfall.io/crop/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.webp?1783906518",
+   "jpeg": "https://cards.scryfall.io/normal/front/d/4/d4aa9f4e-cba9-41fa-8c65-3e263988f90d.jpg?1783906518"
+  },
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Horror",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III \u2014 Pain \u2014 You draw a card and you lose 1 life.\nIV \u2014 Oblivion \u2014 Each opponent sacrifices a creature of their choice and loses 3 life.\nMenace",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [
+   "Menace"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "364",
+  "digital": false,
+  "rarity": "uncommon",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kota Nakatsubo",
+  "artist_ids": [
+   "df956356-a145-47d5-8691-ebee39478174"
+  ],
+  "illustration_id": "ed078181-31d3-4fe1-8790-48c806862784",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffx",
+   "universesbeyond",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "Travis Gafford",
+   "source_uri": "https://x.com/TravisGafford/status/1923456130887401535",
+   "previewed_at": "2025-05-16"
+  }
+ },
+ "fin-365": {
+  "object": "card",
+  "id": "d8117e64-6e43-4aa8-90df-c5b21fbb9182",
+  "oracle_id": "032f59c3-9f47-4db3-a43c-065a99ed7efe",
+  "resource_id": "D17FF02A11C25E9605C953B5E4EA03D146A9F08C504917B81C8B27BD41ABEA92",
+  "name": "Summon: Primal Odin",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:18Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518",
+   "normal": "https://cards.scryfall.io/normal/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518",
+   "large": "https://cards.scryfall.io/large/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518",
+   "png": "https://cards.scryfall.io/png/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.png?1783906518",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518",
+   "thumb": "https://cards.scryfall.io/thumb/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.webp?1783906518",
+   "grid": "https://cards.scryfall.io/grid/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.webp?1783906518",
+   "display": "https://cards.scryfall.io/display/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.webp?1783906518",
+   "art": "https://cards.scryfall.io/art/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.webp?1783906518",
+   "crop": "https://cards.scryfall.io/crop/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.webp?1783906518",
+   "jpeg": "https://cards.scryfall.io/normal/front/d/8/d8117e64-6e43-4aa8-90df-c5b21fbb9182.jpg?1783906518"
+  },
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Gungnir \u2014 Destroy target creature an opponent controls.\nII \u2014 Zantetsuken \u2014 This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII \u2014 Hall of Sorrow \u2014 Draw two cards. Each player loses 2 life.",
+  "power": "5",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "365",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "The elder primal Odin has returned to Eorzea.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Tomohito",
+  "artist_ids": [
+   "528f80a0-b79f-456e-a65f-8a46cfdd48f5"
+  ],
+  "illustration_id": "f1c69dbf-b164-4f43-b951-050ed961dce1",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiv",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fin-366": {
+  "object": "card",
+  "id": "fac98745-a30e-4f64-be21-302c0d73d4f7",
+  "oracle_id": "bab5e9ce-6d55-4d1e-a9ac-c2b954191be9",
+  "resource_id": "A47AAEB98095DB4175E65F1792A54C0D4356269A7C5763F11056362A2D1CB1CF",
+  "name": "Summon: Brynhildr",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:17Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517",
+   "normal": "https://cards.scryfall.io/normal/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517",
+   "large": "https://cards.scryfall.io/large/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517",
+   "png": "https://cards.scryfall.io/png/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.png?1783906517",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517",
+   "thumb": "https://cards.scryfall.io/thumb/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.webp?1783906517",
+   "grid": "https://cards.scryfall.io/grid/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.webp?1783906517",
+   "display": "https://cards.scryfall.io/display/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.webp?1783906517",
+   "art": "https://cards.scryfall.io/art/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.webp?1783906517",
+   "crop": "https://cards.scryfall.io/crop/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.webp?1783906517",
+   "jpeg": "https://cards.scryfall.io/normal/front/f/a/fac98745-a30e-4f64-be21-302c0d73d4f7.jpg?1783906517"
+  },
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Chain \u2014 Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III \u2014 Gestalt Mode \u2014 When you next cast a creature spell this turn, it gains haste until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "366",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "A name in blood, a pact of flame.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Tomohito",
+  "artist_ids": [
+   "528f80a0-b79f-456e-a65f-8a46cfdd48f5"
+  ],
+  "illustration_id": "045c554a-1a62-424c-a15f-811aad1ce9fe",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxiii",
+   "universesbeyond",
+   "boosterfun"
+  ]
+ },
+ "fin-367": {
+  "object": "card",
+  "id": "a6edb808-9753-4029-81ed-60a91ebc1d77",
+  "oracle_id": "0d054301-8465-4a4c-91e7-9a28dda92e57",
+  "resource_id": "AC475A65CA9CEB4729E4CF504600D1DFB8C0372E1720A5A896C8D3A4DC467765",
+  "name": "Summon: Esper Ramuh",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:18Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518",
+   "normal": "https://cards.scryfall.io/normal/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518",
+   "large": "https://cards.scryfall.io/large/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518",
+   "png": "https://cards.scryfall.io/png/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.png?1783906518",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.webp?1783906518",
+   "grid": "https://cards.scryfall.io/grid/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.webp?1783906518",
+   "display": "https://cards.scryfall.io/display/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.webp?1783906518",
+   "art": "https://cards.scryfall.io/art/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.webp?1783906518",
+   "crop": "https://cards.scryfall.io/crop/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.webp?1783906518",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/6/a6edb808-9753-4029-81ed-60a91ebc1d77.jpg?1783906518"
+  },
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Wizard",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Judgment Bolt \u2014 This creature deals damage equal to the number of noncreature, nonland cards in your graveyard to target creature an opponent controls.\nII, III \u2014 Wizards you control get +1/+0 until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "367",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"I am Ramuh\u2014 the esper.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Hagiya Kaoru",
+  "artist_ids": [
+   "f858a52a-a623-4a8d-9928-b98a132994ad"
+  ],
+  "illustration_id": "312fddcc-ca04-48ad-8c47-472495d1440f",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffvi",
+   "universesbeyond",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "Yunalescka",
+   "source_uri": "https://bsky.app/profile/yunalescka.bsky.social/post/3lp5ux7fr222o",
+   "previewed_at": "2025-05-14"
+  }
+ },
+ "fin-368": {
+  "object": "card",
+  "id": "a5ad1e50-2bf1-4f43-9da4-62a89b521206",
+  "oracle_id": "b6b22bac-853a-45a8-a74d-9904ec2b34fd",
+  "resource_id": "6FE5C961AD184E0271AEDF70446E5F81120F4672A9C1FE8ADC29F0B15DB4FF9E",
+  "name": "Summon: G.F. Cerberus",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:17Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517",
+   "normal": "https://cards.scryfall.io/normal/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517",
+   "large": "https://cards.scryfall.io/large/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517",
+   "png": "https://cards.scryfall.io/png/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.png?1783906517",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.webp?1783906517",
+   "grid": "https://cards.scryfall.io/grid/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.webp?1783906517",
+   "display": "https://cards.scryfall.io/display/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.webp?1783906517",
+   "art": "https://cards.scryfall.io/art/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.webp?1783906517",
+   "crop": "https://cards.scryfall.io/crop/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.webp?1783906517",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/5/a5ad1e50-2bf1-4f43-9da4-62a89b521206.jpg?1783906517"
+  },
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dog",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII \u2014 Double \u2014 When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII \u2014 Triple \u2014 When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Double"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "368",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Yoshiya",
+  "artist_ids": [
+   "4803d72e-26fc-4989-8b2b-65e53613d005"
+  ],
+  "illustration_id": "45b78253-65af-4bd5-8656-dcd8a26b2c01",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "boosterfun",
+   "ffviii"
+  ],
+  "preview": {
+   "source": "NGA",
+   "source_uri": "https://weibo.com/3973248709/PtTGnpira",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-369": {
+  "object": "card",
+  "id": "25c3ce9a-39e5-4273-ba67-224a837b75e7",
+  "oracle_id": "96d1bfc1-b80f-466f-b07d-df1ab361e8e0",
+  "resource_id": "A2821071D7DA818A51C535E1777F3FB622A1AC562FE45E868A604EBF542652C5",
+  "name": "Summon: G.F. Ifrit",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:17Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517",
+   "normal": "https://cards.scryfall.io/normal/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517",
+   "large": "https://cards.scryfall.io/large/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517",
+   "png": "https://cards.scryfall.io/png/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.png?1783906517",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517",
+   "thumb": "https://cards.scryfall.io/thumb/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.webp?1783906517",
+   "grid": "https://cards.scryfall.io/grid/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.webp?1783906517",
+   "display": "https://cards.scryfall.io/display/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.webp?1783906517",
+   "art": "https://cards.scryfall.io/art/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.webp?1783906517",
+   "crop": "https://cards.scryfall.io/crop/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.webp?1783906517",
+   "jpeg": "https://cards.scryfall.io/normal/front/2/5/25c3ce9a-39e5-4273-ba67-224a837b75e7.jpg?1783906517"
+  },
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Demon",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II \u2014 You may discard a card. If you do, draw a card.\nIII, IV \u2014 Add {R}.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "produced_mana": [
+   "R"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "369",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "\"Hm! Not bad for a human.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Ono Tako",
+  "artist_ids": [
+   "0dba3399-1f74-4955-9e86-4e1687d9798a"
+  ],
+  "illustration_id": "976e72c7-ec46-4e7d-99c5-7f2dae2c6ca3",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "boosterfun",
+   "ffviii"
+  ]
+ },
+ "fin-371": {
+  "object": "card",
+  "id": "a44ae92c-4894-4172-82b3-11e2e94653ef",
+  "oracle_id": "b5d2f8e7-89d3-4015-ab99-ba4d66918e37",
+  "resource_id": "B84373C2416A9AC6DEABFF0DC0FF6301F3264C6BA6D8153BEBA844BCD03D3FD3",
+  "name": "Summon: Fat Chocobo",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:15Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515",
+   "normal": "https://cards.scryfall.io/normal/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515",
+   "large": "https://cards.scryfall.io/large/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515",
+   "png": "https://cards.scryfall.io/png/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.png?1783906515",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515",
+   "thumb": "https://cards.scryfall.io/thumb/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.webp?1783906515",
+   "grid": "https://cards.scryfall.io/grid/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.webp?1783906515",
+   "display": "https://cards.scryfall.io/display/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.webp?1783906515",
+   "art": "https://cards.scryfall.io/art/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.webp?1783906515",
+   "crop": "https://cards.scryfall.io/crop/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.webp?1783906515",
+   "jpeg": "https://cards.scryfall.io/normal/front/a/4/a44ae92c-4894-4172-82b3-11e2e94653ef.jpg?1783906515"
+  },
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Bird",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI \u2014 Wark \u2014 Create a 2/2 green Bird creature token with \"Whenever a land you control enters, this token gets +1/+0 until end of turn.\"\nII, III, IV \u2014 Kerplunk \u2014 Creatures you control gain trample until end of turn.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "371",
+  "digital": false,
+  "rarity": "common",
+  "flavor_text": "A pleasingly plump summon.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Buchi",
+  "artist_ids": [
+   "33ff0fac-a1be-4c19-b0c0-edffb8dab4a7"
+  ],
+  "illustration_id": "22dabd5f-3585-4009-bcbf-0f0a4c08fec5",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffvii",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "The Pool Shark",
+   "source_uri": "https://bsky.app/profile/thepoolshark.bsky.social/post/3lqadclmj5c27",
+   "previewed_at": "2025-05-28"
+  }
+ },
+ "fin-372": {
+  "object": "card",
+  "id": "412093fb-15c1-4b36-aa53-9484f955ee2c",
+  "oracle_id": "3509171e-8d7d-4e9e-97a1-58e6c7d225ed",
+  "resource_id": "B762266B94C4C118E82D18714B2F00DD084F69C94FD27100CD63AB24267EB288",
+  "name": "Summon: Fenrir",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:13Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513",
+   "normal": "https://cards.scryfall.io/normal/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513",
+   "large": "https://cards.scryfall.io/large/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513",
+   "png": "https://cards.scryfall.io/png/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.png?1783906513",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513",
+   "thumb": "https://cards.scryfall.io/thumb/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.webp?1783906513",
+   "grid": "https://cards.scryfall.io/grid/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.webp?1783906513",
+   "display": "https://cards.scryfall.io/display/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.webp?1783906513",
+   "art": "https://cards.scryfall.io/art/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.webp?1783906513",
+   "crop": "https://cards.scryfall.io/crop/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.webp?1783906513",
+   "jpeg": "https://cards.scryfall.io/normal/front/4/1/412093fb-15c1-4b36-aa53-9484f955ee2c.jpg?1783906513"
+  },
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Enchantment Creature \u2014 Saga Wolf",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Crescent Fang \u2014 Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nII \u2014 Heavenward Howl \u2014 When you next cast a creature spell this turn, that creature enters with an additional +1/+1 counter on it.\nIII \u2014 Ecliptic Growl \u2014 Draw a card if you control the creature with the greatest power or tied for the greatest power.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "372",
+  "digital": false,
+  "rarity": "uncommon",
+  "flavor_text": "\"Who dares summon me from the darkness?\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Maiko Aoji",
+  "artist_ids": [
+   "0f984cfd-16e0-4edb-b9ed-881c98539397"
+  ],
+  "illustration_id": "4bb86122-d0f7-4da3-9485-9df9f5cbcd2e",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "universesbeyond",
+   "ffxi",
+   "boosterfun"
+  ]
+ },
+ "fin-373": {
+  "object": "card",
+  "id": "e5881485-7935-427e-911e-843f198d94dc",
+  "oracle_id": "66ce0c60-f406-4ece-915f-675da4e8b16d",
+  "resource_id": "DD5D7DEDBCB4D283CFD851C2969902B98EFDEBB362F51ABA8AAADA4C1E192880",
+  "name": "Summon: Titan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:35:13Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513",
+   "normal": "https://cards.scryfall.io/normal/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513",
+   "large": "https://cards.scryfall.io/large/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513",
+   "png": "https://cards.scryfall.io/png/front/e/5/e5881485-7935-427e-911e-843f198d94dc.png?1783906513",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513",
+   "thumb": "https://cards.scryfall.io/thumb/front/e/5/e5881485-7935-427e-911e-843f198d94dc.webp?1783906513",
+   "grid": "https://cards.scryfall.io/grid/front/e/5/e5881485-7935-427e-911e-843f198d94dc.webp?1783906513",
+   "display": "https://cards.scryfall.io/display/front/e/5/e5881485-7935-427e-911e-843f198d94dc.webp?1783906513",
+   "art": "https://cards.scryfall.io/art/front/e/5/e5881485-7935-427e-911e-843f198d94dc.webp?1783906513",
+   "crop": "https://cards.scryfall.io/crop/front/e/5/e5881485-7935-427e-911e-843f198d94dc.webp?1783906513",
+   "jpeg": "https://cards.scryfall.io/normal/front/e/5/e5881485-7935-427e-911e-843f198d94dc.jpg?1783906513"
+  },
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Giant",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Mill five cards.\nII \u2014 Return all land cards from your graveyard to the battlefield tapped.\nIII \u2014 Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+  "power": "7",
+  "toughness": "7",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Reach",
+   "Trample",
+   "Mill"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": true,
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "oversized": false,
+  "promo": false,
+  "reprint": false,
+  "variation": false,
+  "set_id": "d7beb4b7-e1ff-4d35-ab07-5700f17ea1ea",
+  "set": "fin",
+  "set_name": "Final Fantasy",
+  "set_type": "expansion",
+  "collector_number": "373",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Ezoi",
+  "artist_ids": [
+   "55f63679-cb6a-41d3-b06e-c24d4867a2fd"
+  ],
+  "illustration_id": "d980bdbe-07f9-4d84-ab0e-58d25bc464e1",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment",
+   "inverted"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "ffxv",
+   "universesbeyond",
+   "boosterfun"
+  ],
+  "preview": {
+   "source": "The Command Zone",
+   "source_uri": "https://www.youtube.com/watch?v=iyTTFy9cXYo",
+   "previewed_at": "2025-05-21"
+  }
+ },
+ "pfin-1s": {
+  "object": "card",
+  "id": "5c0e08d1-ecec-4577-b16e-a8d8478472a0",
+  "oracle_id": "fe9f6825-597b-4d80-ab7c-f4ee4e824b6f",
+  "name": "Summon: Bahamut",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:30:00Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200",
+   "normal": "https://cards.scryfall.io/normal/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200",
+   "large": "https://cards.scryfall.io/large/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200",
+   "png": "https://cards.scryfall.io/png/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.png?1783906200",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200",
+   "thumb": "https://cards.scryfall.io/thumb/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.webp?1783906200",
+   "grid": "https://cards.scryfall.io/grid/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.webp?1783906200",
+   "display": "https://cards.scryfall.io/display/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.webp?1783906200",
+   "art": "https://cards.scryfall.io/art/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.webp?1783906200",
+   "crop": "https://cards.scryfall.io/crop/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.webp?1783906200",
+   "jpeg": "https://cards.scryfall.io/normal/front/5/c/5c0e08d1-ecec-4577-b16e-a8d8478472a0.jpg?1783906200"
+  },
+  "mana_cost": "{9}",
+  "cmc": 9.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dragon",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II \u2014 Destroy up to one target nonland permanent.\nIII \u2014 Draw two cards.\nIV \u2014 Mega Flare \u2014 This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+  "power": "9",
+  "toughness": "9",
+  "colors": [],
+  "color_identity": [],
+  "keywords": [
+   "Flying"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "1s",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Arif Wijaya",
+  "artist_ids": [
+   "a1d47f27-cbf6-4a7b-bbbb-8f051c9069d6"
+  ],
+  "illustration_id": "6ff7fd42-b5e5-484c-8e9b-9572d239f08d",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-36s": {
+  "object": "card",
+  "id": "d9120fd0-f958-4ce3-82cd-0500d4549654",
+  "oracle_id": "73122880-d7f4-422f-a336-18773bcb7bfe",
+  "name": "Summon: Knights of Round",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:54Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194",
+   "normal": "https://cards.scryfall.io/normal/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194",
+   "large": "https://cards.scryfall.io/large/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194",
+   "png": "https://cards.scryfall.io/png/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.png?1783906194",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194",
+   "thumb": "https://cards.scryfall.io/thumb/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.webp?1783906194",
+   "grid": "https://cards.scryfall.io/grid/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.webp?1783906194",
+   "display": "https://cards.scryfall.io/display/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.webp?1783906194",
+   "art": "https://cards.scryfall.io/art/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.webp?1783906194",
+   "crop": "https://cards.scryfall.io/crop/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.webp?1783906194",
+   "jpeg": "https://cards.scryfall.io/normal/front/d/9/d9120fd0-f958-4ce3-82cd-0500d4549654.jpg?1783906194"
+  },
+  "mana_cost": "{6}{W}{W}",
+  "cmc": 8.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV \u2014 Create three 2/2 white Knight creature tokens.\nV \u2014 Ultimate End \u2014 Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "keywords": [
+   "Indestructible"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "36s",
+  "digital": false,
+  "rarity": "mythic",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Takayama Toshiaki",
+  "artist_ids": [
+   "a4879110-33bc-4261-8e00-30b897df509b"
+  ],
+  "illustration_id": "2aa26d05-0da7-4208-bb4c-263be3cdef23",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-77s": {
+  "object": "card",
+  "id": "22281ba1-d509-4039-83c7-d912a1ce5ac4",
+  "oracle_id": "b38d1811-64d7-4a35-a86c-3291eecd8391",
+  "name": "Summon: Leviathan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:45Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185",
+   "normal": "https://cards.scryfall.io/normal/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185",
+   "large": "https://cards.scryfall.io/large/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185",
+   "png": "https://cards.scryfall.io/png/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.png?1783906185",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185",
+   "thumb": "https://cards.scryfall.io/thumb/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.webp?1783906185",
+   "grid": "https://cards.scryfall.io/grid/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.webp?1783906185",
+   "display": "https://cards.scryfall.io/display/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.webp?1783906185",
+   "art": "https://cards.scryfall.io/art/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.webp?1783906185",
+   "crop": "https://cards.scryfall.io/crop/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.webp?1783906185",
+   "jpeg": "https://cards.scryfall.io/normal/front/2/2/22281ba1-d509-4039-83c7-d912a1ce5ac4.jpg?1783906185"
+  },
+  "mana_cost": "{4}{U}{U}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Leviathan",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III \u2014 Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "U"
+  ],
+  "color_identity": [
+   "U"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "77s",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "OTUMAMI",
+  "artist_ids": [
+   "7ba92777-51ca-4b09-ad20-782e28007a7d"
+  ],
+  "illustration_id": "2ccdf15c-b407-41c0-a6b2-df9c746ffc32",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-121s": {
+  "object": "card",
+  "id": "13e0ad67-35a6-48f3-83cb-5ffd07daf717",
+  "oracle_id": "032f59c3-9f47-4db3-a43c-065a99ed7efe",
+  "name": "Summon: Primal Odin",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:40Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180",
+   "normal": "https://cards.scryfall.io/normal/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180",
+   "large": "https://cards.scryfall.io/large/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180",
+   "png": "https://cards.scryfall.io/png/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.png?1783906180",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180",
+   "thumb": "https://cards.scryfall.io/thumb/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.webp?1783906180",
+   "grid": "https://cards.scryfall.io/grid/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.webp?1783906180",
+   "display": "https://cards.scryfall.io/display/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.webp?1783906180",
+   "art": "https://cards.scryfall.io/art/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.webp?1783906180",
+   "crop": "https://cards.scryfall.io/crop/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.webp?1783906180",
+   "jpeg": "https://cards.scryfall.io/normal/front/1/3/13e0ad67-35a6-48f3-83cb-5ffd07daf717.jpg?1783906180"
+  },
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Gungnir \u2014 Destroy target creature an opponent controls.\nII \u2014 Zantetsuken \u2014 This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII \u2014 Hall of Sorrow \u2014 Draw two cards. Each player loses 2 life.",
+  "power": "5",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "121s",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "The elder primal Odin has returned to Eorzea.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Nino Is",
+  "artist_ids": [
+   "ae717001-28ec-46e3-a07e-f16b6deaf9e2"
+  ],
+  "illustration_id": "8c021637-7b5d-4dfb-822f-c87b7c1f0cc8",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-160s": {
+  "object": "card",
+  "id": "59d7c696-0ffa-4327-9045-eaefefcf4fe0",
+  "oracle_id": "bab5e9ce-6d55-4d1e-a9ac-c2b954191be9",
+  "name": "Summon: Brynhildr",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:34Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174",
+   "normal": "https://cards.scryfall.io/normal/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174",
+   "large": "https://cards.scryfall.io/large/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174",
+   "png": "https://cards.scryfall.io/png/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.png?1783906174",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174",
+   "thumb": "https://cards.scryfall.io/thumb/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.webp?1783906174",
+   "grid": "https://cards.scryfall.io/grid/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.webp?1783906174",
+   "display": "https://cards.scryfall.io/display/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.webp?1783906174",
+   "art": "https://cards.scryfall.io/art/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.webp?1783906174",
+   "crop": "https://cards.scryfall.io/crop/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.webp?1783906174",
+   "jpeg": "https://cards.scryfall.io/normal/front/5/9/59d7c696-0ffa-4327-9045-eaefefcf4fe0.jpg?1783906174"
+  },
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Enchantment Creature \u2014 Saga Knight",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Chain \u2014 Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III \u2014 Gestalt Mode \u2014 When you next cast a creature spell this turn, it gains haste until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "160s",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "A name in blood, a pact of flame.",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kevin Glint",
+  "artist_ids": [
+   "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+  ],
+  "illustration_id": "25144f42-0dc1-4731-b11e-2ac049cb6fc3",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-162s": {
+  "object": "card",
+  "id": "5bb06121-b390-4e3d-8822-4389570b0e15",
+  "oracle_id": "b6b22bac-853a-45a8-a74d-9904ec2b34fd",
+  "name": "Summon: G.F. Cerberus",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:33Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173",
+   "normal": "https://cards.scryfall.io/normal/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173",
+   "large": "https://cards.scryfall.io/large/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173",
+   "png": "https://cards.scryfall.io/png/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.png?1783906173",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173",
+   "thumb": "https://cards.scryfall.io/thumb/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.webp?1783906173",
+   "grid": "https://cards.scryfall.io/grid/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.webp?1783906173",
+   "display": "https://cards.scryfall.io/display/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.webp?1783906173",
+   "art": "https://cards.scryfall.io/art/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.webp?1783906173",
+   "crop": "https://cards.scryfall.io/crop/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.webp?1783906173",
+   "jpeg": "https://cards.scryfall.io/normal/front/5/b/5bb06121-b390-4e3d-8822-4389570b0e15.jpg?1783906173"
+  },
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Enchantment Creature \u2014 Saga Dog",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII \u2014 Double \u2014 When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII \u2014 Triple \u2014 When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Double"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "162s",
+  "digital": false,
+  "rarity": "rare",
+  "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Kevin Glint",
+  "artist_ids": [
+   "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+  ],
+  "illustration_id": "dc7f221a-dddf-4730-b60d-aad481de3408",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ },
+ "pfin-204s": {
+  "object": "card",
+  "id": "1eb2a447-e18e-4318-898d-bc12fdd16172",
+  "oracle_id": "66ce0c60-f406-4ece-915f-675da4e8b16d",
+  "name": "Summon: Titan",
+  "lang": "en",
+  "released_at": "2025-06-13",
+  "layout": "saga",
+  "highres_image": true,
+  "image_status": "highres_scan",
+  "image_updated_at": "2026-07-13T01:29:27Z",
+  "image_uris": {
+   "small": "https://cards.scryfall.io/small/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167",
+   "normal": "https://cards.scryfall.io/normal/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167",
+   "large": "https://cards.scryfall.io/large/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167",
+   "png": "https://cards.scryfall.io/png/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.png?1783906167",
+   "art_crop": "https://cards.scryfall.io/art_crop/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167",
+   "border_crop": "https://cards.scryfall.io/border_crop/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167",
+   "thumb": "https://cards.scryfall.io/thumb/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.webp?1783906167",
+   "grid": "https://cards.scryfall.io/grid/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.webp?1783906167",
+   "display": "https://cards.scryfall.io/display/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.webp?1783906167",
+   "art": "https://cards.scryfall.io/art/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.webp?1783906167",
+   "crop": "https://cards.scryfall.io/crop/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.webp?1783906167",
+   "jpeg": "https://cards.scryfall.io/normal/front/1/e/1eb2a447-e18e-4318-898d-bc12fdd16172.jpg?1783906167"
+  },
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Enchantment Creature \u2014 Saga Giant",
+  "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI \u2014 Mill five cards.\nII \u2014 Return all land cards from your graveyard to the battlefield tapped.\nIII \u2014 Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+  "power": "7",
+  "toughness": "7",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Reach",
+   "Trample",
+   "Mill"
+  ],
+  "games": [
+   "paper",
+   "mtgo"
+  ],
+  "reserved": false,
+  "game_changer": false,
+  "foil": true,
+  "nonfoil": false,
+  "finishes": [
+   "foil"
+  ],
+  "oversized": false,
+  "promo": true,
+  "reprint": true,
+  "variation": false,
+  "set_id": "ff405aba-0309-4694-a6d5-e657024f7ad0",
+  "set": "pfin",
+  "set_name": "Final Fantasy Promos",
+  "set_type": "promo",
+  "collector_number": "204s",
+  "digital": false,
+  "rarity": "rare",
+  "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+  "artist": "Andreia Ugrai",
+  "artist_ids": [
+   "f72c1593-751b-45a4-ba65-205509b81b93"
+  ],
+  "illustration_id": "f9fbbf22-469e-48eb-8ad5-16cca2661aa4",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "booster": false,
+  "story_spotlight": false,
+  "promo_types": [
+   "prerelease",
+   "datestamped",
+   "universesbeyond"
+  ]
+ }
+}

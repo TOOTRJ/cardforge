@@ -178,6 +178,8 @@ const STEP_DEFS: StepDef[] = [
       "loyalty_abilities",
       "saga_intro",
       "saga_chapters",
+      // The saga creature's box (TODO 4.5d).
+      "saga_creature_text",
       "flavor_text",
       "power",
       "toughness",

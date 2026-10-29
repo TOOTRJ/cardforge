@@ -401,6 +401,14 @@ export function cardFormSchemaFor(
           message: "Intro must be 400 characters or fewer.",
         });
       }
+      // The saga creature's box (TODO 4.5d): a chapter's limit.
+      if (!rowsUntouched && (values.saga_creature_text ?? "").trim().length > 600) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["saga_creature_text"],
+          message: "Creature abilities must be 600 characters or fewer.",
+        });
+      }
     }
     if (rulesTextIsSubmitted) {
       check(ctx, ["rules_text"], cardRulesTextSchema, values.rules_text.trim());

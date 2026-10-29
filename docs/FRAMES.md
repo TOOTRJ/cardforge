@@ -9825,6 +9825,111 @@ back).
      back the server takes where `sagadfcback/c` is verified is no longer
      refused by the form. `c` stays published but unticked.
 
+### The saga creature (4.5d)
+
+TODO 4.5d, part A, 2026-10-28 (`feat/saga-creature-body`). An ADDITION: a
+new template, `sagacreature`; no layout bump, no sweep, no badge; stored
+sagas keep their look (a summon imported before it stays on `saga`, its P/T
+kept in the row and not drawn).
+
+- **What it dresses.** A one-faced saga whose type words say Creature —
+  Final Fantasy's "Summon:" cards (FIN / FIC / PFIN 2025, "Enchantment
+  Creature — Saga Knight"): 51 paper printings, 29 black-bordered (FIN #1,
+  #35–37, #77–78, #120–121, #160–163, #202–204; FIC #26–28, #42, #60–61,
+  #71; PFIN's seven prerelease stamps) and 22 borderless, Scryfall
+  2026-10-28. Every one prints Universes Beyond's triangle stamp. The
+  transform BACKS that are saga creatures (FIN's Dominants' summons, 34
+  printings) are part B (the ▼ variant), as are the 3 colourless ones' see-
+  through rail and box.
+- **What print shows** (22 black-bordered prints read at 1500 × 2100, the
+  numbers in `scripts/lib/saga-creature.mjs`): the TEXTURED saga (the
+  starfield frame field) with the reminder as a BAND across the card under
+  the title bar (237–433 px; the art window's top outline at 433–438, the
+  first divider on 438–446); the rail and the art column from there to the
+  type bar, whose outline sits at 1587–1722 on 22 of 22 — 173 px above the
+  saga's 1759–1895; under it M15's text box on the black border (to ≈ 1947
+  px) holding the creature's own ability or its flavour, one line centred on
+  every print (its capitals on 1792–1837), and M15's P/T plate.
+- **The masters** are PipGlyph's own composite (`scripts/build-saga-creature-frames.mjs`;
+  frames bucket only, provenance in `lib/cards/frame-sources.json`): Card
+  Conjurer's textured saga (its 'Nyx Frames' saga pack, `img/frames/saga/nyx/<k>.png`,
+  read from the pinned commit like a mask and never published as it is — the
+  `c` key its artifact silver, FIN #1's frame) with 165 rows cut out of the
+  reminder box (the fold's columns SQUEEZED into the band instead, its curl
+  running the whole height of the box) and 8 out of the rail; the window's
+  columns over the band painted with the box's own paper (each column
+  mirrored back into the paper's span: no seam) and its top rule drawn under
+  it (the master's own 4 px black); and from the box down the published
+  `m15nyx/<k>` rows in place, the box's top rim and inner shadow copied up
+  from under m15nyx's own bar and its paper taken from the saga's chapter
+  column (one pack's paper with the rail's). Keys w u b r g m c, no pairs (no
+  multicolour summon was printed).
+- **The profile** (`SAGACREATURE`) is the saga's — its rail, badges,
+  dividers, sizes, set symbol box — with the reminder's box the band (x
+  132–1384, 237–433; the fold's corner keep-outs squeezed with it), the rows
+  from 442 px (no reminder: from there too, the band left empty), the rail's
+  foot, the art window, the type line and the set symbol 173 px up; M15's P/T
+  slot on `m15nyx`'s plates (no new plate); and its SECOND BOX, the plain
+  rules box (`ChapterSlot.creatureBox`): x 110–1383, 1742–1937 px, 8 pt (the
+  prints' "Indestructible" is 391 px wide where 76 px sets 445), ONE line
+  centred — an ability or the flavour alone (`alignSingleLine: "centerAny"`)
+  — on the prints' row (`singleLinePadPx`: a single line is placed with 40
+  px under it, its capitals on 1792–1837 like FIN #36's), a longer text over
+  the whole box, the P/T plate a FLOAT of it (`TextSlot.ptFloat`: the lines
+  beside it break short of it, as the transform front's reverse P/T). The
+  profile offers no text alignment switch (a chapters frame).
+  `PROFILES.sagacreature` adds the Universes Beyond TRIANGLE stamp
+  (`M15UB_HOLO_STAMP`, `c` on the artifact silver's piece: the notch pieces
+  meet the body's bar — m15nyx's, M15's — at their feet as they meet
+  `m15ub`'s, median 0 levels apart) and M15's collector line — both opt-in
+  per card like every frame's, a new card starting with them on; on a
+  triangle frame "auto" stamps every rarity, as FIN prints (matte on a common
+  or uncommon, silver on a rare or mythic).
+- **Its text** (owner 2026-10-28: no new field). On the body the lines AFTER
+  the last chapter are the box's (`lib/cards/saga-creature.ts`
+  `splitSagaCreatureText` / `resolveSagaCreature`, both renderers) — exactly
+  how Scryfall's Oracle text sets a summon ("…\nV — Ultimate End — …
+  \nIndestructible") — except a modal chapter's "•" lines, which stay with
+  their chapter (FIC #71). The flavour is the card's own field, in the box
+  too. On every other saga a line after a chapter continues it, as before.
+  In the creator the saga editor shows a **Creature abilities** field under
+  the chapters on this frame only (`saga_creature_text`, form-only): opened
+  from the stored text's lines after the chapters, saved after the
+  serialized chapters (`submittedRulesOf`, `sagaCreatureFrame`), typeset as
+  rules text on blur and on the server (`print-typography.ts` reads the
+  rows' copy and then the box's lines), an untouched edit keeping the stored
+  text byte for byte.
+- **The kind gate** — ONE rule, `sagaCreatureFrameFits` (`lib/creator/card-kinds.ts`):
+  the Saga kind's third layout frame (`KIND_DEFS.saga.layoutTemplates`;
+  `TREATMENT_KINDS.sagacreature = ["saga"]`), for a saga whose type words
+  say Creature — the card type or a supertype word, never `printed_types`.
+  The server's gate (`frameKindGateError`, an edit that drops the word
+  too), the Frame tile (disabled with the reason), the import chooser
+  (`frameFitsImport`), the reference validator and the stand-in picks read
+  it.
+- **Rollout, an addition**: a NEW saga follows its Creature word onto the
+  body where it is verified in its colour, and back to the saga frame when
+  the word goes (`sagaCreatureFrameFor`: the creator's effect, the AI deck's
+  `resolveDeckCardFrame`); a stored saga keeps its frame; the Frame tiles are
+  the way back. Imports: rule `saga/creature/2015` (black-bordered, the
+  saga layout, a Creature word) is `nearest` on the saga frame until
+  `sagacreature` is verified in the card's colour, then EXACT on it
+  (`onceVerified` + `exactOnceVerified`; the triangle stamp, the
+  `universes-beyond` gap, is drawn there) — the landing and the patch
+  exactly main's until the tick, only the signature's name new
+  (`tests/unit/scryfall/saga-creature-imports.test.ts` holds all 51); the
+  borderless 22 stay on `borderless/layout`. The AI remix follows the import
+  (`remixFrameFor`).
+- **Left as built** (owner 2026-10-28, item 4: fixed only where a clean cut
+  through truly flat zones exists — none does):
+  - the ribbon's TIP ends ≈ 1575 px, 12 px above the bar as the pack draws
+    it; the prints end it ≈ 1520 (55 px higher). Moving it reveals frame
+    edge and paper under the old tip — no flat zone;
+  - the green key's paper keeps the pack's crackle (print is smooth): the
+    pack's own drawing, not a tone;
+  - the box's right edge is m15nyx's (1409 px; print 1402): its rim meets
+    the frame field's curve on 1723–1850, which no cut moves cleanly.
+
 ### Double-sided tokens (5.5 (c))
 
 TODO 5.5 (c), 2026-10-21 (`feat/dfc-tokens-pair`; owner Round 76). An
@@ -11273,12 +11378,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 90 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 91 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

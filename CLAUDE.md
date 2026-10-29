@@ -1024,6 +1024,32 @@ Rules and gotchas:
   creature kind; a spell page of another colour is the `part-colour` gap
   (4.26). An ADDITION: no bump, no sweep. `docs/FRAMES.md` "The Prepare
   frame (4.27)".
+- The saga creature (`sagacreature`; TODO 4.5d): FIN / FIC's "Summon:"
+  cards — a saga whose type words say Creature (the card type or a
+  supertype word, never `printed_types`), the Saga kind's third layout frame
+  (`TREATMENT_KINDS` + ONE gate, `sagaCreatureFrameFits` in
+  `lib/creator/card-kinds.ts`: the server's kind gate, the Frame tile, the
+  import chooser, the reference validator, stand-in picks). Masters: OUR OWN
+  composite (`scripts/build-saga-creature-frames.mjs`, numbers in
+  `scripts/lib/saga-creature.mjs`: Card Conjurer's textured saga read from
+  the pinned commit — never published as it is — rows cut, the reminder
+  widened into a band, m15nyx's rows from the box down; bucket only). The
+  profile is the saga's rail raised with its type bar 173 px, m15nyx's
+  plates, and a SECOND box (`ChapterSlot.creatureBox`): the plain rules box,
+  its text the lines AFTER the last chapter (`lib/cards/saga-creature.ts`,
+  both renderers — a "•" line stays with its chapter; every other saga reads
+  its text as before) and the flavour, ONE line centred on print's row
+  (`alignSingleLine: "centerAny"`, `singleLinePadPx`), the plate a float
+  (`TextSlot.ptFloat`). In the creator that text is the saga editor's
+  **Creature abilities** field on this frame only (`saga_creature_text`,
+  form-only; `submittedRulesOf` `sagaCreatureFrame` writes it after the
+  chapters — never a field of its own in the row). Its PROFILES entry adds
+  the Universes Beyond triangle stamp and M15's collector line (opt-in). An
+  ADDITION: a new saga follows its Creature word onto it where verified
+  (`sagaCreatureFrameFor`: the creator's effect, the AI deck), a stored saga
+  keeps its frame; imports `saga/creature/2015`, exact once verified, the
+  borderless printings nearest as before. The ▼-back variant and the
+  colourless see-through are part B. `docs/FRAMES.md` "The saga creature".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
   m15artifact / m15land under Variations — never a render-time pick, never

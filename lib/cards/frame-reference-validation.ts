@@ -17,6 +17,7 @@ import {
   isSingleBasicLand,
   kindFromCard,
   subtypeDressOf,
+  sagaCreatureFrameFits,
   subtypeFrameFits,
   templateIsBasicOnly,
   templateSupportsKind,
@@ -102,6 +103,12 @@ export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
 }
 
 /** The printing's front-face subtypes. */
+/** The printing's front face's type words, as the dresses read them. */
+function referenceTypeWords(card: ScryfallCard): { cardType?: string; supertype?: string } {
+  const { card_type, supertype } = parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line);
+  return { cardType: card_type, supertype };
+}
+
 function referenceSubtypes(card: ScryfallCard): string[] {
   const { subtypes_text } = parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line);
   return subtypes_text ? subtypes_text.split(", ") : [];
@@ -301,6 +308,10 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} isn't a ${subtypeDressOf(template)}; the ${label} frame dresses ${subtypeDressOf(template)}s only.`,
     );
+  } else if (!sagaCreatureFrameFits(template, referenceTypeWords(card))) {
+    // The saga creature body (TODO 4.5d) is verified against saga
+    // CREATURES only — a plain saga never prints on it.
+    errors.push(`${card.name} isn't a creature; the ${label} frame dresses sagas that are creatures only.`);
   } else {
     // A creature may borrow the artifact frame (TODO 1.7) or the Nyx
     // showcase (owner decision A3), but only an Artifact / Enchantment

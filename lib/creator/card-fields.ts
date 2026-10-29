@@ -3,6 +3,7 @@
 // Extracted from components/creator/card-creator-form.tsx; nothing here may
 // read component state.
 
+import { splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
@@ -35,7 +36,7 @@ import {
   loyaltyFromRulesText,
   sagaEditorRows,
 } from "@/lib/cards/face-content";
-import { KIND_DEFS, dfcLayoutForKind, extendedArtDressFor, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, dfcLayoutForKind, extendedArtDressFor, isSagaCreatureDress, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
@@ -57,6 +58,7 @@ function structuredRowsFrom(card: Card): {
   loyalty_abilities: LoyaltyRowFormValues[];
   saga_intro: string;
   saga_chapters: SagaChapterFormValues[];
+  saga_creature_text: string;
 } {
   const kind = kindFromCard(
     card.card_type,
@@ -70,19 +72,27 @@ function structuredRowsFrom(card: Card): {
       loyalty_abilities: rows.map((r) => ({ cost: r.cost ?? "", text: r.text })),
       saga_intro: "",
       saga_chapters: [],
+      saga_creature_text: "",
     };
   }
   if (kind === "saga") {
     // (A marker the numbers alone would not give back — "II, I", "I, XI" —
     // rides on its row: lib/cards/face-content.ts sagaEditorRows.)
-    const saga = sagaEditorRows(card.face_content, card.rules_text);
+    // A saga CREATURE (TODO 4.5d) opens its rows from the rail's text and
+    // its box from the lines after the last chapter (lib/cards/saga-creature.ts).
+    const template = (card.frame_style as FrameStyle | null)?.template;
+    const split = isSagaCreatureDress(normalizeFrameTemplate(template))
+      ? splitSagaCreatureText(card.rules_text)
+      : { railText: card.rules_text, creatureText: null };
+    const saga = sagaEditorRows(card.face_content, split.railText);
     return {
       loyalty_abilities: [],
       saga_intro: saga.intro ?? "",
       saga_chapters: saga.chapters,
+      saga_creature_text: split.creatureText ?? "",
     };
   }
-  return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };
+  return { loyalty_abilities: [], saga_intro: "", saga_chapters: [], saga_creature_text: "" };
 }
 
 /** A blank second face for a card of `kind` (TODO 3b.8). A frame that
@@ -210,6 +220,7 @@ export function defaultValuesFor(
       loyalty_abilities: [],
       saga_intro: "",
       saga_chapters: [],
+      saga_creature_text: "",
       station_pt_tier: null,
       flavor_text: "",
       // A fresh card is a 1/1 creature until the maker says otherwise — the

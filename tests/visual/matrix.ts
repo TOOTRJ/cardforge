@@ -327,6 +327,24 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
           : "When this Siege enters, discard a card, then draw a card.",
       };
     case "saga":
+      // The saga creature (TODO 4.5d) bakes a saga CREATURE: FIN #36's shape
+      // short (the reminder band, a four-badge row, its ability in the box,
+      // a P/T), and long a two-paragraph box beside the plate.
+      if (template === "sagacreature") {
+        return {
+          title: long ? "Summon: Knights of the Round Table Eternal" : "Summon: Knights of Round",
+          card_type: "enchantment",
+          supertype: "Creature",
+          subtypes: long ? ["Saga", "Knight", "Spirit"] : ["Saga", "Knight"],
+          cost: pips(colour, 2, 2),
+          power: long ? "12" : "3",
+          toughness: long ? "12" : "3",
+          rules_text: long
+            ? "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Destroy up to one target nonland permanent.\nII, III — Draw two cards, then discard a card.\nIV — Mega Flare — This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying, vigilance\nWard {2}"
+            : "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV — Create three 2/2 white Knight creature tokens.\nV — Ultimate End — Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+          flavor_text: long ? "Summoned from the far reaches of the crystal's light." : null,
+        };
+      }
       return {
         title: long ? "The Chronicle of the Endless Long Night" : "The Eldest Reborn",
         card_type: "enchantment",
@@ -2602,6 +2620,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "tardis",
   // …and the OTJ Breaking News' oval (TODO 4.11 wave 2: the pack's one tab).
   "breakingnews",
+  // …and the saga creature's triangle (TODO 4.5d: the Universes Beyond piece
+  // over its M15 bar).
+  "sagacreature",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

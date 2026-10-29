@@ -141,6 +141,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       "sagadfcfront",
       // …and its back (5.5 (b) PR 2): the same rail.
       "sagadfcback",
+      // The saga creature (TODO 4.5d): the saga's rail — its second box sets
+      // ONE line centred by itself (alignSingleLine "centerAny"), as print.
+      "sagacreature",
       "extendedartstation", "m15textless", "m15textlessland",
       // The Nyx dress's textless heights (TODO 4.51), as their plain twins.
       "m20tokennyx", "m20tokenartifactnyx",

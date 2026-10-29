@@ -94,6 +94,8 @@ describe("the switch values", () => {
       "m15mdfcback",
       "m15mdfclandfront",
       "m15mdfclandback",
+      // The saga creature (TODO 4.5d): M15's two lines in the black bar.
+      "sagacreature",
       // The Lord of the Rings scroll (TODO 4.11): M15's slot on its border.
       "lotrscroll",
       // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): M15's slot
