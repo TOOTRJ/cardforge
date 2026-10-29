@@ -103,21 +103,6 @@ function noiseFilter(id, { freq, octaves = 4, seed, color, gain = 1.4, bias = -0
   </filter>`;
 }
 
-/** Caustic light (the net of bright lines under moving water): turbulence
- *  folded through a narrow transfer band. */
-function causticFilter(id, { freq, seed, color }) {
-  const [r, g, b] = hexRgb(color).map((v) => round(v / 255));
-  return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-    <feTurbulence type="turbulence" baseFrequency="${freq}" numOctaves="2" seed="${seed}" result="n"/>
-    <feColorMatrix in="n" type="luminanceToAlpha" result="l"/>
-    <feComponentTransfer in="l">
-      <feFuncA type="table" tableValues="0 0.05 0.55 1 0.55 0.05 0 0 0 0"/>
-    </feComponentTransfer>
-    <feColorMatrix type="matrix" values="0 0 0 0 ${r}  0 0 0 0 ${g}  0 0 0 0 ${b}  0 0 0 1 0"/>
-    <feGaussianBlur stdDeviation="1.6"/>
-  </filter>`;
-}
-
 function blurFilter(id, sd) {
   return `<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${sd}"/></filter>`;
 }
@@ -281,14 +266,16 @@ const COVERS = [
         ${glow("deep", "#123a7a", 0.5)}
         ${linear("fadeDown", 90, [[0, "#ffffff", 1], [0.55, "#ffffff", 0.15], [0.8, "#ffffff", 0]])}
         <mask id="topOnly"><rect width="${W}" height="${H}" fill="url(#fadeDown)"/></mask>
-        ${causticFilter("caustics", { freq: "0.0065 0.0095", seed: 31, color: "#9fd4ff" })}
+        ${noiseFilter("shimmer", { freq: "0.0006 0.0042", octaves: 4, seed: 31, color: "#a9d6ff", gain: 1.5, bias: -0.6, blur: 6 })}
         ${blurFilter("soft", 22)}
         ${blurFilter("bubbles", 1.4)}`;
+      // The surface seen from below: soft, wide bands of light where it
+      // breaks, fading into the deep — no cell pattern, nothing that tiles.
       const body = `
         ${ellipse("deep", 1200, 900, 1700, 700)}
         ${ellipse("surface", 1650, 60, 1500, 520)}
-        <g mask="url(#topOnly)"><rect width="${W}" height="${H}" filter="url(#caustics)" opacity="0.22"/></g>
-        ${shafts(rand, { origin: [1700, -260], count: 10, spread: [72, 120], length: 1750, width: [26, 90], color: "#a8d8ff", opacity: [0.025, 0.065], filter: "soft" })}
+        <g mask="url(#topOnly)"><rect width="${W}" height="${H}" filter="url(#shimmer)" opacity="0.42"/></g>
+        ${shafts(rand, { origin: [1700, -260], count: 12, spread: [72, 120], length: 1750, width: [26, 96], color: "#a8d8ff", opacity: [0.03, 0.075], filter: "soft" })}
         ${particles(rand, { count: 46, region: [1350, 300, 2350, 1300], radius: [2, 7], color: "#cfeaff", opacity: [0.12, 0.38], filter: "bubbles" })}`;
       return { defs, body };
     },
