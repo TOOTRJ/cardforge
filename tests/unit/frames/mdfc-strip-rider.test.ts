@@ -268,7 +268,7 @@ describe("the strip rider's recipe (scripts/lib/cc-frames.mjs MDFC_STRIP_CUTS)",
 });
 
 describe("the strip rider's key — the prints' rule (lib/cards/faces.ts stripKeyOf)", () => {
-  it("a mono-colour face is its letter (an artifact its colour), a two-colour spell gold, a two-colour or colourless land the land grey, a hybrid-dressed front the land grey, a colourless spell c", () => {
+  it("a mono-colour face is its letter (an artifact its colour), a two-colour spell gold, a two-colour or colourless land the land grey, a hybrid-dressed front the land grey, a colourless artifact a, a colourless spell c", () => {
     expect(stripKeyOf({ colorIdentity: ["blue"], cardType: "sorcery" })).toBe("u"); // STX #147's back
     expect(stripKeyOf({ colorIdentity: ["white"], cardType: "artifact" })).toBe("w"); // KHM #15 Sword of the Realms
     expect(stripKeyOf({ colorIdentity: ["black", "red"], cardType: "sorcery" })).toBe("m"); // STX #149's back, KHM #114's Tibalt
@@ -279,7 +279,11 @@ describe("the strip rider's key — the prints' rule (lib/cards/faces.ts stripKe
     expect(stripKeyOf({ colorIdentity: ["white"], cardType: "land" })).toBe("w"); // ZNR #258's Boulderloft
     expect(stripKeyOf({ colorIdentity: ["black", "red"], cardType: "sorcery", wearsHybrid: true })).toBe("l"); // MH3 #252's hybrid front, on its land back
     expect(stripKeyOf({ colorIdentity: ["black"], cardType: "sorcery", wearsHybrid: true })).toBe("b"); // a mono face can't wear the hybrid dress
-    expect(stripKeyOf({ colorIdentity: [], cardType: "artifact" })).toBe("c");
+    // A colourless ARTIFACT face wears the artifact master: its tab is `a`
+    // (STX #154 Pestilent Cauldron); one with no Artifact word the
+    // see-through frame's own `c` (TODO 5.11a, STX #6 Wandering Archaic).
+    expect(stripKeyOf({ colorIdentity: [], cardType: "artifact" })).toBe("a");
+    expect(stripKeyOf({ colorIdentity: [], cardType: "creature", supertype: "Artifact" })).toBe("a");
     expect(stripKeyOf({ colorIdentity: ["colorless"], cardType: "sorcery" })).toBe("c");
     expect(stripKeyOf({ colorIdentity: null, cardType: "creature" })).toBe("c");
     // The key is the one the face's MASTER is picked by (pickFrameColorKey):
@@ -373,7 +377,9 @@ describe("what the profiles declare and the renderers resolve (TODO 5.1c)", () =
       const slot = getFrameProfile(t).overlays!.find((o) => o.anatomy === "mdfcStrip")!;
       expect(slot).toBe(SLOT_OF[t]);
       expect(slot.assetPathTemplate).toBe(`/frames/${t}/strip/{key}.png`);
-      expect([...slot.keys]).toEqual(stripRiderKeys(MDFC_STRIP_CUTS[t]));
+      // (…and on the spell bodies the see-through `c` tab, TODO 5.11a — cut
+      // by scripts/build-mdfc-colourless-frames.mjs, not the importer.)
+      expect([...slot.keys]).toEqual([...stripRiderKeys(MDFC_STRIP_CUTS[t]), ...(t.includes("land") ? [] : ["c"])]);
       // The piece's box in card %, exact fractions of the HD px.
       expect(slot.rect.leftPct * 15).toBeCloseTo(MDFC_STRIP_BOX.x, 9);
       expect(slot.rect.topPct * 21).toBeCloseTo(MDFC_STRIP_BOX.y, 9);
@@ -386,10 +392,13 @@ describe("what the profiles declare and the renderers resolve (TODO 5.1c)", () =
       expect(slot.rect.leftPct + slot.rect.widthPct).toBeLessThanOrEqual(k.leftPct + k.widthPct);
       expect(slot.rect.topPct + slot.rect.heightPct).toBeLessThanOrEqual(k.topPct + k.heightPct + 0.1);
     }
-    expect(MDFC_STRIP_RIDER_FRONT.keyMap).toEqual({ c: "a" });
-    expect(MDFC_STRIP_RIDER_BACK.keyMap).toEqual({ c: "a" });
-    expect(MDFC_STRIP_RIDER_LAND_FRONT.keyMap).toEqual({ l: "c" });
-    expect(MDFC_STRIP_RIDER_LAND_BACK.keyMap).toEqual({ l: "c" });
+    // (The spell bodies drew a colourless other face as the artifact
+    // stand-in, `c` → `a`, until TODO 5.11a: now `a` and `c` are pieces of
+    // their own; the land bodies take an artifact other face as their grey.)
+    expect(MDFC_STRIP_RIDER_FRONT.keyMap).toBeUndefined();
+    expect(MDFC_STRIP_RIDER_BACK.keyMap).toBeUndefined();
+    expect(MDFC_STRIP_RIDER_LAND_FRONT.keyMap).toEqual({ l: "c", a: "c" });
+    expect(MDFC_STRIP_RIDER_LAND_BACK.keyMap).toEqual({ l: "c", a: "c" });
     // …and the borderless modal pair (TODO 5.7): their own pieces, cut by
     // scripts/build-dfc-borderless-frames.mjs at the same box (its own
     // test: tests/unit/frames/dfc-borderless-masters.test.ts).

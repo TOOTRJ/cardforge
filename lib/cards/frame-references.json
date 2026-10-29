@@ -3277,7 +3277,7 @@
     }
   },
   "m15mdfcfront": {
-    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c: NO reference — no colourless modal front was printed on the plain 2015 frame (the design's STX #154 Pestilent Cauldron is a BLACK artifact, {2}{B}, on the black body; STX #6 Wandering Archaic, the only colourless modal face, is an Avatar on the see-through colourless frame, wave 2 / TODO 5.11): the artifact stand-in (design D2) is never offered, as on the back. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Egon #92 — not Valki #114, whose Tibalt back is a walker face the import keeps off the bodies (5.13, dfc/walker) — r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
+    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c: STX #6 Wandering Archaic (TODO 5.11a) — the only colourless modal face with no Artifact word, a Creature — Avatar on the SEE-THROUGH colourless frame, which the body's `c` master is since 5.11a (PipGlyph's composite of m15/c and this body's housing and strip); alternate PSTX #6s (the prerelease stamp; its scan reads a blue cast). The design's STX #154 Pestilent Cauldron is a BLACK artifact, {2}{B}, on the black body; a colourless ARTIFACT face wears the artifact master `a` (artifactMasterKeys), never `c`. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Egon #92 — not Valki #114, whose Tibalt back is a walker face the import keeps off the bodies (5.13, dfc/walker) — r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
     "colors": {
       "w": [
         {
@@ -3359,7 +3359,18 @@
           "scryfallId": "b76bed98-30b1-4572-b36c-684ada06826c"
         }
       ],
-      "c": null,
+      "c": [
+        {
+          "name": "Wandering Archaic",
+          "set": "stx",
+          "scryfallId": "18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312"
+        },
+        {
+          "name": "Wandering Archaic",
+          "set": "pstx",
+          "scryfallId": "a662a862-c592-4c5b-9728-279d04be22bf"
+        }
+      ],
       "m": [
         {
           "name": "Bloodsoaked Insight",
@@ -3375,7 +3386,7 @@
     }
   },
   "m15mdfcback": {
-    "note": "The modal BACK body (TODO 5.1b): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). The only 2015-frame modal backs that are spells are STX's (two-colour cards, one colour per face — the back's strip prints in the FRONT's colour, which the master's own-colour strip does not: a 5.1b review question) and the Marvel sets' creatures: w STX #150 Revel in Silence, u STX #147 Echoing Equation, b STX #148 Search for Blex, r STX #159 Flamethrower Sonata, g STX #151 Journey to the Oracle, m MSH #18 The Sensational She-Hulk (a GW back with a cost and the dark gold plate; its strip prints the Marvel '2/2 Creature' form, not built). c: NO reference — no colourless modal back was printed on the plain 2015 frame (every KHM artifact back is a COLOURED artifact: KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black — drawn on their colour's body in wave 1); the artifact stand-in is never offered. Alternates: the KHM Gods' backs — coloured artifacts drawn on their colour's body (w Sword of the Realms #15 / Valkmira #21, b Tergrid's Lantern #112 / Throne of Death #92, r Toralf's Hammer #154 / Harnfel #123, g The Ringhart Crest #181) and u Hakka, Whispering Raven #40 (a creature back: the dark plate).",
+    "note": "The modal BACK body (TODO 5.1b): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). The only 2015-frame modal backs that are spells are STX's (two-colour cards, one colour per face — the back's strip prints in the FRONT's colour, which the master's own-colour strip does not: a 5.1b review question) and the Marvel sets' creatures: w STX #150 Revel in Silence, u STX #147 Echoing Equation, b STX #148 Search for Blex, r STX #159 Flamethrower Sonata, g STX #151 Journey to the Oracle, m MSH #18 The Sensational She-Hulk (a GW back with a cost and the dark gold plate; its strip prints the Marvel '2/2 Creature' form, not built). c: STX #6's back, Explore the Vastlands (TODO 5.11a) — a colourless Sorcery on the SEE-THROUGH colourless frame (the body's `c` master since 5.11a), its bars and box darker than the front's as every modal back's; alternate PSTX #6s. Every KHM artifact back is a COLOURED artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black — drawn on their colour's body); a colourless ARTIFACT back would wear the artifact master `a`. Alternates: the KHM Gods' backs — coloured artifacts drawn on their colour's body (w Sword of the Realms #15 / Valkmira #21, b Tergrid's Lantern #112 / Throne of Death #92, r Toralf's Hammer #154 / Harnfel #123, g The Ringhart Crest #181) and u Hakka, Whispering Raven #40 (a creature back: the dark plate).",
     "colors": {
       "w": [
         {
@@ -3465,7 +3476,20 @@
           "face": 1
         }
       ],
-      "c": null,
+      "c": [
+        {
+          "name": "Explore the Vastlands",
+          "set": "stx",
+          "scryfallId": "18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312",
+          "face": 1
+        },
+        {
+          "name": "Explore the Vastlands",
+          "set": "pstx",
+          "scryfallId": "a662a862-c592-4c5b-9728-279d04be22bf",
+          "face": 1
+        }
+      ],
       "m": [
         {
           "name": "The Sensational She-Hulk",

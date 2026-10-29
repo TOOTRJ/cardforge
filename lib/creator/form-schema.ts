@@ -36,10 +36,10 @@ import {
   loyaltyCostSchema,
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForCard, kindFromCard } from "@/lib/creator/card-kinds";
-import { colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront, type DfcIconFamily } from "@/lib/cards/dfc";
+import { colorlessFaceAllowed, colorlessFaceFits, dfcLookOf, isDfcFaceType, isSagaFront, type DfcIconFamily } from "@/lib/cards/dfc";
 import { creatorBackBodyFor } from "@/lib/creator/saga-back";
 import { SAGA_TWO_FACES_COLOURLESS } from "@/lib/creator/saga-faces";
-import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT, DFC_SEE_THROUGH_UNVERIFIED } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
   missingSecondFaceName,
@@ -195,6 +195,7 @@ export function cardFormSchemaFor(
         values.frame_style?.template,
         { cardType: values.card_type || null, supertype: values.supertype },
         values.color_identity,
+        backBody.verifiedKeys,
       );
       if (frontColourError) {
         ctx.addIssue({ code: "custom", path: ["color_identity"], message: frontColourError });
@@ -314,7 +315,7 @@ export function cardFormSchemaFor(
           if (
             body &&
             pickFrameColorKey(colour) === "c" &&
-            !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype })
+            !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype }, backBody.verifiedKeys)
           ) {
             // (A colourless double-faced saga whose back takes the front's
             // colour — TODO 5.5 (b), owner Round 73 — is told so where the
@@ -322,7 +323,12 @@ export function cardFormSchemaFor(
             if (isSagaFront(values.frame_style?.template) && back.color_identity.length === 0) {
               ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: SAGA_TWO_FACES_COLOURLESS });
             } else {
-              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: DFC_COLORLESS_NEEDS_ARTIFACT });
+              // (The see-through `c` of the modal back, TODO 5.11a, not
+              // ticked yet: the face's words are fine, the frame isn't.)
+              const message = colorlessFaceFits(body, { cardType: back.card_type, supertype: back.supertype })
+                ? DFC_SEE_THROUGH_UNVERIFIED
+                : DFC_COLORLESS_NEEDS_ARTIFACT;
+              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message });
             }
           }
         }

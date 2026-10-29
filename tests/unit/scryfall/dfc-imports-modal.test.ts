@@ -66,15 +66,16 @@ describe("a modal printing on the modal bodies (5.1b)", () => {
     });
   });
 
-  it("the registry: exact on the modal front body; a colourless Avatar front and a devoid or snow dress are the body's frame landing on the era frame (5.11); borderless is nearest on the body", () => {
+  it("the registry: exact on the modal front body — a colourless Avatar front too since 5.11a; a devoid or snow dress is the body's frame landing on the era frame (5.11); borderless is nearest on the body", () => {
     expect(frameMatchFromScryfall(printing("stx-147"))).toMatchObject({ signature: "modal/2015", status: "exact", template: "m15mdfcfront" });
     expect(frameMatchFromScryfall(printing("znr-12"))).toMatchObject({ signature: "modal/2015", status: "exact", template: "m15mdfcfront" });
     expect(frameMatchFromScryfall(printing("znr-12")).onceVerified).toBeUndefined();
     // STX #6 Wandering Archaic: a colourless creature front with no
-    // Artifact word.
-    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: "colourless-face", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
-    expect(frameMatchFromScryfall(printing("stx-6"))).toMatchObject({ signature: "dfc/colourless-face", status: "nearest", template: "m15mdfcfront", landOn: "m15", blockedBy: "5.11" });
-    expect(mapScryfallToFormPatch(printing("stx-6"))).toMatchObject({ kind: "creature", frame_template: "m15" });
+    // Artifact word — on the bodies' see-through `c` since TODO 5.11a (the
+    // tick it waits for: tests/unit/frames/mdfc-colourless.test.ts).
+    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: null, kind: "mdfc", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
+    expect(frameMatchFromScryfall(printing("stx-6"))).toMatchObject({ signature: "modal/2015", status: "exact", template: "m15mdfcfront" });
+    expect(mapScryfallToFormPatch(printing("stx-6"))).toMatchObject({ kind: "mdfc", frame_template: "m15mdfcfront" });
     // MH3 #253 Drowner of Truth, a devoid MDFC: the devoid frame with a
     // legacy back, as before 5.4 — never the plain body.
     expect(dfcImportOf(printing("mh3-253"))).toMatchObject({ blocked: "dress", frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });

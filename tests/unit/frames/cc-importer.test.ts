@@ -2156,8 +2156,15 @@ describe("provenance and hygiene", () => {
         // the published breakingnews masters; its own test:
         // tests/unit/cards/breaking-news-masthead.test.ts.
         "breakingnewsmasthead",
+        // …and the modal spell bodies' see-through `c` (TODO 5.11a):
+        // PipGlyph's composite (scripts/build-mdfc-colourless-frames.mjs)
+        // of the published m15/c and modal artifact masters; its own test:
+        // tests/unit/frames/mdfc-colourless.test.ts.
+        "mdfccolourless",
       ].sort(),
     );
+    expect(provenance.mdfccolourless.source).toBe("pipglyph");
+    expect(provenance.mdfccolourless.converter).toBe("scripts/build-mdfc-colourless-frames.mjs");
     expect(provenance.breakingnewsmasthead.source).toBe("pipglyph");
     expect(provenance.breakingnewsmasthead.converter).toBe("scripts/build-breaking-news-masthead.mjs");
     expect(provenance.breakingnewsmasthead.commit).toBeUndefined();

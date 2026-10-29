@@ -520,6 +520,12 @@ function transformContent(shape: VisualShape, colour: VisualColour, land: boolea
  *  creature // creature with a cost on the back (MSH #18's shape without
  *  the Marvel strip form) — the dark plate and the long strip texts. */
 function modalContent(shape: VisualShape, colour: VisualColour, land: boolean, backBody: FrameTemplate = "m15mdfcback"): Fields {
+  // The bordered spell bodies' `c` is the SEE-THROUGH colourless frame
+  // since TODO 5.11a: their colourless cases are STX #6 Wandering Archaic's
+  // shape — a colourless creature with no Artifact word // a colourless
+  // sorcery. (Before 5.11a these cases drew such a face on the artifact
+  // stand-in, a card no save could store.)
+  if (colour === "c" && !land && backBody === "m15mdfcback") return archaicContent(shape);
   const long = shape === "long";
   const pip = pips(colour, 0, 1);
   const backStyle = {
@@ -592,6 +598,46 @@ function modalContent(shape: VisualShape, colour: VisualColour, land: boolean, b
       rules_text: `As Soporific Springs enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add ${pip}.`,
       ...backStyle,
       frame_style: { template: "m15mdfclandback" as FrameTemplate },
+    },
+  };
+}
+
+/** The colourless modal card (TODO 5.11a): STX #6 Wandering Archaic //
+ *  Explore the Vastlands — both faces colourless with no Artifact word, on
+ *  the bodies' see-through `c`. The long card: the same shape, Legendary
+ *  (the crown's case) with the long texts. */
+function archaicContent(shape: VisualShape): Fields {
+  const long = shape === "long";
+  const backStyle = {
+    frame_style: { template: "m15mdfcback" as FrameTemplate },
+    color_identity: IDENTITY.c,
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+  };
+  return {
+    title: long ? "Wandering Archaic, Who Walks the Ninefold Path" : "Wandering Archaic",
+    card_type: "creature",
+    supertype: long ? "Legendary" : null,
+    subtypes: ["Avatar"],
+    cost: long ? "{X}{5}" : "{5}",
+    rules_text: long
+      ? LONG_RULES
+      : "Whenever an opponent casts an instant or sorcery spell, they may pay {2}. If they don't, you may copy that spell. You may choose new targets for the copy.",
+    flavor_text: long ? LONG_FLAVOR : "“Fly the path of nine birds.”",
+    power: "4",
+    toughness: "4",
+    back_face: {
+      title: long ? "Explore the Vastlands of the Ninefold Path" : "Explore the Vastlands",
+      cost: "{3}",
+      card_type: "sorcery",
+      // (Legendary on the long card, so the back's crown case draws one.)
+      supertype: long ? "Legendary" : null,
+      subtypes: [],
+      rules_text: long
+        ? DENSE_RULES
+        : "Each player looks at the top five cards of their library and may reveal a land card and/or an instant or sorcery card from among them. Each player gains 3 life.",
+      flavor_text: long ? LONG_FLAVOR : null,
+      ...backStyle,
     },
   };
 }
@@ -2369,7 +2415,10 @@ export function visualCases(): VisualCase[] {
   // land front // white land back); MH3 #252's shape (a hybrid-dressed W/U
   // front // W/U land back: the land grey on both faces).
   const stripRow = (body: FrameTemplate, front: VisualColour, back: VisualColour, shape: VisualShape = "short", backOver: Partial<NonNullable<CardRowForBake["back_face"]>> = {}, frontOver: Partial<CardRowForBake> = {}): Partial<CardRowForBake> => {
-    const row = dfcBodyRow(body, back, shape);
+    // (A colourless back keeps the strip cases' instant // sorcery shape:
+    // the generic `c` content is Wandering Archaic's since TODO 5.11a — the
+    // row is built in another colour and recoloured below, as every back.)
+    const row = dfcBodyRow(body, back === "c" && body === "m15mdfcback" ? "u" : back, shape);
     const backFace = row.back_face as Record<string, unknown> & { cost?: string | null };
     const land = body === "m15mdfclandback";
     return {
@@ -2388,6 +2437,33 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcback", "mdfc", "u", "long", { suffix: "@strip-w-hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "u", "long") });
   add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-a", row: stripRow("m15mdfcback", "w", "c", "short", { title: "Sword of the Realms", card_type: "artifact", subtypes: ["Equipment"], cost: "{3}", rules_text: "Equipped creature gets +2/+0." }) });
   add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-m", row: stripRow("m15mdfcback", "w", "wu") });
+  // TODO 5.11a: the see-through `c`'s own tab as the OTHER face's strip — a
+  // white front with a colourless sorcery back (the front's strip in the
+  // warm grey `c` piece), a blue back with a colourless creature front
+  // (the back's light `c` piece); and a colourless ARTIFACT face, which
+  // wears the artifact master `a` with no art under the frame, as before.
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-c", row: stripRow("m15mdfcback", "w", "c") });
+  add("m15mdfcback", "mdfc", "u", "short", {
+    suffix: "@strip-c",
+    back: { frontTemplate: "m15mdfcfront" },
+    row: stripRow("m15mdfcback", "c", "u", "short", {}, { title: "Wandering Archaic", card_type: "creature", subtypes: ["Avatar"], cost: "{5}", power: "4", toughness: "4" }),
+  });
+  add("m15mdfcfront", "mdfc", "c", "short", {
+    suffix: "@artifact",
+    row: {
+      ...dfcBodyRow("m15mdfcback", "c"),
+      title: "Pestilent Engine",
+      card_type: "artifact",
+      supertype: null,
+      subtypes: [],
+      cost: "{2}",
+      rules_text: "{T}: Each opponent loses 1 life.",
+      power: null,
+      toughness: null,
+    },
+  });
+  add("m15mdfcfront", "mdfc", "c", "long", { suffix: "@hd", preset: "hd" });
+  add("m15mdfcback", "mdfc", "c", "long", { suffix: "@hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: dfcBodyRow("m15mdfcback", "c", "long") });
   add("m15mdfcback", "mdfc", "wu", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "wu") });
   add("m15mdfclandfront", "mdfc", "g", "short", { suffix: "@strip-w", row: stripRow("m15mdfclandback", "g", "w") });
   add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });

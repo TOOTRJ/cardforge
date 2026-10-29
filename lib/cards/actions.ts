@@ -63,10 +63,13 @@ import {
   dfcFamilyOf,
   dfcFrontColorError,
   dfcFrontTypeError,
+  DFC_SEE_THROUGH_UNVERIFIED,
   resolveDfcBackFace,
   stripBackBody,
   type DfcBackFacePayload,
 } from "@/lib/cards/dfc-gate";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { isArtifactFrameType } from "@/lib/cards/anatomy";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -370,11 +373,18 @@ export async function createCardAction(
       return { ok: false, fieldErrors: { frame_style: frontTypeError } };
     }
     // The FRONT face's colourless rule (D2): on a DFC front body, `c` only
-    // with an Artifact word — the body's `c` is the artifact stand-in.
+    // with an Artifact word — the body's `c` is the artifact stand-in — or,
+    // on the modal front's see-through `c` (TODO 5.11a), once that is
+    // ticked again (an admin's frame preview skips the tick, as the rest).
     const frontColourError = dfcFrontColorError(
       storedFrameStyle.template,
       { cardType: data.card_type, supertype: data.supertype },
       data.color_identity,
+      framePreview
+        ? null
+        : templateTakesBackBody(storedFrameStyle.template)
+          ? await verifiedKeysOf()
+          : new Set<string>(),
     );
     if (frontColourError) {
       return { ok: false, fieldErrors: { color_identity: frontColourError } };
@@ -945,9 +955,22 @@ export async function updateCardAction(
         supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
       },
       update.color_identity ?? existing.color_identity,
+      templateTakesBackBody(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
     );
-    if (frontColourError) {
-      return { ok: false, fieldErrors: { color_identity: frontColourError } };
+    // The see-through `c` not ticked (TODO 5.11a) is a VERIFICATION refusal:
+    // a card already stored on it stays editable (the legacy pin — its frame
+    // and colour unchanged), and an admin's frame preview may save it.
+    const seeThroughPinned =
+      frontColourError === DFC_SEE_THROUGH_UNVERIFIED &&
+      nextFrontTemplate === (existing.frame_style as { template?: string } | null)?.template &&
+      pickFrameColorKey(existing.color_identity ?? []) === "c" &&
+      !isArtifactFrameType({ cardType: existing.card_type, supertype: existing.supertype });
+    if (frontColourError && !seeThroughPinned) {
+      if (frontColourError === DFC_SEE_THROUGH_UNVERIFIED && (await previewAllowed())) {
+        becomesPreview = !previewCard;
+      } else {
+        return { ok: false, fieldErrors: { color_identity: frontColourError } };
+      }
     }
   }
   if (data.back_face !== undefined || familyChanged || data.frame_style !== undefined) {

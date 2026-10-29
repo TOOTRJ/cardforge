@@ -380,23 +380,92 @@ export function backBodyFor(
 }
 
 /**
- * Whether a face may wear the colourless `c` key on `template` (D2, design
+ * The layout version the modal spell bodies' SEE-THROUGH `c` shipped at
+ * (TODO 5.11a, no bump: CARD_LAYOUT_VERSION when it merged). Their `c` combo
+ * was ticked before (production, 2026-10-06, at v41) against the ARTIFACT
+ * stand-in — STX #154 Pestilent Cauldron, whose face wears `a` — so that
+ * tick never looked at the see-through master: a colourless face with no
+ * Artifact word is offered on the body only once its `c` is ticked AGAIN at
+ * this version or later (seeThroughTickKeys), and the admin checklist asks
+ * for it (lib/cards/frame-verification-state.ts).
+ */
+export const SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION = 74;
+
+/** Whether `template` is a double-faced body whose `c` master is the
+ *  SEE-THROUGH colourless frame (TODO 5.11a: the modal spell bodies) — the
+ *  profile dresses a colourless ARTIFACT face in `a` and draws the art
+ *  under the frame for `c` (underFrameArt). */
+export function hasSeeThroughColorless(template: FrameTemplate | string | null | undefined): boolean {
+  if (!dfcBodyOf(template)) return false;
+  const profile = getFrameProfile(template ?? undefined);
+  return profile.artifactMasterKeys?.c === "a" && (profile.underFrameArt?.colors ?? []).includes("c");
+}
+
+/** The verified-key entry that publishes a body's see-through `c` to a
+ *  colourless face with no Artifact word (seeThroughTickKeys). Never a
+ *  frame_reviews row of its own: derived from the `c` row's tick. */
+export function seeThroughColorlessKey(template: string): string {
+  return `${template}/c:see-through`;
+}
+
+/**
+ * The see-through keys a set of frame_reviews rows publishes: one per
+ * see-through body whose `c` row is verified at
+ * SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION or later (a tick made while
+ * the master was the artifact stand-in — or before ticks recorded their
+ * version — publishes nothing). The verified-key readers append these
+ * (lib/cards/frame-reviews.ts).
+ */
+export function seeThroughTickKeys(
+  rows: readonly { template: string; color_key: string; verified?: boolean | null; verified_layout_version?: number | null }[],
+): string[] {
+  const out: string[] = [];
+  for (const row of rows) {
+    if (row.color_key !== "c" || row.verified === false) continue;
+    if ((row.verified_layout_version ?? -1) < SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION) continue;
+    if (!hasSeeThroughColorless(row.template)) continue;
+    out.push(seeThroughColorlessKey(row.template));
+  }
+  return out;
+}
+
+/**
+ * Whether a face's type line lets it wear the colourless `c` key on
+ * `template` AT ALL — the structure, not the verification (D2, design
  * 2026-10-02): on a DFC body whose `c` is the ARTIFACT master standing in
- * (every DFC pack's colourless frame is its artifact one — the profile
- * dresses `c` as `a`, FrameProfile.artifactMasterKeys), it is offered only
- * to a face whose type line says Artifact — never to a colourless Eldrazi
- * or Avatar face, whose see-through frame is wave 2 (TODO 5.11). The land
- * pair (5.1a) has ONE master under every key and no stand-in, so its `c`
- * is any land face's. On any other template the ordinary frame gate
- * decides, so this answers true.
+ * (the profile dresses `c` as `a`, FrameProfile.artifactMasterKeys) only a
+ * face whose type line says Artifact; on a body whose `c` is the
+ * SEE-THROUGH frame (TODO 5.11a: the modal spell bodies) any face. The land
+ * pair (5.1a) has ONE master under every key and no stand-in, so its `c` is
+ * any land face's. On any other template, true. The import mapper and the
+ * reference registry read this; every gate reads colorlessFaceAllowed.
+ */
+export function colorlessFaceFits(
+  template: FrameTemplate | string | null | undefined,
+  face: FrameTypeInfo | null | undefined,
+): boolean {
+  return colorlessFaceAllowed(template, face, null);
+}
+
+/**
+ * Whether a face may wear the colourless `c` key on `template` — the gate
+ * (the server's, the creator's, the AI's): colorlessFaceFits, and on a
+ * see-through body a face with no Artifact word only once the see-through
+ * `c` is ticked (seeThroughColorlessKey in `verifiedKeys`). `verifiedKeys`
+ * null = verification doesn't apply (an admin's frame preview, the
+ * structural question). The transform bodies keep refusing such a face
+ * (their `c` is the stand-in: TODO 5.11).
  */
 export function colorlessFaceAllowed(
   template: FrameTemplate | string | null | undefined,
   face: FrameTypeInfo | null | undefined,
+  verifiedKeys: ReadonlySet<string> | null,
 ): boolean {
   if (!dfcBodyOf(template)) return true;
   if (getFrameProfile(template ?? undefined).artifactMasterKeys?.c !== "a") return true;
-  return isArtifactFrameType(face);
+  if (isArtifactFrameType(face)) return true;
+  if (!hasSeeThroughColorless(template)) return false;
+  return verifiedKeys === null || verifiedKeys.has(seeThroughColorlessKey(String(template)));
 }
 
 /**

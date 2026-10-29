@@ -60,7 +60,9 @@ import {
   DFC_FACE_TYPES,
   bodyFor,
   colorlessFaceAllowed,
+  colorlessFaceFits,
   dfcLookOf,
+  seeThroughColorlessKey,
   isDfcIconFamily,
   namesSagaSubtype,
   type DfcIconFamily,
@@ -222,14 +224,42 @@ export function dfcColorKeys(kind: AiDfcKind, picked: FrameTemplate | null, veri
   );
 }
 
+/** Whether a MODAL card of this frame may be colourless with no Artifact
+ *  word on either face (TODO 5.11a, STX #6 Wandering Archaic): the front
+ *  body (the frame picked, else the default) and the default back are the
+ *  see-through `c`, each ticked again since it shipped
+ *  (seeThroughColorlessKey). */
+export function dfcSeeThroughColorlessOffered(kind: AiDfcKind, picked: FrameTemplate | null, verifiedKeys: ReadonlySet<string>): boolean {
+  if (kind !== "mdfc") return false;
+  const front = picked ?? dfcFrontBody(kind, "creature", null);
+  const back = front ? bodyFor("modal", "back", "creature", DEFAULT_DFC_ICON, dfcLookOf(front)) : null;
+  return Boolean(front && back && verifiedKeys.has(seeThroughColorlessKey(front)) && verifiedKeys.has(seeThroughColorlessKey(back)));
+}
+
 /** The colours the designer's hint may take — never colourless on a
- *  double-faced body (a colourless face needs an Artifact word there). */
+ *  double-faced body (a colourless face needs an Artifact word there),
+ *  but on the modal bodies' see-through `c` once it is ticked (TODO 5.11a). */
 export function dfcColorHints(kind: AiDfcKind, picked: FrameTemplate | null, verifiedKeys: ReadonlySet<string>): ColorIdentity[] {
   const byKey: Record<string, ColorIdentity> = { w: "white", u: "blue", b: "black", r: "red", g: "green", c: "colorless", m: "multicolor" };
+  const seeThrough = dfcSeeThroughColorlessOffered(kind, picked, verifiedKeys);
   return dfcColorKeys(kind, picked, verifiedKeys)
-    .filter((key) => kind === "dfc_token" || key !== "c")
+    .filter((key) => kind === "dfc_token" || key !== "c" || seeThrough)
     .map((key) => byKey[key]!)
     .filter(Boolean);
+}
+
+/** Whether a colourless back of this type FITS the kind's back body (its
+ *  type words, not its verification — the fit asks that with the keys):
+ *  colorlessFaceFits on the body the type derives (a land back's body takes
+ *  any land; the modal back's `c` is the see-through frame since TODO
+ *  5.11a, so any spell; the transform back's is the artifact stand-in). */
+function colourlessBackFits(kind: AiDfcKind, back: { card_type: CardType; supertype?: string | null }): boolean {
+  if (kind === "dfc_token") return true;
+  const face = { cardType: back.card_type, supertype: back.supertype ?? null };
+  const layout = dfcLayoutOfKind(kind);
+  const body = layout ? bodyFor(layout, "back", back.card_type, DEFAULT_DFC_ICON) : null;
+  if (body) return colorlessFaceFits(body, face);
+  return back.card_type === "land" || back.card_type === "artifact" || supertypeHasWord(back.supertype, "Artifact");
 }
 
 // ---------------------------------------------------------------------------
@@ -485,15 +515,11 @@ export function lintDfcDesign(card: DfcDesignCard, kind: AiDfcKind): { errors: L
       .filter((found) => !(found.field === "color_identity" && /no colored mana symbols/i.test(found.message)))
       .map(prefixed),
   );
-  // A colourless spell face needs an Artifact word on these bodies (D2).
+  // A colourless spell face needs an Artifact word on these bodies (D2) —
+  // but on the modal back's see-through `c` (TODO 5.11a), whose tick the
+  // fit asks for (dfcFitOf → colorlessFaceAllowed with the keys).
   const colourKey = pickFrameColorKey(resolvedBackColour(back, card.color_identity));
-  if (
-    colourKey === "c" &&
-    kind !== "dfc_token" &&
-    back.card_type !== "land" &&
-    back.card_type !== "artifact" &&
-    !supertypeHasWord(back.supertype, "Artifact")
-  ) {
+  if (colourKey === "c" && !colourlessBackFits(kind, back)) {
     errors.push(issue("color_identity", 'A colorless back face needs "Artifact" on its type line — give it a color.'));
   }
   return { errors, warnings };
@@ -531,13 +557,7 @@ export function autofixDfcParts<T extends DfcDesignCard>(card: T, kind: AiDfcKin
     const declared = new Set(colorLettersFromWords(resolvedBackColour(part, fixed.color_identity)));
     if (letters.some((letter) => !declared.has(letter))) part.color_identity = colorWordsFromLetters(letters);
   }
-  if (
-    kind !== "dfc_token" &&
-    pickFrameColorKey(resolvedBackColour(part, fixed.color_identity)) === "c" &&
-    part.card_type !== "land" &&
-    part.card_type !== "artifact" &&
-    !supertypeHasWord(part.supertype, "Artifact")
-  ) {
+  if (pickFrameColorKey(resolvedBackColour(part, fixed.color_identity)) === "c" && !colourlessBackFits(kind, part)) {
     part.color_identity = [];
   }
   return normalizeDfcDesign({ ...fixed, back_face: part }, kind);
@@ -672,7 +692,7 @@ export function dfcFitOf(
   if (kindError) return no(kindError, front);
   const typeError = dfcFrontTypeError(front, face.card_type);
   if (typeError) return no(typeError, front);
-  const colourError = dfcFrontColorError(front, { cardType: face.card_type, supertype: face.supertype ?? null }, colour);
+  const colourError = dfcFrontColorError(front, { cardType: face.card_type, supertype: face.supertype ?? null }, colour, verifiedKeys);
   if (colourError) return no(colourError, front);
   const gate = frameGateError(front, colour, verifiedKeys);
   if (gate) return no(gate, front);
@@ -707,7 +727,7 @@ export function dfcFitOf(
         verifiedKeys,
       );
   if (!backTemplate) return no(`No back-face frame exists for ${article(back.card_type)} ${back.card_type} back on this frame yet.`, front);
-  if (pickFrameColorKey(backColour) === "c" && !colorlessFaceAllowed(backTemplate, { cardType: back.card_type, supertype: back.supertype })) {
+  if (pickFrameColorKey(backColour) === "c" && !colorlessFaceAllowed(backTemplate, { cardType: back.card_type, supertype: back.supertype }, verifiedKeys)) {
     return no('A colorless back face needs "Artifact" on its type line.', front);
   }
   const resolved = resolveDfcBackFace({

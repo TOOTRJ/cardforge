@@ -266,6 +266,13 @@ const PICKS: readonly Pick[] = [
   { from: "sagadfcback/wub/transform-long", why: "double-faced saga back (5.5 (b) PR 2): four chapters, a long name before the well, the dot in three wedges" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
+  // The colourless modal card (TODO 5.11a, STX #6 Wandering Archaic): the
+  // see-through `c` — the art drawn under the frame on both faces, the
+  // housing's ▲ / ▲▼ over the bar's fill — and the `c` strip piece on a
+  // coloured face.
+  { from: "m15mdfcfront/c/mdfc-short", why: "colourless modal front (5.11a): the see-through c, the art under the frame, the housing over the bar's fill" },
+  { from: "m15mdfcback/c/mdfc-short", why: "colourless modal back (5.11a): the darker see-through bars and box, through the flip" },
+  { from: "m15mdfcfront/w/mdfc-short@strip-c", why: "a coloured modal front beside a colourless back (5.11a): the see-through c's warm grey tab as the strip" },
   // The borderless double-faced bodies (TODO 5.7): the grafted masters'
   // crowned twin under the borderless rider (6 px right, × 0.95) and the
   // borderless reverse P/T; the ▼ back's indicator and white ink; the modal

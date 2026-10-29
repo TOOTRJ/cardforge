@@ -214,6 +214,30 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
   // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
   // row and the bake's now agree there, as 750-cost-row-width's did.)
+  // --- TODO 5.11a: the first parity case whose P/T holds a pair that pulls
+  // in (Wandering Archaic's printed 4/4). Not introduced by 5.11a: every
+  // centred P/T with a kerned pair draws so on main. --------------------------
+  {
+    name: "hd-kerned-pt-centre",
+    size: "hd",
+    cases: /^m15mdfcfront\/c\/mdfc-short$/,
+    regions: ["stat"],
+    metric: "dx",
+    min: 5,
+    max: 7,
+    why:
+      "The P/T 4/4 sits 6 px further RIGHT in the preview at HD (2 at 750, within the limit). Beleren kerns `/4` by −271 units (lib/cards/font-metrics.ts statKerning): the browser centres the KERNED run in the plate's box, Satori lays the run out in a box the sum of its advances wide, centres that box and draws the run kerned from its left — so the bake's ink sits half the kerning (−11 px at 86 px, StatSlot.endKerned's own example) left of the preview's. The end-aligned slots correct it in the bake (endKerned); the centred plates do not, on any frame (the same code draws every M15 plate — not measured on another case: no other parity case prints a kerned P/T). A fix moves every stored P/T with a kerned pair — a layout bump, an owner question, not this PR's.",
+  },
+  {
+    name: "hd-kerned-pt-centre-tile",
+    size: "hd",
+    cases: /^m15mdfcfront\/c\/mdfc-short$/,
+    regions: ["card"],
+    metric: "tileMad",
+    min: 62,
+    max: 72,
+    why: "The worst tile of the same card is the P/T's (hd-kerned-pt-centre: the digits 6 px apart): 66.8 on macOS, over the 65 limit by that tile alone.",
+  },
 ];
 
 /**

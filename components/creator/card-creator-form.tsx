@@ -2292,7 +2292,7 @@ export function CardCreatorForm({
     if (pickFrameColorKey(colour) !== "c") return;
     const dfcKind = kindFromCard(cardType, template);
     if (!dfcLayoutForKind(dfcKind)) return;
-    if (colorlessFaceAllowed(template, { cardType, supertype: getValues("supertype") })) return;
+    if (colorlessFaceAllowed(template, { cardType, supertype: getValues("supertype") }, verifiedFrameSet)) return;
     const verified = framesForKind(dfcKind, verifiedFrameSet).find((choice) => choice.template === template);
     const key = verified?.availableColorKeys.find((k) => k !== "c");
     if (!key) return;

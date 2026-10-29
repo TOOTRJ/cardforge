@@ -208,6 +208,7 @@ describe("an own card's kept frame is always a card the save accepts", () => {
                     stored.template,
                     { cardType: data.card_type, supertype: data.supertype },
                     data.color_identity,
+                    new Set<string>(),
                   );
                   if (frontColour) note(`front colour: ${frontColour}`);
                   const backGate = resolveDfcBackFace({

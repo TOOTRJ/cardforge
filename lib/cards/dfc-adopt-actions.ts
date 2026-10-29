@@ -107,6 +107,7 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
     plan.frontBody,
     { cardType: existing.card_type, supertype: existing.supertype },
     existing.color_identity,
+    verifiedKeys,
   );
   if (frontColourGate) return { ok: false, formError: frontColourGate };
   // The back's body is the gate's to derive (sent without one): a Saga back
