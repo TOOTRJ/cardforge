@@ -1535,9 +1535,12 @@ export type Database = {
       feedback: {
         Row: {
           admin_note: string | null;
+          // Migration 0146 (TODO DK10.1): NULL = /feedback, "decks" = the deck dialog.
+          area: string | null;
           card_id: string | null;
           category: string;
           created_at: string;
+          deck_id: string | null;
           frame_template: string | null;
           id: string;
           message: string;
@@ -1547,12 +1550,15 @@ export type Database = {
           status: string;
           subject: string;
           user_id: string | null;
+          viewport: string | null;
         };
         Insert: {
           admin_note?: string | null;
+          area?: string | null;
           card_id?: string | null;
           category: string;
           created_at?: string;
+          deck_id?: string | null;
           frame_template?: string | null;
           id?: string;
           message: string;
@@ -1562,12 +1568,15 @@ export type Database = {
           status?: string;
           subject: string;
           user_id?: string | null;
+          viewport?: string | null;
         };
         Update: {
           admin_note?: string | null;
+          area?: string | null;
           card_id?: string | null;
           category?: string;
           created_at?: string;
+          deck_id?: string | null;
           frame_template?: string | null;
           id?: string;
           message?: string;
@@ -1577,6 +1586,7 @@ export type Database = {
           status?: string;
           subject?: string;
           user_id?: string | null;
+          viewport?: string | null;
         };
         Relationships: [
           {
@@ -1584,6 +1594,13 @@ export type Database = {
             columns: ["card_id"];
             isOneToOne: false;
             referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "feedback_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
             referencedColumns: ["id"];
           },
         ];

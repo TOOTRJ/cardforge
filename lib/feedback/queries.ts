@@ -2,7 +2,13 @@ import "server-only";
 
 import { createClient, getCurrentUser, getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
-import type { FeedbackCategory, FeedbackStatus } from "@/lib/feedback/schemas";
+import {
+  isFeedbackArea,
+  type FeedbackArea,
+  type FeedbackCategory,
+  type FeedbackStatus,
+} from "@/lib/feedback/schemas";
+import type { FeedbackInboxFilter } from "@/lib/feedback/inbox-filters";
 
 export type MyFeedbackItem = {
   id: string;
@@ -40,6 +46,14 @@ export type AdminFeedbackItem = {
   message: string;
   frameTemplate: string | null;
   pageUrl: string | null;
+  /** Where it was sent from (0146): null = the general /feedback page. */
+  area: FeedbackArea | null;
+  /** The deck the deck dialog was opened on — null when none was attached
+   *  or the deck was deleted since (0146's `on delete set null`). A private
+   *  deck's page opens for its owner only (`isPrivate`: no link). */
+  deck: { id: string; slug: string; title: string; isPrivate: boolean } | null;
+  /** The sender's window, "<width>x<height>". */
+  viewport: string | null;
   status: FeedbackStatus;
   createdAt: string;
   user: { username: string | null; displayName: string | null } | null;
@@ -57,9 +71,7 @@ export async function countNewFeedback(): Promise<number> {
   return count ?? 0;
 }
 
-/** Which submissions the admin inbox shows: one status, everything, or the
- *  default "unresolved" (new + reviewed — anything still needing a look). */
-export type FeedbackInboxFilter = FeedbackStatus | "unresolved" | "all";
+export type { FeedbackInboxFilter };
 
 /** Statuses that still need attention (the inbox default). */
 const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewed"];
@@ -73,6 +85,8 @@ const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewe
  *  says so rather than "Inbox zero". */
 export async function listAllFeedback(
   filter: FeedbackInboxFilter = "unresolved",
+  /** One area only (0146); omitted / null = every area, /feedback's too. */
+  area: FeedbackArea | null = null,
 ): Promise<{ items: AdminFeedbackItem[]; loadError: boolean } | null> {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return null;
@@ -81,11 +95,12 @@ export async function listAllFeedback(
   const admin = createAdminClient();
   let query = admin
     .from("feedback")
-    .select("id, category, subject, message, frame_template, page_url, status, created_at, user_id")
+    .select("id, category, subject, message, frame_template, page_url, area, deck_id, viewport, status, created_at, user_id")
     .order("created_at", { ascending: false })
     .limit(200);
   if (filter === "unresolved") query = query.in("status", [...UNRESOLVED_FEEDBACK_STATUSES]);
   else if (filter !== "all") query = query.eq("status", filter);
+  if (area) query = query.eq("area", area);
   const { data: fetched, error } = await query;
   if (error || !fetched) {
     console.error("[admin/feedback] feedback read failed:", error?.message ?? "no data");
@@ -119,6 +134,26 @@ export async function listAllFeedback(
     }
   }
 
+  // The decks the deck dialog attached, in one read. A private one is named
+  // too (the service role reads it), but its page opens for its owner only
+  // — the inbox shows its title without a link.
+  const deckIds = [...new Set(data.map((r) => r.deck_id).filter(Boolean))] as string[];
+  const decks = new Map<string, NonNullable<AdminFeedbackItem["deck"]>>();
+  if (deckIds.length > 0) {
+    const { data: deckRows, error: decksError } = await admin
+      .from("decks")
+      .select("id, slug, title, visibility")
+      .in("id", deckIds);
+    if (decksError) {
+      // Every deck link would be missing: say so instead.
+      console.error("[admin/feedback] deck read failed:", decksError.message);
+      loadError = true;
+    }
+    for (const d of deckRows ?? []) {
+      decks.set(d.id, { id: d.id, slug: d.slug, title: d.title, isPrivate: d.visibility === "private" });
+    }
+  }
+
   const items = data.map((r) => ({
     id: r.id,
     category: r.category as FeedbackCategory,
@@ -126,6 +161,9 @@ export async function listAllFeedback(
     message: r.message,
     frameTemplate: r.frame_template,
     pageUrl: r.page_url,
+    area: isFeedbackArea(r.area) ? r.area : null,
+    deck: r.deck_id ? (decks.get(r.deck_id) ?? null) : null,
+    viewport: r.viewport,
     status: r.status as FeedbackStatus,
     createdAt: r.created_at,
     user: r.user_id ? (names.get(r.user_id) ?? null) : null,
