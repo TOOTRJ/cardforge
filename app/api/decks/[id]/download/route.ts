@@ -5,6 +5,7 @@ import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
+import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getDeckGuide } from "@/lib/decks/guides";
 import { buildDeckReportPdf } from "@/lib/decks/deck-report-pdf";
@@ -192,14 +193,19 @@ export async function GET(
 }
 
 function toExportEntries(items: Awaited<ReturnType<typeof listDeckCards>>) {
-  return items.map(({ entry, card }) => ({
-    name: entry.name,
-    quantity: entry.quantity,
-    board: entry.board,
-    set_code: entry.set_code,
-    collector_number: entry.collector_number,
-    type_line: entry.type_line,
-    mana_cost: entry.mana_cost,
-    proxyTitle: card?.title ?? null,
-  }));
+  return items.map(({ entry, card }) => {
+    // The entry's effective type line and cost (TODO DK2.7): an edited
+    // card's own, an unchanged import's printing.
+    const fields = effectiveEntryFields(entry, card);
+    return {
+      name: entry.name,
+      quantity: entry.quantity,
+      board: entry.board,
+      set_code: entry.set_code,
+      collector_number: entry.collector_number,
+      type_line: fields.typeLine,
+      mana_cost: fields.cost,
+      proxyTitle: card?.title ?? null,
+    };
+  });
 }

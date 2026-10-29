@@ -829,6 +829,12 @@ export type Database = {
           supertype: string | null;
           nickname: string | null;
           printed_types: string | null;
+          /** Import provenance (migration 0144, TODO DK2.5): the Scryfall
+           *  printing the card was started from and the fingerprint of what it
+           *  printed at its first save (lib/cards/import-fingerprint.ts).
+           *  Insert-only — an API role can't change them. */
+          import_scryfall_id: string | null;
+          import_fingerprint: string | null;
           template_id: string | null;
           title: string;
           toughness: string | null;
@@ -883,6 +889,8 @@ export type Database = {
           lang?: string;
           slug: string;
           source_scryfall_id?: string | null;
+          import_scryfall_id?: string | null;
+          import_fingerprint?: string | null;
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
@@ -940,6 +948,8 @@ export type Database = {
           lang?: string;
           slug?: string;
           source_scryfall_id?: string | null;
+          import_scryfall_id?: string | null;
+          import_fingerprint?: string | null;
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
@@ -1535,9 +1545,12 @@ export type Database = {
       feedback: {
         Row: {
           admin_note: string | null;
+          // Migration 0146 (TODO DK10.1): NULL = /feedback, "decks" = the deck dialog.
+          area: string | null;
           card_id: string | null;
           category: string;
           created_at: string;
+          deck_id: string | null;
           frame_template: string | null;
           id: string;
           message: string;
@@ -1547,12 +1560,15 @@ export type Database = {
           status: string;
           subject: string;
           user_id: string | null;
+          viewport: string | null;
         };
         Insert: {
           admin_note?: string | null;
+          area?: string | null;
           card_id?: string | null;
           category: string;
           created_at?: string;
+          deck_id?: string | null;
           frame_template?: string | null;
           id?: string;
           message: string;
@@ -1562,12 +1578,15 @@ export type Database = {
           status?: string;
           subject: string;
           user_id?: string | null;
+          viewport?: string | null;
         };
         Update: {
           admin_note?: string | null;
+          area?: string | null;
           card_id?: string | null;
           category?: string;
           created_at?: string;
+          deck_id?: string | null;
           frame_template?: string | null;
           id?: string;
           message?: string;
@@ -1577,6 +1596,7 @@ export type Database = {
           status?: string;
           subject?: string;
           user_id?: string | null;
+          viewport?: string | null;
         };
         Relationships: [
           {
@@ -1584,6 +1604,13 @@ export type Database = {
             columns: ["card_id"];
             isOneToOne: false;
             referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "feedback_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
             referencedColumns: ["id"];
           },
         ];
@@ -1799,6 +1826,9 @@ export type Database = {
           rarity: string | null;
           scryfall_id: string | null;
           set_code: string | null;
+          /** How the entry got into the deck (migration 0144, TODO DK2.6);
+           *  null = written before 0144 and not placed by its backfill. */
+          source: string | null;
           type_line: string | null;
           updated_at: string;
         };
@@ -1819,6 +1849,7 @@ export type Database = {
           rarity?: string | null;
           scryfall_id?: string | null;
           set_code?: string | null;
+          source?: string | null;
           type_line?: string | null;
           updated_at?: string;
         };
@@ -1839,6 +1870,7 @@ export type Database = {
           rarity?: string | null;
           scryfall_id?: string | null;
           set_code?: string | null;
+          source?: string | null;
           type_line?: string | null;
           updated_at?: string;
         };
@@ -2041,9 +2073,25 @@ export type Database = {
         Args: { p_deck_id: string; p_entries: Json };
         Returns: Json;
       };
+      /** 0143; 0144 added the entry's origin (p_source: creator | link |
+       *  ai_generate | ai_remix, default creator) and the printing an AI
+       *  restyle keeps (p_scryfall_id). */
       add_custom_deck_entry: {
-        Args: { p_deck_id: string; p_card_id: string; p_name: string };
+        Args: {
+          p_deck_id: string;
+          p_card_id: string;
+          p_name: string;
+          p_source?: string;
+          p_scryfall_id?: string | null;
+        };
         Returns: boolean;
+      };
+      /** 0144 — the decks a card's page names (D3): the owner's own public,
+       *  non-empty decks, and another real creator's while the card is
+       *  public. p_limit defaults to 5, at most 24. */
+      public_decks_containing_card: {
+        Args: { p_card_id: string; p_limit?: number };
+        Returns: { slug: string; title: string }[];
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };

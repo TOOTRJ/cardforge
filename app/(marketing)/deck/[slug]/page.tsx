@@ -28,6 +28,8 @@ import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
+import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import {
   countDeckEntries,
   countRemixableDeckCards,
@@ -145,8 +147,8 @@ export default async function DeckDetailPage({
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck.id);
-  const { total: cardCount, remixed: customCount } = computeDeckAnalytics(items);
+  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck);
+  const { total: cardCount, linked: madeCount } = computeDeckAnalytics(items);
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
 
@@ -189,6 +191,7 @@ export default async function DeckDetailPage({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to decks
       </Link>
+      <DeckBetaBanner deckId={deck.id} signedIn={Boolean(user)} className="mb-6" />
 
       {/* The hero (TODO DK6.5): the cover — the same 16:9 picture every
           deck tile draws (lib/decks/cover.ts) — with the featured cards and
@@ -225,7 +228,9 @@ export default async function DeckDetailPage({
             ) : null}
             <span>
               {cardCount} card{cardCount === 1 ? "" : "s"}
-              {customCount > 0 ? ` · ${customCount} custom` : ""}
+              {/* The tiles' "made on PipGlyph" (lib/decks/tile-counts.ts),
+                  from the rows the page already read. */}
+              {madeCount > 0 ? ` · ${madeCount} made on PipGlyph` : ""}
             </span>
           </>
         }
@@ -275,6 +280,7 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
+            <DeckFeedbackButton deckId={deck.id} signedIn={Boolean(user)} className="h-9" />
             {/* Free for every viewer (TODO DK0.7); streams in with the
                 card list, so the header still paints at once. */}
             <Suspense fallback={null}>
@@ -307,6 +313,7 @@ export default async function DeckDetailPage({
           isOwner={isOwner}
         />
       </Suspense>
+      <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </div>
   );
 }
@@ -392,7 +399,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Analytics"
           title="Deck breakdown"
-          description="Mana curve, colors, and remix progress across the deck."
+          description="Mana curve, colors, and every card by status: imported, edited, remixed or original."
         />
         <div className="mt-6">
           <DeckAnalyticsPanel analytics={analytics} />

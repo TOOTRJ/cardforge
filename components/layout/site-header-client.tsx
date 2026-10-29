@@ -22,10 +22,13 @@ import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 // ---------------------------------------------------------------------------
 
 type SiteHeaderClientProps = {
+  /** Passed through to SiteHeader (AppShell's challenge pill). */
+  challengeBadge?: React.ReactNode;
   className?: string;
 };
 
 export function SiteHeaderClient({
+  challengeBadge,
   className,
 }: SiteHeaderClientProps) {
   const pathname = usePathname();
@@ -56,5 +59,5 @@ export function SiteHeaderClient({
     };
   }, [pathname]);
 
-  return <SiteHeader user={user} className={className} />;
+  return <SiteHeader user={user} challengeBadge={challengeBadge} className={className} />;
 }

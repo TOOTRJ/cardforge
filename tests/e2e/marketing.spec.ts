@@ -11,17 +11,22 @@ import { test, expect } from "@playwright/test";
 
 test("homepage renders the marketing chrome", async ({ page }) => {
   await page.goto("/");
-  // Logo + "Start creating" CTA — defining elements of the marketing
-  // header for an anonymous viewer.
-  await expect(page.getByRole("link", { name: /pipglyph/i }).first()).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /start creating/i }).first(),
-  ).toBeVisible();
+  // Logo + "Create a card" — the header's one start button (TODO NV1; it
+  // replaced "Create" and "Start creating") — and the grouped nav.
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: /pipglyph/i })).toBeVisible();
+  await expect(header.getByRole("link", { name: "Create a card" })).toHaveAttribute("href", "/create");
+  await expect(header.getByRole("button", { name: "Community" })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Learn" })).toBeVisible();
 });
 
-test("gallery link routes from header", async ({ page }) => {
+test("gallery link routes from the header's Community panel", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: /gallery/i }).first().click();
+  const header = page.getByRole("banner");
+  const community = header.getByRole("button", { name: "Community" });
+  await community.click();
+  await expect(community).toHaveAttribute("aria-expanded", "true");
+  await header.getByRole("link", { name: /card gallery/i }).click();
   await expect(page).toHaveURL(/\/gallery/);
   // The community gallery heading should land — even when no cards
   // populate the grid, the header renders.

@@ -2,20 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HelpCircle, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
+import { DeckEntryStatusBadge, NO_LONGER_AVAILABLE } from "@/components/decks/deck-entry-status-badge";
 import {
-  entryTypeLine,
   typeBucketFor,
   TYPE_BUCKET_PLURALS,
   TYPE_BUCKETS,
 } from "@/lib/decks/analytics";
-import { deckEntryState } from "@/types/deck";
+import { effectiveEntryFields } from "@/lib/decks/effective-entry";
+import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
 import type { DeckItem } from "@/lib/decks/queries";
-import type { DeckBoard } from "@/types/deck";
-import { DECK_BOARD_LABELS } from "@/types/deck";
+import type { DeckBoard, DeckEntryStatus } from "@/types/deck";
+import { DECK_BOARD_LABELS, DECK_ENTRY_STATUS_LABELS } from "@/types/deck";
 import { cn } from "@/lib/utils";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { hasBackPicture } from "@/lib/cards/tile-faces";
@@ -25,14 +25,16 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 // ---------------------------------------------------------------------------
 // DeckCardList — the deck's card list grouped by board, then by type bucket.
 // Client component: rows open the deck-card modal (info for everyone,
-// management for the owner), a status filter narrows the list, and the
-// real cards ⇄ custom cards toggle flips which image customized entries
-// show. The words are the deck vocabulary (TODO DK2.2,
-// components/creator/card-glossary.tsx): an entry still on its real card is
-// "Imported", one with your version linked is "Edited" — and the filter
+// management for the owner), the status filter narrows the list, and the
+// real cards ⇄ custom cards toggle flips which image an entry with both
+// shows. The words are the deck vocabulary (TODO DK2.2,
+// components/creator/card-glossary.tsx). Each row's badge is its status —
+// Imported / Edited / Remix / Original / Not found, ONE deckEntryStatus
+// (lib/decks/entry-status.ts), or "No longer available" — and the filter
 // chips say the same words as the badges, each showing exactly the rows
-// that wear its badge ("Custom" and "Placeholder" rows show under All until
-// the status chips of TODO DK5.6).
+// that wear its badge (TODO DK5.6's status chips). A row's group and cost
+// are its EFFECTIVE fields (lib/decks/effective-entry.ts: an edited card
+// counts as what it now is).
 // ---------------------------------------------------------------------------
 
 const BOARD_ORDER: readonly DeckBoard[] = [
@@ -43,7 +45,28 @@ const BOARD_ORDER: readonly DeckBoard[] = [
   "maybe",
 ];
 
-type RemixFilter = "all" | "needs" | "remixed";
+/** What a row's badge says: its status, or "No longer available". */
+type EntryBadge = DeckEntryStatus | "unavailable";
+/** The filter: every row, or the rows wearing one badge. */
+type StatusFilter = "all" | EntryBadge;
+
+/** The chips after Imported and Edited (always shown, #654), each only
+ *  where the deck has a row wearing it. */
+const OTHER_BADGES: readonly EntryBadge[] = ["remix", "original", "not_found", "unavailable"];
+
+const BADGE_LABELS: Record<EntryBadge, string> = {
+  ...DECK_ENTRY_STATUS_LABELS,
+  unavailable: NO_LONGER_AVAILABLE,
+};
+
+function entryBadge(item: DeckItem, viewerIsOwner: boolean): EntryBadge {
+  return deckEntryUnavailable(item.entry, item.card, viewerIsOwner) ? "unavailable" : deckEntryStatus(item.entry, item.card);
+}
+
+const countOf = (counts: ReadonlyMap<EntryBadge, number>, badge: EntryBadge) => {
+  const n = counts.get(badge) ?? 0;
+  return n > 0 ? ` (${n})` : "";
+};
 
 type DeckCardListProps = {
   items: DeckItem[];
@@ -56,7 +79,7 @@ export function DeckCardList({
   ownerUsername,
   canManage,
 }: DeckCardListProps) {
-  const [filter, setFilter] = useState<RemixFilter>("all");
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const [showProxies, setShowProxies] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -135,22 +158,23 @@ export function DeckCardList({
     focusNear(given.index);
   });
 
-  const anyRemixed = items.some((i) => i.entry.card_id);
-  // "needs" = the Imported badge's rows, "remixed" = the Edited badge's.
-  const importedCount = items.filter(
-    (i) => deckEntryState(i.entry) === "real",
-  ).length;
-  const editedCount = items.filter(
-    (i) => deckEntryState(i.entry) === "remixed",
-  ).length;
+  const anyLinked = items.some((i) => i.entry.card_id);
+  // Each row's badge, once: the status filter and the chips' counts read it.
+  const badgeOf = useMemo(() => {
+    const out = new Map<string, EntryBadge>();
+    for (const item of items) out.set(item.entry.id, entryBadge(item, canManage));
+    return out;
+  }, [items, canManage]);
+  const badgeCounts = useMemo(() => {
+    const counts = new Map<EntryBadge, number>();
+    for (const badge of badgeOf.values()) counts.set(badge, (counts.get(badge) ?? 0) + 1);
+    return counts;
+  }, [badgeOf]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
-    return items.filter((item) => {
-      const state = deckEntryState(item.entry);
-      return filter === "remixed" ? state === "remixed" : state === "real";
-    });
-  }, [items, filter]);
+    return items.filter((item) => badgeOf.get(item.entry.id) === filter);
+  }, [items, filter, badgeOf]);
 
   // The modal reads the CURRENT item from props by id, so a mutation +
   // router.refresh() re-renders it with fresh data instead of a stale copy.
@@ -187,17 +211,26 @@ export function DeckCardList({
             onClick={() => setFilter("all")}
           />
           <FilterChip
-            label={`Imported${importedCount > 0 ? ` (${importedCount})` : ""}`}
-            active={filter === "needs"}
-            onClick={() => setFilter("needs")}
+            label={`Imported${countOf(badgeCounts, "imported")}`}
+            active={filter === "imported"}
+            onClick={() => setFilter("imported")}
           />
           <FilterChip
-            label={`Edited${editedCount > 0 ? ` (${editedCount})` : ""}`}
-            active={filter === "remixed"}
-            onClick={() => setFilter("remixed")}
+            label={`Edited${countOf(badgeCounts, "edited")}`}
+            active={filter === "edited"}
+            onClick={() => setFilter("edited")}
           />
+          {/* The rest of the statuses, where the deck has them. */}
+          {OTHER_BADGES.filter((badge) => (badgeCounts.get(badge) ?? 0) > 0).map((badge) => (
+            <FilterChip
+              key={badge}
+              label={`${BADGE_LABELS[badge]}${countOf(badgeCounts, badge)}`}
+              active={filter === badge}
+              onClick={() => setFilter(badge)}
+            />
+          ))}
         </div>
-        {anyRemixed ? (
+        {anyLinked ? (
           <button
             type="button"
             onClick={() => setShowProxies((prev) => !prev)}
@@ -212,7 +245,7 @@ export function DeckCardList({
 
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">
-          {filter === "needs"
+          {filter === "imported"
             ? "Every real card here is edited. 🎉"
             : "No cards match this filter."}
         </p>
@@ -236,6 +269,7 @@ export function DeckCardList({
                 <BoardGroups
                   items={boardItems}
                   showProxies={showProxies}
+                  viewerIsOwner={canManage}
                   onOpen={(id) => setSelectedId(id)}
                 />
               </section>
@@ -289,17 +323,19 @@ function FilterChip({
 function BoardGroups({
   items,
   showProxies,
+  viewerIsOwner,
   onOpen,
 }: {
   items: DeckItem[];
   showProxies: boolean;
+  viewerIsOwner: boolean;
   onOpen: (deckCardId: string) => void;
 }) {
   const byBucket = new Map<string, DeckItem[]>();
   for (const item of items) {
-    // Same fallback as the analytics buckets — custom-only entries derive
-    // their type from the linked card instead of collapsing into "Other".
-    const bucket = typeBucketFor(entryTypeLine(item.entry, item.card));
+    // The analytics' bucket (effectiveEntryFields): an edited card groups
+    // as what it now is, a card with no printing by its own type line.
+    const bucket = typeBucketFor(effectiveEntryFields(item.entry, item.card).typeLine);
     const list = byBucket.get(bucket) ?? [];
     list.push(item);
     byBucket.set(bucket, list);
@@ -327,6 +363,7 @@ function BoardGroups({
                   key={item.entry.id}
                   item={item}
                   showProxies={showProxies}
+                  viewerIsOwner={viewerIsOwner}
                   onOpen={onOpen}
                 />
               ))}
@@ -341,14 +378,18 @@ function BoardGroups({
 function EntryRow({
   item,
   showProxies,
+  viewerIsOwner,
   onOpen,
 }: {
   item: DeckItem;
   showProxies: boolean;
+  viewerIsOwner: boolean;
   onOpen: (deckCardId: string) => void;
 }) {
   const { entry, card } = item;
-  const state = deckEntryState(entry);
+  const status = deckEntryStatus(entry, card);
+  const unavailable = deckEntryUnavailable(entry, card, viewerIsOwner);
+  const fields = effectiveEntryFields(entry, card, status);
   // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
   // written before migration 0126 could point the card anywhere.
   // The 32 px row draws the 600 px WebP thumb where the bake wrote one —
@@ -374,7 +415,7 @@ function EntryRow({
         data-deck-entry={entry.id}
         onClick={() => onOpen(entry.id)}
         className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-        aria-label={`Open ${card?.title ?? entry.name}`}
+        aria-label={`Open ${card?.title ?? entry.name}${item.cardOwner?.username ? ` by @${item.cardOwner.username}` : ""}`}
       >
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -384,7 +425,8 @@ function EntryRow({
             loading="lazy"
             className={cn(
               "h-11 w-8 shrink-0 rounded-sm object-cover",
-              state === "real" && "opacity-70 saturate-50",
+              // A printing with no PipGlyph card yet.
+              !entry.card_id && "opacity-70 saturate-50",
             )}
           />
         ) : (
@@ -397,42 +439,15 @@ function EntryRow({
         </span>
         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
           {card?.title ?? entry.name}
+          {/* Another creator's card (D3): their credit. */}
+          {item.cardOwner?.username ? (
+            <span className="ml-1.5 font-mono text-[11px] text-subtle">by @{item.cardOwner.username}</span>
+          ) : null}
         </span>
-        {entry.mana_cost || card?.cost ? (
-          <ManaCostGlyphs cost={entry.mana_cost ?? card?.cost} size="sm" />
-        ) : null}
+        {fields.cost ? <ManaCostGlyphs cost={fields.cost} size="sm" /> : null}
         {twoFaces && thumb === proxyImage ? <TwoFacesMark /> : null}
-        <StateBadge state={state} />
+        <DeckEntryStatusBadge status={status} unavailable={unavailable} small />
       </button>
     </li>
-  );
-}
-
-function StateBadge({ state }: { state: ReturnType<typeof deckEntryState> }) {
-  if (state === "remixed") {
-    return (
-      <Badge variant="primary" className="shrink-0 gap-1 text-[10px]">
-        <Sparkles className="h-2.5 w-2.5" aria-hidden /> Edited
-      </Badge>
-    );
-  }
-  if (state === "custom") {
-    return (
-      <Badge variant="accent" className="shrink-0 text-[10px]">
-        Custom
-      </Badge>
-    );
-  }
-  if (state === "unresolved") {
-    return (
-      <Badge variant="outline" className="shrink-0 text-[10px]">
-        Placeholder
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="shrink-0 text-[10px]">
-      Imported
-    </Badge>
   );
 }

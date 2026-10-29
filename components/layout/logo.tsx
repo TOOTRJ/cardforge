@@ -15,9 +15,13 @@ type LogoProps = {
   className?: string;
   href?: string;
   showWordmark?: boolean;
+  /** Classes for the wordmark — e.g. the header hides it on the narrowest
+   *  phones, where the mark alone has to make room (the link keeps its
+   *  "PipGlyph home" name either way). */
+  wordmarkClassName?: string;
 };
 
-export function Logo({ className, href = "/", showWordmark = true }: LogoProps) {
+export function Logo({ className, href = "/", showWordmark = true, wordmarkClassName }: LogoProps) {
   return (
     <Link
       href={href}
@@ -123,7 +127,7 @@ export function Logo({ className, href = "/", showWordmark = true }: LogoProps) 
       </span>
 
       {showWordmark ? (
-        <span className="font-display text-lg leading-none tracking-wider text-foreground">
+        <span className={cn("font-display text-lg leading-none tracking-wider text-foreground", wordmarkClassName)}>
           PipGlyph
         </span>
       ) : null}
