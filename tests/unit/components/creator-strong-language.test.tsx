@@ -56,8 +56,14 @@ vi.mock("@/components/creator/scryfall-import-dialog", () => ({ ScryfallImportDi
 vi.mock("@/components/creator/ai-fill-dialog", () => ({ AiFillDialog: () => null }));
 vi.mock("@/components/creator/card-ideas-dialog", () => ({ CardIdeasDialog: () => null }));
 vi.mock("@/components/cards/card-preview", () => ({ CardPreview: () => <div data-testid="card-preview" /> }));
+// The real check, watched: the form reads it only on the Publish step.
+vi.mock("@/lib/creator/strong-language", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/creator/strong-language")>();
+  return { ...actual, strongLanguageChoices: vi.fn(actual.strongLanguageChoices) };
+});
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import { strongLanguageChoices } from "@/lib/creator/strong-language";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const CARD_ID = "22222222-2222-4222-8222-222222222222";
@@ -208,6 +214,63 @@ describe("the Publish step while the text holds strong language", () => {
 
   it("an edit of a card already public that adds none is left alone (not retroactive)", async () => {
     renderForm({ card: savedCard({ flavor_text: STRONG }) });
+    await goTo(/Publish/);
+    expect(note().textContent).toBe("");
+    expect(chipOff(visibilityChip(/^Public/))).toBe(false);
+  });
+});
+
+// The check is read only where it is shown (perf, 2026-10-29): typing on any
+// other step no longer runs it on every keystroke, and the Publish step gets
+// the same choices as before — for words typed elsewhere and on it.
+describe("the check runs on the Publish step only", () => {
+  const choices = vi.mocked(strongLanguageChoices);
+  const tagsInput = () => screen.getByPlaceholderText("dragons, tokens, tribal") as HTMLInputElement;
+  async function typeTags(value: string) {
+    await act(async () => {
+      fireEvent.change(tagsInput(), { target: { value } });
+    });
+  }
+
+  it("typing on another step never reads it; the Publish step then names the word", async () => {
+    renderForm({ card: savedCard() });
+    choices.mockClear();
+    await typeTitle(`${STRONG} Wyrm`);
+    await typeTitle(`${STRONG} Wyrm, Reborn`);
+    expect(choices).not.toHaveBeenCalled();
+    await goTo(/Publish/);
+    expect(choices).toHaveBeenCalled();
+    expect(note().textContent).toBe(
+      "This card's name includes strong language, so it will be saved as private. Remove it to publish.",
+    );
+    expect(chipOff(visibilityChip(/^Public/))).toBe(true);
+    expect(chipOff(visibilityChip(/^Unlisted/))).toBe(true);
+  });
+
+  it("a word typed on the Publish step shows at once, and goes when it is removed", async () => {
+    renderForm({ card: savedCard() });
+    await goTo(/Publish/);
+    expect(note().textContent).toBe("");
+    await typeTags(`dragons, ${STRONG}`);
+    expect(note().textContent).toBe(
+      "This card's tags includes strong language, so it will be saved as private. Remove it to publish.",
+    );
+    expect(chipOff(visibilityChip(/^Public/))).toBe(true);
+    await typeTags("dragons");
+    expect(note().textContent).toBe("");
+    expect(chipOff(visibilityChip(/^Public/))).toBe(false);
+    expect(visibilityChip(/^Public/).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("back on the Publish step after an edit elsewhere, it reads the text as it is now", async () => {
+    renderForm({ card: savedCard() });
+    await typeTitle(`${STRONG} Wyrm`);
+    await goTo(/Publish/);
+    expect(note().textContent).not.toBe("");
+    await goTo(/Identity/);
+    choices.mockClear();
+    await typeTitle("Emberbound Wyrm, Reborn");
+    expect(choices).not.toHaveBeenCalled();
     await goTo(/Publish/);
     expect(note().textContent).toBe("");
     expect(chipOff(visibilityChip(/^Public/))).toBe(false);
