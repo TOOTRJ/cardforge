@@ -15,7 +15,7 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 export const metadata: Metadata = {
   title: "Decks",
   description:
-    "Build MTG decks, import decklists, and remix real cards into your own custom proxies.",
+    "Build MTG decks, import decklists, and customize real cards into your own proxies.",
 };
 
 export default async function DecksPage() {
@@ -26,7 +26,7 @@ export default async function DecksPage() {
       <PageHeader
         eyebrow="Library"
         title="My decks"
-        description="Build decks from real cards and your own creations, then remix every card into a custom proxy."
+        description="Build decks from real cards and your own creations, then customize the real ones."
         actions={
           <Button asChild>
             <Link href="/dashboard/decks/new">
@@ -45,7 +45,7 @@ export default async function DecksPage() {
           <EmptyState
             icon={BookOpen}
             title="No decks yet"
-            description="Create your first deck — pick a format, add cards, and remix the real ones into custom proxies."
+            description="Create your first deck — pick a format, add cards, and customize the real ones."
             action={
               <Button asChild>
                 <Link href="/dashboard/decks/new">Create a deck</Link>

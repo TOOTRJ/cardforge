@@ -16,7 +16,7 @@ type DeckReportEntry = {
   board: DeckBoard;
   type_line: string | null;
   mana_cost: string | null;
-  /** The custom proxy's title, when the entry is remixed. */
+  /** The linked custom card's title, when the entry has one. */
   proxyTitle?: string | null;
 };
 
@@ -176,7 +176,7 @@ export async function buildDeckReportPdf(input: DeckReportInput): Promise<Uint8A
     ["Mana curve", curveText(a.curve)],
     ["Colors", [...(["W", "U", "B", "R", "G"] as const).map((c) => `${c} ${a.byColor[c]}`), `Gold ${a.multicolor}`, `C ${a.byColor.C}`].join("   ")],
     ["Types", Object.entries(a.byType).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join("   ") || "—"],
-    ["Custom proxies", `${a.remixed} of ${a.total}`],
+    ["Customized cards", `${a.remixed} of ${a.total}`],
   ]);
 
   // Guide.

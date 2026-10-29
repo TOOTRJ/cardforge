@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           <strong>AI providers, through the Vercel AI Gateway</strong> — only
           when you use an AI feature. Card text and design prompts go to
           Anthropic (Claude); image generation goes to Black Forest Labs
-          (FLUX) and, for the AI remix, Google (Gemini). The prompt contains
+          (FLUX) and, to restyle a deck&apos;s art with AI, Google (Gemini). The prompt contains
           the relevant card fields (title, rules, cost, your theme) — never
           your account email or password.
         </li>

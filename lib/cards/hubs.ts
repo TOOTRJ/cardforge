@@ -156,6 +156,6 @@ export function formatHubCopy(format: DeckFormat): { title: string; intro: strin
   const label = DECK_FORMAT_LABELS[format];
   return {
     title: `Custom ${label} decks`,
-    intro: `${label} decks built with custom cards on PipGlyph — imported decklists and real cards remixed into custom versions. Browse them, copy a list, or build your own and print it as proxies.`,
+    intro: `${label} decks built with custom cards on PipGlyph — imported decklists and real cards made into custom versions. Browse them, copy a list, or build your own and print it as proxies.`,
   };
 }

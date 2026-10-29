@@ -52,7 +52,7 @@ const features: Feature[] = [
     tone: "gold",
     title: "Decks and proxies",
     description:
-      "Build decks from real cards and your own creations, import a decklist from Arena, Moxfield or Archidekt, and remix every real card into a custom proxy — then print the whole deck as PDF sheets.",
+      "Build decks from real cards and your own creations, import a decklist from Arena, Moxfield or Archidekt, and make your own proxy of any real card — then print the whole deck as PDF sheets.",
   },
   {
     icon: GitFork,

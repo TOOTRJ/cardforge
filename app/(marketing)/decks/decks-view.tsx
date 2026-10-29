@@ -68,7 +68,7 @@ export function parseDecksParams(
 }
 
 const DECKS_DESCRIPTION =
-  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics remixed by PipGlyph forgers. Open one to see the originals side by side with their proxies.";
+  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics customized by PipGlyph forgers. Open one to see the real cards side by side with their proxies.";
 
 /** /decks — the static landing. */
 export function DecksLanding() {

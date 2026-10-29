@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   if (!isDeckFormat(format)) notFound();
   const copy = formatHubCopy(format);
   const count = (await listFormatHubs()).find((hub) => hub.format === format)?.count ?? 0;
-  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists and remixed proxies. Browse, copy a list, or build your own.`;
+  const description = `${count} public ${copy.title.replace("Custom ", "custom ").toLowerCase()} on PipGlyph — imported decklists rebuilt card by card as proxies. Browse, copy a list, or build your own.`;
   return {
     title: `${copy.title} — browse and build`,
     description,

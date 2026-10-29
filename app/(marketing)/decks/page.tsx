@@ -4,7 +4,7 @@ import { DecksLanding } from "./decks-view";
 export const metadata: Metadata = {
   title: "Community decks",
   description:
-    "Browse public MTG decks rebuilt with custom cards — Commander, Standard, Modern and more, remixed by PipGlyph forgers.",
+    "Browse public MTG decks rebuilt with custom cards — Commander, Standard, Modern and more, customized by PipGlyph forgers.",
   alternates: { canonical: "/decks" },
 };
 
