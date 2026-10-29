@@ -807,9 +807,24 @@ where cards.id = v.id and cards.view_count = 0;
 
 insert into public.decks (id, owner_id, title, slug, description, format, visibility, deck_type, bracket)
 values
-  ('b0000000-0000-4000-a000-000000000001', 'd0000000-0000-4000-a000-000000000002', 'Cinderwing Dragonstorm', 'cinderwing-dragonstorm', 'Dragons, ramp, and one very angry matriarch.', 'commander', 'public', 'Dragons', 3),
-  ('b0000000-0000-4000-a000-000000000002', 'd0000000-0000-4000-a000-000000000004', 'Merfolk Tempo (WIP)', 'merfolk-tempo-wip', null, 'modern', 'private', null, null)
+  ('b0000000-0000-4000-a000-000000000001', 'd0000000-0000-4000-a000-000000000002', 'Cinderwing Dragonstorm', 'cinderwing-dragonstorm', 'Dragons, ramp, and one very angry matriarch.', 'commander', 'public', 'Dragons', 3)
 on conflict (id) do nothing;
+
+-- The private draft is its own statement, and proposes NO row when it would
+-- meet 0145's cap: a BEFORE INSERT trigger fires before ON CONFLICT is
+-- resolved, so `on conflict (id) do nothing` would still check the proposed
+-- row against dev_artist's private decks — and refuse the whole seed on a
+-- database seeded before 0145 (the draft still dev_free's) where a tester
+-- gave dev_artist a private deck. So: only when the draft doesn't exist,
+-- and only while dev_artist holds no private or unlisted deck.
+insert into public.decks (id, owner_id, title, slug, description, format, visibility, deck_type, bracket)
+select 'b0000000-0000-4000-a000-000000000002', 'd0000000-0000-4000-a000-000000000004', 'Merfolk Tempo (WIP)', 'merfolk-tempo-wip', null, 'modern', 'private', null, null
+where not exists (select 1 from public.decks where id = 'b0000000-0000-4000-a000-000000000002')
+  and not exists (
+    select 1 from public.decks
+    where owner_id = 'd0000000-0000-4000-a000-000000000004'
+      and visibility in ('private', 'unlisted')
+  );
 
 -- A database seeded before 0145 holds the draft under dev_free, which would
 -- leave dev_free at the cap: hand it to dev_artist — unless dev_artist
@@ -831,9 +846,18 @@ values
   ('a0000000-0000-4000-a000-000000000002', 'b0000000-0000-4000-a000-000000000001', 'main', 1, 1, 'c0000000-0000-4000-a000-000000000017', 'Cinderwing Broodling', 'Creature — Dragon', '{1}{R}', 2, array['R'], 'uncommon'),
   ('a0000000-0000-4000-a000-000000000003', 'b0000000-0000-4000-a000-000000000001', 'main', 1, 2, 'c0000000-0000-4000-a000-000000000006', 'Emberlash', 'Instant', '{R}', 1, array['R'], 'common'),
   ('a0000000-0000-4000-a000-000000000004', 'b0000000-0000-4000-a000-000000000001', 'main', 1, 3, null, 'Sol Ring', 'Artifact', '{1}', 1, array[]::text[], 'uncommon'),
-  ('a0000000-0000-4000-a000-000000000005', 'b0000000-0000-4000-a000-000000000001', 'main', 30, 4, null, 'Mountain', 'Basic Land — Mountain', null, 0, array['R'], 'common'),
-  ('a0000000-0000-4000-a000-000000000006', 'b0000000-0000-4000-a000-000000000002', 'main', 4, 0, 'c0000000-0000-4000-a000-000000000002', 'Tidecaller Adept', 'Creature — Merfolk Wizard', '{1}{U}', 2, array['U'], 'common'),
-  ('a0000000-0000-4000-a000-000000000007', 'b0000000-0000-4000-a000-000000000002', 'main', 20, 1, null, 'Island', 'Basic Land — Island', null, 0, array['U'], 'common')
+  ('a0000000-0000-4000-a000-000000000005', 'b0000000-0000-4000-a000-000000000001', 'main', 30, 4, null, 'Mountain', 'Basic Land — Mountain', null, 0, array['R'], 'common')
+on conflict (id) do nothing;
+
+-- The draft's entries, only where the draft exists (the statement above may
+-- have skipped it).
+insert into public.deck_cards (id, deck_id, board, quantity, position, card_id, name, type_line, mana_cost, mana_value, color_identity, rarity)
+select v.id, v.deck_id, v.board, v.quantity, v.position, v.card_id, v.name, v.type_line, v.mana_cost, v.mana_value, v.color_identity, v.rarity
+from (values
+  ('a0000000-0000-4000-a000-000000000006'::uuid, 'b0000000-0000-4000-a000-000000000002'::uuid, 'main', 4, 0, 'c0000000-0000-4000-a000-000000000002'::uuid, 'Tidecaller Adept', 'Creature — Merfolk Wizard', '{1}{U}', 2, array['U'], 'common'),
+  ('a0000000-0000-4000-a000-000000000007'::uuid, 'b0000000-0000-4000-a000-000000000002'::uuid, 'main', 20, 1, null, 'Island', 'Basic Land — Island', null, 0, array['U'], 'common')
+) as v (id, deck_id, board, quantity, position, card_id, name, type_line, mana_cost, mana_value, color_identity, rarity)
+where exists (select 1 from public.decks d where d.id = v.deck_id)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------

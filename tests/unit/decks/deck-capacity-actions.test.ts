@@ -12,7 +12,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     every content edit of a deck over the cap pass untouched
 //     (grandfathered);
 //   * the funnel rows: deck_created, deck_cap_hit, and deck_card_customized
-//     on an entry's FIRST card (never a re-link).
+//     on an entry's FIRST card when the creator made it from the entry
+//     (never a re-link, never a card linked from the deck page).
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -228,10 +229,16 @@ describe("linkDeckCardAction — deck_card_customized", () => {
     ]);
   });
 
-  it("a placeholder filled from the deck page", async () => {
+  it("a placeholder the creator filled", async () => {
     s.entry = { id: ENTRY, deck_id: DECK, card_id: null, scryfall_id: null };
-    await linkDeckCardAction(ENTRY, CARD);
-    expect(s.events[0].props).toEqual({ surface: "deck", kind: "placeholder" });
+    await linkDeckCardAction(ENTRY, CARD, { surface: "creator" });
+    expect(s.events[0].props).toEqual({ surface: "creator", kind: "placeholder" });
+  });
+
+  it("an EXISTING card linked from the deck page uses no new slot: not counted", async () => {
+    expect(await linkDeckCardAction(ENTRY, CARD)).toMatchObject({ ok: true });
+    expect(await linkDeckCardAction(ENTRY, CARD, { surface: "deck" })).toMatchObject({ ok: true });
+    expect(s.events).toEqual([]);
   });
 
   it("a re-link is not counted again", async () => {

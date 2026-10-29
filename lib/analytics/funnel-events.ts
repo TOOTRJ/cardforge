@@ -39,9 +39,10 @@ export const SERVER_FUNNEL_EVENTS = [
   "pack_purchased",
   // Decks (TODO DK3.8, the 2026-10-28 deck plan): a deck made (visibility,
   // format, surface), the private-deck cap refusing one (kind create /
-  // visibility, the tier), and a deck entry's FIRST card of the user's — an
-  // imported card customized, the moment it takes a saved-card slot (owner
-  // decision D2; surface creator / deck, kind import / placeholder).
+  // visibility, the tier), and a deck entry's FIRST card of the user's made
+  // from it in the creator — an imported card customized, the moment it
+  // takes a saved-card slot (owner decision D2; surface creator, kind
+  // import / placeholder).
   "deck_created",
   "deck_cap_hit",
   "deck_card_customized",

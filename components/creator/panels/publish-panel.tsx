@@ -342,9 +342,12 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
       return;
     }
     startTransition(async () => {
-      // A quick-created deck is public (the schema's default), which the
-      // private-deck cap never counts (D1) — so there is nothing to warn
-      // about first; a refusal still opens the plans (TODO DK3.2).
+      // No visibility is sent, so createDeckSchema's "public" default
+      // applies (lib/validation/deck.ts — not the column's 'private'): the
+      // private-deck cap never counts it (D1), so there is nothing to warn
+      // about first; a refusal still opens the plans (TODO DK3.2). A
+      // visibility choice here — and its pre-check — is DK0.8's remaining
+      // part, which moves to DK9.3's creator deck box.
       const result = await createDeckAction({ title, format: newFormat }, { surface: "creator" });
       if (!result.ok) {
         toast.error(

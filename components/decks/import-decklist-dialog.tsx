@@ -227,7 +227,7 @@ export function ImportDecklistDialog({
               ) : null}
             </div>
 
-            <ImportSlotForecast cardCapacity={cardCapacity} distinctCards={counts.distinct} />
+            <ImportSlotForecast cardCapacity={cardCapacity} cards={counts.cards} distinctCards={counts.distinct} />
 
             {parseWarnings.length > 0 ? (
               <div className="rounded-md border border-gold/40 bg-gold/5 p-3">
@@ -308,12 +308,16 @@ export function ImportDecklistDialog({
  *  the import. */
 export function ImportSlotForecast({
   cardCapacity,
+  cards,
   distinctCards,
 }: {
   cardCapacity: CardCapacity | null;
+  /** The copies the review counts (its badge, its "Add N cards"). */
+  cards: number;
+  /** The different cards among them — what customizing would use. */
   distinctCards: number;
 }) {
-  const slots = describeImportSlots(cardCapacity, distinctCards);
+  const slots = describeImportSlots(cardCapacity, { cards, distinct: distinctCards });
   if (!slots) return null;
   return (
     <p data-testid="import-slot-forecast" className="text-xs leading-5 text-muted">
