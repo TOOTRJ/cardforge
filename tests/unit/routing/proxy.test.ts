@@ -76,6 +76,10 @@ describe("proxy", () => {
     const decks = await proxy(request("/decks?format=commander"));
     expect(decks.status).toBe(308);
     expect(locationOf(decks)).toBe("http://localhost:3000/decks/browse?format=commander");
+
+    const creators = await proxy(request("/creators?sort=liked&page=2"));
+    expect(creators.status).toBe(308);
+    expect(locationOf(creators)).toBe("http://localhost:3000/creators/browse?sort=liked&page=2");
   });
 
   it("leaves junk params, the bare landings, the browse routes and other paths alone", async () => {
@@ -84,6 +88,8 @@ describe("proxy", () => {
       "/gallery",
       "/gallery/browse?type=creature",
       "/decks/browse?format=commander",
+      "/creators?utm_source=x",
+      "/creators/browse?sort=recent",
       "/challenges?q=x",
     ]) {
       const response = await proxy(request(path));

@@ -10,6 +10,8 @@ import {
 } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getRequestedFrames } from "@/lib/frames/requested-frames-queries";
+import { REQUESTED_FRAMES_MIN_INDEXED } from "@/lib/frames/requested-frames";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import {
@@ -27,8 +29,8 @@ import {
 // Layers, in priority order:
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
-//      /decks, /challenges, /news, /learn + its indexable categories, /tools,
-//      guides + their indexable topic hubs, …).
+//      /decks, /creators, /challenges, /news, /learn + its indexable
+//      categories, /tools, guides + their indexable topic hubs, …).
 //      They carry NO lastModified: stamping "now" on every hourly rebuild
 //      taught crawlers the date was noise and made them ignore the real
 //      ones on cards and guides.
@@ -91,6 +93,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/gallery/browse", "daily", 0.7),
     staticEntry(baseUrl, "/decks", "daily", 0.8),
     staticEntry(baseUrl, "/decks/browse", "daily", 0.6),
+    // The creators directory's landing; /creators/browse (its other sorts
+    // and pages) is noindex and canonicalizes here.
+    staticEntry(baseUrl, "/creators", "daily", 0.6),
     staticEntry(baseUrl, "/challenges", "weekly", 0.8),
     staticEntry(baseUrl, "/faq", "monthly", 0.85),
     // The /learn hub and the tools directory, then the category shelves that
@@ -133,14 +138,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/signup", "yearly", 0.2),
   ];
 
-  const [{ cards, profiles }, challengePages, deckPages, hubPages] = await Promise.all([
+  const [{ cards, profiles }, challengePages, deckPages, hubPages, roadmapPages] = await Promise.all([
     fetchCardAndProfileEntries(baseUrl),
     fetchChallengeEntries(baseUrl),
     fetchPublicDeckEntries(baseUrl),
     fetchHubEntries(baseUrl),
+    fetchRoadmapEntries(baseUrl),
   ]);
 
-  return [...staticPages, ...hubPages, ...challengePages, ...deckPages, ...profiles, ...cards];
+  return [
+    ...staticPages,
+    ...roadmapPages,
+    ...hubPages,
+    ...challengePages,
+    ...deckPages,
+    ...profiles,
+    ...cards,
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -295,6 +309,20 @@ async function fetchHubEntries(baseUrl: string): Promise<MetadataRoute.Sitemap> 
         .filter((hub) => hub.count >= FORMAT_HUB_MIN_DECKS)
         .map((hub) => staticEntry(baseUrl, `/decks/format/${hub.format}`, "weekly", 0.65)),
     ];
+  } catch {
+    return [];
+  }
+}
+
+/** /frames/requested, once it lists enough frames to be indexable (fewer is
+ *  noindex on its own page — the same bar, REQUESTED_FRAMES_MIN_INDEXED). */
+async function fetchRoadmapEntries(baseUrl: string): Promise<MetadataRoute.Sitemap> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const { frames } = await getRequestedFrames();
+    return frames.length >= REQUESTED_FRAMES_MIN_INDEXED
+      ? [staticEntry(baseUrl, "/frames/requested", "weekly", 0.5)]
+      : [];
   } catch {
     return [];
   }

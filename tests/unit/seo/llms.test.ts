@@ -21,7 +21,7 @@ describe("/llms.txt", () => {
 
   it("names /learn, /tools and the What's new feed, and lists the guides under their categories", async () => {
     const text = await GET().text();
-    for (const path of ["/learn", "/tools", "/news", "/news/feed.xml"]) {
+    for (const path of ["/learn", "/tools", "/news", "/news/feed.xml", "/creators", "/frames/requested"]) {
       expect(text).toContain(`https://www.pipglyph.com${path}`);
     }
     for (const { category, articles } of listCategoryShelves()) {

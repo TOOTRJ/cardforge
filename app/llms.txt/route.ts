@@ -20,6 +20,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/create", "Card Creator", "The creator itself. Anyone can design a card without an account; saving, sharing and downloads need a free account."],
   ["/gallery", "Community Gallery", "Public custom cards — trending, newest and a random discover feed; filter by color, type, rarity and tag."],
   ["/decks", "Community Decks", "Public decks built from custom and real cards: import a decklist, remix cards into custom versions, print proxies."],
+  ["/creators", "Creators", "Directory of everyone with a public card — most cards, newest cards or most liked — each linking to their profile."],
   ["/challenges", "Design Challenges", "Community design briefs; entries are public cards wearing the challenge tag."],
   ["/learn", "Learn", "The guides by category (design guides, rules & reference, card maker comparisons, MTG lore — list below), plus help, what's new and the tools."],
   ["/articles", "All articles", "Every long-form guide, newest first; finer topic hubs at /articles/tag/<topic>."],
@@ -27,6 +28,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/faq", "FAQ", "Every common question answered directly — card making, pips, AI, sharing, printing, remixing, challenges, plans."],
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
+  ["/frames/requested", "Requested frames", "The card frames people asked for, most requested first, and whether each is requested or built and being checked."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
   ["/about", "About", "What PipGlyph is and the principles behind it."],
 ];

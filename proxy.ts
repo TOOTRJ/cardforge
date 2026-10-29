@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { updateSession } from "@/lib/supabase/middleware";
 import {
+  CREATORS_FILTER_PARAMS,
   DECKS_FILTER_PARAMS,
   GALLERY_FILTER_PARAMS,
   hasAnyParam,
@@ -101,11 +102,12 @@ export async function proxy(request: NextRequest) {
     return rewritten;
   }
 
-  // /gallery and /decks are prerendered (ISR) landings that never read
-  // searchParams; searching, filtering, sorting and paging live on their
-  // VISIBLE dynamic siblings (/gallery/browse, /decks/browse). A landing
-  // request that still carries a REAL filter/search/pagination param (an old
-  // inbound link, a bookmark) is 308'd to the sibling with its query intact.
+  // /gallery, /decks and /creators are prerendered (ISR) landings that never
+  // read searchParams; searching, filtering, sorting and paging live on their
+  // VISIBLE dynamic siblings (/gallery/browse, /decks/browse,
+  // /creators/browse). A landing request that still carries a REAL
+  // filter/search/pagination param (an old inbound link, a bookmark) is 308'd
+  // to the sibling with its query intact.
   //
   // This used to be a hidden rewrite. It broke every in-app filter/sort/
   // search click: Next's client router reuses the cached static route tree
@@ -119,7 +121,9 @@ export async function proxy(request: NextRequest) {
       ? GALLERY_FILTER_PARAMS
       : pathname === "/decks"
         ? DECKS_FILTER_PARAMS
-        : null;
+        : pathname === "/creators"
+          ? CREATORS_FILTER_PARAMS
+          : null;
   if (
     browseParams &&
     hasAnyParam(request.nextUrl.searchParams, browseParams) &&

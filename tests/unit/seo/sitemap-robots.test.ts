@@ -75,6 +75,15 @@ describe("sitemap (static layer)", () => {
     expect(paths.has("/articles/tag/oracle-text")).toBe(true);
   });
 
+  it("lists the /creators landing but never its noindex browse views; the roadmap only with data", async () => {
+    const paths = new Set((await sitemap()).map((e) => pathOf(e.url)));
+    expect(paths.has("/creators")).toBe(true);
+    expect(paths.has("/creators/browse")).toBe(false);
+    // /frames/requested is indexable only above its bar, read from the
+    // database — never from the static layer (offline here).
+    expect(paths.has("/frames/requested")).toBe(false);
+  });
+
   it("never lists a removed sets URL or an auth-only surface", async () => {
     const paths = (await sitemap()).map((e) => pathOf(e.url));
     for (const path of paths) {

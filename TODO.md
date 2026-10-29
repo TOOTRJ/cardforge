@@ -4334,8 +4334,8 @@ NV1 ships together with WD2 (the same header files).
 - [ ] **NV8 [P2 · M] /frames** — Every verified frame with a baked example and "Start with this frame".
 - [ ] **NV9 [P2 · S] /glossary** — Seeded from the creator’s glossary; terms link to the creator.
 - [ ] **NV10 [P2 · S] nav_click event** — Allow-listed, so Gallery’s move under Community can be watched (D9). Files: `lib/analytics/funnel-events.ts`.
-- [ ] **NV11 [P3 · M] /creators** — A directory of makers with public cards.
-- [ ] **NV12 [P3 · S] Challenge winners and a public roadmap** — Start with a public "requested frames" list.
+- [x] **NV11 [P3 · M] /creators** — A directory of makers with public cards. (done: migration 0147 `list_public_creators()` — a public card, never an admin, public cards and non-empty public decks only; the static `/creators` landing (CollectionPage + ItemList, sitemap, llms.txt) and the noindex `/creators/browse` for the other sorts and pages; one link per creator, a 3-card strip of 600 px thumbs)
+- [ ] **NV12 [P3 · S] Challenge winners and a public roadmap** — Start with a public "requested frames" list. (part 1 done: `/frames/requested` from migration 0147's `requested_frame_counts()` — distinct non-admin people per registry signature over six months, the frame named from the registry, never a row's text; still open: challenge winners and the full public roadmap)
 - [ ] **NV13 [P3 · S] Content plan** — A lore-behind-the-cards series and set spotlights for designers; no MTG news for now (D10).
 
 ### WD — Page width
