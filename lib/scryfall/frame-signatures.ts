@@ -3214,6 +3214,33 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["nyx-saga-front", "etched", "border", "universes-beyond", "crown", "two-colour", "two-colour-hybrid"],
   ),
 
+  // --- 4.5d: the saga creature -------------------------------------------------
+  // A one-faced saga whose type line says Creature (FIN / FIC / PFIN's
+  // "Summon:" cards, 2025 — 29 black-bordered printings, Scryfall
+  // 2026-10-28; every one Universes Beyond's triangle stamp) prints the saga
+  // creature body: the textured saga with its type bar raised, a second box
+  // and a P/T plate. Until `sagacreature` is verified in the card's colour
+  // the saga frame is the nearest — where the import always landed; once it
+  // is, this rule names it (`onceVerified`) and is exact (the triangle
+  // stamp, the `universes-beyond` gap, is drawn there). The borderless
+  // printings are named by `borderless/layout` above and stay (4.38).
+  ...withGaps(
+    {
+      key: "saga/creature/2015",
+      exactLabel: "Saga creature frame",
+      match: { frames: ["2015"], borders: ["black"], kinds: ["saga"], layouts: ["saga"], typeWordsAny: ["creature"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: "sagacreature",
+        exactOnceVerified: true,
+        reason: "PipGlyph's saga creature frame isn't verified yet",
+        blockedBy: "4.5d",
+      },
+    },
+    ["omen", "dfc", "etched", "border", "crown", "two-colour", "two-colour-hybrid"],
+  ),
+
   // --- 1.4: layout kinds ---------------------------------------------------
   ...withGaps(
     {

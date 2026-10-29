@@ -104,8 +104,9 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11 wave 2's Enchanting Tales and Dominaria United
     // Stained Glass, the Strixhaven Mystical Archive and the Doctor Who
     // TARDIS and the OTJ Breaking News (new templates: no bump).
+    // …and TODO 4.5d's saga creature (a new template: no bump).
     // …and TODO 4.27b's extended-art Prepare dress (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(91);
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(92);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -211,6 +212,9 @@ describe("one M15-era display size (layout v32)", () => {
         // …and the Dominaria United Stained Glass, a new template, the CC
         // M15 disc on its run's row.
         t === "stainedglass" ||
+        // …and the saga creature (TODO 4.5d), a new template on the saga's
+        // bars: the saga's CC M15 row.
+        t === "sagacreature" ||
         // …and the Prepare frame's extended-art dress (TODO 4.27b), a new
         // template on the Prepare frame's (CC M15) row.
         t === "extendedartprepare" ||
@@ -241,6 +245,8 @@ describe("one M15-era display size (layout v32)", () => {
       sagadfcfront: SET_SYMBOL_BOX_PCT_THIN_BAR,
       // …and its back (5.5 (b) PR 2).
       sagadfcback: SET_SYMBOL_BOX_PCT_THIN_BAR,
+      // …and the saga creature (TODO 4.5d): the saga's box, raised.
+      sagacreature: SET_SYMBOL_BOX_PCT_THIN_BAR,
     };
     expect(SET_SYMBOL_BOX_PCT_THIN_BAR).toBe(0.0533);
     for (const t of M15_FAMILY_TEMPLATES) {
@@ -507,6 +513,10 @@ describe("baselines (TextSlot.dy)", () => {
     ["sagadfcfront", mse.title, (mse.type ?? 0) + 9.3 / 1500],
     // …and its back (5.5 (b) PR 2): the same bars.
     ["sagadfcback", mse.title, (mse.type ?? 0) + 9.3 / 1500],
+    // …and the saga creature (TODO 4.5d): the saga's bars, the type bar
+    // raised 173 px with its line (the rect moves, the baseline offset is the
+    // saga's).
+    ["sagacreature", mse.title, (mse.type ?? 0) + 9.3 / 1500],
     // Flip (layout v38, TODO 4.21a): packFlip.js's bars, the name and type
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).

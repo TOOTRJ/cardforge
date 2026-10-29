@@ -350,6 +350,30 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
       frameStyle: sampleFrameStyle(template),
     };
   }
+  // A saga creature sample is a saga creature (TODO 4.5d): the reminder in
+  // its band, three chapters on the rail, an ability in the second box and
+  // a P/T — the pieces the body is verified for.
+  if (template === "sagacreature") {
+    return {
+      title: "Summon: Sample",
+      cost: SAMPLE_COST[colorKey],
+      cardType: "enchantment",
+      supertype: "Creature",
+      subtypes: ["Saga", "Sample"],
+      rarity: "rare",
+      colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],
+      rulesText:
+        "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Sample chapter text.\nII — A second chapter, long enough to take two lines.\nIII — The last chapter's text.\nFlying",
+      flavorText: null,
+      power: "3",
+      toughness: "3",
+      loyalty: null,
+      defense: null,
+      artistCredit: "Sample Artist",
+      artUrl: null,
+      frameStyle: sampleFrameStyle(template),
+    };
+  }
   return {
     title: "Sample Card",
     cost: isLand ? null : SAMPLE_COST[colorKey],

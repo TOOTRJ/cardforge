@@ -174,6 +174,11 @@ const STATION_DRESSES: readonly string[] = [
   // above; pinned in tests/unit/creator/prepare-kind.test.ts and
   // tests/unit/scryfall/prepare-imports.test.ts.
   "prepare",
+  // …and the saga creature (TODO 4.5d): a new template, the Saga kind's
+  // third layout frame — every row naming it dropped, as above; pinned in
+  // tests/unit/creator/saga-creature-kind.test.ts and
+  // tests/unit/scryfall/saga-creature-imports.test.ts.
+  "sagacreature",
   // …and its extended-art dress (TODO 4.27b): a new template, the Prepare
   // kind's alone — pinned in tests/unit/creator/prepare-kind.test.ts and
   // tests/unit/scryfall/prepare-imports.test.ts.

@@ -69,6 +69,8 @@ import {
   enchantmentDressReason,
   enchantmentFrameFits,
   isEnchantmentDress,
+  sagaCreatureDressReason,
+  sagaCreatureFrameFits,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
@@ -200,6 +202,8 @@ const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
   m15textless: "Name and art only: no type line or text box",
   m15textlessland: "Name and art only: no type line or text box",
   nyx: "Theros Beyond Death showcase",
+  // The saga creature (TODO 4.5d): FIN's "Summon:" layout.
+  sagacreature: "A saga that is also a creature: a box for its abilities and a P/T",
 };
 
 export function CardSetupPanel({
@@ -617,6 +621,9 @@ export function CardSetupPanel({
             const enchantmentRefused =
               !borrowedWord &&
               !enchantmentFrameFits(choice.template, { cardType, supertype });
+            // The saga creature body (TODO 4.5d) is for a saga whose type
+            // words say Creature — the server's rule too.
+            const sagaCreatureRefused = !sagaCreatureFrameFits(choice.template, { cardType, supertype });
             return {
               value: choice.template,
               label,
@@ -626,6 +633,8 @@ export function CardSetupPanel({
                   ? (subtypeDressReason(choice.template) ?? undefined)
                 : enchantmentRefused
                   ? (enchantmentDressReason(choice.template) ?? undefined)
+                : sagaCreatureRefused
+                  ? (sagaCreatureDressReason(choice.template) ?? undefined)
                 : !available
                   ? "Awaiting verification"
                   : !colorAvailable
@@ -666,7 +675,7 @@ export function CardSetupPanel({
                   anatomy={frameAnatomy}
                 />
               ),
-              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused,
+              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused || sagaCreatureRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };

@@ -2151,6 +2151,11 @@ describe("provenance and hygiene", () => {
         // (scripts/build-prepare-frames.mjs) of the published m15 and
         // adventure masters; its own test: tests/unit/frames/prepare-recipe.test.ts.
         "prepare",
+        // …and the saga creature (TODO 4.5d): PipGlyph's own composite
+        // (scripts/build-saga-creature-frames.mjs) of Card Conjurer's
+        // textured saga and the published m15nyx masters; its own test:
+        // tests/unit/frames/saga-creature-recipe.test.ts.
+        "sagacreature",
         // …and its extended-art dress and holofoil stamp notch (TODO 4.27b):
         // PipGlyph's merge of the published extendedart and prepare masters
         // (scripts/build-prepare-frames.mjs --only extended) and the prepare

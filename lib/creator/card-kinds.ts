@@ -196,7 +196,10 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     // …and the double-faced saga front (TODO 5.5 (b)): a saga with a back
     // face of its own, picked on the Card step's Faces row (never the
     // kind's default).
-    layoutTemplates: ["saga", "sagadfcfront"],
+    // …and the saga creature (TODO 4.5d): a saga whose type words say
+    // Creature (FIN's "Summon:" cards) — a frame tile its card follows onto
+    // (sagaCreatureFrameFor), never the kind's default.
+    layoutTemplates: ["saga", "sagadfcfront", "sagacreature"],
     previewTemplate: "saga",
   },
   adventure: {
@@ -656,6 +659,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // the Prepare frame never an adventure, though both draw the same
   // `adventure` page anatomy.
   prepare: ["prepare"],
+  // The saga creature (TODO 4.5d) is new — no stored card sits on it — and
+  // the Saga kind's alone; SAGA_CREATURE_DRESS (below) is the per-card half:
+  // the type words must say Creature.
+  sagacreature: ["saga"],
   // …and its extended-art dress (TODO 4.27b), the Prepare kind's alone too.
   extendedartprepare: ["prepare"],
 };
@@ -1006,6 +1013,59 @@ export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, typ
     if (template === base && followsEnchantmentDress(type) && (kind !== "token" || followsTokenNyxDressIn(colorKey))) return dress;
     if (template === dress && !typeLineHasWord(type, "Enchantment")) return base;
   }
+  return template;
+}
+
+// ---------------------------------------------------------------------------
+// The saga creature (TODO 4.5d). Final Fantasy's "Summon:" cards (FIN / FIC
+// / PFIN 2025, every one-faced saga that prints a P/T) are sagas whose type
+// words say Creature ("Enchantment Creature — Saga Knight": the enchantment
+// card type with "Creature" in its supertype, as the importer and the
+// creator write it), printed on a body of their own: the textured saga with
+// the type bar raised, a second box and the P/T plate (`sagacreature`).
+// Like the Nyx dress it is a per-card check on top of the kind rule — the
+// server refuses it on a saga whose words don't say Creature, a random or
+// stand-in pick never lands there by accident — and the dress of a BASE
+// (the saga frame) a NEW card FOLLOWS onto (sagaCreatureFrameFor: the
+// creator's effect, the AI jobs) where it is verified in the card's colour,
+// while a stored saga keeps its frame. An ADDITION: no bump, no sweep.
+// ---------------------------------------------------------------------------
+
+/** The saga creature body and the frame it re-dresses. */
+const SAGA_CREATURE_DRESS = { template: "sagacreature", base: "saga" } as const satisfies { template: FrameTemplate; base: FrameTemplate };
+
+/** True when the template is the saga creature body: never a stand-in or a
+ *  random pick for a saga whose words don't say Creature. */
+export function isSagaCreatureDress(template: FrameTemplate): boolean {
+  return template === SAGA_CREATURE_DRESS.template;
+}
+
+/** True when this card may wear the template as far as its type words go: a
+ *  frame that is no saga creature body, or a card whose words say Creature
+ *  — the card type or a supertype word (never `printed_types`). */
+export function sagaCreatureFrameFits(template: FrameTemplate, type: TypeWordsFace): boolean {
+  // (An emblem never says a word — its save drops them, withEmblemShape.)
+  return !isSagaCreatureDress(template) || (type.cardType !== "emblem" && typeLineHasWord(type, "Creature"));
+}
+
+/** Why the saga creature body is refused on any other card. */
+export function sagaCreatureDressReason(template: FrameTemplate): string | null {
+  return isSagaCreatureDress(template) ? `The ${FRAME_TEMPLATE_LABELS[template]} frame is for sagas that are creatures` : null;
+}
+
+/**
+ * The frame the type words pick for a card of `kind` on `template`: a SAGA
+ * on the saga frame takes the saga creature body when its words say
+ * Creature, and a card on the body goes back to the saga frame when they no
+ * longer do (the server refuses it there); any other kind or template as it
+ * is (a saga on its two-faced front keeps it). What a NEW card follows; a
+ * stored card is never moved by it.
+ */
+export function sagaCreatureFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace): FrameTemplate {
+  if (kind !== "saga") return template;
+  const creature = typeLineHasWord(type, "Creature");
+  if (template === SAGA_CREATURE_DRESS.base && creature) return SAGA_CREATURE_DRESS.template;
+  if (template === SAGA_CREATURE_DRESS.template && !creature) return SAGA_CREATURE_DRESS.base;
   return template;
 }
 

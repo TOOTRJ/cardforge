@@ -136,7 +136,8 @@ describe("bake path = preview path", () => {
                 : null;
         // The Universes Beyond frames (4.25): their own crown band and
         // triangle notch.
-        const ub = template === "m15ub" || template === "m15ubartifact" || template === "m15ubland";
+        // …and the saga creature's triangle (4.5d): the same notch pieces.
+        const ub = template === "m15ub" || template === "m15ubartifact" || template === "m15ubland" || (template === "sagacreature" && slot.anatomy === "holoStamp");
         // The modal strip riders (5.1c): each modal template's own strip
         // folder, <template>/strip/<key>.
         const folder =
@@ -311,9 +312,11 @@ describe("bake path = preview path", () => {
     // 7 + 10 pairs (4.11 wave 2, the pack's one trapezoid under every key
     // and pair), and the OTJ Breaking News' 8 + 10 pairs (4.11 wave 2, the
     // pack's one oval tab under every key and pair: a and l).
+    // …and the saga creature's (TODO 4.5d): the Universes Beyond slot whole,
+    // its 9 bar keys + 10 pairs.
     // …and the Prepare frame's lifted foot (4.27b): 7 keys + the 20 pair
     // masters (keyed by the master: both dresses), on both of its looks.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10) + (7 + 20) * 2);
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10) + (9 + 10) + (7 + 20) * 2);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

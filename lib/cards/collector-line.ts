@@ -117,6 +117,9 @@ export const COLLECTOR_TEMPLATES = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The saga creature (TODO 4.5d): FIN's summons print both lines in the
+  // black bottom bar where M15 does — the body's foot is M15's.
+  "sagacreature",
   // The Lord of the Rings scroll (TODO 4.11, Card Conjurer's 'Scroll'): its
   // black bottom border is the M15 pack's, and LTR / LTC set both lines
   // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).

@@ -18528,6 +18528,128 @@
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
     ]
   },
+  "sagacreature": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-saga-creature-frames.mjs",
+    "derivedFrom": "Card Conjurer's textured saga ('Nyx Frames', packSagaNyx.js: img/frames/saga/nyx/<k>.png, `c` = its 'Artifact Frame' a.png) with rows cut and the reminder widened into a band, over the published m15nyx/<k> masters' rows from the text box down (Card Conjurer imports: see \"m15nyx\"), its box's top rim moved up under the raised bar and its paper taken from the textured saga's own (scripts/lib/saga-creature.mjs)",
+    "output": "1500x2100, the masters' corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "rowsCut": "165 rows from 380 (the reminder box's straight middle) + 8 from 1100 (the rail's) = 173: the type bar 1759–1895 → 1586–1722 px",
+      "fold": "x 0–175: rows 237–596 resampled (lanczos3) into 237–431, faded into the cut over 16 px",
+      "band": "x 733–1384 × y 237–433: the box's paper mirrored from x 160–730; the window's top rule x 741–1388 × y 434–437",
+      "lower": "rows 1723–2099 from m15nyx/<k>; its box's top rim + inner shadow (rows 1304–1322, x 98–1409) copied to 1723–1741; its paper (x 110–1382 × y 1742–1937) from the saga's chapter column (rows 700+, x mirrored into 175–728)"
+    },
+    "colors": {
+      "w": [
+        "cc:img/frames/saga/nyx/w.png@84e04002d834",
+        "m15nyx/w.png@9e06bf121513 (rows 1723+)"
+      ],
+      "u": [
+        "cc:img/frames/saga/nyx/u.png@a62bec9413d4",
+        "m15nyx/u.png@846cf6f5f2cf (rows 1723+)"
+      ],
+      "b": [
+        "cc:img/frames/saga/nyx/b.png@ccc8d75d4322",
+        "m15nyx/b.png@aaaf35b7d9eb (rows 1723+)"
+      ],
+      "r": [
+        "cc:img/frames/saga/nyx/r.png@221912d0df2a",
+        "m15nyx/r.png@e206ae7448cb (rows 1723+)"
+      ],
+      "g": [
+        "cc:img/frames/saga/nyx/g.png@5cb0b7c217e4",
+        "m15nyx/g.png@74ba28f2f529 (rows 1723+)"
+      ],
+      "m": [
+        "cc:img/frames/saga/nyx/m.png@04535b827685",
+        "m15nyx/m.png@d366c7b36ad2 (rows 1723+)"
+      ],
+      "c": [
+        "cc:img/frames/saga/nyx/a.png@0f6b25dd88c5",
+        "m15nyx/c.png@0a4a43d2a2e9 (rows 1723+)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "u": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "b": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "r": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "g": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "m": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "c": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/saga/nyx/a.png",
+      "cc:img/frames/saga/nyx/b.png",
+      "cc:img/frames/saga/nyx/g.png",
+      "cc:img/frames/saga/nyx/m.png",
+      "cc:img/frames/saga/nyx/r.png",
+      "cc:img/frames/saga/nyx/u.png",
+      "cc:img/frames/saga/nyx/w.png",
+      "m15nyx/b.png",
+      "m15nyx/c.png",
+      "m15nyx/g.png",
+      "m15nyx/m.png",
+      "m15nyx/r.png",
+      "m15nyx/u.png",
+      "m15nyx/w.png"
+    ],
+    "notes": [
+      "TODO 4.5d: the saga creature — FIN / FIC / PFIN's \"Summon:\" cards (2025); no Card Conjurer or MSE pack draws it",
+      "c = the textured saga pack's artifact silver over m15nyx/c (FIN #1 Summon: Bahamut's frame); the prints' see-through rail and box are not drawn"
+    ]
+  },
   "sagadfcback": {
     "source": "pipglyph",
     "repo": "Investigamer/cardconjurer",

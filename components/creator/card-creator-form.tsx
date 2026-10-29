@@ -237,11 +237,10 @@ import {
   loyaltyFromRulesText,
   keepsStoredMarker,
   resolveLoyaltyRows,
-  sagaEditorRows,
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { keptStationRows, sagaRowsForKindSwitch, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { keptStationRows, sagaRowsForKindSwitch, sagaRowsOut, structuredRowsUntouched, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
 import { stationPtChoiceAfterFill } from "@/lib/ai/station-design";
@@ -274,6 +273,8 @@ import {
   SUBTYPE_DRESS_WORDS,
   subtypesSay,
   enchantmentFrameFor,
+  isSagaCreatureDress,
+  sagaCreatureFrameFor,
   followsEnchantmentDress,
   followsTokenNyxDressIn,
   typeLineHasWord,
@@ -330,9 +331,12 @@ import {
   isBlankBackFace,
   mergeTag,
   normalizeColorSelection,
+  openedForFrame,
   parseSubtypes,
   parseTags,
   remixValuesFrom,
+  sagaRowsForFrame,
+  sagaRowsFromText,
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
@@ -706,6 +710,18 @@ function firstErrorMessage(errors: unknown): string | null {
   return null;
 }
 
+/** A saga's rows seeded from a text that ARRIVES (an import, an AI fill, a
+ *  kind switch) on `template` — the editors' six-row cap applied (the
+ *  server refuses more) — and what a frame move re-reads them with
+ *  (TODO 4.5d: lib/creator/card-fields.ts sagaRowsFromText). */
+function sagaSeedFor(
+  rulesText: string | null | undefined,
+  template: string | null | undefined,
+): Pick<FormValues, "saga_intro" | "saga_chapters" | "saga_creature_text"> {
+  const rows = sagaRowsFromText(rulesText, template);
+  return { ...rows, saga_chapters: rows.saga_chapters.slice(0, 6) };
+}
+
 /** A basic-only frame (the full-art basic land, TODO 0.26) can't draw a
  *  nonbasic land's rules. When the card stops being a basic land (Land type
  *  → Nonbasic, or a rename that clears the basic seed), move it to the land
@@ -969,8 +985,16 @@ export function CardCreatorForm({
     [mode, verifiedFrameKeys, card],
   );
   const formResolver = useMemo(
-    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null, formBackBody)),
-    [mode, defaults, formBackBody],
+    () =>
+      zodResolver(
+        cardFormSchemaFor(
+          // (…read for the frame the card is on now: a saga moved on or off
+          // the saga creature frame, TODO 4.5d — card-fields openedForFrame.)
+          mode === "edit" ? (values: FormValues) => openedForFrame(defaults, card, values.frame_style?.template) : null,
+          formBackBody,
+        ),
+      ),
+    [mode, defaults, card, formBackBody],
   );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
@@ -1576,6 +1600,57 @@ export function CardCreatorForm({
     if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [kind, nyxWords, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
+  // A NEW saga whose type words say Creature (TODO 4.5d: FIN's "Summon:"
+  // cards) follows onto the saga creature body — the type bar raised, a box
+  // for its abilities and a P/T — where it is verified in the card's colour,
+  // and back to the saga frame when the words stop saying Creature (the
+  // server refuses the body there): sagaCreatureFrameFor, the Nyx follow's
+  // rules (real edits only, only when the words change, never an unverified
+  // combo, never an admin's saved frame preview). A stored saga keeps its
+  // frame; the Frame section's tiles are the way back.
+  const sagaCreatureWords = `${kind}|${typeLineHasWord({ cardType: watched.card_type, supertype: watched.supertype }, "Creature")}`;
+  const lastSagaCreatureRef = useRef(sagaCreatureWords);
+  useEffect(() => {
+    if (lastSagaCreatureRef.current === sagaCreatureWords) return;
+    lastSagaCreatureRef.current = sagaCreatureWords;
+    if (isRevise || !isDirty || vehicleFramePinned) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = sagaCreatureFrameFor(kind, current, { cardType: getValues("card_type"), supertype: getValues("supertype") });
+    if (next === current) return;
+    if (!isFrameComboAvailable(next, pickFrameColorKey(getValues("color_identity")), new Set(verifiedFrameKeys))) return;
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [kind, sagaCreatureWords, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
+  // A saga moved on or off the saga creature frame (TODO 4.5d) reads its
+  // rows again from its TEXT for the new frame: a text with no stored rows
+  // splits the lines after its last chapter into the box there, and joins
+  // them to the chapter everywhere else — as each frame draws them. An EDIT
+  // reads the STORED card (card-fields sagaRowsForFrame; the untouched card
+  // then still saves its stored text byte for byte, openedForFrame); a new
+  // card the text that arrived (an import landing on the saga frame, then
+  // following its Creature word onto the body). Only while the rows still
+  // read as that text: an edited row stays as the maker left it, the box's
+  // text with it (saved on any frame while it holds a value).
+  const onSagaCreatureFrame = kind === "saga" && isSagaCreatureDress(normalizeFrameTemplate(watched.frame_style?.template));
+  const lastSagaCreatureFrameRef = useRef({ on: onSagaCreatureFrame, template: watched.frame_style?.template });
+  useEffect(() => {
+    const before = lastSagaCreatureFrameRef.current;
+    const template = getValues("frame_style.template");
+    lastSagaCreatureFrameRef.current = { on: onSagaCreatureFrame, template };
+    if (before.on === onSagaCreatureFrame || kind !== "saga") return;
+    const values = getValues();
+    let rows: Pick<FormValues, "saga_intro" | "saga_chapters" | "saga_creature_text">;
+    if (isEdit && card) {
+      if (!structuredRowsUntouched("saga", values, openedForFrame(defaults, card, before.template))) return;
+      rows = sagaRowsForFrame(card, template);
+    } else {
+      const seeded = { ...values, ...sagaSeedFor(values.rules_text, before.template) };
+      if (!values.rules_text.trim() || !structuredRowsUntouched("saga", values, seeded)) return;
+      rows = sagaSeedFor(values.rules_text, template);
+    }
+    setValue("saga_intro", rows.saga_intro, { shouldDirty: true });
+    setValue("saga_chapters", rows.saga_chapters, { shouldDirty: true });
+    setValue("saga_creature_text", rows.saga_creature_text, { shouldDirty: true });
+  }, [onSagaCreatureFrame, isEdit, card, kind, defaults, getValues, setValue]);
   // The token's frame follows its text (TODO 4.49 (b) and 4.48, owner
   // decisions 2026-09-29). On the 2014–19 arch the text box comes and goes
   // with the rules or flavour text; on the full-art design the height (no
@@ -1949,9 +2024,14 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     } else if (targetKind === "saga") {
-      const saga = sagaEditorRows(null, rulesText);
-      setValue("saga_chapters", saga.chapters.slice(0, MAX_STRUCTURED_ROWS), { shouldDirty: true });
-      setValue("saga_intro", saga.intro ?? "", { shouldDirty: true });
+      // (On the saga creature frame the lines after the last chapter seed
+      // its box, TODO 4.5d: sagaSeedFor.)
+      const saga = sagaSeedFor(rulesText, getValues("frame_style.template"));
+      setValue("saga_chapters", saga.saga_chapters, { shouldDirty: true });
+      setValue("saga_intro", saga.saga_intro, { shouldDirty: true });
+      if (saga.saga_creature_text || getValues("saga_creature_text")) {
+        setValue("saga_creature_text", saga.saga_creature_text, { shouldDirty: true });
+      }
     }
   };
 
@@ -1981,13 +2061,17 @@ export function CardCreatorForm({
       // can't show keeps that numeral in the text, TODO 3b.30.)
       const chapters = sagaRowsForKindSwitch(getValues("saga_chapters")).filter((r) => r.marker);
       const intro = getValues("saga_intro").trim();
-      if (chapters.length > 0 || intro) {
-        setValue("rules_text", serializeSagaMarkers(intro || null, chapters), {
+      // …and a saga creature's box (TODO 4.5d), after the chapters.
+      const creature = (getValues("saga_creature_text") ?? "").trim();
+      if (chapters.length > 0 || intro || creature) {
+        const rail = serializeSagaMarkers(intro || null, chapters);
+        setValue("rules_text", creature ? (rail ? `${rail}\n${creature}` : creature) : rail, {
           shouldDirty: true,
         });
       }
       setValue("saga_chapters", [], { shouldDirty: true });
       setValue("saga_intro", "", { shouldDirty: true });
+      setValue("saga_creature_text", "", { shouldDirty: true });
     }
     if (
       nextKind === "planeswalker" &&
@@ -3242,6 +3326,10 @@ export function CardCreatorForm({
       const chapters = sagaRowsOut(values.saga_chapters).filter((r) => r.marker);
       if (chapters.length) {
         rulesNow = serializeSagaMarkers(values.saga_intro.trim() || null, chapters);
+        // …and a saga creature's box after them (TODO 4.5d) — as the save
+        // writes it (lib/creator/structured-rules.ts).
+        const creature = (values.saga_creature_text ?? "").trim();
+        if (creature) rulesNow = `${rulesNow}\n${creature}`;
       }
     }
     return {
@@ -3958,13 +4046,16 @@ export function CardCreatorForm({
       faceContent: faceContentPayload,
       keepsStored: keepsStoredFaceContent,
     } = submittedRulesOf(submitKind, values, {
-      opened: isEdit ? defaults : null,
+      // (Read for the frame the card is on now — TODO 4.5d.)
+      opened: isEdit ? openedForFrame(defaults, card, values.frame_style?.template) : null,
       storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
       // The station frame's tier editor (TODO 4.27a).
       stationFrame: isStationFrame(values.frame_style?.template),
       // A Planet shows no P/T: its rows mark no tier.
       stationShowsPt: showsPowerToughness((values.card_type || null) as CardType | null, parseSubtypes(values.subtypes_text), values.supertype),
       ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
+      // The saga creature's box (TODO 4.5d): its lines after the chapters.
+      sagaCreatureFrame: isSagaCreatureDress(normalizeFrameTemplate(values.frame_style?.template)),
     });
 
     // Design watermark: the form's flat shape → the discriminated union
@@ -4415,8 +4506,10 @@ export function CardCreatorForm({
   const liveRules =
     kind === "planeswalker" || kind === "saga"
       ? submittedRulesOf(kind, watched, {
-          opened: isEdit ? defaults : null,
+          opened: isEdit ? openedForFrame(defaults, card, watched.frame_style?.template) : null,
           storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
+          // (The saga creature's box, TODO 4.5d — as the save writes it.)
+          sagaCreatureFrame: isSagaCreatureDress(normalizeFrameTemplate(watched.frame_style?.template)),
         })
       : null;
   // …and a station card stored WITH rows (TODO 4.27a; no editor shows them

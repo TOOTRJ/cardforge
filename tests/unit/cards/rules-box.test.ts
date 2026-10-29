@@ -119,6 +119,8 @@ describe("the main box on every template", () => {
         // the prints' margins (ink from x 127, M15's 4 px inside the rect) —
         // and its extended-art dress's (TODO 4.27b), the same box.
         "prepare", "extendedartprepare",
+        // The saga creature (TODO 4.5d): M15's box under the raised bar.
+        "sagacreature",
         // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
         // text layout is M15's, its box and margins.
         "lotrscroll",

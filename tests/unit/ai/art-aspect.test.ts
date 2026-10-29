@@ -101,6 +101,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   saga: ["656x1584", "9:21", 0.417],
   sagadfcfront: ["656x1584", "9:21", 0.417],
   sagadfcback: ["656x1584", "9:21", 0.417],
+  sagacreature: ["752x1360", "9:16", 0.552],
   adventure: ["1184x864", "4:3", 1.364],
   prepare: ["1184x864", "4:3", 1.366],
   flip: ["1392x752", "16:9", 1.842],

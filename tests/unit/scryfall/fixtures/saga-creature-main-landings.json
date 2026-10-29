@@ -1,0 +1,2170 @@
+{
+ "base": "origin/main",
+ "landings": {
+  "fic-26": {
+   "patch": {
+    "title": "Summon: Good King Mog XII",
+    "cost": "{4}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Moogle",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Create two 1/2 white Moogle creature tokens with lifelink.\nII, III — Whenever you cast a noncreature spell this turn, create a token that's a copy of a non-Saga token you control.\nIV — Put two +1/+1 counters on each other Moogle you control.\nFlying, lifelink",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Andrea Radeck",
+    "source_scryfall_id": "c14098d6-28ae-492f-8ffc-7d115d83ce6a",
+    "printing": {
+     "set": "fic",
+     "collector_number": "26",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "26",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-27": {
+   "patch": {
+    "title": "Summon: Ixion",
+    "cost": "{2}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Unicorn",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Aerospark — Exile target creature an opponent controls until this Saga leaves the battlefield.\nII, III — Put a +1/+1 counter on each of up to two target creatures you control. You gain 2 life.\nFirst strike",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Ben Wootten",
+    "source_scryfall_id": "acb35dcb-0bee-4deb-88bf-ffa1f110c67b",
+    "printing": {
+     "set": "fic",
+     "collector_number": "27",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "27",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-28": {
+   "patch": {
+    "title": "Summon: Yojimbo",
+    "cost": "{3}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Samurai",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Exile target artifact, enchantment, or tapped creature an opponent controls.\nII, III — Until your next turn, creatures can't attack you unless their controller pays {2} for each of those creatures.\nIV — Create X Treasure tokens, where X is the number of opponents who control a creature with power 4 or greater.\nVigilance",
+    "power": "5",
+    "toughness": "5",
+    "artist_credit": "Benjamin Ee",
+    "source_scryfall_id": "cdbc2d28-ea35-47c6-af7e-07924e9d5794",
+    "printing": {
+     "set": "fic",
+     "collector_number": "28",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "28",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-42": {
+   "patch": {
+    "title": "Summon: Valefor",
+    "cost": "{4}{U}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Drake",
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Sonic Wings — Each opponent chooses a creature with the greatest mana value among creatures they control. Return those creatures to their owners' hands.\nII, III, IV — Tap up to one target creature and put a stun counter on it.\nFlying",
+    "power": "5",
+    "toughness": "4",
+    "artist_credit": "SENNSU",
+    "source_scryfall_id": "e0474d99-48e5-4e60-8cd6-537a10bcfea5",
+    "printing": {
+     "set": "fic",
+     "collector_number": "42",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "42",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-60": {
+   "patch": {
+    "title": "Summon: Esper Valigarmanda",
+    "cost": "{3}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Drake",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Exile an instant or sorcery card from each graveyard.\nII, III, IV — Add {R} for each lore counter on this Saga. You may cast an instant or sorcery card exiled with this Saga, and mana of any type can be spent to cast that spell.\nFlying, haste",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Fiona Hsieh",
+    "source_scryfall_id": "7f0298b4-c7ca-49b8-baaa-b9fad4c2bfd5",
+    "printing": {
+     "set": "fic",
+     "collector_number": "60",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "60",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-61": {
+   "patch": {
+    "title": "Summon: Kujata",
+    "cost": "{5}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Ox",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Lightning — This creature deals 3 damage to each of up to two target creatures.\nII — Ice — Up to three target creatures can't block this turn.\nIII — Fire — Discard a card, then draw two cards. When you discard a card this way, this creature deals damage equal to that card's mana value to each opponent.\nTrample, haste",
+    "power": "7",
+    "toughness": "5",
+    "artist_credit": "Alexandre Honoré",
+    "source_scryfall_id": "ba934866-efd0-4126-b1ff-9c7e82b73bd6",
+    "printing": {
+     "set": "fic",
+     "collector_number": "61",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "61",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-71": {
+   "patch": {
+    "title": "Summon: Magus Sisters",
+    "cost": "{4}{G}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Faerie",
+    "rarity": "rare",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II, III — Choose one at random —\n• Combine Powers! — Put three +1/+1 counters on target creature.\n• Defense! — Put a shield counter on target creature. You gain 3 life.\n• Fight! — This creature fights up to one target creature an opponent controls.\nHaste",
+    "power": "5",
+    "toughness": "5",
+    "artist_credit": "Rui Maruyama",
+    "source_scryfall_id": "76a8cae7-e6ea-45eb-be8d-0e6a29b98aa6",
+    "printing": {
+     "set": "fic",
+     "collector_number": "71",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "71",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fic-194": {
+   "patch": {
+    "title": "Summon: Good King Mog XII",
+    "cost": "{4}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Moogle",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Create two 1/2 white Moogle creature tokens with lifelink.\nII, III — Whenever you cast a noncreature spell this turn, create a token that's a copy of a non-Saga token you control.\nIV — Put two +1/+1 counters on each other Moogle you control.\nFlying, lifelink",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Minoru",
+    "source_scryfall_id": "3aabb93a-7fa2-4fb5-a683-db1d274ac367",
+    "printing": {
+     "set": "fic",
+     "collector_number": "194",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "194",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-195": {
+   "patch": {
+    "title": "Summon: Ixion",
+    "cost": "{2}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Unicorn",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Aerospark — Exile target creature an opponent controls until this Saga leaves the battlefield.\nII, III — Put a +1/+1 counter on each of up to two target creatures you control. You gain 2 life.\nFirst strike",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Yoshiya",
+    "source_scryfall_id": "92c0bfc2-ba98-48b6-82a4-95a2321c8df4",
+    "printing": {
+     "set": "fic",
+     "collector_number": "195",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "195",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-196": {
+   "patch": {
+    "title": "Summon: Yojimbo",
+    "cost": "{3}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Samurai",
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Exile target artifact, enchantment, or tapped creature an opponent controls.\nII, III — Until your next turn, creatures can't attack you unless their controller pays {2} for each of those creatures.\nIV — Create X Treasure tokens, where X is the number of opponents who control a creature with power 4 or greater.\nVigilance",
+    "power": "5",
+    "toughness": "5",
+    "artist_credit": "Hisashi Momose",
+    "source_scryfall_id": "fb7f1e73-183f-4041-907d-700e248ac5af",
+    "printing": {
+     "set": "fic",
+     "collector_number": "196",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "196",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-197": {
+   "patch": {
+    "title": "Summon: Valefor",
+    "cost": "{4}{U}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Drake",
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Sonic Wings — Each opponent chooses a creature with the greatest mana value among creatures they control. Return those creatures to their owners' hands.\nII, III, IV — Tap up to one target creature and put a stun counter on it.\nFlying",
+    "power": "5",
+    "toughness": "4",
+    "artist_credit": "Maiko Aoji",
+    "source_scryfall_id": "c95c1a97-4c9e-4d38-8b12-193f8ff0d556",
+    "printing": {
+     "set": "fic",
+     "collector_number": "197",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "197",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-198": {
+   "patch": {
+    "title": "Summon: Esper Valigarmanda",
+    "cost": "{3}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Drake",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Exile an instant or sorcery card from each graveyard.\nII, III, IV — Add {R} for each lore counter on this Saga. You may cast an instant or sorcery card exiled with this Saga, and mana of any type can be spent to cast that spell.\nFlying, haste",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "TAKUMI",
+    "source_scryfall_id": "e34b664c-2e80-4672-83ae-51babf28cf6c",
+    "printing": {
+     "set": "fic",
+     "collector_number": "198",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "198",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-199": {
+   "patch": {
+    "title": "Summon: Kujata",
+    "cost": "{5}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Ox",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Lightning — This creature deals 3 damage to each of up to two target creatures.\nII — Ice — Up to three target creatures can't block this turn.\nIII — Fire — Discard a card, then draw two cards. When you discard a card this way, this creature deals damage equal to that card's mana value to each opponent.\nTrample, haste",
+    "power": "7",
+    "toughness": "5",
+    "artist_credit": "Yoshiya",
+    "source_scryfall_id": "a469904f-f144-4e70-b689-c7869e40bcb2",
+    "printing": {
+     "set": "fic",
+     "collector_number": "199",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "199",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fic-200": {
+   "patch": {
+    "title": "Summon: Magus Sisters",
+    "cost": "{4}{G}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fic",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Faerie",
+    "rarity": "rare",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II, III — Choose one at random —\n• Combine Powers! — Put three +1/+1 counters on target creature.\n• Defense! — Put a shield counter on target creature. You gain 3 life.\n• Fight! — This creature fights up to one target creature an opponent controls.\nHaste",
+    "power": "5",
+    "toughness": "5",
+    "artist_credit": "Karo ARAI",
+    "source_scryfall_id": "83ba525d-d38e-4e68-9516-b6239a1b0b09",
+    "printing": {
+     "set": "fic",
+     "collector_number": "200",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIC",
+     "collector_number": "200",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-1": {
+   "patch": {
+    "title": "Summon: Bahamut",
+    "cost": "{9}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dragon",
+    "rarity": "mythic",
+    "color_identity": [
+     "colorless"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II — Destroy up to one target nonland permanent.\nIII — Draw two cards.\nIV — Mega Flare — This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+    "power": "9",
+    "toughness": "9",
+    "artist_credit": "Arif Wijaya",
+    "source_scryfall_id": "95318d85-4a08-47ac-a43d-ea83c0bea81c",
+    "printing": {
+     "set": "fin",
+     "collector_number": "1",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "1",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-35": {
+   "patch": {
+    "title": "Summon: Choco/Mog",
+    "cost": "{2}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Bird, Moogle",
+    "rarity": "common",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III, IV — Stampede! — Other creatures you control get +1/+0 until end of turn.",
+    "flavor_text": "\"Wark? Kupo!\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Madeline Boni",
+    "source_scryfall_id": "00546117-018a-4286-bc20-b5446c5be56f",
+    "printing": {
+     "set": "fin",
+     "collector_number": "35",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "35",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-36": {
+   "patch": {
+    "title": "Summon: Knights of Round",
+    "cost": "{6}{W}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "mythic",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV — Create three 2/2 white Knight creature tokens.\nV — Ultimate End — Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Takayama Toshiaki",
+    "source_scryfall_id": "44d23652-077e-4c1f-b640-b284685db911",
+    "printing": {
+     "set": "fin",
+     "collector_number": "36",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "36",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-37": {
+   "patch": {
+    "title": "Summon: Primal Garuda",
+    "cost": "{3}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Harpy",
+    "rarity": "uncommon",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Aerial Blast — This creature deals 4 damage to target tapped creature an opponent controls.\nII, III — Slipstream — Another target creature you control gets +1/+0 and gains flying until end of turn.\nFlying",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Madeline Boni",
+    "source_scryfall_id": "e44497a8-067e-454e-a9c0-684f03df55ff",
+    "printing": {
+     "set": "fin",
+     "collector_number": "37",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "37",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-77": {
+   "patch": {
+    "title": "Summon: Leviathan",
+    "cost": "{4}{U}{U}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Leviathan",
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III — Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+    "power": "6",
+    "toughness": "6",
+    "artist_credit": "OTUMAMI",
+    "source_scryfall_id": "ea7f26a9-b203-4ee7-88f1-3d9c77a25bcb",
+    "printing": {
+     "set": "fin",
+     "collector_number": "77",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "77",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-78": {
+   "patch": {
+    "title": "Summon: Shiva",
+    "cost": "{3}{U}{U}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Elemental",
+    "rarity": "uncommon",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II — Heavenly Strike — Tap target creature an opponent controls. Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)\nIII — Diamond Dust — Draw a card for each tapped creature your opponents control.",
+    "flavor_text": "\"Let us summon a sea in a new dream world.\"",
+    "power": "4",
+    "toughness": "5",
+    "artist_credit": "Fajareka Setiawan",
+    "source_scryfall_id": "a80511f8-7cb1-4974-afde-8a5cebe13ad7",
+    "printing": {
+     "set": "fin",
+     "collector_number": "78",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "78",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-120": {
+   "patch": {
+    "title": "Summon: Anima",
+    "cost": "{4}{B}{B}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Horror",
+    "rarity": "uncommon",
+    "color_identity": [
+     "black"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III — Pain — You draw a card and you lose 1 life.\nIV — Oblivion — Each opponent sacrifices a creature of their choice and loses 3 life.\nMenace",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Esuthio",
+    "source_scryfall_id": "aa4f6703-21f8-4c29-ad5a-5afb54188ade",
+    "printing": {
+     "set": "fin",
+     "collector_number": "120",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "120",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-121": {
+   "patch": {
+    "title": "Summon: Primal Odin",
+    "cost": "{4}{B}{B}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "black"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Gungnir — Destroy target creature an opponent controls.\nII — Zantetsuken — This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII — Hall of Sorrow — Draw two cards. Each player loses 2 life.",
+    "flavor_text": "The elder primal Odin has returned to Eorzea.",
+    "power": "5",
+    "toughness": "3",
+    "artist_credit": "Nino Is",
+    "source_scryfall_id": "8b1b5f06-e34d-44a3-976e-5157c4b7a0f4",
+    "printing": {
+     "set": "fin",
+     "collector_number": "121",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "121",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-160": {
+   "patch": {
+    "title": "Summon: Brynhildr",
+    "cost": "{1}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Chain — Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III — Gestalt Mode — When you next cast a creature spell this turn, it gains haste until end of turn.",
+    "flavor_text": "A name in blood, a pact of flame.",
+    "power": "2",
+    "toughness": "1",
+    "artist_credit": "Kevin Glint",
+    "source_scryfall_id": "8ab5429a-1075-49aa-9608-0610080fbf7a",
+    "printing": {
+     "set": "fin",
+     "collector_number": "160",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "160",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-161": {
+   "patch": {
+    "title": "Summon: Esper Ramuh",
+    "cost": "{2}{R}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Wizard",
+    "rarity": "uncommon",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Judgment Bolt — This creature deals damage equal to the number of noncreature, nonland cards in your graveyard to target creature an opponent controls.\nII, III — Wizards you control get +1/+0 until end of turn.",
+    "flavor_text": "\"I am Ramuh—the esper.\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Justyna Dura",
+    "source_scryfall_id": "840659ee-1493-4190-a514-c2c9ae14e331",
+    "printing": {
+     "set": "fin",
+     "collector_number": "161",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "161",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-162": {
+   "patch": {
+    "title": "Summon: G.F. Cerberus",
+    "cost": "{2}{R}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dog",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII — Double — When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII — Triple — When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+    "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Kevin Glint",
+    "source_scryfall_id": "d0e5cbd4-401b-4456-80bf-d90beadfd1f8",
+    "printing": {
+     "set": "fin",
+     "collector_number": "162",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "162",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-163": {
+   "patch": {
+    "title": "Summon: G.F. Ifrit",
+    "cost": "{2}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Demon",
+    "rarity": "common",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II — You may discard a card. If you do, draw a card.\nIII, IV — Add {R}.",
+    "flavor_text": "\"Hm! Not bad for a human.\"",
+    "power": "3",
+    "toughness": "2",
+    "artist_credit": "Lordigan",
+    "source_scryfall_id": "c6c73092-5195-4bdc-b039-a699f6e297b2",
+    "printing": {
+     "set": "fin",
+     "collector_number": "163",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "163",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-202": {
+   "patch": {
+    "title": "Summon: Fat Chocobo",
+    "cost": "{4}{G}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Bird",
+    "rarity": "common",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Wark — Create a 2/2 green Bird creature token with \"Whenever a land you control enters, this token gets +1/+0 until end of turn.\"\nII, III, IV — Kerplunk — Creatures you control gain trample until end of turn.",
+    "flavor_text": "A pleasingly plump summon.",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Joseph Weston",
+    "source_scryfall_id": "32eb192b-de6b-4814-8077-628d343d014e",
+    "printing": {
+     "set": "fin",
+     "collector_number": "202",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "202",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-203": {
+   "patch": {
+    "title": "Summon: Fenrir",
+    "cost": "{2}{G}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Wolf",
+    "rarity": "uncommon",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Crescent Fang — Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nII — Heavenward Howl — When you next cast a creature spell this turn, that creature enters with an additional +1/+1 counter on it.\nIII — Ecliptic Growl — Draw a card if you control the creature with the greatest power or tied for the greatest power.",
+    "flavor_text": "\"Who dares summon me from the darkness?\"",
+    "power": "3",
+    "toughness": "2",
+    "artist_credit": "Chun Lo",
+    "source_scryfall_id": "93feb9d5-d004-4598-a448-b3488c869c05",
+    "printing": {
+     "set": "fin",
+     "collector_number": "203",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "203",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-204": {
+   "patch": {
+    "title": "Summon: Titan",
+    "cost": "{3}{G}{G}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Giant",
+    "rarity": "rare",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Mill five cards.\nII — Return all land cards from your graveyard to the battlefield tapped.\nIII — Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+    "power": "7",
+    "toughness": "7",
+    "artist_credit": "Andreia Ugrai",
+    "source_scryfall_id": "5ce6ea96-7293-496d-b9c8-8ed6d6109a4d",
+    "printing": {
+     "set": "fin",
+     "collector_number": "204",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "204",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "fin-356": {
+   "patch": {
+    "title": "Summon: Bahamut",
+    "cost": "{9}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dragon",
+    "rarity": "mythic",
+    "color_identity": [
+     "colorless"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II — Destroy up to one target nonland permanent.\nIII — Draw two cards.\nIV — Mega Flare — This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+    "power": "9",
+    "toughness": "9",
+    "artist_credit": "Kota Nakatsubo",
+    "source_scryfall_id": "fd5cb1fc-71b2-4b05-abd3-c90e95c53ad1",
+    "printing": {
+     "set": "fin",
+     "collector_number": "356",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "356",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-358": {
+   "patch": {
+    "title": "Summon: Choco/Mog",
+    "cost": "{2}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Bird, Moogle",
+    "rarity": "common",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III, IV — Stampede! — Other creatures you control get +1/+0 until end of turn.",
+    "flavor_text": "\"Wark? Kupo!\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Yoshiya",
+    "source_scryfall_id": "b95481b1-1780-4cf9-b910-dd0a4461f818",
+    "printing": {
+     "set": "fin",
+     "collector_number": "358",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "358",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-359": {
+   "patch": {
+    "title": "Summon: Knights of Round",
+    "cost": "{6}{W}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "mythic",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV — Create three 2/2 white Knight creature tokens.\nV — Ultimate End — Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Hisashi Momose",
+    "source_scryfall_id": "b8a48466-6dc1-4874-9328-c7358e642f39",
+    "printing": {
+     "set": "fin",
+     "collector_number": "359",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "359",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-360": {
+   "patch": {
+    "title": "Summon: Primal Garuda",
+    "cost": "{3}{W}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Harpy",
+    "rarity": "uncommon",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Aerial Blast — This creature deals 4 damage to target tapped creature an opponent controls.\nII, III — Slipstream — Another target creature you control gets +1/+0 and gains flying until end of turn.\nFlying",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Tokima",
+    "source_scryfall_id": "f6ee6624-79be-4a76-8c12-80bf31f81ae2",
+    "printing": {
+     "set": "fin",
+     "collector_number": "360",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "360",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-361": {
+   "patch": {
+    "title": "Summon: Leviathan",
+    "cost": "{4}{U}{U}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Leviathan",
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III — Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+    "power": "6",
+    "toughness": "6",
+    "artist_credit": "Kota Nakatsubo",
+    "source_scryfall_id": "4c6738f5-55cb-48f0-8e70-296d1c549cd3",
+    "printing": {
+     "set": "fin",
+     "collector_number": "361",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "361",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-362": {
+   "patch": {
+    "title": "Summon: Shiva",
+    "cost": "{3}{U}{U}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Elemental",
+    "rarity": "uncommon",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II — Heavenly Strike — Tap target creature an opponent controls. Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)\nIII — Diamond Dust — Draw a card for each tapped creature your opponents control.",
+    "flavor_text": "\"Let us summon a sea in a new dream world.\"",
+    "power": "4",
+    "toughness": "5",
+    "artist_credit": "Taku Haruno",
+    "source_scryfall_id": "340b2b03-1b20-411c-ba30-2be77655290a",
+    "printing": {
+     "set": "fin",
+     "collector_number": "362",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "362",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-364": {
+   "patch": {
+    "title": "Summon: Anima",
+    "cost": "{4}{B}{B}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Horror",
+    "rarity": "uncommon",
+    "color_identity": [
+     "black"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III — Pain — You draw a card and you lose 1 life.\nIV — Oblivion — Each opponent sacrifices a creature of their choice and loses 3 life.\nMenace",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Kota Nakatsubo",
+    "source_scryfall_id": "d4aa9f4e-cba9-41fa-8c65-3e263988f90d",
+    "printing": {
+     "set": "fin",
+     "collector_number": "364",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "364",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-365": {
+   "patch": {
+    "title": "Summon: Primal Odin",
+    "cost": "{4}{B}{B}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "black"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Gungnir — Destroy target creature an opponent controls.\nII — Zantetsuken — This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII — Hall of Sorrow — Draw two cards. Each player loses 2 life.",
+    "flavor_text": "The elder primal Odin has returned to Eorzea.",
+    "power": "5",
+    "toughness": "3",
+    "artist_credit": "Tomohito",
+    "source_scryfall_id": "d8117e64-6e43-4aa8-90df-c5b21fbb9182",
+    "printing": {
+     "set": "fin",
+     "collector_number": "365",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "365",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-366": {
+   "patch": {
+    "title": "Summon: Brynhildr",
+    "cost": "{1}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Chain — Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III — Gestalt Mode — When you next cast a creature spell this turn, it gains haste until end of turn.",
+    "flavor_text": "A name in blood, a pact of flame.",
+    "power": "2",
+    "toughness": "1",
+    "artist_credit": "Tomohito",
+    "source_scryfall_id": "fac98745-a30e-4f64-be21-302c0d73d4f7",
+    "printing": {
+     "set": "fin",
+     "collector_number": "366",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "366",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-367": {
+   "patch": {
+    "title": "Summon: Esper Ramuh",
+    "cost": "{2}{R}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Wizard",
+    "rarity": "uncommon",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Judgment Bolt — This creature deals damage equal to the number of noncreature, nonland cards in your graveyard to target creature an opponent controls.\nII, III — Wizards you control get +1/+0 until end of turn.",
+    "flavor_text": "\"I am Ramuh— the esper.\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Hagiya Kaoru",
+    "source_scryfall_id": "a6edb808-9753-4029-81ed-60a91ebc1d77",
+    "printing": {
+     "set": "fin",
+     "collector_number": "367",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "367",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-368": {
+   "patch": {
+    "title": "Summon: G.F. Cerberus",
+    "cost": "{2}{R}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dog",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII — Double — When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII — Triple — When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+    "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Yoshiya",
+    "source_scryfall_id": "a5ad1e50-2bf1-4f43-9da4-62a89b521206",
+    "printing": {
+     "set": "fin",
+     "collector_number": "368",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "368",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-369": {
+   "patch": {
+    "title": "Summon: G.F. Ifrit",
+    "cost": "{2}{R}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Demon",
+    "rarity": "common",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II — You may discard a card. If you do, draw a card.\nIII, IV — Add {R}.",
+    "flavor_text": "\"Hm! Not bad for a human.\"",
+    "power": "3",
+    "toughness": "2",
+    "artist_credit": "Ono Tako",
+    "source_scryfall_id": "25c3ce9a-39e5-4273-ba67-224a837b75e7",
+    "printing": {
+     "set": "fin",
+     "collector_number": "369",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "369",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-371": {
+   "patch": {
+    "title": "Summon: Fat Chocobo",
+    "cost": "{4}{G}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Bird",
+    "rarity": "common",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Wark — Create a 2/2 green Bird creature token with \"Whenever a land you control enters, this token gets +1/+0 until end of turn.\"\nII, III, IV — Kerplunk — Creatures you control gain trample until end of turn.",
+    "flavor_text": "A pleasingly plump summon.",
+    "power": "4",
+    "toughness": "4",
+    "artist_credit": "Buchi",
+    "source_scryfall_id": "a44ae92c-4894-4172-82b3-11e2e94653ef",
+    "printing": {
+     "set": "fin",
+     "collector_number": "371",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "371",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-372": {
+   "patch": {
+    "title": "Summon: Fenrir",
+    "cost": "{2}{G}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Wolf",
+    "rarity": "uncommon",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Crescent Fang — Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nII — Heavenward Howl — When you next cast a creature spell this turn, that creature enters with an additional +1/+1 counter on it.\nIII — Ecliptic Growl — Draw a card if you control the creature with the greatest power or tied for the greatest power.",
+    "flavor_text": "\"Who dares summon me from the darkness?\"",
+    "power": "3",
+    "toughness": "2",
+    "artist_credit": "Maiko Aoji",
+    "source_scryfall_id": "412093fb-15c1-4b36-aa53-9484f955ee2c",
+    "printing": {
+     "set": "fin",
+     "collector_number": "372",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "372",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "fin-373": {
+   "patch": {
+    "title": "Summon: Titan",
+    "cost": "{3}{G}{G}",
+    "kind": "saga",
+    "printing_treatment": "borderless",
+    "printing_detail": {
+     "set": "fin",
+     "fullArt": false,
+     "textless": false
+    },
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Giant",
+    "rarity": "rare",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Mill five cards.\nII — Return all land cards from your graveyard to the battlefield tapped.\nIII — Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+    "power": "7",
+    "toughness": "7",
+    "artist_credit": "Ezoi",
+    "source_scryfall_id": "e5881485-7935-427e-911e-843f198d94dc",
+    "printing": {
+     "set": "fin",
+     "collector_number": "373",
+     "border_color": "borderless",
+     "full_art": false,
+     "textless": false
+    },
+    "collector": {
+     "set_code": "FIN",
+     "collector_number": "373",
+     "lang": "en"
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "borderless/layout"
+   },
+   "remix": "saga"
+  },
+  "pfin-1s": {
+   "patch": {
+    "title": "Summon: Bahamut",
+    "cost": "{9}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dragon",
+    "rarity": "mythic",
+    "color_identity": [
+     "colorless"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II — Destroy up to one target nonland permanent.\nIII — Draw two cards.\nIV — Mega Flare — This creature deals damage equal to the total mana value of other permanents you control to each opponent.\nFlying",
+    "power": "9",
+    "toughness": "9",
+    "artist_credit": "Arif Wijaya",
+    "source_scryfall_id": "5c0e08d1-ecec-4577-b16e-a8d8478472a0",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "1s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-36s": {
+   "patch": {
+    "title": "Summon: Knights of Round",
+    "cost": "{6}{W}{W}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "mythic",
+    "color_identity": [
+     "white"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after V.)\nI, II, III, IV — Create three 2/2 white Knight creature tokens.\nV — Ultimate End — Other creatures you control get +2/+2 until end of turn. Put an indestructible counter on each of them.\nIndestructible",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Takayama Toshiaki",
+    "source_scryfall_id": "d9120fd0-f958-4ce3-82cd-0500d4549654",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "36s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-77s": {
+   "patch": {
+    "title": "Summon: Leviathan",
+    "cost": "{4}{U}{U}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Leviathan",
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Return each creature that isn't a Kraken, Leviathan, Merfolk, Octopus, or Serpent to its owner's hand.\nII, III — Until end of turn, whenever a Kraken, Leviathan, Merfolk, Octopus, or Serpent attacks, draw a card.\nWard {2}",
+    "power": "6",
+    "toughness": "6",
+    "artist_credit": "OTUMAMI",
+    "source_scryfall_id": "22281ba1-d509-4039-83c7-d912a1ce5ac4",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "77s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-121s": {
+   "patch": {
+    "title": "Summon: Primal Odin",
+    "cost": "{4}{B}{B}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "black"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Gungnir — Destroy target creature an opponent controls.\nII — Zantetsuken — This creature gains \"Whenever this creature deals combat damage to a player, that player loses the game.\"\nIII — Hall of Sorrow — Draw two cards. Each player loses 2 life.",
+    "flavor_text": "The elder primal Odin has returned to Eorzea.",
+    "power": "5",
+    "toughness": "3",
+    "artist_credit": "Nino Is",
+    "source_scryfall_id": "13e0ad67-35a6-48f3-83cb-5ffd07daf717",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "121s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-160s": {
+   "patch": {
+    "title": "Summon: Brynhildr",
+    "cost": "{1}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Knight",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Chain — Exile the top card of your library. During any turn you put a lore counter on this Saga, you may play that card.\nII, III — Gestalt Mode — When you next cast a creature spell this turn, it gains haste until end of turn.",
+    "flavor_text": "A name in blood, a pact of flame.",
+    "power": "2",
+    "toughness": "1",
+    "artist_credit": "Kevin Glint",
+    "source_scryfall_id": "59d7c696-0ffa-4327-9045-eaefefcf4fe0",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "160s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-162s": {
+   "patch": {
+    "title": "Summon: G.F. Cerberus",
+    "cost": "{2}{R}{R}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Dog",
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nII — Double — When you next cast an instant or sorcery spell this turn, copy it. You may choose new targets for the copy.\nIII — Triple — When you next cast an instant or sorcery spell this turn, copy it twice. You may choose new targets for the copies.",
+    "flavor_text": "\"Pretty confident. Let's see how you do.\"",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Kevin Glint",
+    "source_scryfall_id": "5bb06121-b390-4e3d-8822-4389570b0e15",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "162s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  },
+  "pfin-204s": {
+   "patch": {
+    "title": "Summon: Titan",
+    "cost": "{3}{G}{G}",
+    "kind": "saga",
+    "card_type": "enchantment",
+    "supertype": "Creature",
+    "subtypes_text": "Saga, Giant",
+    "rarity": "rare",
+    "color_identity": [
+     "green"
+    ],
+    "printed_collector": "2023",
+    "printed_star": true,
+    "printed_stamp": "triangle",
+    "rules_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Mill five cards.\nII — Return all land cards from your graveyard to the battlefield tapped.\nIII — Until end of turn, another target creature you control gains trample and gets +X/+X, where X is the number of lands you control.\nReach, trample",
+    "power": "7",
+    "toughness": "7",
+    "artist_credit": "Andreia Ugrai",
+    "source_scryfall_id": "1eb2a447-e18e-4318-898d-bc12fdd16172",
+    "printing": {
+     "set": "pfin",
+     "collector_number": "204s",
+     "border_color": "black",
+     "full_art": false,
+     "textless": false
+    },
+    "preview_art_url": null
+   },
+   "land": {
+    "frame": "saga",
+    "status": "nearest",
+    "signature": "layout/2015+universes-beyond"
+   },
+   "remix": "saga"
+  }
+ }
+}

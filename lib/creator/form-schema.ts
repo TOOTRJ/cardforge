@@ -139,6 +139,10 @@ function checkSubtypesText(ctx: Ctx, path: PathSegment[], text: string): void {
  *  used to be dropped by the save without a word. */
 export const SAGA_ROW_NEEDS_NUMBER = "Pick a chapter number for this row, or remove it.";
 
+/** The saga creature's box with no chapter to follow (TODO 4.5d): its lines
+ *  are saved after the last chapter. */
+export const SAGA_CREATURE_NEEDS_CHAPTER = "Add a chapter first: creature abilities are saved after the last chapter.";
+
 /** What a saga row says once its NUMBERS were changed while its stored
  *  marker holds a numeral the editor has no toggle for ("I, XI —"): saving
  *  would drop that numeral (lib/creator/structured-rules.ts
@@ -175,12 +179,16 @@ export type FormBackBodyContext = {
 const NO_BACK_BODY_CONTEXT: FormBackBodyContext = { mode: "create", verifiedKeys: new Set() };
 
 export function cardFormSchemaFor(
-  opened: StructuredRulesValues | null = null,
+  // (Or the opened rows read for the frame the values are on — an edit's
+  // saga moved on or off the saga creature frame, TODO 4.5d:
+  // lib/creator/card-fields.ts openedForFrame.)
+  openedFor: StructuredRulesValues | ((values: FormValues) => StructuredRulesValues | null) | null = null,
   backBody: FormBackBodyContext = NO_BACK_BODY_CONTEXT,
 ): z.ZodType<FormValues, FormValues> {
   return z
   .custom<FormValues>()
   .superRefine((values, ctx) => {
+    const opened = typeof openedFor === "function" ? openedFor(values) : openedFor;
     // The keys the colourless rule reads (TODO 5.11a): none on an edit.
     const colourlessKeys = backBody.mode === "edit" ? null : backBody.verifiedKeys;
     // ----- Card step -----
@@ -412,6 +420,21 @@ export function cardFormSchemaFor(
           path: ["saga_intro"],
           message: "Intro must be 400 characters or fewer.",
         });
+      }
+      // The saga creature's box (TODO 4.5d): a chapter's limit — and it is
+      // saved AFTER the last chapter, so with no chapter to follow there is
+      // nowhere to save it (as an intro the rail would print it): the save
+      // waits, and says so, rather than dropping it.
+      const creatureText = (values.saga_creature_text ?? "").trim();
+      if (!rowsUntouched && creatureText.length > 600) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["saga_creature_text"],
+          message: "Creature abilities must be 600 characters or fewer.",
+        });
+      }
+      if (!rowsUntouched && creatureText && surviving.length === 0) {
+        ctx.addIssue({ code: "custom", path: ["saga_creature_text"], message: SAGA_CREATURE_NEEDS_CHAPTER });
       }
     }
     if (rulesTextIsSubmitted) {

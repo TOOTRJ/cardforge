@@ -439,6 +439,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // TODO 4.5d's saga creature.
+  "sagacreature",
   // …and its extended-art dress (TODO 4.27b).
   "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
@@ -493,6 +495,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // TODO 4.5d's saga creature.
+  "sagacreature",
   // …and its extended-art dress (TODO 4.27b).
   "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
@@ -888,6 +892,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15tokentall", "m15tokenartifacttall",
       // …and TODO 4.27's Prepare frame: a new template, no stored card — no bump.
       "prepare",
+      // …and TODO 4.5d's saga creature: the same, no bump.
+      "sagacreature",
       // …and TODO 4.27b's extended-art Prepare dress: the same, no bump.
       "extendedartprepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
@@ -1158,7 +1164,8 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
     // A NEW chapter-rail template no card was ever baked on needs none
     // either: TODO 5.5 (b)'s double-faced saga front and back.
-    const newChapters = ["sagadfcfront", "sagadfcback"];
+    // …nor TODO 4.5d's saga creature.
+    const newChapters = ["sagadfcfront", "sagadfcback", "sagacreature"];
     expect([...V33_SCOPE_TEMPLATES.chapters, ...newChapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
     for (const t of newChapters) expect(V33_SCOPE_TEMPLATES.chapters, t).not.toContain(t);
   });
@@ -3050,8 +3057,9 @@ describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
     // (layout v62, TODO 4.11): no stored card names a stamp on it.
     // …and the ring's with its own (layout v65).
     // The Doctor Who TARDIS (TODO 4.11 wave 2) was BORN with its triangle: a
-    // new template, no stored card, no bump.
-    const later = ["lotrscroll", "lotr", "tardis"];
+    // new template, no stored card, no bump — and so was the saga creature
+    // (TODO 4.5d).
+    const later = ["lotrscroll", "lotr", "tardis", "sagacreature"];
     expect(
       FRAME_TEMPLATE_VALUES.filter((t) => !later.includes(t) && (getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp" && o.stamp.shape === "triangle")).sort(),
     ).toEqual([...lv.UB_STAMP_TONES_TEMPLATES].sort());
@@ -3292,9 +3300,11 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // the Strixhaven Mystical Archive (6 px higher, 4 px further right), and
     // the Doctor Who TARDIS (the CC M15 row 4 px lower), and the OTJ Breaking
     // News (the 70 px disc in a box of its own in the masthead: costRect).
+    // The saga creature (TODO 4.5d) was BORN on the saga's row (a new
+    // template, no bump).
     // (…and the extended-art Prepare dress, TODO 4.27b: a new template BORN
     // on the Prepare frame's CC M15 row — no bump.)
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "extendedartprepare"];
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "extendedartprepare"];
     const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());

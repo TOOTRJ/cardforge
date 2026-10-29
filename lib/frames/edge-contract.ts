@@ -238,6 +238,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   sagadfcfront: ALL_BORDER,
   // …and its back (TODO 5.5 (b), PR 2): the saga master's border, whole.
   sagadfcback: ALL_BORDER,
+  // The saga creature (TODO 4.5d): the textured saga's border over the type
+  // bar, m15nyx's (M15's) from the box down — black all round.
+  sagacreature: ALL_BORDER,
   adventure: ALL_BORDER,
   // The Prepare frame (TODO 4.27): M15's own border, whole (its masters are
   // m15/<key> and m15artifact/c with the text area re-dressed).

@@ -164,6 +164,8 @@ const DOCUMENTED_NULLS = new Set([
   // 4.6f) and no colourless Prepare card. The two masters exist so no
   // colour resolves to a missing master.
   "prepare/m", "prepare/c",
+  // The saga creature (TODO 4.5d): no multicolour one-faced summon.
+  "sagacreature/m",
   // …and its extended-art dress (TODO 4.27b): the same — SOC #93–98 are
   // two-colour (judged with the gold key's tick), none is colourless.
   "extendedartprepare/m", "extendedartprepare/c",
