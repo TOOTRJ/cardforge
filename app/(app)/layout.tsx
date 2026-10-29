@@ -9,6 +9,7 @@ import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { planEndingOf } from "@/lib/billing/plan-ending";
+import { LIVE_SUBSCRIPTION_STATUSES } from "@/lib/billing/viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,12 @@ export default async function AppGroupLayout({
     redirect("/onboarding");
   }
 
-  // The Account menu names the plan, and a cancelled plan that is still
-  // running says when it ends — the same facts /api/me gives the marketing
-  // header (lib/billing/plan-ending.ts). Only while billing is on.
+  // The Account menu's plan line (lib/billing/account-plan-line.ts): the
+  // same facts /api/me gives the marketing header — the tiers, the status,
+  // a live subscription, a cancelled plan's end (lib/billing/plan-ending.ts).
+  // Only while billing is on.
   const ending = isBillingEnabled() ? planEndingOf(profile) : null;
+  const status = profile?.subscription_status ?? null;
 
   return (
     <AppShell
@@ -65,6 +68,9 @@ export default async function AppGroupLayout({
               avatarUrl: profileMediaSrc("avatar", profile?.avatar_url, user.id),
               isPaid: entitlements?.isPaid ?? false,
               tier: entitlements?.effectiveTier ?? null,
+              subscribedTier: entitlements?.tier ?? null,
+              subscriptionStatus: status,
+              hasLiveSubscription: status != null && LIVE_SUBSCRIPTION_STATUSES.has(status),
               subscriptionEnding: ending != null,
               subscriptionEndsAt: ending?.endsAt ?? null,
               subscriptionEndingKind: ending?.kind ?? null,

@@ -10,8 +10,8 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { RealtimeAlerts } from "@/components/notifications/realtime-alerts";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { planForTier, type PlanTier } from "@/lib/billing/plans";
-import { planEndingShortText } from "@/lib/billing/plan-ending";
+import type { PlanTier } from "@/lib/billing/plans";
+import { accountPlanLine } from "@/lib/billing/account-plan-line";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -26,6 +26,9 @@ type HeaderUser = {
    *  viewer's plan client-side while the page itself stays static/ISR, and
    *  names the plan in the Account menu. */
   tier?: PlanTier | null;
+  /** The plan subscribed to, even while its payment is broken
+   *  (Entitlements.tier) — the Account menu's "Pro · payment due". */
+  subscribedTier?: PlanTier | null;
   /** Raw Stripe status (`active`, `past_due`, `canceled`, …) — lets /pricing
    *  offer "update your payment" instead of a second checkout when a
    *  subscription's payment is broken. */
@@ -99,23 +102,10 @@ export function SiteHeader({ user, challengeBadge, className }: SiteHeaderProps)
   const entries = showPricing
     ? siteConfig.primaryNav
     : siteConfig.primaryNav.filter((entry) => !(entry.kind === "link" && entry.href === "/pricing"));
-  // The Account menu's plan line. A cancelled plan that is still running
-  // says when it ends — from planEndingOf's facts (/api/me, the (app)
-  // layout), as parts so the date is the viewer's own.
-  const tier = user?.tier ?? (user?.isPaid ? null : "free");
-  const plan: AccountPlan | null =
-    billingOn && user && tier
-      ? {
-          name: planForTier(tier).name,
-          ending:
-            tier !== "free" && user.subscriptionEnding && user.subscriptionEndsAt
-              ? planEndingShortText({
-                  kind: user.subscriptionEndingKind ?? "plan",
-                  endsAt: user.subscriptionEndsAt,
-                })
-              : null,
-        }
-      : null;
+  // The Account menu's plan line ("Admin", "Pro · payment due", "Pro · ends
+  // Oct 23, 2026", "Pro · complimentary", "Pro plan") — the billing page's
+  // decisions, from the facts /api/me and the (app) layout carry.
+  const plan: AccountPlan | null = billingOn && user ? accountPlanLine(user) : null;
 
   return (
     <header

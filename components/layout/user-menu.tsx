@@ -6,7 +6,7 @@ import { Coins, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { useLiveCredits } from "@/components/billing/credits-bus";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits } from "@/lib/billing/plans";
+import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
 import { accountLinkHref, siteConfig, type AccountNavLink } from "@/lib/site-config";
 import { NAV_ICONS, NAV_LINK_ICONS } from "@/components/layout/nav-icons";
@@ -28,11 +28,11 @@ import type { NavSurface } from "@/lib/analytics/funnel-events";
 // AccountSummary).
 // ---------------------------------------------------------------------------
 
-/** The plan the viewer is on, for the header line. `ending` = a cancelled
- *  plan's "ends Oct 23, 2026", as parts from planEndingShortText (the
- *  header builds it from planEndingOf's facts) so the date is printed in
- *  the viewer's own zone. */
-export type AccountPlan = { name: string; ending: DateText | null };
+/** The plan line under the name — "Pro plan", "Admin", "Pro · payment due",
+ *  "Pro · ends Oct 23, 2026" — from accountPlanLine
+ *  (lib/billing/account-plan-line.ts), as parts so a date is printed in the
+ *  viewer's own zone. */
+export type AccountPlan = DateText;
 
 type UserMenuProps = {
   username: string | null;
@@ -203,17 +203,12 @@ export function AccountSummary({
         {plan ? (
           <>
             <span className="mt-1.5 text-xs font-medium text-foreground">
-              {plan.ending ? (
-                <>
-                  {plan.name} · <LocalDateText parts={plan.ending} />
-                </>
-              ) : (
-                `${plan.name} plan`
-              )}
+              <LocalDateText parts={plan} />
             </span>
             <span className="inline-flex items-center gap-1 text-xs text-muted">
               <Coins className="h-3 w-3 shrink-0 text-gold-strong" aria-hidden />
-              {formatCredits(balance)} credits · {creditsUsed} used this month
+              {isUnlimitedCredits(balance) ? "Unlimited credits" : `${formatCredits(balance)} credits`} ·{" "}
+              {creditsUsed} used this month
             </span>
           </>
         ) : null}

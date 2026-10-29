@@ -25,7 +25,18 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 afterEach(cleanup);
 
-const PRO = { id: "u", username: "dev_pro", displayName: "Priya", isPaid: true, tier: "pro" as const, credits: 80, creditsUsed: 3 };
+const PRO = {
+  id: "u",
+  username: "dev_pro",
+  displayName: "Priya",
+  isPaid: true,
+  tier: "pro" as const,
+  subscribedTier: "pro" as const,
+  subscriptionStatus: "active",
+  hasLiveSubscription: true,
+  credits: 80,
+  creditsUsed: 3,
+};
 
 function accountPanel() {
   const button = screen.getByRole("button", { name: "Open account menu" });
@@ -65,5 +76,32 @@ describe("the Account menu — a cancelled plan", () => {
   it("a free account reads Free plan", () => {
     render(<SiteHeader user={{ ...PRO, isPaid: false, tier: "free" }} />);
     expect(accountPanel().textContent).toContain("Free plan");
+  });
+});
+
+describe("the Account menu — other plan states", () => {
+  it("an admin reads Admin and unlimited credits, never Pro plan · ∞", () => {
+    render(<SiteHeader user={{ ...PRO, isAdmin: true, credits: Number.MAX_SAFE_INTEGER, creditsUsed: 0 }} />);
+    const text = accountPanel().textContent ?? "";
+    expect(text).toContain("Admin");
+    expect(text).toContain("Unlimited credits · 0 used this month");
+    expect(text).not.toContain("Pro plan");
+    expect(text).not.toContain("∞");
+  });
+
+  it("a past_due subscriber reads their plan with payment due — not Free plan", () => {
+    render(
+      <SiteHeader
+        user={{ ...PRO, isPaid: false, tier: "free", subscribedTier: "pro", subscriptionStatus: "past_due", hasLiveSubscription: false }}
+      />,
+    );
+    const text = accountPanel().textContent ?? "";
+    expect(text).toContain("Pro · payment due");
+    expect(text).not.toContain("Free plan");
+  });
+
+  it("a comped account reads complimentary", () => {
+    render(<SiteHeader user={{ ...PRO, subscriptionStatus: null, hasLiveSubscription: false }} />);
+    expect(accountPanel().textContent).toContain("Pro · complimentary");
   });
 });
