@@ -172,15 +172,17 @@ describe("m15pw ability rows + title — real bakes", () => {
   /** Stripe seams where the rows put them, and every ability's text inside
    *  its own stripe (clear of both of its seams and the box's edges). */
   function expectRowsHoldTheirText(px: Awaited<ReturnType<typeof bake>>, rules: string) {
-    const { size, edges, left, right, padX, textLeft, lastTextRight, plateLeft, plateTop } = rowGeometry(rules);
+    const { size, edges, right, padX, textLeft, lastTextRight, plateLeft, plateTop } = rowGeometry(rules);
     const count = edges.length - 1;
     // Stripe A (pale cream) and B (darker tan) alternate over the dark art:
-    // walk down the rows' left padding and find where they change.
+    // walk down the rows' RIGHT padding (since layout v75 the badges
+    // straddle the box's left edge, and a static ability's text starts in
+    // the rail), above the shield, and find where they change.
     expect(padX).toBeGreaterThan(5);
-    const x = left + 4;
+    const x = right - 4;
     const kind = (y: number) => (px(x, y)[2] > 176 ? "A" : "B");
     const seams: number[] = [];
-    for (let y = edges[0] + 12; y < edges.at(-1)! - 12; y += 1) {
+    for (let y = edges[0] + 12; y < Math.min(edges.at(-1)! - 12, plateTop - 4); y += 1) {
       if (kind(y) !== kind(y - 1)) seams.push(y);
     }
     expect(seams).toHaveLength(count - 1);

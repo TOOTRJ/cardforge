@@ -348,12 +348,14 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
     // Each blank stripe area changes clearly — before the fix only the
     // card-wide sheen reached it, through the stripe's 22 % and over dark art.
     for (const p of stripeProbes()) expect(meanDelta(regular, foil, p)).toBeGreaterThan(8);
-    // The sheen fills its whole row, padding included: the strip left of the
-    // badge rail changes too.
+    // The sheen fills its whole row, rail included: the strip between the
+    // colon and the text changes too. (Since layout v75 the badges straddle
+    // the box's left edge, at print's place: what they cover is the badge's.)
     const rules = box(getFrameProfile("m15pw").rules.rect, 0);
+    const railX = (hd: number) => Math.round((hd / 1500) * W);
     for (const p of stripeProbes()) {
       const yMid = Math.round((p.y0 + p.y1) / 2);
-      expect(meanDelta(regular, foil, { x0: rules.x0 + 1, x1: rules.x0 + 5, y0: yMid - 20, y1: yMid + 20 })).toBeGreaterThan(4);
+      expect(meanDelta(regular, foil, { x0: railX(258), x1: railX(270), y0: yMid - 20, y1: yMid + 20 })).toBeGreaterThan(4);
     }
 
     // Ink sits ON the foil: the ability text's and the badges' dark cores
@@ -425,10 +427,12 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
           else if (d < radius - 2) inside.push(delta(regular, foil, x, y));
         }
       }
-      // …untouched; inside the arc the sheen reaches right into the corner.
+      // …untouched; inside the arc the sheen reaches right into the corner
+      // (the right one: since layout v75 the badges, which take no sheen,
+      // straddle the box's LEFT edge at print's place and cover its corners).
       expect(outside.length).toBeGreaterThanOrEqual(5);
       expect(Math.max(...outside)).toBe(0);
-      expect(inside.reduce((sum, v) => sum + v, 0) / inside.length).toBeGreaterThan(4);
+      if (sx === 1) expect(inside.reduce((sum, v) => sum + v, 0) / inside.length).toBeGreaterThan(4);
     }
   }, 60_000);
 

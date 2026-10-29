@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutProfileLoyaltyRows, loyaltyRowsDrawing } from "@/lib/cards/loyalty-rows";
+import { layoutProfileLoyaltyRows, loyaltyBadgesDrawing } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { firstCollidingRowCount, loyaltyBadgesCollide, walkerBadgesCollide } from "@/lib/creator/walker-crowding";
 
@@ -15,10 +15,14 @@ const rows = (count: number, cost: string | null = "+1") =>
   Array.from({ length: count }, () => ({ cost, text: "Draw a card." }));
 
 describe("the row count where one-line abilities' badges touch", () => {
+  // Layout v75: the badges at print's size (a "+" rim 108 px tall, 36 px
+  // below its row's centre and 72 above) meet once the rows are closer
+  // than 108 px — 6 rows of the 594 px box (99 px), 7 of the tall 732 px
+  // one (105). (69 px badges met at 9 and 11 rows.)
   it.each([
-    ["m15pw", 9],
-    ["m15borderlesspw", 9],
-    ["m15borderlesspwtall", 11],
+    ["m15pw", 6],
+    ["m15borderlesspw", 6],
+    ["m15borderlesspwtall", 7],
   ])("%s: %i rows", (template, count) => {
     const profile = getFrameProfile(template);
     expect(firstCollidingRowCount(profile, ASPECT)).toBe(count);
@@ -27,19 +31,17 @@ describe("the row count where one-line abilities' badges touch", () => {
     expect(walkerBadgesCollide(profile, rows(13), ASPECT)).toBe(true);
   });
 
-  it("is the layout's own arithmetic: neighbouring rows no further apart than a badge is tall", () => {
+  it("is the layout's own arithmetic: two neighbouring badges' silver rims, where the rows put them", () => {
     const profile = getFrameProfile("m15pw");
-    for (const count of [8, 9]) {
+    for (const count of [5, 6]) {
       const layout = layoutProfileLoyaltyRows(profile, rows(count), ASPECT);
-      const { edges, row, boxHeight } = loyaltyRowsDrawing(layout, "hd");
-      const pitch = (edges[2] - edges[0]) / 2;
-      expect(pitch <= row.badgeHeight).toBe(count === 9);
-      // (The rows stopped FITTING earlier: a row's minimum is its badge and
-      // its padding.)
-      expect(layout.clipped).toBe(true);
-      expect(Math.round(boxHeight / count) < row.badgeHeight + 2 * row.padY).toBe(true);
+      const [a, b] = loyaltyBadgesDrawing(layout, rows(count), "hd");
+      expect(b.rim.top <= a.rim.bottom).toBe(count === 6);
+      // The text still fits: equal one-line rows are as far apart at every
+      // size, so the layout keeps its size and the note says so.
+      expect(layout.clipped).toBe(false);
+      expect(layout.sizePx).toBe(64);
     }
-    expect(layoutProfileLoyaltyRows(profile, rows(6), ASPECT).clipped).toBe(false);
   });
 });
 
@@ -47,7 +49,7 @@ describe("what does not count", () => {
   const profile = getFrameProfile("m15pw");
 
   it("a printed walker's rows", () => {
-    for (const count of [1, 2, 3, 4, 6, 7]) expect(walkerBadgesCollide(profile, rows(count), ASPECT)).toBe(false);
+    for (const count of [1, 2, 3, 4, 5]) expect(walkerBadgesCollide(profile, rows(count), ASPECT)).toBe(false);
   });
 
   it("static abilities: they draw no badge", () => {

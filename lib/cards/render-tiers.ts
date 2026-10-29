@@ -311,6 +311,15 @@ export function pastFloorText(
  * push it past its room) — but never below the 5 pt floor's own rounded
  * pixel (42 px at HD, 21 at 750), which the fit's "…" is measured with
  * (pastFloorText).
+ *
+ * A bake NARROWER than the stored one (the 750 px live render: OG images of
+ * an unbaked card, a free download a pending correction renders live) sets
+ * a shrunk line at the stored HD bake's px scaled to its width — the HD px
+ * ÷ 2 at 750, a half px where the HD px is odd — exactly what the preview
+ * draws (measuredLinePreviewPct), never its own floor (layout v75, TODO
+ * 3.37 (d): the floor at 750 set a long name up to 1 px of 750 smaller than
+ * the preview, ~5 px short at its end). A line that keeps the slot's size
+ * is unchanged, and so is every HD bake.
  */
 export function measuredLinePx(
   fitPct: number,
@@ -320,6 +329,11 @@ export function measuredLinePx(
 ): number {
   const base = Math.round(basePct * cardWidth);
   if (fitPct >= basePct) return base;
+  const stored = STORED_BAKE_WIDTH[orientation];
+  if (cardWidth < stored) {
+    liveShrunkLineProbe?.();
+    return (measuredLinePx(fitPct, basePct, stored, orientation) * cardWidth) / stored;
+  }
   const floorPx = Math.round(measuredLineFloorPct(orientation) * cardWidth);
   return Math.min(base, Math.max(Math.floor(fitPct * cardWidth), floorPx));
 }
@@ -327,6 +341,29 @@ export function measuredLinePx(
 /** The stored bake's width (RENDER_PRESETS.hd, the HD PNG every display
  *  surface serves), per orientation. */
 const STORED_BAKE_WIDTH: Readonly<Record<CardOrientation, number>> = { portrait: 1500, landscape: 2100 };
+
+/** Called each time a bake narrower than the stored one sets a measured
+ *  line its fit shrank (measuredLinePx's HD-px path, layout v75) — the
+ *  exact set of 750 px renders v75 changed. Read by the visual matrix's
+ *  bake only (tests/visual/bake.visual.ts, LIVE_RENDER_SCOPES in
+ *  lib/cards/layout-version.ts); null everywhere else. */
+let liveShrunkLineProbe: (() => void) | null = null;
+
+/** Run `fn` with the probe set; whether any measured line shrank in a
+ *  bake narrower than the stored one while it ran. One bake at a time: the
+ *  probe is module-global (the visual bake renders its cases in turn). */
+export async function probeLiveShrunkLines<T>(fn: () => Promise<T>): Promise<{ result: T; shrunk: boolean }> {
+  let shrunk = false;
+  liveShrunkLineProbe = () => {
+    shrunk = true;
+  };
+  try {
+    const result = await fn();
+    return { result, shrunk };
+  } finally {
+    liveShrunkLineProbe = null;
+  }
+}
 
 /**
  * A measured line's size as the PREVIEW draws it: when the fit shrank it,

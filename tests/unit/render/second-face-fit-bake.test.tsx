@@ -40,7 +40,7 @@ const { width: W, height: H } = RENDER_PRESETS.default;
 const magenta = (r: number, g: number, b: number) => r > 170 && b > 170 && g < 110;
 
 describe("a fitLines second face's shrunk name — real bake", () => {
-  it("is drawn at the whole px below its fit, like the front's", async () => {
+  it("is drawn at the stored HD bake's px below its fit (halved at 750), like the front's", async () => {
     const { getFrameProfile } = await import("@/lib/cards/template-layout");
     const face = getFrameProfile("flip").secondFace!;
     expect(face.fitLines).toBe(true);
@@ -60,8 +60,11 @@ describe("a fitLines second face's shrunk name — real bake", () => {
     expect(pick, "a candidate with a fit in a pixel's upper half").toBeDefined();
     const { name, fit } = pick!;
     expect(fit.titleText).toBe(name);
+    // Layout v75 (TODO 3.37 (d)): at 750 the HD bake's whole px below the
+    // fit, halved — the preview's size — never the 750 bake's own floor.
     const floorPx = measuredLinePx(fit.titleSizePct, face.title.sizePct, W);
-    expect(floorPx).toBe(Math.floor(fit.titleSizePct * W));
+    expect(floorPx).toBe(Math.floor(fit.titleSizePct * 1500) / 2);
+    expect(floorPx).toBeLessThanOrEqual(fit.titleSizePct * W);
 
     const card = {
       title: "Probe",
@@ -103,9 +106,9 @@ describe("a fitLines second face's shrunk name — real bake", () => {
     }
     const inkWidth = right - left + 1;
     const at = (px: number) => displayRunPx(displayLine(name), px, 0).ink;
-    // The ink spans the run at the floored px (its side bearings aside),
-    // clearly shorter than the rounded-up px would draw.
+    // The ink spans the run at that px (its side bearings aside), clearly
+    // shorter than the rounded-up px would draw.
     expect(Math.abs(inkWidth - at(floorPx))).toBeLessThanOrEqual(6);
-    expect(at(floorPx + 1) - inkWidth).toBeGreaterThan(8);
+    expect(at(Math.ceil(fit.titleSizePct * W)) - inkWidth).toBeGreaterThan(8);
   });
 });
