@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -35,7 +36,7 @@ import {
 } from "@/lib/decks/card-actions";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
-import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { hasBackPicture } from "@/lib/cards/tile-faces";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import {
@@ -528,7 +529,17 @@ function StateBadgeLarge({
 // ---------------------------------------------------------------------------
 // LinkCardPicker — lazily loads the caller's cards on first render, with a
 // client-side name filter. Kept intentionally light (200 most recent).
+// Each tile draws the bake's 600 px WebP thumb (the CLAUDE.md tile rule —
+// 24 HD PNGs were up to ~70 MB per open); a bake older than thumbnails
+// goes through next/image, and a card with no bake shows its title.
 // ---------------------------------------------------------------------------
+
+/** The tile's picture: the thumb beside one of OUR bakes, as
+ *  BakedCardThumbnail vouches for it (lib/cards/render-cdn.ts). */
+function pickerThumbOf(card: MyCardLite): string | null {
+  if (!isStoredRenderUrl(card.rendered_image_url) || !isStoredRenderUrl(card.rendered_thumb_url)) return null;
+  return toRenderCdnUrl(card.rendered_thumb_url) ?? card.rendered_thumb_url;
+}
 
 function LinkCardPicker({
   onPick,
@@ -599,33 +610,50 @@ function LinkCardPicker({
         />
       </div>
       <ul className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-        {filtered.map((card) => (
-          <li key={card.id}>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onPick(card.id)}
-              className="group flex w-full flex-col gap-1 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-            >
-              {isStoredRenderUrl(card.rendered_image_url) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={card.rendered_image_url}
-                  alt=""
-                  className="aspect-[5/7] w-full card-corners bg-[#101015] object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <span className="flex aspect-[5/7] w-full items-center justify-center card-corners bg-elevated px-1 text-center text-[9px] text-subtle">
+        {filtered.map((card) => {
+          const thumb = pickerThumbOf(card);
+          return (
+            <li key={card.id}>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onPick(card.id)}
+                className="group flex w-full flex-col gap-1 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+              >
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="aspect-[5/7] w-full card-corners bg-[#101015] object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : isStoredRenderUrl(card.rendered_image_url) ? (
+                  // A bake older than thumbnails: the PNG resized by
+                  // next/image, as BakedCardThumbnail draws it — never the
+                  // ~3 MB file itself.
+                  <span className="relative block aspect-[5/7] w-full overflow-hidden card-corners bg-[#101015]">
+                    <Image
+                      src={card.rendered_image_url}
+                      alt=""
+                      fill
+                      sizes="(min-width: 640px) 120px, 30vw"
+                      className="object-cover"
+                    />
+                  </span>
+                ) : (
+                  <span className="flex aspect-[5/7] w-full items-center justify-center card-corners bg-elevated px-1 text-center text-[9px] text-subtle">
+                    {card.title}
+                  </span>
+                )}
+                <span className="truncate text-[10px] text-muted group-hover:text-foreground">
                   {card.title}
                 </span>
-              )}
-              <span className="truncate text-[10px] text-muted group-hover:text-foreground">
-                {card.title}
-              </span>
-            </button>
-          </li>
-        ))}
+              </button>
+            </li>
+          );
+        })}
         {filtered.length === 0 ? (
           <li className="col-span-full py-4 text-center text-xs text-muted">
             No cards match.

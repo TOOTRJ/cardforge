@@ -5202,7 +5202,7 @@ export function CardCreatorForm({
               <PublishPanel
                 userId={userId}
                 activeChallenge={activeChallenge}
-                myDecks={isRevise ? null : myDecks}
+                myDecks={isRevise || deckRemix ? null : myDecks}
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
               />
