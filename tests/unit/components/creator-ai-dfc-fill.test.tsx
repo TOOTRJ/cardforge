@@ -198,7 +198,7 @@ function serverGates(payload: Awaited<ReturnType<typeof fillAndSave>>["payload"]
   const template = payload.frame_style.template;
   expect(frameKindGateError(template, { cardType: payload.card_type as string, supertype: payload.supertype as string, subtypes: payload.subtypes as string[], title: payload.title as string, rulesText: payload.rules_text as string })).toBeNull();
   expect(dfcFrontTypeError(template, payload.card_type as string)).toBeNull();
-  expect(dfcFrontColorError(template, { cardType: payload.card_type as string, supertype: payload.supertype as string }, payload.color_identity as never)).toBeNull();
+  expect(dfcFrontColorError(template, { cardType: payload.card_type as string, supertype: payload.supertype as string }, payload.color_identity as never, new Set<string>())).toBeNull();
   expect(frameGateError(template, payload.color_identity as never, verified)).toBeNull();
   const gate = resolveDfcBackFace({
     frontTemplate: template,

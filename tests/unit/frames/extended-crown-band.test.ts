@@ -110,8 +110,10 @@ describe("the slot the extendedart profile draws (EXTENDED_CROWN)", () => {
     expect(getFrameProfile("extendedart").overlays).toEqual([EXTENDED_CROWN]);
     expect(getFrameProfile("extendedartland").overlays).toEqual([EXTENDED_CROWN]);
     expect(getFrameProfile("extendedartstation").overlays?.[0]).toEqual(EXTENDED_CROWN);
+    expect(getFrameProfile("extendedartprepare").overlays?.[0]).toEqual(EXTENDED_CROWN);
     for (const t of FRAME_TEMPLATE_VALUES) {
-      if (t === "extendedart" || t === "extendedartland" || t === "extendedartstation") continue;
+      // (…and the Prepare frame's extended-art dress, TODO 4.27b.)
+      if (t === "extendedart" || t === "extendedartland" || t === "extendedartstation" || t === "extendedartprepare") continue;
       for (const slot of getFrameProfile(t).overlays ?? []) expect(slot.assetPathTemplate, t).not.toContain("extendedcrown");
     }
   });

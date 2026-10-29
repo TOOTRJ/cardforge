@@ -101,6 +101,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   saga: ["656x1584", "9:21", 0.417],
   sagadfcfront: ["656x1584", "9:21", 0.417],
   sagadfcback: ["656x1584", "9:21", 0.417],
+  sagacreature: ["752x1360", "9:16", 0.552],
   adventure: ["1184x864", "4:3", 1.364],
   prepare: ["1184x864", "4:3", 1.366],
   flip: ["1392x752", "16:9", 1.842],
@@ -142,6 +143,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],
+  // The extended-art Prepare dress (TODO 4.27b): extendedart's art slot.
+  extendedartprepare: ["1168x896", "4:3", 1.314],
   m15fullartland: ["880x1184", "3:4", 0.737],
   fullartland: ["864x1200", "3:4", 0.714],
   m15fullartlandzen: ["928x1104", "3:4", 0.841],
@@ -264,13 +267,14 @@ describe("what the gateway is asked", () => {
     expect(imageShapeArgs("bfl/flux-2-flex", "square")).toEqual({ aspectRatio: "1:1" });
   });
 
-  it("the default model is called with the window's size — the prompt ladder unchanged", async () => {
+  it("the default model is called with the window's size — the prompt ladder unchanged but for the clothed line", async () => {
     const result = await generateImageWithFallbacks(["A painted scene."], artShapeForFace(red("m15borderless")));
     expect(result.ok).toBe(true);
     expect(s.calls).toHaveLength(1);
     expect(s.calls[0]).toMatchObject({
       model: "bfl/flux-2-flex",
-      prompt: "A painted scene.",
+      // Every art prompt asks for fully clothed figures (owner 2026-10-28).
+      prompt: "A painted scene. If any figure appears, it is fully clothed.",
       size: "896x1168",
       providerOptions: { blackForestLabs: { width: 896, height: 1168 } },
     });

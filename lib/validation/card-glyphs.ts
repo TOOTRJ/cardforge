@@ -184,6 +184,8 @@ export type GlyphCheckValues = {
   loyalty_abilities?: ReadonlyArray<{ text: string }>;
   saga_intro: string;
   saga_chapters?: ReadonlyArray<{ text: string; numerals?: readonly number[] }>;
+  /** The saga creature's box (TODO 4.5d). */
+  saga_creature_text?: string;
   /** The frame style's template and collector switch (TODO 4.9b): on a
    *  collector card the footer mark prints in the body face, as typed. */
   frame_style?: { template?: string | null; collector?: unknown } | null;
@@ -243,6 +245,7 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, face: "rules" as const, value: row.text })),
     { label: "Saga intro", face: "rules", value: v.saga_intro },
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, face: "rules" as const, value: row.text })),
+    { label: "Creature abilities", face: "rules", value: v.saga_creature_text ?? "" },
     { label: "Flavor text", face: "italic", value: v.flavor_text },
     { label: "Stats", face: glyphFace("stat"), value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
     // (On a collector card the artist is the collector line's own display
@@ -363,6 +366,7 @@ export function cardSymbolFields(v: GlyphCheckValues): SymbolCheckField[] {
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text })),
     { label: "Saga intro", value: v.saga_intro },
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
+    { label: "Creature abilities", value: v.saga_creature_text ?? "" },
   ];
   if (v.has_back_face) {
     const part = secondPartLabelOf(v);

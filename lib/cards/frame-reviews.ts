@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { seeThroughTickKeys } from "@/lib/cards/dfc";
 
 // ---------------------------------------------------------------------------
 // Frame review reads. Writes live in lib/cards/frame-review-actions.ts
@@ -73,6 +74,17 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
   return (await readFrameReviews()).reviews;
 }
 
+/** The verified combo keys ("template/color") of the verified rows, plus
+ *  the see-through keys their ticks publish (TODO 5.11a,
+ *  lib/cards/dfc.ts seeThroughTickKeys: a modal body's see-through `c` is
+ *  offered to a colourless face with no Artifact word only once its `c`
+ *  row was ticked at the version it shipped or later). */
+export function verifiedKeysOfRows(
+  rows: readonly { template: string; color_key: string; verified_layout_version?: number | null }[],
+): string[] {
+  return [...rows.map((row) => `${row.template}/${row.color_key}`), ...seeThroughTickKeys(rows)];
+}
+
 /** Just the verified combo keys ("template/color") — what the frame picker
  *  needs for availability. */
 export async function getVerifiedFrameKeys(): Promise<string[]> {
@@ -81,9 +93,9 @@ export async function getVerifiedFrameKeys(): Promise<string[]> {
     const supabase = await createClient();
     const { data } = await supabase
       .from("frame_reviews")
-      .select("template, color_key")
+      .select("template, color_key, verified_layout_version")
       .eq("verified", true);
-    return (data ?? []).map((row) => `${row.template}/${row.color_key}`);
+    return verifiedKeysOfRows(data ?? []);
   } catch {
     return [];
   }
@@ -102,9 +114,9 @@ export async function getVerifiedFrameKeysPublic(): Promise<string[]> {
     const supabase = createPublicClient();
     const { data } = await supabase
       .from("frame_reviews")
-      .select("template, color_key")
+      .select("template, color_key, verified_layout_version")
       .eq("verified", true);
-    return (data ?? []).map((row) => `${row.template}/${row.color_key}`);
+    return verifiedKeysOfRows(data ?? []);
   } catch {
     return [];
   }

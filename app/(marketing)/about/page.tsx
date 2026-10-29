@@ -52,8 +52,8 @@ export default function AboutPage() {
         </li>
         <li>
           <strong>AI is a power-up, not the product.</strong> The AI drafts a
-          field, a card, an art piece or a whole deck when you ask it to, and
-          never overwrites anything without an explicit apply.
+          field, a card or an art piece when you ask it to, and never
+          overwrites anything without an explicit apply.
         </li>
       </ul>
 
@@ -68,8 +68,7 @@ export default function AboutPage() {
         </li>
         <li>
           AI on demand: generate any single field, get three costed ideas for a
-          theme, draft a whole card from a concept, restyle a card&apos;s art,
-          or generate a full deck with a how-to-play guide
+          theme, or draft a whole card from a concept
         </li>
         <li>
           Decks: import a decklist from the popular deck sites, remix real

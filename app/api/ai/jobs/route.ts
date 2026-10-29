@@ -32,7 +32,7 @@ import {
 } from "@/types/card";
 import { CARD_FILL_FIELDS } from "@/lib/ai/card-fill-shared";
 import { AI_DESIGN_KINDS } from "@/lib/ai/frame-choices";
-import { AI_LAYOUT_KINDS, isAiLayoutKind } from "@/lib/ai/layout-design";
+import { AI_LAYOUT_KINDS, isAiLayoutKind, layoutSkinOf } from "@/lib/ai/layout-design";
 import { AI_DFC_KINDS, fillCreditsFor, isAiDfcKind } from "@/lib/ai/dfc-design";
 import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
@@ -45,6 +45,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estimate";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -195,6 +196,11 @@ const requestSchema = z.discriminatedUnion("kind", [
      *  card, a made-up one) is dropped and the art is painted for the
      *  default frame, never a refused fill. Read for the shape alone. */
     art_frame: z.enum(FRAME_TEMPLATE_VALUES).optional().catch(undefined),
+    /** The creator's current frame where it is a Variations skin of a
+     *  layout kind's frame (TODO 4.27b: the extended-art Prepare dress): a
+     *  layout fill keeps the card there where it fits. A known template
+     *  only, else dropped; read by a layout fill alone. */
+    layout_skin: z.enum(FRAME_TEMPLATE_VALUES).optional().catch(undefined),
     /** Which creator this fill belongs to ("create", "card:<id>",
      *  "remix:<id>") so an unclaimed result is offered back on the right
      *  page (app/api/ai/card-fill). */
@@ -328,6 +334,15 @@ export async function POST(request: Request) {
       { ok: false, error: "This generation request couldn't be read — reload the page and try again. No credits were used." },
       { status: 400 },
     );
+  }
+
+  // AI deck building is paused (owner 2026-10-28, TODO DK1): a NEW deck
+  // build, "Add with AI" or deck remix is refused here — before the rate
+  // limit, the remix's Scryfall estimate and any credit. A job that is
+  // already running finishes through the step route, which reads no pause
+  // (D6); the creator's deck-aware `card` / `card_fill` stay open (D5).
+  if ((parsed.data.kind === "deck" || parsed.data.kind === "deck_remix") && isDeckAiPaused()) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
   }
 
   // The AI rate limit comes FIRST: sizing a deck remix resolves the deck's
@@ -552,6 +567,7 @@ export async function POST(request: Request) {
       style: assembled ? assembled.style : fill.style,
       frame: fill.frame,
       artFrame: fill.art_frame,
+      ...(layout && layoutSkinOf(layout, fill.layout_skin) ? { layoutSkin: layoutSkinOf(layout, fill.layout_skin)! } : {}),
       deckId: fill.deck_id,
       scope: fill.scope,
       ...(designKind ? { designKind } : {}),

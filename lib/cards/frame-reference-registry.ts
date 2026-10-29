@@ -245,6 +245,8 @@ function sampleBackFace(template: FrameTemplate, colorKey: FrameColorKey) {
         rules_text: "Sample adventure text on the storybook page.",
       };
     case "prepare":
+    // …and its extended-art dress (TODO 4.27b): the same page.
+    case "extendedartprepare":
       return {
         title: "Sample Spell",
         cost: SAMPLE_COST[colorKey],
@@ -341,6 +343,30 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
       flavorText: null,
       power: null,
       toughness: null,
+      loyalty: null,
+      defense: null,
+      artistCredit: "Sample Artist",
+      artUrl: null,
+      frameStyle: sampleFrameStyle(template),
+    };
+  }
+  // A saga creature sample is a saga creature (TODO 4.5d): the reminder in
+  // its band, three chapters on the rail, an ability in the second box and
+  // a P/T — the pieces the body is verified for.
+  if (template === "sagacreature") {
+    return {
+      title: "Summon: Sample",
+      cost: SAMPLE_COST[colorKey],
+      cardType: "enchantment",
+      supertype: "Creature",
+      subtypes: ["Saga", "Sample"],
+      rarity: "rare",
+      colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],
+      rulesText:
+        "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — Sample chapter text.\nII — A second chapter, long enough to take two lines.\nIII — The last chapter's text.\nFlying",
+      flavorText: null,
+      power: "3",
+      toughness: "3",
       loyalty: null,
       defense: null,
       artistCredit: "Sample Artist",

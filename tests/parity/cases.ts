@@ -222,6 +222,12 @@ const PICKS: readonly Pick[] = [
   // --- the other bodies ----------------------------------------------------
   { from: "m15pw/g/planeswalker-long", why: "walker: loyalty rows, badges, the shield" },
   { from: "saga/g/saga-long", why: "saga: the rail, chapter badges, the reminder block" },
+  // The saga creature (TODO 4.5d): the reminder as a band, the rail and the
+  // type bar raised, and its second box — one line centred on print's row,
+  // a longer text beside the plate (a float) — with the triangle stamp.
+  { from: "sagacreature/w/saga-short", why: "saga creature: the band, a four-badge stack, ONE centred line in the second box, the P/T" },
+  { from: "sagacreature/g/saga-long", why: "saga creature: two abilities and a flavour in the second box, the plate a float beside them" },
+  { from: "sagacreature/u/saga-short@stamp", why: "saga creature: the Universes Beyond triangle stamp over its M15 bar" },
   { from: "split/r/split-long", why: "split: two turned halves (landscape master)" },
   { from: "aftermath/b/aftermath-long", why: "aftermath: the turned second half and its art" },
   { from: "adventure/g/adventure-long", why: "adventure: the inline page" },
@@ -238,6 +244,19 @@ const PICKS: readonly Pick[] = [
   { from: "prepare/r/prepare-short@part-u", why: "part colour: the spell's blue page over a red Prepare master (the page overlay)" },
   { from: "prepare/w/prepare-short@part-gw-h", why: "part colour: a hybrid spell's grey page, its box ramped green → white" },
   { from: "prepare/wu/prepare-long@pair-part-hybrid", why: "part colour: the two-colour Prepare (its pair master, the crown) under a hybrid page" },
+  // The Prepare frame's stamp, collector line and extended-art dress (TODO
+  // 4.27b): the lifted-foot notch over the creature's box and the strip, the
+  // hybrid dress's own piece, the collector line beside the plate, and the
+  // extended-art dress (the extended-art top over the Prepare master's lower
+  // half) with its page in another colour.
+  { from: "prepare/g/prepare-long@stamp-collector-hd", why: "prepare: the lifted-foot arch across the box and the strip, the oval, the collector line with the mark on line 2 beside the plate" },
+  { from: "prepare/wu/prepare-short@stamp-pair-hybrid", why: "prepare: the hybrid pair master's own notch piece (its strip under the arch's edge)" },
+  // (At the default size, as extended art's own cases: at HD the art
+  // region's shift estimate reads the full-width coded picture 3 px off with
+  // the pixels agreeing, as on the Spacecraft's extended-art dress.)
+  { from: "extendedartprepare/u/prepare-short@stamp", why: "extended-art prepare: the art to the side edges, the black type bar's white ink, the Prepare page and the same notch" },
+  { from: "extendedartprepare/u/prepare-short@collector-2015", why: "extended-art prepare: the 2015 collector line under the Prepare page, the mark beside the plate" },
+  { from: "extendedartprepare/r/prepare-short@part-u", why: "extended-art prepare: the spell's blue page overlay over the red dress" },
   { from: "split/r/split-long@part-u-hd", why: "part colour: split's right half in its own colour, a vertical seam (the long card: the short split's turned footer sits 3 px off at 750 on main already)" },
   { from: "aftermath/r/aftermath-short@part-b", why: "part colour: aftermath's lower part in its own colour, a horizontal seam" },
   // …and the adventure's storybook page in its spell's colour (owner
@@ -266,6 +285,13 @@ const PICKS: readonly Pick[] = [
   { from: "sagadfcback/wub/transform-long", why: "double-faced saga back (5.5 (b) PR 2): four chapters, a long name before the well, the dot in three wedges" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
+  // The colourless modal card (TODO 5.11a, STX #6 Wandering Archaic): the
+  // see-through `c` — the art drawn under the frame on both faces, the
+  // housing's ▲ / ▲▼ over the bar's fill — and the `c` strip piece on a
+  // coloured face.
+  { from: "m15mdfcfront/c/mdfc-short", why: "colourless modal front (5.11a): the see-through c, the art under the frame, the housing over the bar's fill" },
+  { from: "m15mdfcback/c/mdfc-short", why: "colourless modal back (5.11a): the darker see-through bars and box, through the flip" },
+  { from: "m15mdfcfront/w/mdfc-short@strip-c", why: "a coloured modal front beside a colourless back (5.11a): the see-through c's warm grey tab as the strip" },
   // The borderless double-faced bodies (TODO 5.7): the grafted masters'
   // crowned twin under the borderless rider (6 px right, × 0.95) and the
   // borderless reverse P/T; the ▼ back's indicator and white ink; the modal

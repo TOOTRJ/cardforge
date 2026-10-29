@@ -41,6 +41,8 @@ export const REVISABLE_FIELDS = [
   "loyalty_abilities",
   "saga_intro",
   "saga_chapters",
+  // The saga creature's box (TODO 4.5d): its lines in the rules text.
+  "saga_creature_text",
   "station_pt_tier",
   "flavor_text",
   "power",

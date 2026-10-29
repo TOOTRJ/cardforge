@@ -17,13 +17,14 @@ import {
   isSingleBasicLand,
   kindFromCard,
   subtypeDressOf,
+  sagaCreatureFrameFits,
   subtypeFrameFits,
   templateIsBasicOnly,
   templateSupportsKind,
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { colorlessFaceAllowed, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
+import { colorlessFaceFits, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
@@ -102,6 +103,12 @@ export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
 }
 
 /** The printing's front-face subtypes. */
+/** The printing's front face's type words, as the dresses read them. */
+function referenceTypeWords(card: ScryfallCard): { cardType?: string; supertype?: string } {
+  const { card_type, supertype } = parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line);
+  return { cardType: card_type, supertype };
+}
+
 function referenceSubtypes(card: ScryfallCard): string[] {
   const { subtypes_text } = parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line);
   return subtypes_text ? subtypes_text.split(", ") : [];
@@ -190,7 +197,7 @@ export function validateReferenceForCombo(
         errors.push(
           `${card.name}'s back face is ${COLOR_WORD[backColor] ?? backColor}; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
         );
-      } else if (colorKey === "c" && !colorlessFaceAllowed(template, faceTypeOf(back?.type_line))) {
+      } else if (colorKey === "c" && !colorlessFaceFits(template, faceTypeOf(back?.type_line))) {
         // The body dresses `c` as the artifact master standing in (D2):
         // its colourless row verifies against an artifact print only.
         errors.push(
@@ -258,7 +265,7 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
     );
-  } else if (colorKey === "c" && !colorlessFaceAllowed(template, frontFaceType(card))) {
+  } else if (colorKey === "c" && !colorlessFaceFits(template, frontFaceType(card))) {
     // The `c` row of a DFC body with the artifact dress is the artifact
     // master standing in (D2); the land pair's `c` is its one master.
     errors.push(`${card.name} isn't an Artifact; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);
@@ -301,6 +308,10 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} isn't a ${subtypeDressOf(template)}; the ${label} frame dresses ${subtypeDressOf(template)}s only.`,
     );
+  } else if (!sagaCreatureFrameFits(template, referenceTypeWords(card))) {
+    // The saga creature body (TODO 4.5d) is verified against saga
+    // CREATURES only — a plain saga never prints on it.
+    errors.push(`${card.name} isn't a creature; the ${label} frame dresses sagas that are creatures only.`);
   } else {
     // A creature may borrow the artifact frame (TODO 1.7) or the Nyx
     // showcase (owner decision A3), but only an Artifact / Enchantment

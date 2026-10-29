@@ -74,7 +74,7 @@ import {
   type HoloStampSwitch,
 } from "@/lib/cards/holo-stamp";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
-import { TWO_COLOR_PAIRS, type TwoColorPair } from "@/lib/cards/frame-reference-registry";
+import { TWO_COLOR_PAIRS, type FrameColorKey, type TwoColorPair } from "@/lib/cards/frame-reference-registry";
 import { legendaryMasterKey } from "@/lib/cards/master-key";
 import {
   getFrameProfile,
@@ -170,6 +170,7 @@ type AnatomyProfile = Pick<
   | "loyaltyRows"
   | "whiteBorder"
   | "partColorSeam"
+  | "artifactMasterKeys"
 >;
 
 /** The switches a NEW card starts with (the creator's create and remix
@@ -839,7 +840,12 @@ export function resolveFrameOverlays(
       const other = facts.dfc?.stripKey;
       if (!other) continue;
       key = slot.keyMap?.[other] ?? other;
-      const own = mdfcStripOwnKey(resolveTwoColor(profile, style, facts), facts.colorKey);
+      // The key the master paints: a colourless ARTIFACT face wears the
+      // artifact master (artifactMasterKeys), whose tab is `a`'s (TODO
+      // 5.11a: the bodies' `c` is the see-through frame's own tab).
+      const dressed = profile.artifactMasterKeys?.[facts.colorKey as FrameColorKey];
+      const ownKey = dressed && isArtifactFrameType(facts) ? dressed : facts.colorKey;
+      const own = mdfcStripOwnKey(resolveTwoColor(profile, style, facts), ownKey);
       if (own !== null && (slot.keyMap?.[own] ?? own) === key) continue;
     } else {
       const wanted =
@@ -849,7 +855,10 @@ export function resolveFrameOverlays(
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
-      const base = look ? look.pair : goldPair ?? facts.colorKey;
+      // (The Prepare notch is keyed by the master itself, either dress —
+      // FrameOverlaySlot.keyByMaster, TODO 4.27b.)
+      const byMaster = slot.anatomy === "holoStamp" && slot.keyByMaster === true;
+      const base = look ? (byMaster ? look.masterKey : look.pair) : goldPair ?? facts.colorKey;
       // A template that dresses a colour key in two masters by type
       // (artifactMasterKeys) keys an artifact's overlay by its own master.
       const artifact = slot.artifactKeyMap?.[base] !== undefined && isArtifactFrameType(facts);

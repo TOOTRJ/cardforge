@@ -100,6 +100,10 @@ export type KnownDifference = {
   /** The bounds the measurement may not leave (inclusive). */
   min: number;
   max: number;
+  /** A `tileMad` entry only: the named region every tile over the limit
+   *  must touch (the case's region rects) — a worst tile ANYWHERE else on
+   *  the card over the limit is not this difference and fails the run. */
+  tilesIn?: string;
   /** What differs, and why it is believed to — a finding, not an excuse. */
   why: string;
 };
@@ -189,9 +193,61 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The © slot's pipglyph.com mark on line 1 (a card that draws no plate: its right end at 93.54 %W, inside the P/T slot's region) is NARROWER in the preview at 750 px: the right end agrees, the star starts 3 px further right. At HD the region measures +2 across, within the limit. It is the mark as 4.9b draws it on every collector card without a plate — m15's no-plate instant measures the same +3 — seen here because this is the first parity case whose line-1 mark falls inside a scored region. A width difference of the 750 px bake's mark text, like the other 750-only entries; not traced to a constant.",
   },
+  // --- TODO 4.5d: the saga creature's short cases print FIN #36's long type
+  // line ("Enchantment Creature — Saga Knight"), which its measured fit
+  // shrinks: the first parity cases with a SHRUNK type line on a saga's
+  // band. (The plain saga's band is the same width — the saga creature only
+  // raises it — and no saga case had a type line long enough to shrink.) ---
+  ...(["dx", "mad", "hot"] as const).map(
+    (metric): KnownDifference => ({
+      name: `750-shrunk-saga-type-line-${metric}`,
+      size: "750",
+      cases: /^sagacreature\/(w\/saga-short|u\/saga-short@stamp)$/,
+      regions: ["type"],
+      metric,
+      ...(metric === "dx" ? { min: -5, max: -4 } : metric === "mad" ? { min: 32, max: 41 } : { min: 0.26, max: 0.31 }),
+      why:
+        "The shrunk type line (TODO 4.5d's short saga creature: \"Enchantment Creature — Saga Knight\", set at the stored HD bake's px halved since layout v75) ends 4 px further LEFT in the preview at 750 px — the Satori line is WIDER at that one fractional size, as 750-emblem-title-end's name; the region's difference follows its glyphs (mad 33–39, hot 27–30 %). At HD the same line agrees (0 across, mad ≤ 9). A difference of the two text engines at a half-pixel size, not of the saga creature's band; not traced to a constant.",
+    }),
+  ),
+  {
+    name: "750-shrunk-saga-type-line-tile",
+    size: "750",
+    cases: /^sagacreature\/w\/saga-short$/,
+    regions: ["card"],
+    metric: "tileMad",
+    min: 95,
+    max: 97,
+    why: "The worst tile of the short white saga creature at 750 px is the shrunk type line's end (750-shrunk-saga-type-line-dx): 95.6, the limit's 95 plus the one tile.",
+  },
   // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
   // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
   // row and the bake's now agree there, as 750-cost-row-width's did.)
+  // --- TODO 5.11a: the first parity case whose P/T holds a pair that pulls
+  // in (Wandering Archaic's printed 4/4). Not introduced by 5.11a: every
+  // centred P/T with a kerned pair draws so on main. --------------------------
+  {
+    name: "hd-kerned-pt-centre",
+    size: "hd",
+    cases: /^m15mdfcfront\/c\/mdfc-short$/,
+    regions: ["stat"],
+    metric: "dx",
+    min: 5,
+    max: 7,
+    why:
+      "The P/T 4/4 sits 6 px further RIGHT in the preview at HD (2 at 750, within the limit). Beleren kerns `/4` by −271 units (lib/cards/font-metrics.ts statKerning): the browser centres the KERNED run in the plate's box, Satori lays the run out in a box the sum of its advances wide, centres that box and draws the run kerned from its left — so the bake's ink sits half the kerning (−11 px at 86 px, StatSlot.endKerned's own example) left of the preview's. The end-aligned slots correct it in the bake (endKerned); the centred plates do not, on any frame (the same code draws every M15 plate — not measured on another case: no other parity case prints a kerned P/T). A fix moves every stored P/T with a kerned pair — a layout bump, an owner question, not this PR's.",
+  },
+  {
+    name: "hd-kerned-pt-centre-tile",
+    size: "hd",
+    cases: /^m15mdfcfront\/c\/mdfc-short$/,
+    regions: ["card"],
+    metric: "tileMad",
+    min: 62,
+    max: 72,
+    tilesIn: "stat",
+    why: "The worst tile of the same card is the P/T's (hd-kerned-pt-centre: the digits 6 px apart): 66.8 on macOS, over the 65 limit by that tile alone — scoped to it (`tilesIn`: every tile over the limit touches the P/T's region; one anywhere else fails the run).",
+  },
 ];
 
 /**
@@ -297,12 +353,36 @@ export function knownFor(m: Pick<Measured, "id" | "size">, over: Pick<OverLimit,
 const fmt = (metric: Metric, value: number) =>
   metric === "dx" || metric === "dy" ? `${value > 0 ? "+" : ""}${value} px` : metric === "hot" ? `${(value * 100).toFixed(1)} %` : value.toFixed(1);
 
+/** The tiles of a case over the tileMad limit, each touching the region
+ *  `name` (its rect from the case) — false when the run has no rect for it. */
+function tilesOverLimitIn(m: Measured, name: string): boolean {
+  const r = m.rects?.[name];
+  if (!r) return false;
+  const limit = LIMITS[m.size].tileMad;
+  const width = m.tiles.cols * m.tiles.tile;
+  const height = (width * m.tiles.rows) / m.tiles.cols;
+  return m.tiles.mads.every((mad, i) => {
+    if (mad <= limit) return true;
+    const x = (i % m.tiles.cols) * m.tiles.tile;
+    const y = Math.floor(i / m.tiles.cols) * m.tiles.tile;
+    return x + m.tiles.tile > r.x * width && x < (r.x + r.w) * width && y + m.tiles.tile > r.y * height && y < (r.y + r.h) * height;
+  });
+}
+
+/** Whether the known difference `k` (one knownFor names) covers this
+ *  over-limit measurement: inside its bounds, and — for a `tilesIn` entry —
+ *  every tile over the limit inside its region. */
+export function knownCovers(k: KnownDifference, m: Measured, over: Pick<OverLimit, "metric" | "value">): boolean {
+  if (over.value < k.min || over.value > k.max) return false;
+  return !(over.metric === "tileMad" && k.tilesIn) || tilesOverLimitIn(m, k.tilesIn);
+}
+
 /** Layers 1 + 2: the over-limit measurements no known difference covers. */
 export function limitFailures(m: Measured): string[] {
   const out: string[] = [];
   for (const over of overLimits(m)) {
     const known = knownFor(m, over);
-    if (known.some((k) => over.value >= k.min && over.value <= k.max)) continue;
+    if (known.some((k) => knownCovers(k, m, over))) continue;
     const limit = over.metric === "dx" || over.metric === "dy" ? `±${over.limit} px` : fmt(over.metric, over.limit);
     out.push(
       known.length
@@ -377,6 +457,6 @@ export function judge(m: Measured, base: BaselineCase | undefined | null): strin
 /** The known differences no measurement of a FULL run needs any more. */
 export function staleKnownDifferences(run: readonly Measured[]): KnownDifference[] {
   return KNOWN_DIFFERENCES.filter(
-    (k) => !run.some((m) => overLimits(m).some((over) => knownFor(m, over).includes(k) && over.value >= k.min && over.value <= k.max)),
+    (k) => !run.some((m) => overLimits(m).some((over) => knownFor(m, over).includes(k) && knownCovers(k, m, over))),
   );
 }

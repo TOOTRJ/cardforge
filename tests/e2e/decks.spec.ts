@@ -54,11 +54,14 @@ test.describe("deck CRUD + import", () => {
     // Create.
     const title = `E2E Deck ${Date.now()}`;
     await page.goto("/dashboard/decks/new");
-    // The wizard: Basics → Build → Cover → Review. Pick "Import a decklist"
-    // explicitly — the default build mode is AI whenever a gateway is
-    // configured, and that path spends credits.
+    // The wizard: Basics → Build → Cover → Review. "Import a decklist" is
+    // the default build mode now that AI deck building is paused (TODO DK1)
+    // — the AI tile is greyed ("Coming soon", aria-disabled) — and the spec
+    // still picks it explicitly.
     await page.getByRole("textbox", { name: /deck name/i }).fill(title);
     await page.getByRole("button", { name: /^next$/i }).click();
+    await expect(page.getByRole("radio", { name: /import a decklist/i })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: /generate with ai/i })).toHaveAttribute("aria-disabled", "true");
     await page.getByRole("radio", { name: /import a decklist/i }).click();
     await page.getByRole("button", { name: /^next$/i }).click(); // Cover (optional)
     await page.getByRole("button", { name: /^next$/i }).click(); // Review

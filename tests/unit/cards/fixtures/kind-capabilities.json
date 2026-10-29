@@ -102,7 +102,9 @@
   { "template":  "stainedglass", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Dominaria United Stained Glass showcase (DMU #287–368, MUL's Dominaria legends), Card Conjurer's 'Stained Glass (DMU)' pack (frames bucket only): M15's anatomy on the pack's own bars with its P/T plates — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
   { "template":  "mysticalarchive", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Strixhaven Mystical Archive showcase (STA #1–63), Card Conjurer's 'Mystical Archive (STA)' pack (frames bucket only): M15's anatomy on the run's own lines with the pack's P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
   { "template":  "tardis", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Doctor Who TARDIS showcase (WHO #535–564, #552z–564z, #1126–1155), Card Conjurer's 'TARDIS' pack (frames bucket only): M15's anatomy on the police box's own bars with the pack's P/T box — the IP showcases' capabilities (P/T only: no walker, battle or layout body). Every kind its body draws but the land (TREATMENT_KINDS: the pack's Land frame 404s). An addition: no stored card sits on it." },
-  { "template":  "breakingnews", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Outlaws of Thunder Junction Breaking News showcase (OTP #1–65), Card Conjurer's 'Breaking News' pack (frames bucket only): M15's anatomy on the newspaper page's own bands with the pack's P/T box — the IP showcases' capabilities (P/T only: no walker, battle or layout body; OTP #39's split and #50's walker keep their landing under gaps of their own). Every kind its body draws (no TREATMENT_KINDS row: print dresses spells, artifacts and a land). An addition: no stored card sits on it." }
+  { "template":  "breakingnews", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Outlaws of Thunder Junction Breaking News showcase (OTP #1–65), Card Conjurer's 'Breaking News' pack (frames bucket only): M15's anatomy on the newspaper page's own bands with the pack's P/T box — the IP showcases' capabilities (P/T only: no walker, battle or layout body; OTP #39's split and #50's walker keep their landing under gaps of their own). Every kind its body draws (no TREATMENT_KINDS row: print dresses spells, artifacts and a land). An addition: no stored card sits on it." },
+  { "template":  "sagacreature", "change":  "new-template", "capabilities":  ["pt", "chapters"], "reason":  "TODO 4.5d: a NEW template — the saga creature (FIN / FIC / PFIN's \"Summon:\" cards; PipGlyph's own composite of Card Conjurer's textured saga and the published m15nyx masters, frames bucket only): the saga's chapter rail with the type bar raised 173 px, a second box under it and M15's P/T plate — the saga's capabilities plus the P/T. The Saga kind's alone (TREATMENT_KINDS), and only for a saga whose type words say Creature (sagaCreatureFrameFits). An addition: no stored card sits on it." },
+  { "template": "extendedartprepare", "change": "new-template", "capabilities": ["pt", "adventure"], "reason": "TODO 4.27b: a NEW template — the Prepare frame's extended-art dress (PipGlyph's merge of the published extendedart and prepare masters, frames bucket only): the Prepare frame's slots — the P/T plate and the spell's page on the RIGHT (the `adventure` anatomy) — under the extended-art top. The Prepare kind's alone (TREATMENT_KINDS + EXCLUSIVE_KINDS). An addition: a Variations pick; no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -164,8 +166,10 @@
   "saga": ["chapters"],
   "sagadfcfront": ["chapters"],
   "sagadfcback": ["chapters"],
+  "sagacreature": ["pt", "chapters"],
   "adventure": ["pt", "adventure"],
   "prepare": ["pt", "adventure"],
+  "extendedartprepare": ["pt", "adventure"],
   "flip": ["pt", "secondFace"],
   "split": ["landscape", "secondFace"],
   "aftermath": ["secondFace"],

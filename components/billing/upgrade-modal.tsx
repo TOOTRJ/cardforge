@@ -73,10 +73,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "Print sheets & batch export",
       description: PRINT_PERK_COPY.sheets,
     },
-    // AI deck/card generation itself is open to every tier — credits are
-    // the only limiter (owner decision 2026-07-28). The ONE tier-gated AI
-    // feature is designing a card FOR a specific deck (owner decision
-    // 2026-09-15): the deck is analyzed and the card lands in it.
+    // AI card generation itself is open to every tier — credits are the
+    // only limiter (owner decision 2026-07-28; AI deck building is paused,
+    // TODO DK1). The ONE tier-gated AI feature is designing a card FOR a
+    // specific deck (owner decision 2026-09-15): the deck is analyzed and
+    // the card lands in it — create-card AI, open during the pause (D5).
     deck_aware_generation: {
       title: "Design cards for your deck",
       description:
@@ -87,15 +88,18 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       description:
         "Plus and Pro downloads print without the pipglyph.com mark — or with your own footer mark — and let you choose the watermark on creatures and spells, or none at all. Custom frames are coming soon.",
     },
+    // While AI deck building is paused (TODO DK1, lib/ai/deck-ai-pause.ts)
+    // no deck guide is written: these two name only the guides decks
+    // already have (owner D4).
     deck_export: {
       title: "Download the whole deck",
       description:
-        "Exporting a deck — the card images as a ZIP, print-ready PDFs, and the deck report with stats, how to play and combos — is a Pro feature. Copying and sharing the deck stays free.",
+        "Exporting a deck — the card images as a ZIP, print-ready PDFs, and the deck report with its stats (and its how-to-play guide, if the deck has one) — is a Pro feature. Copying and sharing the decklist stays free.",
     },
     deck_guide: {
       title: "How to play & combos",
       description:
-        "Pro members see an AI-written guide on every deck: the game plan, mulligan advice, the combos hiding in the list, and its weak spots. AI-generated decks come with one; any other deck can be analyzed for a credit.",
+        "Pro members can read the AI-written guide a deck already has: the game plan, mulligan advice, the combos hiding in the list, and its weak spots. New guides are paused while we rebuild decks — they're coming back soon.",
     },
     generic: {
       title: "Go premium",

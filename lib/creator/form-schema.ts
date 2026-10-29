@@ -36,10 +36,10 @@ import {
   loyaltyCostSchema,
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForCard, kindFromCard } from "@/lib/creator/card-kinds";
-import { colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront, type DfcIconFamily } from "@/lib/cards/dfc";
+import { colorlessFaceAllowed, colorlessFaceFits, dfcLookOf, isDfcFaceType, isSagaFront, type DfcIconFamily } from "@/lib/cards/dfc";
 import { creatorBackBodyFor } from "@/lib/creator/saga-back";
 import { SAGA_TWO_FACES_COLOURLESS } from "@/lib/creator/saga-faces";
-import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT, DFC_SEE_THROUGH_UNVERIFIED } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
   missingSecondFaceName,
@@ -139,6 +139,10 @@ function checkSubtypesText(ctx: Ctx, path: PathSegment[], text: string): void {
  *  used to be dropped by the save without a word. */
 export const SAGA_ROW_NEEDS_NUMBER = "Pick a chapter number for this row, or remove it.";
 
+/** The saga creature's box with no chapter to follow (TODO 4.5d): its lines
+ *  are saved after the last chapter. */
+export const SAGA_CREATURE_NEEDS_CHAPTER = "Add a chapter first: creature abilities are saved after the last chapter.";
+
 /** What a saga row says once its NUMBERS were changed while its stored
  *  marker holds a numeral the editor has no toggle for ("I, XI —"): saving
  *  would drop that numeral (lib/creator/structured-rules.ts
@@ -175,12 +179,18 @@ export type FormBackBodyContext = {
 const NO_BACK_BODY_CONTEXT: FormBackBodyContext = { mode: "create", verifiedKeys: new Set() };
 
 export function cardFormSchemaFor(
-  opened: StructuredRulesValues | null = null,
+  // (Or the opened rows read for the frame the values are on — an edit's
+  // saga moved on or off the saga creature frame, TODO 4.5d:
+  // lib/creator/card-fields.ts openedForFrame.)
+  openedFor: StructuredRulesValues | ((values: FormValues) => StructuredRulesValues | null) | null = null,
   backBody: FormBackBodyContext = NO_BACK_BODY_CONTEXT,
 ): z.ZodType<FormValues, FormValues> {
   return z
   .custom<FormValues>()
   .superRefine((values, ctx) => {
+    const opened = typeof openedFor === "function" ? openedFor(values) : openedFor;
+    // The keys the colourless rule reads (TODO 5.11a): none on an edit.
+    const colourlessKeys = backBody.mode === "edit" ? null : backBody.verifiedKeys;
     // ----- Card step -----
     // A double-faced FRONT is one of the wave-1 face types, on the body its
     // type derives (owner Q2; lib/cards/dfc-gate.ts — the face-type chips
@@ -191,10 +201,15 @@ export function cardFormSchemaFor(
       if (frontTypeError) {
         ctx.addIssue({ code: "custom", path: ["frame_style"], message: frontTypeError });
       }
+      // (On an EDIT the colour is locked and the see-through tick is the
+      // server's question — a card stored on the see-through `c` stays
+      // editable after an untick, the legacy pin: `null` keys ask only the
+      // structural rule, the Artifact word on a stand-in `c`.)
       const frontColourError = dfcFrontColorError(
         values.frame_style?.template,
         { cardType: values.card_type || null, supertype: values.supertype },
         values.color_identity,
+        colourlessKeys,
       );
       if (frontColourError) {
         ctx.addIssue({ code: "custom", path: ["color_identity"], message: frontColourError });
@@ -314,7 +329,7 @@ export function cardFormSchemaFor(
           if (
             body &&
             pickFrameColorKey(colour) === "c" &&
-            !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype })
+            !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype }, colourlessKeys)
           ) {
             // (A colourless double-faced saga whose back takes the front's
             // colour — TODO 5.5 (b), owner Round 73 — is told so where the
@@ -322,7 +337,12 @@ export function cardFormSchemaFor(
             if (isSagaFront(values.frame_style?.template) && back.color_identity.length === 0) {
               ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: SAGA_TWO_FACES_COLOURLESS });
             } else {
-              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: DFC_COLORLESS_NEEDS_ARTIFACT });
+              // (The see-through `c` of the modal back, TODO 5.11a, not
+              // ticked yet: the face's words are fine, the frame isn't.)
+              const message = colorlessFaceFits(body, { cardType: back.card_type, supertype: back.supertype })
+                ? DFC_SEE_THROUGH_UNVERIFIED
+                : DFC_COLORLESS_NEEDS_ARTIFACT;
+              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message });
             }
           }
         }
@@ -400,6 +420,21 @@ export function cardFormSchemaFor(
           path: ["saga_intro"],
           message: "Intro must be 400 characters or fewer.",
         });
+      }
+      // The saga creature's box (TODO 4.5d): a chapter's limit — and it is
+      // saved AFTER the last chapter, so with no chapter to follow there is
+      // nowhere to save it (as an intro the rail would print it): the save
+      // waits, and says so, rather than dropping it.
+      const creatureText = (values.saga_creature_text ?? "").trim();
+      if (!rowsUntouched && creatureText.length > 600) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["saga_creature_text"],
+          message: "Creature abilities must be 600 characters or fewer.",
+        });
+      }
+      if (!rowsUntouched && creatureText && surviving.length === 0) {
+        ctx.addIssue({ code: "custom", path: ["saga_creature_text"], message: SAGA_CREATURE_NEEDS_CHAPTER });
       }
     }
     if (rulesTextIsSubmitted) {

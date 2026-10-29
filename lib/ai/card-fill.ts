@@ -20,7 +20,7 @@ import {
 } from "@/lib/ai/station-design";
 import type { DesignVariety } from "@/lib/ai/design-variety";
 import { fillSecondPartOf, secondPartPinNote, type AiLayoutKind, type SecondPartDesign } from "@/lib/ai/layout-design";
-import { isAiDfcKind, type AiDfcKind, type BackFaceDesign } from "@/lib/ai/dfc-design";
+import { isAiDfcKind, type AiDfcKind, type BackFaceDesign, type DfcDesignFrame } from "@/lib/ai/dfc-design";
 import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +53,9 @@ export type DesignCardFillInput = {
    *  face (lib/ai/dfc-design.ts) — handed back as `back_face`, which the
    *  plan judges and pours into the fill. Absent on every other fill. */
   layout?: AiLayoutKind | AiDfcKind;
+  /** A double-faced kind's frame as the plan's fit reads it (TODO 5.11a:
+   *  the lint and the autofix judge a colourless back with its tick). */
+  dfcFrame?: DfcDesignFrame;
 };
 
 /**
@@ -119,6 +122,7 @@ export async function designCardFill(
               .join(" ")
           : fillPromptNote(input.locked, input.want),
         ...(input.layout ? { layout: input.layout } : {}),
+        ...(input.dfcFrame ? { dfcFrame: input.dfcFrame } : {}),
       },
     ],
   });

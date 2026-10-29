@@ -2142,6 +2142,269 @@
       "plates = M15's (a land creature: Dryad Arbor's kind)"
     ]
   },
+  "extendedartprepare": {
+    "source": "pipglyph",
+    "converter": "scripts/build-prepare-frames.mjs --only extended",
+    "derivedFrom": "the published extendedart/<key> masters (extendedart/a for c; Card Conjurer imports: see \"extendedart\"), the published prepare/<key> masters (PipGlyph's: see \"prepare\") and the published m15 masters they were built on",
+    "output": "1500x2100, the extended-art master's corners and art window, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "merge": "rows 0..1311: the extended-art master; from row 1312: the Prepare master inside cols 100..1400 and wherever its build changed the M15 base, the extended-art master's own side fields elsewhere",
+      "shadow": "rows 1312..1319: the extended-art master's difference from M15 (its black type bar's shadow) added to the Prepare master's pixels"
+    },
+    "colors": {
+      "w": [
+        "extendedart/w.png (published, sha256 27c9e942b754)",
+        "prepare/w.png (published, sha256 f5fd184d3a6a) — below the type bar",
+        "m15/w.png (published, sha256 3818b6c0d274) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "u": [
+        "extendedart/u.png (published, sha256 51e200ceebc6)",
+        "prepare/u.png (published, sha256 e3c5d6237d0a) — below the type bar",
+        "m15/u.png (published, sha256 80cb122e0539) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "b": [
+        "extendedart/b.png (published, sha256 3a7044512bcc)",
+        "prepare/b.png (published, sha256 828022504693) — below the type bar",
+        "m15/b.png (published, sha256 d5578ecb1927) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "r": [
+        "extendedart/r.png (published, sha256 2ec2150ffd1f)",
+        "prepare/r.png (published, sha256 f8b597bbe6d1) — below the type bar",
+        "m15/r.png (published, sha256 e6cbb495cf62) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "g": [
+        "extendedart/g.png (published, sha256 d7e942d442ee)",
+        "prepare/g.png (published, sha256 6d0ab38d7e06) — below the type bar",
+        "m15/g.png (published, sha256 f6d980508b95) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "m": [
+        "extendedart/m.png (published, sha256 b804a306bb1a)",
+        "prepare/m.png (published, sha256 7ebcc024b0c2) — below the type bar",
+        "m15/m.png (published, sha256 0b21a694ab48) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "c": [
+        "extendedart/a.png (published, sha256 44a87b85d75e)",
+        "prepare/c.png (published, sha256 d9e4084f4e89) — below the type bar",
+        "m15artifact/c.png (published, sha256 bc6654e4964d) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "wu": [
+        "extendedart/wu.png (published, sha256 4434bf334d14)",
+        "prepare/wu.png (published, sha256 65416e4bfda3) — below the type bar",
+        "m15/wu.png (published, sha256 5febe66b93c7) — the M15 base it was built on",
+        "1026960 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "wb": [
+        "extendedart/wb.png (published, sha256 de16eed54e4e)",
+        "prepare/wb.png (published, sha256 2ece01bd9ba9) — below the type bar",
+        "m15/wb.png (published, sha256 1f026723e2d0) — the M15 base it was built on",
+        "1026960 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "ub": [
+        "extendedart/ub.png (published, sha256 2301b94ae75a)",
+        "prepare/ub.png (published, sha256 f4475ee3e638) — below the type bar",
+        "m15/ub.png (published, sha256 8702e335d81e) — the M15 base it was built on",
+        "1027313 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "ur": [
+        "extendedart/ur.png (published, sha256 b570a9bf9bbd)",
+        "prepare/ur.png (published, sha256 d813bb522919) — below the type bar",
+        "m15/ur.png (published, sha256 850db175460c) — the M15 base it was built on",
+        "1027313 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "br": [
+        "extendedart/br.png (published, sha256 75850b616bf6)",
+        "prepare/br.png (published, sha256 1c36960328f4) — below the type bar",
+        "m15/br.png (published, sha256 2814f12b0205) — the M15 base it was built on",
+        "1027255 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "bg": [
+        "extendedart/bg.png (published, sha256 361182bcc09a)",
+        "prepare/bg.png (published, sha256 a380fede55ff) — below the type bar",
+        "m15/bg.png (published, sha256 3494bdf81c45) — the M15 base it was built on",
+        "1027255 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "rg": [
+        "extendedart/rg.png (published, sha256 116a35acb9b0)",
+        "prepare/rg.png (published, sha256 4f065f4fe051) — below the type bar",
+        "m15/rg.png (published, sha256 cf8a9d5ed096) — the M15 base it was built on",
+        "1027178 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "rw": [
+        "extendedart/rw.png (published, sha256 0b15430d70f2)",
+        "prepare/rw.png (published, sha256 526496eb50ed) — below the type bar",
+        "m15/rw.png (published, sha256 080d6586a5c9) — the M15 base it was built on",
+        "1027178 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "gw": [
+        "extendedart/gw.png (published, sha256 fb5cc479e44b)",
+        "prepare/gw.png (published, sha256 bcea03e16944) — below the type bar",
+        "m15/gw.png (published, sha256 7cd729e529cc) — the M15 base it was built on",
+        "1027010 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "gu": [
+        "extendedart/gu.png (published, sha256 28454f796c11)",
+        "prepare/gu.png (published, sha256 4fa7af0d1b34) — below the type bar",
+        "m15/gu.png (published, sha256 d74392176cf2) — the M15 base it was built on",
+        "1027010 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "wu-h": [
+        "extendedart/wu-h.png (published, sha256 14855658a717)",
+        "prepare/wu-h.png (published, sha256 300b27537123) — below the type bar",
+        "m15/wu-h.png (published, sha256 72d2cf801df4) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "wb-h": [
+        "extendedart/wb-h.png (published, sha256 7621e3114a95)",
+        "prepare/wb-h.png (published, sha256 f7600508ae88) — below the type bar",
+        "m15/wb-h.png (published, sha256 f187c6549ef6) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "ub-h": [
+        "extendedart/ub-h.png (published, sha256 3a839babfaf8)",
+        "prepare/ub-h.png (published, sha256 c71b419e966c) — below the type bar",
+        "m15/ub-h.png (published, sha256 10a101967899) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "ur-h": [
+        "extendedart/ur-h.png (published, sha256 b9cc494f0791)",
+        "prepare/ur-h.png (published, sha256 c2690c05fa3b) — below the type bar",
+        "m15/ur-h.png (published, sha256 de679e84113d) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "br-h": [
+        "extendedart/br-h.png (published, sha256 2d62894d9c73)",
+        "prepare/br-h.png (published, sha256 893f6bdc2cb4) — below the type bar",
+        "m15/br-h.png (published, sha256 2e4ea478b629) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "bg-h": [
+        "extendedart/bg-h.png (published, sha256 b2181beefb40)",
+        "prepare/bg-h.png (published, sha256 d3b4c1f8546a) — below the type bar",
+        "m15/bg-h.png (published, sha256 e742d40e9de5) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "rg-h": [
+        "extendedart/rg-h.png (published, sha256 42f62b2a457e)",
+        "prepare/rg-h.png (published, sha256 59a11dc6f1bb) — below the type bar",
+        "m15/rg-h.png (published, sha256 1f0ae479f981) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "rw-h": [
+        "extendedart/rw-h.png (published, sha256 1ebcbca8685b)",
+        "prepare/rw-h.png (published, sha256 d60d1121dd15) — below the type bar",
+        "m15/rw-h.png (published, sha256 1b607c532758) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "gw-h": [
+        "extendedart/gw-h.png (published, sha256 be949d14f9e0)",
+        "prepare/gw-h.png (published, sha256 ba6a82b35950) — below the type bar",
+        "m15/gw-h.png (published, sha256 9f5138bcbe1c) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ],
+      "gu-h": [
+        "extendedart/gu-h.png (published, sha256 2ede306a7f12)",
+        "prepare/gu-h.png (published, sha256 3814c798a356) — below the type bar",
+        "m15/gu-h.png (published, sha256 50e8a9f07450) — the M15 base it was built on",
+        "1026228 px from the Prepare master; the extended-art shadow carried onto rows 1312–1319"
+      ]
+    },
+    "sourceFiles": [
+      "extendedart/a.png",
+      "extendedart/b.png",
+      "extendedart/bg-h.png",
+      "extendedart/bg.png",
+      "extendedart/br-h.png",
+      "extendedart/br.png",
+      "extendedart/g.png",
+      "extendedart/gu-h.png",
+      "extendedart/gu.png",
+      "extendedart/gw-h.png",
+      "extendedart/gw.png",
+      "extendedart/m.png",
+      "extendedart/r.png",
+      "extendedart/rg-h.png",
+      "extendedart/rg.png",
+      "extendedart/rw-h.png",
+      "extendedart/rw.png",
+      "extendedart/u.png",
+      "extendedart/ub-h.png",
+      "extendedart/ub.png",
+      "extendedart/ur-h.png",
+      "extendedart/ur.png",
+      "extendedart/w.png",
+      "extendedart/wb-h.png",
+      "extendedart/wb.png",
+      "extendedart/wu-h.png",
+      "extendedart/wu.png",
+      "m15/b.png",
+      "m15/bg-h.png",
+      "m15/bg.png",
+      "m15/br-h.png",
+      "m15/br.png",
+      "m15/g.png",
+      "m15/gu-h.png",
+      "m15/gu.png",
+      "m15/gw-h.png",
+      "m15/gw.png",
+      "m15/m.png",
+      "m15/r.png",
+      "m15/rg-h.png",
+      "m15/rg.png",
+      "m15/rw-h.png",
+      "m15/rw.png",
+      "m15/u.png",
+      "m15/ub-h.png",
+      "m15/ub.png",
+      "m15/ur-h.png",
+      "m15/ur.png",
+      "m15/w.png",
+      "m15/wb-h.png",
+      "m15/wb.png",
+      "m15/wu-h.png",
+      "m15/wu.png",
+      "m15artifact/c.png",
+      "prepare/b.png",
+      "prepare/bg-h.png",
+      "prepare/bg.png",
+      "prepare/br-h.png",
+      "prepare/br.png",
+      "prepare/c.png",
+      "prepare/g.png",
+      "prepare/gu-h.png",
+      "prepare/gu.png",
+      "prepare/gw-h.png",
+      "prepare/gw.png",
+      "prepare/m.png",
+      "prepare/r.png",
+      "prepare/rg-h.png",
+      "prepare/rg.png",
+      "prepare/rw-h.png",
+      "prepare/rw.png",
+      "prepare/u.png",
+      "prepare/ub-h.png",
+      "prepare/ub.png",
+      "prepare/ur-h.png",
+      "prepare/ur.png",
+      "prepare/w.png",
+      "prepare/wb-h.png",
+      "prepare/wb.png",
+      "prepare/wu-h.png",
+      "prepare/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27b): the extended-art Prepare printings (SOS #309–342, SOC #63–98, FRA #425–430) print the extended-art frame over the Prepare frame's lower half. Card Conjurer's extended-art pack is M15's pixels below its type bar (inside x 100–1400 byte for byte from row 1320 but blue's paper, within 10 levels), so the dress merges two published masters; no pixel is drawn.",
+      "The numbers are scripts/lib/prepare-2026.mjs PREPARE_EXTENDED (measured 2026-10-28 on the masters); no scan is read by the build.",
+      "Below the type bar the dress holds the Prepare master's pixels wherever the holofoil stamp's notch, the page overlays (prepare/page/<key>) and the P/T plate read, so those serve it unchanged.",
+      "c is the pack's silver artifact frame over prepare/c (m15artifact/c's): no colourless Prepare is printed, and the see-through Eldrazi frame has no box under it."
+    ]
+  },
   "extendedartstation": {
     "source": "pipglyph",
     "converter": "scripts/build-station-frames.mjs",
@@ -9450,9 +9713,6 @@
       "g": [
         "img/frames/modal/regular/gb.png"
       ],
-      "c": [
-        "img/frames/modal/regular/ab.png"
-      ],
       "m": [
         "img/frames/modal/regular/mb.png"
       ],
@@ -9505,7 +9765,13 @@
         "img/frames/modal/regular/mb.png",
         "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
         "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "c": [
+        "NOT IMPORTED — built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
       ]
+    },
+    "excluded": {
+      "c": "built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
     },
     "tones": {
       "a": [],
@@ -10199,7 +10465,7 @@
       "toned onto the prints before the first tick (MDFC_BACK_TONES, design D1): CC's bars read 3–16 luma light on w u b g m and 16 dark on r, its boxes 5–18 off; per-key gains through the pack's Title / Type / Rules masks, the white ▲▼ and the light rims kept by a luma ramp; the body, the pinline and the strip untouched; the artifact back untoned (no colourless modal back was printed)",
       "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
       "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
-      "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
+      "colourless: a colourless ARTIFACT back would wear the pack's 'Artifact Frame' back (ab.png, artifactMasterKeys; every artifact modal back printed is a coloured artifact — KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black); `c` was that master as a RENDER STAND-IN until TODO 5.11a made it the SEE-THROUGH colourless frame, STX #6's back Explore the Vastlands (scripts/build-mdfc-colourless-frames.mjs, provenance key mdfccolourless)",
       "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 12–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched; the KHM scans read 5–13 lighter than STX's on every key (u KHM #40 242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs STX #151 229, b KHM #112 219 vs STX #148 223): the fitted targets sit on STX, with b on both",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
       "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face",
@@ -10409,9 +10675,6 @@
       "g": [
         "img/frames/modal/regular/g.png"
       ],
-      "c": [
-        "img/frames/modal/regular/a.png"
-      ],
       "m": [
         "img/frames/modal/regular/m.png"
       ],
@@ -10534,7 +10797,13 @@
         "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
         "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "c": [
+        "NOT IMPORTED — built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
       ]
+    },
+    "excluded": {
+      "c": "built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
     },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskType.png",
@@ -10553,7 +10822,7 @@
     "notes": [
       "source: CC 'Modal Regular' (packModalRegular.js, groupModal-1.js): the M15 frame with the drop-shaped icon HOUSING at the left of the name bar (a white fill, its ring, the black ▲ — tip x 41, circle to 201, rows 97–236 at HD; the prints' 44 / 198–205 / 98–236, within 3 px), the dark flipside STRIP at the bottom left in the colour's tone (x 64–690 × y 1866–1948 with its ◀; the prints' 64–681..694 × 1861..1866–1948, 6–10 luma lighter than theirs) and the strip's box cut into the text box's paper — all the master's; only the strip's two texts are drawn (the profile's `flipside` slots: the other face's last type word in Beleren Bold from CC's box at 6.8 %W, its cost or mana line in the rules font ending at 43.2 %W)",
       "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
-      "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+      "colourless: a colourless ARTIFACT face wears the pack's 'Artifact Frame' (a.png, artifactMasterKeys); `c` was that master as a RENDER STAND-IN (design D2) until TODO 5.11a made it the SEE-THROUGH colourless frame, STX #6 Wandering Archaic's (scripts/build-mdfc-colourless-frames.mjs — not this importer, provenance key mdfccolourless)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
       "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it (TODO 5.1c); on a pair master the gold m.png's strip (split) or the two colour fronts' strips lerped across the frame ramp (hybrid)",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay (our m15crown band cut through CC's modal crown twin's alpha around the housing); the two-colour PAIR masters (5.1d / 5.12): 4.6b's recipe over this pack's files and masks — the split dress m.png whole with the box and the pinline lerped from the two colour fronts (STX #149 Extus W|B, MSH #219 King T'Challa W|U print it), the hybrid dress the two fronts lerped across the frame ramp under CC's grey Land frame's bars (l.png through the Title and Type masks: the housing's fill is the Title mask's) with the split box and pinline (MH3 #252–261's ten hybrid fronts print it; the grey plate pt/c)",
@@ -14422,6 +14691,97 @@
       "each SVG is rasterised at 216 px (sharp, density 300, Lanczos): three times the HD bake's 72 px cost disc, so neither bake upsamples; generic and hybrid symbols, {C}, {X} and {T} stay the font's (the era's {T} is mana-font `tap-3ed`, Revised's tilted T)"
     ]
   },
+  "mdfccolourless": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-mdfc-colourless-frames.mjs",
+    "derivedFrom": "the published m15/c master (the see-through colourless 'Eldrazi' frame, TODO 4.17; Card Conjurer imports: see \"m15\") laid over the published m15mdfcfront/a and m15mdfcback/a masters (the 'Modal Regular' artifact frames, Card Conjurer imports: see \"m15mdfcfront\" / \"m15mdfcback\") through Card Conjurer's modal masks — the frame field, box, type bar and title bar m15/c's (the housing's drop filled with m15/c's bar row by row, the ▲ / ▲▼ the modal master's), the lines and the strip the modal master's, toned (scripts/lib/mdfc-colourless.mjs)",
+    "output": "1500x2100, the modal master's border and corners, webp q90 with the PNG's alpha exactly; strip/c.png the tab at 1:1",
+    "recipe": {
+      "masks": {
+        "frame": "cc:img/frames/modal/regular/frame.svg@86e3507e8e54",
+        "rules": "cc:img/frames/modal/regular/textbox.svg@527424d17e61",
+        "type": "cc:img/frames/m15/regular/m15MaskType.png@40600c4681c7",
+        "title": "cc:img/frames/modal/regular/title.svg@f11d29f3b67f",
+        "pinline": "cc:img/frames/modal/regular/pinline.svg@f0b686fc2605",
+        "reminder": "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea"
+      },
+      "layers": "base = the modal artifact master; frame.svg ← m15/c; textbox.svg ← m15/c (back: × the box gain); m15MaskType.png ← m15/c (back: × the type gain); title.svg ← m15/c's bar from x 220 px, the housing's drop m15/c's bar row by row (median of x 400–1100) with the modal master's glyph and inner edge over it (back: × the title gain, before the glyph); pinline.svg ← the modal master's lines toned onto m15/c's; reminder.svg ← the modal master's strip (front: toned onto print's tab, luma ramp 150–200)",
+      "backLumaGains": {
+        "title": 0.72,
+        "type": 0.687,
+        "rules": 0.887
+      },
+      "frontStripTone": "124,128,138 → 120,106,104 (STX #6 Wandering Archaic's tab)",
+      "pinlineTone": {
+        "front": "246,247,245 → 223,224,224",
+        "back": "246,247,245 → 223,224,224"
+      }
+    },
+    "colors": {
+      "m15mdfcfront/c": [
+        "m15mdfcfront/a.png@331c39adb9cd (base: border, housing outline, lines, strip)",
+        "m15/c.png@d166326b77a2 (frame field, box, bars, housing fill)"
+      ],
+      "m15mdfcfront/strip/c": [
+        "m15mdfcfront/c.png (this run), the tab through img/frames/modal/regular/reminder.svg eroded 1 px, 2 × 2 blocks, box 44,1866 658×90"
+      ],
+      "m15mdfcback/c": [
+        "m15mdfcback/a.png@eb33a3423f62 (base: border, housing outline, lines, strip)",
+        "m15/c.png@d166326b77a2 (frame field, box, bars, housing fill)"
+      ],
+      "m15mdfcback/strip/c": [
+        "m15mdfcback/c.png (this run), the tab through img/frames/modal/regular/reminder.svg eroded 1 px, 2 × 2 blocks, box 44,1866 658×90"
+      ]
+    },
+    "changedPixels": {
+      "m15mdfcfront/c": {
+        "frame": 169604,
+        "box": 756071,
+        "type": 162634,
+        "title": 147505,
+        "pinline": 107988,
+        "strip": 54180,
+        "reads": {
+          "title": "206,204,202",
+          "type": "206,204,202",
+          "rules": "243,242,240",
+          "strip": "120,106,104"
+        }
+      },
+      "m15mdfcback/c": {
+        "frame": 169604,
+        "box": 756071,
+        "type": 162634,
+        "title": 147505,
+        "pinline": 107988,
+        "strip": 54180,
+        "reads": {
+          "title": "148,147,145",
+          "type": "142,140,139",
+          "rules": "216,215,213",
+          "strip": "223,225,229"
+        }
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/regular/m15MaskType.png",
+      "cc:img/frames/modal/regular/frame.svg",
+      "cc:img/frames/modal/regular/pinline.svg",
+      "cc:img/frames/modal/regular/reminder.svg",
+      "cc:img/frames/modal/regular/textbox.svg",
+      "cc:img/frames/modal/regular/title.svg",
+      "m15/c.png",
+      "m15mdfcback/a.png",
+      "m15mdfcfront/a.png"
+    ],
+    "notes": [
+      "TODO 5.11a: STX #6 Wandering Archaic // Explore the Vastlands (and PSTX #6s) — the one modal card whose faces are colourless with no Artifact word; both print the SEE-THROUGH colourless frame with the modal housing and strip. No Card Conjurer pack draws it ('Modal Regular' has Artifact and Land frames only). Before it, the bodies' `c` was the artifact master standing in (design D2), which a colourless ARTIFACT face never drew (it wears `a`: FrameProfile.artifactMasterKeys)",
+      "the back's bars and box at print's back ÷ front LUMA (BACK_LUMA_GAINS), m15/c's neutral grey kept — both faces show the same card's art through them, so the ratio leaves the art's cast out; the back strip is the modal back's as published (STX #6's back tab 226,220,230 against 223,225,229)",
+      "no crown, pair, stamp or nickname piece of its own: a legendary colourless non-artifact modal face was never printed (the crown overlay keeps its `c` → `a` band)"
+    ]
+  },
   "modern": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -16501,6 +16861,187 @@
       "TODO 4.26: the page is the SPELL's (print colours it by the spell — a hybrid spell's grey page, Abigale SOS #170): `page/<key>` is drawn over the creature's master where the spell's page key differs (lib/cards/part-color.ts), opt-in per card (frame_style.partColor)."
     ]
   },
+  "prepareholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published Prepare masters named per key below (PipGlyph's own: see \"prepare\")",
+    "output": "192x60 at 654,1890 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of PREPARE_STAMP.lift (scripts/lib/prepare-2026.mjs) rows further down (|x - 750| = 0, 2, 4, …; linear between): 35.8 35.8 35.8 35.8 35.8 35.7 35.6 35.6 35.5 35.4 35.2 35 34.7 34.2 33.7 33.3 32.9 32.4 31.8 31.3 30.8 30.2 29.5 28.8 28.1 27.3 26.5 25.7 24.8 23.8 22.8 21.8 20.8 19.6 18.4 17.3 16 14.6 13.1 11.7 10.2 8.5 6.6 4.7 2.8 1.3 0.4 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1950) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "prepare/w.png (published, sha256 f5fd184d3a6a): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/w.png (sha256 f7b5f26181b4; its piece within 0 levels) too"
+      ],
+      "u": [
+        "prepare/u.png (published, sha256 e3c5d6237d0a): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/u.png (sha256 3ee08f4f249f; its piece within 0 levels) too"
+      ],
+      "b": [
+        "prepare/b.png (published, sha256 828022504693): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/b.png (sha256 576110f0c412; its piece within 0 levels) too"
+      ],
+      "r": [
+        "prepare/r.png (published, sha256 f8b597bbe6d1): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/r.png (sha256 c9f488204c6d; its piece within 0 levels) too"
+      ],
+      "g": [
+        "prepare/g.png (published, sha256 6d0ab38d7e06): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/g.png (sha256 affadecbd3f1; its piece within 0 levels) too"
+      ],
+      "m": [
+        "prepare/m.png (published, sha256 7ebcc024b0c2): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/m.png (sha256 3be6f6d23853; its piece within 0 levels) too"
+      ],
+      "c": [
+        "prepare/c.png (published, sha256 d9e4084f4e89): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/c.png (sha256 4ce7eb3bb7ee; its piece within 0 levels) too"
+      ],
+      "wu": [
+        "prepare/wu.png (published, sha256 65416e4bfda3): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/wu.png (sha256 1a4ea62c4daf; its piece within 0 levels) too"
+      ],
+      "wb": [
+        "prepare/wb.png (published, sha256 2ece01bd9ba9): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/wb.png (sha256 9bda366240e2; its piece within 0 levels) too"
+      ],
+      "ub": [
+        "prepare/ub.png (published, sha256 f4475ee3e638): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/ub.png (sha256 6687614d6c4b; its piece within 0 levels) too"
+      ],
+      "ur": [
+        "prepare/ur.png (published, sha256 d813bb522919): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/ur.png (sha256 76ff6d609d52; its piece within 0 levels) too"
+      ],
+      "br": [
+        "prepare/br.png (published, sha256 1c36960328f4): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/br.png (sha256 55d33d6f1048; its piece within 0 levels) too"
+      ],
+      "bg": [
+        "prepare/bg.png (published, sha256 a380fede55ff): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/bg.png (sha256 8e380b7dd8b4; its piece within 0 levels) too"
+      ],
+      "rg": [
+        "prepare/rg.png (published, sha256 4f065f4fe051): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/rg.png (sha256 e8b1065a3d94; its piece within 0 levels) too"
+      ],
+      "rw": [
+        "prepare/rw.png (published, sha256 526496eb50ed): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/rw.png (sha256 478108fb688c; its piece within 0 levels) too"
+      ],
+      "gw": [
+        "prepare/gw.png (published, sha256 bcea03e16944): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/gw.png (sha256 91e5d6bb7b8a; its piece within 0 levels) too"
+      ],
+      "gu": [
+        "prepare/gu.png (published, sha256 4fa7af0d1b34): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/gu.png (sha256 3126702f09d3; its piece within 0 levels) too"
+      ],
+      "wu-h": [
+        "prepare/wu-h.png (published, sha256 300b27537123): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/wu-h.png (sha256 1b164fd6f65a; its piece within 0 levels) too"
+      ],
+      "wb-h": [
+        "prepare/wb-h.png (published, sha256 f7600508ae88): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/wb-h.png (sha256 8e99075c1453; its piece within 0 levels) too"
+      ],
+      "ub-h": [
+        "prepare/ub-h.png (published, sha256 c71b419e966c): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/ub-h.png (sha256 e1a22c92e61a; its piece within 0 levels) too"
+      ],
+      "ur-h": [
+        "prepare/ur-h.png (published, sha256 c2690c05fa3b): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/ur-h.png (sha256 cebdfbf99ea4; its piece within 0 levels) too"
+      ],
+      "br-h": [
+        "prepare/br-h.png (published, sha256 893f6bdc2cb4): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/br-h.png (sha256 a930e5a4eb1e; its piece within 0 levels) too"
+      ],
+      "bg-h": [
+        "prepare/bg-h.png (published, sha256 d3b4c1f8546a): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/bg-h.png (sha256 84d897f15bcf; its piece within 0 levels) too"
+      ],
+      "rg-h": [
+        "prepare/rg-h.png (published, sha256 59a11dc6f1bb): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/rg-h.png (sha256 05f69752729d; its piece within 0 levels) too"
+      ],
+      "rw-h": [
+        "prepare/rw-h.png (published, sha256 d60d1121dd15): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/rw-h.png (sha256 7a947c8d35d9; its piece within 0 levels) too"
+      ],
+      "gw-h": [
+        "prepare/gw-h.png (published, sha256 ba6a82b35950): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/gw-h.png (sha256 d75959ba2a1a; its piece within 0 levels) too"
+      ],
+      "gu-h": [
+        "prepare/gu-h.png (published, sha256 3814c798a356): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over extendedartprepare/gu-h.png (sha256 dbb3a5cb8b3e; its piece within 0 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "extendedartprepare/b.png",
+      "extendedartprepare/bg-h.png",
+      "extendedartprepare/bg.png",
+      "extendedartprepare/br-h.png",
+      "extendedartprepare/br.png",
+      "extendedartprepare/c.png",
+      "extendedartprepare/g.png",
+      "extendedartprepare/gu-h.png",
+      "extendedartprepare/gu.png",
+      "extendedartprepare/gw-h.png",
+      "extendedartprepare/gw.png",
+      "extendedartprepare/m.png",
+      "extendedartprepare/r.png",
+      "extendedartprepare/rg-h.png",
+      "extendedartprepare/rg.png",
+      "extendedartprepare/rw-h.png",
+      "extendedartprepare/rw.png",
+      "extendedartprepare/u.png",
+      "extendedartprepare/ub-h.png",
+      "extendedartprepare/ub.png",
+      "extendedartprepare/ur-h.png",
+      "extendedartprepare/ur.png",
+      "extendedartprepare/w.png",
+      "extendedartprepare/wb-h.png",
+      "extendedartprepare/wb.png",
+      "extendedartprepare/wu-h.png",
+      "extendedartprepare/wu.png",
+      "prepare/b.png",
+      "prepare/bg-h.png",
+      "prepare/bg.png",
+      "prepare/br-h.png",
+      "prepare/br.png",
+      "prepare/c.png",
+      "prepare/g.png",
+      "prepare/gu-h.png",
+      "prepare/gu.png",
+      "prepare/gw-h.png",
+      "prepare/gw.png",
+      "prepare/m.png",
+      "prepare/r.png",
+      "prepare/rg-h.png",
+      "prepare/rg.png",
+      "prepare/rw-h.png",
+      "prepare/rw.png",
+      "prepare/u.png",
+      "prepare/ub-h.png",
+      "prepare/ub.png",
+      "prepare/ur-h.png",
+      "prepare/ur.png",
+      "prepare/w.png",
+      "prepare/wb-h.png",
+      "prepare/wb.png",
+      "prepare/wu-h.png",
+      "prepare/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27b): the holofoil stamp's notch on the Prepare frame — the text box's foot (its bottom bevel, the pinline and the black border) arched over the oval across the creature's box and the strip under the page, as every stamped Prepare print draws it (79 of 119 paper printings, every rare and mythic). M15's piece (Card Conjurer's m15holostamp) is cut for one box: the page's outline and strip run through it. No CC piece and no scan is read by the build — every painted pixel is the published master's own bevel, pinline and black, moved up.",
+      "The arch is scripts/lib/prepare-2026.mjs PREPARE_STAMP.lift: 35 stamped plain prints measured 2026-10-28 (the rim's lower edge lifted 37.4 px at the centre against the straight 1947.5, its upper edge 34.3 — the lift is their mean, 35.8 — rising from x 657 to x 843); the same set's plain M15 mythic arches the same within 1 px.",
+      "Each piece is built over its master and checked over the other master drawn under its key — the extended-art Prepare dress — by building it there too (sharePiece); the two pair dresses each have their own piece (their strips differ where the lifted bevel's top edge is cut). The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15's oval. Nothing of a hologram is in a piece."
+    ]
+  },
   "retro": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -17985,6 +18526,128 @@
       "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
       "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
+    ]
+  },
+  "sagacreature": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-saga-creature-frames.mjs",
+    "derivedFrom": "Card Conjurer's textured saga ('Nyx Frames', packSagaNyx.js: img/frames/saga/nyx/<k>.png, `c` = its 'Artifact Frame' a.png) with rows cut and the reminder widened into a band, over the published m15nyx/<k> masters' rows from the text box down (Card Conjurer imports: see \"m15nyx\"), its box's top rim moved up under the raised bar and its paper taken from the textured saga's own (scripts/lib/saga-creature.mjs)",
+    "output": "1500x2100, the masters' corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "rowsCut": "165 rows from 380 (the reminder box's straight middle) + 8 from 1100 (the rail's) = 173: the type bar 1759–1895 → 1586–1722 px",
+      "fold": "x 0–175: rows 237–596 resampled (lanczos3) into 237–431, faded into the cut over 16 px",
+      "band": "x 733–1384 × y 237–433: the box's paper mirrored from x 160–730; the window's top rule x 741–1388 × y 434–437",
+      "lower": "rows 1723–2099 from m15nyx/<k>; its box's top rim + inner shadow (rows 1304–1322, x 98–1409) copied to 1723–1741; its paper (x 110–1382 × y 1742–1937) from the saga's chapter column (rows 700+, x mirrored into 175–728)"
+    },
+    "colors": {
+      "w": [
+        "cc:img/frames/saga/nyx/w.png@84e04002d834",
+        "m15nyx/w.png@9e06bf121513 (rows 1723+)"
+      ],
+      "u": [
+        "cc:img/frames/saga/nyx/u.png@a62bec9413d4",
+        "m15nyx/u.png@846cf6f5f2cf (rows 1723+)"
+      ],
+      "b": [
+        "cc:img/frames/saga/nyx/b.png@ccc8d75d4322",
+        "m15nyx/b.png@aaaf35b7d9eb (rows 1723+)"
+      ],
+      "r": [
+        "cc:img/frames/saga/nyx/r.png@221912d0df2a",
+        "m15nyx/r.png@e206ae7448cb (rows 1723+)"
+      ],
+      "g": [
+        "cc:img/frames/saga/nyx/g.png@5cb0b7c217e4",
+        "m15nyx/g.png@74ba28f2f529 (rows 1723+)"
+      ],
+      "m": [
+        "cc:img/frames/saga/nyx/m.png@04535b827685",
+        "m15nyx/m.png@d366c7b36ad2 (rows 1723+)"
+      ],
+      "c": [
+        "cc:img/frames/saga/nyx/a.png@0f6b25dd88c5",
+        "m15nyx/c.png@0a4a43d2a2e9 (rows 1723+)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "u": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "b": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "r": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "g": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "m": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      },
+      "c": {
+        "fold": 34320,
+        "band": 128444,
+        "rule": 2592,
+        "m15": 565500,
+        "top": 24928,
+        "paper": 249508
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/saga/nyx/a.png",
+      "cc:img/frames/saga/nyx/b.png",
+      "cc:img/frames/saga/nyx/g.png",
+      "cc:img/frames/saga/nyx/m.png",
+      "cc:img/frames/saga/nyx/r.png",
+      "cc:img/frames/saga/nyx/u.png",
+      "cc:img/frames/saga/nyx/w.png",
+      "m15nyx/b.png",
+      "m15nyx/c.png",
+      "m15nyx/g.png",
+      "m15nyx/m.png",
+      "m15nyx/r.png",
+      "m15nyx/u.png",
+      "m15nyx/w.png"
+    ],
+    "notes": [
+      "TODO 4.5d: the saga creature — FIN / FIC / PFIN's \"Summon:\" cards (2025); no Card Conjurer or MSE pack draws it",
+      "c = the textured saga pack's artifact silver over m15nyx/c (FIN #1 Summon: Bahamut's frame); the prints' see-through rail and box are not drawn"
     ]
   },
   "sagadfcback": {

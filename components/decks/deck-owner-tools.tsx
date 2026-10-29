@@ -7,8 +7,9 @@
 //   Edit details   → dialog with the deck form (title, description, format,
 //                    visibility, cover + focal point)
 //   Import         → the decklist import dialog (auto-opens with ?import=1)
-//   Add with AI    → dialog with the AI panel in add mode
-//   Remix with AI  → dialog with the AI panel in remix mode
+//   Add with AI    → "Coming soon" while deck AI is paused (TODO DK1,
+//   Remix with AI     lib/ai/deck-ai-pause.ts): greyed, no dialog, with the
+//                     one visible line that says why
 //   Delete         → the existing confirm dialog
 //
 // Pencil icons elsewhere on the page open the same dialogs by dispatching
@@ -28,13 +29,15 @@ import {
 import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { ImportDecklistDialog } from "@/components/decks/import-decklist-dialog";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
-import { AiDeckPanel } from "@/components/decks/ai-deck-panel";
+import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
-export type DeckTool = "details" | "add" | "remix";
+export type DeckTool = "details";
 const EVENT = "pipglyph:deck-tool";
+/** The visible "AI deck building is paused" line the greyed tools point at. */
+const PAUSED_NOTE_ID = "deck-ai-paused-note";
 
 /** A small pencil (or any child) that opens one of the owner dialogs. */
 export function DeckToolButton({
@@ -67,15 +70,12 @@ export function DeckToolButton({
 export function DeckOwnerTools({
   deck,
   userId,
-  aiConfigured,
-  maxCards,
-  aiSeed,
   openImport = false,
-  capacity,
-  remixableCount,
 }: {
   deck: Deck;
   userId: string;
+  // The deck AI's inputs (the AI panel's, before the pause). Still passed by
+  // the deck page and unread while deck AI is paused (TODO DK1).
   aiConfigured: boolean;
   maxCards: number;
   capacity: CardCapacity | null;
@@ -100,16 +100,21 @@ export function DeckOwnerTools({
         <Pencil className="h-4 w-4" aria-hidden /> Edit details
       </Button>
       <ImportDecklistDialog deckId={deck.id} defaultOpen={openImport} />
-      {aiConfigured ? (
-        <>
-          <Button type="button" variant="outline" onClick={() => setOpen("add")}>
-            <Sparkles className="h-4 w-4" aria-hidden /> Add with AI
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setOpen("remix")}>
-            <Wand2 className="h-4 w-4" aria-hidden /> Remix with AI
-          </Button>
-        </>
-      ) : null}
+      {/* The greyed AI tools and the one line that says why, kept together
+          on their own row (TODO DK1). */}
+      <div className="flex basis-full flex-wrap items-center gap-2">
+        <DeckAiComingSoonButton
+          label="Add with AI"
+          icon={<Sparkles className="h-4 w-4" aria-hidden />}
+          describedBy={PAUSED_NOTE_ID}
+        />
+        <DeckAiComingSoonButton
+          label="Remix with AI"
+          icon={<Wand2 className="h-4 w-4" aria-hidden />}
+          describedBy={PAUSED_NOTE_ID}
+        />
+        <DeckAiPausedNote id={PAUSED_NOTE_ID} className="basis-full" />
+      </div>
       <DeleteDeckDialog deckId={deck.id} deckTitle={deck.title} triggerVariant="ghost" />
 
       <Dialog open={open === "details"} onOpenChange={(next) => !next && setOpen(null)}>
@@ -123,57 +128,6 @@ export function DeckOwnerTools({
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <DeckCreatorForm mode="edit" userId={userId} deck={deck} embedded onSaved={() => setOpen(null)} />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={open === "add"} onOpenChange={(next) => !next && setOpen(null)}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" aria-hidden />
-              Add cards with AI
-            </DialogTitle>
-            <DialogDescription>
-              The AI reads what&apos;s already here and designs cards that fit — same colours, mechanics and art style.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <AiDeckPanel
-              mode="add"
-              aiConfigured={aiConfigured}
-              maxCards={maxCards}
-              capacity={capacity}
-              deckId={deck.id}
-              initialTheme={aiSeed?.theme}
-              initialStyle={aiSeed?.style}
-              onStarted={() => setOpen(null)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={open === "remix"} onOpenChange={(next) => !next && setOpen(null)}>
-        <DialogContent size="lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4 text-accent" aria-hidden />
-              Remix this deck with AI
-            </DialogTitle>
-            <DialogDescription>
-              A new public copy where every card keeps its rules but gets fresh AI names, art and a cover in your style.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <AiDeckPanel
-              mode="remix"
-              aiConfigured={aiConfigured}
-              maxCards={maxCards}
-              capacity={capacity}
-              remixableCount={remixableCount}
-              deckId={deck.id}
-              onStarted={() => setOpen(null)}
-            />
           </div>
         </DialogContent>
       </Dialog>

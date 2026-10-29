@@ -149,12 +149,10 @@ const DOCUMENTED_NULLS = new Set([
   // emblem's model — verified on c only (INR #287 / FIN #31).
   "m15dfclandfront/w", "m15dfclandfront/u", "m15dfclandfront/b", "m15dfclandfront/r", "m15dfclandfront/g", "m15dfclandfront/m",
   "m15dfclandback/w", "m15dfclandback/u", "m15dfclandback/b", "m15dfclandback/r", "m15dfclandback/g", "m15dfclandback/m",
-  // The modal bodies (TODO 5.1b): no colourless modal FRONT or BACK was
-  // printed on the plain 2015 frame (STX #154 Pestilent Cauldron is a BLACK
-  // artifact, every KHM artifact back a coloured one; STX #6 Wandering
-  // Archaic is an Avatar on the see-through frame, wave 2), and the land pair's `c` (CC's grey land modal) and `m` (the gold land
-  // tint) are stand-ins — no colourless or gold modal land was printed.
-  "m15mdfcfront/c", "m15mdfcback/c",
+  // The modal land pair (TODO 5.1b): its `c` (CC's grey land modal) and `m`
+  // (the gold land tint) are stand-ins — no colourless or gold modal land
+  // was printed. (The spell bodies' `c` is STX #6 Wandering Archaic's
+  // see-through frame since TODO 5.11a: referenced, front and back.)
   "m15mdfclandfront/c", "m15mdfclandfront/m",
   "m15mdfclandback/c", "m15mdfclandback/m",
   // The station frame (TODO 4.27a): Edge of Eternities prints five Planets,
@@ -166,6 +164,11 @@ const DOCUMENTED_NULLS = new Set([
   // 4.6f) and no colourless Prepare card. The two masters exist so no
   // colour resolves to a missing master.
   "prepare/m", "prepare/c",
+  // The saga creature (TODO 4.5d): no multicolour one-faced summon.
+  "sagacreature/m",
+  // …and its extended-art dress (TODO 4.27b): the same — SOC #93–98 are
+  // two-colour (judged with the gold key's tick), none is colourless.
+  "extendedartprepare/m", "extendedartprepare/c",
   // The double-faced saga front (TODO 5.5 (b)): no colourless transforming
   // saga was printed (the land frame stands in, as on the saga).
   "sagadfcfront/c",

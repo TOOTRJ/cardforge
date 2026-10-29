@@ -168,6 +168,23 @@ describe("the three layers of tests/parity/thresholds.ts", () => {
     expect(baselineFailures(measured({ rules: [0, 0, 8, 0.05] }), undefined)[0]).toMatch(/not in tests\/parity\/baseline\/ for this platform/);
   });
 
+  it("a worst-tile known difference scoped to a region (`tilesIn`) covers tiles in that region only", () => {
+    // hd-kerned-pt-centre-tile: Wandering Archaic's P/T tile, nothing else.
+    const card = (mads: number[]): Measured => ({
+      ...measured({}, "hd"),
+      id: "m15mdfcfront/c/mdfc-short",
+      tile: { mad: Math.max(...mads), x: 0, y: 0 },
+      tiles: { tile: 50, cols: 3, rows: 2, mads },
+      rects: { stat: { x: 0.66, y: 0.5, w: 0.34, h: 0.5 } },
+    });
+    expect(limitFailures(card([3, 3, 3, 3, 3, 66.8]))).toEqual([]);
+    // The same value on a tile away from the P/T is not that difference…
+    expect(limitFailures(card([66.8, 3, 3, 3, 3, 3]))[0]).toMatch(/tileMad 66\.8 is outside the known difference "hd-kerned-pt-centre-tile"/);
+    // …nor is a second tile over the limit beside it, nor a run with no rect.
+    expect(limitFailures(card([3, 3, 3, 66, 3, 66.8]))).toHaveLength(1);
+    expect(limitFailures({ ...card([3, 3, 3, 3, 3, 66.8]), rects: undefined })).toHaveLength(1);
+  });
+
   it("a platform with no recorded section is held to the limits only", () => {
     expect(judge(measured({ rules: [0, 0, 8, 0.05] }), null)).toEqual([]);
     expect(judge(measured({ rules: [0, 0, 8, 0.05] }), undefined)).toHaveLength(1);

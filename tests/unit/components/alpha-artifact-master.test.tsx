@@ -115,7 +115,9 @@ describe("frameMasterKey — the one master rule", () => {
           // The transform bodies' `a` is their `c`'s bytes; the extended-art
           // frame's and the Lord of the Rings scroll's are the packs' own
           // artifact frames.
-          if (t !== "extendedart" && t !== "lotrscroll" && t !== "lotr" && t !== "mysticalarchive" && t !== "breakingnews") expect(manifest.files[`${t}/${master}.png`].sha256).toBe(manifest.files[`${t}/c.png`].sha256);
+          // (…and the modal spell bodies', TODO 5.11a: their `c` is the
+          // see-through frame, their `a` the pack's artifact frame.)
+          if (t !== "extendedart" && t !== "lotrscroll" && t !== "lotr" && t !== "mysticalarchive" && t !== "breakingnews" && t !== "m15mdfcfront" && t !== "m15mdfcback") expect(manifest.files[`${t}/${master}.png`].sha256).toBe(manifest.files[`${t}/c.png`].sha256);
           continue;
         }
         expect(existsSync(`public/frames/${t}/${master}.png`), `${t}/${master}.png`).toBe(true);
@@ -136,7 +138,10 @@ describe("frameMasterKey — the one master rule", () => {
       const colors = profile.underFrameArt?.colors;
       if (!colors) continue;
       for (const [colorKey, master] of Object.entries(profile.artifactMasterKeys ?? {})) {
-        if (t === "extendedart") {
+        // (…and the modal spell bodies, TODO 5.11a: their `a` is the pack's
+        // OPAQUE artifact frame — a colourless artifact face draws no art
+        // under it, as before — their `c` the see-through frame.)
+        if (t === "extendedart" || t === "m15mdfcfront" || t === "m15mdfcback") {
           expect([colorKey, master, colors]).toEqual(["c", "a", ["c"]]);
           continue;
         }

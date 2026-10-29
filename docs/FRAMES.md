@@ -4123,8 +4123,8 @@ stays unticked.
 **Profile.** M15's slots, cost lift, type baseline, art window
 (`CC_M15_ART_SLOT`), P/T plate and crown (`M15_CROWN`, `c` → the artifact's
 `a`: SOS #170 and the five other legendary prints wear it; opt-in per card).
-No stamp notch (the page's outline runs through M15's notch), no collector
-line, no pairs yet. The page's slots carry `placeholderName: "Spell"` and
+The stamp notch and the collector line since TODO 4.27b (below); the pairs
+since 4.26. The page's slots carry `placeholderName: "Spell"` and
 their own editor hint — the adventure's stay as they were.
 
 **Kind.** `prepare` is a layout kind (`KIND_DEFS.prepare`: a creature, the
@@ -4159,10 +4159,96 @@ Prepare cards (its design types are one-faced).
 
 **Left for later** (TODO 4.27), in the owner's order (Round 79): the page's
 own colour and the two-colour pairs — BUILT by 4.26 (next section, "Each
-part in its own colour") — then the stamp notch and the collector line; the
-extended-art and borderless dresses; Omen, then Room. (The import paragraph
-above is 4.27's: since 4.26 the two-colour and part-colour printings are
-exact on `prepare` once it is verified in the card's colour.)
+part in its own colour") — then the stamp notch, the collector line and the
+extended-art dress — BUILT by 4.27b (next); Omen, then Room. There is no
+borderless or showcase Prepare printing. (The import paragraph above is
+4.27's: since 4.26 the two-colour and part-colour printings are exact on
+`prepare` once it is verified in the card's colour, and since 4.27b the
+extended-art ones on their own dress.)
+
+### The Prepare frame's stamp, collector line and extended-art dress (4.27b)
+
+TODO 4.27b (owner 2026-10-28, P2). Three ADDITIONS, each opt-in per card —
+no layout bump, no sweep, no badge; a stored Prepare card (no `stamp` /
+`collector` key, never on the new template) bakes byte for byte as before.
+Checked against print first (Scryfall 2026-10-28, `layout:prepare`: 124
+printings, 119 paper).
+
+**The holofoil stamp's notch** (`PREPARE_HOLO_STAMP`, `prepareholostamp/<key>`).
+79 of the 119 paper printings are oval-stamped — every rare and mythic. Print
+arches the text box's FOOT — its bottom bevel, the pinline and the black
+border — over the oval right across the creature's box AND the strip under
+the page; the page's outline ends on the arch. M15's piece (Card Conjurer's
+`m15holostamp`) is cut for one box, so the notch is PipGlyph's own: each
+Prepare master's own foot LIFTED along print's arch
+(`scripts/build-borderless-stamp.mjs`, the borderless recipe; the arch is
+`PREPARE_STAMP` in `scripts/lib/prepare-2026.mjs`). Measured on the 35
+stamped one-colour plain printings: the rim's lower edge lifted 37.4 px at
+the centre (1910.1 against the straight 1947.5 — the PSOS / PFRA promos
+sit 2 px lower, the lift read against each card's own), its upper edge 34.3
+(the rim prints 3 px thinner at the crown), the lift from x 657 to x 843,
+symmetric within 0.5 px; the same set's plain M15 mythic (SOS #1) arches
+the same within 1 px. The pieces lift by the MEAN of the two edges (35.8 at
+the centre) from the bevel's first row (1927; the masters are opaque, so
+the foot is named, `liftTop`, not found by alpha) — 192 × 60 px at 654,
+1890, 1:1 at HD. The oval is M15's (Scryfall's clean renders draw it 7 px
+higher, as on every 2015 frame). Keys: the seven masters and the twenty
+pair masters, BOTH dresses — the slot is keyed by the master drawn
+(`FrameOverlaySlot.keyByMaster`), because the lifted bevel's top edge is cut
+against the strip, which the gold-split and hybrid dresses paint
+differently. The rules keep-out FOLLOWS THE ARCH, as on the borderless
+frames: 4 px columns from 2 px above the lifted foot down past the
+creature's rules rect (`PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE`,
+`prepareArchKeepOut`; `PREPARE_HOLO_STAMP_KEEP_OUT` is their bounds) — only
+the creature's box reaches it. One rect over the arch's crown made the last
+line give way along the shallow left slope and clipped a long text the
+unstamped box fits at the floor (TLA #112); `rules-no-clip.test.tsx` holds
+both templates to "the stamp never adds a clip", at 750 and at HD. New cards start on "auto"
+(the oval on a rare or mythic), imports follow `security_stamp`, as on every
+wave-1 frame.
+
+**The collector line** (`collector: M15_COLLECTOR`). SOS / SOC / FRA set both
+lines exactly where the set's plain M15 cards do (22 measured: line 1's ink
+1965–1989, line 2's 1999–2028, from x 98, the © line ending at 1396–1397;
+SOS #1, #2, #14 the same), so M15's slot unchanged.
+
+**The extended-art dress** (`extendedartprepare`). 29 printings (SOS
+#309–342, SOC #63–98, FRA #425–430), every one oval-stamped, 5 two-colour:
+the extended-art frame — the art to the side edges between the title bar
+and the BLACK type bar — over the Prepare frame's lower half. They imported
+onto `extendedart` (or `prepare`, nearest) and lost the page. Masters:
+PipGlyph's MERGE of two published masters, no pixel drawn
+(`scripts/build-prepare-frames.mjs --only extended`, `PREPARE_EXTENDED`):
+Card Conjurer's extended-art pack is M15's pixels below its type bar (inside
+x 100–1400 byte for byte from row 1320, blue's paper within 10 levels of its
+own re-encode), so the dress is the extended-art master above row 1312 and
+beside the box, the Prepare master below it, with the black type bar's
+shadow (rows 1312–1319, 15 → 1 levels) carried onto the page. Its lower
+half is therefore the Prepare master's pixels wherever the notch, the page
+overlays (`prepare/page/<key>`) and the P/T plate read — they serve it
+unchanged (the stamp build checks each piece over both). `c` is the pack's
+silver artifact frame over `prepare/c`. Profile: the Prepare frame's slots
+with the extended-art top (its art slot, white type ink, the set symbol's
+keyline), the extended-art crown, the pairs, the stamp and the collector
+line. A Variations pick of the Prepare kind (`TEMPLATE_SKIN_VARIANTS.prepare`
+— `framesForKind` lists a layout template's skins, `kindFromCard` reads a
+skin of a layout template as that kind), never a default nor a stand-in
+(`isLayoutSkin`: `firstAvailableFrame` and `resolvePublishedFrame`'s
+stand-in search pass over a layout template's skins, so a dress ticked in a
+colour the Prepare frame isn't never becomes the kind's frame by itself). A
+layout AI fill on a card wearing it keeps it where the filled card fits
+there (`layoutFrameFitOf`, the request's `layout_skin`; the creator puts a
+fill back on it where it is verified in the fill's colour, else lands on
+`prepare` and says so); its art brief is the Prepare frame's. Imports: the
+extended family names it for a Prepare printing — EXACT once verified in the
+card's colour; short of it the Prepare frame, nearest, where THAT is
+verified; short of both the creature on `extendedart` with the spell a
+legacy back, as before (`finalizeImportMatch`); the AI deck remix lands
+where the import does.
+
+**Left out:** the two serialized headliners (SOS #306 Emeritus of Ideation
+// Ancestral Recall, FRA #402 Bloodline Recollector // Ancestral Craving: a
+full-art look of their own, 2 printings) — logged in TODO, built on request.
 
 ### Each part in its own colour (4.26)
 
@@ -8909,8 +8995,8 @@ ticks each colour × face.
 
 | template | source | masters | `dfc` | what it draws |
 |---|---|---|---|---|
-| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (= `c`, the artifact stand-in — no print: STX #154 Pestilent Cauldron is a BLACK artifact) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
-| `m15mdfcback` | `<k>b.png`, toned | same (`c` has no print) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
+| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (the artifact frame a colourless ARTIFACT face wears); `c` the SEE-THROUGH frame since 5.11a (below) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
+| `m15mdfcback` | `<k>b.png`, toned | same (`c` the see-through frame since 5.11a) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
 | `m15mdfclandfront` | recipe: `<k>.png` + the land tint's body and box | w u b r g (+ `m`, `c` stand-ins) | front, land | no cost, no P/T; the pathways' look |
 | `m15mdfclandback` | recipe: `<k>b.png` + the land tint's body, toned | same | back, land | no cost, no P/T; the ZNR / MH3 land backs' look |
 
@@ -9076,6 +9162,69 @@ ticks each colour × face.
   on two-colour cards (above); the import's modal body / colour (5.4);
   the Marvel strip form; borderless / extended modal (5.7); the walker
   faces (5.13, ask first).
+
+### The colourless modal card: the see-through `c` (5.11a)
+
+STX #6 Wandering Archaic // Explore the Vastlands (and PSTX #6s) is the one
+modal card whose faces are colourless with NO Artifact word — a Creature —
+Avatar {5} and a Sorcery {3}. Both print the SEE-THROUGH colourless frame,
+`m15/c`'s grey bars and box with the art showing through the frame field,
+with the modal housing and the flipside strip. Card Conjurer's 'Modal
+Regular' pack has Artifact and Land frames only, so until 5.11a the spell
+bodies' `c` was the artifact master standing in, refused to any face
+without the Artifact word (design D2).
+
+- **The masters** (`m15mdfcfront/c`, `m15mdfcback/c` + `strip/c`):
+  PipGlyph's composite, `scripts/build-mdfc-colourless-frames.mjs` (numbers
+  as DATA in `scripts/lib/mdfc-colourless.mjs`; bucket only, provenance key
+  `mdfccolourless`; the CC importer leaves the key out, `excluded`). The
+  base is the body's published artifact master (border, outlines, strip);
+  through Card Conjurer's modal masks `frame.svg`, `textbox.svg` and the M15
+  type mask take `m15/c`'s pixels (α 28 field, α 179 box, α 212 bars);
+  `title.svg` takes `m15/c`'s bar right of the housing and, in the housing's
+  drop, `m15/c`'s bar ROW BY ROW (the housing's fill is the bar's), with
+  the modal master's ▲ / ▲▼ and the drop's dark edge laid back over it;
+  `pinline.svg` the modal master's lines toned onto `m15/c`'s (246 → 223);
+  `reminder.svg` the modal master's strip — on the front toned onto STX
+  #6's warm grey tab (124,128,138 → 120,106,104), the back's as published
+  (226,220,230 on print, 223,225,229 ours). The BACK's bars and box are
+  `m15/c`'s at print's back ÷ front LUMA (title × 0.720, type × 0.687, box
+  × 0.887: both faces show the same card's art through them, so the ratio
+  leaves the art's cast out; the hue stays `m15/c`'s neutral grey).
+- **The profile**: both spell bodies declare `underFrameArt` for `c` on
+  `UNDER_FRAME_RECT`, as `m15` does; a colourless ARTIFACT face still wears
+  `a` (`artifactMasterKeys`), which draws no art under the frame. The crown
+  keeps its `c` → `a` band (no legendary colourless non-artifact modal face
+  was printed). The transform bodies, the land pair and the borderless
+  modal bodies are untouched (their colourless non-artifact faces are
+  5.11's).
+- **The gate**: `colorlessFaceFits` (structure: a see-through `c` takes any
+  face) and `colorlessFaceAllowed(template, face, verifiedKeys)` (the
+  verification: on the see-through `c` a face with no Artifact word only
+  once `seeThroughColorlessKey(template)` is in the verified keys).
+  Production's `c` ticks on both bodies were made at v41 against the
+  artifact stand-in, so the see-through master is published by a NEW tick:
+  the verified-key readers add the key for a `c` row ticked at
+  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` (75) or later
+  (`seeThroughTickKeys`), and the admin checklist shows those two rows as
+  "re-verify" until then. Server (`dfcFrontColorError`, `resolveDfcBackFace`:
+  an `unverified` refusal an admin preview skips; a stored card keeps
+  editing — the legacy pin), creator (the colour chips' reason,
+  `dfcColorlessRefusal`), import and AI read the same two functions.
+- **The strip**: a colourless ARTIFACT other face is now `a` in
+  `stripKeyOf` (the master it wears — the same piece as before, `c` → `a`),
+  one with no Artifact word `c`, the see-through frame's own tab; the land
+  bodies map both to their grey.
+- **The import**: STX #6 and PSTX #6s land on the modal pair in `c`
+  (`modal/2015`, exact) once both see-through `c`s are ticked;
+  short of either the import lands as before (the standard frame, a legacy
+  back) and the match says which face's see-through frame waits. STX #286,
+  the extended-art printing, keeps `dfc/colourless-face` (no see-through
+  extended body: 5.7b).
+- **An addition**: no bump, no sweep, no badge; no stored card could sit on
+  the key (the gate refused it). The visual matrix's six colourless modal
+  cases, which drew such a face on the stand-in, are Wandering Archaic's
+  now.
 
 ### Crowns and pairs on the double-faced bodies (5.1d)
 
@@ -9824,6 +9973,129 @@ back).
      `sagadfcback` the `c` key is the saga's own master, so a colourless Saga
      back the server takes where `sagadfcback/c` is verified is no longer
      refused by the form. `c` stays published but unticked.
+
+### The saga creature (4.5d)
+
+TODO 4.5d, part A, 2026-10-28 (`feat/saga-creature-body`). An ADDITION: a
+new template, `sagacreature`; no layout bump, no sweep, no badge; stored
+sagas keep their look (a summon imported before it stays on `saga`, its P/T
+kept in the row and not drawn).
+
+- **What it dresses.** A one-faced saga whose type words say Creature —
+  Final Fantasy's "Summon:" cards (FIN / FIC / PFIN 2025, "Enchantment
+  Creature — Saga Knight"): 51 paper printings, 29 black-bordered (FIN #1,
+  #35–37, #77–78, #120–121, #160–163, #202–204; FIC #26–28, #42, #60–61,
+  #71; PFIN's seven prerelease stamps) and 22 borderless, Scryfall
+  2026-10-28. Every one prints Universes Beyond's triangle stamp. The
+  transform BACKS that are saga creatures (FIN's Dominants' summons, 34
+  printings) are part B (the ▼ variant), as are the 3 colourless ones' see-
+  through rail and box.
+- **What print shows** (22 black-bordered prints read at 1500 × 2100, the
+  numbers in `scripts/lib/saga-creature.mjs`): the TEXTURED saga (the
+  starfield frame field) with the reminder as a BAND across the card under
+  the title bar (237–433 px; the art window's top outline at 433–438, the
+  first divider on 438–446); the rail and the art column from there to the
+  type bar, whose outline sits at 1587–1722 on 22 of 22 — 173 px above the
+  saga's 1759–1895; under it M15's text box on the black border (to ≈ 1947
+  px) holding the creature's own ability or its flavour, one line centred on
+  every print (its capitals on 1792–1837), and M15's P/T plate.
+- **The masters** are PipGlyph's own composite (`scripts/build-saga-creature-frames.mjs`;
+  frames bucket only, provenance in `lib/cards/frame-sources.json`): Card
+  Conjurer's textured saga (its 'Nyx Frames' saga pack, `img/frames/saga/nyx/<k>.png`,
+  read from the pinned commit like a mask and never published as it is — the
+  `c` key its artifact silver, FIN #1's frame) with 165 rows cut out of the
+  reminder box (the fold's columns SQUEEZED into the band instead, its curl
+  running the whole height of the box) and 8 out of the rail; the window's
+  columns over the band painted with the box's own paper (each column
+  mirrored back into the paper's span: no seam) and its top rule drawn under
+  it (the master's own 4 px black); and from the box down the published
+  `m15nyx/<k>` rows in place, the box's top rim and inner shadow copied up
+  from under m15nyx's own bar and its paper taken from the saga's chapter
+  column (one pack's paper with the rail's). Keys w u b r g m c, no pairs (no
+  multicolour summon was printed).
+- **The profile** (`SAGACREATURE`) is the saga's — its rail, badges,
+  dividers, sizes, set symbol box — with the reminder's box the band (x
+  132–1384, 237–433; the fold's corner keep-outs squeezed with it), the rows
+  from 442 px (no reminder: from there too, the band left empty), the rail's
+  foot, the art window, the type line and the set symbol 173 px up; M15's P/T
+  slot on `m15nyx`'s plates (no new plate); and its SECOND BOX, the plain
+  rules box (`ChapterSlot.creatureBox`): x 110–1383, 1742–1937 px, 8 pt (the
+  prints' "Indestructible" is 391 px wide where 76 px sets 445), ONE line
+  centred — an ability or the flavour alone (`alignSingleLine: "centerAny"`)
+  — on the prints' row (`singleLinePadPx`: a single line is placed with 40
+  px under it, its capitals on 1792–1837 like FIN #36's), a longer text over
+  the whole box, the P/T plate a FLOAT of it (`TextSlot.ptFloat`: the lines
+  beside it break short of it, as the transform front's reverse P/T). The
+  profile offers no text alignment switch (a chapters frame).
+  `PROFILES.sagacreature` adds the Universes Beyond TRIANGLE stamp
+  (`M15UB_HOLO_STAMP`, `c` on the artifact silver's piece: the notch pieces
+  meet the body's bar — m15nyx's, M15's — at their feet as they meet
+  `m15ub`'s, median 0 levels apart) and M15's collector line — both opt-in
+  per card like every frame's, a new card starting with them on; on a
+  triangle frame "auto" stamps every rarity, as FIN prints (matte on a common
+  or uncommon, silver on a rare or mythic).
+- **Its text** (owner 2026-10-28: no new field). With NO stored rows (an
+  import, a card saved as plain text) the lines AFTER the last chapter are
+  the box's on the body (`lib/cards/saga-creature.ts`
+  `splitSagaCreatureText`, both renderers) — exactly how Scryfall's Oracle
+  text sets a summon ("…\nV — Ultimate End — …\nIndestructible") — except a
+  modal chapter's "•" lines, which stay with their chapter (FIC #71). BESIDE
+  stored rows (`face_content.saga`, which the rail draws first) the box's
+  text is what the rules text holds after the rows' EXACT serialization
+  (`serializeSaga(rows)` + a newline — `sagaCreatureTextAfterRows`, the rule
+  the server's typography pass reads too), and nothing when the text does
+  not start with it: a line split there drew an ability twice (a row that
+  had joined the trailing line into its chapter on the saga frame; a
+  chapter's second line typed with Enter, growing on every save) and
+  dropped a box line that read as a chapter ("Vivi — …") or a bullet. The
+  flavour is the card's own field, in the box too. On every other saga a
+  line after a chapter continues it, as before.
+  In the creator the saga editor shows a **Creature abilities** field under
+  the chapters on this frame (`saga_creature_text`, form-only) — and on any
+  other while it holds a value, saying the frame doesn't print it (a card
+  moved off the body keeps lines its maker did not touch): opened with what
+  the box draws (`structuredRowsFrom`; with no rows, `sagaRowsFromText` for
+  the frame — what a text that arrives seeds too), saved after the
+  serialized chapters on any frame while it holds a value
+  (`submittedRulesOf`), and with no chapter to follow the save waits
+  (`SAGA_CREATURE_NEEDS_CHAPTER`). A saga moved on or off the body re-reads
+  its rows for the new frame while they still read as its text
+  (`sagaRowsForFrame`, `openedForFrame`: an untouched edit is untouched
+  against the stored text read for its CURRENT frame). Typeset as rules
+  text on blur and on the server (`print-typography.ts` reads the rows'
+  copy and then the box's lines); an untouched edit keeps the stored text
+  byte for byte, and its dual write is made only where the rows draw the
+  same box (`resolveSagaCreature`), else `keepsStored`.
+- **The kind gate** — ONE rule, `sagaCreatureFrameFits` (`lib/creator/card-kinds.ts`):
+  the Saga kind's third layout frame (`KIND_DEFS.saga.layoutTemplates`;
+  `TREATMENT_KINDS.sagacreature = ["saga"]`), for a saga whose type words
+  say Creature — the card type or a supertype word, never `printed_types`.
+  The server's gate (`frameKindGateError`, an edit that drops the word
+  too), the Frame tile (disabled with the reason), the import chooser
+  (`frameFitsImport`), the reference validator and the stand-in picks read
+  it.
+- **Rollout, an addition**: a NEW saga follows its Creature word onto the
+  body where it is verified in its colour, and back to the saga frame when
+  the word goes (`sagaCreatureFrameFor`: the creator's effect, the AI deck's
+  `resolveDeckCardFrame`); a stored saga keeps its frame; the Frame tiles are
+  the way back. Imports: rule `saga/creature/2015` (black-bordered, the
+  saga layout, a Creature word) is `nearest` on the saga frame until
+  `sagacreature` is verified in the card's colour, then EXACT on it
+  (`onceVerified` + `exactOnceVerified`; the triangle stamp, the
+  `universes-beyond` gap, is drawn there) — the landing and the patch
+  exactly main's until the tick, only the signature's name new
+  (`tests/unit/scryfall/saga-creature-imports.test.ts` holds all 51); the
+  borderless 22 stay on `borderless/layout`. The AI remix follows the import
+  (`remixFrameFor`).
+- **Left as built** (owner 2026-10-28, item 4: fixed only where a clean cut
+  through truly flat zones exists — none does):
+  - the ribbon's TIP ends ≈ 1575 px, 12 px above the bar as the pack draws
+    it; the prints end it ≈ 1520 (55 px higher). Moving it reveals frame
+    edge and paper under the old tip — no flat zone;
+  - the green key's paper keeps the pack's crackle (print is smooth): the
+    pack's own drawing, not a tone;
+  - the box's right edge is m15nyx's (1409 px; print 1402): its rim meets
+    the frame field's curve on 1723–1850, which no cut moves cleanly.
 
 ### Double-sided tokens (5.5 (c))
 
@@ -11273,12 +11545,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 90 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 92 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

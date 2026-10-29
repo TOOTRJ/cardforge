@@ -174,7 +174,7 @@ export async function buildDeckReportPdf(input: DeckReportInput): Promise<Uint8A
     ["Cards", `${a.total} (${a.lands} lands, ${a.total - a.lands} spells)`],
     ["Average mana value", a.averageManaValue === null ? "n/a" : a.averageManaValue.toFixed(2)],
     ["Mana curve", curveText(a.curve)],
-    ["Colors", (["W", "U", "B", "R", "G", "C"] as const).map((c) => `${c} ${a.byColor[c]}`).join("   ")],
+    ["Colors", [...(["W", "U", "B", "R", "G"] as const).map((c) => `${c} ${a.byColor[c]}`), `Gold ${a.multicolor}`, `C ${a.byColor.C}`].join("   ")],
     ["Types", Object.entries(a.byType).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join("   ") || "—"],
     ["Custom proxies", `${a.remixed} of ${a.total}`],
   ]);

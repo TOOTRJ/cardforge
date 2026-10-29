@@ -2501,3 +2501,46 @@ describe("6.11 print typography on blur", () => {
     expect(preview().rules).toBe("Landfall — It can’t block.\nIt has “{T}: Add {G}.”");
   });
 });
+
+// ---------------------------------------------------------------------------
+// TODO DK0.6 (deck audit 2026-10-28, M1) — a deck entry's custom card
+// (/create?deckCard=) is linked INTO that entry on save. The Publish step's
+// "Add to deck" picker still showed there: picking the same deck inserted a
+// second entry beside the one the save then linked.
+// ---------------------------------------------------------------------------
+
+describe("DK0.6 a deck entry's custom card offers no second \"Add to deck\"", () => {
+  const MY_DECKS = [{ id: "77777777-7777-4777-8777-777777777777", title: "Burn", format: "modern" }];
+  async function goToPublish() {
+    const nav = screen.getByRole("navigation", { name: /card editor steps/i });
+    const publish = Array.from(nav.querySelectorAll("button")).find((b) => /publish/i.test(b.textContent ?? ""));
+    if (!publish) throw new Error("no Publish step");
+    await act(async () => {
+      fireEvent.click(publish);
+    });
+  }
+
+  it("a new card has the picker", async () => {
+    renderForm({ myDecks: MY_DECKS });
+    await goToPublish();
+    expect(screen.queryByText("Add to deck")).not.toBeNull();
+  });
+
+  it("the deck entry's flow hides it", async () => {
+    renderForm({
+      myDecks: MY_DECKS,
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: null,
+        deckSlug: "tester/burn",
+        deckTitle: "Burn",
+        entryName: "Lightning Bolt",
+      },
+    });
+    await goToPublish();
+    // On the Publish step (its visibility control is there)…
+    expect(screen.getByRole("radiogroup", { name: /visibility/i })).toBeTruthy();
+    // …with no deck picker.
+    expect(screen.queryByText("Add to deck")).toBeNull();
+  });
+});

@@ -8,6 +8,8 @@ import {
   enchantmentFrameFits,
   isSingleBasicLand,
   kindFromCard,
+  sagaCreatureDressReason,
+  sagaCreatureFrameFits,
   subtypeDressReason,
   subtypeFrameFits,
   templateIsBasicOnly,
@@ -21,7 +23,8 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // restriction takes it out of the kind's gallery, and a basic-only frame's
 // chip is disabled on anything but a basic land, a subtype dress's (the
 // Vehicle frame, TODO 4.5c) on anything but its subtype, and an enchantment
-// dress (the Nyx frame, TODO 4.7) is offered to enchantments only.
+// dress (the Nyx frame, TODO 4.7) is offered to enchantments only, and the
+// saga creature body (TODO 4.5d) to sagas that are creatures.
 // createCardAction and
 // updateCardAction repeat both checks so a stale client or a crafted payload
 // can't save a planeswalker on the Zendikar Rising hedron frame or a
@@ -79,6 +82,11 @@ export function frameKindGateError(
   // type words say Enchantment — the card type or a supertype word.
   if (!enchantmentFrameFits(resolved, face)) {
     return `${enchantmentDressReason(resolved)} — pick another frame.`;
+  }
+  // The saga creature body (TODO 4.5d) is for the sagas whose type words say
+  // Creature — the card type or a supertype word.
+  if (!sagaCreatureFrameFits(resolved, face)) {
+    return `${sagaCreatureDressReason(resolved)} — pick another frame.`;
   }
   return null;
 }

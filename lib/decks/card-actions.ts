@@ -206,7 +206,11 @@ export type MyCardLite = {
   id: string;
   title: string;
   slug: string;
+  /** The HD bake — read only to vouch for the thumb beside it (and drawn
+   *  resized by next/image for a bake older than thumbnails). */
   rendered_image_url: string | null;
+  /** The 600 px WebP the picker's tiles draw (never the ~3 MB PNG). */
+  rendered_thumb_url: string | null;
 };
 
 export type ListMyCardsLiteResult =
@@ -223,7 +227,7 @@ export async function listMyCardsLiteAction(): Promise<ListMyCardsLiteResult> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cards")
-    .select("id, title, slug, rendered_image_url")
+    .select("id, title, slug, rendered_image_url, rendered_thumb_url")
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(200);

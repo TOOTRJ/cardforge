@@ -6,6 +6,7 @@ import { checkAiRateLimit } from "@/lib/ai/rate-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { estimateDeckRemix } from "@/lib/ai/remix-estimate";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // GET /api/ai/remix-estimate?deck_id=<uuid> — what an AI deck remix would
@@ -20,6 +21,9 @@ import { estimateDeckRemix } from "@/lib/ai/remix-estimate";
 // calls for a 100-card deck, the client's own throttle between them), so it
 // is gated by the AI rate limit like the jobs route itself. `private,
 // no-store`: per-viewer data (the deck's RLS decides what it sees).
+// The whole route is the deck remix's: refused while AI deck building is
+// paused (owner 2026-10-28, TODO DK1, lib/ai/deck-ai-pause.ts) — before the
+// rate limit and the Scryfall work.
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 30;
@@ -33,6 +37,9 @@ export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ ok: false, error: "Sign in to remix decks." }, { status: 401, headers: NO_STORE });
+  }
+  if (isDeckAiPaused()) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS, headers: NO_STORE });
   }
   const deckId = request.nextUrl.searchParams.get("deck_id")?.trim() ?? "";
   if (!isUuid(deckId)) {

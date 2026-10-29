@@ -73,6 +73,10 @@ export const COLLECTOR_TEMPLATES = [
   // The Spacecraft's extended-art dress (TODO 4.27a step 2): its bottom
   // border is M15's, pixel for pixel, and its prints carry the line.
   "extendedartstation",
+  // The Prepare frame and its extended-art dress (TODO 4.27b): SOS / SOC /
+  // FRA set both lines on M15's rows, as the set's plain M15 cards.
+  "prepare",
+  "extendedartprepare",
   // The borderless frames (TODO 4.9d, owner Round 66): the prints set both
   // lines in the black bottom bar exactly where the bordered frame does.
   "m15borderless",
@@ -113,6 +117,9 @@ export const COLLECTOR_TEMPLATES = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The saga creature (TODO 4.5d): FIN's summons print both lines in the
+  // black bottom bar where M15 does — the body's foot is M15's.
+  "sagacreature",
   // The Lord of the Rings scroll (TODO 4.11, Card Conjurer's 'Scroll'): its
   // black bottom border is the M15 pack's, and LTR / LTC set both lines
   // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).

@@ -10,17 +10,27 @@ import {
 import { modelInputImage } from "@/lib/media/model-input";
 
 // Unsafe-image auto-scan via OpenAI's free omni-moderation model (image
-// input). Used on human uploads (art, watermarks, custom pips) — AI-generated
-// art is NOT scanned (providers filter upstream; owner decision 2026-07-10).
+// input). Used on human uploads (art, watermarks, custom pips) with the
+// uploads' category list (scanImageUrl, after the store), and on AI-generated
+// art with the sexual categories ALONE, before the store (scanImageBytes;
+// owner 2026-10-28, lib/ai/random-art.ts: violence is allowed in card art,
+// nudity is not — AI_ART_BLOCKED_CATEGORIES).
 // FAILS OPEN: if the key is missing or the API errors, we don't block the
-// upload (matches the app's "don't wedge the feature" posture) — the manual
-// report path remains the backstop.
+// picture (matches the app's "don't wedge the feature" posture) — the
+// manual report path remains the backstop. `skipped` says why a scan didn't
+// run, for the caller's log.
 //
 // The request and the category allowlist live in
 // lib/moderation/image-scan-core.ts, shared with the owner-run rescan of
 // pre-0126 direct uploads (scripts/sweep-storage-orphans.mjs --rescan-review).
 
 export type { ImageScanResult };
+
+export type ImageScanOutcome = ImageScanResult & {
+  /** Set when no verdict was reached (fail open): no key, or the call failed. */
+  skipped?: "no_key" | "error";
+};
+
 
 /**
  * Scan the stored image at `url`. Pass its `bytes` when they may be large
@@ -29,16 +39,46 @@ export type { ImageScanResult };
  * OpenAI takes image files up to 20 MB, and a refused file would fail open,
  * i.e. go unscanned. Smaller files are scanned by URL, as before.
  */
-export async function scanImageUrl(url: string, opts: { bytes?: Uint8Array } = {}): Promise<ImageScanResult> {
+export async function scanImageUrl(url: string, opts: { bytes?: Uint8Array } = {}): Promise<ImageScanOutcome> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return { flagged: false, categories: [] };
+  if (!apiKey) return { flagged: false, categories: [], skipped: "no_key" };
 
   try {
     const client = new OpenAI({ apiKey, timeout: IMAGE_MODERATION_TIMEOUT_MS });
     const response = await client.moderations.create(imageModerationRequest(await moderationInputUrl(url, opts.bytes)));
     return scanVerdict(response.results?.[0]);
   } catch {
-    return { flagged: false, categories: [] };
+    return { flagged: false, categories: [], skipped: "error" };
+  }
+}
+
+/**
+ * Scan an image's BYTES before they are stored (AI art, lib/ai/random-art.ts;
+ * review of #644): the model is sent a data: URL — the same form the upload
+ * scan already sends for a big file — so a flagged picture is never public
+ * and a step killed mid-scan leaves nothing in storage.
+ *
+ * `timeoutMs` is the WHOLE scan: no retries (the SDK's default two would
+ * retry a timeout, ~3× the wait) and one abort signal over the request, so
+ * a step's 180 s holds. Fails open like scanImageUrl.
+ */
+export async function scanImageBytes(
+  bytes: Uint8Array,
+  contentType: string,
+  opts: { categories: ReadonlySet<string>; timeoutMs: number },
+): Promise<ImageScanOutcome> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return { flagged: false, categories: [], skipped: "no_key" };
+
+  try {
+    const signal = AbortSignal.timeout(opts.timeoutMs);
+    const input = await modelInputImage(bytes, contentType);
+    const url = `data:${input.contentType};base64,${Buffer.from(input.bytes).toString("base64")}`;
+    const client = new OpenAI({ apiKey, timeout: opts.timeoutMs, maxRetries: 0 });
+    const response = await client.moderations.create(imageModerationRequest(url), { signal });
+    return scanVerdict(response.results?.[0], opts.categories);
+  } catch {
+    return { flagged: false, categories: [], skipped: "error" };
   }
 }
 

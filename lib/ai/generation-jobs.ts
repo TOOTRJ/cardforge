@@ -77,7 +77,7 @@ import {
   LAYOUT_TEMPLATE,
   layoutColorHints,
   layoutColorKeys,
-  layoutFitOf,
+  layoutFrameFitOf,
   layoutFrameBrief,
   layoutLockedOf,
   layoutPrecheckError,
@@ -229,6 +229,11 @@ export type JobStep = {
   /** A failed attempt's refund that didn't land in-process: the reconcile
    *  sweep returns it (same idempotency key — never twice). */
   refund_pending?: boolean | null;
+  /** The gateway model that painted this step's picture(s) — the default
+   *  or its backup (lib/ai/image-gen.ts generatePlainImage; owner
+   *  2026-10-28). Analytics only: nothing reads it to decide anything.
+   *  Two pictures painted by two models read "a + b". */
+  image_model?: string | null;
   /** On a DONE step whose card was saved private instead of public because
    *  its text holds strong language (owner policy 2026-10-28,
    *  lib/moderation/profanity.ts — the card action's notice, passed on):
@@ -734,6 +739,7 @@ async function runGeneratedCardStep(
       card_id: cardId,
       attempts: attempt,
       error: undefined,
+      image_model: published.model,
       ...(notice ? { forced_private: notice } : {}),
     };
   });
@@ -1059,6 +1065,11 @@ export type CreateCardFillJobInput = {
    *  window's shape (TODO 4.48b). Read for nothing else — the fill never
    *  sets a frame from it. */
   artFrame?: FrameTemplate;
+  /** The creator's CURRENT frame where it is a Variations skin of a layout
+   *  kind's frame (TODO 4.27b: the extended-art Prepare dress) — read ONLY
+   *  by a layout fill, which keeps the card on that skin where the filled
+   *  card fits there (layoutFrameFitOf). Validated by the route. */
+  layoutSkin?: FrameTemplate;
   /** Pro: brief the designer with this deck. */
   deckId?: string;
   /** The creator this fill belongs to — see app/api/ai/card-fill. */
@@ -1428,9 +1439,11 @@ async function createLayoutFillJob(
   await logAiCall(userId, "fill_card");
   const recent = await recentAiTitles(userId);
   type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
-  const fitOf = (result: DesignedFill): LayoutFit => {
+  // (The card's Variations skin of the frame — the extended-art Prepare
+  // dress — is kept where the filled card fits there, TODO 4.27b.)
+  const fitOf = (result: DesignedFill): LayoutFit & { template: FrameTemplate } => {
     const f = result.fields;
-    return layoutFitOf(
+    return layoutFrameFitOf(
       layout,
       {
         card_type: f.card_type ?? input.locked.card_type ?? "creature",
@@ -1445,6 +1458,7 @@ async function createLayoutFillJob(
         second_part: mergedSecondPart(layout, result.second_part, input.want, input.locked.back_face),
       },
       verifiedKeys,
+      input.layoutSkin,
     );
   };
   let designs = 0;
@@ -1499,7 +1513,7 @@ async function createLayoutFillJob(
     if (fit.partColour.first) fields.first_part_color = fit.partColour.first;
     fields.back_face = { ...(fields.back_face ?? {}), color_identity: fit.partColour.second ?? [] };
   }
-  const template = LAYOUT_TEMPLATE[layout];
+  const template = fit.template;
   const plan: CardFillJobPlan = {
     want: input.want,
     fields,
@@ -1625,6 +1639,7 @@ async function createDfcFillJob(
           variety,
           frameBrief: designs > 1 && redoNote ? `${brief} ${redoNote}` : brief,
           layout: kind,
+          dfcFrame: { verifiedKeys, picked, family: input.dfcIcon ?? null },
           ...(input.assembled ? { assembled: true } : {}),
         });
       },
@@ -1771,13 +1786,14 @@ async function runCardFillBackStep(
     }
     const persisted = await persistGeneratedArt(image.bytes, image.contentType);
     if (!persisted.ok) {
-      return { ...step, status: "failed", attempts: attempt, error: AI_FAILURE_COPY.art_store, failure: "art_store" };
+      // A picture our nudity scan blocked (never stored) or one not stored.
+      return { ...step, status: "failed", attempts: attempt, error: persisted.error, failure: persisted.failure };
     }
     const credit = await aiArtistCredit();
     const fill: CardFillResult = {
       back_face: { art_url: persisted.publicUrl, ...(credit ? { artist_credit: credit } : {}) },
     };
-    return { ...step, status: "done", fill, attempts: attempt, error: undefined };
+    return { ...step, status: "done", fill, attempts: attempt, error: undefined, image_model: image.model };
   });
 }
 
@@ -1803,6 +1819,7 @@ async function runCardFillStep(
       ...(plan.frame_notice ? { frame_notice: plan.frame_notice } : {}),
     };
     const attempt = (step.attempts ?? 0) + 1;
+    let imageModel: string | undefined;
     if (plan.want.includes("art")) {
       const style = plan.style?.trim()
         ? ` Rendered strictly in ${plan.style.trim()} style.`
@@ -1827,14 +1844,16 @@ async function runCardFillStep(
       }
       const persisted = await persistGeneratedArt(image.bytes, image.contentType);
       if (!persisted.ok) {
+        // A picture our nudity scan blocked (never stored) or one not stored.
         return {
           ...step,
           status: "failed",
           attempts: attempt,
-          error: AI_FAILURE_COPY.art_store,
-          failure: "art_store",
+          error: persisted.error,
+          failure: persisted.failure,
         };
       }
+      imageModel = image.model;
       fill.art_url = persisted.publicUrl;
       fill.artist_credit = await aiArtistCredit();
       // A split / aftermath card's second half has a window of its own: the
@@ -1845,7 +1864,14 @@ async function runCardFillStep(
         fill.back_face = { ...fill.back_face, art_url: persisted.publicUrl };
       }
     }
-    return { ...step, status: "done", fill, attempts: attempt, error: undefined };
+    return {
+      ...step,
+      status: "done",
+      fill,
+      attempts: attempt,
+      error: undefined,
+      ...(imageModel ? { image_model: imageModel } : {}),
+    };
   });
 }
 
@@ -2219,7 +2245,7 @@ async function paintAndPublishCard(
   cardId: string,
   prompts: readonly string[],
   shape: ArtShape,
-): Promise<{ ok: true; forcedPrivate?: ForcedPrivateNotice } | { ok: false; error: string; failure: AiFailureKind }> {
+): Promise<{ ok: true; model: string; forcedPrivate?: ForcedPrivateNotice } | { ok: false; error: string; failure: AiFailureKind }> {
   // Painted in the shape of the card's own art window (TODO 4.48b).
   // The card is created before and attached + baked after, in the same
   // 180 s function: the picture waits a little less than a fill's.
@@ -2227,7 +2253,8 @@ async function paintAndPublishCard(
   if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  if (!persisted.ok) return { ok: false, error: AI_FAILURE_COPY.art_store, failure: "art_store" };
+  // A picture our nudity scan blocked (never stored) or one not stored.
+  if (!persisted.ok) return { ok: false, error: persisted.error, failure: persisted.failure };
 
   const updated = await updateCardAction(cardId, {
     art_url: persisted.publicUrl,
@@ -2245,7 +2272,7 @@ async function paintAndPublishCard(
   }
   // The card's text held strong language: the action stored it private
   // instead (owner policy 2026-10-28) — never a failed step.
-  return updated.forcedPrivate ? { ok: true, forcedPrivate: updated.forcedPrivate } : { ok: true };
+  return updated.forcedPrivate ? { ok: true, model: image.model, forcedPrivate: updated.forcedPrivate } : { ok: true, model: image.model };
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {
@@ -2661,6 +2688,11 @@ async function executeDeckRemixStep(
   await logAiCall(userId, "remix_art");
   let artUrl: string | undefined;
   let artError: string | null = null;
+  // Why the picture failed, for the step's `failure` (a nudity-scan block is
+  // `art_blocked` with its own sentence: lib/ai/random-art.ts).
+  let artFailure: AiFailureKind | undefined;
+  // Which model(s) painted the step's pictures (JobStep.image_model).
+  const imageModels: string[] = [];
   if (mechanics.art_url && isAllowedServerImageFetchUrl(mechanics.art_url)) {
     try {
       const sourceResponse = await fetch(mechanics.art_url, {
@@ -2680,10 +2712,18 @@ async function executeDeckRemixStep(
             restyled.bytes,
             restyled.contentType,
           );
-          if (persisted.ok) artUrl = persisted.publicUrl;
-          else artError = AI_FAILURE_COPY.art_store;
+          if (persisted.ok) {
+            artUrl = persisted.publicUrl;
+            imageModels.push(restyled.model ?? "restyle");
+          } else {
+            // Blocked or not stored: the fresh picture below is the retry
+            // (still the step's one credit).
+            artError = persisted.error;
+            artFailure = persisted.failure;
+          }
         } else {
           artError = restyled.error;
+          artFailure = restyled.failure;
         }
       }
     } catch {
@@ -2701,10 +2741,16 @@ async function executeDeckRemixStep(
         generated.bytes,
         generated.contentType,
       );
-      if (persisted.ok) artUrl = persisted.publicUrl;
-      else artError = AI_FAILURE_COPY.art_store;
+      if (persisted.ok) {
+        artUrl = persisted.publicUrl;
+        imageModels.push(generated.model);
+      } else {
+        artError = persisted.error;
+        artFailure = persisted.failure;
+      }
     } else {
       artError = generated.error;
+      artFailure = generated.failure;
     }
   }
   if (!artUrl) {
@@ -2712,6 +2758,7 @@ async function executeDeckRemixStep(
       ...step,
       status: "failed",
       error: artError ?? "Art generation failed — retry this card.",
+      ...(artFailure ? { failure: artFailure } : {}),
     };
   }
 
@@ -2731,16 +2778,23 @@ async function executeDeckRemixStep(
     );
     if (generated.ok) {
       const persisted = await persistGeneratedArt(generated.bytes, generated.contentType);
-      if (persisted.ok) backArtUrl = persisted.publicUrl;
-      else artError = AI_FAILURE_COPY.art_store;
+      if (persisted.ok) {
+        backArtUrl = persisted.publicUrl;
+        imageModels.push(generated.model);
+      } else {
+        artError = persisted.error;
+        artFailure = persisted.failure;
+      }
     } else {
       artError = generated.error;
+      artFailure = generated.failure;
     }
     if (!backArtUrl) {
       return {
         ...step,
         status: "failed",
         error: artError ?? "The back face's art generation failed — retry this card.",
+        ...(artFailure ? { failure: artFailure } : {}),
       };
     }
   }
@@ -2833,6 +2887,7 @@ async function executeDeckRemixStep(
       ? `${named.title} // ${named.back_face.title}`
       : named.title,
     error: undefined,
+    image_model: [...new Set(imageModels)].join(" + ") || null,
     // Saved private for the strong language in its text (the action's
     // notice; owner policy 2026-10-28) — the runner says so.
     ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
@@ -2913,7 +2968,9 @@ async function runCoverStep(
     }
     const persisted = await persistGeneratedArt(bytes, contentType);
     if (!persisted.ok) {
-      return { ...step, status: "failed", error: AI_FAILURE_COPY.art_store, failure: "art_store" };
+      // A cover our nudity scan blocked (never stored) or one not stored. Free:
+      // nothing to refund.
+      return { ...step, status: "failed", error: persisted.error, failure: persisted.failure };
     }
 
     if (job.deck_id) {
@@ -2925,7 +2982,7 @@ async function runCoverStep(
       if (!updated.ok) {
         return { ...step, status: "failed", error: "Couldn't attach the deck cover." };
       }
-      return { ...step, status: "done", error: undefined };
+      return { ...step, status: "done", error: undefined, image_model: image.model };
     }
     return { ...step, status: "failed", error: "Job has no deck to cover." };
   }
@@ -2977,6 +3034,10 @@ async function patchJobStep(
     refund_pending: step.status === "failed" ? (step.refund_pending ?? null) : null,
     // The step is no longer running — drop the claim stamp.
     claimed_at: null,
+    // Which model painted (analytics). Sent only when a picture was painted
+    // — a done step is never run again, so there is no stale value to clear
+    // — so a step that paints nothing writes exactly what it did before.
+    ...(step.image_model ? { image_model: step.image_model } : {}),
     // A card saved private for its text (owner policy 2026-10-28): only
     // a step that says so names the key, so every other patch is as before.
     ...(step.forced_private ? { forced_private: step.forced_private } : {}),
