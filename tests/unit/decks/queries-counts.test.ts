@@ -25,6 +25,8 @@ const s = vi.hoisted(() => ({
   /** RPC calls made, and what the next one answers. */
   rpcCalls: [] as Array<[string, unknown]>,
   rpcAnswer: { data: null as unknown, error: null as unknown },
+  /** A cards column the database doesn't have (42703 when a select names it). */
+  missingColumn: null as string | null,
 }));
 
 function client() {
@@ -47,6 +49,10 @@ function client() {
           };
         }
         if (table === "cards") {
+          const select = String(call.ops.find((op) => op[0] === "select")?.[1] ?? "");
+          if (s.missingColumn && select.split(", ").includes(s.missingColumn)) {
+            return { data: null, error: { code: "42703", message: `column cards.${s.missingColumn} does not exist` } };
+          }
           const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
           return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
         }
@@ -78,7 +84,9 @@ import {
   countDeckEntries,
   countPublicDecks,
   countPublicDecksByOwner,
+  DECK_PAGE_CARD_COLUMNS,
   listDeckCards,
+  listDeckPageCards,
   listMyDecks,
   listPublicDecks,
   listPublicDecksByOwner,
@@ -117,6 +125,7 @@ beforeEach(() => {
   s.cardVisibility = {};
   s.rpcCalls = [];
   s.rpcAnswer = { data: null, error: null };
+  s.missingColumn = null;
 });
 
 describe("deck tiles read their counts off the deck row", () => {
@@ -259,6 +268,59 @@ describe("listDeckCards reads a whole deck", () => {
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
     expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
+  });
+});
+
+// The deck PAGE's read (TODO DK5.11): listDeckCards' rules with only the
+// columns the page draws — never `cards.*`.
+describe("listDeckPageCards", () => {
+  const cardSelects = () =>
+    s.calls.filter((c) => c.table === "cards").map((c) => String(c.ops.find((op) => op[0] === "select")?.[1]));
+
+  it("names its columns (no `*`), and keeps the D3 rule and the makers' credit", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.rows.profiles = [{ id: "artist-1", username: "dev_artist" }];
+    s.cardOwner = { "card-unlisted": "artist-1", "card-public": "artist-1" };
+    s.cardVisibility = { "card-unlisted": "unlisted", "card-public": "public", "card-own-private": "private" };
+    s.entries = [
+      { id: "e1", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-unlisted", name: "Theirs, unlisted", source: "link" },
+      { id: "e2", deck_id: "d", board: "main", quantity: 1, position: 1, card_id: "card-public", name: "Theirs, public", source: "link" },
+      { id: "e3", deck_id: "d", board: "main", quantity: 1, position: 2, card_id: "card-own-private", name: "Mine, private", source: "creator" },
+    ];
+    const items = await listDeckPageCards("d");
+    expect(items.map((item) => [item.card?.id ?? null, item.cardOwner])).toEqual([
+      [null, null],
+      ["card-public", { username: "dev_artist" }],
+      ["card-own-private", null],
+    ]);
+    expect(cardSelects()).toEqual([DECK_PAGE_CARD_COLUMNS.join(", ")]);
+    expect(cardSelects()[0]).not.toContain("*");
+    for (const column of ["search_vector", "metadata", "oracle_text", "created_at"]) {
+      expect(cardSelects()[0]!.split(", ")).not.toContain(column);
+    }
+  });
+
+  it("a database without 0144: read again ONCE without both provenance columns (#664's degrade)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.missingColumn = "import_scryfall_id";
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    const items = await listDeckPageCards("d");
+    expect(items[0]!.card?.id).toBe("card-own");
+    const [first, second, ...rest] = cardSelects();
+    expect(rest).toEqual([]);
+    expect(first).toContain("import_scryfall_id");
+    expect(second!.split(", ")).not.toContain("import_scryfall_id");
+    expect(second!.split(", ")).not.toContain("import_fingerprint");
+    expect(second!.split(", ")).toContain("title");
+  });
+
+  it("any other error reads no cards — never a retry loop", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.missingColumn = "title";
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    const items = await listDeckPageCards("d");
+    expect(items[0]!.card).toBeNull();
+    expect(cardSelects()).toHaveLength(1);
   });
 });
 

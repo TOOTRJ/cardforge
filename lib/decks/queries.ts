@@ -415,11 +415,16 @@ export const DECK_PAGE_CARD_COLUMNS = [
   "import_fingerprint",
 ] as const;
 
-/** The page's columns a database may not have yet (0137, 0141, 0144):
- *  PostgREST answers a select naming one with 42703, and the read runs
- *  again without it — the row then reads as such a database's `*` does.
- *  Remove each once its migration is on production and on dev. */
-const DECK_PAGE_LATE_COLUMNS: readonly string[] = ["printed_types", "nickname", "import_scryfall_id", "import_fingerprint"];
+/** The page's columns a database may not have yet, by migration (0137,
+ *  0141, 0144): PostgREST answers a select naming one with 42703, and the
+ *  read runs again without that migration's columns — the row then reads as
+ *  such a database's `*` does. Remove each once its migration is on
+ *  production and on dev. */
+const DECK_PAGE_LATE_COLUMNS: readonly (readonly string[])[] = [
+  ["printed_types"],
+  ["nickname"],
+  ["import_scryfall_id", "import_fingerprint"],
+];
 
 type PageColumn = (typeof DECK_PAGE_CARD_COLUMNS)[number];
 type ProvenanceColumn = "import_scryfall_id" | "import_fingerprint";
@@ -438,10 +443,10 @@ export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPa
       const { data, error } = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
       const missing =
         error?.code === "42703"
-          ? DECK_PAGE_LATE_COLUMNS.find((column) => columns.includes(column) && (error.message ?? "").includes(column))
+          ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
           : undefined;
       if (missing) {
-        columns = columns.filter((column) => column !== missing);
+        columns = columns.filter((column) => !missing.includes(column));
         continue;
       }
       if (error) return [];

@@ -178,17 +178,18 @@ export default async function DeckDetailPage({
     searchParams,
   ]);
 
+  // The rows as this viewer's list shows them: a private card's title never
+  // reaches a visitor — not in the list, its pop-up, the copied text or the
+  // fan.
+  const shownItems = publicDeckItems(items, isOwner);
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck);
+  const featured = featuredCardsOf(shownItems, deck);
   const analytics = computeDeckAnalytics(items);
   const { total: cardCount, linked: madeCount } = analytics;
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
-  // The rows as this viewer's list shows them: a private card's title never
-  // reaches a visitor — not in the list, its pop-up or the copied text.
-  const shownItems = publicDeckItems(items, isOwner);
   const hasCards = items.length > 0;
   const usesCommander = formatHasCommander(deck.format);
   const hasCommander = items.some((item) => item.entry.board === "commander");
