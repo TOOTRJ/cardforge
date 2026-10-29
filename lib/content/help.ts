@@ -1,6 +1,5 @@
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import { allFaqEntries, faqTopicOf, type FaqEntry } from "@/lib/content/faq";
-import { privateDecksByPlanSentence } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // The help centre (/help, TODO NV6) — how to USE PipGlyph, kept apart from
@@ -247,8 +246,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       steps: [
         {
           title: "Start a deck",
-          // The private-deck cap (owner D1, migration 0145), from DECK_CAPACITY.
-          body: `In My Decks, choose “New deck”. Give it a name and a format — the format sets its size and copy limits — and choose who sees it: public, unlisted or private. Public decks are unlimited on every plan; ${privateDecksByPlanSentence()}`,
+          body: "In My Decks, choose “New deck”. Give it a name and a format — the format sets its size and copy limits — and choose who sees it: public, unlisted or private.",
         },
         {
           title: "Paste your list",

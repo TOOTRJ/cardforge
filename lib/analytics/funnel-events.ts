@@ -38,13 +38,11 @@ export const SERVER_FUNNEL_EVENTS = [
   "payment_failed",
   "pack_purchased",
   // Decks (TODO DK3.8, the 2026-10-28 deck plan): a deck made (visibility,
-  // format, surface), the private-deck cap refusing one (kind create /
-  // visibility, the tier), and a deck entry's FIRST card of the user's made
-  // from it in the creator — an imported card customized, the moment it
-  // takes a saved-card slot (owner decision D2; surface creator, kind
-  // import / placeholder).
+  // format, surface) and a deck entry's FIRST card of the user's made from
+  // it in the creator — an imported card customized, the moment it takes a
+  // saved-card slot (owner decision D2; surface creator, kind import /
+  // placeholder). There is no deck cap (owner 2026-10-29), so no cap event.
   "deck_created",
-  "deck_cap_hit",
   "deck_card_customized",
 ] as const;
 

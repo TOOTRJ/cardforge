@@ -12,14 +12,6 @@ import type { DeckInsert, DeckUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
 import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
-import { getEntitlements, type Entitlements } from "@/lib/billing/entitlements";
-import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
-import {
-  deckCapacityRefusal,
-  deckCountsTowardCap,
-  isDeckCapacityViolation,
-} from "@/lib/billing/deck-capacity-copy";
-import { countCappedDecks } from "@/lib/decks/capacity";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
@@ -34,13 +26,9 @@ type DeckActionFailure = {
   ok: false;
   formError?: string;
   fieldErrors?: DeckFieldErrors;
-  /** "UPGRADE_REQUIRED" when a plan with more room is needed — the UI opens
-   *  the upgrade modal instead of only showing the error. "AUTH_REQUIRED"
-   *  when nobody is signed in — the New deck dialog asks the visitor to
-   *  sign up or sign in instead (TODO DK4.3). */
-  code?: "UPGRADE_REQUIRED" | "AUTH_REQUIRED";
-  /** Which limit was hit: the private-deck cap (migration 0145). */
-  reason?: "deck_capacity";
+  /** "AUTH_REQUIRED" when nobody is signed in — the New deck dialog asks the
+   *  visitor to sign up or sign in instead (TODO DK4.3). */
+  code?: "AUTH_REQUIRED";
 };
 
 /** Where a deck was made from — a funnel prop only (allow-listed, sanitized
@@ -98,42 +86,9 @@ function notAuthed(): DeckActionFailure {
   };
 }
 
-// ---------------------------------------------------------------------------
-// The private-deck cap (owner decision D1, 2026-10-28; migration 0145). The
-// pre-check reads the plan so the common case gets the friendly refusal
-// without a round trip; the database trigger is the backstop the pre-check
-// can lose a race to (and the only check while billing is off, when every
-// entitlement reads unlimited — 0104's posture for saved cards).
-// ---------------------------------------------------------------------------
-
-function deckCapacityFailure(entitlements: Pick<Entitlements, "deckCapacity" | "effectiveTier">): DeckActionFailure {
-  return {
-    ok: false,
-    code: "UPGRADE_REQUIRED",
-    reason: "deck_capacity",
-    formError: deckCapacityRefusal(
-      entitlements.deckCapacity === CARD_CAPACITY_UNLIMITED
-        ? null
-        : { cap: entitlements.deckCapacity, tier: entitlements.effectiveTier },
-    ),
-  };
-}
-
-/** True when the plan leaves no room for one more private / unlisted deck.
- *  An unreadable count lets the write go on: the trigger still decides. */
-async function deckCapacityFull(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-  entitlements: Pick<Entitlements, "deckCapacity">,
-): Promise<boolean> {
-  if (entitlements.deckCapacity === CARD_CAPACITY_UNLIMITED) return false;
-  const used = await countCappedDecks(supabase, userId);
-  return used !== null && used >= entitlements.deckCapacity;
-}
-
 /** Funnel rows (TODO DK3.8). Best effort; never touches the write. */
 async function recordDeckEvent(
-  event: "deck_created" | "deck_cap_hit",
+  event: "deck_created",
   userId: string,
   props: Record<string, string | undefined>,
 ): Promise<void> {
@@ -191,22 +146,6 @@ export async function createDeckAction(
     bracket: parsed.data.bracket ?? null,
   };
 
-  // A private or unlisted deck takes one of the plan's private slots; a
-  // public deck never does (D1).
-  const capped = deckCountsTowardCap(insert.visibility ?? "private");
-  const entitlements = capped ? await getEntitlements() : null;
-  const capHit = () =>
-    recordDeckEvent("deck_cap_hit", user.id, {
-      kind: "create",
-      visibility: insert.visibility,
-      tier: entitlements?.effectiveTier,
-      surface: options.surface,
-    });
-  if (entitlements && (await deckCapacityFull(supabase, user.id, entitlements))) {
-    await capHit();
-    return deckCapacityFailure(entitlements);
-  }
-
   let row: { id: string; slug: string } | null = null;
   let lastError: string | null = null;
   for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
@@ -223,12 +162,6 @@ export async function createDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
-  // The database enforces the cap too (migration 0145) — the pre-check above
-  // can lose a race between two creates, the trigger can't.
-  if (!row && isDeckCapacityViolation(lastError)) {
-    await capHit();
-    return deckCapacityFailure(entitlements ?? (await getEntitlements()));
-  }
   if (!row && mediaUrlViolationField(lastError)) {
     // Migration 0127: a cover that isn't one of the user's own uploads.
     return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
@@ -318,26 +251,6 @@ export async function updateDeckAction(
   if (data.format !== undefined) update.format = data.format;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 
-  // A public deck turned private or unlisted joins the plan's private decks
-  // (D1). Switching between private and unlisted, or re-sending the stored
-  // value (the details form sends it every time), adds nothing — a deck over
-  // the cap stays editable (grandfathered, TODO DK3.4).
-  const joiningCap =
-    data.visibility !== undefined &&
-    !deckCountsTowardCap(existing.visibility) &&
-    deckCountsTowardCap(data.visibility);
-  const entitlements = joiningCap ? await getEntitlements() : null;
-  const capHit = () =>
-    recordDeckEvent("deck_cap_hit", user.id, {
-      kind: "visibility",
-      visibility: data.visibility,
-      tier: entitlements?.effectiveTier,
-    });
-  if (entitlements && (await deckCapacityFull(supabase, user.id, entitlements))) {
-    await capHit();
-    return deckCapacityFailure(entitlements);
-  }
-
   const desiredSlug =
     data.slug !== undefined ? slugify(data.slug).slice(0, 80) || null : null;
   const changingSlug = desiredSlug !== null && desiredSlug !== existing.slug;
@@ -364,10 +277,6 @@ export async function updateDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
-  if (!row && isDeckCapacityViolation(lastError)) {
-    await capHit();
-    return deckCapacityFailure(entitlements ?? (await getEntitlements()));
-  }
   if (!row && mediaUrlViolationField(lastError)) {
     // Migration 0127: a cover that isn't one of the user's own uploads.
     return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };

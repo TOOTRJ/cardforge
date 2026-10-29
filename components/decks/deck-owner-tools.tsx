@@ -38,7 +38,6 @@ import { useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-de
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
-import type { DeckCapacity } from "@/lib/billing/deck-capacity-copy";
 
 export type DeckTool = "details";
 const EVENT = "pipglyph:deck-tool";
@@ -77,7 +76,6 @@ export function DeckOwnerTools({
   deck,
   userId,
   capacity,
-  deckCapacity = null,
   defaultCoverSrc = null,
   openImport = false,
 }: {
@@ -93,9 +91,6 @@ export function DeckOwnerTools({
   /** Saved-card slots: the import's forecast (D2 — customizing an imported
    *  card is what takes one). */
   capacity: CardCapacity | null;
-  /** Private-deck slots: the details form warns before a public deck is
-   *  turned private or unlisted past the cap (TODO DK3.2). */
-  deckCapacity?: DeckCapacity | null;
   remixableCount: number;
   aiSeed: { theme: string | null; style: string | null } | null;
   openImport?: boolean;
@@ -158,7 +153,6 @@ export function DeckOwnerTools({
               userId={userId}
               deck={deck}
               defaultCoverSrc={defaultCoverSrc}
-              deckCapacity={deckCapacity}
               embedded
               onSaved={() => setOpen(null)}
             />

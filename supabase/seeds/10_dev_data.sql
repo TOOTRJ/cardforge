@@ -19,10 +19,9 @@
 -- Accounts (username → what it exists to test):
 --   dev_admin   is_admin + comped Pro — /admin/*, challenge authoring
 --   dev_pro     paid Pro, 200 credits — premium/AI/export surfaces
---   dev_free    free tier, 5 credits  — upgrade prompts, card limits, drafts;
---               no private deck (its first is allowed, a second refused)
+--   dev_free    free tier, 5 credits  — upgrade prompts, card limits, drafts
 --   dev_artist  prolific free creator — gallery, profile, follows, trending;
---               AT the private-deck cap (1 of 1, migration 0145)
+--               owns the private deck draft
 --   dev_new     NOT onboarded         — the first-run wizard redirect
 -- ---------------------------------------------------------------------------
 
@@ -798,11 +797,12 @@ where cards.id = v.id and cards.view_count = 0;
 
 -- ---------------------------------------------------------------------------
 -- 4. Decks: one public Commander deck mixing custom cards with real-card rows
---    (no Scryfall ids → they render as "needs proxy"), one private draft.
---    The draft is dev_artist's, a free account, so dev_artist sits AT the
---    private-deck cap (Free: 1 private or unlisted deck, migration 0145) and
---    dev_free holds none: it can make its first private deck and see the
---    second refused (TODO DK3.6).
+--    (no Scryfall ids → they render as "needs proxy"), one private draft,
+--    dev_artist's (whose card it holds). Decks are unlimited on every plan
+--    (owner 2026-10-29): 0145 capped private decks for a while and 0147
+--    dropped the cap. The draft's guards below were written for that cap and
+--    are kept: they keep the seed from failing on a database that still has
+--    0145's trigger, and cost nothing without it.
 -- ---------------------------------------------------------------------------
 
 insert into public.decks (id, owner_id, title, slug, description, format, visibility, deck_type, bracket)
@@ -810,10 +810,11 @@ values
   ('b0000000-0000-4000-a000-000000000001', 'd0000000-0000-4000-a000-000000000002', 'Cinderwing Dragonstorm', 'cinderwing-dragonstorm', 'Dragons, ramp, and one very angry matriarch.', 'commander', 'public', 'Dragons', 3)
 on conflict (id) do nothing;
 
--- The private draft is its own statement, and proposes NO row when it would
--- meet 0145's cap: a BEFORE INSERT trigger fires before ON CONFLICT is
--- resolved, so `on conflict (id) do nothing` would still check the proposed
--- row against dev_artist's private decks — and refuse the whole seed on a
+-- The private draft is its own statement, and proposes NO row where 0145's
+-- cap (while it is there) could refuse it: a BEFORE INSERT trigger fires
+-- before ON CONFLICT is resolved, so `on conflict (id) do nothing` would
+-- still check the proposed row against dev_artist's private decks — and
+-- refuse the whole seed on a
 -- database seeded before 0145 (the draft still dev_free's) where a tester
 -- gave dev_artist a private deck. So: only when the draft doesn't exist,
 -- and only while dev_artist holds no private or unlisted deck.
@@ -826,10 +827,10 @@ where not exists (select 1 from public.decks where id = 'b0000000-0000-4000-a000
       and visibility in ('private', 'unlisted')
   );
 
--- A database seeded before 0145 holds the draft under dev_free, which would
--- leave dev_free at the cap: hand it to dev_artist — unless dev_artist
--- already holds a private or unlisted deck of a tester's, where the move
--- would cross the cap (0145 checks an owner change) and fail the seed.
+-- A database seeded before 0145 holds the draft under dev_free: hand it to
+-- dev_artist — unless dev_artist already holds a private or unlisted deck of
+-- a tester's, where, while 0145's trigger is there, the move would cross its
+-- cap (it checked an owner change) and fail the seed.
 update public.decks d
 set owner_id = 'd0000000-0000-4000-a000-000000000004'
 where d.id = 'b0000000-0000-4000-a000-000000000002'
