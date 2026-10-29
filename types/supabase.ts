@@ -2076,6 +2076,21 @@ export type Database = {
         Args: { p_card_id: string; p_limit?: number };
         Returns: { slug: string; title: string }[];
       };
+      // Migration 0149 — the ONE rule behind a card's public decks (the
+      // list above is read over it), the gallery's batched "In N decks"
+      // (a card no public deck names is absent), and trending decks.
+      public_deck_card_pairs: {
+        Args: { p_card_ids: string[]; p_deck_id?: string | null };
+        Returns: { card_id: string; deck_id: string }[];
+      };
+      public_deck_counts_for_cards: {
+        Args: { p_card_ids: string[] };
+        Returns: { card_id: string; deck_count: number }[];
+      };
+      list_trending_decks: {
+        Args: { p_limit?: number };
+        Returns: Database["public"]["Tables"]["decks"]["Row"][];
+      };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;

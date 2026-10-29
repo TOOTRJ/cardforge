@@ -320,3 +320,13 @@ instead. Each bullet: what the header says, and what is true now.
   dropped; a 3-argument call resolves to the new one). 0143's
   `import_deck_entries` is redefined by 0144 unchanged but for writing
   `source = 'import'` on the rows it adds.
+- **0144 (`public_decks_containing_card` holds the decks-on-a-card rule
+  itself)** — since 0149 its body reads `public_deck_card_pairs`, which
+  holds 0144's predicate word for word and is read as well by
+  `public_deck_counts_for_cards` (the gallery's "In N decks") and the
+  `deck_card_added` notification; the list's signature, result and order
+  are unchanged.
+- **0055 (`deck_likes_deck_id_idx` on `deck_likes (deck_id)`)** — since
+  0149 the index is `deck_likes_deck_id_created_at_idx` on
+  `(deck_id, created_at)` (trending decks count the week's likes per deck);
+  the single-column index is dropped.
