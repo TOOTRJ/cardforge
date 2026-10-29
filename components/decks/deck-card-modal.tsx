@@ -42,9 +42,11 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 import {
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
-  deckEntryState,
 } from "@/types/deck";
 import type { DeckItem } from "@/lib/decks/queries";
+import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
+import { effectiveEntryFields } from "@/lib/decks/effective-entry";
+import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
 
@@ -77,7 +79,13 @@ export function DeckCardModal({
   preferProxy,
 }: DeckCardModalProps) {
   const { entry, card } = item;
-  const state = deckEntryState(entry);
+  const status = deckEntryStatus(entry, card);
+  // Its PipGlyph card is gone (D3): another creator's card that went
+  // private (the owner reads all of their own), or a deleted one.
+  const unavailable = deckEntryUnavailable(entry, card, canManage);
+  const fields = effectiveEntryFields(entry, card, status);
+  // Another creator's card (D3): their handle, and THEIR card page.
+  const maker = item.cardOwner?.username ?? null;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -121,7 +129,7 @@ export function DeckCardModal({
   // soft navigation there opens the site's large card modal over this
   // deck); a real card points at Scryfall.
   const cardPath = card
-    ? buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })
+    ? buildCardPath({ slug: card.slug, owner: { username: item.cardOwner ? maker : ownerUsername } })
     : null;
   const scryfallHref = entry.scryfall_id ? `/go/scryfall/${entry.scryfall_id}` : null;
   // The PICTURE's link opens the face it shows (TODO 5.17): with Back chosen
@@ -160,13 +168,20 @@ export function DeckCardModal({
             ) : (
               card?.title ?? entry.name
             )}
-            <StateBadgeLarge state={state} />
+            <DeckEntryStatusBadge status={status} unavailable={unavailable} />
             <CardGlossary />
           </DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-2">
-            {entry.type_line ?? card?.card_type ?? "Card"}
-            {entry.mana_cost || card?.cost ? (
-              <ManaCostGlyphs cost={entry.mana_cost ?? card?.cost} size="sm" />
+            {fields.typeLine ?? "Card"}
+            {fields.cost ? <ManaCostGlyphs cost={fields.cost} size="sm" /> : null}
+            {maker ? (
+              <Link
+                href={`/profile/${maker}`}
+                onClick={() => onOpenChange(false)}
+                className="text-xs text-muted transition-colors hover:text-foreground"
+              >
+                by <span className="font-mono text-foreground">@{maker}</span>
+              </Link>
             ) : null}
             {entry.set_code ? (
               <span className="font-mono text-xs text-subtle">
@@ -271,6 +286,14 @@ export function DeckCardModal({
               </Badge>
             </div>
 
+            {/* Never WHY (made private or unlisted, hidden by moderation,
+                deleted): the deck can't tell these apart for sure. */}
+            {unavailable ? (
+              <p className="text-sm leading-6 text-muted" data-testid="deck-card-unavailable">
+                This card is no longer available.
+              </p>
+            ) : null}
+
             <div className="flex flex-col gap-2">
               {entry.scryfall_id ? (
                 <a
@@ -303,6 +326,15 @@ export function DeckCardModal({
                     <Link href={`/create?deckCard=${entry.id}`}>
                       <Sparkles className="h-4 w-4" aria-hidden />
                       Customize
+                    </Link>
+                  </Button>
+                ) : unavailable ? (
+                  // Nothing left to start from but the name (D3): a card of
+                  // the owner's own takes the entry's place on save.
+                  <Button asChild size="lg">
+                    <Link href={`/create?deckCard=${entry.id}`}>
+                      <Sparkles className="h-4 w-4" aria-hidden />
+                      Make your own version
                     </Link>
                   </Button>
                 ) : null}
@@ -510,23 +542,6 @@ function FlipButton({
       {label}
     </button>
   );
-}
-
-function StateBadgeLarge({
-  state,
-}: {
-  state: ReturnType<typeof deckEntryState>;
-}) {
-  if (state === "remixed")
-    return (
-      <Badge variant="primary" className="gap-1">
-        <Sparkles className="h-3 w-3" aria-hidden /> Edited
-      </Badge>
-    );
-  if (state === "custom") return <Badge variant="accent">Custom card</Badge>;
-  if (state === "unresolved")
-    return <Badge variant="outline">Placeholder</Badge>;
-  return <Badge variant="outline">Imported</Badge>;
 }
 
 // ---------------------------------------------------------------------------

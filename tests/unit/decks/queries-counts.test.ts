@@ -18,10 +18,21 @@ const s = vi.hoisted(() => ({
   rows: {} as Record<string, unknown[]>,
   entries: [] as Record<string, unknown>[],
   withCount: true,
+  /** A linked card's maker, by card id (default: the deck's owner). */
+  cardOwner: {} as Record<string, string>,
+  /** A linked card's visibility, by card id (default: public). */
+  cardVisibility: {} as Record<string, string>,
+  /** RPC calls made, and what the next one answers. */
+  rpcCalls: [] as Array<[string, unknown]>,
+  rpcAnswer: { data: null as unknown, error: null as unknown },
 }));
 
 function client() {
   return {
+    async rpc(name: string, args: unknown) {
+      s.rpcCalls.push([name, args]);
+      return s.rpcAnswer;
+    },
     from(table: string) {
       const call: Call = { table, ops: [] };
       s.calls.push(call);
@@ -37,7 +48,7 @@ function client() {
         }
         if (table === "cards") {
           const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
-          return { data: ids.map((id) => ({ id, title: id, color_identity: [] })), error: null };
+          return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
         }
         return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
       };
@@ -71,6 +82,7 @@ import {
   listMyDecks,
   listPublicDecks,
   listPublicDecksByOwner,
+  listPublicDecksContaining,
 } from "@/lib/decks/queries";
 
 const deckRow = (id: string, card_count: number, linked_card_count: number) => ({
@@ -101,13 +113,17 @@ beforeEach(() => {
   s.rows = {};
   s.entries = [];
   s.withCount = true;
+  s.cardOwner = {};
+  s.cardVisibility = {};
+  s.rpcCalls = [];
+  s.rpcAnswer = { data: null, error: null };
 });
 
 describe("deck tiles read their counts off the deck row", () => {
-  it("listPublicDecks: card_count > 0, counts mapped to cards_count / remixed_count, no deck_cards read", async () => {
+  it("listPublicDecks: card_count > 0, counts mapped to cards_count / linked_count, no deck_cards read", async () => {
     s.rows.decks = [deckRow("a", 100, 40), deckRow("b", 2400, 0)];
     const decks = await listPublicDecks({ anonymous: true, limit: 25 });
-    expect(decks.map((d) => [d.id, d.cards_count, d.remixed_count])).toEqual([
+    expect(decks.map((d) => [d.id, d.cards_count, d.linked_count])).toEqual([
       ["a", 100, 40],
       ["b", 2400, 0],
     ]);
@@ -121,7 +137,7 @@ describe("deck tiles read their counts off the deck row", () => {
   it("listPublicDecksByOwner and both public counts leave empty decks out", async () => {
     s.rows.decks = [deckRow("a", 60, 60)];
     const decks = await listPublicDecksByOwner("owner-1", 6);
-    expect(decks[0]).toMatchObject({ cards_count: 60, remixed_count: 60 });
+    expect(decks[0]).toMatchObject({ cards_count: 60, linked_count: 60 });
     await countPublicDecksByOwner("owner-1");
     await countPublicDecks();
     const deckQueries = s.calls.filter((c) => c.table === "decks");
@@ -133,7 +149,7 @@ describe("deck tiles read their counts off the deck row", () => {
   it("listMyDecks keeps the owner's empty decks (the dashboard is where they're filled)", async () => {
     s.rows.decks = [deckRow("draft", 0, 0), deckRow("full", 99, 12)];
     const decks = await listMyDecks();
-    expect(decks.map((d) => [d.id, d.cards_count, d.remixed_count])).toEqual([
+    expect(decks.map((d) => [d.id, d.cards_count, d.linked_count])).toEqual([
       ["draft", 0, 0],
       ["full", 99, 12],
     ]);
@@ -150,6 +166,7 @@ describe("deck tiles read their counts off the deck row", () => {
 
 describe("listDeckCards reads a whole deck", () => {
   it("pages past 1000 rows on a unique order, stops at the exact count, and looks linked cards up in chunks", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = Array.from({ length: 1003 }, (_, i) => ({
       id: `e-${i}`,
       deck_id: "big",
@@ -179,9 +196,88 @@ describe("listDeckCards reads a whole deck", () => {
     ]);
   });
 
+  it("another creator's card names its maker (D3); the owner's own cards and printings don't", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.rows.profiles = [{ id: "artist-1", username: "dev_artist" }];
+    s.cardOwner = { "card-foreign": "artist-1" };
+    s.entries = [
+      { id: "e-own", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own", source: "creator" },
+      { id: "e-foreign", deck_id: "d", board: "main", quantity: 1, position: 1, card_id: "card-foreign", name: "Theirs", source: "link" },
+      { id: "e-print", deck_id: "d", board: "main", quantity: 1, position: 2, card_id: null, scryfall_id: "x", name: "Bolt", source: "bogus" },
+    ];
+    const items = await listDeckCards("d");
+    expect(items.map((item) => item.cardOwner)).toEqual([null, { username: "dev_artist" }, null]);
+    // One profiles read, for the other makers only.
+    const makerReads = s.calls.filter((c) => c.table === "profiles");
+    expect(makerReads).toHaveLength(1);
+    expect(makerReads[0]!.ops.find((op) => op[0] === "in")).toEqual(["in", "id", ["artist-1"]]);
+    // `source` narrowed: a value outside the CHECK's list reads as none.
+    expect(items.map((item) => item.entry.source)).toEqual(["creator", "link", null]);
+  });
+
+  it("another creator's card that is no longer PUBLIC is withheld (M2: RLS hands an unlisted card to anyone)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.rows.profiles = [{ id: "artist-1", username: "dev_artist" }];
+    s.cardOwner = { "card-unlisted": "artist-1", "card-public": "artist-1" };
+    s.cardVisibility = { "card-unlisted": "unlisted", "card-public": "public", "card-own-unlisted": "unlisted", "card-own-private": "private" };
+    s.entries = [
+      { id: "e1", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-unlisted", name: "Theirs, unlisted", source: "link" },
+      { id: "e2", deck_id: "d", board: "main", quantity: 1, position: 1, card_id: "card-public", name: "Theirs, public", source: "link" },
+      { id: "e3", deck_id: "d", board: "main", quantity: 1, position: 2, card_id: "card-own-unlisted", name: "Mine, unlisted", source: "creator" },
+      { id: "e4", deck_id: "d", board: "main", quantity: 1, position: 3, card_id: "card-own-private", name: "Mine, private", source: "creator" },
+    ];
+    const items = await listDeckCards("d");
+    // Withheld: no card, no credit — the entry keeps its card_id and name
+    // ("No longer available" to the owner).
+    expect(items.map((item) => [item.entry.name, item.card?.id ?? null, item.cardOwner])).toEqual([
+      ["Theirs, unlisted", null, null],
+      ["Theirs, public", "card-public", { username: "dev_artist" }],
+      ["Mine, unlisted", "card-own-unlisted", null],
+      ["Mine, private", "card-own-private", null],
+    ]);
+    expect(items[0]!.entry.card_id).toBe("card-unlisted");
+  });
+
+  it("no readable deck row: no entries (another creator's card can't be told from the owner's)", async () => {
+    s.rows.decks = [];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    expect(await listDeckCards("d")).toEqual([]);
+  });
+
+  it("a deck with only its owner's cards reads no profile", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "card-own", name: "Own" }];
+    const items = await listDeckCards("d");
+    expect(items[0]!.cardOwner).toBeNull();
+    // A database 0144 hasn't reached: no source at all.
+    expect(items[0]!.entry.source).toBeNull();
+    expect(s.calls.filter((c) => c.table === "profiles")).toHaveLength(0);
+  });
+
   it("an ordinary deck is ONE request (the exact count says it's all there)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
     s.entries = Array.from({ length: 99 }, (_, i) => ({ id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id: null, name: `C${i}` }));
     expect(await listDeckCards("d")).toHaveLength(99);
     expect(s.calls.filter((c) => c.table === "deck_cards")).toHaveLength(1);
+  });
+});
+
+// The card page's "In decks" and its JSON-LD isPartOf (D3, the reviewer's
+// L3): ONE read, the database's rule (0144 public_decks_containing_card —
+// the owner's own public non-empty decks, another real creator's while the
+// card is public; the throwaway account's deck is proved left out on the
+// local stack, PR body). No table is read around it.
+describe("listPublicDecksContaining", () => {
+  it("is the 0144 function, five at most, mapped as it answers", async () => {
+    s.rpcAnswer = { data: [{ slug: "dev_pro/elves", title: "Elves" }], error: null };
+    expect(await listPublicDecksContaining("card-in-decks")).toEqual([{ slug: "dev_pro/elves", title: "Elves" }]);
+    expect(s.rpcCalls).toEqual([["public_decks_containing_card", { p_card_id: "card-in-decks", p_limit: 5 }]]);
+    expect(s.calls).toHaveLength(0);
+  });
+
+  it("names none on a database the function hasn't reached (never the old any-deck read)", async () => {
+    s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
+    expect(await listPublicDecksContaining("card-before-0144")).toEqual([]);
+    expect(s.calls).toHaveLength(0);
   });
 });

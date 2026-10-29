@@ -144,8 +144,8 @@ export default async function DeckDetailPage({
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
-  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck.id);
-  const { total: cardCount, remixed: customCount } = computeDeckAnalytics(items);
+  const featured = featuredCardsOf(publicDeckItems(items, isOwner), deck);
+  const { total: cardCount, linked: madeCount } = computeDeckAnalytics(items);
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
 
@@ -224,7 +224,9 @@ export default async function DeckDetailPage({
             ) : null}
             <span>
               {cardCount} card{cardCount === 1 ? "" : "s"}
-              {customCount > 0 ? ` · ${customCount} custom` : ""}
+              {/* The tiles' "made on PipGlyph" (lib/decks/tile-counts.ts),
+                  from the rows the page already read. */}
+              {madeCount > 0 ? ` · ${madeCount} made on PipGlyph` : ""}
             </span>
           </>
         }
@@ -390,7 +392,7 @@ async function DeckBody({
         <PageHeader
           eyebrow="Analytics"
           title="Deck breakdown"
-          description="Mana curve, colors, and remix progress across the deck."
+          description="Mana curve, colors, and every card by status: imported, edited, remixed or original."
         />
         <div className="mt-6">
           <DeckAnalyticsPanel analytics={analytics} />

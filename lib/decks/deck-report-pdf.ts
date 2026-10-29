@@ -1,7 +1,7 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
-import type { DeckAnalytics } from "@/lib/decks/analytics";
+import { statusRows, type DeckAnalytics } from "@/lib/decks/analytics";
 import type { DeckGuideContent } from "@/lib/ai/deck-guide";
-import type { DeckBoard } from "@/types/deck";
+import { DECK_ENTRY_STATUS_COUNT_LABELS, type DeckBoard } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // Deck report PDF — the "deck.pdf" inside a Pro ZIP export: the deck's
@@ -176,8 +176,10 @@ export async function buildDeckReportPdf(input: DeckReportInput): Promise<Uint8A
     ["Mana curve", curveText(a.curve)],
     ["Colors", [...(["W", "U", "B", "R", "G"] as const).map((c) => `${c} ${a.byColor[c]}`), `Gold ${a.multicolor}`, `C ${a.byColor.C}`].join("   ")],
     ["Types", Object.entries(a.byType).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join("   ") || "—"],
-    ["Customized cards", `${a.remixed} of ${a.total}`],
-  ]);
+    // The cards by status (TODO DK2.6) — what replaced "custom proxies".
+    ...statusRows(a).map((row): [string, string] => [DECK_ENTRY_STATUS_COUNT_LABELS[row.status], `${row.count} of ${a.total}`]),
+    // (Wider than the default: "Imported, not changed yet" in bold.)
+  ], 165);
 
   // Guide.
   if (input.guide) {

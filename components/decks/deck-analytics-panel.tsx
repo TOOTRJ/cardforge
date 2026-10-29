@@ -1,14 +1,15 @@
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { TYPE_BUCKETS, type DeckAnalytics } from "@/lib/decks/analytics";
+import { statusRows, TYPE_BUCKETS, type DeckAnalytics } from "@/lib/decks/analytics";
 import {
   COLOR_IDENTITY_LABELS,
   COLOR_LETTER_IDENTITY,
   type ColorIdentity,
 } from "@/types/card";
 import { BarList, COLOR_DOT_CLASS } from "@/components/analytics/bar-list";
+import { DECK_ENTRY_STATUS_COUNT_LABELS } from "@/types/deck";
 
 // Deck-flavored sibling of SetAnalyticsPanel: mana curve, color pips, type
-// breakdown, and the remix-progress headline number.
+// breakdown, and the cards by status (Imported / Edited / Remix / Original).
 
 type DeckAnalyticsPanelProps = {
   analytics: DeckAnalytics;
@@ -27,10 +28,6 @@ function colorRows(analytics: DeckAnalytics): Array<{ identity: ColorIdentity; c
 }
 
 export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
-  const remixPct =
-    analytics.total > 0
-      ? Math.round((analytics.remixed / analytics.total) * 100)
-      : 0;
   const colors = colorRows(analytics);
 
   return (
@@ -53,16 +50,20 @@ export function DeckAnalyticsPanel({ analytics }: DeckAnalyticsPanelProps) {
         </span>
       </SurfaceCard>
 
-      <SurfaceCard className="flex flex-col gap-2 p-5">
+      <SurfaceCard className="flex flex-col gap-3 p-5">
         <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Proxied
+          Card status
         </span>
-        <span className="font-display text-3xl font-semibold tracking-tight text-foreground">
-          {remixPct}%
-        </span>
-        <span className="text-xs text-muted">
-          {analytics.remixed} of {analytics.total} cards have a custom proxy
-        </span>
+        {/* Imported / Edited / Remix / Original (+ Not found), physical
+            cards (lib/decks/entry-status.ts) — what replaced "% proxied". */}
+        <dl className="flex flex-col gap-1.5 text-sm">
+          {statusRows(analytics).map((row) => (
+            <div key={row.status} className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted">{DECK_ENTRY_STATUS_COUNT_LABELS[row.status]}</dt>
+              <dd className="font-mono text-foreground">{row.count}</dd>
+            </div>
+          ))}
+        </dl>
       </SurfaceCard>
 
       <SurfaceCard className="flex flex-col gap-2 p-5">

@@ -10,7 +10,6 @@ import {
   DECK_BOARD_VALUES,
   DECK_FORMAT_LABELS,
   DECK_FORMAT_VALUES,
-  deckEntryState,
   isDeckBoard,
   isDeckFormat,
 } from "@/types/deck";
@@ -133,18 +132,6 @@ describe("deck domain types", () => {
     expect(isDeckBoard("sideboard")).toBe(false);
   });
 
-  it("derives entry state from scryfall_id + card_id", () => {
-    expect(deckEntryState({ scryfall_id: "abc", card_id: null })).toBe("real");
-    expect(deckEntryState({ scryfall_id: "abc", card_id: "def" })).toBe(
-      "remixed",
-    );
-    expect(deckEntryState({ scryfall_id: null, card_id: "def" })).toBe(
-      "custom",
-    );
-    expect(deckEntryState({ scryfall_id: null, card_id: null })).toBe(
-      "unresolved",
-    );
-  });
 });
 
 describe("cover position", () => {
