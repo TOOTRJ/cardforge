@@ -1,19 +1,46 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Megaphone, Sparkles } from "lucide-react";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { getNewsFeed } from "@/lib/updates/queries";
-import { formatReleaseDate, type SiteUpdate } from "@/lib/updates/shared";
+import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
+import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+
+// ---------------------------------------------------------------------------
+// /news — "What's new" (TODO NV5): every released update, newest first, and
+// what's coming. The URL stays /news; everything a reader SEES calls it
+// "What's new" (the title, the breadcrumb, the footer, the /learn hub) —
+// never "News". It sits under Learn in the trail. Each update carries an id
+// (updateAnchorId) so the /learn hub and the RSS feed (news/feed.xml) can
+// link to it; an update has no page of its own yet.
+// ---------------------------------------------------------------------------
+
+const DESCRIPTION =
+  "Every PipGlyph update as it ships — new tools, frames, AI features and fixes — plus a look at what the forge is building next.";
 
 export const metadata: Metadata = {
   title: "What's new",
-  alternates: { canonical: "/news" },
-  description:
-    "Every PipGlyph update as it ships — new tools, frames, AI features and fixes — plus a look at what the forge is building next.",
+  description: DESCRIPTION,
+  alternates: {
+    canonical: "/news",
+    types: { "application/rss+xml": "/news/feed.xml" },
+  },
+  openGraph: siteOpenGraph({
+    title: "What's new · PipGlyph",
+    description: DESCRIPTION,
+    type: "website",
+    siteName: "PipGlyph",
+    url: "/news",
+  }),
+  twitter: siteTwitter({
+    title: "What's new · PipGlyph",
+    description: DESCRIPTION,
+  }),
 };
 
 // ISR over the cached public feed; admin saves purge it (lib/updates/actions).
@@ -23,8 +50,15 @@ export default async function NewsPage() {
   const { updates, upcoming } = await getNewsFeed();
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+      <Breadcrumbs
+        items={[
+          { name: "Home", path: "/" },
+          { name: "Learn", path: "/learn" },
+          { name: "What's new", path: "/news" },
+        ]}
+      />
       <PageHeader
-        eyebrow="News"
+        eyebrow="Release notes"
         title="What's new on PipGlyph"
         description="Fresh from the forge: every update as it ships, and a peek at what we're hammering on next."
       />
@@ -86,14 +120,24 @@ export default async function NewsPage() {
 
 function UpdateCard({ update }: { update: SiteUpdate }) {
   return (
-    <SurfaceCard className="flex flex-col gap-3 p-6">
+    <SurfaceCard
+      as="article"
+      id={updateAnchorId(update.id)}
+      aria-labelledby={`${updateAnchorId(update.id)}-title`}
+      className="flex scroll-mt-24 flex-col gap-3 p-6"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="gold">New</Badge>
         <time dateTime={update.publish_at} className="text-xs text-subtle">
           {formatReleaseDate(update.publish_at)}
         </time>
       </div>
-      <h3 className="font-display text-xl font-semibold text-foreground">{update.title}</h3>
+      <h3
+        id={`${updateAnchorId(update.id)}-title`}
+        className="font-display text-xl font-semibold text-foreground"
+      >
+        {update.title}
+      </h3>
       <p className="text-base leading-7 text-muted">{update.summary}</p>
       {update.body ? (
         <p className="whitespace-pre-line text-sm leading-6 text-foreground/90">{update.body}</p>

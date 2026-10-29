@@ -88,6 +88,17 @@ export function canLinkIntoDeck(card: { owner_id: string; visibility: string }, 
   return card.owner_id === deckOwnerId || card.visibility === "public";
 }
 
+/** A deck's rows with every card the deck may not show taken out (the card
+ *  reads as null): the read side of canLinkIntoDeck for a surface that
+ *  reads its own rows instead of listDeckCards — the share image, the
+ *  tiles' cover colours. */
+export function withDeckVisibleCards<C extends { owner_id: string; visibility: string }, T extends { card: C | null }>(
+  items: readonly T[],
+  deckOwnerId: string,
+): T[] {
+  return items.map((item) => (item.card && !canLinkIntoDeck(item.card, deckOwnerId) ? { ...item, card: null } : item));
+}
+
 /** The sources that bring a PipGlyph CARD into the deck (the RPC's list,
  *  add_custom_deck_entry, migration 0144). */
 const CARD_SOURCES: ReadonlySet<string> = new Set(["creator", "link", "ai_generate", "ai_remix"]);

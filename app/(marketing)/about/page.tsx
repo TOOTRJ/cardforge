@@ -71,11 +71,11 @@ export default function AboutPage() {
           theme, or draft a whole card from a concept
         </li>
         <li>
-          Decks: import a decklist from the popular deck sites, remix real
-          cards into custom versions, see the curve and color analytics, and
-          print proxy sheets
+          Decks: import a decklist from the popular deck sites, customize the
+          real cards, see the curve and color analytics, and print proxy
+          sheets
         </li>
-        <li>Scryfall import for remixing real cards, with lineage tracking</li>
+        <li>Scryfall import to start a card from a real one, with lineage tracking</li>
         <li>
           Downloads: a watermarked PNG on every account; watermark-free
           high-resolution PNG and print-ready PDF on paid plans, and whole-deck

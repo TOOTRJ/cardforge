@@ -67,6 +67,9 @@ function purge() {
   revalidateTag(SITE_UPDATES_TAG, "max");
   revalidatePath("/");
   revalidatePath("/news");
+  revalidatePath("/news/feed.xml");
+  // The /learn hub's "What's new" strip shows the latest three.
+  revalidatePath("/learn");
   revalidatePath("/admin/updates");
 }
 

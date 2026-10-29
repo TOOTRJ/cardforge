@@ -77,6 +77,10 @@ export type DeckAnalytics = {
   /** Physical cards per entry status (deckEntryStatus, TODO DK2.6),
    *  playable boards — Imported / Edited / Remix / Original / Not found. */
   byStatus: Record<DeckEntryStatus, number>;
+  /** Physical cards whose entry links a PipGlyph card (playable boards) —
+   *  what `decks.linked_card_count` stores (0143), counted from the rows:
+   *  the hero's "made on PipGlyph". */
+  linked: number;
   /** Mana curve over playable non-land cards: indexes 0–6 are exact mana
    *  values, index 7 is "7+". Cards with unknown mana value are excluded. */
   curve: number[];
@@ -128,6 +132,7 @@ export function computeDeckAnalytics(
   const curve = Array.from({ length: 8 }, () => 0);
 
   let total = 0;
+  let linked = 0;
   let multicolor = 0;
   let lands = 0;
   let mvTotal = 0;
@@ -138,6 +143,7 @@ export function computeDeckAnalytics(
     if (entry.board === "maybe") continue;
 
     total += entry.quantity;
+    if (entry.card_id) linked += entry.quantity;
     // The entry's status and its effective fields (TODO DK2.6 / DK2.7): an
     // edited card counts as what it now is, an unchanged import as its
     // printing.
@@ -179,6 +185,7 @@ export function computeDeckAnalytics(
     byBoard,
     total,
     byStatus,
+    linked,
     curve,
     byColor,
     multicolor,

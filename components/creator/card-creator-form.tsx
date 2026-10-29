@@ -3108,11 +3108,8 @@ export function CardCreatorForm({
       setValue("source_scryfall_id", patch.source_scryfall_id, {
         shouldDirty: true,
       });
-      // Cards that start from a real card are proxies until altered —
-      // auto-tag them so the glossary's contract holds (see CardGlossary).
-      setValue("tags_text", mergeTag(getValues("tags_text"), "proxy"), {
-        shouldDirty: true,
-      });
+      // No "proxy" tag (TODO DK2.4): every card made here is a proxy, and the
+      // tag outlived every change. The maker's own tags stay as they are.
     }
 
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });

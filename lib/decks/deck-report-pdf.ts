@@ -16,7 +16,7 @@ type DeckReportEntry = {
   board: DeckBoard;
   type_line: string | null;
   mana_cost: string | null;
-  /** The custom proxy's title, when the entry is remixed. */
+  /** The linked custom card's title, when the entry has one. */
   proxyTitle?: string | null;
 };
 

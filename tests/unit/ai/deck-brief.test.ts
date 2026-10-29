@@ -7,6 +7,7 @@ function analytics(over: Partial<DeckAnalytics> = {}): DeckAnalytics {
     byBoard: { main: 60, side: 0, maybe: 0, commander: 0, companion: 0 },
     total: 60,
     byStatus: { imported: 60, edited: 0, remix: 0, original: 0, not_found: 0 },
+    linked: 0,
     curve: [2, 8, 10, 9, 5, 2, 1, 0],
     byColor: { W: 0, U: 30, B: 0, R: 4, G: 0, C: 0 },
     multicolor: 0,

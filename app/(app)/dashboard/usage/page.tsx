@@ -32,11 +32,13 @@ type JobStepLite = {
   error?: string;
 };
 
+// The `*_remix` kinds and `remix_card` are "Restyle with AI" in the UI's
+// words (TODO DK2.3); the stored keys stay.
 const JOB_KIND_LABELS: Record<string, string> = {
   deck: "Deck generation",
-  deck_remix: "Deck remix",
+  deck_remix: "Deck restyle",
   card: "Single card generation",
-  card_remix: "Card remix",
+  card_remix: "Card restyle",
   card_fill: "Card fields (creator)",
 };
 
@@ -50,7 +52,7 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 
 const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
   generate_random_card: "Single card generation",
-  remix_card: "Card remix",
+  remix_card: "Card restyle",
   fill_card: "Card fields (creator)",
 };
 

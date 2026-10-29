@@ -6,6 +6,11 @@
 // a bare list (thin hub pages don't earn topical authority). Tags that aren't
 // listed here still get a generic hub — this map only adds the pillar copy and
 // a CTA to the matching tool for the clusters we're actively building.
+//
+// The four broad topics that used to be clusters here (card design,
+// reference, card makers, lore) are /learn CATEGORIES now, with their copy in
+// lib/content/article-categories.ts — their tag hubs 308 to /learn/<slug>
+// (proxy.ts), so a cluster entry for one of those tags would never be read.
 // ---------------------------------------------------------------------------
 
 export type Cluster = {
@@ -22,46 +27,6 @@ export type Cluster = {
 };
 
 const CLUSTERS: Record<string, Cluster> = {
-  lore: {
-    slug: "lore",
-    title: "MTG Lore for Card Designers",
-    intro:
-      "Magic's worlds explain its cards. These guides follow a piece of the story — a plane, its gods, a turning point — to the place it shows up on cardboard: a frame, a mechanic, a card type. They are written from Wizards of the Coast's own published story and design articles, with the sources listed, for people who want their custom cards to belong to a world as well as to the rules.",
-    blurb:
-      "MTG lore explained for custom card makers — the stories behind frames, mechanics and card types, with sources.",
-    toolHref: "/create",
-    toolLabel: "Open the card creator",
-  },
-  "card-design": {
-    slug: "card-design",
-    title: "Custom Card Design",
-    intro:
-      "Designing a custom Magic: The Gathering card is part rules, part instinct. These guides cover the craft end to end — costing a card fairly against the color pie, writing oracle text that reads like the real thing, designing every card type from creatures to planeswalkers, and catching the mistakes that make a homebrew card feel off before your playgroup ever sleeves it up.",
-    blurb:
-      "Guides on designing custom MTG cards — costing, the color pie, oracle text, every card type, and the mistakes to avoid.",
-    toolHref: "/mtg-card-maker",
-    toolLabel: "Open the card maker",
-  },
-  reference: {
-    slug: "reference",
-    title: "MTG Card Reference",
-    intro:
-      "The building blocks of every Magic card, explained for the people who make their own. Mana symbols, keyword abilities, card frames, rarity, and the anatomy of the card itself — the reference you reach for while you design, written to be accurate and quick to scan.",
-    blurb:
-      "A reference for custom-card makers: MTG mana symbols, keyword abilities, frames, rarity, and card anatomy.",
-    toolHref: "/mana-pip-editor",
-    toolLabel: "Open the pip editor",
-  },
-  "card-makers": {
-    slug: "card-makers",
-    title: "MTG Card Makers Compared",
-    intro:
-      "Which custom card maker should you use? These guides compare the tools people actually reach for — PipGlyph, Magic Set Editor, MTG Cardsmith, the Card Conjurer forks — on the things that matter when a card has to look printed: frame accuracy, live preview, export quality, sharing, and whether the tool will still be online next year.",
-    blurb:
-      "Honest comparisons of MTG card makers — PipGlyph, Magic Set Editor, MTG Cardsmith and Card Conjurer alternatives.",
-    toolHref: "/best-mtg-card-makers",
-    toolLabel: "See the full comparison",
-  },
   playtesting: {
     slug: "playtesting",
     title: "Playtesting & Printing",

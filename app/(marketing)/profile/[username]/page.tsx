@@ -193,14 +193,16 @@ async function ProfileDecks({ ownerId }: { ownerId: string }) {
   if (decks.length === 0) return null;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    // grid-cols-1 (minmax(0, 1fr)) + min-w-0: a long one-word deck title
+    // wraps instead of widening a 390 px page.
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {decks.map((deck) => {
         const made = madeOnPipGlyph(deck);
         return (
           <Link
             key={deck.id}
             href={`/deck/${deck.slug}`}
-            className="group block rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="group block min-w-0 rounded-frame focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={`Open ${deck.title}`}
           >
             <SurfaceCard className="flex h-full flex-col gap-2 p-5 transition-colors group-hover:border-border-strong">
@@ -210,7 +212,7 @@ async function ProfileDecks({ ownerId }: { ownerId: string }) {
                   {DECK_FORMAT_LABELS[deck.format]}
                 </Badge>
               </div>
-              <h3 className="font-display text-lg font-semibold text-foreground">
+              <h3 className="font-display text-lg font-semibold text-foreground [overflow-wrap:anywhere]">
                 {deck.title}
               </h3>
               <div className="mt-auto flex items-center justify-between text-xs text-muted">

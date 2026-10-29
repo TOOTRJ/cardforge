@@ -27,7 +27,11 @@ const PAGES = [
   "/faq",
   "/articles",
   "/articles/how-to-write-mtg-oracle-text",
-  "/articles/tag/card-design",
+  "/articles/tag/oracle-text",
+  "/learn",
+  "/learn/design",
+  "/tools",
+  "/news",
   "/best-mtg-card-makers",
 ];
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
+import { siteOpenGraph } from "@/lib/seo/share-metadata";
 
 // ---------------------------------------------------------------------------
 // SEO landing: /ai-mtg-card-generator
@@ -33,12 +34,12 @@ export const metadata: Metadata = {
   description:
     "PipGlyph is an AI-powered Magic: The Gathering card generator. Describe a concept and the AI drafts a balanced creature, instant, planeswalker, or land — original card, original art, ready to share.",
   alternates: { canonical: "/ai-mtg-card-generator" },
-  openGraph: {
+  openGraph: siteOpenGraph({
     title: "AI MTG Card Generator — Free Custom Magic Cards | PipGlyph",
     description:
       "Generate a complete MTG card from a one-sentence concept. AI drafts the rules text, mana cost, rarity, and flavor — you tweak and publish. Free, browser-based.",
     type: "article",
-  },
+  }),
 };
 
 const FEATURES = [

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 //     dynamic /browse sibling (query intact); junk params keep the
 //     CDN-cached page. A rewrite would be invisible to the client router,
 //     which reuses the cached static tree for same-path query changes;
+//   * the guide tag hubs that became /learn categories 308 to them;
 //   * a signed-in /pricing is rewritten to the dynamic pricing-member twin
 //     (server-rendered buttons, no anonymous flash); the internal path 308s;
 //   * a redirect from updateSession is never clobbered.
@@ -30,6 +31,7 @@ vi.mock("@/lib/supabase/middleware", async () => {
 });
 
 import { proxy } from "@/proxy";
+import { ARTICLE_CATEGORIES } from "@/lib/content/article-categories";
 
 const request = (path: string, cookie?: string) =>
   new NextRequest(`http://localhost:3000${path}`, cookie ? { headers: { cookie } } : undefined);
@@ -108,6 +110,18 @@ describe("proxy", () => {
     expect(response.status).toBe(308);
     expect(locationOf(response)).toBe("http://localhost:3000/pricing");
     expect(s.updateSession).not.toHaveBeenCalled();
+  });
+
+  it("308s each tag hub that became a /learn category to it (every category's tagSlug), query dropped", async () => {
+    for (const category of ARTICLE_CATEGORIES) {
+      const response = await proxy(request(`/articles/tag/${category.tagSlug}?utm_source=x`));
+      expect(response.status, category.tagSlug).toBe(308);
+      expect(locationOf(response), category.tagSlug).toBe(`http://localhost:3000/learn/${category.slug}`);
+    }
+    // The hubs that still stand are served as before.
+    const standing = await proxy(request("/articles/tag/oracle-text"));
+    expect(locationOf(standing)).toBeNull();
+    expect(s.updateSession).toHaveBeenCalledTimes(1);
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {

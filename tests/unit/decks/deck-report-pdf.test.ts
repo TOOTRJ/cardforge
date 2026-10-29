@@ -6,6 +6,7 @@ const analytics: DeckAnalytics = {
   byBoard: { commander: 1, companion: 0, main: 59, side: 0, maybe: 0 },
   total: 60,
   byStatus: { imported: 50, edited: 6, remix: 1, original: 3, not_found: 0 },
+  linked: 10,
   curve: [0, 8, 12, 10, 6, 3, 1, 1],
   byColor: { W: 0, U: 0, B: 30, R: 0, G: 25, C: 5 },
   multicolor: 0,
