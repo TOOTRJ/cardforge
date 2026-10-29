@@ -7,7 +7,11 @@
 // Pure.
 // ---------------------------------------------------------------------------
 
-import { languageForcesPrivate, type ProfanityField } from "@/lib/moderation/profanity";
+import {
+  languageForcesPrivate,
+  languageForcesPrivateByVisibility,
+  type ProfanityField,
+} from "@/lib/moderation/profanity";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { Card, Visibility } from "@/types/card";
 
@@ -51,6 +55,9 @@ function scanOf(values: FormValues, footerStored: boolean) {
   };
 }
 
+const storedOf = (context: CreatorLanguageContext) =>
+  context.stored ? { card: context.stored, visibility: context.stored.visibility } : null;
+
 /** The fields that make a save of `values` at `visibility` private — empty
  *  when it saves as asked. */
 export function creatorLanguageFields(
@@ -58,11 +65,7 @@ export function creatorLanguageFields(
   visibility: Visibility,
   context: CreatorLanguageContext,
 ): ProfanityField[] {
-  return languageForcesPrivate({
-    saved: scanOf(values, context.footerStored),
-    visibility,
-    stored: context.stored ? { card: context.stored, visibility: context.stored.visibility } : null,
-  });
+  return languageForcesPrivate({ saved: scanOf(values, context.footerStored), visibility, stored: storedOf(context) });
 }
 
 /** Which of the Publish step's two choices the text rules out, and the
@@ -72,9 +75,20 @@ export type StrongLanguageChoices = {
   unlisted: ProfanityField[];
 };
 
+/** Both choices from ONE read of the form's text — what
+ *  `creatorLanguageFields` says for "public" and for "unlisted". */
 export function strongLanguageChoices(values: FormValues, context: CreatorLanguageContext): StrongLanguageChoices {
-  return {
-    public: creatorLanguageFields(values, "public", context),
-    unlisted: creatorLanguageFields(values, "unlisted", context),
-  };
+  return languageForcesPrivateByVisibility({ saved: scanOf(values, context.footerStored), stored: storedOf(context) });
 }
+
+const NOTHING_RULED_OUT: ProfanityField[] = [];
+Object.freeze(NOTHING_RULED_OUT);
+
+/** What the Publish step is handed while it is not on screen: nothing ruled
+ *  out. One frozen value, so a render that skips the check hands the same
+ *  object every time. The form computes the real choices only on the
+ *  Publish step (its one reader); the save runs its own check. */
+export const NO_STRONG_LANGUAGE: StrongLanguageChoices = Object.freeze({
+  public: NOTHING_RULED_OUT,
+  unlisted: NOTHING_RULED_OUT,
+});
