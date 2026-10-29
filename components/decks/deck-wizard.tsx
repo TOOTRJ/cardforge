@@ -17,17 +17,17 @@
 // format hub's "Build a <format> deck" (`?format=` on the page).
 // ---------------------------------------------------------------------------
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, FileText, Loader2, Sparkles, SquarePen } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Loader2, Plus, Sparkles, SquarePen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Stepper, type StepperStep } from "@/components/ui/stepper";
 import { FieldGroup, inputClass, textareaClass } from "@/components/creator/field-group";
 import { CoverField } from "@/components/decks/deck-creator-form";
-import { ComingSoonBadge, DeckAiPausedReason } from "@/components/decks/deck-ai-coming-soon";
+import { ComingSoonBadge, ComingSoonSuffix } from "@/components/decks/deck-ai-coming-soon";
 import { createDeckAction } from "@/lib/decks/actions";
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import { cn } from "@/lib/utils";
@@ -277,7 +277,7 @@ export function DeckWizard({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" aria-hidden />
+                    <Plus className="h-4 w-4" aria-hidden />
                     Create deck
                   </>
                 )}
@@ -306,7 +306,8 @@ export function DeckWizard({
 }
 
 /** One build choice. A `comingSoon` tile is greyed: `aria-disabled`, still
- *  reachable, its reason in its name, and no click handler (TODO DK1.1). */
+ *  reachable, no click handler (TODO DK1.1); its name is its title "— coming
+ *  soon" and its visible body (the reason) is its description. */
 function BuildTile({
   active,
   comingSoon = false,
@@ -322,12 +323,15 @@ function BuildTile({
   body: string;
   onClick?: () => void;
 }) {
+  const id = useId();
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
       aria-disabled={comingSoon || undefined}
+      aria-labelledby={comingSoon ? `${id}-title` : undefined}
+      aria-describedby={comingSoon ? `${id}-body` : undefined}
       onClick={comingSoon ? undefined : onClick}
       className={cn(
         "flex flex-col gap-2 rounded-xl border p-4 text-left transition-colors",
@@ -346,11 +350,11 @@ function BuildTile({
         </span>
         {comingSoon ? <ComingSoonBadge /> : null}
       </span>
-      <span className="font-display text-base font-semibold text-foreground">
+      <span id={`${id}-title`} className="font-display text-base font-semibold text-foreground">
         {title}
-        {comingSoon ? <DeckAiPausedReason /> : null}
+        {comingSoon ? <ComingSoonSuffix /> : null}
       </span>
-      <span className="text-xs leading-5 text-muted" aria-hidden={comingSoon || undefined}>
+      <span id={`${id}-body`} className="text-xs leading-5 text-muted">
         {body}
       </span>
     </button>

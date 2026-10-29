@@ -3,8 +3,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { DeckGuideUpgradeButton } from "@/components/decks/deck-analyze-button";
-import { DeckAiComingSoonButton } from "@/components/decks/deck-ai-coming-soon";
+import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import type { DeckGuide } from "@/lib/decks/guides";
+
+/** The visible "AI deck building is paused" line the greyed button points at. */
+const PAUSED_NOTE_ID = "deck-guide-paused-note";
 
 // ---------------------------------------------------------------------------
 // DeckGuideSection — the AI "how to play" section on the deck page.
@@ -63,16 +66,27 @@ export function DeckGuideSection({
     );
   }
 
-  // The owner's analyze / refresh, greyed while deck AI is paused (D4). The
-  // same viewers as before the pause see it: a Pro owner, AI configured, a
-  // deck with cards.
+  // The owner's analyze / refresh, greyed while deck AI is paused (D4), with
+  // the one visible line that says why under it. The same viewers as before
+  // the pause see it: a Pro owner, AI configured, a deck with cards.
   const ownerAction =
     isOwner && aiConfigured && hasCards ? (
-      guide ? (
-        <DeckAiComingSoonButton label="Refresh analysis" icon={<RefreshCw className="h-4 w-4" aria-hidden />} />
-      ) : (
-        <DeckAiComingSoonButton label="Analyze this deck" icon={<Sparkles className="h-4 w-4" aria-hidden />} />
-      )
+      <div className="flex flex-col items-start gap-1.5 md:items-end">
+        {guide ? (
+          <DeckAiComingSoonButton
+            label="Refresh analysis"
+            icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+            describedBy={PAUSED_NOTE_ID}
+          />
+        ) : (
+          <DeckAiComingSoonButton
+            label="Analyze this deck"
+            icon={<Sparkles className="h-4 w-4" aria-hidden />}
+            describedBy={PAUSED_NOTE_ID}
+          />
+        )}
+        <DeckAiPausedNote id={PAUSED_NOTE_ID} className="max-w-xs md:text-right" />
+      </div>
     ) : null;
 
   if (!guide) {
@@ -84,7 +98,7 @@ export function DeckGuideSection({
         <PageHeader
           eyebrow="How to play"
           title="Game plan & combos"
-          description="An AI primer for this deck — game plan, mulligans, combos and weaknesses. New deck guides are paused while we rebuild decks; they're coming back soon."
+          description="An AI primer for this deck — game plan, mulligans, combos and weaknesses."
           actions={ownerAction}
         />
       </section>

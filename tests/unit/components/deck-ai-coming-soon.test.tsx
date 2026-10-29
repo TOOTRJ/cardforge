@@ -8,9 +8,10 @@ import { chipOff } from "../helpers/chip";
 // AI deck building is paused (owner 2026-10-28, TODO DK1.1 / DK1.2,
 // lib/ai/deck-ai-pause.ts). Every deck AI control is the ONE "Coming soon"
 // pattern (components/decks/deck-ai-coming-soon.tsx): aria-disabled — never
-// `disabled` — its reason in its accessible name, and INERT (chipOff throws
-// on a greyed control that still has a click handler). And the owner's
-// decisions on the deck page:
+// `disabled` — and INERT (chipOff throws on a greyed control that still has
+// a click handler), a SHORT name ("Add with AI — coming soon") and, as its
+// description, the ONE visible line that says why. And the owner's decisions
+// on the deck page:
 //   D4 — guides that exist stay readable to the same viewers; no new guide
 //        and no refresh; the non-Pro teaser only on a deck that HAS one;
 //   D6 — the Regenerate bar re-runs failed steps for NEW credits: greyed.
@@ -42,7 +43,7 @@ vi.mock("@/components/decks/delete-deck-dialog", () => ({
   DeleteDeckDialog: () => <button type="button">Delete deck</button>,
 }));
 
-import { DeckAiComingSoonButton } from "@/components/decks/deck-ai-coming-soon";
+import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
 import { DeckOwnerTools } from "@/components/decks/deck-owner-tools";
@@ -63,14 +64,20 @@ const GUIDE: DeckGuide = {
   generated_at: "2026-10-01T00:00:00.000Z",
 };
 
-/** A greyed deck AI control: aria-disabled, inert, the reason in its name. */
-function expectComingSoon(control: HTMLElement, label: RegExp) {
+/** A greyed deck AI control: aria-disabled, inert, a short name, and the
+ *  one VISIBLE reason line as its description. Returns that line. */
+function expectComingSoon(name: string, role: "button" | "radio" = "button"): HTMLElement {
+  const control = screen.getByRole(role, { name });
   expect(control.getAttribute("aria-disabled")).toBe("true");
   expect(control.hasAttribute("disabled")).toBe(false);
   expect(chipOff(control)).toBe(true);
-  const name = control.textContent ?? "";
-  expect(name).toMatch(label);
-  expect(name).toContain(DECK_AI_PAUSED_MESSAGE);
+  expect(control.textContent).toMatch(/Coming soon/);
+  const noteId = control.getAttribute("aria-describedby");
+  const note = noteId ? document.getElementById(noteId) : null;
+  expect(note, `${name} is described by a line`).not.toBeNull();
+  expect(note!.textContent).toBe(DECK_AI_PAUSED_MESSAGE);
+  expect(note!.className).not.toMatch(/sr-only/);
+  return note!;
 }
 
 const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true, batch: null }), { status: 200 }));
@@ -87,16 +94,19 @@ afterEach(() => {
 });
 
 describe("the Coming soon button", () => {
-  it("is aria-disabled (never disabled), inert, and says why in its name", () => {
-    render(<DeckAiComingSoonButton label="Add with AI" />);
-    const button = screen.getByRole("button", { name: /add with ai/i });
-    expectComingSoon(button, /^Add with AI/);
-    expect(screen.getByRole("button", { name: /coming soon: AI deck building is paused/i })).toBe(button);
+  it("is aria-disabled (never disabled), inert, named short and described by the visible line", () => {
+    render(
+      <>
+        <DeckAiComingSoonButton label="Add with AI" describedBy="why" />
+        <DeckAiPausedNote id="why" />
+      </>,
+    );
+    expectComingSoon("Add with AI — coming soon");
   });
 });
 
 describe("the deck page's owner tools", () => {
-  it("Add with AI and Remix with AI are Coming soon; edit, import and delete are untouched", () => {
+  it("Add with AI and Remix with AI are Coming soon beside ONE visible reason; edit, import and delete are untouched", () => {
     render(
       <DeckOwnerTools
         deck={{ id: "deck-1", title: "Gorgon Gaze" } as Deck}
@@ -108,13 +118,15 @@ describe("the deck page's owner tools", () => {
         aiSeed={{ theme: "gorgons", style: "ink" }}
       />,
     );
-    expectComingSoon(screen.getByRole("button", { name: /^add with ai/i }), /Add with AI/);
-    expectComingSoon(screen.getByRole("button", { name: /^remix with ai/i }), /Remix with AI/);
+    const add = expectComingSoon("Add with AI — coming soon");
+    const remix = expectComingSoon("Remix with AI — coming soon");
+    expect(add).toBe(remix);
+    expect(screen.getAllByText(DECK_AI_PAUSED_MESSAGE)).toHaveLength(1);
     for (const name of [/edit details/i, /import decklist/i, /delete deck/i]) {
       expect(screen.getByRole("button", { name }).getAttribute("aria-disabled")).toBeNull();
     }
     // Nothing opens: no AI dialog exists any more.
-    fireEvent.click(screen.getByRole("button", { name: /^add with ai/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Add with AI — coming soon" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
@@ -147,17 +159,17 @@ describe("the deck guide section (D4)", () => {
     section({ guide: GUIDE, viewerIsPro: true });
     expect(screen.getByText(GUIDE.overview)).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText(DECK_AI_PAUSED_MESSAGE)).toBeNull();
     cleanup();
     section({ guide: GUIDE, viewerIsPro: true, isOwner: true });
     expect(screen.getByText(GUIDE.overview)).toBeTruthy();
-    expectComingSoon(screen.getByRole("button", { name: /refresh analysis/i }), /Refresh analysis/);
+    expectComingSoon("Refresh analysis — coming soon");
   });
 
-  it("no guide: the Pro owner sees Analyze greyed; anyone else sees nothing", () => {
+  it("no guide: the Pro owner sees Analyze greyed with the reason; anyone else sees nothing", () => {
     section({ viewerIsPro: true, isOwner: true });
-    const analyze = screen.getByRole("button", { name: /analyze this deck/i });
-    expectComingSoon(analyze, /Analyze this deck/);
-    expect(analyze.textContent).not.toMatch(/credit/i);
+    expectComingSoon("Analyze this deck — coming soon");
+    expect(screen.getByRole("button", { name: "Analyze this deck — coming soon" }).textContent).not.toMatch(/credit/i);
     cleanup();
     const { container } = section({ viewerIsPro: true, isOwner: false });
     expect(container.textContent).toBe("");
@@ -169,10 +181,10 @@ describe("the deck guide section (D4)", () => {
 });
 
 describe("the Regenerate bar (D6: a regenerate reserves new credits)", () => {
-  it("still says what didn't generate, and Regenerate is Coming soon", () => {
+  it("still says what didn't generate and why, and Regenerate is Coming soon", () => {
     render(<DeckRegenerateBar jobId="job-1" failedCount={2} failedLabels={["Goblin Grin", "Ember Imp"]} />);
     expect(screen.getByText(/2 cards didn't generate/)).toBeTruthy();
-    expectComingSoon(screen.getByRole("button", { name: /regenerate them/i }), /Regenerate them/);
+    expectComingSoon("Regenerate them — coming soon");
   });
 });
 
@@ -187,9 +199,8 @@ describe("the new-deck wizard", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     toBuildStep();
     expect(screen.getByRole("radio", { name: /import a decklist/i }).getAttribute("aria-checked")).toBe("true");
-    const ai = screen.getByRole("radio", { name: /generate with ai/i });
-    expectComingSoon(ai, /Generate with AI/);
-    expect(ai.getAttribute("aria-checked")).toBe("false");
+    expectComingSoon("Generate with AI — coming soon", "radio");
+    expect(screen.getByRole("radio", { name: "Generate with AI — coming soon" }).getAttribute("aria-checked")).toBe("false");
     // No AI builder anywhere in the wizard.
     expect(screen.queryByText(/ai deck builder/i)).toBeNull();
     expect(screen.queryByRole("button", { name: /theme ideas/i })).toBeNull();

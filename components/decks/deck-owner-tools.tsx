@@ -8,7 +8,8 @@
 //                    visibility, cover + focal point)
 //   Import         → the decklist import dialog (auto-opens with ?import=1)
 //   Add with AI    → "Coming soon" while deck AI is paused (TODO DK1,
-//   Remix with AI     lib/ai/deck-ai-pause.ts): greyed, no dialog
+//   Remix with AI     lib/ai/deck-ai-pause.ts): greyed, no dialog, with the
+//                     one visible line that says why
 //   Delete         → the existing confirm dialog
 //
 // Pencil icons elsewhere on the page open the same dialogs by dispatching
@@ -28,13 +29,15 @@ import {
 import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { ImportDecklistDialog } from "@/components/decks/import-decklist-dialog";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
-import { DeckAiComingSoonButton } from "@/components/decks/deck-ai-coming-soon";
+import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
 export type DeckTool = "details";
 const EVENT = "pipglyph:deck-tool";
+/** The visible "AI deck building is paused" line the greyed tools point at. */
+const PAUSED_NOTE_ID = "deck-ai-paused-note";
 
 /** A small pencil (or any child) that opens one of the owner dialogs. */
 export function DeckToolButton({
@@ -97,8 +100,21 @@ export function DeckOwnerTools({
         <Pencil className="h-4 w-4" aria-hidden /> Edit details
       </Button>
       <ImportDecklistDialog deckId={deck.id} defaultOpen={openImport} />
-      <DeckAiComingSoonButton label="Add with AI" icon={<Sparkles className="h-4 w-4" aria-hidden />} />
-      <DeckAiComingSoonButton label="Remix with AI" icon={<Wand2 className="h-4 w-4" aria-hidden />} />
+      {/* The greyed AI tools and the one line that says why, kept together
+          on their own row (TODO DK1). */}
+      <div className="flex basis-full flex-wrap items-center gap-2">
+        <DeckAiComingSoonButton
+          label="Add with AI"
+          icon={<Sparkles className="h-4 w-4" aria-hidden />}
+          describedBy={PAUSED_NOTE_ID}
+        />
+        <DeckAiComingSoonButton
+          label="Remix with AI"
+          icon={<Wand2 className="h-4 w-4" aria-hidden />}
+          describedBy={PAUSED_NOTE_ID}
+        />
+        <DeckAiPausedNote id={PAUSED_NOTE_ID} className="basis-full" />
+      </div>
       <DeleteDeckDialog deckId={deck.id} deckTitle={deck.title} triggerVariant="ghost" />
 
       <Dialog open={open === "details"} onOpenChange={(next) => !next && setOpen(null)}>

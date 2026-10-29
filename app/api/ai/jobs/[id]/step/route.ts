@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkAiRateLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 import { notifyDeckJobFinished } from "@/lib/ai/job-notify";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs/[id]/step — execute one step of a generation job (one
@@ -13,6 +15,14 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 // while steps remain; passing { step } retries a specific failed step.
 // One image generation per call keeps every invocation well under the
 // function timeout regardless of batch size.
+//
+// While AI deck building is paused (owner 2026-10-28, TODO DK1 — D6,
+// lib/ai/deck-ai-pause.ts) a FAILED step of a deck build or deck remix is
+// not re-run: its credit was refunded, so a re-run reserves a new one and
+// calls the AI — new deck AI. It is refused before the rate limit, the
+// claim (claim_job_step accepts a failed step by key) and any charge. The
+// pending and running steps of a job still running are untouched: work
+// already paid for finishes.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -21,6 +31,22 @@ export const maxDuration = 180;
 const requestSchema = z.object({
   step: z.string().max(40).optional(),
 });
+
+/** A retry of a deck job's failed step — what the pause refuses. Read
+ *  through the caller's own session (RLS: owners read only their jobs); a
+ *  job it can't read is left to runNextJobStep's "Job not found". */
+async function isPausedDeckRetry(jobId: string, stepKey: string): Promise<boolean> {
+  if (!isUuid(jobId)) return false;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_generation_jobs")
+    .select("kind, steps")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!data || (data.kind !== "deck" && data.kind !== "deck_remix")) return false;
+  const steps = Array.isArray(data.steps) ? (data.steps as Array<{ key?: unknown; status?: unknown }>) : [];
+  return steps.some((step) => step?.key === stepKey && step?.status === "failed");
+}
 
 export async function POST(
   request: Request,
@@ -37,11 +63,6 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Sign in." }, { status: 401 });
   }
 
-  const rate = await checkAiRateLimit(user.id);
-  if (!rate.ok) {
-    return rateLimitedResponse(rate);
-  }
-
   let stepKey: string | undefined;
   try {
     const body = await request.json();
@@ -52,6 +73,17 @@ export async function POST(
   }
 
   const { id } = await params;
+  // Only a keyed request can name a failed step (the unkeyed one claims the
+  // next pending step), so only it pays for the read.
+  if (stepKey && isDeckAiPaused() && (await isPausedDeckRetry(id, stepKey))) {
+    return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
+  }
+
+  const rate = await checkAiRateLimit(user.id);
+  if (!rate.ok) {
+    return rateLimitedResponse(rate);
+  }
+
   const result = await runNextJobStep(id, stepKey);
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

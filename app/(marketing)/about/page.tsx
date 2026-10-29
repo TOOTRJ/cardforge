@@ -68,7 +68,7 @@ export default function AboutPage() {
         </li>
         <li>
           AI on demand: generate any single field, get three costed ideas for a
-          theme, draft a whole card from a concept, or restyle a card&apos;s art
+          theme, or draft a whole card from a concept
         </li>
         <li>
           Decks: import a decklist from the popular deck sites, remix real

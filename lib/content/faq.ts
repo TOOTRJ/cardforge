@@ -105,7 +105,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   },
   {
     q: "Can the AI generate artwork for my card?",
-    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image with an AI image model. The image lands in your card's art slot and you can replace it with your own upload at any time — or use the AI remix to restyle art you already have. Generated artwork is yours to use for your custom cards.",
+    a: "Yes. After the AI drafts the card's text, it composes a vivid art prompt and generates a single original image with an AI image model. The image lands in your card's art slot and you can replace it with your own upload at any time. Generated artwork is yours to use for your custom cards.",
   },
   {
     q: "Is the AI random card generator free?",
