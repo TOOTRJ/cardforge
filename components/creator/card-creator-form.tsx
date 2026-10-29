@@ -3506,7 +3506,9 @@ export function CardCreatorForm({
         setValue("artist_credit", fill.artist_credit, { shouldDirty: true });
       }
     }
-    if (fill.deck_id && mode === "create") {
+    // Never in the deck-card flow: that card is linked into its own deck on
+    // save, and a second deck_id would add it to a deck twice.
+    if (fill.deck_id && mode === "create" && !deckRemix) {
       setValue("deck_id", fill.deck_id, { shouldDirty: true });
     }
     // A two-part card's second part (the AI dialog, PR 2): into the same
@@ -5337,7 +5339,7 @@ export function CardCreatorForm({
               <PublishPanel
                 userId={userId}
                 activeChallenge={activeChallenge}
-                myDecks={isRevise ? null : myDecks}
+                myDecks={isRevise || deckRemix ? null : myDecks}
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}

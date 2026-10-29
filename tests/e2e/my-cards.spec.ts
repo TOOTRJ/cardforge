@@ -85,7 +85,12 @@ test.describe("dashboard overview + My Cards", () => {
     await signIn(page);
     await saveDraft(page, title);
 
-    await page.goto("/dashboard/cards");
+    // The editor's post-save router.refresh() can start after networkidle on
+    // a busy runner, and a goto it overtakes is aborted (net::ERR_ABORTED):
+    // retry the navigation until it lands.
+    await expect(async () => {
+      await page.goto("/dashboard/cards");
+    }).toPass({ timeout: 20_000 });
     await expect(page.getByRole("heading", { name: /^my cards$/i })).toBeVisible();
 
     // Default: large grid, newest edit first.

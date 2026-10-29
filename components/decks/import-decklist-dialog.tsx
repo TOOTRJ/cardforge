@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -63,6 +63,22 @@ export function ImportDecklistDialog({
   const [parseWarnings, setParseWarnings] = useState<ParseWarning[]>([]);
   const [isResolving, startResolving] = useTransition();
   const [isCommitting, startCommitting] = useTransition();
+
+  // Opened by `?import=1` (the new-deck wizard's import path): the flag
+  // leaves the address bar once the dialog is up, so a reload or a shared
+  // link doesn't open it again. Through the router, never a bare
+  // history.replaceState: on a hard load this effect runs before the app
+  // router's own (a child's effects run first), so Next would not hear of
+  // it and its next history write would put the flag back. The dialog's
+  // state outlives the re-render (same place in the tree).
+  useEffect(() => {
+    if (!defaultOpen) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("import") !== "1") return;
+    url.searchParams.delete("import");
+    router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the mount that opened it
+  }, []);
 
   const reset = () => {
     setStep("paste");
@@ -232,7 +248,12 @@ export function ImportDecklistDialog({
               {lines.map((line, index) =>
                 line.quantity === 0 ? null : (
                   <ReviewRow
-                    key={`${line.line}-${line.name}-${line.board}`}
+                    // The row's place in this review: `lines` keeps its
+                    // order and length until the next "Preview import"
+                    // (a removal sets the quantity to 0). Never a key
+                    // holding a field the row edits — a Board change
+                    // remounted the row and dropped the focus (audit M6).
+                    key={index}
                     line={line}
                     onChange={(patch) => updateLine(index, patch)}
                   />

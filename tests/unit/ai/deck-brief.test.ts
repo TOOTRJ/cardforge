@@ -9,6 +9,7 @@ function analytics(over: Partial<DeckAnalytics> = {}): DeckAnalytics {
     remixed: 0,
     curve: [2, 8, 10, 9, 5, 2, 1, 0],
     byColor: { W: 0, U: 30, B: 0, R: 4, G: 0, C: 0 },
+    multicolor: 0,
     byType: { Battle: 0, Planeswalker: 1, Creature: 26, Instant: 6, Sorcery: 4, Artifact: 0, Enchantment: 0, Land: 23, Other: 0 },
     lands: 23,
     averageManaValue: 2.7,

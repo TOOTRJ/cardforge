@@ -97,6 +97,10 @@ export function validateDeck(
   format: DeckFormat,
   entries: Entry[],
 ): DeckWarning[] {
+  // An empty deck (nothing outside the maybeboard) has nothing to check
+  // yet — a brand-new deck was told it is 100 cards short and has no
+  // commander (deck audit 2026-10-28, M5).
+  if (!entries.some((entry) => entry.board !== "maybe" && entry.quantity > 0)) return [];
   const spec = FORMAT_SPECS[format];
   const warnings: DeckWarning[] = [];
 

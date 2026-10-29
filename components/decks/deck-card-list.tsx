@@ -6,7 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
-import { entryTypeLine, typeBucketFor, TYPE_BUCKETS } from "@/lib/decks/analytics";
+import {
+  entryTypeLine,
+  typeBucketFor,
+  TYPE_BUCKET_PLURALS,
+  TYPE_BUCKETS,
+} from "@/lib/decks/analytics";
 import { deckEntryState } from "@/types/deck";
 import type { DeckItem } from "@/lib/decks/queries";
 import type { DeckBoard } from "@/types/deck";
@@ -304,7 +309,7 @@ function BoardGroups({
         return (
           <SurfaceCard key={bucket} className="flex flex-col gap-1 p-4">
             <span className="mb-1 text-xs font-semibold uppercase tracking-wider text-subtle">
-              {bucket === "Other" ? "Other" : `${bucket}s`} · {bucketCount}
+              {TYPE_BUCKET_PLURALS[bucket]} · {bucketCount}
             </span>
             <ul className="flex flex-col">
               {bucketItems.map((item) => (
