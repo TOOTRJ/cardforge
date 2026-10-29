@@ -6,7 +6,10 @@
 --    is no admin (0091's owner_is_admin) and has at least one PUBLIC card of
 --    its own — a creator, not a throwaway account. Every place that asks
 --    reads this function, never a restated predicate: another user's deck
---    on a card's page (section 1) and the decks that may trend (section 2).
+--    on a card's page (section 1), the decks that may trend (section 2) and
+--    the /creators directory — 0148's list_public_creators is redefined over
+--    it here (same signature, result and people; its `not owner_is_admin`
+--    filter on makers who already own a public card becomes the call).
 --
 -- 1. ONE RULE FOR "THE PUBLIC DECKS THAT NAME A CARD" (DK8.4; owner decision
 --    2026-10-29, first written as 0144's public_decks_containing_card). A
@@ -82,7 +85,8 @@
 -- Grants: the three readers and trending (and owner_is_creator and the
 -- pairs function they call — an invoker's callee needs EXECUTE too) are
 -- public reads: PUBLIC revoked, EXECUTE to anon, authenticated and
--- service_role.
+-- service_role. list_public_creators keeps 0148's signature and grants
+-- (`create or replace` keeps its ACL; restated).
 -- public_decks_containing_card keeps its signature (`create or replace` keeps
 -- its ACL; restated). notify_deck_cards_added and the three trigger
 -- functions are invoked by triggers alone (EXECUTE revoked from PUBLIC and
@@ -116,6 +120,104 @@ $$;
 
 revoke all on function public.owner_is_creator(uuid) from public;
 grant execute on function public.owner_is_creator(uuid) to anon, authenticated, service_role;
+
+-- 0148's /creators directory, over the one answer: its makers (owners of a
+-- public card) are kept where they are real creators — the same people as
+-- 0148's `not owner_is_admin(...)` (a maker has a public card by its own
+-- definition). Same signature, result, order and paging; only that filter
+-- changes. The makers CTE stays MATERIALIZED, so the call is once per maker.
+create or replace function public.list_public_creators(
+  p_sort text default 'cards',
+  p_limit integer default 24,
+  p_offset integer default 0
+)
+returns table (
+  id uuid,
+  username text,
+  display_name text,
+  avatar_url text,
+  public_cards bigint,
+  public_decks bigint,
+  likes bigint,
+  last_card_at timestamptz,
+  recent_card_ids uuid[],
+  total bigint
+)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with makers as materialized (
+    select
+      c.owner_id,
+      count(*)::bigint as public_cards,
+      coalesce(sum(c.likes_count), 0)::bigint as likes,
+      max(c.created_at) as last_card_at
+    from public.cards c
+    where c.visibility = 'public'
+    group by c.owner_id
+  ),
+  ranked as (
+    select
+      m.owner_id,
+      p.username,
+      p.display_name,
+      p.avatar_url,
+      m.public_cards,
+      m.likes,
+      m.last_card_at,
+      row_number() over (
+        order by
+          case when p_sort = 'recent' then m.last_card_at end desc nulls last,
+          case when p_sort = 'liked' then m.likes end desc nulls last,
+          m.public_cards desc,
+          m.last_card_at desc,
+          p.username asc
+      ) as rn,
+      count(*) over () as total
+    from makers m
+    join public.profiles p on p.id = m.owner_id
+    where public.owner_is_creator(m.owner_id)
+  ),
+  page as (
+    select r.*
+    from ranked r
+    order by r.rn
+    limit greatest(1, least(coalesce(p_limit, 24), 60))
+    offset greatest(0, coalesce(p_offset, 0))
+  )
+  select
+    pg.owner_id as id,
+    pg.username,
+    pg.display_name,
+    pg.avatar_url,
+    pg.public_cards,
+    (
+      select count(*)
+      from public.decks d
+      where d.owner_id = pg.owner_id
+        and d.visibility = 'public'
+        and exists (select 1 from public.deck_cards dc where dc.deck_id = d.id)
+    )::bigint as public_decks,
+    pg.likes,
+    pg.last_card_at,
+    array(
+      select c.id
+      from public.cards c
+      where c.owner_id = pg.owner_id
+        and c.visibility = 'public'
+      order by c.created_at desc, c.id
+      limit 3
+    ) as recent_card_ids,
+    pg.total
+  from page pg
+  order by pg.rn;
+$$;
+
+revoke all on function public.list_public_creators(text, integer, integer) from public;
+grant execute on function public.list_public_creators(text, integer, integer)
+  to anon, authenticated, service_role;
 
 -- ===========================================================================
 -- 1. The public decks that name a card: one rule

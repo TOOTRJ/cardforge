@@ -1824,7 +1824,8 @@ Rules and gotchas:
   "In decks", the "Decks with this card" tiles and the JSON-LD `isPartOf`
   are that one list, never a second read). Since 0149 "a real creator" is
   ONE function, `owner_is_creator(owner)` (no admin, a public card of their
-  own — the anti-spam rule; trending reads it too, never a restated
+  own — the anti-spam rule; trending and /creators' `list_public_creators`
+  read it too, never a restated
   predicate), and the rule lives in ONE
   function, `public_deck_card_pairs`, which that list, the gallery tile's
   batched "In N decks" (`public_deck_counts_for_cards` →

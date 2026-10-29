@@ -93,6 +93,44 @@ describe("0149 — one rule for a card's public decks", () => {
     expect(SQL.match(/public\.owner_is_creator\(d\.owner_id\)/g)?.length).toBe(2);
   });
 
+  it("/creators (0148's list_public_creators) is redefined over owner_is_creator — 0148's body otherwise word for word", () => {
+    const body0148 = squash(
+      fnBody(strip(readFileSync(join(dir, "0148_creators_and_requested_frames.sql"), "utf8")), "list_public_creators"),
+    );
+    const body = squash(fnBody(SQL, "list_public_creators"));
+    expect(body0148).toContain("where not public.owner_is_admin(m.owner_id)");
+    expect(body).toBe(
+      body0148.replace("where not public.owner_is_admin(m.owner_id)", "where public.owner_is_creator(m.owner_id)"),
+    );
+    // Same signature and grants (create or replace keeps the ACL; restated).
+    expect(squash(SQL)).toContain(
+      "create or replace function public.list_public_creators( p_sort text default 'cards', p_limit integer default 24, p_offset integer default 0 ) returns table ( id uuid, username text, display_name text, avatar_url text, public_cards bigint, public_decks bigint, likes bigint, last_card_at timestamptz, recent_card_ids uuid[], total bigint )",
+    );
+    expect(squash(SQL)).toContain(
+      "grant execute on function public.list_public_creators(text, integer, integer) to anon, authenticated, service_role;",
+    );
+  });
+
+  it("after 0149 the creator clause appears ONCE among the current definitions of every function that asks it", () => {
+    // The latest definition of each function across the migrations: 0148's
+    // list_public_creators is superseded by 0149's, so the clause — "not
+    // owner_is_admin" beside "a public card of their own" — lives in
+    // owner_is_creator alone.
+    const files = ["0148_creators_and_requested_frames.sql", "0149_deck_tiles_trending.sql"];
+    const latest = new Map<string, string>();
+    for (const file of files) {
+      const text = strip(readFileSync(join(dir, file), "utf8"));
+      for (const name of ["owner_is_creator", "public_deck_card_pairs", "list_trending_decks", "list_public_creators"]) {
+        if (text.includes(`create or replace function public.${name}(`)) latest.set(name, squash(fnBody(text, name)));
+      }
+    }
+    const admins = [...latest].filter(([, body]) => body.includes("owner_is_admin(")).map(([name]) => name);
+    expect(admins).toEqual(["owner_is_creator"]);
+    for (const name of ["public_deck_card_pairs", "list_trending_decks", "list_public_creators"]) {
+      expect(latest.get(name), name).toContain("public.owner_is_creator(");
+    }
+  });
+
   it("the list keeps 0144's signature, order and cap (create or replace keeps its ACL)", () => {
     expect(SQL).toContain("create or replace function public.public_decks_containing_card(p_card_id uuid, p_limit integer default 5)");
     expect(SQL).toContain("returns table (slug text, title text)");

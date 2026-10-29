@@ -341,3 +341,8 @@ instead. Each bullet: what the header says, and what is true now.
   on every plan; paid conversion is saved-card capacity, 0104). The trigger,
   `enforce_deck_capacity()` and the helper are gone; 0145 never changed a
   row, so nothing was restored.
+- **0148 (`list_public_creators` keeps its makers with `not
+  owner_is_admin(owner)`)** — since 0149 that filter is the shared
+  `owner_is_creator(owner)` (no admin, a public card of their own — the
+  card pages' and trending's anti-spam rule); the same people, signature,
+  result and order.
