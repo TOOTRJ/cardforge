@@ -63,6 +63,8 @@ import {
   M15PW_HOLO_STAMP_OVAL,
   M15_HOLO_STAMP_KEEP_OUT,
   M15_HOLO_STAMP_OVAL,
+  PREPARE_HOLO_STAMP_KEEP_OUT,
+  PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
@@ -575,6 +577,12 @@ export type FrameOverlaySlot =
       /** The stamp this notch is cut for: its shape, the oval the art
        *  bitmap fills and the rules keep-out over the arch. */
       stamp: HoloStampArt;
+      /** Key a two-colour card's notch by the MASTER drawn (`wu`, or the
+       *  hybrid dress's `wu-h`), not by the pair alone: the Prepare notch
+       *  (TODO 4.27b) is its master's foot lifted, and its top edge is cut
+       *  against the strip under the page, which the two dresses paint
+       *  differently. Absent: one piece per pair serves both dresses. */
+      keyByMaster?: true;
     });
 
 export type FrameOverlayAnatomy = FrameOverlaySlot["anatomy"];
@@ -5765,6 +5773,24 @@ const EXTENDEDARTLAND: FrameProfile = {
   artifactMasterKeys: undefined,
 };
 
+// The extended-art PREPARE dress (TODO 4.27b): 29 printings (SOS #309–342,
+// SOC #63–98, FRA #425–430) print the extended-art frame — the art to the
+// side edges between the title bar and the BLACK type bar — over the Prepare
+// frame's lower half. Masters: PipGlyph's merge of the published extendedart
+// and prepare masters (scripts/build-prepare-frames.mjs --only extended,
+// PREPARE_EXTENDED in scripts/lib/prepare-2026.mjs: the pack is M15's pixels
+// below its type bar), so the slots are the Prepare frame's with the
+// extended-art top: its art slot, white type ink and the set symbol's
+// keyline. The colourless key is the pack's silver artifact frame (no
+// see-through master, no artifact master key).
+const EXTENDEDARTPREPARE: FrameProfile = {
+  ...PREPARE,
+  label: "Extended Art Prepare",
+  setSymbolKeyline: SET_SYMBOL_KEYLINE,
+  artSlot: EXTENDED_ART_SLOT,
+  type: { ...PREPARE.type, colorHex: "#ffffff" },
+};
+
 // The Zendikar Expeditions (TODO 4.11 wave 1, layout
 // EXPEDITION_CC_LAYOUT_VERSION) — Card Conjurer's two Expedition packs,
 // 1500 × 2100 native (frames bucket; the 375 px MSE masters left git). Both
@@ -6759,6 +6785,48 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The holofoil stamp's notch on the PREPARE frame (TODO 4.27b): print
+ * arches the text box's foot — its bottom bevel, the pinline and the black
+ * border — over the oval across the creature's box AND the strip under the
+ * page (the page's outline ends on the arch; 79 of 119 paper printings, every
+ * rare and mythic). M15's piece is cut for one box, so ours is PipGlyph's
+ * own derivation (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/prepare-2026.mjs PREPARE_STAMP): each Prepare master's own
+ * foot LIFTED along print's arch (35.8 px at the centre, from x 657 to 843 —
+ * the same set's M15 arch within 1 px), 192 × 60 px at 654, 1890, 1:1 at
+ * HD. Keys: the masters' seven and the twenty pair masters, BOTH dresses
+ * (`keyByMaster`: the lifted bevel's top edge is cut against the strip,
+ * which the gold-split and the hybrid dress paint differently); every
+ * piece serves the extended-art Prepare dress too (its foot is the Prepare
+ * master's, checked by the build). The oval is M15's (print's clean
+ * renders draw it 7 px higher, as on every 2015 frame). Opt-in per card
+ * like every stamp ("auto" = a rare or mythic). Set on the prepare and
+ * extendedartprepare entries only.
+ */
+export const PREPARE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // PREPARE_STAMP.box in scripts/lib/prepare-2026.mjs (a unit test holds
+  // them together).
+  rect: { leftPct: (654 / 1500) * 100, topPct: (1890 / 2100) * 100, widthPct: (192 / 1500) * 100, heightPct: (60 / 2100) * 100 },
+  assetPathTemplate: "/frames/prepareholostamp/{key}.png",
+  keys: [
+    "w", "u", "b", "r", "g", "m", "c",
+    "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu",
+    "wu-h", "wb-h", "ub-h", "ur-h", "br-h", "bg-h", "rg-h", "rw-h", "gw-h", "gu-h",
+  ],
+  keyByMaster: true,
+  // The keep-out FOLLOWS THE ARCH (the borderless rule): 4 px columns from
+  // 2 px above the lifted foot (prepareArchKeepOut); `keepOut` is their
+  // bounds.
+  stamp: {
+    shape: "oval",
+    oval: M15_HOLO_STAMP_OVAL,
+    keepOut: PREPARE_HOLO_STAMP_KEEP_OUT,
+    keepOutShape: PREPARE_HOLO_STAMP_KEEP_OUT_SHAPE,
+  },
 };
 
 /**
@@ -7948,17 +8016,20 @@ export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
  *  fronts print the land grey) and, on a back, a front in the hybrid dress
  *  (MH3's land backs: a warm light grey, never gold); the land bodies map
  *  `l` to their own grey `c`. A two-colour spell other face is gold `m`
- *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless one
- *  the artifact stand-in (`c` → `a`, no print). */
+ *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless
+ *  ARTIFACT one the artifact frame's `a` (STX #154 Pestilent Cauldron's
+ *  back), a colourless one with no Artifact word the see-through frame's
+ *  own `c` (TODO 5.11a: STX #6 Wandering Archaic's warm grey tab — a card
+ *  colourless on both faces draws none); the land bodies map `a` to their
+ *  grey `c` as before. */
 const MDFC_STRIP_RIDER_RECT: Rect = { leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 };
-const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"] as const;
+const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"] as const;
 const MDFC_STRIP_RIDER_LAND_KEYS = ["w", "u", "b", "r", "g", "m", "c"] as const;
 export const MDFC_STRIP_RIDER_FRONT: FrameOverlaySlot = {
   anatomy: "mdfcStrip",
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfcfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_SPELL_KEYS,
-  keyMap: { c: "a" },
 };
 export const MDFC_STRIP_RIDER_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_FRONT,
@@ -7969,7 +8040,7 @@ export const MDFC_STRIP_RIDER_LAND_FRONT: FrameOverlaySlot = {
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfclandfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_LAND_KEYS,
-  keyMap: { l: "c" },
+  keyMap: { l: "c", a: "c" },
 };
 export const MDFC_STRIP_RIDER_LAND_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_LAND_FRONT,
@@ -8541,9 +8612,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // crown cut round the housing and the pairs (5.1d) on the spell faces —
   // the front draws both dresses (STX #149 / MSH #219 the split, MH3's ten
   // hybrid fronts the hybrid), the back the split (STX #149's back, MSH's
-  // crowned pair backs); the land pair draws neither (no print).
-  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT], twoColorMasters: ["split", "hybrid"] },
-  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK], twoColorMasters: ["split"] },
+  // crowned pair backs); the land pair draws neither (no print). Their `c`
+  // is the SEE-THROUGH colourless frame (TODO 5.11a, STX #6 Wandering
+  // Archaic: m15/c's field, bars and box with the modal housing and strip —
+  // PipGlyph's composite, scripts/build-mdfc-colourless-frames.mjs), so the
+  // art is drawn under the frame for `c` as m15 draws it; a colourless
+  // ARTIFACT face still wears the opaque artifact master `a`
+  // (artifactMasterKeys), which draws no under-frame layer. The crown keeps
+  // its `c` → `a` band (no legendary colourless non-artifact modal face was
+  // printed).
+  m15mdfcfront: {
+    ...M15MDFCFRONT,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT],
+    twoColorMasters: ["split", "hybrid"],
+  },
+  m15mdfcback: {
+    ...M15MDFCBACK,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK],
+    twoColorMasters: ["split"],
+  },
   m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_FRONT] },
   m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_BACK] },
   // The borderless double-faced bodies (TODO 5.7): m15borderless's crowned
@@ -8649,14 +8740,30 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
   // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
   // the colourless key is the artifact frame, so its crown is the
-  // artifact's. No stamp notch (the page's outline runs through M15's) and
-  // no collector line yet (TODO 4.27 follow-ups).
+  // artifact's.
   // TODO 4.26: the two-colour Prepare (M15's pair masters with the page,
   // both dresses) and the spell's page in its own colour (PREPARE_PAGE).
+  // TODO 4.27b: the holofoil stamp's notch (PREPARE_HOLO_STAMP) and the
+  // collector line — SOS / FRA / SOC set both lines on M15's rows, as the
+  // set's plain M15 cards (line 1's ink 1965–1989, line 2's 1999–2028, from
+  // x 98, the © line ending at 1396–1397 on all 22 measured) — each opt-in
+  // per card, so no stored card changes by them.
   prepare: {
     ...PREPARE,
     twoColorMasters: ["split", "hybrid"],
-    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, PREPARE_PAGE],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, PREPARE_PAGE, PREPARE_HOLO_STAMP],
+    collector: M15_COLLECTOR,
+  },
+  // …and its extended-art dress (TODO 4.27b): the extended-art crown, the
+  // Prepare frame's page overlays and notch (its lower half is the Prepare
+  // master's pixels), the collector line on the same rows (SOS #309, #318,
+  // SOC #63, FRA #425 measured with the plain ones). A Variations pick of
+  // the Prepare kind, never a default.
+  extendedartprepare: {
+    ...EXTENDEDARTPREPARE,
+    twoColorMasters: ["split", "hybrid"],
+    overlays: [EXTENDED_CROWN, PREPARE_PAGE, PREPARE_HOLO_STAMP],
+    collector: M15_COLLECTOR,
   },
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and

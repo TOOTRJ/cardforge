@@ -105,7 +105,8 @@ describe("one M15-era display size (layout v32)", () => {
     // Stained Glass, the Strixhaven Mystical Archive and the Doctor Who
     // TARDIS and the OTJ Breaking News (new templates: no bump).
     // …and TODO 4.5d's saga creature (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(91);
+    // …and TODO 4.27b's extended-art Prepare dress (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(92);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -214,6 +215,9 @@ describe("one M15-era display size (layout v32)", () => {
         // …and the saga creature (TODO 4.5d), a new template on the saga's
         // bars: the saga's CC M15 row.
         t === "sagacreature" ||
+        // …and the Prepare frame's extended-art dress (TODO 4.27b), a new
+        // template on the Prepare frame's (CC M15) row.
+        t === "extendedartprepare" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -395,6 +399,8 @@ describe("baselines (TextSlot.dy)", () => {
     // The Prepare frame (TODO 4.27): its masters are M15's above the type
     // bar, so the CC-framed M15 profile's lines.
     ["prepare", base.title, cc],
+    // …and its extended-art dress (TODO 4.27b): the same bands.
+    ["extendedartprepare", base.title, cc],
     // The transform bodies (TODO 5.1a): CC's 'Transform' packs are the M15
     // skeleton (the bands within 1–4 px of the prints), so each face is the
     // registry's m15 entry's baselines — the name kept, the type line on

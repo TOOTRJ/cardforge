@@ -118,12 +118,12 @@ import {
   frameSubstitutionLabel,
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
-import { colorlessFaceAllowed, dfcLookOf } from "@/lib/cards/dfc";
+import { dfcLookOf } from "@/lib/cards/dfc";
 import {
   LegendaryVariationChip,
   useLegendaryVariation,
 } from "@/components/creator/panels/legendary-variation";
-import { DFC_COLORLESS_FRONT_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { dfcColorlessRefusal } from "@/lib/cards/dfc-gate";
 
 const KIND_HINTS: Partial<Record<CardKind, string>> = {
   saga: "Chapter rail (I–IV)",
@@ -840,11 +840,11 @@ export function CardSetupPanel({
             template={normalizeFrameTemplate(watchedTemplate)}
             // A double-faced front may be colourless only with "Artifact"
             // on its type line (design D2: the body's `c` is the artifact
-            // stand-in) — the same rule the back-face panel's chips apply.
+            // stand-in; the modal front's see-through `c` once ticked, TODO
+            // 5.11a) — the same rule the back-face panel's chips apply.
             colorlessDisabledReason={
-              dfcLayoutForKind(kind) &&
-              !colorlessFaceAllowed(normalizeFrameTemplate(watchedTemplate), frameType)
-                ? DFC_COLORLESS_FRONT_NEEDS_ARTIFACT
+              dfcLayoutForKind(kind)
+                ? dfcColorlessRefusal(normalizeFrameTemplate(watchedTemplate), frameType, verifiedKeys, "front")
                 : null
             }
             onPairTouched={onPairTouched}

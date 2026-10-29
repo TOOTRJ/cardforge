@@ -113,8 +113,8 @@ describe("the look a back follows", () => {
     expect(bodyFor("transform", "back", "land", "arrows", "borderless")).toBeNull();
     expect(bodyFor("modal", "back", "land", "arrows", "borderless")).toBeNull();
     // The artifact stand-in: colourless only with the Artifact word (D2).
-    expect(colorlessFaceAllowed("m15borderlessdfcback", { cardType: "creature" })).toBe(false);
-    expect(colorlessFaceAllowed("m15borderlessdfcback", { cardType: "artifact" })).toBe(true);
+    expect(colorlessFaceAllowed("m15borderlessdfcback", { cardType: "creature" }, new Set<string>())).toBe(false);
+    expect(colorlessFaceAllowed("m15borderlessdfcback", { cardType: "artifact" }, new Set<string>())).toBe(true);
   });
 
   it("the server's gate derives the borderless back, refuses a bordered one by name, and a face with no body", () => {

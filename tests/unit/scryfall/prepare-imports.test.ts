@@ -29,7 +29,10 @@ const card = (key: string) => {
 };
 const KEYS = Object.keys(PRINTINGS);
 const ALL_VERIFIED = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => ["w", "u", "b", "r", "g", "m", "c"].map((k) => `${t}/${k}`)));
-const PREPARE_UNVERIFIED = new Set([...ALL_VERIFIED].filter((k) => !k.startsWith("prepare/")));
+// (…and its extended-art dress, TODO 4.27b.)
+const PREPARE_UNVERIFIED = new Set([...ALL_VERIFIED].filter((k) => !k.startsWith("prepare/") && !k.startsWith("extendedartprepare/")));
+/** The Prepare frame ticked, its extended-art dress not. */
+const DRESS_UNVERIFIED = new Set([...ALL_VERIFIED].filter((k) => !k.startsWith("extendedartprepare/")));
 
 describe("the Prepare printings, imported", () => {
   it("captures all 124", () => {
@@ -66,7 +69,9 @@ describe("the Prepare printings, imported", () => {
     // and part-colour (4.26) gaps: 66 + 12 + 10 + 5 = 93.
     expect(table).toEqual({
       "exact prepare layout/2015 -": 93,
-      "nearest extendedart→prepare extendedart -": 29,
+      // TODO 4.27b: the extended-art printings on their own dress (they
+      // were nearest on the extended-art frame, landing on `prepare`).
+      "exact extendedartprepare extendedart -": 29,
       "nearest m15textless textless/2015 4.42": 1,
       "nearest modern textless/old-frame 4.43": 1,
     });
@@ -125,8 +130,8 @@ describe("the Prepare printings, imported", () => {
       const extended = (printing.frame_effects ?? []).includes("extendedart");
       expect(finalized.kind, key).toBe("creature");
       expect(finalized.frame_template, key).toBe(extended ? "extendedart" : "m15");
-      expect(finalized.frame_match, key).toMatchObject({ status: "nearest", template: extended ? "extendedart" : "prepare" });
-      expect(finalized.frame_match?.landOn, key).toBe(extended ? undefined : "m15");
+      expect(finalized.frame_match, key).toMatchObject({ status: "nearest", template: extended ? "extendedartprepare" : "prepare" });
+      expect(finalized.frame_match?.landOn, key).toBe(extended ? "extendedart" : "m15");
       // The spell stays, a legacy back as on main.
       expect(finalized.back_face?.title, key).toBe(printing.card_faces![1]!.name);
       const plan = importFramePlan(finalized, PREPARE_UNVERIFIED, "m15");
@@ -160,8 +165,31 @@ describe("the Prepare printings, imported", () => {
       const row = `${m.status} ${m.template}${m.landOn ? `→${m.landOn}` : ""} ${m.blockedBy ?? "-"}`;
       rows[row] = (rows[row] ?? 0) + 1;
     }
-    expect(rows).toEqual({ "exact prepare -": 22, "nearest extendedart→prepare -": 5 });
+    expect(rows).toEqual({ "exact prepare -": 22, "nearest extendedartprepare→prepare -": 5 });
     expect(remixFrameFor(mapScryfallToFormPatch(card("sos-170")), goldOnly)).toEqual({ ok: true, template: "prepare", card_type: "creature" });
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-109")), goldOnly).kind).toBe("creature");
+  });
+
+  it("lands the extended-art printings on their own dress once it is verified, on `prepare` (nearest) while only that is (TODO 4.27b)", () => {
+    const extended = KEYS.filter((k) => (card(k).frame_effects ?? []).includes("extendedart"));
+    expect(extended).toHaveLength(29);
+    for (const key of extended) {
+      const patch = mapScryfallToFormPatch(card(key));
+      expect(patch.frame_match, key).toMatchObject({ status: "exact", template: "extendedartprepare" });
+      // Verified: the Prepare kind, exact on the dress — the remix there too.
+      const onDress = finalizeImportMatch(patch, ALL_VERIFIED);
+      expect(onDress.kind, key).toBe("prepare");
+      expect(onDress.frame_match, key).toMatchObject({ status: "exact", template: "extendedartprepare" });
+      expect(onDress.frame_match?.landOn, key).toBeUndefined();
+      expect(remixFrameFor(patch, ALL_VERIFIED), key).toMatchObject({ ok: true, template: "extendedartprepare" });
+      // Only the Prepare frame verified: the Prepare kind on it, nearest,
+      // "not yet verified" naming the dress (the request log's cause).
+      const onPrepare = finalizeImportMatch(patch, DRESS_UNVERIFIED);
+      expect(onPrepare.kind, key).toBe("prepare");
+      expect(onPrepare.frame_match, key).toMatchObject({ status: "nearest", template: "extendedartprepare", landOn: "prepare", unverified: true });
+      expect(remixFrameFor(patch, DRESS_UNVERIFIED), key).toMatchObject({ ok: true, template: "prepare" });
+    }
+    // SOS #318 Jadzi (legendary): the crown on the dress.
+    expect(mapScryfallToFormPatch(card("sos-318")).printed_crown).toBe(true);
   });
 });

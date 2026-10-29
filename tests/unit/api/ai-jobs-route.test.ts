@@ -274,6 +274,28 @@ describe("POST /api/ai/jobs — the art fill's frame", () => {
   });
 });
 
+// TODO 4.27b: a layout fill names the Variations skin the card wears (the
+// extended-art Prepare dress) so the plan keeps it — a skin of THAT kind's
+// frame only; anything else is dropped, never a refused fill.
+describe("POST /api/ai/jobs — a layout fill's skin", () => {
+  it("passes a skin of the kind's frame on as layoutSkin; drops anything else", async () => {
+    const kept = await post({ kind: "card_fill", want: ["card_type", "title"], locked: {}, design_kind: "prepare", layout_skin: "extendedartprepare" });
+    expect(kept.status).toBe(200);
+    expect(s.created.at(-1)?.input).toMatchObject({ layout: "prepare", layoutSkin: "extendedartprepare" });
+    for (const [design_kind, layout_skin] of [
+      ["prepare", "prepare"],
+      ["prepare", "extendedart"],
+      ["adventure", "extendedartprepare"],
+      ["prepare", "../../etc"],
+      ["prepare", 42],
+    ] as const) {
+      const dropped = await post({ kind: "card_fill", want: ["card_type", "title"], locked: {}, design_kind, layout_skin });
+      expect(dropped.status, `${design_kind} · ${String(layout_skin)}`).toBe(200);
+      expect((s.created.at(-1)?.input as Record<string, unknown>).layoutSkin, `${design_kind} · ${String(layout_skin)}`).toBeUndefined();
+    }
+  });
+});
+
 // 2026-10-28 (fix/ai-generation-live): the fill's pinned context is the open
 // form as it stands — a value outside a limit (a 31-character tag, a long
 // subtype, a legacy "spell" type, a deck theme past the dialog's maxLength)

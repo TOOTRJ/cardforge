@@ -365,11 +365,31 @@ export function importedCardTypeForKind(
 // Reverse map: layout template → its kind (saga → saga, adventure →
 // adventure, …). Skins and standards are deliberately absent — they resolve
 // through the card_type branch of kindFromCard.
+// A layout template's skin (the Prepare frame's extended-art dress, TODO
+// 4.27b: TEMPLATE_SKIN_VARIANTS.prepare) is that kind's too.
 const TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
-  (Object.entries(KIND_DEFS) as [CardKind, KindDef][]).flatMap(
-    ([kind, def]) => (def.layoutTemplates ?? []).map((t) => [t, kind] as const),
+  (Object.entries(KIND_DEFS) as [CardKind, KindDef][]).flatMap(([kind, def]) =>
+    (def.layoutTemplates ?? []).flatMap((t) => [t, ...(TEMPLATE_SKIN_VARIANTS[t] ?? [])].map((u) => [u, kind] as const)),
   ),
 );
+
+/** The Variations skins of the layout kinds' frames (TODO 4.27b: the
+ *  extended-art Prepare dress, TEMPLATE_SKIN_VARIANTS.prepare). */
+const LAYOUT_SKINS: ReadonlySet<FrameTemplate> = new Set(
+  (Object.values(KIND_DEFS) as KindDef[]).flatMap((def) =>
+    (def.layoutTemplates ?? []).flatMap((t) => TEMPLATE_SKIN_VARIANTS[t] ?? []),
+  ),
+);
+
+/** True for a layout template's Variations skin (the extended-art Prepare
+ *  dress, TODO 4.27b). Such a skin is a PICK — the Variations section, an
+ *  exact import, a fill or remix that keeps it — and never a default or a
+ *  stand-in: firstAvailableFrame and resolvePublishedFrame's stand-in
+ *  search pass over it, so a skin ticked in a colour the layout's own frame
+ *  isn't never becomes the kind's frame by itself. */
+export function isLayoutSkin(template: FrameTemplate | string | null | undefined): boolean {
+  return Boolean(template) && LAYOUT_SKINS.has(template as FrameTemplate);
+}
 
 /** Derive the kind from persisted/form state. The template wins (a saga
  *  frame IS the saga kind, whatever card_type says); otherwise card_type
@@ -643,6 +663,8 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // the Saga kind's alone; SAGA_CREATURE_DRESS (below) is the per-card half:
   // the type words must say Creature.
   sagacreature: ["saga"],
+  // …and its extended-art dress (TODO 4.27b), the Prepare kind's alone too.
+  extendedartprepare: ["prepare"],
 };
 
 /** The extended-art frame's land dress (TODO 4.7, owner Round 63): the one
@@ -1672,14 +1694,19 @@ export function framesForKind(
   const colors = (t: FrameTemplate) =>
     FRAME_COLOR_KEYS.filter((k) => isFrameComboAvailable(t, k, verifiedKeys));
 
-  // Layout kinds are exactly their template family (all M15-era today).
+  // Layout kinds are exactly their template family (all M15-era today) —
+  // each with its skins, the Variations section's (the Prepare frame's
+  // extended-art dress, TODO 4.27b).
   if (def.layoutTemplates) {
-    return def.layoutTemplates.map((t) => ({
-      template: t,
-      era: eraForTemplate(t),
-      group: "layout" as const,
-      availableColorKeys: colors(t),
-    }));
+    return def.layoutTemplates.flatMap((t) => [
+      { template: t, era: eraForTemplate(t), group: "layout" as const, availableColorKeys: colors(t) },
+      ...(TEMPLATE_SKIN_VARIANTS[t] ?? []).map((skin) => ({
+        template: skin,
+        era: eraForTemplate(t),
+        group: "skin" as const,
+        availableColorKeys: colors(skin),
+      })),
+    ]);
   }
   // The emblem (TODO 6.23) comes out of this loop as the M15 era's one
   // emblem frame alone: no other era prints today's emblem, it has no
@@ -1802,7 +1829,8 @@ export function firstAvailableFrame(
 ): FrameChoice | null {
   return (
     framesForKind(kind, verifiedKeys).find(
-      (f) => f.availableColorKeys.length > 0,
+      // A layout skin is never the default (isLayoutSkin, TODO 4.27b).
+      (f) => f.availableColorKeys.length > 0 && !isLayoutSkin(f.template),
     ) ?? null
   );
 }

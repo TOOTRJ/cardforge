@@ -60,6 +60,9 @@ describe("the switch values", () => {
       "m15stationland",
       // …and its extended-art dress (step 2): M15's bottom border.
       "extendedartstation",
+      // The Prepare frame and its extended-art dress (TODO 4.27b): M15's rows.
+      "prepare",
+      "extendedartprepare",
       // The borderless frames (TODO 4.9d): M15's two lines in the black bar.
       "m15borderless",
       "m15borderlessartifact",

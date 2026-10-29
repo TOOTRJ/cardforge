@@ -538,6 +538,12 @@ function transformContent(shape: VisualShape, colour: VisualColour, land: boolea
  *  creature // creature with a cost on the back (MSH #18's shape without
  *  the Marvel strip form) — the dark plate and the long strip texts. */
 function modalContent(shape: VisualShape, colour: VisualColour, land: boolean, backBody: FrameTemplate = "m15mdfcback"): Fields {
+  // The bordered spell bodies' `c` is the SEE-THROUGH colourless frame
+  // since TODO 5.11a: their colourless cases are STX #6 Wandering Archaic's
+  // shape — a colourless creature with no Artifact word // a colourless
+  // sorcery. (Before 5.11a these cases drew such a face on the artifact
+  // stand-in, a card no save could store.)
+  if (colour === "c" && !land && backBody === "m15mdfcback") return archaicContent(shape);
   const long = shape === "long";
   const pip = pips(colour, 0, 1);
   const backStyle = {
@@ -610,6 +616,46 @@ function modalContent(shape: VisualShape, colour: VisualColour, land: boolean, b
       rules_text: `As Soporific Springs enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add ${pip}.`,
       ...backStyle,
       frame_style: { template: "m15mdfclandback" as FrameTemplate },
+    },
+  };
+}
+
+/** The colourless modal card (TODO 5.11a): STX #6 Wandering Archaic //
+ *  Explore the Vastlands — both faces colourless with no Artifact word, on
+ *  the bodies' see-through `c`. The long card: the same shape, Legendary
+ *  (the crown's case) with the long texts. */
+function archaicContent(shape: VisualShape): Fields {
+  const long = shape === "long";
+  const backStyle = {
+    frame_style: { template: "m15mdfcback" as FrameTemplate },
+    color_identity: IDENTITY.c,
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+  };
+  return {
+    title: long ? "Wandering Archaic, Who Walks the Ninefold Path" : "Wandering Archaic",
+    card_type: "creature",
+    supertype: long ? "Legendary" : null,
+    subtypes: ["Avatar"],
+    cost: long ? "{X}{5}" : "{5}",
+    rules_text: long
+      ? LONG_RULES
+      : "Whenever an opponent casts an instant or sorcery spell, they may pay {2}. If they don't, you may copy that spell. You may choose new targets for the copy.",
+    flavor_text: long ? LONG_FLAVOR : "“Fly the path of nine birds.”",
+    power: "4",
+    toughness: "4",
+    back_face: {
+      title: long ? "Explore the Vastlands of the Ninefold Path" : "Explore the Vastlands",
+      cost: "{3}",
+      card_type: "sorcery",
+      // (Legendary on the long card, so the back's crown case draws one.)
+      supertype: long ? "Legendary" : null,
+      subtypes: [],
+      rules_text: long
+        ? DENSE_RULES
+        : "Each player looks at the top five cards of their library and may reveal a land card and/or an instant or sorcery card from among them. Each player gains 3 life.",
+      flavor_text: long ? LONG_FLAVOR : null,
+      ...backStyle,
     },
   };
 }
@@ -786,6 +832,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // bar: a colour (SOS #170's gold is a pair, 4.6f), the artifact silver on
   // a colourless card (c → a), gold.
   ["prepare", ["r", "c", "wub"]],
+  // TODO 4.27b: the extended-art Prepare dress's extended-art band: a
+  // colour (SOS #318 Jadzi's blue), gold.
+  ["extendedartprepare", ["u", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -1785,6 +1834,10 @@ export function visualCases(): VisualCase[] {
   partCase("prepare", "prepare", "wu", "long", "@pair-part-hybrid", { colors: ["white", "blue"], cost: "{1}{W/U}" }, { style: { twoColor: true } });
   partCase("prepare", "prepare", "wu", "short", "@pair-part-r", { colors: ["red"], cost: "{X}{R}" }, { style: { twoColor: true } });
   partCase("prepare", "prepare", "wu", "short", "@pair-hybrid-part", { colors: ["white", "blue"], cost: "{W/U}" }, { style: { twoColor: true }, row: { cost: "{1}{W/U}{W/U}" } });
+  // TODO 4.27b: the extended-art Prepare dress's page in another colour (its
+  // lower half is the Prepare master's, so the page overlays serve it).
+  partCase("extendedartprepare", "prepare", "r", "short", "@part-u", { colors: ["blue"], cost: "{1}{U}" });
+  partCase("extendedartprepare", "prepare", "wu", "long", "@pair-part-hybrid", { colors: ["white", "blue"], cost: "{1}{W/U}" }, { style: { twoColor: true } });
   // Split's right half and aftermath's lower part in their own colour (Fire
   // // Ice; Cut // Ribbons): the seam, at the default bake and HD, and both
   // finishes' masks on it; a gold second half.
@@ -2056,6 +2109,17 @@ export function visualCases(): VisualCase[] {
   }
   add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
+  // TODO 4.27b: the Prepare notch — its hybrid dress has a piece of its own
+  // (the strip under the arch's edge differs), a full creature box whose
+  // last line enters the arch, the collector line beside the notch at the
+  // stored bake's size on both looks, the extended-art dress in foil.
+  add("prepare", "prepare", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("prepare", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("prepare", "prepare", "b", "long", { suffix: "@stamp-arch", row: stampRow("prepare", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  for (const template of ["prepare", "extendedartprepare"] as const) {
+    const stamped = stampRow(template, "auto", { rarity: "mythic" });
+    add(template, "prepare", "g", "long", { suffix: "@stamp-collector-hd", preset: "hd", row: { ...stamped, ...collectorRow(template, "2023", stamped) } });
+  }
+  add("extendedartprepare", "prepare", "u", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("extendedartprepare", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-hd", preset: "hd", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil", twoColor: true } as CardRowForBake["frame_style"] }) });
   // TODO 4.25: the Universes Beyond TRIANGLE (new templates, no stored
@@ -2387,7 +2451,10 @@ export function visualCases(): VisualCase[] {
   // land front // white land back); MH3 #252's shape (a hybrid-dressed W/U
   // front // W/U land back: the land grey on both faces).
   const stripRow = (body: FrameTemplate, front: VisualColour, back: VisualColour, shape: VisualShape = "short", backOver: Partial<NonNullable<CardRowForBake["back_face"]>> = {}, frontOver: Partial<CardRowForBake> = {}): Partial<CardRowForBake> => {
-    const row = dfcBodyRow(body, back, shape);
+    // (A colourless back keeps the strip cases' instant // sorcery shape:
+    // the generic `c` content is Wandering Archaic's since TODO 5.11a — the
+    // row is built in another colour and recoloured below, as every back.)
+    const row = dfcBodyRow(body, back === "c" && body === "m15mdfcback" ? "u" : back, shape);
     const backFace = row.back_face as Record<string, unknown> & { cost?: string | null };
     const land = body === "m15mdfclandback";
     return {
@@ -2406,6 +2473,33 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcback", "mdfc", "u", "long", { suffix: "@strip-w-hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "u", "long") });
   add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-a", row: stripRow("m15mdfcback", "w", "c", "short", { title: "Sword of the Realms", card_type: "artifact", subtypes: ["Equipment"], cost: "{3}", rules_text: "Equipped creature gets +2/+0." }) });
   add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-m", row: stripRow("m15mdfcback", "w", "wu") });
+  // TODO 5.11a: the see-through `c`'s own tab as the OTHER face's strip — a
+  // white front with a colourless sorcery back (the front's strip in the
+  // warm grey `c` piece), a blue back with a colourless creature front
+  // (the back's light `c` piece); and a colourless ARTIFACT face, which
+  // wears the artifact master `a` with no art under the frame, as before.
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-c", row: stripRow("m15mdfcback", "w", "c") });
+  add("m15mdfcback", "mdfc", "u", "short", {
+    suffix: "@strip-c",
+    back: { frontTemplate: "m15mdfcfront" },
+    row: stripRow("m15mdfcback", "c", "u", "short", {}, { title: "Wandering Archaic", card_type: "creature", subtypes: ["Avatar"], cost: "{5}", power: "4", toughness: "4" }),
+  });
+  add("m15mdfcfront", "mdfc", "c", "short", {
+    suffix: "@artifact",
+    row: {
+      ...dfcBodyRow("m15mdfcback", "c"),
+      title: "Pestilent Engine",
+      card_type: "artifact",
+      supertype: null,
+      subtypes: [],
+      cost: "{2}",
+      rules_text: "{T}: Each opponent loses 1 life.",
+      power: null,
+      toughness: null,
+    },
+  });
+  add("m15mdfcfront", "mdfc", "c", "long", { suffix: "@hd", preset: "hd" });
+  add("m15mdfcback", "mdfc", "c", "long", { suffix: "@hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: dfcBodyRow("m15mdfcback", "c", "long") });
   add("m15mdfcback", "mdfc", "wu", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "wu") });
   add("m15mdfclandfront", "mdfc", "g", "short", { suffix: "@strip-w", row: stripRow("m15mdfclandback", "g", "w") });
   add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });
@@ -2623,6 +2717,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   // …and the saga creature's triangle (TODO 4.5d: the Universes Beyond piece
   // over its M15 bar).
   "sagacreature",
+  // TODO 4.27b: the Prepare frame's (its own lifted foot) and its extended-
+  // art dress's (the same pieces).
+  "prepare", "extendedartprepare",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2647,6 +2744,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the OTJ Breaking News — its pair masters under the
   // pack's one notch tab.
   "breakingnews",
+  // TODO 4.27b: the Prepare pairs (a piece per pair master, either dress)
+  // and the extended-art dress's.
+  "prepare", "extendedartprepare",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -3097,6 +3197,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
   "prepare",
+  // …and its extended-art dress (TODO 4.27b): the same pairs under the
+  // extended-art top.
+  "extendedartprepare",
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",

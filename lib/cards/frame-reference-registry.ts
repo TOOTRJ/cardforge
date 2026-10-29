@@ -245,6 +245,8 @@ function sampleBackFace(template: FrameTemplate, colorKey: FrameColorKey) {
         rules_text: "Sample adventure text on the storybook page.",
       };
     case "prepare":
+    // …and its extended-art dress (TODO 4.27b): the same page.
+    case "extendedartprepare":
       return {
         title: "Sample Spell",
         cost: SAMPLE_COST[colorKey],

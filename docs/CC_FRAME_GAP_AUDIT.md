@@ -151,7 +151,9 @@ colourless modal frame); they are recorded in TODO.md with this audit:
   plain card is covered by 4.27; missing are the holofoil stamp notch (79
   stamped printings), the collector line and the extended-art dress (29),
   plus two serialized headliners. No borderless or showcase Prepare is
-  printed.
+  printed. BUILT 2026-10-28 (draft PR, feat/prepare-stamp-collector-extended):
+  the notch, the collector line and `extendedartprepare`; the headliners are
+  logged as 4.27c.
 - **5.11a — Wandering Archaic (STX #6)**: the only colourless, non-artifact
   modal nonland card (3 paper printings). Needs a see-through `c` master on
   both modal bodies, the gate opened for a colourless face on the modal

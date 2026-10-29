@@ -192,6 +192,7 @@ function expectSavable(card: Row) {
       style.template as string,
       { cardType: card.card_type as string, supertype: card.supertype as string },
       colours,
+      new Set<string>(),
     ),
   ).toBeNull();
   const gate = resolveDfcBackFace({

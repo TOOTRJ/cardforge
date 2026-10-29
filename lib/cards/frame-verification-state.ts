@@ -3,6 +3,7 @@ import {
   VERIFICATION_SCOPED_VERSIONS,
   isRenderStale,
 } from "@/lib/cards/layout-version";
+import { SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION, hasSeeThroughColorless } from "@/lib/cards/dfc";
 
 // ---------------------------------------------------------------------------
 // Is a frame verification still meaningful? A tick in /admin/frame-compare
@@ -76,6 +77,9 @@ export type VerificationSnapshot = {
   verified: boolean;
   verifiedLayoutVersion: number | null;
   verifiedOverrideHash: string | null;
+  /** The row's colour key, where the caller knows it: a see-through `c`
+   *  (TODO 5.11a) asks for its own tick. */
+  colorKey?: string;
 };
 
 export type VerificationState = {
@@ -121,6 +125,19 @@ export function verificationState(
     snapshot.verifiedOverrideHash !== currentOverrideHash
   ) {
     reasons.push("the layout override changed since this was verified");
+  }
+  // A modal body's `c` is the SEE-THROUGH frame since TODO 5.11a (no bump):
+  // a tick from before verified the artifact stand-in, so the see-through
+  // master is offered to a colourless face with no Artifact word only once
+  // the row is ticked again (lib/cards/dfc.ts seeThroughTickKeys).
+  if (
+    snapshot.colorKey === "c" &&
+    hasSeeThroughColorless(template) &&
+    (snapshot.verifiedLayoutVersion ?? -1) < SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION
+  ) {
+    reasons.push(
+      "the colourless master is now the see-through frame (TODO 5.11a: STX #6 Wandering Archaic) — this tick verified the artifact stand-in, so the see-through frame isn't offered until the row is ticked again",
+    );
   }
   return { verified: true, stale: reasons.length > 0, legacy, reasons };
 }

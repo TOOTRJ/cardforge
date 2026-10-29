@@ -20,9 +20,11 @@
 //   • its colour (the back's own, else the front's — stored explicitly) is
 //     verified for that body (frameGateError — the front's gate, per
 //     colour) and, on a spell body whose `c` is the artifact stand-in,
-//     colourless only with "Artifact" on the type line (colorlessFaceAllowed,
-//     design D2); an update re-checks only when the body or the colour
-//     changed, as the front's legacy pin;
+//     colourless only with "Artifact" on the type line (colorlessFaceFits,
+//     design D2) — on a body whose `c` is the SEE-THROUGH frame (the modal
+//     back, TODO 5.11a) without it too, once that `c` is ticked again
+//     (colorlessFaceAllowed: the verification half); an update re-checks
+//     only when the body or the colour changed, as the front's legacy pin;
 //   • on an UPDATE of a card whose back HAS a body the STORED colour wins
 //     too (owner 2026-10-05: the back's colour is locked like the front's —
 //     a colour change moves the back onto another master, which is what the
@@ -58,6 +60,7 @@ import {
   backBodyFor,
   bodyFor,
   colorlessFaceAllowed,
+  colorlessFaceFits,
   dfcBodyOf,
   dfcLookOf,
   isDfcBackBody,
@@ -71,6 +74,7 @@ import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availab
 import { isTokenPairBack, isTokenPairFront, tokenDesignOf } from "@/lib/cards/token-faces";
 import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { isArtifactFrameType } from "@/lib/cards/anatomy";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 /** A back face as the actions see it: the 0015 content plus, since 5.0a,
@@ -152,6 +156,10 @@ export const DFC_COLORLESS_NEEDS_ARTIFACT =
   "A colourless back face needs “Artifact” on its type line — pick a colour.";
 export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
   "A colourless double-faced card needs “Artifact” on its type line — pick a colour.";
+/** A colourless face with no Artifact word on a body whose `c` is the
+ *  see-through frame (TODO 5.11a) while that frame isn't published yet. */
+export const DFC_SEE_THROUGH_UNVERIFIED =
+  "The see-through colourless frame isn't available on this double-faced frame yet — pick a colour, or add “Artifact” to the type line.";
 export const DFC_FRONT_TYPE_REFUSED =
   "A double-faced card's front can be a creature, artifact, enchantment, land, instant or sorcery.";
 export const DFC_BATTLE_FRONT_TYPE_REFUSED = "The battle frame dresses battles only.";
@@ -197,18 +205,37 @@ export function dfcFrontTypeError(
  * card on a DFC front body may be colourless only with "Artifact" on its
  * type line, where the body's `c` is the artifact master standing in
  * (colorlessFaceAllowed; the land front has one master under every key and
- * takes any land). Null when the card may wear its colour, else the
- * `color_identity` field error. Any other template: null.
+ * takes any land) — or, on a body whose `c` is the SEE-THROUGH frame (the
+ * modal front, TODO 5.11a), without it once that `c` is ticked
+ * (seeThroughColorlessKey in `verifiedKeys`; null = verification skipped,
+ * an admin's frame preview). Null when the card may wear its colour, else
+ * the `color_identity` field error. Any other template: null.
  */
 export function dfcFrontColorError(
   frontTemplate: FrameTemplate | string | null | undefined,
   face: { cardType?: string | null; supertype?: string | null },
   colorIdentity: readonly ColorIdentity[] | null | undefined,
+  verifiedKeys: ReadonlySet<string> | null,
 ): string | null {
   const front = normalizeFrameTemplate(frontTemplate);
   if (dfcBodyOf(front)?.role !== "front") return null;
   if (pickFrameColorKey(colorIdentity) !== "c") return null;
-  return colorlessFaceAllowed(front, face) ? null : DFC_COLORLESS_FRONT_NEEDS_ARTIFACT;
+  if (colorlessFaceAllowed(front, face, verifiedKeys)) return null;
+  return colorlessFaceFits(front, face) ? DFC_SEE_THROUGH_UNVERIFIED : DFC_COLORLESS_FRONT_NEEDS_ARTIFACT;
+}
+
+/** Why a face may NOT wear `c` on `template` (the colour chips' reason), or
+ *  null when it may: the Artifact word it lacks, or — on a see-through `c`
+ *  (TODO 5.11a) — the frame not ticked yet. */
+export function dfcColorlessRefusal(
+  template: FrameTemplate | string | null | undefined,
+  face: { cardType?: string | null; supertype?: string | null },
+  verifiedKeys: ReadonlySet<string> | null,
+  role: "front" | "back",
+): string | null {
+  if (colorlessFaceAllowed(template, face, verifiedKeys)) return null;
+  if (colorlessFaceFits(template, face)) return DFC_SEE_THROUGH_UNVERIFIED;
+  return role === "front" ? DFC_COLORLESS_FRONT_NEEDS_ARTIFACT : DFC_COLORLESS_NEEDS_ARTIFACT;
 }
 
 /** The family as stored: a named one, else the default (`arrows`). */
@@ -350,10 +377,9 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   } else {
     colour = backColourOf(back, input.frontColorIdentity);
   }
-  if (
-    pickFrameColorKey(colour) === "c" &&
-    !colorlessFaceAllowed(template, { cardType: backType, supertype: back.supertype })
-  ) {
+  const colourless = pickFrameColorKey(colour) === "c";
+  const typeWords = { cardType: backType, supertype: back.supertype };
+  if (colourless && !colorlessFaceFits(template, typeWords)) {
     return { ok: false, field: "back_face.color_identity", message: DFC_COLORLESS_NEEDS_ARTIFACT };
   }
   if (!input.skipVerification) {
@@ -362,15 +388,28 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     const storedColour = input.stored
       ? backColourOf(input.stored.back, input.frontColorIdentity)
       : null;
+    // On `c` the master a face wears follows its Artifact word (the modal
+    // bodies' see-through `c`, TODO 5.11a — an artifact face wears `a`):
+    // a back that gains or loses the word moves onto the other master, so
+    // it is a change (the front's seeThroughPinned rule).
+    const storedArtifact = input.stored
+      ? isArtifactFrameType({ cardType: input.stored.back?.card_type ?? null, supertype: input.stored.back?.supertype ?? null })
+      : false;
     const unchanged =
       input.stored !== undefined &&
       storedBody === template &&
       storedColour !== null &&
-      pickFrameColorKey(storedColour) === pickFrameColorKey(colour);
+      pickFrameColorKey(storedColour) === pickFrameColorKey(colour) &&
+      (!colourless || storedArtifact === isArtifactFrameType(typeWords));
     if (!unchanged) {
       const gateError = frameGateError(template, colour, input.verifiedKeys);
       if (gateError) {
         return { ok: false, field: "back_face.color_identity", message: gateError, code: "unverified" };
+      }
+      // A colourless back with no Artifact word on a see-through `c` (the
+      // modal back, TODO 5.11a): only once that `c` is ticked again.
+      if (colourless && !colorlessFaceAllowed(template, typeWords, input.verifiedKeys)) {
+        return { ok: false, field: "back_face.color_identity", message: DFC_SEE_THROUGH_UNVERIFIED, code: "unverified" };
       }
     }
   }

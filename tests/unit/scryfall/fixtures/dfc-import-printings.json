@@ -1,5 +1,5 @@
 {
-  "_note": "The double-faced printings of TODO 5.4's import (captured from Scryfall /cards/:set/:number and /cards/search on 2026-10-05, User-Agent pipglyph-dev), trimmed to the fields the importer, the frame signature registry, the art import (per-face image_uris) and the AI deck remix read. Keys are set-collector_number. inr-60 Delver (no dfc effect → arrows, the ▼-right back), mid-169 Bird Admirer (sunmoondfc → the 2016–22 back), vow-157 a VOW werewolf, mom-36 a MOM transform (no effect), bot-1 a BOT convert (convertdfc, a Vehicle back), xln-22 Legion's Landing (compasslanddfc, an enchantment front // the parchment land back, 5.8), lci-26 Ojer Taq (LCI's land back), emn-63 Grizzled Angler (mooneldrazidfc, a COLOURLESS Eldrazi back — 5.11), ori-60 Jace (originpwdfc, a walker back — 5.13), mom-20 a battle front, tmom-16 a double-faced token, znr-12 Emeria's Call (modal, a sorcery // land), khm-112 Tergrid (modal, an artifact back with a cost), stx-6 Wandering Archaic (modal, a COLOURLESS non-artifact front — 5.11), stx-147 Augmenter Pugilist (modal, a green front // a blue sorcery back).",
+  "_note": "The double-faced printings of TODO 5.4's import (captured from Scryfall /cards/:set/:number and /cards/search on 2026-10-05, User-Agent pipglyph-dev), trimmed to the fields the importer, the frame signature registry, the art import (per-face image_uris) and the AI deck remix read. Keys are set-collector_number. inr-60 Delver (no dfc effect → arrows, the ▼-right back), mid-169 Bird Admirer (sunmoondfc → the 2016–22 back), vow-157 a VOW werewolf, mom-36 a MOM transform (no effect), bot-1 a BOT convert (convertdfc, a Vehicle back), xln-22 Legion's Landing (compasslanddfc, an enchantment front // the parchment land back, 5.8), lci-26 Ojer Taq (LCI's land back), emn-63 Grizzled Angler (mooneldrazidfc, a COLOURLESS Eldrazi back — 5.11), ori-60 Jace (originpwdfc, a walker back — 5.13), mom-20 a battle front, tmom-16 a double-faced token, znr-12 Emeria's Call (modal, a sorcery // land), khm-112 Tergrid (modal, an artifact back with a cost), stx-6 Wandering Archaic (modal, a COLOURLESS non-artifact front — 5.11), stx-147 Augmenter Pugilist (modal, a green front // a blue sorcery back). Added 2026-10-28 (TODO 5.11a, the same capture by /cards/:set/:number): pstx-6s Wandering Archaic (the prerelease stamp) and stx-286 (the EXTENDED-art printing, frame_effects extendedart).",
   "inr-60": {
     "id": "6904ea20-e504-47da-95a0-08739fdde260",
     "name": "Delver of Secrets // Insectile Aberration",
@@ -1008,6 +1008,127 @@
           "png": "https://cards.scryfall.io/png/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.png?1783938353",
           "normal": "https://cards.scryfall.io/normal/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353",
           "art_crop": "https://cards.scryfall.io/art_crop/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353"
+        }
+      }
+    ]
+  },
+  "pstx-6s": {
+    "id": "a662a862-c592-4c5b-9728-279d04be22bf",
+    "name": "Wandering Archaic // Explore the Vastlands",
+    "layout": "modal_dfc",
+    "set": "pstx",
+    "set_name": "Strixhaven: School of Mages Promos",
+    "set_type": "promo",
+    "collector_number": "6s",
+    "released_at": "2021-04-23",
+    "frame": "2015",
+    "border_color": "black",
+    "promo_types": [
+      "prerelease",
+      "datestamped"
+    ],
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Avatar // Sorcery",
+    "color_identity": [],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/pstx/6s/wandering-archaic-explore-the-vastlands?utm_source=api",
+    "artist": "Wayne Reynolds",
+    "card_faces": [
+      {
+        "name": "Wandering Archaic",
+        "mana_cost": "{5}",
+        "type_line": "Creature — Avatar",
+        "oracle_text": "Whenever an opponent casts an instant or sorcery spell, they may pay {2}. If they don't, you may copy that spell. You may choose new targets for the copy.",
+        "colors": [],
+        "power": "4",
+        "toughness": "4",
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/a/6/a662a862-c592-4c5b-9728-279d04be22bf.png?1783927194",
+          "normal": "https://cards.scryfall.io/normal/front/a/6/a662a862-c592-4c5b-9728-279d04be22bf.jpg?1783927194",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/a/6/a662a862-c592-4c5b-9728-279d04be22bf.jpg?1783927194"
+        }
+      },
+      {
+        "name": "Explore the Vastlands",
+        "mana_cost": "{3}",
+        "type_line": "Sorcery",
+        "oracle_text": "Each player looks at the top five cards of their library and may reveal a land card and/or an instant or sorcery card from among them. Each player puts the cards they revealed this way into their hand and the rest on the bottom of their library in a random order. Each player gains 3 life.",
+        "colors": [],
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/a/6/a662a862-c592-4c5b-9728-279d04be22bf.png?1783927194",
+          "normal": "https://cards.scryfall.io/normal/back/a/6/a662a862-c592-4c5b-9728-279d04be22bf.jpg?1783927194",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/a/6/a662a862-c592-4c5b-9728-279d04be22bf.jpg?1783927194"
+        }
+      }
+    ]
+  },
+  "stx-286": {
+    "id": "63bd0484-4089-4d33-aa8b-3730791061c3",
+    "name": "Wandering Archaic // Explore the Vastlands",
+    "layout": "modal_dfc",
+    "set": "stx",
+    "set_name": "Strixhaven: School of Mages",
+    "set_type": "expansion",
+    "collector_number": "286",
+    "released_at": "2021-04-23",
+    "frame": "2015",
+    "border_color": "black",
+    "frame_effects": [
+      "extendedart"
+    ],
+    "promo_types": [
+      "boosterfun"
+    ],
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Avatar // Sorcery",
+    "color_identity": [],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/stx/286/wandering-archaic-explore-the-vastlands?utm_source=api",
+    "artist": "Wayne Reynolds",
+    "card_faces": [
+      {
+        "name": "Wandering Archaic",
+        "mana_cost": "{5}",
+        "type_line": "Creature — Avatar",
+        "oracle_text": "Whenever an opponent casts an instant or sorcery spell, they may pay {2}. If they don't, you may copy that spell. You may choose new targets for the copy.",
+        "colors": [],
+        "power": "4",
+        "toughness": "4",
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.png?1783927272",
+          "normal": "https://cards.scryfall.io/normal/front/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.jpg?1783927272",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.jpg?1783927272"
+        }
+      },
+      {
+        "name": "Explore the Vastlands",
+        "mana_cost": "{3}",
+        "type_line": "Sorcery",
+        "oracle_text": "Each player looks at the top five cards of their library and may reveal a land card and/or an instant or sorcery card from among them. Each player puts the cards they revealed this way into their hand and the rest on the bottom of their library in a random order. Each player gains 3 life.",
+        "colors": [],
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.png?1783927272",
+          "normal": "https://cards.scryfall.io/normal/back/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.jpg?1783927272",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/6/3/63bd0484-4089-4d33-aa8b-3730791061c3.jpg?1783927272"
         }
       }
     ]

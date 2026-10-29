@@ -54,7 +54,7 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_COLOR_KEYS, KIND_DEFS, framesForKind } from "@/lib/creator/card-kinds";
 import { neverDrawnSecondPartUnits } from "@/lib/creator/second-part-fields";
 import { undrawableSymbols, undrawableSymbolsMessage } from "@/lib/validation/card-glyphs";
-import { FRAME_TEMPLATE_LABELS, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_LABELS, TEMPLATE_SKIN_VARIANTS, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The kinds
@@ -595,8 +595,12 @@ function firstPartColorOf(template: FrameTemplate, cost: string | null | undefin
  * the frame is verified in. Pure: the plan reads it before any credit is
  * reserved, so nothing can fail after the art.
  */
-export function layoutFitOf(kind: AiLayoutKind, face: LayoutFace, verifiedKeys: ReadonlySet<string>): LayoutFit {
-  const template = LAYOUT_TEMPLATE[kind];
+export function layoutFitOf(
+  kind: AiLayoutKind,
+  face: LayoutFace,
+  verifiedKeys: ReadonlySet<string>,
+  template: FrameTemplate = LAYOUT_TEMPLATE[kind],
+): LayoutFit {
   const no = (reason: string): LayoutFit => ({ ok: false, reason, partColour: {} });
   const saga = kind === "saga" ? sagaFromRulesText(face.rules_text) : null;
   const lint = lintLayoutDesign(
@@ -635,6 +639,36 @@ export function layoutFitOf(kind: AiLayoutKind, face: LayoutFace, verifiedKeys: 
   const gate = frameGateError(template, gateColours, verifiedKeys);
   if (gate) return no(gate);
   return { ok: true, reason: null, partColour };
+}
+
+/** The Variations skin of the kind's frame (TEMPLATE_SKIN_VARIANTS — the
+ *  extended-art Prepare dress, TODO 4.27b) that `current` names, or null:
+ *  the frame a fill keeps the card on where it fits there. */
+export function layoutSkinOf(kind: AiLayoutKind, current: string | null | undefined): FrameTemplate | null {
+  const skins: readonly FrameTemplate[] = TEMPLATE_SKIN_VARIANTS[LAYOUT_TEMPLATE[kind]] ?? [];
+  return current && skins.includes(current as FrameTemplate) ? (current as FrameTemplate) : null;
+}
+
+/**
+ * The fit a layout fill is planned on, and the frame it saves on: a card
+ * sitting on a Variations skin of the kind's frame (layoutSkinOf: the
+ * extended-art Prepare dress) KEEPS it wherever the filled card passes every
+ * gate there — the skin verified in the card's colour included — and else
+ * the kind's own frame, as before (TODO 4.27b: a fill used to move the card
+ * back to `prepare` without a word). A card on no skin: layoutFitOf alone.
+ */
+export function layoutFrameFitOf(
+  kind: AiLayoutKind,
+  face: LayoutFace,
+  verifiedKeys: ReadonlySet<string>,
+  current?: string | null,
+): LayoutFit & { template: FrameTemplate } {
+  const skin = layoutSkinOf(kind, current);
+  if (skin) {
+    const onSkin = layoutFitOf(kind, face, verifiedKeys, skin);
+    if (onSkin.ok) return { ...onSkin, template: skin };
+  }
+  return { ...layoutFitOf(kind, face, verifiedKeys), template: LAYOUT_TEMPLATE[kind] };
 }
 
 // ---------------------------------------------------------------------------

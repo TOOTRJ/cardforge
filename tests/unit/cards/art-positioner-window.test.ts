@@ -57,6 +57,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // whole frame — from the border's inner edge to the card's sides on
   // extended art; the borderless frame's own window.
   extendedartstation: { front: [1500, 1959] },
+  // The extended-art Prepare dress (TODO 4.27b): extendedart's window; its
+  // colourless key is the opaque silver artifact frame.
+  extendedartprepare: { front: [1500, 1142] },
   m15borderlessstation: { front: BORDERLESS },
   m15ub: { front: M15_WINDOW },
   m15ubartifact: { front: M15_WINDOW },

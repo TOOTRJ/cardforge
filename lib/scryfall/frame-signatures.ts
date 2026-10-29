@@ -1050,9 +1050,13 @@ const FAMILIES: Record<
   // The extended-art frame and its land dress (TODO 4.7, owner Round 63):
   // a land prints the pack's land frames (FDN #487, NEO #501–505), every
   // other kind the spell frame.
+  // …and the Prepare kind its own dress (TODO 4.27b: SOS #309–342, SOC
+  // #63–98, FRA #425–430), exact once verified in the card's colour — short
+  // of it the Prepare frame where that is (nearest), else the creature on
+  // the extended-art frame (lib/creator/frame-resolve.ts finalizeImportMatch).
   extended: {
-    produces: ["extendedartland", "extendedart"],
-    pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : "extendedart"),
+    produces: ["extendedartland", "extendedartprepare", "extendedart"],
+    pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : facts.kind === "prepare" ? "extendedartprepare" : "extendedart"),
   },
   // The full-art token design, M20 → today (TODO 4.48 / 4.50).
   m20: {
@@ -2238,13 +2242,16 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "5.13",
     },
   },
-  // A colourless face without the Artifact word (EMN's Eldrazi backs, TLA's
-  // Aang backs, STX #6's Avatar front): the printing's frame IS the
+  // A colourless face without the Artifact word on a TRANSFORM body (EMN's
+  // Eldrazi backs, TLA's Aang backs): the printing's frame IS the
   // double-faced body (a front-body row may be verified against its front),
   // but the body's `c` is the artifact master standing in (design D2) and
   // the see-through frame is 5.11, so the import LANDS on the standard
   // (`landOn`: today's landing, a legacy back) rather than giving the face
-  // a colour the print doesn't have.
+  // a colour the print doesn't have. STX #6 Wandering Archaic, the modal
+  // card, left this rule with TODO 5.11a: the modal bodies' `c` IS the
+  // see-through frame, so `modal/2015` names it exact, once its `c` rows
+  // are ticked again (finalizeImportMatch).
   {
     key: "dfc/colourless-face",
     exactLabel: "Double-faced card with a colourless face",

@@ -441,6 +441,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.5d's saga creature.
   "sagacreature",
+  // …and its extended-art dress (TODO 4.27b).
+  "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
@@ -495,6 +497,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.5d's saga creature.
   "sagacreature",
+  // …and its extended-art dress (TODO 4.27b).
+  "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
   "expeditionlandbfz",
   // TODO 4.11 wave 2's New Capenna Art Deco.
@@ -890,6 +894,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "prepare",
       // …and TODO 4.5d's saga creature: the same, no bump.
       "sagacreature",
+      // …and TODO 4.27b's extended-art Prepare dress: the same, no bump.
+      "extendedartprepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
       "expeditionlandbfz",
       // …and TODO 4.11 wave 2's New Capenna Art Deco: the same, no bump.
@@ -1349,7 +1355,10 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // could be on: not v35's business either.)
     // (…nor the arch's tall box, TODO 4.55: the text box's see-through c
     // cut shorter — a new template, no stored card.)
-    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub", "m15tokentall"];
+    // (…nor the modal spell bodies' see-through `c`, TODO 5.11a: STX #6
+    // Wandering Archaic's frame, an addition on a key no save could store —
+    // the gate refused a colourless non-artifact face there.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub", "m15tokentall", "m15mdfcfront", "m15mdfcback"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
@@ -3293,7 +3302,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // News (the 70 px disc in a box of its own in the masthead: costRect).
     // The saga creature (TODO 4.5d) was BORN on the saga's row (a new
     // template, no bump).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature"];
+    // (…and the extended-art Prepare dress, TODO 4.27b: a new template BORN
+    // on the Prepare frame's CC M15 row — no bump.)
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "extendedartprepare"];
     const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
@@ -3929,7 +3940,11 @@ describe("v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 / 3.22 
     expect(v74ShadowsChanged(at({ frame_style: { template: "m15" } }))).toBe(false);
     // The list is every template whose profile declares a shadow in
     // card-width px today (cardPx's `cqw`).
-    const declared = FRAME_TEMPLATE_VALUES.filter((t) => JSON.stringify(getFrameProfile(t)).includes("cqw"));
+    // (A template born after v74 — the extended-art Prepare dress, TODO
+    // 4.27b, the Prepare page's ADV_SHADOW — has no card a v74 sweep could
+    // re-bake: the frozen list never names it.)
+    const BORN_AFTER_V74 = ["extendedartprepare"];
+    const declared = FRAME_TEMPLATE_VALUES.filter((t) => JSON.stringify(getFrameProfile(t)).includes("cqw") && !BORN_AFTER_V74.includes(t));
     expect([...V74_SHADOW_TEMPLATES].sort()).toEqual([...declared].sort());
   });
 

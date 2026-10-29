@@ -156,8 +156,8 @@ describe("the supertype a typed line stands for — where every behaviour reader
   it("“Legendary” typed anywhere offers the crown; “Artifact” lets a double-faced face be colourless", () => {
     expect(qualifiesForCrown({ cardType: "creature", supertype: supertypeFromTypes("Creature legendary", "creature") })).toBe(true);
     expect(qualifiesForCrown({ cardType: "creature", supertype: supertypeFromTypes("Goblin", "creature") })).toBe(false);
-    expect(colorlessFaceAllowed("m15dfcfront", { cardType: "creature", supertype: supertypeFromTypes("Artifact Creature", "creature") })).toBe(true);
-    expect(colorlessFaceAllowed("m15dfcfront", { cardType: "creature", supertype: supertypeFromTypes("Creature", "creature") })).toBe(false);
+    expect(colorlessFaceAllowed("m15dfcfront", { cardType: "creature", supertype: supertypeFromTypes("Artifact Creature", "creature") }, new Set<string>())).toBe(true);
+    expect(colorlessFaceAllowed("m15dfcfront", { cardType: "creature", supertype: supertypeFromTypes("Creature", "creature") }, new Set<string>())).toBe(false);
   });
 });
 

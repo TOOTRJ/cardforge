@@ -28,9 +28,11 @@ import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/ty
 const MANIFEST = (manifestJson as { files: Record<string, { width: number; height: number }> }).files;
 
 describe("the declaration", () => {
-  it("is on split, aftermath, prepare and adventure alone", () => {
+  it("is on split, aftermath, prepare (and its extended-art dress) and adventure alone", () => {
     const drawing = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).partColor);
-    expect(drawing.sort()).toEqual(["adventure", "aftermath", "prepare", "split"]);
+    // (…the extended-art Prepare dress since TODO 4.27b: the same page overlays.)
+    expect(drawing.sort()).toEqual(["adventure", "aftermath", "extendedartprepare", "prepare", "split"]);
+    expect((getFrameProfile("extendedartprepare").overlays ?? []).filter((s) => s.anatomy === "partPage")).toEqual([PREPARE_PAGE]);
     expect((getFrameProfile("adventure").overlays ?? []).filter((s) => s.anatomy === "partPage")).toEqual([ADVENTURE_PAGE]);
     expect(getFrameProfile("split").partColorSeam).toEqual(SPLIT_PART_SEAM);
     expect(getFrameProfile("aftermath").partColorSeam).toEqual(AFTERMATH_PART_SEAM);

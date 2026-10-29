@@ -1,4 +1,4 @@
-import { BORDERLESS_STAMP_FOLDERS, SNC_DECO_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
+import { BORDERLESS_STAMP_FOLDERS, PREPARE_STAMP_FOLDERS, SNC_DECO_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -2156,13 +2156,27 @@ describe("provenance and hygiene", () => {
         // textured saga and the published m15nyx masters; its own test:
         // tests/unit/frames/saga-creature-recipe.test.ts.
         "sagacreature",
+        // …and its extended-art dress and holofoil stamp notch (TODO 4.27b):
+        // PipGlyph's merge of the published extendedart and prepare masters
+        // (scripts/build-prepare-frames.mjs --only extended) and the prepare
+        // masters' own foot lifted (scripts/build-borderless-stamp.mjs); their
+        // own test: tests/unit/frames/prepare-stamp-extended.test.ts.
+        "extendedartprepare",
+        ...Object.keys(PREPARE_STAMP_FOLDERS),
         // …and the Breaking News masthead pieces (owner decision on #624):
         // PipGlyph's own cut (scripts/build-breaking-news-masthead.mjs) of
         // the published breakingnews masters; its own test:
         // tests/unit/cards/breaking-news-masthead.test.ts.
         "breakingnewsmasthead",
+        // …and the modal spell bodies' see-through `c` (TODO 5.11a):
+        // PipGlyph's composite (scripts/build-mdfc-colourless-frames.mjs)
+        // of the published m15/c and modal artifact masters; its own test:
+        // tests/unit/frames/mdfc-colourless.test.ts.
+        "mdfccolourless",
       ].sort(),
     );
+    expect(provenance.mdfccolourless.source).toBe("pipglyph");
+    expect(provenance.mdfccolourless.converter).toBe("scripts/build-mdfc-colourless-frames.mjs");
     expect(provenance.breakingnewsmasthead.source).toBe("pipglyph");
     expect(provenance.breakingnewsmasthead.converter).toBe("scripts/build-breaking-news-masthead.mjs");
     expect(provenance.breakingnewsmasthead.commit).toBeUndefined();

@@ -193,7 +193,7 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the Doctor Who TARDIS (TODO 4.11 wave 2: an opaque police box round its window, no sample).
     // + the OTJ Breaking News (TODO 4.11 wave 2: an opaque page round its picture, no sample).
     // + the saga creature (TODO 4.5d: the saga's opaque master, no sample).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(98);
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(99);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

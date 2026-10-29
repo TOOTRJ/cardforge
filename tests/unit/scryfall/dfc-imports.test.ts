@@ -205,10 +205,11 @@ describe("dfcImportOf — the one landing rule", () => {
       if (backColour) expect(patch.back_face?.color_identity, key).toEqual(backColour);
       expect(patch.printed_dfc_icon, key).toBeUndefined();
     }
-    // STX #6 Wandering Archaic's front is a colourless Avatar: the body's
-    // `c` is the artifact stand-in, so the printing keeps today's landing
-    // (5.11); MH3 #253's devoid dress likewise (`dress`).
-    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: "colourless-face", frontBody: "m15mdfcfront" });
+    // STX #6 Wandering Archaic's front is a colourless Avatar: the modal
+    // bodies' `c` is the see-through frame since TODO 5.11a, so it lands on
+    // them (once that `c` is ticked again: finalizeImportMatch); MH3 #253's
+    // devoid dress keeps today's landing (`dress`).
+    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: null, kind: "mdfc", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
     expect(dfcImportOf(printing("mh3-253"))).toMatchObject({ blocked: "dress", frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });
   });
 });
@@ -245,7 +246,9 @@ describe("the registry", () => {
     // Tergrid is legendary: the modal front draws the crown since 5.1d —
     // exact on the body.
     ["khm-112", "modal/2015", "exact", "m15mdfcfront", undefined, undefined],
-    ["stx-6", "dfc/colourless-face", "nearest", "m15mdfcfront", "m15", "5.11"],
+    // STX #6 since TODO 5.11a: exact on the modal front's see-through `c`
+    // (its extended-art printing, STX #286, keeps dfc/colourless-face).
+    ["stx-6", "modal/2015", "exact", "m15mdfcfront", undefined, undefined],
     ["znr-259", "modal/2015", "exact", "m15mdfclandfront", undefined, undefined],
     ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
     // A borderless modal Pathway: nearest on the modal land front (5.7).
@@ -353,7 +356,7 @@ describe("the patch passes the server's gate", () => {
       };
       expect(backFaceSchema.safeParse(payload).success, key).toBe(true);
       expect(dfcFrontTypeError(patch.frame_template, patch.card_type), key).toBeNull();
-      expect(dfcFrontColorError(patch.frame_template, { cardType: patch.card_type, supertype: patch.supertype }, patch.color_identity), key).toBeNull();
+      expect(dfcFrontColorError(patch.frame_template, { cardType: patch.card_type, supertype: patch.supertype }, patch.color_identity, new Set<string>()), key).toBeNull();
       const gate = resolveDfcBackFace({
         frontTemplate: patch.frame_template,
         back: payload,

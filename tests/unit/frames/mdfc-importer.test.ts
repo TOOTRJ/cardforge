@@ -93,14 +93,17 @@ const LAND_PRINTS: Record<string, { bars: number; box: number }> = {
 const CC_BACK_BARS: Record<string, number> = { w: 188.5, u: 123, b: 91, r: 90.5, g: 87.5, m: 147 };
 
 describe("the modal bodies' recipes (TODO 5.1b)", () => {
-  it("the spell pair over CC's 'Modal Regular' pack: w u b r g m + a, c the artifact stand-in, each master the whole image", () => {
+  it("the spell pair over CC's 'Modal Regular' pack: w u b r g m + a, each master the whole image; c left to the see-through builder (TODO 5.11a)", () => {
     for (const t of ["m15mdfcfront", "m15mdfcback"] as const) {
       const d = def(t);
       // Since 5.1d the split pair masters too, and the hybrid dress on the front.
       const pairs = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
-      expect(builtColors(d as never)).toEqual(["a", ...COLORS, ...pairs, ...(t === "m15mdfcfront" ? pairs.map((p) => `${p}-h`) : [])]);
-      expect(d.colors.c).toEqual(d.colors.a);
-      expect(d.colors.c[0].src).toMatch(/\/a(b)?\.png$/);
+      expect(builtColors(d as never)).toEqual(["a", ...COLORS.filter((k) => k !== "c"), ...pairs, ...(t === "m15mdfcfront" ? pairs.map((p) => `${p}-h`) : [])]);
+      // `c` was the artifact stand-in (design D2) until TODO 5.11a: now the
+      // see-through frame, scripts/build-mdfc-colourless-frames.mjs.
+      expect(d.colors.c).toBeUndefined();
+      expect((d as { excluded?: Record<string, string> }).excluded?.c).toMatch(/build-mdfc-colourless-frames/);
+      expect(d.colors.a[0].src).toMatch(/\/a(b)?\.png$/);
       for (const k of ["w", "u", "b", "r", "g", "m"]) expect(d.colors[k][0].src, `${t}/${k}`).toMatch(new RegExp(`${MODAL}/${k}${t.endsWith("back") ? "b" : ""}\\.png$`));
       for (const [k, layers] of Object.entries(d.colors)) {
         if (k.length > 1) continue; // a pair master (5.1d) is its own recipe
@@ -204,19 +207,22 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
     expect(provenance.m15mdfcfront.notes.join("\n")).toMatch(/strip is painted in the MASTER's colour/);
   });
 
-  it("publishes every master as PNG + WebP at 1500 × 2100 — 30 keys (a beside c) and 5.1d's 30 pair masters, 116 distinct blobs", () => {
+  it("publishes every master as PNG + WebP at 1500 × 2100 — 30 keys (a beside c) and 5.1d's 30 pair masters, 120 distinct blobs", () => {
     const keys = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && !k.startsWith("m15mdfccrown") && !k.includes("/strip/"));
     expect(keys).toHaveLength(120);
-    // The strip riders (TODO 5.1c, tests/unit/frames/mdfc-strip-rider.test.ts): 30 pieces, PNG + WebP, at the piece's box.
+    // The strip riders (TODO 5.1c, tests/unit/frames/mdfc-strip-rider.test.ts): 30 pieces, PNG + WebP, at the piece's box
+    // — and the spell bodies' see-through `c` tab (TODO 5.11a): 32.
     const strips = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && k.includes("/strip/"));
-    expect(strips).toHaveLength(60);
+    expect(strips).toHaveLength(64);
     for (const k of strips) expect([manifest.files[k].width, manifest.files[k].height], k).toEqual([658, 90]);
-    expect(new Set(keys.map((k) => manifest.files[k].sha256)).size).toBe(116);
+    // (116 until TODO 5.11a, when the spell pair's `c` became the
+    // see-through frame — two masters, PNG + WebP, of their own.)
+    expect(new Set(keys.map((k) => manifest.files[k].sha256)).size).toBe(120);
     for (const k of keys) expect([manifest.files[k].width, manifest.files[k].height], k).toEqual([1500, 2100]);
     for (const t of ALL) for (const k of builtColors(def(t) as never)) expect(manifest.files[`${t}/${k}.png`], `${t}/${k}`).toBeDefined();
-    // `c` and `a` are the same bytes on the spell pair; the land pair's c is
-    // its own (the grey land modal).
-    for (const t of ["m15mdfcfront", "m15mdfcback"]) expect(manifest.files[`${t}/c.png`].sha256).toBe(manifest.files[`${t}/a.png`].sha256);
+    // `c` is the see-through frame on the spell pair (TODO 5.11a), no longer
+    // `a`'s bytes; the land pair's c is its own (the grey land modal).
+    for (const t of ["m15mdfcfront", "m15mdfcback"]) expect(manifest.files[`${t}/c.png`].sha256).not.toBe(manifest.files[`${t}/a.png`].sha256);
     for (const t of BACKS.filter((x) => x === "m15mdfclandback")) expect(manifest.files[`${t}/c.png`].sha256).not.toBe(manifest.files[`${t}/w.png`].sha256);
   });
 });

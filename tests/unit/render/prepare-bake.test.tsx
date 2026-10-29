@@ -44,6 +44,9 @@ const WANTED = [
   // the frame it lands on today beside the Prepare frame.)
   ...KEYS.map((k) => `m15/${k}.png`),
   ...Object.keys(REAL).filter((rel) => /^(m15crown\/[a-z]+|m15\/pt\/[a-z]+)\.png$/.test(rel)),
+  // (…and, for the review set, TODO 4.27b's pieces where at hand: the pair
+  // masters and pages, the extended-art dress and its band, the notch.)
+  ...Object.keys(REAL).filter((rel) => /^(prepare\/[a-z-]+|prepare\/page\/[a-z-]+|extendedartprepare\/[a-z-]+|extendedcrown\/[a-z]+|prepareholostamp\/[a-z-]+)\.png$/.test(rel)),
 ];
 const served = new Map<string, Buffer>();
 for (const rel of WANTED) {
