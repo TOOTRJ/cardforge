@@ -125,14 +125,23 @@ describe("0151: a deck guide is read where the page shows it", () => {
     const body = fnBody("deck_guide_for_viewer");
     for (const field of ["overview", "mulligan", "weaknesses"]) {
       expect(body).toContain(
-        `case when not viewer.pro then null when deck.is_owner then g.${field} else public.redact_guide_text(g.${field}, scrub.names, scrub.subs) end`,
+        `case when not access.can_read then null when deck.is_owner then g.${field} else public.redact_guide_text(g.${field}, redaction.pattern, redaction.map) end`,
       );
     }
     for (const field of ["game_plan", "combos", "key_cards"]) {
       expect(body).toContain(
-        `case when not viewer.pro then null when deck.is_owner then g.${field} else public.redact_guide_jsonb(g.${field}, scrub.names, scrub.subs) end`,
+        `case when not access.can_read then null when deck.is_owner then g.${field} else public.redact_guide_jsonb(g.${field}, redaction.pattern, redaction.map) end`,
       );
     }
+  });
+
+  it("past 150 hidden names (or 400 in all) a visitor gets the teaser — the owner still reads", () => {
+    const body = fnBody("deck_guide_for_viewer");
+    expect(body).toContain(
+      "select viewer.pro and (deck.is_owner or (scrub.hidden_count <= 150 and scrub.name_count <= 400)) as can_read",
+    );
+    // The pattern and the map are built only for a guide that will be read.
+    expect(body.match(/when scrub\.hidden_count between 1 and 150 and scrub\.name_count <= 400 then/g)).toHaveLength(2);
   });
 
   it("hides the cards the deck read hides (canLinkIntoDeck + the cards' RLS), as the list names them", () => {
@@ -143,9 +152,13 @@ describe("0151: a deck guide is read where the page shows it", () => {
     // A printing's real name, else the deck page's own words.
     expect(body).toContain(`case when entries.printed then entries.entry_name else '${PRIVATE_CARD_NAME}' end as sub`);
     // Longest first, so a full name goes before its short form; the
-    // guards (shown names a hidden one could reach into) in the same list.
-    expect(body).toContain("array_agg(x.name order by char_length(x.name) desc, x.name) as names");
-    expect(body).toContain("where exists (select 1 from hidden h where position(h.key in s.key) > 0)");
+    // guards (shown names a hidden one, or its plural, sits inside as words)
+    // in the same list; the map keyed by the one fold.
+    expect(body).toContain("public.guide_redaction_pattern( (select array_agg(n.name order by char_length(n.name) desc, n.name) from names n))");
+    expect(body).toContain("(select jsonb_object_agg(public.guide_name_fold(btrim(n.name)), n.sub) from names n)");
+    expect(body).toContain("where position(' ' || h.words || ' ' in s.words) > 0");
+    // A name with no letter or digit is never one ("--" took every dash).
+    expect(body).toContain("and n.name ~ '[[:alnum:]]'");
     // Every comparison of two names goes through the one fold.
     expect(body).toContain("not exists (select 1 from shown s where s.key = public.guide_name_fold(ws.name))");
     expect(body).not.toMatch(/lower\(ws\.name\)|lower\(entry_name\)/);
@@ -170,18 +183,37 @@ describe("0151: a deck guide is read where the page shows it", () => {
     }
   });
 
-  it("ONE pass of ONE pattern: a replacement is never read again", () => {
+  it("ONE pass of ONE pattern built once per guide; each match named by its fold", () => {
     const body = fnBody("redact_guide_text");
-    expect(body).toContain("v_parts := regexp_split_to_array(p_text, v_pattern, 'i');");
-    expect(body).toContain("from regexp_matches(p_text, v_pattern, 'gi')");
+    expect(body).toContain("v_parts := regexp_split_to_array(p_text, p_pattern, 'i');");
+    expect(body).toContain("from regexp_matches(p_text, p_pattern, 'gi')");
     expect(body).not.toContain("regexp_replace");
-    // A guard (NULL sub) is kept as written.
-    expect(body).toContain("case when v_found and v_sub is not null then v_sub || lower(v_hit[2]) else v_hit[1] || v_hit[2] end");
+    // No pattern is built here, and no regex per name per match.
+    expect(body).not.toContain("guide_name_pattern");
+    expect(body).not.toContain("~*");
+    // The fold names the match; one the map can't name reads the deck
+    // page's words (fail closed); a guard (JSON null) is kept as written.
+    expect(body).toContain("v_key := public.guide_name_fold(v_hit[1]);");
+    expect(body).toContain(`v_sub := case when p_map ? v_key then p_map ->> v_key else '${PRIVATE_CARD_NAME}' end;`);
+    expect(body).toContain("case when v_sub is null then v_hit[1] || v_hit[2] else v_sub || lower(v_hit[2]) end");
+    expect(fnBody("guide_redaction_pattern")).toContain("|| ')((?:e?s)?)(?![[:alnum:]_])'");
+  });
+
+  it("an ae / oe / ss pair is matched from its letters' classes (Zoë, Noël, Citroën), or its one letter", () => {
+    const pattern = fnBody("guide_name_pattern");
+    const cls = (letter: string) => pattern.match(new RegExp(`when v_ch = '${letter}' then '(\\[[^']+\\])'`))?.[1];
+    const [a, e, o, s] = ["a", "e", "o", "s"].map(cls);
+    expect([a, e, o, s].every(Boolean)).toBe(true);
+    expect(pattern).toContain(`when 'ae' then '(?:${a}${e}|æ|Æ)'`);
+    expect(pattern).toContain(`when 'oe' then '(?:${o}${e}|œ|Œ)'`);
+    expect(pattern).toContain(`else '(?:${s}${s}|ß)'`);
   });
 
   it("the helpers are the service role's; nothing else may call them", () => {
-    expect(FLAT).toContain("revoke all on function public.redact_guide_text(text, text[], text[]) from public, anon, authenticated;");
-    expect(FLAT).toContain("revoke all on function public.redact_guide_jsonb(jsonb, text[], text[]) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.redact_guide_text(text, text, jsonb) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.redact_guide_jsonb(jsonb, text, jsonb) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.guide_redaction_pattern(text[]) from public, anon, authenticated;");
+    expect(FLAT).toContain("revoke all on function public.guide_words(text) from public, anon, authenticated;");
     expect(FLAT).toContain("revoke all on function public.guide_name_fold(text) from public, anon, authenticated;");
     expect(FLAT).toContain("revoke all on function public.guide_name_pattern(text) from public, anon, authenticated;");
   });

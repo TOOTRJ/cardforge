@@ -62,20 +62,35 @@
 --    any case, and FOLDED both sides (guide_name_fold: the printed ’ ‘ “ ”
 --    – — read as the typed ' " - — typedForMatching's six, 0136 — common
 --    Latin accents, æ / œ / ß, runs of spaces), so "Vael’s Forge" is found
---    as "Vael's Forge" and "Æther" as "Aether". ONE pass of ONE
---    longest-first pattern: a replacement is never read again, and a name
---    the visitor's list shows (another entry's) is never touched — it is
---    left alone when a hidden card shares it, and GUARDED (matched and kept
---    as written) when a hidden name sits inside it ("Bolt" in "Lightning
---    Bolt"). Every string of the guide is read, the lists included. What
---    it can't catch: a name the guide spelled otherwise (a paraphrase, a
---    title the card had before a rename the entry never saw), or a card no
---    longer in the deck. And one thing it can't check: a hidden card whose
---    entry stands for a printing reads as that entry's name — the page hides
---    such a name when it holds strong language (hidesEntryName,
+--    as "Vael's Forge", "Æther" as "Aether" and "Zoë" as "Zoe". ONE pass of
+--    ONE longest-first pattern, built once per guide: a replacement is never
+--    read again; each match is named by its fold in a map (one the map
+--    can't name reads "Private card" — fail closed); and a name the
+--    visitor's list shows (another entry's) is never touched — left alone
+--    when a hidden card shares it, GUARDED (matched and kept as written)
+--    when a hidden name sits inside it ("Bolt" in "Lightning Bolt"). A name
+--    with no letter or digit ("--", "!!") is never a name. Past 150 hidden
+--    names, or 400 names with the guards, a visitor gets the teaser instead
+--    of the text: the redaction's cost grows with them, and a guide it can't
+--    afford to read is withheld, never shown unread. Every string of the
+--    guide is read, the lists included.
+--    Known limits: a name the guide spelled otherwise (a paraphrase, a
+--    title the card had before a rename the entry never saw) or a card no
+--    longer in the deck; overlaps — at each place the LEFTMOST match wins,
+--    so a hidden "Lotus Petal" inside the guide's "Black Lotus Petal" stays
+--    as written where "Black Lotus" is a shown name (its guard starts
+--    first), and a hidden name overlapping a longer one that starts earlier
+--    is read as part of that one; a name typed with a COMBINING accent
+--    (e + U+0308 rather than ë) is matched by its base letters and leaves
+--    the mark behind the replacement. And one thing it can't check: a hidden
+--    card whose entry stands for a printing reads as that entry's name — the
+--    page hides such a name when it holds strong language (hidesEntryName,
 --    lib/moderation/profanity.ts), which SQL can't test (the detector's
 --    database twin is TODO 7.17); the name is the printing's real one unless
---    the deck's owner renamed their own entry.
+--    the deck's owner renamed their own entry. (Letters are judged by the
+--    database's ctype: production's is Unicode-aware, as the local stack's
+--    and the branches' — checked 2026-10-29: 'é' ~ '[[:alnum:]]',
+--    'Ð' ~* 'ð', lower('É') = 'é'.)
 --    Hiding the whole guide while the deck holds a private card was the
 --    other option: it can't miss a name, but it takes D4's guides away from
 --    every deck with one private card (D11 makes that common); the
@@ -226,7 +241,7 @@ $$;
 
 -- A name as a pattern that matches every text guide_name_fold() folds to
 -- the same name: each of those letters with its accented forms, ae / oe /
--- ss with æ / œ / ß, every apostrophe, quote and dash with its typed form,
+-- ss (their letters' forms) with æ / œ / ß, every apostrophe, quote and dash with its typed form,
 -- any run of white space for a space; every other ASCII sign escaped, every
 -- other character literal (never a backslash before a letter — an ARE
 -- escape).
@@ -247,10 +262,12 @@ begin
     v_ch := substr(v_fold, i, 1);
     v_pair := substr(v_fold, i, 2);
     if v_pair in ('ae', 'oe', 'ss') then
+      -- The pair from the letter classes (an accented letter in it — Zoë,
+      -- Noël, Citroën — folds to the same pair), or its one-letter form.
       v_out := v_out || case v_pair
-        when 'ae' then '(?:ae|æ|Æ)'
-        when 'oe' then '(?:oe|œ|Œ)'
-        else '(?:ss|ß)'
+        when 'ae' then '(?:[aAàáâãäåāăąÀÁÂÃÄÅĀĂĄ][eEèéêëēĕėęěÈÉÊËĒĔĖĘĚ]|æ|Æ)'
+        when 'oe' then '(?:[oOòóôõöøōŏőÒÓÔÕÖØŌŎŐ][eEèéêëēĕėęěÈÉÊËĒĔĖĘĚ]|œ|Œ)'
+        else '(?:[sSśšşŚŠŞ][sSśšşŚŠŞ]|ß)'
       end;
       i := i + 2;
       continue;
@@ -281,57 +298,68 @@ begin
 end;
 $$;
 
--- The redaction: ONE pass of ONE pattern — every name, longest first (and
--- POSIX's rule: the longest alternative wins at each place), as a whole
--- word, a plural keeping its ending ("two Ember Signets" → "two Sol Rings";
--- in lower case after a replacement)
--- — cut out with regexp_split_to_array and regexp_matches over the same
--- pattern, so a replacement is never read again (a hidden "Sol" can't touch
--- the "Sol Ring" just written). A name whose sub is NULL is a GUARD: a name
--- the visitor's list shows, matched only to be kept as written (a hidden
--- "Bolt" never reaches into "Lightning Bolt"). Each match is tied to its
--- name by that name's own pattern, anchored, in array order.
-create or replace function public.redact_guide_text(p_text text, p_names text[], p_subs text[])
+-- A folded name's words: every run of characters that is no letter or
+-- digit as one space — the guards' word check (a hidden name, or its
+-- plural, inside a shown one).
+create or replace function public.guide_words(p_key text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select btrim(regexp_replace(p_key, '[^[:alnum:]]+', ' ', 'g'));
+$$;
+
+-- The redaction's ONE pattern for a guide: every name (longest first —
+-- and POSIX's rule, the longest alternative wins at each place), as a whole
+-- word, with an optional plural ending. Built once per guide read, never
+-- per string. NULL for no names.
+create or replace function public.guide_redaction_pattern(p_names text[])
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select '(?<![[:alnum:]_])('
+    || string_agg('(?:' || public.guide_name_pattern(t.name) || ')', '|' order by t.o)
+    || ')((?:e?s)?)(?![[:alnum:]_])'
+  from unnest(p_names) with ordinality as t(name, o);
+$$;
+
+-- The redaction: ONE pass of p_pattern, cut out with regexp_split_to_array
+-- and regexp_matches over that same pattern, so a replacement is never
+-- read again (a hidden "Sol" can't touch the "Sol Ring" just written). Each
+-- match is named by its FOLD in p_map (fold → what the list shows; a JSON
+-- null is a GUARD — a name the visitor's list shows, kept as written, so a
+-- hidden "Bolt" never reaches into "Lightning Bolt"); a match the map
+-- can't name reads "Private card" (fail closed). A plural keeps its ending,
+-- in lower case after a replacement ("two Ember Signets" → "two Sol
+-- Rings").
+create or replace function public.redact_guide_text(p_text text, p_pattern text, p_map jsonb)
 returns text
 language plpgsql
 immutable
 set search_path = ''
 as $$
 declare
-  v_pats text[];
-  v_pattern text;
   v_parts text[];
   v_out text;
   v_hit text[];
+  v_key text;
   v_sub text;
-  v_found boolean;
   i integer := 0;
-  j integer;
 begin
-  if p_text is null or coalesce(cardinality(p_names), 0) = 0 then
+  if p_text is null or p_pattern is null then
     return p_text;
   end if;
-  select array_agg(public.guide_name_pattern(t.name) order by t.o) into v_pats
-  from unnest(p_names) with ordinality as t(name, o);
-  v_pattern := '(?<![[:alnum:]_])('
-    || (select string_agg('(?:' || t.pat || ')', '|' order by t.o)
-          from unnest(v_pats) with ordinality as t(pat, o))
-    || ')((?:e?s)?)(?![[:alnum:]_])';
-  v_parts := regexp_split_to_array(p_text, v_pattern, 'i');
+  v_parts := regexp_split_to_array(p_text, p_pattern, 'i');
   v_out := v_parts[1];
-  for v_hit in select m.hit from regexp_matches(p_text, v_pattern, 'gi') as m(hit) loop
+  for v_hit in select m.hit from regexp_matches(p_text, p_pattern, 'gi') as m(hit) loop
     i := i + 1;
-    v_found := false;
-    v_sub := null;
-    for j in 1 .. cardinality(p_names) loop
-      if v_hit[1] ~* ('^(?:' || v_pats[j] || ')$') then
-        v_found := true;
-        v_sub := p_subs[j];
-        exit;
-      end if;
-    end loop;
+    v_key := public.guide_name_fold(v_hit[1]);
+    v_sub := case when p_map ? v_key then p_map ->> v_key else 'Private card' end;
     v_out := v_out
-      || case when v_found and v_sub is not null then v_sub || lower(v_hit[2]) else v_hit[1] || v_hit[2] end
+      || case when v_sub is null then v_hit[1] || v_hit[2] else v_sub || lower(v_hit[2]) end
       || v_parts[i + 1];
   end loop;
   return v_out;
@@ -340,28 +368,28 @@ $$;
 
 -- The same through every string of a guide's jsonb (game plan steps, the
 -- combos' cards and descriptions, key cards), whatever its shape.
-create or replace function public.redact_guide_jsonb(p_value jsonb, p_names text[], p_subs text[])
+create or replace function public.redact_guide_jsonb(p_value jsonb, p_pattern text, p_map jsonb)
 returns jsonb
 language plpgsql
 immutable
 set search_path = ''
 as $$
 begin
-  if p_value is null or p_names is null then
+  if p_value is null or p_pattern is null then
     return p_value;
   end if;
   case jsonb_typeof(p_value)
     when 'string' then
-      return to_jsonb(public.redact_guide_text(p_value #>> '{}', p_names, p_subs));
+      return to_jsonb(public.redact_guide_text(p_value #>> '{}', p_pattern, p_map));
     when 'array' then
       return coalesce(
-        (select jsonb_agg(public.redact_guide_jsonb(t.value, p_names, p_subs) order by t.ordinality)
+        (select jsonb_agg(public.redact_guide_jsonb(t.value, p_pattern, p_map) order by t.ordinality)
            from jsonb_array_elements(p_value) with ordinality as t(value, ordinality)),
         '[]'::jsonb
       );
     when 'object' then
       return coalesce(
-        (select jsonb_object_agg(t.key, public.redact_guide_jsonb(t.value, p_names, p_subs))
+        (select jsonb_object_agg(t.key, public.redact_guide_jsonb(t.value, p_pattern, p_map))
            from jsonb_each(p_value) as t(key, value)),
         '{}'::jsonb
       );
@@ -420,11 +448,14 @@ as $$
   -- an entry's own name unless it is a hidden card's with no printing),
   -- with its fold.
   shown as (
-    select public.guide_name_fold(entry_name) as key, entry_name as name
-    from entries where not (hidden and not printed)
-    union
-    select public.guide_name_fold(card_title), card_title
-    from entries where card_title is not null and not hidden
+    select f.key, f.name, ' ' || public.guide_words(f.key) || ' ' as words
+    from (
+      select public.guide_name_fold(entry_name) as key, entry_name as name
+      from entries where not (hidden and not printed)
+      union
+      select public.guide_name_fold(card_title), card_title
+      from entries where card_title is not null and not hidden
+    ) f
   ),
   -- A hidden card's names, and what the list shows in their place.
   hidden_names as (
@@ -435,7 +466,9 @@ as $$
       values (entries.card_title),
              (case when not entries.printed then entries.entry_name end)
     ) as n(name)
+    -- never a name without a letter or digit ("--" would take every dash)
     where entries.hidden and n.name is not null and char_length(n.name) >= 2
+      and n.name ~ '[[:alnum:]]'
   ),
   with_short as (
     select name, sub from hidden_names
@@ -446,12 +479,14 @@ as $$
     from hidden_names
     where position(',' in name) > 1
       and char_length(btrim(split_part(name, ',', 1))) >= 3
+      and btrim(split_part(name, ',', 1)) ~ '[[:alnum:]]'
   ),
   -- The names to replace: once per fold, never one the list shows anyway,
   -- never one that reads as its own replacement.
   hidden as (
     select distinct on (public.guide_name_fold(ws.name))
-           ws.name, ws.sub, public.guide_name_fold(ws.name) as key
+           ws.name, ws.sub, public.guide_name_fold(ws.name) as key,
+           public.guide_words(public.guide_name_fold(ws.name)) as words
     from with_short ws
     where public.guide_name_fold(ws.name) <> public.guide_name_fold(ws.sub)
       and not exists (select 1 from shown s where s.key = public.guide_name_fold(ws.name))
@@ -462,45 +497,72 @@ as $$
   guards as (
     select distinct on (s.key) s.name, null::text as sub
     from shown s
-    where exists (select 1 from hidden h where position(h.key in s.key) > 0)
+    where exists (
+      select 1 from hidden h
+      where position(' ' || h.words || ' ' in s.words) > 0
+         or position(' ' || h.words || 's ' in s.words) > 0
+         or position(' ' || h.words || 'es ' in s.words) > 0
+    )
     order by s.key, s.name
   ),
+  -- The pattern and the map, built ONCE for the whole guide — and only
+  -- while the guide is affordable: past 150 hidden names (or 400 in all)
+  -- the visitor gets the teaser (below), never the text unread.
+  names as (
+    select name, sub from hidden
+    union all
+    select name, sub from guards
+  ),
   scrub as (
-    select array_agg(x.name order by char_length(x.name) desc, x.name) as names,
-           array_agg(x.sub order by char_length(x.name) desc, x.name) as subs
-    from (
-      select name, sub from hidden
-      union all
-      select name, sub from guards
-    ) x
+    select count(*) filter (where n.sub is not null) as hidden_count,
+           count(*) as name_count
+    from names n
+  ),
+  redaction as (
+    select case when scrub.hidden_count between 1 and 150 and scrub.name_count <= 400 then
+             public.guide_redaction_pattern(
+               (select array_agg(n.name order by char_length(n.name) desc, n.name) from names n))
+           end as pattern,
+           case when scrub.hidden_count between 1 and 150 and scrub.name_count <= 400 then
+             (select jsonb_object_agg(public.guide_name_fold(btrim(n.name)), n.sub) from names n)
+           end as map
+    from scrub
+  ),
+  -- The text for a Pro viewer: the owner always, a visitor while the
+  -- redaction can be afforded.
+  access as (
+    select viewer.pro and (deck.is_owner or (scrub.hidden_count <= 150 and scrub.name_count <= 400)) as can_read
+    from deck
+    cross join viewer
+    cross join scrub
   )
   select
     g.deck_id,
-    viewer.pro,
-    case when not viewer.pro then null
+    access.can_read,
+    case when not access.can_read then null
          when deck.is_owner then g.overview
-         else public.redact_guide_text(g.overview, scrub.names, scrub.subs) end,
-    case when not viewer.pro then null
+         else public.redact_guide_text(g.overview, redaction.pattern, redaction.map) end,
+    case when not access.can_read then null
          when deck.is_owner then g.game_plan
-         else public.redact_guide_jsonb(g.game_plan, scrub.names, scrub.subs) end,
-    case when not viewer.pro then null
+         else public.redact_guide_jsonb(g.game_plan, redaction.pattern, redaction.map) end,
+    case when not access.can_read then null
          when deck.is_owner then g.mulligan
-         else public.redact_guide_text(g.mulligan, scrub.names, scrub.subs) end,
-    case when not viewer.pro then null
+         else public.redact_guide_text(g.mulligan, redaction.pattern, redaction.map) end,
+    case when not access.can_read then null
          when deck.is_owner then g.combos
-         else public.redact_guide_jsonb(g.combos, scrub.names, scrub.subs) end,
-    case when not viewer.pro then null
+         else public.redact_guide_jsonb(g.combos, redaction.pattern, redaction.map) end,
+    case when not access.can_read then null
          when deck.is_owner then g.weaknesses
-         else public.redact_guide_text(g.weaknesses, scrub.names, scrub.subs) end,
-    case when not viewer.pro then null
+         else public.redact_guide_text(g.weaknesses, redaction.pattern, redaction.map) end,
+    case when not access.can_read then null
          when deck.is_owner then g.key_cards
-         else public.redact_guide_jsonb(g.key_cards, scrub.names, scrub.subs) end,
-    case when viewer.pro then g.source end,
-    case when viewer.pro then g.generated_at end
+         else public.redact_guide_jsonb(g.key_cards, redaction.pattern, redaction.map) end,
+    case when access.can_read then g.source end,
+    case when access.can_read then g.generated_at end
   from deck
   join public.deck_guides g on g.deck_id = deck.id
-  cross join viewer
-  cross join scrub;
+  cross join access
+  cross join redaction;
 $$;
 
 comment on function public.deck_guide_for_viewer(uuid) is
@@ -643,10 +705,14 @@ revoke all on function public.guide_name_fold(text) from public, anon, authentic
 grant execute on function public.guide_name_fold(text) to service_role;
 revoke all on function public.guide_name_pattern(text) from public, anon, authenticated;
 grant execute on function public.guide_name_pattern(text) to service_role;
-revoke all on function public.redact_guide_text(text, text[], text[]) from public, anon, authenticated;
-grant execute on function public.redact_guide_text(text, text[], text[]) to service_role;
-revoke all on function public.redact_guide_jsonb(jsonb, text[], text[]) from public, anon, authenticated;
-grant execute on function public.redact_guide_jsonb(jsonb, text[], text[]) to service_role;
+revoke all on function public.guide_words(text) from public, anon, authenticated;
+grant execute on function public.guide_words(text) to service_role;
+revoke all on function public.guide_redaction_pattern(text[]) from public, anon, authenticated;
+grant execute on function public.guide_redaction_pattern(text[]) to service_role;
+revoke all on function public.redact_guide_text(text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.redact_guide_text(text, text, jsonb) to service_role;
+revoke all on function public.redact_guide_jsonb(jsonb, text, jsonb) from public, anon, authenticated;
+grant execute on function public.redact_guide_jsonb(jsonb, text, jsonb) to service_role;
 
 revoke all on function public.deck_guide_for_viewer(uuid) from public;
 grant execute on function public.deck_guide_for_viewer(uuid) to anon, authenticated, service_role;
