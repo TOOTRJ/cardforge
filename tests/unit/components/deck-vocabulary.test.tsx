@@ -100,20 +100,32 @@ describe("the deck card pop-up", () => {
 });
 
 describe("the deck card list", () => {
-  it("filters by status in the new words and badges each row", async () => {
+  it("badges each row, and its filter chips say the badges' words", async () => {
     render(<DeckCardList items={[real, edited, original]} ownerUsername="kesh" canManage={false} />);
     const filters = screen.getByRole("group", { name: "Filter by card status" });
-    expect(within(filters).getByRole("button", { name: "Not customized (1)" })).toBeTruthy();
-    expect(within(filters).getByRole("button", { name: "Customized" })).toBeTruthy();
+    expect(within(filters).getByRole("button", { name: "Imported (1)" })).toBeTruthy();
+    expect(within(filters).getByRole("button", { name: "Edited (1)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Showing custom cards" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Open Lightning Bolt" }).textContent).toContain("Imported");
     expect(screen.getByRole("button", { name: "Open Counter-Hex" }).textContent).toContain("Edited");
     expect(document.body.textContent).not.toMatch(NOT_THESE);
 
+    // Each chip shows exactly the rows wearing its badge.
     await act(async () => {
-      fireEvent.click(within(filters).getByRole("button", { name: "Customized" }));
+      fireEvent.click(within(filters).getByRole("button", { name: "Edited (1)" }));
     });
+    expect(screen.getByRole("button", { name: "Open Counter-Hex" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open Lightning Bolt" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Ember Imp" })).toBeNull();
+    await act(async () => {
+      fireEvent.click(within(filters).getByRole("button", { name: "Imported (1)" }));
+    });
+    expect(screen.getByRole("button", { name: "Open Lightning Bolt" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Open Counter-Hex" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Ember Imp" })).toBeNull();
+    await act(async () => {
+      fireEvent.click(within(filters).getByRole("button", { name: "All" }));
+    });
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Showing custom cards" }));
     });

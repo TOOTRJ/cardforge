@@ -29,7 +29,10 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 // real cards ⇄ custom cards toggle flips which image customized entries
 // show. The words are the deck vocabulary (TODO DK2.2,
 // components/creator/card-glossary.tsx): an entry still on its real card is
-// "Imported", one with your version linked is "Edited".
+// "Imported", one with your version linked is "Edited" — and the filter
+// chips say the same words as the badges, each showing exactly the rows
+// that wear its badge ("Custom" and "Placeholder" rows show under All until
+// the status chips of TODO DK5.6).
 // ---------------------------------------------------------------------------
 
 const BOARD_ORDER: readonly DeckBoard[] = [
@@ -69,7 +72,7 @@ export function DeckCardList({
   //    same click's mousedown then takes the focus off the row again (it
   //    lands on <body>): the hand-back is repeated once the click is over;
   //  - the row may be GONE — "Remove from deck" in the pop-up, or a card
-  //    linked under the "Not customized" filter — before or just after the
+  //    linked under the "Imported" filter — before or just after the
   //    close: the focus then goes to the row that took its place (the last
   //    one, past the end; the list's first control when no row is left),
   //    never to <body>;
@@ -133,17 +136,19 @@ export function DeckCardList({
   });
 
   const anyRemixed = items.some((i) => i.entry.card_id);
-  const needsCount = items.filter(
+  // "needs" = the Imported badge's rows, "remixed" = the Edited badge's.
+  const importedCount = items.filter(
     (i) => deckEntryState(i.entry) === "real",
+  ).length;
+  const editedCount = items.filter(
+    (i) => deckEntryState(i.entry) === "remixed",
   ).length;
 
   const filtered = useMemo(() => {
     if (filter === "all") return items;
     return items.filter((item) => {
       const state = deckEntryState(item.entry);
-      return filter === "remixed"
-        ? state === "remixed" || state === "custom"
-        : state === "real" || state === "unresolved";
+      return filter === "remixed" ? state === "remixed" : state === "real";
     });
   }, [items, filter]);
 
@@ -182,12 +187,12 @@ export function DeckCardList({
             onClick={() => setFilter("all")}
           />
           <FilterChip
-            label={`Not customized${needsCount > 0 ? ` (${needsCount})` : ""}`}
+            label={`Imported${importedCount > 0 ? ` (${importedCount})` : ""}`}
             active={filter === "needs"}
             onClick={() => setFilter("needs")}
           />
           <FilterChip
-            label="Customized"
+            label={`Edited${editedCount > 0 ? ` (${editedCount})` : ""}`}
             active={filter === "remixed"}
             onClick={() => setFilter("remixed")}
           />
@@ -208,7 +213,7 @@ export function DeckCardList({
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">
           {filter === "needs"
-            ? "Every card here is customized. 🎉"
+            ? "Every real card here is edited. 🎉"
             : "No cards match this filter."}
         </p>
       ) : (
