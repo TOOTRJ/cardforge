@@ -59,6 +59,7 @@ const LABEL: Record<FunnelEvent, string> = {
   payment_received: "Payments received",
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",
+  nav_click: "Nav clicks",
   pack_purchased: "Packs purchased",
   deck_created: "Decks created",
   deck_cap_hit: "Private-deck cap hits",

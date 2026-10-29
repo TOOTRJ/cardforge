@@ -1,35 +1,48 @@
 import {
   Activity,
   Bell,
+  BookMarked,
   BookOpen,
   CreditCard,
   FlaskConical,
+  FolderPlus,
   Frame,
   GalleryVerticalEnd,
+  Images,
   Inbox,
+  Layers,
   LayoutDashboard,
+  Library,
+  LifeBuoy,
   ListOrdered,
+  LogIn,
   Megaphone,
   MessageSquare,
   MessageSquarePlus,
+  PenTool,
   RefreshCw,
   Rss,
+  Scale,
   Settings,
   ShieldCheck,
   Sparkles,
   Star,
   Trophy,
+  UserCircle,
+  UserPlus,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
 // Icon per dashboard-nav destination, keyed by href so the config stays a
 // plain data array (no JSX in site-config.ts). Shared by the dashboard rail
-// and the avatar menu's admin section (both list siteConfig.adminNav).
+// and the Account menu (its own links and its admin section).
 export const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
   "/dashboard/cards": GalleryVerticalEnd,
   "/dashboard/decks": BookOpen,
+  "/dashboard/decks/new": FolderPlus,
   "/feed": Rss,
   "/dashboard/usage": Sparkles,
   "/dashboard/billing": CreditCard,
@@ -49,4 +62,24 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/frame-requests": ListOrdered,
   "/admin/renders": RefreshCw,
   "/admin/creator-lab": FlaskConical,
+};
+
+// The header panels' and the drawer's icons, keyed by the link's nav id
+// (siteConfig.primaryNav / accountNav) — the same no-JSX-in-config rule.
+// An Account link without one here takes its href's icon above.
+export const NAV_LINK_ICONS: Record<string, LucideIcon> = {
+  "community.gallery": Images,
+  "community.decks": Layers,
+  "community.challenges": Trophy,
+  "community.feed": Rss,
+  "learn.design": PenTool,
+  "learn.reference": BookMarked,
+  "learn.comparisons": Scale,
+  "learn.articles": Library,
+  "learn.help": LifeBuoy,
+  "learn.whats-new": Megaphone,
+  "learn.tools": Wrench,
+  "account.sign-in": LogIn,
+  "account.sign-up": UserPlus,
+  "account.profile": UserCircle,
 };

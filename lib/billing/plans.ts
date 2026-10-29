@@ -323,7 +323,9 @@ export function isLowCredits(balance: number, monthlyAllotment: number): boolean
   return balance <= Math.max(1, Math.floor(monthlyAllotment * LOW_CREDIT_FRACTION));
 }
 
-function isUnlimitedCredits(credits: number): boolean {
+/** The "unlimited" sentinel admin / billing-off entitlements carry
+ *  (Number.MAX_SAFE_INTEGER). */
+export function isUnlimitedCredits(credits: number): boolean {
   return credits >= Number.MAX_SAFE_INTEGER;
 }
 
