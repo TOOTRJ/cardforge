@@ -1685,7 +1685,8 @@ async function createDfcFillJob(
     deckContext,
     plan,
     `${frontTitle} // ${back.title}`,
-    paints ? `${back.title} (back face)` : undefined,
+    // (The back's own name: the recent-titles list reads every step label.)
+    paints ? back.title : undefined,
   );
 }
 
