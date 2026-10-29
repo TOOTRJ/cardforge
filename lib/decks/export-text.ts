@@ -10,12 +10,12 @@ import type { DeckBoard } from "@/types/deck";
 //
 // Pure + unit-tested; the deck page precomputes both variants server-side
 // for its free "Copy decklist" button (owner and visitors alike). The page
-// passes `useProxyNames`: each line names the card the way the viewer's
-// list does — the linked custom card's title where they can read it, the
-// entry's own name otherwise (a private card the viewer can't read is null
-// in their rows, so it never leaks its title). A line that swaps in a
-// custom title drops the printing: "(SET) 123" is the original's, not the
-// custom card's.
+// passes `useProxyNames`: an entry with a real card keeps the real name and
+// printing (the copied list must paste back into Arena or an import); an
+// entry with no real card takes its custom card's title where the viewer can
+// read it, the entry's own name otherwise (a private card the viewer can't
+// read is null in their rows, so it never leaks its title). A line that
+// swaps in a custom title drops the printing.
 // ---------------------------------------------------------------------------
 
 export type ExportEntry = {
@@ -53,11 +53,15 @@ function lineFor(
 }
 
 /** Export entries from deck rows AS THE VIEWER READ THEM (`card` is null
- *  where RLS hid a private card): with `useProxyNames`, each line then says
- *  what the viewer's deck list says. */
+ *  where RLS hid a private card). A copied list has to paste back into
+ *  Arena, Moxfield or PipGlyph's own import, so an entry with a real card
+ *  keeps the real card's name and printing even when it is linked to a
+ *  custom version; only an entry with NO real card (a custom card of your
+ *  own) takes the custom title the viewer's list shows, which also follows
+ *  a rename the stored entry name doesn't. */
 export function exportEntriesOf(
   items: ReadonlyArray<{
-    entry: Omit<ExportEntry, "proxyTitle">;
+    entry: Omit<ExportEntry, "proxyTitle"> & { scryfall_id?: string | null };
     card: { title: string } | null;
   }>,
 ): ExportEntry[] {
@@ -67,7 +71,7 @@ export function exportEntriesOf(
     board: entry.board,
     set_code: entry.set_code,
     collector_number: entry.collector_number,
-    proxyTitle: card?.title ?? null,
+    proxyTitle: entry.scryfall_id ? null : (card?.title ?? null),
   }));
 }
 

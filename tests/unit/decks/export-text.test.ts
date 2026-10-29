@@ -125,21 +125,37 @@ describe("deckToText — proxy names", () => {
 });
 
 describe("exportEntriesOf — the names the viewer's deck list shows (DK0.7)", () => {
-  const row = (name: string, card: { title: string } | null, extra: Partial<ExportEntry> = {}) => ({
+  const row = (
+    name: string,
+    card: { title: string } | null,
+    extra: Partial<ExportEntry> & { scryfall_id?: string } = {},
+  ) => ({
     entry: { name, quantity: 1, board: "main" as DeckBoard, set_code: null, collector_number: null, ...extra },
     card,
   });
 
-  it("a readable custom card names the line; a card the viewer can't read leaves the entry's own name", () => {
+  it("a custom card with no real card names the line; a card the viewer can't read leaves the entry's own name", () => {
     const entries = exportEntriesOf([
-      row("Krenko, Mob Boss", { title: "Grenko, Riot Forgeboss" }),
+      row("Grenko (old title)", { title: "Grenko, Riot Forgeboss" }),
       // A private card in a public deck: RLS gives the visitor no card.
       row("Old Draft Title", null),
-      row("Lightning Bolt", null, { set_code: "m11", collector_number: "149" }),
+      row("Lightning Bolt", null, { set_code: "m11", collector_number: "149", scryfall_id: "bolt-id" }),
     ]);
     const plain = deckToText(DECK, entries, { style: "plain", useProxyNames: true });
     expect(plain).toBe("1 Grenko, Riot Forgeboss\n1 Old Draft Title\n1 Lightning Bolt");
     const arena = deckToText(DECK, entries, { style: "arena", useProxyNames: true });
     expect(arena).toContain("1 Lightning Bolt (M11) 149");
+  });
+
+  it("a real card linked to a custom version keeps the real name and printing, so the list pastes back into Arena", () => {
+    const entries = exportEntriesOf([
+      row("Krenko, Mob Boss", { title: "Grenko, Riot Forgeboss" }, {
+        set_code: "fdn",
+        collector_number: "204",
+        scryfall_id: "krenko-id",
+      }),
+    ]);
+    expect(deckToText(DECK, entries, { style: "plain", useProxyNames: true })).toBe("1 Krenko, Mob Boss");
+    expect(deckToText(DECK, entries, { style: "arena", useProxyNames: true })).toContain("1 Krenko, Mob Boss (FDN) 204");
   });
 });

@@ -3395,7 +3395,9 @@ export function CardCreatorForm({
         setValue("artist_credit", fill.artist_credit, { shouldDirty: true });
       }
     }
-    if (fill.deck_id && mode === "create") {
+    // Never in the deck-card flow: that card is linked into its own deck on
+    // save, and a second deck_id would add it to a deck twice.
+    if (fill.deck_id && mode === "create" && !deckRemix) {
       setValue("deck_id", fill.deck_id, { shouldDirty: true });
     }
     // A two-part card's second part (the AI dialog, PR 2): into the same
