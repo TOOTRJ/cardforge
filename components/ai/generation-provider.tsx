@@ -177,8 +177,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Credits a set of steps will reserve when (re)run: one per card/icon
  *  step — two for a deck remix of a double-faced printing (TODO 5.4, the
- *  step's own `credits`); the deck cover and the how-to-play guide are
- *  free. */
+ *  step's own `credits`); the how-to-play guide is free, and so is an
+ *  older deck job's retired cover step (TODO DK6.3). */
 function creditedStepCount(steps: ReadonlyArray<{ key: string; credits?: number }>): number {
   return steps
     .filter((s) => s.key !== "cover" && s.key !== "guide")
@@ -504,7 +504,7 @@ export function GenerationJobProvider({
         // projection with the real number, including any refunds.
         if (typeof planPayload.credits === "number") {
           // Each pending step's own reserve (a double-faced remix step
-          // reserves two, TODO 5.4); the free cover and guide steps none.
+          // reserves two, TODO 5.4); the free guide (and retired cover) steps none.
           const pendingCost = creditedStepCount(
             startJob.steps.filter((s) => s.status === "pending"),
           );

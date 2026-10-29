@@ -443,8 +443,8 @@ export async function POST(request: Request) {
 
   // Credits are metered per card as steps complete; pre-check the balance so
   // a user doesn't burn a plan call they can't afford (billing off → ∞).
-  // Covers are free (owner decision, 2026-09-15) — only the cards cost
-  // credits.
+  // Only the cards cost credits: the guide is free, and deck jobs plan no
+  // cover any more (TODO DK6.3).
   if (isBillingEnabled()) {
     // First hand back any credit an earlier attempt took and never finished
     // with (a closed tab, a killed function, a refund that didn't land) —
