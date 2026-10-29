@@ -245,7 +245,11 @@ const PICKS: readonly Pick[] = [
   // half) with its page in another colour.
   { from: "prepare/g/prepare-long@stamp-collector-hd", why: "prepare: the lifted-foot arch across the box and the strip, the oval, the collector line with the mark on line 2 beside the plate" },
   { from: "prepare/wu/prepare-short@stamp-pair-hybrid", why: "prepare: the hybrid pair master's own notch piece (its strip under the arch's edge)" },
-  { from: "extendedartprepare/g/prepare-long@stamp-collector-hd", why: "extended-art prepare: the art to the side edges, the black type bar's white ink, the Prepare page, the same notch and the collector line" },
+  // (At the default size, as extended art's own cases: at HD the art
+  // region's shift estimate reads the full-width coded picture 3 px off with
+  // the pixels agreeing, as on the Spacecraft's extended-art dress.)
+  { from: "extendedartprepare/u/prepare-short@stamp", why: "extended-art prepare: the art to the side edges, the black type bar's white ink, the Prepare page and the same notch" },
+  { from: "extendedartprepare/u/prepare-short@collector-2015", why: "extended-art prepare: the 2015 collector line under the Prepare page, the mark beside the plate" },
   { from: "extendedartprepare/r/prepare-short@part-u", why: "extended-art prepare: the spell's blue page overlay over the red dress" },
   { from: "split/r/split-long@part-u-hd", why: "part colour: split's right half in its own colour, a vertical seam (the long card: the short split's turned footer sits 3 px off at 750 on main already)" },
   { from: "aftermath/r/aftermath-short@part-b", why: "part colour: aftermath's lower part in its own colour, a horizontal seam" },
