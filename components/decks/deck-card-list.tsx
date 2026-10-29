@@ -574,7 +574,6 @@ function DeckCardArea({ items: given, ownerUsername, canManage, initialPrefs, su
                     stopSelecting();
                   }}
                   onDone={stopSelecting}
-                  className={overPhoneBar}
                 />
               ) : bar ? (
                 <DeckSummaryBar
@@ -591,7 +590,7 @@ function DeckCardArea({ items: given, ownerUsername, canManage, initialPrefs, su
             {/* The pane's column is the CSS's from 1280 px (so nothing moves
                 when it mounts); the pane itself — and its picture — only
                 where it shows. */}
-            <div className="hidden xl:block">
+            <div className="hidden xl:block xl:self-stretch">
               {wide ? (
                 <DeckPreviewPane
                   store={preview}

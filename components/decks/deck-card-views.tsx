@@ -97,10 +97,10 @@ function GroupHeading({
         aria-expanded={open}
         aria-controls={contentId}
         onClick={() => ui.toggleGroup(group.key)}
-        className="group/heading -mx-1 inline-flex min-h-8 items-baseline gap-2 rounded-md px-1 text-left transition-colors hover:text-primary-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+        className="-mx-1 inline-flex min-h-8 items-center gap-2 rounded-md px-1 text-left transition-colors hover:text-primary-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
       >
         <ChevronDown
-          className={cn("h-3.5 w-3.5 shrink-0 self-center text-subtle transition-transform motion-reduce:transition-none", !open && "-rotate-90")}
+          className={cn("h-3.5 w-3.5 shrink-0 text-subtle transition-transform motion-reduce:transition-none", !open && "-rotate-90")}
           aria-hidden
         />
         {group.label}
@@ -315,7 +315,9 @@ function EntryRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean
             )}
           </span>
         )}
-        {controls ? null : <span className="w-7 shrink-0 text-right font-mono text-xs text-subtle">{row.quantity}×</span>}
+        {/* The owner's stepper says the count from 640 px; on a phone the
+            row keeps its name's room and the sheet holds the stepper. */}
+        <span className={cn("w-7 shrink-0 text-right font-mono text-xs text-subtle", controls && "sm:hidden")}>{row.quantity}×</span>
         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
           {row.name}
           {row.privateName ? <span className="ml-1.5 text-xs text-muted">{row.privateName}</span> : null}
@@ -332,7 +334,7 @@ function EntryRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean
       </button>
       {controls ? (
         <>
-          {ui.stepper(row)}
+          <div className="hidden sm:flex">{ui.stepper(row)}</div>
           {ui.menuButton(row)}
         </>
       ) : null}

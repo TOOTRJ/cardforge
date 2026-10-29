@@ -89,7 +89,7 @@ export function DeckSummaryBar({
                   <span className="text-foreground">{commanders.join(" & ")}</span>
                 </span>
               ) : (
-                <span>No commander yet</span>
+                <span className="min-w-0 truncate">No commander yet</span>
               )}
             </Item>
           ) : null}

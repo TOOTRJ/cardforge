@@ -146,7 +146,31 @@ export function normalizeAddQuery(raw: string): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, ADD_SEARCH_MAX_CHARS);
 }
 
-const SCRYFALL_PNG = /^(https:\/\/cards\.scryfall\.io\/)png(\/(?:front|back)\/[^?#]+)\.png((?:\?[^#]*)?)$/;
+/**
+ * Real cards in the order a typeahead should offer them: the name typed
+ * whole first, then names that start with it, then names with a word that
+ * does, then the rest — each tier in Scryfall's own order (the most played
+ * first, `order=edhrec`). "sol" puts Sol Ring before Solemn Simulacrum's
+ * many neighbours; "bolt" Lightning Bolt's word match before "Boltwing".
+ */
+export function rankRealCards<C extends { name: string }>(cards: readonly C[], query: string, limit = ADD_RESULTS_PER_SECTION): C[] {
+  const q = cardNameKey(query);
+  if (!q) return cards.slice(0, limit);
+  const tier = (card: C) => {
+    const name = cardNameKey(card.name);
+    if (name === q) return 0;
+    if (name.startsWith(q)) return 1;
+    if (name.split(/[\s,'’-]+/).some((word) => word.startsWith(q))) return 2;
+    return 3;
+  };
+  return cards
+    .map((card, index) => ({ card, index, tier: tier(card) }))
+    .sort((a, b) => a.tier - b.tier || a.index - b.index)
+    .slice(0, limit)
+    .map(({ card }) => card);
+}
+
+const SCRYFALL_PNG =/^(https:\/\/cards\.scryfall\.io\/)png(\/(?:front|back)\/[^?#]+)\.png((?:\?[^#]*)?)$/;
 
 /** A Scryfall printing picture at the JPEG size a surface draws ("small"
  *  for the box's rows, "normal" for a card tile). The search route sends

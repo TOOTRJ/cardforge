@@ -1905,6 +1905,40 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+  The OWNER's page is the deck's editor (DK5 part 2): ONE provider,
+  `DeckEditorProvider` (`components/decks/use-deck-editor.tsx`), makes every
+  edit — steppers, Move to, Remove, the selection's bulk bar, the add box —
+  draws it at once (useOptimistic over the server's rows; every edit is the
+  VALUE it wants, `lib/decks/entry-ops.ts`) and sends it through the write
+  queue (`lib/decks/entry-queue.ts`: one line per entry, a waiting edit
+  replaced by a newer one of its kind, a failure cancelling the edits on top
+  of it). The writes are the batch actions of `lib/decks/card-actions.ts`
+  (`updateDeckEntriesAction` / `removeDeckEntriesAction`: one deck a call,
+  every statement held to `deck_id`, ONE revalidation —
+  `revalidateDeckEntryChange`: the deck's paths with IndexNow and My Cards'
+  chips); their revalidation brings the page back with the answer — never a
+  `router.refresh()` per edit (only after a request that never answered).
+  A refusal rolls back and is SAID (toast + the live region); leaving with a
+  write on its way asks first. A removal's Undo (the toast, the phone bar,
+  ⌘Z) is `restoreDeckEntriesAction` — the lines back through the paths cards
+  come in by (`planRestore`: the decklist commit for printings and names,
+  `changeDeckMembershipAction` for a card), NEVER a direct insert; what can't
+  come back says why. The add box (`deck-add-box.tsx`, an ARIA combobox, "/"
+  outside a field) searches My cards and other creators' public cards
+  through GET `/api/decks/add-search` (a route, not an action: cancellable,
+  never queued behind edits) and real cards through `/api/scryfall/search`
+  (`order=edhrec`, its quota); `addToDeckAction` lands a card where
+  `addTargetEntry` says (one copy more on the board's row — never a second
+  line for the same card) or brings it in through the membership writer / a
+  ONE-LINE decklist import (the commit's quota). Every entry's Edit is
+  `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
+  creator and the editor follow only through `deckReturnPath` (a deck page,
+  our `#entry-` / `#next-` anchor, nothing else); "Edit next" comes back to
+  `#next-<id>` with the focus on the next one. A row's keys (+ − M S) act
+  only on a focused opener; selection is Select / Shift + click / a long
+  press (touch); the pop-up is a bottom sheet on touch; the large preview
+  pane mounts from 1280 px only (its picture the 600 px thumb, never the
+  HD PNG).
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /

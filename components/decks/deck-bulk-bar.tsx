@@ -49,62 +49,81 @@ export function DeckBulkBar({
   const guard = (run: () => void) => () => {
     if (!none) run();
   };
+  const selectAll = (className: string) => (
+    <button
+      type="button"
+      onClick={() => count < total && onSelectAll()}
+      aria-disabled={count >= total || undefined}
+      className={cn(BUTTON, className)}
+    >
+      Select all <span className="tabular-nums text-muted">({total})</span>
+    </button>
+  );
   return (
     <section
       aria-label="Selected cards"
       className={cn(
-        "sticky bottom-2 z-30 flex flex-wrap items-center gap-2 rounded-frame border border-primary/40 bg-surface/95 px-3 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 sm:bottom-3 sm:px-4",
+        "sticky bottom-2 z-30 flex flex-col gap-2 rounded-frame border border-primary/40 bg-surface/95 px-3 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 sm:bottom-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-4",
         className,
       )}
     >
-      <p className="mr-auto flex min-w-0 items-center gap-2 text-sm text-foreground" aria-live="polite">
-        <CheckSquare className="h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
-        {none ? (
-          <span className="text-muted">Pick cards to change them together.</span>
-        ) : (
-          <span>
-            <span className="font-semibold tabular-nums">{count}</span> selected
-            <span className="text-muted"> · {cards} card{cards === 1 ? "" : "s"}</span>
-          </span>
-        )}
-      </p>
-      <button type="button" onClick={() => count < total && onSelectAll()} aria-disabled={count >= total || undefined} className={BUTTON}>
-        Select all <span className="tabular-nums text-muted">({total})</span>
-      </button>
-      <EntryMenu
-        label="Move the selected cards"
-        items={moveItems}
-        open={moveOpen && !none}
-        onOpenChange={(open) => setMoveOpen(open && !none)}
-        side="top"
-        trigger={
-          <button type="button" aria-disabled={none || undefined} aria-haspopup="menu" className={BUTTON}>
-            <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden />
-            Move to…
-          </button>
-        }
-      />
-      <div role="group" aria-label="Copies of each selected card" className="flex items-center gap-1">
-        <button type="button" aria-label="One fewer of each" aria-disabled={none || undefined} onClick={guard(() => onStep(-1))} className={cn(BUTTON, "w-9 justify-center px-0 pointer-coarse:w-11")}>
-          <Minus className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        <button type="button" aria-label="One more of each" aria-disabled={none || undefined} onClick={guard(() => onStep(1))} className={cn(BUTTON, "w-9 justify-center px-0 pointer-coarse:w-11")}>
-          <Plus className="h-3.5 w-3.5" aria-hidden />
+      {/* One row from 640 px. On a phone two: the count with Select all and
+          Done (where a thumb finds them), then the four actions. */}
+      <div className="flex min-w-0 items-center gap-2 sm:mr-auto">
+        <p className="flex min-w-0 flex-1 items-center gap-2 text-sm text-foreground" aria-live="polite">
+          <CheckSquare className="h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
+          {none ? (
+            <span className="text-muted">Pick cards to change them together.</span>
+          ) : (
+            <span>
+              <span className="font-semibold tabular-nums">{count}</span> selected
+              <span className="text-muted"> · {cards} card{cards === 1 ? "" : "s"}</span>
+            </span>
+          )}
+        </p>
+        {selectAll("sm:hidden")}
+        <button type="button" onClick={onDone} className={cn(BUTTON, "border-primary/50 text-primary-bright sm:hidden")}>
+          <X className="h-3.5 w-3.5" aria-hidden />
+          Done
         </button>
       </div>
-      <button
-        type="button"
-        aria-disabled={none || undefined}
-        onClick={guard(onRemove)}
-        className={cn(BUTTON, "text-danger hover:text-danger")}
-      >
-        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-        Remove
-      </button>
-      <button type="button" onClick={onDone} className={cn(BUTTON, "border-primary/50 text-primary-bright")}>
-        <X className="h-3.5 w-3.5" aria-hidden />
-        Done
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {selectAll("hidden sm:inline-flex")}
+        <EntryMenu
+          label="Move the selected cards"
+          items={moveItems}
+          open={moveOpen && !none}
+          onOpenChange={(open) => setMoveOpen(open && !none)}
+          side="top"
+          trigger={
+            <button type="button" aria-disabled={none || undefined} className={BUTTON}>
+              <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden />
+              Move to…
+            </button>
+          }
+        />
+        <div role="group" aria-label="Copies of each selected card" className="flex items-center gap-1">
+          <button type="button" aria-label="One fewer of each" aria-disabled={none || undefined} onClick={guard(() => onStep(-1))} className={cn(BUTTON, "w-9 justify-center px-0 pointer-coarse:w-11")}>
+            <Minus className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <button type="button" aria-label="One more of each" aria-disabled={none || undefined} onClick={guard(() => onStep(1))} className={cn(BUTTON, "w-9 justify-center px-0 pointer-coarse:w-11")}>
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-disabled={none || undefined}
+          onClick={guard(onRemove)}
+          className={cn(BUTTON, "text-danger hover:text-danger")}
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          Remove
+        </button>
+        <button type="button" onClick={onDone} className={cn(BUTTON, "hidden border-primary/50 text-primary-bright sm:inline-flex")}>
+          <X className="h-3.5 w-3.5" aria-hidden />
+          Done
+        </button>
+      </div>
     </section>
   );
 }

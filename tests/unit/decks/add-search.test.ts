@@ -7,6 +7,7 @@ import {
   inDeckCountForName,
   inDeckLabel,
   normalizeAddQuery,
+  rankRealCards,
   scryfallPictureAt,
   typedFoldPattern,
 } from "@/lib/decks/add-search";
@@ -95,6 +96,26 @@ describe("the owner's card search, read as typed", () => {
   it("the query is trimmed, its spaces one, at most 100 characters", () => {
     expect(normalizeAddQuery("  sol    ring \n")).toBe("sol ring");
     expect(normalizeAddQuery("x".repeat(300))).toHaveLength(100);
+  });
+});
+
+describe("real cards, in the order a typeahead offers them", () => {
+  it("the name typed whole, then names that start with it, then a word that does — each in Scryfall's (most played) order", () => {
+    const answer = ["Solemn Simulacrum", "Sol Ring", "Arcane Signet", "Sol Talisman", "Soldevi Adnate", "Swords of Sol"].map((name) => ({ name }));
+    expect(rankRealCards(answer, "sol ring").map((card) => card.name)).toEqual([
+      "Sol Ring",
+      "Solemn Simulacrum",
+      "Arcane Signet",
+      "Sol Talisman",
+      "Soldevi Adnate",
+      "Swords of Sol",
+    ]);
+    expect(rankRealCards(answer, "sol", 4).map((card) => card.name)).toEqual(["Solemn Simulacrum", "Sol Ring", "Sol Talisman", "Soldevi Adnate"]);
+    expect(rankRealCards([{ name: "Boltwing" }, { name: "Lightning Bolt" }, { name: "Bolt" }], "bolt").map((card) => card.name)).toEqual([
+      "Bolt",
+      "Boltwing",
+      "Lightning Bolt",
+    ]);
   });
 });
 

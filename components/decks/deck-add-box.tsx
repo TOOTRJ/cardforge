@@ -11,6 +11,7 @@ import {
   inDeckCountForName,
   inDeckLabel,
   normalizeAddQuery,
+  rankRealCards,
   scryfallPictureAt,
   type AddPick,
 } from "@/lib/decks/add-search";
@@ -20,6 +21,7 @@ import { entryPrintingImage } from "@/lib/decks/entry-image";
 import { formatHasCommander } from "@/lib/decks/format-rules";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/components/creator/use-media-query";
 import { DECK_BOARD_LABELS, type DeckBoard, type DeckCardEntry } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
@@ -54,7 +56,8 @@ import { DECK_BOARD_LABELS, type DeckBoard, type DeckCardEntry } from "@/types/d
 export const DECK_ADD_INPUT_ID = "deck-add-input";
 const DECK_TOOL_EVENT = "pipglyph:deck-tool";
 const SEARCH_DELAY_MS = 220;
-const REAL_RESULTS = 6;
+/** Real cards asked for — ranked in the browser, the first six shown. */
+const REAL_RESULTS_ASKED = 20;
 
 type RealCard = {
   id: string;
@@ -142,6 +145,8 @@ export function DeckAddBox({ className }: { className?: string }) {
   const [adding, setAdding] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const searched = useRef<string | null>(null);
+  // The full invitation where it fits; a phone gets the short one.
+  const roomy = useMediaQuery("(min-width: 40rem)") === true;
 
   const deck = editor?.deck ?? null;
   const entries = useMemo(() => (editor?.items ?? []).filter((item) => !item.pending).map((item) => item.entry), [editor?.items]);
@@ -187,7 +192,7 @@ export function DeckAddBox({ className }: { className?: string }) {
         if (long) settle("community", { status: "error", error: "Couldn't search PipGlyph cards." });
       });
     if (long) {
-      void fetch(`/api/scryfall/search?q=${encodeURIComponent(q)}&limit=${REAL_RESULTS}`, { signal: controller.signal })
+      void fetch(`/api/scryfall/search?q=${encodeURIComponent(q)}&limit=${REAL_RESULTS_ASKED}&order=edhrec`, { signal: controller.signal })
         .then(async (response) => {
           const body = (await response.json()) as { ok: boolean; results?: RealCard[]; error?: string };
           if (searched.current !== q) return;
@@ -198,7 +203,7 @@ export function DeckAddBox({ className }: { className?: string }) {
             });
             return;
           }
-          setReal(body.results ?? []);
+          setReal(rankRealCards(body.results ?? [], q));
           settle("real", { status: "done" });
         })
         .catch((error: unknown) => {
@@ -410,7 +415,7 @@ export function DeckAddBox({ className }: { className?: string }) {
             autoComplete="off"
             spellCheck={false}
             value={query}
-            placeholder="Add cards — search your cards, PipGlyph cards and real cards"
+            placeholder={roomy ? "Add cards — search your cards, PipGlyph cards and real cards" : "Search cards to add"}
             onChange={(event) => {
               setQuery(event.target.value);
               setOpen(true);

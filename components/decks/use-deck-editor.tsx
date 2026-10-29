@@ -34,6 +34,7 @@ import {
   type EntryPatch,
 } from "@/lib/decks/entry-ops";
 import { isTypingTarget } from "@/lib/decks/entry-shortcuts";
+import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import type { RemovedEntry } from "@/lib/decks/entry-batch";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import type { DeckBoard, DeckFormat } from "@/types/deck";
@@ -57,7 +58,8 @@ import type { DeckBoard, DeckFormat } from "@/types/deck";
 //     what the server holds (the drawn edit simply ends) and says so — a
 //     toast and the live region, naming what went back. A request that
 //     never answered (offline, a deploy) also asks the server again: its
-//     state is unknown.
+//     state is unknown. While an edit is on its way, leaving the page asks
+//     first (useLeaveWarning: an unload can cut the request off).
 //   * UNDO: the last changes, newest first (a removal's toast, the phone
 //     bar's Undo, ⌘/Ctrl Z outside a field). An edit's undo is the edit
 //     back; a removal's is restoreDeckEntriesAction — the lines back through
@@ -239,6 +241,11 @@ export function DeckEditorProvider({
   }, []);
 
   // ---- one edit: drawn, queued, answered ---------------------------------
+  // Edits on their way: leaving the page (a reload, a closed tab) asks first
+  // — a request cut off by the unload may never reach the server, and the
+  // page already shows it as made.
+  const [writing, setWriting] = useState(0);
+  useLeaveWarning(writing > 0);
   const send = useCallback(
     <T extends Answer>(
       op: EntryOp,
@@ -251,12 +258,14 @@ export function DeckEditorProvider({
       },
     ): Promise<QueueOutcome<T>> =>
       new Promise((resolve) => {
+        setWriting((count) => count + 1);
         startTransition(async () => {
           draw(op);
           const outcome = await queue.run(opEntryIds(op), write, {
             coalesce: options.coalesce,
             failed: (value) => !value.ok,
           });
+          setWriting((count) => Math.max(0, count - 1));
           if (outcome.status === "done") options.onDone?.(outcome.value);
           if (outcome.status === "failed") {
             const value = outcome.value as Answer | undefined;

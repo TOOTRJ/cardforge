@@ -21,7 +21,7 @@ import {
 import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
-// GET /api/scryfall/search?q=<query>&limit=<n>&scope=<cards|tokens>&fallback=tokens
+// GET /api/scryfall/search?q=<query>&limit=<n>&scope=<cards|tokens>&fallback=tokens&order=<name|edhrec>
 //
 // Server-side proxy in front of Scryfall's /cards/search. Auth-gated and
 // per-user rate-limited so a single malicious account can't hammer the
@@ -49,6 +49,10 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 // results come from. Each upstream search is one call against the quota. The
 // route's other callers (the real-card art dialog, the admin reference
 // picker) send no `fallback`: one request, as before 1.23.
+//
+// `order=edhrec` (the deck page's add box, TODO DK5.2) sorts the most played
+// cards first instead of by name — a typeahead's best guess; any other value
+// is the name order every other caller gets.
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 15;
@@ -145,6 +149,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const order = request.nextUrl.searchParams.get("order") === "edhrec" ? "edhrec" : "name";
+
   const limitRaw = Number(request.nextUrl.searchParams.get("limit") ?? "12");
   const limit = Number.isFinite(limitRaw)
     ? Math.min(50, Math.max(1, Math.round(limitRaw)))
@@ -169,8 +175,8 @@ export async function GET(request: NextRequest) {
   const search = async (scope: SearchScope) => {
     const outcome = await searchCardsWithOutcome(
       scope === "tokens"
-        ? { query: tokensScopeQuery(query), limit, includeExtras: true }
-        : { query, limit },
+        ? { query: tokensScopeQuery(query), limit, includeExtras: true, order }
+        : { query, limit, order },
     );
     if (!quotaExempt) {
       await logScryfallCall(user.id, "search");

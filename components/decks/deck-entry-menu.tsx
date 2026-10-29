@@ -1,6 +1,15 @@
 "use client";
 
-import { useRef, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Check } from "lucide-react";
@@ -49,6 +58,11 @@ export type MenuItem =
   | { kind: "separator" }
   | { kind: "heading"; label: string };
 
+type TriggerProps = {
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
+};
+
 type EntryMenuProps = {
   /** The menu's name ("Move Sol Ring", "Sol Ring: actions"). */
   label: string;
@@ -71,6 +85,8 @@ const ITEM_CLASS =
 
 export function EntryMenu({ label, items, open, onOpenChange, trigger, anchor, onCloseAutoFocus, align = "end", side = "bottom" }: EntryMenuProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const menuId = useId();
+  const triggerOf = () => (typeof document === "undefined" ? null : document.querySelector<HTMLElement>(`[data-menu-trigger="${menuId}"]`));
   const itemsOf = () => Array.from(contentRef.current?.querySelectorAll<HTMLElement>("[data-menu-item]") ?? []);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -98,15 +114,45 @@ export function EntryMenu({ label, items, open, onOpenChange, trigger, anchor, o
     if (item.kind === "radio" || !item.href) item.onSelect?.();
   };
 
+  // The trigger is the menu's own button: aria-haspopup="menu" (Radix's
+  // Popover.Trigger would say "dialog"), its expanded state, the menu it
+  // controls; ↓ / ↑ on it open the menu as a click does.
+  const ownTrigger = isValidElement<TriggerProps>(trigger)
+    ? cloneElement(trigger, {
+        "data-menu-trigger": menuId,
+        "aria-haspopup": "menu",
+        "aria-expanded": open,
+        "aria-controls": open ? menuId : undefined,
+        onClick: (event: MouseEvent<HTMLElement>) => {
+          trigger.props.onClick?.(event);
+          if (!event.defaultPrevented) onOpenChange(!open);
+        },
+        onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+          trigger.props.onKeyDown?.(event);
+          if (event.defaultPrevented || open) return;
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            onOpenChange(true);
+          }
+        },
+      } as Partial<TriggerProps>)
+    : null;
+
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      {trigger ? <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger> : null}
+      {ownTrigger ? <PopoverPrimitive.Anchor asChild>{ownTrigger}</PopoverPrimitive.Anchor> : null}
       {anchor ? <PopoverPrimitive.Anchor virtualRef={anchor as RefObject<HTMLElement>} /> : null}
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           ref={contentRef}
+          id={menuId}
           role="menu"
           aria-label={label}
+          // A press on the trigger toggles it (never closed by the press and
+          // opened again by its click).
+          onInteractOutside={(event) => {
+            if (triggerOf()?.contains(event.target as Node)) event.preventDefault();
+          }}
           align={align}
           side={side}
           sideOffset={6}
@@ -123,7 +169,7 @@ export function EntryMenu({ label, items, open, onOpenChange, trigger, anchor, o
               onCloseAutoFocus(event);
               return;
             }
-            const back = anchor?.current;
+            const back = anchor?.current ?? triggerOf();
             if (back && back.isConnected) {
               event.preventDefault();
               back.focus();

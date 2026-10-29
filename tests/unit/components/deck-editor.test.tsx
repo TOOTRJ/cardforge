@@ -129,6 +129,11 @@ describe("instant saves (DK5.8)", () => {
     await flush();
     expect(status()).toBe("Lightning Bolt: 3 copies.");
     expect(actions.updateDeckEntriesAction).toHaveBeenCalledWith({ deckId: DECK.id, updates: [{ id: id(1), quantity: 3 }] });
+    // On its way: the stepper says it's busy, and leaving the page asks first.
+    expect(screen.getByRole("group", { name: "Copies of Lightning Bolt" }).getAttribute("aria-busy")).toBe("true");
+    const leaving = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leaving);
+    expect(leaving.defaultPrevented).toBe(true);
     // The revalidated page brings the new rows with the answer.
     await act(async () => {
       page.rerender(
@@ -144,6 +149,10 @@ describe("instant saves (DK5.8)", () => {
     });
     expect(shownCount("Lightning Bolt")).toBe("3 copies");
     expect(router.refresh).not.toHaveBeenCalled();
+    // Saved: nothing to warn about.
+    const after = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(after);
+    expect(after.defaultPrevented).toBe(false);
   });
 
   it("a refusal rolls the card back to what the server holds — and says so, never silently", async () => {
