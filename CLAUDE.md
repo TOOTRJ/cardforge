@@ -1917,6 +1917,33 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+  The breakdown's charts (TODO DK7, free for everyone) are
+  `computeDeckCharts` (`lib/decks/deck-charts.ts`, over `deckRowsOf`: the
+  effective fields, the maybeboard never counted; its curve adds up to
+  `computeDeckAnalytics`' card for card), both over the VIEWER's rows
+  (`viewerDeckBreakdown`: through `publicDeckItems`, so a visitor's
+  counts never name the type a "Private card" tile hides): ONE curve bucket,
+  `manaValueSlot`, shared with the list's "Group by mana value". The curve,
+  the average / median mana value, Card types and the lands count the main
+  deck and the commander only, never the sideboard or a companion
+  (`countsTowardDeckStats`: also the summary bar, the report PDF and the AI
+  deck brief / guide) (owner 2026-10-29). A curve
+  bar FILTERS the list above through `DeckCurveFilterProvider`
+  (`components/decks/deck-curve-filter.tsx`, around both sections; it
+  holds the picked column only — the ids come from the page's latest
+  curve), and the focus goes to the list's notice and back. Every chart
+  has a table twin (`DeckChartCard`'s "Table" switch); the series are
+  `--color-chart-1` / `-2` (validated pair; a mana colour only where it
+  means a colour). The playtest (draw odds, the sample hand:
+  `lib/decks/draw-odds.ts`, `lib/decks/sample-hand.ts`) shuffles the
+  MAINBOARD and reads the viewer's rows (`publicDeckItems`); its pictures
+  are the list's (600 px thumbs, printings on 5:7 tiles, a "Private card"
+  face). Turn order and the free mulligan come from `lib/decks/format-rules.ts`
+  (`formatIsMultiplayer`: Commander / Oathbreaker are on the draw with no
+  play / draw choice, CR 103.8c — Brawl is 1v1; `formatHasFreeMulligan`:
+  every commander format, CR 103.5c); a kept hand (Keep or a draw) takes
+  no more mulligans. Keywords read only the rules text a PipGlyph card carries
+  (`lib/decks/keyword-frequency.ts`; deck_cards stores no Oracle text).
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /

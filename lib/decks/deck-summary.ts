@@ -7,8 +7,8 @@ import type { DeckFormat } from "@/types/deck";
 // The deck page's sticky summary bar (TODO DK5.9) as data: the count
 // against the format's size, the commander, the composition (each kind of
 // card), the average mana value and the lands. The size, the average and
-// the lands are the deck's breakdown's (computeDeckAnalytics, playable
-// boards); the composition is THE status count the chips and the breakdown
+// the lands are the deck's breakdown's (computeDeckAnalytics: the main deck
+// and the commander, countsTowardDeckStats); the composition is THE status count the chips and the breakdown
 // say too (deckStatusCountsOf, lib/decks/deck-view.ts) — so the bar, the
 // chips and the breakdown never disagree. The format check's verdict and
 // "Edit next" are the owner's and come from the page. Pure.

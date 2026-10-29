@@ -74,13 +74,16 @@ type FormatSpec = {
   copyLimit: number | null;
   hasCommander: boolean;
   sideboardMax: number | null;
+  /** Played as a multiplayer game (Commander, Oathbreaker). Absent = a 1v1
+   *  game — the Brawl formats too, like every 60-card one. */
+  multiplayer?: true;
 };
 
 const FORMAT_SPECS: Record<DeckFormat, FormatSpec> = {
-  commander: { size: { exact: 100 }, copyLimit: 1, hasCommander: true, sideboardMax: null },
+  commander: { size: { exact: 100 }, copyLimit: 1, hasCommander: true, sideboardMax: null, multiplayer: true },
   brawl: { size: { exact: 100 }, copyLimit: 1, hasCommander: true, sideboardMax: null },
   standard_brawl: { size: { exact: 60 }, copyLimit: 1, hasCommander: true, sideboardMax: null },
-  oathbreaker: { size: { exact: 60 }, copyLimit: 1, hasCommander: true, sideboardMax: null },
+  oathbreaker: { size: { exact: 60 }, copyLimit: 1, hasCommander: true, sideboardMax: null, multiplayer: true },
   standard: { size: { min: 60 }, copyLimit: 4, hasCommander: false, sideboardMax: 15 },
   pioneer: { size: { min: 60 }, copyLimit: 4, hasCommander: false, sideboardMax: 15 },
   modern: { size: { min: 60 }, copyLimit: 4, hasCommander: false, sideboardMax: 15 },
@@ -101,6 +104,20 @@ export function deckSizeRule(format: DeckFormat): { exact?: number; min?: number
 /** True for the formats played with a commander zone. */
 export function formatHasCommander(format: DeckFormat): boolean {
   return FORMAT_SPECS[format].hasCommander;
+}
+
+/** True for the formats played as a multiplayer game — Commander and
+ *  Oathbreaker: no player skips the draw of their first turn (CR 103.8c),
+ *  so every player is on the draw. Brawl and Standard Brawl are 1v1 games:
+ *  the starting player skips it (CR 103.8a), as in every 60-card format. */
+export function formatIsMultiplayer(format: DeckFormat): boolean {
+  return FORMAT_SPECS[format].multiplayer === true;
+}
+
+/** True where a player's first mulligan is free (CR 103.5c): a multiplayer
+ *  game, and any Brawl game — every commander format. */
+export function formatHasFreeMulligan(format: DeckFormat): boolean {
+  return formatIsMultiplayer(format) || format === "brawl" || format === "standard_brawl";
 }
 
 type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity">;
