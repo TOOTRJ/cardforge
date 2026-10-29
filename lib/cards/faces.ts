@@ -37,7 +37,7 @@
 // ---------------------------------------------------------------------------
 
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { resolveTwoColor } from "@/lib/cards/anatomy";
+import { isArtifactFrameType, resolveTwoColor } from "@/lib/cards/anatomy";
 import { buildTypeLine, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
@@ -129,13 +129,17 @@ export type FaceContentFacts = {
  * ten hybrid fronts: 113,99,88, the grey land modal's tab; a land's colour
  * is its mana's, dfcFaceColorIdentity); a face in the hybrid dress → `l` too
  * (MH3 #252's land back: 218,210,206, a warm light grey — the hybrid frame's
- * bars are the grey land frame's); a colourless spell → `c` (no print; the
- * artifact stand-in on the spell bodies, the land grey on the land bodies).
+ * bars are the grey land frame's); a colourless ARTIFACT spell → `a` (the
+ * artifact master it wears: STX #154 Pestilent Cauldron); a colourless
+ * spell with no Artifact word → `c` (the see-through frame it wears, TODO
+ * 5.11a: STX #6 Wandering Archaic's warm grey tab). The land bodies map
+ * both to their grey `c`.
  */
-export function stripKeyOf(face: Pick<FaceContentFacts, "colorIdentity" | "cardType" | "wearsHybrid">): string {
+export function stripKeyOf(face: Pick<FaceContentFacts, "colorIdentity" | "cardType" | "wearsHybrid" | "supertype">): string {
   const key = pickFrameColorKey(face.colorIdentity);
   if (face.cardType === "land") return key === "c" || key === "m" ? "l" : key;
   if (key === "m" && face.wearsHybrid) return "l";
+  if (key === "c" && isArtifactFrameType({ cardType: face.cardType, supertype: face.supertype })) return "a";
   return key;
 }
 

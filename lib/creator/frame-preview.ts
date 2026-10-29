@@ -18,6 +18,7 @@ import {
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { hasSeeThroughColorless, seeThroughColorlessKey } from "@/lib/cards/dfc";
 import { FACE_PARAM, type CardFace } from "@/lib/cards/card-face";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { ColorIdentity } from "@/types/card";
@@ -124,9 +125,26 @@ export function resolveFramePreviewMode(input: {
   return {
     param: request.param,
     publishedKeys: [...input.verifiedKeys],
-    pickableKeys: [...input.verifiedKeys, ...unverifiedKeys],
+    pickableKeys: [...input.verifiedKeys, ...unverifiedKeys, ...seeThroughPreviewKeys(request.keys, published)],
     unverifiedKeys,
   };
+}
+
+/** The see-through keys a previewed `<template>/c` brings (TODO 5.11a): a
+ *  body whose `c` is the see-through frame offers it to a colourless face
+ *  with no Artifact word only under seeThroughColorlessKey — derived from a
+ *  fresh tick, never a combo of its own — so an admin previewing the `c`
+ *  (or "all") may preview that look before the tick too. Not counted as an
+ *  unverified combo (the banner counts combos). */
+function seeThroughPreviewKeys(keys: readonly string[], published: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const key of keys) {
+    const [template, colour] = key.split("/");
+    if (colour !== "c" || !template || !hasSeeThroughColorless(template)) continue;
+    const seeThrough = seeThroughColorlessKey(template);
+    if (!published.has(seeThrough)) out.push(seeThrough);
+  }
+  return out;
 }
 
 /** What the create/edit pages hand the creator form in preview mode. */

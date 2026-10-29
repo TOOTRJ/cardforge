@@ -1631,6 +1631,7 @@ async function createDfcFillJob(
           variety,
           frameBrief: designs > 1 && redoNote ? `${brief} ${redoNote}` : brief,
           layout: kind,
+          dfcFrame: { verifiedKeys, picked, family: input.dfcIcon ?? null },
           ...(input.assembled ? { assembled: true } : {}),
         });
       },

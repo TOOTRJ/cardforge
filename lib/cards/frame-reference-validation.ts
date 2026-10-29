@@ -23,7 +23,7 @@ import {
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { colorlessFaceAllowed, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
+import { colorlessFaceFits, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
@@ -190,7 +190,7 @@ export function validateReferenceForCombo(
         errors.push(
           `${card.name}'s back face is ${COLOR_WORD[backColor] ?? backColor}; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
         );
-      } else if (colorKey === "c" && !colorlessFaceAllowed(template, faceTypeOf(back?.type_line))) {
+      } else if (colorKey === "c" && !colorlessFaceFits(template, faceTypeOf(back?.type_line))) {
         // The body dresses `c` as the artifact master standing in (D2):
         // its colourless row verifies against an artifact print only.
         errors.push(
@@ -258,7 +258,7 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
     );
-  } else if (colorKey === "c" && !colorlessFaceAllowed(template, frontFaceType(card))) {
+  } else if (colorKey === "c" && !colorlessFaceFits(template, frontFaceType(card))) {
     // The `c` row of a DFC body with the artifact dress is the artifact
     // master standing in (D2); the land pair's `c` is its one master.
     errors.push(`${card.name} isn't an Artifact; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);

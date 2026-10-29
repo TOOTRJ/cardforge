@@ -404,6 +404,7 @@ function keptOwnFrame(
         template,
         { cardType: source.card_type, supertype: source.supertype },
         colours,
+        verifiedKeys,
       ) !== null
     ) {
       return {};

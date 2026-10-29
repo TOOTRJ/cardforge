@@ -1342,7 +1342,10 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // could be on: not v35's business either.)
     // (…nor the arch's tall box, TODO 4.55: the text box's see-through c
     // cut shorter — a new template, no stored card.)
-    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub", "m15tokentall"];
+    // (…nor the modal spell bodies' see-through `c`, TODO 5.11a: STX #6
+    // Wandering Archaic's frame, an addition on a key no save could store —
+    // the gate refused a colourless non-artifact face there.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub", "m15tokentall", "m15mdfcfront", "m15mdfcback"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {

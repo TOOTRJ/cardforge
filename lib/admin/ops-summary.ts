@@ -126,6 +126,7 @@ export function summariseFrameVerification(
             verified: review?.verified ?? false,
             verifiedLayoutVersion: review?.verifiedLayoutVersion ?? null,
             verifiedOverrideHash: review?.verifiedOverrideHash ?? null,
+            colorKey,
           },
           template,
           hash,

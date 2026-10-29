@@ -40,6 +40,7 @@ import {
   bodyFor,
   sagaBackBodyFor,
   colorlessFaceAllowed,
+  colorlessFaceFits,
   dfcBodyOf,
   dfcIconFamilyFromEffects,
   isDfcFaceType,
@@ -681,10 +682,13 @@ export function undrawableSymbolsNotice(
  *     modal pair; a later layout's rows turn a printing onto them by
  *     themselves once `bodyFor` answers);
  *   • "colourless-face" — a colourless face whose type line has no Artifact
- *     word (EMN's Eldrazi backs, STX #6 Wandering Archaic's front): the
+ *     word on a TRANSFORM body (EMN's Eldrazi backs, TLA's Aang backs): the
  *     body's `c` is the artifact master standing in (design D2), and the
  *     see-through frame is 5.11 — the printing keeps today's landing rather
- *     than a colour the print doesn't have;
+ *     than a colour the print doesn't have. The MODAL spell bodies' `c` IS
+ *     the see-through frame (TODO 5.11a: STX #6 Wandering Archaic lands on
+ *     them; whether the see-through `c` is ticked is finalizeImportMatch's
+ *     question, colorlessFaceFits here);
  *   • "dress" — a devoid or snow printing (MH3's five devoid MDFCs, KHM
  *     #179 Jorn): no double-faced body carries that dress (5.11), so the
  *     printing keeps today's landing — the era's devoid / snow frame with a
@@ -725,7 +729,7 @@ export type DfcImportFacts = {
 };
 
 /** A face's type words as the gate reads them (lib/cards/dfc.ts
- *  colorlessFaceAllowed → isArtifactFrameType). */
+ *  colorlessFaceFits → isArtifactFrameType). */
 function faceTypeInfo(typeLine: string | null | undefined): { cardType: CardType | undefined; supertype: string | undefined; saga: boolean } {
   const parsed = parseTypeLine(typeLine);
   return {
@@ -777,7 +781,7 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
     if (!battleBack) return blocked("no-body");
     if (
       backFaceColors(card).length === 0 &&
-      !colorlessFaceAllowed(battleBack, { cardType: back.cardType, supertype: back.supertype })
+      !colorlessFaceFits(battleBack, { cardType: back.cardType, supertype: back.supertype })
     ) {
       return { ...blocked("colourless-face"), frontBody: "battle", backBody: battleBack };
     }
@@ -794,7 +798,7 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
     if (!sagaBack) return blocked("no-body");
     if (
       backFaceColors(card).length === 0 &&
-      !colorlessFaceAllowed(sagaBack, { cardType: back.cardType, supertype: back.supertype })
+      !colorlessFaceFits(sagaBack, { cardType: back.cardType, supertype: back.supertype })
     ) {
       // TLA's Avatars: a colourless back with no Artifact word (5.11).
       return { ...blocked("colourless-face"), frontBody: "sagadfcfront", backBody: sagaBack };
@@ -820,22 +824,29 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   const frontBody = borderlessFront && borderlessBack ? borderlessFront : bodyFor(layout, "front", front.cardType, family);
   const backBody = borderlessFront && borderlessBack ? borderlessBack : (sagaBack ?? bodyFor(layout, "back", back.cardType, family));
   if (!frontBody || !backBody) return blocked("no-body");
-  // A colourless face wears the body's `c` only with an Artifact word (D2);
-  // a land face's colour is its body's one master (always allowed). The
-  // bodies stay on the facts: they ARE the printing's frame (the registry
-  // names them); the import lands on the standard meanwhile.
+  // A colourless face wears the body's `c` only with an Artifact word (D2)
+  // — or on a body whose `c` is the see-through frame (the modal spell
+  // bodies, TODO 5.11a: STX #6 Wandering Archaic); a land face's colour is
+  // its body's one master (always allowed). The bodies stay on the facts:
+  // they ARE the printing's frame (the registry names them); the import
+  // lands on the standard meanwhile. The see-through `c` is the BORDERED
+  // print's: an extended-art printing (STX #286) has no see-through
+  // extended body yet (5.7b), so it keeps the landing it had — the stand-in
+  // rule, as before 5.11a.
+  const effects = new Set((card.frame_effects ?? []).map((e) => e.toLowerCase()));
+  const fits = (body: FrameTemplate, face: { cardType: CardType | undefined; supertype: string | undefined }) =>
+    effects.has("extendedart") ? colorlessFaceAllowed(body, face, new Set<string>()) : colorlessFaceFits(body, face);
   const frontColourless = frontFaceColors(card).length === 0;
   const backColourless = backFaceColors(card).length === 0;
   if (
-    (frontColourless && !colorlessFaceAllowed(frontBody, { cardType: front.cardType, supertype: front.supertype })) ||
-    (backColourless && !colorlessFaceAllowed(backBody, { cardType: back.cardType, supertype: back.supertype }))
+    (frontColourless && !fits(frontBody, { cardType: front.cardType, supertype: front.supertype })) ||
+    (backColourless && !fits(backBody, { cardType: back.cardType, supertype: back.supertype }))
   ) {
     return { ...blocked("colourless-face"), frontBody, backBody };
   }
   // A devoid or snow dress (5.1b skeptic): the bodies don't carry it, and
   // the plain body would be a look the print doesn't have — today's landing
   // (the era's dress frame, a legacy back) until a dressed body exists.
-  const effects = new Set((card.frame_effects ?? []).map((e) => e.toLowerCase()));
   if (effects.has("devoid") || effects.has("snow")) return { ...blocked("dress"), frontBody, backBody };
   return { ...facts, kind: layout === "transform" ? "transform" : "mdfc", frontBody, backBody };
 }

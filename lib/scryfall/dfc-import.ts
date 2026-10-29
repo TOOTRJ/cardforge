@@ -2,7 +2,7 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { isArtifactFrameType } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { DEFAULT_DFC_ICON, SAGA_BACK_BODY, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, isSagaFront, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, SAGA_BACK_BODY, bodyFor, colorlessFaceAllowed, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, isSagaFront, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -50,6 +50,9 @@ export type DfcImportLanding =
       /** The unverified body and the colour key it was asked for. */
       template?: FrameTemplate;
       colorKey?: string;
+      /** The body's `c` is ticked, but not its SEE-THROUGH master (TODO
+       *  5.11a): a colourless face with no Artifact word waits for that. */
+      seeThrough?: true;
     };
 
 type DfcPatch = Pick<
@@ -97,6 +100,12 @@ export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<stri
   if (!isFrameComboAvailable(frontBody, frontKey, verifiedKeys)) {
     return { ok: false, reason: "front-unverified", template: frontBody, colorKey: frontKey };
   }
+  // A colourless face with no Artifact word on a see-through `c` (the modal
+  // bodies, TODO 5.11a: STX #6 Wandering Archaic) needs that `c` ticked
+  // AGAIN — the old tick verified the artifact stand-in (colorlessFaceAllowed).
+  if (frontKey === "c" && !colorlessFaceAllowed(frontBody, { cardType: patch.card_type, supertype: patch.supertype }, verifiedKeys)) {
+    return { ok: false, reason: "front-unverified", template: frontBody, colorKey: frontKey, seeThrough: true };
+  }
   const back = patch.back_face;
   const backBody =
     back?.frame_style?.template ??
@@ -109,6 +118,9 @@ export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<stri
   const backKey = pickFrameColorKey(backColorIdentity);
   if (!isFrameComboAvailable(backBody, backKey, verifiedKeys)) {
     return { ok: false, reason: "back-unverified", template: backBody, colorKey: backKey };
+  }
+  if (backKey === "c" && !colorlessFaceAllowed(backBody, { cardType: back?.card_type ?? undefined, supertype: back?.supertype }, verifiedKeys)) {
+    return { ok: false, reason: "back-unverified", template: backBody, colorKey: backKey, seeThrough: true };
   }
   return { ok: true, kind, frontBody, backBody, backColorIdentity };
 }
