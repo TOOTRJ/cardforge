@@ -29,6 +29,8 @@ import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
+import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import {
   countDeckEntries,
   countRemixableDeckCards,
@@ -181,6 +183,7 @@ export default async function DeckDetailPage({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to decks
       </Link>
+      <DeckBetaBanner deckId={deck.id} signedIn={Boolean(user)} className="mb-6" />
 
       {/* Cover + header. The cover is the same 16:9 box every deck tile
           uses (lib/decks/cover.ts), so it crops identically here, on the
@@ -274,6 +277,7 @@ export default async function DeckDetailPage({
               entity="deck"
               itemId={deck.id}
             />
+            <DeckFeedbackButton deckId={deck.id} signedIn={Boolean(user)} className="h-9" />
             {/* Free for every viewer (TODO DK0.7); streams in with the
                 card list, so the header still paints at once. */}
             <Suspense fallback={null}>
@@ -306,6 +310,7 @@ export default async function DeckDetailPage({
           hasCover={Boolean(coverUrl)}
         />
       </Suspense>
+      <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </div>
   );
 }
