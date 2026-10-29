@@ -11,7 +11,10 @@ import {
   HERO_CROP_ASPECTS,
   heroCropWindow,
   isDefaultDeckCover,
+  shuffleDeckCover,
 } from "@/lib/decks/cover";
+import { defaultCoverParts } from "@/lib/decks/default-covers";
+import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { BRAND } from "@/lib/brand/constants";
 
 // ---------------------------------------------------------------------------
@@ -100,6 +103,27 @@ describe("isDefaultDeckCover — only the list, never a lookalike", () => {
   });
 });
 
+describe("shuffleDeckCover — another of the sixteen", () => {
+  it("never the one shown, always one on the list, and every other one reachable", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 15; i += 1) {
+      const next = shuffleDeckCover("/defaults/deck-covers/red-1.webp", () => i / 15);
+      expect(isDefaultDeckCover(next)).toBe(true);
+      expect(next).not.toBe("/defaults/deck-covers/red-1.webp");
+      seen.add(next);
+    }
+    expect(seen.size).toBe(15);
+    // random() at its top end stays in the list.
+    expect(isDefaultDeckCover(shuffleDeckCover(null, () => 0.999999))).toBe(true);
+    expect(isDefaultDeckCover(shuffleDeckCover("/defaults/deck-covers/red-1.webp", () => 1))).toBe(true);
+  });
+
+  it("defaultCoverParts names a background by its identity and index", () => {
+    expect(defaultCoverParts("/defaults/deck-covers/multicolor-2.webp")).toEqual({ identity: "multicolor", index: 2 });
+    expect(defaultCoverParts("/defaults/deck-covers/gold-1.webp")).toBeNull();
+  });
+});
+
 describe("deckCoverIdentity — colour letters → the pair", () => {
   it.each([
     [["W"], "white"],
@@ -171,6 +195,18 @@ describe("deckCoverOf", () => {
       objectPosition: undefined,
     });
     expect(deckCoverOf(deck(null), null).src).toMatch(/\/neutral-[12]\.webp$/);
+  });
+
+  it("a stored built-in (0150's shuffle / pick) is a DEFAULT, never an upload — though the media guard draws it", () => {
+    const stored = deckCoverOf(deck("/defaults/deck-covers/green-1.webp", { cover_position: { focalX: 0.1, focalY: 0.9 } }), ["R"]);
+    expect(stored).toEqual({ src: "/defaults/deck-covers/green-1.webp", kind: "default", objectPosition: undefined });
+    // isAllowedMediaUrl takes it (it is a value the column may hold) …
+    expect(isAllowedMediaUrl("deck-cover", "/defaults/deck-covers/green-1.webp", OWNER)).toBe(true);
+    // … for the deck-cover kind alone, and only the list.
+    expect(isAllowedMediaUrl("avatar", "/defaults/deck-covers/green-1.webp", OWNER)).toBe(false);
+    expect(isAllowedMediaUrl("card-art", "/defaults/deck-covers/green-1.webp", OWNER)).toBe(false);
+    expect(isAllowedMediaUrl("deck-cover", "/defaults/deck-covers/green-3.webp", OWNER)).toBe(false);
+    expect(isAllowedMediaUrl("deck-cover", "https://evil.example/defaults/deck-covers/green-1.webp", OWNER)).toBe(false);
   });
 
   it("a stored built-in path (the shuffle seam) is drawn only when it is on the list", () => {

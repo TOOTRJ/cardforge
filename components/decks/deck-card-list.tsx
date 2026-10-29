@@ -24,6 +24,7 @@ import {
   type StatusFilter,
 } from "@/lib/decks/deck-view";
 import { publicDeckItems } from "@/lib/decks/private-card-name";
+import { coverPickRowsOf, standsInFan } from "@/lib/decks/featured";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import type { DeckFormat } from "@/types/deck";
 
@@ -62,13 +63,16 @@ type DeckCardListProps = {
   items: DeckItem<DeckPageCard>[];
   ownerUsername: string | null;
   canManage: boolean;
+  /** The deck's owner, given to the OWNER's list only: the pop-up's cover
+   *  picks (TODO DK6.4, components/decks/deck-cover-picks.tsx). */
+  coverOwnerId?: string | null;
   /** The viewer's remembered view (the cookie). The List when left out. */
   initialPrefs?: DeckViewPrefs;
   /** The sticky summary bar's numbers; no bar when left out. */
   summary?: DeckCardListSummary;
 };
 
-export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, summary }: DeckCardListProps) {
+export function DeckCardList({ items, ownerUsername, canManage, coverOwnerId = null, initialPrefs, summary }: DeckCardListProps) {
   const [prefs, setPrefs] = useState<DeckViewPrefs>(initialPrefs ?? LIST_PREFS);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [showProxies, setShowProxies] = useState(true);
@@ -185,6 +189,11 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
   // The modal reads the CURRENT item from props by id, so a mutation +
   // router.refresh() re-renders it with fresh data instead of a stale copy.
   const selected = selectedId ? (shown.find((i) => i.entry.id === selectedId) ?? null) : null;
+  // The owner's cover picks, rank 1 first, from the rows the list reads.
+  const coverPicks = useMemo(
+    () => (canManage && coverOwnerId ? coverPickRowsOf(items, coverOwnerId) : null),
+    [items, canManage, coverOwnerId],
+  );
 
   const bar = summary
     ? {
@@ -291,6 +300,11 @@ export function DeckCardList({ items, ownerUsername, canManage, initialPrefs, su
             if (!open) setSelectedId(null);
           }}
           preferProxy={showProxies}
+          cover={
+            coverPicks && coverOwnerId
+              ? { picks: coverPicks, shown: standsInFan(selected.entry, selected.card, coverOwnerId) }
+              : null
+          }
         />
       ) : null}
     </div>
