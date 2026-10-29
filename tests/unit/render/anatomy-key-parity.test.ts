@@ -277,10 +277,11 @@ describe("bake path = preview path", () => {
     // m15dfcbackleft, and the borderless front's, TODO 5.7) — and the double-
     // faced saga front's (5.5 (b)): five.
     expect(riders).toBe(60);
-    // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
-    // g m a + l), 7 on each land body (w u b r g m c).
+    // The four modal strip slots (5.1c): 9 keys on each spell body (w u b r
+    // g m a + l, and the see-through `c` since TODO 5.11a), 7 on each land
+    // body (w u b r g m c).
     // …and the borderless modal pair's 7 each (TODO 5.7: no `l`).
-    expect(strips).toBe(8 + 8 + 7 + 7 + 7 + 7);
+    expect(strips).toBe(9 + 9 + 7 + 7 + 7 + 7);
     // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the eight
     // M15-family entries (the Vehicle frame's since 4.5c, the Nyx dress's since 4.7) + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back

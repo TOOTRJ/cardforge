@@ -212,16 +212,16 @@ describe("resolveDfcBackFace — update (the stored body wins)", () => {
 
 describe("dfcFrontColorError — the front's colourless rule (D2)", () => {
   it("refuses a colourless non-artifact front on a DFC body; an Artifact word or any colour passes; the land front and plain cards are never judged", () => {
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["colorless"])).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, [])).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "enchantment" }, null)).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "artifact" }, ["colorless"])).toBeNull();
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature", supertype: "Legendary Artifact" }, ["colorless"])).toBeNull();
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["blue"])).toBeNull();
-    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["white", "blue"])).toBeNull();
-    expect(dfcFrontColorError("m15dfclandfront", { cardType: "land" }, ["colorless"])).toBeNull();
-    expect(dfcFrontColorError("m15", { cardType: "creature" }, ["colorless"])).toBeNull();
-    expect(dfcFrontColorError("m15dfcback", { cardType: "creature" }, ["colorless"])).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["colorless"], new Set<string>())).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, [], new Set<string>())).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "enchantment" }, null, new Set<string>())).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "artifact" }, ["colorless"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature", supertype: "Legendary Artifact" }, ["colorless"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["blue"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["white", "blue"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15dfclandfront", { cardType: "land" }, ["colorless"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15", { cardType: "creature" }, ["colorless"], new Set<string>())).toBeNull();
+    expect(dfcFrontColorError("m15dfcback", { cardType: "creature" }, ["colorless"], new Set<string>())).toBeNull();
   });
 });
 

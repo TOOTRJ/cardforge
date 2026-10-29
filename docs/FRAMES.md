@@ -8995,8 +8995,8 @@ ticks each colour × face.
 
 | template | source | masters | `dfc` | what it draws |
 |---|---|---|---|---|
-| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (= `c`, the artifact stand-in — no print: STX #154 Pestilent Cauldron is a BLACK artifact) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
-| `m15mdfcback` | `<k>b.png`, toned | same (`c` has no print) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
+| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (the artifact frame a colourless ARTIFACT face wears); `c` the SEE-THROUGH frame since 5.11a (below) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
+| `m15mdfcback` | `<k>b.png`, toned | same (`c` the see-through frame since 5.11a) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
 | `m15mdfclandfront` | recipe: `<k>.png` + the land tint's body and box | w u b r g (+ `m`, `c` stand-ins) | front, land | no cost, no P/T; the pathways' look |
 | `m15mdfclandback` | recipe: `<k>b.png` + the land tint's body, toned | same | back, land | no cost, no P/T; the ZNR / MH3 land backs' look |
 
@@ -9162,6 +9162,69 @@ ticks each colour × face.
   on two-colour cards (above); the import's modal body / colour (5.4);
   the Marvel strip form; borderless / extended modal (5.7); the walker
   faces (5.13, ask first).
+
+### The colourless modal card: the see-through `c` (5.11a)
+
+STX #6 Wandering Archaic // Explore the Vastlands (and PSTX #6s) is the one
+modal card whose faces are colourless with NO Artifact word — a Creature —
+Avatar {5} and a Sorcery {3}. Both print the SEE-THROUGH colourless frame,
+`m15/c`'s grey bars and box with the art showing through the frame field,
+with the modal housing and the flipside strip. Card Conjurer's 'Modal
+Regular' pack has Artifact and Land frames only, so until 5.11a the spell
+bodies' `c` was the artifact master standing in, refused to any face
+without the Artifact word (design D2).
+
+- **The masters** (`m15mdfcfront/c`, `m15mdfcback/c` + `strip/c`):
+  PipGlyph's composite, `scripts/build-mdfc-colourless-frames.mjs` (numbers
+  as DATA in `scripts/lib/mdfc-colourless.mjs`; bucket only, provenance key
+  `mdfccolourless`; the CC importer leaves the key out, `excluded`). The
+  base is the body's published artifact master (border, outlines, strip);
+  through Card Conjurer's modal masks `frame.svg`, `textbox.svg` and the M15
+  type mask take `m15/c`'s pixels (α 28 field, α 179 box, α 212 bars);
+  `title.svg` takes `m15/c`'s bar right of the housing and, in the housing's
+  drop, `m15/c`'s bar ROW BY ROW (the housing's fill is the bar's), with
+  the modal master's ▲ / ▲▼ and the drop's dark edge laid back over it;
+  `pinline.svg` the modal master's lines toned onto `m15/c`'s (246 → 223);
+  `reminder.svg` the modal master's strip — on the front toned onto STX
+  #6's warm grey tab (124,128,138 → 120,106,104), the back's as published
+  (226,220,230 on print, 223,225,229 ours). The BACK's bars and box are
+  `m15/c`'s at print's back ÷ front LUMA (title × 0.720, type × 0.687, box
+  × 0.887: both faces show the same card's art through them, so the ratio
+  leaves the art's cast out; the hue stays `m15/c`'s neutral grey).
+- **The profile**: both spell bodies declare `underFrameArt` for `c` on
+  `UNDER_FRAME_RECT`, as `m15` does; a colourless ARTIFACT face still wears
+  `a` (`artifactMasterKeys`), which draws no art under the frame. The crown
+  keeps its `c` → `a` band (no legendary colourless non-artifact modal face
+  was printed). The transform bodies, the land pair and the borderless
+  modal bodies are untouched (their colourless non-artifact faces are
+  5.11's).
+- **The gate**: `colorlessFaceFits` (structure: a see-through `c` takes any
+  face) and `colorlessFaceAllowed(template, face, verifiedKeys)` (the
+  verification: on the see-through `c` a face with no Artifact word only
+  once `seeThroughColorlessKey(template)` is in the verified keys).
+  Production's `c` ticks on both bodies were made at v41 against the
+  artifact stand-in, so the see-through master is published by a NEW tick:
+  the verified-key readers add the key for a `c` row ticked at
+  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` (75) or later
+  (`seeThroughTickKeys`), and the admin checklist shows those two rows as
+  "re-verify" until then. Server (`dfcFrontColorError`, `resolveDfcBackFace`:
+  an `unverified` refusal an admin preview skips; a stored card keeps
+  editing — the legacy pin), creator (the colour chips' reason,
+  `dfcColorlessRefusal`), import and AI read the same two functions.
+- **The strip**: a colourless ARTIFACT other face is now `a` in
+  `stripKeyOf` (the master it wears — the same piece as before, `c` → `a`),
+  one with no Artifact word `c`, the see-through frame's own tab; the land
+  bodies map both to their grey.
+- **The import**: STX #6 and PSTX #6s land on the modal pair in `c`
+  (`modal/2015`, exact) once both see-through `c`s are ticked;
+  short of either the import lands as before (the standard frame, a legacy
+  back) and the match says which face's see-through frame waits. STX #286,
+  the extended-art printing, keeps `dfc/colourless-face` (no see-through
+  extended body: 5.7b).
+- **An addition**: no bump, no sweep, no badge; no stored card could sit on
+  the key (the gate refused it). The visual matrix's six colourless modal
+  cases, which drew such a face on the stand-in, are Wandering Archaic's
+  now.
 
 ### Crowns and pairs on the double-faced bodies (5.1d)
 

@@ -431,8 +431,15 @@ Rules and gotchas:
   (`lib/scryfall/dfc-import.ts`, `finalizeImportMatch`), else as before
   (standard frame + legacy back); a walker face imports the front alone
   (toast + a `dfc/walker` request row), a colourless face without an
-  Artifact word and a devoid / snow dress keep today's landing (5.11,
-  `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The AI deck remix of such an
+  Artifact word on a TRANSFORM body and a devoid / snow dress keep today's
+  landing (5.11, `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The
+  modal spell bodies' `c` is the SEE-THROUGH frame (5.11a, STX #6 Wandering
+  Archaic: `scripts/build-mdfc-colourless-frames.mjs`), offered to a face
+  with no Artifact word only once its `c` row is ticked at
+  `SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION` or later — the older ticks
+  verified the artifact stand-in (`seeThroughTickKeys`; every gate reads
+  `colorlessFaceAllowed(template, face, verifiedKeys)`, the mapper and the
+  references `colorlessFaceFits`). The AI deck remix of such an
   entry costs 2 credits (two pictures), priced at plan time
   (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
   only, behind the AI rate limit: it calls Scryfall) and shown in the

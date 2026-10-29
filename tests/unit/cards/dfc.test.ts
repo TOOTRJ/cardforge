@@ -158,23 +158,23 @@ describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other t
 
   it("colorlessFaceAllowed: the ordinary gate's business on a non-DFC template (always true); on a DFC body only an Artifact face (D2)", () => {
     for (const template of ["m15", "m15artifact", "m15land", "m15borderless", "emblem", "agclassic", undefined]) {
-      expect(colorlessFaceAllowed(template, { cardType: "creature", supertype: null }), String(template)).toBe(true);
-      expect(colorlessFaceAllowed(template, { cardType: "artifact" }), String(template)).toBe(true);
-      expect(colorlessFaceAllowed(template, null), String(template)).toBe(true);
+      expect(colorlessFaceAllowed(template, { cardType: "creature", supertype: null }, new Set<string>()), String(template)).toBe(true);
+      expect(colorlessFaceAllowed(template, { cardType: "artifact" }, new Set<string>()), String(template)).toBe(true);
+      expect(colorlessFaceAllowed(template, null, new Set<string>()), String(template)).toBe(true);
     }
     for (const body of ["m15dfcfront", "m15dfcback", "m15dfcbackleft"] as const) {
-      expect(colorlessFaceAllowed(body, { cardType: "artifact" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Artifact" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }), body).toBe(false);
-      expect(colorlessFaceAllowed(body, { cardType: "enchantment" }), body).toBe(false);
-      expect(colorlessFaceAllowed(body, null), body).toBe(false);
+      expect(colorlessFaceAllowed(body, { cardType: "artifact" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Artifact" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }, new Set<string>()), body).toBe(false);
+      expect(colorlessFaceAllowed(body, { cardType: "enchantment" }, new Set<string>()), body).toBe(false);
+      expect(colorlessFaceAllowed(body, null, new Set<string>()), body).toBe(false);
     }
     // The land pair: one master under every key, no stand-in — its `c` is
     // any (land) face's.
     for (const body of ["m15dfclandfront", "m15dfclandback"] as const) {
-      expect(colorlessFaceAllowed(body, { cardType: "land" }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }), body).toBe(true);
-      expect(colorlessFaceAllowed(body, null), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "land" }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }, new Set<string>()), body).toBe(true);
+      expect(colorlessFaceAllowed(body, null, new Set<string>()), body).toBe(true);
     }
   });
 

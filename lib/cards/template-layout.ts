@@ -7905,17 +7905,20 @@ export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
  *  fronts print the land grey) and, on a back, a front in the hybrid dress
  *  (MH3's land backs: a warm light grey, never gold); the land bodies map
  *  `l` to their own grey `c`. A two-colour spell other face is gold `m`
- *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless one
- *  the artifact stand-in (`c` → `a`, no print). */
+ *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless
+ *  ARTIFACT one the artifact frame's `a` (STX #154 Pestilent Cauldron's
+ *  back), a colourless one with no Artifact word the see-through frame's
+ *  own `c` (TODO 5.11a: STX #6 Wandering Archaic's warm grey tab — a card
+ *  colourless on both faces draws none); the land bodies map `a` to their
+ *  grey `c` as before. */
 const MDFC_STRIP_RIDER_RECT: Rect = { leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 };
-const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"] as const;
+const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"] as const;
 const MDFC_STRIP_RIDER_LAND_KEYS = ["w", "u", "b", "r", "g", "m", "c"] as const;
 export const MDFC_STRIP_RIDER_FRONT: FrameOverlaySlot = {
   anatomy: "mdfcStrip",
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfcfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_SPELL_KEYS,
-  keyMap: { c: "a" },
 };
 export const MDFC_STRIP_RIDER_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_FRONT,
@@ -7926,7 +7929,7 @@ export const MDFC_STRIP_RIDER_LAND_FRONT: FrameOverlaySlot = {
   rect: MDFC_STRIP_RIDER_RECT,
   assetPathTemplate: "/frames/m15mdfclandfront/strip/{key}.png",
   keys: MDFC_STRIP_RIDER_LAND_KEYS,
-  keyMap: { l: "c" },
+  keyMap: { l: "c", a: "c" },
 };
 export const MDFC_STRIP_RIDER_LAND_BACK: FrameOverlaySlot = {
   ...MDFC_STRIP_RIDER_LAND_FRONT,
@@ -8498,9 +8501,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // crown cut round the housing and the pairs (5.1d) on the spell faces —
   // the front draws both dresses (STX #149 / MSH #219 the split, MH3's ten
   // hybrid fronts the hybrid), the back the split (STX #149's back, MSH's
-  // crowned pair backs); the land pair draws neither (no print).
-  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT], twoColorMasters: ["split", "hybrid"] },
-  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK], twoColorMasters: ["split"] },
+  // crowned pair backs); the land pair draws neither (no print). Their `c`
+  // is the SEE-THROUGH colourless frame (TODO 5.11a, STX #6 Wandering
+  // Archaic: m15/c's field, bars and box with the modal housing and strip —
+  // PipGlyph's composite, scripts/build-mdfc-colourless-frames.mjs), so the
+  // art is drawn under the frame for `c` as m15 draws it; a colourless
+  // ARTIFACT face still wears the opaque artifact master `a`
+  // (artifactMasterKeys), which draws no under-frame layer. The crown keeps
+  // its `c` → `a` band (no legendary colourless non-artifact modal face was
+  // printed).
+  m15mdfcfront: {
+    ...M15MDFCFRONT,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT],
+    twoColorMasters: ["split", "hybrid"],
+  },
+  m15mdfcback: {
+    ...M15MDFCBACK,
+    collector: M15_COLLECTOR,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK],
+    twoColorMasters: ["split"],
+  },
   m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_FRONT] },
   m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_BACK] },
   // The borderless double-faced bodies (TODO 5.7): m15borderless's crowned

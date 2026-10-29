@@ -761,6 +761,20 @@ export function finalizeImportMatch<
       }
       const unverifiedBack =
         landing.reason === "back-unverified" && (match.status === "exact" || match.unverified === true);
+      // The see-through `c` (TODO 5.11a: STX #6 Wandering Archaic) waits for
+      // its own tick on either face: said so, by face.
+      if (landing.seeThrough && (match.status === "exact" || match.unverified === true)) {
+        return {
+          ...fallback,
+          frame_match: {
+            ...match,
+            status: "nearest",
+            ...(fallback.frame_template ? { landOn: fallback.frame_template } : {}),
+            reason: `the ${landing.reason === "front-unverified" ? "front" : "back"} face's see-through colourless frame isn't verified yet`,
+            unverified: true as const,
+          },
+        } as P;
+      }
       const downgraded: FrameMatch = {
         ...match,
         status: "nearest",

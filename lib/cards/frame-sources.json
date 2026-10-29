@@ -9713,9 +9713,6 @@
       "g": [
         "img/frames/modal/regular/gb.png"
       ],
-      "c": [
-        "img/frames/modal/regular/ab.png"
-      ],
       "m": [
         "img/frames/modal/regular/mb.png"
       ],
@@ -9768,7 +9765,13 @@
         "img/frames/modal/regular/mb.png",
         "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
         "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "c": [
+        "NOT IMPORTED — built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
       ]
+    },
+    "excluded": {
+      "c": "built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
     },
     "tones": {
       "a": [],
@@ -10462,7 +10465,7 @@
       "toned onto the prints before the first tick (MDFC_BACK_TONES, design D1): CC's bars read 3–16 luma light on w u b g m and 16 dark on r, its boxes 5–18 off; per-key gains through the pack's Title / Type / Rules masks, the white ▲▼ and the light rims kept by a luma ramp; the body, the pinline and the strip untouched; the artifact back untoned (no colourless modal back was printed)",
       "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
       "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
-      "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
+      "colourless: a colourless ARTIFACT back would wear the pack's 'Artifact Frame' back (ab.png, artifactMasterKeys; every artifact modal back printed is a coloured artifact — KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black); `c` was that master as a RENDER STAND-IN until TODO 5.11a made it the SEE-THROUGH colourless frame, STX #6's back Explore the Vastlands (scripts/build-mdfc-colourless-frames.mjs, provenance key mdfccolourless)",
       "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 12–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched; the KHM scans read 5–13 lighter than STX's on every key (u KHM #40 242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs STX #151 229, b KHM #112 219 vs STX #148 223): the fitted targets sit on STX, with b on both",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
       "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face",
@@ -10672,9 +10675,6 @@
       "g": [
         "img/frames/modal/regular/g.png"
       ],
-      "c": [
-        "img/frames/modal/regular/a.png"
-      ],
       "m": [
         "img/frames/modal/regular/m.png"
       ],
@@ -10797,7 +10797,13 @@
         "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
         "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "c": [
+        "NOT IMPORTED — built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
       ]
+    },
+    "excluded": {
+      "c": "built by scripts/build-mdfc-colourless-frames.mjs (TODO 5.11a): the SEE-THROUGH colourless frame — m15/c's field, bars and box with this pack's housing and strip (provenance key mdfccolourless); the artifact master stood in before"
     },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskType.png",
@@ -10816,7 +10822,7 @@
     "notes": [
       "source: CC 'Modal Regular' (packModalRegular.js, groupModal-1.js): the M15 frame with the drop-shaped icon HOUSING at the left of the name bar (a white fill, its ring, the black ▲ — tip x 41, circle to 201, rows 97–236 at HD; the prints' 44 / 198–205 / 98–236, within 3 px), the dark flipside STRIP at the bottom left in the colour's tone (x 64–690 × y 1866–1948 with its ◀; the prints' 64–681..694 × 1861..1866–1948, 6–10 luma lighter than theirs) and the strip's box cut into the text box's paper — all the master's; only the strip's two texts are drawn (the profile's `flipside` slots: the other face's last type word in Beleren Bold from CC's box at 6.8 %W, its cost or mana line in the rules font ending at 43.2 %W)",
       "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
-      "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+      "colourless: a colourless ARTIFACT face wears the pack's 'Artifact Frame' (a.png, artifactMasterKeys); `c` was that master as a RENDER STAND-IN (design D2) until TODO 5.11a made it the SEE-THROUGH colourless frame, STX #6 Wandering Archaic's (scripts/build-mdfc-colourless-frames.mjs — not this importer, provenance key mdfccolourless)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
       "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it (TODO 5.1c); on a pair master the gold m.png's strip (split) or the two colour fronts' strips lerped across the frame ramp (hybrid)",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay (our m15crown band cut through CC's modal crown twin's alpha around the housing); the two-colour PAIR masters (5.1d / 5.12): 4.6b's recipe over this pack's files and masks — the split dress m.png whole with the box and the pinline lerped from the two colour fronts (STX #149 Extus W|B, MSH #219 King T'Challa W|U print it), the hybrid dress the two fronts lerped across the frame ramp under CC's grey Land frame's bars (l.png through the Title and Type masks: the housing's fill is the Title mask's) with the split box and pinline (MH3 #252–261's ten hybrid fronts print it; the grey plate pt/c)",
@@ -14683,6 +14689,97 @@
       "the 1993 frame's five colour symbols (TODO 4.10c / 4.24; symbol style \"original\" on agclassic and alphaland): mana-font has only the old sun (`w-original`), so all five come from this ONE set and are drawn as images in the cost row and the rules text, through the path an owner's custom pip uses — never a font glyph on our own disc",
       "proof 3 (2026-10-08, Scryfall scans of 14 sets on the 1993 frame): the ringed twelve-ray sun is printed by nine sets, Alpha 1993 → Fallen Empires 1994 (LEA LEB 2ED ARN ATQ 3ED LEG DRK FEM); Fourth Edition 1995, Ice Age, Chronicles, Homelands and Alliances print today's sun. The drop, skull, flame and tree are today's shapes drawn to fill the disc; Alpha / Beta / Unlimited print a rougher skull than this file's",
       "each SVG is rasterised at 216 px (sharp, density 300, Lanczos): three times the HD bake's 72 px cost disc, so neither bake upsamples; generic and hybrid symbols, {C}, {X} and {T} stay the font's (the era's {T} is mana-font `tap-3ed`, Revised's tilted T)"
+    ]
+  },
+  "mdfccolourless": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-mdfc-colourless-frames.mjs",
+    "derivedFrom": "the published m15/c master (the see-through colourless 'Eldrazi' frame, TODO 4.17; Card Conjurer imports: see \"m15\") laid over the published m15mdfcfront/a and m15mdfcback/a masters (the 'Modal Regular' artifact frames, Card Conjurer imports: see \"m15mdfcfront\" / \"m15mdfcback\") through Card Conjurer's modal masks — the frame field, box, type bar and title bar m15/c's (the housing's drop filled with m15/c's bar row by row, the ▲ / ▲▼ the modal master's), the lines and the strip the modal master's, toned (scripts/lib/mdfc-colourless.mjs)",
+    "output": "1500x2100, the modal master's border and corners, webp q90 with the PNG's alpha exactly; strip/c.png the tab at 1:1",
+    "recipe": {
+      "masks": {
+        "frame": "cc:img/frames/modal/regular/frame.svg@86e3507e8e54",
+        "rules": "cc:img/frames/modal/regular/textbox.svg@527424d17e61",
+        "type": "cc:img/frames/m15/regular/m15MaskType.png@40600c4681c7",
+        "title": "cc:img/frames/modal/regular/title.svg@f11d29f3b67f",
+        "pinline": "cc:img/frames/modal/regular/pinline.svg@f0b686fc2605",
+        "reminder": "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea"
+      },
+      "layers": "base = the modal artifact master; frame.svg ← m15/c; textbox.svg ← m15/c (back: × the box gain); m15MaskType.png ← m15/c (back: × the type gain); title.svg ← m15/c's bar from x 220 px, the housing's drop m15/c's bar row by row (median of x 400–1100) with the modal master's glyph and inner edge over it (back: × the title gain, before the glyph); pinline.svg ← the modal master's lines toned onto m15/c's; reminder.svg ← the modal master's strip (front: toned onto print's tab, luma ramp 150–200)",
+      "backLumaGains": {
+        "title": 0.72,
+        "type": 0.687,
+        "rules": 0.887
+      },
+      "frontStripTone": "124,128,138 → 120,106,104 (STX #6 Wandering Archaic's tab)",
+      "pinlineTone": {
+        "front": "246,247,245 → 223,224,224",
+        "back": "246,247,245 → 223,224,224"
+      }
+    },
+    "colors": {
+      "m15mdfcfront/c": [
+        "m15mdfcfront/a.png@331c39adb9cd (base: border, housing outline, lines, strip)",
+        "m15/c.png@d166326b77a2 (frame field, box, bars, housing fill)"
+      ],
+      "m15mdfcfront/strip/c": [
+        "m15mdfcfront/c.png (this run), the tab through img/frames/modal/regular/reminder.svg eroded 1 px, 2 × 2 blocks, box 44,1866 658×90"
+      ],
+      "m15mdfcback/c": [
+        "m15mdfcback/a.png@eb33a3423f62 (base: border, housing outline, lines, strip)",
+        "m15/c.png@d166326b77a2 (frame field, box, bars, housing fill)"
+      ],
+      "m15mdfcback/strip/c": [
+        "m15mdfcback/c.png (this run), the tab through img/frames/modal/regular/reminder.svg eroded 1 px, 2 × 2 blocks, box 44,1866 658×90"
+      ]
+    },
+    "changedPixels": {
+      "m15mdfcfront/c": {
+        "frame": 169604,
+        "box": 756071,
+        "type": 162634,
+        "title": 147505,
+        "pinline": 107988,
+        "strip": 54180,
+        "reads": {
+          "title": "206,204,202",
+          "type": "206,204,202",
+          "rules": "243,242,240",
+          "strip": "120,106,104"
+        }
+      },
+      "m15mdfcback/c": {
+        "frame": 169604,
+        "box": 756071,
+        "type": 162634,
+        "title": 147505,
+        "pinline": 107988,
+        "strip": 54180,
+        "reads": {
+          "title": "148,147,145",
+          "type": "142,140,139",
+          "rules": "216,215,213",
+          "strip": "223,225,229"
+        }
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/regular/m15MaskType.png",
+      "cc:img/frames/modal/regular/frame.svg",
+      "cc:img/frames/modal/regular/pinline.svg",
+      "cc:img/frames/modal/regular/reminder.svg",
+      "cc:img/frames/modal/regular/textbox.svg",
+      "cc:img/frames/modal/regular/title.svg",
+      "m15/c.png",
+      "m15mdfcback/a.png",
+      "m15mdfcfront/a.png"
+    ],
+    "notes": [
+      "TODO 5.11a: STX #6 Wandering Archaic // Explore the Vastlands (and PSTX #6s) — the one modal card whose faces are colourless with no Artifact word; both print the SEE-THROUGH colourless frame with the modal housing and strip. No Card Conjurer pack draws it ('Modal Regular' has Artifact and Land frames only). Before it, the bodies' `c` was the artifact master standing in (design D2), which a colourless ARTIFACT face never drew (it wears `a`: FrameProfile.artifactMasterKeys)",
+      "the back's bars and box at print's back ÷ front LUMA (BACK_LUMA_GAINS), m15/c's neutral grey kept — both faces show the same card's art through them, so the ratio leaves the art's cast out; the back strip is the modal back's as published (STX #6's back tab 226,220,230 against 223,225,229)",
+      "no crown, pair, stamp or nickname piece of its own: a legendary colourless non-artifact modal face was never printed (the crown overlay keeps its `c` → `a` band)"
     ]
   },
   "modern": {

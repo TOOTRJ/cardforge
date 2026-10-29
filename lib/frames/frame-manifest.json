@@ -16005,16 +16005,16 @@
       "height": 2100
     },
     "m15mdfcback/c.png": {
-      "hash": "eb33a3423f62",
-      "sha256": "eb33a3423f62f304f05b919623ac0f32bc4c394eb2b4472be6db027ccc2c2d48",
-      "bytes": 2125982,
+      "hash": "c873bca773bf",
+      "sha256": "c873bca773bf2278d21e2fe64d0dd5b5111549d49e451f740b614bb00aabc78c",
+      "bytes": 283360,
       "width": 1500,
       "height": 2100
     },
     "m15mdfcback/c.webp": {
-      "hash": "f6aef15d700b",
-      "sha256": "f6aef15d700b83d3104f594c7558bb5201cfe2b6b84227bfd01d1d92bc9e37da",
-      "bytes": 99770,
+      "hash": "6663bd8329f3",
+      "sha256": "6663bd8329f382cdbb00da068b5f9f3d1be4b3537778f1004cda362744ad222c",
+      "bytes": 38988,
       "width": 1500,
       "height": 2100
     },
@@ -16141,6 +16141,20 @@
       "hash": "f3d1f0fd157c",
       "sha256": "f3d1f0fd157cb040499ff4eba780a603e4737a6c65c4148d1f1bcf5e5bb85995",
       "bytes": 1798,
+      "width": 658,
+      "height": 90
+    },
+    "m15mdfcback/strip/c.png": {
+      "hash": "01aff2bb3788",
+      "sha256": "01aff2bb37882bdbffe76d75daafa7181dd7f2ab32b0e6d5d0e90c0e76e736b7",
+      "bytes": 3867,
+      "width": 658,
+      "height": 90
+    },
+    "m15mdfcback/strip/c.webp": {
+      "hash": "856405dfe088",
+      "sha256": "856405dfe088fe52ab94f25a608771a78331241cf032e354f0b5da48be1178b3",
+      "bytes": 1782,
       "width": 658,
       "height": 90
     },
@@ -16649,16 +16663,16 @@
       "height": 2100
     },
     "m15mdfcfront/c.png": {
-      "hash": "331c39adb9cd",
-      "sha256": "331c39adb9cd8afa5a378de86e6913d952d68e40a2dbd702eefcac8db93cc74d",
-      "bytes": 2134552,
+      "hash": "a42754388c8d",
+      "sha256": "a42754388c8d1df1754e54b988acbaf98f1aede4a630dee0687a9c5f4816fad4",
+      "bytes": 301903,
       "width": 1500,
       "height": 2100
     },
     "m15mdfcfront/c.webp": {
-      "hash": "807059dc0bbc",
-      "sha256": "807059dc0bbcec39587e8d8d04dfaf2a0b24ab126f2eb54607ebac249dc67938",
-      "bytes": 97374,
+      "hash": "3c0f1fcebc51",
+      "sha256": "3c0f1fcebc5179229b296a48836e8d186b86bb6cc0aa13d54989b0dac6865829",
+      "bytes": 40452,
       "width": 1500,
       "height": 2100
     },
@@ -16841,6 +16855,20 @@
       "hash": "0b2b6e9a252f",
       "sha256": "0b2b6e9a252f88117e51be2cdd7ae5673278330b1fbffccde974afa327f59a09",
       "bytes": 1412,
+      "width": 658,
+      "height": 90
+    },
+    "m15mdfcfront/strip/c.png": {
+      "hash": "81b1fe86b41e",
+      "sha256": "81b1fe86b41e05c75b0422ff9a108b2750ac04730c90dc2e8d8717a13c83eea6",
+      "bytes": 3823,
+      "width": 658,
+      "height": 90
+    },
+    "m15mdfcfront/strip/c.webp": {
+      "hash": "76fb80b6f0c1",
+      "sha256": "76fb80b6f0c111f202879945ac152ec4d5939f27263a42a73e09fecdf1c1833f",
+      "bytes": 1610,
       "width": 658,
       "height": 90
     },
