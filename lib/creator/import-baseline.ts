@@ -17,9 +17,18 @@ import type { BackFaceFormValues, FormValues } from "@/lib/creator/form-types";
 // frame follows (token text box, enchantment / subtype dress, part colour),
 // anatomy defaults, a kind's own defaults. Those are the import's, never
 // the maker's, so the baseline is taken once they have run: the creator
-// RE-TAKES it after every commit until the maker's first edit
-// (card-creator-form.tsx, `importBaselineOpen`) — the automatic steps all
-// run in effects before any input can reach the form.
+// RE-TAKES it on every value change while its settle window is open
+// (card-creator-form.tsx, `importBaselineOpen`). The window closes — so
+// nothing the maker does is ever absorbed — on the FIRST of: a quiet spell
+// (no render of the form for IMPORT_SETTLE_QUIET_MS after a commit's
+// effects — the automatic steps' writes each render it again — capped at
+// IMPORT_SETTLE_CAP_MS after the import's first commit); any user gesture anywhere on the
+// page (window-level capture of pointer, key, wheel, paste, drop, drag,
+// input, click and change events — a drag-pan, a Shift+wheel zoom, a
+// dropped or pasted picture never pass through the form's own events); and
+// every writer the maker sets off without one (an AI fill or idea, a toast
+// action, Start over). The automatic steps all run in effects within a
+// render of the import.
 //
 // The keys are the form's side of lib/cards/import-fingerprint.ts's fields:
 // everything but what isn't the card (visibility, tags, decks, the slug,
@@ -28,6 +37,28 @@ import type { BackFaceFormValues, FormValues } from "@/lib/creator/form-types";
 // (tests/unit/creator/import-baseline.test.ts holds them to the form's
 // defaults), so a new field is a decision, never a miss.
 // ---------------------------------------------------------------------------
+
+/** The settle window: closed once the form has gone this long without a
+ *  render after the import (counted from each commit's effects, so a slow
+ *  first render never closes it before the automatic steps have run)… */
+export const IMPORT_SETTLE_QUIET_MS = 200;
+/** …and never later than this after the import's first commit. */
+export const IMPORT_SETTLE_CAP_MS = 800;
+
+/** The user gestures that close the settle window, wherever they land. */
+export const IMPORT_SETTLE_GESTURES = [
+  "pointerdown",
+  "mousedown",
+  "touchstart",
+  "keydown",
+  "wheel",
+  "paste",
+  "drop",
+  "dragstart",
+  "input",
+  "change",
+  "click",
+] as const;
 
 export const IMPORT_BASELINE_KEYS = [
   "title",
@@ -97,7 +128,9 @@ export const IMPORT_BASELINE_BACK_KEYS = [
   "color_identity",
 ] as const satisfies readonly (keyof BackFaceFormValues)[];
 
-export type ImportBaseline = { scryfallId: string; values: string };
+/** `changed`: the form already held something the import isn't
+ *  (preImportChanges) — the card can never save as the import's. */
+export type ImportBaseline = { scryfallId: string; values: string; changed?: boolean };
 
 /** The two texts whose blank is a choice of its own: an emptied Types field
  *  prints the subtypes alone, an emptied footer prints none (NULL is the
@@ -133,15 +166,26 @@ function valuesKeyOf(values: Partial<FormValues>): string {
 }
 
 /** The baseline of the form as it stands (null when the values name no
- *  source printing). */
-export function importBaselineOf(values: Partial<FormValues>): ImportBaseline | null {
+ *  source printing); `changed` when the form already held something else
+ *  before the import (preImportChanges). */
+export function importBaselineOf(values: Partial<FormValues>, changed = false): ImportBaseline | null {
   const scryfallId = values.source_scryfall_id?.trim();
-  return scryfallId ? { scryfallId, values: valuesKeyOf(values) } : null;
+  if (!scryfallId) return null;
+  return changed ? { scryfallId, values: valuesKeyOf(values), changed: true } : { scryfallId, values: valuesKeyOf(values) };
 }
 
 /** Whether the form still holds exactly the baseline's values. */
 export function matchesBaseline(baseline: ImportBaseline | null, values: Partial<FormValues>): boolean {
   return Boolean(baseline) && values.source_scryfall_id?.trim() === baseline!.scryfallId && valuesKeyOf(values) === baseline!.values;
+}
+
+/** The baseline re-taken on the values as they now stand — the creator's
+ *  settle window (an automatic step moved them) and "Fill from the
+ *  printing" (the import's own collector line): the same object while
+ *  nothing moved, and a card marked changed stays changed. */
+export function retakenBaseline(baseline: ImportBaseline | null, values: Partial<FormValues>): ImportBaseline | null {
+  if (!baseline || matchesBaseline(baseline, values)) return baseline;
+  return importBaselineOf(values, baseline.changed === true);
 }
 
 /** What a NEW card's payload says about its import: nothing without an
@@ -152,5 +196,53 @@ export function importUnchangedPayload(
   values: Partial<FormValues>,
 ): { import_unchanged?: boolean } {
   if (!baseline || values.source_scryfall_id?.trim() !== baseline.scryfallId) return {};
-  return { import_unchanged: valuesKeyOf(values) === baseline.values };
+  return { import_unchanged: baseline.changed !== true && valuesKeyOf(values) === baseline.values };
+}
+
+// ---------------------------------------------------------------------------
+// What the form held BEFORE an import that the import leaves in place (the
+// review's F2): the import handler (card-creator-form.tsx
+// handleScryfallImport) writes the printing's text, type line, colour,
+// rarity, frame and anatomy, nickname, rows, faces and source — but NEVER
+// the footer, the watermark, the set icon or the frame's finish, nor the
+// art when it brought none or the collector line when Scryfall gave none.
+// A value there that a NEW card wouldn't have is the maker's (typed before
+// the import, during the deck pre-fill's load, or on the card before a
+// second import): the card is not the import's, whatever happens next.
+// The keys are listed, never inferred — a key the handler conditionally
+// writes elsewhere (the stats a kind change seeds) would read as changed.
+// ---------------------------------------------------------------------------
+
+export type ImportWrites = {
+  /** The import brought its art (`importedArtUrl`). */
+  art: boolean;
+  /** The import named the printing's collector line (`patch.collector`). */
+  collector: boolean;
+};
+
+/** The keys holding something the import didn't write and a new card
+ *  (`newCard`: the form's new-card defaults; `newCardWatermark`: the
+ *  watermark a new card of the import's type starts with — the kind change
+ *  sets the free Rose itself) wouldn't have. Empty = nothing left over. */
+export function preImportChanges(
+  values: Partial<FormValues>,
+  newCard: Partial<FormValues>,
+  newCardWatermark: FormValues["watermark"],
+  wrote: ImportWrites,
+): string[] {
+  const same = (a: unknown, b: unknown, keepBlank = false) =>
+    JSON.stringify(settled(a, keepBlank)) === JSON.stringify(settled(b, keepBlank));
+  const out: string[] = [];
+  if (!same(values.footer_text, newCard.footer_text, true)) out.push("footer_text");
+  if (!same(values.watermark, newCardWatermark)) out.push("watermark");
+  if (!same(values.set_icon_url, newCard.set_icon_url)) out.push("set_icon_url");
+  if (!same(values.set_icon_code, newCard.set_icon_code)) out.push("set_icon_code");
+  if (!same(values.frame_style?.finish, newCard.frame_style?.finish)) out.push("frame_style.finish");
+  if (!wrote.art && !same(values.art_url, newCard.art_url)) out.push("art_url");
+  if (!wrote.collector) {
+    for (const key of ["set_code", "collector_number", "lang"] as const) {
+      if (!same(values[key], newCard[key])) out.push(key);
+    }
+  }
+  return out;
 }

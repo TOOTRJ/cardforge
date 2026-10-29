@@ -8,6 +8,8 @@ import {
   importUnchangedPayload,
   matchesBaseline,
   NOT_COMPARED_FORM_KEYS,
+  preImportChanges,
+  retakenBaseline,
 } from "@/lib/creator/import-baseline";
 
 // ---------------------------------------------------------------------------
@@ -149,5 +151,58 @@ describe("matchesBaseline (the creator re-takes the baseline only when it moved)
     expect(matchesBaseline(baseline, imported())).toBe(true);
     expect(matchesBaseline(baseline, { ...imported(), rarity: "rare" })).toBe(false);
     expect(matchesBaseline(null, imported())).toBe(false);
+  });
+});
+
+describe("retakenBaseline (the settle window, Fill from the printing)", () => {
+  it("the same baseline while nothing moved; the values as they stand once something did", () => {
+    const baseline = importBaselineOf(imported());
+    expect(retakenBaseline(baseline, imported())).toBe(baseline);
+    const moved = retakenBaseline(baseline, { ...imported(), collector_number: "168" });
+    expect(importUnchangedPayload(moved, { ...imported(), collector_number: "168" })).toEqual({ import_unchanged: true });
+    expect(retakenBaseline(null, imported())).toBeNull();
+  });
+
+  it("a card marked changed stays changed", () => {
+    const baseline = importBaselineOf(imported(), true);
+    const moved = retakenBaseline(baseline, { ...imported(), rarity: "rare" });
+    expect(moved?.changed).toBe(true);
+    expect(importUnchangedPayload(moved, { ...imported(), rarity: "rare" })).toEqual({ import_unchanged: false });
+  });
+});
+
+describe("preImportChanges (F2: what the form held before the import, left in place)", () => {
+  const newCard = defaultValuesFor(null, [{ id: "g" } as never]);
+  const wrote = { art: true, collector: true };
+
+  it("nothing on an import over a new card", () => {
+    expect(preImportChanges(imported(), newCard, newCard.watermark, wrote)).toEqual([]);
+  });
+
+  it.each([
+    ["footer_text", { footer_text: "mine.art" }],
+    ["watermark", { watermark: { kind: "custom", key: "", size: "normal", url: "https://example.supabase.co/storage/v1/object/public/set-covers/u/w.png" } }],
+    ["set_icon_url", { set_icon_url: "https://example.supabase.co/storage/v1/object/public/set-covers/u/icon.png" }],
+    ["set_icon_code", { set_icon_code: "dom" }],
+    ["frame_style.finish", { frame_style: { ...imported().frame_style, finish: "foil" } }],
+  ] as const)("names %s, a key the import never writes", (key, change) => {
+    expect(preImportChanges({ ...imported(), ...change } as unknown as FormValues, newCard, newCard.watermark, wrote)).toEqual([key]);
+  });
+
+  it("the art and the collector line only when the import didn't bring them", () => {
+    const left = { ...imported(), art_url: "https://example.supabase.co/storage/v1/object/public/card-art/u/mine.png", set_code: "XYZ" };
+    expect(preImportChanges(left, newCard, newCard.watermark, wrote)).toEqual([]);
+    expect(preImportChanges(left, newCard, newCard.watermark, { art: false, collector: false })).toEqual(["art_url", "set_code"]);
+  });
+
+  it("a paid maker's own default footer is a new card's", () => {
+    const paidNew = defaultValuesFor(null, [{ id: "g" } as never], { paid: true, footerText: "tester.art" });
+    const paidImport = { ...imported(), watermark: paidNew.watermark };
+    expect(preImportChanges({ ...paidImport, footer_text: "tester.art" }, paidNew, paidNew.watermark, wrote)).toEqual([]);
+    expect(preImportChanges({ ...paidImport, footer_text: "" }, paidNew, paidNew.watermark, wrote)).toEqual(["footer_text"]);
+  });
+
+  it("an import that starts changed never saves as the import's", () => {
+    expect(importUnchangedPayload(importBaselineOf(imported(), true), imported())).toEqual({ import_unchanged: false });
   });
 });

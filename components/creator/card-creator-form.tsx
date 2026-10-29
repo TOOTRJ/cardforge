@@ -2,6 +2,7 @@
 
 import {
   memo,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -340,7 +341,17 @@ import {
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
-import { importBaselineOf, importUnchangedPayload, matchesBaseline, type ImportBaseline } from "@/lib/creator/import-baseline";
+import {
+  IMPORT_SETTLE_CAP_MS,
+  IMPORT_SETTLE_GESTURES,
+  IMPORT_SETTLE_QUIET_MS,
+  importBaselineOf,
+  importUnchangedPayload,
+  matchesBaseline,
+  preImportChanges,
+  retakenBaseline,
+  type ImportBaseline,
+} from "@/lib/creator/import-baseline";
 import { editBackFacePayload } from "@/lib/creator/back-face-edit";
 import { cancelsImplicitSubmit } from "@/lib/creator/enter-key";
 import {
@@ -878,11 +889,16 @@ export function CardCreatorForm({
   } | null>(null);
   // The values the last import landed with, once the form's own automatic
   // steps have run on them (TODO DK2.5): a new card's save says whether it
-  // is still exactly that (lib/creator/import-baseline.ts). Re-taken after
-  // every commit while `importBaselineOpen` — from the import until the
-  // maker's first input, click or key in the form.
+  // is still exactly that (lib/creator/import-baseline.ts). Re-taken on
+  // every value change while `importBaselineOpen` — the settle window,
+  // closed by a quiet spell, any user gesture on the page, or a writer the
+  // maker sets off (closeImportBaseline).
   const [importBaseline, setImportBaseline] = useState<ImportBaseline | null>(null);
   const importBaselineOpen = useRef(false);
+  const importSettle = useRef<{ firstCommitAt: number | null; timer: ReturnType<typeof setTimeout> | null }>({
+    firstCommitAt: null,
+    timer: null,
+  });
   // Session-only import facts (never saved): the Card step's "Frame
   // substituted (imported …)" chip while the card sits on a frame that
   // isn't the printing's own (TODO 1.5), and the Art step's note on
@@ -1033,9 +1049,42 @@ export function CardCreatorForm({
     [subscribe],
   );
   // An import's automatic steps (the art's fit, the frame follows, anatomy
-  // and kind defaults) all write the form in effects, before any input can
-  // reach it: the import baseline (TODO DK2.5) follows every value change
-  // until the maker's first input, click or key closes it.
+  // and kind defaults) all write the form in effects within a render or two
+  // of the import: the import baseline (TODO DK2.5) follows every value
+  // change while its settle window is open. The window shuts on a quiet
+  // spell (armSettleAfterCommit, the LAST effect of this component: no
+  // render for IMPORT_SETTLE_QUIET_MS, capped), on any user gesture anywhere
+  // on the page (window capture: a drag-pan, a Shift+wheel zoom, a dropped
+  // or pasted picture never pass through the form's own events) and in
+  // every writer the maker sets off without one.
+  const closeImportBaseline = useCallback(() => {
+    importBaselineOpen.current = false;
+    const settle = importSettle.current;
+    if (settle.timer !== null) clearTimeout(settle.timer);
+    settle.timer = null;
+  }, []);
+  /** "Fill from the printing" (the Set & collector info step) wrote the
+   *  collector line of the card's OWN source printing: on an import that
+   *  was untouched until then, that line is the import's, so the baseline
+   *  takes it (an edited card stays edited). */
+  const retakeAfterPrintingFill = (before: FormValues, scryfallId: string) => {
+    const after = getValues();
+    setImportBaseline((prev) =>
+      prev && prev.scryfallId === scryfallId.trim() && matchesBaseline(prev, before) ? retakenBaseline(prev, after) : prev,
+    );
+  };
+  /** An import landed: its baseline, and the settle window open on it. */
+  const openImportBaseline = useCallback(
+    (baseline: ImportBaseline | null) => {
+      closeImportBaseline();
+      setImportBaseline(baseline);
+      if (!baseline) return;
+      importBaselineOpen.current = true;
+      // The quiet spell counts from the import's first commit (below).
+      importSettle.current.firstCommitAt = null;
+    },
+    [closeImportBaseline],
+  );
   useEffect(
     () =>
       subscribe({
@@ -1043,11 +1092,18 @@ export function CardCreatorForm({
         callback: () => {
           if (!importBaselineOpen.current) return;
           const values = getValues();
-          setImportBaseline((prev) => (matchesBaseline(prev, values) ? prev : importBaselineOf(values)));
+          setImportBaseline((prev) => retakenBaseline(prev, values));
         },
       }),
     [subscribe, getValues],
   );
+  useEffect(() => {
+    for (const type of IMPORT_SETTLE_GESTURES) window.addEventListener(type, closeImportBaseline, { capture: true });
+    return () => {
+      for (const type of IMPORT_SETTLE_GESTURES) window.removeEventListener(type, closeImportBaseline, { capture: true });
+      closeImportBaseline();
+    };
+  }, [closeImportBaseline]);
 
   // Signed-out visitors may LOOK at the creator (every step, the live
   // preview) but not use it (owner decision 2026-09-16): the panels are
@@ -2682,6 +2738,8 @@ export function CardCreatorForm({
   // dirty. Strings are passed through as-is; the color_identity readonly
   // tuple from the schema is widened to a mutable array.
   const handleAIPatch = (rawPatch: CardFieldPatch) => {
+    // The maker's pick, never an import's settling (TODO DK2.5).
+    closeImportBaseline();
     sagaFramePickRef.current = false;
     // The idea's text as print sets it (TODO 6.11) — what the save stores.
     const patch = printTypographyPatch(rawPatch);
@@ -2952,6 +3010,9 @@ export function CardCreatorForm({
               action: {
                 label: offer.actionLabel,
                 onClick: () => {
+                  // The maker's pick (a toast, outside the form): never
+                  // part of the import's settling (TODO DK2.5).
+                  closeImportBaseline();
                   setValue("frame_style.template", offer.template, {
                     shouldDirty: true,
                   });
@@ -3143,8 +3204,18 @@ export function CardCreatorForm({
     // (a step change used to turn the preview to the front). With Face tabs
     // an import made from the Back face tab would otherwise land there.
     setPreviewFace("front");
-    setImportBaseline(importBaselineOf(getValues()));
-    importBaselineOpen.current = true;
+    // The baseline, unless the form already held something the import
+    // doesn't write (a footer, a watermark, the set icon, a finish typed
+    // before it, during the deck pre-fill's load or before a re-import):
+    // then the card isn't the import's whatever happens next.
+    const landed = getValues();
+    const leftOver = preImportChanges(
+      landed,
+      defaults,
+      watermarkFormValuesFromValue(defaultWatermarkFor(landed.card_type, isPaid)),
+      { art: Boolean(importedArtUrl), collector: Boolean(patch.collector) },
+    );
+    openImportBaseline(importBaselineOf(landed, leftOver.length > 0));
     return notice;
   };
 
@@ -3400,6 +3471,9 @@ export function CardCreatorForm({
 
   /** Pour a fill result into the form — only the keys present are touched. */
   const applyFill = (fill: CardFillResult) => {
+    // The maker's fill (the dialog, or the "finished while you were away"
+    // toast — outside the form), never an import's settling (TODO DK2.5).
+    closeImportBaseline();
     // A fill that names the card renames it (TODO 6.3, owner Round 80 and
     // N3): the nickname typed or imported for the card before it is
     // forgotten, as its borrowed words are — on a new card AND a remix (a
@@ -3859,8 +3933,7 @@ export function CardCreatorForm({
     secondPartFields.forget();
     forgetBorrowedWords();
     setRemixSource(null);
-    setImportBaseline(null);
-    importBaselineOpen.current = false;
+    openImportBaseline(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
     setPreviewFace("front");
@@ -4809,6 +4882,26 @@ export function CardCreatorForm({
     setValue,
   });
 
+  // The import settle window's quiet spell (TODO DK2.5): after EVERY commit
+  // while it is open, (re)start the timer — the last effect of this
+  // component, so the commit's other effects (children's first, then this
+  // component's in order: the automatic steps) have already written. An
+  // automatic write renders again and restarts it; the cap counts from the
+  // import's first commit. Keep it the LAST hook here.
+  useEffect(() => {
+    if (!importBaselineOpen.current) return;
+    const settle = importSettle.current;
+    const now = Date.now();
+    if (settle.firstCommitAt === null) settle.firstCommitAt = now;
+    if (settle.timer !== null) clearTimeout(settle.timer);
+    const left = IMPORT_SETTLE_CAP_MS - (now - settle.firstCommitAt);
+    if (left <= 0) {
+      closeImportBaseline();
+      return;
+    }
+    settle.timer = setTimeout(closeImportBaseline, Math.min(IMPORT_SETTLE_QUIET_MS, left));
+  });
+
   // ---- Render pieces shared by both layouts ----
   // The step panels, the once-mounted dialogs and the action bar are the
   // same in the shipped stepper and in the lab's canvas layout; only the
@@ -5336,7 +5429,11 @@ export function CardCreatorForm({
 
             {/* ----- Set icon panel (the type-line symbol, a direct card field) ----- */}
             {stepKey === "seticon" ? (
-              <SetIconPanel userId={userId} stored={isEdit && card ? ((card.frame_style as FrameStyle | null) ?? {}) : null} />
+              <SetIconPanel
+                userId={userId}
+                stored={isEdit && card ? ((card.frame_style as FrameStyle | null) ?? {}) : null}
+                onFilledFromPrinting={retakeAfterPrintingFill}
+              />
             ) : null}
 
             {/* ----- Subscriber step (paid perks for this card; upsell for free) ----- */}
@@ -5733,10 +5830,6 @@ export function CardCreatorForm({
     ) {
       event.preventDefault();
     }
-  };
-
-  const closeImportBaseline = () => {
-    importBaselineOpen.current = false;
   };
 
   const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {

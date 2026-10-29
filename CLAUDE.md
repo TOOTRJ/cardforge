@@ -1776,16 +1776,26 @@ Rules and gotchas:
   change is `v2`, never a silent one). It is stored only when the creator
   says the card is still the import's (`lib/creator/import-baseline.ts`:
   form values against the import AFTER its own automatic steps — art fit,
-  frame follows, part colour, anatomy — re-taken on every value change until
-  the maker's first input, click or key; every fixture printing proves an
-  untouched save, `creator-import-unchanged-printings.test.tsx`). A
+  frame follows, part colour, anatomy — re-taken on every value change while
+  the SETTLE WINDOW is open; it shuts on a quiet spell (150 ms, capped at
+  500 ms), on any user gesture anywhere on the page (window capture,
+  `IMPORT_SETTLE_GESTURES`: a drag-pan, a wheel zoom, a drop or a paste
+  never pass the form's own events) and in every writer the maker sets off
+  without one — a new one (an AI fill, an idea, a toast action) calls
+  `closeImportBaseline()` first; a value the form held before the import
+  and the import doesn't write (footer, watermark, set icon, finish) starts
+  the card changed, `preImportChanges`; every fixture printing proves an
+  untouched save, `creator-import-unchanged-printings.test.tsx`, and
+  `creator-import-settle-window.test.tsx` the maker's changes). A
   PLATFORM rewrite of a fingerprinted field (a frame sweep, a typography
   fix) re-fingerprints the untouched imports it changes, in the same UPDATE
   on the trusted path (the guard allows it): `fingerprintAfterRewrite(before,
   after)`. SQL can't compute the hash (the canonical text is that module's
   JSON), so a SQL migration rewrites only rows `where import_fingerprint is
   null` and leaves the fingerprinted ones to a service-role script that
-  calls the helper — else every untouched import it touches reads Edited.
+  calls the helper — else every untouched import it touches reads Edited
+  (`tests/unit/db/import-fingerprint-migrations.test.ts` fails a migration
+  after 0144 that doesn't, short of a `-- import-fingerprint: exempt` note).
   An entry's type line, cost, colours and
   mana value are `effectiveEntryFields` (`lib/decks/effective-entry.ts`: the
   printing is the authority for an unchanged import of it and for any card

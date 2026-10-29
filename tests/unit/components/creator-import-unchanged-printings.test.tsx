@@ -20,10 +20,14 @@ import importPrintings from "../scryfall/fixtures/import-printings.json";
 // walker backs, tokens, sagas, split / aftermath / Room, adventure / Omen,
 // flip, class, case, meld, Dryad Arbor, reversible, the 1993 / 1997 / 2003
 // frames…) lands through the deck pre-fill — the real handler, with its art
-// — on BOTH a narrow and an everything-verified database, is walked to the
-// last step and saved untouched: `import_unchanged: true`. Then ONE change of
-// the frame, the colour, the rarity or the crop alone reads Edited.
-// Harness: tests/unit/components/creator-import-unchanged.test.tsx.
+// — on a narrow and an everything-verified database, and for a paid account
+// with its own default footer, is walked to the last step and saved
+// untouched: `import_unchanged: true`. Then ONE change of the frame, the
+// colour, the rarity or the crop alone reads Edited; and a keyboard walk
+// that blurs every field, or a visit to the other face's tab, is no edit.
+// Harness: tests/unit/components/creator-import-unchanged.test.tsx. The
+// window that keeps the maker's own changes out of the baseline is
+// creator-import-settle-window.test.tsx.
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
@@ -86,7 +90,7 @@ afterEach(() => {
   for (const fn of [...Object.values(toast), ...Object.values(router), ...Object.values(actions)]) fn.mockReset();
 });
 
-function prefill(card: ScryfallCard, verified: readonly string[]) {
+function prefill(card: ScryfallCard, verified: readonly string[], account: { paid?: boolean; footer?: string } = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -118,6 +122,8 @@ function prefill(card: ScryfallCard, verified: readonly string[]) {
       ownerUsername="tester"
       gameSystems={GAME_SYSTEMS}
       aiConfigured
+      isPaid={account.paid}
+      defaultFooterText={account.footer}
       verifiedFrameKeys={[...verified]}
       deckRemix={{
         deckCardId: "66666666-6666-4666-8666-666666666666",
@@ -167,12 +173,15 @@ async function saveAsDraft() {
 const KEYS = Object.keys(PRINTINGS).sort();
 
 describe.each([
-  ["the wave-1 frames verified", NARROW],
-  ["everything verified", EVERYTHING],
-] as const)("an untouched import saves import_unchanged: true — %s", (_db, verified) => {
+  ["the wave-1 frames verified", NARROW, {}],
+  ["everything verified", EVERYTHING, {}],
+  // A subscriber: no forced watermark, their own default footer — what a
+  // new card of theirs starts with is never "left over" (preImportChanges).
+  ["everything verified, a paid account with a default footer", EVERYTHING, { paid: true, footer: "tester.art" }],
+] as const)("an untouched import saves import_unchanged: true — %s", (_db, verified, account) => {
   it.each(KEYS)("%s", { timeout: 30_000 }, async (key) => {
     const card = printing(key);
-    prefill(card, verified);
+    prefill(card, verified, account);
     await landed();
     const payload = await saveAsDraft();
     expect(payload.source_scryfall_id).toBe(card.id);
@@ -246,5 +255,77 @@ describe("one change alone reads Edited (Llanowar Elves DOM #168, everything ver
     await goTo("Identity");
     const payload = await saveAsDraft();
     expect(payload.import_unchanged).toBe(true);
+  });
+});
+
+// The other direction (the review of #664): what ISN'T an edit never reads
+// as one — a keyboard walk that focuses and blurs every field (the form's
+// print-typography pass runs on blur), and a visit to the other face's or
+// part's tab on every step. Every printing, everything verified.
+async function submitDraft() {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId("save-as-draft"));
+  });
+  await act(async () => {
+    fireEvent.submit(screen.getByTestId("save-as-draft").closest("form")!);
+  });
+  await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+  return actions.createCardAction.mock.calls[0][0] as Record<string, unknown>;
+}
+
+describe("no edit, no Edited: a keyboard walk that blurs every field", () => {
+  it.each(KEYS)("%s", { timeout: 60_000 }, async (key) => {
+    prefill(printing(key), EVERYTHING);
+    await landed();
+    const form = document.querySelector("form")!;
+    await act(async () => {
+      fireEvent.keyDown(form, { key: "Tab" });
+    });
+    const blurAll = async () => {
+      for (const field of Array.from(form.querySelectorAll("input[name], textarea[name]"))) {
+        await act(async () => {
+          fireEvent.focusIn(field);
+          fireEvent.focusOut(field);
+        });
+      }
+    };
+    await blurAll();
+    while (screen.queryByRole("button", { name: /^Next/ })) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Next/ }));
+      });
+      await blurAll();
+    }
+    expect((await submitDraft()).import_unchanged).toBe(true);
+  });
+});
+
+describe("no edit, no Edited: the other face's tab on every step", () => {
+  it.each(KEYS)("%s", { timeout: 60_000 }, async (key) => {
+    prefill(printing(key), EVERYTHING);
+    await landed();
+    const walk = async () => {
+      while (screen.queryByRole("button", { name: /^Next/ })) {
+        await act(async () => {
+          fireEvent.click(screen.getByRole("button", { name: /^Next/ }));
+        });
+      }
+    };
+    // One-faced printings have no tab to visit.
+    if (screen.queryAllByRole("tab").filter((tab) => tab.getAttribute("aria-selected") !== "true").length === 0) return;
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle(/^Go to /)[0]!);
+    });
+    for (const tab of screen.queryAllByRole("tab").filter((t) => t.getAttribute("aria-selected") !== "true")) {
+      await act(async () => {
+        fireEvent.click(tab);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getAllByTitle(/^Go to /)[0]!);
+      });
+      await walk();
+    }
+    await walk();
+    expect((await submitDraft()).import_unchanged).toBe(true);
   });
 });
