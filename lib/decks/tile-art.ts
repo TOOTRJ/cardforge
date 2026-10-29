@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { deckCoverColors, type DeckCoverColor } from "@/lib/decks/cover";
-import { featuredCardsOf, type FeaturableCard, type FeaturedCard } from "@/lib/decks/featured";
+import { featuredCardsOf, missingFeaturedRank, type FeaturableCard, type FeaturedCard } from "@/lib/decks/featured";
 import { canLinkIntoDeck, withDeckVisibleCards } from "@/lib/decks/entry-status";
 import { narrowCard } from "@/lib/cards/narrow";
 import type { Card } from "@/types/card";
@@ -15,8 +15,9 @@ import type { Card } from "@/types/card";
 // pips — and the 3-card fan in front of the cover. The same answers the
 // deck's own page computes from its rows (`deckCoverColors`,
 // `featuredCardsOf`, lib/decks/cover.ts + featured.ts), so a deck shows the
-// same default and the first three cards of the same fan on its tile and on
-// its page.
+// same default and the first three cards of the same fan — the commanders,
+// the owner's cover picks (0151), then the fill — on its tile and on its
+// page.
 //
 // ONE read for the page of decks: every playable entry (the maybeboard is
 // not the deck) embedded under its deck — so the row cap is per deck, at
@@ -41,8 +42,11 @@ export const TILE_FAN_MAX = 3;
 /** listDeckCards reads a deck's entries in one PostgREST page. */
 const ENTRY_CAP = 1000;
 
-const ENTRY_COLUMNS =
+/** The entry columns the colours and the fan read — the owner's cover pick
+ *  too (0151), left out on a database that migration hasn't reached. */
+const entryColumns = (withRank: boolean) =>
   "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, " +
+  (withRank ? "featured_rank, " : "") +
   "card:cards(id, owner_id, title, visibility, color_identity, rendered_image_url, rendered_thumb_url)";
 
 type LiteCard = FeaturableCard & { color_identity: string[] | null };
@@ -57,6 +61,8 @@ type EntryRow = {
   image_url: string | null;
   type_line: string | null;
   color_identity: string[] | null;
+  /** Absent on a database 0151 hasn't reached. */
+  featured_rank?: number | null;
   card: LiteCard | null;
 };
 
@@ -81,15 +87,18 @@ export async function listDeckTileArt(
   if (decks.length === 0 || !isSupabaseConfigured()) return art;
   try {
     const supabase = options.anonymous ? createPublicClient() : await createClient();
-    const { data } = await supabase
-      .from("decks")
-      .select(`id, owner_id, deck_cards(${ENTRY_COLUMNS})`)
-      .in("id", decks.map((deck) => deck.id))
-      .neq("deck_cards.board", "maybe")
-      .order("position", { referencedTable: "deck_cards" })
-      .order("created_at", { referencedTable: "deck_cards" })
-      .order("id", { referencedTable: "deck_cards" })
-      .limit(ENTRY_CAP, { referencedTable: "deck_cards" });
+    const read = (withRank: boolean) =>
+      supabase
+        .from("decks")
+        .select(`id, owner_id, deck_cards(${entryColumns(withRank)})`)
+        .in("id", decks.map((deck) => deck.id))
+        .neq("deck_cards.board", "maybe")
+        .order("position", { referencedTable: "deck_cards" })
+        .order("created_at", { referencedTable: "deck_cards" })
+        .order("id", { referencedTable: "deck_cards" })
+        .limit(ENTRY_CAP, { referencedTable: "deck_cards" });
+    let { data, error } = await read(true);
+    if (missingFeaturedRank(error)) ({ data, error } = await read(false));
 
     const lite = new Map<string, { ownerId: string; colors: DeckCoverColor[] | null; fan: FeaturedCard<LiteCard>[] }>();
     for (const deck of (data ?? []) as unknown as Array<{ id: string; owner_id: string; deck_cards: EntryRow[] | null }>) {

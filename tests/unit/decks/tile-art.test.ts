@@ -21,7 +21,7 @@ const HOST = "https://auth.pipglyph.com";
 
 type Row = Record<string, unknown>;
 type Call = { table: string; ops: Array<[string, ...unknown[]]> };
-const s = vi.hoisted(() => ({ decks: [] as Row[], cards: [] as Row[], calls: [] as Call[], fail: false }));
+const s = vi.hoisted(() => ({ decks: [] as Row[], cards: [] as Row[], calls: [] as Call[], fail: false, noRank: false }));
 
 function chain(table: string) {
   const call: Call = { table, ops: [] };
@@ -35,6 +35,14 @@ function chain(table: string) {
   }
   c.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
     if (s.fail) return Promise.reject(new Error("network")).then(resolve, reject);
+    // A database 0151 hasn't reached: a select naming featured_rank is 42703.
+    const select = String(call.ops.find((op) => op[0] === "select")?.[1] ?? "");
+    if (s.noRank && select.includes("featured_rank")) {
+      return Promise.resolve({
+        data: null,
+        error: { code: "42703", message: "column deck_cards_1.featured_rank does not exist" },
+      }).then(resolve, reject);
+    }
     return Promise.resolve({ data: table === "decks" ? s.decks : s.cards, error: null }).then(resolve, reject);
   };
   return c;
@@ -80,6 +88,7 @@ beforeEach(() => {
   s.cards = [];
   s.calls = [];
   s.fail = false;
+  s.noRank = false;
 });
 
 describe("listDeckTileArt — colours (D3, the page's default cover)", () => {
@@ -164,6 +173,39 @@ describe("listDeckTileArt — the fan", () => {
     expect(deckRead).toContain(JSON.stringify(["order", "id", { referencedTable: "deck_cards" }]));
     // Never the HD PNG as a column a tile would draw: the thumb is selected.
     expect(String(s.calls[0].ops.find((op) => op[0] === "select")?.[1])).toContain("rendered_thumb_url");
+  });
+
+  it("follows the owner's cover picks (DK6.4): the commander, then the picks by rank", async () => {
+    const commander = card("c40", OWNER, "public");
+    const fill = [card("c41", OWNER, "public"), card("c42", OWNER, "public"), card("c43", OWNER, "public")];
+    const picked = card("c44", OWNER, "public");
+    s.decks = [
+      {
+        id: "d6",
+        owner_id: OWNER,
+        deck_cards: [
+          entry("e40", "commander", commander),
+          ...fill.map((c, i) => entry(`e${41 + i}`, "main", c)),
+          entry("e44", "main", picked, { featured_rank: 2 }),
+          entry("e45", "main", null, { featured_rank: 1 }),
+        ],
+      },
+    ];
+    s.cards = [commander, ...fill, picked].map((c) => ({ ...c, frame_style: { template: "m15" } }));
+    const art = await listDeckTileArt([{ id: "d6", owner_id: OWNER }], { anonymous: true });
+    expect(art.get("d6")!.fan.map((f) => f.key)).toEqual(["card:c40", "print:sf-e45", "card:c44"]);
+    expect(String(s.calls[0].ops.find((op) => op[0] === "select")?.[1])).toContain("featured_rank");
+  });
+
+  it("a database 0151 hasn't reached: the read runs again without the rank — today's fan, never no art", async () => {
+    s.noRank = true;
+    s.decks = [{ id: "d7", owner_id: OWNER, deck_cards: [entry("e70", "commander", null), entry("e71", "main", null)] }];
+    const art = await listDeckTileArt([{ id: "d7", owner_id: OWNER }], { anonymous: true });
+    expect(art.get("d7")!.fan.map((f) => f.key)).toEqual(["print:sf-e70", "print:sf-e71"]);
+    const deckReads = s.calls.filter((c) => c.table === "decks").map((c) => String(c.ops.find((op) => op[0] === "select")?.[1]));
+    expect(deckReads).toHaveLength(2);
+    expect(deckReads[0]).toContain("featured_rank");
+    expect(deckReads[1]).not.toContain("featured_rank");
   });
 
   it("no decks, no read; a failed read is no art (the neutral pair), never a thrown page", async () => {

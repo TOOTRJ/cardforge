@@ -1,5 +1,6 @@
 import { ownStorageObject } from "@/lib/media/storage-hosts";
 import { defaultMediaFor, isDefaultProfileMedia } from "@/lib/profile/default-media";
+import { isDefaultDeckCover } from "@/lib/decks/default-covers";
 
 // ---------------------------------------------------------------------------
 // isAllowedMediaUrl — may a surface DRAW this user-media URL?
@@ -83,6 +84,9 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
  *     shares its parent's art object, which is ours and was scanned.
  *   * avatar / banner: also a built-in image (`/defaults/…`, 0095); an avatar
  *     also a Google account picture (Google sign-ups).
+ *   * deck-cover: also one of the sixteen built-in backgrounds an owner
+ *     stored (0151, isDefaultDeckCover — deckCoverOf tells it from an
+ *     upload).
  *   * card-art: also PipGlyph's own built-in images (the seed cards).
  *   * deck-card-image: a Scryfall printing image only.
  */
@@ -98,6 +102,7 @@ export function isAllowedMediaUrl(
     if (kind === "avatar" && GOOGLE_AVATAR.test(url)) return true;
   }
   if (kind === "card-art" && BUILT_IN_ART.test(url)) return true;
+  if (kind === "deck-cover" && isDefaultDeckCover(url)) return true;
   const object = ownStorageObject(url);
   if (!object || !MEDIA_KIND_BUCKETS[kind].includes(object.bucket)) return false;
   const [folder, name, ...rest] = object.key.split("/");

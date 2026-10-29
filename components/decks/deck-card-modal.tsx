@@ -30,6 +30,7 @@ import {
   linkDeckCardAction,
   listMyCardsLiteAction,
   removeDeckCardAction,
+  setDeckCoverPicksAction,
   unlinkDeckCardAction,
   updateDeckCardAction,
   type MyCardLite,
@@ -47,6 +48,8 @@ import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
+import { DeckCoverPicks } from "@/components/decks/deck-cover-picks";
+import type { CoverPickRow } from "@/lib/decks/featured";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
 
@@ -54,7 +57,8 @@ import { typedForMatching } from "@/lib/validation/print-typography";
 // DeckCardModal — the "more info" view for one deck entry. Everyone gets the
 // real card ⇄ custom card image flipper and source links; the deck owner
 // additionally gets the management actions (customize, link / unlink a card,
-// quantity, board, remove). Mutations refresh the route so the
+// quantity, board, remove, "Feature on cover" — DeckCoverPicks, TODO DK6.4).
+// Mutations refresh the route so the
 // server-rendered list reflects the change. Its words are the deck
 // vocabulary (TODO DK2.2, components/creator/card-glossary.tsx).
 // ---------------------------------------------------------------------------
@@ -68,6 +72,9 @@ type DeckCardModalProps = {
   /** Which image the list was showing when opened — keeps the flip state
    *  consistent between grid and modal. */
   preferProxy: boolean;
+  /** The owner's cover picks (TODO DK6.4) and whether this entry can stand
+   *  in the fan; null = no "Feature on cover" (a visitor). */
+  cover?: { picks: readonly CoverPickRow[]; shown: boolean } | null;
 };
 
 export function DeckCardModal({
@@ -77,6 +84,7 @@ export function DeckCardModal({
   open,
   onOpenChange,
   preferProxy,
+  cover = null,
 }: DeckCardModalProps) {
   const { entry, card } = item;
   const status = deckEntryStatus(entry, card);
@@ -441,6 +449,17 @@ export function DeckCardModal({
                     />
                   ) : null}
                 </div>
+
+                {cover ? (
+                  <DeckCoverPicks
+                    entryId={entry.id}
+                    board={entry.board}
+                    picks={cover.picks}
+                    shown={cover.shown}
+                    pending={isPending}
+                    onChange={(ids) => mutate(() => setDeckCoverPicksAction(entry.deck_id, ids))}
+                  />
+                ) : null}
 
                 {linkPickerOpen && !card ? (
                   <LinkCardPicker

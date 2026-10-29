@@ -12,6 +12,7 @@ import {
   Save,
   Sparkles,
   Trash2,
+  Undo2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +23,9 @@ import { updateDeckAction } from "@/lib/decks/actions";
 import { slugify } from "@/lib/validation/card";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { DECK_COVER_HEIGHT, DECK_COVER_WIDTH, HERO_CROP_ASPECTS, heroCropWindow } from "@/lib/decks/cover";
+import { isDefaultDeckCover } from "@/lib/decks/default-covers";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
+import { DeckCoverDefaults, defaultCoverLabel } from "@/components/decks/deck-cover-defaults";
 
 /** The deck hero's two crops the cover preview frames (lib/decks/cover.ts). */
 const HERO_CROPS = [
@@ -64,8 +67,9 @@ type DeckCreatorFormProps = {
   mode: "edit";
   userId: string | null;
   deck?: Deck | null;
-  /** The default background the deck shows without an upload
-   *  (lib/decks/cover.ts deckCoverOf), previewed in the cover field. */
+  /** The default background the deck's colours pick (lib/decks/cover.ts
+   *  defaultDeckCoverFor) — what it shows with no cover stored, previewed in
+   *  the cover field. */
   defaultCoverSrc?: string | null;
   /** Inside a dialog on the deck page: no card chrome, no "All decks" link,
    *  and a successful save calls `onSaved` instead of navigating. */
@@ -373,8 +377,9 @@ export function CoverField({
 }: {
   userId: string | null;
   value: string;
-  /** Shown (never stored) while there is no upload: the default background
-   *  the deck's colours pick (lib/decks/cover.ts). */
+  /** Shown (never stored) while the deck stores no cover: the default
+   *  background the deck's colours pick (lib/decks/cover.ts). A built-in
+   *  the owner shuffled to or picked IS stored (`value`, migration 0151). */
   defaultCoverSrc?: string | null;
   onChange: (next: string) => void;
   position: DeckCoverPosition | null;
@@ -411,10 +416,14 @@ export function CoverField({
     }
   };
 
+  // A stored built-in background (migration 0151) is no upload: no focal
+  // point, and the picker below shows it picked.
+  const storedDefault = isDefaultDeckCover(value);
   // Only a cover a surface may draw (migration 0127): an older cover on
   // another host is not drawn anywhere — the deck shows its default — so the
   // field says so instead of drawing it here.
-  const drawable = Boolean(value) && isAllowedMediaUrl("deck-cover", value, userId);
+  const drawable = Boolean(value) && !storedDefault && isAllowedMediaUrl("deck-cover", value, userId);
+  const shownDefault = storedDefault ? value : defaultCoverSrc;
 
   // Drag the image inside the preview to pick the focal point — the point
   // under the pointer becomes the CSS object-position, same mental model as
@@ -454,7 +463,7 @@ export function CoverField({
         }}
       />
 
-      {value && !drawable ? (
+      {value && !drawable && !storedDefault ? (
         <div className="flex flex-col gap-2">
           {defaultCoverSrc ? (
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/60 bg-elevated">
@@ -476,7 +485,7 @@ export function CoverField({
             </Button>
           </div>
         </div>
-      ) : value ? (
+      ) : drawable ? (
         <>
           <div
             ref={previewRef}
@@ -568,19 +577,27 @@ export function CoverField({
         </>
       ) : (
         <div className="flex flex-col gap-2">
-        {defaultCoverSrc ? (
+        {shownDefault ? (
           <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/60 bg-elevated">
             <Image
-              src={defaultCoverSrc}
+              src={shownDefault}
               alt="The deck's default background"
               fill
               sizes="(min-width: 768px) 640px, 100vw"
               className="object-cover"
             />
             <span className="absolute bottom-2 left-2 rounded-full bg-background/75 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted backdrop-blur">
-              Default background · picked by the deck&apos;s colours
+              {storedDefault
+                ? `Built-in background · ${defaultCoverLabel(value)}, your pick`
+                : "Default background · picked by the deck’s colours"}
             </span>
           </div>
+        ) : null}
+        <DeckCoverDefaults value={storedDefault ? value : ""} shown={shownDefault} onPick={onChange} disabled={uploading} />
+        {storedDefault ? (
+          <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => onChange("")} disabled={uploading}>
+            <Undo2 className="h-4 w-4" aria-hidden /> Back to the colours&apos; pick
+          </Button>
         ) : null}
         <button
           type="button"
@@ -599,7 +616,7 @@ export function CoverField({
           disabled={uploading || !userId}
           className={cn(
             "flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-sm transition-colors",
-            defaultCoverSrc ? "py-5" : "aspect-video",
+            shownDefault ? "py-5" : "aspect-video",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
             dragOver
               ? "border-primary bg-primary/10 text-foreground"
@@ -614,7 +631,7 @@ export function CoverField({
           <span className="font-medium">
             {uploading
               ? "Uploading…"
-              : defaultCoverSrc
+              : shownDefault
                 ? "Use your own picture — drag it here, or click to choose"
                 : "Drag a cover here, or click to choose"}
           </span>

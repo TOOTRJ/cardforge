@@ -25,6 +25,7 @@ import type {
 import { narrowCard } from "@/lib/cards/narrow";
 import { IMPORT_FINGERPRINT_FIELDS } from "@/lib/cards/import-fingerprint";
 import { canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { featuredRankOf } from "@/lib/decks/featured";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 
@@ -41,12 +42,14 @@ function narrowDeck(row: DeckRow): Deck {
 }
 
 function narrowDeckCard(row: DeckCardRow): DeckCardEntry {
-  // `source` (migration 0144) is absent on a database 0144 hasn't reached.
+  // `source` (migration 0144) and `featured_rank` (0151) are absent on a
+  // database that migration hasn't reached.
   const source = (row as { source?: unknown }).source;
   return {
     ...row,
     board: isDeckBoard(row.board) ? row.board : "main",
     source: isDeckEntrySource(source) ? source : null,
+    featured_rank: featuredRankOf((row as { featured_rank?: unknown }).featured_rank),
   };
 }
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
 import { VISIBILITY_VALUES } from "@/types/card";
 import { isSafeImageUrl } from "@/lib/validation/card";
+import { isDefaultDeckCover } from "@/lib/decks/default-covers";
 
 // Mirrors the DB check constraints on the decks table exactly.
 // supabase/migrations/0055_decks.sql is the source of truth.
@@ -40,13 +41,25 @@ const deckDescriptionSchema = clearableString(
     .max(2000, "Description must be 2000 characters or fewer."),
 );
 
+// An upload's https URL (the database holds it to the owner's own storage,
+// 0127), or one of the sixteen built-in backgrounds by its site-relative
+// path (0151: "Shuffle" / a pick in the cover editor) — that exact list,
+// never another relative path.
+const httpsCoverUrlSchema = z
+  .string()
+  .url("Cover URL must be a valid URL.")
+  .refine(isSafeImageUrl, "Cover URL must be an https:// URL.");
+
 const deckCoverUrlSchema = clearableString(
   z
     .string()
     .trim()
     .max(2048, "Cover URL must be 2048 characters or fewer.")
-    .url("Cover URL must be a valid URL.")
-    .refine(isSafeImageUrl, "Cover URL must be an https:// URL."),
+    .superRefine((value, ctx) => {
+      if (isDefaultDeckCover(value)) return;
+      const https = httpsCoverUrlSchema.safeParse(value);
+      if (!https.success) ctx.addIssue({ code: "custom", message: https.error.issues[0]?.message ?? "Cover URL must be an https:// URL." });
+    }),
 );
 
 // Cover focal point — {focalX, focalY} in 0..1 (migration 0057). `null`

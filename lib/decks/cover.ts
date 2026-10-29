@@ -1,5 +1,11 @@
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import { coverObjectPosition } from "@/types/deck";
+import {
+  DEFAULTS_PER_IDENTITY,
+  defaultCoverPath,
+  isDefaultDeckCover,
+  type DeckCoverIdentity,
+} from "@/lib/decks/default-covers";
 
 // ---------------------------------------------------------------------------
 // A deck's cover — ONE answer for every surface that draws it (TODO DK6.2):
@@ -11,11 +17,10 @@ import { coverObjectPosition } from "@/types/deck";
 //     lib/media/media-urls.ts) — normalised to 1600×900 WebP when stored
 //     (lib/decks/cover-normalize.ts), drawn at its focal point;
 //   * else one of the 16 DEFAULT backgrounds (owner decision D12,
-//     public/defaults/deck-covers, scripts/build-deck-covers.mjs): two per
-//     colour identity plus two neutrals, the pair picked by the deck's
-//     colours (`deckCoverColors`) and the one by a stable hash of its id —
-//     the same picture on every visit and every surface. Nothing is stored:
-//     a deck with no upload has no cover row to write (no migration).
+//     public/defaults/deck-covers, scripts/build-deck-covers.mjs): the one
+//     the owner stored (below), or — nothing stored — the pair picked by
+//     the deck's colours (`deckCoverColors`) and the one by a stable hash of
+//     its id: the same picture on every visit and every surface.
 //
 // The colours come from the deck's ENTRIES and only from what every viewer
 // can read, so the owner and a visitor are shown the same default: an
@@ -23,13 +28,13 @@ import { coverObjectPosition } from "@/types/deck";
 // card's colours when that card is not private. A commander deck is its
 // commander's colours, as the format defines a deck's colour identity.
 //
-// Shuffling to another default needs the choice stored, and the only cover
-// column can't hold it: 0127's `media_url_allowed('deck-cover', …)` takes
-// the owner's own storage objects alone (profiles' columns take their
-// built-in paths, decks' do not), so a site-relative default is refused
-// until a migration lists the pattern. `deckCoverOf` already draws a stored
-// default when it is one of DEFAULT_DECK_COVERS (`isDefaultDeckCover`, the
-// twin of isDefaultProfileMedia) — the read side of that later change.
+// An owner may also STORE a default (migration 0151: "Shuffle", or a pick
+// among the sixteen in the cover editor): `decks.cover_url` then holds its
+// site-relative path, which the database takes exactly as it takes a
+// profile's built-in avatar (media_url_allowed('deck-cover', …)) and the app
+// checks with `isDefaultDeckCover` (lib/decks/default-covers.ts). A stored
+// default is drawn as a default — centred, no darkening layer — whatever
+// the deck's colours say; clearing it goes back to the colours' pick.
 //
 // Client-safe: no server imports (the cover editor shows the default).
 // ---------------------------------------------------------------------------
@@ -62,41 +67,13 @@ export function heroCropWindow(
   return { left: (1 - width) * fx, top: 0, width, height: 1 };
 }
 
-/** The colour identities a default is picked by, in WUBRG order, then the
- *  two that aren't one colour. `neutral` = nothing known about the colours
- *  (an empty deck, a list of placeholders). */
-export const DECK_COVER_IDENTITIES = [
-  "white",
-  "blue",
-  "black",
-  "red",
-  "green",
-  "multicolor",
-  "colorless",
-  "neutral",
-] as const;
-export type DeckCoverIdentity = (typeof DECK_COVER_IDENTITIES)[number];
-
-const DEFAULTS_PER_IDENTITY = 2;
-const DEFAULT_COVER_FOLDER = "/defaults/deck-covers";
-
-/** Site-relative path of a built-in cover (1-based index). */
-function defaultCoverPath(identity: DeckCoverIdentity, index: number): string {
-  return `${DEFAULT_COVER_FOLDER}/${identity}-${index}.webp`;
-}
-
-/** All sixteen built-in covers, in identity order. */
-export const DEFAULT_DECK_COVERS: readonly string[] = DECK_COVER_IDENTITIES.flatMap((identity) =>
-  Array.from({ length: DEFAULTS_PER_IDENTITY }, (_, i) => defaultCoverPath(identity, i + 1)),
-);
-
-const DEFAULT_COVER_SET = new Set(DEFAULT_DECK_COVERS);
-
-/** True only for a path this module mints — never a lookalike, a query
- *  string, another folder or an index past the set. */
-export function isDefaultDeckCover(url: string | null | undefined): url is string {
-  return typeof url === "string" && DEFAULT_COVER_SET.has(url);
-}
+export {
+  DECK_COVER_IDENTITIES,
+  DEFAULT_DECK_COVERS,
+  isDefaultDeckCover,
+  shuffleDeckCover,
+  type DeckCoverIdentity,
+} from "@/lib/decks/default-covers";
 
 /** WUBRG letters, plus "M" for a card saved as "multicolor" without naming
  *  its colours (it is gold, whatever they are). */
@@ -203,12 +180,14 @@ type CoverDeck = {
 
 /** The cover every surface draws for this deck (see the header). */
 export function deckCoverOf(deck: CoverDeck, colors: readonly string[] | null | undefined): DeckCover {
+  // A stored built-in first: the media guard draws one too (it is a value
+  // the column may hold), and it is no upload.
+  if (isDefaultDeckCover(deck.cover_url)) {
+    return { src: deck.cover_url, kind: "default", objectPosition: undefined };
+  }
   const upload = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
   if (upload) {
     return { src: upload, kind: "upload", objectPosition: coverObjectPosition(deck.cover_position) };
-  }
-  if (isDefaultDeckCover(deck.cover_url)) {
-    return { src: deck.cover_url, kind: "default", objectPosition: undefined };
   }
   return { src: defaultDeckCoverFor(deck.id, colors), kind: "default", objectPosition: undefined };
 }

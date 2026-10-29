@@ -4,19 +4,23 @@ import { stableDeckHash } from "@/lib/decks/cover";
 import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 
 // ---------------------------------------------------------------------------
-// The cards a deck's hero (and its share image) fans out in front of the
-// cover — TODO DK6.5, until DK6.4 stores the owner's picks. Pure.
+// The cards a deck's hero (and its share image, and its tiles) fans out in
+// front of the cover — TODO DK6.5 / DK6.4. Pure.
 //
 // The fan aims for three and holds five: it fills every slot the deck can,
 // and shows fewer only when the deck has fewer cards that may stand in it.
 // In order, distinct cards:
 //   1. the COMMANDERS (and partners), in the deck's order — always first;
-//   2. — DK6.4: the owner's "Feature on cover" picks slot in HERE, between
-//      the commanders and the fill (deck_cards.featured_rank) —
+//   2. the owner's "Feature on cover" picks (deck_cards.featured_rank,
+//      migration 0151: up to five, 1 first) — by rank, whichever board
+//      they are on but the maybeboard;
 //   3. the fill, a seeded shuffle (the deck id: the same fan on every
 //      visit) of the deck's own PipGlyph cards with a stored bake thumbnail
 //      — the custom work is what a deck shows off —
 //   4. then a seeded shuffle of its real printings (basic lands left out).
+// A pick passes the same test as every other card below: a private one, or
+// another creator's that isn't public, is left out for every viewer (the
+// deck's owner too) and the next card takes its place.
 //
 // What may stand in the fan, for EVERY viewer alike (the owner sees what a
 // visitor sees):
@@ -43,6 +47,23 @@ import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 /** The most cards a fan shows. */
 export const FAN_MAX = 5;
 
+/** The most cards an owner may feature (0151's CHECK: ranks 1–5). */
+export const FEATURED_PICKS_MAX = 5;
+
+/** A stored rank as the app reads it: 1–5, else none. */
+export function featuredRankOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= FEATURED_PICKS_MAX
+    ? value
+    : null;
+}
+
+/** PostgREST's "no such column" (42703) for `featured_rank`: a database
+ *  0151 has not reached. Its readers ask again without the column (the fan
+ *  then has no picks). Remove once 0151 is on production and on dev. */
+export function missingFeaturedRank(error: { code?: string | null; message?: string | null } | null): boolean {
+  return error?.code === "42703" && (error.message ?? "").includes("featured_rank");
+}
+
 /** The card fields a fan reads (a `Card` has them all). */
 export type FeaturableCard = {
   id: string;
@@ -62,6 +83,8 @@ type FeaturableEntry = {
   scryfall_id: string | null;
   image_url: string | null;
   type_line: string | null;
+  /** The owner's pick (0151); absent on a database 0151 hasn't reached. */
+  featured_rank?: number | null;
 };
 
 export type FeaturedCard<C extends FeaturableCard = FeaturableCard> =
@@ -94,6 +117,43 @@ function seededShuffle<T>(items: readonly T[], keyOf: (item: T) => string, rando
 const isBasicLand = (typeLine: string | null) => /\bBasic\b[^—]*\bLand\b/i.test(typeLine ?? "");
 
 type Candidate<C extends FeaturableCard> = { entryId: string; typeLine: string | null; featured: FeaturedCard<C> };
+
+/** True when the entry may stand in the deck page's fan at all (the
+ *  header's rules) — the cover picker's "not shown on the cover" note. */
+export function standsInFan<C extends FeaturableCard>(entry: FeaturableEntry, card: C | null, deckOwnerId: string): boolean {
+  return entry.board !== "maybe" && asFeatured(entry, card, deckOwnerId) !== null;
+}
+
+/** The deck's picks, rank 1 first — every ranked entry, shown or not (the
+ *  owner's list in the cover picker). */
+export function coverPicksOf<E extends FeaturableEntry>(entries: readonly E[]): E[] {
+  return entries
+    .filter((entry) => featuredRankOf(entry.featured_rank) !== null)
+    .sort((a, b) => featuredRankOf(a.featured_rank)! - featuredRankOf(b.featured_rank)!);
+}
+
+/** One of the owner's picks as the cover picker lists it. */
+export type CoverPickRow = {
+  entryId: string;
+  /** The card's title (the owner reads their private cards), else the
+   *  entry's name. */
+  name: string;
+  /** False when the fan skips it (private, another creator's no longer
+   *  public, no picture, or on the maybeboard) — picked all the same. */
+  shown: boolean;
+};
+
+/** The owner's picks, rank 1 first, for the deck card pop-up. */
+export function coverPickRowsOf<C extends FeaturableCard>(
+  items: readonly { entry: FeaturableEntry; card: C | null }[],
+  deckOwnerId: string,
+): CoverPickRow[] {
+  const cardOf = new Map(items.map((item) => [item.entry.id, item.card]));
+  return coverPicksOf(items.map((item) => item.entry)).map((entry) => {
+    const card = cardOf.get(entry.id) ?? null;
+    return { entryId: entry.id, name: card?.title ?? entry.name, shown: standsInFan(entry, card, deckOwnerId) };
+  });
+}
 
 /** What an entry may stand in the fan as — its baked card, its printing,
  *  or nothing (the header's rules). */
@@ -154,7 +214,14 @@ export function featuredCardsOf<C extends FeaturableCard>(
     ),
   );
 
-  // 2. DK6.4: the owner's picks go here.
+  // 2. The owner's picks, by rank.
+  take(
+    candidates(
+      playable
+        .filter((item) => featuredRankOf(item.entry.featured_rank) !== null)
+        .sort((a, b) => featuredRankOf(a.entry.featured_rank)! - featuredRankOf(b.entry.featured_rank)!),
+    ),
+  );
 
   // 3–4. The fill: baked PipGlyph cards first, then printings.
   const rest = candidates(playable.filter((item) => item.entry.board !== "commander"));

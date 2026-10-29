@@ -1,5 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FAN_MAX, featuredCardsOf, type FeaturableCard } from "@/lib/decks/featured";
+import {
+  FAN_MAX,
+  FEATURED_PICKS_MAX,
+  coverPickRowsOf,
+  coverPicksOf,
+  featuredCardsOf,
+  featuredRankOf,
+  missingFeaturedRank,
+  standsInFan,
+  type FeaturableCard,
+} from "@/lib/decks/featured";
 
 // ---------------------------------------------------------------------------
 // TODO DK6.5: the deck hero's fan — commanders first, then a seeded pick of
@@ -258,5 +268,129 @@ describe("featuredCardsOf and other creators' cards (D3)", () => {
     expect(keys(fan).sort()).toEqual([`card:${theirsPublic.card.id}`, `card:${ownUnlisted.card.id}`].sort());
     // The share image's fill reads the same rule.
     expect(keys(featuredCardsOf([theirsUnlisted], DECK, { printings: false }))).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO DK6.4: the owner's "Feature on cover" picks (deck_cards.featured_rank,
+// migration 0151) — after the commanders, before the seeded fill, by rank;
+// held to the same rules as every other card in the fan.
+// ---------------------------------------------------------------------------
+
+/** An item with the owner's pick on it. */
+function ranked<T extends { entry: object }>(item: T, rank: number): T & { entry: { featured_rank: number } } {
+  return { ...item, entry: { ...item.entry, featured_rank: rank } };
+}
+
+describe("featuredCardsOf — the owner's picks (DK6.4)", () => {
+  it("commanders first, then the picks by rank, then the fill — the picks are not shuffled", () => {
+    const commander = customItem("commander");
+    const fill = Array.from({ length: 8 }, () => customItem("main"));
+    const pickA = ranked(printingItem("main", "Sol Ring", "Artifact"), 2);
+    const pickB = ranked(customItem("side"), 1);
+    const fan = featuredCardsOf([...fill, pickA, commander, pickB], DECK);
+    expect(fan).toHaveLength(FAN_MAX);
+    expect(fan.slice(0, 3).map((c) => c.key)).toEqual([
+      `card:${commander.card.id}`,
+      `card:${pickB.card.id}`,
+      `print:${pickA.entry.scryfall_id}`,
+    ]);
+    // A printing pick beats the baked fill: it is the owner's choice.
+    expect(fan.slice(3).every((c) => c.kind === "custom" && c.key !== `card:${pickB.card.id}`)).toBe(true);
+  });
+
+  it("five picks fill a fan with no commander, in rank order", () => {
+    const picks = [5, 3, 1, 4, 2].map((rank) => ranked(customItem("main"), rank));
+    const fan = featuredCardsOf([...picks, ...Array.from({ length: 4 }, () => customItem("main"))], DECK);
+    const byRank = [...picks].sort((a, b) => a.entry.featured_rank - b.entry.featured_rank);
+    expect(keys(fan)).toEqual(byRank.map((p) => `card:${p.card.id}`));
+  });
+
+  it("the tiles' three: the commander and the first two picks", () => {
+    const commander = printingItem("commander", "Krenko, Mob Boss", "Legendary Creature — Goblin");
+    const picks = [1, 2, 3].map((rank) => ranked(customItem("main"), rank));
+    const fan = featuredCardsOf([...picks, commander, customItem("main")], DECK, { max: 3 });
+    expect(keys(fan)).toEqual([`print:${commander.entry.scryfall_id}`, `card:${picks[0].card.id}`, `card:${picks[1].card.id}`]);
+  });
+
+  it("a PRIVATE pick never shows — for the owner (who reads it) or a visitor (who reads null) — and the next card takes its place", () => {
+    const privatePick = ranked(customItem("main", { visibility: "private" }), 1);
+    const visitorView = { ...privatePick, card: null };
+    const nextPick = ranked(customItem("main"), 2);
+    for (const view of [privatePick, visitorView]) {
+      expect(keys(featuredCardsOf([view, nextPick], DECK))).toEqual([`card:${nextPick.card.id}`]);
+    }
+    // …nor its printing in its place.
+    privatePick.entry.scryfall_id = "sf-secret";
+    privatePick.entry.image_url = "https://cards.scryfall.io/normal/front/s/e/secret.jpg";
+    expect(featuredCardsOf([privatePick], DECK)).toEqual([]);
+  });
+
+  it("another creator's pick shows only while it is PUBLIC (D3)", () => {
+    const theirsUnlisted = ranked(customItem("main", { owner_id: OTHER_CREATOR, visibility: "unlisted" }), 1);
+    theirsUnlisted.entry.scryfall_id = "sf-unlisted";
+    theirsUnlisted.entry.image_url = "https://cards.scryfall.io/normal/front/u/n/unlisted.jpg";
+    const theirsPrivate = ranked(customItem("main", { owner_id: OTHER_CREATOR, visibility: "private" }), 2);
+    expect(featuredCardsOf([theirsUnlisted, theirsPrivate], DECK)).toEqual([]);
+  });
+
+  it("a pick on the maybeboard is not the deck", () => {
+    expect(featuredCardsOf([ranked(customItem("maybe"), 1)], DECK)).toEqual([]);
+  });
+
+  it("the share image (printings: false) keeps the baked picks in order and skips a printing pick", () => {
+    const printPick = ranked(printingItem("main", "Sol Ring", "Artifact"), 1);
+    const bakedPick = ranked(customItem("main"), 2);
+    const fan = featuredCardsOf([printPick, bakedPick, customItem("main")], DECK, { printings: false });
+    expect(fan[0].key).toBe(`card:${bakedPick.card.id}`);
+    expect(fan.every((c) => c.kind === "custom")).toBe(true);
+  });
+
+  it("a database without 0151 (no featured_rank) draws today's fan; a stray value is no rank", () => {
+    const items = [...Array.from({ length: 6 }, () => customItem("main")), printingItem("main", "Opt")];
+    const before = keys(featuredCardsOf(items, DECK));
+    const junk = items.map((item, i) => ({
+      ...item,
+      entry: { ...item.entry, featured_rank: [0, 6, 1.5, -1, null, undefined, 9][i] },
+    }));
+    expect(keys(featuredCardsOf(junk, DECK))).toEqual(before);
+  });
+});
+
+describe("the picks' helpers", () => {
+  it("featuredRankOf: 1–5 integers only", () => {
+    expect([1, 2, 3, 4, 5].map(featuredRankOf)).toEqual([1, 2, 3, 4, 5]);
+    for (const bad of [0, 6, -1, 1.5, "1", null, undefined, Number.NaN]) expect(featuredRankOf(bad)).toBeNull();
+    expect(FEATURED_PICKS_MAX).toBe(5);
+  });
+
+  it("missingFeaturedRank: PostgREST's 42703 naming the column, nothing else", () => {
+    expect(missingFeaturedRank({ code: "42703", message: "column deck_cards_1.featured_rank does not exist" })).toBe(true);
+    expect(missingFeaturedRank({ code: "42703", message: "column deck_cards.nickname does not exist" })).toBe(false);
+    expect(missingFeaturedRank({ code: "42501", message: "featured_rank" })).toBe(false);
+    expect(missingFeaturedRank(null)).toBe(false);
+  });
+
+  it("coverPicksOf / coverPickRowsOf: every ranked entry, rank 1 first, with whether the fan can show it", () => {
+    const shownPick = ranked(customItem("main"), 2);
+    const privatePick = ranked(customItem("main", { visibility: "private", title: "Secret" }), 1);
+    const maybePick = ranked(customItem("maybe"), 3);
+    const unranked = customItem("main");
+    const items = [unranked, shownPick, maybePick, privatePick];
+    expect(coverPicksOf(items.map((i) => i.entry)).map((e) => e.id)).toEqual([
+      privatePick.entry.id,
+      shownPick.entry.id,
+      maybePick.entry.id,
+    ]);
+    expect(coverPickRowsOf(items, OWNER)).toEqual([
+      { entryId: privatePick.entry.id, name: "Secret", shown: false },
+      { entryId: shownPick.entry.id, name: shownPick.card.title, shown: true },
+      { entryId: maybePick.entry.id, name: maybePick.card.title, shown: false },
+    ]);
+    // A public card may stand in anyone's deck; an unlisted one only its owner's.
+    expect(standsInFan(unranked.entry, unranked.card, OTHER_CREATOR)).toBe(true);
+    const ownUnlisted = customItem("main", { visibility: "unlisted" });
+    expect(standsInFan(ownUnlisted.entry, ownUnlisted.card, OWNER)).toBe(true);
+    expect(standsInFan(ownUnlisted.entry, ownUnlisted.card, OTHER_CREATOR)).toBe(false);
   });
 });

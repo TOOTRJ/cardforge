@@ -81,6 +81,29 @@ describe("createDeckSchema", () => {
     ).toBe(true);
   });
 
+  it("takes one of the sixteen built-in backgrounds by its site-relative path (0151) — that list, no other path", () => {
+    for (const cover_url of ["/defaults/deck-covers/red-1.webp", "/defaults/deck-covers/neutral-2.webp"]) {
+      expect(createDeckSchema.safeParse({ title: "Deck", cover_url }).success, cover_url).toBe(true);
+      expect(updateDeckSchema.safeParse({ cover_url }).success, cover_url).toBe(true);
+    }
+    for (const cover_url of [
+      "/defaults/deck-covers/red-3.webp",
+      "/defaults/deck-covers/../avatars/avatar-01.webp",
+      "/defaults/avatars/avatar-01.webp",
+      "/etc/passwd",
+      "//evil.example/defaults/deck-covers/red-1.webp",
+      "/defaults/deck-covers/red-1.webp?x=1",
+    ]) {
+      expect(updateDeckSchema.safeParse({ cover_url }).success, `${cover_url} should be rejected`).toBe(false);
+    }
+    // A default with stray whitespace is the default (the schema trims).
+    expect(updateDeckSchema.safeParse({ cover_url: " /defaults/deck-covers/blue-2.webp " }).data?.cover_url).toBe(
+      "/defaults/deck-covers/blue-2.webp",
+    );
+    // Clearing still clears.
+    expect(updateDeckSchema.safeParse({ cover_url: null }).data?.cover_url).toBeNull();
+  });
+
   it("rejects unknown visibility values", () => {
     expect(
       createDeckSchema.safeParse({ title: "Deck", visibility: "friends-only" })
