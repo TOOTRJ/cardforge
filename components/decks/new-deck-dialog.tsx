@@ -146,7 +146,9 @@ export function quickImportNotes(
 ): string | undefined {
   const toCheck = reviewLines.filter((line) => line.quantity > 0 && line.status !== "resolved").map((line) => line.name);
   const notes = [
-    toCheck.length > 0 ? `${lines(toCheck.length)} kept as names to check: ${someNames(toCheck)}.` : null,
+    toCheck.length > 0
+      ? `${lines(toCheck.length)} kept as ${toCheck.length === 1 ? "a name" : "names"} to check: ${someNames(toCheck)}.`
+      : null,
     warnings.length > 0 ? `${lines(warnings.length)} skipped or adjusted: line ${skippedLines(warnings)}.` : null,
   ].filter(Boolean);
   return notes.length > 0 ? notes.join(" ") : undefined;

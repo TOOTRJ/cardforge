@@ -55,7 +55,7 @@ vi.mock("@/lib/decks/actions", () => ({ createDeckAction: s.createDeck, updateDe
 vi.mock("@/lib/decks/import", () => ({ resolveDecklistAction: s.resolve, commitDeckImportAction: s.commit }));
 vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => s.signedInCookie }));
 
-import { NewDeckDialog } from "@/components/decks/new-deck-dialog";
+import { NewDeckDialog, quickImportNotes } from "@/components/decks/new-deck-dialog";
 import { readNewDeckDraft, saveNewDeckDraft } from "@/lib/decks/new-deck";
 
 const onClosed = vi.fn();
@@ -306,6 +306,16 @@ describe("a pasted list", () => {
         "3 lines kept as names to check: Lightning Blot, Sol Ring, Zzzyx Card. 1 line skipped or adjusted: line 4 (“just some words”).",
       duration: 12_000,
     });
+  });
+
+  it("the notes read in the singular for one line, list three names and count the rest, and say nothing when all matched", () => {
+    const guess = (name: string, line: number) =>
+      ({ line, raw: `1 ${name}`, name, quantity: 1, board: "main", status: "fuzzy", resolved: null }) as const;
+    expect(quickImportNotes([guess("Lightning Blot", 1)], [])).toBe("1 line kept as a name to check: Lightning Blot.");
+    expect(quickImportNotes(["A", "B", "C", "D", "E"].map(guess), [])).toBe(
+      "5 lines kept as names to check: A, B, C and 2 more.",
+    );
+    expect(quickImportNotes([RESOLVED_LINES[0]] as never, [])).toBeUndefined();
   });
 
   it("a list the import can't read keeps the deck: the import's words, then the list again or the deck", async () => {
