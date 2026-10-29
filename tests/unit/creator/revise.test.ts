@@ -92,6 +92,12 @@ describe("revise contract", () => {
     expect(hasMeaningfulChange([], "edit")).toBe(false);
   });
 
+  it("never counts the deck a remix goes in as a change (TODO DK9.3)", () => {
+    expect(hasMeaningfulChange(["deck_id"], "remix")).toBe(false);
+    expect(hasMeaningfulChange(["deck_id", "visibility"], "remix")).toBe(false);
+    expect(hasMeaningfulChange(["deck_id", "flavor_text"], "remix")).toBe(true);
+  });
+
   it("prefills a remix title and keeps it within the title limit", () => {
     expect(remixTitleFor("Emberbound Wyrm")).toBe("Emberbound Wyrm (remix)");
     expect(remixTitleFor("x".repeat(145)).length).toBe(150);

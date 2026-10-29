@@ -1857,6 +1857,25 @@ Rules and gotchas:
   neither trigger can fail the write that fired it. The maybeboard is not
   the deck there either: `public_deck_card_pairs` leaves it out, as
   `card_count`, the tiles and the fans do.
+  A SAVED card joins or leaves the owner's decks from My Cards, the
+  creator's edit and another creator's card page (TODO DK9) through ONE
+  picker (`components/decks/deck-membership-picker.tsx`: checkboxes, a
+  one-card row's board / copies, "＋ New deck" with its visibility ON SHOW
+  as the card creator's Publish control — "Keep it private" over Unlisted /
+  Public, Public picked (owner 2026-10-29); decks are unlimited) and
+  ONE writer, `changeDeckMembershipAction` (`lib/decks/membership-actions.ts`:
+  one deck, ≤ `MAX_MEMBERSHIP_BATCH` cards, `add_custom_deck_entry` per card
+  with source `link`, D3 refused before the RPC, the 500 cap in words —
+  `deckFullMessage` — a result per card, ONE revalidation). A removal deletes
+  only an entry whose source SAYS the card brought it (no printing) and
+  unlinks every other — a printing, an import / manual source, or NO source
+  (unknown: in doubt the line stays). The creator's
+  "Add to a deck" box (`creator-deck-box.tsx`, under the live preview) gives
+  a NEW card / remix the save's `deck_id` — the payload main sends, pinned;
+  never a remix's "change something" (`hasMeaningfulChange`) — and acts AT
+  ONCE on an edit (D13), never touching the form; never for a
+  guest or a frame preview; a deck that refuses the new card comes back as
+  `deckEntryError` (the card is saved).
 
 - A router navigation a component makes BY ITSELF (an effect's
   `router.replace`, e.g. dropping `?import=1`) runs ONCE (a ref: StrictMode

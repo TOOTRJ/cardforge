@@ -31,8 +31,8 @@ test.describe("admin frame requests", () => {
       "href",
       "https://scryfall.com/card/iko/275",
     );
-    // Distinct users first (D4): the Japan showcase (2 users, 2 requests)
-    // outranks Zilortha (no users, 4 requests).
+    // Distinct users first (D4): the Japan showcase (3 users, 3 requests)
+    // outranks Zilortha (2 users, 6 requests).
     await expect(missing.locator("tbody tr").first()).toHaveAttribute("data-signature", "japan-showcase");
     // A key no registry rule has is flagged (D6).
     await expect(

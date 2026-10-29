@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Globe2,
+  Layers,
   Link2,
   Loader2,
   Lock,
@@ -31,14 +32,14 @@ import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // DashboardBulkBar — sticky bottom bar shown when ≥1 card is selected.
-// Renders the bulk actions: print / download (TODO 6.15), change
-// visibility, delete. Visibility and delete call into server actions that
+// Renders the bulk actions: add to deck (TODO DK9.2), print / download
+// (TODO 6.15), change visibility, delete. Visibility and delete call into server actions that
 // pre-flight ownership and abort the whole batch on any cross-user attempt.
 // Making cards public or unlisted skips an admin's frame previews (the
 // server decides) and the toast names how many it skipped.
 //
-// On the Liked tab the cards aren't yours: only "Print / download" is
-// offered (`ownedActions={false}`). The print button is the caller's —
+// On the Liked tab the cards aren't yours: only "Add to deck…" and "Print /
+// download" are offered (`ownedActions={false}`). The print button is the caller's —
 // it opens the print dialog, or the upgrade modal for a plan without the
 // deck export's entitlement (`printLocked` shows the Pro badge).
 // ---------------------------------------------------------------------------
@@ -51,6 +52,10 @@ type DashboardBulkBarProps = {
   onSuccess: () => void;
   /** "Print / download" (TODO 6.15) — shown when given. */
   onPrint?: () => void;
+  /** "Add to deck…" (TODO DK9.2) — shown when given: the picker for the
+   *  selection, on your cards and the Liked tab alike (another creator's
+   *  card joins a deck only while it's public — the picker says which). */
+  onAddToDeck?: () => void;
   /** The viewer's plan doesn't include it (Pro): the button says so. */
   printLocked?: boolean;
   /** Visibility + delete — false on cards the viewer doesn't own. */
@@ -62,6 +67,7 @@ export function DashboardBulkBar({
   onClear,
   onSuccess,
   onPrint,
+  onAddToDeck,
   printLocked = false,
   ownedActions = true,
 }: DashboardBulkBarProps) {
@@ -135,6 +141,18 @@ export function DashboardBulkBar({
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            {onAddToDeck ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAddToDeck}
+                disabled={isPending}
+              >
+                <Layers className="h-3.5 w-3.5" aria-hidden />
+                Add to deck…
+              </Button>
+            ) : null}
             {onPrint ? (
               <Button
                 type="button"

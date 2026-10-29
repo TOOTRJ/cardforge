@@ -142,4 +142,18 @@ describe("addCustomCardEntryToDeck", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/already holds 500/);
   });
+
+  it("…and says it is the cap, naming the deck (the creator's own words, TODO DK9.3)", async () => {
+    s.deck = { id: "deck-1", slug: "dragons", title: "Dragons", owner_id: "user-1" };
+    s.rpcResult = {
+      data: null,
+      error: { message: "deck_entry_limit: a deck holds at most 500 entries", details: "existing=500,adding=1" },
+    };
+    const result = await addCustomCardEntryToDeck(supabase, "user-1", "deck-1", "card-1", "Cinderwing");
+    expect(result).toMatchObject({ ok: false, deckFull: true, deckTitle: "Dragons" });
+    // Any other refusal is not the cap.
+    s.rpcResult = { data: null, error: { message: "deck_not_owned: deck not found or not yours" } };
+    const other = await addCustomCardEntryToDeck(supabase, "user-1", "deck-1", "card-1", "Cinderwing");
+    expect(other.deckFull).toBeUndefined();
+  });
 });
