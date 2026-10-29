@@ -4168,6 +4168,190 @@ template/colour as each is verified.)
 - [x] (done 2026-10-13 — #532 merged: the file mirrors production as read on 2026-10-13 (313 combos). Owner step left: the shared DEV database does not re-run a changed seed — run the seed's `-- frame_reviews:begin … end` block once in the dev branch's SQL editor) **7.16 [P2] `supabase/seed.sql` mirrors production's verified frames again** (follow-up 2026-10-13; 7.9 was the 2026-09-28 pass) — the file was production's list as read on 2026-10-06 (278 combos): it had no `m15vehicle`, and none of the ticks made since. Refresh it from production's `frame_reviews` (the query is in the file's header) so previews and local resets offer what production offers — never ahead of it.
 - [ ] **7.17 [P2] The strong-language rule in the DATABASE: a trigger for direct client writes** (owner 2026-10-28, follow-up of #642) — #642 applies the rule (a card whose text holds strong language is saved private, `lib/moderation/profanity.ts`) in the card actions, My Cards' bulk change and the creator, but the `cards` table still takes a client's direct PostgREST insert / update, which skips them. Build, in a new numbered migration with explicit grants: an SQL `card_has_strong_language(…)` over the same fields as `profaneFields` (both faces, rows, tags, stats / collector line), held to the TS list and its normalisation by a unit test (the ROT13'd forms, the leet classes, the word boundaries — the test feeds both the same cases); and a BEFORE INSERT / UPDATE trigger on `cards` that sets `visibility = 'private'` when the row's text holds strong language AND the visibility widens (private → unlisted / public, unlisted → public) or a field's strong language is new or its text changed (`languageForcesPrivate`'s rule). It never refuses a write. A forced update clears the render pointers the way the actions do (0126's guard allows clearing); the purge stays the app's (no network from SQL), so the trigger is the backstop, not the path. Same PR: a public deck's `deck_cards.name` of such a card is still readable over PostgREST (the app hides it on the deck page, `lib/decks/private-card-name.ts`) — decide whether the entry's name follows the card's privacy in SQL too.
 
+## Decks, navigation and width refactor (plan 2026-10-28)
+
+Research + read-only audit of decks, the header menu and page width (owner request
+2026-10-28). Full report, wireframes and evidence: the owner's plan page
+(claude.ai artifact "PipGlyph Refactor Plan"). IDs: DK = decks, NV = navigation,
+WD = width. Sizes: S ≈ a day, M ≈ a few days, L ≈ a week or more.
+
+**Owner decisions (2026-10-28, all as recommended):**
+
+- D1 — deck caps (Free 1 / Plus 3 / Pro unlimited) count PRIVATE and unlisted decks only; public decks are unlimited for everyone and empty decks stay out of browse.
+- D2 — an imported card takes a saved-card slot when it is first edited, not at import; the import shows a slot forecast with an upgrade link and never blocks.
+- D3 — a deck may hold other creators' PUBLIC cards by reference, with the creator credited and notified; editing one makes a remix in your account (needs an RLS change, DK2.9).
+- D4 — while deck AI is paused, existing AI deck guides stay visible to the same viewers; no new guides or refreshes.
+- D5 — the creator's Pro "design for a deck" / deck-themed ideas stay (create-card AI).
+- D6 — AI deck jobs already running finish; only new ones are refused.
+- D7 — the header and footer always use the wide container (the logo never moves).
+- D8 — the creator keeps its width until TODO 6.29 is reopened.
+- D9 — Gallery moves under Community; nav clicks are tracked and Gallery returns to the top level if gallery visits from the header drop.
+- D10 — no MTG news for now; "set spotlights for designers" under Rules & reference; lore ("the lore behind the cards") joins the menu at 4+ articles.
+- D11 — private cards may sit in public decks, with a warning and "Make public"; visitors see a "Private card" tile.
+- D12 — 16 in-house default deck backgrounds (two per colour identity plus neutrals), made for card overlays.
+- D13 — the creator's "Add to a deck" box also shows when editing, acting immediately (separate from Save).
+
+Recommended order: DK0 + DK1 → DK2 (+ DK3) with NV1/WD2 in parallel → DK4, DK5, DK9 → DK6, DK8 tiles, WD3, DK10 → DK8 trending, DK7, NV3–NV9, the rest of WD.
+
+### DK0 — Decks: fix first
+
+Safe to ship before the redesign. DK0.1 and DK0.2 must land before any trending feature.
+
+- [ ] **DK0.1 [P0 · M] Deck counts computed in SQL** — Replace the client-side count scan with an aggregate (a SQL function or stored counters). Fix the same 1,000-row cap in the deck card list, the import’s existing-row read and the account export. Files: `lib/decks/queries.ts:60-87 · lib/decks/import.ts:282 · app/api/account/export/route.ts:45`.
+- [ ] **DK0.2 [P0 · M] Lock like, view and date counters** — A BEFORE UPDATE guard that resets likes_count, view_count and created_at for API roles and accepts updated_at only from the entry trigger. Same fix for cards. Add DB tests. Files: `supabase/migrations (new) · 0055:112 · 0097`.
+- [ ] **DK0.3 [P0 · M] Harden the import** — Rate-limit the commit, cap rows per deck (for example 400 entries), and stop trusting card data from the browser: re-resolve on the server, or sign the preview’s output. Commit atomically (one RPC) with a unique key per card and board. Files: `lib/decks/import.ts:225-331 · lib/decks/membership.ts:33-58`.
+- [ ] **DK0.4 [P0 · S] AI deck cards follow the deck’s visibility** — Fix the visibility, or rely on DK1 blocking new jobs, and run a read-only check for private or unlisted decks that already hold public AI cards. Tell the owners or fix the rows. Files: `lib/ai/generation-jobs.ts (paintAndPublishCard) · deck-wizard.tsx:561`.
+- [ ] **DK0.5 [P0 · S] Link picker uses 600 px thumbnails** — Add rendered_thumb_url to MyCardLite and render through BakedCardThumbnail. Files: `components/decks/deck-card-modal.tsx:610-617 · lib/decks/card-actions.ts:205-231`.
+- [ ] **DK0.6 [P0 · S] No double entry when customizing from a deck** — Hide the Publish step’s deck picker in the /create?deckCard= flow. Files: `components/creator/card-creator-form.tsx:4918`.
+- [ ] **DK0.7 [P0 · S] Free decklist copy for everyone** — Move Copy as text / Arena out of the Pro export gate, for owners and visitors. Files and print stay paid. Fix the upgrade-modal copy to match. Files: `components/decks/deck-export-menu.tsx:149-156 · upgrade-modal.tsx:89-93`.
+- [ ] **DK0.8 [P1 · S] Hide empty decks from public lists** — Filter /decks, browse, hubs and profiles to decks with at least one card. Stop quick-create from silently making public decks. Files: `lib/decks/queries.ts:156-257 · publish-panel.tsx:289`.
+- [ ] **DK0.9 [P1 · S] Format check for the owner only** — Hide it for visitors and on empty decks. Files: `app/(marketing)/deck/[slug]/page.tsx:365-377`.
+- [ ] **DK0.10 [P1 · S] Small fixes** — "Sorcerys" plurals; one shared mana-value helper (hybrid, Phyrexian, snow); "multicolor" counted correctly; "my proxies" wording for visitors; empty page after Next at multiples of 24; format-hub CTA preselects its format; clear ?import=1; visibility labels; profile "See all decks"; mana-curve text alternative. Files: `deck-card-list.tsx:307 · lib/decks/analytics.ts:141-219 · decks-view.tsx:247 · format/[format]/page.tsx:80`.
+- [ ] **DK0.11 [P2 · M] API reads match the page’s rules** — Deck guides readable only where the page shows them; decide whether unlisted decks can be listed through the API (cards share the pattern). Dedupe view counts and skip bots. Files: `0085:26-38 · 0055:99-105 · 0103:71-81`.
+- [ ] **DK0.12 [P2 · S] Delete-dialog and import-focus fixes** — Rebuild DeleteDeckDialog on Radix (focus trap, return, scroll lock); keep focus when an import row’s board changes. Files: `delete-deck-dialog.tsx · import-decklist-dialog.tsx:235`.
+
+### DK1 — Pause deck AI and say so everywhere
+
+Greyed out in the UI, refused by the server, explained in the copy. The creator’s card AI is untouched (D5).
+
+- [ ] **DK1.1 [P0 · S] One "Coming soon" pattern** — A gold badge plus one line of copy; aria-disabled controls with the reason in their name and no click handler. Files: `reuse deck-wizard.tsx:545-554 styling`.
+- [ ] **DK1.2 [P0 · S] Grey out deck AI on deck pages** — Add with AI, Restyle (remix) with AI, Analyze and Refresh guide, and the Pro guide teaser. Existing guides per D4. Files: `deck-owner-tools.tsx:98-179 · deck-guide-section.tsx · deck-analyze-button.tsx`.
+- [ ] **DK1.3 [P0 · S] Server refuses new deck AI** — The jobs route refuses deck and deck_remix kinds (code DECK_AI_PAUSED); the deck-ideas, guide and remix-estimate routes refuse too. Running jobs finish (D6). Files: `app/api/ai/jobs/route.ts · app/api/ai/deck-ideas/* · app/api/decks/[id]/guide · app/api/ai/remix-estimate`.
+- [ ] **DK1.4 [P0 · S] Copy sweep** — Site metadata, llms.txt, the AI generator and About pages, the Pro tagline and "a full Commander deck" line, FAQ, format-hub copy, upgrade-modal reasons, landing and pricing lines. Files: `app/layout.tsx:53 · app/llms.txt/route.ts:16 · ai-mtg-card-generator/page.tsx:49 · about/page.tsx:55,72 · lib/billing/plans.ts · lib/content/faq.ts:112,254 · lib/cards/hubs.ts:159 · upgrade-modal.tsx:79-98`.
+- [ ] **DK1.5 [P1 · S] "What’s new" post** — "Deck builder rebuild: AI deck tools paused for now." Owner posts it in /admin/updates; check older posts that promise deck AI.
+- [ ] **DK1.6 [P1 · S] Tests** — Rewrite the e2e step that assumes AI is the default build mode; unit tests for the refused job kinds. Files: `tests/e2e/decks.spec.ts:56-58 · tests/unit/ai`.
+
+### DK2 — New vocabulary and card-origin data
+
+Proxy = any card made on PipGlyph. Import = started from a real card. Remix = started from another PipGlyph card. Original = from scratch.
+
+- [ ] **DK2.1 [P1 · S] Rewrite the glossary** — One source (CardGlossary) with the new definitions; "Custom proxy" removed. Files: `components/creator/card-glossary.tsx`.
+- [ ] **DK2.2 [P1 · M] Rename UI strings** — About 32 "custom proxy" strings, "Needs proxy", "% proxied", "Proxy progress", "Create a custom proxy" (now "Edit" / "Customize"), "Unlink proxy" (now "Use the real card"), the deck report PDF row. Keep "proxy" in SEO copy; add one bridging sentence to the print-proxy article. Files: `components/decks/* · deck-analytics-panel.tsx:45,51 · decks-view.tsx:362,369 · dashboard pages · feature-grid.tsx:53-55 · create/page.tsx:182,189`.
+- [ ] **DK2.3 [P1 · S] "AI remix" becomes "Restyle with AI"** — UI wording only; stored keys stay. Remove the retired single-card AI remix from the three places that still advertise it. Files: `ai-mtg-card-generator/page.tsx:48 · faq.ts:108 · privacy/page.tsx:90`.
+- [ ] **DK2.4 [P1 · S] Stop auto-tagging imports "proxy"** — Existing user tags stay. Files: `card-creator-form.tsx:2965-2969`.
+- [ ] **DK2.5 [P1 · M] Card provenance** — Insert-only import source id and an import fingerprint (hash of printed fields after print typography) written by the create and update actions, never by a trigger. Older imports: derived where the deck flow knows, otherwise "not tracked". Files: `lib/cards/actions.ts · supabase/migrations (new)`.
+- [ ] **DK2.6 [P1 · M] Deck entry origin and status** — deck_cards.source (import, creator, link, ai_generate, ai_remix, manual); keep scryfall_id on AI-remix entries; one deckEntryStatus() returns Imported / Edited / Remix / Original / Not found. Files: `types/deck.ts:136-144 · lib/decks/*`.
+- [ ] **DK2.7 [P1 · M] Effective entry fields** — A view or helper that gives each entry its real type line (buildTypeLine), colour letters and mana value, with the card’s own values winning for edited imports. Needed for sorting, grouping and analytics. Files: `lib/decks/analytics.ts · lib/decks/queries.ts`.
+- [ ] **DK2.8 [P2 · S] Rename code identifiers** — remixed → edited, custom → original, and so on, with tests. Files: `types/deck.ts · components/decks`.
+- [ ] **DK2.9 [P1 · M] Other creators’ public cards in decks (D3)** — Change the deck_cards insert and update policies to accept a public card from any creator (your own cards at any visibility). Show the creator’s credit on the entry. When that card goes private or is deleted, keep its name with "No longer available" and offer a remix. Exports and print follow the card download rules. Files: `supabase/migrations/0055_decks.sql:213-262 (new migration) · lib/decks/membership.ts`.
+
+### DK3 — Deck limits and upgrade path
+
+Waits on D1 and D2.
+
+- [ ] **DK3.1 [P1 · M] Capacity in the database** — DECK_CAPACITY in plans.ts plus an entitlement; deck_capacity_for() and a trigger with an advisory lock and explicit grants (with D1 b: insert or visibility change to private or unlisted). A sync test like card-capacity.test.ts. Files: `lib/billing/plans.ts · lib/billing/entitlements.ts · supabase/migrations (new)`.
+- [ ] **DK3.2 [P1 · S] Errors and pre-checks** — Map the database error in createDeckAction to an upgrade reason "deck_capacity"; pre-check in the create dialog, the creator’s quick-create and (later) AI jobs. Files: `lib/decks/actions.ts · components/billing/upgrade-modal.tsx`.
+- [ ] **DK3.3 [P1 · S] Meter and three ways out** — "Private decks: 1 of 1" in the dialog, My Decks and the account menu; at the cap offer make public, archive or upgrade.
+- [ ] **DK3.4 [P1 · S] Grandfathering** — Insert-only enforcement: decks over the cap stay editable; a downgrade never locks anything.
+- [ ] **DK3.5 [P1 · S] Plan copy** — Deck lines in PLANS, plan-status.tsx (it hard-codes the card limit), FAQ and the upgrade modal. Files: `lib/billing/plans.ts · plan-status.tsx:133,139`.
+- [ ] **DK3.6 [P1 · S] Billing-off previews and seeds** — The trigger ignores the billing flag, as 0104 does: seed accounts so dev_free isn’t stuck, or gate the trigger. Files: `supabase/seeds`.
+- [ ] **DK3.7 [P1 · S] Import slot check** — D2 a: forecast plus upgrade link in the import preview. D2 b: block, keep the pasted list as a draft, open the upgrade dialog. Files: `components/decks/import-decklist-dialog.tsx`.
+- [ ] **DK3.8 [P2 · S] Funnel events** — deck_created, deck_cap_hit, deck_card_customized, deck_export_clicked (allow-listed). Files: `lib/analytics/funnel-events.ts`.
+
+### DK4 — Create-deck dialog and the first deck
+
+- [ ] **DK4.1 [P1 · M] NewDeckDialog** — Name (1+ characters, the server’s rule) and format (Commander by default), optional inline paste, visibility with the plan meter. Create opens the deck page in edit mode with the add box focused. Files: `lib/decks/actions.ts:83 · lib/validation/deck.ts:72`.
+- [ ] **DK4.2 [P1 · S] Retire the stepper** — Delete DeckWizard; /dashboard/decks/new opens the dialog. Wire every entry point: My Decks, /decks, format hubs (preselected), account menu, My Cards, the creator box, "Build a deck around this card". Files: `components/decks/deck-wizard.tsx · app/(app)/dashboard/decks/new`.
+- [ ] **DK4.3 [P1 · S] Signed-out path** — The dialog asks the visitor to sign up and returns them to the same dialog with their input (safeRedirectPath).
+- [ ] **DK4.4 [P1 · S] Empty deck state** — Three doors (search and add, paste a list, add from my cards); Commander decks get a "Choose your commander" slot.
+- [ ] **DK4.5 [P1 · S] Tests** — Rewrite the e2e create flow; unit tests for the dialog; keep the quick-create focus test. Files: `tests/e2e/decks.spec.ts · publish-deck-quick-create-focus.test.tsx`.
+
+### DK5 — The deck page as a one-screen builder
+
+The largest phase; split into several PRs.
+
+- [ ] **DK5.1 [P1 · M] Page structure** — Hero, toolbar, cards first, then stats and the guide. One URL, read-only for visitors, inline edit for the owner. Owner data fetched in parallel; optionally split the public read from an owner island so the page can be cached. Files: `app/(marketing)/deck/[slug]/page.tsx`.
+- [ ] **DK5.2 [P1 · L] Add box** — One search (/ focuses it) with sections for My cards, PipGlyph cards (D3) and real cards (Scryfall autocomplete). Enter adds to the current board; results show "in deck ×N". Files: `/api/scryfall/search · lib/decks/membership.ts`.
+- [ ] **DK5.3 [P1 · L] Views, grouping, sorting** — Stacks, Grid, List, Table; group by type, mana value, colour, status, board, rarity or none; sort by mana value, name, colour, quantity or recently added; remembered per viewer in a cookie. Custom cards through CardTile and BakedCardThumbnail; real cards on their own 5:7 tile with cardCornersClass. Files: `lib/cards/my-cards-view.ts (pattern) · components/cards/card-tile.tsx`.
+- [ ] **DK5.4 [P1 · M] Inline editing and bulk** — Quantity steppers, a Move-to menu with keys (+ − M S), Remove with an undo toast, multi-select with a bulk bar. Batch server actions that revalidate once (IndexNow through revalidateDeckPaths). Files: `lib/decks/card-actions.ts`.
+- [ ] **DK5.5 [P1 · M] Edit any card, then come back** — Edit on every entry: imports open /create?deckCard=, saved cards their editor, with a whitelisted returnTo that brings you back to the card in the deck. "Edit next" walks through the unchanged imports. Placeholders can be customized too. Files: `card-creator-form.tsx:3923-3948,4073-4083 · deck-card-modal.tsx:299`.
+- [ ] **DK5.6 [P1 · S] Status badges and filters** — Imported / Edited / Remix / Original / Not found as badges, filter chips (ChipGroup) and per-group counts.
+- [ ] **DK5.7 [P1 · M] Preview pane and bottom sheet** — A sticky large preview that follows the pointer on desktop; tap opens a bottom sheet with the same actions on touch. No hover-only controls.
+- [ ] **DK5.8 [P1 · M] Instant saves** — Optimistic updates with rollback instead of router.refresh() per edit.
+- [ ] **DK5.9 [P1 · S] Sticky summary bar** — Count against the format’s size, commander status, format check, composition, "Edit next".
+- [ ] **DK5.10 [P1 · M] Mobile** — List view by default, a bottom bar (Add · View · Undo · More), collapsible groups, long-press to select.
+- [ ] **DK5.11 [P1 · M] Performance** — Scryfall small images for rows, virtualise past 150 entries, select only the columns needed (not cards.*), and no deck-entry scan on /create or the card editor. Files: `lib/decks/import-resolution.ts:44-49 · lib/decks/queries.ts:405-410`.
+- [ ] **DK5.12 [P1 · S] Accessibility** — ChipGroup for chips, Radix dialogs, row names that include quantity and status, chart tables, a non-drag alternative for every drag (WCAG 2.5.7), and the two-faces focus hand-back kept. Files: `tests/unit/components/two-faces-surfaces.test.tsx`.
+- [ ] **DK5.13 [P2 · M] Undo and history** — Toolbar undo/redo for the session; change history with restore (Plus 30 days, Pro full).
+- [ ] **DK5.14 [P2 · S] Deck details** — Deck type and bracket editable in the details dialog (with validation); slug history with redirects. Files: `components/decks/deck-creator-form.tsx · lib/validation/deck.ts:81-83`.
+- [ ] **DK5.15 [P2 · M] Drag between boards** — With keyboard and menu alternatives.
+- [ ] **DK5.16 [P3 · M] Zones and clone** — Auto-listed tokens; Clone deck with "remixed from" credit; similar decks.
+- [ ] **DK5.17 [P1 · S] Private cards in public decks (D11)** — Adding a private card to a public deck warns and offers "Make public". Visitors see a "Private card" tile with its name, and it never appears in the hero fan. Files: `lib/decks/queries.ts:399-414 · components/decks/*`.
+
+### DK6 — Deck hero, default backgrounds, featured cards
+
+- [ ] **DK6.1 [P1 · M] Default background set** — 16 images (two per colour identity plus neutrals), 2400×1350 WebP, made for card overlays, in public/defaults/deck-covers. Per D12.
+- [ ] **DK6.2 [P1 · S] deckCoverOf(deck)** — One render-time fallback (colour identity plus a hash of the deck id) used by the deck page, tiles, dashboard, share image and download route. No migration. Owners can shuffle. Files: `opengraph-image.tsx:77 · decks-view.tsx:312 · dashboard/decks/page.tsx:78 · api/decks/[id]/download/route.ts:91`.
+- [ ] **DK6.3 [P1 · S] Remove AI cover generation** — Drop the cover step from deck jobs and the cover copy. Files: `lib/ai/generation-jobs.ts (cover step)`.
+- [ ] **DK6.4 [P1 · M] Featured cards** — deck_cards.featured_rank with a partial unique index; commanders first, else owner picks ("Feature on cover", up to 5), else a seeded random set preferring custom work. Never private cards for visitors. Files: `supabase/migrations (new)`.
+- [ ] **DK6.5 [P1 · M] Hero composition** — Background, scrim, a fan of 3–5 card thumbnails, title block. Covers normalised to 1600×900 WebP; 16:9 preview in the cover editor; no unoptimized images. Files: `lib/decks/cover.ts · lib/media/upload-cover-server.ts · deck-creator-form.tsx:414,484,500`.
+- [ ] **DK6.6 [P2 · S] Share image** — Background plus fan in the deck’s OG image (flat Satori, thumbnails). Files: `app/(marketing)/deck/[slug]/opengraph-image.tsx`.
+
+### DK7 — Deck analytics and graphs
+
+Free core, Pro insights.
+
+- [ ] **DK7.1 [P2 · M] Core charts** — A curve split into creatures and other spells that filters the list on click; colour symbols vs sources; type breakdown; average and median mana value; rarity; composition. Files: `components/decks/deck-analytics-panel.tsx · lib/decks/analytics.ts`.
+- [ ] **DK7.2 [P2 · M] Draw odds and sample hand** — Lands by turn, chance to draw a card; an opening hand with mulligan using custom card images.
+- [ ] **DK7.3 [P3 · S] Keyword frequency** — Across rules text, which custom cards make interesting.
+- [ ] **DK7.4 [P3 · M] Deck activity (Pro)** — Views, likes and clones over time; needs a deck view log. Files: `supabase/migrations (new)`.
+
+### DK8 — Community decks, trending, cross-links
+
+Needs DK0.2.
+
+- [ ] **DK8.1 [P1 · M] One DeckTile** — Replaces the three tile designs: background plus fan, title, format and bracket, colour pips, custom count, likes and views, author. Files: `decks-view.tsx:295 · dashboard/decks/page.tsx:67 · profile/[username]/page.tsx:190-230`.
+- [ ] **DK8.2 [P2 · M] Trending decks** — list_trending_decks: likes in the last 7 days (index on deck_id, created_at), later views and clones; admin and empty decks excluded. "Trending now" row on /decks. Files: `supabase/migrations (new) · lib/decks/queries.ts`.
+- [ ] **DK8.3 [P2 · S] Gallery ↔ decks rows** — "Trending decks" on the gallery; "Trending cards" plus "Build a deck around this card" on /decks. Files: `app/(marketing)/gallery · app/(marketing)/decks`.
+- [ ] **DK8.4 [P2 · M] "In N decks" on cards** — A batched public_deck_counts_for_cards(uuid[]) RPC; text in GalleryCardTile’s footer outside the CardTile link; a "Decks with this card" section on the card page and modal. Meaningful only with D3 a. Files: `components/cards/card-detail-content.tsx:199,1229 · GalleryCardTile`.
+- [ ] **DK8.5 [P2 · S] Browse controls** — A sort control (popular, viewed, recent, already parsed), ChipGroup formats, an owner filter for "See all decks". Files: `decks-view.tsx:64-66 · components/decks/decks-search.tsx · lib/routing/browse-params.ts:37`.
+- [ ] **DK8.6 [P2 · S] Notifications** — "Your card was added to a deck" (D3 a) and deck likes; type CHECK plus describe.ts. Files: `lib/notifications/describe.ts`.
+
+### DK9 — Cards and decks everywhere
+
+- [ ] **DK9.1 [P1 · M] Shared DeckMembershipPicker** — A controlled component extracted from the Publish step’s DeckPicker: search, checkboxes to add and remove, board and quantity, New deck. Files: `components/creator/panels/publish-panel.tsx:252-420`.
+- [ ] **DK9.2 [P1 · M] My Cards** — "Add to deck…" in the bulk bar and tile menus, an "In N decks" chip, remove; a batch membership action. Liked cards only with D3 a. Files: `components/creator/dashboard-bulk-bar.tsx · my-cards-browser.tsx`.
+- [ ] **DK9.3 [P1 · M] Creator "Add to a deck" box** — Its own box under the live preview on every step, out of the Publish step. New cards: applied on save through deck_id (pinned payload path unchanged). Editing: acts right away (D13). Hidden in the guest creator; in the deck flow it reads "Saving returns you to…". Files: `card-creator-form.tsx:4918 · lib/cards/actions.ts:576-587 · face-tabs-main-payloads.json`.
+- [ ] **DK9.4 [P2 · S] Gallery "Add to deck"** — On another creator’s card page and modal (D3 a), else "Remix into a deck".
+
+### DK10 — Feedback and bug reports for decks
+
+- [ ] **DK10.1 [P1 · S] Deck feedback dialog** — A button in the deck toolbar, My Decks and the deck footer; Idea / Bug / Other plus a message; deck, URL and screen size attached; a new feedback.area column ("decks") the admin inbox filters on. Files: `components/feedback/feedback-form.tsx · 0051 feedback table`.
+- [ ] **DK10.2 [P1 · S] Beta banner** — "New deck builder: tell us what’s missing", for 30 days.
+- [ ] **DK10.3 [P2 · S] "Coming next for decks"** — A short list in What’s new.
+
+### NV — Header menu and Learn
+
+NV1 ships together with WD2 (the same header files).
+
+- [ ] **NV1 [P1 · M] Grouped header** — siteConfig.primaryNav groups; a NavDisclosure on the W3C disclosure pattern (click to open, one at a time, Escape returns focus); Account menu with My decks, New deck and one billing link; a mobile drawer with accordions and an always-visible Create; "Create a card" replaces Create and Start creating. Files: `lib/site-config.ts · components/layout/site-header*.tsx · nav-links.tsx · mobile-menu.tsx · user-menu.tsx`.
+- [ ] **NV2 [P1 · S] Footer** — Create · Community · Learn · Company, in an even grid. Files: `components/layout/site-footer.tsx`.
+- [ ] **NV3 [P1 · S] Article categories** — One category per article in frontmatter (design, reference, comparisons, lore) with a unit test; clusters.ts copy moved in. Files: `content/articles/*.mdx · lib/content/clusters.ts`.
+- [ ] **NV4 [P1 · M] /learn and category pages** — The hub plus /learn/[category] (indexed from 3 articles), breadcrumbs and JSON-LD, 308s for the four tag hubs, sitemap and llms.txt. Files: `app/(marketing)/learn (new) · proxy.ts · app/sitemap.ts · app/llms.txt/route.ts`.
+- [ ] **NV5 [P2 · S] What’s new** — "News" relabelled and moved into Learn; later /news/[slug] permalinks and RSS. Files: `app/(marketing)/news`.
+- [ ] **NV6 [P2 · M] /help** — A help centre built from faq.ts plus product how-tos. Files: `lib/content/faq.ts`.
+- [ ] **NV7 [P2 · S] /tools** — A directory of the creator, AI generator, pip editor, deck builder and print sheets.
+- [ ] **NV8 [P2 · M] /frames** — Every verified frame with a baked example and "Start with this frame".
+- [ ] **NV9 [P2 · S] /glossary** — Seeded from the creator’s glossary; terms link to the creator.
+- [ ] **NV10 [P2 · S] nav_click event** — Allow-listed, so Gallery’s move under Community can be watched (D9). Files: `lib/analytics/funnel-events.ts`.
+- [ ] **NV11 [P3 · M] /creators** — A directory of makers with public cards.
+- [ ] **NV12 [P3 · S] Challenge winners and a public roadmap** — Start with a public "requested frames" list.
+- [ ] **NV13 [P3 · S] Content plan** — A lore-behind-the-cards series and set spotlights for designers; no MTG news for now (D10).
+
+### WD — Page width
+
+Each step is its own PR. Check 1366, 1536, 1920 and 2560 px and a phone on every preview.
+
+- [ ] **WD1 [P1 · S] PageContainer and Measure** — One component for the frame and one for the reading measure; a codemod turns the 36 page roots into size="standard"; a guard test. No visual change. Files: `components/layout/page-container.tsx (new)`.
+- [ ] **WD2 [P1 · S] Header and footer wide** — Per D7; ships with NV1. Files: `components/layout/site-header.tsx · site-footer.tsx`.
+- [ ] **WD3 [P1 · M] Wide browse grids** — Gallery, hubs, decks and profiles on the wide size, with container-query columns (2 / 3 / 4 / 6), strips fetching 6, and DEFAULT_SIZES updated. Files: `app/(marketing)/gallery · decks · profile · lib/cards/* DEFAULT_SIZES`.
+- [ ] **WD4 [P2 · S] Wide dashboard** — DashboardShell, My Cards (up to 8 compact columns) and the admin tables. Files: `components/layout/dashboard-shell.tsx`.
+- [ ] **WD5 [P1 · S] Wide deck page** — Part of DK5: stacks across the width and the sticky summary.
+- [ ] **WD6 [P2 · M] Reading measure** — Articles, FAQ, legal and landing copy at about 38rem and 18 px, with a contents or call-to-action rail. Files: `app/(marketing)/articles/[slug] · legal shell · faq`.
+- [ ] **WD7 [P3 · M] Wider creator** — Only with D8 b or inside TODO 6.29: wide size and a preview sized by screen height. Files: `components/creator/card-creator-form.tsx`.
+- [ ] **WD8 [P1 · S] Less space above content** — Start the gallery grid and the creator’s first field higher (today y = 431 and y = 404).
+- [ ] **WD9 [P3 · S] Measure our own screens** — Anonymous viewport-width buckets to confirm the StatCounter shares.
+
 ## Billing audit follow-ups (2026-09-24)
 
 What's left from the 2026-09-22 billing audit (docs/BILLING.md §5–§9 record
