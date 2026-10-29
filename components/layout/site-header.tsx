@@ -95,6 +95,13 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
   // nav showed from `md` and the row ran up to 390 px past the viewport.
   const showUpgrade = isAuthed && billingOn && !user?.isPaid;
   const desktopNavFrom: DesktopNavBreakpoint = showUpgrade ? "xl" : "lg";
+  // Between `sm` and `md` the same free row (credits chip, Upgrade, New
+  // card, Dashboard, bell, avatar, hamburger) needs ~722 px and ran 58 px
+  // past the edge at 640 (TODO 3b.38). Its Dashboard button waits for `md`
+  // there: Dashboard is the drawer's first item (the hamburger shows at
+  // these widths) and the avatar menu's. Upgrade (only lower in the drawer)
+  // and New card keep their labels. Signed out and paid rows fit: unchanged.
+  const dashboardButtonFrom: InlineButtonBreakpoint = showUpgrade ? "md" : "sm";
 
   return (
     <header
@@ -144,7 +151,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                 asChild
                 variant="accent"
                 size="sm"
-                className="hidden sm:inline-flex"
+                className={INLINE_BUTTON_CLASS[dashboardButtonFrom]}
               >
                 <Link href="/dashboard">
                   <LayoutDashboard className="h-4 w-4" aria-hidden /> Dashboard
@@ -202,6 +209,15 @@ export type DesktopNavBreakpoint = "lg" | "xl";
 const DESKTOP_NAV_CLASS: Record<DesktopNavBreakpoint, string> = {
   lg: "hidden lg:flex lg:items-center lg:gap-1",
   xl: "hidden xl:flex xl:items-center xl:gap-1",
+};
+
+/** The breakpoint from which an account button shows in the row (below it
+ *  the drawer carries it). Literal class strings, as above. */
+export type InlineButtonBreakpoint = "sm" | "md";
+
+const INLINE_BUTTON_CLASS: Record<InlineButtonBreakpoint, string> = {
+  sm: "hidden sm:inline-flex",
+  md: "hidden md:inline-flex",
 };
 
 export type { HeaderUser };
