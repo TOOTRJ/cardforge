@@ -1,69 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Coins, LayoutDashboard, Menu, Sparkles, X } from "lucide-react";
+import { ChevronDown, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { useLiveCredits } from "@/components/billing/credits-bus";
 import { Button } from "@/components/ui/button";
-import { siteConfig } from "@/lib/site-config";
-import { isBillingEnabled } from "@/lib/billing/flags";
-import { formatCredits } from "@/lib/billing/plans";
+import {
+  groupLinks,
+  siteConfig,
+  type NavGroup,
+  type PrimaryNavEntry,
+} from "@/lib/site-config";
 import { cn } from "@/lib/utils";
-import type { DesktopNavBreakpoint } from "./site-header";
-
-// Literal class strings: Tailwind only builds classes it can read.
-const TRIGGER_HIDDEN_FROM: Record<DesktopNavBreakpoint, string> = {
-  lg: "lg:hidden",
-  xl: "xl:hidden",
-};
+import { NavSections, isNavItemActive } from "./nav-links";
+import {
+  AccountLinks,
+  AccountSummary,
+  SignedOutAccountLinks,
+  type AccountPlan,
+} from "./user-menu";
+import { trackNavClick } from "./nav-click";
 
 // ---------------------------------------------------------------------------
-// MobileMenu — hamburger-triggered slide-in drawer for narrow viewports.
-// Replaces the desktop nav below `desktopNavFrom` (lg, or xl for a free
-// account's wider row — site-header.tsx, TODO 3b.27). Reuses Radix Dialog
-// for focus trap + ESC + click-outside behavior; the content is styled as
-// a right-anchored drawer instead of a centered modal.
+// MobileMenu — the menu button's drawer below `lg` (TODO NV1), where the
+// header row holds only the logo, Create, the bell, the avatar and this
+// button. Top to bottom: Create a card (full width), Community and Learn as
+// accordions (a caret button each — aria-expanded / aria-controls; the group
+// holding the current page starts open), Pricing, then the Account part:
+// the same links as the avatar's panel, or Sign in / Create account.
+//
+// Radix Dialog does the dialog's work: focus trap, Escape, the focus back on
+// the menu button, scroll lock, the overlay click. The content is styled as
+// a right-anchored drawer instead of a centred modal.
 // ---------------------------------------------------------------------------
 
 type MobileMenuProps = {
-  /** The breakpoint from which the header shows its nav inline — the
-   *  hamburger hides from there. */
-  desktopNavFrom?: DesktopNavBreakpoint;
+  /** Already filtered by the header (Pricing only where it can be bought). */
+  entries: readonly PrimaryNavEntry[];
   isAuthed: boolean;
   username: string | null;
-  isPaid?: boolean;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  isAdmin?: boolean;
+  /** Null while billing is off. */
+  plan?: AccountPlan | null;
   credits?: number;
   creditsUsed?: number;
   /** Shows "Messages" — only for users with a support thread. */
   hasMessages?: boolean;
   unreadMessages?: number;
+  challengeBadge?: React.ReactNode;
 };
 
 export function MobileMenu({
-  desktopNavFrom = "lg",
+  entries,
   isAuthed,
   username,
-  isPaid = false,
+  displayName = null,
+  avatarUrl = null,
+  isAdmin = false,
+  plan = null,
   credits = 0,
   creditsUsed = 0,
   hasMessages = false,
   unreadMessages = 0,
+  challengeBadge,
 }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const billingOn = isBillingEnabled();
-  const liveCredits = useLiveCredits(credits);
-
-  const visibleItems = siteConfig.primaryNav.filter((item) => {
-    if (item.authedOnly && !isAuthed) return false;
-    if (item.anonOnly && isAuthed) return false;
-    // Paid accounts manage (and buy credits) on /dashboard/billing.
-    if (item.href === "/pricing" && (!billingOn || isPaid)) return false;
-    return true;
-  });
+  const close = () => setOpen(false);
+  const label = displayName?.trim() || username || "Account";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -71,10 +78,7 @@ export function MobileMenu({
         <button
           type="button"
           aria-label="Open navigation menu"
-          className={cn(
-            "inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
-            TRIGGER_HIDDEN_FROM[desktopNavFrom],
-          )}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 lg:hidden"
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>
@@ -88,205 +92,214 @@ export function MobileMenu({
           )}
         />
         <DialogPrimitive.Content
+          aria-describedby={undefined}
           className={cn(
-            "fixed inset-y-0 right-0 z-50 flex w-72 max-w-[80vw] flex-col border-l border-border bg-surface p-4 shadow-2xl",
-            "transition-transform duration-200 ease-out",
+            "fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-surface shadow-2xl",
+            "transition-transform duration-200 ease-out motion-reduce:transition-none",
             "data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full",
             "focus-visible:outline-none",
           )}
         >
-          <DialogPrimitive.Title className="sr-only">
-            Navigation menu
-          </DialogPrimitive.Title>
-          <div className="flex items-center justify-between pb-3">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-subtle">
-              Menu
-            </span>
+          <DialogPrimitive.Title className="sr-only">Navigation menu</DialogPrimitive.Title>
+          <div className="flex items-center justify-between px-4 pb-2 pt-4">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-subtle">Menu</span>
             <DialogPrimitive.Close asChild>
               <button
                 type="button"
                 aria-label="Close menu"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-foreground"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </DialogPrimitive.Close>
           </div>
 
-          {/* Dashboard sits at the very top of the drawer for signed-in
-              users — the prominent accent button mirrors the desktop header. */}
-          {isAuthed ? (
-            <Link
-              href="/dashboard"
-              onClick={() => setOpen(false)}
-              aria-current={isActive(pathname, "/dashboard") ? "page" : undefined}
-              className={cn(
-                "mb-2 inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2.5 text-sm font-semibold text-accent-foreground transition-all hover:brightness-110",
-                isActive(pathname, "/dashboard") && "ring-2 ring-accent/60",
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" aria-hidden />
-              Dashboard
-            </Link>
-          ) : null}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+            <Button asChild className="mb-3 w-full">
+              <Link
+                href={siteConfig.createCta.href}
+                onClick={() => {
+                  trackNavClick(siteConfig.createCta.id, "drawer", isAuthed);
+                  close();
+                }}
+              >
+                <Plus aria-hidden /> {siteConfig.createCta.label}
+              </Link>
+            </Button>
 
-          <nav className="flex flex-col gap-0.5">
-            {visibleItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "rounded-md px-3 py-2.5 text-sm transition-colors",
-                    active
-                      ? "bg-elevated text-foreground"
-                      : "text-muted hover:bg-elevated hover:text-foreground",
-                  )}
-                >
-                  {item.label}
-                  {item.badge ? (
-                    <span className="ml-1.5 rounded-full border border-border/70 bg-elevated px-1.5 py-px align-middle text-[9px] font-semibold uppercase tracking-wide text-subtle">
-                      {item.badge}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </nav>
+            <DrawerNav
+              entries={entries}
+              isAuthed={isAuthed}
+              challengeBadge={challengeBadge}
+              onNavigate={close}
+            />
 
-          {isAuthed ? (
-            <>
-              <div className="my-3 h-px bg-border/60" />
-              {billingOn && !isPaid ? (
-                <Button asChild variant="accent" className="mb-2">
-                  <Link href="/pricing" onClick={() => setOpen(false)}>
-                    <Sparkles className="h-4 w-4" aria-hidden /> Upgrade
+            <div className="my-3 h-px bg-border/60" />
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">
+              Account
+            </p>
+            {isAuthed ? (
+              <>
+                <AccountSummary
+                  username={username}
+                  label={label}
+                  avatarUrl={avatarUrl}
+                  plan={plan}
+                  credits={credits}
+                  creditsUsed={creditsUsed}
+                />
+                <AccountLinks
+                  username={username}
+                  hasMessages={hasMessages}
+                  unreadMessages={unreadMessages}
+                  surface="drawer"
+                  onNavigate={close}
+                />
+                {isAdmin ? (
+                  <Link
+                    href={siteConfig.adminNav[0].href}
+                    onClick={close}
+                    className="mt-1 flex items-center gap-2.5 rounded-md border-t border-border/60 px-2 py-2 pt-3 text-sm text-muted transition-colors hover:bg-elevated hover:text-foreground focus-visible:bg-elevated focus-visible:outline-none"
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
+                    Admin
                   </Link>
-                </Button>
-              ) : null}
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">
-                Account
-              </p>
-              {billingOn ? (
-                <div className="mb-1 flex items-center gap-1.5 px-3 text-xs text-muted">
-                  <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-                  <span className="font-medium text-foreground">
-                    {formatCredits(liveCredits)}
-                  </span>
-                  credits · {creditsUsed} used
-                </div>
-              ) : null}
-              <div className="flex flex-col gap-0.5">
-                <DrawerLink
-                  href="/dashboard/cards"
-                  label="My Cards"
-                  onNav={() => setOpen(false)}
-                  active={isActive(pathname, "/dashboard/cards")}
-                />
-                <DrawerLink
-                  href="/dashboard/decks"
-                  label="My Decks"
-                  onNav={() => setOpen(false)}
-                  active={isActive(pathname, "/dashboard/decks")}
-                />
-                <DrawerLink
-                  href="/feed"
-                  label="Feed"
-                  onNav={() => setOpen(false)}
-                  active={isActive(pathname, "/feed")}
-                />
-                {hasMessages ? (
-                  <DrawerLink
-                    href="/messages"
-                    label={
-                      unreadMessages > 0
-                        ? `Messages (${unreadMessages > 9 ? "9+" : unreadMessages})`
-                        : "Messages"
-                    }
-                    onNav={() => setOpen(false)}
-                    active={isActive(pathname, "/messages")}
-                  />
                 ) : null}
-                {username ? (
-                  <DrawerLink
-                    href={`/profile/${username}`}
-                    label="View profile"
-                    onNav={() => setOpen(false)}
-                    active={pathname === `/profile/${username}`}
-                  />
-                ) : null}
-                <DrawerLink
-                  href="/settings"
-                  label="Settings"
-                  onNav={() => setOpen(false)}
-                  active={pathname === "/settings"}
-                />
-                {billingOn ? (
-                  <DrawerLink
-                    href="/settings#billing"
-                    label="Plans & billing"
-                    onNav={() => setOpen(false)}
-                    active={false}
-                  />
-                ) : null}
-              </div>
-              <div className="mt-auto pt-4">
-                <LogoutButton className="w-full" />
-              </div>
-            </>
-          ) : (
-            <div className="mt-auto flex flex-col gap-2 pt-4">
-              <Button asChild variant="ghost">
-                <Link href="/login" onClick={() => setOpen(false)}>
-                  Sign in
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link href="/signup" onClick={() => setOpen(false)}>
-                  Start creating
-                </Link>
-              </Button>
+              </>
+            ) : (
+              <SignedOutAccountLinks surface="drawer" onNavigate={close} />
+            )}
+          </div>
+
+          {isAuthed ? (
+            <div className="border-t border-border/60 px-3 py-3">
+              <LogoutButton className="w-full [&>button]:w-full" variant="secondary" />
             </div>
-          )}
+          ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
 
-function DrawerLink({
-  href,
-  label,
-  active,
-  onNav,
+/** Community and Learn as accordions, then the plain links (Pricing). */
+function DrawerNav({
+  entries,
+  isAuthed,
+  challengeBadge,
+  onNavigate,
 }: {
-  href: string;
-  label: string;
-  active: boolean;
-  onNav: () => void;
+  entries: readonly PrimaryNavEntry[];
+  isAuthed: boolean;
+  challengeBadge?: React.ReactNode;
+  onNavigate: () => void;
 }) {
+  const pathname = usePathname();
+  // The drawer mounts on every open, so a group holding the current page
+  // starts open each time; the others start closed.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+    () =>
+      new Set(
+        entries
+          .filter((entry): entry is NavGroup => entry.kind === "group")
+          .filter((group) => groupLinks(group).some((link) => isNavItemActive(pathname, link.href)))
+          .map((group) => group.id),
+      ),
+  );
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
-    <Link
-      href={href}
-      onClick={onNav}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "rounded-md px-3 py-2.5 text-sm transition-colors",
-        active
-          ? "bg-elevated text-foreground"
-          : "text-muted hover:bg-elevated hover:text-foreground",
-      )}
-    >
-      {label}
-    </Link>
+    <nav aria-label="Main">
+      <ul className="flex flex-col gap-0.5">
+        {entries.map((entry) =>
+          entry.kind === "group" ? (
+            <li key={entry.id}>
+              <DrawerGroup
+                group={entry}
+                open={expanded.has(entry.id)}
+                onToggle={() => toggle(entry.id)}
+                isAuthed={isAuthed}
+                challengeBadge={challengeBadge}
+                onNavigate={onNavigate}
+              />
+            </li>
+          ) : (
+            <li key={entry.id}>
+              <Link
+                href={entry.href}
+                aria-current={isNavItemActive(pathname, entry.href) ? "page" : undefined}
+                onClick={() => {
+                  trackNavClick(entry.id, "drawer", isAuthed);
+                  onNavigate();
+                }}
+                className={cn(
+                  "flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+                  isNavItemActive(pathname, entry.href)
+                    ? "bg-elevated text-foreground"
+                    : "text-foreground hover:bg-elevated",
+                )}
+              >
+                {entry.label}
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+    </nav>
   );
 }
 
-function isActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  if (pathname === href) return true;
-  return pathname.startsWith(`${href}/`);
+function DrawerGroup({
+  group,
+  open,
+  onToggle,
+  isAuthed,
+  challengeBadge,
+  onNavigate,
+}: {
+  group: NavGroup;
+  open: boolean;
+  onToggle: () => void;
+  isAuthed: boolean;
+  challengeBadge?: React.ReactNode;
+  onNavigate: () => void;
+}) {
+  const panelId = `drawer-${group.id}-${useId().replace(/:/g, "")}`;
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+        className="flex w-full items-center justify-between rounded-md px-3 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+      >
+        {group.label}
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "h-4 w-4 text-subtle transition-transform duration-150 motion-reduce:transition-none",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      <div id={panelId} hidden={!open} className="pb-2 pl-1">
+        <NavSections
+          group={group}
+          isAuthed={isAuthed}
+          surface="drawer"
+          challengeBadge={challengeBadge}
+          layout="stack"
+          onNavigate={onNavigate}
+        />
+      </div>
+    </>
+  );
 }

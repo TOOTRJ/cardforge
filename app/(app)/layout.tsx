@@ -8,6 +8,7 @@ import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { planEndingOf } from "@/lib/billing/plan-ending";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,11 @@ export default async function AppGroupLayout({
     redirect("/onboarding");
   }
 
+  // The Account menu names the plan, and a cancelled plan that is still
+  // running says when it ends — the same facts /api/me gives the marketing
+  // header (lib/billing/plan-ending.ts). Only while billing is on.
+  const ending = isBillingEnabled() ? planEndingOf(profile) : null;
+
   return (
     <AppShell
       user={
@@ -58,6 +64,10 @@ export default async function AppGroupLayout({
               // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
               avatarUrl: profileMediaSrc("avatar", profile?.avatar_url, user.id),
               isPaid: entitlements?.isPaid ?? false,
+              tier: entitlements?.effectiveTier ?? null,
+              subscriptionEnding: ending != null,
+              subscriptionEndsAt: ending?.endsAt ?? null,
+              subscriptionEndingKind: ending?.kind ?? null,
               credits: entitlements?.credits ?? 0,
               creditsUsed,
               unreadNotifications,
