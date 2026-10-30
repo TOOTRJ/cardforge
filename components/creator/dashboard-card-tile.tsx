@@ -1,7 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, type MouseEvent } from "react";
-import { VISIBILITY_LABELS } from "@/types/card";
+import { ownerVisibilityLabel } from "@/lib/moderation/lock";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Eye, Pencil } from "lucide-react";
@@ -251,7 +251,7 @@ export function DashboardCardTile({
       </div>
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted">
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-          {VISIBILITY_LABELS[card.visibility]}
+          {ownerVisibilityLabel(card)}
           {isFramePreviewCard(card) ? <FramePreviewCardBadge /> : null}
         </span>
         {/* The card's decks, outside the picture's control. Select mode's

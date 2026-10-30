@@ -37,6 +37,18 @@ const CLUSTERS: Record<string, Cluster> = {
     toolHref: "/create",
     toolLabel: "Open the card creator",
   },
+  // The evergreen series (TODO NV13): lore behind a mechanic or a flavor
+  // archetype, and design studies of classic sets. Never news (owner D10).
+  "behind-the-cards": {
+    slug: "behind-the-cards",
+    title: "Behind the Cards",
+    intro:
+      "Every Magic mechanic began as an idea about a world: that the dead don't stay buried, that power has a price, that the ground beneath an explorer's feet is alive. Behind the Cards follows those ideas from story to rules text in two kinds of guide — lore pieces on a mechanic or flavor archetype, and spotlights that study a classic set the way a designer would. Each ends with original example cards and how to build your own in PipGlyph.",
+    blurb:
+      "The ideas behind MTG's mechanics and classic sets, studied for custom card designers, with original example cards.",
+    toolHref: "/create",
+    toolLabel: "Open the card creator",
+  },
 };
 
 export function getCluster(slug: string): Cluster | null {

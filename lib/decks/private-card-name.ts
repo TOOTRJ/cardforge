@@ -30,6 +30,12 @@ import { containsProfanity } from "@/lib/moderation/profanity";
 
 export const PRIVATE_CARD_NAME = "Private card";
 
+/** What a visitor reads in place of a DELETED card's entry (0153): the card
+ *  is gone, so "Private card" would say something untrue about it — never
+ *  its title either (0152 masks it). The status badge's words too
+ *  (lib/decks/deck-view.ts NO_LONGER_AVAILABLE). */
+export const GONE_CARD_NAME = "No longer available";
+
 type EntryLike = {
   card_id: string | null;
   name: string;
@@ -53,6 +59,22 @@ export function isPrivateForViewer(
   if (viewerIsOwner) return false;
   if (entry.card_id) return !card;
   return !entry.scryfall_id && bringsCard(entry.source);
+}
+
+/** True when the entry is hidden from this viewer because its card was
+ *  DELETED (no card, no printing, a card-bringing source) — the "No longer
+ *  available" face of isPrivateForViewer (migration 0153). */
+export function isGoneForViewer(
+  entry: Pick<EntryLike, "card_id" | "scryfall_id" | "source">,
+  viewerIsOwner: boolean,
+): boolean {
+  return !viewerIsOwner && !entry.card_id && !entry.scryfall_id && bringsCard(entry.source);
+}
+
+/** The name a visitor reads in place of a hidden entry's: "No longer
+ *  available" for a deleted card, else "Private card". */
+export function hiddenEntryName(entry: Pick<EntryLike, "card_id" | "scryfall_id" | "source">, viewerIsOwner: boolean): string {
+  return isGoneForViewer(entry, viewerIsOwner) ? GONE_CARD_NAME : PRIVATE_CARD_NAME;
 }
 
 /** True when this entry's name is hidden from a viewer who isn't the owner:
@@ -80,7 +102,7 @@ export function publicDeckWarning<T extends { message: string }>(warning: T, vie
 export function publicDeckItems<T extends { entry: EntryLike; card: unknown }>(items: readonly T[], viewerIsOwner: boolean): T[] {
   return items.map((item) =>
     hidesEntryName(item.entry, item.card, viewerIsOwner)
-      ? { ...item, entry: { ...item.entry, name: PRIVATE_CARD_NAME, type_line: null } }
+      ? { ...item, entry: { ...item.entry, name: hiddenEntryName(item.entry, viewerIsOwner), type_line: null } }
       : item,
   );
 }

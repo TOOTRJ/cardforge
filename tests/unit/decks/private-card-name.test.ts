@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { PRIVATE_CARD_NAME, hidesEntryName, isPrivateForViewer, publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
+import {
+  GONE_CARD_NAME,
+  PRIVATE_CARD_NAME,
+  hiddenEntryName,
+  hidesEntryName,
+  isGoneForViewer,
+  isPrivateForViewer,
+  publicDeckItems,
+  publicDeckWarning,
+} from "@/lib/decks/private-card-name";
 
 // ---------------------------------------------------------------------------
 // A public deck's view of a card the strong-language rule kept private
@@ -53,9 +62,14 @@ describe("publicDeckItems", () => {
       const gone = { entry: entry("Grim Goblin", { card_id: null, scryfall_id: null, source }), card: null };
       expect(isPrivateForViewer(gone.entry, null, false), source).toBe(true);
       expect(hidesEntryName(gone.entry, null, false)).toBe(true);
-      expect(publicDeckItems([gone], false)[0]!.entry.name).toBe(PRIVATE_CARD_NAME);
-      // The owner keeps the stored name ("No longer available").
+      // A visitor reads "No longer available" in its place (0153), never
+      // "Private card": the card is gone, not private.
+      expect(publicDeckItems([gone], false)[0]!.entry.name).toBe(GONE_CARD_NAME);
+      expect(isGoneForViewer(gone.entry, false)).toBe(true);
+      expect(hiddenEntryName(gone.entry, false)).toBe(GONE_CARD_NAME);
+      // The owner keeps the stored name ("No longer available" is its badge).
       expect(isPrivateForViewer(gone.entry, null, true)).toBe(false);
+      expect(isGoneForViewer(gone.entry, true)).toBe(false);
       expect(publicDeckItems([gone], true)[0]!.entry.name).toBe("Grim Goblin");
     }
     // The owner's own unlink clears the source: a plain line, shown as typed —
@@ -65,6 +79,9 @@ describe("publicDeckItems", () => {
       const plain = { card_id: null, scryfall_id: null, source, name: "Grim Goblin" };
       expect(isPrivateForViewer(plain, null, false), String(source)).toBe(false);
     }
+    // A private or withheld card is still "Private card".
+    expect(hiddenEntryName({ card_id: "c", scryfall_id: null, source: "creator" }, false)).toBe(PRIVATE_CARD_NAME);
+    expect(publicDeckItems([{ entry: entry("Grim Goblin", { scryfall_id: null }), card: null }], false)[0]!.entry.name).toBe(PRIVATE_CARD_NAME);
     // A printing whose card is gone is the real card again.
     expect(isPrivateForViewer({ card_id: null, scryfall_id: "sf", source: "ai_remix" }, null, false)).toBe(false);
   });

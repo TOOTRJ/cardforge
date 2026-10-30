@@ -68,6 +68,9 @@ export default defineConfig({
       // to resolve under vitest; stub it so server modules (e.g.
       // lib/stripe/config.ts) remain unit-testable.
       "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
+      // `next/dynamic` loads a chunk on first render and suspends; the stub
+      // imports it at once so a test never asserts on an empty place.
+      "next/dynamic": path.resolve(__dirname, "tests/stubs/next-dynamic.tsx"),
     },
   },
 });

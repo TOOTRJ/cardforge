@@ -1,9 +1,11 @@
 "use client";
 
 import type { KeyboardEvent, ReactNode } from "react";
-import { HelpCircle, Lock } from "lucide-react";
+import { Ban, HelpCircle, Lock } from "lucide-react";
+import { GONE_CARD_NAME } from "@/lib/decks/private-card-name";
 import { CardTile } from "@/components/cards/card-tile";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
+import type { OpenerProps } from "@/components/decks/deck-row-ui";
 import { cardCornersClass } from "@/lib/cards/card-orientation";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
@@ -34,10 +36,12 @@ import { cn } from "@/lib/utils";
 //
 // The opener is a role="button" (a CardTile body holds the picture's divs, so
 // it can't be a <button>) or a <button> around a plain <img>; either way it
-// carries `data-deck-entry` — the pop-up hands the focus back to it — and
-// the row's full name (quantity and status included, TODO DK5.12). The
-// quantity and the status ride on the picture as a strip of chips, hidden
-// from assistive tech (the name already says them) and from the pointer.
+// is built by the card area (`opener`, DeckRowUi.openerProps): it carries
+// `data-deck-entry` — the pop-up hands the focus back to it — the row's full
+// name (quantity and status included, TODO DK5.12), and the page's entry
+// keys and selection. The quantity and the status ride on the picture as a
+// strip of chips, hidden from assistive tech (the name already says them)
+// and from the pointer.
 // ---------------------------------------------------------------------------
 
 type TileItem = DeckItem<DeckPageCard>;
@@ -47,29 +51,30 @@ type TileItem = DeckItem<DeckPageCard>;
 const OPENER_CLASS =
   "scroll-mb-28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-/** Enter / Space open the card, as a <button> would. */
-function openOnKey(event: KeyboardEvent<HTMLElement>, open: () => void) {
+/** Enter / Space open the card, as a <button> would — after the page's own
+ *  keys had their turn. */
+function openOnKey(event: KeyboardEvent<HTMLElement>, opener: OpenerProps) {
+  opener.onKeyDown?.(event);
+  if (event.defaultPrevented) return;
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
-    open();
+    opener.onClick(event);
   }
 }
 
 export function DeckEntryTile({
   row,
-  label,
+  opener,
   showProxies,
-  onOpen,
   sizes,
   chips = "overlay",
   maker = null,
 }: {
   row: DeckRow<TileItem>;
-  /** The opener's accessible name (deckRowLabel). */
-  label: string;
+  /** The opener's attributes and handlers (its name: deckRowLabel). */
+  opener: OpenerProps;
   /** The list's "custom cards ⇄ real cards" choice. */
   showProxies: boolean;
-  onOpen: (entryId: string) => void;
   /** The picture's rendered width (next/image `sizes`) for an older bake. */
   sizes: string;
   /** Where the quantity and status go: on the picture under its title bar
@@ -80,28 +85,24 @@ export function DeckEntryTile({
   maker?: string | null;
 }) {
   const { entry, card } = row.item;
-  const open = () => onOpen(entry.id);
-  const opener = {
-    "data-deck-entry": entry.id,
-    "aria-label": label,
-    "aria-haspopup": "dialog" as const,
-  };
 
   const baked = Boolean(card && isStoredRenderUrl(card.rendered_image_url));
   const printing = entryPrintingImage(entry.image_url, "normal");
   const useCard = Boolean(card && (baked ? showProxies || !printing : !printing));
+  // No callout or text selection under a long press (the owner's select).
+  const touch = opener["aria-pressed"] !== undefined || opener.onPointerDown ? "select-none [-webkit-touch-callout:none]" : "";
 
   let picture: ReactNode;
   if (row.isPrivate) {
     picture = (
-      <button type="button" {...opener} onClick={open} className={cn("block w-full", cardCornersClass(false), OPENER_CLASS)}>
-        <PrivateCardFace name={row.privateName} />
+      <button type="button" {...opener} className={cn("block w-full", cardCornersClass(false), OPENER_CLASS, touch)}>
+        <PrivateCardFace name={row.privateName} gone={row.isGone} />
       </button>
     );
   } else if (card && useCard) {
     picture = (
       <CardTile
-        className="scroll-mb-28 cursor-pointer"
+        className={cn("scroll-mb-28 cursor-pointer", touch)}
         thumbnail={{
           renderedImageUrl: card.rendered_image_url,
           renderedThumbUrl: card.rendered_thumb_url,
@@ -115,8 +116,7 @@ export function DeckEntryTile({
             role="button"
             tabIndex={0}
             {...opener}
-            onClick={open}
-            onKeyDown={(event) => openOnKey(event, open)}
+            onKeyDown={(event) => openOnKey(event, opener)}
             className={slot.className}
             style={slot.style}
             data-tile-body={slot["data-tile-body"]}
@@ -131,11 +131,11 @@ export function DeckEntryTile({
       <button
         type="button"
         {...opener}
-        onClick={open}
         className={cn(
           "relative block aspect-[5/7] w-full overflow-hidden border border-border/40 bg-[#101015] shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)]",
           cardCornersClass(false),
           OPENER_CLASS,
+          touch,
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- Scryfall's own CDN, sized by the URL */}
@@ -144,7 +144,7 @@ export function DeckEntryTile({
     );
   } else {
     picture = (
-      <button type="button" {...opener} onClick={open} className={cn("block w-full", cardCornersClass(false), OPENER_CLASS)}>
+      <button type="button" {...opener} className={cn("block w-full", cardCornersClass(false), OPENER_CLASS, touch)}>
         <BlankCardFace name={row.name} />
       </button>
     );
@@ -220,9 +220,21 @@ function StandInFace({
 }
 
 /** A visitor's private card (D11): a lock, the words, the real card's name
- *  where the entry has one — never the private card's title or art. The
+ *  where the entry has one — never the private card's title or art. A
+ *  DELETED card (`gone`, 0153) says "No longer available" instead. The
  *  sample hand (deck-sample-hand.tsx) draws it too. */
-export function PrivateCardFace({ name }: { name: string | null }) {
+export function PrivateCardFace({ name, gone = false }: { name: string | null; gone?: boolean }) {
+  if (gone) {
+    return (
+      <StandInFace title={GONE_CARD_NAME} titleIcon={<Ban className="h-3 w-3 shrink-0 text-muted" aria-hidden />} dashed>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted">
+          <Ban className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="text-sm font-semibold text-foreground">{GONE_CARD_NAME}</span>
+        <span className="text-xs leading-5 text-muted">The card behind this entry was deleted.</span>
+      </StandInFace>
+    );
+  }
   return (
     <StandInFace title={name ?? "Private card"} titleIcon={<Lock className="h-3 w-3 shrink-0 text-muted" aria-hidden />} dashed>
       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted">

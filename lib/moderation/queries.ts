@@ -170,3 +170,68 @@ export async function getCommentModerationQueue(): Promise<
   }
   return { items: Array.from(byComment.values()), loadError: false };
 }
+
+export type HiddenCard = {
+  cardId: string;
+  title: string;
+  /** The card's page (null while its owner's handle is unknown). */
+  href: string | null;
+  ownerUsername: string | null;
+  card: Card;
+  hiddenAt: string;
+  /** The lock's reason CODE (migration 0156): report, flagged_file or
+   *  backfill — never report text. */
+  reason: string | null;
+};
+
+/**
+ * Cards moderation hid, which stay private until an admin unhides them
+ * (migration 0156, lib/moderation/lock.ts), most recently hidden first.
+ * Null when the caller isn't an admin. Reads via the service role.
+ */
+export async function getModerationHiddenCards(): Promise<ModerationQueue<HiddenCard> | null> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return null;
+  if (!isAdminConfigured()) return { items: [], loadError: true };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("cards")
+    .select("*")
+    .not("moderation_hidden_at", "is", null)
+    .order("moderation_hidden_at", { ascending: false })
+    .limit(200);
+  if (error || !data) {
+    console.error("[admin/moderation] hidden cards read failed:", error?.message ?? "no data");
+    return { items: [], loadError: true };
+  }
+  const cards = data as unknown as Card[];
+
+  let loadError = false;
+  const ownerIds = [...new Set(cards.map((c) => c.owner_id))];
+  const usernameById = new Map<string, string | null>();
+  if (ownerIds.length > 0) {
+    const { data: owners, error: ownersError } = await admin.from("profiles").select("id, username").in("id", ownerIds);
+    if (ownersError) {
+      console.error("[admin/moderation] hidden card owner read failed:", ownersError.message);
+      loadError = true;
+    }
+    for (const o of owners ?? []) usernameById.set(o.id as string, (o.username as string | null) ?? null);
+  }
+
+  return {
+    items: cards.map((card) => {
+      const username = usernameById.get(card.owner_id) ?? null;
+      return {
+        cardId: card.id,
+        title: card.title,
+        href: card.slug && username ? buildCardPath({ slug: card.slug, owner: { username } }) : null,
+        ownerUsername: username,
+        card,
+        hiddenAt: card.moderation_hidden_at ?? "",
+        reason: card.moderation_hidden_reason ?? null,
+      };
+    }),
+    loadError,
+  };
+}

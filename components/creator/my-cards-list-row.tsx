@@ -1,7 +1,7 @@
 "use client";
 
 import { type MouseEvent } from "react";
-import { VISIBILITY_LABELS } from "@/types/card";
+import { ownerVisibilityLabel } from "@/lib/moderation/lock";
 import Link from "next/link";
 import { Check, Eye, Heart, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
@@ -194,7 +194,7 @@ export function MyCardListRow({
         variant={card.visibility === "public" ? "primary" : "default"}
         className="hidden shrink-0 sm:inline-flex"
       >
-        {VISIBILITY_LABELS[card.visibility]}
+        {ownerVisibilityLabel(card)}
       </Badge>
       <EditedAt value={card.updated_at} className="hidden w-16 text-right md:block" />
       {decks ? <DeckChipButton count={decks.count} title={card.title} onClick={decks.onOpen} /> : null}

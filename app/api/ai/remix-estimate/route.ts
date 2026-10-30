@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       doubleFaced: estimate.doubleFaced,
       skipped: estimate.skipped,
       emblems: estimate.emblems,
+      moderationLocked: estimate.moderationLocked,
       unresolved: estimate.unresolved,
       cardLimit: limit,
     },

@@ -40,6 +40,7 @@ import {
 import type { DeckPdfLayout } from "@/lib/render/card-pdf";
 import { planSheet } from "@/lib/render/sheet-layout";
 import { cn } from "@/lib/utils";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // DeckExportMenu — the deck owner's export hub (Pro). Two builds, both run
@@ -224,7 +225,11 @@ export function DeckExportMenu({
               <Included icon={ImageIcon}>
                 {customCardCount} clean card image{customCardCount === 1 ? "" : "s"}, no watermark
               </Included>
-              <Included icon={ScrollText}>deck.pdf — stats and decklist, plus the how-to-play guide if the deck has one</Included>
+              <Included icon={ScrollText}>
+                {areDeckGuidesEnabled()
+                  ? "deck.pdf — stats and decklist, plus the how-to-play guide if the deck has one"
+                  : "deck.pdf — stats and decklist"}
+              </Included>
               <Included icon={FileText}>decklist.txt</Included>
               {hasCover ? <Included icon={Sparkles}>Cover art</Included> : null}
             </ul>

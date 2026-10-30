@@ -221,7 +221,7 @@ describe("AddToDeckDialog", () => {
     await act(async () => {
       fireEvent.click(box("Burn"));
     });
-    expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: "d3", add: [CARD] });
+    expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: "d3", add: [CARD], privateCards: "ask" });
     expect(box("Burn").checked).toBe(true);
     expect(screen.getByTestId("deck-membership-status").textContent).toBe("Added to “Burn”.");
     // The new entry's board and copies are there to edit.
@@ -328,5 +328,153 @@ describe("AddToDeckButton (the gallery, TODO DK9.4)", () => {
     });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Add to deck" })));
+  });
+});
+
+describe("AddToDeckDialog — a private card into a deck others can open (DK0.13)", () => {
+  const loaded = { ok: true, decks: DECKS, memberships: {} };
+  const answer = (deckId: string, deckTitle: string, results: unknown[], entries: unknown[] = []) => ({
+    ok: true,
+    deckId,
+    deckTitle,
+    deckSlug: deckTitle.toLowerCase(),
+    results,
+    entries,
+  });
+  const added = (deckId: string) => [{ cardId: CARD, deckId, entryId: "e9", board: "main", quantity: 1 }];
+
+  async function tickGoblins() {
+    render(<AddToDeckDialog open onOpenChange={vi.fn()} cards={[{ id: CARD, title: "Bolt" }]} surface="my_cards" />);
+    await waitFor(() => expect(box("Goblins")).toBeTruthy());
+    box("Goblins").focus();
+    await act(async () => {
+      fireEvent.click(box("Goblins"));
+    });
+  }
+
+  it("the server's private_card opens the question — nothing said as added — and Make it public publishes then adds", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction
+      .mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "private_card" }]))
+      .mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "added", published: true }], added("d1")));
+    await tickGoblins();
+    expect(actions.changeDeckMembershipAction).toHaveBeenLastCalledWith({ deckId: "d1", add: [CARD], privateCards: "ask" });
+    const offer = screen.getByRole("dialog", { name: "Add “Bolt” to “Goblins”?" });
+    expect(offer.textContent).toContain("This card is private. Visitors will see “Private card” in this deck.");
+    // The picker behind is inert while the question is open (Radix hides it).
+    expect((screen.getByRole("checkbox", { name: "Goblins", hidden: true }) as HTMLInputElement).checked).toBe(false);
+    expect(document.activeElement).toBe(within(offer).getByRole("button", { name: "Make it public" }));
+    await act(async () => {
+      fireEvent.click(within(offer).getByRole("button", { name: "Make it public" }));
+    });
+    expect(actions.changeDeckMembershipAction).toHaveBeenLastCalledWith({ deckId: "d1", add: [CARD], publish: [CARD] });
+    expect(screen.getByTestId("deck-membership-status").textContent).toBe("Made public and added to “Goblins”.");
+    expect(box("Goblins").checked).toBe(true);
+    // The focus is back on the deck that asked.
+    await waitFor(() => expect(document.activeElement).toBe(box("Goblins")));
+  });
+
+  it("Add as private: added as it is", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction
+      .mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "private_card" }]))
+      .mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "added" }], added("d1")));
+    await tickGoblins();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add as private" }));
+    });
+    expect(actions.changeDeckMembershipAction).toHaveBeenLastCalledWith({ deckId: "d1", add: [CARD] });
+    expect(screen.getByTestId("deck-membership-status").textContent).toBe("Added to “Goblins”.");
+  });
+
+  it("Escape is Cancel: nothing added, the outer dialog stays, the focus goes back", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction.mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "private_card" }]));
+    await tickGoblins();
+    const offer = screen.getByRole("dialog", { name: "Add “Bolt” to “Goblins”?" });
+    await act(async () => {
+      fireEvent.keyDown(offer, { key: "Escape" });
+    });
+    expect(screen.queryByRole("dialog", { name: "Add “Bolt” to “Goblins”?" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Add “Bolt” to a deck" })).toBeTruthy();
+    expect(actions.changeDeckMembershipAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("deck-membership-status").textContent).toBe("Not added.");
+    expect(box("Goblins").checked).toBe(false);
+    await waitFor(() => expect(document.activeElement).toBe(box("Goblins")));
+  });
+
+  it("forced private: the reason instead of Make it public", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction.mockResolvedValueOnce(
+      answer("d1", "Goblins", [
+        {
+          cardId: CARD,
+          status: "private_card",
+          blockedReason: "Its name includes strong language, so it stays private. Remove it to publish.",
+        },
+      ]),
+    );
+    await tickGoblins();
+    const offer = screen.getByRole("dialog", { name: "Add “Bolt” to “Goblins”?" });
+    expect(within(offer).queryByRole("button", { name: /Make/ })).toBeNull();
+    expect(offer.textContent).toContain("Its name includes strong language");
+    expect(within(offer).getByRole("button", { name: "Add as private" })).toBeTruthy();
+  });
+
+  it("a refused publish is said, and the card is not in the deck", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction
+      .mockResolvedValueOnce(answer("d1", "Goblins", [{ cardId: CARD, status: "private_card" }]))
+      .mockResolvedValueOnce(
+        answer("d1", "Goblins", [{ cardId: CARD, status: "publish_refused", error: "Name the second face first." }]),
+      );
+    await tickGoblins();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Make it public" }));
+    });
+    expect(screen.getByTestId("deck-membership-status").textContent).toBe("Name the second face first.");
+    expect(box("Goblins").checked).toBe(false);
+  });
+
+  it("a selection: several asked in one question; mixed reasons publish the rest and add the others as private", async () => {
+    actions.getDeckPickerDataAction.mockResolvedValue(loaded);
+    actions.changeDeckMembershipAction
+      .mockResolvedValueOnce(
+        answer("d1", "Goblins", [
+          { cardId: CARD, status: "private_card" },
+          {
+            cardId: CARD_2,
+            status: "private_card",
+            blockedReason: "Its rules text includes strong language, so it stays private. Remove it to publish.",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        answer("d1", "Goblins", [
+          { cardId: CARD, status: "added", published: true },
+          { cardId: CARD_2, status: "added" },
+        ]),
+      );
+    render(
+      <AddToDeckDialog
+        open
+        onOpenChange={vi.fn()}
+        cards={[
+          { id: CARD, title: "Bolt" },
+          { id: CARD_2, title: "Shock" },
+        ]}
+        surface="my_cards"
+      />,
+    );
+    await waitFor(() => expect(box("Goblins")).toBeTruthy());
+    await act(async () => {
+      fireEvent.click(box("Goblins"));
+    });
+    const offer = screen.getByRole("dialog", { name: "Add 2 private cards to “Goblins”?" });
+    expect(offer.textContent).toContain("“Shock”");
+    await act(async () => {
+      fireEvent.click(within(offer).getByRole("button", { name: "Make 1 public" }));
+    });
+    expect(actions.changeDeckMembershipAction).toHaveBeenLastCalledWith({ deckId: "d1", add: [CARD, CARD_2], publish: [CARD] });
   });
 });

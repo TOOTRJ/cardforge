@@ -15,7 +15,13 @@ import {
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { rateLimitedResponse } from "@/lib/api/responses";
-import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
+import {
+  DECK_AI_PAUSED_STATUS,
+  areDeckGuidesEnabled,
+  deckAiPausedBody,
+  deckGuidesComingSoonBody,
+  isDeckAiPaused,
+} from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // POST /api/decks/[id]/guide — analyze the owner's deck into a how-to-play
@@ -37,6 +43,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false, error: "Sign in first." }, { status: 401 });
+  // Deck guides are hidden until AI generation returns to decks (owner
+  // 2026-10-30): no guide is written, whatever the pause says.
+  if (!areDeckGuidesEnabled()) {
+    return NextResponse.json(deckGuidesComingSoonBody(), { status: DECK_AI_PAUSED_STATUS });
+  }
   if (isDeckAiPaused()) {
     return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
   }
