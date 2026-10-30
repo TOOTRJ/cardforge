@@ -16,7 +16,7 @@ import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
 import { commitImportLines } from "@/lib/decks/import-commit";
 import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
 import { MAX_MEMBERSHIP_BATCH } from "@/lib/decks/membership-copy";
-import { MAX_DECKLIST_ENTRIES } from "@/lib/decks/parse-decklist";
+import { MAX_DECKLIST_ENTRIES, MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import {
   chunk,
   groupEntryUpdates,
@@ -557,15 +557,23 @@ async function takeBackMerge(
   line: StagedLine,
   before: readonly RestoreRow[],
   after: readonly RestoreRow[],
-): Promise<void> {
+): Promise<string> {
+  const name = line.entry.name;
+  const fallback = `${name} couldn't come back as its own entry. Try again.`;
   const merged = mergedRowOfStagedLine(line, before, after);
-  if (!merged) return;
+  if (!merged) return fallback;
+  if (merged.quantity === null) {
+    // Merged into a row written meanwhile up to the cap: what it held is
+    // unknown, so it is left as it is — and said.
+    return `${name} couldn't come back as its own entry, and was added to another ${name} row that is now at ${MAX_ENTRY_QUANTITY} copies — check its count.`;
+  }
   await supabase
     .from("deck_cards")
     .update({ quantity: merged.quantity })
     .eq("deck_id", deckId)
     .eq("id", merged.row.id)
     .eq("quantity", merged.row.quantity);
+  return fallback;
 }
 
 /** Printings and name-only lines back — each a NEW row of its own (see
@@ -592,6 +600,9 @@ async function restoreLines(
     waiting = next;
 
     const written: StagedLine[] = [];
+    // Lines whose commit merged something: in such a chunk a row at the
+    // 250 cap may be another tab's row the merge filled, not the line's own.
+    const mergedChunk = new Set<StagedLine>();
     for (const lines of chunk(staged, MAX_DECKLIST_ENTRIES)) {
       if (failure) {
         for (const line of lines) restored.push({ from: line.entry.id, to: null, note: failure });
@@ -610,6 +621,7 @@ async function restoreLines(
       }
       changed = true;
       written.push(...lines);
+      if (commit.merged > 0) for (const line of lines) mergedChunk.add(line);
     }
     if (written.length === 0) break;
 
@@ -623,10 +635,9 @@ async function restoreLines(
     const fresh = after.filter((row) => !known.has(row.id));
     const claimed = new Set<string>();
     for (const line of written) {
-      const row = newRowOfStagedLine(line, fresh, claimed);
+      const row = newRowOfStagedLine(line, fresh, claimed, mergedChunk.has(line));
       if (!row) {
-        await takeBackMerge(supabase, deckId, line, before, after);
-        restored.push({ from: line.entry.id, to: null, note: `${line.entry.name} couldn't come back as its own entry. Try again.` });
+        restored.push({ from: line.entry.id, to: null, note: await takeBackMerge(supabase, deckId, line, before, after) });
         continue;
       }
       claimed.add(row.id);

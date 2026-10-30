@@ -397,6 +397,32 @@ describe("restoreDeckEntriesAction — a removal undone: each entry a NEW row, n
     });
   });
 
+  it("a merge that took a row written meanwhile to the 250 cap leaves that row alone and says so — never sets it to 0", async () => {
+    state.rows = [row(1, { name: "Lightning Bolt", scryfall_id: BOLT, board: "main", quantity: 250, card_id: SENTINEL })];
+    const stub = liveDb();
+    const removal = await removeDeckEntriesAction({ deckId: DECK, entryIds: [id(1)] });
+    if (!removal.ok) throw new Error(removal.error);
+    // The import RPC caps a merge at 250.
+    state.commit.mockImplementation(async () => {
+      live().push(row(7, { name: "Lightning Bolt", scryfall_id: BOLT, board: "main", quantity: 250, position: 7 }));
+      return { ok: true, added: 0, merged: 1, placeholders: 0 };
+    });
+    const writesBefore = stub.forTable("deck_cards").filter((e) => called(e.calls, "update")).length;
+    const result = await restoreDeckEntriesAction({ deckId: DECK, entries: removal.removed });
+    expect(live().map(strip)).toEqual([{ id: id(7), board: "main", quantity: 250, card_id: null, featured_rank: null }]);
+    expect(stub.forTable("deck_cards").filter((e) => called(e.calls, "update")).length).toBe(writesBefore);
+    expect(result).toEqual({
+      ok: true,
+      restored: [
+        {
+          from: id(1),
+          to: null,
+          note: "Lightning Bolt couldn't come back as its own entry, and was added to another Lightning Bolt row that is now at 250 copies — check its count.",
+        },
+      ],
+    });
+  });
+
   it("names and placeholders come back as rows of their own too; a card the D3 guard refuses comes back as the real card", async () => {
     state.rows = [
       row(1, { name: "Mystery Card", board: "main", quantity: 2 }),

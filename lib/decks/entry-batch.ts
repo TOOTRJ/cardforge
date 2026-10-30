@@ -256,33 +256,36 @@ export function newRowOfStagedLine<R extends CommittedRow>(
   line: StagedLine,
   fresh: readonly R[],
   claimed: ReadonlySet<string>,
+  /** The line's commit reported a merge: a fresh row AT the cap may be
+   *  another tab's row the merge filled to 250, so it is never taken as the
+   *  line's own (the merge path then says so). */
+  commitMerged = false,
 ): R | null {
   const keys = new Set(restoreStagingKeys(line.entry, line.stage));
+  const count = Math.min(line.entry.quantity, MAX_ENTRY_QUANTITY);
+  if (commitMerged && count >= MAX_ENTRY_QUANTITY) return null;
   return (
-    fresh.find(
-      (row) =>
-        !claimed.has(row.id) &&
-        keys.has(rowMergeKey(row)) &&
-        !row.card_id &&
-        row.quantity === Math.min(line.entry.quantity, MAX_ENTRY_QUANTITY),
-    ) ?? null
+    fresh.find((row) => !claimed.has(row.id) && keys.has(rowMergeKey(row)) && !row.card_id && row.quantity === count) ?? null
   );
 }
 
 /** The row a staged line was merged into when it found none of its own
  *  (the first row of its key, as the commit picks it — `after` in list
  *  order) and the count that row goes back to: what it held before, or,
- *  for a row written meanwhile, its count less the line's. Null: nothing to
- *  take back. */
+ *  for a row written meanwhile, its count less the line's. `quantity: null`:
+ *  a row written meanwhile that the merge took to the 250 cap — what it held
+ *  can't be told (the cap ate part of the line), so it is left alone and the
+ *  note says so. Null: nothing to take back. */
 export function mergedRowOfStagedLine<R extends CommittedRow>(
   line: StagedLine,
   before: readonly R[],
   after: readonly R[],
-): { row: R; quantity: number } | null {
+): { row: R; quantity: number | null } | null {
   const keys = new Set(restoreStagingKeys(line.entry, line.stage));
   const row = after.find((candidate) => keys.has(rowMergeKey(candidate)));
   if (!row) return null;
   const old = before.find((candidate) => candidate.id === row.id);
+  if (!old && row.quantity >= MAX_ENTRY_QUANTITY) return { row, quantity: null };
   const quantity = old ? old.quantity : row.quantity - line.entry.quantity;
   return quantity >= 1 && quantity < row.quantity ? { row, quantity } : null;
 }
