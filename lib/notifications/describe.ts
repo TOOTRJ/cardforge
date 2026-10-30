@@ -281,6 +281,19 @@ export function describeNotification(
         href: "/admin/users",
       };
     }
+    case "moderation_unhidden": {
+      // An admin cleared the moderation lock (migration 0156,
+      // admin_unhide_card). The card stays private: its owner decides.
+      const title = item.card?.title ?? "your card";
+      return {
+        subject: "PipGlyph team",
+        body: `reviewed ${title} — it's no longer hidden by moderation. It stays private until you publish it.`,
+        href:
+          item.card && item.card.ownerUsername
+            ? `/card/${item.card.ownerUsername}/${item.card.slug}`
+            : "/dashboard/cards",
+      };
+    }
     case "card_limit": {
       const limit = num(payload.limit);
       return {

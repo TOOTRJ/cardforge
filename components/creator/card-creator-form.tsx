@@ -402,6 +402,7 @@ import {
 } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import { creatorLanguageFields, NO_STRONG_LANGUAGE, strongLanguageChoices } from "@/lib/creator/strong-language";
+import { isModerationLocked, moderationLockedSavedMessage } from "@/lib/moderation/lock";
 import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
 import {
   isFramePreviewSave,
@@ -1440,6 +1441,9 @@ export function CardCreatorForm({
   // Read only where it is shown (the Publish panel), not on every keystroke.
   const languageChoices =
     stepKey === "publish" ? strongLanguageChoices(watched, languageContextFor(watched)) : NO_STRONG_LANGUAGE;
+  // The moderation lock (migration 0156, lib/moderation/lock.ts): an edit of
+  // a card moderation hid saves private, and the Publish step says why.
+  const moderationLocked = isEdit && isModerationLocked(card);
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -4001,8 +4005,9 @@ export function CardCreatorForm({
     // …and strong language in the text makes it private too (the Publish
     // step says so; the server applies the same rule).
     const languageFields = creatorLanguageFields(values, chosenVisibility, languageContextFor(values));
+    // …and so does the moderation lock (an edit of a card moderation hid).
     const finalVisibility =
-      languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
+      moderationLocked || languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
         ? "private"
         : chosenVisibility;
 
@@ -4525,8 +4530,16 @@ export function CardCreatorForm({
       // Kept private for the strong language in its text (the Publish
       // step's note, or the server): ONE toast says so.
       const editLanguageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
-      const editSavedVisibility = result.forcedPrivate ? "private" : finalVisibility;
-      toast.success(editLanguageNotice ? strongLanguageSavedMessage(payload.title, editLanguageNotice) : "Changes saved.");
+      const editSavedVisibility = result.forcedPrivate || result.moderationLocked ? "private" : finalVisibility;
+      // …and for the moderation lock (0156), when the maker asked for more.
+      const editLockNotice = result.moderationLocked === true || (moderationLocked && chosenVisibility !== "private");
+      toast.success(
+        editLockNotice
+          ? moderationLockedSavedMessage(payload.title)
+          : editLanguageNotice
+            ? strongLanguageSavedMessage(payload.title, editLanguageNotice)
+            : "Changes saved.",
+      );
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
       // …and its nickname (TODO 6.3), when this save sent one.
@@ -5509,6 +5522,7 @@ export function CardCreatorForm({
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}
+                moderationLocked={moderationLocked}
               />
             ) : null}
       </div>

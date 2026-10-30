@@ -18,6 +18,7 @@ import { DeckCardList } from "@/components/decks/deck-card-list";
 import { CommanderSlot, DeckStartDoors } from "@/components/decks/deck-start-doors";
 import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
 import { publicDeckWarning } from "@/lib/decks/private-card-name";
+import { isModerationLocked } from "@/lib/moderation/lock";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
@@ -166,13 +167,19 @@ async function redirectRenamedDeckOrNotFound(slug: string, search?: { import?: s
   notFound();
 }
 
-/** The owner's own cards in the deck that are private (D11), once each. */
-function ownPrivateCards(items: readonly DeckItem<DeckPageCard>[], ownerId: string): Array<{ id: string; title: string }> {
-  const seen = new Map<string, string>();
+/** The owner's own cards in the deck that are private (D11), once each —
+ *  a card moderation hid (0156) marked, so the notice offers it nothing. */
+function ownPrivateCards(
+  items: readonly DeckItem<DeckPageCard>[],
+  ownerId: string,
+): Array<{ id: string; title: string; moderationLocked: boolean }> {
+  const seen = new Map<string, { id: string; title: string; moderationLocked: boolean }>();
   for (const { card } of items) {
-    if (card && card.owner_id === ownerId && card.visibility === "private") seen.set(card.id, card.title);
+    if (card && card.owner_id === ownerId && card.visibility === "private") {
+      seen.set(card.id, { id: card.id, title: card.title, moderationLocked: isModerationLocked(card) });
+    }
   }
-  return [...seen].map(([id, title]) => ({ id, title }));
+  return [...seen.values()];
 }
 
 export default async function DeckDetailPage({

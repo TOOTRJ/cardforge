@@ -29,6 +29,12 @@ import type { Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { StrongLanguageChoices } from "@/lib/creator/strong-language";
 import { STRONG_LANGUAGE_CHOICE_REASON, strongLanguageNote } from "@/lib/moderation/profanity";
+import Link from "next/link";
+import {
+  MODERATION_CONTACT_HREF,
+  MODERATION_LOCK_CHOICE_REASON,
+  MODERATION_LOCK_NOTE,
+} from "@/lib/moderation/lock";
 
 // Private is not a chip any more — it is the "Save as a draft" checkbox
 // above the chips (owner decision 2026-09-16: drafts simply force private).
@@ -78,6 +84,10 @@ type PublishPanelProps = {
    *  language saves private — lib/creator/strong-language.ts) and the
    *  fields that do it. Absent / empty = both open. */
   strongLanguage?: StrongLanguageChoices;
+  /** An edit of a card moderation hid (migration 0156,
+   *  lib/moderation/lock.ts): neither choice is offered, one note says why
+   *  and how to reach the team — the save sends private. */
+  moderationLocked?: boolean;
 };
 
 export function PublishPanel({
@@ -86,6 +96,7 @@ export function PublishPanel({
   revise = false,
   showWatermark = true,
   strongLanguage,
+  moderationLocked = false,
 }: PublishPanelProps) {
   const {
     register,
@@ -109,18 +120,21 @@ export function PublishPanel({
   const blockedPublic = strongLanguage?.public ?? [];
   const blockedUnlisted = strongLanguage?.unlisted ?? [];
   const visibilityOptions = VISIBILITY_OPTIONS.map((option) =>
-    (option.value === "public" ? blockedPublic : blockedUnlisted).length > 0
-      ? { ...option, disabled: true, description: STRONG_LANGUAGE_CHOICE_REASON }
-      : option,
+    moderationLocked
+      ? { ...option, disabled: true, description: MODERATION_LOCK_CHOICE_REASON }
+      : (option.value === "public" ? blockedPublic : blockedUnlisted).length > 0
+        ? { ...option, disabled: true, description: STRONG_LANGUAGE_CHOICE_REASON }
+        : option,
   );
-  const languageFields = saveAsDraft
+  const languageFields = saveAsDraft || moderationLocked
     ? []
     : visibility === "public"
       ? blockedPublic
       : visibility === "unlisted"
         ? blockedUnlisted
         : [];
-  const blockedNow = languageFields.length > 0;
+  const blockedNow = languageFields.length > 0 || moderationLocked;
+  const lockNoteId = `${draftId}-moderation`;
   // The checkbox and the visibility field move together: ticking it forces
   // private; unticking a private card offers public (the default) again.
   const setSaveAsDraft = (next: boolean) => {
@@ -230,7 +244,9 @@ export function PublishPanel({
               render={({ field }) => (
                 <ChipGroup
                   ariaLabel="Visibility"
-                  ariaDescribedBy={languageFields.length > 0 ? languageNoteId : undefined}
+                  ariaDescribedBy={
+                    moderationLocked ? lockNoteId : languageFields.length > 0 ? languageNoteId : undefined
+                  }
                   layout="grid-2"
                   size="md"
                   // A choice the text rules out is never shown as picked;
@@ -253,8 +269,19 @@ export function PublishPanel({
             data-testid="strong-language-note"
             className="text-xs leading-5 text-accent empty:-mt-3"
           >
-            {blockedNow ? strongLanguageNote(languageFields) : null}
+            {languageFields.length > 0 ? strongLanguageNote(languageFields) : null}
           </p>
+          {/* The moderation lock (0156): a fact of the card, not of what is
+              typed — static text, shown whether or not it is a draft. */}
+          {moderationLocked ? (
+            <p id={lockNoteId} data-testid="moderation-lock-note" className="text-xs leading-5 text-accent">
+              {MODERATION_LOCK_NOTE}{" "}
+              <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
+                Contact us
+              </Link>{" "}
+              if you have questions.
+            </p>
+          ) : null}
         </div>
       </FieldGroup>
 

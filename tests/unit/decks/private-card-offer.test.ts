@@ -194,6 +194,26 @@ describe("changeDeckMembershipAction — a private card into a deck others can o
     });
   });
 
+  it("a card moderation hid (0156): the dialog's reason is the lock's — FIRST, before its text", async () => {
+    state.cards = [card(1, "private", { rules_text: STRONG, moderation_hidden_at: "2026-10-29T00:00:00Z" } as Partial<CardRow>)];
+    const result = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)], privateCards: "ask" });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.results[0]).toEqual({
+      cardId: id(1),
+      status: "private_card",
+      blockedReason: expect.stringMatching(/^Hidden by moderation\. Our moderation team hid this card/),
+    });
+  });
+
+  it("publish of a card moderation hid: never sent to the publish step, not added", async () => {
+    state.cards = [card(1, "private", { moderation_hidden_at: "2026-10-29T00:00:00Z" } as Partial<CardRow>)];
+    const result = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)], publish: [id(1)] });
+    if (!result.ok) throw new Error(result.error);
+    expect(state.published).toEqual([]);
+    expect(result.results[0]).toMatchObject({ status: "publish_refused", error: expect.stringMatching(/hidden by moderation/i) });
+    expect(state.rpcCards).toEqual([]);
+  });
+
   it("keep (the default, an Undo): added as it is, no question", async () => {
     state.cards = [card(1, "private")];
     const result = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)] });
@@ -332,6 +352,14 @@ describe("linkDeckCardAction — publish then link", () => {
     state.cards = [card(1, "private", { rules_text: STRONG })];
     const result = await linkDeckCardAction(ENTRY, id(1), { publish: true });
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/strong language/) });
+    expect(state.published).toEqual([]);
+    expect(state.linked).toEqual([]);
+  });
+
+  it("a card moderation hid (0156) is not published or linked, in words", async () => {
+    state.cards = [card(1, "private", { moderation_hidden_at: "2026-10-29T00:00:00Z" } as Partial<CardRow>)];
+    const result = await linkDeckCardAction(ENTRY, id(1), { publish: true });
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/^Hidden by moderation\./) });
     expect(state.published).toEqual([]);
     expect(state.linked).toEqual([]);
   });

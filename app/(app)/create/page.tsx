@@ -17,6 +17,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
+import { isModerationLocked, MODERATION_LOCKED_REMIX_MESSAGE } from "@/lib/moderation/lock";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
@@ -156,6 +157,11 @@ export default async function CreatePage({
     // A deleted / private / malformed source — say so rather than silently
     // opening a blank creator the user didn't ask for.
     return <RemixSourceMissing />;
+  }
+  // A card moderation hid (migration 0156) is never remixed (owner decision
+  // 2026-10-30); the save refuses it too (createCardAction).
+  if (remixParent && isModerationLocked(remixParent)) {
+    return <RemixSourceMissing reason={MODERATION_LOCKED_REMIX_MESSAGE} />;
   }
 
   // Admin frame preview (TODO 2.1): ?previewFrames=all|<list> unions the
@@ -306,7 +312,7 @@ export default async function CreatePage({
   );
 }
 
-function RemixSourceMissing() {
+function RemixSourceMissing({ reason }: { reason?: string } = {}) {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <SurfaceCard className="flex flex-col gap-3 p-8 text-center">
@@ -314,7 +320,7 @@ function RemixSourceMissing() {
           That card can&apos;t be remixed
         </h1>
         <p className="text-sm leading-6 text-muted">
-          It may have been deleted or made private by its owner.
+          {reason ?? "It may have been deleted or made private by its owner."}
         </p>
         <div className="mt-2 flex justify-center gap-2">
           <Button asChild variant="ghost">

@@ -74,19 +74,30 @@ export function artlessSkippedLine(skipped: number | undefined): string {
     : `${skipped} cards stayed as they were: they have no artwork yet. Add artwork before publishing.`;
 }
 
-/** Every selected card is held back, artless cards among them: nothing
- *  changed, and every reason. */
+/** Every selected card is held back — by the moderation lock (migration
+ *  0156, lib/moderation/lock.ts), its missing artwork, its text, or as a
+ *  frame preview — and at least one of them by the lock or the artwork:
+ *  nothing changed, and every reason in ONE sentence. "Add artwork before
+ *  publishing." only when a card has none. */
 export function allHeldBackMessage(
   visibility: Visibility,
-  held: { strongLanguage: number; previews: number; artless: number },
+  held: { moderation?: number; strongLanguage: number; previews: number; artless?: number },
 ): string {
+  const moderation = held.moderation ?? 0;
+  const artless = held.artless ?? 0;
   const nothing =
     visibility === "public" ? "Nothing was published" : `Nothing was made ${visibility}`;
+  const alone = (n: number) => n === 1 && moderation + artless + held.strongLanguage + held.previews === 1;
   const reasons = [
-    held.artless > 0
-      ? held.artless === 1 && held.strongLanguage + held.previews === 0
+    moderation > 0
+      ? alone(moderation)
+        ? "the selected card was hidden by moderation and stays private until our team reviews it"
+        : `${cards(moderation)} ${plural(moderation, "was", "were")} hidden by moderation`
+      : "",
+    artless > 0
+      ? alone(artless)
         ? "the selected card has no artwork yet"
-        : `${cards(held.artless)} ${plural(held.artless, "has", "have")} no artwork yet`
+        : `${cards(artless)} ${plural(artless, "has", "have")} no artwork yet`
       : "",
     held.strongLanguage > 0
       ? `${cards(held.strongLanguage)} ${plural(held.strongLanguage, "has", "have")} strong language in ${plural(held.strongLanguage, "its", "their")} text`
@@ -94,5 +105,5 @@ export function allHeldBackMessage(
     held.previews > 0 ? `${held.previews} ${plural(held.previews, "is a frame preview", "are frame previews")}` : "",
   ].filter(Boolean);
   const list = reasons.length > 1 ? `${reasons.slice(0, -1).join(", ")} and ${reasons[reasons.length - 1]}` : reasons[0];
-  return `${nothing}: ${list}. Add artwork before publishing.`;
+  return `${nothing}: ${list}.${artless > 0 ? " Add artwork before publishing." : ""}`;
 }

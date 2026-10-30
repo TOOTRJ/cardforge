@@ -37,11 +37,13 @@ export type VisibilityPreflightRow = {
   artist_credit?: string | null;
   footer_text?: string | null;
   face_content?: unknown;
+  /** The moderation lock (migration 0156, lib/moderation/lock.ts). */
+  moderation_hidden_at?: string | null;
 };
 
 /** The pre-flight's columns. A database that lacks one of the LATE ones
  *  (frame_preview before 0121, printed_types before 0137, nickname before
- *  0141) answers that it does not exist, naming it, and the read runs
+ *  0141, moderation_hidden_at before 0156) answers that it does not exist, naming it, and the read runs
  *  again without it. */
 const PREFLIGHT_COLUMNS: readonly string[] = [
   "id",
@@ -63,8 +65,9 @@ const PREFLIGHT_COLUMNS: readonly string[] = [
   "artist_credit",
   "footer_text",
   "face_content",
+  "moderation_hidden_at",
 ];
-const LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname"];
+const LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname", "moderation_hidden_at"];
 
 /** The rows of `ids` the caller's session can read (RLS decides), with the
  *  columns above. */

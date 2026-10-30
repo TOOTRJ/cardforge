@@ -100,6 +100,7 @@ describe("estimateDeckRemix", () => {
       doubleFaced: 1,
       skipped: 0,
       emblems: 0,
+      moderationLocked: 0,
       unresolved: 0,
       creditsByEntry: { "e-cathar": 2, "e-elves": 1, "e-own": 1 },
     });
@@ -153,6 +154,7 @@ describe("estimateDeckRemix", () => {
       doubleFaced: 1,
       skipped: 0,
       emblems: 0,
+      moderationLocked: 0,
       unresolved: 0,
       creditsByEntry: { "e-dfc": 2, "e-vehicle": 1, "e-gone": 1 },
     });
@@ -263,6 +265,7 @@ describe("estimateDeckRemix", () => {
       doubleFaced: 0,
       skipped: 0,
       emblems: 2,
+      moderationLocked: 0,
       unresolved: 0,
       // The own emblem is not an entry of the remix at all; the printed one
       // is priced 0 — what tells the plan to make no step for it.
@@ -272,6 +275,18 @@ describe("estimateDeckRemix", () => {
     // A deck of emblems alone: nothing to remix, nothing to pay.
     s.items = s.items.slice(0, 2);
     expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 0, credits: 0, emblems: 2 });
+  });
+
+  it("an own card moderation hid (0156) is left out: no entry, no credit, counted for the dialog, no slot", async () => {
+    s.verified = keys(["m15", "g"]);
+    s.items = [
+      { ...entry("locked", { card_id: "11111111-1111-4111-8111-111111111111" }), card: { card_type: "creature", moderation_hidden_at: "2026-10-29T00:00:00Z" } },
+      entry("e-a", { name: "Llanowar Elves", scryfall_id: idOf("dom-168") }),
+      entry("e-b", { name: "Llanowar Elves", scryfall_id: idOf("dom-168") }),
+    ];
+    const estimate = await estimateDeckRemix("deck-1", 2);
+    expect(estimate).toMatchObject({ cards: 2, credits: 2, skipped: 0, moderationLocked: 1, emblems: 0 });
+    expect(estimate.creditsByEntry).not.toHaveProperty("locked");
   });
 
   it("an own emblem takes no slot of the batch cap", async () => {
@@ -304,7 +319,7 @@ describe("estimateDeckRemix", () => {
   it("a deck that isn't the caller's (a public one RLS lets them read) is zero cards, and never asks Scryfall", async () => {
     s.items = [entry("e-cathar", { name: "Brutal Cathar", scryfall_id: idOf("mid-7") })];
     s.deck = { id: "deck-1", owner_id: "someone-else" };
-    expect(await estimateDeckRemix("deck-1", 100)).toEqual({ cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, unresolved: 0, creditsByEntry: {} });
+    expect(await estimateDeckRemix("deck-1", 100)).toEqual({ cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, moderationLocked: 0, unresolved: 0, creditsByEntry: {} });
     s.deck = null;
     expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 0 });
     s.deck = { id: "deck-1", owner_id: "user-1" };

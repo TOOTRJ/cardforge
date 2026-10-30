@@ -1,5 +1,6 @@
 import { MAX_DECK_ENTRIES } from "@/lib/decks/import-plan";
 import { profaneFieldList, type ProfanityField } from "@/lib/moderation/profanity";
+import { HIDDEN_BY_MODERATION_LABEL, MODERATION_LOCK_NOTE } from "@/lib/moderation/lock";
 
 // ---------------------------------------------------------------------------
 // Deck membership, as words (TODO DK9): the creator's "Add to a deck" box,
@@ -85,6 +86,10 @@ export function privateCardArtReason(missing: "front" | "back"): string {
     ? "Its back face has no artwork yet, so it stays private. Add artwork before publishing."
     : "It has no artwork yet, so it stays private. Add artwork before publishing.";
 }
+
+/** Why a private card can't be made public: moderation hid it (migration
+ *  0156) — it stays private until an admin unhides it. */
+export const PRIVATE_CARD_MODERATION_REASON = `${HIDDEN_BY_MODERATION_LABEL}. ${MODERATION_LOCK_NOTE}`;
 
 /** Why a private card can't be made public: its second face has no name. */
 export const PRIVATE_CARD_UNNAMED_FACE_REASON =

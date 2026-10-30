@@ -123,7 +123,7 @@ describe("a card that draws the file → the moderation hide", () => {
       s.rows.cards = { id: CARD, visibility: "public", ...row };
       const [result] = await act(admin(), { kind: "hide-card", cardId: CARD });
       expect(result).toMatchObject({ status: "done", detail: "hidden (was public)" });
-      expect(s.hide).toHaveBeenCalledWith(expect.anything(), CARD, { resolvedBy: null });
+      expect(s.hide).toHaveBeenCalledWith(expect.anything(), CARD, { resolvedBy: null, reason: "flagged_file" });
     }
   });
 

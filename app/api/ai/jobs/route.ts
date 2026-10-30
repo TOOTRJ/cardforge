@@ -384,7 +384,9 @@ export async function POST(request: Request) {
         {
           ok: false,
           error:
-            remixEstimate.emblems > 0
+            remixEstimate.moderationLocked > 0
+              ? "That deck has nothing to remix: emblems and cards hidden by moderation aren't remixed."
+              : remixEstimate.emblems > 0
               ? "That deck has only emblems, and emblems aren't remixed."
               : "That deck has no cards to remix, or it isn't yours.",
         },
