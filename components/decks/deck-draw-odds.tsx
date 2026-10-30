@@ -5,7 +5,7 @@ import { ChipGroup } from "@/components/ui/chip-group";
 import { deckLibraryOf, defaultDrawPick, drawPickOptions } from "@/lib/decks/deck-charts";
 import { deckRowsOf } from "@/lib/decks/deck-view";
 import { cardOddsByTurn, formatOdds, hypergeometricAtLeast, landOddsTable, OPENING_HAND } from "@/lib/decks/draw-odds";
-import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
+import { GONE_CARD_NAME, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +55,11 @@ export function DeckDrawOdds({
   const library = useMemo(() => deckLibraryOf(deckRowsOf(items, canManage)), [items, canManage]);
   const librarySize = library.reduce((sum, card) => sum + card.quantity, 0);
   const lands = library.reduce((sum, card) => sum + (card.isLand ? card.quantity : 0), 0);
-  const options = useMemo(() => drawPickOptions(library, PRIVATE_CARD_NAME), [library]);
+  // Neither a private card nor a deleted one (0153) is a card to pick.
+  const options = useMemo(
+    () => drawPickOptions(canManage ? library : library.filter((card) => card.name !== GONE_CARD_NAME), PRIVATE_CARD_NAME),
+    [library, canManage],
+  );
   // The spell with the most copies first — the question a player asks most.
   const defaultPick = useMemo(() => defaultDrawPick(options)?.key ?? "", [options]);
   const [picked, setPicked] = useState<string>("");

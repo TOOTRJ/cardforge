@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { ArrowDown, ArrowUp, HelpCircle, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, HelpCircle, Lock } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { TwoFacesMark } from "@/components/cards/two-faces-mark";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
@@ -262,7 +262,9 @@ function EntryRow({ row, showProxies, onOpen }: { row: ViewRow; showProxies: boo
           />
         ) : (
           <span className="flex h-11 w-8 shrink-0 items-center justify-center rounded-sm bg-elevated">
-            {row.isPrivate ? (
+            {row.isGone ? (
+              <Ban className="h-3.5 w-3.5 text-subtle" aria-hidden />
+            ) : row.isPrivate ? (
               <Lock className="h-3.5 w-3.5 text-subtle" aria-hidden />
             ) : (
               <HelpCircle className="h-3.5 w-3.5 text-subtle" aria-hidden />

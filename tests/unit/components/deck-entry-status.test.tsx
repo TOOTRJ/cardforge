@@ -123,11 +123,15 @@ describe("the deck list's status badges", () => {
     // A card the visitor can't read is a "Private card" (D11) — with no
     // printing behind it, the entry's name is the card's own title: hidden.
     const privateRows = screen.getAllByRole("button", { name: /^Private card, / });
-    expect(privateRows.map((row) => row.querySelector("[data-status]")?.textContent).sort()).toEqual(["No longer available", "Original"]);
+    expect(privateRows.map((row) => row.querySelector("[data-status]")?.textContent)).toEqual(["Original"]);
     expect(screen.queryByText("Tidecaller Apprentice")).toBeNull();
-    // A deleted card is gone for everyone — and its name (the deleted
-    // card's title, maybe a private one's) is the owner's alone (0152).
+    // A deleted card is gone for everyone — its name (the deleted card's
+    // title, maybe a private one's) is the owner's alone (0152), and a
+    // visitor reads "No longer available" in its place, never "Private
+    // card" (0153).
     expect(screen.queryByText("Ashen Prototype")).toBeNull();
+    const gone = rowOf("No longer available");
+    expect(gone.querySelector("[data-status]")?.textContent).toBe("No longer available");
   });
 
   it("credits another creator's card, in the row and its name", () => {

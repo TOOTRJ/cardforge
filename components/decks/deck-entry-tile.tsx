@@ -1,7 +1,8 @@
 "use client";
 
 import type { KeyboardEvent, ReactNode } from "react";
-import { HelpCircle, Lock } from "lucide-react";
+import { Ban, HelpCircle, Lock } from "lucide-react";
+import { GONE_CARD_NAME } from "@/lib/decks/private-card-name";
 import { CardTile } from "@/components/cards/card-tile";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import { cardCornersClass } from "@/lib/cards/card-orientation";
@@ -95,7 +96,7 @@ export function DeckEntryTile({
   if (row.isPrivate) {
     picture = (
       <button type="button" {...opener} onClick={open} className={cn("block w-full", cardCornersClass(false), OPENER_CLASS)}>
-        <PrivateCardFace name={row.privateName} />
+        <PrivateCardFace name={row.privateName} gone={row.isGone} />
       </button>
     );
   } else if (card && useCard) {
@@ -220,9 +221,21 @@ function StandInFace({
 }
 
 /** A visitor's private card (D11): a lock, the words, the real card's name
- *  where the entry has one — never the private card's title or art. The
+ *  where the entry has one — never the private card's title or art. A
+ *  DELETED card (`gone`, 0153) says "No longer available" instead. The
  *  sample hand (deck-sample-hand.tsx) draws it too. */
-export function PrivateCardFace({ name }: { name: string | null }) {
+export function PrivateCardFace({ name, gone = false }: { name: string | null; gone?: boolean }) {
+  if (gone) {
+    return (
+      <StandInFace title={GONE_CARD_NAME} titleIcon={<Ban className="h-3 w-3 shrink-0 text-muted" aria-hidden />} dashed>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted">
+          <Ban className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="text-sm font-semibold text-foreground">{GONE_CARD_NAME}</span>
+        <span className="text-xs leading-5 text-muted">The card behind this entry was deleted.</span>
+      </StandInFace>
+    );
+  }
   return (
     <StandInFace title={name ?? "Private card"} titleIcon={<Lock className="h-3 w-3 shrink-0 text-muted" aria-hidden />} dashed>
       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted">
