@@ -768,11 +768,13 @@ transaction, a claw-back a POSITIVE one.
 - The user's `comp_plan` notification names the amount credited ("We've put
   $6 on your billing balance…"); the admin's toast names what was credited
   or taken back (`compCreditNote`).
+- Not sandbox-verified either (no Stripe key in the session that built
+  it): the balance credit and claw-back — run them once on a test clock
+  with the trial move below.
 
 Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
 question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
 while comped), `webhook-handlers.test.ts` (the second reminder). Not
 sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
-`proration_behavior: none`, and the balance credit / claw-back — run both
-once on a test clock.
+`proration_behavior: none` — run it once on a test clock.
