@@ -10,7 +10,7 @@ import { HELP_SECTIONS } from "@/lib/content/help";
 // can never again describe a feature the site no longer has.
 describe("/llms.txt", () => {
   it("maps every guide and key page, and none of the removed features", async () => {
-    const text = await GET().text();
+    const text = await (await GET()).text();
     for (const article of listArticles()) {
       expect(text).toContain(`https://www.pipglyph.com/articles/${article.slug}`);
     }
@@ -21,7 +21,7 @@ describe("/llms.txt", () => {
   });
 
   it("lists every help section under Help, and no longer advertises /faq (a 308)", async () => {
-    const text = await GET().text();
+    const text = await (await GET()).text();
     const start = text.indexOf("\n## Help\n");
     expect(start).toBeGreaterThan(-1);
     const help = text.slice(start).split("\n## ")[1];
@@ -34,14 +34,14 @@ describe("/llms.txt", () => {
   });
 
   it("says what the guest creator is: every step read-only, an account to design (the FAQ's words)", async () => {
-    const text = await GET().text();
+    const text = await (await GET()).text();
     const line = text.split("\n").find((l) => l.includes("https://www.pipglyph.com/create)"));
     expect(line).toMatch(/read-only; designing and saving a card need a free account/);
     expect(line).not.toMatch(/anyone can design/i);
   });
 
   it("names /learn, /tools, /glossary and the What's new feed, and lists the guides under their categories", async () => {
-    const text = await GET().text();
+    const text = await (await GET()).text();
     for (const path of ["/learn", "/tools", "/glossary", "/news", "/news/feed.xml", "/creators", "/frames", "/frames/requested"]) {
       expect(text).toContain(`https://www.pipglyph.com${path}`);
     }

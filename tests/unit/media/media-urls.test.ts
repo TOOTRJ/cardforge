@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -220,9 +220,22 @@ describe("drawableCardMedia — what both card renderers may draw", () => {
 
 // The TS table and migration 0127's media_url_allowed() must agree, or the
 // app would draw what the database refuses (or the other way round).
+// The NEWEST migration that defines media_url_allowed() is the rule the
+// database runs (0127, re-stated by 0150 and 0153 with one branch each).
+const latestMediaUrlAllowed = (): string => {
+  const dir = join(process.cwd(), "supabase/migrations");
+  const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort();
+  for (const file of files.reverse()) {
+    const text = readFileSync(join(dir, file), "utf8");
+    const match = /create or replace function public\.media_url_allowed[\s\S]*?\$\$;/.exec(text);
+    if (match) return match[0];
+  }
+  throw new Error("no migration defines media_url_allowed");
+};
+
 describe("the same rules as migration 0127", () => {
   const sql = readFileSync(join(process.cwd(), "supabase/migrations/0127_media_url_guards.sql"), "utf8");
-  const fn = /create or replace function public\.media_url_allowed[\s\S]*?\$\$;/.exec(sql)![0];
+  const fn = latestMediaUrlAllowed();
 
   it("the kind → bucket table", () => {
     const table = /v_buckets := case p_kind([\s\S]*?)end;/.exec(fn)![1];

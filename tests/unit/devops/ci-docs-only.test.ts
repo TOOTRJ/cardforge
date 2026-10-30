@@ -153,11 +153,14 @@ describe("the notes allow-list", () => {
       .filter(Boolean);
     expect(tracked.length).toBeGreaterThan(30);
     const code = tracked.filter((file) => !isNotesFile(file));
-    expect(code.filter((file) => !file.startsWith("content/articles/")).sort()).toEqual([
+    // The guides (content/articles/) and the composer's shipped drafts
+    // (content/article-drafts/, "Import drafts" + seeds/32) are app content.
+    const content = (file: string) => file.startsWith("content/articles/") || file.startsWith("content/article-drafts/");
+    expect(code.filter((file) => !content(file)).sort()).toEqual([
       "supabase/migrations/README.md",
       "tests/unit/render/fixtures/google-noto-sans/README.md",
     ]);
-    expect(code.filter((file) => file.startsWith("content/articles/")).every((file) => file.endsWith(".mdx"))).toBe(true);
+    expect(code.filter(content).every((file) => file.endsWith(".mdx"))).toBe(true);
   });
 });
 

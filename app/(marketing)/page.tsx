@@ -20,7 +20,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { countPublicCards, getCommunityPulse, listTrendingCards } from "@/lib/cards/queries";
 import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
-import { listArticles } from "@/lib/content/articles";
+import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
@@ -225,10 +225,11 @@ export default async function HomePage() {
 }
 
 // Newest three guides — fresh internal links from the most-crawled page
-// (and a freshness signal as the article library grows). Filesystem read,
-// so it stays static with the rest of the homepage.
-function LatestGuides() {
-  const articles = listArticles().slice(0, 3);
+// (and a freshness signal as the article library grows). The MDX guides and
+// the released composer articles — a cached, cookie-free read, so it stays
+// static (ISR) with the rest of the homepage.
+async function LatestGuides() {
+  const articles = (await listPublishedArticles()).slice(0, 3);
   if (articles.length === 0) return null;
   return (
     <section

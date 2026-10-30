@@ -1,0 +1,90 @@
+---
+title: "How to Name a Custom Magic Card"
+seoTitle: "How to Name a Custom MTG Card"
+description: "Name a custom Magic card that sounds real: name patterns by card type, legendary names and epithets, length that fits the title bar, and collision checks."
+excerpt: "A name is the first rules text anyone reads. It sets the tone, hints at the effect and decides whether the card feels printed or homemade."
+tags: ["card design", "card types"]
+category: design
+cover:
+  src: "/article-media/how-to-name-a-custom-mtg-card/cover.svg"
+  alt: "A table of card-name patterns by card type, each with an invented example name"
+  width: 1600
+  height: 900
+faq:
+  - q: "How long can a Magic card name be?"
+    a: "Most printed card names run from one to four words and fit beside a full mana cost without shrinking. Names past about thirty characters start to crowd the title bar; PipGlyph's creator sets a long name smaller to fit beside the cost and only cuts it with an ellipsis when it would get too small to read."
+  - q: "How do legendary card names work?"
+    a: "A legendary character's name usually takes the form of a personal name, a comma, and an epithet that says who they are, such as a title or a role. Rules text can refer to the card by its short form, the personal name alone, which keeps long names readable in abilities."
+  - q: "Can I use a real card's name on a custom card?"
+    a: "Avoid it. Two different cards with the same name confuse players, break deck lists and searches, and can look like a counterfeit. Check the name with an exact-name search on Scryfall before you settle on it, and pick another if it is taken."
+  - q: "Should a card name describe what the card does?"
+    a: "It should hint at it without explaining it. A good name points at the effect or the world, so the rules text feels like the natural consequence of the name, but it leaves the mechanics to the text box."
+---
+
+A good custom card name is short, concrete and evocative: one to four words that fit beside the mana cost, follow the naming pattern of the card's type, hint at what the card does, and belong to no printed card. Write it after the rules text, read it aloud, and check it with an exact-name search before you print.
+
+## What makes a card name sound like Magic?
+
+Printed Magic names feel like they come from a world, not a game. A few habits make that happen:
+
+- **Concrete nouns.** Glass, salt, lanterns, bridges and tides. Things you could draw beat abstractions like "power" and "energy".
+- **One surprise.** An ordinary word next to an unexpected one ("Saltglass Courier") reads as a world with its own materials.
+- **No modern slang, no puns.** Jokes date quickly and break the tone of the other cards in the deck. Keep them for a deliberately silly set.
+- **The effect, hinted.** A card that returns things from the graveyard can be named for memory, return or the dead. The rules text then feels like what the name promised.
+
+Write the rules text first, then name the card. A name chosen first tends to pull the design toward the name.
+
+## Which name pattern fits each card type?
+
+Each card type has a habit, and following it makes a custom card read as the type it is. The examples below were invented for this guide.
+
+| Card type | Pattern | Example |
+| --- | --- | --- |
+| Creature | material or place + role | Saltglass Courier |
+| Legendary creature | name, epithet | Wren Ashvale, Lantern Keeper |
+| Instant or sorcery | an event, or a verb phrase | Unwritten Hour |
+| Enchantment | a state, an oath or a law | Oath of the Tidegate |
+| Artifact | maker + object | Cartographer's Compass |
+| Land | a place | Hollowmere Crossing |
+| Planeswalker | name, a short role or a moment | Wren, Keeper of the Last Light |
+
+Instants and sorceries are where custom names go most often wrong. A spell is something that happens, so name the event ("Unwritten Hour") or the action ("Scatter the Ledgers"), not the creature that cast it. The guide to [MTG card types](/articles/mtg-card-types-explained) covers what each type does in the game, and the name should match.
+
+## How long can a card name be?
+
+Aim for fewer than about twenty-five characters, and treat thirty as the edge. The title bar shares its width with the mana cost: a five-symbol cost leaves much less room than a one-symbol cost.
+
+<Figure src="/article-media/how-to-name-a-custom-mtg-card/title-fit.svg" alt="Three title bars showing a short name at full size, a long name set smaller, and an over-long name cut with an ellipsis" caption="How the creator fits a name: full size when it fits, smaller beside a long cost, and cut with an ellipsis only past the smallest readable size." width="1600" height="900" />
+
+PipGlyph's [card creator](/create) measures the name against the cost on the frame you picked. A name that fits is printed at full size. A longer one is set smaller so it still sits beside the cost, and only a name too long for the smallest readable size is cut with an ellipsis. If your name shrinks, try a shorter epithet before you accept the smaller type, because a card name is read from across the table.
+
+## How do you name a legendary card?
+
+Use a personal name, a comma and an epithet. The personal name makes the character a person. The epithet says who they are in the world: a title, a role or a deed.
+
+- **Make the personal name pronounceable.** Two syllables, maybe three. Players will say it all game.
+- **Make the epithet do work.** "Lantern Keeper" says something; "the Powerful" does not.
+- **Use the short form in rules text.** Printed legendary cards refer to themselves by the personal name alone. On PipGlyph, write `~` in the rules text, and the card prints its own name there. Rename the card and the rules text follows.
+
+If you want a second name on the card, PipGlyph's **Nickname** field prints it in the title bar, and on the frames that support it the card's real name goes on a small plate hanging from the art. Printed cards with an alternate name work the same way. It is useful for a gift card or an in-joke, where the playful name goes on top and the real one stays readable.
+
+## How do you check a name isn't already taken?
+
+Search for it before you print it.
+
+1. **Scryfall exact-name search.** Type `!"Your Card Name"` into Scryfall's search. An exact match means a printed card already uses it.
+2. **Close calls.** Search the main word alone. Two cards one letter apart cause the same confusion as an exact match.
+3. **The community gallery.** Search [PipGlyph's gallery](/gallery) too. A name another creator made famous is better left alone.
+4. **Trademarks and real people.** Avoid brand names and real people's full names unless the card is a private gift they will enjoy.
+
+## A naming checklist
+
+Before you save the card, read the name aloud and run through five questions:
+
+- Does it follow the pattern of its card type?
+- Does it hint at what the card does?
+- Does it fit the title bar at full size beside its cost?
+- Can the table pronounce it?
+- Is it free on Scryfall and in the gallery?
+
+The name is part of the card's text, so it deserves the care of the rest. The guide to [MTG card anatomy](/articles/mtg-card-anatomy-explained) covers the other parts, and the guide to [writing Oracle text](/articles/how-to-write-mtg-oracle-text) covers how the card refers to itself.
