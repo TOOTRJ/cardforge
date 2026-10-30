@@ -45,6 +45,25 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     ).toBe("ended your complimentary plan access.");
   });
 
+  it("referral_signup and referral_reward: who, what month, where it links", () => {
+    const d = (type: string, payload: Record<string, unknown>) =>
+      describeNotification({ type, actor, card: null, threadId: null, payload }, { isAdmin: false });
+    expect(d("referral_signup", { referralId: "r1" })).toMatchObject({
+      body: "joined PipGlyph with your referral link. You'll both get a free month when they save their first card.",
+      href: "/dashboard/referrals",
+    });
+    expect(d("referral_reward", { side: "referrer", reward: "comp_month", tier: "plus", until: "2026-12-01T12:00:00Z" }).body).toBe(
+      "saved their first card — you've earned a free month of Plus (until Dec 1, 2026). Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referrer", reward: "balance_credit", amountCents: 1500, currency: "usd" }).body).toBe(
+      "saved their first card — you've earned a free month — $15 off your next bill. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referee", reward: "comp_month", tier: "plus", until: "2026-12-01T12:00:00Z" })).toMatchObject({
+      body: "invited you to PipGlyph — you've earned a free month of Plus (until Dec 1, 2026) for saving your first card.",
+      href: "/dashboard/billing",
+    });
+  });
+
   it("describes card limit overrides and resets", () => {
     expect(
       describeNotification({ type: "card_limit", actor, card: null, threadId: null, payload: { limit: 2500 } }, { isAdmin: false }).body,

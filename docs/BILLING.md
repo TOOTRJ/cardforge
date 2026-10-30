@@ -734,3 +734,68 @@ while comped), `webhook-handlers.test.ts` (the second reminder). Not
 sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
 `proration_behavior: none` — run it once on a test clock.
+
+## Referrals (2026-10-30, migration 0153)
+
+Research and the numbers behind each rule: `docs/research/conversion-2026-10.md`
+§3 and §8. Code: `lib/referrals/` (rules, fraud, reward, server).
+
+**The link.** Every user has ONE code (`referral_codes`, minted on first ask
+by `my_referral_code()`: 8 hex characters); the link is `/?ref=<code>`. The
+code rides the existing first-touch attribution — `AttributionCapture`
+(sessionStorage, no cookie; a `ref` the tab doesn't hold yet is added to the
+first touch, the FIRST code wins) → `AttributionFields` (hidden `attr_ref`) →
+`signupAction`, which writes the `referrals` row (`recordReferralSignup`)
+beside the `signup` event (whose props say only `referred: true`, never the
+code). A Google sign-up never posts that form: onboarding's finish sends the
+tab's code instead (`completeOnboardingAction({ referralCode })`, first
+finish only). Either way the account must be NEW — under
+`REFERRAL_CLAIM_WINDOW_DAYS` (7) old, never subscribed, no saved card — and
+the first claim wins (`referee_id` is unique). The referrer gets a
+`referral_signup` notification.
+
+**Activation = the first saved card.** `createCardAction` → `recordActivity`
+answers true when it wrote `first_card_saved`, and then (in `after()`, never
+holding up or failing the save) `qualifyReferral`: signed_up → first_card in
+ONE conditional update (a second save or a retry finds nothing), then
+
+1. the window: the first card within `REFERRAL_ACTIVATION_WINDOW_DAYS` (30)
+   of the signup, else `expired`;
+2. fraud (`lib/referrals/fraud.ts`) — **nobody rewarded**: the same inbox
+   (case, `+tag`, Gmail dots), a card fingerprint on both Stripe customers,
+   a throwaway domain (`DISPOSABLE_EMAIL_DOMAINS`); **the friend only**: the
+   same CUSTOM domain (free mail — gmail, outlook, … — and reserved TLDs like
+   `.test` never match). Self-referral by id is a table CHECK;
+3. caps — `claim_referral_reward()` (service role, a per-referrer advisory
+   lock): `REFERRAL_MONTHLY_CAP` (3 a UTC month) and `REFERRAL_LIFETIME_CAP`
+   (12) rewarded referrals; past either the row is `capped` and the FRIEND
+   still gets their month;
+4. each side's month and one `referral_reward` notification (0153's unique
+   index: once per referral and side).
+
+**What "one free month" is** (`planReferralMonth`, `lib/referrals/reward.ts`):
+
+| The account | The month |
+|---|---|
+| free, or comped | a comp month (`comp_tier` / `comp_expires_at`, the admin comp's columns): Plus, or the higher tier it already has; 30 days added to the end of a running comp |
+| a RENEWING subscription — active or trialing | a Stripe **customer-balance credit** of one month at the subscription's own price (a twelfth of an annual one), idempotency key `referral:<id>:<side>`. Stripe takes it off the next invoice; the plan's status, dates and trial are untouched (a 100 %-off coupon would make an annual renewal free for a year; moving `trial_end` would re-run the trial paths) |
+| a cancelled plan still running | a comp month that starts when the plan ends, at its tier |
+| a broken payment | a comp month of Plus |
+| an admin, or an open-ended comp | nothing (nothing to add) |
+
+A comp month is a comp in every way: perks, the tier's monthly credits
+(`refillTierFor`), capacity — and, since the plans audit, Checkout while
+comped starts billing when it ends. A balance credit that fails (Stripe
+down) is recorded as `none` with `grant_failed` on the row
+(`referrer_reward_detail`), visible to admins; no retry job.
+
+**Who sees what.** A user reads their own rows as referrer or referee
+through a COLUMN grant (status and dates — never `block_reason` or the
+reward details): a blocked referral reads "Not eligible". Admins read
+everything (RLS `viewer_is_admin()`), and `admin_referral_stats(since)` is
+the admin panel's one read. Writes: the service role only.
+
+**Not built (owner decisions, PR body):** a 72-hour hold on the referrer's
+month (the research's reversal window), a click window longer than the tab
+(sessionStorage dies with it — a localStorage entry would be a new storage
+decision), IP / velocity review queues, a credit-only referral comp.

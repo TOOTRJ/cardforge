@@ -136,6 +136,37 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "referral_signup":
+      // Someone joined through the recipient's referral link (0153).
+      return {
+        subject: actorName,
+        body: "joined PipGlyph with your referral link. You'll both get a free month when they save their first card.",
+        href: "/dashboard/referrals",
+      };
+    case "referral_reward": {
+      // One free month, either side of a referral (lib/referrals/server.ts).
+      const side = str(payload.side);
+      const reward = str(payload.reward);
+      const tier = str(payload.tier);
+      const until = str(payload.until);
+      const amountCents = num(payload.amountCents);
+      const currency = str(payload.currency) ?? "usd";
+      const month =
+        reward === "balance_credit" && amountCents != null
+          ? `a free month — ${formatMoney(amountCents, currency)} off your next bill`
+          : `a free month of ${TIER_LABEL[tier ?? ""] ?? "Plus"}${until ? ` (until ${formatShortDate(until)})` : ""}`;
+      return side === "referee"
+        ? {
+            subject: actorName,
+            body: `invited you to PipGlyph — you've earned ${month} for saving your first card.`,
+            href: "/dashboard/billing",
+          }
+        : {
+            subject: actorName,
+            body: `saved their first card — you've earned ${month}. Thanks for spreading the word!`,
+            href: "/dashboard/referrals",
+          };
+    }
     case "deck_like": {
       // Someone liked your PUBLIC deck — once per liker and deck (0149).
       const title = str(payload.title);

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { usernameSchema } from "@/lib/auth/schemas";
+import { recordReferralSignup } from "@/lib/referrals/server";
 import { welcomeEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
@@ -111,6 +112,9 @@ const completeSchema = z.object({
       newsletter: z.boolean(),
     })
     .optional(),
+  /** The tab's first-touch referral code (a Google sign-up never posts the
+   *  signup form's hidden fields — this is its one chance). */
+  referralCode: z.string().max(16).optional(),
 });
 
 export type CompleteResult = { ok: true } | { ok: false; error: string };
@@ -119,6 +123,7 @@ export type CompleteResult = { ok: true } | { ok: false; error: string };
  *  row's defaults stand, which never include the newsletter. */
 export async function completeOnboardingAction(input: {
   preferences?: { account: boolean; activity: boolean; newsletter: boolean };
+  referralCode?: string;
 }): Promise<CompleteResult> {
   const parsed = completeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid preferences." };
@@ -155,6 +160,12 @@ export async function completeOnboardingAction(input: {
   }
 
   const profile = finished?.[0];
+  // First finish only (`finished` is empty on a repeat): a referral the
+  // signup action didn't record — the Google path. recordReferralSignup
+  // checks the account is new and keeps the first claim.
+  if (profile && parsed.data.referralCode && isAdminConfigured()) {
+    await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: parsed.data.referralCode });
+  }
   if (profile && isEmailConfigured() && isAdminConfigured()) {
     // After the response, identity passed in as plain values — never re-auth
     // inside after() (it can rotate the session cookie with nowhere to set it).

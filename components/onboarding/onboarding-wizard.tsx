@@ -17,6 +17,7 @@ import {
   type UsernameCheck,
 } from "@/lib/onboarding/actions";
 import { isGeneratedUsername } from "@/lib/auth/usernames";
+import { ATTRIBUTION_STORAGE_KEY, sanitizeAttribution } from "@/lib/analytics/attribution";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -110,9 +111,11 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
   const finish = (withPreferences: boolean) =>
     startTransition(async () => {
       setError(null);
-      const result = await completeOnboardingAction(
-        withPreferences ? { preferences: email } : {},
-      );
+      const referralCode = storedReferralCode();
+      const result = await completeOnboardingAction({
+        ...(withPreferences ? { preferences: email } : {}),
+        ...(referralCode ? { referralCode } : {}),
+      });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -390,4 +393,15 @@ function Field({
       </span>
     </label>
   );
+}
+
+/** The tab's first-touch referral code (AttributionCapture), if any. */
+function storedReferralCode(): string | undefined {
+  try {
+    const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+    if (!raw) return undefined;
+    return sanitizeAttribution(JSON.parse(raw) as Record<string, unknown>).ref;
+  } catch {
+    return undefined;
+  }
 }

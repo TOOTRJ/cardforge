@@ -1,7 +1,8 @@
 "use server";
 
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
-import { ATTRIBUTION_FIELDS, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { ATTRIBUTION_FIELDS, attributionProps, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { recordReferralSignup } from "@/lib/referrals/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 import { revalidatePath } from "next/cache";
@@ -221,16 +222,24 @@ export async function signupAction(
   // user with no identities, and that must record nothing.
   const newUser = signUpData.user;
   if (newUser?.id && (newUser.identities?.length ?? 0) > 0 && isAdminConfigured()) {
-    await recordFunnelEvent(createAdminClient(), {
+    const attribution = sanitizeAttribution({
+      referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
+      utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
+      utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
+      utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
+      ref: formData.get(ATTRIBUTION_FIELDS.ref),
+    });
+    const admin = createAdminClient();
+    await recordFunnelEvent(admin, {
       event: "signup",
       userId: newUser.id,
-      props: sanitizeAttribution({
-        referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
-        utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
-        utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
-        utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
-      }),
+      props: attributionProps(attribution),
     });
+    // Joined through a friend's link: the referral row (lib/referrals). Its
+    // reward waits for the first saved card. Best effort — never the signup.
+    if (attribution.ref) {
+      await recordReferralSignup(admin, { refereeId: newUser.id, code: attribution.ref });
+    }
   }
 
   // If email confirmation is OFF, signUp also signs the user in.
