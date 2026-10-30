@@ -47,12 +47,7 @@ function handFrames(source: string): string[] {
 }
 
 /** Hand-written frames that stay, and why. */
-const HAND_FRAMES_ALLOWED: Record<string, string> = {
-  // The card page's 1152 px (6xl) frame; the modal draws the same content
-  // unframed. The plan moves it up to standard — a visual change of its
-  // own, never part of WD1's "nothing moves".
-  "components/cards/card-detail-content.tsx": "the card page's 6xl frame",
-};
+const HAND_FRAMES_ALLOWED: Record<string, string> = {};
 
 /** Pages that draw no frame of their own, and why. */
 const FRAMELESS_PAGES: Record<string, string> = {
@@ -67,7 +62,6 @@ const FRAMELESS_PAGES: Record<string, string> = {
   "app/(auth)/reset-password/page.tsx": "the auth layout's centred column",
   "app/(auth)/signup/page.tsx": "the auth layout's centred column",
   "app/(onboarding)/onboarding/page.tsx": "framed by the onboarding layout",
-  "app/(marketing)/card/[username]/[slug]/page.tsx": "CardDetailContent's 6xl frame (HAND_FRAMES_ALLOWED)",
   "app/(marketing)/card/[username]/page.tsx": "a redirect",
 };
 
