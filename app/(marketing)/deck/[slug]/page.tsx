@@ -219,7 +219,6 @@ export default async function DeckDetailPage({
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
   const hasCards = items.length > 0;
   const usesCommander = formatHasCommander(deck.format);
-  const hasCommander = items.some((item) => item.entry.board === "commander");
   const hasMainboard = items.some((item) => item.entry.board === "main" && item.entry.quantity > 0);
 
   // The format check is the owner's to-do list (TODO DK0.9): a visitor
@@ -448,29 +447,41 @@ export default async function DeckDetailPage({
               {cardCount} in the deck
             </span>
           </h2>
-          {!hasCards ? (
-            isOwner ? (
-              <DeckStartDoors commander={usesCommander} />
-            ) : (
-              <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
-            )
+          {isOwner ? (
+            // The owner's deck is its editor (TODO DK5 part 2): the add box
+            // first, then the doors of an empty deck or its cards — drawn at
+            // once as they change (components/decks/use-deck-editor). The
+            // list decides the commander slot from its live rows.
+            <DeckCardList
+              items={shownItems}
+              ownerUsername={deck.owner?.username ?? null}
+              canManage
+              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
+              // The owner's cover picks in the card pop-up (TODO DK6.4).
+              coverOwnerId={deck.owner_id}
+              initialPrefs={viewPrefs}
+              summary={{
+                format: deck.format,
+                analytics,
+                formatIssues: warnings.length,
+              }}
+              emptyState={<DeckStartDoors key="doors" commander={usesCommander} />}
+              commanderSlot={usesCommander ? <CommanderSlot key="commander-slot" compact /> : null}
+            />
+          ) : !hasCards ? (
+            <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />
           ) : (
-            <div className="flex flex-col gap-4">
-              {isOwner && usesCommander && !hasCommander ? <CommanderSlot compact /> : null}
-              <DeckCardList
-                items={shownItems}
-                ownerUsername={deck.owner?.username ?? null}
-                canManage={isOwner}
-                // The owner's cover picks in the card pop-up (TODO DK6.4).
-                coverOwnerId={isOwner ? deck.owner_id : null}
-                initialPrefs={viewPrefs}
-                summary={{
-                  format: deck.format,
-                  analytics,
-                  formatIssues: isOwner ? warnings.length : null,
-                }}
-              />
-            </div>
+            <DeckCardList
+              items={shownItems}
+              ownerUsername={deck.owner?.username ?? null}
+              canManage={false}
+              initialPrefs={viewPrefs}
+              summary={{
+                format: deck.format,
+                analytics,
+                formatIssues: null,
+              }}
+            />
           )}
         </section>
 

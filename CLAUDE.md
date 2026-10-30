@@ -1943,6 +1943,62 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+  The OWNER's page is the deck's editor (DK5 part 2): ONE provider,
+  `DeckEditorProvider` (`components/decks/use-deck-editor.tsx`), makes every
+  edit — steppers, Move to, Remove, the selection's bulk bar, the add box —
+  draws it at once (useOptimistic over the server's rows; every edit is the
+  VALUE it wants, `lib/decks/entry-ops.ts`) and sends it through the write
+  queue (`lib/decks/entry-queue.ts`: one line per entry, a waiting edit
+  replaced by a newer one of its kind, a failure cancelling the edits on top
+  of it). The writes are the batch actions of `lib/decks/card-actions.ts`
+  (`updateDeckEntriesAction` / `removeDeckEntriesAction`: one deck a call,
+  every statement held to `deck_id`, ONE revalidation —
+  `revalidateDeckEntryChange`: the deck's paths with IndexNow and My Cards'
+  chips); their revalidation brings the page back with the answer — never a
+  `router.refresh()` per edit (only after a request that never answered,
+  or a `stale` refusal: the entries are gone, removed in another tab).
+  A refusal rolls back and is SAID (toast + the live region); leaving with a
+  write on its way asks first. A Move NEVER merges: two rows of one printing
+  on one board are legitimate (your version beside the real card, a cover
+  pick), so nothing may assume one row per key. A removal's Undo (the toast,
+  the phone bar, ⌘Z) is `restoreDeckEntriesAction` — the lines back through
+  the paths cards come in by, NEVER a direct insert, and each removed entry
+  a NEW row of its own: `stageRestoreLines` (`lib/decks/entry-batch.ts`)
+  writes each line onto a board where no row has its key (its own, else a
+  free one, then moved home), since `import_deck_entries` merges a line into
+  the first row with its key; only that new row gets the entry's board, card
+  (D3 judged again) and cover pick (`featured_rank`); a line merged after all
+  (another tab) is taken back out and said. A card alone comes back through
+  `changeDeckMembershipAction`; what can't come back says why. The add box
+  (`deck-add-box.tsx`, an ARIA combobox, "/" outside a field) searches My
+  cards and other creators' public cards through GET `/api/decks/add-search`
+  (a route, not an action: cancellable, never queued behind edits; no rate
+  limit of its own yet — every limiter is a table with a label CHECK, a
+  migration) and real cards through `/api/scryfall/search` (`order=edhrec`,
+  its quota; ranked by `rankRealCards`: an exact word beats a longer word);
+  `addToDeckAction` lands a card where `addTargetEntry` says (one copy more
+  on the board's row, the real card's before your version — never a second
+  line for the same card) or brings it in through the membership writer / a
+  ONE-LINE decklist commit. The commit's core is `commitImportLines`
+  (`lib/decks/import-commit.ts`): a decklist import spends
+  `deck_import_commit`, the add box's add and an undo the single-card
+  `named` quota — the caller's choice, never the browser's. The bulk bar
+  is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
+  `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
+  screen at load may be: a lazy part's controls are dead until its chunk
+  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
+  `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
+  creator and the editor follow only through `deckReturnPath` (a deck page,
+  our `#entry-` / `#next-` anchor, nothing else — the card editor only to
+  one of the user's OWN decks, `ownDeckReturnPath`); "Edit next" comes back
+  to `#next-<id>` with the focus on the next one. A row's keys (+ − M S) act
+  only on a focused opener; selection is Select / Shift + click / a long
+  press (touch), and its Done hands the focus to the card picked last (else
+  the Select toggle), never `<body>`; the pop-up is a bottom sheet on touch;
+  the large preview pane mounts from 1280 px only (its picture the 600 px
+  thumb, never the HD PNG) and follows the focus at once but a pointer only
+  once it RESTS (`HOVER_REST_MS`), holding while its menu is open — its
+  buttons never act on a card the pointer only crossed.
   The breakdown's charts (TODO DK7, free for everyone) are
   `computeDeckCharts` (`lib/decks/deck-charts.ts`, over `deckRowsOf`: the
   effective fields, the maybeboard never counted; its curve adds up to

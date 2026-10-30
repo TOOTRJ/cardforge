@@ -1,8 +1,8 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { ClipboardPaste, Crown, LibraryBig, Search } from "lucide-react";
-import { openDeckTool, type DeckTool } from "@/components/decks/deck-owner-tools";
+import { ClipboardPaste, Crown, ListPlus, Search } from "lucide-react";
+import { openDeckTool, type DeckTool } from "@/components/decks/deck-tool-event";
 import { NEW_DECK_FIRST_ADD_ATTRIBUTE } from "@/components/decks/use-focus-add-on-new-deck";
 import { cn } from "@/lib/utils";
 
@@ -11,25 +11,24 @@ import { cn } from "@/lib/utils";
 // for a deck played with a commander a "Choose your commander" slot (also
 // shown, compact, over the cards of a commander deck that has none yet).
 //
-// Each door opens a flow the page already has (DeckOwnerTools, through
-// openDeckTool): the decklist import — typed card names, or a pasted list —
-// and "Add from my cards". The full add box, one search over my cards,
-// PipGlyph cards and real cards (TODO DK5.2), comes later; until then the
-// first door says what it really does — you type the names, Scryfall
-// matches them, and you check every match — never "search". The commander
-// slot opens the same two flows with the commander zone chosen: the import
-// starts its text under "Commander", and a card of yours is added straight
-// to the zone. A deck the New deck dialog just made (`?new=1`, TODO DK4.1)
-// lands on "Paste a decklist": the door a maker who left the dialog's paste
-// empty most likely wants (useFocusAddOnNewDeck).
+// Each door opens a flow the page already has (openDeckTool): the add box
+// (TODO DK5.2 — one search over the owner's cards, PipGlyph cards and real
+// cards; it opens on the cards they edited last, so it is also "add from
+// my cards"), and the decklist import — a pasted list, or typed card names
+// matched on Scryfall and checked before they're added. The commander slot
+// opens the same two with the commander zone chosen: the add box adds to
+// the Commander, and the import starts its text under "Commander". A deck
+// the New deck dialog just made (`?new=1`, TODO DK4.1) lands on "Paste a
+// decklist": the door a maker who left the dialog's paste empty most likely
+// wants (useFocusAddOnNewDeck).
 // ---------------------------------------------------------------------------
 
 const DOORS: Array<{ tool: DeckTool; icon: LucideIcon; title: string; body: string; firstAdd?: true }> = [
   {
-    tool: "names",
+    tool: "add",
     icon: Search,
-    title: "Add cards by name",
-    body: "Type the cards you want, one a line. Each is matched on Scryfall, and you check every match before it's added.",
+    title: "Search and add",
+    body: "Your cards, other creators' public cards and real cards, one at a time — press / anywhere on the page.",
   },
   {
     tool: "paste",
@@ -39,10 +38,10 @@ const DOORS: Array<{ tool: DeckTool; icon: LucideIcon; title: string; body: stri
     body: "From Moxfield, Archidekt, MTG Arena, ManaBox or plain text — sideboard and commander sections included.",
   },
   {
-    tool: "my-cards",
-    icon: LibraryBig,
-    title: "Add from my cards",
-    body: "The cards you've made on PipGlyph, a copy at a time.",
+    tool: "names",
+    icon: ListPlus,
+    title: "Add cards by name",
+    body: "Type the cards you want, one a line. Each is matched on Scryfall, and you check every match before it's added.",
   },
 ];
 
@@ -119,19 +118,19 @@ export function CommanderSlot({ compact = false }: { compact?: boolean }) {
       <div className={cn("flex flex-wrap gap-2", !compact && "sm:ml-auto")}>
         <button
           type="button"
-          onClick={(event) => openDeckTool("commander", event.currentTarget)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+          onClick={(event) => openDeckTool("add-commander", event.currentTarget)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-gold/50 bg-gold/10 px-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 pointer-coarse:h-11"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
-          Type the commander’s name
+          Search for your commander
         </button>
         <button
           type="button"
-          onClick={(event) => openDeckTool("my-cards-commander", event.currentTarget)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+          onClick={(event) => openDeckTool("commander", event.currentTarget)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 pointer-coarse:h-11"
         >
-          <LibraryBig className="h-3.5 w-3.5" aria-hidden />
-          Pick a commander from my cards
+          <ListPlus className="h-3.5 w-3.5" aria-hidden />
+          Type the commander’s name
         </button>
       </div>
     </section>
