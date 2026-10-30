@@ -28,7 +28,9 @@ import { partColorFromCost } from "@/lib/cards/part-color";
 // (Edited by hand 2026-10-30, one deliberate change: a NEW card's — and a
 // key-less parent's remix's — `frame_style.collector` reads "off" where it
 // read "2023", the collector line's new-card default (NEW_CARD_ANATOMY);
-// a stored card's own "2023" is unchanged. Nothing else moved.)
+// a stored card's own "2023" is unchanged. And a NEW card's `tags` holds
+// what its name, rules text and subtypes suggest (lib/cards/auto-tags.ts,
+// the creator's tag follow) where it was []. Nothing else moved.)
 //
 // Part 2 (split, aftermath, adventure, flip — the second part left the
 // Identity step's "More options" fold for a tab of its own): the scenarios

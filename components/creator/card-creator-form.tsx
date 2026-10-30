@@ -250,6 +250,7 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
+import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
@@ -1218,6 +1219,9 @@ export function CardCreatorForm({
   const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const partColorFollow = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
   const markPartColorTouched = partColorFollow.markTouched;
+  // A new card's tags follow its name, rules text and subtypes until the
+  // Tags field changes under anything else (lib/creator/auto-tags-follow.ts).
+  const autoTags = useAutoTagsFollow({ control, setValue }, mode === "create");
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -3933,6 +3937,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    autoTags.restart();
     remixNicknameClearedRef.current = false;
     stashedSecondPartRef.current = {};
     secondPartFields.forget();

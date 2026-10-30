@@ -261,7 +261,11 @@ export function PublishPanel({
 
       <FieldGroup
         label="Tags"
-        helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+        helper={
+          revise
+            ? "Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+            : "Filled in from the card's name and rules text until you change them. Comma-separated, up to 12."
+        }
         error={errors.tags_text?.message}
       >
         <input

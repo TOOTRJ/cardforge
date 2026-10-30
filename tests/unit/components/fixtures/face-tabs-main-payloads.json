@@ -13,7 +13,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -92,7 +95,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -163,7 +169,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -235,7 +244,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -488,7 +500,10 @@
     "subtypes": [
       "Arcane"
     ],
-    "tags": [],
+    "tags": [
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -760,7 +775,10 @@
     "subtypes": [
       "Arcane"
     ],
-    "tags": [],
+    "tags": [
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -1032,7 +1050,11 @@
     "subtypes": [
       "Giant"
     ],
-    "tags": [],
+    "tags": [
+      "giants",
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -1263,7 +1285,11 @@
     "subtypes": [
       "Giant"
     ],
-    "tags": [],
+    "tags": [
+      "giants",
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,

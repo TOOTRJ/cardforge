@@ -10,7 +10,9 @@
     "subtypes": [
       "Golem"
     ],
-    "tags": [],
+    "tags": [
+      "golems"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -191,7 +193,9 @@
     "subtypes": [
       "Equipment"
     ],
-    "tags": [],
+    "tags": [
+      "equipment"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -235,7 +239,9 @@
     "subtypes": [
       "Aura"
     ],
-    "tags": [],
+    "tags": [
+      "auras"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -364,7 +370,9 @@
     "subtypes": [
       "Golem"
     ],
-    "tags": [],
+    "tags": [
+      "golems"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -411,7 +419,9 @@
     "subtypes": [
       "Spirit"
     ],
-    "tags": [],
+    "tags": [
+      "spirits"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {

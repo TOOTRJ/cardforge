@@ -30,7 +30,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // (Edited by hand 2026-10-30, one deliberate change: a NEW card's — and a
 // key-less parent's remix's — `frame_style.collector` reads "off" where it
 // read "2023", the collector line's new-card default (NEW_CARD_ANATOMY);
-// a stored card's own "2023" is unchanged. Nothing else moved.)
+// a stored card's own "2023" is unchanged. And a NEW card's `tags` holds
+// what its name, rules text and subtypes suggest (lib/cards/auto-tags.ts,
+// the creator's tag follow) where it was []. Nothing else moved.)
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));

@@ -10,7 +10,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
@@ -58,7 +61,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
@@ -106,7 +112,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
@@ -764,7 +773,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
@@ -812,7 +824,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
@@ -860,7 +875,10 @@
     "subtypes": [
       "Beast"
     ],
-    "tags": [],
+    "tags": [
+      "beasts",
+      "trample"
+    ],
     "rarity": "common",
     "rules_text": "Trample",
     "face_content": null,
