@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck editing mockups</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+  li { margin: 10px 0; }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">PipGlyph · TODO DK5.18 · research only, nothing built</p>
+  <h1 class="display">Editing cards inside the deck</h1>
+  <p class="muted">These are static mockups that open from disk. They use PipGlyph's colour tokens from <span class="mono">app/globals.css</span>, dark by default. Cards are grey placeholders; their "art" is the repo's own generated deck covers (<span class="mono">public/defaults/deck-covers</span>). The write-up is <a href="../../deck-in-place-editing-2026-10.md">deck-in-place-editing-2026-10.md</a>.</p>
+  <ol>
+    <li><a href="recommended-1366.html">Recommended (b): an edit drawer, 1366 × 768</a>. Click a row, edit, then Save, Save &amp; next, ‹ ›, or ✕ (which runs the unsaved-changes guard). "＋ Create new card" opens it too.</li>
+    <li><a href="recommended-390.html">Recommended (b) on a phone, 390 × 844</a>. The same dialog fills the screen. Step through the four states.</li>
+    <li><a href="bulk-edit.html">Bulk edit</a>. Select, then Edit fields…, mixed values, Review (before → after), and Apply with Undo.</li>
+    <li><a href="rejected-inline-section.html">Rejected (c): a section that opens in place</a>, for comparison.</li>
+  </ol>
+  <p class="subtle">Option (a), a modal holding the full creator, is not drawn on its own. It is the drawer's below-1024 px form (mockup 2) used at every width; the doc explains why it is the fallback, not the pick.</p>
+</main>
+</body>
+</html>

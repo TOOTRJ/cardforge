@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rejected: inline section</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .deck { position: absolute; inset: 56px 0 0 0; overflow: auto; padding: 14px 24px 80px; }
+  .body { display: grid; grid-template-columns: minmax(0,1fr) 19rem; gap: 24px; align-items: start; }
+  .list { border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+  .entry { display: grid; grid-template-columns: 28px minmax(0,1fr) auto auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--color-border); }
+  .inline { border-top: 1px solid var(--color-primary-bright); border-bottom: 1px solid var(--color-primary-bright); background: var(--color-background); padding: 14px; display: grid; grid-template-columns: minmax(0,1fr) 200px; gap: 16px; }
+  .pane { position: sticky; top: 0; display: flex; flex-direction: column; gap: 10px; }
+  .summary { position: sticky; bottom: 0; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-frame); border: 1px solid var(--color-border-strong); background: var(--color-surface); display: flex; gap: 8px; align-items: center; }
+  .clash { outline: 2px dashed var(--color-danger); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <strong>DK5.18 · Rejected alternative (c): a section that opens in place · 1366</strong>
+  <a href="index.html">All mockups</a>
+  <a href="recommended-1366.html">Compare: the recommended drawer</a>
+  <label><input type="checkbox" id="callouts" checked> notes</label>
+</div>
+<div class="screen w1366">
+  <header class="site-header"><span class="logo">PipGlyph</span><nav class="nav"><span>Create</span><span>Gallery</span><span>Decks</span></nav></header>
+  <main class="deck" id="deck">
+    <div class="row" style="margin-bottom:10px"><h1 class="display" style="margin:0;font-size:20px">Ember Tide</h1><span class="badge">Commander</span><span style="flex:1"></span><button class="btn">List ▾</button><button class="btn">Group: type ▾</button></div>
+    <div class="body">
+      <div>
+        <div class="list" id="list"></div>
+        <div class="summary" id="summary"><span>98 / 100 · Commander ✓</span><span style="flex:1"></span><button class="btn">Edit next</button></div>
+      </div>
+      <aside class="pane" id="pane">
+        <div class="card big"><div class="bar">Ashfall Drake</div><div class="art" style="background-image:url(../../../../public/defaults/deck-covers/red-2.webp)"></div><div class="tbar"></div><div class="box"></div></div>
+        <p class="subtle" style="margin:0;font-size:12px">The preview pane follows the pointer, so here it shows a different card from the one being edited.</p>
+      </aside>
+    </div>
+  </main>
+  <div class="callout" data-n="1" style="left:300px;top:60px">Click "Edit" on any row. Everything below it jumps down by the creator's height (≈ 900 px for a real step).</div>
+  <div class="callout" data-n="2" id="c2" style="left:300px;top:700px" hidden>Two sticky bars at the bottom: the creator's Save bar and the deck's summary bar. They overlap (WCAG 2.4.11 Focus Not Obscured, which 3b.28 fixed for the creator alone).</div>
+  <div class="callout" data-n="3" id="c3" style="left:1000px;top:420px" hidden>Two live pictures of two different cards: the creator's preview and the deck's pane.</div>
+  <div class="callout" data-n="4" id="c4" style="left:40px;top:330px" hidden>Not a dialog, so "/" and the row keys (+ − M S) still act on the deck while the maker types elsewhere in the creator. In Stacks or Grid view there is no row for the section to open under.</div>
+</div>
+<div class="note">
+  <p><strong>Why it ranks last</strong> (the doc gives the full scoring): it moves the place the maker was looking at and leaves the URL alone, so Back leaves the deck. It also needs a non-modal focus model next to the deck's own keyboard shortcuts, and it works only in List view. At 390 px it is a full page in all but name. Its one strength is that nothing covers the deck, which the recommended drawer mostly keeps too.</p>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const names = ["Cinder Wolf", "Ashfall Drake", "Goblin Tinkerer", "Tidecaller Adept", "Reef Leviathan", "Storm Kin", "Flashfire", "Counterflow", "Brine Snap", "Volcanic Rebirth"];
+let openAt = -1;
+function render() {
+  const l = $("list"); l.innerHTML = "";
+  names.forEach((n, i) => {
+    l.insertAdjacentHTML("beforeend", `<div class="entry"><span class="muted">1×</span><span>${n}</span><span class="badge">${i % 3 ? "Original" : "Imported"}</span><button class="btn sm" data-i="${i}">${openAt === i ? "Close" : "Edit"}</button></div>`);
+    if (openAt === i) l.insertAdjacentHTML("beforeend", `<div class="inline" role="region" aria-label="Editing ${n}"><div class="stack"><nav class="steps"><span class="step">Card</span><span class="step" aria-current="step">Identity</span><span class="step">Text</span><span class="step">Publish</span></nav><label class="field"><span>Title</span><input class="input" value="${n}"></label><label class="field"><span>Rules text</span><textarea class="input" style="height:220px"></textarea></label><div class="sticky-save clash" style="position:sticky;bottom:52px"><span class="muted">Unsaved changes</span><span style="flex:1"></span><button class="btn primary">Save changes</button></div></div><div><div class="eyebrow">Live preview</div><div class="card"><div class="bar">${n}</div><div class="art" style="background-image:url(../../../../public/defaults/deck-covers/red-1.webp)"></div><div class="tbar"></div><div class="box"></div></div></div></div>`);
+  });
+  l.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => { openAt = openAt === +b.dataset.i ? -1 : +b.dataset.i; render(); }));
+  ["c2", "c3", "c4"].forEach((id) => ($(id).hidden = openAt < 0));
+  $("summary").classList.toggle("clash", openAt >= 0);
+}
+render();
+$("callouts").addEventListener("change", (ev) => document.body.classList.toggle("hide-callouts", !ev.target.checked));
+</script>
+</body>
+</html>
