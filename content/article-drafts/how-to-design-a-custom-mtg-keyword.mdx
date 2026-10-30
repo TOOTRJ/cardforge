@@ -1,0 +1,100 @@
+---
+title: "How to Design Your Own Magic Keyword"
+seoTitle: "How to Design a Custom MTG Keyword Mechanic"
+description: "Design a custom Magic keyword that plays well: when an ability earns one, how to name it, write its reminder text, cost it, and test it across a set."
+excerpt: "A keyword is a promise: one word that means the same thing on every card it touches. Here is how to decide when an ability deserves one, and how to build it so it keeps that promise."
+tags: ["oracle text", "card design"]
+category: design
+cover:
+  src: "/article-media/how-to-design-a-custom-mtg-keyword/cover.svg"
+  alt: "A rules line for an invented keyword, Waymark 2, with callouts for its name, its number and its italic reminder text"
+  width: 1600
+  height: 900
+faq:
+  - q: "What is the difference between a keyword ability and an ability word?"
+    a: "A keyword ability has rules meaning of its own: the word itself does something, explained by its reminder text. An ability word has no rules meaning; it is an italic label in front of an ordinary ability that groups cards sharing a theme. If removing the word would change what the card does, you have a keyword."
+  - q: "How many cards should use a custom keyword?"
+    a: "Enough that players meet it in most games of your set or cube: in a small custom set, often eight to fifteen cards across the rarities and two or more colors. A keyword on two or three cards rarely earns the space; write the ability out in full instead."
+  - q: "Should a custom keyword have reminder text?"
+    a: "Yes. Every card with a custom keyword should spell out what it does in italic reminder text, because nobody at the table has read your rules. Printed sets drop reminder text only once a keyword is familiar, and a homemade keyword never is."
+  - q: "What makes a keyword parasitic?"
+    a: "A parasitic keyword only works with other cards that carry it or care about it, so it does nothing in an ordinary deck. Mark Rosewater uses the term in his design writing. Open keywords, which work with the creatures, lands and spells players already own, are easier to play and to build around."
+---
+
+Give an ability a keyword when it appears on many cards, does one clear thing, and saves words every time it is printed. Name it with one evocative word, write reminder text that explains it in a single sentence, cost it by comparing the full ability against printed cards, and test it on a dozen cards across rarities before you commit.
+
+## When does an ability deserve a keyword?
+
+An ability deserves a keyword when three things are true at once:
+
+1. **It repeats.** The ability appears on enough cards that players will meet it in most games of your set, cube or playgroup.
+2. **It is one idea.** You can explain it in one sentence of reminder text. If you need two, it is probably two mechanics.
+3. **It saves space.** Writing the word is shorter than writing the ability, so the text box has room for something else.
+
+If the ability appears on two cards, write it out in full. A keyword with nothing around it is jargon, not design.
+
+## Keyword ability, ability word or keyword action?
+
+Magic has three kinds of named mechanics, and choosing the right one shapes everything after.
+
+- **Keyword ability.** The word itself has rules meaning, and reminder text explains it. Flying, trample and ward are keyword abilities.
+- **Ability word.** An italic label in front of a normal ability, with no rules meaning of its own. It groups cards that share a condition, the way landfall groups abilities that trigger when a land enters.
+- **Keyword action.** A verb with rules meaning that other cards can use, such as scry or mill. Actions are flexible because any card can say "scry 2".
+
+A good test: delete the word. If the card still works because the ability is written out, you have an ability word. If the card stops making sense, it is a keyword ability or action. The guide to [MTG ability types](/articles/mtg-ability-types-explained) covers the families, and the [keyword abilities list](/articles/mtg-keyword-abilities-list) shows which names are already taken.
+
+## How do you name a custom keyword?
+
+A keyword name has to do a lot in one word. Good ones share four traits:
+
+- **Short.** One word, two at most. It sits in the text box next to costs and numbers.
+- **Evocative.** It hints at the effect or the world. A keyword about leaving marks on lands might be "waymark". One about growing stronger in the graveyard might borrow a word from memory or ash.
+- **Distinct.** It should not sound like an existing keyword. Players will confuse it, and so will search.
+- **A verb or a noun on purpose.** Verbs read naturally as actions ("then waymark 2"). Nouns read naturally as abilities ("this creature has waymark").
+
+Say it aloud at the table: "I waymark two." If it sounds awkward spoken, it will feel awkward played.
+
+## How do you write the reminder text?
+
+Reminder text is a promise in parentheses: it says exactly what the keyword does, in the same words, on every card. The picture at the top of this guide shows the three parts of a keyword line: the name, an optional number that scales it, and the reminder text.
+
+Write it the way the rules write everything else:
+
+- **Use the card's own words.** "This creature", "this artifact" or the card's name, never "you" for the card.
+- **Use the standard verbs.** "Enters", "dies", "put a counter", "create a token". The [templating cookbook](/articles/mtg-templating-cookbook) collects the phrasings.
+- **Parameterize with N.** If the keyword scales, write "Waymark N" and put N in the reminder text. One rule, many costs.
+- **Keep it to one sentence where you can.** Two short sentences beat one long one with semicolons.
+
+In PipGlyph's [card creator](/create), type the keyword and its reminder text in parentheses. The rules box sets reminder text in italics like a printed card, and the layout fits it to the box.
+
+## How much is a keyword worth?
+
+Cost the full ability, not the word. Write the card out without the keyword, compare it with printed cards that do something similar, and price it the way you would price any ability. The guide to [designing balanced custom cards](/articles/designing-balanced-custom-mtg-cards) covers the comparison method.
+
+Then check the keyword at its extremes:
+
+- **The cheapest card** that carries it. Is it still fair at common?
+- **The biggest N** you plan to print. Does it break when doubled or copied?
+- **The best partner** card in your set. Two keyword cards together should be good, not a loop.
+
+## Why do some keywords fail?
+
+Most homemade keywords fail in one of four ways.
+
+<Figure src="/article-media/how-to-design-a-custom-mtg-keyword/parasitic-or-open.svg" alt="A parasitic keyword whose cards only connect to each other, beside an open keyword that connects to ordinary cards" caption="Parasitic or open: an open keyword works with cards your players already own." width="1600" height="900" />
+
+- **It is parasitic.** It only works with other cards that carry it, so it does nothing in an ordinary deck. Mark Rosewater calls this parasitic design. Prefer keywords that care about creatures, lands, spells or counters that already exist.
+- **It is a memory test.** "Until your next turn, if you've done X…" asks players to track invisible state. Put the state on the battlefield instead, with counters or tokens.
+- **It does not interact.** If opponents can never answer it or play around it, it is a damage number, not a mechanic.
+- **It is too complex for its rarity.** Common cards should be simple. The idea behind Wizards' "New World Order" is that complexity belongs at higher rarities, where fewer copies appear in each game.
+
+## How do you test a new keyword?
+
+Build a small set of cards before you build the set. Make eight to twelve cards with the keyword, across the rarities and at least two colors, then play them.
+
+1. **Make the cards in the creator** so they look and read like real cards. Ambiguity hides in plain text and shows up on a printed card.
+2. **Play them in a cube or a draft pod.** A keyword is a set-level decision. The guide on [designing a custom set](/articles/how-to-design-a-custom-mtg-set) covers how mechanics spread across a set.
+3. **Watch for questions.** Every "wait, how does this work?" is a reminder-text fix.
+4. **Count the games it mattered in.** If the keyword rarely changed a game, it needs more cards or a stronger effect.
+
+The [playtesting guide](/articles/how-to-playtest-custom-mtg-cards) has a full method. When a keyword survives three sessions without a rules question, it has earned its word.
