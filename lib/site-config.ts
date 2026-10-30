@@ -111,6 +111,12 @@ export const siteConfig = {
               description: "Makers with public cards",
             },
             {
+              id: "community.roadmap",
+              label: "Roadmap",
+              href: "/roadmap",
+              description: "What we're building now, next and later",
+            },
+            {
               id: "community.feed",
               label: "Your feed",
               href: "/feed",
@@ -300,6 +306,7 @@ export const siteConfig = {
         { id: "community.decks", label: "Community decks", href: "/decks" },
         { id: "community.challenges", label: "Design challenges", href: "/challenges" },
         { id: "community.creators", label: "Creators", href: "/creators" },
+        { id: "community.roadmap", label: "Roadmap", href: "/roadmap" },
       ],
     },
     {
