@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRIVATE_CARD_NAME, hidesEntryName, publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
+import { PRIVATE_CARD_NAME, hidesEntryName, isPrivateForViewer, publicDeckItems, publicDeckWarning } from "@/lib/decks/private-card-name";
 
 // ---------------------------------------------------------------------------
 // A public deck's view of a card the strong-language rule kept private
@@ -46,6 +46,27 @@ describe("publicDeckItems", () => {
     expect(item.entry.type_line).toBeNull();
     // The owner reads it.
     expect(publicDeckItems([{ entry: entry("Grim Goblin"), card: null }], true)[0]!.entry.name).toBe("Grim Goblin");
+  });
+
+  it("a DELETED card's entry (no card, no printing, a card-bringing source) is hidden too — its name is the card's old title (0152)", () => {
+    for (const source of ["creator", "link", "ai_generate", "ai_remix"]) {
+      const gone = { entry: entry("Grim Goblin", { card_id: null, scryfall_id: null, source }), card: null };
+      expect(isPrivateForViewer(gone.entry, null, false), source).toBe(true);
+      expect(hidesEntryName(gone.entry, null, false)).toBe(true);
+      expect(publicDeckItems([gone], false)[0]!.entry.name).toBe(PRIVATE_CARD_NAME);
+      // The owner keeps the stored name ("No longer available").
+      expect(isPrivateForViewer(gone.entry, null, true)).toBe(false);
+      expect(publicDeckItems([gone], true)[0]!.entry.name).toBe("Grim Goblin");
+    }
+    // The owner's own unlink clears the source: a plain line, shown as typed —
+    // and so are a pasted name, an import placeholder and an entry written
+    // before 0144 (no source).
+    for (const source of [null, "import", "manual", undefined]) {
+      const plain = { card_id: null, scryfall_id: null, source, name: "Grim Goblin" };
+      expect(isPrivateForViewer(plain, null, false), String(source)).toBe(false);
+    }
+    // A printing whose card is gone is the real card again.
+    expect(isPrivateForViewer({ card_id: null, scryfall_id: "sf", source: "ai_remix" }, null, false)).toBe(false);
   });
 
   it("keeps the real card's name of a private card's printing, and everything else as it was", () => {

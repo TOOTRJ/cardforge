@@ -378,3 +378,15 @@ instead. Each bullet: what the header says, and what is true now.
   day by `record_deck_view` (service role only; never the owner, a crawler
   or a prefetch — `lib/decks/views.ts`), logged in `deck_views` under a salt
   of the day, and the column's comment says so.
+- **0055 (`deck_cards`' read: "Visibility piggybacks on the parent deck's
+  RLS — anyone who can read the deck can see what's inside it"; 0151
+  restates it as "the entries follow the deck")** — since 0152 the deck's
+  OWNER reads every row of it, and anyone else who may read the deck every
+  row but a HIDDEN one (`deck_entry_hidden`): an entry with no printing
+  behind it that links a card the deck doesn't show them
+  (`deck_shows_card`: a public card, or the deck owner's own unlisted one),
+  or whose card it brought was deleted (no card, a card-bringing source) —
+  its name, type line and cost are that card's. The deck page reads the rows through `deck_entries_for_viewer`,
+  which hands a visitor such an entry masked ("Private card", the card's
+  values cleared) and the owner every row as stored. Nothing stored
+  changed; who may read the deck at all is still the decks policy's.

@@ -21,7 +21,7 @@ import {
   type DeckRow,
   type ViewItem,
 } from "@/lib/decks/deck-view";
-import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
+import { PRIVATE_CARD_NAME, publicDeckItems } from "@/lib/decks/private-card-name";
 
 // ---------------------------------------------------------------------------
 // The deck page's card area as data (TODO DK5.3 / DK5.6 / DK5.9): the
@@ -138,6 +138,37 @@ describe("a row", () => {
     expect(noPrinting.privateName).toBeNull();
     // The owner reads their own card (RLS hands it back) — never private to them.
     expect(deckRowOf(item({ name: "My Secret Dragon", card_id: "c-private", scryfall_id: null }), true).isPrivate).toBe(false);
+  });
+
+  it("a visitor's row from 0152's MASKED entry is the row the page drew from the stored one, less the card's cost and values", () => {
+    // What the table held (and the API handed out before 0152)…
+    const stored = item({
+      name: "Vael, Gloomforge Tinker",
+      type_line: "Legendary Creature — Dwarf Artificer",
+      mana_cost: "{2}{R}",
+      mana_value: 3,
+      color_identity: ["R"],
+      rarity: "rare",
+      card_id: "c-private",
+      scryfall_id: null,
+      source: "creator",
+    });
+    // …and what deck_entries_for_viewer hands a visitor now.
+    const masked: ViewItem = {
+      card: null,
+      entry: { ...stored.entry, name: PRIVATE_CARD_NAME, type_line: null, mana_cost: null, mana_value: null, color_identity: [], rarity: null },
+    };
+    const [before, after] = [deckRowOf(publicDeckItems([stored], false)[0]!, false), deckRowOf(publicDeckItems([masked], false)[0]!, false)];
+    for (const key of ["id", "name", "privateName", "isPrivate", "status", "badge", "quantity", "board", "bucket", "position"] as const) {
+      expect(after[key], key).toEqual(before[key]);
+    }
+    expect(after.name).toBe(PRIVATE_CARD_NAME);
+    expect(after.status).toBe("original");
+    expect(deckRowLabel(after)).toBe(`${PRIVATE_CARD_NAME}, 1 copy, Original`);
+    // The card's cost and values no longer reach the visitor's row.
+    expect(after.fields).toEqual({ typeLine: null, cost: null, manaValue: null, colors: [], multicolorOnly: false });
+    expect(after.rarity).toBeNull();
+    expect(before.fields.cost).toBe("{2}{R}");
   });
 
   it("badges a gone card No longer available — for the owner only when it was linked", () => {

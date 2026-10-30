@@ -45,7 +45,7 @@ const ENTRY_CAP = 1000;
 /** The entry columns the colours and the fan read — the owner's cover pick
  *  too (0150), left out on a database that migration hasn't reached. */
 const entryColumns = (withRank: boolean) =>
-  "id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, " +
+  "id, board, name, position, card_id, scryfall_id, source, image_url, type_line, color_identity, " +
   (withRank ? "featured_rank, " : "") +
   "card:cards(id, owner_id, title, visibility, color_identity, rendered_image_url, rendered_thumb_url)";
 
@@ -58,6 +58,9 @@ type EntryRow = {
   position: number | null;
   card_id: string | null;
   scryfall_id: string | null;
+  /** How the entry got into the deck (0144): a card-brought entry whose card
+   *  is gone counts for nobody's colours (lib/decks/cover.ts). */
+  source: string | null;
   image_url: string | null;
   type_line: string | null;
   color_identity: string[] | null;
