@@ -15,6 +15,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { AttributionCapture } from "@/components/analytics/attribution-capture";
+import { ScreenWidthBeacon } from "@/components/analytics/screen-width-beacon";
 import { AckSplash } from "@/components/updates/ack-splash";
 import { UpdatePrompt } from "@/components/updates/update-prompt";
 import "./globals.css";
@@ -295,6 +296,8 @@ export default function RootLayout({
             interactions for analytics and insights. */}
         <Analytics />
         <AttributionCapture />
+        {/* One anonymous viewport-width bucket per tab session (TODO WD9). */}
+        <ScreenWidthBeacon />
         {/* Must-read site updates for signed-in users (see /admin/updates). */}
         <AckSplash />
       </body>
