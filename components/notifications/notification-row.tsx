@@ -6,6 +6,7 @@ import {
   CirclePause,
   Coins,
   Crown,
+  Gift,
   Heart,
   Layers,
   MailWarning,
@@ -42,6 +43,8 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   credit_refill_failed: Coins,
   deck_like: Heart,
   deck_card_added: Layers,
+  referral_signup: UserPlus,
+  referral_reward: Gift,
 };
 
 export function NotificationRow({

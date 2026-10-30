@@ -386,6 +386,64 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0153 — referrals.
+      referral_codes: {
+        Row: { user_id: string; code: string; created_at: string };
+        Insert: { user_id: string; code: string; created_at?: string };
+        Update: { user_id?: string; code?: string; created_at?: string };
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referrer_id: string;
+          referee_id: string;
+          code: string;
+          status: string;
+          block_reason: string | null;
+          signed_up_at: string;
+          first_card_at: string | null;
+          rewarded_at: string | null;
+          referrer_reward: string | null;
+          referee_reward: string | null;
+          referrer_reward_detail: Json;
+          referee_reward_detail: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          referrer_id: string;
+          referee_id: string;
+          code: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          referrer_id?: string;
+          referee_id?: string;
+          code?: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       comment_reports: {
         Row: {
           comment_id: string;
@@ -2287,6 +2345,19 @@ export type Database = {
       admin_funnel_counts: {
         Args: { p_since: string };
         Returns: { event: string; n: number; users: number }[];
+      };
+      // Migration 0153 — referrals.
+      my_referral_code: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      claim_referral_reward: {
+        Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number };
+        Returns: string | null;
+      };
+      admin_referral_stats: {
+        Args: { p_since: string };
+        Returns: Json;
       };
       // Migration 0113 — trial engagement.
       admin_trial_engagement: {

@@ -8,6 +8,8 @@
 // Client-safe; the server reuses the sanitizer.
 // ---------------------------------------------------------------------------
 
+import { REFERRAL_PARAM, normalizeReferralCode } from "@/lib/referrals/rules";
+
 export const ATTRIBUTION_STORAGE_KEY = "pg_attribution_v1";
 
 export type Attribution = {
@@ -15,6 +17,10 @@ export type Attribution = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  /** A referral link's code (`?ref=`, lib/referrals/rules.ts) — the friend
+   *  who sent it. Rides the same first-touch blob and hidden field; never a
+   *  funnel prop (the signup action turns it into a `referrals` row). */
+  ref?: string;
 };
 
 /** Form field names the signup form posts (hidden inputs). */
@@ -23,6 +29,7 @@ export const ATTRIBUTION_FIELDS: Record<keyof Attribution, string> = {
   utmSource: "attr_utm_source",
   utmMedium: "attr_utm_medium",
   utmCampaign: "attr_utm_campaign",
+  ref: "attr_ref",
 };
 
 const MAX = 48;
@@ -34,7 +41,8 @@ function clean(value: unknown): string | undefined {
   return v && SAFE.test(v) ? v : undefined;
 }
 
-/** Keep only the four fields, lowercased, short, safe characters. */
+/** Keep only the known fields, lowercased, short, safe characters (a
+ *  referral code: exactly its shape). */
 export function sanitizeAttribution(raw: Record<string, unknown> | null | undefined): Attribution {
   const out: Attribution = {};
   if (!raw) return out;
@@ -46,6 +54,8 @@ export function sanitizeAttribution(raw: Record<string, unknown> | null | undefi
   if (utmSource) out.utmSource = utmSource;
   if (utmMedium) out.utmMedium = utmMedium;
   if (utmCampaign) out.utmCampaign = utmCampaign;
+  const ref = normalizeReferralCode(raw.ref);
+  if (ref) out.ref = ref;
   return out;
 }
 
@@ -70,7 +80,27 @@ export function attributionFromLanding(input: {
     utmSource: params.get("utm_source"),
     utmMedium: params.get("utm_medium"),
     utmCampaign: params.get("utm_campaign"),
+    ref: params.get(REFERRAL_PARAM),
   });
+}
+
+/**
+ * The first-touch blob after another landing in the same tab: the first
+ * touch is kept as it was, but a referral code the tab doesn't hold yet is
+ * added (someone browsing, then opening a friend's link). The FIRST code
+ * wins — a later link never takes a referral over.
+ */
+export function mergeLandingAttribution(stored: Attribution | null, landing: Attribution): Attribution {
+  if (!stored) return landing;
+  if (stored.ref || !landing.ref) return stored;
+  return { ...stored, ref: landing.ref };
+}
+
+/** The signup event's props: attribution without the referral code (the
+ *  code is a `referrals` row, not an analytics prop). */
+export function attributionProps(a: Attribution): Omit<Attribution, "ref"> & { referred?: boolean } {
+  const { ref, ...rest } = a;
+  return ref ? { ...rest, referred: true } : rest;
 }
 
 /** The source label the admin panel groups by. */
