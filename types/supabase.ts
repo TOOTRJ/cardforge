@@ -2100,6 +2100,12 @@ export type Database = {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; views: number }[];
       };
+      // Migration 0154 — the caller's OWN deck's likes per UTC day they were
+      // given, oldest first, zeros included; no rows for anyone else's deck.
+      deck_likes_by_day: {
+        Args: { p_deck_id: string; p_days?: number };
+        Returns: { day: string; likes: number }[];
+      };
       // Migration 0151 — a deck's AI guide as its page shows it to the
       // caller (lib/decks/guides.ts): no row, or `readable` with the text
       // only for a Pro viewer (redacted for anyone but the owner).

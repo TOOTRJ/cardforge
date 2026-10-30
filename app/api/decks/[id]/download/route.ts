@@ -7,7 +7,7 @@ import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
-import { getDeckGuide } from "@/lib/decks/guides";
+import { readShownDeckGuide } from "@/lib/decks/guides";
 import { buildDeckReportPdf } from "@/lib/decks/deck-report-pdf";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import { formatHasBracket } from "@/lib/decks/deck-details";
@@ -133,8 +133,10 @@ export async function GET(
 
   if (part === "report") {
     const [{ guide }, ownerProfile] = await Promise.all([
-      // The owner's own guide, as stored (a Pro owner: requireTier above).
-      getDeckGuide(id),
+      // The owner's own guide, as stored (a Pro owner: requireTier above) —
+      // never read while deck guides are hidden (owner 2026-10-30,
+      // lib/ai/deck-ai-pause.ts): the report prints no guide.
+      readShownDeckGuide(id),
       supabase.from("profiles").select("username, display_name").eq("id", user.id).maybeSingle(),
     ]);
     const format = isDeckFormat(deck.format) ? deck.format : "casual";

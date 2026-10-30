@@ -1,5 +1,6 @@
 import "server-only";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { formatHasBracket } from "@/lib/decks/deck-details";
 
@@ -2947,6 +2948,10 @@ function retiredCoverStep(step: JobStep): JobStep {
  *  Never charged; a failure is retryable like any other step. */
 async function runGuideStep(job: GenerationJobRow, step: JobStep): Promise<JobStep> {
   if (!job.deck_id) return { ...step, status: "failed", error: "Job has no deck to describe." };
+  // Deck guides are hidden (owner 2026-10-30, lib/ai/deck-ai-pause.ts): a
+  // job already running writes none — no AI call, nothing stored. "done",
+  // not "failed": the step is free and could not be retried into a guide.
+  if (!areDeckGuidesEnabled()) return { ...step, status: "done", error: undefined };
   const result = await buildAndStoreDeckGuide(job.deck_id, "generation");
   if (!result.ok) return { ...step, status: "failed", error: result.error };
   return { ...step, status: "done", error: undefined };

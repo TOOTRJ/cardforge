@@ -21,8 +21,9 @@ import { publicDeckWarning } from "@/lib/decks/private-card-name";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
-import { DeckGuideSection } from "@/components/decks/deck-guide-section";
-import { getDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
+import { DeckGuideComingSoon, DeckGuideSection } from "@/components/decks/deck-guide-section";
+import { readShownDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
@@ -64,6 +65,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
+import { DeckActivitySlot } from "@/components/decks/deck-activity-slot";
 import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
@@ -193,8 +195,12 @@ export default async function DeckDetailPage({
 
   // Started now, awaited where they're drawn (their own Suspense
   // boundaries): the guide, and the owner's AI job state (deck AI is
-  // paused, but a job already running finishes — D6).
-  const guide = getDeckGuide(deck.id).catch(() => null);
+  // paused, but a job already running finishes — D6). While deck guides are
+  // hidden (owner 2026-10-30, lib/ai/deck-ai-pause.ts) the guide is never
+  // read (`readShownDeckGuide`): no deck_guide_for_viewer call, no text in
+  // the page.
+  const guidesShown = areDeckGuidesEnabled();
+  const guide = readShownDeckGuide(deck.id).catch(() => null);
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
@@ -531,6 +537,17 @@ export default async function DeckDetailPage({
         ) : null}
       </DeckCurveFilterProvider>
 
+      {/* Deck activity (TODO DK7.4): the OWNER's views and likes over time,
+          Pro (a locked preview otherwise) — a client island a visitor's page
+          never references. */}
+      {isOwner ? (
+        <DeckActivitySlot
+          deckId={deck.id}
+          canView={entitlements.effectiveTier === "pro"}
+          isPrivate={deck.visibility === "private"}
+        />
+      ) : null}
+
       {/* The playtest (TODO DK7.2): odds and a sample hand off the
           mainboard, for every viewer — the rows as THIS viewer reads them
           (a visitor never meets a private card's title or art). */}
@@ -560,6 +577,7 @@ export default async function DeckDetailPage({
           <DeckGuideSlot
             deckId={deck.id}
             guide={guide}
+            hidden={!guidesShown}
             isOwner={isOwner}
             viewerIsPro={entitlements.effectiveTier === "pro"}
             hasCards={hasCards}
@@ -598,16 +616,21 @@ async function DeckJobsSlot({
 async function DeckGuideSlot({
   deckId,
   guide,
+  hidden,
   isOwner,
   viewerIsPro,
   hasCards,
 }: {
   deckId: string;
   guide: Promise<DeckGuideRead | null>;
+  /** Deck guides are hidden: the "Coming soon" section, no guide read. */
+  hidden: boolean;
   isOwner: boolean;
   viewerIsPro: boolean;
   hasCards: boolean;
 }) {
+  // Hidden: the one "Coming soon" look for every viewer; no guide was read.
+  if (hidden) return <DeckGuideComingSoon />;
   const read = await guide;
   return (
     <DeckGuideSection
