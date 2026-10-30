@@ -10,6 +10,7 @@ import {
   type DeckGuideContent,
 } from "@/lib/ai/deck-guide";
 import { aiErrorMessage } from "@/lib/ai/structured-output";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
 // Deck guides — storage + the one shared "build a guide for this deck"
@@ -84,6 +85,18 @@ export async function getDeckGuide(deckId: string): Promise<DeckGuideRead> {
   const row = Array.isArray(data) ? data[0] : null;
   if (error || !row) return NO_GUIDE;
   return row.readable ? { guide: narrowGuide(row), withheld: false } : { guide: null, withheld: true };
+}
+
+/**
+ * The deck guide as a SURFACE reads it (the deck page, the Pro report):
+ * `getDeckGuide` while deck guides are shown, and nothing at all — no
+ * `deck_guide_for_viewer` call, so no text leaves the database — while they
+ * are hidden (owner 2026-10-30, `areDeckGuidesEnabled()` in
+ * lib/ai/deck-ai-pause.ts). The stored rows are never touched either way.
+ */
+export async function readShownDeckGuide(deckId: string): Promise<DeckGuideRead> {
+  if (!areDeckGuidesEnabled()) return NO_GUIDE;
+  return getDeckGuide(deckId);
 }
 
 export type BuildGuideResult = { ok: true; guide: DeckGuideContent } | { ok: false; error: string };

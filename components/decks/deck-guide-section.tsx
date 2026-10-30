@@ -3,7 +3,13 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { DeckGuideUpgradeButton } from "@/components/decks/deck-analyze-button";
-import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
+import {
+  ComingSoonBadge,
+  ComingSoonSuffix,
+  DeckAiComingSoonButton,
+  DeckAiPausedNote,
+} from "@/components/decks/deck-ai-coming-soon";
+import { DECK_GUIDES_HIDDEN_MESSAGE } from "@/lib/ai/deck-ai-pause";
 import type { DeckGuide } from "@/lib/decks/guides";
 
 /** The visible "AI deck building is paused" line the greyed button points at. */
@@ -29,9 +35,50 @@ const PAUSED_NOTE_ID = "deck-guide-paused-note";
 // deck" and "Refresh analysis" are "Coming soon", and the guides that exist
 // stay readable to the same viewers. The teaser shows only on a deck that
 // HAS a guide — it used to promise one on every deck.
+//
+// While deck guides are hidden (owner 2026-10-30, `areDeckGuidesEnabled()`
+// in lib/ai/deck-ai-pause.ts) the page passes `hidden` and NO guide — it
+// never reads one — and every viewer (owner, visitor, Pro) sees
+// `DeckGuideComingSoon`: the section's heading with the "Coming soon" badge,
+// the one line that says why as plain text, and the guide's panels greyed
+// and empty. Nothing in it takes the focus.
 // ---------------------------------------------------------------------------
 
+/** The one hidden look of the section, the same for every viewer. */
+export function DeckGuideComingSoon() {
+  return (
+    <section className="mt-12" aria-labelledby="deck-guide-coming-soon-title">
+      <div className="flex flex-col gap-2 border-b border-gold/20 pb-8">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-subtle">How to play</span>
+        <h2
+          id="deck-guide-coming-soon-title"
+          className="flex flex-wrap items-center gap-3 font-display text-3xl font-semibold tracking-tight text-muted sm:text-4xl"
+        >
+          Game plan &amp; combos
+          <ComingSoonSuffix />
+          <ComingSoonBadge />
+        </h2>
+        <p className="max-w-2xl text-base leading-7 text-muted">{DECK_GUIDES_HIDDEN_MESSAGE}</p>
+      </div>
+      {/* The guide's two panels, greyed and empty: a picture of what is
+          coming back, nothing to read or press. */}
+      <div
+        className="pointer-events-none mt-6 grid select-none gap-6 opacity-50 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+        aria-hidden
+      >
+        <SurfaceCard className="flex min-h-28 flex-col gap-3 border-dashed p-6">
+          <GuideLabel icon={Swords}>Game plan</GuideLabel>
+        </SurfaceCard>
+        <SurfaceCard className="flex min-h-28 flex-col gap-3 border-dashed p-6">
+          <GuideLabel icon={Lightbulb}>Combos &amp; synergies</GuideLabel>
+        </SurfaceCard>
+      </div>
+    </section>
+  );
+}
+
 export function DeckGuideSection({
+  hidden = false,
   guide,
   guideWithheld = false,
   isOwner,
@@ -41,6 +88,9 @@ export function DeckGuideSection({
 }: {
   /** The analyze button's target; unread while deck AI is paused (DK1). */
   deckId: string;
+  /** Deck guides are hidden (`areDeckGuidesEnabled()` false): the one
+   *  "Coming soon" look for every viewer, and `guide` is never drawn. */
+  hidden?: boolean;
   guide: DeckGuide | null;
   /** A guide exists that this viewer may not read (the database withheld
    *  its text): the teaser. */
@@ -50,6 +100,7 @@ export function DeckGuideSection({
   aiConfigured: boolean;
   hasCards: boolean;
 }) {
+  if (hidden) return <DeckGuideComingSoon />;
   if (!viewerIsPro) {
     if (!guide && !guideWithheld) return null;
     return (

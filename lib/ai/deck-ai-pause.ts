@@ -61,3 +61,46 @@ export function deckAiPausedBody(): { ok: false; code: typeof DECK_AI_PAUSED_COD
     error: `${DECK_AI_PAUSED_MESSAGE} No credits were used.`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Deck guides behind "Coming soon" (owner 2026-10-30). The deck page's
+// "Game plan & combos" section — the AI guide — is hidden from EVERY viewer
+// (owner, visitor, Pro) until AI generation returns to decks: the guide
+// redaction fix (0151 doesn't hide a deleted card's name in an old guide) is
+// deferred until then. While this is false:
+//   * the deck page never calls `deck_guide_for_viewer` (lib/decks/guides.ts)
+//     — no guide text is read for, or sent to, the browser — and shows the
+//     section greyed with `DECK_GUIDES_HIDDEN_MESSAGE`;
+//   * POST /api/decks/[id]/guide answers `deckGuidesComingSoonBody()`;
+//   * the Pro export's deck.pdf report prints no guide;
+//   * a deck job's free guide step (a job already running) writes none.
+// The stored `deck_guides` rows are never deleted or changed: switching this
+// to true brings every guide back as it was. The ONE switch.
+// ---------------------------------------------------------------------------
+
+export const DECK_GUIDES_ENABLED = false;
+
+/** The refusal's `code` while guides are hidden. */
+export const DECK_GUIDES_COMING_SOON_CODE = "DECK_GUIDES_COMING_SOON";
+
+/** The one line the hidden section (and the refusal) says. */
+export const DECK_GUIDES_HIDDEN_MESSAGE =
+  "Deck guides are being reworked and will be back with AI deck tools. Guides already written are saved.";
+
+/** Whether deck guides are read, shown, printed and written (the one question). */
+export function areDeckGuidesEnabled(): boolean {
+  return DECK_GUIDES_ENABLED;
+}
+
+/** The JSON body POST /api/decks/[id]/guide answers while guides are hidden. */
+export function deckGuidesComingSoonBody(): {
+  ok: false;
+  code: typeof DECK_GUIDES_COMING_SOON_CODE;
+  error: string;
+} {
+  return {
+    ok: false,
+    code: DECK_GUIDES_COMING_SOON_CODE,
+    error: `${DECK_GUIDES_HIDDEN_MESSAGE} No credits were used.`,
+  };
+}
