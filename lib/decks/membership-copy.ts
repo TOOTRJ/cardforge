@@ -50,7 +50,7 @@ export type MembershipCardResult = {
   error?: string;
   /** private_card: why it can't be made public — its text holds strong
    *  language (owner policy 2026-10-28). Absent = it can. */
-  languageReason?: string;
+  blockedReason?: string;
   /** The card was made public by this call (`publish`) — on an added card,
    *  and on one the deck then refused (it stays public). */
   published?: true;
@@ -77,6 +77,18 @@ export function privateCardsOffer(count: number): string {
 export function privateCardLanguageReason(fields: readonly ProfanityField[]): string {
   return `Its ${profaneFieldList(fields)} includes strong language, so it stays private. Remove it to publish.`;
 }
+
+/** Why a private card can't be made public: no artwork (the single-card
+ *  rule — no artwork → no gallery; a double-faced card's back too). */
+export function privateCardArtReason(missing: "front" | "back"): string {
+  return missing === "back"
+    ? "Its back face has no artwork yet, so it stays private. Add artwork before publishing."
+    : "It has no artwork yet, so it stays private. Add artwork before publishing.";
+}
+
+/** Why a private card can't be made public: its second face has no name. */
+export const PRIVATE_CARD_UNNAMED_FACE_REASON =
+  "Its second face has no name yet, so it stays private. Name it in the editor before publishing.";
 
 /** A publish refused with no other words for it. */
 export const PUBLISH_REFUSED_MESSAGE = "It couldn't be made public, so it wasn't added — add it as private instead.";

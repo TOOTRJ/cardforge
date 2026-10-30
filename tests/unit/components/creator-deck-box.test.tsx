@@ -396,3 +396,22 @@ describe("a PRIVATE new card into a deck others can open (TODO DK0.13)", () => {
     expect(note()!.textContent).toContain("Visitors will see “Private card” in this deck.");
   });
 });
+
+describe("an edit's box: the private-card question names the card (TODO DK0.13)", () => {
+  it("asks with the stored card's name in the title", async () => {
+    actions.changeDeckMembershipAction.mockResolvedValue({
+      ok: true,
+      deckId: DECK,
+      deckTitle: "Burn",
+      deckSlug: "burn",
+      results: [{ cardId: CARD_ID, status: "private_card" }],
+      entries: [],
+    });
+    renderForm("edit", { card: savedCard({ visibility: "private" }) });
+    const burn = await within(box()).findByRole("checkbox", { name: "Burn" });
+    await act(async () => {
+      fireEvent.click(burn);
+    });
+    expect(screen.getByRole("dialog", { name: "Add “Kesh, Emberforge Warden” to “Burn”?" })).toBeTruthy();
+  });
+});

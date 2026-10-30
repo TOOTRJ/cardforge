@@ -674,7 +674,7 @@ describe("the add box — a private card into a deck others can open (DK0.13)", 
     searchFor("private");
     offers.privateCardOfferAction.mockResolvedValue({
       ok: true,
-      cards: [{ cardId: WYRM, languageReason: "Its rules text includes strong language, so it stays private. Remove it to publish." }],
+      cards: [{ cardId: WYRM, blockedReason: "Its rules text includes strong language, so it stays private. Remove it to publish." }],
     });
     deckPage(undefined, PUBLIC_DECK);
     await pickWyrm();

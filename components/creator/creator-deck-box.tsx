@@ -51,6 +51,8 @@ type BoxProps = {
   mode: "create" | "edit" | "remix";
   /** The stored card (edit). */
   cardId?: string | null;
+  /** Its stored title — the private-card question names it. */
+  cardTitle?: string | null;
   myDecks: DeckOption[] | null;
   deckRemix: DeckRemixContext | null;
   className?: string;
@@ -62,6 +64,7 @@ type BoxProps = {
 export function CreatorDeckBox({
   mode,
   cardId = null,
+  cardTitle = null,
   myDecks,
   deckRemix,
   className,
@@ -85,7 +88,7 @@ export function CreatorDeckBox({
     );
   } else if (mode === "edit") {
     if (!cardId) return null;
-    body = <EditDecks cardId={cardId} />;
+    body = <EditDecks cardId={cardId} cardTitle={cardTitle} />;
   } else {
     // The create page always lists the maker's decks; without the list
     // there is nothing to offer.
@@ -234,14 +237,19 @@ function PrivateCardDeckNote({
 }
 
 /** A stored card: its decks, each tick written at once (D13). */
-function EditDecks({ cardId }: { cardId: string }) {
+function EditDecks({ cardId, cardTitle }: { cardId: string; cardTitle: string | null }) {
   const membership = useDeckMembership([cardId]);
   return (
     <>
       <p className="text-xs leading-5 text-muted">
         Changes here are saved at once — Save is for the card itself.
       </p>
-      <DeckMembershipPanel membership={membership} cardCount={1} surface="creator" />
+      <DeckMembershipPanel
+        membership={membership}
+        cardCount={1}
+        surface="creator"
+        cardTitles={cardTitle ? { [cardId]: cardTitle, [cardId.toLowerCase()]: cardTitle } : undefined}
+      />
     </>
   );
 }

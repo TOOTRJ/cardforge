@@ -298,7 +298,7 @@ export function DeckAddBox({ className }: { className?: string }) {
   // ---- adding ------------------------------------------------------------
   // The maker's private card into a deck others can open (TODO DK0.13): the
   // question waiting on them, and the add it holds.
-  const [offer, setOffer] = useState<{ option: AddOption; board: DeckBoard; languageReason?: string } | null>(null);
+  const [offer, setOffer] = useState<{ option: AddOption; board: DeckBoard; blockedReason?: string } | null>(null);
   const settle = (key: string) =>
     setAdding((prev) => {
       const next = new Set(prev);
@@ -345,7 +345,7 @@ export function DeckAddBox({ className }: { className?: string }) {
         }
         const card = asked.cards[0];
         if (card) {
-          setOffer({ option, board, ...(card.languageReason ? { languageReason: card.languageReason } : {}) });
+          setOffer({ option, board, ...(card.blockedReason ? { blockedReason: card.blockedReason } : {}) });
           return;
         }
       }
@@ -600,7 +600,7 @@ export function DeckAddBox({ className }: { className?: string }) {
         deckTitle={editor?.deck.title ?? ""}
         cards={
           offer && offer.option.pick.kind === "card"
-            ? [{ cardId: offer.option.pick.cardId, title: offer.option.name, languageReason: offer.languageReason }]
+            ? [{ cardId: offer.option.pick.cardId, title: offer.option.name, blockedReason: offer.blockedReason }]
             : []
         }
         onChoose={answerOffer}

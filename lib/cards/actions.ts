@@ -16,7 +16,7 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
-import { readVisibilityPreflight, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
+import { readVisibilityPreflight, storedArtMissing, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
@@ -93,7 +93,11 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
-import { allFramePreviewsMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
+import {
+  allFramePreviewsMessage,
+  allHeldBackMessage,
+  allStrongLanguageMessage,
+} from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
@@ -1336,7 +1340,7 @@ export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
  *  and, only when there were any, how many cards it left as they were
  *  because their text holds strong language (owner policy 2026-10-28). */
 export type BulkVisibilityResult =
-  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number })
+  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number; skippedArtless?: number })
   | BulkCardsFailure;
 
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
@@ -1407,16 +1411,32 @@ export async function updateCardsVisibilityAction(
           c.frame_preview !== true &&
           storedLanguageBlocks(c, parsed.data.visibility).length > 0,
       );
+  // No artwork → no gallery (the single-card rule, createCardAction /
+  // updateCardAction): a PUBLISH leaves an artless card — or a double-faced
+  // one whose back has no picture — as it is, and counts it. Unlisting is
+  // link-only sharing of a work in progress, and stays allowed.
+  const artless =
+    parsed.data.visibility !== "public"
+      ? []
+      : rows.filter(
+          (c) => c.frame_preview !== true && !strongLanguage.includes(c) && storedArtMissing(c) !== null,
+        );
   const targets = goingPrivate
     ? rows
-    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c));
+    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c));
   if (targets.length === 0) {
     return {
       ok: false,
       error:
-        strongLanguage.length > 0
-          ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
-          : allFramePreviewsMessage(parsed.data.visibility, previews.length),
+        artless.length > 0
+          ? allHeldBackMessage(parsed.data.visibility, {
+              strongLanguage: strongLanguage.length,
+              previews: previews.length,
+              artless: artless.length,
+            })
+          : strongLanguage.length > 0
+            ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
+            : allFramePreviewsMessage(parsed.data.visibility, previews.length),
     };
   }
   const targetIds = targets.map((c) => c.id);
@@ -1525,6 +1545,7 @@ export async function updateCardsVisibilityAction(
     count: targetIds.length,
     skippedPreviews: previews.length,
     ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
+    ...(artless.length > 0 ? { skippedArtless: artless.length } : {}),
   };
 }
 

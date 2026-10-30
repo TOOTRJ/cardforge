@@ -38,7 +38,7 @@ export type PrivateOfferCard = {
   /** Shown in a list of several; the one card's name in the title. */
   title?: string | null;
   /** Why it can't be made public (its text). */
-  languageReason?: string;
+  blockedReason?: string;
 };
 
 export function PrivateCardOfferDialog({
@@ -59,7 +59,7 @@ export function PrivateCardOfferDialog({
   const openerRef = useRef<HTMLElement | null>(null);
   const firstActionRef = useRef<HTMLButtonElement | null>(null);
   const single = cards.length === 1 ? cards[0]! : null;
-  const blocked = cards.filter((card) => card.languageReason);
+  const blocked = cards.filter((card) => card.blockedReason);
   const publishable = cards.length - blocked.length;
   const named = (card: PrivateOfferCard) => (card.title?.trim() ? `“${card.title.trim()}”` : "This card");
 
@@ -103,7 +103,7 @@ export function PrivateCardOfferDialog({
         {blocked.length > 0 ? (
           <div className="flex flex-col gap-2 px-5 py-4" data-testid="private-card-offer-reasons">
             {single ? (
-              <p className="text-sm leading-6 text-foreground">{single.languageReason}</p>
+              <p className="text-sm leading-6 text-foreground">{single.blockedReason}</p>
             ) : (
               <>
                 <p className="text-sm leading-6 text-foreground">
@@ -112,7 +112,7 @@ export function PrivateCardOfferDialog({
                 <ul className="flex flex-col gap-1.5 text-sm leading-6 text-muted">
                   {blocked.map((card) => (
                     <li key={card.cardId}>
-                      <span className="font-medium text-foreground">{named(card)}</span> — {card.languageReason}
+                      <span className="font-medium text-foreground">{named(card)}</span> — {card.blockedReason}
                     </li>
                   ))}
                 </ul>

@@ -167,7 +167,7 @@ export function DeckCardModal({
   const linkButtonRef = useRef<HTMLButtonElement | null>(null);
   // The maker's PRIVATE card linked into a deck others can open (TODO
   // DK0.13): asked first — "Make it public" / "Add as private".
-  const [linkOffer, setLinkOffer] = useState<{ cardId: string; title: string; languageReason?: string } | null>(null);
+  const [linkOffer, setLinkOffer] = useState<{ cardId: string; title: string; blockedReason?: string } | null>(null);
   const link = (cardId: string, title: string) => {
     if (!editor || !deckShowsPrivateCards(editor.deck.visibility)) {
       mutate(() => linkDeckCardAction(entry.id, cardId));
@@ -182,7 +182,7 @@ export function DeckCardModal({
         }
         const offered = asked.cards[0];
         if (offered) {
-          setLinkOffer({ cardId, title, ...(offered.languageReason ? { languageReason: offered.languageReason } : {}) });
+          setLinkOffer({ cardId, title, ...(offered.blockedReason ? { blockedReason: offered.blockedReason } : {}) });
           return;
         }
         const result = await linkDeckCardAction(entry.id, cardId);

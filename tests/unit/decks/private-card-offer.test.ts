@@ -34,6 +34,8 @@ type CardRow = {
   visibility: string;
   frame_preview: boolean;
   rules_text?: string | null;
+  art_url?: string | null;
+  back_face?: Record<string, unknown> | null;
 };
 
 const state = vi.hoisted(() => ({
@@ -47,6 +49,8 @@ const state = vi.hoisted(() => ({
   publishFlips: true,
   rpcCards: [] as string[],
   linked: [] as Array<Record<string, unknown>>,
+  /** The deck_cards link write fails. */
+  failLink: false,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -92,6 +96,7 @@ function db() {
     if (table === "deck_cards") {
       const update = calls.find((c) => c.method === "update");
       if (update) {
+        if (state.failLink) return { data: null, error: { message: "permission denied for table deck_cards" } };
         state.linked.push(update.args[0] as Record<string, unknown>);
         return { data: null, error: null };
       }
@@ -126,6 +131,7 @@ const card = (n: number, visibility: string, extra: Partial<CardRow> = {}): Card
   visibility,
   frame_preview: false,
   rules_text: "Flying.",
+  art_url: "https://example.com/art.png",
   ...extra,
 });
 
@@ -137,6 +143,7 @@ beforeEach(() => {
   state.publishFlips = true;
   state.rpcCards = [];
   state.linked = [];
+  state.failLink = false;
   db();
 });
 
@@ -183,7 +190,7 @@ describe("changeDeckMembershipAction — a private card into a deck others can o
     expect(result.results[0]).toEqual({
       cardId: id(1),
       status: "private_card",
-      languageReason: expect.stringMatching(/rules text includes strong language/),
+      blockedReason: expect.stringMatching(/rules text includes strong language/),
     });
   });
 
@@ -248,6 +255,44 @@ describe("changeDeckMembershipAction — a private card into a deck others can o
   });
 });
 
+describe("the publish's other rules, read before the publish (M1 / L1)", () => {
+  it("an ARTLESS card: the dialog's reason, never sent to the publish, not added on publish", async () => {
+    state.cards = [card(1, "private", { art_url: null })];
+    const asked = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)], privateCards: "ask" });
+    if (!asked.ok) throw new Error(asked.error);
+    expect(asked.results[0]).toEqual({
+      cardId: id(1),
+      status: "private_card",
+      blockedReason: "It has no artwork yet, so it stays private. Add artwork before publishing.",
+    });
+    const published = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)], publish: [id(1)] });
+    if (!published.ok) throw new Error(published.error);
+    expect(state.published).toEqual([]);
+    expect(published.results[0]).toMatchObject({ status: "publish_refused", error: expect.stringMatching(/no artwork/) });
+    expect(state.rpcCards).toEqual([]);
+    // Add as private still adds it.
+    const kept = await changeDeckMembershipAction({ deckId: DECK, add: [id(1)] });
+    if (!kept.ok) throw new Error(kept.error);
+    expect(kept.results[0]?.status).toBe("added");
+  });
+
+  it("a mixed batch: an unnamed second face is held back with its reason, the rest is published and added", async () => {
+    state.cards = [
+      card(1, "private"),
+      card(2, "private", { back_face: { title: "", card_type: "instant" } }),
+    ];
+    const result = await changeDeckMembershipAction({ deckId: DECK, add: [id(1), id(2)], publish: [id(1), id(2)] });
+    if (!result.ok) throw new Error(result.error);
+    // Only the publishable card is sent: the unnamed face can't refuse the batch.
+    expect(state.published).toEqual([[id(1)]]);
+    expect(result.results).toEqual([
+      { cardId: id(1), status: "added", published: true },
+      { cardId: id(2), status: "publish_refused", error: expect.stringMatching(/second face has no name/) },
+    ]);
+    expect(state.rpcCards).toEqual([id(1)]);
+  });
+});
+
 describe("privateCardOfferAction — the same answer as a read", () => {
   it("lists the own private cards a public deck would mask, with the reason; writes nothing", async () => {
     state.cards = [
@@ -259,7 +304,7 @@ describe("privateCardOfferAction — the same answer as a read", () => {
     const result = await privateCardOfferAction({ deckId: DECK, cardIds: [id(1), id(2), id(3), id(4)] });
     expect(result).toEqual({
       ok: true,
-      cards: [{ cardId: id(1) }, { cardId: id(2), languageReason: expect.stringMatching(/strong language/) }],
+      cards: [{ cardId: id(1) }, { cardId: id(2), blockedReason: expect.stringMatching(/strong language/) }],
     });
     expect(state.rpcCards).toEqual([]);
     expect(state.published).toEqual([]);
@@ -289,6 +334,21 @@ describe("linkDeckCardAction — publish then link", () => {
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/strong language/) });
     expect(state.published).toEqual([]);
     expect(state.linked).toEqual([]);
+  });
+
+  it("an artless card is not published or linked, in words", async () => {
+    state.cards = [card(1, "private", { art_url: null })];
+    const result = await linkDeckCardAction(ENTRY, id(1), { publish: true });
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/no artwork/) });
+    expect(state.published).toEqual([]);
+  });
+
+  it("published, then the link fails: both are said — never the database's words (L2)", async () => {
+    state.cards = [card(1, "private")];
+    state.failLink = true;
+    const result = await linkDeckCardAction(ENTRY, id(1), { publish: true });
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/^Made public, but not linked/) });
+    expect(JSON.stringify(result)).not.toMatch(/permission denied/);
   });
 
   it("a refused publish links nothing", async () => {

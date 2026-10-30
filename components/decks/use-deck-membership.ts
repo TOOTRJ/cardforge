@@ -41,7 +41,7 @@ export type DeckMembershipStatus = { tone: "success" | "error" | "info"; message
  *  public" / "Add as private" (PrivateCardOfferDialog). */
 export type PrivateCardOffer = {
   deck: PickerDeck;
-  cards: Array<{ cardId: string; languageReason?: string }>;
+  cards: Array<{ cardId: string; blockedReason?: string }>;
 };
 
 /** The maker's answer: publish then add, add as private, or neither. */
@@ -176,7 +176,7 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
       setOffer({
         key: askedFor,
         deck,
-        cards: asked.map((r) => ({ cardId: r.cardId, ...(r.languageReason ? { languageReason: r.languageReason } : {}) })),
+        cards: asked.map((r) => ({ cardId: r.cardId, ...(r.blockedReason ? { blockedReason: r.blockedReason } : {}) })),
       });
     }
     // What the rest did; the asked cards wait on the offer (said nothing
@@ -208,7 +208,7 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
       true,
       choice === "keep"
         ? "keep"
-        : { publish: current.cards.filter((card) => !card.languageReason).map((card) => card.cardId) },
+        : { publish: current.cards.filter((card) => !card.blockedReason).map((card) => card.cardId) },
     );
   };
 

@@ -11,11 +11,8 @@ import { addCardEntryRpc } from "@/lib/decks/membership";
 import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { listDeckMemberships, listPickerDecks } from "@/lib/decks/membership-queries";
 import { chunkIds } from "@/lib/supabase/select-all-rows";
-import {
-  readVisibilityPreflight,
-  storedLanguageBlocks,
-  type VisibilityPreflightRow,
-} from "@/lib/cards/visibility-preflight";
+import { readVisibilityPreflight, type VisibilityPreflightRow } from "@/lib/cards/visibility-preflight";
+import { publishBlockReason } from "@/lib/decks/publish-block";
 import {
   FRAME_PREVIEW_MESSAGE,
   MAX_MEMBERSHIP_BATCH,
@@ -24,7 +21,6 @@ import {
   NOT_LINKABLE_MESSAGE,
   deckFullMessage,
   deckShowsPrivateCards,
-  privateCardLanguageReason,
   type MembershipCardResult,
 } from "@/lib/decks/membership-copy";
 import type {
@@ -150,14 +146,18 @@ const unique = (ids: readonly string[]) => Array.from(new Set(ids.map((id) => id
 
 /** Of `cards`, the caller's own PRIVATE ones (never a frame preview) that a
  *  deck of `deckVisibility` would show as "Private card" (TODO DK0.13) —
- *  lower-cased ids — and, for each that its text keeps private, why. Read
- *  from the rows, with the caller's session. */
+ *  lower-cased ids — and, for each that can't go public as it is, why: the
+ *  publish's own rules, read on the stored row — its text (strong
+ *  language), its artwork (no art → no gallery; a double-faced back's too)
+ *  and an unnamed second face. Such a card is never sent to the publish
+ *  (one unnamed face would refuse the whole batch), and the dialog shows
+ *  the reason instead of "Make it public". Read with the caller's session. */
 async function privateCardsOf(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   deckVisibility: string | null | undefined,
   cards: readonly CardRow[],
-): Promise<{ privateOwn: Set<string>; languageReason: Map<string, string> }> {
+): Promise<{ privateOwn: Set<string>; blockedReason: Map<string, string> }> {
   const privateOwn = new Set(
     deckShowsPrivateCards(deckVisibility)
       ? cards
@@ -165,16 +165,16 @@ async function privateCardsOf(
           .map((card) => card.id.toLowerCase())
       : [],
   );
-  const languageReason = new Map<string, string>();
-  if (privateOwn.size === 0) return { privateOwn, languageReason };
+  const blockedReason = new Map<string, string>();
+  if (privateOwn.size === 0) return { privateOwn, blockedReason };
   const read = await readVisibilityPreflight(supabase, [...privateOwn]);
   const rows = new Map<string, VisibilityPreflightRow>((read.rows ?? []).map((row) => [row.id.toLowerCase(), row]));
   for (const cardId of privateOwn) {
     const row = rows.get(cardId);
-    const fields = row ? storedLanguageBlocks(row, "public") : [];
-    if (fields.length > 0) languageReason.set(cardId, privateCardLanguageReason(fields));
+    const reason = row ? publishBlockReason(row) : null;
+    if (reason) blockedReason.set(cardId, reason);
   }
-  return { privateOwn, languageReason };
+  return { privateOwn, blockedReason };
 }
 
 export async function changeDeckMembershipAction(payload: unknown): Promise<DeckMembershipActionResult> {
@@ -213,7 +213,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
   }
   // ---- the caller's private cards in a deck others can open (DK0.13) ----
   const asking = parsed.data.privateCards === "ask";
-  const { privateOwn, languageReason } = await privateCardsOf(
+  const { privateOwn, blockedReason } = await privateCardsOf(
     supabase,
     user.id,
     deck.visibility,
@@ -225,7 +225,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
   if (privateOwn.size > 0) {
     // Publish first (a card its text keeps private is never sent: it would
     // only be skipped), then add.
-    const sendable = [...privateOwn].filter((cardId) => publishIds.has(cardId) && !languageReason.has(cardId));
+    const sendable = [...privateOwn].filter((cardId) => publishIds.has(cardId) && !blockedReason.has(cardId));
     if (sendable.length > 0) {
       // Loaded when used: the card actions are a large module every deck
       // action would otherwise pull in.
@@ -272,7 +272,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
       continue;
     }
     if (privateOwn.has(cardId) && !published.has(cardId)) {
-      const reason = languageReason.get(cardId);
+      const reason = blockedReason.get(cardId);
       if (publishIds.has(cardId)) {
         // Asked to go public and still private: not added (the maker may
         // add it as private instead).
@@ -284,7 +284,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
         continue;
       }
       if (asking) {
-        results.push({ cardId, status: "private_card", ...(reason ? { languageReason: reason } : {}) });
+        results.push({ cardId, status: "private_card", ...(reason ? { blockedReason: reason } : {}) });
         continue;
       }
     }
@@ -422,7 +422,7 @@ export type PrivateCardOfferResult =
       /** The cards the deck would show as "Private card" — each with the
        *  reason it can't be made public, when its text keeps it private.
        *  Empty: nothing to ask. */
-      cards: Array<{ cardId: string; languageReason?: string }>;
+      cards: Array<{ cardId: string; blockedReason?: string }>;
     }
   | { ok: false; error: string };
 
@@ -463,14 +463,14 @@ export async function privateCardOfferAction(payload: unknown): Promise<PrivateC
       .in("id", chunk);
     rows.push(...((data ?? []) as CardRow[]));
   }
-  const { privateOwn, languageReason } = await privateCardsOf(supabase, user.id, deck.visibility, rows);
+  const { privateOwn, blockedReason } = await privateCardsOf(supabase, user.id, deck.visibility, rows);
   return {
     ok: true,
     cards: ids
       .filter((cardId) => privateOwn.has(cardId))
       .map((cardId) => {
-        const reason = languageReason.get(cardId);
-        return { cardId, ...(reason ? { languageReason: reason } : {}) };
+        const reason = blockedReason.get(cardId);
+        return { cardId, ...(reason ? { blockedReason: reason } : {}) };
       }),
   };
 }

@@ -1,5 +1,6 @@
 import type { createClient } from "@/lib/supabase/server";
 import { languageForcesPrivate, type ProfanityField } from "@/lib/moderation/profanity";
+import { dfcBackArtMissing } from "@/lib/cards/dfc-gate";
 import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,9 @@ export type VisibilityPreflightRow = {
   title: string;
   back_face: unknown;
   rendered_image_url: string | null;
+  /** The artwork rule (no art → no gallery; a double-faced back's too). */
+  art_url?: string | null;
+  frame_style?: { template?: string | null } | null;
   /** Absent until migration 0121 lands. */
   frame_preview?: boolean;
   /** The card's visibility and text, for the strong-language rule. */
@@ -45,6 +49,8 @@ const PREFLIGHT_COLUMNS: readonly string[] = [
   "title",
   "back_face",
   "rendered_image_url",
+  "art_url",
+  "frame_style",
   "frame_preview",
   "visibility",
   "nickname",
@@ -92,4 +98,16 @@ export function storedLanguageBlocks(row: VisibilityPreflightRow, visibility: Vi
     visibility,
     stored: { card: row, visibility: row.visibility ?? "private" },
   });
+}
+
+/** What the artwork rule says of this stored card going PUBLIC — the single
+ *  card actions' rule (no artwork → no gallery; a double-faced card's back
+ *  needs its picture too, TODO 5.2 D13): "front" / "back" when a public save
+ *  would be demoted to a draft, null when it may go. Unlisted is never held
+ *  back by it. */
+export function storedArtMissing(row: VisibilityPreflightRow): "front" | "back" | null {
+  if (!row.art_url) return "front";
+  const back = (row.back_face ?? null) as Parameters<typeof dfcBackArtMissing>[1];
+  if (dfcBackArtMissing(row.frame_style?.template ?? null, back)) return "back";
+  return null;
 }

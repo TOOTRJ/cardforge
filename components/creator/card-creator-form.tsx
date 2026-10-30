@@ -5018,6 +5018,7 @@ export function CardCreatorForm({
       <CreatorDeckBox
         mode={mode}
         cardId={isEdit ? (card?.id ?? null) : null}
+        cardTitle={isEdit ? (card?.title ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
         publicLanguageFields={() => {

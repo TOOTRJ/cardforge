@@ -410,7 +410,7 @@ describe("AddToDeckDialog — a private card into a deck others can open (DK0.13
         {
           cardId: CARD,
           status: "private_card",
-          languageReason: "Its name includes strong language, so it stays private. Remove it to publish.",
+          blockedReason: "Its name includes strong language, so it stays private. Remove it to publish.",
         },
       ]),
     );
@@ -445,7 +445,7 @@ describe("AddToDeckDialog — a private card into a deck others can open (DK0.13
           {
             cardId: CARD_2,
             status: "private_card",
-            languageReason: "Its rules text includes strong language, so it stays private. Remove it to publish.",
+            blockedReason: "Its rules text includes strong language, so it stays private. Remove it to publish.",
           },
         ]),
       )

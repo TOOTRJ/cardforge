@@ -15,8 +15,9 @@ import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
 import { commitImportLines } from "@/lib/decks/import-commit";
 import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
-import { MAX_MEMBERSHIP_BATCH, PUBLISH_REFUSED_MESSAGE, privateCardLanguageReason } from "@/lib/decks/membership-copy";
-import { readVisibilityPreflight, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
+import { MAX_MEMBERSHIP_BATCH, PUBLISH_REFUSED_MESSAGE } from "@/lib/decks/membership-copy";
+import { readVisibilityPreflight } from "@/lib/cards/visibility-preflight";
+import { publishBlockReason } from "@/lib/decks/publish-block";
 import { MAX_DECKLIST_ENTRIES, MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import {
   chunk,
@@ -212,11 +213,12 @@ export async function linkDeckCardAction(
   // "Make it public" (TODO DK0.13): the caller's own private card made
   // public FIRST, through the site's visibility change and every gate it
   // has; still private after it, it is not linked and the answer says why.
+  let madePublic = false;
   if (options.publish === true && card.owner_id === user.id && card.visibility === "private") {
     const preflight = await readVisibilityPreflight(supabase, [cardId]);
     const row = preflight.rows?.[0];
-    const fields = row ? storedLanguageBlocks(row, "public") : [];
-    if (fields.length > 0) return { ok: false, error: privateCardLanguageReason(fields) };
+    const blocked = row ? publishBlockReason(row) : null;
+    if (blocked) return { ok: false, error: blocked };
     // Loaded when used: the card actions are a large module every deck
     // action would otherwise pull in.
     const { updateCardsVisibilityAction } = await import("@/lib/cards/actions");
@@ -225,13 +227,19 @@ export async function linkDeckCardAction(
     if (after?.visibility !== "public") {
       return { ok: false, error: outcome.ok ? PUBLISH_REFUSED_MESSAGE : outcome.error };
     }
+    madePublic = true;
   }
 
   const { error } = await supabase
     .from("deck_cards")
     .update({ card_id: cardId })
     .eq("id", deckCardId);
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // Made public on the way, then the link failed: both are said — never
+    // the database's words.
+    if (madePublic) return { ok: false, error: "Made public, but not linked: the deck couldn't save it. Try again." };
+    return { ok: false, error: error.message };
+  }
 
   // Funnel (TODO DK3.8): the entry got its FIRST card of the user's, MADE
   // from it in the creator — an imported card customized (owner decision
