@@ -86,6 +86,9 @@ const TOOL_PATHS = [
   "/tools",
 ];
 
+/** How a shipped draft marks a picture the owner still has to make. */
+export const IMAGE_PLACEHOLDER = /IMAGE PLACEHOLDER/;
+
 const VAGUE_ANCHORS = /^(click here|here|this|this page|read more|more|link|learn more)$/i;
 const QUESTION_HEADING = /^(how|what|why|when|where|which|who|can|should|is|are|do|does)\b|\?$/i;
 
@@ -325,6 +328,14 @@ export function articleSeoChecklist(
     level: "error",
     ok: badSrc.length === 0 && (!input.coverUrl || isAllowedMediaUrl("article-image", input.coverUrl)),
     hint: "Upload pictures through the composer (or use /article-media/ diagrams). Outside images are not drawn — and never Wizards of the Coast art.",
+    rec: 6,
+  });
+  add({
+    id: "no-placeholder",
+    label: "No image placeholder left in the body",
+    level: "error",
+    ok: !IMAGE_PLACEHOLDER.test(body),
+    hint: "A draft marks a picture still to be made with “IMAGE PLACEHOLDER”. Make the picture (or cut the block) before it goes out.",
     rec: 6,
   });
   const allAlts = [...images.map((i) => i.alt), input.coverAlt ?? ""].filter(Boolean);

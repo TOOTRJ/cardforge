@@ -116,6 +116,11 @@ describe("the article SEO checklist", () => {
     expect(blockingItems(articleSeoChecklist({ ...GOOD, body }, CONTEXT)).map((i) => i.id)).toEqual(["links-safe"]);
   });
 
+  it("blocks a draft that still holds an image placeholder", () => {
+    const body = `${GOOD.body}\n\n<Callout tone="warning" title="IMAGE PLACEHOLDER">A render of the card.</Callout>`;
+    expect(blockingItems(articleSeoChecklist({ ...GOOD, body }, CONTEXT)).map((i) => i.id)).toEqual(["no-placeholder"]);
+  });
+
   it("advises (never blocks) on answer-first, titles, FAQ, links and authorship", () => {
     const weak: ChecklistInput = {
       ...GOOD,
