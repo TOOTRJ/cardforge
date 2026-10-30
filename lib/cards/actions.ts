@@ -16,6 +16,7 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { readVisibilityPreflight, storedArtMissing, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
@@ -92,7 +93,11 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
-import { allFramePreviewsMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
+import {
+  allFramePreviewsMessage,
+  allHeldBackMessage,
+  allStrongLanguageMessage,
+} from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
@@ -1335,60 +1340,13 @@ export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
  *  and, only when there were any, how many cards it left as they were
  *  because their text holds strong language (owner policy 2026-10-28). */
 export type BulkVisibilityResult =
-  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number })
+  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number; skippedArtless?: number })
   | BulkCardsFailure;
 
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
  *  the function's lifetime; whatever doesn't fit renders live until its next
  *  individual save. */
 const BULK_BAKE_BUDGET_MS = 200_000;
-
-type BulkPreflightRow = {
-  id: string;
-  owner_id: string;
-  title: string;
-  back_face: unknown;
-  rendered_image_url: string | null;
-  /** Absent until migration 0121 lands. */
-  frame_preview?: boolean;
-  /** The card's visibility and text, for the strong-language rule. */
-  visibility?: Visibility;
-  nickname?: string | null;
-  supertype?: string | null;
-  printed_types?: string | null;
-  subtypes?: string[] | null;
-  tags?: string[] | null;
-  rules_text?: string | null;
-  flavor_text?: string | null;
-  artist_credit?: string | null;
-  footer_text?: string | null;
-  face_content?: unknown;
-};
-
-/** The pre-flight's columns. A database that lacks one of the LATE ones
- *  (frame_preview before 0121, printed_types before 0137, nickname before
- *  0141) answers that it does not exist, naming it, and the read runs
- *  again without it. */
-const BULK_PREFLIGHT_COLUMNS: readonly string[] = [
-  "id",
-  "owner_id",
-  "title",
-  "back_face",
-  "rendered_image_url",
-  "frame_preview",
-  "visibility",
-  "nickname",
-  "supertype",
-  "printed_types",
-  "subtypes",
-  "tags",
-  "rules_text",
-  "flavor_text",
-  "artist_credit",
-  "footer_text",
-  "face_content",
-];
-const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname"];
 
 export async function updateCardsVisibilityAction(
   cardIds: string[],
@@ -1420,20 +1378,7 @@ export async function updateCardsVisibilityAction(
   // every user's bulk change in that window.
   // (The card's visibility and text ride along too, for the strong-language
   // rule below; a late column that is missing is dropped the same way.)
-  let existing: BulkPreflightRow[] | null = null;
-  let existingError: { message: string } | null = null;
-  let columns = [...BULK_PREFLIGHT_COLUMNS];
-  for (let attempt = 0; attempt <= BULK_LATE_COLUMNS.length; attempt += 1) {
-    const read = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
-    existing = (read.data ?? null) as unknown as BulkPreflightRow[] | null;
-    existingError = read.error;
-    const message = read.error?.message ?? "";
-    const missing = read.error
-      ? BULK_LATE_COLUMNS.find((column) => columns.includes(column) && message.includes(column))
-      : undefined;
-    if (!missing) break;
-    columns = columns.filter((column) => column !== missing);
-  }
+  const { rows: existing, error: existingError } = await readVisibilityPreflight(supabase, ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
   }
@@ -1464,22 +1409,34 @@ export async function updateCardsVisibilityAction(
     : rows.filter(
         (c) =>
           c.frame_preview !== true &&
-          languageForcesPrivate({
-            saved: c,
-            visibility: parsed.data.visibility,
-            stored: { card: c, visibility: c.visibility ?? "private" },
-          }).length > 0,
+          storedLanguageBlocks(c, parsed.data.visibility).length > 0,
       );
+  // No artwork → no gallery (the single-card rule, createCardAction /
+  // updateCardAction): a PUBLISH leaves an artless card — or a double-faced
+  // one whose back has no picture — as it is, and counts it. Unlisting is
+  // link-only sharing of a work in progress, and stays allowed.
+  const artless =
+    parsed.data.visibility !== "public"
+      ? []
+      : rows.filter(
+          (c) => c.frame_preview !== true && !strongLanguage.includes(c) && storedArtMissing(c) !== null,
+        );
   const targets = goingPrivate
     ? rows
-    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c));
+    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c));
   if (targets.length === 0) {
     return {
       ok: false,
       error:
-        strongLanguage.length > 0
-          ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
-          : allFramePreviewsMessage(parsed.data.visibility, previews.length),
+        artless.length > 0
+          ? allHeldBackMessage(parsed.data.visibility, {
+              strongLanguage: strongLanguage.length,
+              previews: previews.length,
+              artless: artless.length,
+            })
+          : strongLanguage.length > 0
+            ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
+            : allFramePreviewsMessage(parsed.data.visibility, previews.length),
     };
   }
   const targetIds = targets.map((c) => c.id);
@@ -1588,6 +1545,7 @@ export async function updateCardsVisibilityAction(
     count: targetIds.length,
     skippedPreviews: previews.length,
     ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
+    ...(artless.length > 0 ? { skippedArtless: artless.length } : {}),
   };
 }
 

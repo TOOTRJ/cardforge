@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { updateCardsVisibilityAction } from "@/lib/cards/actions";
-import { strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import { artlessSkippedLine, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
 
 // ---------------------------------------------------------------------------
 // Private cards in a deck others can open (owner decision D11, TODO DK5.17)
@@ -46,7 +46,11 @@ export function DeckPrivateCardsNotice({
         return;
       }
       const published = result.count === 1 ? "1 card is public now." : `${result.count} cards are public now.`;
-      toast.success([published, strongLanguageSkippedLine(result.skippedLanguage)].filter(Boolean).join(" "));
+      toast.success(
+        [published, strongLanguageSkippedLine(result.skippedLanguage), artlessSkippedLine(result.skippedArtless)]
+          .filter(Boolean)
+          .join(" "),
+      );
       router.refresh();
     });
   };

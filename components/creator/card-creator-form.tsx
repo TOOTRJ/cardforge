@@ -5018,8 +5018,13 @@ export function CardCreatorForm({
       <CreatorDeckBox
         mode={mode}
         cardId={isEdit ? (card?.id ?? null) : null}
+        cardTitle={isEdit ? (card?.title ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
+        publicLanguageFields={() => {
+          const values = methods.getValues();
+          return creatorLanguageFields(values, "public", languageContextFor(values));
+        }}
       />
     );
   const stepPanels = (

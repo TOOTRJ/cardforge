@@ -63,3 +63,36 @@ export function allStrongLanguageMessage(visibility: Visibility, strongLanguage:
   const rest = previews > 0 ? `, and ${previews} ${plural(previews, "is a frame preview", "are frame previews")}` : "";
   return `${nothing}: ${text}${rest}. Remove the strong language to publish.`;
 }
+
+/** The cards a PUBLISH left as they were because they have no artwork (or
+ *  a double-faced card's back has none) — the single-card rule, no artwork →
+ *  no gallery — as a sentence the toast adds; "" when there were none. */
+export function artlessSkippedLine(skipped: number | undefined): string {
+  if (!skipped || skipped <= 0) return "";
+  return skipped === 1
+    ? "1 card stayed as it was: it has no artwork yet. Add artwork before publishing."
+    : `${skipped} cards stayed as they were: they have no artwork yet. Add artwork before publishing.`;
+}
+
+/** Every selected card is held back, artless cards among them: nothing
+ *  changed, and every reason. */
+export function allHeldBackMessage(
+  visibility: Visibility,
+  held: { strongLanguage: number; previews: number; artless: number },
+): string {
+  const nothing =
+    visibility === "public" ? "Nothing was published" : `Nothing was made ${visibility}`;
+  const reasons = [
+    held.artless > 0
+      ? held.artless === 1 && held.strongLanguage + held.previews === 0
+        ? "the selected card has no artwork yet"
+        : `${cards(held.artless)} ${plural(held.artless, "has", "have")} no artwork yet`
+      : "",
+    held.strongLanguage > 0
+      ? `${cards(held.strongLanguage)} ${plural(held.strongLanguage, "has", "have")} strong language in ${plural(held.strongLanguage, "its", "their")} text`
+      : "",
+    held.previews > 0 ? `${held.previews} ${plural(held.previews, "is a frame preview", "are frame previews")}` : "",
+  ].filter(Boolean);
+  const list = reasons.length > 1 ? `${reasons.slice(0, -1).join(", ")} and ${reasons[reasons.length - 1]}` : reasons[0];
+  return `${nothing}: ${list}. Add artwork before publishing.`;
+}

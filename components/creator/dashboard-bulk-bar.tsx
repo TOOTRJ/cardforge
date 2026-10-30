@@ -28,7 +28,11 @@ import {
   deleteCardsAction,
   updateCardsVisibilityAction,
 } from "@/lib/cards/actions";
-import { bulkVisibilityMessage, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import {
+  artlessSkippedLine,
+  bulkVisibilityMessage,
+  strongLanguageSkippedLine,
+} from "@/lib/cards/bulk-visibility-copy";
 import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -90,7 +94,7 @@ export function DashboardBulkBar({
       // …and a card left as it was for the strong language in its text
       // (owner policy 2026-10-28) is named in the same toast — one message.
       toast.success(
-        [bulkVisibilityMessage(visibility, result.count, result.skippedPreviews), strongLanguageSkippedLine(result.skippedLanguage)]
+        [bulkVisibilityMessage(visibility, result.count, result.skippedPreviews), strongLanguageSkippedLine(result.skippedLanguage), artlessSkippedLine(result.skippedArtless)]
           .filter(Boolean)
           .join(" "),
       );
