@@ -14,7 +14,9 @@
 --    slugs back — that row removed (a live slug is never also a redirect).
 --    Nothing else writes it: no API role holds a write grant and the table
 --    has no write policy. A deleted deck takes its rows with it (cascade):
---    the old links then 404 like the deck's own.
+--    the old links then 404 like the deck's own. A deck keeps its 20 NEWEST
+--    old slugs (the trigger drops the oldest past that): renaming a deck over
+--    and over can't hoard names — every one of them would be reserved (2).
 --
 -- 2. AN OLD SLUG IS RESERVED WHILE IT REDIRECTS. decks_reserve_old_slugs
 --    (BEFORE INSERT OR UPDATE OF slug) refuses a slug that another deck's
@@ -28,17 +30,26 @@
 --    write that skips the app (the service role, an AI job) is held to it
 --    too. The deck page still reads the LIVE slug first, so were a row ever
 --    to share a live slug (it can't through these triggers), the live deck
---    wins.
+--    wins. Both triggers take a transaction-level advisory lock on the slug
+--    they test or record (pg_advisory_xact_lock(hashtext(slug))) BEFORE the
+--    test: under READ COMMITTED, deck A renaming x → y while deck B renames
+--    → x could otherwise each miss the other's uncommitted row, and A's old
+--    links would land on B. With the lock, B's test waits for A's commit and
+--    then sees A's row.
 --
--- 3. READS FOLLOW THE DECK (0151's rule). deck_slug_history_readable(deck,
---    old slug) — a definer, since an unlisted deck is invisible to a visitor's
---    own decks read until the request names it — admits a row when its deck
---    is PUBLIC, or the CALLER's, or UNLISTED and the request names the OLD
---    slug in 0151's `x-pipglyph-deck` header (requested_deck_link()): an
---    unlisted deck's old link is a link like its new one, and a list without
---    the header holds none of its rows. A PRIVATE deck's history is its
---    owner's alone. The app then reads the deck by its id (0151: the id is a
---    link too) to learn the slug to redirect to; no other column is read.
+-- 3. NO ROW IS LISTABLE: EVERY NON-OWNER READ NAMES ITS OLD SLUG.
+--    deck_slug_history_readable(deck, old slug) — a definer, since an
+--    unlisted deck is invisible to a visitor's own decks read until the
+--    request names it — admits a row to the deck's OWNER, and to anyone else
+--    only when the deck is PUBLIC or UNLISTED and the request names that
+--    row's OLD slug in 0151's `x-pipglyph-deck` header
+--    (requested_deck_link()) — the link the visitor already holds. A public
+--    deck's history is NOT a list: the slugs a deck had while it was private
+--    or unlisted ("my-secret-plan-against-bob", later renamed and made
+--    public) would otherwise be handed to anyone. A PRIVATE deck's history is
+--    its owner's alone, header or not. The app (lib/decks/slug-history.ts)
+--    always sends the old slug, then reads the deck by its id (0151: the id
+--    is a link too) to learn the slug to redirect to.
 --
 -- Grants (new projects auto-grant nothing — CLAUDE.md): deck_slug_history
 -- SELECT to anon and authenticated (RLS above), everything to service_role;
@@ -82,6 +93,8 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Serialise every test and record of this slug (see 2. above).
+  perform pg_advisory_xact_lock(hashtext(new.slug));
   if exists (
     select 1 from public.deck_slug_history h
     where h.old_slug = new.slug and h.deck_id <> new.id
@@ -106,15 +119,31 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Serialise against a reservation test of the slug being left (2. above).
+  perform pg_advisory_xact_lock(hashtext(old.slug));
+
   -- The deck took one of its own old slugs back: it is live again.
   delete from public.deck_slug_history
   where old_slug = new.slug and deck_id = new.id;
 
-  insert into public.deck_slug_history (old_slug, deck_id)
-  values (old.slug, new.id)
+  -- clock_timestamp, not now(): several renames in one transaction keep
+  -- their order for the cap below.
+  insert into public.deck_slug_history (old_slug, deck_id, created_at)
+  values (old.slug, new.id, clock_timestamp())
   on conflict (old_slug) do update
-    set created_at = now()
+    set created_at = excluded.created_at
     where public.deck_slug_history.deck_id = excluded.deck_id;
+
+  -- At most 20 old slugs a deck: the oldest go (their links then 404, and
+  -- the names are free again).
+  delete from public.deck_slug_history h
+  where h.deck_id = new.id
+    and h.old_slug in (
+      select k.old_slug from public.deck_slug_history k
+      where k.deck_id = new.id
+      order by k.created_at desc, k.old_slug
+      offset 20
+    );
   return null;
 end;
 $$;
@@ -138,16 +167,18 @@ security definer
 set search_path = ''
 as $$
   select coalesce((
-    select d.visibility = 'public'
-        or d.owner_id = auth.uid()
-        or (d.visibility = 'unlisted' and public.requested_deck_link() = p_old_slug)
+    select d.owner_id = auth.uid()
+        or (
+          d.visibility in ('public', 'unlisted')
+          and public.requested_deck_link() = p_old_slug
+        )
     from public.decks d
     where d.id = p_deck
   ), false);
 $$;
 
 comment on function public.deck_slug_history_readable(uuid, text) is
-  'Whether the caller may read a deck_slug_history row: its deck is public, or theirs, or unlisted and the request names the OLD slug in x-pipglyph-deck (0151''s link rule). Never a private deck''s for anyone but its owner (0155).';
+  'Whether the caller may read a deck_slug_history row: the deck is theirs, or it is public / unlisted and the request names THAT OLD slug in x-pipglyph-deck (0151''s link rule) — no row is listable. Never a private deck''s for anyone but its owner (0155).';
 
 drop policy if exists "Deck slug history: readable where its deck's link is" on public.deck_slug_history;
 create policy "Deck slug history: readable where its deck's link is"

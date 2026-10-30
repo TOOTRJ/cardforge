@@ -1,6 +1,7 @@
 import "server-only";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
+import { formatHasBracket } from "@/lib/decks/deck-details";
 
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -1978,16 +1979,21 @@ export async function createDeckGenerationJob(
     existingContext = owned.context;
   }
 
+  // The deck's format decides whether a bracket applies at all (TODO
+  // DK5.14: Commander only) — a stored bracket on a deck that left Commander
+  // is never handed to the AI. A deck type is a key from the list or none.
+  const planFormat = (existingDeck?.format as DeckFormat) ?? input.format;
+  const deckType = deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null);
   let planResult;
   try {
     planResult = await generateDeckPlan({
       theme: input.theme,
       style: input.style,
-      format: (existingDeck?.format as DeckFormat) ?? input.format,
+      format: planFormat,
       size: input.size,
       existing: existingContext,
-      deckType: deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null),
-      bracket: input.bracket ?? existingDeck?.bracket ?? null,
+      deckType,
+      bracket: formatHasBracket(planFormat) ? (input.bracket ?? existingDeck?.bracket ?? null) : null,
     });
   } catch (error) {
     const failed = planDesignFailure(error, "deck");
@@ -2004,8 +2010,9 @@ export async function createDeckGenerationJob(
         description: planResult.concept.deck_description,
         format: input.format,
         visibility: "public",
-        deck_type: input.deckType ?? null,
-        bracket: input.format === "commander" ? (input.bracket ?? null) : null,
+        // Only a key the list knows (createDeckSchema refuses any other).
+        deck_type: deckTypeByKey(input.deckType ?? null)?.key ?? null,
+        bracket: formatHasBracket(input.format) ? (input.bracket ?? null) : null,
       },
       { redirectAfterCreate: false },
     );

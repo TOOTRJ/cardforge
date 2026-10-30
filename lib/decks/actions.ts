@@ -101,6 +101,16 @@ async function recordDeckEvent(
   await recordFunnelEvent(createAdminClient(), { event, userId, props });
 }
 
+/** Every suffixed slug was taken (live decks, or old ones a renamed deck
+ *  still redirects from — migration 0155): plain words, never the
+ *  database's (TODO DK5.14). */
+function slugsExhausted(): DeckActionFailure {
+  return {
+    ok: false,
+    fieldErrors: { title: "Too many decks already use this name's link — try a different name." },
+  };
+}
+
 function slugCandidate(desired: string, attempt: number): string {
   if (attempt === 1) return desired;
   const suffix = `-${attempt}`;
@@ -161,6 +171,7 @@ export async function createDeckAction(
     : null;
   const reused = row !== null;
   let lastError: string | null = null;
+  let lastCode: string | null = null;
   for (let attempt = 1; !row && attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
     const { data, error } = await supabase
       .from("decks")
@@ -172,6 +183,7 @@ export async function createDeckAction(
       break;
     }
     lastError = error?.message ?? null;
+    lastCode = error?.code ?? null;
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
@@ -180,6 +192,7 @@ export async function createDeckAction(
     // a built-in background on a database 0150 hasn't reached.
     return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(insert.cover_url) } };
   }
+  if (!row && lastCode === UNIQUE_VIOLATION) return slugsExhausted();
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
@@ -332,6 +345,7 @@ export async function updateDeckAction(
 
   let row: { id: string; slug: string } | null = null;
   let lastError: string | null = null;
+  let lastCode: string | null = null;
   const attempts = changingSlug ? MAX_SLUG_ATTEMPTS : 1;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const candidate = changingSlug
@@ -349,6 +363,7 @@ export async function updateDeckAction(
       break;
     }
     lastError = error?.message ?? null;
+    lastCode = error?.code ?? null;
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
@@ -357,6 +372,7 @@ export async function updateDeckAction(
     // a built-in background on a database 0150 hasn't reached.
     return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(update.cover_url) } };
   }
+  if (!row && lastCode === UNIQUE_VIOLATION) return slugsExhausted();
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not update deck." };
   }

@@ -19,11 +19,11 @@ import { SLUG_PATTERN } from "@/lib/validation/card";
 // refused with 23505, which the deck actions retry with a suffix), so a link
 // shared to a renamed deck never lands on a stranger's.
 //
-// Reads go as the VIEWER (0155's policy follows 0151's link rule): a public
-// deck's old slug redirects for everyone, an unlisted deck's for a request
-// that names the OLD slug (the link the visitor holds) — the deck is then
-// read by its id, 0151's other link — and a private deck's for its owner
-// alone. Anything else, a database 0155 has not reached included, is null:
+// Reads go as the VIEWER (0155's policy follows 0151's link rule): no row
+// is listable — every non-owner read must NAME the old slug in the header
+// (the link the visitor holds), which this read always does. A public or
+// unlisted deck's old slug then redirects for everyone (the deck is read by
+// its id, 0151's other link), a private deck's for its owner alone. Anything else, a database 0155 has not reached included, is null:
 // the page's 404, as before.
 // ---------------------------------------------------------------------------
 

@@ -132,6 +132,16 @@ describe("updateDeckAction — a rename moves the slug", () => {
     expect(result).toMatchObject({ ok: true, slug: "ashen-emberforge-2" });
   });
 
+  it("every suffix taken: plain words on the title, never the database's", async () => {
+    state.takenSlugs = new Set(["ashen-emberforge", ...Array.from({ length: 60 }, (_, i) => `ashen-emberforge-${i + 2}`)]);
+    const result = await updateDeckAction(DECK_ID, { title: "Ashen Emberforge" });
+    expect(result).toEqual({
+      ok: false,
+      fieldErrors: { title: "Too many decks already use this name's link — try a different name." },
+    });
+    expect(JSON.stringify(result)).not.toMatch(/duplicate/);
+  });
+
   it("an edit without a new title never touches the slug", async () => {
     const result = await updateDeckAction(DECK_ID, { deck_type: "goblins", bracket: 2 });
     expect(result).toMatchObject({ ok: true, slug: "emberforge-draft" });
