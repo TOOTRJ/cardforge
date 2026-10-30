@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/layout/page-container";
 import {
   deleteCardsAction,
   updateCardsVisibilityAction,
@@ -121,9 +122,11 @@ export function DashboardBulkBar({
       <div
         role="region"
         aria-label={`${count} cards selected`}
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-surface/95 px-4 py-3 backdrop-blur-md sm:px-6"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-surface/95 py-3 backdrop-blur-md"
       >
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3">
+        {/* The dashboard's own wide frame (TODO WD4), so the bar's edges
+            line up with the page above it. */}
+        <PageContainer size="wide" className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3">
             <span className="font-display text-sm font-semibold text-foreground">
               {count} selected
@@ -222,7 +225,7 @@ export function DashboardBulkBar({
               />
             ) : null}
           </div>
-        </div>
+        </PageContainer>
       </div>
 
       {/* Delete confirmation dialog. */}

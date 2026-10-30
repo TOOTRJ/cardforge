@@ -19,7 +19,7 @@ export default async function MessagesLayout({
 }) {
   const threads = await listMyThreads();
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Support"
         title="Messages"

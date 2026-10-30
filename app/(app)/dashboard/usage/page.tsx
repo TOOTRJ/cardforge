@@ -93,7 +93,7 @@ export default async function UsagePage() {
   const billingOn = isBillingEnabled();
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Account"
         title="AI usage"

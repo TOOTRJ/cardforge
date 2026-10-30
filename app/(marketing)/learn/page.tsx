@@ -13,6 +13,7 @@ import { listCategoryShelves, type CategoryShelf } from "@/lib/content/articles"
 import { getNewsFeed } from "@/lib/updates/queries";
 import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /learn — the hub of everything a reader learns from (TODO NV4): the four
@@ -98,7 +99,7 @@ export default async function LearnPage() {
   const guideCount = shelves.reduce((sum, shelf) => sum + shelf.articles.length, 0);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: "Learn on PipGlyph",
@@ -213,7 +214,7 @@ export default async function LearnPage() {
           ))}
         </ul>
       </section>
-    </div>
+    </PageContainer>
   );
 }
 

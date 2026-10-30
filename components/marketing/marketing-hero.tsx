@@ -6,6 +6,7 @@ import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
 import { cardCornersClass } from "@/lib/cards/card-orientation";
+import { PageContainer } from "@/components/layout/page-container";
 
 // WUBRG pips rendered with the Mana font — the same glyphs the card pips use,
 // so the strip shows real MTG mana symbols rather than plain colored dots.
@@ -44,7 +45,7 @@ export function MarketingHero({
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-8 lg:py-32">
+      <PageContainer className="relative grid gap-12 py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-32">
         <div className="flex flex-col items-start gap-6">
           {/* Eyebrow */}
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
@@ -197,7 +198,7 @@ export function MarketingHero({
             </div>
           )}
         </div>
-      </div>
+      </PageContainer>
     </section>
   );
 }

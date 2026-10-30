@@ -53,6 +53,9 @@ type Props = {
   /** "compact" is the small-tile My Cards view: the hover actions stack and
    *  the footer drops its select hint so nothing overflows a narrow tile. */
   density?: "regular" | "compact";
+  /** The grid's `sizes` (components/cards/card-grid.tsx: the dashboard's
+   *  lists); else the thumbnail's generous default. */
+  sizes?: string;
   /** Extra line under the tile (e.g. the "Remixed from …" credit). */
   caption?: React.ReactNode;
   /** The card's decks (TODO DK9.2): "In N decks" / "Add to deck", opening
@@ -74,6 +77,7 @@ export function DashboardCardTile({
   enableViewTransition = true,
   density = "regular",
   caption,
+  sizes,
   decks,
   onToggle,
 }: Props) {
@@ -154,6 +158,7 @@ export function DashboardCardTile({
             renderedBackThumbUrl: card.rendered_back_thumb_url,
             title: card.title,
             previewData,
+            sizes,
           }}
         />
 

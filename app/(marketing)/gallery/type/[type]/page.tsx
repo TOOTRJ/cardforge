@@ -10,6 +10,8 @@ import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-
 import { listGalleryCards } from "@/lib/cards/queries";
 import { HUB_TYPES, isHubType, listTypeHubs, TYPE_HUB_COPY, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import { CARD_TYPE_LABELS } from "@/types/card";
+import { PageContainer } from "@/components/layout/page-container";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // /gallery/type/[type] — one page per card type (creature, instant, …) with a
@@ -54,7 +56,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
   const label = CARD_TYPE_LABELS[type].toLowerCase();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -71,7 +73,7 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
           })),
         })}
       />
-      <PageHeader eyebrow="Gallery · card type" title={copy.title} description={copy.intro} />
+      <PageHeader className="pb-6" eyebrow="Gallery · card type" title={copy.title} description={copy.intro} />
       <p className="mt-4 text-sm text-muted">
         {count} public custom {label} card{count === 1 ? "" : "s"} so far
         {copy.guide ? (
@@ -85,11 +87,11 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
         ) : null}
         .
       </p>
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <CardGrid className="mt-6">
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
-      </div>
+      </CardGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
         <Button asChild size="sm">
           <Link href="/create">
@@ -113,6 +115,6 @@ export default async function TypeHubPage({ params }: { params: Promise<Params> 
         </Button>
       </div>
       <HubLinks currentType={type} />
-    </div>
+    </PageContainer>
   );
 }

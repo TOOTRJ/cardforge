@@ -34,6 +34,7 @@ import {
 } from "@/lib/creator/frame-preview";
 import { buildFrameWalkthrough } from "@/lib/creator/frame-walkthrough";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const metadata: Metadata = {
   title: "Create",
@@ -182,7 +183,7 @@ export default async function CreatePage({
       : null;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <PageContainer className="py-10">
       <PageHeader
         eyebrow={remixParent ? "Remix" : "Creator"}
         title={
@@ -299,7 +300,7 @@ export default async function CreatePage({
           defaultFooterText={exportStamp.footerText}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -22,6 +22,7 @@ import {
   itemListJsonLd,
   JsonLd,
 } from "@/components/seo/json-ld";
+import { PageContainer } from "@/components/layout/page-container";
 
 type Params = { slug: string };
 
@@ -75,7 +76,7 @@ export default async function ChallengeDetailPage({
   const active = isActive(challenge);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -189,7 +190,7 @@ export default async function ChallengeDetailPage({
           </div>
         )}
       </section>
-    </div>
+    </PageContainer>
   );
 }
 

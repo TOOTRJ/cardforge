@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { PageContainer } from "@/components/layout/page-container";
 
 type LegalPageShellProps = {
   eyebrow: string;
@@ -22,7 +23,7 @@ export function LegalPageShell({
   backLabel = "Back to home",
 }: LegalPageShellProps) {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer className="py-12">
       <div className="max-w-3xl">
       <Link
         href={backHref}
@@ -48,6 +49,6 @@ export function LegalPageShell({
         {children}
       </article>
     </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getFantasyGameSystem } from "@/lib/cards/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The GUEST card creator — served at /create for signed-out visitors.
@@ -56,7 +57,7 @@ export default async function PreviewPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <PageContainer className="py-10">
       {/* Guest banner */}
       <div className="mb-6 flex items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3">
         <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
@@ -96,7 +97,7 @@ export default async function PreviewPage() {
           aiConfigured={isDesignAiConfigured()}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
