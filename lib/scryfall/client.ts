@@ -316,6 +316,10 @@ export type ScryfallSearchOptions = {
    *  before the limit. TODO 1.23: only the import dialog's "Tokens &
    *  emblems" scope and the no-match fallback send it. */
   includeExtras?: boolean;
+  /** Scryfall's sort: by name (the default — the import dialog's list) or
+   *  by EDHREC rank, the most played first (the deck page's add box, TODO
+   *  DK5.2: a typeahead's best guess is the card people mean). */
+  order?: "name" | "edhrec";
 };
 
 export type ScryfallSearchOutcome = {
@@ -335,6 +339,7 @@ export async function searchCardsWithOutcome({
   query,
   limit = 12,
   includeExtras = false,
+  order = "name",
 }: ScryfallSearchOptions): Promise<ScryfallSearchOutcome> {
   const q = query.trim();
   if (!q) return { cards: [], noMatches: false };
@@ -342,7 +347,7 @@ export async function searchCardsWithOutcome({
   const url = `/cards/search?${new URLSearchParams({
     q,
     unique: "cards",
-    order: "name",
+    order,
     ...(includeExtras ? { include_extras: "true" } : {}),
   })}`;
 

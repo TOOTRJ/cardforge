@@ -451,6 +451,10 @@ type CardCreatorFormProps = {
    *  from the entry's Scryfall card on mount, and on save the new card links
    *  back as the entry's proxy before returning to the deck. */
   deckRemix?: DeckRemixContext | null;
+  /** Where a save returns to (TODO DK5.5): the deck page at the card being
+   *  edited, already whitelisted by the page (lib/decks/return-to.ts
+   *  deckReturnPath). Null: where a save always goes. */
+  returnTo?: string | null;
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
@@ -774,6 +778,7 @@ export function CardCreatorForm({
   aiDecks = null,
   canDesignForDeck = false,
   deckRemix = null,
+  returnTo = null,
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
@@ -4455,7 +4460,7 @@ export function CardCreatorForm({
           } else {
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
-          linkedHome = `/deck/${deckRemix.deckSlug}`;
+          linkedHome = returnTo ?? `/deck/${deckRemix.deckSlug}`;
         }
 
         if (options.afterSave) {
@@ -4565,12 +4570,20 @@ export function CardCreatorForm({
       // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
       // to be pressed twice after a save) — unless we stay in the editor
       // with unsent keystrokes, which keep their guard.
+      // Opened from a deck (TODO DK5.5): back to it — unless keystrokes
+      // made during the save are still unsent.
+      const returning = Boolean(returnTo) && !typedDuringSave;
       const staysInEditor =
         !options.afterSave &&
+        !returning &&
         !(intent === "save" && editSavedVisibility === "public");
       if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
+        return;
+      }
+      if (returning && returnTo) {
+        router.push(returnTo);
         return;
       }
       if (intent === "save" && editSavedVisibility === "public") {

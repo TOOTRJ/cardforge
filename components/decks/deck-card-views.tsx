@@ -1,22 +1,15 @@
 "use client";
 
 import { useId } from "react";
-import { ArrowDown, ArrowUp, Ban, HelpCircle, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, Check, ChevronDown, HelpCircle, Lock } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { TwoFacesMark } from "@/components/cards/two-faces-mark";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import { DeckEntryTile } from "@/components/decks/deck-entry-tile";
+import type { DeckRowUi, ViewRow } from "@/components/decks/deck-row-ui";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { entryRowPictures } from "@/lib/decks/entry-image";
-import {
-  deckRowLabel,
-  stackColumnsOf,
-  type DeckGroup,
-  type DeckRow,
-  type DeckSort,
-  type DeckView,
-} from "@/lib/decks/deck-view";
-import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
+import { deckRowLabel, stackColumnsOf, type DeckGroup, type DeckSort, type DeckView } from "@/lib/decks/deck-view";
 import { formatUtcDate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY } from "@/types/card";
@@ -35,9 +28,16 @@ import { DECK_BOARD_LABELS } from "@/types/deck";
 //   Table   one row per entry with every field; the five sortable columns'
 //           headers sort (the toolbar's Sort, the same choice).
 //
-// Every opener carries `data-deck-entry` (the pop-up's focus hand-back) and
-// the row's full name — its quantity and status included (TODO DK5.12) —
-// and keeps clear of the sticky summary bar when focused (scroll-margin).
+// Every opener is built by the card area (DeckRowUi.openerProps — the
+// pop-up, the preview pane, the entry keys, the owner's selection) and
+// carries `data-deck-entry` (the pop-up's focus hand-back) and the row's
+// full name — its quantity and status included (TODO DK5.12) — and keeps
+// clear of the sticky summary bar when focused (scroll-margin). The owner's
+// List and Table rows carry a quantity stepper and a "⋯" menu beside the
+// opener (never inside it); the Stacks and Grid cards keep their pictures
+// clear — their actions are the preview pane's, the pop-up's and the keys'.
+// Each group's heading is a disclosure button: a group can be folded away
+// (TODO DK5.10) — by its reader, never by the page.
 //
 // Every group is in the document, however big the deck: no windowing and
 // no `content-visibility` (the independent check of #671 found it took
@@ -45,7 +45,6 @@ import { DECK_BOARD_LABELS } from "@/types/deck";
 // the page jumped as the guessed sizes reflowed) — 160+ entries draw fine.
 // ---------------------------------------------------------------------------
 
-type ViewRow = DeckRow<DeckItem<DeckPageCard>>;
 type ViewGroup = DeckGroup<ViewRow>;
 
 /** Openers keep clear of the sticky summary bar when the focus scrolls them
@@ -61,30 +60,72 @@ export function DeckGroupViews({
   sort,
   onSort,
   showProxies,
-  onOpen,
+  ui,
 }: {
   view: DeckView;
   groups: ViewGroup[];
   sort: DeckSort;
   onSort: (sort: DeckSort) => void;
   showProxies: boolean;
-  onOpen: (entryId: string) => void;
+  ui: DeckRowUi;
 }) {
-  if (view === "table") return <TableView groups={groups} sort={sort} onSort={onSort} showProxies={showProxies} onOpen={onOpen} />;
-  if (view === "list") return <ListView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
-  if (view === "grid") return <GridView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
-  return <StacksView groups={groups} showProxies={showProxies} onOpen={onOpen} />;
+  if (view === "table") return <TableView groups={groups} sort={sort} onSort={onSort} showProxies={showProxies} ui={ui} />;
+  if (view === "list") return <ListView groups={groups} showProxies={showProxies} ui={ui} />;
+  if (view === "grid") return <GridView groups={groups} showProxies={showProxies} ui={ui} />;
+  return <StacksView groups={groups} showProxies={showProxies} ui={ui} />;
 }
 
-function GroupHeading({ id, group, className }: { id: string; group: ViewGroup; className?: string }) {
+/** A group's heading — its disclosure button, the group's name and count. */
+function GroupHeading({
+  id,
+  group,
+  ui,
+  contentId,
+  className,
+}: {
+  id: string;
+  group: ViewGroup;
+  ui: DeckRowUi;
+  contentId: string;
+  className?: string;
+}) {
+  const open = !ui.isCollapsed(group.key);
   return (
-    <h3 id={id} className={cn("flex items-baseline gap-2 font-display text-base font-semibold text-foreground", className)}>
-      {group.label}
-      <span className="font-sans text-xs font-normal tabular-nums text-subtle">
-        <span className="sr-only">, </span>
-        {group.count} card{group.count === 1 ? "" : "s"}
-      </span>
+    <h3 id={id} className={cn("font-display text-base font-semibold text-foreground", className)}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => ui.toggleGroup(group.key)}
+        className="-mx-1 inline-flex min-h-8 items-center gap-2 rounded-md px-1 text-left transition-colors hover:text-primary-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+      >
+        <ChevronDown
+          className={cn("h-3.5 w-3.5 shrink-0 text-subtle transition-transform motion-reduce:transition-none", !open && "-rotate-90")}
+          aria-hidden
+        />
+        {group.label}
+        <span className="font-sans text-xs font-normal tabular-nums text-subtle">
+          <span className="sr-only">, </span>
+          {group.count} card{group.count === 1 ? "" : "s"}
+        </span>
+      </button>
     </h3>
+  );
+}
+
+/** The selection's mark on a card picture (the opener's aria-pressed says
+ *  it to assistive tech). */
+function SelectedMark({ selected }: { selected: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow",
+        selected ? "border-primary-bright bg-primary text-white" : "border-white/80 bg-black/55 text-transparent",
+      )}
+    >
+      <Check className="h-3.5 w-3.5" />
+    </span>
   );
 }
 
@@ -92,15 +133,7 @@ function GroupHeading({ id, group, className }: { id: string; group: ViewGroup; 
 // Stacks
 // ---------------------------------------------------------------------------
 
-function StacksView({
-  groups,
-  showProxies,
-  onOpen,
-}: {
-  groups: ViewGroup[];
-  showProxies: boolean;
-  onOpen: (entryId: string) => void;
-}) {
+function StacksView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxies: boolean; ui: DeckRowUi }) {
   const baseId = useId();
   return (
     // A pile is the column's width (11 rem; on a phone two piles share the
@@ -109,10 +142,11 @@ function StacksView({
     <div className="flex flex-wrap items-start gap-x-6 gap-y-8 [--stack-col:min(11rem,calc((100vw_-_3.5rem)/2))] xl:[--stack-col:12rem]">
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
+        const contentId = `${headingId}-cards`;
         return (
           <section key={group.key} aria-labelledby={headingId} className="flex max-w-full flex-col gap-2.5">
-            <GroupHeading id={headingId} group={group} />
-            <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-6">
+            <GroupHeading id={headingId} group={group} ui={ui} contentId={contentId} />
+            <div id={contentId} hidden={ui.isCollapsed(group.key)} className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-6">
               {stackColumnsOf(group.rows).map((column, c) => (
                 <ul
                   key={c}
@@ -129,8 +163,9 @@ function StacksView({
                   )}
                 >
                   {column.map((row) => (
-                    <li key={row.id}>
-                      <DeckEntryTile row={row} label={labelOf(row)} showProxies={showProxies} onOpen={onOpen} sizes="192px" />
+                    <li key={row.id} className={cn(row.item.pending && "opacity-60")}>
+                      <DeckEntryTile row={row} opener={ui.openerProps(row, labelOf(row))} showProxies={showProxies} sizes="192px" />
+                      {ui.selecting ? <SelectedMark selected={ui.isSelected(row.id)} /> : null}
                     </li>
                   ))}
                 </ul>
@@ -147,38 +182,35 @@ function StacksView({
 // Grid
 // ---------------------------------------------------------------------------
 
-function GridView({
-  groups,
-  showProxies,
-  onOpen,
-}: {
-  groups: ViewGroup[];
-  showProxies: boolean;
-  onOpen: (entryId: string) => void;
-}) {
+function GridView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxies: boolean; ui: DeckRowUi }) {
   const baseId = useId();
   return (
     <div className="flex flex-col gap-8">
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
+        const contentId = `${headingId}-cards`;
         return (
           <section key={group.key} aria-labelledby={headingId} className="flex flex-col gap-3">
-            <GroupHeading id={headingId} group={group} />
+            <GroupHeading id={headingId} group={group} ui={ui} contentId={contentId} />
             {/* Columns are added, never grown: two on a phone, as many
                 10.5 rem cards as the width takes (the 600 px thumb stays
                 sharp to ~300 px on a 2× screen). */}
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,calc(50%_-_0.5rem)),1fr))] gap-x-4 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]">
+            <ul
+              id={contentId}
+              hidden={ui.isCollapsed(group.key)}
+              className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,calc(50%_-_0.5rem)),1fr))] gap-x-4 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]"
+            >
               {group.rows.map((row) => (
-                <li key={row.id}>
+                <li key={row.id} className={cn("relative", row.item.pending && "opacity-60")}>
                   <DeckEntryTile
                     row={row}
-                    label={labelOf(row)}
+                    opener={ui.openerProps(row, labelOf(row))}
                     showProxies={showProxies}
-                    onOpen={onOpen}
                     sizes="(min-width: 640px) 220px, 50vw"
                     chips="caption"
                     maker={makerOf(row)}
                   />
+                  {ui.selecting ? <SelectedMark selected={ui.isSelected(row.id)} /> : null}
                 </li>
               ))}
             </ul>
@@ -193,15 +225,7 @@ function GridView({
 // List
 // ---------------------------------------------------------------------------
 
-function ListView({
-  groups,
-  showProxies,
-  onOpen,
-}: {
-  groups: ViewGroup[];
-  showProxies: boolean;
-  onOpen: (entryId: string) => void;
-}) {
+function ListView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxies: boolean; ui: DeckRowUi }) {
   const baseId = useId();
   return (
     // Group cards flow down columns (multi-column: no gaps under a short
@@ -209,13 +233,20 @@ function ListView({
     <div className="columns-[24rem] gap-4">
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
+        const contentId = `${headingId}-cards`;
         return (
           <section key={group.key} aria-labelledby={headingId} className="mb-4 break-inside-avoid">
-            <SurfaceCard className="flex min-w-0 flex-col gap-1 p-4">
-              <GroupHeading id={headingId} group={group} className="mb-1 font-sans text-xs uppercase tracking-wider text-subtle" />
-              <ul className="flex flex-col">
+            <SurfaceCard className="flex min-w-0 flex-col gap-1 p-3 sm:p-4">
+              <GroupHeading
+                id={headingId}
+                group={group}
+                ui={ui}
+                contentId={contentId}
+                className="mb-1 font-sans text-xs uppercase tracking-wider text-subtle"
+              />
+              <ul id={contentId} hidden={ui.isCollapsed(group.key)} className="flex flex-col">
                 {group.rows.map((row) => (
-                  <EntryRow key={row.id} row={row} showProxies={showProxies} onOpen={onOpen} />
+                  <EntryRow key={row.id} row={row} showProxies={showProxies} ui={ui} />
                 ))}
               </ul>
             </SurfaceCard>
@@ -226,27 +257,42 @@ function ListView({
   );
 }
 
-function EntryRow({ row, showProxies, onOpen }: { row: ViewRow; showProxies: boolean; onOpen: (entryId: string) => void }) {
+function EntryRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean; ui: DeckRowUi }) {
   const { entry, card } = row.item;
   const maker = makerOf(row);
   // A private card (a visitor's view, D11) is never drawn: neither its art
   // nor a stand-in.
   const pictures = row.isPrivate ? { proxy: null, printing: null, twoFaces: false } : entryRowPictures(entry, card);
   const thumb = (showProxies ? pictures.proxy : pictures.printing) ?? pictures.proxy ?? pictures.printing;
+  const opener = ui.openerProps(row, labelOf(row));
+  const selected = ui.selecting && ui.isSelected(row.id);
+  // The owner's rows: the stepper says the quantity, and the controls sit
+  // beside the opener. Selecting, the row is its toggle alone.
+  const controls = ui.editing && !ui.selecting && !row.item.pending;
 
   return (
-    <li>
+    <li className={cn("flex items-center gap-1", row.item.pending && "opacity-60")}>
       <button
         type="button"
-        data-deck-entry={entry.id}
-        aria-haspopup="dialog"
-        onClick={() => onOpen(entry.id)}
+        {...opener}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+          "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+          ui.editing && "select-none [-webkit-touch-callout:none]",
+          selected && "bg-primary/10 ring-1 ring-primary/50",
           CLEAR_OF_BAR,
         )}
-        aria-label={labelOf(row)}
       >
+        {ui.selecting ? (
+          <span
+            aria-hidden
+            className={cn(
+              "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+              selected ? "border-primary-bright bg-primary text-white" : "border-border-strong text-transparent",
+            )}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </span>
+        ) : null}
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -271,17 +317,29 @@ function EntryRow({ row, showProxies, onOpen }: { row: ViewRow; showProxies: boo
             )}
           </span>
         )}
-        <span className="w-7 shrink-0 text-right font-mono text-xs text-subtle">{row.quantity}×</span>
+        {/* The owner's stepper says the count from 640 px; on a phone the
+            row keeps its name's room and the sheet holds the stepper. */}
+        <span className={cn("w-7 shrink-0 text-right font-mono text-xs text-subtle", controls && "sm:hidden")}>{row.quantity}×</span>
         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
           {row.name}
           {row.privateName ? <span className="ml-1.5 text-xs text-muted">{row.privateName}</span> : null}
           {/* Another creator's card (D3): their credit. */}
           {maker ? <span className="ml-1.5 font-mono text-[11px] text-subtle">by @{maker}</span> : null}
         </span>
-        {row.fields.cost ? <ManaCostGlyphs cost={row.fields.cost} size="sm" /> : null}
+        {row.fields.cost ? (
+          <span className={cn("shrink-0", ui.editing && "hidden sm:inline-flex")}>
+            <ManaCostGlyphs cost={row.fields.cost} size="sm" />
+          </span>
+        ) : null}
         {pictures.twoFaces && thumb === pictures.proxy ? <TwoFacesMark /> : null}
         <DeckEntryStatusBadge status={row.status} unavailable={row.badge === "unavailable"} small />
       </button>
+      {controls ? (
+        <>
+          <div className="hidden sm:flex">{ui.stepper(row)}</div>
+          {ui.menuButton(row)}
+        </>
+      ) : null}
     </li>
   );
 }
@@ -316,15 +374,16 @@ function TableView({
   sort,
   onSort,
   showProxies,
-  onOpen,
+  ui,
 }: {
   groups: ViewGroup[];
   sort: DeckSort;
   onSort: (sort: DeckSort) => void;
   showProxies: boolean;
-  onOpen: (entryId: string) => void;
+  ui: DeckRowUi;
 }) {
   const captionId = useId();
+  const columnCount = COLUMNS.length + (ui.editing ? 1 : 0);
   return (
     // Scrolls sideways on a narrow screen — by keyboard too (a named,
     // focusable region).
@@ -348,7 +407,7 @@ function TableView({
                   key={column}
                   scope="col"
                   aria-sort={active ? (key === "quantity" || key === "added" ? "descending" : "ascending") : undefined}
-                  className={cn("px-3 py-2 font-semibold", column === "Qty" && "w-14 text-right")}
+                  className={cn("px-3 py-2 font-semibold", column === "Qty" && (ui.editing ? "w-28" : "w-14 text-right"))}
                 >
                   {key ? (
                     <button
@@ -374,48 +433,77 @@ function TableView({
                 </th>
               );
             })}
+            {ui.editing ? (
+              <th scope="col" className="w-12 px-2 py-2">
+                <span className="sr-only">Actions</span>
+              </th>
+            ) : null}
           </tr>
         </thead>
-        {groups.map((group) => (
-          <tbody key={group.key} className="border-t border-border/60">
-            <tr className="bg-elevated/40">
-              <th scope="rowgroup" colSpan={COLUMNS.length} className="px-3 py-1.5 text-xs font-semibold text-muted">
-                {group.label} <span className="font-normal tabular-nums text-subtle">· {group.count}</span>
-              </th>
-            </tr>
-            {group.rows.map((row) => (
-              <TableRow key={row.id} row={row} showProxies={showProxies} onOpen={onOpen} />
-            ))}
-          </tbody>
-        ))}
+        {groups.map((group) => {
+          const open = !ui.isCollapsed(group.key);
+          return (
+            <tbody key={group.key} className="border-t border-border/60">
+              <tr className="bg-elevated/40">
+                <th scope="rowgroup" colSpan={columnCount} className="px-3 py-1 text-xs font-semibold text-muted">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => ui.toggleGroup(group.key)}
+                    className="inline-flex min-h-7 items-center gap-1.5 rounded-sm text-left transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+                  >
+                    <ChevronDown className={cn("h-3 w-3 transition-transform motion-reduce:transition-none", !open && "-rotate-90")} aria-hidden />
+                    {group.label} <span className="font-normal tabular-nums text-subtle">· {group.count}</span>
+                  </button>
+                </th>
+              </tr>
+              {open ? group.rows.map((row) => <TableRow key={row.id} row={row} showProxies={showProxies} ui={ui} />) : null}
+            </tbody>
+          );
+        })}
       </table>
     </div>
   );
 }
 
-function TableRow({ row, showProxies, onOpen }: { row: ViewRow; showProxies: boolean; onOpen: (entryId: string) => void }) {
+function TableRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean; ui: DeckRowUi }) {
   const { entry, card } = row.item;
   const maker = makerOf(row);
   const pictures = row.isPrivate ? { proxy: null, printing: null, twoFaces: false } : entryRowPictures(entry, card);
   const showsProxy = Boolean(pictures.proxy) && (showProxies || !pictures.printing);
+  const opener = ui.openerProps(row, labelOf(row));
+  const selected = ui.selecting && ui.isSelected(row.id);
+  const controls = ui.editing && !ui.selecting && !row.item.pending;
   return (
-    <tr className="border-t border-border/30 hover:bg-elevated/40">
-      <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums text-muted">{row.quantity}</td>
+    <tr className={cn("border-t border-border/30 hover:bg-elevated/40", selected && "bg-primary/10", row.item.pending && "opacity-60")}>
+      <td className={cn("px-3 py-1.5 font-mono text-xs tabular-nums text-muted", !ui.editing && "text-right")}>
+        {controls ? ui.stepper(row) : row.quantity}
+      </td>
       <td className="max-w-[22rem] px-3 py-1.5">
         <span className="flex min-w-0 items-center gap-2">
           <button
             type="button"
-            data-deck-entry={entry.id}
-            aria-haspopup="dialog"
-            aria-label={labelOf(row)}
-            onClick={() => onOpen(entry.id)}
+            {...opener}
             className={cn(
-              "min-w-0 truncate rounded-sm text-left text-foreground underline-offset-4 hover:text-primary-bright hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+              "inline-flex min-w-0 items-center gap-1.5 truncate rounded-sm text-left text-foreground underline-offset-4 hover:text-primary-bright hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
               CLEAR_OF_BAR,
             )}
           >
-            {row.name}
-            {row.privateName ? <span className="ml-1.5 text-xs text-muted">{row.privateName}</span> : null}
+            {ui.selecting ? (
+              <span
+                aria-hidden
+                className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                  selected ? "border-primary-bright bg-primary text-white" : "border-border-strong text-transparent",
+                )}
+              >
+                <Check className="h-3 w-3" />
+              </span>
+            ) : null}
+            <span className="truncate">
+              {row.name}
+              {row.privateName ? <span className="ml-1.5 text-xs text-muted">{row.privateName}</span> : null}
+            </span>
           </button>
           {maker ? <span className="shrink-0 font-mono text-[11px] text-subtle">by @{maker}</span> : null}
           {pictures.twoFaces && showsProxy ? <TwoFacesMark /> : null}
@@ -431,6 +519,7 @@ function TableRow({ row, showProxies, onOpen }: { row: ViewRow; showProxies: boo
       </td>
       <td className="px-3 py-1.5 text-xs text-muted">{DECK_BOARD_LABELS[row.board]}</td>
       <td className="whitespace-nowrap px-3 py-1.5 text-xs text-muted">{row.addedAt ? formatUtcDate(row.addedAt) : "—"}</td>
+      {ui.editing ? <td className="px-2 py-1">{controls ? ui.menuButton(row) : null}</td> : null}
     </tr>
   );
 }
