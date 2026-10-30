@@ -76,6 +76,11 @@ type PublishPanelProps = {
   /** Edit / remix: the finish is locked structure (owner decision
    *  2026-09-16) and is not offered. */
   revise?: boolean;
+  /** True while a new card's Tags field still follows its words
+   *  (components/creator/use-auto-tags.ts): the helper says so. Once the
+   *  maker changes the field — or on an edit, a remix, a deck-card proxy —
+   *  the helper is the plain one. */
+  tagsAutoFilled?: boolean;
   /** False for creature/instant/sorcery/artifact/enchantment — their
    *  watermark is a subscriber perk on the Subscriber step (free accounts
    *  always carry the PipGlyph Rose there). */
@@ -94,6 +99,7 @@ export function PublishPanel({
   userId,
   activeChallenge,
   revise = false,
+  tagsAutoFilled = false,
   showWatermark = true,
   strongLanguage,
   moderationLocked = false,
@@ -291,7 +297,11 @@ export function PublishPanel({
 
       <FieldGroup
         label="Tags"
-        helper="Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+        helper={
+          tagsAutoFilled
+            ? "Filled in from the card's rules text and subtypes until you change them. Comma-separated, up to 12."
+            : "Comma-separated keywords for discovery (e.g. dragons, tokens). Up to 12."
+        }
         error={errors.tags_text?.message}
       >
         <input

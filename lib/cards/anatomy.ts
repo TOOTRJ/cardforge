@@ -22,9 +22,10 @@
 //   • the renderers draw a piece only when its switch is `true` — absent and
 //     `false` are both today's look, so no card stored before a piece
 //     shipped ever changes (no layout sweep, no badge);
-//   • a NEW card starts with every switch on (NEW_CARD_ANATOMY in the
-//     creator; createCardAction stamps a payload that names none — the AI
-//     jobs), with an off switch;
+//   • a NEW card starts with every switch on but the collector line, which
+//     starts "off" (owner 2026-10-30) (NEW_CARD_ANATOMY in the creator;
+//     createCardAction stamps a payload that names none — the AI jobs),
+//     with an off switch;
 //   • an import follows the printing, and names only what the printing
 //     says (owner round 17, 2026-09-30; importedAnatomy): the crown for a
 //     Legendary printing (on with the `legendary` frame effect, off without
@@ -174,9 +175,12 @@ type AnatomyProfile = Pick<
 >;
 
 /** The switches a NEW card starts with (the creator's create and remix
- *  forms): every piece on — the collector line in the style printed today
- *  ("2023"), the holofoil stamp on "auto" (the oval on a rare or mythic,
- *  4.9c); the ★ is never a default (it follows a foil finish or an
+ *  forms): every piece on but the collector line — "off" (owner
+ *  2026-10-30: a new card names no set, number or language, so the line
+ *  starts off; an import follows its printing, importedAnatomy) — and the
+ *  holofoil stamp on "auto" (the oval on a rare or mythic, 4.9c). "off"
+ *  draws exactly what an absent key draws, so no stored card moves (no
+ *  bump, no sweep). The ★ is never a default (it follows a foil finish or an
  *  import's foil-only printing). The renderers draw only what the template
  *  can, and the save drops the rest (normalizeAnatomy), so the new-card
  *  preview is exactly what the saved bake draws on any template. No
@@ -188,7 +192,7 @@ export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown"
   Object.freeze({
     crown: true,
     twoColor: true,
-    collector: "2023",
+    collector: "off",
     stamp: "auto",
   });
 // (Each part in its own colour, TODO 4.26, is on for a new card too — but
@@ -321,7 +325,7 @@ export function anatomyOn(
 /** The switches a new card saved on `template` defaults to: `true` for each
  *  piece the template draws (whatever the card's type or colours, so the
  *  crown appears if the card becomes Legendary later), the collector line
- *  in today's printed style where the template has its slot, the stamp on
+ *  "off" where the template has its slot (NEW_CARD_ANATOMY), the stamp on
  *  "auto" where it has the notch (so the oval appears if the card is made
  *  rare later), never the ★ (NEW_CARD_ANATOMY), and — on a transform FRONT
  *  body, the one template that draws it — the icon family's default,

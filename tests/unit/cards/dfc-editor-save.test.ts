@@ -156,7 +156,7 @@ describe("createCardAction on a transform front", () => {
     expect(result.ok).toBe(true);
     const row = written(stub, "insert")!;
     // The crown and the two-colour switch start on (the body draws both since 5.1d).
-    expect(row.frame_style).toEqual({ template: "m15dfcfront", finish: "regular", crown: true, twoColor: true, collector: "2023", dfcIcon: "arrows" });
+    expect(row.frame_style).toEqual({ template: "m15dfcfront", finish: "regular", crown: true, twoColor: true, collector: "off", dfcIcon: "arrows" });
     expect(row.back_face).toEqual({ ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["blue"] });
     expect(row.visibility).toBe("public");
     // The verified set was read once for both gates.
@@ -173,7 +173,7 @@ describe("createCardAction on a transform front", () => {
     );
     expect(result.ok).toBe(true);
     const row = written(stub, "insert")!;
-    expect(row.frame_style).toEqual({ template: "m15dfcfront", finish: "regular", crown: true, twoColor: true, collector: "2023", dfcIcon: "sunmoon" });
+    expect(row.frame_style).toEqual({ template: "m15dfcfront", finish: "regular", crown: true, twoColor: true, collector: "off", dfcIcon: "sunmoon" });
     expect(row.back_face).toEqual({ ...BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["green"] });
   });
 

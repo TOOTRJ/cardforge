@@ -10,7 +10,9 @@
     "subtypes": [
       "Golem"
     ],
-    "tags": [],
+    "tags": [
+      "golems"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -31,7 +33,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -76,7 +78,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -121,7 +123,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -166,7 +168,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -191,7 +193,9 @@
     "subtypes": [
       "Equipment"
     ],
-    "tags": [],
+    "tags": [
+      "equipment"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -210,7 +214,7 @@
       "template": "m15artifact",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -235,7 +239,9 @@
     "subtypes": [
       "Aura"
     ],
-    "tags": [],
+    "tags": [
+      "auras"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -254,7 +260,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -296,7 +302,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -338,7 +344,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -364,7 +370,9 @@
     "subtypes": [
       "Golem"
     ],
-    "tags": [],
+    "tags": [
+      "golems"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -385,7 +393,7 @@
       "template": "m15artifact",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -411,7 +419,9 @@
     "subtypes": [
       "Spirit"
     ],
-    "tags": [],
+    "tags": [
+      "spirits"
+    ],
     "rarity": "common",
     "face_content": null,
     "watermark": {
@@ -432,7 +442,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -475,7 +485,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -519,7 +529,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -563,7 +573,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -608,7 +618,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",

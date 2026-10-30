@@ -13,7 +13,14 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "spirits",
+      "horrors",
+      "rogues",
+      "flying",
+      "vigilance",
+      "mill"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -37,7 +44,7 @@
       "template": "m15dfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto",
       "dfcIcon": "sunmoon"
     },
@@ -92,7 +99,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -116,7 +126,7 @@
       "template": "m15dfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto",
       "dfcIcon": "arrows"
     },
@@ -163,7 +173,12 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "removal",
+      "burn",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -187,7 +202,7 @@
       "template": "m15mdfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -235,7 +250,10 @@
       "Human",
       "Rogue"
     ],
-    "tags": [],
+    "tags": [
+      "rogues",
+      "vigilance"
+    ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
     "face_content": null,
@@ -259,7 +277,7 @@
       "template": "m15mdfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -488,7 +506,10 @@
     "subtypes": [
       "Arcane"
     ],
-    "tags": [],
+    "tags": [
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -510,7 +531,7 @@
       "template": "split",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -760,7 +781,10 @@
     "subtypes": [
       "Arcane"
     ],
-    "tags": [],
+    "tags": [
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -782,7 +806,7 @@
       "template": "aftermath",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1032,7 +1056,11 @@
     "subtypes": [
       "Giant"
     ],
-    "tags": [],
+    "tags": [
+      "giants",
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -1056,7 +1084,7 @@
       "template": "adventure",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1263,7 +1291,11 @@
     "subtypes": [
       "Giant"
     ],
-    "tags": [],
+    "tags": [
+      "giants",
+      "removal",
+      "burn"
+    ],
     "rarity": "common",
     "rules_text": "Fire deals 2 damage to any target.",
     "face_content": null,
@@ -1287,7 +1319,7 @@
       "template": "flip",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",

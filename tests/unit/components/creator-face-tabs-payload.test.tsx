@@ -25,6 +25,13 @@ import { partColorFromCost } from "@/lib/cards/part-color";
 // steps and, where there is a switch, the tabs), so the same file runs
 // unchanged on both. To re-record on a checkout of that commit:
 //   FACE_TABS_CAPTURE=<path/to/out.json> npx vitest run <this file>
+// (Edited by hand 2026-10-30, one deliberate change: a NEW card's — and a
+// key-less parent's remix's — `frame_style.collector` reads "off" where it
+// read "2023", the collector line's new-card default (NEW_CARD_ANATOMY);
+// a stored card's own "2023" is unchanged. And a NEW card's `tags` holds
+// what its rules text and subtypes suggest (lib/cards/auto-tags.ts,
+// the creator's tag follow) where it was [] — the back face's too, so the
+// two new double-faced cards carry their back's tags. Nothing else moved.)
 //
 // Part 2 (split, aftermath, adventure, flip — the second part left the
 // Identity step's "More options" fold for a tab of its own): the scenarios

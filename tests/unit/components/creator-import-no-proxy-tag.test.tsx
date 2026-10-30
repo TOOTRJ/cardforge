@@ -137,7 +137,9 @@ describe("an import adds no tag (TODO DK2.4)", () => {
     renderForm();
     await importSheoldred();
     await goToPublish();
-    expect(tagsInput().value).toBe("");
+    // Only what the card's own words suggest (lib/cards/auto-tags.ts, owner
+    // 2026-10-30: the stub's Phyrexian Praetor) — never "proxy".
+    expect(tagsInput().value).toBe("phyrexians");
   });
 
   it("the maker's own tags stay as they are, “proxy” included", async () => {

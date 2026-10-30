@@ -70,10 +70,15 @@ const starSwitch = () => screen.queryByRole("switch", { name: "Foil printing (�
 const stampSwitch = () => screen.queryByRole("switch", { name: "Holofoil stamp" });
 
 describe("a new card", () => {
-  it("starts with the line on in the 2023 style, the chips showing, no hint, the ★ off", () => {
+  it("starts with the line OFF (owner 2026-10-30), no hint; switched on, the 2023 style with its chips, the ★ off", () => {
     render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} />);
-    expect(lineSwitch().getAttribute("aria-checked")).toBe("true");
+    expect(lineSwitch().getAttribute("aria-checked")).toBe("false");
     expect(screen.queryByText(ANATOMY_HINTS.collector!)).toBeNull();
+    expect(screen.queryByTestId("collector-style")).toBeNull();
+    expect(starSwitch()).toBeNull();
+    fireEvent.click(lineSwitch());
+    expect(styleOf().collector).toBe("2023");
+    expect(lineSwitch().getAttribute("aria-checked")).toBe("true");
     expect(screen.getByTestId("collector-style")).toBeTruthy();
     expect(starSwitch()?.getAttribute("aria-checked")).toBe("false");
     // The chips name each style with the card's own letter: "M 0040" / "040/281 M".

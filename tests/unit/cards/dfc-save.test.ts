@@ -338,7 +338,7 @@ describe("the real transform bodies through the actions (TODO 5.1a)", () => {
       payload({ card_type: "land", cost: "", color_identity: ["colorless"], frame_style: { template: "m15dfclandfront", dfcIcon: "compass", crown: true }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["white"] } }),
     );
     expect(landFront.ok).toBe(true);
-    expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", crown: true, collector: "2023" });
+    expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", crown: true, collector: "off" });
     expect((written(land, "insert")?.back_face as { frame_style: unknown }).frame_style).toEqual({ template: "m15dfcbackleft" });
   });
 });
