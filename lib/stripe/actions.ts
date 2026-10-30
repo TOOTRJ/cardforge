@@ -18,7 +18,11 @@ import {
 } from "@/lib/billing/plans";
 import { formatMoney } from "@/lib/format/money";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
-import { compHoldsCheckoutUntil, type CompFacts } from "@/lib/billing/comp-stripe";
+import {
+  TRIAL_END_BEFORE_COMP_KEY,
+  compHoldsCheckoutUntil,
+  type CompFacts,
+} from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
@@ -425,19 +429,31 @@ export async function createCheckoutSessionAction(
         !live &&
         !customer.hasSubscribedBefore &&
         (await isTrialEligible(stripe, customer.customerId));
-      // Win-back: a trial that ended unconverted within the last 30 days
-      // buys its first month at a discount — applied here, never as a code.
-      const winback = !live && !withTrial && (await hasRecentLapsedTrial(customer.userId));
       // A comp of this plan (or a higher one) that is still running: nothing
       // is charged before it ends, then the plan bills normally (owner rule
       // 2026-10-30, lib/billing/comp-stripe.ts). The trial, if any, keeps
       // whichever end is later.
       const compHold = live ? null : compHoldsCheckoutUntil(customer.comp, input.tier);
-      const trialDaysEnd = Math.floor(Date.now() / 1000) + TRIAL_DAYS * 86_400;
+      const checkoutSec = Math.floor(Date.now() / 1000);
+      const trialDaysEnd = checkoutSec + TRIAL_DAYS * 86_400;
       const heldTrialEnd =
         compHold == null
           ? null
           : Math.max(compHold, withTrial ? trialDaysEnd : 0, carryTrialEnd ?? 0);
+      // The trial end the subscription would have had WITHOUT the comp —
+      // what clearing or shortening the comp puts back (compTrialChangeFor
+      // reads it): the 7-day trial's end, a carried trial's end, or — no
+      // trial at all — the checkout itself (cleared → charged at once).
+      // Also what tells a cancel during the hold from a lapsed trial
+      // (isUnconvertedTrial).
+      const trialEndBeforeComp =
+        heldTrialEnd == null ? null : withTrial ? trialDaysEnd : (carryTrialEnd ?? checkoutSec);
+      // Win-back: a trial that ended unconverted within the last 30 days
+      // buys its first month at a discount — applied here, never as a code.
+      // Never on a comp hold: the first invoice is the hold's $0 one, and a
+      // once-off coupon would be spent on it.
+      const winback =
+        !live && !withTrial && heldTrialEnd == null && (await hasRecentLapsedTrial(customer.userId));
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
@@ -459,7 +475,12 @@ export async function createCheckoutSessionAction(
           ...(supersedes ? { supersedes_subscription_id: supersedes } : {}),
         },
         subscription_data: {
-          metadata: { supabase_user_id: customer.userId },
+          metadata: {
+            supabase_user_id: customer.userId,
+            ...(trialEndBeforeComp != null
+              ? { [TRIAL_END_BEFORE_COMP_KEY]: String(trialEndBeforeComp) }
+              : {}),
+          },
           ...(heldTrialEnd != null
             ? {
                 trial_end: heldTrialEnd,

@@ -193,12 +193,26 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // trial converts; this is ours (docs/BILLING.md). The notification insert is
 // the durable part: a failure throws so Stripe retries; the email is best
 // effort on top (idempotent at the provider by subscription id).
+/** A trial ending within this long of the event is ending NOW: an admin
+ *  released a comp hold with `trial_end: "now"` (lib/billing/comp-stripe.ts),
+ *  and Stripe may still send `trial_will_end` for it. The charge happens at
+ *  once — a "your trial ends soon" email arriving with the receipt is wrong. */
+const TRIAL_ENDING_NOW_SECONDS = 60;
+
 async function handleTrialWillEnd(
   sub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
+  opts: { firedAt?: number | null } = {},
 ): Promise<void> {
   const { admin, stripe } = deps;
   if (sub.status !== "trialing") return;
+  if (
+    typeof opts.firedAt === "number" &&
+    typeof sub.trial_end === "number" &&
+    sub.trial_end - opts.firedAt <= TRIAL_ENDING_NOW_SECONDS
+  ) {
+    return;
+  }
   // Already cancelled (the portal's `cancel_at`, or the flag): the trial ends
   // and nothing is charged, so "your card is charged then" would be false —
   // and the customer needs no reminder of a conversion that won't happen.
@@ -786,7 +800,9 @@ export async function handleStripeEvent(
       );
       break;
     case "customer.subscription.trial_will_end":
-      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps);
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps, {
+        firedAt: typeof event.created === "number" ? event.created : null,
+      });
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;

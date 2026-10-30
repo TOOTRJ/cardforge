@@ -100,6 +100,7 @@ export function describeNotification(
       const tier = str(payload.tier);
       const expiresAt = str(payload.expiresAt);
       const trialEnd = str(payload.trialEnd);
+      const creditCents = num(payload.creditCents);
       return {
         subject: "PipGlyph team",
         body: tier
@@ -108,6 +109,11 @@ export function describeNotification(
             } — enjoy.${
               // A comp holds a card-backed trial: the first charge moves too.
               trialEnd ? ` Your free trial now runs until ${formatShortDate(trialEnd)}; nothing is charged before then.` : ""
+            }${
+              // A paying user's comp period, credited to their billing balance.
+              creditCents != null && creditCents > 0
+                ? ` We've put ${formatMoney(creditCents, str(payload.currency) ?? "usd")} on your billing balance, so the comp period costs you nothing.`
+                : ""
             }`
           : "ended your complimentary plan access.",
         href: "/settings",

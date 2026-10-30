@@ -31,7 +31,7 @@ import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
 import { isStripeConfigured } from "@/lib/stripe/client";
 import { LocalDate } from "@/components/ui/local-date";
-import { compOverLiveSubscription } from "@/lib/billing/comp-stripe";
+import { compOverLiveSubscription, liveCompChargeLine } from "@/lib/billing/comp-stripe";
 
 export const metadata: Metadata = {
   title: "Billing & subscription",
@@ -125,6 +125,22 @@ export default async function BillingPage() {
   // The plan grid below reads the same fact (the profile flag can lag the
   // live read until the next webhook event).
   const gridViewer = { ...viewer, subscriptionEnding: live && ending };
+  // What a comp over a live plan means for the next charge
+  // (lib/billing/comp-stripe.ts `liveCompChargeLine`).
+  const liveCompLine = liveComp
+    ? {
+        trial_held: " — your trial runs at least that long, so nothing is charged before then.",
+        balance_credit: " — the comp period's price goes on your billing balance and comes off your next invoices.",
+        own_dates: " — your subscription keeps its own billing dates.",
+      }[
+        liveCompChargeLine({
+          status,
+          ending,
+          compExpiresAt: liveComp.expiresAt,
+          stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
+        })
+      ]
+    : null;
   const capacity = entitlements.cardCapacity;
   const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
@@ -187,9 +203,7 @@ export default async function BillingPage() {
                   {" "}until <LocalDate iso={liveComp.expiresAt} />
                 </>
               ) : null}
-              {status === "trialing" && liveComp.expiresAt
-                ? " — your trial runs at least that long, so nothing is charged before then."
-                : " — your subscription keeps its own billing dates."}
+              {liveCompLine}
             </p>
           ) : null}
 

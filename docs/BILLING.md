@@ -715,22 +715,64 @@ it is charged normally.** `lib/billing/comp-stripe.ts` decides,
 | The user has | A comp (same tier or higher, dated) | When it ends / is cleared |
 |---|---|---|
 | a TRIAL that renews | `trial_end` moved to the comp's end (never earlier than its own; `proration_behavior: none`); the old end kept in the subscription's metadata `pipglyph_trial_end_before_comp` | the trial converts at that second — the card, the subscription's own price. Cleared or shortened: the trial goes back to its own end, or ends now if that has passed (the charge it would have made) |
-| an ACTIVE plan (incl. a scheduled downgrade) | nothing in Stripe — it bills as usual and the comp adds perks (owner question 1 in the audit PR) | — |
-| a CANCELLED plan, still running | nothing — it stops on its date; the comp carries the perks after it | free; nothing is charged |
-| no subscription, then subscribes from the billing page | Checkout starts it with `trial_end` = the comp's end (when ≥ 48 h out, the plan bought ≤ the comp; the 7-day trial's end if later) | charged normally |
+| an ACTIVE plan (incl. a scheduled downgrade) | the comp period's share of the subscription's own price is CREDITED to the Stripe customer balance (owner answer 1, 2026-10-30); status, dates and trial untouched — Stripe takes it off the next invoices | ends: nothing more happens (the credit was for that period). Shortened or cleared: the part not yet lived through is CLAWED BACK, capped at the credit still unspent |
+| a CANCELLED plan, still running | nothing — it stops on its date; the comp carries the perks after it (a credit would sit unused) | free; nothing is charged |
+| no subscription, then subscribes from the billing page | Checkout starts it with `trial_end` = the comp's end (when ≥ 48 h out, the plan bought ≤ the comp; the 7-day trial's end if later) and writes `pipglyph_trial_end_before_comp` = the 7-day trial's end, or the checkout time when there is no trial, so clearing the comp puts it back (or charges at once) | charged normally |
 
-Not moved: a comp with no end date (Stripe can't hold a trial open-ended), a
-comp past 730 days, a comp below the plan paid for. The admin's toast says
-what happened in one line (`compStripeNote`); the user's `comp_plan`
-notification adds "Your free trial now runs until …; nothing is charged
-before then." when the trial moved. `trial_will_end` is now once per
-subscription AND trial end, so a moved trial is reminded again before the
-charge that really happens. The billing page names a comp over a live
-subscription in one line under the plan status.
+**A comp on a trialing or paying user needs an END DATE** (owner answer 2):
+`adminSetCompTierAction` refuses one without (`compEndDateError` — status
+`trialing`, `active` or `past_due`), and one more than 730 days out; the
+admin form marks the expiry required for such a user. "No expiry" stays for
+free users. **Clearing a comp after the trial's own end has passed** ends
+the trial now and charges (owner answer 3) — the user's notification then
+says only that the comp ended, never "your trial now runs until" today.
+
+### The balance credit on an active plan
+
+One shared helper, `lib/billing/balance-credit.ts` (the referral programme's
+free month for a payer uses it too): a credit is a NEGATIVE customer-balance
+transaction, a claw-back a POSITIVE one.
+
+- **Amount** (`periodCreditCents`): `yearly price × (whole months ÷ 12 +
+  leftover days ÷ 365)`, rounded to the cent once. The yearly price is the
+  subscription's own: a monthly price × 12, an annual price as it is. The
+  period is counted in whole CALENDAR months from the grant's start (UTC),
+  a period ending within one day of a whole month counting as that month
+  (the admin's picker lands at midnight), then whole leftover days (nearest).
+  - Monthly $6 Plus, comp of one calendar month → `72 × 1/12` = **$6**.
+    Three months → **$18**. 30 days from Oct 29 (ends Nov 28, one day
+    short of a month) → `72 × 30/365` = **$5.92**.
+  - Annual $60 Plus, one calendar month → `60 × 1/12` = **$5**; 45 days
+    from Nov 1 (Dec 1 + 15 days) → `60 × (1/12 + 15/365)` = **$7.47**. The
+    credit sits on the balance until the next ANNUAL renewal takes it.
+- **One ledger key per grant.** A grant opens when a comp first holds an
+  active plan: the subscription's metadata `pipglyph_comp_credit` =
+  `<startSec>:<endSec>` is written BEFORE any money moves, and every balance
+  transaction carries `metadata.pipglyph_comp_grant` = `comp:<sub>:<startSec>`.
+  Each save reads the ledger (the customer's balance transactions under that
+  key, credits minus claw-backs) and posts only `target − posted`: a re-save
+  of the same comp posts nothing. The Stripe idempotency key is
+  `comp:<sub>:<start>:<posted>-><target>:credit|clawback`, so a retried
+  request or two admins saving at once post once. A grant whose end has
+  passed is finished; the next comp opens a new one.
+- **Extending** a running comp credits the difference (the grant's start
+  never moves; one grant covers at most 730 days from its start).
+- **Shortening / clearing / dropping below the plan:** the target becomes
+  the grant's start → the new end (shortened) or → NOW (cleared: the time
+  already lived through stays paid for). The difference is clawed back,
+  **capped at the customer's credit still unspent** (`-customer.balance`):
+  credit an invoice already used paid for time the user had and is never
+  turned into a debt. What the cap kept is named in the admin's toast. A
+  clearing never posts a fresh credit. On clearing, the grant's metadata is
+  removed.
+- The user's `comp_plan` notification names the amount credited ("We've put
+  $6 on your billing balance…"); the admin's toast names what was credited
+  or taken back (`compCreditNote`).
 
 Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
 question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
 while comped), `webhook-handlers.test.ts` (the second reminder). Not
 sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
-`proration_behavior: none` — run it once on a test clock.
+`proration_behavior: none`, and the balance credit / claw-back — run both
+once on a test clock.
