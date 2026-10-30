@@ -4222,6 +4222,7 @@ Greyed out in the UI, refused by the server, explained in the copy. The creator�
 - [x] **DK1.4 [P0 · S] Copy sweep** — Site metadata, llms.txt, the AI generator and About pages, the Pro tagline and "a full Commander deck" line, FAQ, format-hub copy, upgrade-modal reasons, landing and pricing lines. Files: `app/layout.tsx:53 · app/llms.txt/route.ts:16 · ai-mtg-card-generator/page.tsx:49 · about/page.tsx:55,72 · lib/billing/plans.ts · lib/content/faq.ts:112,254 · lib/cards/hubs.ts:159 · upgrade-modal.tsx:79-98`. (done: #647)
 - [x] **DK1.5 [P1 · S] "What’s new" post** — "Deck builder rebuild: AI deck tools paused for now." Owner posts it in /admin/updates; check older posts that promise deck AI. (done: the owner posted the 2026-10-29 updates)
 - [x] **DK1.6 [P1 · S] Tests** — Rewrite the e2e step that assumes AI is the default build mode; unit tests for the refused job kinds. Files: `tests/e2e/decks.spec.ts:56-58 · tests/unit/ai`. (done: #647)
+- [ ] **DK1.7 [P2 · S] Deck guide redaction fix — deferred** — 0151 doesn't hide a deleted card's name in an old guide; deferred until AI generation returns to decks, and the deck guide ("Game plan & combos") stays hidden behind "Coming soon" for every viewer until then (owner 2026-10-30; `DECK_GUIDES_ENABLED` in `lib/ai/deck-ai-pause.ts`, stored guides untouched).
 
 ### DK2 — New vocabulary and card-origin data
 

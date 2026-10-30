@@ -13,14 +13,19 @@ import { chainClient, called, type ChainAnswer } from "@/tests/stubs/supabase-ch
 const state = vi.hoisted(() => ({
   stub: null as null | ReturnType<typeof import("@/tests/stubs/supabase-chain").chainClient>,
   table: null as ChainAnswer | null,
+  guidesOn: true,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => state.stub!.client }));
 vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => false, createAdminClient: () => null }));
 vi.mock("@/lib/ai/deck-guide", () => ({ generateDeckGuide: vi.fn() }));
+vi.mock("@/lib/ai/deck-ai-pause", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai/deck-ai-pause")>()),
+  areDeckGuidesEnabled: () => state.guidesOn,
+}));
 
-import { getDeckGuide } from "@/lib/decks/guides";
+import { getDeckGuide, readShownDeckGuide } from "@/lib/decks/guides";
 
 const DECK = "b0000000-0000-4000-a000-000000000006";
 const ROW = {
@@ -36,6 +41,7 @@ const ROW = {
 };
 
 beforeEach(() => {
+  state.guidesOn = true;
   state.table = null;
   state.stub = chainClient(() => state.table ?? {});
 });
@@ -80,5 +86,25 @@ describe("getDeckGuide", () => {
     expect(read).toMatchObject({ withheld: false, guide: { overview: ROW.overview } });
     const tableRead = state.stub!.forTable("deck_guides")[0]!;
     expect(called(tableRead.calls, "eq", "deck_id")).toBe(true);
+  });
+});
+
+// Deck guides are hidden (owner 2026-10-30, DECK_GUIDES_ENABLED): the deck
+// page and the Pro report read through readShownDeckGuide, which asks the
+// database NOTHING while they are — no guide text leaves it.
+describe("readShownDeckGuide", () => {
+  it("hidden: nothing, and no deck_guide_for_viewer call or table read", async () => {
+    state.guidesOn = false;
+    state.stub!.rpc.mockResolvedValue({ data: [{ ...ROW, readable: true }], error: null });
+    expect(await readShownDeckGuide(DECK)).toEqual({ guide: null, withheld: false });
+    expect(state.stub!.rpc).not.toHaveBeenCalled();
+    expect(state.stub!.forTable("deck_guides")).toHaveLength(0);
+  });
+
+  it("the flag flipped back: the guide as getDeckGuide reads it", async () => {
+    state.stub!.rpc.mockResolvedValueOnce({ data: [{ ...ROW, readable: true }], error: null });
+    const read = await readShownDeckGuide(DECK);
+    expect(state.stub!.rpc).toHaveBeenCalledWith("deck_guide_for_viewer", { p_deck_id: DECK });
+    expect(read.guide?.overview).toBe(ROW.overview);
   });
 });
