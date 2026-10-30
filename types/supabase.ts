@@ -1970,11 +1970,120 @@ export type Database = {
           },
         ];
       };
+      // Migration 0153 — a profile's extra links (lib/profile/link-kinds.ts).
+      profile_links: {
+        Row: {
+          id: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          kind?: string;
+          url?: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_links_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Migration 0153 — a profile's store cards (lib/profile/store-platforms.ts).
+      profile_stores: {
+        Row: {
+          id: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          platform?: string;
+          url?: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_stores_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      // Migration 0153 — the Settings editors' whole-list saves (caller's rows).
+      set_profile_links: {
+        Args: { p_links: Json };
+        Returns: undefined;
+      };
+      set_profile_stores: {
+        Args: { p_stores: Json };
+        Returns: undefined;
+      };
+      // Migration 0153 — the profile page's card search (public cards only).
+      list_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+          p_sort?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      count_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+        };
+        Returns: number;
+      };
       consume_credits: {
         Args: { p_amount: number; p_reason: string; p_ref?: string };
         Returns: {
