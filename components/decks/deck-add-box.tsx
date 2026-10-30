@@ -377,6 +377,7 @@ export function DeckAddBox({ className }: { className?: string }) {
     key,
     options: options.filter((option) => option.section === key),
   }));
+  const anyOption = grouped.some(({ options: list }) => list.length > 0);
   const notes = grouped.flatMap(({ key, options: list }) => {
     const state = sections[key];
     if (list.length > 0) return [];
@@ -433,11 +434,20 @@ export function DeckAddBox({ className }: { className?: string }) {
           </kbd>
           <div
             hidden={!expanded}
-            className="absolute inset-x-0 top-full z-40 mt-1 max-h-[min(60vh,28rem)] overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-2xl"
+            className="absolute inset-x-0 top-full z-40 mt-1 flex flex-col overflow-hidden rounded-md border border-border bg-surface shadow-2xl"
             // A click on a result must not take the focus off the input.
             onMouseDown={(event) => event.preventDefault()}
           >
-            <div id={listId} role="listbox" aria-label="Cards to add">
+            {/* The listbox IS the scroller (a scrolling box around it is a
+                region no key reaches — the input's arrows move the
+                highlight, and the highlighted option scrolls into view);
+                the sections' notes sit under it, outside. */}
+            <div
+              id={listId}
+              role="listbox"
+              aria-label="Cards to add"
+              className={cn("max-h-[min(55vh,25rem)] overflow-y-auto", anyOption ? "p-1" : "p-0")}
+            >
               {grouped.map(({ key, options: list }) =>
                 list.length === 0 ? null : (
                   <div key={key} role="group" aria-labelledby={`${baseId}-section-${key}`} className="py-1">
@@ -492,7 +502,7 @@ export function DeckAddBox({ className }: { className?: string }) {
               )}
             </div>
             {notes.length > 0 ? (
-              <ul className="flex flex-col gap-0.5 border-t border-border/60 px-2.5 py-2 text-xs text-muted first:border-t-0">
+              <ul className={cn("flex shrink-0 flex-col gap-0.5 px-3.5 py-2 text-xs text-muted", anyOption && "border-t border-border/60")}>
                 {notes.map((note) => (
                   <li key={note.key} className="flex items-center gap-1.5">
                     {sections[note.key].status === "loading" ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : null}

@@ -39,6 +39,16 @@ export function deckReturnPath(value: unknown, deckSlug?: string | null): string
   return path;
 }
 
+/** `value` when it is the page of one of `ownedSlugs` — the signed-in
+ *  user's own decks — else null: the editor of the user's card goes back
+ *  only to a deck of theirs, never to wherever a link says. */
+export function ownDeckReturnPath(value: unknown, ownedSlugs: readonly string[]): string | null {
+  const path = deckReturnPath(value);
+  if (!path) return null;
+  const slug = DECK_RETURN.exec(path)?.[1];
+  return slug && ownedSlugs.includes(slug) ? path : null;
+}
+
 /** The deck page's anchor for an entry — the card the owner comes back to
  *  (`entry`), or the card a walk just made (`next`). */
 export function deckEntryAnchor(entryId: string, kind: "entry" | "next" = "entry"): string {

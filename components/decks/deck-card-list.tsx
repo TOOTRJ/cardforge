@@ -3,20 +3,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CheckSquare, ClipboardPaste, FileText, Pencil, Trash2 } from "lucide-react";
-import { DeckAddBox } from "@/components/decks/deck-add-box";
-import { DeckBulkBar } from "@/components/decks/deck-bulk-bar";
 import { ArrowDown, ChartColumn, X } from "lucide-react";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
 import { CURVE_FILTER_NOTICE_ID, useDeckCurveFilter } from "@/components/decks/deck-curve-filter";
 import { DeckGroupViews } from "@/components/decks/deck-card-views";
 import { EntryMenuButton, EntryStepper, MenuTrigger } from "@/components/decks/deck-entry-controls";
-import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
-import { DeckMobileBar } from "@/components/decks/deck-mobile-bar";
+import type { MenuItem } from "@/components/decks/deck-entry-menu";
+// The owner's parts load in chunks of their own — never on a visitor's page.
+import { DeckAddBox, DeckBulkBar, DeckMobileBar, EntryMenu } from "@/components/decks/deck-owner-parts";
 import { createPreviewStore, DeckPreviewPane } from "@/components/decks/deck-preview-pane";
 import type { DeckRowUi, OpenerProps, ViewRow } from "@/components/decks/deck-row-ui";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
 import { openDeckTool } from "@/components/decks/deck-tool-event";
-import { DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
+import { DECK_SELECT_TOGGLE_ID, DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
 import { useMediaQuery } from "@/components/creator/use-media-query";
 import { DeckEditorProvider, useDeckEditor, type DeckEditor, type EditorItem } from "@/components/decks/use-deck-editor";
 import { computeDeckAnalytics, type DeckAnalytics } from "@/lib/decks/analytics";
@@ -278,8 +277,12 @@ function DeckCardArea({
   // Only cards still on show stay picked (a removal, a filter).
   const selectedIds = useMemo(() => visibleRows.filter((row) => picked.has(row.id) && !row.item.pending).map((row) => row.id), [picked, visibleRows]);
   const isSelected = (id: string) => picked.has(id);
+  /** The card picked last — where the focus goes when the selection ends
+   *  from the bar (its Done is gone with it). */
+  const lastPicked = useRef<string | null>(null);
   const toggleSelected = (id: string) => {
     setSelecting(true);
+    if (!picked.has(id)) lastPicked.current = id;
     setPicked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -288,6 +291,18 @@ function DeckCardArea({
     });
   };
   const stopSelecting = () => {
+    // Ended from the bar (Done, or Escape inside it): the bar is about to
+    // go, and the focus with it — to <body>. Hand it to the card picked
+    // last that is still on show, else to the toolbar's Select toggle.
+    // (Ended from the toggle or a card, the focus stays where it is.)
+    const active = typeof document === "undefined" ? null : document.activeElement;
+    if (active instanceof HTMLElement && active.closest("[data-deck-bulk-bar]")) {
+      const onShow = visibleRows.filter((row) => picked.has(row.id) && !row.item.pending).map((row) => row.id);
+      const target = lastPicked.current && onShow.includes(lastPicked.current) ? lastPicked.current : onShow.at(-1);
+      const opener = target ? document.getElementById(`entry-${target}`) : null;
+      (opener ?? document.getElementById(DECK_SELECT_TOGGLE_ID))?.focus();
+    }
+    lastPicked.current = null;
     setSelecting(false);
     setPicked(new Set());
   };
@@ -393,10 +408,18 @@ function DeckCardArea({
         }
         setSelectedId(id);
       },
+      // The keyboard's focus shows its card at once; a pointer only once it
+      // has RESTED on the card (HOVER_REST_MS, the tiles' rest) — one that
+      // crosses other cards on its way to the pane's buttons never changes
+      // the card those buttons act on.
       onFocus: () => preview.set(id),
       onPointerEnter: (event) => {
-        if (event.pointerType !== "touch") preview.set(id);
+        if (event.pointerType !== "touch") preview.rest(id);
       },
+      onPointerMove: (event) => {
+        if (event.pointerType !== "touch") preview.rest(id);
+      },
+      onPointerLeave: () => preview.leave(id),
     };
     if (editing && selecting) props["aria-pressed"] = picked.has(id);
     else props["aria-haspopup"] = "dialog";
@@ -420,12 +443,16 @@ function DeckCardArea({
         press.current = { id, timer, x: event.clientX, y: event.clientY };
       },
       onPointerMove: (event) => {
+        props.onPointerMove?.(event);
         const current = press.current;
         if (current && Math.hypot(event.clientX - current.x, event.clientY - current.y) > LONG_PRESS_SLOP_PX) endPress();
       },
       onPointerUp: endPress,
       onPointerCancel: endPress,
-      onPointerLeave: endPress,
+      onPointerLeave: (event) => {
+        props.onPointerLeave?.(event);
+        endPress();
+      },
       onContextMenu: (event) => {
         // A long press's own menu (Android) would cover the selection.
         if (swallowClick.current === id || press.current?.id === id) event.preventDefault();
@@ -641,8 +668,12 @@ function DeckCardArea({
                   onSelectAll={() => setPicked(new Set(visibleRows.filter((row) => !row.item.pending).map((row) => row.id)))}
                   onStep={(by) => editor?.step(selectedIds, by)}
                   onRemove={() => {
+                    // The removal hands the focus to the card after the
+                    // last one removed (the editor's focus keeper).
                     editor?.remove(selectedIds);
-                    stopSelecting();
+                    lastPicked.current = null;
+                    setSelecting(false);
+                    setPicked(new Set());
                   }}
                   onDone={stopSelecting}
                 />
@@ -667,7 +698,19 @@ function DeckCardArea({
                   store={preview}
                   rows={visibleRows}
                   showProxies={showProxies}
-                  actions={editor ? (row) => <PaneActions row={row} editor={editor} menuItems={rowMenuItems(row)} /> : null}
+                  actions={
+                    editor
+                      ? (row) => (
+                          <PaneActions
+                            row={row}
+                            editor={editor}
+                            menuItems={rowMenuItems(row)}
+                            // Its menu open, the pane holds its card.
+                            onMenuOpenChange={(open) => preview.hold(open)}
+                          />
+                        )
+                      : null
+                  }
                   onDetails={(entryId) => setSelectedId(entryId)}
                 />
               ) : null}
@@ -723,9 +766,23 @@ function DeckCardArea({
 
 /** The preview pane's controls for the owner's card: the stepper, the "⋯"
  *  menu (Move to, Edit, Select, Remove) and Edit as its own button. */
-function PaneActions({ row, editor, menuItems }: { row: ViewRow; editor: DeckEditor; menuItems: MenuItem[] }) {
+function PaneActions({
+  row,
+  editor,
+  menuItems,
+  onMenuOpenChange,
+}: {
+  row: ViewRow;
+  editor: DeckEditor;
+  menuItems: MenuItem[];
+  onMenuOpenChange: (open: boolean) => void;
+}) {
   const edit = entryEditTarget(row.item, editor.deck.slug);
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onMenuOpenChange(next);
+  };
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-surface/60 p-3">
       <div className="flex items-center justify-between gap-2">

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,9 @@ vi.mock("@/lib/decks/card-actions", () => ({
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 afterEach(cleanup);
 

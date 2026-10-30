@@ -99,11 +99,12 @@ export function addTargetEntry<E extends CountEntry & { id: string }>(
     return onBoard.find((entry) => entry.card_id?.toLowerCase() === id) ?? null;
   }
   const id = pick.scryfallId.toLowerCase();
-  const exact = onBoard.find((entry) => entry.scryfall_id?.toLowerCase() === id);
-  if (exact) return exact;
+  // The real card itself before your version of it — of the printing, then
+  // of the name.
+  const exact = onBoard.filter((entry) => entry.scryfall_id?.toLowerCase() === id);
+  if (exact.length > 0) return exact.find((entry) => !entry.card_id) ?? exact[0];
   const key = cardNameKey(pick.name);
   const sameName = onBoard.filter((entry) => entry.scryfall_id && cardNameKey(entry.name) === key);
-  // The real card itself before your version of it.
   return sameName.find((entry) => !entry.card_id) ?? sameName[0] ?? null;
 }
 
@@ -146,22 +147,48 @@ export function normalizeAddQuery(raw: string): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, ADD_SEARCH_MAX_CHARS);
 }
 
+const NAME_WORD_BREAK = /[\s,'’-]+/;
+
+/** The query's words appear in the name as whole words, in a row ("bolt"
+ *  in "Lightning Bolt", never in "Boltwing"). */
+function hasWholeWords(nameWords: readonly string[], queryWords: readonly string[]): boolean {
+  if (queryWords.length === 0) return false;
+  for (let i = 0; i + queryWords.length <= nameWords.length; i += 1) {
+    if (queryWords.every((word, j) => nameWords[i + j] === word)) return true;
+  }
+  return false;
+}
+
 /**
- * Real cards in the order a typeahead should offer them: the name typed
- * whole first, then names that start with it, then names with a word that
- * does, then the rest — each tier in Scryfall's own order (the most played
- * first, `order=edhrec`). "sol" puts Sol Ring before Solemn Simulacrum's
- * many neighbours; "bolt" Lightning Bolt's word match before "Boltwing".
+ * Real cards in the order a typeahead should offer them, each tier in
+ * Scryfall's own order (the most played first, `order=edhrec`):
+ *
+ *   0  the name typed whole            "Sol Ring" for "sol ring"
+ *   1  a name that STARTS with the     "Sol Ring", "Sol Talisman" for "sol"
+ *      query as whole words
+ *   2  the query as whole words        "Lightning Bolt" for "bolt"
+ *      anywhere else
+ *   3  a name that starts with it      "Solemn Simulacrum", "Boltwing"
+ *   4  a word that starts with it      "Arcbound Solemnist"
+ *   5  the rest (Scryfall's fuzzier matches)
+ *
+ * So an exact WORD always beats a longer word that merely begins with the
+ * query: "bolt" offers Lightning Bolt before Boltwing, "sol" Sol Ring
+ * before Solemn Simulacrum.
  */
 export function rankRealCards<C extends { name: string }>(cards: readonly C[], query: string, limit = ADD_RESULTS_PER_SECTION): C[] {
   const q = cardNameKey(query);
   if (!q) return cards.slice(0, limit);
+  const queryWords = q.split(NAME_WORD_BREAK).filter(Boolean);
   const tier = (card: C) => {
     const name = cardNameKey(card.name);
     if (name === q) return 0;
-    if (name.startsWith(q)) return 1;
-    if (name.split(/[\s,'’-]+/).some((word) => word.startsWith(q))) return 2;
-    return 3;
+    const words = name.split(NAME_WORD_BREAK).filter(Boolean);
+    if (hasWholeWords(words.slice(0, queryWords.length), queryWords)) return 1;
+    if (hasWholeWords(words, queryWords)) return 2;
+    if (name.startsWith(q)) return 3;
+    if (words.some((word) => word.startsWith(q))) return 4;
+    return 5;
   };
   return cards
     .map((card, index) => ({ card, index, tier: tier(card) }))

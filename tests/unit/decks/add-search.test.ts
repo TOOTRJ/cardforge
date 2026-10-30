@@ -68,6 +68,10 @@ describe("where an add lands", () => {
     const side = entry({ name: "Sol Ring", scryfall_id: "sf-c", board: "side" });
     const entries = [yours, printing, placeholder, side];
     expect(addTargetEntry(entries, { kind: "printing", scryfallId: "sf-b", name: "Sol Ring" }, "main")).toBe(yours);
+    // Two rows of the printing (a Move never merges): the real card's own
+    // row before your version of it.
+    const plainOfB = entry({ name: "Sol Ring", scryfall_id: "sf-b" });
+    expect(addTargetEntry([yours, plainOfB], { kind: "printing", scryfallId: "sf-b", name: "Sol Ring" }, "main")).toBe(plainOfB);
     // Another printing of it: the real card's own line before your version.
     expect(addTargetEntry(entries, { kind: "printing", scryfallId: "sf-z", name: "Sol Ring" }, "main")).toBe(printing);
     expect(addTargetEntry([yours, placeholder], { kind: "printing", scryfallId: "sf-z", name: "Sol Ring" }, "main")).toBe(yours);
@@ -100,7 +104,7 @@ describe("the owner's card search, read as typed", () => {
 });
 
 describe("real cards, in the order a typeahead offers them", () => {
-  it("the name typed whole, then names that start with it, then a word that does — each in Scryfall's (most played) order", () => {
+  it("the name typed whole, then whole words (at the start, then anywhere), then names and words that start with it — each in Scryfall's (most played) order", () => {
     const answer = ["Solemn Simulacrum", "Sol Ring", "Arcane Signet", "Sol Talisman", "Soldevi Adnate", "Swords of Sol"].map((name) => ({ name }));
     expect(rankRealCards(answer, "sol ring").map((card) => card.name)).toEqual([
       "Sol Ring",
@@ -110,12 +114,19 @@ describe("real cards, in the order a typeahead offers them", () => {
       "Soldevi Adnate",
       "Swords of Sol",
     ]);
-    expect(rankRealCards(answer, "sol", 4).map((card) => card.name)).toEqual(["Solemn Simulacrum", "Sol Ring", "Sol Talisman", "Soldevi Adnate"]);
+    expect(rankRealCards(answer, "sol", 4).map((card) => card.name)).toEqual(["Sol Ring", "Sol Talisman", "Swords of Sol", "Solemn Simulacrum"]);
     expect(rankRealCards([{ name: "Boltwing" }, { name: "Lightning Bolt" }, { name: "Bolt" }], "bolt").map((card) => card.name)).toEqual([
       "Bolt",
-      "Boltwing",
       "Lightning Bolt",
+      "Boltwing",
     ]);
+  });
+
+  it("Scryfall's real answer for \"bolt\" (order=edhrec): Lightning Bolt first, not fifth", () => {
+    const answer = ["Boltwing Marauder", "Bolt Bend", "Boltbender", "Thunderbolt", "Lightning Bolt", "Chain Lightning", "Fireblast"].map(
+      (name) => ({ name }),
+    );
+    expect(rankRealCards(answer, "bolt", 3).map((card) => card.name)).toEqual(["Bolt Bend", "Lightning Bolt", "Boltwing Marauder"]);
   });
 });
 

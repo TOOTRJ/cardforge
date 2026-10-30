@@ -3,6 +3,7 @@ import {
   deckEntryReturnTo,
   deckReturnPath,
   entryEditTarget,
+  ownDeckReturnPath,
   parseDeckEntryAnchor,
   RETURN_TO_PARAM,
 } from "@/lib/decks/return-to";
@@ -51,6 +52,16 @@ describe("the returnTo whitelist", () => {
   it("given a deck, only THAT deck's page", () => {
     expect(deckReturnPath(`/deck/ness#entry-${ENTRY}`, "ness")).toBe(`/deck/ness#entry-${ENTRY}`);
     expect(deckReturnPath(`/deck/other#entry-${ENTRY}`, "ness")).toBeNull();
+  });
+
+  it("a card's editor goes back only to one of the signed-in user's OWN decks", () => {
+    expect(ownDeckReturnPath(`/deck/ness#entry-${ENTRY}`, ["goblins", "ness"])).toBe(`/deck/ness#entry-${ENTRY}`);
+    expect(ownDeckReturnPath("/deck/ness", ["ness"])).toBe("/deck/ness");
+    // Someone else's deck, a deck slug that only starts like one, a non-deck path.
+    expect(ownDeckReturnPath(`/deck/theirs#entry-${ENTRY}`, ["ness"])).toBeNull();
+    expect(ownDeckReturnPath("/deck/ness-2", ["ness"])).toBeNull();
+    expect(ownDeckReturnPath("/dashboard", ["ness"])).toBeNull();
+    expect(ownDeckReturnPath("/deck/ness", [])).toBeNull();
   });
 
   it("reads the anchor back off the hash", () => {

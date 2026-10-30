@@ -30,7 +30,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
-import { deckReturnPath } from "@/lib/decks/return-to";
+import { ownDeckReturnPath } from "@/lib/decks/return-to";
 
 // File-system param name is `username` because the sibling
 // `(marketing)/card/[username]/[slug]` route uses the same first
@@ -187,7 +187,9 @@ export default async function EditCardPage({
       <div className="mt-10">
         <CardCreatorForm
           mode="edit"
-          returnTo={deckReturnPath(search.returnTo)}
+          // Back to the deck it was opened from — one of the user's own decks
+          // only (TODO DK5.5).
+          returnTo={ownDeckReturnPath(search.returnTo, myDecks.map((deck) => deck.slug))}
           userId={user.id}
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}

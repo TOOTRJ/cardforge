@@ -6,9 +6,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isUuid } from "@/lib/ids";
 import { selectAllRows } from "@/lib/supabase/select-all-rows";
 import { addTargetEntry, cardElsewhere, type AddPick } from "@/lib/decks/add-search";
-import { restoreLineKey } from "@/lib/decks/entry-batch";
+import { restoreStagingKeys, rowMergeKey } from "@/lib/decks/entry-batch";
 import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
-import { commitDeckImportAction } from "@/lib/decks/import";
+import { commitImportLines } from "@/lib/decks/import-commit";
 import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { DECK_BOARD_LABELS, DECK_BOARD_VALUES, isDeckBoard, type DeckBoard } from "@/types/deck";
@@ -22,9 +22,10 @@ import { DECK_BOARD_LABELS, DECK_BOARD_VALUES, isDeckBoard, type DeckBoard } fro
 //            board gets one copy more; a PipGlyph card comes in through THE
 //            membership writer (changeDeckMembershipAction — the RPC, D3,
 //            the frame-preview and full-deck refusals in words) and a real
-//            card as a one-line decklist (commitDeckImportAction — the
-//            printing fetched again from Scryfall, the import RPC), never a
-//            client-side insert. A PipGlyph card already on ANOTHER board
+//            card as a one-line decklist (lib/decks/import-commit.ts — the
+//            printing fetched again from Scryfall, the import RPC; ONE card,
+//            so the single-card `named` quota, never the decklist import's),
+//            never a client-side insert. A PipGlyph card already on ANOTHER board
 //            stays where it is: the answer says where (a deck holds one
 //            entry a card).
 // ---------------------------------------------------------------------------
@@ -160,19 +161,22 @@ export async function addToDeckAction(payload: unknown): Promise<DeckAddResult> 
   }
 
   // ---- a real card: a one-line decklist ----------------------------------
-  const commit = await commitDeckImportAction({
-    deckId: deck.id,
-    lines: [{ name: pick.name, quantity: 1, board, resolved: { scryfall_id: pick.scryfallId } }],
-  });
+  const commit = await commitImportLines(
+    {
+      deckId: deck.id,
+      lines: [{ name: pick.name, quantity: 1, board, resolved: { scryfall_id: pick.scryfallId } }],
+    },
+    { quota: "named", revalidate: false },
+  );
   if (!commit.ok) return { ok: false, error: commit.error };
   const after = (await readDeckRows(supabase, deck.id)) ?? [];
   // The printing's row — or, when Scryfall no longer has that printing, the
-  // name the line went in under.
-  const keys = [
-    restoreLineKey({ board, scryfallId: pick.scryfallId, name: pick.name }),
-    restoreLineKey({ board, scryfallId: null, name: pick.name }),
-  ];
-  const row = keys.map((key) => after.find((r) => restoreLineKey({ board: r.board, scryfallId: r.scryfall_id, name: r.name }) === key)).find(Boolean);
+  // name the line went in under: the NEW row first, else the one the
+  // commit merged into.
+  const keys = new Set(restoreStagingKeys({ scryfallId: pick.scryfallId, name: pick.name }, board));
+  const known = new Set(rows.map((r) => r.id));
+  const landed = after.filter((r) => keys.has(rowMergeKey(r)));
+  const row = landed.find((r) => !known.has(r.id)) ?? landed[0];
   await revalidateDeckEntryChange(supabase, user.id, deck.slug);
   if (!row) return { ok: false, error: "Added, but the deck didn't show it yet — reload the page." };
   return { ok: true, entryId: row.id, board, quantity: row.quantity, merged: commit.merged > 0, name: row.name };

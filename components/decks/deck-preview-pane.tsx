@@ -5,6 +5,7 @@ import Link from "next/link";
 import { HelpCircle, Lock, Maximize2 } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { TwoFacesMark } from "@/components/cards/two-faces-mark";
+import { HOVER_REST_MS } from "@/components/cards/baked-card-flip";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import type { ViewRow } from "@/components/decks/deck-row-ui";
 import { cardCornersClass } from "@/lib/cards/card-orientation";
@@ -23,8 +24,12 @@ import { DECK_BOARD_LABELS } from "@/types/deck";
 //
 // Which card it shows is a tiny store of its own (`createPreviewStore`),
 // set by the openers' pointer and focus events: a hover re-renders the pane,
-// never the deck's hundred cards. It shows the deck's first card until one
-// is pointed at, and moves to the first again when its card leaves.
+// never the deck's hundred cards. The focus shows its card at once; a
+// pointer only once it has RESTED on a card (HOVER_REST_MS, the two-faced
+// tiles' rest), so one crossing other cards on its way to the pane's
+// buttons never changes the card they act on — and while the pane's menu
+// is open nothing does. It shows the deck's first card until one is
+// pointed at, and moves to the first again when its card leaves.
 //
 // Pictures: a PipGlyph card's 600 px thumb (never the HD PNG — a pane that
 // follows the pointer over a hundred cards would pull 3 MB a card) and a
@@ -34,19 +39,58 @@ import { DECK_BOARD_LABELS } from "@/types/deck";
 
 export type PreviewStore = {
   get: () => string | null;
+  /** Shows a card at once (the keyboard's focus, a click). */
   set: (entryId: string | null) => void;
+  /** A pointer on a card: shown once it has rested there HOVER_REST_MS. */
+  rest: (entryId: string) => void;
+  /** The pointer left the card: a rest it hadn't finished is dropped. */
+  leave: (entryId: string) => void;
+  /** While held (the pane's own menu open), no pointer changes the card. */
+  hold: (held: boolean) => void;
   subscribe: (listener: () => void) => () => void;
 };
 
-export function createPreviewStore(): PreviewStore {
+export function createPreviewStore(restMs: number = HOVER_REST_MS): PreviewStore {
   let current: string | null = null;
+  let held = false;
+  let resting: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
   const listeners = new Set<() => void>();
+  const show = (entryId: string | null) => {
+    if (entryId === current) return;
+    current = entryId;
+    for (const listener of listeners) listener();
+  };
+  const drop = () => {
+    if (resting) clearTimeout(resting.timer);
+    resting = null;
+  };
   return {
     get: () => current,
     set: (entryId) => {
-      if (entryId === current) return;
-      current = entryId;
-      for (const listener of listeners) listener();
+      drop();
+      show(entryId);
+    },
+    rest: (entryId) => {
+      if (held || entryId === current) {
+        if (resting?.id !== entryId) drop();
+        return;
+      }
+      // Every move on the card starts its rest again.
+      drop();
+      resting = {
+        id: entryId,
+        timer: setTimeout(() => {
+          resting = null;
+          if (!held) show(entryId);
+        }, restMs),
+      };
+    },
+    leave: (entryId) => {
+      if (resting?.id === entryId) drop();
+    },
+    hold: (next) => {
+      held = next;
+      if (next) drop();
     },
     subscribe: (listener) => {
       listeners.add(listener);

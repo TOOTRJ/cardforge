@@ -44,6 +44,10 @@ const VIEW_OPTIONS: ChipOption<DeckView>[] = DECK_VIEWS.map((view) => ({
 const SELECT_CLASS =
   "h-9 rounded-md border border-border bg-background/60 px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50";
 
+/** The toolbar's Select toggle — where the focus goes when a selection ends
+ *  with none of its cards left to hand it to. */
+export const DECK_SELECT_TOGGLE_ID = "deck-select-toggle";
+
 export function DeckViewToolbar({
   prefs,
   onPrefs,
@@ -139,6 +143,7 @@ export function DeckViewToolbar({
           {select ? (
             <button
               type="button"
+              id={DECK_SELECT_TOGGLE_ID}
               onClick={select.onToggle}
               aria-pressed={select.selecting}
               className={cn(

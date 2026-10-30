@@ -130,7 +130,8 @@ const nameOf = (item: Pick<EditorItem, "entry" | "card">) => item.card?.title ??
 /** "Sol Ring", or "3 cards". */
 const whoOf = (names: readonly string[]) => (names.length === 1 ? names[0]! : `${names.length} cards`);
 
-type Answer = { ok: true } | { ok: false; error: string };
+/** `stale`: the server found the entries gone (removed in another tab). */
+type Answer = { ok: true } | { ok: false; error: string; stale?: true };
 
 export function DeckEditorProvider({
   deck,
@@ -272,9 +273,10 @@ export function DeckEditorProvider({
             const reason = value && !value.ok ? value.error : LOST_REQUEST;
             toast.error(options.failure, { description: reason });
             announce(`${options.failure} ${reason}`);
-            // A request that never answered: what the server holds is
-            // unknown — ask for it.
-            if (!value) router.refresh();
+            // A request that never answered (what the server holds is
+            // unknown), or entries the server no longer has (another tab
+            // removed them): ask for the deck again.
+            if (!value || (!value.ok && value.stale)) router.refresh();
           }
           resolve(outcome);
         });

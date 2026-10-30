@@ -62,6 +62,7 @@ export function DeckBulkBar({
   return (
     <section
       aria-label="Selected cards"
+      data-deck-bulk-bar=""
       className={cn(
         "sticky bottom-2 z-30 flex flex-col gap-2 rounded-frame border border-primary/40 bg-surface/95 px-3 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 sm:bottom-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-4",
         className,

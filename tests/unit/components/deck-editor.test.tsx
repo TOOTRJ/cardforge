@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,9 @@ vi.mock("@/lib/decks/add-actions", () => adds);
 
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 const DECK = { id: "33333333-3333-4333-8333-333333333333", slug: "ness", title: "Ness", format: "casual" as const };
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -169,6 +173,19 @@ describe("instant saves (DK5.8)", () => {
     expect(status()).toContain("Deck not found or not yours.");
     // A refusal is an answer: the server's state is known.
     expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("entries another tab removed: the refusal is said AND the page asks for the deck again", async () => {
+    actions.updateDeckEntriesAction.mockResolvedValue({ ok: false, error: "Those cards are no longer in the deck.", stale: true });
+    deckPage();
+    await act(async () => {
+      fireEvent.click(copiesOf("Lightning Bolt").getByRole("button", { name: "One more" }));
+    });
+    await flush();
+    expect(toast.error).toHaveBeenCalledWith("Couldn't change Lightning Bolt — back to what it was.", {
+      description: "Those cards are no longer in the deck.",
+    });
+    expect(router.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("a request that never answers rolls back too, and asks the server again (its state is unknown)", async () => {
@@ -342,6 +359,41 @@ describe("the selection and its bulk bar (DK5.4 / DK5.10)", () => {
     expect(screen.queryByRole("region", { name: "Selected cards" })).toBeNull();
   });
 
+  it("Done hands the focus to the card picked last — never to <body>; with none picked, to the Select toggle", async () => {
+    deckPage();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Sol Ring/ }));
+      fireEvent.click(screen.getByRole("button", { name: /^Lightning Bolt/ }));
+    });
+    const done = () => within(screen.getByRole("region", { name: "Selected cards" })).getAllByRole("button", { name: "Done" })[0]!;
+    done().focus();
+    await act(async () => {
+      fireEvent.click(done());
+    });
+    expect(screen.queryByRole("region", { name: "Selected cards" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Lightning Bolt/ }));
+
+    // Picked and unpicked again: nothing to hand it to but the toggle.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Select" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Sol Ring/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Sol Ring/ }));
+    });
+    done().focus();
+    await act(async () => {
+      fireEvent.click(done());
+    });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Select" }));
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it("Shift + click selects without opening the card", async () => {
     deckPage();
     await act(async () => {
@@ -349,6 +401,63 @@ describe("the selection and its bulk bar (DK5.4 / DK5.10)", () => {
     });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("region", { name: "Selected cards" }).textContent).toContain("1 selected");
+  });
+});
+
+describe("the preview pane (DK5.7) — its buttons never act on a card the pointer only crossed", () => {
+  const wideScreen = () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(min-width: 80rem)",
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    window.matchMedia = globalThis.matchMedia;
+  };
+  const pane = () => screen.getByRole("complementary", { name: "Card preview" });
+  const shown = () => within(pane()).getByRole("heading", { level: 3 }).textContent;
+  const opener = (name: RegExp) => screen.getByRole("button", { name });
+  const rest = () => act(async () => new Promise((resolve) => setTimeout(resolve, 420)));
+
+  it("a pointer that passes over a card leaves the pane as it was; one that RESTS shows it; the focus shows its card at once", async () => {
+    wideScreen();
+    deckPage();
+    expect(shown()).toBe("Lightning Bolt");
+    // Crossing Sol Ring on the way to the pane: no change, even later.
+    await act(async () => {
+      fireEvent.pointerOver(opener(/^Sol Ring/), { pointerType: "mouse" });
+      fireEvent.pointerMove(opener(/^Sol Ring/), { pointerType: "mouse" });
+      fireEvent.pointerOut(opener(/^Sol Ring/), { pointerType: "mouse", relatedTarget: pane() });
+    });
+    await rest();
+    expect(shown()).toBe("Lightning Bolt");
+    expect(within(pane()).getByRole("group", { name: "Copies of Lightning Bolt" })).toBeTruthy();
+    // Resting on it: now it is the pane's card.
+    await act(async () => {
+      fireEvent.pointerMove(opener(/^Sol Ring/), { pointerType: "mouse" });
+    });
+    expect(shown()).toBe("Lightning Bolt");
+    await rest();
+    expect(shown()).toBe("Sol Ring");
+    // The keyboard's focus: at once.
+    await act(async () => {
+      fireEvent.focus(opener(/^Lightning Bolt/));
+    });
+    expect(shown()).toBe("Lightning Bolt");
+  });
+
+  it("while the pane's menu is open, no pointer changes its card", async () => {
+    wideScreen();
+    deckPage();
+    await act(async () => {
+      fireEvent.click(within(pane()).getByRole("button", { name: "More for Lightning Bolt" }));
+    });
+    expect(await screen.findByRole("menu", { name: "Lightning Bolt: actions" })).toBeTruthy();
+    await act(async () => {
+      fireEvent.pointerMove(opener(/^Sol Ring/), { pointerType: "mouse" });
+    });
+    await rest();
+    expect(shown()).toBe("Lightning Bolt");
   });
 });
 

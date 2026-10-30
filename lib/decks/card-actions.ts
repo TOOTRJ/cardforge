@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { DECK_BOARD_VALUES, type DeckBoard } from "@/types/deck";
+import { DECK_BOARD_LABELS, DECK_BOARD_VALUES, isDeckBoard } from "@/types/deck";
 import { isUuid } from "@/lib/ids";
 import { revalidateProfilePage } from "@/lib/profile/username";
 import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
@@ -13,18 +13,26 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
-import { commitDeckImportAction } from "@/lib/decks/import";
+import { commitImportLines } from "@/lib/decks/import-commit";
 import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
+import { MAX_MEMBERSHIP_BATCH } from "@/lib/decks/membership-copy";
+import { MAX_DECKLIST_ENTRIES } from "@/lib/decks/parse-decklist";
 import {
+  chunk,
   groupEntryUpdates,
-  planRestore,
+  newRowOfStagedLine,
   removedEntryOf,
   removeEntriesSchema,
   restoreEntriesSchema,
-  restoreLineKey,
+  restoresAsCard,
+  mergedRowOfStagedLine,
+  rowMergeKey,
+  stagedLineOf,
+  stageRestoreLines,
   updateEntriesSchema,
   type RemovedEntry,
   type RestoredEntry,
+  type StagedLine,
 } from "@/lib/decks/entry-batch";
 
 // ---------------------------------------------------------------------------
@@ -365,13 +373,15 @@ export async function listMyCardsLiteAction(): Promise<ListMyCardsLiteResult> {
 // server sends replace it).
 // ---------------------------------------------------------------------------
 
+/** `stale`: the entries are gone (removed in another tab) — the page's copy
+ *  of the deck is out of date, so it asks for the deck again. */
 export type DeckEntriesUpdateResult =
   | { ok: true; entries: Array<{ id: string; quantity: number; board: string }> }
-  | { ok: false; error: string };
+  | { ok: false; error: string; stale?: true };
 
 export type DeckEntriesRemoveResult =
   | { ok: true; removed: RemovedEntry[] }
-  | { ok: false; error: string };
+  | { ok: false; error: string; stale?: true };
 
 export type DeckEntriesRestoreResult =
   | { ok: true; restored: RestoredEntry[] }
@@ -425,7 +435,7 @@ export async function updateDeckEntriesAction(payload: unknown): Promise<DeckEnt
   if (entries.length > 0) await revalidateDeckEntryChange(supabase, user.id, deck.slug);
   if (failure) return { ok: false, error: failure };
   // Nothing matched: the entries are gone (removed in another tab).
-  if (entries.length === 0) return { ok: false, error: "Those cards are no longer in the deck." };
+  if (entries.length === 0) return { ok: false, error: "Those cards are no longer in the deck.", stale: true };
   return { ok: true, entries };
 }
 
@@ -462,33 +472,222 @@ export async function removeDeckEntriesAction(payload: unknown): Promise<DeckEnt
 
   if (removed.length > 0) await revalidateDeckEntryChange(supabase, user.id, deck.slug);
   if (failure) return { ok: false, error: failure };
-  if (removed.length === 0) return { ok: false, error: "Those cards are no longer in the deck." };
+  if (removed.length === 0) return { ok: false, error: "Those cards are no longer in the deck.", stale: true };
   return { ok: true, removed };
 }
 
-type RestoreRow = { id: string; board: string; name: string; scryfall_id: string | null; card_id: string | null };
+type RestoreRow = {
+  id: string;
+  board: string;
+  name: string;
+  scryfall_id: string | null;
+  card_id: string | null;
+  quantity: number;
+};
 
-/** Every entry row of the deck, in list order (≤ 500 since 0143). */
-async function readRestoreRows(supabase: SessionClient, deckId: string): Promise<RestoreRow[]> {
-  const { data } = await selectAllRows<RestoreRow>((from, to) =>
+/** Every entry row of the deck, in list order (≤ 500 since 0143) — null
+ *  when the deck can't be read. */
+async function readRestoreRows(supabase: SessionClient, deckId: string): Promise<RestoreRow[] | null> {
+  const { data, error } = await selectAllRows<RestoreRow>((from, to) =>
     supabase
       .from("deck_cards")
-      .select("id, board, name, scryfall_id, card_id", { count: "exact" })
+      .select("id, board, name, scryfall_id, card_id, quantity", { count: "exact" })
       .eq("deck_id", deckId)
       .order("position", { ascending: true })
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
       .range(from, to),
   );
-  return data;
+  return error ? null : data;
+}
+
+/** A restore takes at most this many commits per chunk of lines: a line
+ *  waits a round only when every board holds its printing or another line
+ *  of the round took the board (stageRestoreLines). */
+const MAX_RESTORE_ROUNDS = 4;
+
+/** What a restored row still needs: its own board (it was written onto
+ *  another to stay a row of its own), its card and its cover pick — each
+ *  written on the NEW row only, and each refused on its own. */
+async function settleRestoredRow(
+  supabase: SessionClient,
+  deckId: string,
+  entry: RemovedEntry,
+  row: { id: string; board: string; card_id: string | null },
+): Promise<RestoredEntry> {
+  const notes: string[] = [];
+  if (row.board !== entry.board) {
+    const { error } = await supabase.from("deck_cards").update({ board: entry.board }).eq("deck_id", deckId).eq("id", row.id);
+    if (error) {
+      const board = isDeckBoard(row.board) ? DECK_BOARD_LABELS[row.board] : row.board;
+      notes.push(`${entry.name} came back on the ${board}.`);
+    }
+  }
+  if (entry.cardId && !row.card_id) {
+    // Its card again, judged again (D3, deck_cards_guard_card_link):
+    // another creator's card that is no longer public stays out, and the
+    // line comes back as the real card.
+    const { error } = await supabase
+      .from("deck_cards")
+      .update({ card_id: entry.cardId })
+      .eq("deck_id", deckId)
+      .eq("id", row.id)
+      .is("card_id", null);
+    if (error) notes.push(`${entry.name} came back without its card — that card is no longer available.`);
+  }
+  if (entry.featuredRank) {
+    // The cover pick's place (0150: one entry a rank) — taken meanwhile by
+    // another pick, the entry comes back off the cover.
+    const { error } = await supabase
+      .from("deck_cards")
+      .update({ featured_rank: entry.featuredRank })
+      .eq("deck_id", deckId)
+      .eq("id", row.id);
+    if (error) notes.push(`${entry.name} is back, but no longer featured on the cover.`);
+  }
+  return notes.length > 0 ? { from: entry.id, to: row.id, note: notes.join(" ") } : { from: entry.id, to: row.id };
+}
+
+/** A line the commit merged into a row after all (one written meanwhile,
+ *  from another tab, took its key): that row's count goes back — only while
+ *  it still reads as the merge left it. */
+async function takeBackMerge(
+  supabase: SessionClient,
+  deckId: string,
+  line: StagedLine,
+  before: readonly RestoreRow[],
+  after: readonly RestoreRow[],
+): Promise<void> {
+  const merged = mergedRowOfStagedLine(line, before, after);
+  if (!merged) return;
+  await supabase
+    .from("deck_cards")
+    .update({ quantity: merged.quantity })
+    .eq("deck_id", deckId)
+    .eq("id", merged.row.id)
+    .eq("quantity", merged.row.quantity);
+}
+
+/** Printings and name-only lines back — each a NEW row of its own (see
+ *  lib/decks/entry-batch.ts stageRestoreLines), never merged into a row
+ *  the deck holds or linked onto one. */
+async function restoreLines(
+  supabase: SessionClient,
+  deckId: string,
+  entries: readonly RemovedEntry[],
+): Promise<{ restored: RestoredEntry[]; changed: boolean }> {
+  const restored: RestoredEntry[] = [];
+  let changed = false;
+  let waiting: RemovedEntry[] = [...entries];
+  let failure: string | null = null;
+
+  for (let round = 0; waiting.length > 0 && round < MAX_RESTORE_ROUNDS && !failure; round += 1) {
+    const before = await readRestoreRows(supabase, deckId);
+    if (!before) {
+      failure = "Couldn't read the deck. Try again.";
+      break;
+    }
+    const { staged, waiting: next } = stageRestoreLines(waiting, new Set(before.map(rowMergeKey)));
+    if (staged.length === 0) break;
+    waiting = next;
+
+    const written: StagedLine[] = [];
+    for (const lines of chunk(staged, MAX_DECKLIST_ENTRIES)) {
+      if (failure) {
+        for (const line of lines) restored.push({ from: line.entry.id, to: null, note: failure });
+        continue;
+      }
+      // One card back is a single-card call: the `named` quota, never the
+      // decklist import's (lib/decks/import-commit.ts).
+      const commit = await commitImportLines(
+        { deckId, lines: lines.map(stagedLineOf) },
+        { quota: "named", revalidate: false },
+      );
+      if (!commit.ok) {
+        failure = commit.error;
+        for (const line of lines) restored.push({ from: line.entry.id, to: null, note: failure });
+        continue;
+      }
+      changed = true;
+      written.push(...lines);
+    }
+    if (written.length === 0) break;
+
+    const after = await readRestoreRows(supabase, deckId);
+    if (!after) {
+      for (const line of written) restored.push({ from: line.entry.id, to: null, note: "Couldn't read the deck. Reload the page." });
+      failure = "Couldn't read the deck. Try again.";
+      break;
+    }
+    const known = new Set(before.map((row) => row.id));
+    const fresh = after.filter((row) => !known.has(row.id));
+    const claimed = new Set<string>();
+    for (const line of written) {
+      const row = newRowOfStagedLine(line, fresh, claimed);
+      if (!row) {
+        await takeBackMerge(supabase, deckId, line, before, after);
+        restored.push({ from: line.entry.id, to: null, note: `${line.entry.name} couldn't come back as its own entry. Try again.` });
+        continue;
+      }
+      claimed.add(row.id);
+      restored.push(await settleRestoredRow(supabase, deckId, line.entry, row));
+    }
+  }
+
+  for (const entry of waiting) {
+    restored.push({ from: entry.id, to: null, note: failure ?? `${entry.name} couldn't come back. Try again.` });
+  }
+  return { restored, changed };
+}
+
+/** PipGlyph cards alone back through the ONE membership writer — a new row
+ *  of the card, or "already in the deck" (never a row of another). */
+async function restoreCards(
+  supabase: SessionClient,
+  deckId: string,
+  entries: readonly RemovedEntry[],
+): Promise<{ restored: RestoredEntry[]; changed: boolean }> {
+  const restored: RestoredEntry[] = [];
+  let changed = false;
+  for (const cards of chunk(entries, MAX_MEMBERSHIP_BATCH)) {
+    const result = await changeDeckMembershipAction({ deckId, add: cards.map((entry) => entry.cardId!) });
+    if (!result.ok) {
+      for (const entry of cards) restored.push({ from: entry.id, to: null, note: result.error });
+      continue;
+    }
+    for (const entry of cards) {
+      const id = entry.cardId!.toLowerCase();
+      const outcome = result.results.find((row) => row.cardId.toLowerCase() === id);
+      const now = result.entries.find((row) => row.cardId.toLowerCase() === id);
+      if (outcome?.status === "added" && now) {
+        changed = true;
+        // The RPC writes the mainboard ×1: then the entry's own count, its
+        // board and its cover pick.
+        if (entry.quantity !== now.quantity) {
+          await supabase.from("deck_cards").update({ quantity: entry.quantity }).eq("deck_id", deckId).eq("id", now.entryId);
+        }
+        restored.push(
+          await settleRestoredRow(supabase, deckId, { ...entry, cardId: null }, { id: now.entryId, board: now.board, card_id: entry.cardId }),
+        );
+      } else if (outcome?.status === "already") {
+        // Another row holds the card now: that row is left as it is, and the
+        // removed entry does not become it.
+        restored.push({ from: entry.id, to: null, note: `${entry.name} is already in the deck.` });
+      } else {
+        restored.push({ from: entry.id, to: null, note: outcome?.error ?? `${entry.name} couldn't come back.` });
+      }
+    }
+  }
+  return { restored, changed };
 }
 
 /** Puts removed entries back — the owner's Undo — through the paths a card
- *  comes INTO a deck by (lib/decks/entry-batch.ts planRestore): the
- *  decklist commit for printings and names, the membership writer for a
- *  PipGlyph card, then each line's card, board and quantity. Never a direct
- *  insert. An entry that can't come back (the deck is full, the card is no
- *  longer yours to add) says why, one by one. */
+ *  comes INTO a deck by (lib/decks/entry-batch.ts): the decklist commit for
+ *  printings and names, the membership writer for a PipGlyph card. Each
+ *  entry comes back as a NEW row of its own — never merged into a row the
+ *  deck holds, never linked onto one — with its board, card and cover pick.
+ *  Never a direct insert. An entry that can't come back (the deck is full,
+ *  the card is no longer yours to add) says why, one by one. */
 export async function restoreDeckEntriesAction(payload: unknown): Promise<DeckEntriesRestoreResult> {
   const parsed = restoreEntriesSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid change." };
@@ -500,90 +699,18 @@ export async function restoreDeckEntriesAction(payload: unknown): Promise<DeckEn
   const deck = await getOwnedDeck(supabase, user.id, parsed.data.deckId);
   if (!deck) return { ok: false, error: "Deck not found or not yours." };
 
-  const plan = planRestore(parsed.data.entries);
-  const restored: RestoredEntry[] = [];
-  let changed = false;
+  const entries = parsed.data.entries as RemovedEntry[];
+  const lines = await restoreLines(
+    supabase,
+    deck.id,
+    entries.filter((entry) => !restoresAsCard(entry)),
+  );
+  const cards = await restoreCards(
+    supabase,
+    deck.id,
+    entries.filter((entry) => restoresAsCard(entry)),
+  );
 
-  // ---- printings and names: the decklist commit -------------------------
-  let lineFailure: string | null = null;
-  for (const lines of plan.lineChunks) {
-    const commit = await commitDeckImportAction({ deckId: deck.id, lines });
-    if (!commit.ok) {
-      lineFailure = commit.error;
-      break;
-    }
-    changed = true;
-  }
-  if (plan.lineEntries.length > 0) {
-    // Each line's row is the one its merge key names now (the commit merged
-    // into it or wrote it) — the first of a key, as the commit's merge
-    // picks it.
-    const rows = changed ? await readRestoreRows(supabase, deck.id) : [];
-    const rowByKey = new Map<string, RestoreRow>();
-    for (const row of rows) {
-      const key = restoreLineKey({ board: row.board, scryfallId: row.scryfall_id, name: row.name });
-      if (!rowByKey.has(key)) rowByKey.set(key, row);
-    }
-    for (const { entry, key } of plan.lineEntries) {
-      const row = rowByKey.get(key);
-      if (!row) {
-        restored.push({ from: entry.id, to: null, note: lineFailure ?? `${entry.name} couldn't come back.` });
-        continue;
-      }
-      if (entry.cardId && !row.card_id) {
-        // Its card again, judged again (D3, deck_cards_guard_card_link):
-        // another creator's card that is no longer public stays out, and
-        // the line comes back as the real card.
-        const { error } = await supabase
-          .from("deck_cards")
-          .update({ card_id: entry.cardId })
-          .eq("deck_id", deck.id)
-          .eq("id", row.id)
-          .is("card_id", null);
-        if (error) {
-          restored.push({ from: entry.id, to: row.id, note: `${entry.name} came back without its card — that card is no longer available.` });
-          continue;
-        }
-        row.card_id = entry.cardId;
-      }
-      restored.push({ from: entry.id, to: row.id });
-    }
-  }
-
-  // ---- PipGlyph cards: the membership writer ----------------------------
-  for (const cards of plan.cardChunks) {
-    const result = await changeDeckMembershipAction({ deckId: deck.id, add: cards.map((entry) => entry.cardId!) });
-    if (!result.ok) {
-      for (const entry of cards) restored.push({ from: entry.id, to: null, note: result.error });
-      continue;
-    }
-    for (const entry of cards) {
-      const id = entry.cardId!.toLowerCase();
-      const outcome = result.results.find((row) => row.cardId.toLowerCase() === id);
-      const now = result.entries.find((row) => row.cardId.toLowerCase() === id);
-      if (outcome?.status === "added" && now) {
-        changed = true;
-        // The RPC writes the mainboard ×1: then the entry's own board and count.
-        const patch: { board?: DeckBoard; quantity?: number } = {};
-        if (entry.board !== now.board) patch.board = entry.board;
-        if (entry.quantity !== now.quantity) patch.quantity = entry.quantity;
-        const { error } =
-          Object.keys(patch).length > 0
-            ? await supabase.from("deck_cards").update(patch).eq("deck_id", deck.id).eq("id", now.entryId)
-            : { error: null };
-        restored.push(
-          error
-            ? { from: entry.id, to: now.entryId, note: `${entry.name} came back on the Mainboard, ×1.` }
-            : { from: entry.id, to: now.entryId },
-        );
-      } else if (outcome?.status === "already") {
-        restored.push({ from: entry.id, to: now?.entryId ?? null, note: `${entry.name} is already in the deck.` });
-      } else {
-        restored.push({ from: entry.id, to: null, note: outcome?.error ?? `${entry.name} couldn't come back.` });
-      }
-    }
-  }
-
-  if (changed) await revalidateDeckEntryChange(supabase, user.id, deck.slug);
-  return { ok: true, restored };
+  if (lines.changed || cards.changed) await revalidateDeckEntryChange(supabase, user.id, deck.slug);
+  return { ok: true, restored: [...lines.restored, ...cards.restored] };
 }

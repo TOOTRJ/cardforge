@@ -2,8 +2,8 @@ import { z } from "zod";
 import { isUuid } from "@/lib/ids";
 import { bringsCard } from "@/lib/decks/entry-status";
 import { MAX_DECK_ENTRIES } from "@/lib/decks/import-plan";
-import { MAX_DECKLIST_ENTRIES, MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
-import { MAX_MEMBERSHIP_BATCH } from "@/lib/decks/membership-copy";
+import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
+import { FEATURED_PICKS_MAX } from "@/lib/decks/featured";
 import { DECK_BOARD_VALUES, isDeckBoard, type DeckBoard } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
@@ -16,16 +16,21 @@ import { DECK_BOARD_VALUES, isDeckBoard, type DeckBoard } from "@/types/deck";
 // never a direct insert (CLAUDE.md: entry inserts go through the RPCs):
 //
 //   a printing (an import, with or without your version of it) or a
-//   name-only line          → ONE decklist commit (import_deck_entries via
-//                             commitDeckImportAction: the printing fetched
-//                             again from Scryfall, never the browser's copy)
-//                             on its board, at its quantity — then the card
-//                             it had is linked back (the D3 guard judges it
-//                             again: another creator's card that went
-//                             private meanwhile comes back as the real card);
+//   name-only line          → the decklist commit (import_deck_entries via
+//                             lib/decks/import-commit.ts: the printing
+//                             fetched again from Scryfall, never the
+//                             browser's copy), ONE line per entry, written
+//                             so it is always a NEW row (stageRestoreLines:
+//                             never merged into a row the deck holds) — then
+//                             that new row, and only it, gets the entry's
+//                             board, its card (the D3 guard judges it again:
+//                             another creator's card that went private
+//                             meanwhile comes back as the real card) and its
+//                             cover pick;
 //   a PipGlyph card alone   → the ONE membership writer (add_custom_deck_entry
-//                             via changeDeckMembershipAction), then its board
-//                             and quantity.
+//                             via changeDeckMembershipAction: a new row or
+//                             "already in the deck"), then its board,
+//                             quantity and cover pick.
 //
 // What a restored entry does NOT get back: its id, its place in "Recently
 // added" and its position (it is new), and its `source` where the path
@@ -102,6 +107,8 @@ export type RemovedEntry = {
   scryfallId: string | null;
   cardId: string | null;
   source: string | null;
+  /** Its "Feature on cover" rank (0150), when it had one. */
+  featuredRank?: number | null;
 };
 
 export const removedEntrySchema = z.object({
@@ -112,6 +119,7 @@ export const removedEntrySchema = z.object({
   scryfallId: z.string().refine((id) => isUuid(id), "That card's Scryfall id isn't valid.").nullable(),
   cardId: z.string().refine((id) => isUuid(id), "Invalid card id.").nullable(),
   source: z.string().max(40).nullable(),
+  featuredRank: z.number().int().min(1).max(FEATURED_PICKS_MAX).nullable().optional(),
 });
 
 export const restoreEntriesSchema = z.object({
@@ -119,7 +127,10 @@ export const restoreEntriesSchema = z.object({
   entries: z
     .array(removedEntrySchema)
     .min(1, "Nothing to put back.")
-    .max(MAX_ENTRY_BATCH, `At most ${MAX_ENTRY_BATCH} cards at a time.`),
+    .max(MAX_ENTRY_BATCH, `At most ${MAX_ENTRY_BATCH} cards at a time.`)
+    .refine((entries) => new Set(entries.map((e) => e.id.toLowerCase())).size === entries.length, {
+      message: "An entry comes back once a call.",
+    }),
 });
 
 /** A deck_cards row as the removal read it. */
@@ -131,6 +142,7 @@ export function removedEntryOf(row: {
   scryfall_id: string | null;
   card_id: string | null;
   source?: string | null;
+  featured_rank?: number | null;
 }): RemovedEntry {
   return {
     id: row.id,
@@ -140,6 +152,7 @@ export function removedEntryOf(row: {
     scryfallId: row.scryfall_id,
     cardId: row.card_id,
     source: row.source ?? null,
+    featuredRank: typeof row.featured_rank === "number" ? row.featured_rank : null,
   };
 }
 
@@ -151,68 +164,141 @@ export type RestoreLine = {
   resolved: { scryfall_id: string } | null;
 };
 
-export type RestorePlan = {
-  /** Printings and name-only lines: the decklist commit, in chunks of the
-   *  commit's own cap. */
-  lineChunks: RestoreLine[][];
-  /** Which removed entry each line brings back (a line may carry two: the
-   *  same printing on the same board — the commit merges them). */
-  lineEntries: Array<{ entry: RemovedEntry; key: string }>;
-  /** PipGlyph cards with no printing: the membership writer, in chunks of
-   *  its cap. */
-  cardChunks: RemovedEntry[][];
-};
-
 /** The merge key a line and a deck row share (lib/decks/import-plan.ts
- *  importMergeKey's rule). */
+ *  importMergeKey's rule — import_deck_entries merges a line into the FIRST
+ *  row of the deck with its key). */
 export function restoreLineKey(line: { board: string; scryfallId: string | null; name: string }): string {
   return `${line.board}|${line.scryfallId ? line.scryfallId.toLowerCase() : `name:${line.name.trim().toLowerCase()}`}`;
 }
 
-function chunk<T>(items: readonly T[], size: number): T[][] {
+/** A row's merge key. */
+export function rowMergeKey(row: { board: string; scryfall_id: string | null; name: string }): string {
+  return restoreLineKey({ board: row.board, scryfallId: row.scryfall_id, name: row.name });
+}
+
+/** Every key a line written onto `board` may land on: its printing's — and
+ *  the name's, which is what the commit writes when Scryfall no longer has
+ *  that printing (lib/decks/import-resolution.ts serverResolvedLines). */
+export function restoreStagingKeys(entry: Pick<RemovedEntry, "scryfallId" | "name">, board: DeckBoard): string[] {
+  const byName = restoreLineKey({ board, scryfallId: null, name: entry.name });
+  return entry.scryfallId ? [restoreLineKey({ board, scryfallId: entry.scryfallId, name: entry.name }), byName] : [byName];
+}
+
+/** True when the entry comes back through the PipGlyph card's own path (a
+ *  card alone, no printing) — unless the card was never the line's own (an
+ *  import line linked to a card later): that line stays a line. */
+export function restoresAsCard(entry: RemovedEntry): boolean {
+  return Boolean(entry.cardId && !entry.scryfallId && (bringsCard(entry.source) || entry.source === null));
+}
+
+/** The boards a restored line may be written onto when its own board holds
+ *  a row with its key (it moves to its own board right after). */
+const STAGING_BOARDS: readonly DeckBoard[] = ["maybe", "side", "companion", "commander", "main"];
+
+export type StagedLine = { entry: RemovedEntry; stage: DeckBoard };
+
+/**
+ * Undo NEVER merges a line into a row the deck holds (TODO DK5.4): two
+ * rows of one printing on one board are legitimate (a Move never merges —
+ * the moved row keeps its id, its card and its cover pick), and
+ * import_deck_entries merges a line into the first row with its key. So
+ * each removed entry is ONE line of its own, written onto a board where no
+ * row — and no other line of this round — has its key: its own board when
+ * that is free, else the first free of STAGING_BOARDS, and moved to its own
+ * board once the commit has made it a NEW row. A line with no free board
+ * this round waits for the next (the boards the round used are free again
+ * once its rows have moved home).
+ */
+export function stageRestoreLines(
+  lines: readonly RemovedEntry[],
+  occupiedKeys: ReadonlySet<string>,
+): { staged: StagedLine[]; waiting: RemovedEntry[] } {
+  const taken = new Set(occupiedKeys);
+  const staged: StagedLine[] = [];
+  const waiting: RemovedEntry[] = [];
+  for (const entry of lines) {
+    const boards = [entry.board, ...STAGING_BOARDS.filter((board) => board !== entry.board)];
+    const stage = boards.find((board) => restoreStagingKeys(entry, board).every((key) => !taken.has(key)));
+    if (!stage) {
+      waiting.push(entry);
+      continue;
+    }
+    for (const key of restoreStagingKeys(entry, stage)) taken.add(key);
+    staged.push({ entry, stage });
+  }
+  return { staged, waiting };
+}
+
+/** The commit line a staged entry is written as. */
+export function stagedLineOf({ entry, stage }: StagedLine): RestoreLine {
+  return {
+    name: entry.name,
+    quantity: entry.quantity,
+    board: stage,
+    resolved: entry.scryfallId ? { scryfall_id: entry.scryfallId } : null,
+  };
+}
+
+type CommittedRow = {
+  id: string;
+  board: string;
+  scryfall_id: string | null;
+  name: string;
+  card_id: string | null;
+  quantity: number;
+};
+
+/** The NEW row a staged line became: an id the deck didn't hold before the
+ *  commit, with the line's key, no card and exactly the line's count — never
+ *  a row the deck had, nor one another tab wrote meanwhile that the line was
+ *  merged into (its count is more than the line's). */
+export function newRowOfStagedLine<R extends CommittedRow>(
+  line: StagedLine,
+  fresh: readonly R[],
+  claimed: ReadonlySet<string>,
+): R | null {
+  const keys = new Set(restoreStagingKeys(line.entry, line.stage));
+  return (
+    fresh.find(
+      (row) =>
+        !claimed.has(row.id) &&
+        keys.has(rowMergeKey(row)) &&
+        !row.card_id &&
+        row.quantity === Math.min(line.entry.quantity, MAX_ENTRY_QUANTITY),
+    ) ?? null
+  );
+}
+
+/** The row a staged line was merged into when it found none of its own
+ *  (the first row of its key, as the commit picks it — `after` in list
+ *  order) and the count that row goes back to: what it held before, or,
+ *  for a row written meanwhile, its count less the line's. Null: nothing to
+ *  take back. */
+export function mergedRowOfStagedLine<R extends CommittedRow>(
+  line: StagedLine,
+  before: readonly R[],
+  after: readonly R[],
+): { row: R; quantity: number } | null {
+  const keys = new Set(restoreStagingKeys(line.entry, line.stage));
+  const row = after.find((candidate) => keys.has(rowMergeKey(candidate)));
+  if (!row) return null;
+  const old = before.find((candidate) => candidate.id === row.id);
+  const quantity = old ? old.quantity : row.quantity - line.entry.quantity;
+  return quantity >= 1 && quantity < row.quantity ? { row, quantity } : null;
+}
+
+export function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
-}
-
-export function planRestore(entries: readonly RemovedEntry[]): RestorePlan {
-  const lines = new Map<string, RestoreLine>();
-  const lineEntries: RestorePlan["lineEntries"] = [];
-  const cards: RemovedEntry[] = [];
-  for (const entry of entries) {
-    // A card alone (no printing) comes in through the card's own path —
-    // unless the card was never the line's own (an import line linked to a
-    // card later): that line stays a line.
-    if (entry.cardId && !entry.scryfallId && (bringsCard(entry.source) || entry.source === null)) {
-      cards.push(entry);
-      continue;
-    }
-    const key = restoreLineKey(entry);
-    lineEntries.push({ entry, key });
-    const line = lines.get(key);
-    if (line) {
-      line.quantity = Math.min(line.quantity + entry.quantity, MAX_ENTRY_QUANTITY);
-      continue;
-    }
-    lines.set(key, {
-      name: entry.name,
-      quantity: entry.quantity,
-      board: entry.board,
-      resolved: entry.scryfallId ? { scryfall_id: entry.scryfallId } : null,
-    });
-  }
-  return {
-    lineChunks: chunk([...lines.values()], MAX_DECKLIST_ENTRIES),
-    lineEntries,
-    cardChunks: chunk(cards, MAX_MEMBERSHIP_BATCH),
-  };
 }
 
 /** What became of one removed entry. */
 export type RestoredEntry = {
   /** The removed entry's id. */
   from: string;
-  /** The entry that stands for it now — null when it couldn't come back. */
+  /** The NEW entry that stands for it now — null when it couldn't come back
+   *  (never a row the deck already held). */
   to: string | null;
   /** Why it came back short, or not at all, in words. */
   note?: string;

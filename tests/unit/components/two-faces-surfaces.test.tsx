@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,9 @@ import type { DashboardCard } from "@/components/creator/dashboard-card-tile";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import type { DeckItem } from "@/lib/decks/queries";
 import type { CardWithStats } from "@/lib/cards/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 const HOST = "https://auth.pipglyph.com";
 const RENDERS = `${HOST}/storage/v1/object/public/card-renders/owner-1`;
