@@ -212,6 +212,13 @@ export default async function BillingPage() {
             <PlanActions status={planStatus} live={live} planName={plan.name} />
           ) : null}
         </SurfaceCard>
+        <p className="mt-3 text-sm text-muted">
+          Know someone who&apos;d like making cards?{" "}
+          <Link href="/dashboard/referrals" className="font-medium text-primary-bright hover:underline">
+            Invite a friend
+          </Link>{" "}
+          — you both get a free month when they save their first card.
+        </p>
       </section>
 
       {/* ---- Change plan ---- */}
