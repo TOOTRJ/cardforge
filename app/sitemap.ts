@@ -2,7 +2,8 @@ import "server-only";
 
 import type { MetadataRoute } from "next";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { listArticles, listCategoryShelves, listTags } from "@/lib/content/articles";
+import { shelvesOf, tagsOf } from "@/lib/content/articles";
+import { listPublishedArticles } from "@/lib/content/article-catalog";
 import {
   categoryForTagSlug,
   categoryPath,
@@ -82,6 +83,9 @@ function staticEntry(
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteBaseUrl();
+  // The MDX guides and the released composer articles (fail-soft: a database
+  // hiccup leaves the files).
+  const articles = await listPublishedArticles();
 
   const staticPages: MetadataRoute.Sitemap = [
     staticEntry(baseUrl, "/", "weekly", 1),
@@ -110,14 +114,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticEntry(baseUrl, "/learn", "weekly", 0.85),
     staticEntry(baseUrl, "/tools", "monthly", 0.8),
     staticEntry(baseUrl, "/glossary", "monthly", 0.75),
-    ...listCategoryShelves()
+    ...shelvesOf(articles)
       .filter((shelf) => isIndexableCategory(shelf.articles.length))
       .map((shelf) => staticEntry(baseUrl, categoryPath(shelf.category.slug), "weekly", 0.75)),
     staticEntry(baseUrl, "/articles", "weekly", 0.85),
-    // The guides themselves — read straight from content/articles/ so a new
-    // MDX file lands in the sitemap on the same deploy. These DO carry a
-    // date: it's the frontmatter's, not the build's.
-    ...listArticles().map(
+    // The guides themselves — the MDX files (a new one lands on the same
+    // deploy) and the released composer articles (a publish revalidates this
+    // route). These DO carry a date: the guide's own published / honestly
+    // updated date (frontmatter, or a composer revision), never the build's.
+    ...articles.map(
       (article): Entry => ({
         url: `${baseUrl}/articles/${article.slug}`,
         lastModified: new Date(article.updated ?? article.date),
@@ -129,7 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // tag with 2+ guides). One-off single-article tags are noindex, so they're
     // kept out of the sitemap too, and so are the four hubs that became /learn
     // categories (they 308 there). Tag slugs are [a-z0-9-] only, so XML-safe.
-    ...listTags()
+    ...tagsOf(articles)
       .filter((tag) => !categoryForTagSlug(tag.slug))
       .filter((tag) => getCluster(tag.slug) !== null || tag.count >= 2)
       .map((tag) => staticEntry(baseUrl, `/articles/tag/${tag.slug}`, "weekly", 0.7)),

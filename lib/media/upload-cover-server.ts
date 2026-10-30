@@ -16,9 +16,9 @@ import {
 } from "@/lib/media/upload-rate-limit";
 
 // ---------------------------------------------------------------------------
-// Moderated upload for the `set-covers` bucket — deck covers and custom card
-// set icons (the bucket keeps its historical name; the sets feature itself was
-// removed 2026-09-22). Mirrors lib/cards/upload-art-server.ts: the bytes are
+// Moderated upload for the `set-covers` bucket — deck covers, custom card
+// set icons and the composer's article images (the bucket keeps its
+// historical name; the sets feature itself was removed 2026-09-22). Mirrors lib/cards/upload-art-server.ts: the bytes are
 // validated with Sharp (never the client-declared MIME), stored under the
 // caller's own folder (service-role write, folder forced from the session —
 // lib/media/user-storage.ts), then run through the same NSFW scan as card
@@ -41,8 +41,20 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
   gif: "image/gif",
 };
 
+/** The longest side an article image is stored at (the article column is
+ *  48rem; 1600 px covers it at 2× and keeps the LCP picture light). */
+export const ARTICLE_IMAGE_MAX_PX = 1600;
+
 export type UploadCoverServerResult =
-  | { ok: true; publicUrl: string; path: string }
+  | {
+      ok: true;
+      publicUrl: string;
+      path: string;
+      /** The stored picture's size — an article sets width/height from it
+       *  (no layout shift). */
+      width: number | null;
+      height: number | null;
+    }
   | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function uploadCoverServerAction(
@@ -104,6 +116,31 @@ export async function uploadCoverServerAction(
     }
   }
 
+  // An ARTICLE image (the composer, /admin/articles): no larger than the
+  // page draws it, as WebP — the same upright, metadata-free bytes.
+  if (formData.get("purpose") === "article-image") {
+    try {
+      stored = await sharp(stored)
+        .resize({ width: ARTICLE_IMAGE_MAX_PX, height: ARTICLE_IMAGE_MAX_PX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+      extension = "webp";
+      contentType = "image/webp";
+    } catch {
+      return { ok: false, error: "That doesn't look like an image." };
+    }
+  }
+
+  let width: number | null = null;
+  let height: number | null = null;
+  try {
+    const finalMeta = await sharp(stored).metadata();
+    width = finalMeta.width ?? null;
+    height = finalMeta.height ?? null;
+  } catch {
+    // The size is a nicety; the upload stands without it.
+  }
+
   const name = `${crypto.randomUUID()}.${extension}`;
   const covers = userFolder("set-covers", user.id);
   const { error } = await covers.upload(name, stored, {
@@ -126,5 +163,5 @@ export async function uploadCoverServerAction(
     };
   }
 
-  return { ok: true, publicUrl, path: covers.path(name) };
+  return { ok: true, publicUrl, path: covers.path(name), width, height };
 }

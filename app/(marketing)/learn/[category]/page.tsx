@@ -18,8 +18,10 @@ import {
   isIndexableCategory,
 } from "@/lib/content/article-categories";
 import {
-  listArticlesInCategory,
-  listCategoryShelves,
+  listPublishedArticlesInCategory,
+  listPublishedCategoryShelves,
+} from "@/lib/content/article-catalog";
+import {
   slugifyTag,
   tagHubHref,
   type ArticleMeta,
@@ -47,6 +49,9 @@ export function generateStaticParams(): Params[] {
 
 export const dynamic = "error";
 export const dynamicParams = false;
+// The shelf also lists released composer articles (lib/content/
+// article-catalog.ts); a publish purges it.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -56,7 +61,7 @@ export async function generateMetadata({
   const { category: slug } = await params;
   const category = getArticleCategory(slug);
   if (!category) notFound();
-  const count = listArticlesInCategory(category.slug).length;
+  const count = (await listPublishedArticlesInCategory(category.slug)).length;
   const path = categoryPath(category.slug);
   const title = category.title;
   return {
@@ -87,7 +92,7 @@ export default async function LearnCategoryPage({
   const category = getArticleCategory(slug);
   if (!category) notFound();
 
-  const articles = listArticlesInCategory(category.slug);
+  const articles = await listPublishedArticlesInCategory(category.slug);
   const path = categoryPath(category.slug);
   const topics = relatedTopics(articles);
 
@@ -170,7 +175,7 @@ export default async function LearnCategoryPage({
       </div>
 
       <CategoryLinks
-        shelves={listCategoryShelves()}
+        shelves={await listPublishedCategoryShelves()}
         current={category.slug}
         label="Other topics"
         className="mt-14 border-t border-border/40 pt-8"

@@ -1371,6 +1371,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      articles: {
+        Row: {
+          author_id: string | null;
+          announced_at: string | null;
+          body: string;
+          category: string | null;
+          content_updated_at: string | null;
+          cover_alt: string | null;
+          cover_height: number | null;
+          cover_url: string | null;
+          cover_width: number | null;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          excerpt: string | null;
+          faq: Json;
+          id: string;
+          is_published: boolean;
+          publish_at: string | null;
+          seo_title: string | null;
+          slug: string;
+          tags: string[];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          announced_at?: string | null;
+          body?: string;
+          category?: string | null;
+          content_updated_at?: string | null;
+          cover_alt?: string | null;
+          cover_height?: number | null;
+          cover_url?: string | null;
+          cover_width?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description: string;
+          excerpt?: string | null;
+          faq?: Json;
+          id?: string;
+          is_published?: boolean;
+          publish_at?: string | null;
+          seo_title?: string | null;
+          slug: string;
+          tags?: string[];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          announced_at?: string | null;
+          body?: string;
+          category?: string | null;
+          content_updated_at?: string | null;
+          cover_alt?: string | null;
+          cover_height?: number | null;
+          cover_url?: string | null;
+          cover_width?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          excerpt?: string | null;
+          faq?: Json;
+          id?: string;
+          is_published?: boolean;
+          publish_at?: string | null;
+          seo_title?: string | null;
+          slug?: string;
+          tags?: string[];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       site_updates: {
         Row: {
           ack_until: string | null;
@@ -1975,6 +2050,12 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      // migration 0153 — the admins an article may be bylined to (an admin
+      // caller only; lib/content/db-articles.ts listAuthorOptions).
+      admin_list_article_authors: {
+        Args: Record<string, never>;
+        Returns: { id: string; username: string; display_name: string | null }[];
+      };
       consume_credits: {
         Args: { p_amount: number; p_reason: string; p_ref?: string };
         Returns: {

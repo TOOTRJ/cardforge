@@ -33,6 +33,7 @@ export type MediaKind =
   | "banner"
   | "deck-cover"
   | "pip"
+  | "article-image"
   | "deck-card-image";
 
 /** The buckets each stored kind may live in — the table in migration 0127's
@@ -45,6 +46,7 @@ export const MEDIA_KIND_BUCKETS: Readonly<Record<Exclude<MediaKind, "deck-card-i
   avatar: ["profile-media"],
   banner: ["profile-media"],
   pip: ["custom-pips"],
+  "article-image": ["set-covers"],
 };
 
 /** A deck entry's Scryfall printing image — the only outside host the product
@@ -71,6 +73,11 @@ const GOOGLE_AVATAR = /^https:\/\/lh[0-9]{1,2}\.googleusercontent\.com\/a-?\/[A-
 const BUILT_IN_ART =
   /^(https:\/\/(www\.)?pipglyph\.com)?\/defaults\/(avatars\/avatar|banners\/banner)-(0[1-9]|1[0-9]|2[0-5])\.webp$/;
 
+/** PipGlyph's own article diagrams (public/article-media/<slug>/<file>),
+ *  site-relative — the same pattern as migration 0153's media_url_allowed. */
+export const ARTICLE_DIAGRAM =
+  /^\/article-media\/[a-z0-9]+(-[a-z0-9]+)*\/[a-z0-9]+(-[a-z0-9]+)*\.(svg|png|webp)$/;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 
@@ -88,6 +95,8 @@ const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
  *     stored (0150, isDefaultDeckCover — deckCoverOf tells it from an
  *     upload).
  *   * card-art: also PipGlyph's own built-in images (the seed cards).
+ *   * article-image: also one of PipGlyph's own diagrams (0153,
+ *     ARTICLE_DIAGRAM).
  *   * deck-card-image: a Scryfall printing image only.
  */
 export function isAllowedMediaUrl(
@@ -103,6 +112,7 @@ export function isAllowedMediaUrl(
   }
   if (kind === "card-art" && BUILT_IN_ART.test(url)) return true;
   if (kind === "deck-cover" && isDefaultDeckCover(url)) return true;
+  if (kind === "article-image" && ARTICLE_DIAGRAM.test(url)) return true;
   const object = ownStorageObject(url);
   if (!object || !MEDIA_KIND_BUCKETS[kind].includes(object.bucket)) return false;
   const [folder, name, ...rest] = object.key.split("/");
