@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Filter } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { formatUtcDate } from "@/lib/format/dates";
 import type { FunnelSummary } from "@/lib/admin/funnel-queries";
 
@@ -121,7 +122,50 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
             </table>
           )}
         </div>
+        <ScreenWidthsTable rows={summary.screenWidths} />
       </div>
     </SurfaceCard>
+  );
+}
+
+// TODO WD9: our own visitors' viewport widths beside the StatCounter figures
+// the width plan used — anonymous tab sessions per bucket, never a user.
+function ScreenWidthsTable({ rows }: { rows: FunnelSummary["screenWidths"] }) {
+  const total = rows?.reduce((sum, row) => sum + row.sessions, 0) ?? 0;
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Screen widths (last 30 days)</h3>
+      {rows == null ? (
+        <AdminLoadError what="the screen widths" />
+      ) : total === 0 ? (
+        <p className="text-sm text-muted">No screen widths recorded yet.</p>
+      ) : (
+        <>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[11px] uppercase tracking-wider text-subtle">
+                <th className="pb-1 text-left font-medium">Width (CSS px)</th>
+                <th className="whitespace-nowrap pb-1 pl-3 text-right font-medium">Sessions</th>
+                <th className="whitespace-nowrap pb-1 pl-3 text-right font-medium">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.bucket} className="border-t border-border/40">
+                  <td className="py-1 pr-2 tabular-nums text-foreground">{row.label}</td>
+                  <td className="whitespace-nowrap py-1 pl-3 text-right tabular-nums text-foreground">{row.sessions}</td>
+                  <td className="whitespace-nowrap py-1 pl-3 text-right tabular-nums text-muted">
+                    {row.share == null ? "—" : `${row.share}%`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-subtle">
+            One anonymous count per browser tab session: the viewport&apos;s width bucket, nothing else.
+          </p>
+        </>
+      )}
+    </div>
   );
 }

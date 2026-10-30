@@ -7,9 +7,10 @@ import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
-import { getDeckGuide } from "@/lib/decks/guides";
+import { readShownDeckGuide } from "@/lib/decks/guides";
 import { buildDeckReportPdf } from "@/lib/decks/deck-report-pdf";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
+import { formatHasBracket } from "@/lib/decks/deck-details";
 import { DECK_BOARD_LABELS, DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import type { DeckExportManifest } from "@/lib/decks/export-client";
@@ -132,13 +133,18 @@ export async function GET(
 
   if (part === "report") {
     const [{ guide }, ownerProfile] = await Promise.all([
-      // The owner's own guide, as stored (a Pro owner: requireTier above).
-      getDeckGuide(id),
+      // The owner's own guide, as stored (a Pro owner: requireTier above) —
+      // never read while deck guides are hidden (owner 2026-10-30,
+      // lib/ai/deck-ai-pause.ts): the report prints no guide.
+      readShownDeckGuide(id),
       supabase.from("profiles").select("username, display_name").eq("id", user.id).maybeSingle(),
     ]);
     const format = isDeckFormat(deck.format) ? deck.format : "casual";
     const type = deckTypeByKey(deck.deck_type);
-    const bracket = commanderBracket(deck.bracket);
+    // A bracket is a Commander deck's alone: one stored on a deck that left
+    // Commander is kept (an edit never changes what it didn't touch) but
+    // never printed (TODO DK5.14).
+    const bracket = formatHasBracket(format) ? commanderBracket(deck.bracket) : null;
     const report = await buildDeckReportPdf({
       title: deck.title,
       description: deck.description,

@@ -218,6 +218,7 @@ describe("updateCardsVisibilityAction (bulk publish)", () => {
     title,
     back_face: backFace,
     rendered_image_url: null,
+    art_url: "https://example.com/art.png",
   });
 
   it("refuses the batch when a card's second face is unnamed, changing nothing", async () => {

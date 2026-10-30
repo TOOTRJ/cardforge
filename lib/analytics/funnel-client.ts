@@ -10,8 +10,25 @@ import { sanitizeFunnelProps, type ClientFunnelEvent, type FunnelProps } from ".
 // nothing here can throw into the UI.
 export function trackFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = {}): void {
   const clean = sanitizeFunnelProps(props);
+  postFunnelEvent(event, clean);
   try {
-    const body = JSON.stringify({ event, props: clean });
+    track(event, clean);
+  } catch {
+    // ignore
+  }
+  try {
+    if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) sendGAEvent("event", event, clean);
+  } catch {
+    // ignore
+  }
+}
+
+/** The first-party half alone: /api/events and nothing else — for a step
+ *  that must not reach a third party (GA4 tags every event with its client
+ *  id), like the anonymous screen_width bucket. */
+export function postFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = {}): void {
+  try {
+    const body = JSON.stringify({ event, props: sanitizeFunnelProps(props) });
     let sent = false;
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
       sent = navigator.sendBeacon("/api/events", new Blob([body], { type: "text/plain" }));
@@ -24,16 +41,6 @@ export function trackFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = 
         keepalive: true,
       }).catch(() => {});
     }
-  } catch {
-    // ignore
-  }
-  try {
-    track(event, clean);
-  } catch {
-    // ignore
-  }
-  try {
-    if (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) sendGAEvent("event", event, clean);
   } catch {
     // ignore
   }

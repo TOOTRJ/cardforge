@@ -64,6 +64,13 @@ import {
   type ProfileWithStats,
 } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import {
+  isModerationLocked,
+  MODERATION_CONTACT_HREF,
+  MODERATION_LOCK_NOTE,
+  MODERATION_LOCKED_REMIX_MESSAGE,
+  ownerVisibilityLabel,
+} from "@/lib/moderation/lock";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import {
   countPublicDecksForCard,
@@ -308,7 +315,10 @@ export async function CardDetailContent({
                 className="w-fit"
                 variant={card.visibility === "public" ? "primary" : "outline"}
               >
-                {VISIBILITY_LABELS[card.visibility]}
+                {/* The moderation lock (0156) is the owner's to read; a
+                    locked card is private, so only its owner (or an admin)
+                    reaches this page. */}
+                {isOwner ? ownerVisibilityLabel(card) : VISIBILITY_LABELS[card.visibility]}
               </Badge>
             ) : null}
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -339,6 +349,18 @@ export async function CardDetailContent({
               otherRemixesCount={otherRemixesCount}
             />
           </header>
+
+          {/* The moderation lock (0156): the owner is told why the card
+              stays private, and where to ask. */}
+          {isOwner && isModerationLocked(card) ? (
+            <p className="rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-sm leading-6 text-foreground">
+              {MODERATION_LOCK_NOTE}{" "}
+              <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
+                Contact us
+              </Link>{" "}
+              if you have questions.
+            </p>
+          ) : null}
 
           {/* The actions, in the order people reach for them: the card's
               own (download, remix, add to deck — the owner's Edit first),
@@ -375,6 +397,7 @@ export async function CardDetailContent({
                 cardId={card.id}
                 requiresSignIn={!user}
                 label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
+                unavailableReason={isModerationLocked(card) ? MODERATION_LOCKED_REMIX_MESSAGE : undefined}
                 className={cn("w-full sm:w-auto", isOwner && "col-span-2 sm:col-auto")}
               />
               {!isOwner && card.visibility === "public" ? (

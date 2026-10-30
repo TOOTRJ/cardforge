@@ -98,7 +98,7 @@ vi.mock("@/lib/cards/actions", () => ({
 }));
 
 import { REMIX_DFC_FRAMES_GONE, runNextJobStep } from "@/lib/ai/generation-jobs";
-import { REMIX_EMBLEM_LEFT_OUT, ownCardRemixFrame, ownCardRulesText, remixCreditsOf } from "@/lib/ai/remix-mechanics";
+import { REMIX_EMBLEM_LEFT_OUT, REMIX_MODERATION_LEFT_OUT, ownCardRemixFrame, ownCardRulesText, remixCreditsOf } from "@/lib/ai/remix-mechanics";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import {
@@ -332,6 +332,22 @@ describe("an own emblem is not remixed", () => {
     expect(step.status).toBe("failed");
     expect(step.error).toBe(REMIX_EMBLEM_LEFT_OUT);
     expect(step.error_code ?? null).toBeNull();
+    expect(step.spend_ref).toBeNull();
+    expect(card).toBeUndefined();
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(s.identity).not.toHaveBeenCalled();
+    expect(s.image).not.toHaveBeenCalled();
+    expect(s.restyle).not.toHaveBeenCalled();
+  });
+});
+
+describe("an own card moderation hid is not remixed (0156; owner 2026-10-30)", () => {
+  it("an older plan's step for it is refused BEFORE the reserve: nothing spent, nothing copied, no AI call", async () => {
+    s.verified = keys(["m15", "w"]);
+    const { step, card } = await remix(row({ moderation_hidden_at: "2026-10-29T00:00:00Z", moderation_hidden_reason: "report" }));
+    expect(step.status).toBe("failed");
+    expect(step.error).toBe(REMIX_MODERATION_LEFT_OUT);
     expect(step.spend_ref).toBeNull();
     expect(card).toBeUndefined();
     expect(s.spend).not.toHaveBeenCalled();

@@ -11,8 +11,6 @@
 //                       cards takes the focus — the empty deck's "Paste a
 //                       decklist" door, else Import decklist
 //                       (useFocusAddOnNewDeck)
-//   Add from my cards → one of the owner's own cards into the deck
-//                       (TODO DK4.4, add-from-my-cards-dialog.tsx)
 //   Edit details      → dialog with the deck form (title, description,
 //                       format, visibility, cover + focal point)
 //   Add with AI       → "Coming soon" while deck AI is paused (TODO DK1,
@@ -23,17 +21,21 @@
 //                       another PipGlyph card
 //   Delete            → the existing confirm dialog
 //
+// Adding cards one by one is the add box's (TODO DK5.2, deck-add-box.tsx —
+// it replaced #671's "Add from my cards" picker), in the card area below.
+//
 // Controls elsewhere on the page — the hero's pencils, the empty deck's
-// three doors, the commander slot — open the same dialogs by dispatching
-// `pipglyph:deck-tool` with { tool, opener } (openDeckTool / DeckToolButton
-// below). Such a dialog has no Dialog.Trigger of its own to go back to, so
-// closing it hands the focus back to the control that opened it (DK5.12) —
+// three doors, the commander slot, the phone bar — open the same dialogs by
+// dispatching `pipglyph:deck-tool` with { tool, opener } (openDeckTool,
+// components/decks/deck-tool-event.ts; DeckToolButton below). Such a dialog
+// has no Dialog.Trigger of its own to go back to, so closing it hands the
+// focus back to the control that opened it (DK5.12) —
 // or, when that control is gone (the empty deck's door, once a card is in),
 // to the Cards heading — never to <body>.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, LibraryBig, Pencil, Sparkles, Wand2 } from "lucide-react";
+import { FileText, Pencil, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,32 +46,22 @@ import {
 } from "@/components/ui/dialog";
 import { DeckCreatorForm } from "@/components/decks/deck-creator-form";
 import { ImportDecklistDialog, type ImportMode } from "@/components/decks/import-decklist-dialog";
-import { AddFromMyCardsDialog } from "@/components/decks/add-from-my-cards-dialog";
 import { DeleteDeckDialog } from "@/components/decks/delete-deck-dialog";
 import { DeckAiComingSoonButton, DeckAiPausedNote } from "@/components/decks/deck-ai-coming-soon";
 import { NEW_DECK_FIRST_ADD, useFocusAddOnNewDeck } from "@/components/decks/use-focus-add-on-new-deck";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
+import { DECK_TOOL_EVENT, openDeckTool, type DeckTool, type DeckToolDetail } from "@/components/decks/deck-tool-event";
 import { cn } from "@/lib/utils";
 import type { Deck } from "@/types/deck";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 
-/** What a page control can open: the details dialog, the import dialog in
- *  one of its modes, or "Add from my cards" (for the commander zone too). */
-export type DeckTool = "details" | ImportMode | "my-cards" | "my-cards-commander";
-const EVENT = "pipglyph:deck-tool";
+export { openDeckTool, type DeckTool } from "@/components/decks/deck-tool-event";
+
 /** The visible "AI deck building is paused" line the greyed tools point at. */
 const PAUSED_NOTE_ID = "deck-ai-paused-note";
 
 const IMPORT_MODES: ReadonlySet<string> = new Set<ImportMode>(["paste", "names", "commander"]);
 
-type ToolDetail = { tool: DeckTool; opener: HTMLElement | null };
-
-/** Opens one of the owner's dialogs from anywhere on the page; closing it
- *  returns the focus to `opener` (a click's own control — Safari doesn't
- *  focus a clicked button, so it is passed, never read from the document). */
-export function openDeckTool(tool: DeckTool, opener: HTMLElement | null = null) {
-  window.dispatchEvent(new CustomEvent<ToolDetail>(EVENT, { detail: { tool, opener } }));
-}
 
 /** The focus was handed back to `from`, and the refresh that follows the
  *  dialog's change may take `from` away (the empty deck's door once a card
@@ -143,9 +135,6 @@ export function DeckOwnerTools({
 }) {
   const [details, setDetails] = useState(false);
   const [importRequest, setImportRequest] = useState<{ nonce: number; mode: ImportMode } | null>(null);
-  // The board is kept while the dialog closes, so its title doesn't change
-  // on the way out.
-  const [myCards, setMyCards] = useState<{ open: boolean; board: "main" | "commander" }>({ open: false, board: "main" });
   // The control that opened the dialog that is open now (null: its own
   // trigger, which Radix returns to by itself).
   const opener = useRef<HTMLElement | null>(null);
@@ -171,18 +160,18 @@ export function DeckOwnerTools({
 
   useEffect(() => {
     const onTool = (event: Event) => {
-      const detail = (event as CustomEvent<ToolDetail>).detail;
+      const detail = (event as CustomEvent<DeckToolDetail>).detail;
       const tool = detail?.tool;
+      // The add box's tools are the add box's.
+      if (tool !== "details" && !(tool && IMPORT_MODES.has(tool))) return;
       opener.current = detail?.opener ?? null;
       if (tool === "details") setDetails(true);
-      else if (tool === "my-cards") setMyCards({ open: true, board: "main" });
-      else if (tool === "my-cards-commander") setMyCards({ open: true, board: "commander" });
-      else if (tool && IMPORT_MODES.has(tool)) {
+      else {
         setImportRequest((prev) => ({ nonce: (prev?.nonce ?? 0) + 1, mode: tool as ImportMode }));
       }
     };
-    window.addEventListener(EVENT, onTool);
-    return () => window.removeEventListener(EVENT, onTool);
+    window.addEventListener(DECK_TOOL_EVENT, onTool);
+    return () => window.removeEventListener(DECK_TOOL_EVENT, onTool);
   }, []);
 
   return (
@@ -196,16 +185,6 @@ export function DeckOwnerTools({
         triggerRef={arrival.target}
         navigating={arrival.clearing}
       />
-      <Button
-        type="button"
-        variant="outline"
-        onClick={(event) => {
-          openFrom(event.currentTarget);
-          setMyCards({ open: true, board: "main" });
-        }}
-      >
-        <LibraryBig className="h-4 w-4" aria-hidden /> Add from my cards
-      </Button>
       <Button
         type="button"
         variant="outline"
@@ -233,14 +212,6 @@ export function DeckOwnerTools({
         <DeckAiPausedNote id={PAUSED_NOTE_ID} className="basis-full sm:basis-auto" />
       </div>
 
-      <AddFromMyCardsDialog
-        deckId={deck.id}
-        open={myCards.open}
-        board={myCards.board}
-        onOpenChange={(next) => !next && setMyCards((prev) => ({ ...prev, open: false }))}
-        onCloseAutoFocus={returnFocus}
-      />
-
       <Dialog open={details} onOpenChange={(next) => !next && setDetails(false)}>
         <DialogContent size="lg" onCloseAutoFocus={returnFocus}>
           <DialogHeader>
@@ -248,7 +219,7 @@ export function DeckOwnerTools({
               <FileText className="h-4 w-4 text-accent" aria-hidden />
               Deck details
             </DialogTitle>
-            <DialogDescription>Name, description, format, visibility and cover.</DialogDescription>
+            <DialogDescription>Name, format, deck type, bracket, description, cover and visibility.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <DeckCreatorForm

@@ -17,12 +17,23 @@ export type RemixEstimate = {
   skipped: number;
   /** Emblems the remix leaves out (owner 2026-10-13): no step, no credit. */
   emblems: number;
+  /** Own cards moderation hid (migration 0156): left out the same way. */
+  moderationLocked?: number;
 };
 
 /** The one line that tells a deck's owner its emblems stay behind. */
 export function emblemsLeftOutLine(emblems: number): string {
   if (emblems <= 0) return "";
   return `${emblems} emblem${emblems === 1 ? " is" : "s are"} left out: emblems are not remixed.`;
+}
+
+/** The one line that tells a deck's owner its cards moderation hid stay
+ *  behind (owner 2026-10-30: a locked card is never remixed). */
+export function moderationLockedLeftOutLine(count: number | undefined): string {
+  if (!count || count <= 0) return "";
+  return count === 1
+    ? "1 card is left out: it was hidden by moderation and isn't remixed."
+    : `${count} cards are left out: they were hidden by moderation and aren't remixed.`;
 }
 
 /** The deck's remix estimate, or null when the request fails — the paused
@@ -44,6 +55,7 @@ export async function fetchRemixEstimate(deckId: string): Promise<RemixEstimate 
       doubleFaced: body.doubleFaced,
       skipped: body.skipped,
       emblems: body.emblems ?? 0,
+      ...(body.moderationLocked ? { moderationLocked: body.moderationLocked } : {}),
     };
   } catch {
     return null;

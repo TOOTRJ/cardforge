@@ -92,7 +92,7 @@ beforeEach(() => {
 describe("hideCard", () => {
   it("private + pointer cleared in one update, then the renders, the reports, and the purge — in that order", async () => {
     const stub = adminClient();
-    expect(await hideCard(stub.client as never, CARD, { resolvedBy: null })).toEqual({ ok: true, ownerId: OWNER });
+    expect(await hideCard(stub.client as never, CARD, { resolvedBy: null, reason: "report" })).toEqual({ ok: true, ownerId: OWNER });
     expect(s.seq).toEqual(["read cards", "update cards", `remove ${OWNER} ${CARD}`, "update card_reports", "purge"]);
     const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
     expect(payloadOf(update.calls, "update")).toEqual({
@@ -102,6 +102,10 @@ describe("hideCard", () => {
       rendered_back_image_url: null,
       rendered_back_thumb_url: null,
       rendered_at: null,
+      // The moderation lock (0156), in the SAME update: it stays private
+      // until an admin unhides it.
+      moderation_hidden_at: expect.any(String),
+      moderation_hidden_reason: "report",
     });
     expect(called(update.calls, "eq", "id")).toBe(true);
     const reports = stub.forTable("card_reports")[0];
@@ -116,21 +120,54 @@ describe("hideCard", () => {
   it("a card that isn't there, or a read or hide that fails, changes nothing else", async () => {
     adminClient();
     s.card = null;
-    expect(await hideCard(s.client as never, CARD, { resolvedBy: null })).toMatchObject({ ok: false, notFound: true });
+    expect(await hideCard(s.client as never, CARD, { resolvedBy: null, reason: "report" })).toMatchObject({ ok: false, notFound: true });
     s.card = { owner_id: OWNER, slug: "x" };
     s.readError = { message: "db down" };
-    expect(await hideCard(s.client as never, CARD, { resolvedBy: null })).toMatchObject({ ok: false, error: "Couldn't read the card: db down" });
+    expect(await hideCard(s.client as never, CARD, { resolvedBy: null, reason: "report" })).toMatchObject({ ok: false, error: "Couldn't read the card: db down" });
     s.readError = null;
     s.hideError = { message: "nope" };
-    expect(await hideCard(s.client as never, CARD, { resolvedBy: null })).toEqual({ ok: false, error: "Couldn't hide the card: nope" });
+    expect(await hideCard(s.client as never, CARD, { resolvedBy: null, reason: "report" })).toEqual({ ok: false, error: "Couldn't hide the card: nope" });
     expect(s.seq.filter((e) => e.startsWith("remove") || e === "purge" || e === "update card_reports")).toEqual([]);
+  });
+
+  it("sets the lock on the rescan path too, with its own reason code", async () => {
+    const stub = adminClient();
+    expect((await hideCard(stub.client as never, CARD, { resolvedBy: null, reason: "flagged_file" })).ok).toBe(true);
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    const payload = payloadOf(update.calls, "update") as Record<string, unknown>;
+    expect(payload.moderation_hidden_reason).toBe("flagged_file");
+    expect(Number.isNaN(Date.parse(String(payload.moderation_hidden_at)))).toBe(false);
+  });
+
+  it("on a database 0156 hasn't reached, the card is still hidden — without the lock — and it says so", async () => {
+    let attempts = 0;
+    const stub = chainClient((table: string, calls: ChainCall[]): ChainAnswer => {
+      if (table === "cards" && called(calls, "update")) {
+        attempts += 1;
+        s.seq.push("update cards");
+        return attempts === 1
+          ? { error: { code: "PGRST204", message: "Could not find the 'moderation_hidden_at' column of 'cards' in the schema cache" } }
+          : { error: null };
+      }
+      if (table === "cards") return { data: s.card };
+      return {};
+    });
+    s.client = stub.client;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await hideCard(stub.client as never, CARD, { resolvedBy: null, reason: "report" })).ok).toBe(true);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("without the lock"));
+    log.mockRestore();
+    const updates = stub.forTable("cards").filter((e) => called(e.calls, "update"));
+    expect(updates).toHaveLength(2);
+    expect(payloadOf(updates[1].calls, "update")).not.toHaveProperty("moderation_hidden_at");
+    expect(payloadOf(updates[1].calls, "update")).toMatchObject({ visibility: "private" });
   });
 
   it("a render delete that fails is logged, and the reports are still actioned and the card purged", async () => {
     adminClient();
     s.removeError = "storage down";
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect((await hideCard(s.client as never, CARD, { resolvedBy: null })).ok).toBe(true);
+    expect((await hideCard(s.client as never, CARD, { resolvedBy: null, reason: "report" })).ok).toBe(true);
     expect(log).toHaveBeenCalledWith(expect.stringContaining("could not delete its render: storage down"));
     log.mockRestore();
     expect(s.seq.slice(-2)).toEqual(["update card_reports", "purge"]);
@@ -139,7 +176,7 @@ describe("hideCard", () => {
   it("reports that weren't marked are an error — but the hidden card is purged all the same", async () => {
     adminClient();
     s.reportsError = { message: "locked" };
-    expect(await hideCard(s.client as never, CARD, { resolvedBy: null })).toEqual({
+    expect(await hideCard(s.client as never, CARD, { resolvedBy: null, reason: "report" })).toEqual({
       ok: false,
       error: "Card hidden, but the reports weren't marked: locked",
     });

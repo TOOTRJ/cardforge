@@ -17,6 +17,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
+import { isModerationLocked, MODERATION_LOCKED_REMIX_MESSAGE } from "@/lib/moderation/lock";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
@@ -26,6 +27,7 @@ import { getCreatorLabMode } from "@/lib/creator/lab";
 import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared";
 import { FlaskConical, Layers3 } from "lucide-react";
 import { isUuid } from "@/lib/ids";
+import { deckReturnPath } from "@/lib/decks/return-to";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import {
   resolveFramePreviewMode,
@@ -60,6 +62,8 @@ export default async function CreatePage({
     ref?: string;
     /** The face the walk opens the preview on (TODO 5.0b). */
     face?: string | string[];
+    /** Where a deck entry's save returns to (TODO DK5.5). */
+    returnTo?: string;
   }>;
 }) {
   const search = await searchParams;
@@ -126,16 +130,22 @@ export default async function CreatePage({
         deckSlug: deckRemixSource.deck.slug,
         deckTitle: deckRemixSource.deck.title,
         entryName: deckRemixSource.entry.name,
+        deckVisibility: deckRemixSource.deck.visibility,
       }
     : null;
+  // Back to that card on the deck once it is saved (TODO DK5.5): only a
+  // page of THAT deck (lib/decks/return-to.ts deckReturnPath).
+  const returnTo = deckRemix ? deckReturnPath(search.returnTo, deckRemix.deckSlug) : null;
 
   // /create?remix=<cardId> — a NEW card prefilled from another card (yours or
   // anyone's public/unlisted one; RLS decides what's readable). The creator
   // opens in remix mode with the structural fields locked; nothing is
   // inserted until Save, when the slug follows the chosen title and
-  // parent_card_id links it back.
+  // parent_card_id links it back. With a deck entry (TODO DK5.5, owner
+  // decision D3: editing another creator's card in your deck makes a remix
+  // in your account) only the entry's OWN card: the remix takes its place.
   const remixParent =
-    !deckRemix && remixParam && isUuid(remixParam)
+    remixParam && isUuid(remixParam) && (!deckRemix || deckRemixSource?.entry.card_id === remixParam)
       ? await getCardById(remixParam)
       : null;
 
@@ -147,6 +157,11 @@ export default async function CreatePage({
     // A deleted / private / malformed source — say so rather than silently
     // opening a blank creator the user didn't ask for.
     return <RemixSourceMissing />;
+  }
+  // A card moderation hid (migration 0156) is never remixed (owner decision
+  // 2026-10-30); the save refuses it too (createCardAction).
+  if (remixParent && isModerationLocked(remixParent)) {
+    return <RemixSourceMissing reason={MODERATION_LOCKED_REMIX_MESSAGE} />;
   }
 
   // Admin frame preview (TODO 2.1): ?previewFrames=all|<list> unions the
@@ -179,14 +194,18 @@ export default async function CreatePage({
       <PageHeader
         eyebrow={remixParent ? "Remix" : "Creator"}
         title={
-          deckRemix
-            ? `Customize “${deckRemix.entryName}”`
-            : remixParent
-              ? `Remix “${remixParent.title}”`
-              : "Forge a new card"
+          deckRemix && remixParent
+            ? `Remix “${remixParent.title}”`
+            : deckRemix
+              ? `Customize “${deckRemix.entryName}”`
+              : remixParent
+                ? `Remix “${remixParent.title}”`
+                : "Forge a new card"
         }
         description={
-          deckRemix
+          deckRemix && remixParent
+            ? `Your take on this card, for “${deckRemix.deckTitle}”. The type, frame and colour stay as they are — change the name, art, text or numbers, then save: your remix takes its place in the deck.`
+            : deckRemix
             ? `Your version of the real card, for “${deckRemix.deckTitle}”. Everything is pre-filled — change at least one thing to make it yours, then save to link it into the deck.`
             : remixParent
               ? "Your take on this card. The type, frame and colour stay as they are — change the name, art, text or numbers, then save it as a new card of your own."
@@ -260,11 +279,13 @@ export default async function CreatePage({
             title: deck.title,
             format: deck.format,
             slug: deck.slug,
+            visibility: deck.visibility,
             theme: deckSeeds.get(deck.id)?.theme ?? null,
             style: deckSeeds.get(deck.id)?.style ?? null,
           }))}
           canDesignForDeck={entitlements.effectiveTier === "pro"}
           deckRemix={deckRemix}
+          returnTo={returnTo}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
@@ -291,7 +312,7 @@ export default async function CreatePage({
   );
 }
 
-function RemixSourceMissing() {
+function RemixSourceMissing({ reason }: { reason?: string } = {}) {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <SurfaceCard className="flex flex-col gap-3 p-8 text-center">
@@ -299,7 +320,7 @@ function RemixSourceMissing() {
           That card can&apos;t be remixed
         </h1>
         <p className="text-sm leading-6 text-muted">
-          It may have been deleted or made private by its owner.
+          {reason ?? "It may have been deleted or made private by its owner."}
         </p>
         <div className="mt-2 flex justify-center gap-2">
           <Button asChild variant="ghost">

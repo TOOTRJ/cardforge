@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,9 @@ import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { computeDeckCharts, viewerDeckBreakdown } from "@/lib/decks/deck-charts";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.pipglyph.com");

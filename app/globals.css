@@ -636,3 +636,27 @@ body {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * The owner's deck page (TODO DK5 part 2)
+ *
+ * `[data-flash]`: the card the owner came back to from the creator (TODO
+ * DK5.5) — marked with a gold ring for a moment, then the mark fades.
+ * `[data-deck-mobile-bar]`: the phone's editing bar (TODO DK5.10) is fixed
+ * to the bottom edge, so the toasts — the removal's Undo among them — rise
+ * above it instead of covering it (sonner reads these offsets; its own
+ * inline values lose to `!important`).
+ * --------------------------------------------------------------------------- */
+
+[data-deck-entry][data-flash] {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  transition: outline-color 600ms ease-out;
+}
+
+@media (max-width: 767px) {
+  html:has([data-deck-mobile-bar]) [data-sonner-toaster] {
+    --mobile-offset-bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
+    --offset-bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
+  }
+}
