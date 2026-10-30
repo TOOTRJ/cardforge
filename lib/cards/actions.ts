@@ -92,8 +92,9 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
-import { allFramePreviewsMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
+import { allFramePreviewsMessage, allHeldBackMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
+import { isModerationLocked, isModerationLockViolation, MODERATION_LOCK_REFUSED } from "@/lib/moderation/lock";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
 import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
@@ -110,7 +111,9 @@ type CardActionFailure = {
   formError?: string;
   fieldErrors?: CardActionFieldErrors;
   /** "UPGRADE_REQUIRED" when a paid plan is needed — the UI opens the upgrade
-   *  modal instead of showing a generic error. */
+   *  modal instead of showing a generic error. "MODERATION_LOCKED" when a
+   *  go-public write met the moderation lock (migration 0156) — its
+   *  `formError` says so in words. */
   code?: string;
   /** Which limit was hit, so the modal (and a batch job's step) can say the
    *  right thing: the saved-card cap or a premium frame/finish. */
@@ -137,6 +140,10 @@ type UpdateCardSuccess = {
   slug: string;
   /** As on a create: the edit was stored private because of its text. */
   forcedPrivate?: ForcedPrivateNotice;
+  /** Set only when the edit asked for public / unlisted and was stored
+   *  PRIVATE because moderation hid the card (migration 0156,
+   *  lib/moderation/lock.ts) — the UI says why. */
+  moderationLocked?: true;
 };
 
 type DeleteCardSuccess = {
@@ -1140,6 +1147,14 @@ export async function updateCardAction(
   });
   if (languageFields.length > 0) update.visibility = "private";
 
+  // The moderation lock (migration 0156, lib/moderation/lock.ts): a card
+  // moderation hid stays private until an admin unhides it. The edit itself
+  // is saved — the maker may still fix the card — at private, and the
+  // result says why (the creator's Publish step offered neither choice).
+  const moderationLocked =
+    isModerationLocked(existing) && (update.visibility ?? existing.visibility) !== "private";
+  if (moderationLocked) update.visibility = "private";
+
   // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
   // card as it will be stored — the patched back face over the stored one,
   // at the visibility the rules above settled on (the strong-language rule
@@ -1180,6 +1195,10 @@ export async function updateCardAction(
   const mediaField = mediaUrlViolationField(error?.message);
   if (mediaField) {
     return { ok: false, fieldErrors: { [mediaField]: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
+  // Migration 0156: moderation hid the card after the read above.
+  if (isModerationLockViolation(error)) {
+    return { ok: false, code: "MODERATION_LOCKED", formError: MODERATION_LOCK_REFUSED };
   }
   if (error || !row) {
     return {
@@ -1241,6 +1260,7 @@ export async function updateCardAction(
     cardId: row.id,
     slug: row.slug,
     ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
+    ...(moderationLocked ? { moderationLocked: true as const } : {}),
   };
 }
 
@@ -1333,10 +1353,13 @@ export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
 
 /** A bulk visibility change also says how many frame previews it skipped —
  *  and, only when there were any, how many cards it left as they were
- *  because their text holds strong language (owner policy 2026-10-28). */
+ *  because their text holds strong language (owner policy 2026-10-28), and
+ *  how many because moderation hid them (migration 0156,
+ *  lib/moderation/lock.ts). A refusal of the whole batch names its
+ *  `reason` when it is the lock. */
 export type BulkVisibilityResult =
-  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number })
-  | BulkCardsFailure;
+  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number; skippedModeration?: number })
+  | (BulkCardsFailure & { reason?: "moderation" });
 
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
  *  the function's lifetime; whatever doesn't fit renders live until its next
@@ -1363,6 +1386,8 @@ type BulkPreflightRow = {
   artist_credit?: string | null;
   footer_text?: string | null;
   face_content?: unknown;
+  /** The moderation lock (migration 0156). */
+  moderation_hidden_at?: string | null;
 };
 
 /** The pre-flight's columns. A database that lacks one of the LATE ones
@@ -1387,8 +1412,9 @@ const BULK_PREFLIGHT_COLUMNS: readonly string[] = [
   "artist_credit",
   "footer_text",
   "face_content",
+  "moderation_hidden_at",
 ];
-const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname"];
+const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname", "moderation_hidden_at"];
 
 export async function updateCardsVisibilityAction(
   cardIds: string[],
@@ -1458,7 +1484,12 @@ export async function updateCardsVisibilityAction(
   // lib/moderation/profanity.ts) is never made public / unlisted from here
   // either: it is left as it is and counted — the single-card rule, read on
   // the stored row (an already-public one may still be unlisted).
-  const rows = existing;
+  // A card moderation hid (migration 0156) stays private until an admin
+  // unhides it: left as it is and counted, like strong language.
+  const moderationLocked = goingPrivate
+    ? []
+    : existing.filter((c) => c.frame_preview !== true && isModerationLocked(c));
+  const rows = existing.filter((c) => !moderationLocked.includes(c));
   const strongLanguage = goingPrivate
     ? []
     : rows.filter(
@@ -1474,6 +1505,17 @@ export async function updateCardsVisibilityAction(
     ? rows
     : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c));
   if (targets.length === 0) {
+    if (moderationLocked.length > 0) {
+      return {
+        ok: false,
+        reason: "moderation",
+        error: allHeldBackMessage(parsed.data.visibility, {
+          moderation: moderationLocked.length,
+          strongLanguage: strongLanguage.length,
+          previews: previews.length,
+        }),
+      };
+    }
     return {
       ok: false,
       error:
@@ -1524,6 +1566,14 @@ export async function updateCardsVisibilityAction(
     // A card flagged as a frame preview after the pre-flight read: 0121's
     // CHECK refuses the whole statement, so nothing changed — say why in
     // words instead of Postgres's (a retry reads the flag and skips it).
+    // Moderation hid one after the read (0156's CHECK): the same, by name.
+    if (isModerationLockViolation(error)) {
+      return {
+        ok: false,
+        reason: "moderation",
+        error: "A card was hidden by moderation meanwhile, and nothing was changed — try again and it'll be skipped.",
+      };
+    }
     if (error.code === "23514" && error.message.includes("cards_frame_preview_private")) {
       return {
         ok: false,
@@ -1588,6 +1638,7 @@ export async function updateCardsVisibilityAction(
     count: targetIds.length,
     skippedPreviews: previews.length,
     ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
+    ...(moderationLocked.length > 0 ? { skippedModeration: moderationLocked.length } : {}),
   };
 }
 

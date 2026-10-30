@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageCircle, ShieldCheck } from "lucide-react";
+import { EyeOff, MessageCircle, ShieldCheck } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -9,8 +9,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
   getCommentModerationQueue,
+  getModerationHiddenCards,
   getModerationQueue,
 } from "@/lib/moderation/queries";
+import { UnhideCardButton } from "@/components/moderation/unhide-card-button";
+import { formatUtcDate } from "@/lib/format/dates";
 import {
   REPORT_REASON_LABELS,
   type ReportReason,
@@ -29,6 +32,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/** The lock's reason code (migration 0156) in words — never report text. */
+const HIDDEN_REASON_LABELS: Record<string, string> = {
+  report: "Hidden from a report",
+  flagged_file: "Hidden by the file rescan",
+  backfill: "Hidden before the lock existed (actioned report)",
+};
+
 function reasonLine(reason: string, details: string | null, key: string) {
   return (
     <li key={key} className="text-xs leading-5 text-muted">
@@ -41,15 +51,18 @@ function reasonLine(reason: string, details: string | null, key: string) {
 }
 
 export default async function ModerationPage() {
-  const [cardResult, commentResult] = await Promise.all([
+  const [cardResult, commentResult, hiddenResult] = await Promise.all([
     getModerationQueue(),
     getCommentModerationQueue(),
+    getModerationHiddenCards(),
   ]);
   // Non-admins get a 404 (don't reveal the route exists).
   if (cardResult === null) notFound();
   const cardQueue = cardResult.items;
   const comments = commentResult?.items ?? [];
   const commentsFailed = commentResult?.loadError ?? false;
+  const hidden = hiddenResult?.items ?? [];
+  const hiddenFailed = hiddenResult?.loadError ?? false;
   const totalFlagged = cardQueue.length + comments.length;
   // Only the live-preview fallback (a card with no bake) reads these.
   const profileOverrides = cardQueue.some((item) => !item.card.rendered_image_url)
@@ -140,6 +153,47 @@ export default async function ModerationPage() {
                 <ReportActions cardId={item.cardId} />
               </SurfaceCard>
             ))
+          )}
+        </section>
+
+        {/* Cards moderation hid stay private until an admin unhides them
+            (migration 0156). Unhide clears the lock and tells the owner;
+            it never republishes. */}
+        <section className="flex flex-col gap-4">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
+            Hidden cards
+          </h2>
+          {hiddenFailed ? <AdminLoadError what="the hidden cards" /> : null}
+          {hidden.length === 0 && hiddenFailed ? null : hidden.length === 0 ? (
+            <EmptyState
+              icon={EyeOff}
+              title="No hidden cards"
+              description="No card is held private by moderation."
+            />
+          ) : (
+            <ul className="flex flex-col divide-y divide-border/40 rounded-md border border-border/60 bg-surface/60">
+              {hidden.map((item) => (
+                <li key={item.cardId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {item.href ? (
+                        <Link href={item.href} className="underline-offset-4 hover:underline">
+                          {item.title}
+                        </Link>
+                      ) : (
+                        item.title
+                      )}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {item.ownerUsername ? `@${item.ownerUsername} · ` : ""}
+                      {HIDDEN_REASON_LABELS[item.reason ?? ""] ?? "Hidden"}
+                      {item.hiddenAt ? ` · ${formatUtcDate(item.hiddenAt)}` : ""}
+                    </span>
+                  </div>
+                  <UnhideCardButton cardId={item.cardId} title={item.title} />
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

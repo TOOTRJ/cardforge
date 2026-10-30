@@ -478,10 +478,13 @@ export const DECK_PAGE_CARD_COLUMNS = [
   ...IMPORT_FINGERPRINT_FIELDS,
   "import_scryfall_id",
   "import_fingerprint",
+  // The moderation lock (0156): the owner's "private cards here" notice
+  // offers no "Make public" for a card moderation hid.
+  "moderation_hidden_at",
 ] as const;
 
 /** The page's columns a database may not have yet, by migration (0137,
- *  0141, 0144): PostgREST answers a select naming one with 42703, and the
+ *  0141, 0144, 0156): PostgREST answers a select naming one with 42703, and the
  *  read runs again without that migration's columns — the row then reads as
  *  such a database's `*` does. Remove each once its migration is on
  *  production and on dev. */
@@ -489,6 +492,7 @@ const DECK_PAGE_LATE_COLUMNS: readonly (readonly string[])[] = [
   ["printed_types"],
   ["nickname"],
   ["import_scryfall_id", "import_fingerprint"],
+  ["moderation_hidden_at"],
 ];
 
 type PageColumn = (typeof DECK_PAGE_CARD_COLUMNS)[number];

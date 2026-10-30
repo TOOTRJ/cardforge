@@ -29,6 +29,7 @@ import {
   updateCardsVisibilityAction,
 } from "@/lib/cards/actions";
 import { bulkVisibilityMessage, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import { moderationLockedSkippedLine } from "@/lib/moderation/lock";
 import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -88,9 +89,14 @@ export function DashboardBulkBar({
       // A publish / unlist skips an admin's frame previews (they stay
       // private) and says so; any other batch keeps the short wording.
       // …and a card left as it was for the strong language in its text
-      // (owner policy 2026-10-28) is named in the same toast — one message.
+      // (owner policy 2026-10-28) is named in the same toast — one message —
+      // and so is a card moderation hid (migration 0156).
       toast.success(
-        [bulkVisibilityMessage(visibility, result.count, result.skippedPreviews), strongLanguageSkippedLine(result.skippedLanguage)]
+        [
+          bulkVisibilityMessage(visibility, result.count, result.skippedPreviews),
+          strongLanguageSkippedLine(result.skippedLanguage),
+          moderationLockedSkippedLine(result.skippedModeration),
+        ]
           .filter(Boolean)
           .join(" "),
       );

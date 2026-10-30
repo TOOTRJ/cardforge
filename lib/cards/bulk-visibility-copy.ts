@@ -63,3 +63,25 @@ export function allStrongLanguageMessage(visibility: Visibility, strongLanguage:
   const rest = previews > 0 ? `, and ${previews} ${plural(previews, "is a frame preview", "are frame previews")}` : "";
   return `${nothing}: ${text}${rest}. Remove the strong language to publish.`;
 }
+
+/** Every selected card is held back and at least one of them because
+ *  moderation hid it (migration 0156, lib/moderation/lock.ts): nothing
+ *  changed, and every reason in one sentence. */
+export function allHeldBackMessage(
+  visibility: Visibility,
+  held: { moderation: number; strongLanguage: number; previews: number },
+): string {
+  const nothing =
+    visibility === "public" ? "Nothing was published" : `Nothing was made ${visibility}`;
+  const parts = [
+    held.moderation === 1 && held.strongLanguage === 0 && held.previews === 0
+      ? "the selected card was hidden by moderation and stays private until our team reviews it"
+      : `${cards(held.moderation)} ${plural(held.moderation, "was", "were")} hidden by moderation`,
+    held.strongLanguage > 0
+      ? `${cards(held.strongLanguage)} ${plural(held.strongLanguage, "has", "have")} strong language in ${plural(held.strongLanguage, "its", "their")} text`
+      : null,
+    held.previews > 0 ? `${held.previews} ${plural(held.previews, "is a frame preview", "are frame previews")}` : null,
+  ].filter((part): part is string => Boolean(part));
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+  return `${nothing}: ${list}.`;
+}
