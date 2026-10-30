@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="t">
+  <title id="t">A release timeline: drafts feed a queue of scheduled articles that go live one at a time</title>
+  <rect width="1600" height="900" fill="#1a2030"/>
+  <g font-family="Cinzel, Georgia, 'Times New Roman', serif" fill="#f2f3f5">
+    <text x="140" y="190" font-size="60" font-weight="600">The article backlog</text>
+  </g>
+  <text x="140" y="250" font-family="Geist, system-ui, sans-serif" font-size="30" fill="#9aa3b5">Draft → scheduled → live, one release at a time</text>
+  <line x1="300" y1="520" x2="1320" y2="520" stroke="#2a3346" stroke-width="8" stroke-linecap="round"/>
+  <g font-family="Geist, system-ui, sans-serif" font-size="30" text-anchor="middle">
+    <circle cx="300" cy="520" r="48" fill="#0d1320" stroke="#9aa3b5" stroke-width="5"/>
+    <text x="300" y="630" fill="#9aa3b5">Draft</text>
+    <circle cx="640" cy="520" r="48" fill="#0d1320" stroke="#8e72c9" stroke-width="5"/>
+    <text x="640" y="630" fill="#8e72c9">Scheduled</text>
+    <circle cx="980" cy="520" r="48" fill="#0d1320" stroke="#8e72c9" stroke-width="5"/>
+    <text x="980" y="630" fill="#8e72c9">Scheduled</text>
+    <circle cx="1320" cy="520" r="48" fill="#d8b26e"/>
+    <text x="1320" y="630" fill="#d8b26e">Live</text>
+  </g>
+</svg>

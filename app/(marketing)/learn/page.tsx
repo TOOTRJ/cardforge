@@ -9,7 +9,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { CATEGORY_ICONS } from "@/components/content/category-icons";
 import { collectionPageJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { categoryPath } from "@/lib/content/article-categories";
-import { listCategoryShelves, type CategoryShelf } from "@/lib/content/articles";
+import type { CategoryShelf } from "@/lib/content/articles";
+import { listPublishedCategoryShelves } from "@/lib/content/article-catalog";
 import { getNewsFeed } from "@/lib/updates/queries";
 import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
@@ -93,7 +94,7 @@ const USING_PIPGLYPH: UsingLink[] = [
 ];
 
 export default async function LearnPage() {
-  const shelves = listCategoryShelves();
+  const shelves = await listPublishedCategoryShelves();
   const { updates } = await getNewsFeed();
   const latest = updates.slice(0, LATEST_UPDATES);
   const guideCount = shelves.reduce((sum, shelf) => sum + shelf.articles.length, 0);

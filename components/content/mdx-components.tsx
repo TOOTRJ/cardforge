@@ -6,6 +6,7 @@ import { Info, Lightbulb, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { slugifyTag } from "@/lib/content/articles";
+import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // MDX component map for article bodies (passed to MDXRemote). Everything here
@@ -15,6 +16,14 @@ import { slugifyTag } from "@/lib/content/articles";
 //   <Mana cost="{2}{R}{R}" />            inline mana pips (real Mana font)
 //   <Callout tone="tip|note|warning">…</Callout>   boxed aside
 //   <CardRow caption="…"><CardScan … /></CardRow>  printed cards, side by side
+//   <Figure src="/article-media/…" alt="…" caption="…" width={…} height={…} />
+//                                        a picture of ours, with its caption
+//   ![alt](src "caption")                the same, in Markdown
+//
+// A picture is drawn only from OUR media (isAllowedMediaUrl "article-image":
+// an upload in our storage, or a diagram under /article-media/) and only with
+// alt text — anything else renders nothing. Never Wizards of the Coast art:
+// a printed card is a <CardScan>, served by Scryfall.
 //
 // h2/h3 are overridden to carry slugified ids so the table of contents (built
 // from the same slugifyTag in extractToc) links to real anchors. Links to
@@ -157,6 +166,53 @@ function CardRow({
   );
 }
 
+/**
+ * One of our pictures with its caption — <figure> + <figcaption>, so the
+ * caption sits beside the image it explains. width/height (when known) give
+ * the box its size before the bytes arrive (no layout shift); lazy below the
+ * fold.
+ */
+export function Figure({
+  src,
+  alt,
+  caption,
+  width,
+  height,
+}: {
+  src?: string;
+  alt?: string;
+  caption?: string;
+  width?: number | string;
+  height?: number | string;
+}) {
+  if (!src || !alt?.trim() || !isAllowedMediaUrl("article-image", src)) return null;
+  const w = Number(width) || undefined;
+  const h = Number(height) || undefined;
+  return (
+    <figure className="my-6 flex flex-col gap-2">
+      {/* Our own upload or diagram, drawn as stored (SVG diagrams scale). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        width={w}
+        height={h}
+        loading="lazy"
+        decoding="async"
+        className="m-0 block h-auto w-full rounded-frame border border-border bg-surface"
+      />
+      {caption ? (
+        <figcaption className="m-0 text-sm leading-6 text-muted">{caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+/** Markdown `![alt](src "caption")` → a Figure (the title is the caption). */
+function MdxImage({ src, alt, title }: { src?: string; alt?: string; title?: string }) {
+  return <Figure src={src} alt={alt} caption={title} />;
+}
+
 function MdxLink({
   href = "",
   children,
@@ -198,6 +254,8 @@ export const mdxComponents = {
   Callout,
   CardRow,
   CardScan,
+  Figure,
+  img: MdxImage,
 };
 
 /** Compile options for article bodies. next-mdx-remote parses CommonMark
@@ -206,5 +264,23 @@ export const mdxComponents = {
  *  footnotes and bare-URL autolinks — tests/unit/content/article-mdx.test.tsx
  *  renders every guide with these options to keep that honest. */
 export const articleMdxOptions = {
-  mdxOptions: { remarkPlugins: [remarkGfm] },
+  mdxOptions: { remarkPlugins: [remarkGfm, remarkUnwrapImages] },
 } satisfies MDXRemoteProps["options"];
+
+type MdNode = { type: string; value?: string; children?: MdNode[] };
+
+/** A Markdown image on its own line is a paragraph holding one image; drawn
+ *  as a <figure> it would sit inside a <p> (invalid HTML the browser
+ *  re-nests). Lift such an image out of its paragraph. */
+export function remarkUnwrapImages() {
+  const visit = (node: MdNode) => {
+    if (!node.children) return;
+    node.children = node.children.map((child) => {
+      if (child.type !== "paragraph" || !child.children) return child;
+      const meaningful = child.children.filter((c) => !(c.type === "text" && !c.value?.trim()));
+      return meaningful.length === 1 && meaningful[0].type === "image" ? meaningful[0] : child;
+    });
+    node.children.forEach(visit);
+  };
+  return (tree: MdNode) => visit(tree);
+}

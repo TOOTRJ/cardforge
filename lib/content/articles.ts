@@ -18,7 +18,10 @@ import {
 // Filesystem-as-CMS: each .mdx file's name is its slug, frontmatter
 // carries the metadata, and everything renders fully static at build
 // time (generateStaticParams reads this same directory). Adding a guide
-// is: drop a file, ship a deploy.
+// is: drop a file, ship a deploy. Admins also compose and schedule guides in
+// the database (/admin/articles, migration 0153); lib/content/
+// article-catalog.ts merges both into the site's one list. The list helpers
+// below take a list (`shelvesOf`, `tagsOf`, …) so the catalog reuses them.
 // ---------------------------------------------------------------------------
 
 export type ArticleMeta = {
@@ -53,6 +56,26 @@ export type ArticleMeta = {
   cta?: { title: string; body: string; label: string };
   /** Rough read time from word count — display sugar only. */
   readingMinutes: number;
+  /** Where the guide comes from: an MDX file here, or a composer article
+   *  (migration 0153, lib/content/db-articles.ts). Undefined = a file. */
+  source?: "file" | "composer";
+  /** The cover picture (composer articles): Article.image and the picture
+   *  under the headline. Alt text is required with it. */
+  cover?: { src: string; alt: string; width: number | null; height: number | null };
+  /** A named author (composer articles; files say "the PipGlyph Team"). */
+  author?: ArticleAuthor;
+  /** Word count of the body — schema.org wordCount. */
+  wordCount?: number;
+};
+
+/** A guide's byline: a PipGlyph profile (its page is the author page). */
+export type ArticleAuthor = {
+  name: string;
+  /** /profile/<username>. */
+  path: string;
+  bio: string | null;
+  /** The profile's public links (schema.org sameAs). */
+  sameAs: string[];
 };
 
 /** A tag aggregated across all articles — the unit a cluster hub is built on. */
@@ -126,6 +149,7 @@ function readArticleFile(filename: string): Article | null {
         tocDepth: data.tocDepth === 2 ? 2 : undefined,
         cta: parseCta(data.cta),
         readingMinutes: Math.max(1, Math.round(words / 220)),
+        wordCount: words,
       },
       content,
     };
@@ -134,7 +158,8 @@ function readArticleFile(filename: string): Article | null {
   }
 }
 
-/** All articles, newest first. */
+/** All MDX guides, newest first. The site-wide list — files AND composer
+ *  articles — is lib/content/article-catalog.ts's listPublishedArticles(). */
 export function listArticles(): ArticleMeta[] {
   let files: string[];
   try {
@@ -173,13 +198,17 @@ export type CategoryShelf = {
   articles: ArticleMeta[];
 };
 
-/** Every category in menu order, each with its guides. */
-export function listCategoryShelves(): CategoryShelf[] {
-  const all = listArticles();
+/** Every category in menu order, each with its guides from `all`. */
+export function shelvesOf(all: readonly ArticleMeta[]): CategoryShelf[] {
   return ARTICLE_CATEGORIES.map((category) => ({
     category,
     articles: all.filter((article) => article.category === category.slug),
   }));
+}
+
+/** Every category in menu order, each with its guides. */
+export function listCategoryShelves(): CategoryShelf[] {
+  return shelvesOf(listArticles());
 }
 
 /** One category's guides, newest first. */
@@ -214,8 +243,13 @@ export function tagHubHref(tag: string): string {
 
 /** Every tag across all articles, most-used first. */
 export function listTags(): TagInfo[] {
+  return tagsOf(listArticles());
+}
+
+/** Every tag across `all`, most-used first. */
+export function tagsOf(all: readonly ArticleMeta[]): TagInfo[] {
   const bySlug = new Map<string, TagInfo>();
-  for (const article of listArticles()) {
+  for (const article of all) {
     for (const tag of article.tags) {
       const slug = slugifyTag(tag);
       if (!slug) continue;
@@ -234,19 +268,29 @@ export function listTags(): TagInfo[] {
 export function getArticlesByTag(
   tagSlug: string,
 ): { label: string; articles: ArticleMeta[] } | null {
+  return articlesByTagOf(listArticles(), tagSlug);
+}
+
+/** `getArticlesByTag` over a given list. */
+export function articlesByTagOf(
+  all: readonly ArticleMeta[],
+  tagSlug: string,
+): { label: string; articles: ArticleMeta[] } | null {
   if (!/^[a-z0-9-]+$/.test(tagSlug)) return null;
-  const articles = listArticles().filter((a) =>
-    a.tags.some((t) => slugifyTag(t) === tagSlug),
-  );
+  const articles = all.filter((a) => a.tags.some((t) => slugifyTag(t) === tagSlug));
   if (articles.length === 0) return null;
-  const label = listTags().find((t) => t.slug === tagSlug)?.tag ?? tagSlug;
+  const label = tagsOf(all).find((t) => t.slug === tagSlug)?.tag ?? tagSlug;
   return { label, articles };
 }
 
 /** Related guides for an article, ranked by shared-tag overlap then recency.
  *  Backfills with newest articles so it always returns up to `limit`. */
 export function getRelatedArticles(slug: string, limit = 3): ArticleMeta[] {
-  const all = listArticles();
+  return relatedOf(listArticles(), slug, limit);
+}
+
+/** `getRelatedArticles` over a given list. */
+export function relatedOf(all: readonly ArticleMeta[], slug: string, limit = 3): ArticleMeta[] {
   const current = all.find((a) => a.slug === slug);
   const currentTags = new Set((current?.tags ?? []).map(slugifyTag));
   return all

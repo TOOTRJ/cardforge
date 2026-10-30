@@ -268,6 +268,7 @@ export const siteConfig = {
     { label: "Featured", href: "/admin/featured" },
     { label: "Challenges", href: "/admin/challenges" },
     { label: "Updates", href: "/admin/updates" },
+    { label: "Articles", href: "/admin/articles" },
     { label: "Scryfall usage", href: "/admin/scryfall" },
     { label: "Frame compare", href: "/admin/frame-compare" },
     { label: "Frame requests", href: "/admin/frame-requests" },

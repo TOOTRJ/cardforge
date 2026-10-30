@@ -128,6 +128,11 @@ const nextConfig: NextConfig = {
   // share image, lib/og/deck-share-image.tsx — fetches them from it when
   // they are not on disk. Every function that traces public/ (the card
   // renderer's readers) would otherwise carry them.
+  // The composer's "Import drafts" reads content/article-drafts/ at run time
+  // (lib/content/article-drafts.ts) — not a static import, so trace it in.
+  outputFileTracingIncludes: {
+    "/admin/articles": ["./content/article-drafts/**/*"],
+  },
   outputFileTracingExcludes: {
     "*": ["./public/frames/**", "./public/defaults/deck-covers/**"],
   },
