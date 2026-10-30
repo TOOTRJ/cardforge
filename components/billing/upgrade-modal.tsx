@@ -39,6 +39,7 @@ export type UpgradeReason =
   | "subscriber_perks"
   | "deck_export"
   | "deck_guide"
+  | "deck_activity"
   | "generic";
 
 const REASON_COPY: Record<UpgradeReason, { title: string; description: string }> =
@@ -100,6 +101,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "How to play & combos",
       description:
         "Pro members can read the AI-written guide a deck already has: the game plan, mulligan advice, the combos hiding in the list, and its weak spots. New guides are paused while we rebuild decks — they're coming back soon.",
+    },
+    deck_activity: {
+      title: "See how your deck is doing",
+      description:
+        "Pro shows each of your decks' views and likes over the last 7, 30 or 90 days, against the period before — as charts and as a table.",
     },
     generic: {
       title: "Go premium",

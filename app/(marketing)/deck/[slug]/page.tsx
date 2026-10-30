@@ -64,6 +64,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
+import { DeckActivitySlot } from "@/components/decks/deck-activity-slot";
 import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
@@ -520,6 +521,17 @@ export default async function DeckDetailPage({
           </section>
         ) : null}
       </DeckCurveFilterProvider>
+
+      {/* Deck activity (TODO DK7.4): the OWNER's views and likes over time,
+          Pro (a locked preview otherwise) — a client island a visitor's page
+          never references. */}
+      {isOwner ? (
+        <DeckActivitySlot
+          deckId={deck.id}
+          canView={entitlements.effectiveTier === "pro"}
+          isPrivate={deck.visibility === "private"}
+        />
+      ) : null}
 
       {/* The playtest (TODO DK7.2): odds and a sample hand off the
           mainboard, for every viewer — the rows as THIS viewer reads them
