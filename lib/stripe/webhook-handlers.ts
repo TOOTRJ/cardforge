@@ -207,16 +207,22 @@ async function handleTrialWillEnd(
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
-  // Once per subscription — a retried delivery (or a second event after a
-  // trial extension) must not notify twice.
-  const { data: existing } = await admin
+  // Once per subscription AND trial end — a retried delivery must not notify
+  // twice, but a trial an admin comp MOVED (lib/billing/comp-stripe.ts) is
+  // reminded again before its new date: the first reminder named a charge
+  // that no longer happens then, and card-network rules want one before the
+  // charge that does.
+  const trialEndIso = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
+  const { data: earlier } = await admin
     .from("notifications")
-    .select("id")
+    .select("id, payload")
     .eq("type", "trial_ending")
     .eq("payload->>subscriptionId", sub.id)
-    .limit(1)
-    .maybeSingle();
-  if (existing) return;
+    .limit(20);
+  const reminded = ((earlier ?? []) as Array<{ payload: { trialEnd?: string | null } | null }>).some(
+    (row) => (row.payload?.trialEnd ?? null) === trialEndIso || row.payload?.trialEnd == null,
+  );
+  if (reminded) return;
 
   const [tier, hasPaymentMethod] = await Promise.all([
     resolveSubscriptionTier(sub, stripe),
@@ -227,7 +233,7 @@ async function handleTrialWillEnd(
   const payload = {
     subscriptionId: sub.id,
     tier,
-    trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    trialEnd: trialEndIso,
     hasPaymentMethod,
     amountCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
     currency: price?.currency ?? "usd",
@@ -257,7 +263,7 @@ async function handleTrialWillEnd(
             ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
             : null,
       }),
-      { idempotencyKey: `trial-ending:${sub.id}` },
+      { idempotencyKey: `trial-ending:${sub.id}:${sub.trial_end ?? ""}` },
     );
   } catch (error) {
     console.warn(

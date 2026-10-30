@@ -19,6 +19,8 @@ const s = vi.hoisted(() => ({
     stripe_customer_id: string | null;
     subscription_status?: string | null;
     stripe_subscription_id?: string | null;
+    comp_tier?: string | null;
+    comp_expires_at?: string | null;
   },
   adminConfigured: true,
   stripeConfigured: true,
@@ -266,6 +268,33 @@ describe("createCheckoutSessionAction", () => {
         expect.objectContaining({ customer: "cus_1", status: "all" }),
       );
     }
+  });
+
+  it("a COMPED user who subscribes is charged only when the comp ends (owner rule 2026-10-30)", async () => {
+    const compEnd = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    const compEndSec = Math.floor(Date.parse(compEnd) / 1000);
+    // Trial-eligible: the comp's end is later than the 7-day trial's, and wins.
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: compEnd };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    let params = checkoutParams();
+    expect(params.subscription_data).toMatchObject({
+      trial_end: compEndSec,
+      trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+    });
+    expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+    expect(params).not.toHaveProperty("payment_method_collection");
+    // Not trial-eligible: the comp alone holds the first charge.
+    s.checkoutCreate.mockClear();
+    s.history = [{ id: "sub_old", status: "canceled" }];
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    params = checkoutParams();
+    expect(params.subscription_data).toMatchObject({ trial_end: compEndSec });
+    // A plan ABOVE the comp is bought now: no hold.
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "plus", comp_expires_at: compEnd };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    params = checkoutParams();
+    expect(params.subscription_data).not.toHaveProperty("trial_end");
   });
 
   it("fails TOWARD no trial when Stripe's history can't be read", async () => {

@@ -695,3 +695,42 @@ handling sees the new price on the same subscription (upgrade and downgrade),
 subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.
+
+## Comps and a live subscription (audit 2026-10-30)
+
+An admin comp (`profiles.comp_tier` / `comp_expires_at`, set on
+`/admin/users` → a user → Comp) is an OVERLAY on the profile: perks are the
+higher of the comp and the live subscription (`effectiveTierForProfile`),
+credits the higher of the two tiers' monthly allotment (`refillTierFor` —
+a comp is owed its tier like a payer, even on a trial), and capacity the
+same in the database (`card_capacity_for`, 0104). It expires by itself: no
+job, the next read is the plan underneath.
+
+Until this audit a comp never touched Stripe, so a user on a card-backed
+trial who was comped "a free month" was CHARGED when the 7-day trial ended,
+inside the month. The owner's rule: **a comp month is free, the month after
+it is charged normally.** `lib/billing/comp-stripe.ts` decides,
+`lib/billing/comp-stripe-apply.ts` writes (best effort, after the row):
+
+| The user has | A comp (same tier or higher, dated) | When it ends / is cleared |
+|---|---|---|
+| a TRIAL that renews | `trial_end` moved to the comp's end (never earlier than its own; `proration_behavior: none`); the old end kept in the subscription's metadata `pipglyph_trial_end_before_comp` | the trial converts at that second — the card, the subscription's own price. Cleared or shortened: the trial goes back to its own end, or ends now if that has passed (the charge it would have made) |
+| an ACTIVE plan (incl. a scheduled downgrade) | nothing in Stripe — it bills as usual and the comp adds perks (owner question 1 in the audit PR) | — |
+| a CANCELLED plan, still running | nothing — it stops on its date; the comp carries the perks after it | free; nothing is charged |
+| no subscription, then subscribes from the billing page | Checkout starts it with `trial_end` = the comp's end (when ≥ 48 h out, the plan bought ≤ the comp; the 7-day trial's end if later) | charged normally |
+
+Not moved: a comp with no end date (Stripe can't hold a trial open-ended), a
+comp past 730 days, a comp below the plan paid for. The admin's toast says
+what happened in one line (`compStripeNote`); the user's `comp_plan`
+notification adds "Your free trial now runs until …; nothing is charged
+before then." when the trial moved. `trial_will_end` is now once per
+subscription AND trial end, so a moved trial is reminded again before the
+charge that really happens. The billing page names a comp over a live
+subscription in one line under the plan status.
+
+Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
+question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
+while comped), `webhook-handlers.test.ts` (the second reminder). Not
+sandbox-verified (no Stripe key in the session that built it): updating
+`trial_end` on a card-backed trialing subscription with
+`proration_behavior: none` — run it once on a test clock.

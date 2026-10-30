@@ -13,6 +13,7 @@ import {
   resolveSubscriptionTier,
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
+import { applyCompToSubscription } from "@/lib/billing/comp-stripe-apply";
 
 // Admin user tools — grant credits, comp a plan, raise the saved-card cap.
 // Every write goes through the service-role client because the target columns
@@ -167,7 +168,14 @@ const setCompTierSchema = z
     { message: "Expiry must be in the future.", path: ["expiresAt"] },
   );
 
-export type AdminSetCompTierResult = { ok: true } | ActionError;
+export type AdminSetCompTierResult =
+  | {
+      ok: true;
+      /** What the comp did to a live Stripe subscription, in one line for the
+       *  admin (lib/billing/comp-stripe.ts) — null when there is none. */
+      stripeNote?: string | null;
+    }
+  | ActionError;
 
 export async function adminSetCompTierAction(input: {
   userId: string;
@@ -204,14 +212,30 @@ export async function adminSetCompTierAction(input: {
     return { ok: false, error: "Couldn't update the comp tier." };
   }
 
+  // A comp month is FREE and the month after it is charged normally (owner,
+  // 2026-10-30): a card-backed trial is held until the comp ends, and put
+  // back when the comp is cleared or shortened. Best effort — the comp row
+  // above is what grants the perks.
+  const stripeOutcome = await applyCompToSubscription(admin, userId, {
+    tier,
+    expiresAt: tier == null ? null : expiresAt,
+  });
+
   await notifyUser(admin, {
     recipientId: userId,
     actorId: gate.adminId,
     type: "comp_plan",
-    payload: { tier, expiresAt: tier == null ? null : expiresAt },
+    payload: {
+      tier,
+      expiresAt: tier == null ? null : expiresAt,
+      // The trial's new end, so the copy can say when the first charge lands.
+      ...(stripeOutcome.change?.kind === "set_trial_end" && stripeOutcome.trialEnd
+        ? { trialEnd: stripeOutcome.trialEnd }
+        : {}),
+    },
   });
 
-  return { ok: true };
+  return { ok: true, stripeNote: stripeOutcome.note };
 }
 
 // ---------------------------------------------------------------------------

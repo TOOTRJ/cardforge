@@ -99,12 +99,16 @@ export function describeNotification(
     case "comp_plan": {
       const tier = str(payload.tier);
       const expiresAt = str(payload.expiresAt);
+      const trialEnd = str(payload.trialEnd);
       return {
         subject: "PipGlyph team",
         body: tier
           ? `gave you ${TIER_LABEL[tier] ?? tier} plan access${
               expiresAt ? ` until ${formatShortDate(expiresAt)}` : ""
-            } — enjoy.`
+            } — enjoy.${
+              // A comp holds a card-backed trial: the first charge moves too.
+              trialEnd ? ` Your free trial now runs until ${formatShortDate(trialEnd)}; nothing is charged before then.` : ""
+            }`
           : "ended your complimentary plan access.",
         href: "/settings",
       };

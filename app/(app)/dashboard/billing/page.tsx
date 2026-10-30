@@ -31,6 +31,7 @@ import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
 import { isStripeConfigured } from "@/lib/stripe/client";
 import { LocalDate } from "@/components/ui/local-date";
+import { compOverLiveSubscription } from "@/lib/billing/comp-stripe";
 
 export const metadata: Metadata = {
   title: "Billing & subscription",
@@ -94,6 +95,9 @@ export default async function BillingPage() {
   const delinquent = !live && status != null && DELINQUENT_SUBSCRIPTION_STATUSES.has(status);
   const comped =
     entitlements.isPaid && !live && !delinquent && (profile?.comp_tier != null || profile?.is_admin);
+  // An admin comp over a LIVE subscription (lib/billing/comp-stripe.ts):
+  // the perks follow the comp; a trial is held until it ends.
+  const liveComp = live && profile ? compOverLiveSubscription(profile) : null;
   const sub = stripeDetails?.subscription ?? null;
   const priceLine = sub?.amountCents != null && sub.interval
     ? `${formatMoney(sub.amountCents, sub.currency)} / ${sub.interval}`
@@ -175,6 +179,19 @@ export default async function BillingPage() {
               compExpiresAt={profile?.comp_expires_at ?? null}
             />
           </p>
+          {liveComp ? (
+            <p className="text-sm leading-6 text-muted">
+              {planForTier(liveComp.tier).name} is complimentary
+              {liveComp.expiresAt ? (
+                <>
+                  {" "}until <LocalDate iso={liveComp.expiresAt} />
+                </>
+              ) : null}
+              {status === "trialing" && liveComp.expiresAt
+                ? " — your trial runs at least that long, so nothing is charged before then."
+                : " — your subscription keeps its own billing dates."}
+            </p>
+          ) : null}
 
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat

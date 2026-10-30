@@ -769,8 +769,17 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
 // subscription, honest about whether the plan converts.
 // ---------------------------------------------------------------------------
 describe("handleStripeEvent — trial_will_end", () => {
-  function makeTrialAdmin(opts: { alreadyNotified?: boolean; insertError?: string } = {}) {
+  function makeTrialAdmin(
+    opts: { alreadyNotified?: boolean; notifiedFor?: string; insertError?: string } = {},
+  ) {
     const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
+    // An earlier reminder for this subscription: for its CURRENT trial end
+    // (alreadyNotified), or for another one (notifiedFor: the trial a comp moved).
+    const earlier = opts.alreadyNotified
+      ? [{ id: "n_1", payload: { subscriptionId: "sub_trial", trialEnd: "2026-09-30T02:26:40.000Z" } }]
+      : opts.notifiedFor
+        ? [{ id: "n_0", payload: { subscriptionId: "sub_trial", trialEnd: opts.notifiedFor } }]
+        : [];
     const admin = {
       from(table: string) {
         return {
@@ -781,7 +790,8 @@ describe("handleStripeEvent — trial_will_end", () => {
               maybeSingle: async () =>
                 table === "profiles"
                   ? { data: { id: "user-1" }, error: null }
-                  : { data: opts.alreadyNotified ? { id: "n_1" } : null, error: null },
+                  : { data: earlier[0] ?? null, error: null },
+              then: (resolve: (v: unknown) => void) => resolve({ data: earlier, error: null }),
             };
             return chain;
           },
@@ -842,7 +852,7 @@ describe("handleStripeEvent — trial_will_end", () => {
     expect(message.to).toBe("trial@example.test");
     expect(message.subject).toContain("add a card to keep it");
     expect(message.html).toContain("$15 / month");
-    expect(options).toEqual({ idempotencyKey: "trial-ending:sub_trial" });
+    expect(options).toEqual({ idempotencyKey: "trial-ending:sub_trial:1790735200" });
   });
 
   it.each([
@@ -880,6 +890,16 @@ describe("handleStripeEvent — trial_will_end", () => {
     await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
     expect(inserts).toEqual([]);
     expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("a trial an admin comp MOVED is reminded again before its new end (once)", async () => {
+    // The first reminder named the old date; the new one names the charge
+    // that actually happens (lib/billing/comp-stripe.ts).
+    const { admin, inserts } = makeTrialAdmin({ notifiedFor: "2026-09-23T02:26:40.000Z" });
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].row.payload).toMatchObject({ trialEnd: "2026-09-30T02:26:40.000Z" });
+    expect(email.send.mock.calls[0][1]).toEqual({ idempotencyKey: "trial-ending:sub_trial:1790735200" });
   });
 
   it("the notification is the durable part: an insert failure throws (Stripe retries); a missing email setup or recipient is fine", async () => {

@@ -140,6 +140,7 @@ export function CompTierForm({
         tier === ""
           ? "Comp cleared."
           : `Comped ${tier === "plus" ? "Plus" : "Pro"}${expiresAt ? " until the set expiry" : ", no expiry"}.`,
+        result.stripeNote ? { description: result.stripeNote } : undefined,
       );
       router.refresh();
     });

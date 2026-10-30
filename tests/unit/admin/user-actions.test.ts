@@ -24,6 +24,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
+const compStripe = vi.hoisted(() => ({ applyCompToSubscription: vi.fn() }));
+vi.mock("@/lib/billing/comp-stripe-apply", () => compStripe);
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: vi.fn(),
   grantCreditsForSync: vi.fn(),
@@ -59,6 +61,9 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
+  compStripe.applyCompToSubscription
+    .mockReset()
+    .mockResolvedValue({ change: null, trialEnd: null, note: null, failed: false });
 });
 
 describe("admin gate", () => {
@@ -135,11 +140,39 @@ describe("adminSetCompTierAction", () => {
   it("writes the tier + expiry and tells the user", async () => {
     const stub = db();
     const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
-    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({ ok: true });
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({ ok: true, stripeNote: null });
     const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
     expect(payloadOf(update.calls, "update")).toEqual({ comp_tier: "pro", comp_expires_at: expiresAt });
     expect(called(update.calls, "eq", "id")).toBe(true);
-    expect(notification(stub)).toMatchObject({ type: "comp_plan", payload: { tier: "pro", expiresAt } });
+    expect(notification(stub)).toEqual({
+      recipient_id: TARGET,
+      actor_id: ADMIN,
+      type: "comp_plan",
+      payload: { tier: "pro", expiresAt },
+    });
+    // The comp is applied to Stripe AFTER the row is written.
+    expect(compStripe.applyCompToSubscription).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
+  });
+  it("a comp that held the user's trial says so to the admin and names the trial's new end to the user", async () => {
+    const stub = db();
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: { kind: "set_trial_end", trialEnd: 1, beforeComp: "0", reason: "comp_holds_trial" },
+      trialEnd: expiresAt,
+      note: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
+      failed: false,
+    });
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).toEqual({
+      ok: true,
+      stripeNote: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
+    });
+    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, trialEnd: expiresAt } });
+  });
+  it("a failed profile write never touches Stripe", async () => {
+    db({ updateError: "nope" });
+    const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
+    expect((await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).ok).toBe(false);
+    expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
   });
   it("clearing the tier always clears the expiry with it", async () => {
     const stub = db();
