@@ -7,7 +7,7 @@ import { DeckLiveProgress } from "@/components/decks/deck-live-progress";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense, cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { after, userAgent } from "next/server";
 import { AlertTriangle, ArrowLeft, ImagePlus, Pencil } from "lucide-react";
@@ -30,6 +30,7 @@ import { ShareTargets } from "@/components/cards/share-targets";
 import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import { recordDeckView } from "@/lib/decks/views";
+import { findRenamedDeckSlug } from "@/lib/decks/slug-history";
 import {
   countDeckEntries,
   getDeckBySlugWithOwner,
@@ -107,7 +108,9 @@ export async function generateMetadata({
     return { title: titleFromSlug(slug) };
   }
   const deck = await getDeckBySlugWithOwner(slug);
-  // A missing/unreadable deck is a real 404, never a titled 200 (soft 404).
+  // A renamed deck's old slug is a 308 to its current one (TODO DK5.14);
+  // anything else missing/unreadable is a real 404, never a titled 200.
+  if (!deck) await redirectRenamedDeckOrNotFound(slug);
   if (!deck) notFound();
   const entryCount = deck.visibility === "public" ? await countDeckEntries(deck.id) : 0;
 
@@ -150,6 +153,17 @@ export async function generateMetadata({
   };
 }
 
+/** No deck has this slug: a deck that GAVE IT UP on a rename answers a 308
+ *  to its current slug (migration 0155, lib/decks/slug-history.ts — the
+ *  viewer's read, so a private deck's old link stays a 404 for anyone but
+ *  its owner), keeping the page's own ?import=1; else the 404. Before any
+ *  Suspense boundary, as the SEO contract asks of notFound(). */
+async function redirectRenamedDeckOrNotFound(slug: string, search?: { import?: string }): Promise<never> {
+  const current = await findRenamedDeckSlug(slug);
+  if (current) permanentRedirect(`/deck/${current}${search?.import === "1" ? "?import=1" : ""}`);
+  notFound();
+}
+
 /** The owner's own cards in the deck that are private (D11), once each. */
 function ownPrivateCards(items: readonly DeckItem<DeckPageCard>[], ownerId: string): Array<{ id: string; title: string }> {
   const seen = new Map<string, string>();
@@ -171,6 +185,7 @@ export default async function DeckDetailPage({
     isSupabaseConfigured() ? getDeckBySlugWithOwner(slug) : null,
     getCurrentUser(),
   ]);
+  if (!deck) await redirectRenamedDeckOrNotFound(slug, await searchParams);
   if (!deck) notFound();
 
   const isOwner = Boolean(user && user.id === deck.owner_id);

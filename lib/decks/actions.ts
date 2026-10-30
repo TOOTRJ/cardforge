@@ -1,11 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { revalidateDeckPaths } from "@/lib/decks/revalidate";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createDeckSchema, updateDeckSchema } from "@/lib/validation/deck";
+import { bracketFormatError, createDeckSchema, updateDeckSchema } from "@/lib/validation/deck";
 import { slugify } from "@/lib/validation/card";
 import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
@@ -303,6 +302,11 @@ export async function updateDeckAction(
     return { ok: false, formError: "Deck not found or not yours to edit." };
   }
 
+  // The bracket against the format the edit SAVES (the stored one when the
+  // edit leaves it alone): only a Commander deck takes one (TODO DK5.14).
+  const bracketError = bracketFormatError(data.format ?? existing.format, data.bracket);
+  if (bracketError) return { ok: false, fieldErrors: { bracket: bracketError } };
+
   const update: DeckUpdate = {};
   if (data.title !== undefined) update.title = data.title;
   if (data.description !== undefined)
@@ -315,8 +319,15 @@ export async function updateDeckAction(
   if (data.format !== undefined) update.format = data.format;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 
+  // The slug follows a RENAME (TODO DK5.14): a new title's slug, suffixed
+  // when it's taken — another deck's live slug, or one a renamed deck still
+  // redirects from (migration 0155 reserves those, 23505). The slug the deck
+  // leaves is kept by the database (deck_slug_history), so its old links 308
+  // here. An explicit `slug` wins; an unchanged title keeps the slug.
   const desiredSlug =
-    data.slug !== undefined ? slugify(data.slug).slice(0, 80) || null : null;
+    data.slug !== undefined
+      ? slugify(data.slug).slice(0, 80) || null
+      : renamedSlugFor(data.title, existing.title);
   const changingSlug = desiredSlug !== null && desiredSlug !== existing.slug;
 
   let row: { id: string; slug: string } | null = null;
@@ -353,11 +364,19 @@ export async function updateDeckAction(
   const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(row.slug, ownerUsername);
   if (existing.slug !== row.slug) {
-    revalidatePath(`/deck/${existing.slug}`);
-    revalidatePath(`/deck/${existing.slug}/edit`);
+    // The old URL is a 308 now: drop its cached page and tell IndexNow it
+    // moved (revalidateDeckPaths announces it with the profile).
+    revalidateDeckPaths(existing.slug, ownerUsername);
   }
 
   return { ok: true, deckId: row.id, slug: row.slug };
+}
+
+/** The slug a rename asks for: the new title's, or null when the title is
+ *  not changing (nothing asked). */
+function renamedSlugFor(title: string | undefined, storedTitle: string): string | null {
+  if (title === undefined || title === storedTitle) return null;
+  return slugify(title, 80, "deck").slice(0, 80) || null;
 }
 
 // ---------------------------------------------------------------------------
