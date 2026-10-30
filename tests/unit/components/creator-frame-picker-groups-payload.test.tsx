@@ -27,6 +27,10 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // label; the kind change answers main's "Switch frame era?" question, which
 // the branch no longer asks, with "Switch to M15"). To re-record there:
 //   FRAME_GROUPS_PAYLOAD_CAPTURE=<path/to/out.json> npx vitest run <this file>
+// (Edited by hand 2026-10-30, one deliberate change: a NEW card's — and a
+// key-less parent's remix's — `frame_style.collector` reads "off" where it
+// read "2023", the collector line's new-card default (NEW_CARD_ANATOMY);
+// a stored card's own "2023" is unchanged. Nothing else moved.)
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));

@@ -132,7 +132,7 @@ beforeEach(() => {
 });
 
 describe("createCardAction — the new-card default", () => {
-  it("a slotted template gets collector '2023' and no ★; a template without the slot gets neither key", async () => {
+  it("a slotted template gets collector 'off' (owner 2026-10-30) and no ★; a template without the slot gets neither key", async () => {
     for (const template of ["m15", "m15snow", "m15pw", "m15token"] as const) {
       const stub = db();
       const cardType = template === "m15pw" ? "planeswalker" : template === "m15token" ? "token" : "creature";
@@ -140,7 +140,7 @@ describe("createCardAction — the new-card default", () => {
       expect(result.ok, template).toBe(true);
       const style = written(stub, "insert")?.frame_style as Record<string, unknown>;
       expect((COLLECTOR_TEMPLATES as readonly string[]).includes(template), template).toBe(true);
-      expect(style.collector, template).toBe("2023");
+      expect(style.collector, template).toBe("off");
       expect("star" in style, template).toBe(false);
       // …and the stamp's "auto" where the frame has the notch (4.9c): the
       // walker too, never the token frame.
@@ -318,9 +318,9 @@ describe("a remix (the creator's form → createCardAction)", () => {
       lang: "en",
     }) as unknown as Card;
 
-  it("starts ON for a key-less parent, stays OFF for a parent that turned it off, and keeps a parent's style and ★", async () => {
+  it("starts OFF for a key-less parent (the new-card default, owner 2026-10-30), stays OFF for a parent that turned it off, and keeps a parent's style and ★", async () => {
     for (const [parentStyle, expected] of [
-      [{ template: "m15", finish: "regular" }, { collector: "2023" }],
+      [{ template: "m15", finish: "regular" }, { collector: "off" }],
       [{ template: "m15", collector: "off" }, { collector: "off" }],
       [{ template: "m15", collector: "2015", star: true }, { collector: "2015", star: true }],
     ] as const) {

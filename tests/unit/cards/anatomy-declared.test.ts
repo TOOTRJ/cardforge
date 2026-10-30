@@ -114,7 +114,7 @@ describe("where the pieces are declared", () => {
     // The borderless land (TODO 4.56): the split pair — no crown — and,
     // since 4.9d, the collector slot and its own stamp notch.
     expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true, collector: "2023", stamp: "auto" });
+    expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true, collector: "off", stamp: "auto" });
     expect(getFrameProfile("m15borderlessland").overlays?.map((slot) => slot.anatomy)).toEqual(["holoStamp"]);
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
@@ -127,25 +127,25 @@ describe("where the pieces are declared", () => {
 
 describe("a new card (createCardAction, the creator's initial state)", () => {
   it("defaults every piece its template draws to on, whatever the card's type or colours", () => {
-    // …and the collector line in today's printed style where the template
+    // …and the collector line "off" (owner 2026-10-30) where the template
     // has its slot (TODO 4.9b; the walker has one, not the crown).
     // …and the stamp on "auto" where the template has the notch (4.9c).
-    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
-    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
-    expect(anatomyDefaults("m15pw")).toEqual({ collector: "2023", stamp: "auto" });
-    expect(anatomyDefaults("m15token")).toEqual({ collector: "2023" });
-    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
+    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
+    expect(anatomyDefaults("m15pw")).toEqual({ collector: "off", stamp: "auto" });
+    expect(anatomyDefaults("m15token")).toEqual({ collector: "off" });
+    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "off", stamp: "auto" });
     // The AI jobs send no frame_style at all: the default template's pieces.
-    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
   });
 
   it("keeps an explicit off (an import of a crownless printing, the creator's switch)", () => {
-    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true, collector: "off", stamp: "auto" });
     expect(newCardFrameStyle({ template: "m15", crown: false, twoColor: false }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: false,
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
     // The collector line's explicit off and an import's printed style stay too.
@@ -159,7 +159,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       stamp: "auto",
     });
     // …and the stamp's "none" (the owner's Never, an unstamped printing).
-    expect(newCardFrameStyle({ template: "m15", stamp: "none" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "none" });
+    expect(newCardFrameStyle({ template: "m15", stamp: "none" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "off", stamp: "none" });
   });
 
   it("the creator's all-on switches store only what the template draws", () => {
@@ -168,7 +168,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
     expect(newCardFrameStyle({ template: "m15devoid", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15devoid",
       finish: "regular",
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
     // m15snow draws both since 4.6f wave 2c, and the line.
@@ -177,7 +177,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       finish: "regular",
       crown: true,
       twoColor: true,
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
     // A frame with no collector slot drops the line's keys too (extendedart
@@ -193,7 +193,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       template: "m15artifact",
       crown: true,
       twoColor: true,
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
     // The borderless land (4.56) keeps the two-colour switch — a NEW
@@ -203,17 +203,17 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       template: "m15borderlessland",
       finish: "regular",
       twoColor: true,
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
-    expect(newCardFrameStyle({ template: "m15borderlessland" }, "land")).toEqual({ template: "m15borderlessland", twoColor: true, collector: "2023", stamp: "auto" });
-    expect(newCardFrameStyle({ template: "m15borderlessland", twoColor: false }, "land")).toEqual({ template: "m15borderlessland", twoColor: false, collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15borderlessland" }, "land")).toEqual({ template: "m15borderlessland", twoColor: true, collector: "off", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15borderlessland", twoColor: false }, "land")).toEqual({ template: "m15borderlessland", twoColor: false, collector: "off", stamp: "auto" });
     // A token frame has the collector slot but no notch: the stamp's key
     // is dropped (4.9c — tokens print no stamp).
     expect(newCardFrameStyle({ template: "m15token", finish: "regular", ...NEW_CARD_ANATOMY }, "token")).toEqual({
       template: "m15token",
       finish: "regular",
-      collector: "2023",
+      collector: "off",
     });
   });
 });
@@ -363,7 +363,7 @@ describe("an import (importedAnatomy)", () => {
       template: "m15",
       crown: false,
       twoColor: true,
-      collector: "2023",
+      collector: "off",
       stamp: "auto",
     });
     const unstamped = importedAnatomy({ ...facts, printed_stamp: "none" }, "m15");

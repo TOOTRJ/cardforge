@@ -37,7 +37,7 @@
       "template": "m15dfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto",
       "dfcIcon": "sunmoon"
     },
@@ -116,7 +116,7 @@
       "template": "m15dfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto",
       "dfcIcon": "arrows"
     },
@@ -187,7 +187,7 @@
       "template": "m15mdfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -259,7 +259,7 @@
       "template": "m15mdfcfront",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -510,7 +510,7 @@
       "template": "split",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -782,7 +782,7 @@
       "template": "aftermath",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1056,7 +1056,7 @@
       "template": "adventure",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1287,7 +1287,7 @@
       "template": "flip",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",

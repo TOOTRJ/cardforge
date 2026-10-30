@@ -31,7 +31,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -76,7 +76,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -121,7 +121,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -166,7 +166,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -210,7 +210,7 @@
       "template": "m15artifact",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -254,7 +254,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -296,7 +296,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -338,7 +338,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -385,7 +385,7 @@
       "template": "m15artifact",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -432,7 +432,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -475,7 +475,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -519,7 +519,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -563,7 +563,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -608,7 +608,7 @@
       "template": "m15nyx",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",

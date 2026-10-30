@@ -29,6 +29,10 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 //        BORROWED_WORD_CAPTURE=<path/to/out.json> npx vitest run <this file>
 //      (the capture run records the scenarios only: the behaviour half is
 //      what main does not do).
+// (Edited by hand 2026-10-30, one deliberate change: a NEW card's — and a
+// key-less parent's remix's — `frame_style.collector` reads "off" where it
+// read "2023", the collector line's new-card default (NEW_CARD_ANATOMY);
+// a stored card's own "2023" is unchanged. Nothing else moved.)
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));

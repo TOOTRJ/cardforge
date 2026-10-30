@@ -831,7 +831,8 @@ Rules and gotchas:
   line and its ★, 4.9b): `frame_style.crown` / `twoColor`, drawn only
   `=== true`, `frame_style.collector` (`"2015"` / `"2023"` / `"off"`; drawn
   for a style) and `star` (`true` or absent) (`lib/cards/anatomy.ts`); new
-  cards start on, every save runs `normalizeAnatomy`, an edit sends only
+  cards start on — but the collector line, which starts `"off"` (owner
+  2026-10-30; an import follows its printing) — every save runs `normalizeAnatomy`, an edit sends only
   `frame_anatomy`, and a piece is declared on a `PROFILES` entry only — the
   old frames' pairs too (4.6h: `modern`, `modernland`, `retroland`; masters
   SYNTHESISED from the template's own finished masters, `oldFramePairLayers`,

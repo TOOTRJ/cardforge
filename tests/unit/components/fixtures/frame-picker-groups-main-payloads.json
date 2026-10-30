@@ -33,7 +33,7 @@
       "template": "extendedart",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -81,7 +81,7 @@
       "template": "extendedart",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -127,7 +127,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -248,7 +248,7 @@
       "template": "extendedart",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -291,7 +291,7 @@
       "template": "m15fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -333,7 +333,7 @@
       "template": "m15fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -378,7 +378,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -493,7 +493,7 @@
       "template": "m15fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -536,7 +536,7 @@
       "template": "fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -578,7 +578,7 @@
       "template": "fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -623,7 +623,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -738,7 +738,7 @@
       "template": "fullartland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -787,7 +787,7 @@
       "template": "m15textless",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -835,7 +835,7 @@
       "template": "m15textless",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -881,7 +881,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1002,7 +1002,7 @@
       "template": "m15textless",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1043,7 +1043,7 @@
       "template": "m15textlessland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1083,7 +1083,7 @@
       "template": "m15textlessland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1129,7 +1129,7 @@
       "template": "m15",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
@@ -1241,7 +1241,7 @@
       "template": "m15textlessland",
       "crown": true,
       "twoColor": true,
-      "collector": "2023",
+      "collector": "off",
       "stamp": "auto"
     },
     "visibility": "public",
