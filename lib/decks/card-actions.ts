@@ -15,7 +15,8 @@ import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
 import { commitImportLines } from "@/lib/decks/import-commit";
 import { changeDeckMembershipAction } from "@/lib/decks/membership-actions";
-import { MAX_MEMBERSHIP_BATCH } from "@/lib/decks/membership-copy";
+import { MAX_MEMBERSHIP_BATCH, PUBLISH_REFUSED_MESSAGE, privateCardLanguageReason } from "@/lib/decks/membership-copy";
+import { readVisibilityPreflight, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { MAX_DECKLIST_ENTRIES, MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import {
   chunk,
@@ -181,7 +182,7 @@ export async function removeDeckCardAction(
 export async function linkDeckCardAction(
   deckCardId: string,
   cardId: string,
-  options: { surface?: "creator" | "deck" } = {},
+  options: { surface?: "creator" | "deck"; publish?: boolean } = {},
 ): Promise<DeckCardActionResult> {
   if (!isUuid(deckCardId) || !isUuid(cardId)) {
     return { ok: false, error: "Invalid id." };
@@ -206,6 +207,24 @@ export async function linkDeckCardAction(
       ok: false,
       error: "You can link your own cards, or another creator's public card.",
     };
+  }
+
+  // "Make it public" (TODO DK0.13): the caller's own private card made
+  // public FIRST, through the site's visibility change and every gate it
+  // has; still private after it, it is not linked and the answer says why.
+  if (options.publish === true && card.owner_id === user.id && card.visibility === "private") {
+    const preflight = await readVisibilityPreflight(supabase, [cardId]);
+    const row = preflight.rows?.[0];
+    const fields = row ? storedLanguageBlocks(row, "public") : [];
+    if (fields.length > 0) return { ok: false, error: privateCardLanguageReason(fields) };
+    // Loaded when used: the card actions are a large module every deck
+    // action would otherwise pull in.
+    const { updateCardsVisibilityAction } = await import("@/lib/cards/actions");
+    const outcome = await updateCardsVisibilityAction([cardId], "public");
+    const { data: after } = await supabase.from("cards").select("visibility").eq("id", cardId).maybeSingle();
+    if (after?.visibility !== "public") {
+      return { ok: false, error: outcome.ok ? PUBLISH_REFUSED_MESSAGE : outcome.error };
+    }
   }
 
   const { error } = await supabase

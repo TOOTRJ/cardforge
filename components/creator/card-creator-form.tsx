@@ -5020,6 +5020,10 @@ export function CardCreatorForm({
         cardId={isEdit ? (card?.id ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
+        publicLanguageFields={() => {
+          const values = methods.getValues();
+          return creatorLanguageFields(values, "public", languageContextFor(values));
+        }}
       />
     );
   const stepPanels = (

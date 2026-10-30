@@ -456,7 +456,7 @@ export default async function DeckDetailPage({
               items={shownItems}
               ownerUsername={deck.owner?.username ?? null}
               canManage
-              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
+              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format, visibility: deck.visibility }}
               // The owner's cover picks in the card pop-up (TODO DK6.4).
               coverOwnerId={deck.owner_id}
               initialPrefs={viewPrefs}

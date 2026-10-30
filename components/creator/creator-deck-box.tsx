@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Layers } from "lucide-react";
+import { Globe, Layers, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DeckChoice,
   DeckMembershipStatusLine,
@@ -14,6 +15,8 @@ import type { DeckOption } from "@/components/creator/panels/publish-panel";
 import type { PickerDeck } from "@/lib/decks/membership-state";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { DeckRemixContext } from "@/types/deck";
+import { PRIVATE_CARD_OFFER, deckShowsPrivateCards, privateCardLanguageReason } from "@/lib/decks/membership-copy";
+import type { ProfanityField } from "@/lib/moderation/profanity";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +38,13 @@ import { cn } from "@/lib/utils";
 //                     ONCE through the membership action (owner decision
 //                     D13), apart from Save — the form is never touched, so
 //                     an edit's payload can't change either.
+//
+// A PRIVATE card into a deck others can open (TODO DK0.13): on an edit the
+// picker asks (PrivateCardOfferDialog, through DeckMembershipPanel); on a
+// new card the choice is still the form's, so the box says what visitors
+// would see and offers "Make it public" — the Publish step's own fields
+// (Public, no draft), nothing sent until Save, whose rules still decide
+// (strong language: the reason instead of the button).
 // ---------------------------------------------------------------------------
 
 type BoxProps = {
@@ -44,16 +54,34 @@ type BoxProps = {
   myDecks: DeckOption[] | null;
   deckRemix: DeckRemixContext | null;
   className?: string;
+  /** The fields whose strong language would keep a public save private —
+   *  read when the private-card note shows (a new card). */
+  publicLanguageFields?: () => ProfanityField[];
 };
 
-export function CreatorDeckBox({ mode, cardId = null, myDecks, deckRemix, className }: BoxProps) {
+export function CreatorDeckBox({
+  mode,
+  cardId = null,
+  myDecks,
+  deckRemix,
+  className,
+  publicLanguageFields,
+}: BoxProps) {
   const headingId = useId();
   let body: React.ReactNode;
   if (deckRemix) {
     body = (
-      <p className="text-xs leading-5 text-muted" data-testid="creator-deck-return">
-        Saving returns you to <span className="font-medium text-foreground">&ldquo;{deckRemix.deckTitle}&rdquo;</span>.
-      </p>
+      <>
+        <p className="text-xs leading-5 text-muted" data-testid="creator-deck-return">
+          Saving returns you to <span className="font-medium text-foreground">&ldquo;{deckRemix.deckTitle}&rdquo;</span>.
+        </p>
+        <PrivateCardDeckNote
+          deckVisibility={deckRemix.deckVisibility}
+          publicLanguageFields={publicLanguageFields}
+          // Nothing else here takes the focus: the box itself does.
+          focusAfter={() => document.querySelector<HTMLElement>(`[aria-labelledby="${CSS.escape(headingId)}"]`)}
+        />
+      </>
     );
   } else if (mode === "edit") {
     if (!cardId) return null;
@@ -62,13 +90,14 @@ export function CreatorDeckBox({ mode, cardId = null, myDecks, deckRemix, classN
     // The create page always lists the maker's decks; without the list
     // there is nothing to offer.
     if (myDecks === null) return null;
-    body = <NewCardDeck myDecks={myDecks} />;
+    body = <NewCardDeck myDecks={myDecks} publicLanguageFields={publicLanguageFields} />;
   }
   return (
     <section
       aria-labelledby={headingId}
+      tabIndex={-1}
       data-testid="creator-deck-box"
-      className={cn("flex flex-col gap-3 rounded-lg border border-border/60 bg-elevated/30 p-4", className)}
+      className={cn("flex flex-col gap-3 rounded-lg border border-border/60 bg-elevated/30 p-4 focus-visible:outline-none", className)}
     >
       <h2
         id={headingId}
@@ -83,7 +112,13 @@ export function CreatorDeckBox({ mode, cardId = null, myDecks, deckRemix, classN
 }
 
 /** A new card (or a remix): one deck for the save's `deck_id`. */
-function NewCardDeck({ myDecks }: { myDecks: DeckOption[] }) {
+function NewCardDeck({
+  myDecks,
+  publicLanguageFields,
+}: {
+  myDecks: DeckOption[];
+  publicLanguageFields?: () => ProfanityField[];
+}) {
   const { control, setValue } = useFormContext<FormValues>();
   const deckId = useWatch({ control, name: "deck_id" }) ?? "";
   const noteId = useId();
@@ -93,8 +128,9 @@ function NewCardDeck({ myDecks }: { myDecks: DeckOption[] }) {
   const [status, setStatus] = useState<{ tone: "success"; message: string } | null>(null);
   const decks: PickerDeck[] = [
     ...created.filter((deck) => !myDecks.some((own) => own.id === deck.id)),
-    ...myDecks.map(({ id, title, format, slug }) => ({ id, title, format, slug })),
+    ...myDecks.map(({ id, title, format, slug, visibility: shown }) => ({ id, title, format, slug, visibility: shown })),
   ];
+  const picked = decks.find((deck) => deck.id === deckId) ?? null;
   return (
     <>
       <DeckChoice
@@ -119,8 +155,81 @@ function NewCardDeck({ myDecks }: { myDecks: DeckOption[] }) {
           ? "You have no decks yet. Make one, and the card goes in it when you save."
           : "Added to the main deck, one copy, when you save."}
       </p>
+      <PrivateCardDeckNote
+        deckVisibility={picked?.visibility}
+        publicLanguageFields={publicLanguageFields}
+        onMadePublic={() => setStatus({ tone: "success", message: "The card will be public when you save." })}
+        focusAfter={() => document.querySelector<HTMLElement>(`[aria-describedby~="${CSS.escape(noteId)}"]`)}
+      />
       <DeckMembershipStatusLine status={status} />
     </>
+  );
+}
+
+/**
+ * A new card (or a remix) saving PRIVATE into a deck others can open (TODO
+ * DK0.13): what visitors would see, and "Make it public" — the Publish
+ * step's own fields (Public, not a draft), sent only by Save, whose rules
+ * still decide. A text that keeps the card private shows its reason
+ * instead. The button removes itself: the focus goes on to `focusAfter`
+ * (the deck's choice), never <body>.
+ */
+function PrivateCardDeckNote({
+  deckVisibility,
+  publicLanguageFields,
+  onMadePublic,
+  focusAfter,
+}: {
+  deckVisibility: string | null | undefined;
+  publicLanguageFields?: () => ProfanityField[];
+  onMadePublic?: () => void;
+  focusAfter?: () => HTMLElement | null;
+}) {
+  const { control, setValue } = useFormContext<FormValues>();
+  const [visibility, draft] = useWatch({ control, name: ["visibility", "save_as_draft"] });
+  // "Make it public" removes itself (and the note): the focus it held goes on.
+  const handOff = useRef(false);
+  const savesPrivate = draft === true || visibility === "private";
+  const shows = savesPrivate && deckShowsPrivateCards(deckVisibility);
+  useEffect(() => {
+    if (!handOff.current || shows) return;
+    handOff.current = false;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    focusAfter?.()?.focus();
+  }, [focusAfter, shows]);
+  if (!shows) return null;
+  // Read only while the note shows (the save checks again).
+  const blocked = publicLanguageFields?.() ?? [];
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-md border border-gold/40 bg-gold/5 p-3"
+      data-testid="creator-deck-private-note"
+    >
+      <p className="flex items-start gap-2 text-xs leading-5 text-foreground">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden />
+        <span>{PRIVATE_CARD_OFFER}</span>
+      </p>
+      {blocked.length > 0 ? (
+        <p className="text-xs leading-5 text-muted">{privateCardLanguageReason(blocked)}</p>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="self-start"
+          onClick={() => {
+            handOff.current = true;
+            setValue("save_as_draft", false, { shouldDirty: true });
+            setValue("visibility", "public", { shouldDirty: true });
+            onMadePublic?.();
+          }}
+        >
+          <Globe className="h-3.5 w-3.5" aria-hidden />
+          Make it public
+        </Button>
+      )}
+    </div>
   );
 }
 

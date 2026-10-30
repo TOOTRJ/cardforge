@@ -278,7 +278,7 @@ describe("the creator's Add to a deck box (TODO DK9.3)", () => {
         await act(async () => {
           fireEvent.click(burn);
         });
-        expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: DECK, add: [CARD_ID] });
+        expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: DECK, add: [CARD_ID], privateCards: "ask" });
         expect((within(box()).getByRole("checkbox", { name: "Burn" }) as HTMLInputElement).checked).toBe(true);
         expect(within(box()).getByTestId("deck-membership-status").textContent).toBe("Added to “Burn”.");
         // Written, and the card was never saved for it.
@@ -308,5 +308,91 @@ describe("the creator's Add to a deck box (TODO DK9.3)", () => {
     renderForm("edit", { card: savedCard({ frame_preview: true, visibility: "private" }) });
     expect(screen.queryByTestId("creator-deck-box")).toBeNull();
     expect(actions.getDeckPickerDataAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("a PRIVATE new card into a deck others can open (TODO DK0.13)", () => {
+  const VISIBLE_DECKS = [
+    { ...MY_DECKS[0]!, visibility: "public" as const },
+    { ...MY_DECKS[1]!, visibility: "private" as const },
+  ];
+  const note = () => screen.queryByTestId("creator-deck-private-note");
+  /** The Publish step's "Save as a draft": the card saves private. */
+  const makeDraft = async () => {
+    await goTo("Publish");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("checkbox", { name: /Save as a draft/ }));
+    });
+  };
+
+  it("a private remix into a public deck: what visitors see, and Make it public sets the Publish step's own fields", async () => {
+    renderForm("remix", { card: savedCard(), myDecks: VISIBLE_DECKS });
+    await act(async () => {
+      fireEvent.change(document.querySelector('[name="title"]')!, { target: { value: "Kesh Reforged" } });
+    });
+    await makeDraft();
+    expect(note()).toBeNull();
+    await act(async () => {
+      fireEvent.change(deckSelect(), { target: { value: DECK } });
+    });
+    expect(note()!.textContent).toContain("This card is private. Visitors will see “Private card” in this deck.");
+    const button = within(note()!).getByRole("button", { name: "Make it public" });
+    button.focus();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    // The button removed itself: the note is gone and the focus went on to
+    // the deck's choice, never <body>.
+    expect(note()).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(deckSelect()));
+    await save();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0]![0]).toMatchObject({ visibility: "public", deck_id: DECK });
+  });
+
+  it("no note for a private deck, nor for a public card", async () => {
+    renderForm("remix", { card: savedCard(), myDecks: VISIBLE_DECKS });
+    await makeDraft();
+    await act(async () => {
+      fireEvent.change(deckSelect(), { target: { value: VISIBLE_DECKS[1]!.id } });
+    });
+    expect(note()).toBeNull();
+    cleanup();
+    renderForm("remix", { card: savedCard(), myDecks: VISIBLE_DECKS });
+    await act(async () => {
+      fireEvent.change(deckSelect(), { target: { value: DECK } });
+    });
+    expect(note()).toBeNull();
+  });
+
+  it("text that keeps the card private: the reason instead of the button", async () => {
+    const rot13 = (text: string) =>
+      text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
+    renderForm("remix", {
+      card: savedCard({ rules_text: `Haste. ${rot13("fuvg")}.` }),
+      myDecks: VISIBLE_DECKS,
+    });
+    await makeDraft();
+    await act(async () => {
+      fireEvent.change(deckSelect(), { target: { value: DECK } });
+    });
+    expect(within(note()!).queryByRole("button")).toBeNull();
+    expect(note()!.textContent).toMatch(/rules text includes strong language/);
+  });
+
+  it("the deck flow (/create?deckCard=…) says the same about the entry's public deck", async () => {
+    renderForm("remix", {
+      card: savedCard(),
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: null,
+        deckSlug: "burn",
+        deckTitle: "Burn",
+        entryName: "Shock",
+        deckVisibility: "unlisted",
+      },
+    });
+    await makeDraft();
+    expect(note()!.textContent).toContain("Visitors will see “Private card” in this deck.");
   });
 });

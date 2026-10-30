@@ -129,6 +129,7 @@ export default async function CreatePage({
         deckSlug: deckRemixSource.deck.slug,
         deckTitle: deckRemixSource.deck.title,
         entryName: deckRemixSource.entry.name,
+        deckVisibility: deckRemixSource.deck.visibility,
       }
     : null;
   // Back to that card on the deck once it is saved (TODO DK5.5): only a
@@ -272,6 +273,7 @@ export default async function CreatePage({
             title: deck.title,
             format: deck.format,
             slug: deck.slug,
+            visibility: deck.visibility,
             theme: deckSeeds.get(deck.id)?.theme ?? null,
             style: deckSeeds.get(deck.id)?.style ?? null,
           }))}

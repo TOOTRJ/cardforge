@@ -16,6 +16,7 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { readVisibilityPreflight, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
@@ -1343,53 +1344,6 @@ export type BulkVisibilityResult =
  *  individual save. */
 const BULK_BAKE_BUDGET_MS = 200_000;
 
-type BulkPreflightRow = {
-  id: string;
-  owner_id: string;
-  title: string;
-  back_face: unknown;
-  rendered_image_url: string | null;
-  /** Absent until migration 0121 lands. */
-  frame_preview?: boolean;
-  /** The card's visibility and text, for the strong-language rule. */
-  visibility?: Visibility;
-  nickname?: string | null;
-  supertype?: string | null;
-  printed_types?: string | null;
-  subtypes?: string[] | null;
-  tags?: string[] | null;
-  rules_text?: string | null;
-  flavor_text?: string | null;
-  artist_credit?: string | null;
-  footer_text?: string | null;
-  face_content?: unknown;
-};
-
-/** The pre-flight's columns. A database that lacks one of the LATE ones
- *  (frame_preview before 0121, printed_types before 0137, nickname before
- *  0141) answers that it does not exist, naming it, and the read runs
- *  again without it. */
-const BULK_PREFLIGHT_COLUMNS: readonly string[] = [
-  "id",
-  "owner_id",
-  "title",
-  "back_face",
-  "rendered_image_url",
-  "frame_preview",
-  "visibility",
-  "nickname",
-  "supertype",
-  "printed_types",
-  "subtypes",
-  "tags",
-  "rules_text",
-  "flavor_text",
-  "artist_credit",
-  "footer_text",
-  "face_content",
-];
-const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname"];
-
 export async function updateCardsVisibilityAction(
   cardIds: string[],
   visibility: Visibility,
@@ -1420,20 +1374,7 @@ export async function updateCardsVisibilityAction(
   // every user's bulk change in that window.
   // (The card's visibility and text ride along too, for the strong-language
   // rule below; a late column that is missing is dropped the same way.)
-  let existing: BulkPreflightRow[] | null = null;
-  let existingError: { message: string } | null = null;
-  let columns = [...BULK_PREFLIGHT_COLUMNS];
-  for (let attempt = 0; attempt <= BULK_LATE_COLUMNS.length; attempt += 1) {
-    const read = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
-    existing = (read.data ?? null) as unknown as BulkPreflightRow[] | null;
-    existingError = read.error;
-    const message = read.error?.message ?? "";
-    const missing = read.error
-      ? BULK_LATE_COLUMNS.find((column) => columns.includes(column) && message.includes(column))
-      : undefined;
-    if (!missing) break;
-    columns = columns.filter((column) => column !== missing);
-  }
+  const { rows: existing, error: existingError } = await readVisibilityPreflight(supabase, ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
   }
@@ -1464,11 +1405,7 @@ export async function updateCardsVisibilityAction(
     : rows.filter(
         (c) =>
           c.frame_preview !== true &&
-          languageForcesPrivate({
-            saved: c,
-            visibility: parsed.data.visibility,
-            stored: { card: c, visibility: c.visibility ?? "private" },
-          }).length > 0,
+          storedLanguageBlocks(c, parsed.data.visibility).length > 0,
       );
   const targets = goingPrivate
     ? rows

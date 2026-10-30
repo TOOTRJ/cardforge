@@ -4,6 +4,9 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Keyboard
 import { Loader2, Plus, Search } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { useDeckEditor, type EditorItem } from "@/components/decks/use-deck-editor";
+import { PrivateCardOfferDialog } from "@/components/decks/private-card-offer-dialog";
+import { privateCardOfferAction } from "@/lib/decks/membership-actions";
+import { deckShowsPrivateCards } from "@/lib/decks/membership-copy";
 import type { AddCandidate } from "@/lib/decks/add-search-queries";
 import {
   ADD_SEARCH_MIN_CHARS,
@@ -89,6 +92,9 @@ type AddOption = {
   pick: AddPick;
   /** The row drawn while the server writes a NEW line. */
   preview: (board: DeckBoard) => EditorItem;
+  /** The owner's own PRIVATE card (as the search read it): into a deck
+   *  others can open, the box asks first (TODO DK0.13). */
+  privateOwn?: true;
 };
 
 let pendingSerial = 0;
@@ -241,6 +247,11 @@ export function DeckAddBox({ className }: { className?: string }) {
         picture: cardThumb(candidate),
         inDeck: inDeckLabel(inDeckCountForCard(entries, card.id)),
         pick: { kind: "card", cardId: card.id, title: card.title },
+        // Already in the deck: one copy more of a card it masks already —
+        // nothing new to ask.
+        ...(!maker && card.visibility === "private" && !entries.some((row) => row.card_id?.toLowerCase() === card.id.toLowerCase())
+          ? { privateOwn: true as const }
+          : {}),
         preview: (to) => ({
           entry: pendingEntry(deck.id, to, { name: card.title, card_id: card.id, source: "link" }),
           card,
@@ -285,30 +296,74 @@ export function DeckAddBox({ className }: { className?: string }) {
   }, [activeKey, baseId]);
 
   // ---- adding ------------------------------------------------------------
-  const addOption = useCallback(
-    async (option: AddOption) => {
-      if (!editor || adding.has(option.key)) return;
-      setAdding((prev) => new Set(prev).add(option.key));
-      setNotice(null);
-      const result = await editor.add(option.pick, board, option.preview(board));
-      setAdding((prev) => {
-        const next = new Set(prev);
-        next.delete(option.key);
-        return next;
-      });
+  // The maker's private card into a deck others can open (TODO DK0.13): the
+  // question waiting on them, and the add it holds.
+  const [offer, setOffer] = useState<{ option: AddOption; board: DeckBoard; languageReason?: string } | null>(null);
+  const settle = (key: string) =>
+    setAdding((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  const commitAdd = useCallback(
+    async (option: AddOption, to: DeckBoard, privateCard: "keep" | "publish") => {
+      if (!editor) return;
+      const result = await editor.add(option.pick, to, option.preview(to), privateCard);
+      settle(option.key);
       if (result.ok) {
+        const made = result.published ? "Made public and added" : "Added";
         editor.announce(
           result.merged
             ? `${option.name}: one more on ${boardPhrase(result.board)} — ${result.quantity} now.`
-            : `Added ${option.name} to ${boardPhrase(result.board)}.`,
+            : `${made} ${option.name} to ${boardPhrase(result.board)}.`,
         );
       } else {
         // Said by the editor's toast too; kept here, next to the box.
         setNotice(result.error);
       }
     },
-    [adding, board, editor],
+    [editor],
   );
+  const addOption = useCallback(
+    async (option: AddOption) => {
+      if (!editor || adding.has(option.key) || offer) return;
+      setAdding((prev) => new Set(prev).add(option.key));
+      setNotice(null);
+      if (option.privateOwn && option.pick.kind === "card" && deckShowsPrivateCards(editor.deck.visibility)) {
+        // Asked of the server (the card's row, its text): the add is drawn
+        // only once the maker has answered.
+        let asked: Awaited<ReturnType<typeof privateCardOfferAction>>;
+        try {
+          asked = await privateCardOfferAction({ deckId: editor.deck.id, cardIds: [option.pick.cardId] });
+        } catch {
+          asked = { ok: false, error: "Couldn't reach the server. Try again." };
+        }
+        if (!asked.ok) {
+          settle(option.key);
+          setNotice(asked.error);
+          return;
+        }
+        const card = asked.cards[0];
+        if (card) {
+          setOffer({ option, board, ...(card.languageReason ? { languageReason: card.languageReason } : {}) });
+          return;
+        }
+      }
+      await commitAdd(option, board, "keep");
+    },
+    [adding, board, commitAdd, editor, offer],
+  );
+  const answerOffer = (choice: "publish" | "keep" | "cancel") => {
+    const held = offer;
+    setOffer(null);
+    if (!held) return;
+    if (choice === "cancel") {
+      settle(held.option.key);
+      editor?.announce(`${held.option.name} not added.`);
+      return;
+    }
+    void commitAdd(held.option, held.board, choice);
+  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     const index = activeOption ? options.indexOf(activeOption) : -1;
@@ -540,6 +595,17 @@ export function DeckAddBox({ className }: { className?: string }) {
       <p role="status" className="sr-only">
         {summary ? `Results: ${summary}.` : ""}
       </p>
+      <PrivateCardOfferDialog
+        open={offer !== null}
+        deckTitle={editor?.deck.title ?? ""}
+        cards={
+          offer && offer.option.pick.kind === "card"
+            ? [{ cardId: offer.option.pick.cardId, title: offer.option.name, languageReason: offer.languageReason }]
+            : []
+        }
+        onChoose={answerOffer}
+        fallbackFocus={() => inputRef.current}
+      />
     </div>
   );
 }

@@ -53,6 +53,9 @@ export type DeckOption = {
   format: string;
   /** Deck page slug — the AI dialog's "Open deck" toast link. */
   slug?: string;
+  /** Public / unlisted: a private card saved into it shows as "Private
+   *  card" to its visitors — the deck box says so (TODO DK0.13). */
+  visibility?: Visibility;
   /** Theme/style the deck was last generated with (lib/ai/generation-jobs
    *  getDeckAiSeeds) — the AI dialog imports them when the deck is picked. */
   theme?: string | null;

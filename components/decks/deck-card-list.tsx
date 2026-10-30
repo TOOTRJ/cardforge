@@ -49,6 +49,7 @@ import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import { entryEditTarget, parseDeckEntryAnchor } from "@/lib/decks/return-to";
 import { cn } from "@/lib/utils";
 import { DECK_BOARD_LABELS, type DeckBoard, type DeckFormat } from "@/types/deck";
+import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // DeckCardList — the deck page's card area (TODO DK5.1 / DK5.3 / DK5.6 /
@@ -102,7 +103,7 @@ type DeckCardListProps = {
   ownerUsername: string | null;
   canManage: boolean;
   /** The owner's deck: with it, the list is the deck's editor. */
-  deck?: { id: string; slug: string; title: string; format: DeckFormat } | null;
+  deck?: { id: string; slug: string; title: string; format: DeckFormat; visibility?: Visibility } | null;
   /** The deck's owner, given to the OWNER's list only: the pop-up's cover
    *  picks (TODO DK6.4, components/decks/deck-cover-picks.tsx). */
   coverOwnerId?: string | null;
@@ -119,8 +120,11 @@ type DeckCardListProps = {
 export function DeckCardList(props: DeckCardListProps) {
   const { deck, canManage } = props;
   const editorDeck = useMemo(
-    () => (canManage && deck ? { id: deck.id, slug: deck.slug, title: deck.title, format: deck.format } : null),
-    [canManage, deck?.id, deck?.slug, deck?.title, deck?.format], // eslint-disable-line react-hooks/exhaustive-deps -- by value
+    () =>
+      canManage && deck
+        ? { id: deck.id, slug: deck.slug, title: deck.title, format: deck.format, visibility: deck.visibility }
+        : null,
+    [canManage, deck?.id, deck?.slug, deck?.title, deck?.format, deck?.visibility], // eslint-disable-line react-hooks/exhaustive-deps -- by value
   );
   if (editorDeck) {
     return (
