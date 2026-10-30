@@ -24,6 +24,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
+const compStripe = vi.hoisted(() => ({ applyCompToSubscription: vi.fn() }));
+vi.mock("@/lib/billing/comp-stripe-apply", () => compStripe);
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: vi.fn(),
   grantCreditsForSync: vi.fn(),
@@ -38,11 +40,16 @@ import {
   adminSetCompTierAction,
 } from "@/lib/admin/user-actions";
 
-function db(opts: { targetExists?: boolean; updateError?: string } = {}) {
+function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null } = {}) {
   const stub = chainClient((table, calls): ChainAnswer => {
     if (table === "profiles" && called(calls, "select")) {
       const id = calls.find((c) => c.method === "eq")?.args[1];
-      return { data: opts.targetExists !== false && id === TARGET ? { id } : null };
+      return {
+        data:
+          opts.targetExists !== false && id === TARGET
+            ? { id, subscription_status: opts.subscriptionStatus ?? null }
+            : null,
+      };
     }
     if (table === "profiles" && called(calls, "update")) {
       return { error: opts.updateError ? { message: opts.updateError } : null };
@@ -59,6 +66,9 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
+  compStripe.applyCompToSubscription
+    .mockReset()
+    .mockResolvedValue({ change: null, trialEnd: null, note: null, failed: false });
 });
 
 describe("admin gate", () => {
@@ -135,11 +145,92 @@ describe("adminSetCompTierAction", () => {
   it("writes the tier + expiry and tells the user", async () => {
     const stub = db();
     const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
-    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({ ok: true });
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({ ok: true, stripeNote: null });
     const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
     expect(payloadOf(update.calls, "update")).toEqual({ comp_tier: "pro", comp_expires_at: expiresAt });
     expect(called(update.calls, "eq", "id")).toBe(true);
-    expect(notification(stub)).toMatchObject({ type: "comp_plan", payload: { tier: "pro", expiresAt } });
+    expect(notification(stub)).toEqual({
+      recipient_id: TARGET,
+      actor_id: ADMIN,
+      type: "comp_plan",
+      payload: { tier: "pro", expiresAt },
+    });
+    // The comp is applied to Stripe AFTER the row is written.
+    expect(compStripe.applyCompToSubscription).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
+  });
+  it("a comp that held the user's trial says so to the admin and names the trial's new end to the user", async () => {
+    const stub = db();
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: { kind: "set_trial_end", trialEnd: 1, beforeComp: "0", reason: "comp_holds_trial" },
+      trialEnd: expiresAt,
+      note: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
+      failed: false,
+    });
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).toEqual({
+      ok: true,
+      stripeNote: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
+    });
+    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, trialEnd: expiresAt } });
+  });
+  it("a comp RELEASED from a trial never names a trial end to the user (owner answer 3)", async () => {
+    const stub = db({ subscriptionStatus: "trialing" });
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: { kind: "set_trial_end", trialEnd: "now", beforeComp: "", reason: "comp_released_trial" },
+      trialEnd: new Date().toISOString(),
+      note: "Their trial had already passed its own end, so it ends now and is charged.",
+      failed: false,
+    });
+    await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null });
+    expect(notification(stub)).toEqual({
+      recipient_id: TARGET,
+      actor_id: ADMIN,
+      type: "comp_plan",
+      payload: { tier: null, expiresAt: null },
+    });
+  });
+  it("a paying user's comp credit is named to the user (amount + currency)", async () => {
+    const stub = db({ subscriptionStatus: "active" });
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: null,
+      trialEnd: null,
+      credit: { change: { kind: "settle" }, postedCents: 600, keptCents: 0, currency: "usd" },
+      note: "Credited $6 …",
+      failed: false,
+    });
+    await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
+    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, creditCents: 600, currency: "usd" } });
+  });
+  it.each(["trialing", "active", "past_due"])(
+    "a %s user's comp needs an end date (owner answer 2): refused, nothing written",
+    async (status) => {
+      const stub = db({ subscriptionStatus: status });
+      const result = await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt: null });
+      expect(result).toEqual({ ok: false, error: expect.stringMatching(/set an expiry date/) });
+      expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
+      expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
+      // …and not past 730 days either.
+      const far = new Date(Date.now() + 731 * 86_400_000).toISOString();
+      expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt: far })).toEqual({
+        ok: false,
+        error: expect.stringMatching(/at most 730 days/),
+      });
+      // Clearing is always allowed.
+      expect((await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null })).ok).toBe(true);
+    },
+  );
+  it("a FREE user (or a cancelled-and-ended one) may still be comped with no expiry", async () => {
+    for (const status of [null, "canceled"]) {
+      db({ subscriptionStatus: status });
+      expect((await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt: null })).ok).toBe(true);
+    }
+  });
+  it("a failed profile write never touches Stripe", async () => {
+    db({ updateError: "nope" });
+    const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
+    expect((await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).ok).toBe(false);
+    expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
   });
   it("clearing the tier always clears the expiry with it", async () => {
     const stub = db();

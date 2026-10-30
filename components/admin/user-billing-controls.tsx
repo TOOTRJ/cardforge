@@ -111,10 +111,14 @@ export function CompTierForm({
   userId,
   compTier,
   compExpiresAt,
+  requiresExpiry = false,
 }: {
   userId: string;
   compTier: "plus" | "pro" | null;
   compExpiresAt: string | null;
+  /** The user is trialing or paying on Stripe: a comp needs an end date
+   *  (owner 2026-10-30; the action refuses one without — this says so first). */
+  requiresExpiry?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -126,6 +130,12 @@ export function CompTierForm({
 
   function submit() {
     const expiresAt = tier && expiry ? new Date(expiry).toISOString() : null;
+    if (tier && requiresExpiry && !expiresAt) {
+      toast.error(
+        "This user has a live Stripe subscription (trialing or paying): set an expiry date. A comp with no end date is for free users only.",
+      );
+      return;
+    }
     startTransition(async () => {
       const result = await adminSetCompTierAction({
         userId,
@@ -140,6 +150,7 @@ export function CompTierForm({
         tier === ""
           ? "Comp cleared."
           : `Comped ${tier === "plus" ? "Plus" : "Pro"}${expiresAt ? " until the set expiry" : ", no expiry"}.`,
+        result.stripeNote ? { description: result.stripeNote } : undefined,
       );
       router.refresh();
     });
@@ -166,12 +177,13 @@ export function CompTierForm({
         </select>
       </label>
       <label className="flex flex-col gap-1">
-        <FieldLabel>Expires (optional)</FieldLabel>
+        <FieldLabel>{requiresExpiry ? "Expires (required — live subscription)" : "Expires (optional)"}</FieldLabel>
         <input
           type="datetime-local"
           value={expiry}
           onChange={(e) => setExpiry(e.target.value)}
           disabled={tier === ""}
+          required={requiresExpiry && tier !== ""}
           className={`${inputClass} disabled:opacity-50`}
         />
       </label>

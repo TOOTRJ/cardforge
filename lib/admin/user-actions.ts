@@ -13,6 +13,8 @@ import {
   resolveSubscriptionTier,
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
+import { applyCompToSubscription } from "@/lib/billing/comp-stripe-apply";
+import { compEndDateError } from "@/lib/billing/comp-stripe";
 
 // Admin user tools — grant credits, comp a plan, raise the saved-card cap.
 // Every write goes through the service-role client because the target columns
@@ -167,7 +169,14 @@ const setCompTierSchema = z
     { message: "Expiry must be in the future.", path: ["expiresAt"] },
   );
 
-export type AdminSetCompTierResult = { ok: true } | ActionError;
+export type AdminSetCompTierResult =
+  | {
+      ok: true;
+      /** What the comp did to a live Stripe subscription, in one line for the
+       *  admin (lib/billing/comp-stripe.ts) — null when there is none. */
+      stripeNote?: string | null;
+    }
+  | ActionError;
 
 export async function adminSetCompTierAction(input: {
   userId: string;
@@ -187,9 +196,23 @@ export async function adminSetCompTierAction(input: {
   const { userId, tier, expiresAt } = parsed.data;
 
   const { admin } = gate;
-  if (!(await targetExists(admin, userId))) {
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, subscription_status")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!target) {
     return { ok: false, error: "No user with that id." };
   }
+  // A trialing or paying user's comp needs an end date (owner answer 2,
+  // 2026-10-30): Stripe can't hold a trial open-ended, and an open-ended
+  // balance credit has no amount. "No expiry" stays for free users.
+  const endDateError = compEndDateError({
+    subscriptionStatus: (target as { subscription_status?: string | null }).subscription_status ?? null,
+    tier,
+    expiresAt,
+  });
+  if (endDateError) return { ok: false, error: endDateError };
 
   const { error } = await admin
     .from("profiles")
@@ -204,14 +227,40 @@ export async function adminSetCompTierAction(input: {
     return { ok: false, error: "Couldn't update the comp tier." };
   }
 
+  // A comp month is FREE and the month after it is charged normally (owner,
+  // 2026-10-30): a card-backed trial is held until the comp ends, and put
+  // back when the comp is cleared or shortened; an ACTIVE plan gets the comp
+  // period's price on its Stripe balance (clawed back, unspent part only,
+  // when shortened or cleared). Best effort — the comp row above is what
+  // grants the perks.
+  const stripeOutcome = await applyCompToSubscription(admin, userId, {
+    tier,
+    expiresAt: tier == null ? null : expiresAt,
+  });
+
   await notifyUser(admin, {
     recipientId: userId,
     actorId: gate.adminId,
     type: "comp_plan",
-    payload: { tier, expiresAt: tier == null ? null : expiresAt },
+    payload: {
+      tier,
+      expiresAt: tier == null ? null : expiresAt,
+      // The trial's new end, so the copy can say when the first charge
+      // lands — only when the comp HOLDS the trial: a release must never say
+      // "your trial now runs until" today.
+      ...(stripeOutcome.change?.kind === "set_trial_end" &&
+      stripeOutcome.change.reason === "comp_holds_trial" &&
+      stripeOutcome.trialEnd
+        ? { trialEnd: stripeOutcome.trialEnd }
+        : {}),
+      // A paying user's comp period credited to their Stripe balance.
+      ...(tier != null && stripeOutcome.credit && stripeOutcome.credit.postedCents > 0
+        ? { creditCents: stripeOutcome.credit.postedCents, currency: stripeOutcome.credit.currency }
+        : {}),
+    },
   });
 
-  return { ok: true };
+  return { ok: true, stripeNote: stripeOutcome.note };
 }
 
 // ---------------------------------------------------------------------------

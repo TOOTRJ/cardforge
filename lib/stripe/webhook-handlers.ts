@@ -193,12 +193,26 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // trial converts; this is ours (docs/BILLING.md). The notification insert is
 // the durable part: a failure throws so Stripe retries; the email is best
 // effort on top (idempotent at the provider by subscription id).
+/** A trial ending within this long of the event is ending NOW: an admin
+ *  released a comp hold with `trial_end: "now"` (lib/billing/comp-stripe.ts),
+ *  and Stripe may still send `trial_will_end` for it. The charge happens at
+ *  once — a "your trial ends soon" email arriving with the receipt is wrong. */
+const TRIAL_ENDING_NOW_SECONDS = 60;
+
 async function handleTrialWillEnd(
   sub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
+  opts: { firedAt?: number | null } = {},
 ): Promise<void> {
   const { admin, stripe } = deps;
   if (sub.status !== "trialing") return;
+  if (
+    typeof opts.firedAt === "number" &&
+    typeof sub.trial_end === "number" &&
+    sub.trial_end - opts.firedAt <= TRIAL_ENDING_NOW_SECONDS
+  ) {
+    return;
+  }
   // Already cancelled (the portal's `cancel_at`, or the flag): the trial ends
   // and nothing is charged, so "your card is charged then" would be false —
   // and the customer needs no reminder of a conversion that won't happen.
@@ -207,16 +221,22 @@ async function handleTrialWillEnd(
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
-  // Once per subscription — a retried delivery (or a second event after a
-  // trial extension) must not notify twice.
-  const { data: existing } = await admin
+  // Once per subscription AND trial end — a retried delivery must not notify
+  // twice, but a trial an admin comp MOVED (lib/billing/comp-stripe.ts) is
+  // reminded again before its new date: the first reminder named a charge
+  // that no longer happens then, and card-network rules want one before the
+  // charge that does.
+  const trialEndIso = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
+  const { data: earlier } = await admin
     .from("notifications")
-    .select("id")
+    .select("id, payload")
     .eq("type", "trial_ending")
     .eq("payload->>subscriptionId", sub.id)
-    .limit(1)
-    .maybeSingle();
-  if (existing) return;
+    .limit(20);
+  const reminded = ((earlier ?? []) as Array<{ payload: { trialEnd?: string | null } | null }>).some(
+    (row) => (row.payload?.trialEnd ?? null) === trialEndIso || row.payload?.trialEnd == null,
+  );
+  if (reminded) return;
 
   const [tier, hasPaymentMethod] = await Promise.all([
     resolveSubscriptionTier(sub, stripe),
@@ -227,7 +247,7 @@ async function handleTrialWillEnd(
   const payload = {
     subscriptionId: sub.id,
     tier,
-    trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    trialEnd: trialEndIso,
     hasPaymentMethod,
     amountCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
     currency: price?.currency ?? "usd",
@@ -257,7 +277,7 @@ async function handleTrialWillEnd(
             ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
             : null,
       }),
-      { idempotencyKey: `trial-ending:${sub.id}` },
+      { idempotencyKey: `trial-ending:${sub.id}:${sub.trial_end ?? ""}` },
     );
   } catch (error) {
     console.warn(
@@ -780,7 +800,9 @@ export async function handleStripeEvent(
       );
       break;
     case "customer.subscription.trial_will_end":
-      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps);
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps, {
+        firedAt: typeof event.created === "number" ? event.created : null,
+      });
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
