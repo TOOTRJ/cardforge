@@ -8,7 +8,6 @@ import { listArticles } from "@/lib/content/articles";
 import { parseArticleDraft, readArticleDrafts } from "@/lib/content/article-drafts";
 import { articleInputSchema, bodyImages } from "@/lib/content/article-shared";
 import { articleSeoChecklist, IMAGE_PLACEHOLDER } from "@/lib/content/article-seo-checklist";
-// @ts-expect-error — a plain .mjs module without types (the seed generator).
 import { buildArticleDraftsSeed, parseDraftForSeed } from "@/scripts/lib/article-drafts-seed.mjs";
 
 // ---------------------------------------------------------------------------
