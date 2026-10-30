@@ -33,7 +33,7 @@ import {
 // Layers, in priority order:
 //
 //   1. Static product pages (home, the tool landing pages, /create, /gallery,
-//      /decks, /challenges, /news, /learn + its indexable categories, /tools,
+//      /decks, /challenges, /news, /roadmap, /learn + its indexable categories, /tools,
 //      /help + its sections, guides + their indexable topic hubs, …), plus
 //      /creators, /frames and /frames/requested while their own pages are
 //      indexable.
@@ -134,6 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((tag) => getCluster(tag.slug) !== null || tag.count >= 2)
       .map((tag) => staticEntry(baseUrl, `/articles/tag/${tag.slug}`, "weekly", 0.7)),
     staticEntry(baseUrl, "/news", "weekly", 0.6),
+    staticEntry(baseUrl, "/roadmap", "monthly", 0.5),
     // /pricing calls notFound() while billing is off — never advertise a 404.
     ...(isBillingEnabled() ? [staticEntry(baseUrl, "/pricing", "monthly", 0.8)] : []),
     staticEntry(baseUrl, "/about", "monthly", 0.5),

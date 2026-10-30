@@ -63,6 +63,7 @@ describe("sitemap (static layer)", () => {
       "/help",
       "/articles",
       "/news",
+      "/roadmap",
       "/about",
     ]) {
       expect(paths.has(path), path).toBe(true);

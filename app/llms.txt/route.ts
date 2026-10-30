@@ -31,6 +31,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
   ["/frames", "Frames", "Every card frame the creator offers — the 1993, 1997, 2003 and 2015 borders, variations such as borderless and snow, card layouts and showcases — with the colors each is verified in and an example card."],
+  ["/roadmap", "Roadmap", "What PipGlyph is building now, next and later, and what recently shipped — no dates, each item marked exploring, building or shipped."],
   ["/frames/requested", "Requested frames", "The card frames people asked for, most requested first, and whether each is requested, being checked or built."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
   ["/about", "About", "What PipGlyph is and the principles behind it."],
