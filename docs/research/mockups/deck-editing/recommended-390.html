@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck edit sheet — 390</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .phone-top { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .scroll { position: absolute; top: 52px; left: 0; right: 0; bottom: 64px; overflow: auto; padding: 12px 16px; }
+  .entry { display: grid; grid-template-columns: 26px 34px minmax(0,1fr) auto; gap: 10px; align-items: center; min-height: 52px; padding: 4px 0; border-top: 1px solid var(--color-border); }
+  .entry .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bottombar { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--color-border); background: var(--color-surface); }
+  .bottombar span { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--color-muted); }
+  .sheet { left: 0; right: 0; bottom: 0; max-height: 88%; border-radius: 20px 20px 0 0; padding: 8px 16px 20px; gap: 12px; }
+  .grab { width: 40px; height: 6px; border-radius: 3px; background: var(--color-border-strong); margin: 0 auto 4px; }
+  .full { inset: 0; border-radius: 28px; }
+  .full-head { display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 8px; border-bottom: 1px solid var(--color-border); }
+  .full-head .t { min-width: 0; flex: 1; }
+  .full-head h2 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .full-body { flex: 1; overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .steps { flex-wrap: nowrap; overflow-x: auto; }
+  .full-body > * { flex-shrink: 0; }
+  details { border: 1px solid var(--color-border); border-radius: 10px; background: color-mix(in oklch, var(--color-elevated) 30%, transparent); }
+  summary { padding: 8px 12px; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--color-subtle); }
+  .btn { height: 44px; }
+  .btn.icon-btn { width: 44px; }
+  .chip { height: 36px; }
+  .dialog { width: 340px; }
+  .state-nav { display: flex; gap: 6px; justify-content: center; margin: 12px 0 0; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <strong>DK5.18 · Recommended (b) on a phone · 390 × 844</strong>
+  <span>URL: <span class="mono" id="url">/deck/ember-tide</span></span>
+  <a href="index.html">All mockups</a>
+  <a href="recommended-1366.html">Same at 1366</a>
+</div>
+<div class="state-nav" role="group" aria-label="Jump to a state">
+  <button class="chip" data-state="list" aria-pressed="true">1 · Deck list</button>
+  <button class="chip" data-state="sheet" aria-pressed="false">2 · Card sheet (today)</button>
+  <button class="chip" data-state="edit" aria-pressed="false">3 · Editor, full screen</button>
+  <button class="chip" data-state="leave" aria-pressed="false">4 · Back with changes</button>
+</div>
+
+<div class="screen w390" id="screen">
+  <div class="phone-top"><span class="logo">PipGlyph</span><span class="muted" style="margin-left:auto">☰</span></div>
+  <div class="scroll" id="list">
+    <h1 class="display" style="margin:0 0 4px;font-size:20px">Ember Tide</h1>
+    <p class="muted" style="margin:0 0 10px;font-size:12px">Commander · 98 / 100</p>
+    <div class="eyebrow" style="margin:8px 0 4px">Creatures · 6</div>
+  </div>
+  <nav class="bottombar" aria-label="Deck"><span>＋ Add</span><span>View</span><span>Undo</span><span>More</span></nav>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <section class="panel sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Cinder Wolf" hidden>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="row"><strong id="sheet-name">Cinder Wolf</strong><span class="badge original">Original</span></div>
+    <div class="row" style="align-items:flex-start;gap:12px">
+      <div class="card" style="width:120px;flex:none"><div class="bar"></div><div class="art" style="background-image:url(../../../../public/defaults/deck-covers/red-1.webp)"></div><div class="tbar"></div><div class="box"></div></div>
+      <div class="stack" style="flex:1">
+        <span class="muted" style="font-size:12px">Creature — Wolf Elemental</span>
+        <div class="row"><button class="btn icon-btn">−</button><span>1</span><button class="btn icon-btn">＋</button></div>
+        <button class="btn">Move to…</button>
+      </div>
+    </div>
+    <button class="btn primary" id="sheet-edit" style="justify-content:center">✎ Edit card</button>
+    <p class="subtle" style="margin:0;font-size:12px">The DK5.7 bottom sheet as it is today. Only "Edit card" changes: it opens the editor over the deck instead of leaving for /card/…/edit.</p>
+  </section>
+
+  <section class="panel full" id="full" role="dialog" aria-modal="true" aria-labelledby="full-title" hidden>
+    <div class="full-head">
+      <button class="btn icon-btn ghost" id="full-close" aria-label="Back to Ember Tide">‹</button>
+      <div class="t"><div class="eyebrow">Ember Tide · editing</div><h2 id="full-title">Cinder Wolf</h2></div>
+      <button class="btn ghost" aria-label="More: previous, next, open full page">⋯</button>
+    </div>
+    <div class="full-body">
+      <nav class="steps" aria-label="Steps">
+        <span class="step">Card</span><span class="step" aria-current="step">Identity</span><span class="step">Text</span><span class="step">Set icon</span><span class="step">Publish</span>
+      </nav>
+      <details open>
+        <summary>Live preview</summary>
+        <div style="width:220px;margin:0 auto 12px"><div class="card"><div class="bar" id="live-title">Cinder Wolf</div><div class="art" style="background-image:url(../../../../public/defaults/deck-covers/red-1.webp)"></div><div class="tbar"></div><div class="box"></div></div></div>
+      </details>
+      <label class="field"><span>Title</span><input class="input" id="title" value="Cinder Wolf" style="height:44px"></label>
+      <label class="field"><span>Mana cost</span><input class="input mono" value="{1}{R}{R}" style="height:44px"></label>
+      <div class="field"><span>Rarity</span><div class="row" style="flex-wrap:wrap"><button class="chip">Common</button><button class="chip" aria-pressed="true">Uncommon</button><button class="chip">Rare</button><button class="chip">Mythic</button></div></div>
+      <label class="field"><span>Rules text</span><textarea class="input">Haste</textarea></label>
+      <p class="subtle" style="margin:0;font-size:12px">This is the creator's phone arrangement exactly as /create draws it at 390 px today: the steps, the folding "Live preview", the sticky Save bar.</p>
+    </div>
+    <div class="sticky-save" style="padding-bottom:20px">
+      <span class="muted" id="dirty-note" style="font-size:12px">No changes</span>
+      <span style="flex:1"></span>
+      <button class="btn primary" id="save">Save changes</button>
+    </div>
+  </section>
+
+  <div class="dialog" id="leave" role="alertdialog" aria-modal="true" aria-labelledby="leave-h" hidden>
+    <h2 id="leave-h">Leave without saving?</h2>
+    <p class="muted" style="margin:0 0 14px">You have unsaved changes to this card. Save them, or leave and discard them.</p>
+    <div class="stack">
+      <button class="btn primary" id="leave-save" style="justify-content:center">Save changes</button>
+      <button class="btn danger" id="leave-go" style="justify-content:center">Leave without saving</button>
+      <button class="btn" id="leave-stay" style="justify-content:center">Keep editing</button>
+    </div>
+  </div>
+  <div class="toast" id="toast" style="left:16px;right:16px;bottom:80px" hidden></div>
+</div>
+
+<div class="note" style="max-width:720px">
+  <ul>
+    <li>Below 1024 px the drawer is a full-screen dialog. On a phone it opens from the card's bottom sheet (DK5.7) or a row's "⋯ → Edit".</li>
+    <li>The system Back gesture and "‹" both close the editor. With unsaved changes they ask first (state 4), as the creator's guard does today.</li>
+    <li>Targets are 44 px (`pointer-coarse:h-11`, as in the deck bulk bar). The Save bar keeps clear of the home indicator (safe-area inset).</li>
+    <li>On close, the focus goes back to the row that opened it (the `data-deck-entry` hand-back the pop-up already uses).</li>
+  </ul>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const rows = [["1", "Cinder Wolf", "original", "red-1"], ["1", "Ashfall Drake", "edited", "red-2"], ["1", "Goblin Tinkerer", "imported", null], ["1", "Tidecaller Adept", "original", "blue-1"], ["1", "Reef Leviathan", "imported", null], ["2", "Storm Kin", "remix", "blue-2"]];
+const L = { original: "Original", edited: "Edited", imported: "Imported", remix: "Remix" };
+rows.forEach((r) => {
+  const d = document.createElement("button"); d.className = "entry"; d.style.cssText = "width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;color:inherit";
+  d.innerHTML = `<span class="muted">${r[0]}×</span><span class="card ${r[3] ? "" : "printing"}" style="border-width:1px;padding:2px"><span class="art" style="flex:1;${r[3] ? `background-image:url(../../../../public/defaults/deck-covers/${r[3]}.webp)` : ""}"></span></span><span class="name">${r[1]}</span><span class="badge ${r[2]}">${L[r[2]]}</span>`;
+  d.addEventListener("click", () => state("sheet"));
+  $("list").appendChild(d);
+});
+let dirty = false;
+function state(s) {
+  document.querySelectorAll("[data-state]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.state === s));
+  $("sheet").hidden = s !== "sheet"; $("full").hidden = !(s === "edit" || s === "leave");
+  $("scrim").hidden = s === "list" || s === "edit"; $("leave").hidden = s !== "leave";
+  $("url").textContent = s === "edit" || s === "leave" ? "/deck/ember-tide?edit=…" : "/deck/ember-tide";
+  if (s === "leave") setDirty(true);
+}
+function setDirty(d) { dirty = d; $("dirty-note").textContent = d ? "Unsaved changes" : "No changes"; $("dirty-note").style.color = d ? "var(--color-gold)" : ""; }
+document.querySelectorAll("[data-state]").forEach((b) => b.addEventListener("click", () => state(b.dataset.state)));
+$("scrim").addEventListener("click", () => { if (!$("sheet").hidden) state("list"); });
+$("sheet-edit").addEventListener("click", () => state("edit"));
+$("title").addEventListener("input", () => { setDirty(true); $("live-title").textContent = $("title").value; $("full-title").textContent = $("title").value; });
+$("full-close").addEventListener("click", () => (dirty ? state("leave") : state("list")));
+$("leave-stay").addEventListener("click", () => state("edit"));
+$("leave-go").addEventListener("click", () => { setDirty(false); state("list"); });
+function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; setTimeout(() => (t.hidden = true), 2800); }
+$("leave-save").addEventListener("click", () => { setDirty(false); state("list"); toast("Changes saved."); });
+$("save").addEventListener("click", () => { setDirty(false); toast("Changes saved."); });
+</script>
+</body>
+</html>

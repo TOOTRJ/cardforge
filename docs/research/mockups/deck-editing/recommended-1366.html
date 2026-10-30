@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck edit drawer — 1366</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .deck { position: absolute; inset: 56px 0 0 0; display: flex; flex-direction: column; overflow: hidden; }
+  .deck-head { padding: 14px 24px 10px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--color-border); }
+  .deck-head h1 { margin: 0; font-size: 20px; }
+  .toolbar { padding: 10px 24px; display: flex; gap: 8px; align-items: center; }
+  .addbox { flex: 1; max-width: 420px; }
+  .body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 24px; padding: 0 24px 16px; min-height: 0; }
+  .list { overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+  .group { padding: 8px 12px 4px; }
+  .entry { display: grid; grid-template-columns: 28px 30px minmax(0,1fr) auto auto; gap: 10px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--color-border); cursor: pointer; }
+  .entry:hover { background: var(--color-elevated); }
+  .entry.editing { background: color-mix(in oklch, var(--color-primary) 22%, transparent); box-shadow: inset 3px 0 0 var(--color-primary-bright); }
+  .entry .qty { font-variant-numeric: tabular-nums; color: var(--color-muted); text-align: right; }
+  .entry .mini { width: 30px; }
+  .entry .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pane { display: flex; flex-direction: column; gap: 10px; }
+  /* Drawer: the creator's own two-column arrangement inside it. */
+  .drawer { top: 0; right: 0; bottom: 0; width: 880px; border-radius: 16px 0 0 16px; }
+  .drawer-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
+  .drawer-head h2 { margin: 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drawer-body { flex: 1; overflow: auto; display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 20px; padding: 16px; }
+  .form { display: flex; flex-direction: column; gap: 14px; }
+  .aside { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 10px; }
+  .scrim.light { background: rgba(5, 6, 12, 0.38); }
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <strong>DK5.18 · Recommended (b): an edit drawer · 1366 × 768</strong>
+  <span>URL: <span class="mono" id="url">/deck/ember-tide</span></span>
+  <a href="index.html">All mockups</a>
+  <a href="recommended-390.html">Same at 390</a>
+  <label><input type="checkbox" id="callouts" checked> notes</label>
+</div>
+
+<div class="screen w1366" id="screen">
+  <header class="site-header">
+    <span class="logo">PipGlyph</span>
+    <nav class="nav"><span>Create</span><span>Gallery</span><span>Decks</span></nav>
+  </header>
+
+  <main class="deck" id="deck">
+    <div class="deck-head">
+      <h1 class="display">Ember Tide</h1>
+      <span class="badge">Commander</span><span class="badge">Public</span>
+      <span class="muted" style="margin-left:auto">98 / 100 cards</span>
+    </div>
+    <div class="toolbar">
+      <input class="input addbox" placeholder="Add a card… ( / )" aria-label="Add a card">
+      <button class="btn" id="create-new">＋ Create new card</button>
+      <span style="flex:1"></span>
+      <button class="btn">List ▾</button><button class="btn">Group: type ▾</button><button class="btn">Select</button>
+    </div>
+    <div class="body">
+      <div class="list" id="list" role="list" aria-label="Cards"></div>
+      <aside class="pane" id="pane">
+        <div class="card big" id="pane-card"><div class="bar"></div><div class="art"></div><div class="tbar"></div><div class="box"></div></div>
+        <div class="row" style="flex-wrap:wrap">
+          <button class="btn primary" id="pane-edit">✎ Edit card</button>
+          <button class="btn">Move to…</button>
+          <button class="btn danger">Remove</button>
+        </div>
+        <p class="subtle" style="margin:0;font-size:12px">Today Edit leaves for the creator and comes back (DK5.5). Here it opens the drawer.</p>
+      </aside>
+    </div>
+  </main>
+
+  <div class="scrim light" id="scrim" hidden></div>
+  <section class="panel drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <button class="btn icon-btn ghost" id="prev" aria-label="Previous card">‹</button>
+      <button class="btn icon-btn ghost" id="next" aria-label="Next card">›</button>
+      <div style="min-width:0">
+        <div class="eyebrow" id="drawer-eyebrow">Editing · 3 of 14 in Creatures</div>
+        <h2 id="drawer-title">Cinder Wolf</h2>
+      </div>
+      <span class="badge original" id="drawer-badge">Original</span>
+      <span style="flex:1"></span>
+      <a class="btn ghost" href="#" title="The creator on its own page, as today (DK5.5)">Open full page ↗</a>
+      <button class="btn icon-btn" id="close" aria-label="Close the editor">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="form">
+        <nav class="steps" aria-label="Steps">
+          <span class="step">1 Card</span><span class="step" aria-current="step">2 Identity</span><span class="step">3 Text &amp; stats</span><span class="step">4 Set icon</span><span class="step">5 Subscriber</span><span class="step">6 Publish</span>
+        </nav>
+        <p class="subtle" style="margin:0;font-size:12px">The creator's existing steps and panels, unchanged. Frame, colour and type are locked on a saved card (revise mode) exactly as on /card/…/edit.</p>
+        <label class="field"><span>Title</span><input class="input" id="title" value="Cinder Wolf"></label>
+        <div class="row" style="gap:12px">
+          <label class="field" style="flex:1"><span>Mana cost</span><input class="input mono" value="{1}{R}{R}"></label>
+          <label class="field" style="flex:2"><span>Types</span><input class="input" value="Creature — Wolf Elemental"></label>
+        </div>
+        <div class="field"><span>Rarity</span>
+          <div class="row" role="radiogroup" aria-label="Rarity">
+            <button class="chip" role="radio" aria-checked="false">Common</button>
+            <button class="chip" role="radio" aria-checked="true">Uncommon</button>
+            <button class="chip" role="radio" aria-checked="false">Rare</button>
+            <button class="chip" role="radio" aria-checked="false">Mythic</button>
+          </div>
+        </div>
+        <label class="field"><span>Rules text</span><textarea class="input">Haste
+Whenever Cinder Wolf attacks, it deals 1 damage to each opponent.</textarea></label>
+        <div class="row"><button class="btn">‹ Back</button><button class="btn">Next: Text &amp; stats ›</button></div>
+      </div>
+      <div class="aside">
+        <div class="eyebrow">Live preview</div>
+        <div class="card big" id="live"><div class="bar" id="live-title">Cinder Wolf</div><div class="art" style="background-image:url(../../../../public/defaults/deck-covers/red-1.webp)"></div><div class="tbar"></div><div class="box"></div></div>
+        <p class="subtle" style="margin:0;font-size:12px">The creator's own preview, as drawn on /create.</p>
+      </div>
+    </div>
+    <div class="sticky-save">
+      <span class="muted" id="dirty-note">No changes yet</span>
+      <span style="flex:1"></span>
+      <button class="btn" id="save-next">Save &amp; next ›</button>
+      <button class="btn primary" id="save">Save changes</button>
+    </div>
+  </section>
+
+  <div class="dialog" id="leave" role="alertdialog" aria-modal="true" aria-labelledby="leave-h" hidden>
+    <h2 id="leave-h">Leave without saving?</h2>
+    <p class="muted" style="margin:0 0 14px">You have unsaved changes to <strong id="leave-name">Cinder Wolf</strong>. Save them, or leave and discard them. <span class="subtle">(The creator's own dialog and wording, <span class="mono">unsaved-changes-guard.tsx</span>. A new card offers "Save as draft".)</span></p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" id="leave-stay">Keep editing</button>
+      <button class="btn danger" id="leave-go">Leave without saving</button>
+      <button class="btn primary" id="leave-save">Save changes</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="callout" data-n="1" style="left:520px;top:110px">Drawer is a modal dialog (focus kept inside, the deck inert). The deck stays VISIBLE, lightly dimmed.</div>
+  <div class="callout" data-n="2" style="left:500px;top:300px">The row being edited is marked; after a save its badge and picture update in place.</div>
+  <div class="callout" data-n="3" style="left:1110px;top:680px">Save stays in the drawer. "Save &amp; next" is today's "Edit next" walk.</div>
+  <div class="callout" data-n="4" style="left:860px;top:24px">?edit=&lt;entry&gt; is pushed: Back closes the drawer (asking first if there are changes); a reload reopens it.</div>
+</div>
+
+<div class="note">
+  <p><strong>What to try:</strong> click a row or "Edit card"; type in the Title (the live preview follows and the drawer counts as changed); press ✕, ‹ › or Esc to see the guard; Save; "＋ Create new card".</p>
+  <ul>
+    <li>Drawer width at 1366: 880 px (min(64rem, 100vw − 480px)). The deck list keeps about 460 px: names, counts and badges stay readable.</li>
+    <li>Below 1024 px wide the same dialog fills the screen (see the 390 mockup). There is no third layout.</li>
+    <li>The creator renders its existing two-column arrangement (form + live preview) because it now reads its CONTAINER's width, not the window's. That is the one creator-side change (see the doc, PR 2).</li>
+  </ul>
+</div>
+
+<script>
+const entries = [
+  ["Creatures", 1, "Cinder Wolf", "original", "red-1"],
+  ["Creatures", 1, "Ashfall Drake", "edited", "red-2"],
+  ["Creatures", 1, "Goblin Tinkerer", "imported", null],
+  ["Creatures", 1, "Tidecaller Adept", "original", "blue-1"],
+  ["Creatures", 1, "Reef Leviathan", "imported", null],
+  ["Creatures", 2, "Storm Kin", "remix", "blue-2"],
+  ["Instants", 1, "Flashfire", "imported", null],
+  ["Instants", 1, "Counterflow", "original", "multicolor-1"],
+  ["Instants", 1, "Brine Snap", "edited", "blue-1"],
+  ["Sorceries", 1, "Volcanic Rebirth", "original", "red-2"],
+  ["Artifacts", 1, "Ember Lantern", "imported", null],
+  ["Lands", 12, "Mountain", "imported", null],
+  ["Lands", 12, "Island", "imported", null],
+  ["Lands", 1, "Steamvent Cove", "original", "multicolor-2"],
+];
+const label = { original: "Original", edited: "Edited", imported: "Imported", remix: "Remix" };
+const $ = (id) => document.getElementById(id);
+let current = 0, dirty = false, open = false, opener = null, creating = false;
+
+function renderList() {
+  const list = $("list"); list.innerHTML = ""; let g = "";
+  entries.forEach((e, i) => {
+    if (e[0] !== g) { g = e[0]; const h = document.createElement("div"); h.className = "group eyebrow"; h.textContent = g; list.appendChild(h); }
+    const r = document.createElement("div");
+    r.className = "entry" + (open && i === current ? " editing" : "");
+    r.setAttribute("role", "listitem"); r.tabIndex = 0; r.dataset.i = i;
+    r.innerHTML = `<span class="qty">${e[1]}×</span><span class="mini card ${e[4] ? "" : "printing"}" style="border-width:1px;padding:2px"><span class="art" style="flex:1;${e[4] ? `background-image:url(../../../../public/defaults/deck-covers/${e[4]}.webp)` : ""}"></span></span><span class="name">${e[2]}</span><span class="badge ${e[3]}">${label[e[3]]}</span><button class="btn sm ghost" data-edit="${i}">${e[3] === "imported" ? "Customize" : "Edit"}</button>`;
+    r.addEventListener("click", (ev) => { if (!ev.target.dataset.edit) showPane(i); });
+    list.appendChild(r);
+  });
+  list.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", (ev) => { ev.stopPropagation(); go(+b.dataset.edit, b); }));
+}
+function showPane(i) {
+  current = i; const e = entries[i];
+  $("pane-card").querySelector(".bar").textContent = e[2];
+  $("pane-card").classList.toggle("printing", !e[4]);
+  $("pane-card").querySelector(".art").style.backgroundImage = e[4] ? `url(../../../../public/defaults/deck-covers/${e[4]}.webp)` : "";
+  $("pane-edit").textContent = e[3] === "imported" ? "✎ Customize" : "✎ Edit card";
+}
+function fill(i) {
+  current = i; const e = entries[i];
+  const inGroup = entries.filter((x) => x[0] === e[0]); const n = inGroup.indexOf(e) + 1;
+  $("drawer-eyebrow").textContent = e[3] === "imported" ? `Your version of a real card · ${n} of ${inGroup.length} in ${e[0]}` : `Editing · ${n} of ${inGroup.length} in ${e[0]}`;
+  $("drawer-title").textContent = e[2]; $("title").value = e[2]; $("live-title").textContent = e[2];
+  $("drawer-badge").className = "badge " + e[3]; $("drawer-badge").textContent = label[e[3]];
+  $("live").querySelector(".art").style.backgroundImage = e[4] ? `url(../../../../public/defaults/deck-covers/${e[4]}.webp)` : "";
+  $("url").textContent = `/deck/ember-tide?edit=${(1000 + i).toString(16)}…`;
+  $("drawer-badge").hidden = false; $("save").textContent = "Save changes"; $("title").placeholder = "";
+  setDirty(false); renderList();
+}
+function setDirty(d) { dirty = d; $("dirty-note").textContent = d ? "Unsaved changes" : "No changes yet"; $("dirty-note").style.color = d ? "var(--color-gold)" : ""; }
+function openDrawer(i, from) { opener = from || null; open = true; $("drawer").hidden = false; $("scrim").hidden = false; fill(i); $("title").focus(); }
+function closeDrawer() { if (creating) { entries.shift(); creating = false; current = 0; } open = false; $("drawer").hidden = true; $("scrim").hidden = true; $("url").textContent = "/deck/ember-tide"; renderList(); (opener && document.contains(opener) ? opener : $("pane-edit")).focus(); }
+let pending = null;
+function guard(action) { if (!dirty) return action(); pending = action; $("leave-name").textContent = $("title").value; $("leave").hidden = false; $("leave-stay").focus(); }
+function go(i, from) { if (!open) return openDrawer(i, from); guard(() => fill(i)); }
+function toast(msg) { const t = $("toast"); t.innerHTML = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(() => (t.hidden = true), 3200); }
+function save(thenNext) {
+  creating = false;
+  const e = entries[current]; e[2] = $("title").value || e[2];
+  if (e[3] === "imported") { e[3] = "original"; e[4] = e[4] || "red-1"; toast(`Saved and linked into “Ember Tide”.`); }
+  else { if (e[3] === "original" || e[3] === "edited") {} toast(`Changes saved. <span class="subtle">The new picture bakes in the background.</span>`); }
+  setDirty(false); renderList(); showPane(current);
+  if (thenNext) { const nx = entries.findIndex((x, j) => j > current && x[3] === "imported"); if (nx >= 0) fill(nx); else toast("No more unchanged imports."); }
+}
+$("title").addEventListener("input", () => { setDirty(true); $("live-title").textContent = $("title").value; $("drawer-title").textContent = $("title").value; });
+document.querySelectorAll(".drawer textarea, .drawer .input:not(#title)").forEach((x) => x.addEventListener("input", () => setDirty(true)));
+document.querySelectorAll('.drawer [role="radio"]').forEach((c) => c.addEventListener("click", () => { document.querySelectorAll('.drawer [role="radio"]').forEach((x) => x.setAttribute("aria-checked", x === c)); setDirty(true); }));
+$("pane-edit").addEventListener("click", (ev) => openDrawer(current, ev.currentTarget));
+$("close").addEventListener("click", () => guard(closeDrawer));
+$("scrim").addEventListener("click", () => guard(closeDrawer));
+$("prev").addEventListener("click", () => go(Math.max(0, current - 1)));
+$("next").addEventListener("click", () => go(Math.min(entries.length - 1, current + 1)));
+$("save").addEventListener("click", () => save(false));
+$("save-next").addEventListener("click", () => save(true));
+$("leave-stay").addEventListener("click", () => { $("leave").hidden = true; pending = null; $("title").focus(); });
+$("leave-go").addEventListener("click", () => { $("leave").hidden = true; setDirty(false); const p = pending; pending = null; p && p(); });
+$("leave-save").addEventListener("click", () => { $("leave").hidden = true; save(false); const p = pending; pending = null; p && p(); });
+$("create-new").addEventListener("click", (ev) => {
+  if (creating) return; entries.unshift(["Creatures", 1, "New card", "original", null]);
+  openDrawer(0, ev.currentTarget); $("drawer-eyebrow").textContent = "New card · goes into Ember Tide on save"; $("drawer-badge").hidden = true; $("save").textContent = "Save card";
+  $("title").value = ""; $("title").placeholder = "Name your card";
+  $("url").textContent = "/deck/ember-tide?edit=new"; creating = true;
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && !$("leave").hidden) { $("leave-stay").click(); }
+  else if (ev.key === "Escape" && open) guard(closeDrawer);
+});
+$("callouts").addEventListener("change", (ev) => document.body.classList.toggle("hide-callouts", !ev.target.checked));
+renderList(); showPane(0);
+</script>
+</body>
+</html>

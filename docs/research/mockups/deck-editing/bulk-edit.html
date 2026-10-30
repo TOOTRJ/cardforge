@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck bulk edit</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+  .deck { position: absolute; inset: 56px 0 0 0; padding: 14px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; overflow: auto; padding: 4px; }
+  .tile { position: relative; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; }
+  .tile .card { pointer-events: none; }
+  .tile .check { position: absolute; top: 8px; left: 8px; width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--color-foreground); background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .tile[aria-pressed="true"] .card { outline: 3px solid var(--color-primary-bright); outline-offset: 2px; }
+  .tile[aria-pressed="true"] .check { background: var(--color-primary-bright); border-color: var(--color-primary-bright); }
+  .tile .cap { display: flex; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; }
+  .bulkbar { margin-top: auto; display: flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: var(--radius-frame); border: 1px solid color-mix(in oklch, var(--color-primary) 60%, transparent); background: var(--color-surface); }
+  .bulk { top: 0; right: 0; bottom: 0; width: 640px; border-radius: 16px 0 0 16px; }
+  .bulk-head { padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .bulk-head h2 { margin: 0 0 4px; font-size: 17px; }
+  .bulk-body { flex: 1; overflow: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 16px; }
+  .frow { display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 12px; align-items: start; }
+  .frow > .lbl { padding-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-muted); display: flex; gap: 6px; align-items: center; }
+  .frow.changed > .lbl::after { content: "changed"; font-size: 10px; font-weight: 600; color: var(--color-gold); border: 1px solid var(--color-gold); border-radius: 999px; padding: 0 5px; }
+  .mixed-note { font-size: 12px; color: var(--color-subtle); margin-top: 4px; }
+  .locked { opacity: .65; }
+  fieldset { border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px 14px; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+  legend { padding: 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-subtle); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--color-border); vertical-align: top; }
+  th { font-size: 11px; color: var(--color-subtle); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .from { color: var(--color-subtle); font-style: italic; }
+  .to { color: var(--color-foreground); }
+  .pair { display: flex; gap: 8px; align-items: center; }
+  .pair .card { width: 70px; }
+  .tagchip { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--color-border); font-size: 12px; }
+  .tagchip button { background: none; border: 0; cursor: pointer; color: var(--color-subtle); padding: 0; }
+  .tagchip.removing { border-style: dashed; border-color: var(--color-danger); color: var(--color-danger); }
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <strong>DK5.18 · Bulk edit of several entries · 1366</strong>
+  <a href="index.html">All mockups</a>
+  <label><input type="checkbox" id="callouts" checked> notes</label>
+</div>
+
+<div class="screen w1366">
+  <header class="site-header"><span class="logo">PipGlyph</span><nav class="nav"><span>Create</span><span>Gallery</span><span>Decks</span></nav></header>
+  <main class="deck">
+    <div class="row"><h1 class="display" style="margin:0;font-size:20px">Ember Tide</h1><span class="badge">Commander</span><span class="muted" style="margin-left:auto">Grid view · Select is on</span></div>
+    <div class="grid" id="grid"></div>
+    <section class="bulkbar" aria-label="Selected cards">
+      <span id="count" aria-live="polite"><strong>5</strong> selected <span class="muted">· 5 cards</span></span>
+      <span style="flex:1"></span>
+      <button class="btn">Select all (14)</button>
+      <button class="btn">Move to…</button>
+      <button class="btn icon-btn" aria-label="One fewer of each">−</button><button class="btn icon-btn" aria-label="One more of each">＋</button>
+      <button class="btn primary" id="open-bulk">✎ Edit fields…</button>
+      <button class="btn danger">Remove</button>
+      <button class="btn">Done</button>
+    </section>
+  </main>
+
+  <div class="scrim" id="scrim" style="background:rgba(5,6,12,.4)" hidden></div>
+  <section class="panel bulk" id="bulk" role="dialog" aria-modal="true" aria-labelledby="bulk-h" hidden>
+    <!-- Step 1: fields -->
+    <div id="step1" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="bulk-head">
+        <div class="eyebrow">Step 1 of 2 · Choose changes</div>
+        <h2 id="bulk-h">Edit <span id="own-n">3</span> of your cards</h2>
+        <p class="muted" style="margin:0;font-size:12px"><span id="skip-line">2 of the 5 selected are left alone: <strong>Goblin Tinkerer</strong> is a real card (customize it first), <strong>Storm Kin</strong> is another creator's card.</span> Only the fields you change are sent; everything else stays exactly as it is.</p>
+      </div>
+      <div class="bulk-body">
+        <fieldset>
+          <legend>On the deck page</legend>
+          <div class="frow" id="f-vis"><span class="lbl">Visibility</span>
+            <div><div class="row" role="radiogroup" aria-label="Visibility (mixed)">
+              <button class="chip mixed" role="radio" aria-checked="false" data-v="private">Private</button>
+              <button class="chip mixed" role="radio" aria-checked="false" data-v="unlisted">Unlisted</button>
+              <button class="chip mixed" role="radio" aria-checked="false" data-v="public">Public</button>
+              <button class="btn sm ghost" data-reset="f-vis" hidden>Leave as is</button>
+            </div><div class="mixed-note">Mixed: 2 public, 1 private. No chip is picked until you pick one.</div></div>
+          </div>
+          <div class="frow" id="f-tags"><span class="lbl">Tags</span>
+            <div class="stack">
+              <div class="row" style="flex-wrap:wrap" id="tag-list">
+                <span class="tagchip">dragons <span class="subtle">· 2 of 3</span><button aria-label="Remove dragons from all">✕</button></span>
+                <span class="tagchip">fire <span class="subtle">· 3 of 3</span><button aria-label="Remove fire from all">✕</button></span>
+                <span class="tagchip">ember-tide <span class="subtle">· 1 of 3</span><button aria-label="Remove ember-tide from all">✕</button></span>
+              </div>
+              <div class="row"><input class="input" id="tag-add" placeholder="Add a tag to all 3…" style="flex:1"><button class="btn" id="tag-add-btn">Add</button></div>
+              <div class="mixed-note">Add and remove, never replace: a tag only some cards have stays on those cards unless you remove it.</div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>On the card itself (re-baked)</legend>
+          <div class="frow" id="f-rar"><span class="lbl">Rarity</span>
+            <div><div class="row" role="radiogroup" aria-label="Rarity (mixed)">
+              <button class="chip mixed" role="radio" aria-checked="false">Common</button><button class="chip mixed" role="radio" aria-checked="false">Uncommon</button><button class="chip mixed" role="radio" aria-checked="false">Rare</button><button class="chip mixed" role="radio" aria-checked="false">Mythic</button>
+            </div><div class="mixed-note">Mixed: 1 uncommon, 2 rare. (A token or an emblem has no rarity: it would be skipped and named.)</div></div>
+          </div>
+          <div class="frow" id="f-col"><span class="lbl">Collector line</span>
+            <div class="stack">
+              <div class="row" role="radiogroup" aria-label="Collector line style (mixed)"><button class="chip mixed" role="radio" aria-checked="false">2015</button><button class="chip mixed" role="radio" aria-checked="false">2023</button><button class="chip mixed" role="radio" aria-checked="false">Off</button></div>
+              <div class="row"><label class="field" style="flex:1"><span>Set code</span><input class="input mono" placeholder="Mixed (ETD, —)"></label><label class="field" style="width:90px"><span>Language</span><input class="input mono" value="EN"></label></div>
+              <div class="mixed-note">Collector numbers stay per card. Numbering them in deck order is a separate idea (owner question).</div>
+            </div>
+          </div>
+          <div class="frow" id="f-icon"><span class="lbl">Set icon</span>
+            <div><button class="btn">Choose a set icon…</button><div class="mixed-note">Mixed: 2 use your "Ember" icon, 1 has none.</div></div>
+          </div>
+          <div class="frow" id="f-art"><span class="lbl">Artist credit</span>
+            <div><input class="input" style="width:100%" placeholder="Mixed — type to set it on all 3"></div>
+          </div>
+        </fieldset>
+        <fieldset class="locked" aria-describedby="lock-why">
+          <legend>Locked on a saved card</legend>
+          <div class="frow"><span class="lbl">Frame</span><span class="muted">M15 · M15 · Extended art</span></div>
+          <div class="frow"><span class="lbl">Colours</span><span class="muted">Red · Red · Blue–red</span></div>
+          <p id="lock-why" class="subtle" style="margin:0;font-size:12px">Changing a saved card's type, frame, colour or finish is locked in the editor (owner decision 2026-09-16, <span class="mono">lib/creator/revise.ts</span>), so bulk edit can't change them either. Owner question Q5 in the doc.</p>
+        </fieldset>
+      </div>
+      <div class="sticky-save">
+        <span class="muted" id="changes-n">No changes yet</span><span style="flex:1"></span>
+        <button class="btn" id="cancel">Cancel</button>
+        <button class="btn primary" id="to-review" aria-disabled="true">Review changes ›</button>
+      </div>
+    </div>
+    <!-- Step 2: review -->
+    <div id="step2" style="display:none;flex-direction:column;min-height:0;flex:1">
+      <div class="bulk-head">
+        <div class="eyebrow">Step 2 of 2 · Review before applying</div>
+        <h2>3 cards will change</h2>
+        <p class="muted" style="margin:0;font-size:12px">Before → after for each card. The pictures are the live preview with the change applied; nothing is saved yet.</p>
+      </div>
+      <div class="bulk-body">
+        <table>
+          <thead><tr><th>Card</th><th>Changes</th></tr></thead>
+          <tbody id="review"></tbody>
+        </table>
+        <p class="subtle" style="margin:0;font-size:12px">Left alone: Goblin Tinkerer (a real card), Storm Kin (@riverglass's card).</p>
+      </div>
+      <div class="sticky-save">
+        <button class="btn" id="back">‹ Back</button><span style="flex:1"></span>
+        <button class="btn primary" id="apply">Apply to 3 cards</button>
+      </div>
+    </div>
+  </section>
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="callout" data-n="1" style="left:880px;top:612px">One new button in the existing DK5.4 bulk bar.</div>
+  <div class="callout" data-n="2" style="left:520px;top:130px">Mixed = no chip pressed and a dashed outline, plus a plain-words count (Figma's "Mixed", but said).</div>
+  <div class="callout" data-n="3" style="left:520px;top:300px">Two groups: changes that only touch the row (no re-bake) and changes that re-bake the card's picture.</div>
+</div>
+
+<div class="note">
+  <p><strong>What to try:</strong> "Edit fields…"; pick a Visibility and a Rarity; add a tag or remove one; "Review changes"; Apply. The toast's Undo puts the old values back.</p>
+  <ul>
+    <li>Only the owner's own PipGlyph cards in the selection are editable. A real card has no card yet, and another creator's card belongs to them (D3). Both are named, never silently skipped.</li>
+    <li>Each card goes through the SAME server checks as one edit: strong-language → private, print typography, the revise lock, one deferred re-bake each. One request and one revalidation.</li>
+    <li>The rule that an edit never changes a field its maker didn't touch holds here too: a field left on "Mixed" is not in the patch.</li>
+  </ul>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const tiles = [
+  ["Cinder Wolf", "original", "red-1", true], ["Ashfall Drake", "edited", "red-2", true], ["Goblin Tinkerer", "imported", null, true],
+  ["Tidecaller Adept", "original", "blue-1", false], ["Reef Leviathan", "imported", null, false], ["Storm Kin", "original", "blue-2", true, "@riverglass"],
+  ["Counterflow", "original", "multicolor-1", true], ["Brine Snap", "edited", "blue-1", false], ["Volcanic Rebirth", "original", "red-2", false],
+  ["Ember Lantern", "imported", null, false], ["Steamvent Cove", "original", "multicolor-2", false], ["Flashfire", "imported", null, false],
+];
+const L = { original: "Original", edited: "Edited", imported: "Imported", remix: "Remix" };
+tiles.forEach((t) => {
+  const b = document.createElement("button"); b.className = "tile"; b.setAttribute("aria-pressed", t[3]);
+  b.innerHTML = `<span class="check">${t[3] ? "✓" : ""}</span><div class="card ${t[2] ? "" : "printing"}"><div class="bar">${t[0]}</div><div class="art" style="${t[2] ? `background-image:url(../../../../public/defaults/deck-covers/${t[2]}.webp)` : ""}"></div><div class="tbar"></div><div class="box"></div></div><div class="cap"><span>${t[0]}</span><span class="badge ${t[1]}">${L[t[1]]}</span>${t[4] ? `<span class="subtle">by ${t[4]}</span>` : ""}</div>`;
+  b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", on); b.querySelector(".check").textContent = on ? "✓" : ""; const n = document.querySelectorAll('.tile[aria-pressed="true"]').length; $("count").innerHTML = `<strong>${n}</strong> selected <span class="muted">· ${n} cards</span>`; });
+  $("grid").appendChild(b);
+});
+const changes = {};
+function count() {
+  const n = Object.keys(changes).length;
+  $("changes-n").textContent = n ? `${n} change${n > 1 ? "s" : ""} to 3 cards` : "No changes yet";
+  $("to-review").setAttribute("aria-disabled", n ? "false" : "true");
+  ["f-vis", "f-rar", "f-tags", "f-col", "f-art"].forEach((id) => $(id).classList.toggle("changed", Boolean(changes[id])));
+}
+document.querySelectorAll('#bulk [role="radiogroup"]').forEach((g) => {
+  const row = g.closest(".frow");
+  g.querySelectorAll('[role="radio"]').forEach((c) => c.addEventListener("click", () => {
+    g.querySelectorAll('[role="radio"]').forEach((x) => { x.setAttribute("aria-checked", x === c); x.classList.remove("mixed"); });
+    changes[row.id] = c.textContent; const note = row.querySelector(".mixed-note"); if (note) note.textContent = `All 3 will be ${c.textContent.toLowerCase()}. (Was mixed.)`; count();
+  }));
+});
+document.querySelectorAll("#tag-list button").forEach((b) => b.addEventListener("click", () => { const chip = b.parentElement; chip.classList.toggle("removing"); const any = document.querySelectorAll(".tagchip.removing").length; changes["f-tags"] = any || changes["f-tags-add"] ? "tags" : undefined; if (!changes["f-tags"]) delete changes["f-tags"]; count(); }));
+$("tag-add-btn").addEventListener("click", () => { const v = $("tag-add").value.trim().toLowerCase().replace(/\s+/g, "-"); if (!v) return; const s = document.createElement("span"); s.className = "tagchip"; s.style.borderColor = "var(--color-gold)"; s.innerHTML = `+ ${v} <span class="subtle">· new on 3</span>`; $("tag-list").appendChild(s); $("tag-add").value = ""; changes["f-tags"] = "tags"; changes["f-tags-add"] = v; count(); });
+document.querySelector("#f-art input").addEventListener("input", (e) => { if (e.target.value) changes["f-art"] = e.target.value; else delete changes["f-art"]; count(); });
+const own = [["Cinder Wolf", "red-1", "Public", "Uncommon", "dragons, fire"], ["Ashfall Drake", "red-2", "Public", "Rare", "dragons, fire"], ["Counterflow", "multicolor-1", "Private", "Rare", "fire, ember-tide"]];
+function review() {
+  const tb = $("review"); tb.innerHTML = "";
+  own.forEach((c, i) => {
+    const lines = [];
+    if (changes["f-vis"] && changes["f-vis"] !== c[2]) {
+      const strong = i === 2 && changes["f-vis"] !== "Private";
+      lines.push(strong ? `<div>Visibility: <span class="to">stays Private</span> <span class="badge edited">kept private</span><div class="subtle" style="font-size:12px">Its text holds strong language — the same rule as one save.</div></div>` : `<div>Visibility: <span class="from">${c[2]}</span> → <span class="to">${changes["f-vis"]}</span></div>`);
+    }
+    if (changes["f-rar"] && changes["f-rar"] !== c[3]) lines.push(`<div>Rarity: <span class="from">${c[3]}</span> → <span class="to">${changes["f-rar"]}</span> <span class="subtle">· re-bake</span></div>`);
+    const removed = [...document.querySelectorAll(".tagchip.removing")].map((x) => x.firstChild.textContent.trim());
+    if (changes["f-tags-add"]) lines.push(`<div>Tags: + ${changes["f-tags-add"]}</div>`);
+    removed.filter((t) => c[4].includes(t)).forEach((t) => lines.push(`<div>Tags: − ${t}</div>`));
+    if (changes["f-col"]) lines.push(`<div>Collector line: → ${changes["f-col"]} <span class="subtle">· re-bake</span></div>`);
+    if (changes["f-art"]) lines.push(`<div>Artist credit: → ${changes["f-art"]} <span class="subtle">· re-bake</span></div>`);
+    const art = `background-image:url(../../../../public/defaults/deck-covers/${c[1]}.webp)`;
+    const changesPic = Boolean(changes["f-rar"] || changes["f-col"] || changes["f-art"]);
+    tb.insertAdjacentHTML("beforeend", `<tr><td><div class="pair"><div class="card"><div class="bar">${c[0]}</div><div class="art" style="${art}"></div><div class="tbar"></div><div class="box"></div></div>${changesPic ? `<span>→</span><div class="card" style="outline:2px solid var(--color-gold)"><div class="bar">${c[0]}</div><div class="art" style="${art}"></div><div class="tbar"></div><div class="box"></div></div>` : ""}</div></td><td>${lines.join("") || '<span class="subtle">No change (already so)</span>'}</td></tr>`);
+  });
+}
+function step(n) { $("step1").style.display = n === 1 ? "flex" : "none"; $("step2").style.display = n === 2 ? "flex" : "none"; }
+$("open-bulk").addEventListener("click", () => { $("bulk").hidden = false; $("scrim").hidden = false; step(1); });
+$("cancel").addEventListener("click", () => { $("bulk").hidden = true; $("scrim").hidden = true; });
+$("to-review").addEventListener("click", () => { if ($("to-review").getAttribute("aria-disabled") === "true") return; review(); step(2); });
+$("back").addEventListener("click", () => step(1));
+$("apply").addEventListener("click", () => {
+  $("bulk").hidden = true; $("scrim").hidden = true;
+  const t = $("toast"); t.innerHTML = `3 cards updated. <span class="subtle">New pictures bake in the background.</span> <button class="btn sm" id="undo">Undo</button>`; t.hidden = false;
+  $("undo").addEventListener("click", () => { t.innerHTML = "Put back as they were."; setTimeout(() => (t.hidden = true), 1800); });
+});
+$("callouts").addEventListener("change", (ev) => document.body.classList.toggle("hide-callouts", !ev.target.checked));
+</script>
+</body>
+</html>
