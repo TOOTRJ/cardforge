@@ -26,7 +26,7 @@ export default async function NotificationsPage() {
   if (items.some((item) => !item.readAt)) await markAllNotificationsSeen();
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <NotificationsSeen />
       <PageHeader
         eyebrow="Activity"

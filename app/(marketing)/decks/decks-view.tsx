@@ -11,7 +11,7 @@ import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import {
-  DECK_GRID_CLASS,
+  DeckGrid,
   DECK_GRID_SIZES,
   DeckTile,
   DeckTileSkeleton,
@@ -21,6 +21,7 @@ import {
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
 import { ROW_MAX } from "@/components/gallery/card-row";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
@@ -29,6 +30,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
 import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
@@ -51,8 +53,6 @@ const PAGE_SIZE = 24;
 
 /** The one place search, the format filter and paging live. */
 export const DECKS_BROWSE_PATH = "/decks/browse";
-
-const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 export type DecksViewParams = {
   page: number;
@@ -106,7 +106,7 @@ export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -114,6 +114,7 @@ export function DecksLanding() {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Public"
         title="Community decks"
         description={DECKS_DESCRIPTION}
@@ -124,7 +125,7 @@ export function DecksLanding() {
 
       {/* Search + browse-by first: a search is a navigation to the browse
           route, and the format chips are the crawlable way in. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <BrowseSearchBox
           browsePath={DECKS_BROWSE_PATH}
           placeholder="Search decks by name or description"
@@ -176,7 +177,7 @@ export function DecksLanding() {
           </Suspense>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -192,6 +193,7 @@ async function DecksTrendingCards() {
     <TrendingCardsSection
       cards={trending}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
       eyebrow="Trending cards"
       heading="Cards to build around"
       description="The community's hottest cards this week — start a deck around one, or open it to add it to a deck you have."
@@ -218,7 +220,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -227,6 +229,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Community decks"
         title="Browse decks"
         description="Search every public deck by name or description, sort it and narrow by format."
@@ -242,7 +245,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
 
       {/* The Suspense boundary contains DecksSearch's useSearchParams() CSR
           bailout so the shell still server-renders. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <Suspense fallback={null}>
           <DecksSearch />
         </Suspense>
@@ -266,7 +269,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-6">
         {!configured ? (
           <DecksOffline />
         ) : (
@@ -290,7 +293,7 @@ export function DecksBrowse({ page, search, format, sort, owner }: DecksViewPara
           <DeckFormatLinks current={format} />
         </Suspense>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -364,11 +367,11 @@ async function PublicDecksResults({
 
   return (
     <>
-      <div className={DECK_GRID_CLASS}>
+      <DeckGrid>
         {decks.map((deck) => (
           <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} sizes={DECK_GRID_SIZES} />
         ))}
-      </div>
+      </DeckGrid>
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
@@ -398,10 +401,10 @@ async function PublicDecksResults({
 
 function DecksSkeletonGrid({ count }: { count: number }) {
   return (
-    <div className={DECK_GRID_CLASS}>
+    <DeckGrid>
       {Array.from({ length: count }).map((_, i) => (
         <DeckTileSkeleton key={i} />
       ))}
-    </div>
+    </DeckGrid>
   );
 }

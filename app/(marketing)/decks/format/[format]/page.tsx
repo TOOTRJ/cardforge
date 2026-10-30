@@ -5,13 +5,14 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { DECK_GRID_CLASS, DECK_GRID_SIZES, DeckTile } from "@/components/decks/deck-tile";
+import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
 import { listPublicDecks } from "@/lib/decks/queries";
 import { FORMAT_HUB_MIN_DECKS, formatHubCopy, isDeckFormat, listFormatHubs } from "@/lib/cards/hubs";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /decks/format/[format] — one page per deck format with the community's
@@ -55,7 +56,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
   const art = await listDeckTileArt(decks, { anonymous: true });
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -69,11 +70,11 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
           items: decks.map((deck) => ({ name: deck.title, path: `/deck/${deck.slug}` })),
         })}
       />
-      <PageHeader eyebrow="Decks · format" title={copy.title} description={copy.intro} />
+      <PageHeader className="pb-6" eyebrow="Decks · format" title={copy.title} description={copy.intro} />
       <p className="mt-4 text-sm text-muted">
         {count} public deck{count === 1 ? "" : "s"} in this format so far.
       </p>
-      <div className={`mt-8 ${DECK_GRID_CLASS}`}>
+      <DeckGrid className="mt-6">
         {decks.map((deck) => (
           <DeckTile
             key={deck.id}
@@ -83,7 +84,7 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
             likeRedirect={`/decks/format/${format}`}
           />
         ))}
-      </div>
+      </DeckGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
         <NewDeckButton format={format} size="sm">
           Build a {copy.title.replace("Custom ", "").replace(" decks", "")} deck
@@ -96,6 +97,6 @@ export default async function FormatHubPage({ params }: { params: Promise<Params
         </Button>
       </div>
       <DeckFormatLinks current={format} />
-    </div>
+    </PageContainer>
   );
 }

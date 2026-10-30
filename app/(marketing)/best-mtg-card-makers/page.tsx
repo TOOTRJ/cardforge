@@ -7,6 +7,7 @@ import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { COMPARISON_FAQ } from "@/lib/content/faq";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /best-mtg-card-makers
@@ -107,9 +108,7 @@ export default function BestMtgCardMakersPage() {
   };
 
   return (
-    <div
-      className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8"
-    >
+    <PageContainer className="py-16">
       <div className="max-w-4xl">
       <JsonLd data={faqJsonLd} />
       <JsonLd
@@ -360,6 +359,6 @@ export default function BestMtgCardMakersPage() {
         </div>
       </section>
     </div>
-    </div>
+    </PageContainer>
   );
 }

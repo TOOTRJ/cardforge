@@ -10,6 +10,7 @@ import {
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { IconTile } from "@/components/ui/icon-tile";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { PageContainer } from "@/components/layout/page-container";
 
 type Feature = {
   icon: LucideIcon;
@@ -65,7 +66,7 @@ const features: Feature[] = [
 
 export function FeatureGrid() {
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+    <PageContainer as="section" className="py-24">
       <SectionHeading
         align="center"
         eyebrow="Built for Magic fans"
@@ -90,6 +91,6 @@ export function FeatureGrid() {
           </SurfaceCard>
         ))}
       </div>
-    </section>
+    </PageContainer>
   );
 }

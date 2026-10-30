@@ -18,6 +18,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { TOOL_COMPARISON, TOOLS, type ToolEntry } from "@/lib/content/tools";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /tools — the directory of what PipGlyph lets you do (TODO NV7): one card
@@ -63,7 +64,7 @@ const TOOL_ICONS: Record<string, LucideIcon> = {
 
 export default function ToolsPage() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <JsonLd
         data={itemListJsonLd({
           name: "PipGlyph tools",
@@ -97,7 +98,7 @@ export default function ToolsPage() {
           <ToolCard tool={TOOL_COMPARISON} tone="quiet" />
         </li>
       </ul>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -5,6 +5,7 @@ import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { siteConfig } from "@/lib/site-config";
 import type { BillingViewer } from "@/lib/billing/viewer";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The storefront body, shared by two routes:
@@ -19,7 +20,7 @@ import type { BillingViewer } from "@/lib/billing/viewer";
 
 export function PricingContent({ initialViewer }: { initialViewer?: BillingViewer }) {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+    <PageContainer className="py-16 lg:py-24">
       <Suspense fallback={null}>
         <BillingReturnToast />
       </Suspense>
@@ -69,6 +70,6 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
       <p className="mx-auto mt-16 max-w-3xl text-center text-xs leading-5 text-subtle">
         {siteConfig.disclaimer}
       </p>
-    </div>
+    </PageContainer>
   );
 }

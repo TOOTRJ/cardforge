@@ -30,6 +30,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { PageContainer } from "@/components/layout/page-container";
 
 // File-system param name is `username` because the sibling
 // `(marketing)/card/[username]/[slug]` route uses the same first
@@ -120,7 +121,7 @@ export default async function EditCardPage({
   const previewCard = card.frame_preview === true;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <PageContainer className="py-10">
       <PageHeader
         eyebrow="Editing"
         title={card.title}
@@ -215,6 +216,6 @@ export default async function EditCardPage({
           defaultFooterText={exportStamp.footerText}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

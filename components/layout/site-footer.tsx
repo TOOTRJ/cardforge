@@ -1,20 +1,19 @@
 import Link from "next/link";
 import { Logo } from "./logo";
 import { FooterNavLink } from "./footer-nav-link";
-import { WIDE_FRAME_CLASS } from "./wide-frame";
+import { PageContainer } from "./page-container";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { cn } from "@/lib/utils";
 
 // The site footer (TODO NV2): the brand, then four EVEN columns — Create ·
 // Community · Learn · Company — from siteConfig.footerNav. The grid has one
 // track per column (the old one had four tracks for five, and "Legal"
 // wrapped onto a row of its own). The wide frame, like the header (TODO
-// WD2). Static: no cookie read; the links' nav_click is a client island.
+// WD2, owner decision D7). Static: no cookie read; the links' nav_click is a client island.
 export function SiteFooter() {
   return (
     <footer className="mt-24 border-t border-gold/20 bg-background">
-      <div className={cn(WIDE_FRAME_CLASS, "py-14")}>
+      <PageContainer size="wide" className="py-14">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,4fr)] lg:gap-12">
           <div className="flex flex-col gap-4">
             <Logo />
@@ -60,7 +59,7 @@ export function SiteFooter() {
           </p>
           <p className="max-w-3xl md:text-right">{siteConfig.disclaimer}</p>
         </div>
-      </div>
+      </PageContainer>
     </footer>
   );
 }

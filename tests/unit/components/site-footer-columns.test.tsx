@@ -18,7 +18,7 @@ vi.mock("@/lib/analytics/funnel-client", () => ({
 }));
 
 import { SiteFooter } from "@/components/layout/site-footer";
-import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
+import { pageContainerClass } from "@/components/layout/page-container";
 import { siteConfig } from "@/lib/site-config";
 
 afterEach(() => {
@@ -40,8 +40,8 @@ describe("the footer", () => {
   it("uses the wide frame, like the header (the logo never moves)", () => {
     render(<SiteFooter />);
     const frame = screen.getByRole("contentinfo").firstElementChild!;
-    for (const cls of WIDE_FRAME_CLASS.split(" ")) expect(frame.className).toContain(cls);
-    expect(WIDE_FRAME_CLASS).toContain("max-w-[1920px]");
+    for (const cls of pageContainerClass("wide").split(" ")) expect(frame.className).toContain(cls);
+    expect(pageContainerClass("wide")).toContain("max-w-[1920px]");
   });
 
   it("keeps the WotC disclaimer", () => {

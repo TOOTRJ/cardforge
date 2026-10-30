@@ -9,6 +9,8 @@ import { HubLinks } from "@/components/cards/hub-links";
 import { breadcrumbJsonLd, itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listGalleryCards } from "@/lib/cards/queries";
 import { isIndexableTagHub, listTagHubs, resolveTagHub, TAG_HUB_MIN_CARDS } from "@/lib/cards/hubs";
+import { PageContainer } from "@/components/layout/page-container";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // /gallery/tag/[tag] — a real page per discovery tag, built from the public
@@ -55,7 +57,7 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
   const galleryHref = `/gallery/browse?tag=${encodeURIComponent(hub.tag)}`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -73,17 +75,18 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
         })}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Gallery · tag"
         title={`Custom MTG cards tagged "${hub.tag}"`}
         description={`${hub.count} public card${hub.count === 1 ? "" : "s"} carry the #${hub.tag} tag — all designed with PipGlyph's card creator. ${
           hub.count < TAG_HUB_MIN_CARDS ? "A young tag: add yours to grow it." : "Sorted by what the community liked most."
         }`}
       />
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <CardGrid className="mt-6">
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
-      </div>
+      </CardGrid>
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
         <Button asChild size="sm">
           <Link href="/create">
@@ -100,6 +103,6 @@ export default async function TagHubPage({ params }: { params: Promise<Params> }
         </Button>
       </div>
       <HubLinks currentTag={hub.slug} />
-    </div>
+    </PageContainer>
   );
 }

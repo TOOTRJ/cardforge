@@ -57,14 +57,13 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { WIDE_FRAME_CLASS } from "@/components/layout/wide-frame";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
-import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // The deck page (TODO DK5.1) — ONE URL, read-only for visitors, the owner's
@@ -72,7 +71,7 @@ import { cn } from "@/lib/utils";
 // actions anyone has), the owner's bar, the CARDS — first, in the viewer's
 // view with the sticky summary bar — then the breakdown (the owner's format
 // check with it) and the guide. The whole page is the WIDE frame (TODO WD5,
-// components/layout/wide-frame.ts: up to 1920 px, aligned with the header):
+// <PageContainer size="wide">: up to 1920 px, aligned with the header):
 // the cards spread across it; running text keeps its own measure.
 //
 // Reads: the deck and the viewer first (everything hangs on them), then ONE
@@ -271,7 +270,7 @@ export default async function DeckDetailPage({
   }
 
   return (
-    <div className={cn(WIDE_FRAME_CLASS, "py-6 sm:py-8")}>
+    <PageContainer size="wide" className="py-6 sm:py-8">
       {/* Structured data only for indexable (public) decks — unlisted pages
           are noindex, so schema there is dead weight. */}
       {isPublic ? (
@@ -542,7 +541,7 @@ export default async function DeckDetailPage({
         </Suspense>
       </div>
       <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
-    </div>
+    </PageContainer>
   );
 }
 

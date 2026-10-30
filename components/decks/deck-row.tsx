@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Flame } from "lucide-react";
 import {
-  DECK_ROW_GRID_CLASS,
+  DeckGrid,
   DECK_ROW_SIZES,
   DeckTile,
   DeckTileSkeleton,
@@ -64,13 +64,13 @@ export function DeckRowSection({
           </Link>
         ) : null}
       </div>
-      <div className={DECK_ROW_GRID_CLASS}>
+      <DeckGrid>
         {decks.slice(0, DECK_ROW_MAX).map((deck, index) => (
           <div key={deck.id} className={cn("min-w-0 flex-col", deckRowTileClass(index))}>
             <DeckTile deck={deck} art={art.get(deck.id)} sizes={DECK_ROW_SIZES} likeRedirect={likeRedirect} />
           </div>
         ))}
-      </div>
+      </DeckGrid>
     </section>
   );
 }
@@ -123,11 +123,11 @@ export function DeckRowSkeleton() {
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-56" />
       </div>
-      <div className={DECK_ROW_GRID_CLASS}>
+      <DeckGrid>
         {Array.from({ length: DECK_ROW_MAX }).map((_, index) => (
           <DeckTileSkeleton key={index} className={deckRowTileClass(index)} />
         ))}
-      </div>
+      </DeckGrid>
     </div>
   );
 }

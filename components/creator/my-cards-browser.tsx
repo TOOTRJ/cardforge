@@ -57,6 +57,12 @@ import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { CardWithStats, RemixParentLink } from "@/lib/cards/queries";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
+import {
+  CARD_GRID_CLASS,
+  CARD_GRID_COMPACT_CLASS,
+  DASHBOARD_CARD_GRID_SIZES,
+  DASHBOARD_COMPACT_GRID_SIZES,
+} from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // MyCardsBrowser — the whole /dashboard/cards library: filter tabs (All /
@@ -96,9 +102,17 @@ const PAGE_SIZE: Record<MyCardsView, number> = {
   list: 50,
 };
 
+// The card grids' columns by the width of the list (TODO WD4,
+// components/cards/card-grid.tsx): 2 – 6 large tiles, 2 – 8 compact ones,
+// inside the `@container` below — and their tiles' `sizes` in the
+// dashboard's column.
 const GRID_CLASS: Record<Exclude<MyCardsView, "list">, string> = {
-  grid: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
-  compact: "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5",
+  grid: CARD_GRID_CLASS,
+  compact: CARD_GRID_COMPACT_CLASS,
+};
+const GRID_SIZES: Record<Exclude<MyCardsView, "list">, string> = {
+  grid: DASHBOARD_CARD_GRID_SIZES,
+  compact: DASHBOARD_COMPACT_GRID_SIZES,
 };
 
 const VIEW_OPTIONS: Array<{ value: MyCardsView; label: string; icon: LucideIcon }> = [
@@ -498,30 +512,34 @@ export function MyCardsBrowser({
               ))}
         </ul>
       ) : (
-        <div className={GRID_CLASS[view]}>
-          {isLiked
-            ? visibleLiked.map((card) => (
-                <LikedCardTile
-                  key={card.id}
-                  card={card}
-                  profileOverrides={profileOverrides}
-                  selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
-                  decks={likedDecksFor(card)}
-                />
-              ))
-            : visibleOwned.map((card) => (
-                <DashboardCardTile
-                  key={card.id}
-                  card={card}
-                  profileOverrides={profileOverrides}
-                  isSelected={selection.has(card.id)}
-                  selectMode={selectMode}
-                  density={view === "compact" ? "compact" : "regular"}
-                  caption={remixCaption(card)}
-                  decks={ownedDecksFor(card)}
-                  onToggle={handleToggle}
-                />
-              ))}
+        <div className="@container">
+          <div className={GRID_CLASS[view]}>
+            {isLiked
+              ? visibleLiked.map((card) => (
+                  <LikedCardTile
+                    key={card.id}
+                    card={card}
+                    profileOverrides={profileOverrides}
+                    selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
+                    decks={likedDecksFor(card)}
+                    sizes={GRID_SIZES[view]}
+                  />
+                ))
+              : visibleOwned.map((card) => (
+                  <DashboardCardTile
+                    key={card.id}
+                    card={card}
+                    profileOverrides={profileOverrides}
+                    isSelected={selection.has(card.id)}
+                    selectMode={selectMode}
+                    density={view === "compact" ? "compact" : "regular"}
+                    caption={remixCaption(card)}
+                    decks={ownedDecksFor(card)}
+                    sizes={GRID_SIZES[view]}
+                    onToggle={handleToggle}
+                  />
+                ))}
+          </div>
         </div>
       )}
 

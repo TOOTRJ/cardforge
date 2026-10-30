@@ -21,7 +21,7 @@ export default async function AdminMessagesLayout({
   const unread = await getAdminUnreadThreadCount();
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Admin · Messages"
         title="Conversations"

@@ -17,6 +17,7 @@ import {
 } from "@/lib/challenges/queries";
 import { listTrendingTags } from "@/lib/cards/queries";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const metadata: Metadata = {
   title: "Design Challenges",
@@ -39,7 +40,7 @@ export default async function ChallengesPage() {
   const past = challenges.filter((c) => !isActive(c));
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -167,6 +168,6 @@ export default async function ChallengesPage() {
           </div>
         </section>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }

@@ -19,6 +19,7 @@ import {
   type RequestedFrameStatus,
 } from "@/lib/frames/requested-frames";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /frames/requested — the public "Requested frames" list (TODO NV12, part
@@ -80,7 +81,7 @@ export default async function RequestedFramesPage() {
   const { frames, error } = await getRequestedFrames();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -192,6 +193,6 @@ export default async function RequestedFramesPage() {
           </SurfaceCard>
         </aside>
       </div>
-    </div>
+    </PageContainer>
   );
 }

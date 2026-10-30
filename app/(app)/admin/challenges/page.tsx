@@ -22,7 +22,7 @@ export default async function ChallengesAdminPage() {
   const challenges = await listChallenges();
 
   return (
-    <DashboardShell>
+    <DashboardShell readable>
       <PageHeader
         eyebrow="Admin"
         title="Design challenges"

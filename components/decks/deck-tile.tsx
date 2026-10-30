@@ -250,22 +250,48 @@ export function DeckTileSkeleton({ className }: { className?: string }) {
   );
 }
 
-/** The deck grids: one column on a phone, two from sm, three from lg. */
-export const DECK_GRID_CLASS = "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3";
+/** The deck grids and one-row strips (TODO WD3): 1 / 2 / 3 / 4 columns by
+ *  the width of the box they sit in — the card grid's steps
+ *  (components/cards/card-grid.tsx: 36 / 56 / 84rem), each a column fewer
+ *  than a card grid's, so a tile stays ~280–450 px past a phone's single
+ *  column: wide enough for its cover's fan and its title. 1, 2, 3 and 4 divide a 24-deck page. The grid
+ *  sits inside an `@container` element (DeckGrid brings one). */
+export const DECK_GRID_CLASS = "grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3 @min-[84rem]:grid-cols-4";
 
-/** One-row deck strips (trending): 1 / 2 / 3 / 4 columns, the tiles past
- *  the last column hidden — never wrapped (the card rows' rule). */
-export const DECK_ROW_GRID_CLASS = "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
-
-/** Visibility class for the tile at `index` — matches DECK_ROW_GRID_CLASS. */
+/** A one-row strip (trending) is the same grid with the tiles past the last
+ *  column hidden — never wrapped (the card rows' rule). Visibility class for
+ *  the strip's tile at `index`. */
 export function deckRowTileClass(index: number): string {
-  if (index >= 3) return "hidden xl:flex";
-  if (index >= 2) return "hidden lg:flex";
-  if (index >= 1) return "hidden sm:flex";
+  if (index >= 3) return "hidden @min-[84rem]:flex";
+  if (index >= 2) return "hidden @4xl:flex";
+  if (index >= 1) return "hidden @xl:flex";
   return "flex";
 }
 
-/** The row's tile column width, for the covers' `sizes`. */
-export const DECK_ROW_SIZES = "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
-/** The grids' tile column width. */
-export const DECK_GRID_SIZES = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
+/** The covers' `sizes`: what a DeckGrid tile measures in ONE frame, at
+ *  every window width, never less (tests/unit/components/card-grid.test.ts)
+ *  — a grid passes the list of the frame it is in. This one is the WIDE
+ *  page frame's (/decks, its browse and format hubs, a profile, the
+ *  strips): window steps 608 / 944 / 1408 / 1920 px. */
+export const DECK_GRID_SIZES =
+  "(min-width: 1920px) 460px, (min-width: 1408px) calc((100vw - 124px) / 4), (min-width: 944px) calc((100vw - 88px) / 3), (min-width: 608px) calc((100vw - 52px) / 2), calc(100vw - 32px)";
+/** The strips' tiles are the grid's. */
+export const DECK_ROW_SIZES = DECK_GRID_SIZES;
+/** A DeckGrid tile in the DASHBOARD's column (the wide frame less its
+ *  220 px rail and 32 px gap from 1024 px): My Decks. Steps 608 / 944 /
+ *  1024 (the rail: 2) / 1212 (3) / 1660 (4). */
+export const DASHBOARD_DECK_GRID_SIZES =
+  "(min-width: 1920px) 386px, (min-width: 1660px) calc((100vw - 376px) / 4), (min-width: 1212px) calc((100vw - 356px) / 3), (min-width: 1024px) calc((100vw - 336px) / 2), (min-width: 944px) calc((100vw - 88px) / 3), (min-width: 608px) calc((100vw - 52px) / 2), calc(100vw - 32px)";
+/** A DeckGrid tile in a frame narrower than the wide page's — the card
+ *  page's "Decks with this card" (1152 px frame) and its modal: generous,
+ *  never less. */
+export const DECK_NARROW_FRAME_SIZES = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
+
+/** DECK_GRID_CLASS in its own query container. */
+export function DeckGrid({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className="@container">
+      <div className={cn(DECK_GRID_CLASS, className)}>{children}</div>
+    </div>
+  );
+}

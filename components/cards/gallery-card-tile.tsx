@@ -13,9 +13,13 @@ import { cardTypeHasRarity } from "@/lib/cards/emblem";
 export function GalleryCardTile({
   card,
   isAuthed,
+  sizes,
 }: {
   card: CardWithStats;
   isAuthed: boolean;
+  /** The grid's `sizes` (components/cards/card-grid.tsx) — a container-query
+   *  grid passes its frame's list; else the thumbnail's generous default. */
+  sizes?: string;
 }) {
   const ownerLabel =
     card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
@@ -52,6 +56,7 @@ export function GalleryCardTile({
             // An emblem names no rarity (CR 114, TODO 6.23).
             alt: `${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity && cardTypeHasRarity(card.card_type) ? `, ${card.rarity} rarity` : ""}`,
             previewData: cardToPreviewData(card, null),
+            sizes,
           }}
         />
         {remixHref ? (

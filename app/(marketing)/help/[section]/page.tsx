@@ -23,6 +23,7 @@ import {
   type HelpSection,
 } from "@/lib/content/help";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /help/[section] — one help topic (TODO NV6): its how-to, then its answers
@@ -87,7 +88,7 @@ export default async function HelpSectionPage({
   const toc = tocOf(section);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12 lg:py-16">
       <div className="min-w-0 max-w-3xl">
         {markup.length > 0 ? <JsonLd data={faqJsonLd(markup)} /> : null}
         <Breadcrumbs
@@ -171,7 +172,7 @@ export default async function HelpSectionPage({
           <ArticleToc items={toc} variant="sidebar" />
         </div>
       </aside>
-    </div>
+    </PageContainer>
   );
 }
 
