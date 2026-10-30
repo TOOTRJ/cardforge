@@ -1746,6 +1746,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0151 — the deck view log: one row per (deck, viewer, UTC
+      // day), written by record_deck_view (service role), read by
+      // deck_views_by_day (the owner). No API role reads it.
+      deck_views: {
+        Row: {
+          deck_id: string;
+          day: string;
+          viewer_key: string;
+        };
+        Insert: {
+          deck_id: string;
+          day: string;
+          viewer_key: string;
+        };
+        Update: {
+          deck_id?: string;
+          day?: string;
+          viewer_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_views_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Migration 0151 — today's salt for deck_views keys (service role).
+      deck_view_salts: {
+        Row: {
+          day: string;
+          salt: string;
+        };
+        Insert: {
+          day: string;
+          salt: string;
+        };
+        Update: {
+          day?: string;
+          salt?: string;
+        };
+        Relationships: [];
+      };
       decks: {
         Row: {
           cover_position: Json | null;
@@ -2020,6 +2065,12 @@ export type Database = {
       increment_deck_view: {
         Args: { p_deck_id: string };
         Returns: undefined;
+      };
+      // Migration 0151 — the caller's OWN deck's viewers per UTC day, oldest
+      // first, zeros included; no rows for anyone else's deck.
+      deck_views_by_day: {
+        Args: { p_deck_id: string; p_days?: number };
+        Returns: { day: string; views: number }[];
       };
       // Migration 0151 — a deck's AI guide as its page shows it to the
       // caller (lib/decks/guides.ts): no row, or `readable` with the text

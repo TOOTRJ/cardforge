@@ -356,3 +356,25 @@ instead. Each bullet: what the header says, and what is true now.
   `guard_deck_media_columns` is unchanged (its refusal still says "one of
   your own uploads"). The app's twin is `isDefaultDeckCover`
   (`lib/decks/default-covers.ts`), also accepted by `isAllowedMediaUrl`.
+- **0055 ("Decks: public + unlisted readable, private by owner"; the
+  entries "visible when parent deck is readable" by its own visibility
+  list) and 0102 (deck likes readable when the deck is "public/unlisted, or
+  you own it")** — since 0151 an UNLISTED deck is link-only: the decks
+  policy admits it only to a request that names it, by its slug or id, in
+  the `x-pipglyph-deck` header (`requested_deck_link()`,
+  `lib/decks/deck-link.ts`), and the entries' and likes' read policies ask
+  the decks policy (`exists (select 1 from decks …)`) instead of restating a
+  visibility list. Public decks and the owner's own read as before.
+- **0085 (deck guides' "Read follows the deck's own visibility; the
+  Pro-viewer gate lives in app code")** — since 0151 no API role reads
+  `deck_guides` (its select policy is dropped, the grants revoked): ONE
+  definer function, `deck_guide_for_viewer(deck)`, hands out a guide as the
+  deck page shows it — the text to a Pro viewer only (`viewer_is_pro()`,
+  entitlements.ts's rule), redacted for anyone but the owner (the deck's
+  hidden cards read "Private card" or their printing's name).
+- **0055 / 0103 (3: `increment_deck_view(deck)`, "anon views are real
+  views"; `decks.view_count` "bumped by increment_deck_view")** — since 0151
+  the function is dropped: a view is counted once per viewer, deck and UTC
+  day by `record_deck_view` (service role only; never the owner, a crawler
+  or a prefetch — `lib/decks/views.ts`), logged in `deck_views` under a salt
+  of the day, and the column's comment says so.

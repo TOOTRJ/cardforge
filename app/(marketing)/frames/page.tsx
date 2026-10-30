@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Frame, MessageSquarePlus, PenTool } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
+import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -86,7 +87,7 @@ export default async function FramesPage() {
   const entries = galleryEntries(sections);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: "Card frames on PipGlyph",
@@ -198,7 +199,7 @@ export default async function FramesPage() {
           </Button>
         </div>
       </SurfaceCard>
-    </div>
+    </PageContainer>
   );
 }
 

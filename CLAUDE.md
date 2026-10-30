@@ -2015,6 +2015,38 @@ Rules and gotchas:
   every commander format, CR 103.5c); a kept hand (Keep or a draw) takes
   no more mulligans. Keywords read only the rules text a PipGlyph card carries
   (`lib/decks/keyword-frequency.ts`; deck_cards stores no Oracle text).
+  What the API hands out matches the page (TODO DK0.11, migration 0151).
+  An UNLISTED deck is link-only: the decks policy admits it only to a
+  request that NAMES it — its slug or id in the `x-pipglyph-deck` header,
+  `viaDeckLink` (`lib/decks/deck-link.ts`) — so no list holds it, and its
+  entries, likes and feedback follow (their policies ask the decks policy,
+  never a visibility list of their own). A read or write that reaches an
+  unlisted deck as a visitor names it (the page's deck by slug and rows by
+  id, the share image, the like, the deck feedback); without it the deck
+  reads as missing. A deck GUIDE is read through ONE function,
+  `deck_guide_for_viewer` (`getDeckGuide`): the text only for a Pro viewer
+  (`viewer_is_pro()`, held to entitlements.ts by a test), redacted for
+  anyone but the owner — a card the visitor's list hides reads "Private
+  card", or its printing's name — and `withheld` (the teaser) otherwise; no
+  API role reads `deck_guides`, and the stored text is never rewritten. The
+  redaction matches names FOLDED (`guide_name_fold`: typedForMatching's
+  six, accents, æ / œ / ß, spaces) in ONE pass of ONE longest-first
+  pattern built once per guide, each match named by its fold in a jsonb
+  map (one the map can't name reads "Private card": fail closed), the shown
+  names that hold a hidden one as guards kept whole — never a chain of
+  replaces (a replacement was read again), never a regex per name per
+  match; past 150 hidden names (or 400 in all) a visitor gets the teaser. A
+  VIEW counts once per viewer, deck and UTC day (`recordDeckView`,
+  `lib/decks/views.ts` → `record_deck_view`, service role only): never the
+  owner, a crawler (isbot), an empty user agent or a prefetch; the viewer is
+  an HMAC of the user id, else the network + agent, re-keyed in the database
+  by a SHA-256 under the day's salt, which it drops after the day — no
+  address, id or cookie is stored. `deck_views_by_day` is the owner's
+  per-day read (DK7.4's data); the weekly prune cron keeps 400 days.
+  Unlisted CARDS are still listable through the API (the same shape; a
+  follow-up). The app shipped BEFORE 0151 (#679): `getDeckGuide` and
+  `recordDeckView` fall back to main's calls on PGRST202 — remove both once
+  0151 is on production and dev.
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
