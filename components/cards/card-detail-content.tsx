@@ -15,14 +15,10 @@ import { after } from "next/server";
 import {
   ArrowLeft,
   ArrowUpRight,
-  BookOpen,
-  CalendarDays,
-  Clock,
+  ChevronRight,
+  Download,
   ExternalLink,
-  Eye,
   Flame,
-  Heart,
-  MessageCircle,
   Pencil,
   Repeat2,
   Sparkles,
@@ -47,6 +43,8 @@ import { profileMediaSrc } from "@/lib/media/media-urls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
+import { PageContainer } from "@/components/layout/page-container";
+import { cn } from "@/lib/utils";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
 import {
   countCardLikes,
@@ -108,21 +106,11 @@ import { formatShortDate } from "@/lib/format/dates";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
-// CardDetailContent — the shared body of the public card detail view.
-//
-// Rendered by BOTH:
-//   - app/(marketing)/card/[username]/[slug]/page.tsx  (variant="page")
-//   - app/@modal/(.)card/[username]/[slug]/page.tsx    (variant="modal",
-//     the intercepting route that shows the card in a dialog over the
-//     page the viewer clicked from)
-//
-// Variant differences:
-//   - "page" emits JSON-LD + breadcrumbs (crawlers only ever see the full
-//     page), the "Back to gallery" link, and the shared-element
-//     view-transition-name on the hero.
-//   - "modal" skips all of that — the dialog shell owns the close/expand
-//     affordances, and duplicating the view-transition-name while the
-//     originating grid tile is still on screen would void the transition.
+// CardDetailContent — the body of the public card page,
+// app/(marketing)/card/[username]/[slug]/page.tsx. It is the ONE card
+// detail view: every tile, row and link opens this page (the intercepting
+// route that drew a copy of it in a dialog, app/@modal, is gone — one
+// canonical page, one back button, one URL that looks the same on a reload).
 //
 // RLS gates which cards the viewer can read: anonymous + non-owner
 // viewers only see `public` / `unlisted` rows. Owners see their private
@@ -130,30 +118,18 @@ import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 // rendering before flipping visibility.
 // ---------------------------------------------------------------------------
 
-export type CardDetailVariant = "page" | "modal";
-
 export async function CardDetailContent({
   username,
   slug,
-  variant,
 }: {
   username: string;
   slug: string;
-  variant: CardDetailVariant;
 }) {
   const card = isSupabaseConfigured()
     ? await getCardByOwnerAndSlug(username, slug)
     : null;
 
-  if (!card) {
-    // In the modal the nearest not-found boundary is the root one, which
-    // would replace the whole page behind the dialog — render an inline
-    // empty state instead and let the shell's close button do its job.
-    if (variant === "modal") {
-      return <CardMissingNotice />;
-    }
-    notFound();
-  }
+  if (!card) notFound();
 
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
@@ -239,8 +215,7 @@ export async function CardDetailContent({
   const deckCount = publicDeckCount ?? inDecks.length;
 
   // Bump the view tally after the response ships — never for the owner's own
-  // views, and never blocking render. A modal open is a view of the card the
-  // same as the full page. Uses a public client + SECURITY DEFINER RPC, so it
+  // views, and never blocking render. Uses a public client + SECURITY DEFINER RPC, so it
   // can't rotate the viewer's session (see incrementCardView).
   if (!isOwner) {
     after(() => incrementCardView(card.id));
@@ -262,7 +237,7 @@ export async function CardDetailContent({
   // offers it, the details list it, the JSON-LD names it.
   const hasBackFace = rowHasBakedBack(card);
   const jsonLd =
-    variant === "page" && isShareable
+    isShareable
       ? buildCardJsonLd({
           inDecks,
           card,
@@ -273,14 +248,19 @@ export async function CardDetailContent({
         })
       : null;
 
+  const cardPath = `/card/${username}/${card.slug}`;
+  const isAuthed = Boolean(user);
+  // The visibility badge is the OWNER's reminder, and a visitor's only where
+  // it says something (an unlisted link); a public card needs no label.
+  const showVisibility = isOwner || card.visibility !== "public";
+
+  // The page, mobile first (TODO card page refactor, 2026-10-30): the card,
+  // then what you can DO with it (download, remix, add to deck — then like,
+  // share), the numbers, the card as TEXT ("Card details"), its creator; below
+  // the fold the decks it is in, its remixes, more cards, and the comments.
+  // From lg the card stays in view (sticky) beside that column.
   return (
-    <div
-      className={
-        variant === "modal"
-          ? "w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
-          : "mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8"
-      }
-    >
+    <PageContainer className="py-6 sm:py-10">
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -289,61 +269,50 @@ export async function CardDetailContent({
       ) : null}
       {/* Breadcrumbs only for indexable cards — unlisted pages are noindex,
           so hierarchy signals there are wasted bytes. */}
-      {variant === "page" && card.visibility === "public" ? (
+      {card.visibility === "public" ? (
         <JsonLd
           data={breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Gallery", path: "/gallery" },
-            { name: pageName, path: `/card/${username}/${card.slug}` },
+            { name: pageName, path: cardPath },
           ])}
         />
       ) : null}
-      {variant === "page" ? (
-        <Link
-          href="/gallery"
-          className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Back to gallery
-        </Link>
-      ) : null}
+      <CardBreadcrumbs pageName={pageName} />
 
-      <div className="flex flex-col gap-10">
       {/* grid-cols-1 (not the implicit auto column) so the info column is
           viewport-bound on mobile instead of spreading to max-content. */}
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div
-          className="mx-auto w-full max-w-sm"
-          // Matches the gallery / dashboard / profile / set thumbnails'
-          // view-transition-name so chromium-class browsers can animate a
-          // shared-element transition between the grid tile and this hero.
-          // Page variant only: in the modal the originating tile is still
-          // on screen, and duplicate names skip the transition entirely.
-          style={
-            variant === "page"
-              ? { viewTransitionName: `card-${card.id}` }
-              : undefined
-          }
-        >
-          {/* The ONE row → preview mapper (shared with the bake and every
-              tile), so the hero carries the design watermark and the
-              structured loyalty / saga content — a hand-built prop bag here
-              used to drop both and diverge from the stored render. The
-              hero is the live preview with its corner flip; `?face=back`
-              opens it flipped (TODO 5.3) — read by the client island, never
-              here, so the server render never varies on the query. */}
-          <CardHeroPreview
-            {...cardToPreviewData(card, profileOverrides)}
-            pipOverrides={pipOverrides}
-            backFace={(card.back_face as CardBackFace | null) ?? null}
-            backCard={backCard ? cardToPreviewData(backCard, profileOverrides) : null}
-          />
+      <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:gap-12">
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <div
+            className="mx-auto w-full max-w-sm lg:max-w-none"
+            // Matches the gallery / dashboard / profile thumbnails'
+            // view-transition-name so chromium-class browsers can animate a
+            // shared-element transition between the grid tile and this hero.
+            style={{ viewTransitionName: `card-${card.id}` }}
+          >
+            {/* The ONE row → preview mapper (shared with the bake and every
+                tile), so the hero carries the design watermark and the
+                structured loyalty / saga content — a hand-built prop bag here
+                used to drop both and diverge from the stored render. The
+                hero is the live preview with its corner flip; `?face=back`
+                opens it flipped (TODO 5.3) — read by the client island, never
+                here, so the server render never varies on the query. */}
+            <CardHeroPreview
+              {...cardToPreviewData(card, profileOverrides)}
+              pipOverrides={pipOverrides}
+              backFace={(card.back_face as CardBackFace | null) ?? null}
+              backCard={backCard ? cardToPreviewData(backCard, profileOverrides) : null}
+            />
+          </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
+        {/* A reading width for the column (its text and its strip). */}
+        <div className="flex min-w-0 max-w-2xl flex-col gap-6">
+          <header className="flex flex-col gap-2">
+            {showVisibility ? (
               <Badge
+                className="w-fit"
                 variant={card.visibility === "public" ? "primary" : "outline"}
               >
                 {/* The moderation lock (0156) is the owner's to read; a
@@ -351,27 +320,6 @@ export async function CardDetailContent({
                     reaches this page. */}
                 {isOwner ? ownerVisibilityLabel(card) : VISIBILITY_LABELS[card.visibility]}
               </Badge>
-              {ownerProfile?.username ? (
-                <Link
-                  href={`/profile/${ownerProfile.username}`}
-                  className="text-xs text-muted transition-colors hover:text-foreground"
-                >
-                  by{" "}
-                  <span className="font-mono text-foreground">
-                    @{ownerProfile.username}
-                  </span>
-                </Link>
-              ) : null}
-              <span className="text-xs text-subtle">· {createdAt}</span>
-            </div>
-            {isOwner && isModerationLocked(card) ? (
-              <p className="rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-sm leading-6 text-foreground">
-                {MODERATION_LOCK_NOTE}{" "}
-                <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
-                  Contact us
-                </Link>{" "}
-                if you have questions.
-              </p>
             ) : null}
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {pageName}
@@ -380,112 +328,115 @@ export async function CardDetailContent({
                 title bar — the H1 stays the card's name; "Also known as"
                 on a frame that prints no nickname. */}
             <NicknameLine nickname={card.nickname} frameStyle={card.frame_style} />
-            {/* Chunk 13: "Also remixed by N others" chip. Only renders
-                when this card was imported from Scryfall AND at least
-                one other public/unlisted remix exists. Click-through
-                lands on the gallery filtered by the same source. */}
-            {card.source_scryfall_id && otherRemixesCount > 0 ? (
-              <Link
-                href={`/gallery/browse?source=${encodeURIComponent(card.source_scryfall_id)}`}
-                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs text-foreground transition-colors hover:border-accent hover:bg-accent/15"
-              >
-                <Sparkles className="h-3 w-3 text-accent" aria-hidden />
-                Also remixed by {otherRemixesCount}{" "}
-                {otherRemixesCount === 1 ? "other" : "others"}
-              </Link>
-            ) : null}
-
-            {/* Provenance — a remix of another PipGlyph card, and/or based on a
-                real card imported from Scryfall. Both open in a new tab. */}
-            {remixParent ? (
-              <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted">
-                <Repeat2 className="h-4 w-4 text-primary-bright" aria-hidden />
-                Remixed from{" "}
-                <Link
-                  href={remixParent.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 font-medium text-foreground underline-offset-2 hover:text-primary-bright hover:underline"
-                >
-                  {remixParent.title}
-                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-              </p>
-            ) : null}
-            {card.source_scryfall_id ? (
-              <a
-                href={`/go/scryfall/${card.source_scryfall_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-1.5 text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
-              >
-                <Sparkles className="h-4 w-4 text-accent" aria-hidden />
-                Based on a real card — view on Scryfall
-                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              </a>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <LikeButton
-              cardId={card.id}
-              cardSlug={card.slug}
-              ownerUsername={username}
-              initialLiked={viewerLiked}
-              initialCount={likesCount}
-              requiresSignIn={!user}
+            <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
+              {ownerProfile?.username ? (
+                <>
+                  by
+                  <Link
+                    href={`/profile/${ownerProfile.username}`}
+                    className="font-mono text-foreground underline-offset-4 transition-colors hover:text-primary-bright hover:underline"
+                  >
+                    @{ownerProfile.username}
+                  </Link>
+                  <span aria-hidden>·</span>
+                </>
+              ) : null}
+              <time dateTime={card.created_at}>{createdAt}</time>
+            </p>
+            <CardProvenance
+              remixParent={remixParent}
+              sourceScryfallId={card.source_scryfall_id}
+              otherRemixesCount={otherRemixesCount}
             />
-            {/* Another creator's card into one of your decks (TODO DK9.4,
-                owner decision D3): a PUBLIC one by "Add to deck"; one that
-                isn't public only as a remix — the Remix button says so
-                (one button, never two to the same place). */}
-            <RemixButton
-              cardId={card.id}
-              requiresSignIn={!user}
-              label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
-              unavailableReason={isModerationLocked(card) ? MODERATION_LOCKED_REMIX_MESSAGE : undefined}
-            />
-            {!isOwner && card.visibility === "public" ? (
-              <AddToDeckButton
+          </header>
+
+          {/* The moderation lock (0156): the owner is told why the card
+              stays private, and where to ask. */}
+          {isOwner && isModerationLocked(card) ? (
+            <p className="rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-sm leading-6 text-foreground">
+              {MODERATION_LOCK_NOTE}{" "}
+              <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
+                Contact us
+              </Link>{" "}
+              if you have questions.
+            </p>
+          ) : null}
+
+          {/* The actions, in the order people reach for them: the card's
+              own (download, remix, add to deck — the owner's Edit first),
+              then the social row. On a phone the first row is a two-column
+              grid of full-width buttons. */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+              {isOwner ? (
+                <Button asChild className="w-full sm:w-auto">
+                  <Link href={`/card/${card.slug}/edit`}>
+                    <Pencil className="h-4 w-4" aria-hidden /> Edit card
+                  </Link>
+                </Button>
+              ) : null}
+              <DownloadModal
                 cardId={card.id}
-                cardTitle={card.title}
-                cardPath={`/card/${username}/${card.slug}`}
-                signedIn={Boolean(user)}
+                cardSlug={card.slug}
+                isPaid={entitlements.isPaid}
+                canBatch={entitlements.allowBatchExport}
+                downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
+                frameTemplate={frameTemplateOf(card.frame_style)}
+                hasBackFace={hasBackFace}
+                trigger={
+                  <Button variant={isOwner ? "outline" : "primary"} className="w-full sm:w-auto">
+                    <Download className="h-4 w-4" aria-hidden /> Download
+                  </Button>
+                }
               />
-            ) : null}
-            {isOwner ? (
-              <Button asChild>
-                <Link href={`/card/${card.slug}/edit`}>
-                  <Pencil className="h-4 w-4" aria-hidden /> Edit card
-                </Link>
-              </Button>
-            ) : null}
-            <DownloadModal
-              cardId={card.id}
-              cardSlug={card.slug}
-              isPaid={entitlements.isPaid}
-              canBatch={entitlements.allowBatchExport}
-              downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
-              frameTemplate={frameTemplateOf(card.frame_style)}
-              hasBackFace={hasBackFace}
-            />
-            <ShareTargets
-              title={pageName}
-              url={`${siteBase}/card/${username}/${card.slug}`}
-              entity="card"
-              itemId={card.id}
-              imageUrl={
-                isShareable ? `${siteBase}/api/cards/${card.id}/og` : undefined
-              }
-            />
-            {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
+              {/* Another creator's card into one of your decks (TODO DK9.4,
+                  owner decision D3): a PUBLIC one by "Add to deck"; one that
+                  isn't public only as a remix — the Remix button says so
+                  (one button, never two to the same place). */}
+              <RemixButton
+                cardId={card.id}
+                requiresSignIn={!user}
+                label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
+                unavailableReason={isModerationLocked(card) ? MODERATION_LOCKED_REMIX_MESSAGE : undefined}
+                className={cn("w-full sm:w-auto", isOwner && "col-span-2 sm:col-auto")}
+              />
+              {!isOwner && card.visibility === "public" ? (
+                <div className="col-span-2 sm:col-auto [&>*]:w-full sm:[&>*]:w-auto">
+                  <AddToDeckButton
+                    cardId={card.id}
+                    cardTitle={card.title}
+                    cardPath={cardPath}
+                    signedIn={isAuthed}
+                  />
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <LikeButton
+                cardId={card.id}
+                cardSlug={card.slug}
+                ownerUsername={username}
+                initialLiked={viewerLiked}
+                initialCount={likesCount}
+                requiresSignIn={!user}
+              />
+              <ShareTargets
+                title={pageName}
+                url={`${siteBase}${cardPath}`}
+                entity="card"
+                itemId={card.id}
+                imageUrl={
+                  isShareable ? `${siteBase}/api/cards/${card.id}/og` : undefined
+                }
+              />
+              {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
+            </div>
           </div>
 
           {/* Share-traffic conversion: most anonymous visitors arrive from a
               shared link — meet the "I could make one of these" moment with
-              the create CTA right under the card actions. Page variant only;
-              in-app modal viewers already have the header CTA. */}
-          {variant === "page" && !user ? (
+              the create CTA right under the card actions. */}
+          {!user ? (
             <Link
               href="/signup"
               className="inline-flex w-fit items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15"
@@ -493,6 +444,38 @@ export async function CardDetailContent({
               <Sparkles className="h-4 w-4 text-gold" aria-hidden />
               Forge your own card — free
             </Link>
+          ) : null}
+
+          <CardStats
+            views={card.view_count}
+            likes={likesCount}
+            remixes={remixCount}
+            decks={deckCount}
+            comments={comments.length}
+            trendingSignals={trendingSignals}
+            overallRank={overallRank}
+          />
+
+          {/* Card details as TEXT. The rendered preview shows all of this, but
+              a crawler or answer engine reads none of it from an image — this
+              block is what makes the page citable for "custom MTG {type}"
+              queries. */}
+          <CardDetails card={card} inDecks={inDecks} />
+
+          {/* Discovery tags — under the details they describe. */}
+          {card.tags.length > 0 ? (
+            <ul className="flex flex-wrap gap-2" aria-label="Tags">
+              {card.tags.map((tag) => (
+                <li key={tag}>
+                  <Link
+                    href={`/gallery/tag/${tagSlug(tag)}`}
+                    className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                  >
+                    #{tag}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           ) : null}
 
           {creatorProfile ? (
@@ -504,123 +487,152 @@ export async function CardDetailContent({
               requiresSignIn={!user}
             />
           ) : null}
-
-          {/* Card details as TEXT. The rendered preview shows all of this, but
-              a crawler or answer engine reads none of it from an image — this
-              block is what makes the page citable for "custom MTG {type}"
-              queries. Page variant only; the modal is for people. */}
-          {variant === "page" ? <CardDetails card={card} inDecks={inDecks} /> : null}
-
-          {/* Discovery tags — at the bottom of the info card. */}
-          {card.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {card.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/gallery/tag/${tagSlug(tag)}`}
-                  className="inline-flex items-center rounded-full border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          ) : null}
         </div>
-        </div>
-
-        {/* Full-width below the card + info: analytics and the comment thread
-            get the whole content width for a bigger, more scannable display. */}
-        <CardAnalytics
-          views={card.view_count}
-          likes={likesCount}
-          remixes={remixCount}
-          decks={deckCount}
-          comments={comments.length}
-          createdAt={card.created_at}
-          updatedAt={card.updated_at}
-          trendingSignals={trendingSignals}
-          overallRank={overallRank}
-          topRemixes={topRemixes}
-          isAuthed={Boolean(user)}
-        />
-
-        <CardComments
-          cardId={card.id}
-          cardSlug={card.slug}
-          ownerUsername={username}
-          initialComments={comments}
-          currentUserId={user?.id ?? null}
-        />
       </div>
 
-      {deckTiles.length > 0 || canBuildAround ? (
-        <DecksWithCard
-          decks={deckTiles}
-          art={deckTileArt}
-          total={Math.max(deckCount, deckTiles.length)}
-          cardPath={`/card/${username}/${card.slug}`}
-          buildAround={canBuildAround ? { cardId: card.id, cardTitle: card.title } : null}
-        />
-      ) : null}
+      {/* Below the card: where it is used, what it became, more to look at —
+          and the conversation last. */}
+      <div className="mt-12 flex flex-col gap-12 sm:mt-16 sm:gap-14">
+        {deckTiles.length > 0 || canBuildAround ? (
+          <DecksWithCard
+            decks={deckTiles}
+            art={deckTileArt}
+            total={Math.max(deckCount, deckTiles.length)}
+            cardPath={cardPath}
+            buildAround={canBuildAround ? { cardId: card.id, cardTitle: card.title } : null}
+          />
+        ) : null}
 
-      {moreFromOwner.length > 0 || relatedCards.length > 0 ? (
-        <div className="mt-14 flex flex-col gap-12">
-          {moreFromOwner.length > 0 ? (
-            <RelatedRow
-              title={`More from @${username}`}
-              viewAllHref={`/profile/${username}`}
-              cards={moreFromOwner}
-              isAuthed={Boolean(user)}
-            />
-          ) : null}
-          {relatedCards.length > 0 ? (
-            <RelatedRow
-              title="More like this"
-              viewAllHref={
-                card.card_type && isHubType(card.card_type)
-                  ? `/gallery/type/${card.card_type}`
-                  : "/gallery/browse"
-              }
-              cards={relatedCards}
-              isAuthed={Boolean(user)}
-            />
-          ) : null}
+        {topRemixes.length > 0 ? (
+          <RelatedRow title="Top remixes" cards={topRemixes} isAuthed={isAuthed} />
+        ) : null}
+        {moreFromOwner.length > 0 ? (
+          <RelatedRow
+            title={`More from @${username}`}
+            viewAllHref={`/profile/${username}`}
+            cards={moreFromOwner}
+            isAuthed={isAuthed}
+          />
+        ) : null}
+        {relatedCards.length > 0 ? (
+          <RelatedRow
+            title="More like this"
+            viewAllHref={
+              card.card_type && isHubType(card.card_type)
+                ? `/gallery/type/${card.card_type}`
+                : "/gallery/browse"
+            }
+            cards={relatedCards}
+            isAuthed={isAuthed}
+          />
+        ) : null}
+
+        {/* The comment thread keeps a reading measure; `#comments` is where
+            the stats' count points. */}
+        <div id="comments" className="max-w-3xl scroll-mt-24">
+          <CardComments
+            cardId={card.id}
+            cardSlug={card.slug}
+            ownerUsername={username}
+            initialComments={comments}
+            currentUserId={user?.id ?? null}
+          />
         </div>
-      ) : null}
-    </div>
+      </div>
+    </PageContainer>
   );
 }
 
 // ---------------------------------------------------------------------------
-// CardMissingNotice — modal-variant stand-in for notFound(). The card was
-// deleted, made private, or the link is wrong; the dialog shell still
-// provides Esc / ✕ / overlay-click to dismiss.
+// CardBreadcrumbs — "Gallery › <card>", the visible twin of the breadcrumb
+// JSON-LD (Home › Gallery › card). The current page is named for a screen
+// reader and on a wide screen; a phone shows the way back alone (the H1
+// right below says the rest).
 // ---------------------------------------------------------------------------
 
-function CardMissingNotice() {
+function CardBreadcrumbs({ pageName }: { pageName: string }) {
   return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full border border-border/60 bg-elevated">
-        <Sparkles className="h-6 w-6 text-subtle" aria-hidden />
-      </span>
-      <div className="flex flex-col gap-1.5">
-        <h1 className="font-display text-xl font-semibold text-foreground">
-          Card not found
-        </h1>
-        <p className="max-w-sm text-sm text-muted">
-          This card may have been deleted, made private, or the link might be
-          wrong.
+    <nav aria-label="Breadcrumb" className="mb-4 sm:mb-6">
+      <ol className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
+        <li className="shrink-0">
+          <Link href="/gallery" className="inline-flex items-center gap-1 transition-colors hover:text-foreground">
+            <ArrowLeft className="h-4 w-4 sm:hidden" aria-hidden />
+            Gallery
+          </Link>
+        </li>
+        <li className="flex min-w-0 items-center gap-1.5">
+          <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-subtle sm:block" aria-hidden />
+          <span aria-current="page" className="sr-only truncate text-foreground sm:not-sr-only">
+            {pageName}
+          </span>
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CardProvenance — where the card came from: a remix of another PipGlyph
+// card, a real card imported from Scryfall (both open in a new tab), and how
+// many others remixed that same real card (chunk 13: only when another
+// public/unlisted remix exists; it lands on the gallery filtered by source).
+// ---------------------------------------------------------------------------
+
+function CardProvenance({
+  remixParent,
+  sourceScryfallId,
+  otherRemixesCount,
+}: {
+  remixParent: { path: string; title: string } | null;
+  sourceScryfallId: string | null;
+  otherRemixesCount: number;
+}) {
+  if (!remixParent && !sourceScryfallId) return null;
+  return (
+    <div className="flex flex-col gap-1.5 pt-1">
+      {remixParent ? (
+        <p className="inline-flex flex-wrap items-center gap-1.5 text-sm text-muted">
+          <Repeat2 className="h-4 w-4 text-primary-bright" aria-hidden />
+          Remixed from{" "}
+          <Link
+            href={remixParent.path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 font-medium text-foreground underline-offset-2 hover:text-primary-bright hover:underline"
+          >
+            {remixParent.title}
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
         </p>
-      </div>
-      <Button asChild variant="outline" size="sm">
-        <Link href="/gallery">Browse the gallery</Link>
-      </Button>
+      ) : null}
+      {sourceScryfallId ? (
+        <a
+          href={`/go/scryfall/${sourceScryfallId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+        >
+          <Sparkles className="h-4 w-4 text-accent" aria-hidden />
+          Based on a real card — view on Scryfall
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+        </a>
+      ) : null}
+      {sourceScryfallId && otherRemixesCount > 0 ? (
+        <Link
+          href={`/gallery/browse?source=${encodeURIComponent(sourceScryfallId)}`}
+          className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs text-foreground transition-colors hover:border-accent hover:bg-accent/15"
+        >
+          <Sparkles className="h-3 w-3 text-accent" aria-hidden />
+          Also remixed by {otherRemixesCount}{" "}
+          {otherRemixesCount === 1 ? "other" : "others"}
+        </Link>
+      ) : null}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// DecksWithCard — "Decks with this card" (TODO DK8.4), page and modal alike:
+// DecksWithCard — "Decks with this card" (TODO DK8.4):
 // the public decks the card's page names (listPublicDecksContaining — the
 // one list, by its one rule; the JSON-LD isPartOf reads it too) as
 // DeckTiles. The heading counts every such deck; the tiles are the newest.
@@ -643,10 +655,10 @@ function DecksWithCard({
   buildAround: { cardId: string; cardTitle: string } | null;
 }) {
   return (
-    <section aria-labelledby="decks-with-card-heading" className="mt-14">
+    <section aria-labelledby="decks-with-card-heading" className="scroll-mt-24">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 id="decks-with-card-heading" className="font-display text-lg font-semibold text-foreground">
+          <h2 id="decks-with-card-heading" className="scroll-mt-24 font-display text-lg font-semibold text-foreground">
             Decks with this card
           </h2>
           <p className="text-xs text-muted">
@@ -674,6 +686,9 @@ function DecksWithCard({
   );
 }
 
+/** A row of up to four card tiles — two columns on a phone, four from sm.
+ *  The tiles keep BakedCardThumbnail's window-grid `sizes` (generous, never
+ *  less than a tile here). */
 function RelatedRow({
   title,
   viewAllHref,
@@ -681,24 +696,27 @@ function RelatedRow({
   isAuthed,
 }: {
   title: string;
-  viewAllHref: string;
+  viewAllHref?: string;
   cards: CardWithStats[];
   isAuthed: boolean;
 }) {
+  const headingId = `related-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   return (
-    <section>
+    <section aria-labelledby={headingId}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold text-foreground">
+        <h2 id={headingId} className="font-display text-lg font-semibold text-foreground">
           {title}
         </h2>
-        <Link
-          href={viewAllHref}
-          className="shrink-0 text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
-        >
-          View all →
-        </Link>
+        {viewAllHref ? (
+          <Link
+            href={viewAllHref}
+            className="shrink-0 text-xs font-semibold text-primary-bright underline-offset-4 hover:underline"
+          >
+            View all<span className="sr-only">: {title}</span> →
+          </Link>
+        ) : null}
       </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
         {cards.map((card) => (
           <GalleryCardTile key={card.id} card={card} isAuthed={isAuthed} />
         ))}
@@ -707,34 +725,35 @@ function RelatedRow({
   );
 }
 
-
-
 // ---------------------------------------------------------------------------
-// CardAnalytics — "By the numbers": engagement + provenance stats for the
-// card, plus its most-liked remixes. Replaces the old rules/flavor panels
-// (that text already lives on the rendered card itself).
+// CardStats — "By the numbers" as ONE compact strip under the actions: views,
+// likes, remixes, decks and comments, then the trending and rank lines when
+// they say something. (It was a full-width panel of five large tiles below
+// the fold; the remixes it listed are their own row now.) The deck and
+// comment counts link to their sections.
 // ---------------------------------------------------------------------------
 
-function CardAnalytics({
+const COMPACT_COUNT = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
+/** 9,999 and under as written; past it "12.3K". Exported for tests. */
+export function formatStatCount(value: number): string {
+  return value < 10_000 ? value.toLocaleString("en") : COMPACT_COUNT.format(value);
+}
+
+function CardStats({
   views,
   likes,
   remixes,
   decks,
   comments,
-  createdAt,
-  updatedAt,
   trendingSignals,
   overallRank,
-  topRemixes,
-  isAuthed,
 }: {
   views: number;
   likes: number;
   remixes: number;
   decks: number;
   comments: number;
-  createdAt: string;
-  updatedAt: string;
   trendingSignals: {
     likes_7d: number;
     comments_7d: number;
@@ -742,19 +761,13 @@ function CardAnalytics({
     is_fresh: boolean;
   };
   overallRank: number | null;
-  topRemixes: CardWithStats[];
-  isAuthed: boolean;
 }) {
-  const stats: {
-    icon: typeof Heart;
-    label: string;
-    value: number;
-  }[] = [
-    { icon: Eye, label: "Views", value: views },
-    { icon: Heart, label: "Likes", value: likes },
-    { icon: Repeat2, label: "Remixes", value: remixes },
-    { icon: BookOpen, label: decks === 1 ? "Deck" : "Decks", value: decks },
-    { icon: MessageCircle, label: "Comments", value: comments },
+  const stats: { label: string; value: number; href?: string }[] = [
+    { label: views === 1 ? "View" : "Views", value: views },
+    { label: likes === 1 ? "Like" : "Likes", value: likes },
+    { label: remixes === 1 ? "Remix" : "Remixes", value: remixes },
+    { label: decks === 1 ? "Deck" : "Decks", value: decks, href: decks > 0 ? "#decks-with-card-heading" : undefined },
+    { label: comments === 1 ? "Comment" : "Comments", value: comments, href: "#comments" },
   ];
   // "Trending" needs real momentum this week — freshness alone (a brand-new
   // card with no engagement) shouldn't earn the badge, even though it scores.
@@ -763,105 +776,80 @@ function CardAnalytics({
     trendingSignals.comments_7d +
     trendingSignals.remixes_7d;
   const isTrending = recentEngagement > 0;
-  const hasRankLines = Boolean(overallRank && likes > 0);
+  const showRank = Boolean(overallRank && likes > 0);
 
   return (
-    <SurfaceCard className="flex flex-col gap-5 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          By the numbers
-        </h2>
-        {isTrending ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-            <Flame className="h-3.5 w-3.5" aria-hidden />
-            Trending this week
-          </span>
-        ) : null}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {stats.map((s) => {
-          const Icon = s.icon;
+    <section aria-labelledby="card-stats-heading" className="flex flex-col gap-2">
+      <h2 id="card-stats-heading" className="sr-only">
+        By the numbers
+      </h2>
+      <dl className="grid grid-cols-5 overflow-hidden rounded-card border border-border/60 bg-surface/60">
+        {stats.map((s, i) => {
+          const value = (
+            <span className="font-display text-lg font-semibold tabular-nums text-foreground sm:text-xl">
+              {formatStatCount(s.value)}
+            </span>
+          );
           return (
             <div
               key={s.label}
-              className="flex flex-col items-center gap-1 rounded-lg border border-border/50 bg-elevated/40 p-4 text-center"
+              className={cn(
+                "flex min-w-0 flex-col items-center gap-0.5 px-1 py-2.5 text-center",
+                i > 0 && "border-l border-border/60",
+              )}
             >
-              <Icon className="h-5 w-5 text-muted" aria-hidden />
-              <span className="font-display text-3xl font-semibold tabular-nums text-foreground">
-                {s.value}
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
-                {s.label}
-              </span>
+              {/* The number reads first on screen; the label first to a
+                  screen reader (a <dt> before its <dd>). */}
+              <dt className="order-2 truncate text-[11px] text-muted sm:text-xs">{s.label}</dt>
+              <dd className="order-1">
+                {s.href ? (
+                  <a href={s.href} className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50">
+                    {value}
+                    {/* A link is named by its own text: the bare number
+                        alone says nothing out of the list's context. */}
+                    <span className="sr-only"> {s.label}</span>
+                  </a>
+                ) : (
+                  value
+                )}
+              </dd>
             </div>
           );
         })}
-      </div>
-
-      {isTrending ? (
-        <p className="text-xs text-muted">
-          Past 7 days: {trendingSignals.likes_7d} like
-          {trendingSignals.likes_7d === 1 ? "" : "s"} ·{" "}
-          {trendingSignals.comments_7d} comment
-          {trendingSignals.comments_7d === 1 ? "" : "s"} ·{" "}
-          {trendingSignals.remixes_7d} remix
-          {trendingSignals.remixes_7d === 1 ? "" : "es"}
-          {trendingSignals.is_fresh ? " · freshly forged" : ""}.
-        </p>
-      ) : null}
-
-      {hasRankLines ? (
-        <div className="flex flex-col gap-2 text-sm">
-          {overallRank && likes > 0 ? (
-            <span className="inline-flex items-center gap-2 text-muted">
-              <Trophy className="h-4 w-4 text-gold-strong" aria-hidden />
-              <span className="font-semibold text-foreground">
-                #{overallRank}
-              </span>{" "}
-              most-liked card overall
+      </dl>
+      {isTrending || showRank ? (
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+          {isTrending ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Flame className="h-3.5 w-3.5 text-accent" aria-hidden />
+              <span>
+                <span className="font-semibold text-foreground">Trending this week</span>
+                {" — "}
+                {trendingSignals.likes_7d} like{trendingSignals.likes_7d === 1 ? "" : "s"},{" "}
+                {trendingSignals.comments_7d} comment{trendingSignals.comments_7d === 1 ? "" : "s"},{" "}
+                {trendingSignals.remixes_7d} remix{trendingSignals.remixes_7d === 1 ? "" : "es"}
+                {trendingSignals.is_fresh ? " · freshly forged" : ""}
+              </span>
             </span>
           ) : null}
-        </div>
+          {showRank ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Trophy className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
+              <span>
+                <span className="font-semibold text-foreground">#{overallRank}</span> most-liked card overall
+              </span>
+            </span>
+          ) : null}
+        </p>
       ) : null}
-
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
-        <span className="inline-flex items-center gap-1.5">
-          <CalendarDays className="h-3.5 w-3.5 text-subtle" aria-hidden />
-          Created {formatShortDate(createdAt)}
-        </span>
-        {updatedAt !== createdAt ? (
-          <span className="inline-flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-subtle" aria-hidden />
-            Updated {formatShortDate(updatedAt)}
-          </span>
-        ) : null}
-      </div>
-
-      {topRemixes.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-subtle">
-            Top remixes
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {topRemixes.map((remix) => (
-              <GalleryCardTile
-                key={remix.id}
-                card={remix}
-                isAuthed={isAuthed}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </SurfaceCard>
+    </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// CreatorFeature — the card's maker, featured beneath the card's own info.
-// Avatar + name + bio + social links, with the profile's accent tint. Second
-// in prominence to the card itself.
+// CreatorFeature — the card's maker, at the end of the info column: avatar,
+// name, Follow / View profile, a short bio (clamped — the profile has it
+// whole) and social links, with the profile's accent tint.
 // ---------------------------------------------------------------------------
 
 function CreatorFeature({
@@ -896,32 +884,34 @@ function CreatorFeature({
 
   return (
     <SurfaceCard
-      className="flex flex-col gap-4 border-t-2 border-t-[var(--profile-accent,var(--color-primary))] p-6"
+      as="section"
+      aria-labelledby="card-creator-heading"
+      className="flex flex-col gap-4 border-t-2 border-t-[var(--profile-accent,var(--color-primary))] p-4 sm:p-5"
       style={accentStyle}
     >
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+      <h2 id="card-creator-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
         Creator
-      </span>
+      </h2>
 
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
         {avatarSrc ? (
           <Image
             src={avatarSrc}
             alt={`${displayName} avatar`}
-            width={56}
-            height={56}
-            className="h-14 w-14 shrink-0 rounded-full border border-border/60 object-cover"
+            width={48}
+            height={48}
+            className="h-12 w-12 shrink-0 rounded-full border border-border/60 object-cover"
             // Avatars can be OAuth-provider URLs (not in remotePatterns) or a
-            // /defaults path — never worth an optimizer variant at 56px.
+            // /defaults path — never worth an optimizer variant at 48px.
             unoptimized
           />
         ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border/60 bg-elevated text-xl font-semibold text-foreground">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 bg-elevated text-lg font-semibold text-foreground">
             {initial}
           </span>
         )}
 
-        <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-1 basis-40 flex-col gap-0.5">
           {profileHref ? (
             <Link
               href={profileHref}
@@ -944,7 +934,8 @@ function CreatorFeature({
           </span>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* Its own row on a phone, so the name keeps its width. */}
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
           {!isOwner ? (
             <FollowButton
               targetUserId={targetUserId}
@@ -961,7 +952,7 @@ function CreatorFeature({
       </div>
 
       {profile.bio?.trim() ? (
-        <p className="whitespace-pre-line text-sm leading-6 text-muted">
+        <p className="line-clamp-4 whitespace-pre-line text-sm leading-6 text-muted">
           {profile.bio}
         </p>
       ) : null}

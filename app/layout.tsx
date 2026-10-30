@@ -193,13 +193,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-  modal,
 }: Readonly<{
   children: React.ReactNode;
-  // Parallel slot (app/@modal) for the intercepted card-detail dialog.
-  // Renders null via @modal/default.tsx except when a card tile click
-  // soft-navigates to /card/[username]/[slug].
-  modal: React.ReactNode;
 }>) {
   // The root layout reads NO cookies — that keeps every route eligible
   // for static rendering / CDN caching. data-theme is always "dark"
@@ -257,7 +252,6 @@ export default function RootLayout({
                 {/* The New deck dialog, openable from any page (TODO DK4). */}
                 <NewDeckProvider>
                   {children}
-                  {modal}
                   {/* "A new version is ready" pill — checks /api/version on
                       focus and reloads at the next safe moment. Sits inside the
                       runners so it never reloads over an in-flight job/export. */}

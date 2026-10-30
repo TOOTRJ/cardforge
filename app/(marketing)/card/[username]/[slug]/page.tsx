@@ -24,10 +24,9 @@ import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 // (the folder must be named [username] for Next.js segment-name consistency;
 // it treats the param as a slug).
 //
-// The body lives in CardDetailContent, shared with the intercepting route
-// at app/@modal/(.)card/[username]/[slug] that renders the same view in a
-// dialog when the viewer clicks a card tile in-app. This full page serves
-// direct visits, refreshes, and crawlers — so metadata stays here.
+// The body lives in CardDetailContent — the ONE card detail view. Every
+// tile and link opens this page (no intercepting modal): one canonical URL
+// that reads the same on a soft navigation, a reload and to a crawler.
 // ---------------------------------------------------------------------------
 
 type Params = { username: string; slug: string };
@@ -147,5 +146,5 @@ export default async function CardDetailPage({
   params: Promise<Params>;
 }) {
   const { username, slug } = await params;
-  return <CardDetailContent username={username} slug={slug} variant="page" />;
+  return <CardDetailContent username={username} slug={slug} />;
 }
