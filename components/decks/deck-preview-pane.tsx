@@ -136,7 +136,7 @@ export function DeckPreviewPane({
   const twoFaces = Boolean(row.item.card && hasBackPicture(row.item.card)) && picture !== entryPrintingImage(row.item.entry.image_url, "normal");
 
   return (
-    <aside aria-label="Card preview" className={cn("sticky top-24 flex max-h-[calc(100dvh-7rem)] flex-col gap-3 overflow-y-auto", className)}>
+    <section aria-label="Card preview" className={cn("sticky top-24 flex max-h-[calc(100dvh-7rem)] flex-col gap-3 overflow-y-auto", className)}>
       <div className={cn("relative aspect-[5/7] w-full overflow-hidden border border-border/60 bg-elevated", cardCornersClass(false))}>
         {picture ? (
           // eslint-disable-next-line @next/next/no-img-element -- our 600 px thumb or Scryfall's sized picture
@@ -181,6 +181,6 @@ export function DeckPreviewPane({
         Details
         <span className="sr-only">: {row.name}</span>
       </button>
-    </aside>
+    </section>
   );
 }

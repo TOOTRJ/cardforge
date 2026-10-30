@@ -414,7 +414,7 @@ describe("the preview pane (DK5.7) — its buttons never act on a card the point
     }));
     window.matchMedia = globalThis.matchMedia;
   };
-  const pane = () => screen.getByRole("complementary", { name: "Card preview" });
+  const pane = () => screen.getByRole("region", { name: "Card preview" });
   const shown = () => within(pane()).getByRole("heading", { level: 3 }).textContent;
   const opener = (name: RegExp) => screen.getByRole("button", { name });
   const rest = () => act(async () => new Promise((resolve) => setTimeout(resolve, 420)));
