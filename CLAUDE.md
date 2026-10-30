@@ -134,13 +134,16 @@ Rules and gotchas:
   (no retroactive change); a forced edit leaves view through the existing
   private path (purge + private bake), never a second hide. A public deck
   shows such a card's entry as "Private card" to everyone but its owner
-  (`lib/decks/private-card-name.ts`), and so does the API (0152): a deck
-  entry linking a card the deck doesn't show a visitor, with no printing,
-  is the deck OWNER's row alone (`deck_cards` read policy); a surface
-  that LISTS a deck's rows for anyone reads them through
-  `deck_entries_for_viewer` (`readDeckItems`: masked, "Private card") —
-  the table hands a visitor none of them (the tiles and the share image
-  read the table: such a row adds nothing to their colours or fan). The
+  (`lib/decks/private-card-name.ts`), and so does the API (0152): a
+  HIDDEN entry — no printing, and a linked card the deck doesn't show a
+  visitor, or a card-brought entry whose card was deleted
+  (`deck_entry_hidden`, `isPrivateForViewer`) — is the deck OWNER's row
+  alone (`deck_cards` read policy); a surface that LISTS a deck's rows for
+  anyone reads them through `deck_entries_for_viewer` (`readDeckItems`:
+  masked, "Private card") — the table hands a visitor none of them. A
+  hidden entry adds nothing to the default cover's colours for ANY viewer,
+  owner included (`lib/decks/cover.ts`), so the tiles and the share image
+  (which read the table) and the page draw one cover for everyone. The
   database trigger is TODO 7.17.
 - Auth: `profiles.username` is NOT NULL + unique (0094) — the signup trigger
   mints a generated handle (`ember_sphinx_4821`) when none/invalid/taken is

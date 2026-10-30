@@ -19,16 +19,31 @@
 -- WHICH ENTRIES. A card the deck SHOWS a visitor is a public card, or the
 -- deck owner's own unlisted one (the cards' RLS + canLinkIntoDeck, read by
 -- listDeckCards — 0151's guide redaction asks the same): deck_shows_card()
--- below, the ONE rule here. An entry is HIDDEN from a visitor when it links
--- a card the deck does not show them AND has no printing behind it (an
--- entry with a printing holds the REAL card's name, which the page shows
--- beside "Private card" by design). The deck's OWNER is never a visitor.
+-- below. An entry is HIDDEN from a visitor (deck_entry_hidden(), the ONE
+-- rule the policy and the page's read share) when it has no printing
+-- behind it (an entry with a printing holds the REAL card's name, which the
+-- page shows beside "Private card" by design) AND
+--   * it links a card the deck does not show them, or
+--   * its card is GONE: no card left (0055's ON DELETE SET NULL) and its
+--     source says the entry came WITH a card ('creator', 'link',
+--     'ai_generate', 'ai_remix' — lib/decks/entry-status.ts bringsCard, the
+--     "No longer available" case of deckEntryUnavailable). Its name is the
+--     deleted card's title — a private one's, a strong-language one's —
+--     and deleting a card must never publish it.
+-- The deck's OWNER is never a visitor: they keep the stored name ("No
+-- longer available"). An owner's own UNLINK of such an entry clears its
+-- source (unlinkDeckCardAction: "a plain name, never No longer available")
+-- — the owner keeps the name in their deck as a plain line, so a visitor
+-- reads it as one, as they read any name the owner typed. (An entry written
+-- before 0144 has no source, so a card deleted from under it reads as a
+-- plain name too — the deck can't tell it from a pasted one.)
 --
 -- THE FIX: read-time, nothing stored changes.
 --   1. The entries' read policy: the deck's owner reads every row of their
 --      deck (as before); anyone else who may read the deck (0151's decks
 --      policy — the unlisted-deck link header included) reads every row
---      but a hidden one. A direct API read (anon or another signed-in user,
+--      but a hidden one (EVERY older select policy on the table is dropped
+--      first, by catalogue, not by name). A direct API read (anon or another signed-in user,
 --      a list, an embed under decks or cards) can no longer reach a hidden
 --      entry's text.
 --   2. deck_entries_for_viewer(deck) — the deck page's read of the rows
@@ -78,9 +93,12 @@
 -- colours and rarity are gone (its name and type line already were, on the
 -- page). The add path writes a name alone, so production rows mostly held
 -- none of those; where one did (an older writer, the seeds), a visitor's
--- breakdown counts the card without them and the deck's default cover no
--- longer takes a private card's colours from its entry (lib/decks/cover.ts
--- already counted a private CARD for nobody). The owner sees what they saw.
+-- breakdown counts the card without them. A GONE card's entry (above) was
+-- a plain name to visitors; it is "Private card" now. The deck's default
+-- cover no longer takes a hidden entry's colours from the entry, for ANY
+-- viewer, the owner included (lib/decks/cover.ts: the same rule, so the
+-- default is one picture for everyone — it already counted a private CARD
+-- for nobody). Otherwise the owner sees what they saw.
 -- One count moves in an edge case: list_public_creators (0149) counts a
 -- creator's public decks by `exists (an entry)` as the caller reads it — a
 -- public deck whose EVERY entry is hidden no longer counts there (the stored
@@ -92,8 +110,9 @@
 -- definer: it reads the stored text to redact it) and the deck_cards
 -- grants (0097).
 --
--- Grants: deck_shows_card() is every API role's (the policy runs it for
--- anon too; a pure function of its three arguments, it reads nothing).
+-- Grants: deck_shows_card() and deck_entry_hidden() are every API role's
+-- (the policy runs them for anon too; pure functions of their arguments,
+-- they read nothing).
 -- deck_entries_for_viewer() is anon's, authenticated's and the service
 -- role's (PUBLIC revoked). No table grant changes.
 --
@@ -106,8 +125,8 @@
 --
 -- Ships through a PR; never applied ad-hoc. Idempotent. Composes with 0151
 -- (its decks policy decides who may read a deck at all; its deck_cards read
--- policy, of the same name as 0055's, is replaced here) and applies on a
--- database without it.
+-- policy — every SELECT policy on the table, whatever its name — is
+-- replaced here) and applies on a database without it.
 
 -- ===========================================================================
 -- The one rule: may a deck show this card to someone who isn't its owner?
@@ -135,13 +154,56 @@ $$;
 comment on function public.deck_shows_card(text, uuid, uuid) is
   'Whether a deck shows a card to anyone but the deck''s owner: a public card, or the deck owner''s own unlisted one (lib/decks/entry-status.ts canLinkIntoDeck + the cards'' RLS). 0152.';
 
+-- An entry is hidden from anyone but its deck's owner: no printing behind
+-- it, and a linked card the deck doesn't show (a card the caller can't read
+-- comes in as a NULL visibility: hidden), or no card left of one it brought
+-- (its source — lib/decks/entry-status.ts bringsCard).
+create or replace function public.deck_entry_hidden(
+  p_card_id uuid,
+  p_scryfall_id text,
+  p_source text,
+  p_card_visibility text,
+  p_card_owner uuid,
+  p_deck_owner uuid
+)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select p_scryfall_id is null
+     and case
+           when p_card_id is not null
+             then not public.deck_shows_card(p_card_visibility, p_card_owner, p_deck_owner)
+           else coalesce(p_source in ('creator', 'link', 'ai_generate', 'ai_remix'), false)
+         end;
+$$;
+
+comment on function public.deck_entry_hidden(uuid, text, text, text, uuid, uuid) is
+  'Whether a deck entry is hidden from anyone but its deck''s owner (0152): no printing, and a linked card the deck does not show, or no card left of one the entry brought (its source). The deck_cards read policy and deck_entries_for_viewer share it.';
+
 -- ===========================================================================
 -- 1. The entries' read: a hidden entry is its deck owner's alone
 -- ===========================================================================
 
--- 0055 / 0151's policy (one name), and this migration's on a re-run.
-drop policy if exists "Deck cards: visible when parent deck is readable" on public.deck_cards;
-drop policy if exists "Deck cards: the owner's, and a visitor's where the card shows" on public.deck_cards;
+-- EVERY select policy on the table, whatever its name (0055's, 0151's, this
+-- migration's on a re-run, one a later rename left behind): permissive
+-- policies are OR'd, so one left beside this would hand the rows back.
+do $drop$
+declare
+  v_name name;
+begin
+  for v_name in
+    select p.polname
+    from pg_policy p
+    where p.polrelid = 'public.deck_cards'::regclass
+      and p.polcmd = 'r'
+  loop
+    execute format('drop policy %I on public.deck_cards', v_name);
+  end loop;
+end
+$drop$;
+
 create policy "Deck cards: the owner's, and a visitor's where the card shows"
   on public.deck_cards
   for select
@@ -154,15 +216,16 @@ create policy "Deck cards: the owner's, and a visitor's where the card shows"
       where d.id = deck_cards.deck_id
         and (
           d.owner_id = (select auth.uid())
-          -- Not hidden: no card, a printing behind it, or a card the deck
-          -- shows.
-          or deck_cards.card_id is null
+          -- Not hidden. The card is read under the caller's RLS: one they
+          -- can't read comes in as NULL — not shown.
           or deck_cards.scryfall_id is not null
-          or exists (
-            select 1
-            from public.cards c
-            where c.id = deck_cards.card_id
-              and public.deck_shows_card(c.visibility, c.owner_id, d.owner_id)
+          or not public.deck_entry_hidden(
+            deck_cards.card_id,
+            deck_cards.scryfall_id,
+            deck_cards.source,
+            (select c.visibility from public.cards c where c.id = deck_cards.card_id),
+            (select c.owner_id from public.cards c where c.id = deck_cards.card_id),
+            d.owner_id
           )
         )
     )
@@ -198,9 +261,7 @@ begin
 
   for v_row in
     select e as entry,
-           e.card_id is not null
-             and e.scryfall_id is null
-             and not coalesce(public.deck_shows_card(c.visibility, c.owner_id, v_owner), false) as hidden
+           public.deck_entry_hidden(e.card_id, e.scryfall_id, e.source, c.visibility, c.owner_id, v_owner) as hidden
     from public.deck_cards e
     left join public.cards c on c.id = e.card_id
     where e.deck_id = p_deck_id
@@ -226,7 +287,7 @@ end;
 $$;
 
 comment on function public.deck_entries_for_viewer(uuid) is
-  'A deck''s entries as its page shows them to the caller (0152): the owner''s rows as stored; for anyone else who may open the deck (public, unlisted by its id, or their own) every row, an entry linking a card the deck does not show them with no printing behind it masked — name "Private card", the card''s values cleared.';
+  'A deck''s entries as its page shows them to the caller (0152): the owner''s rows as stored; for anyone else who may open the deck (public, unlisted by its id, or their own) every row, a hidden one (deck_entry_hidden) masked — name "Private card", the card''s values cleared.';
 
 -- ===========================================================================
 -- Grants
@@ -234,6 +295,9 @@ comment on function public.deck_entries_for_viewer(uuid) is
 
 revoke all on function public.deck_shows_card(text, uuid, uuid) from public;
 grant execute on function public.deck_shows_card(text, uuid, uuid) to anon, authenticated, service_role;
+
+revoke all on function public.deck_entry_hidden(uuid, text, text, text, uuid, uuid) from public;
+grant execute on function public.deck_entry_hidden(uuid, text, text, text, uuid, uuid) to anon, authenticated, service_role;
 
 revoke all on function public.deck_entries_for_viewer(uuid) from public;
 grant execute on function public.deck_entries_for_viewer(uuid) to anon, authenticated, service_role;

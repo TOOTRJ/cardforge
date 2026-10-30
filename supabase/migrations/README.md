@@ -360,10 +360,11 @@ instead. Each bullet: what the header says, and what is true now.
   RLS — anyone who can read the deck can see what's inside it"; 0151
   restates it as "the entries follow the deck")** — since 0152 the deck's
   OWNER reads every row of it, and anyone else who may read the deck every
-  row but a HIDDEN one: an entry that links a card the deck doesn't show
-  them (`deck_shows_card`: a public card, or the deck owner's own unlisted
-  one) with no printing behind it — its name, type line and cost are that
-  card's. The deck page reads the rows through `deck_entries_for_viewer`,
+  row but a HIDDEN one (`deck_entry_hidden`): an entry with no printing
+  behind it that links a card the deck doesn't show them
+  (`deck_shows_card`: a public card, or the deck owner's own unlisted one),
+  or whose card it brought was deleted (no card, a card-bringing source) —
+  its name, type line and cost are that card's. The deck page reads the rows through `deck_entries_for_viewer`,
   which hands a visitor such an entry masked ("Private card", the card's
   values cleared) and the owner every row as stored. Nothing stored
   changed; who may read the deck at all is still the decks policy's.

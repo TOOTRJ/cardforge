@@ -271,6 +271,25 @@ describe("deckCoverColors — from rows every viewer can read", () => {
     expect(deckCoverColors([])).toBeNull();
   });
 
+  it("an entry a visitor's deck hides counts for nobody — its own stored colours included (0152: owner and visitor agree)", () => {
+    // The seeded Quillon: a private card whose entry holds {U}{R}'s letters.
+    const ownerRow = { entry: entry("main", { card_id: "c-q", color_identity: ["U", "R"], source: "creator" }), card: { color_identity: ["blue", "red"], visibility: "private" } };
+    // What deck_entries_for_viewer hands a visitor: no card, letters cleared.
+    const visitorRow = { entry: entry("main", { card_id: "c-q", color_identity: [], source: "creator" }), card: null };
+    const bolt = printing("main", ["R"]);
+    expect(deckCoverColors([ownerRow, bolt])).toEqual(["R"]);
+    expect(deckCoverColors([visitorRow, bolt])).toEqual(["R"]);
+    // Withheld (another creator's card no longer public) or gone: the same.
+    expect(deckCoverColors([{ entry: entry("main", { card_id: "c-x", color_identity: ["G"] }), card: null }])).toBeNull();
+    expect(deckCoverColors([{ entry: entry("main", { color_identity: ["W"], source: "creator" }), card: null }])).toBeNull();
+    // An owner's own unlink (source cleared): a plain line, its letters count.
+    expect(deckCoverColors([{ entry: entry("main", { color_identity: ["W"], source: null }), card: null }])).toEqual(["W"]);
+    // A private card on a printing stands for the REAL card: its letters count.
+    expect(
+      deckCoverColors([{ entry: entry("main", { card_id: "c-p", scryfall_id: "sf", color_identity: ["B"] }), card: { color_identity: [], visibility: "private" } }]),
+    ).toEqual(["B"]);
+  });
+
   it("an entry's own letters win over its linked card's words", () => {
     expect(
       deckCoverColors([{ entry: entry("main", { card_id: "c", color_identity: ["U"] }), card: { color_identity: ["red"], visibility: "public" } }]),

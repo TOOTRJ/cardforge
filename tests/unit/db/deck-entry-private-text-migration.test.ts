@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { canLinkIntoDeck } from "@/lib/decks/entry-status";
-import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
+import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
+import { isPrivateForViewer, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import { DECK_ENTRIES_FUNCTION } from "@/lib/decks/queries";
 
 // ---------------------------------------------------------------------------
@@ -85,10 +85,50 @@ describe("0152: the one rule — does a deck show this card to a visitor?", () =
   });
 });
 
+describe("0152: hidden — the one rule the policy and the page's read share", () => {
+  const body = fnBody("deck_entry_hidden");
+
+  it("no printing, and a card the deck doesn't show, or no card left of one the entry brought", () => {
+    expect(body).toContain("select p_scryfall_id is null and case");
+    expect(body).toContain(
+      "when p_card_id is not null then not public.deck_shows_card(p_card_visibility, p_card_owner, p_deck_owner)",
+    );
+    expect(fnHead("deck_entry_hidden")).toContain("immutable set search_path = ''");
+  });
+
+  it("names bringsCard's sources, exactly", () => {
+    const listed = /else coalesce\(p_source in \(([^)]*)\), false\)/.exec(body)?.[1] ?? "";
+    const sources = listed.split(",").map((s) => s.trim().replace(/'/g, ""));
+    expect(sources).toEqual(["creator", "link", "ai_generate", "ai_remix"]);
+    for (const source of sources) expect(bringsCard(source), source).toBe(true);
+    for (const other of ["import", "manual", null, undefined, ""]) expect(bringsCard(other)).toBe(false);
+  });
+
+  it("is the app's visitor rule (isPrivateForViewer, with no printing) for every entry shape", () => {
+    const sql = (entry: { card_id: string | null; scryfall_id: string | null; source: string | null }, shown: boolean) =>
+      entry.scryfall_id === null && (entry.card_id !== null ? !shown : bringsCard(entry.source));
+    for (const card_id of ["c-1", null]) {
+      for (const scryfall_id of ["sf-1", null]) {
+        for (const source of ["creator", "link", "ai_generate", "ai_remix", "import", "manual", null]) {
+          for (const shown of card_id ? [true, false] : [false]) {
+            const entry = { card_id, scryfall_id, source };
+            // The app hands a visitor the card only when the deck shows it.
+            const app = isPrivateForViewer(entry, card_id && shown ? { id: card_id } : null, false) && !scryfall_id;
+            expect(sql(entry, shown), JSON.stringify({ ...entry, shown })).toBe(app);
+          }
+        }
+      }
+    }
+  });
+});
+
 describe("0152: the entries' read policy", () => {
-  it("replaces 0055 / 0151's one SELECT policy (same name) — never left beside it", () => {
-    expect(FLAT).toContain(`drop policy if exists "Deck cards: visible when parent deck is readable" on public.deck_cards;`);
-    expect(FLAT).toContain(`drop policy if exists "${POLICY}" on public.deck_cards;`);
+  it("drops EVERY select policy on the table by catalogue, never by name (OR'd, one left beside it would leak)", () => {
+    expect(FLAT).toContain(
+      "for v_name in select p.polname from pg_policy p where p.polrelid = 'public.deck_cards'::regclass and p.polcmd = 'r' loop execute format('drop policy %I on public.deck_cards', v_name); end loop;",
+    );
+    expect(FLAT.indexOf("from pg_policy p")).toBeLessThan(FLAT.indexOf(`create policy "${POLICY}"`));
+    expect(SQL).not.toMatch(/drop policy if exists[^;]*on public\.deck_cards/);
     expect(SQL.match(/create policy[^;]*on public\.deck_cards/g)).toHaveLength(1);
   });
 
@@ -97,11 +137,12 @@ describe("0152: the entries' read policy", () => {
     expect(using).toContain("for select");
     expect(using).toContain("exists ( select 1 from public.decks d where d.id = deck_cards.deck_id and (");
     expect(using).toContain("d.owner_id = (select auth.uid())");
-    expect(using).toContain("or deck_cards.card_id is null");
     expect(using).toContain("or deck_cards.scryfall_id is not null");
     expect(using).toContain(
-      "or exists ( select 1 from public.cards c where c.id = deck_cards.card_id and public.deck_shows_card(c.visibility, c.owner_id, d.owner_id) )",
+      "or not public.deck_entry_hidden( deck_cards.card_id, deck_cards.scryfall_id, deck_cards.source, (select c.visibility from public.cards c where c.id = deck_cards.card_id), (select c.owner_id from public.cards c where c.id = deck_cards.card_id), d.owner_id )",
     );
+    // A bare "no card" is no longer shown: a deleted card's entry.
+    expect(using).not.toContain("card_id is null");
     // No deck visibility list of its own: the decks policy decides who may
     // read the deck at all.
     expect(using).not.toMatch(/d\.visibility/);
@@ -120,6 +161,10 @@ describe("0152: the deck page's read, deck_entries_for_viewer", () => {
     expect(FLAT).toContain("grant execute on function public.deck_entries_for_viewer(uuid) to anon, authenticated, service_role;");
     expect(FLAT).toContain("revoke all on function public.deck_shows_card(text, uuid, uuid) from public;");
     expect(FLAT).toContain("grant execute on function public.deck_shows_card(text, uuid, uuid) to anon, authenticated, service_role;");
+    expect(FLAT).toContain("revoke all on function public.deck_entry_hidden(uuid, text, text, text, uuid, uuid) from public;");
+    expect(FLAT).toContain(
+      "grant execute on function public.deck_entry_hidden(uuid, text, text, text, uuid, uuid) to anon, authenticated, service_role;",
+    );
   });
 
   it("opens the decks the page opens (0151's guide function's rule): public, unlisted by its id, or the caller's own", () => {
@@ -128,9 +173,9 @@ describe("0152: the deck page's read, deck_entries_for_viewer", () => {
     expect(body).toContain("v_is_owner := coalesce(v_owner = auth.uid(), false);");
   });
 
-  it("hides what the policy hides — a linked card the deck doesn't show, no printing — from anyone but the owner", () => {
+  it("hides what the policy hides (deck_entry_hidden) from anyone but the owner", () => {
     expect(body).toContain(
-      "e.card_id is not null and e.scryfall_id is null and not coalesce(public.deck_shows_card(c.visibility, c.owner_id, v_owner), false) as hidden",
+      "public.deck_entry_hidden(e.card_id, e.scryfall_id, e.source, c.visibility, c.owner_id, v_owner) as hidden",
     );
     expect(body).toContain("if v_row.hidden and not v_is_owner then");
   });

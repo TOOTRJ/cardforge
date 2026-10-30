@@ -25,16 +25,34 @@
 // real name. Pure.
 // ---------------------------------------------------------------------------
 
+import { bringsCard } from "@/lib/decks/entry-status";
 import { containsProfanity } from "@/lib/moderation/profanity";
 
 export const PRIVATE_CARD_NAME = "Private card";
 
-type EntryLike = { card_id: string | null; name: string; type_line?: string | null; scryfall_id?: string | null };
+type EntryLike = {
+  card_id: string | null;
+  name: string;
+  type_line?: string | null;
+  scryfall_id?: string | null;
+  /** How the entry got into the deck (0144); absent = not known. */
+  source?: string | null;
+};
 
-/** True when the entry links a card this viewer can't read — the "Private
- *  card" tile of a visitor's view (never for the deck's owner). */
-export function isPrivateForViewer(entry: Pick<EntryLike, "card_id">, card: unknown, viewerIsOwner: boolean): boolean {
-  return !viewerIsOwner && Boolean(entry.card_id) && !card;
+/** True when the entry links a card this viewer can't read — or its card is
+ *  GONE (no card, no printing, an entry that came WITH a card: its name is
+ *  the deleted card's title, deckEntryUnavailable's case) — the "Private
+ *  card" tile of a visitor's view (never for the deck's owner, who keeps the
+ *  stored name, "No longer available"). Migration 0152's deck_entry_hidden
+ *  is the database's side: such a row reaches a visitor masked. */
+export function isPrivateForViewer(
+  entry: Pick<EntryLike, "card_id" | "scryfall_id" | "source">,
+  card: unknown,
+  viewerIsOwner: boolean,
+): boolean {
+  if (viewerIsOwner) return false;
+  if (entry.card_id) return !card;
+  return !entry.scryfall_id && bringsCard(entry.source);
 }
 
 /** True when this entry's name is hidden from a viewer who isn't the owner:

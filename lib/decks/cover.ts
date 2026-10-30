@@ -1,3 +1,4 @@
+import { bringsCard } from "@/lib/decks/entry-status";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import { coverObjectPosition } from "@/types/deck";
 import {
@@ -94,12 +95,31 @@ type CoverColorEntry = {
   color_identity: readonly string[] | null;
   scryfall_id: string | null;
   card_id: string | null;
+  /** How the entry got into the deck (0144) — a card-brought entry whose
+   *  card is gone is hidden (bringsCard). Absent = not known. */
+  source?: string | null;
 };
 type CoverColorCard = { color_identity: readonly string[] | null; visibility: string } | null;
 
+/** An entry a visitor's deck hides (migration 0152's deck_entry_hidden): no
+ *  printing, and a linked card the deck doesn't show — private, or withheld
+ *  (`card` null: every caller reads the cards the deck may show,
+ *  canLinkIntoDeck) — or no card left of one the entry brought. Judged the
+ *  same for EVERY viewer, the owner included, so the default cover is one
+ *  picture for everyone: the owner reads their private card and the entry's
+ *  stored colours, a visitor neither (0152 masks them). */
+function hiddenFromVisitors(entry: CoverColorEntry, card: CoverColorCard): boolean {
+  if (entry.scryfall_id) return false;
+  if (entry.card_id) return !card || card.visibility === "private";
+  return bringsCard(entry.source);
+}
+
 /** One entry's colours, or null when the viewer-independent data says
- *  nothing: a placeholder, or a linked card that is private or gone. */
+ *  nothing: a placeholder, or an entry a visitor's deck hides (a linked card
+ *  that is private or withheld, or a card that is gone) — its own stored
+ *  colours included. */
 function entryCoverColors(entry: CoverColorEntry, card: CoverColorCard): DeckCoverColor[] | null {
+  if (hiddenFromVisitors(entry, card)) return null;
   const own = (entry.color_identity ?? []).filter((c): c is DeckCoverColor => WUBRG.has(c));
   if (own.length > 0) return own;
   if (entry.card_id) {

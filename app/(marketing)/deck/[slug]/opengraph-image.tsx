@@ -59,6 +59,9 @@ type OgEntry = {
   position: number;
   card_id: string | null;
   scryfall_id: string | null;
+  /** How the entry got into the deck (0144): a card-brought entry whose card
+   *  is gone counts for nobody's colours (lib/decks/cover.ts). */
+  source: string | null;
   image_url: string | null;
   type_line: string | null;
   color_identity: string[];
@@ -91,7 +94,7 @@ async function getDeck(
         supabase
           .from("deck_cards")
           .select(
-            `id, board, name, position, card_id, scryfall_id, image_url, type_line, color_identity, ${withRank ? "featured_rank, " : ""}card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)`,
+            `id, board, name, position, card_id, scryfall_id, source, image_url, type_line, color_identity, ${withRank ? "featured_rank, " : ""}card:cards(id, owner_id, title, visibility, rendered_image_url, rendered_thumb_url, color_identity, frame_style)`,
           )
           .eq("deck_id", deck.id)
           .order("position", { ascending: true }),
