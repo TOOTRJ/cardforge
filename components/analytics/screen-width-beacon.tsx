@@ -19,7 +19,7 @@ export function ScreenWidthBeacon() {
     if (navigator.webdriver) return;
     const report = () =>
       reportScreenWidthOnce({
-        storage: () => window.sessionStorage,
+        sessionStore: () => window.sessionStorage,
         width: window.innerWidth,
         send: (bucket) => postFunnelEvent("screen_width", { bucket }),
       });

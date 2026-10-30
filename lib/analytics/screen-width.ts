@@ -56,16 +56,16 @@ export function screenWidthProps(input: unknown): { bucket: ScreenWidthBucket } 
  * a missing session is better than a double one. Returns whether it sent.
  */
 export function reportScreenWidthOnce(deps: {
-  storage: () => Pick<Storage, "getItem" | "setItem">;
+  sessionStore: () => Pick<Storage, "getItem" | "setItem">;
   width: number;
   send: (bucket: ScreenWidthBucket) => void;
 }): boolean {
   const bucket = screenWidthBucket(deps.width);
   if (!bucket) return false;
   try {
-    const storage = deps.storage();
-    if (storage.getItem(SCREEN_WIDTH_STORAGE_KEY) != null) return false;
-    storage.setItem(SCREEN_WIDTH_STORAGE_KEY, "1");
+    const store = deps.sessionStore();
+    if (store.getItem(SCREEN_WIDTH_STORAGE_KEY) != null) return false;
+    store.setItem(SCREEN_WIDTH_STORAGE_KEY, "1");
   } catch {
     return false;
   }

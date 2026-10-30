@@ -119,19 +119,19 @@ describe("reportScreenWidthOnce — once per tab session", () => {
   it("sends the bucket the first time and nothing after (a reload, a remount)", () => {
     const { storage, map } = memoryStorage();
     const send = vi.fn();
-    expect(reportScreenWidthOnce({ storage: () => storage, width: 1440, send })).toBe(true);
+    expect(reportScreenWidthOnce({ sessionStore: () => storage, width: 1440, send })).toBe(true);
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith("1366-1535");
     expect(map.get(SCREEN_WIDTH_STORAGE_KEY)).toBe("1");
     // The same tab again — even at another width.
-    expect(reportScreenWidthOnce({ storage: () => storage, width: 390, send })).toBe(false);
+    expect(reportScreenWidthOnce({ sessionStore: () => storage, width: 390, send })).toBe(false);
     expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("a new tab session (empty storage) counts again", () => {
     const send = vi.fn();
-    reportScreenWidthOnce({ storage: () => memoryStorage().storage, width: 1920, send });
-    reportScreenWidthOnce({ storage: () => memoryStorage().storage, width: 1920, send });
+    reportScreenWidthOnce({ sessionStore: () => memoryStorage().storage, width: 1920, send });
+    reportScreenWidthOnce({ sessionStore: () => memoryStorage().storage, width: 1920, send });
     expect(send.mock.calls).toEqual([["1920-2559"], ["1920-2559"]]);
   });
 
@@ -139,22 +139,22 @@ describe("reportScreenWidthOnce — once per tab session", () => {
     const send = vi.fn();
     expect(
       reportScreenWidthOnce({
-        storage: () => {
+        sessionStore: () => {
           throw new Error("SecurityError: sessionStorage is blocked");
         },
         width: 1440,
         send,
       }),
     ).toBe(false);
-    expect(reportScreenWidthOnce({ storage: () => memoryStorage({ throwOnGet: true }).storage, width: 1440, send })).toBe(false);
-    expect(reportScreenWidthOnce({ storage: () => memoryStorage({ throwOnSet: true }).storage, width: 1440, send })).toBe(false);
+    expect(reportScreenWidthOnce({ sessionStore: () => memoryStorage({ throwOnGet: true }).storage, width: 1440, send })).toBe(false);
+    expect(reportScreenWidthOnce({ sessionStore: () => memoryStorage({ throwOnSet: true }).storage, width: 1440, send })).toBe(false);
     expect(send).not.toHaveBeenCalled();
   });
 
   it("sets the flag before it sends", () => {
     const { storage, map } = memoryStorage();
     reportScreenWidthOnce({
-      storage: () => storage,
+      sessionStore: () => storage,
       width: 800,
       send: () => expect(map.get(SCREEN_WIDTH_STORAGE_KEY)).toBe("1"),
     });
@@ -164,7 +164,7 @@ describe("reportScreenWidthOnce — once per tab session", () => {
   it("a width that isn't one sends nothing and leaves the flag unset", () => {
     const { storage, map } = memoryStorage();
     const send = vi.fn();
-    expect(reportScreenWidthOnce({ storage: () => storage, width: 0, send })).toBe(false);
+    expect(reportScreenWidthOnce({ sessionStore: () => storage, width: 0, send })).toBe(false);
     expect(send).not.toHaveBeenCalled();
     expect(map.size).toBe(0);
   });
