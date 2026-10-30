@@ -8,7 +8,11 @@ import { BrowseSearchBox } from "@/components/browse/browse-search-box";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
-import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
+import {
+  COMMANDER_ROW_MAX,
+  CommanderCardsSection,
+  CommanderCardsSectionSkeleton,
+} from "@/components/decks/commander-row";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import {
   DeckGrid,
@@ -16,16 +20,11 @@ import {
   DeckTile,
   DeckTileSkeleton,
 } from "@/components/decks/deck-tile";
-import {
-  TrendingCardsSection,
-  TrendingCardsSectionSkeleton,
-} from "@/components/gallery/trending-cards-section";
-import { ROW_MAX } from "@/components/gallery/card-row";
-import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
-import { listTrendingCards } from "@/lib/cards/queries";
+import { listCommanderCards } from "@/lib/cards/queries";
+import { randomId } from "@/lib/ids";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDeckFormat, type DeckFormat } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
@@ -37,8 +36,8 @@ import { PageContainer } from "@/components/layout/page-container";
 //
 //   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
 //     on top, then "Trending now" (the week's most-liked decks, TODO DK8.2),
-//     "Trending cards" (the gallery's trending query, DK8.3) and the newest
-//     public decks. Never reads searchParams, so it stays on the CDN.
+//     "Cards to build around" (public legendary creatures, a random sample
+//     per regeneration, DK8.4) and the newest public decks. Never reads searchParams, so it stays on the CDN.
 //   - /decks/browse (DecksBrowse) → dynamic. Search, the sort, the format
 //     chips and one creator's decks (?owner=, a profile's "See all decks";
 //     DK8.5) with the results; every control navigates WITHIN this route
@@ -139,8 +138,8 @@ export function DecksLanding() {
         </Suspense>
       ) : null}
 
-      {/* The week's most-liked decks, then the cards to build around. Both
-          rows hide themselves when they have nothing to show. */}
+      {/* The week's most-liked decks, then the commanders to build around.
+          Both rows hide themselves when they have nothing to show. */}
       {configured ? (
         <div className="mt-10">
           <Suspense fallback={<DeckRowSkeleton />}>
@@ -154,8 +153,8 @@ export function DecksLanding() {
       ) : null}
       {configured ? (
         <div className="mt-12">
-          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
-            <DecksTrendingCards />
+          <Suspense fallback={<CommanderCardsSectionSkeleton />}>
+            <DecksCommanderCards />
           </Suspense>
         </div>
       ) : null}
@@ -181,31 +180,18 @@ export function DecksLanding() {
   );
 }
 
-/** "Trending cards" on /decks (TODO DK8.3) — the gallery's own trending
- *  query and section, cookie-free so the landing stays ISR — each tile with
- *  "Build a deck around this card" (the New deck dialog, the card as the
- *  deck's first entry) while it is public — what lets anyone build around
- *  another creator's card (D3); the trending pool is public cards. */
-async function DecksTrendingCards() {
-  const trending = await listTrendingCards({ limit: ROW_MAX, anonymous: true });
-  if (trending.length === 0) return null;
+/** "Cards to build around" on /decks (TODO DK8.4) — its own row: public
+ *  legendary creatures, potential commanders, no admin's (0091), a fresh
+ *  weighted-random sample at each ISR regeneration (a new seed every
+ *  render; the page re-bakes at most every `revalidate` seconds).
+ *  Cookie-free so the landing stays ISR. Each tile carries "Build around"
+ *  (the New deck dialog, the card as the deck's commander) — every card
+ *  here is public, so anyone may build around it (D3). */
+async function DecksCommanderCards() {
+  const cards = await listCommanderCards({ seed: randomId(), limit: COMMANDER_ROW_MAX, anonymous: true });
   return (
-    <TrendingCardsSection
-      cards={trending}
-      isAuthed={false}
-      sizes={CARD_GRID_SIZES}
-      eyebrow="Trending cards"
-      heading="Cards to build around"
-      description="The community's hottest cards this week — start a deck around one, or open it to add it to a deck you have."
-      cardAction={(card) =>
-        card.visibility === "public" ? (
-          <BuildDeckAroundButton
-            cardId={card.id}
-            cardTitle={card.title}
-            className="h-auto min-h-9 w-full whitespace-normal py-1.5 text-xs"
-          />
-        ) : null
-      }
+    <CommanderCardsSection
+      cards={cards}
       action={
         <Link href="/gallery" className="text-sm font-medium text-primary-bright underline-offset-4 hover:underline">
           Open the gallery

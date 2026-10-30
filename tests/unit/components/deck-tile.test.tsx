@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
-// TODO DK8.1 — the ONE deck tile, and DK8.4's "In N decks" on a gallery tile:
+// TODO DK8.1 — the ONE deck tile, and DK8.4's "In N decks" on a gallery tile
+// (and the later DK8.4 / DK8.5: /decks' commander row; a click on a deck
+// tile's fanned cards opens the deck):
 //   * the title is the tile's one link, stretched over it; the author and
 //     the heart are its siblings — no control inside a link;
 //   * the picture (cover + fan) is decorative; a fan card is its thumb;
@@ -44,6 +46,13 @@ vi.mock("@/components/cards/card-preview", () => ({ CardPreview: () => <div data
 vi.mock("@/components/gallery/trending-share-button", () => ({
   TrendingShareButton: () => <button type="button">Share</button>,
 }));
+vi.mock("@/components/decks/build-deck-around-button", () => ({
+  BuildDeckAroundButton: ({ cardId, cardTitle, short }: { cardId: string; cardTitle: string; short?: boolean }) => (
+    <button type="button" data-card-id={cardId}>
+      {short ? "Build around" : "Build a deck around this card"}: {cardTitle}
+    </button>
+  ),
+}));
 vi.mock("@/lib/cards/preview-data", () => ({
   cardToPreviewData: (row: { title: string; frame_style: unknown }) => ({ title: row.title, frameStyle: row.frame_style }),
 }));
@@ -51,6 +60,7 @@ vi.mock("@/lib/cards/preview-data", () => ({
 import { DeckTile, deckTileCardLine, deckTileFormatLine, deckTilePips, type DeckTileDeck } from "@/components/decks/deck-tile";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { TrendingCardsSection } from "@/components/gallery/trending-cards-section";
+import { CommanderCardsSection } from "@/components/decks/commander-row";
 import type { DeckTileArt } from "@/lib/decks/tile-art";
 import type { CardWithStats } from "@/lib/cards/queries";
 import type { Card } from "@/types/card";
@@ -149,6 +159,28 @@ describe("DeckTile", () => {
     expect(picture.className).toContain("@container");
   });
 
+  it("a click on a fanned card opens the deck (DK8.5): the picture takes no pointer events, the fan is no control", () => {
+    const { container } = render(<DeckTile deck={deck()} art={art} />);
+    const tile = screen.getByRole("article");
+    const picture = container.querySelector("[aria-hidden]")!;
+    const fan = picture.querySelector("ul")!;
+    expect(fan.querySelectorAll("li")).toHaveLength(2);
+    // The fan's turned cards paint over the title's stretched ::after; with
+    // the whole picture click-through, a click on one reaches that link.
+    expect(picture.className.split(" ")).toContain("pointer-events-none");
+    for (const el of [fan, ...fan.querySelectorAll("*")]) {
+      expect(el.className.toString(), el.tagName).not.toMatch(/\bpointer-events-auto\b/);
+    }
+    // Nothing in the picture is a control or a tab stop: the tile keeps ONE
+    // stop for the deck (the title) — the author and the heart are their own.
+    expect(picture.querySelector("a, button, [tabindex], [role='button']")).toBeNull();
+    const deckLinks = within(tile)
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href") === "/deck/ness");
+    expect(deckLinks).toHaveLength(1);
+    expect(deckLinks[0].closest("[aria-hidden]")).toBeNull();
+  });
+
   it("names the format and bracket, the colours (WUBRG order, in words for a screen reader), the counts, likes and views", () => {
     render(<DeckTile deck={deck()} art={art} />);
     const tile = screen.getByRole("article");
@@ -214,11 +246,15 @@ describe("every deck list draws DeckTile (no tile of its own)", () => {
 describe("Build a deck around this card (TODO DK8.3) — where it is wired", () => {
   const read = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
 
-  it("/decks' trending cards: one per PUBLIC card, carrying its id", () => {
-    const source = read("app/(marketing)/decks/decks-view.tsx");
-    expect(source).toMatch(
-      /cardAction=\{\(card\) =>\s*card\.visibility === "public" \? \(\s*<BuildDeckAroundButton\s*cardId=\{card\.id\}\s*cardTitle=\{card\.title\}/,
-    );
+  it("/decks' commander row (DK8.4): every tile carries its card's id, the row is no longer the trending cards", () => {
+    const view = read("app/(marketing)/decks/decks-view.tsx");
+    expect(view).toMatch(/listCommanderCards\(\{ seed: randomId\(\)/);
+    expect(view).not.toMatch(/listTrendingCards|TrendingCardsSection/);
+    const row = read("components/decks/commander-row.tsx");
+    expect(row).toMatch(/<BuildDeckAroundButton\s*cardId=\{card\.id\}\s*cardTitle=\{card\.title\}/);
+    // The glow is the trending block's own class, never a copy of it.
+    expect(row).toContain("TRENDING_HERO_SURFACE_CLASS");
+    expect(row).not.toContain("radial-gradient");
   });
 
   it("the card page's Decks with this card: a public card (anyone's, D3) or the viewer's own", () => {
@@ -288,5 +324,60 @@ describe("GalleryCardTile — In N decks (TODO DK8.4)", () => {
     cleanup();
     render(<GalleryCardTile card={card(undefined)} isAuthed={false} />);
     expect(screen.queryByText(/^In \d+ decks?$/)).toBeNull();
+  });
+});
+
+describe("CommanderCardsSection — /decks' cards to build around (TODO DK8.4)", () => {
+  const commander = (id: string, title: string) =>
+    ({
+      id,
+      owner_id: OWNER,
+      slug: title.toLowerCase().replace(" ", "-"),
+      title,
+      card_type: "creature",
+      supertype: "Legendary",
+      visibility: "public",
+      rarity: "mythic",
+      frame_style: { template: "m15" },
+      rendered_image_url: `${HOST}/storage/v1/object/public/card-renders/${OWNER}/${id}.png?v=1`,
+      rendered_thumb_url: `${HOST}/storage/v1/object/public/card-renders/${OWNER}/${id}.thumb.webp?v=1`,
+      rendered_back_thumb_url: null,
+      owner: { username: "storm_griffin", display_name: null, avatar_url: null },
+    }) as unknown as CardWithStats;
+  const ids = Array.from({ length: 9 }, (_, i) => `55555555-5555-4555-8555-${String(i).padStart(12, "0")}`);
+
+  it("one small tile per card (eight at most), each a link to its card with Build around and the author OUTSIDE it", () => {
+    render(<CommanderCardsSection cards={ids.map((id, i) => commander(id, `Commander ${i}`))} />);
+    const section = screen.getByRole("region", { name: "Cards to build around" });
+    const items = within(section).getAllByRole("listitem");
+    expect(items).toHaveLength(8);
+    const first = items[0];
+    const open = within(first).getByRole("link", { name: "Open Commander 0" });
+    expect(open.getAttribute("href")).toBe("/card/storm_griffin/commander-0");
+    const build = within(first).getByRole("button", { name: "Build around: Commander 0" });
+    expect(build.getAttribute("data-card-id")).toBe(ids[0]);
+    expect(build.closest("a")).toBeNull();
+    expect(within(first).getByRole("link", { name: "@storm_griffin" }).closest("a")?.getAttribute("href")).toBe(
+      "/profile/storm_griffin",
+    );
+    expect(open.querySelector("a, button")).toBeNull();
+    // The 600 px thumb, never the HD PNG.
+    const srcs = [...first.querySelectorAll("img")].map((img) => img.getAttribute("src") ?? "");
+    expect(srcs.some((src) => src.includes(".thumb.webp"))).toBe(true);
+    expect(srcs.some((src) => /\.png\b/.test(src))).toBe(false);
+    // Tiles past the row's columns are hidden by the container, never wrapped.
+    expect(items[0].className).toContain("flex");
+    expect(items[7].className).toContain("hidden @min-[92rem]:flex");
+  });
+
+  it("wears the trending block's glow", async () => {
+    const { TRENDING_HERO_SURFACE_CLASS } = await import("@/components/gallery/trending-cards-section");
+    render(<CommanderCardsSection cards={[commander(ids[0], "Vipara")]} />);
+    expect(screen.getByRole("region", { name: "Cards to build around" }).className).toBe(TRENDING_HERO_SURFACE_CLASS);
+  });
+
+  it("draws nothing without a card", () => {
+    const { container } = render(<CommanderCardsSection cards={[]} />);
+    expect(container.innerHTML).toBe("");
   });
 });

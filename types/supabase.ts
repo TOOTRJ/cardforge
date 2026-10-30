@@ -2119,6 +2119,10 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
+      list_commander_cards: {
+        Args: { p_seed?: string; p_limit?: number };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
       list_trending_pool: {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
