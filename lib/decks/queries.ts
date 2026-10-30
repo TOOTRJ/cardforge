@@ -502,22 +502,33 @@ export type DeckPageCard = Omit<Pick<Card, PageColumn>, ProvenanceColumn> & Part
  *  the D3 filter, the makers' credit — with only DECK_PAGE_CARD_COLUMNS of
  *  each card. */
 export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPageCard>[]> {
-  return readDeckItems(deckId, async (supabase, ids) => {
-    let columns: string[] = [...DECK_PAGE_CARD_COLUMNS];
-    for (;;) {
-      const { data, error } = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
-      const missing =
-        error?.code === "42703"
-          ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
-          : undefined;
-      if (missing) {
-        columns = columns.filter((column) => !missing.includes(column));
-        continue;
-      }
-      if (error) return [];
-      return ((data ?? []) as unknown as CardRow[]).map((row) => narrowCard(row) as DeckPageCard);
+  return readDeckItems(deckId, async (supabase, ids) =>
+    (await readDeckPageCardRows((columns) => supabase.from("cards").select(columns).in("id", ids))) ?? [],
+  );
+}
+
+/** Cards read with DECK_PAGE_CARD_COLUMNS — the page's read, and the add
+ *  box's results (lib/decks/add-actions.ts), which the page draws as rows
+ *  the moment they are added. `select(columns)` builds the query; a
+ *  database missing a late column (DECK_PAGE_LATE_COLUMNS) is asked again
+ *  without it. Null on any other error. */
+export async function readDeckPageCardRows(
+  select: (columns: string) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>,
+): Promise<DeckPageCard[] | null> {
+  let columns: string[] = [...DECK_PAGE_CARD_COLUMNS];
+  for (;;) {
+    const { data, error } = await select(columns.join(", "));
+    const missing =
+      error?.code === "42703"
+        ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
+        : undefined;
+    if (missing) {
+      columns = columns.filter((column) => !missing.includes(column));
+      continue;
     }
-  });
+    if (error) return null;
+    return ((data ?? []) as unknown as CardRow[]).map((row) => narrowCard(row) as DeckPageCard);
+  }
 }
 
 type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: string[]) => Promise<C[]>;
