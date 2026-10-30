@@ -253,6 +253,7 @@ export const siteConfig = {
     { label: "Feed", href: "/feed" },
     { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Billing", href: "/dashboard/billing" },
+    { label: "Refer a friend", href: "/dashboard/referrals" },
     { label: "Notifications", href: "/notifications" },
     { label: "Feedback", href: "/feedback" },
     { label: "Settings", href: "/settings" },

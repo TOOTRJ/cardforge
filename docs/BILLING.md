@@ -795,6 +795,18 @@ reward details): a blocked referral reads "Not eligible". Admins read
 everything (RLS `viewer_is_admin()`), and `admin_referral_stats(since)` is
 the admin panel's one read. Writes: the service role only.
 
+**Where it shows.** `/dashboard/referrals` ("Refer a friend" in the
+dashboard rail; a line under the plan card on `/dashboard/billing`): the
+link with Copy / the platform's Share sheet / an email draft, how it works,
+the caps, four numbers (`buildReferralSummary`: joined, first card, months
+earned of 12, this UTC month of 3) and the friends with their status
+(`getMyReferralDashboard`, the viewer's own session and column grant). The
+admin **Referrals** panel sits under Funnel on `/admin/users`
+(`getReferralStats` → `admin_referral_stats` for 30 days and all time):
+signups → first card → rewarded, capped, blocked (by reason), expired,
+months granted on both sides, and the top referrers linked to their admin
+page.
+
 **Not built (owner decisions, PR body):** a 72-hour hold on the referrer's
 month (the research's reversal window), a click window longer than the tab
 (sessionStorage dies with it — a localStorage entry would be a new storage
