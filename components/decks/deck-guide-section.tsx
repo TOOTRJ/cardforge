@@ -18,6 +18,12 @@ const PAUSED_NOTE_ID = "deck-guide-paused-note";
 //   No guide                  → nothing, but for the Pro owner of a deck with
 //     cards: the section with "Analyze this deck" greyed.
 //
+// The database decides what reaches the page (lib/decks/guides.ts, migration
+// 0151): the text only for a Pro viewer, redacted for anyone but the owner
+// (a card gone private since reads "Private card"); `guideWithheld` = a guide
+// exists that this viewer may not read. The text is drawn only for a Pro
+// viewer here as well.
+//
 // While deck AI is paused (owner 2026-10-28, TODO DK1 — D4,
 // lib/ai/deck-ai-pause.ts) no guide is written or refreshed: "Analyze this
 // deck" and "Refresh analysis" are "Coming soon", and the guides that exist
@@ -27,6 +33,7 @@ const PAUSED_NOTE_ID = "deck-guide-paused-note";
 
 export function DeckGuideSection({
   guide,
+  guideWithheld = false,
   isOwner,
   viewerIsPro,
   aiConfigured,
@@ -35,13 +42,16 @@ export function DeckGuideSection({
   /** The analyze button's target; unread while deck AI is paused (DK1). */
   deckId: string;
   guide: DeckGuide | null;
+  /** A guide exists that this viewer may not read (the database withheld
+   *  its text): the teaser. */
+  guideWithheld?: boolean;
   isOwner: boolean;
   viewerIsPro: boolean;
   aiConfigured: boolean;
   hasCards: boolean;
 }) {
   if (!viewerIsPro) {
-    if (!guide) return null;
+    if (!guide && !guideWithheld) return null;
     return (
       <section className="mt-12">
         <PageHeader
