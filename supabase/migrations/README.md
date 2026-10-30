@@ -390,3 +390,14 @@ instead. Each bullet: what the header says, and what is true now.
   which hands a visitor such an entry masked ("Private card", the card's
   values cleared) and the owner every row as stored. Nothing stored
   changed; who may read the deck at all is still the decks policy's.
+- **0152 (a deleted card's entry is hidden: "no card left and its source
+  says the entry came WITH a card"; the mask "Private card")** — two
+  corrections. Since 0153 such an entry's mask reads "No longer available"
+  to visitors (a private or withheld card still reads "Private card").
+  And the rule needs a SOURCE: an entry written before 0144 has none, so
+  once its card is deleted it is not hidden — `deck_entry_hidden` can't
+  tell it from a pasted name or a line its owner unlinked — and visitors
+  read its stored name (the deleted card's title) as before 0152. The
+  owner accepted this gap on 2026-10-29; production held 391 entries that
+  would read so once their card is deleted (`source is null and card_id is
+  not null and scryfall_id is null`).

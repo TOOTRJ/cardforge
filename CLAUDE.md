@@ -140,7 +140,8 @@ Rules and gotchas:
   (`deck_entry_hidden`, `isPrivateForViewer`) — is the deck OWNER's row
   alone (`deck_cards` read policy); a surface that LISTS a deck's rows for
   anyone reads them through `deck_entries_for_viewer` (`readDeckItems`:
-  masked, "Private card") — the table hands a visitor none of them. A
+  masked "Private card", a deleted card "No longer available" — 0153,
+  `hiddenEntryName`) — the table hands a visitor none of them. A
   hidden entry adds nothing to the default cover's colours for ANY viewer,
   owner included (`lib/decks/cover.ts`), so the tiles and the share image
   (which read the table) and the page draw one cover for everyone. The
