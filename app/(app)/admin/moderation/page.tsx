@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EyeOff, MessageCircle, ShieldCheck } from "lucide-react";
+import { MessageCircle, ShieldCheck } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -12,7 +12,7 @@ import {
   getModerationHiddenCards,
   getModerationQueue,
 } from "@/lib/moderation/queries";
-import { UnhideCardButton } from "@/components/moderation/unhide-card-button";
+import { HiddenCardsList } from "@/components/moderation/hidden-cards-list";
 import { formatUtcDate } from "@/lib/format/dates";
 import {
   REPORT_REASON_LABELS,
@@ -159,41 +159,31 @@ export default async function ModerationPage() {
         {/* Cards moderation hid stay private until an admin unhides them
             (migration 0156). Unhide clears the lock and tells the owner;
             it never republishes. */}
-        <section className="flex flex-col gap-4">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
-            Hidden cards
-          </h2>
-          {hiddenFailed ? <AdminLoadError what="the hidden cards" /> : null}
-          {hidden.length === 0 && hiddenFailed ? null : hidden.length === 0 ? (
-            <EmptyState
-              icon={EyeOff}
-              title="No hidden cards"
-              description="No card is held private by moderation."
-            />
+        <section className="flex flex-col gap-4" aria-labelledby="hidden-cards-title">
+          {hiddenFailed ? (
+            <>
+              <h2 id="hidden-cards-title" className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
+                Hidden cards
+              </h2>
+              <AdminLoadError what="the hidden cards" />
+            </>
           ) : (
-            <ul className="flex flex-col divide-y divide-border/40 rounded-md border border-border/60 bg-surface/60">
-              {hidden.map((item) => (
-                <li key={item.cardId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {item.href ? (
-                        <Link href={item.href} className="underline-offset-4 hover:underline">
-                          {item.title}
-                        </Link>
-                      ) : (
-                        item.title
-                      )}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {item.ownerUsername ? `@${item.ownerUsername} · ` : ""}
-                      {HIDDEN_REASON_LABELS[item.reason ?? ""] ?? "Hidden"}
-                      {item.hiddenAt ? ` · ${formatUtcDate(item.hiddenAt)}` : ""}
-                    </span>
-                  </div>
-                  <UnhideCardButton cardId={item.cardId} title={item.title} />
-                </li>
-              ))}
-            </ul>
+            // A private card's page 404s for everyone but its owner, so the
+            // title is plain text (no link).
+            <HiddenCardsList
+              headingId="hidden-cards-title"
+              rows={hidden.map((item) => ({
+                cardId: item.cardId,
+                title: item.title,
+                detail: [
+                  item.ownerUsername ? `@${item.ownerUsername}` : null,
+                  HIDDEN_REASON_LABELS[item.reason ?? ""] ?? "Hidden",
+                  item.hiddenAt ? formatUtcDate(item.hiddenAt) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }))}
+            />
           )}
         </section>
 

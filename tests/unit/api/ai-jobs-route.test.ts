@@ -130,6 +130,13 @@ describe("POST /api/ai/jobs", () => {
     expect(s.created).toEqual([expect.objectContaining({ kind: "deck", input: expect.objectContaining({ size: 3 }) })]);
   });
 
+  it("keeps a deck type the list knows and drops any other before the plan call (DK5.14)", async () => {
+    await post({ kind: "deck", theme: "goblins", format: "commander", deck_type: "goblins" });
+    await post({ kind: "deck", theme: "goblins", format: "commander", deck_type: "Goblin Horde" });
+    expect(s.created[0]).toEqual(expect.objectContaining({ input: expect.objectContaining({ deckType: "goblins" }) }));
+    expect(s.created[1]).toEqual(expect.objectContaining({ input: expect.objectContaining({ deckType: undefined }) }));
+  });
+
   it("refuses an over-cap batch up front with 403 CARD_CAPACITY and the numbers", async () => {
     s.capacity = { used: 48, cap: 50, tier: "free" };
     const { status, json } = await post({ kind: "deck", theme: "x", format: "commander", size: 5 });

@@ -5,14 +5,17 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isClientFunnelEvent, sanitizeFunnelProps } from "@/lib/analytics/funnel-events";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { screenWidthProps } from "@/lib/analytics/screen-width";
 import { isbot } from "isbot";
 
 // ---------------------------------------------------------------------------
 // POST /api/events — the browser's funnel steps (pricing_view, cta_click,
-// upgrade_modal_open, nav_click). Allow-listed event names, allow-listed scalar props,
-// a 2 KB body cap, and only same-site callers (a cross-site fetch can't
-// pollute the funnel). Signed-out visitors are recorded with NO identifier;
-// a signed-in visitor's row carries their user id. Always 204: this must
+// upgrade_modal_open, nav_click, screen_width). Allow-listed event names,
+// allow-listed scalar props, a 2 KB body cap, and only same-site callers (a
+// cross-site fetch can't pollute the funnel). Signed-out visitors are
+// recorded with NO identifier; a signed-in visitor's row carries their user
+// id — except screen_width (TODO WD9), anonymous for everyone: the session
+// is never read and the row holds its bucket alone. Always 204: this must
 // never make the page care.
 // ---------------------------------------------------------------------------
 
@@ -50,6 +53,14 @@ export async function POST(request: Request): Promise<Response> {
     return new NextResponse(null, { status: 204, headers: NO_STORE });
   }
   if (!isClientFunnelEvent(body.event)) {
+    return new NextResponse(null, { status: 204, headers: NO_STORE });
+  }
+
+  if (body.event === "screen_width") {
+    const props = screenWidthProps(body.props);
+    if (props) {
+      await recordFunnelEvent(createAdminClient(), { event: body.event, userId: null, props, source: "client" });
+    }
     return new NextResponse(null, { status: 204, headers: NO_STORE });
   }
 

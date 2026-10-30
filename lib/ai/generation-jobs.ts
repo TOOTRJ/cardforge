@@ -2,6 +2,7 @@ import "server-only";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
 import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
+import { formatHasBracket } from "@/lib/decks/deck-details";
 
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
 import type { ForcedPrivateNotice } from "@/lib/moderation/profanity";
+import { isModerationLocked } from "@/lib/moderation/lock";
 import { createDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
@@ -111,6 +113,7 @@ import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import {
   REMIX_EMBLEM_LEFT_OUT,
+  REMIX_MODERATION_LEFT_OUT,
   isEmblemRemixSource,
   ownCardRemixFrame,
   ownCardTextStandIn,
@@ -1979,16 +1982,21 @@ export async function createDeckGenerationJob(
     existingContext = owned.context;
   }
 
+  // The deck's format decides whether a bracket applies at all (TODO
+  // DK5.14: Commander only) — a stored bracket on a deck that left Commander
+  // is never handed to the AI. A deck type is a key from the list or none.
+  const planFormat = (existingDeck?.format as DeckFormat) ?? input.format;
+  const deckType = deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null);
   let planResult;
   try {
     planResult = await generateDeckPlan({
       theme: input.theme,
       style: input.style,
-      format: (existingDeck?.format as DeckFormat) ?? input.format,
+      format: planFormat,
       size: input.size,
       existing: existingContext,
-      deckType: deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null),
-      bracket: input.bracket ?? existingDeck?.bracket ?? null,
+      deckType,
+      bracket: formatHasBracket(planFormat) ? (input.bracket ?? existingDeck?.bracket ?? null) : null,
     });
   } catch (error) {
     const failed = planDesignFailure(error, "deck");
@@ -2005,8 +2013,9 @@ export async function createDeckGenerationJob(
         description: planResult.concept.deck_description,
         format: input.format,
         visibility: "public",
-        deck_type: input.deckType ?? null,
-        bracket: input.format === "commander" ? (input.bracket ?? null) : null,
+        // Only a key the list knows (createDeckSchema refuses any other).
+        deck_type: deckTypeByKey(input.deckType ?? null)?.key ?? null,
+        bracket: formatHasBracket(input.format) ? (input.bracket ?? null) : null,
       },
       { redirectAfterCreate: false },
     );
@@ -2148,14 +2157,18 @@ export async function createDeckRemixJob(
   // out before the batch cap — the estimate's own filter — and a printed
   // one is what the estimate priced 0. No step, no charge; the new deck
   // has no emblem.
-  const { remixable, ownEmblems } = remixableDeckItems(items);
+  // …and so are the user's own cards moderation hid (0156; owner
+  // 2026-10-30): no step, no charge.
+  const { remixable, ownEmblems, moderationLocked } = remixableDeckItems(items);
   const capped = remixable.slice(0, input.limit);
   const taken = capped.filter((item) => input.creditsByEntry?.[item.entry.id] !== 0);
   if (taken.length === 0) {
     return {
       ok: false,
       error:
-        ownEmblems > 0 || capped.length > 0
+        moderationLocked > 0
+          ? "Nothing to remix — emblems and cards hidden by moderation aren't remixed."
+          : ownEmblems > 0 || capped.length > 0
           ? "Nothing to remix — emblems aren't remixed."
           : "Nothing to remix — the deck has no resolved cards yet.",
     };
@@ -2406,8 +2419,15 @@ async function runDeckRemixStep(
   // An EMBLEM is not remixed (owner 2026-10-13). A new plan has no step for
   // one; an older plan's step is refused here — before the reserve, so no
   // ledger row is written, and before any AI call.
-  if (entry.card_id && isEmblemRemixSource(await getCardById(entry.card_id))) {
-    return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+  // …nor is a card moderation hid (0156), refused the same way.
+  if (entry.card_id) {
+    const source = await getCardById(entry.card_id);
+    if (isModerationLocked(source)) {
+      return { ...step, status: "failed", error: REMIX_MODERATION_LEFT_OUT, spend_ref: null };
+    }
+    if (isEmblemRemixSource(source)) {
+      return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+    }
   }
 
   // A failed remix step carries no card_id, so its retry reruns the whole

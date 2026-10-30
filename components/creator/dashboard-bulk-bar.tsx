@@ -28,7 +28,11 @@ import {
   deleteCardsAction,
   updateCardsVisibilityAction,
 } from "@/lib/cards/actions";
-import { bulkVisibilityMessage, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import {
+  artlessSkippedLine,
+  bulkVisibilityMessage,
+  strongLanguageSkippedLine,
+} from "@/lib/cards/bulk-visibility-copy";
 import { moderationLockedSkippedLine } from "@/lib/moderation/lock";
 import type { Visibility } from "@/types/card";
 
@@ -95,6 +99,7 @@ export function DashboardBulkBar({
         [
           bulkVisibilityMessage(visibility, result.count, result.skippedPreviews),
           strongLanguageSkippedLine(result.skippedLanguage),
+          artlessSkippedLine(result.skippedArtless),
           moderationLockedSkippedLine(result.skippedModeration),
         ]
           .filter(Boolean)

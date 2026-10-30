@@ -75,6 +75,13 @@ export function moderationLockedSavedMessage(title: string): string {
   return `Saved “${title}” as private — it was hidden by moderation and stays private until our team reviews it.`;
 }
 
+/** A remix of a locked card is refused (owner decision 2026-10-30) — by
+ *  createCardAction, the AI remix and the deck remix's plan, before any art
+ *  is copied or any credit spent. */
+export const MODERATION_LOCKED_REMIX_CODE = "MODERATION_LOCKED_REMIX";
+export const MODERATION_LOCKED_REMIX_MESSAGE =
+  "This card was hidden by moderation, so it can't be remixed. Contact us if you think that's a mistake.";
+
 /** A refused write (the race above), in words. */
 export const MODERATION_LOCK_REFUSED =
   "This card was hidden by moderation, so it stays private — nothing was published.";

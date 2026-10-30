@@ -60,11 +60,13 @@ vi.mock("@/lib/cards/revalidate", () => ({
   revalidateCardListSurfaces: vi.fn(),
   revalidateCardPaths: vi.fn(),
 }));
+vi.mock("@/lib/cards/remix-media", () => ({ adoptRemixMedia: vi.fn(async () => ({ ok: true, media: {} })) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
-import { updateCardAction, updateCardsVisibilityAction } from "@/lib/cards/actions";
+import { adoptRemixMedia } from "@/lib/cards/remix-media";
+import { createCardAction, updateCardAction, updateCardsVisibilityAction } from "@/lib/cards/actions";
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   id: CARD,
@@ -172,6 +174,7 @@ describe("updateCardsVisibilityAction — the moderation lock", () => {
     frame_preview: false,
     visibility,
     rules_text: "Flying",
+    art_url: "https://example.com/art.png",
     moderation_hidden_at: hiddenAt,
   });
   function bulkDb(rows: unknown[], writeError: ChainAnswer["error"] = null) {
@@ -236,5 +239,53 @@ describe("updateCardsVisibilityAction — the moderation lock", () => {
     expect(await updateCardsVisibilityAction([OPEN], "public")).toEqual({ ok: true, count: 1, skippedPreviews: 0 });
     const second = stub.forTable("cards")[1].calls.find((c) => c.method === "select")!.args[0] as string;
     expect(second).not.toMatch(/moderation_hidden_at/);
+  });
+});
+
+describe("a remix of a card moderation hid (owner decision 2026-10-30)", () => {
+  const PARENT = "55555555-5555-4555-8555-555555555555";
+  const remixPayload = () => ({
+    title: "Grim Tidings, Again",
+    game_system_id: "33333333-3333-4333-8333-333333333333",
+    card_type: "creature",
+    color_identity: ["white"],
+    subtypes: ["Human"],
+    power: "2",
+    toughness: "2",
+    rules_text: "Flying",
+    frame_style: { template: "m15" },
+    visibility: "private",
+    art_url: "https://example.com/art.png",
+    parent_card_id: PARENT,
+  });
+
+  it("createCardAction refuses it in words BEFORE any media is copied or anything is written", async () => {
+    state.existing = row({ id: PARENT });
+    vi.mocked(adoptRemixMedia).mockClear();
+    const stub = db();
+    const result = await createCardAction(remixPayload());
+    expect(result).toEqual({
+      ok: false,
+      code: "MODERATION_LOCKED_REMIX",
+      formError: "This card was hidden by moderation, so it can't be remixed. Contact us if you think that's a mistake.",
+    });
+    expect(vi.mocked(adoptRemixMedia)).not.toHaveBeenCalled();
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "insert"))).toHaveLength(0);
+  });
+
+  it("an unlocked parent remixes as before", async () => {
+    state.existing = row({ id: PARENT, moderation_hidden_at: null, moderation_hidden_reason: null });
+    const stub = db();
+    expect((await createCardAction(remixPayload())).ok).toBe(true);
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "insert"))).toHaveLength(1);
+  });
+
+  it("an edit can't newly point its parent at a locked card", async () => {
+    // getCardById answers the same row for the card and its parent here; the
+    // card's own parent is unset, so the link is new.
+    state.existing = row({ parent_card_id: null });
+    db();
+    const result = await updateCardAction(CARD, { parent_card_id: PARENT });
+    expect(result).toMatchObject({ ok: false, code: "MODERATION_LOCKED_REMIX" });
   });
 });

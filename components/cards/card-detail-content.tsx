@@ -70,6 +70,7 @@ import {
   isModerationLocked,
   MODERATION_CONTACT_HREF,
   MODERATION_LOCK_NOTE,
+  MODERATION_LOCKED_REMIX_MESSAGE,
   ownerVisibilityLabel,
 } from "@/lib/moderation/lock";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
@@ -442,6 +443,7 @@ export async function CardDetailContent({
               cardId={card.id}
               requiresSignIn={!user}
               label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
+              unavailableReason={isModerationLocked(card) ? MODERATION_LOCKED_REMIX_MESSAGE : undefined}
             />
             {!isOwner && card.visibility === "public" ? (
               <AddToDeckButton

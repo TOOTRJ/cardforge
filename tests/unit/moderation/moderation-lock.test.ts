@@ -49,6 +49,9 @@ import {
 } from "@/lib/moderation/lock";
 import { unhideCardAction } from "@/lib/moderation/actions";
 import { describeNotification } from "@/lib/notifications/describe";
+import { allHeldBackMessage } from "@/lib/cards/bulk-visibility-copy";
+import { publishBlockReason } from "@/lib/decks/publish-block";
+import { PRIVATE_CARD_MODERATION_REASON } from "@/lib/decks/membership-copy";
 
 beforeEach(() => {
   s.profile = { id: ADMIN, is_admin: true };
@@ -81,6 +84,39 @@ describe("moderationLockReasonOf — the one question a go-public offer asks", (
     expect(moderationLockedSkippedLine(undefined)).toBe("");
     expect(moderationLockedSkippedLine(1)).toBe("1 card stayed private: it was hidden by moderation.");
     expect(moderationLockedSkippedLine(3)).toBe("3 cards stayed private: they were hidden by moderation.");
+  });
+});
+
+describe("allHeldBackMessage — ONE sentence for every reason", () => {
+  it("names the lock, the artwork, the text and previews; asks for artwork only when one has none", () => {
+    expect(allHeldBackMessage("public", { moderation: 1, strongLanguage: 0, previews: 0, artless: 0 })).toBe(
+      "Nothing was published: the selected card was hidden by moderation and stays private until our team reviews it.",
+    );
+    expect(allHeldBackMessage("public", { moderation: 1, strongLanguage: 1, previews: 0, artless: 2 })).toBe(
+      "Nothing was published: 1 card was hidden by moderation, 2 cards have no artwork yet and 1 card has strong language in its text. Add artwork before publishing.",
+    );
+    expect(allHeldBackMessage("public", { moderation: 0, strongLanguage: 0, previews: 0, artless: 1 })).toBe(
+      "Nothing was published: the selected card has no artwork yet. Add artwork before publishing.",
+    );
+    expect(allHeldBackMessage("unlisted", { moderation: 2, strongLanguage: 0, previews: 1, artless: 0 })).not.toMatch(/artwork/);
+  });
+});
+
+describe("publishBlockReason — the lock is the FIRST test", () => {
+  it("a locked row gives the moderation reason, whatever else holds it back", () => {
+    const row = {
+      id: CARD,
+      owner_id: OWNER,
+      title: "Grim",
+      back_face: null,
+      rendered_image_url: null,
+      art_url: null,
+      rules_text: "Flying.",
+      moderation_hidden_at: "2026-10-29T00:00:00Z",
+    };
+    expect(publishBlockReason(row)).toBe(PRIVATE_CARD_MODERATION_REASON);
+    expect(PRIVATE_CARD_MODERATION_REASON).toMatch(/^Hidden by moderation\. Our moderation team hid this card/);
+    expect(publishBlockReason({ ...row, moderation_hidden_at: null })).toMatch(/no artwork/);
   });
 });
 

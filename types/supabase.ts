@@ -1784,6 +1784,34 @@ export type Database = {
           },
         ];
       };
+      // Migration 0155 — each slug a deck gave up on a rename (written by the
+      // decks_record_slug_change trigger only; read where the deck's link is).
+      deck_slug_history: {
+        Row: {
+          old_slug: string;
+          deck_id: string;
+          created_at: string;
+        };
+        Insert: {
+          old_slug: string;
+          deck_id: string;
+          created_at?: string;
+        };
+        Update: {
+          old_slug?: string;
+          deck_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_slug_history_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Migration 0151 — today's salt for deck_views keys (service role).
       deck_view_salts: {
         Row: {

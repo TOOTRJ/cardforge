@@ -53,6 +53,10 @@
 --
 -- Ships through a PR; never applied ad-hoc.
 
+-- The ALTERs and the trigger take an ACCESS EXCLUSIVE lock on public.cards:
+-- give up after 10 s rather than queue every card read behind a long one.
+set local lock_timeout = '10s';
+
 -- 1. The columns -------------------------------------------------------------
 
 alter table public.cards

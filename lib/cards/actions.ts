@@ -16,6 +16,7 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { readVisibilityPreflight, storedArtMissing, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
@@ -92,9 +93,19 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
-import { allFramePreviewsMessage, allHeldBackMessage, allStrongLanguageMessage } from "@/lib/cards/bulk-visibility-copy";
+import {
+  allFramePreviewsMessage,
+  allHeldBackMessage,
+  allStrongLanguageMessage,
+} from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
-import { isModerationLocked, isModerationLockViolation, MODERATION_LOCK_REFUSED } from "@/lib/moderation/lock";
+import {
+  isModerationLocked,
+  isModerationLockViolation,
+  MODERATION_LOCK_REFUSED,
+  MODERATION_LOCKED_REMIX_CODE,
+  MODERATION_LOCKED_REMIX_MESSAGE,
+} from "@/lib/moderation/lock";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import { adoptRemixMedia, type RemixMedia } from "@/lib/cards/remix-media";
 import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
@@ -489,6 +500,11 @@ export async function createCardAction(
       ok: false,
       fieldErrors: { parent_card_id: "The card to remix could not be found." },
     };
+  }
+  // A card moderation hid (migration 0156) is never remixed (owner decision
+  // 2026-10-30) — refused here, before any of its media is copied.
+  if (parent && isModerationLocked(parent)) {
+    return { ok: false, code: MODERATION_LOCKED_REMIX_CODE, formError: MODERATION_LOCKED_REMIX_MESSAGE };
   }
 
   // Cross-field sanity: loyalty rows belong to planeswalkers. (Saga chapters
@@ -1097,6 +1113,10 @@ export async function updateCardAction(
       if (!parent) {
         return { ok: false, fieldErrors: { parent_card_id: "The card to remix could not be found." } };
       }
+      // Never a remix of a card moderation hid (0156; owner 2026-10-30).
+      if (isModerationLocked(parent) && parent.id !== existing.parent_card_id) {
+        return { ok: false, code: MODERATION_LOCKED_REMIX_CODE, formError: MODERATION_LOCKED_REMIX_MESSAGE };
+      }
     }
     update.parent_card_id = data.parent_card_id;
   }
@@ -1358,63 +1378,18 @@ export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
  *  lib/moderation/lock.ts). A refusal of the whole batch names its
  *  `reason` when it is the lock. */
 export type BulkVisibilityResult =
-  | (BulkCardsSuccess & { skippedPreviews: number; skippedLanguage?: number; skippedModeration?: number })
+  | (BulkCardsSuccess & {
+      skippedPreviews: number;
+      skippedLanguage?: number;
+      skippedArtless?: number;
+      skippedModeration?: number;
+    })
   | (BulkCardsFailure & { reason?: "moderation" });
 
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
  *  the function's lifetime; whatever doesn't fit renders live until its next
  *  individual save. */
 const BULK_BAKE_BUDGET_MS = 200_000;
-
-type BulkPreflightRow = {
-  id: string;
-  owner_id: string;
-  title: string;
-  back_face: unknown;
-  rendered_image_url: string | null;
-  /** Absent until migration 0121 lands. */
-  frame_preview?: boolean;
-  /** The card's visibility and text, for the strong-language rule. */
-  visibility?: Visibility;
-  nickname?: string | null;
-  supertype?: string | null;
-  printed_types?: string | null;
-  subtypes?: string[] | null;
-  tags?: string[] | null;
-  rules_text?: string | null;
-  flavor_text?: string | null;
-  artist_credit?: string | null;
-  footer_text?: string | null;
-  face_content?: unknown;
-  /** The moderation lock (migration 0156). */
-  moderation_hidden_at?: string | null;
-};
-
-/** The pre-flight's columns. A database that lacks one of the LATE ones
- *  (frame_preview before 0121, printed_types before 0137, nickname before
- *  0141) answers that it does not exist, naming it, and the read runs
- *  again without it. */
-const BULK_PREFLIGHT_COLUMNS: readonly string[] = [
-  "id",
-  "owner_id",
-  "title",
-  "back_face",
-  "rendered_image_url",
-  "frame_preview",
-  "visibility",
-  "nickname",
-  "supertype",
-  "printed_types",
-  "subtypes",
-  "tags",
-  "rules_text",
-  "flavor_text",
-  "artist_credit",
-  "footer_text",
-  "face_content",
-  "moderation_hidden_at",
-];
-const BULK_LATE_COLUMNS: readonly string[] = ["frame_preview", "printed_types", "nickname", "moderation_hidden_at"];
 
 export async function updateCardsVisibilityAction(
   cardIds: string[],
@@ -1446,20 +1421,7 @@ export async function updateCardsVisibilityAction(
   // every user's bulk change in that window.
   // (The card's visibility and text ride along too, for the strong-language
   // rule below; a late column that is missing is dropped the same way.)
-  let existing: BulkPreflightRow[] | null = null;
-  let existingError: { message: string } | null = null;
-  let columns = [...BULK_PREFLIGHT_COLUMNS];
-  for (let attempt = 0; attempt <= BULK_LATE_COLUMNS.length; attempt += 1) {
-    const read = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
-    existing = (read.data ?? null) as unknown as BulkPreflightRow[] | null;
-    existingError = read.error;
-    const message = read.error?.message ?? "";
-    const missing = read.error
-      ? BULK_LATE_COLUMNS.find((column) => columns.includes(column) && message.includes(column))
-      : undefined;
-    if (!missing) break;
-    columns = columns.filter((column) => column !== missing);
-  }
+  const { rows: existing, error: existingError } = await readVisibilityPreflight(supabase, ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
   }
@@ -1495,24 +1457,33 @@ export async function updateCardsVisibilityAction(
     : rows.filter(
         (c) =>
           c.frame_preview !== true &&
-          languageForcesPrivate({
-            saved: c,
-            visibility: parsed.data.visibility,
-            stored: { card: c, visibility: c.visibility ?? "private" },
-          }).length > 0,
+          storedLanguageBlocks(c, parsed.data.visibility).length > 0,
       );
+  // No artwork → no gallery (the single-card rule, createCardAction /
+  // updateCardAction): a PUBLISH leaves an artless card — or a double-faced
+  // one whose back has no picture — as it is, and counts it. Unlisting is
+  // link-only sharing of a work in progress, and stays allowed.
+  const artless =
+    parsed.data.visibility !== "public"
+      ? []
+      : rows.filter(
+          (c) => c.frame_preview !== true && !strongLanguage.includes(c) && storedArtMissing(c) !== null,
+        );
   const targets = goingPrivate
     ? rows
-    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c));
+    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c));
   if (targets.length === 0) {
-    if (moderationLocked.length > 0) {
+    // ONE sentence for every reason when the lock or the artwork is among
+    // them (the strong-language and preview-only wordings keep theirs).
+    if (moderationLocked.length > 0 || artless.length > 0) {
       return {
         ok: false,
-        reason: "moderation",
+        ...(moderationLocked.length > 0 ? { reason: "moderation" as const } : {}),
         error: allHeldBackMessage(parsed.data.visibility, {
           moderation: moderationLocked.length,
           strongLanguage: strongLanguage.length,
           previews: previews.length,
+          artless: artless.length,
         }),
       };
     }
@@ -1520,8 +1491,8 @@ export async function updateCardsVisibilityAction(
       ok: false,
       error:
         strongLanguage.length > 0
-          ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
-          : allFramePreviewsMessage(parsed.data.visibility, previews.length),
+            ? allStrongLanguageMessage(parsed.data.visibility, strongLanguage.length, previews.length)
+            : allFramePreviewsMessage(parsed.data.visibility, previews.length),
     };
   }
   const targetIds = targets.map((c) => c.id);
@@ -1639,6 +1610,7 @@ export async function updateCardsVisibilityAction(
     skippedPreviews: previews.length,
     ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
     ...(moderationLocked.length > 0 ? { skippedModeration: moderationLocked.length } : {}),
+    ...(artless.length > 0 ? { skippedArtless: artless.length } : {}),
   };
 }
 

@@ -20,7 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { updateDeckAction } from "@/lib/decks/actions";
-import { slugify } from "@/lib/validation/card";
+import {
+  deckDetailsPatch,
+  deckDetailsValuesOf,
+  formatHasBracket,
+  type DeckDetailsOpened,
+  type DeckDetailsValues,
+} from "@/lib/decks/deck-details";
+import { COMMANDER_BRACKETS, DECK_TYPES, commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { DECK_COVER_HEIGHT, DECK_COVER_WIDTH, HERO_CROP_ASPECTS, heroCropWindow } from "@/lib/decks/cover";
 import { isDefaultDeckCover } from "@/lib/decks/default-covers";
@@ -41,25 +48,21 @@ import {
   type DeckCoverPosition,
   type DeckFormat,
 } from "@/types/deck";
-import type { Visibility } from "@/types/card";
 import { VisibilityPicker } from "@/components/ui/visibility-picker";
 import { inputClass, textareaClass } from "@/components/ui/field-classes";
 import { FieldGroup, joinIds } from "@/components/creator/field-group";
 
-type FormValues = {
-  title: string;
-  slug: string;
-  description: string;
-  cover_url: string;
-  /** Cover focal point ({focalX, focalY} in 0..1); null = centered. */
-  cover_position: DeckCoverPosition | null;
-  format: DeckFormat;
-  visibility: Visibility;
-};
+/** The form's values (lib/decks/deck-details.ts): text inputs as strings,
+ *  "" = none; the cover's focal point {focalX, focalY} in 0..1, null =
+ *  centered. */
+type FormValues = DeckDetailsValues;
 
 /** The fields a refused save can focus, in page order (the others have no
  *  control of their own to focus). */
-const FOCUSABLE_FIELDS = ["title", "format", "description"] as const;
+const FOCUSABLE_FIELDS = ["title", "format", "deck_type", "bracket", "description"] as const;
+
+const TRIBE_TYPES = DECK_TYPES.filter((type) => type.kind === "tribe");
+const ARCHETYPE_TYPES = DECK_TYPES.filter((type) => type.kind === "archetype");
 
 type DeckCreatorFormProps = {
   /** Only "edit" exists: creation goes through the New deck dialog
@@ -96,26 +99,18 @@ const FORMAT_HINTS: Partial<Record<DeckFormat, string>> = {
   casual: "Kitchen table rules — anything goes.",
 };
 
-function defaultValuesFor(deck: Deck | null | undefined): FormValues {
-  if (!deck) {
-    return {
-      title: "",
-      slug: "",
-      description: "",
-      cover_url: "",
-      cover_position: null,
-      format: "commander",
-      visibility: "public",
-    };
-  }
+/** The deck as the dialog opens it — what an edit's patch is measured
+ *  against (an edit sends only the fields the maker changed). */
+function openedDeckOf(deck: Deck | null | undefined): DeckDetailsOpened {
   return {
-    title: deck.title,
-    slug: deck.slug,
-    description: deck.description ?? "",
-    cover_url: deck.cover_url ?? "",
-    cover_position: (deck.cover_position as DeckCoverPosition | null) ?? null,
-    format: deck.format,
-    visibility: deck.visibility,
+    title: deck?.title ?? "",
+    description: deck?.description ?? null,
+    cover_url: deck?.cover_url ?? null,
+    cover_position: (deck?.cover_position as DeckCoverPosition | null) ?? null,
+    format: deck?.format ?? "commander",
+    visibility: deck?.visibility ?? "public",
+    deck_type: deck?.deck_type ?? null,
+    bracket: deck?.bracket ?? null,
   };
 }
 
@@ -127,8 +122,11 @@ export function DeckCreatorForm({ mode, userId, deck,
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const defaults = useMemo(() => defaultValuesFor(deck), [deck]);
-  const formatHintId = `${useId()}-format-hint`;
+  const opened = useMemo(() => openedDeckOf(deck), [deck]);
+  const defaults = useMemo(() => deckDetailsValuesOf(opened), [opened]);
+  const fieldId = useId();
+  const formatHintId = `${fieldId}-format-hint`;
+  const bracketHintId = `${fieldId}-bracket-hint`;
 
   const {
     register,
@@ -153,22 +151,24 @@ export function DeckCreatorForm({ mode, userId, deck,
   }, [defaults, reset]);
 
   const coverPosition = useWatch({ control, name: "cover_position" }) ?? null;
+  const format = useWatch({ control, name: "format" });
+  const bracketValue = useWatch({ control, name: "bracket" });
+  const pickedBracket = commanderBracket(bracketValue ? Number(bracketValue) : null);
+  // A stored type the list doesn't know (an older free-text value) stays
+  // pickable as it is, so opening the dialog never changes it.
+  const storedOtherType = opened.deck_type && !deckTypeByKey(opened.deck_type) ? opened.deck_type : null;
 
   const onSubmit: SubmitHandler<FormValues> = (values) => {
     setServerError(null);
-    const payload = {
-      title: values.title.trim(),
-      slug: values.slug.trim() ? slugify(values.slug.trim()) : undefined,
-      // Edit mode sends an explicit null for an emptied field so the server
-      // CLEARS it; `undefined` means "leave as is" and used to make "Remove
-      // cover" / clearing the description a silent no-op.
-      description: values.description.trim() || (mode === "edit" ? null : undefined),
-      cover_url: values.cover_url.trim() || (mode === "edit" ? null : undefined),
-      // null clears back to centered; only meaningful with a cover set.
-      cover_position: values.cover_url.trim() ? values.cover_position : null,
-      format: values.format,
-      visibility: values.visibility,
-    };
+    // Only the fields the maker changed (TODO DK5.14): an emptied field
+    // travels as null, which clears it; an untouched one not at all.
+    const payload = deckDetailsPatch(opened, values);
+    if (Object.keys(payload).length === 0) {
+      // Nothing changed: nothing to write — done, as a save would be.
+      if (onSaved) onSaved(deck?.slug ?? "");
+      else if (deck?.slug) router.replace(`/deck/${deck.slug}`);
+      return;
+    }
 
     startTransition(async () => {
       if (!deck?.id) {
@@ -196,7 +196,11 @@ export function DeckCreatorForm({ mode, userId, deck,
       toast.success("Changes saved.");
       if (onSaved) {
         onSaved(result.slug);
-        router.refresh();
+        // A rename moves the deck to its new slug (the old one 308s there,
+        // migration 0155): land on it, so the address bar shows the deck's
+        // own URL; else the page reads the saved row.
+        if (result.slug !== deck.slug) router.replace(`/deck/${result.slug}`);
+        else router.refresh();
         return;
       }
       // Editing is done — land on the deck itself.
@@ -281,6 +285,66 @@ export function DeckCreatorForm({ mode, userId, deck,
             />
           )}
         </FieldGroup>
+
+        {/* The deck's type: the AI wizard's list (lib/decks/deck-types.ts),
+            the chip on the deck's hero. */}
+        <FieldGroup
+          label="Deck type"
+          helper="The tribe or archetype the deck is built around — shown on the deck's page."
+          error={errors.deck_type?.message}
+        >
+          <select
+            {...register("deck_type")}
+            className={cn(inputClass(Boolean(errors.deck_type)), "appearance-none")}
+          >
+            <option value="">None</option>
+            {storedOtherType ? <option value={storedOtherType}>{`${storedOtherType} (not in the list)`}</option> : null}
+            <optgroup label="Tribes">
+              {TRIBE_TYPES.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Archetypes">
+              {ARCHETYPE_TYPES.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </FieldGroup>
+
+        {/* The bracket is a Commander deck's alone (formatHasBracket): on
+            another format the field is gone and the save leaves the stored
+            bracket as it is (no page shows it there). */}
+        {formatHasBracket(format) ? (
+          <FieldGroup label="Bracket" error={errors.bracket?.message}>
+            {(aria) => (
+              <div className="flex flex-col gap-1.5">
+                <select
+                  {...register("bracket")}
+                  {...aria}
+                  aria-describedby={joinIds(aria["aria-describedby"], pickedBracket ? bracketHintId : null)}
+                  className={cn(inputClass(Boolean(errors.bracket)), "appearance-none")}
+                >
+                  <option value="">None</option>
+                  {COMMANDER_BRACKETS.map((bracket) => (
+                    <option key={bracket.level} value={String(bracket.level)}>
+                      {`${bracket.level} · ${bracket.name}`}
+                    </option>
+                  ))}
+                </select>
+                {pickedBracket ? (
+                  <span id={bracketHintId} className="text-xs text-muted">
+                    {pickedBracket.blurb}
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </FieldGroup>
+        ) : null}
 
         <FieldGroup
           label="Description"

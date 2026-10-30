@@ -323,6 +323,7 @@ describe("updateCardsVisibilityAction — strong language in the batch", () => {
     title: `Card ${id.slice(0, 4)}`,
     back_face: null,
     rendered_image_url: null,
+    art_url: "https://example.com/art.png",
     frame_preview: false,
     visibility,
     rules_text: rules,
@@ -361,6 +362,36 @@ describe("updateCardsVisibilityAction — strong language in the batch", () => {
   it("an already-public card may still be unlisted (a narrower audience)", async () => {
     bulkDb([bulkRow(ROUGH, STRONG, "public")]);
     expect(await updateCardsVisibilityAction([ROUGH], "unlisted")).toEqual({ ok: true, count: 1, skippedPreviews: 0 });
+  });
+
+  it("no artwork → no gallery: a publish leaves an artless card as it was and counts it (DK0.13 review M1)", async () => {
+    const ARTLESS = "99999999-9999-4999-8999-999999999999";
+    const stub = bulkDb([bulkRow(CLEAN, "Flying"), { ...bulkRow(ARTLESS, "Flying"), art_url: null }]);
+    const result = await updateCardsVisibilityAction([CLEAN, ARTLESS], "public");
+    expect(result).toEqual({ ok: true, count: 1, skippedPreviews: 0, skippedArtless: 1 });
+    expect(updates(stub)[0].calls.find((c) => c.method === "in")!.args[1]).toEqual([CLEAN]);
+  });
+
+  it("a double-faced card whose back has no picture is held back the same way", async () => {
+    const DFC = "99999999-9999-4999-8999-999999999998";
+    const stub = bulkDb([
+      {
+        ...bulkRow(DFC, "Flying"),
+        frame_style: { template: "m15dfcfront" },
+        back_face: { title: "Night", frame_style: { template: "m15dfcback" }, art_url: null },
+      },
+    ]);
+    const result = await updateCardsVisibilityAction([DFC], "public");
+    expect(result).toEqual({
+      ok: false,
+      error: "Nothing was published: the selected card has no artwork yet. Add artwork before publishing.",
+    });
+    expect(updates(stub)).toHaveLength(0);
+  });
+
+  it("an artless card may still be UNLISTED (link-only sharing of a work in progress)", async () => {
+    bulkDb([{ ...bulkRow(CLEAN, "Flying"), art_url: null }]);
+    expect(await updateCardsVisibilityAction([CLEAN], "unlisted")).toEqual({ ok: true, count: 1, skippedPreviews: 0 });
   });
 
   it("making cards private is never held back", async () => {

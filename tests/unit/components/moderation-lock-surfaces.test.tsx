@@ -15,13 +15,17 @@ import { chipOff } from "../helpers/chip";
 // ---------------------------------------------------------------------------
 
 const updateCardsVisibilityAction = vi.fn();
+const unhideCardAction = vi.fn();
+const push = vi.fn();
+vi.mock("@/lib/moderation/actions", () => ({ unhideCardAction: (...args: unknown[]) => unhideCardAction(...args) }));
+vi.mock("@/lib/admin/admin-toast", () => ({ adminErrorToast: vi.fn() }));
 const toastSuccess = vi.fn();
 vi.mock("@/lib/cards/actions", () => ({
   updateCardsVisibilityAction: (...args: unknown[]) => updateCardsVisibilityAction(...args),
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: (...a: unknown[]) => toastSuccess(...a), info: vi.fn() } }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push }),
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
@@ -35,11 +39,15 @@ vi.mock("@/components/creator/challenge-brief-dialog", () => ({ ChallengeBriefDi
 
 import { PublishPanel } from "@/components/creator/panels/publish-panel";
 import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
+import { HiddenCardsList } from "@/components/moderation/hidden-cards-list";
+import { RemixButton } from "@/components/cards/remix-button";
 
 afterEach(() => {
   cleanup();
   updateCardsVisibilityAction.mockReset();
   toastSuccess.mockReset();
+  unhideCardAction.mockReset();
+  push.mockReset();
 });
 
 function Harness({ locked }: { locked: boolean }) {
@@ -115,5 +123,54 @@ describe("the deck's private-cards notice", () => {
       fireEvent.click(screen.getByRole("button", { name: "Make Open One public" }));
     });
     expect(toastSuccess).toHaveBeenCalledWith("1 card is public now. 1 card stayed private: it was hidden by moderation.");
+  });
+});
+
+describe("the admin's Hidden cards list", () => {
+  const rows = [
+    { cardId: "a", title: "First", detail: "@dev_pro · Hidden from a report" },
+    { cardId: "b", title: "Second", detail: "@dev_pro · Hidden from a report" },
+  ];
+
+  it("titles are plain text (a private card's page 404s for the admin)", () => {
+    render(<HiddenCardsList rows={rows} headingId="h" />);
+    expect(screen.queryByRole("link", { name: "First" })).toBeNull();
+    expect(screen.getByText("First")).toBeTruthy();
+  });
+
+  it("an unhidden row leaves, and the focus goes to the next row's Unhide — then to the heading", async () => {
+    unhideCardAction.mockResolvedValue({ ok: true });
+    render(<HiddenCardsList rows={rows} headingId="h" />);
+    const first = screen.getByRole("button", { name: "Unhide First" });
+    first.focus();
+    await act(async () => {
+      fireEvent.click(first);
+    });
+    expect(unhideCardAction).toHaveBeenCalledWith({ cardId: "a" });
+    expect(screen.queryByText("First")).toBeNull();
+    const second = screen.getByRole("button", { name: "Unhide Second" });
+    expect(document.activeElement).toBe(second);
+    await act(async () => {
+      fireEvent.click(second);
+    });
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hidden cards" }));
+  });
+});
+
+describe("Remix on a card moderation hid", () => {
+  it("is unavailable, says why, and goes nowhere", () => {
+    const reason = "This card was hidden by moderation, so it can't be remixed. Contact us if you think that's a mistake.";
+    render(<RemixButton cardId="c1" unavailableReason={reason} />);
+    const button = screen.getByRole("button", { name: "Remix" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe(reason);
+    fireEvent.click(button);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("an unlocked card's Remix opens the creator", () => {
+    render(<RemixButton cardId="c1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Remix" }));
+    expect(push).toHaveBeenCalledWith("/create?remix=c1");
   });
 });

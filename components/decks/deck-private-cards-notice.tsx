@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { updateCardsVisibilityAction } from "@/lib/cards/actions";
-import { strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import { artlessSkippedLine, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
 import Link from "next/link";
 import {
   HIDDEN_BY_MODERATION_LABEL,
@@ -58,7 +58,12 @@ export function DeckPrivateCardsNotice({
       }
       const published = result.count === 1 ? "1 card is public now." : `${result.count} cards are public now.`;
       toast.success(
-        [published, strongLanguageSkippedLine(result.skippedLanguage), moderationLockedSkippedLine(result.skippedModeration)]
+        [
+          published,
+          strongLanguageSkippedLine(result.skippedLanguage),
+          artlessSkippedLine(result.skippedArtless),
+          moderationLockedSkippedLine(result.skippedModeration),
+        ]
           .filter(Boolean)
           .join(" "),
       );

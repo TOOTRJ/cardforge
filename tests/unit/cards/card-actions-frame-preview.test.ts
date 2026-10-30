@@ -262,6 +262,7 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
     title: `Card ${id.slice(0, 4)}`,
     back_face: null,
     rendered_image_url: null,
+    art_url: "https://example.com/art.png",
     frame_preview: framePreview,
   });
 
