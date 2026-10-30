@@ -11,6 +11,7 @@ import { getArticlesByTag, listTags } from "@/lib/content/articles";
 import { categoryForTagSlug } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /articles/tag/[tag] — a cluster hub. Every tag across the articles becomes
@@ -82,7 +83,7 @@ export default async function ArticleTagPage({
     `Every PipGlyph guide tagged “${found.label}” — custom MTG card design, in one place.`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <PageContainer className="py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -127,6 +128,6 @@ export default async function ArticleTagPage({
           />
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

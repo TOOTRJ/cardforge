@@ -38,6 +38,8 @@ import {
 } from "@/types/card";
 import { isUuid } from "@/lib/ids";
 import { firstString } from "@/lib/routing/search-params";
+import { PageContainer } from "@/components/layout/page-container";
+import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
 
 // ---------------------------------------------------------------------------
 // The community gallery is two routes with one result grid:
@@ -61,8 +63,6 @@ const PAGE_SIZE = 24;
 
 /** The one place search, filters, sort and paging live. */
 export const GALLERY_BROWSE_PATH = "/gallery/browse";
-
-const FRAME = "mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8";
 
 type GallerySort = GalleryListSort;
 
@@ -199,7 +199,7 @@ export function GalleryLanding() {
   const filters = parseGalleryFilters({});
 
   return (
-    <div className={FRAME}>
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -207,6 +207,7 @@ export function GalleryLanding() {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Public"
         title="Community gallery"
         description={GALLERY_DESCRIPTION}
@@ -219,7 +220,7 @@ export function GalleryLanding() {
 
       {/* Search + browse-by first: a search is a navigation to the browse
           route, and the hub chips are the crawlable way in. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <BrowseSearchBox
           browsePath={GALLERY_BROWSE_PATH}
           placeholder="Search cards by name, rules, or flavor"
@@ -303,7 +304,7 @@ export function GalleryLanding() {
           </Suspense>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -312,7 +313,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
   const configured = isSupabaseConfigured();
 
   return (
-    <div className={FRAME}>
+    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -321,9 +322,10 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
         ])}
       />
       <PageHeader
+        className="pb-6"
         eyebrow="Gallery"
         title="Browse cards"
-        description="Search every public card by name, rules or flavor text, then narrow by type, rarity, color and tag."
+        description="Search every public card, then narrow by type, rarity, color and tag."
         actions={
           <Button asChild variant="outline">
             <Link href="/gallery">
@@ -336,13 +338,13 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
 
       {/* Search + filters. The Suspense boundary contains GalleryFilters'
           useSearchParams() CSR bailout so the shell still server-renders. */}
-      <div className="mt-8">
+      <div className="mt-6">
         <Suspense fallback={null}>
           <GalleryFilters />
         </Suspense>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {!configured ? (
           <GalleryOffline />
         ) : (
@@ -364,7 +366,7 @@ export function GalleryBrowse({ filters }: { filters: ParsedFilters }) {
           <HubLinks currentType={filters.cardType} />
         </Suspense>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -389,6 +391,7 @@ async function GalleryTrending() {
     <TrendingCardsSection
       cards={trending}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
       eyebrow="Trending now"
       heading="Hot this week"
       description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
@@ -416,6 +419,7 @@ async function GalleryNewest() {
       hrefLabel="See all newest"
       cards={newest}
       isAuthed={false}
+      sizes={CARD_GRID_SIZES}
     />
   );
 }
@@ -535,11 +539,11 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
           </Link>
         </div>
       ) : null}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <CardGrid>
         {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+          <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
         ))}
-      </div>
+      </CardGrid>
       {hasPrev || hasMore ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border/40 pt-6">
           <span className="text-xs text-subtle">Page {page}</span>
@@ -575,7 +579,7 @@ async function GalleryResults({ filters }: { filters: ParsedFilters }) {
 
 function GallerySkeletonGrid({ count }: { count: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <CardGrid>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex flex-col gap-2">
           <CardPreviewSkeleton />
@@ -585,7 +589,7 @@ function GallerySkeletonGrid({ count }: { count: number }) {
           </div>
         </div>
       ))}
-    </div>
+    </CardGrid>
   );
 }
 

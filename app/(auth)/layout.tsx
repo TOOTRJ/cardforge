@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default function AuthLayout({
   children,
@@ -12,7 +13,7 @@ export default function AuthLayout({
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
+      <PageContainer as="header" className="relative z-10 flex items-center justify-between py-6">
         <Logo />
         <Link
           href="/"
@@ -20,7 +21,7 @@ export default function AuthLayout({
         >
           Back to site
         </Link>
-      </header>
+      </PageContainer>
 
       <main
         id="main"

@@ -9,6 +9,7 @@ import { GlossaryBrowser } from "@/components/content/glossary-browser";
 import { definedTermSetJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { GLOSSARY_PATH, GLOSSARY_TERMS } from "@/lib/content/glossary";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /glossary — the words on a Magic card and the words PipGlyph uses (TODO
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
 
 export default function GlossaryPage() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <JsonLd
         data={definedTermSetJsonLd({
           name: "PipGlyph glossary",
@@ -107,6 +108,6 @@ export default function GlossaryPage() {
           </div>
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }

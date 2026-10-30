@@ -32,6 +32,7 @@ export function LikedCardTile({
   profileOverrides = null,
   selection,
   decks,
+  sizes,
 }: {
   card: CardWithStats;
   profileOverrides?: FrameProfileOverridesMap | null;
@@ -39,6 +40,8 @@ export function LikedCardTile({
   /** The card's decks (TODO DK9.2) — only where it may join one: another
    *  creator's PUBLIC card (owner decision D3), or the viewer's own. */
   decks?: { count: number | null; onOpen: () => void };
+  /** The grid's `sizes` (components/cards/card-grid.tsx). */
+  sizes?: string;
 }) {
   const ownerLabel =
     card.owner?.username ?? card.owner?.display_name ?? "Anonymous forger";
@@ -80,6 +83,7 @@ export function LikedCardTile({
             renderedBackThumbUrl: card.rendered_back_thumb_url,
             title: card.title,
             previewData: cardToPreviewData(card, profileOverrides),
+            sizes,
           }}
         />
         {selection ? (

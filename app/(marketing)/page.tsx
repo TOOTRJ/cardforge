@@ -23,6 +23,7 @@ import { countPublicDecks } from "@/lib/decks/queries";
 import { listArticles } from "@/lib/content/articles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
+import { PageContainer } from "@/components/layout/page-container";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
 // inherited from the root layout; this just pins the canonical to "/" so it
@@ -92,7 +93,7 @@ export default async function HomePage() {
       {/* Proof before pitch: what the community forged THIS WEEK, right
           under the hero — live rank badges + weekly stats, one row, with the
           pulse line and the two doors out (forge one / see the gallery). */}
-      <section className="mx-auto w-full max-w-7xl px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+      <PageContainer as="section" className="pb-10 pt-4">
         {isSupabaseConfigured() ? (
           <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
             <HomeTrending />
@@ -100,7 +101,7 @@ export default async function HomePage() {
         ) : (
           <PlaceholderGallery />
         )}
-      </section>
+      </PageContainer>
 
       <FeatureGrid />
 

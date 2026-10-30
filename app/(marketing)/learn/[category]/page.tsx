@@ -25,6 +25,7 @@ import {
   type ArticleMeta,
 } from "@/lib/content/articles";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
+import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /learn/[category] — one shelf of guides (TODO NV4): the category's intro
@@ -91,7 +92,7 @@ export default async function LearnCategoryPage({
   const topics = relatedTopics(articles);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+    <PageContainer className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: category.title,
@@ -174,7 +175,7 @@ export default async function LearnCategoryPage({
         label="Other topics"
         className="mt-14 border-t border-border/40 pt-8"
       />
-    </div>
+    </PageContainer>
   );
 }
 

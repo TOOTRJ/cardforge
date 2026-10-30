@@ -1747,6 +1747,22 @@ Rules and gotchas:
   the sibling) and never bring back a hidden rewrite: Next's client router
   reuses the cached static tree for a same-path query change and never calls
   the server, so the URL changed while the grid stayed frozen (2026-09-22).
+- Page width (TODO WD1, WD3, WD4, WD8): every page frame is `<PageContainer
+  size="standard|wide|full">` (`components/layout/page-container.tsx`;
+  `page-container-structure.test.ts` fails on a hand-written
+  `mx-auto … max-w-7xl px-4`). Standard (1280) = reading and marketing pages
+  and the creator (D8); wide (1920) = the browse pages, profiles, the deck
+  page, the dashboard (`DashboardShell readable` caps a page of forms at
+  1024) and ALWAYS the header, footer and ribbon (D7). Extra width is more
+  columns, never wider tiles: card grids are `CardGrid` / `CARD_GRID_CLASS`
+  (2 / 3 / 4 / 5 / 6 by CONTAINER width — the grid sits in an `@container`;
+  the five-column step keeps 1440–1536 px laptops near 260–280 px tiles
+  (owner 2026-10-29)), deck grids `DeckGrid` (1 / 2 / 3 / 4). A tile drawn
+  from a bigger file than its thumbnail asks for its FRAME's `sizes`
+  (`CARD_GRID_SIZES` / `DECK_GRID_SIZES` on a wide page, the `DASHBOARD_*`
+  lists in the dashboard; `card-grid.test.ts` holds each to its tile) — the
+  thumbnail's default is the generous window-grid answer. Running text keeps
+  a measure.
 - Decks (2026-10-28 plan, TODO DK0–DK2; owner decisions D1–D13): a deck
   STORES `card_count` / `linked_card_count` (0143: physical cards,
   maybeboard out; kept by ONE statement trigger, `sync_deck_from_entries`,
