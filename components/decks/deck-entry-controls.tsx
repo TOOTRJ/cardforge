@@ -2,10 +2,7 @@
 
 import { forwardRef, useState, type ComponentPropsWithoutRef } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
-import type { MenuItem } from "@/components/decks/deck-entry-menu";
-// The menu loads with the owner's other parts (the pop-up's stepper, which
-// a visitor never sees either, shares this file).
-import { EntryMenu } from "@/components/decks/deck-owner-parts";
+import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
 import { useDeckEditor } from "@/components/decks/use-deck-editor";
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { cn } from "@/lib/utils";

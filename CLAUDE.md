@@ -1972,10 +1972,11 @@ Rules and gotchas:
   ONE-LINE decklist commit. The commit's core is `commitImportLines`
   (`lib/decks/import-commit.ts`): a decklist import spends
   `deck_import_commit`, the add box's add and an undo the single-card
-  `named` quota — the caller's choice, never the browser's. The owner's
-  parts (add box, bulk bar, phone bar, menus) are `next/dynamic` chunks
-  (`deck-owner-parts.tsx`; under vitest `tests/stubs/next-dynamic.tsx`,
-  `dynamicReady()`). Every entry's Edit is
+  `named` quota — the caller's choice, never the browser's. The bulk bar
+  is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
+  `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
+  screen at load may be: a lazy part's controls are dead until its chunk
+  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
   `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
   creator and the editor follow only through `deckReturnPath` (a deck page,
   our `#entry-` / `#next-` anchor, nothing else — the card editor only to

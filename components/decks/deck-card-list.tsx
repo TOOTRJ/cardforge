@@ -8,9 +8,11 @@ import { DeckCardModal } from "@/components/decks/deck-card-modal";
 import { CURVE_FILTER_NOTICE_ID, useDeckCurveFilter } from "@/components/decks/deck-curve-filter";
 import { DeckGroupViews } from "@/components/decks/deck-card-views";
 import { EntryMenuButton, EntryStepper, MenuTrigger } from "@/components/decks/deck-entry-controls";
-import type { MenuItem } from "@/components/decks/deck-entry-menu";
-// The owner's parts load in chunks of their own — never on a visitor's page.
-import { DeckAddBox, DeckBulkBar, DeckMobileBar, EntryMenu } from "@/components/decks/deck-owner-parts";
+import { DeckAddBox } from "@/components/decks/deck-add-box";
+import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
+import { DeckMobileBar } from "@/components/decks/deck-mobile-bar";
+// The bulk bar loads in a chunk of its own, when a selection starts.
+import { DeckBulkBar } from "@/components/decks/deck-owner-parts";
 import { createPreviewStore, DeckPreviewPane } from "@/components/decks/deck-preview-pane";
 import type { DeckRowUi, OpenerProps, ViewRow } from "@/components/decks/deck-row-ui";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
