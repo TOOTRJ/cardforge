@@ -1,6 +1,9 @@
 // ---------------------------------------------------------------------------
 // A new card's discovery tags, suggested from what the card SAYS (owner
-// 2026-10-30): its name, its rules text and its subtypes. Deterministic and
+// 2026-10-30): its rules text and its subtypes — every face's and every
+// part's (a double-faced card's back, a split card's second half). Never
+// its NAME: a name is flavour ("Wrath of God", "Giant Growth", "Bat Out of
+// Hell" name no tribe). Deterministic and
 // fast — a few regular expressions over a few hundred characters, no AI call
 // — so the creator can run it on every keystroke
 // (lib/creator/auto-tags-follow.ts holds the follow: a NEW card's Tags field
@@ -26,22 +29,32 @@
  *  the maker's room). */
 export const AUTO_TAG_LIMIT = 6;
 
-export type AutoTagInput = {
-  title?: string | null;
+export type AutoTagFace = {
   rules_text?: string | null;
-  /** The card's subtypes, as a list or as the creator's comma-separated
+  /** The face's subtypes, as a list or as the creator's comma-separated
    *  field. */
   subtypes?: readonly string[] | string | null;
+};
+
+export type AutoTagInput = AutoTagFace & {
+  /** The card's name: never read for a tag (a name is flavour), kept in the
+   *  shape so a caller can pass the form's values as they are. */
+  title?: string | null;
   card_type?: string | null;
+  /** The card's other faces and parts (a double-faced card's back, a
+   *  split / adventure / flip card's second part): their rules text and
+   *  subtypes are read as the front's are; their names never. */
+  otherFaces?: readonly AutoTagFace[] | null;
 };
 
 // --- Tribes ----------------------------------------------------------------
 // Creature types worth a hub, each with the plural its tag takes. A type
-// counts from the card's SUBTYPES (any case), or from its name or rules text
-// where it is written as print writes a creature type — capitalised, as a
-// whole word ("Goblin", "Goblins"), so "fish" in flavourful prose, "elf" in
-// "itself" or "rat" in "pirate" never count. Generic types (Human, Advisor)
-// are left out: they would tag half the gallery.
+// counts from the card's SUBTYPES (any case), or from its rules text only in
+// a TRIBAL phrase as print writes one — the type capitalised, as a whole
+// word: "<Type> creature token(s)", "<Types> you control", "other <Types>",
+// "<Type> spell(s)" (TRIBE_PATTERNS). A type merely named, or a name's word
+// ("Wrath of God", "Cat Burglar"), never counts. Generic types (Human,
+// Advisor) are left out: they would tag half the gallery.
 const TRIBES: readonly (readonly [singular: string, tag: string])[] = [
   ["Dragon", "dragons"],
   ["Angel", "angels"],
@@ -152,10 +165,12 @@ const KEYWORD_ACTIONS: readonly string[] = [
 // out, ’ read as '). Each pattern is anchored on print's own wording.
 const THEMES: readonly (readonly [tag: string, pattern: RegExp])[] = [
   ["tokens", /\bcreates?\b[^.]*\btokens?\b|\bpopulate\b|\bamass\b/],
-  ["card draw", /\bdraws? (?:a|an|one|two|three|four|five|x|that many|cards? equal)\b[^.]*\bcards?\b|\bdraw cards?\b/],
+  // Two cards or more, or a number the card counts ("draws X", "that
+  // many"): a lone "Draw a card" (a cantrip) is not a draw theme.
+  ["card draw", /\bdraws? (?:two|three|four|five|six|seven|x|that many)\b[^.]*\bcards\b|\bdraws? (?:x|cards)\b/],
   ["counterspell", /\bcounter target\b[^.]*\bspell\b/],
   ["board wipe", /\b(?:destroy|exile) all (?:other )?(?:nonland )?(?:creatures|permanents|nonland permanents)\b|\b(?:all|each) (?:other )?creatures? gets? -\d+\/-\d+|\bdeals? (?:\d+|x) damage to each creature\b/],
-  ["removal", /\b(?:destroy|exile) (?:up to (?:one|two|three) )?(?:another )?target (?:(?:nonland|nontoken|attacking|blocking|tapped|creature or|artifact or|enchantment or)\s+)*(?:creature|permanent|planeswalker|artifact|enchantment)\b|\bdeals? (?:\d+|x) damage to (?:any target|target creature|target attacking|target blocking)|\btarget creature (?:an opponent controls )?gets -\d+\/-\d+|\btarget opponent sacrifices\b|\beach opponent sacrifices\b/],
+  ["removal", /\b(?:destroy|exile) (?:up to (?:one|two|three) )?(?:another )?target (?:(?:non(?:white|blue|black|red|green|artifact|land|token|creature|legendary)|attacking|blocking|tapped|untapped|creature|artifact|enchantment)(?: or)?\s+)*(?:creature|permanent|planeswalker|artifact|enchantment)\b|\bdeals? (?:\d+|x) damage to (?:any target|target creature|target attacking|target blocking)|\btarget creature (?:an opponent controls )?gets -\d+\/-\d+|\btarget opponent sacrifices\b|\beach opponent sacrifices\b/],
   ["burn", /\bdeals? (?:\d+|x|that much) damage to (?:any target|target player|target opponent|each opponent|each player|that player)\b/],
   ["lifegain", /\byou gain (?:\d+|x|that much|life equal)\b|\bgains? (?:\d+|x) life\b|\bwhenever you gain life\b/],
   ["counters", /\+1\/\+1 counters?\b|\bproliferate\b/],
@@ -164,12 +179,12 @@ const THEMES: readonly (readonly [tag: string, pattern: RegExp])[] = [
   ["reanimator", /\breturn (?:up to one )?target (?:[a-z]+ )?creature card from (?:your|a|an opponent's) graveyard to the battlefield\b|\bput (?:target|a) creature card from (?:a|your) graveyard onto the battlefield\b/],
   ["graveyard", /\bfrom your graveyard\b|\bin your graveyard\b|\b(?:flashback|escape|unearth)(?:—|\s*\{)|\bdelve\b/],
   ["sacrifice", /\bsacrifices? (?:a|an|another|one|two|x|any number of)\b/],
-  ["discard", /\b(?:target|each) (?:player|opponent) discards?\b|\bwhenever (?:a player|an opponent|you) discards?\b/],
+  ["discard", /\b(?:target|each|that) (?:player|opponent) discards?\b|\bdiscards that card\b|\bwhenever (?:a player|an opponent|you) discards?\b/],
   ["bounce", /\breturn (?:up to (?:one|two) )?target (?:nonland )?(?:creature|permanent|artifact|enchantment|spell)[^.]* to its owner's hand\b/],
   ["flicker", /\bexile (?:up to one )?(?:another )?target (?:nontoken )?(?:creature|permanent)[^.]*\bthen return (?:it|that card|them)\b/],
   ["landfall", /\blandfall\b|\bwhenever a land (?:you control )?enters\b/],
   ["anthem", /\b(?:other )?creatures you control get \+\d+\/\+\d+/],
-  ["copy", /\bcopy (?:target|that|it)\b[^.]*\b(?:spell|instant|sorcery)\b|\bbecomes? a copy of\b|\bcreate a token that's a copy\b/],
+  ["copy", /\bcopy (?:target|that|it)\b[^.]*\b(?:spell|instant|sorcery)\b|\bbecomes? a copy of\b|\benters? (?:the battlefield )?as a copy of\b|\bcreate a token that's a copy\b/],
   ["energy", /\{e\}/],
   ["poison", /\bpoison counters?\b|\binfect\b|\btoxic\b/],
   ["artifacts", /\bwhenever (?:you cast )?an artifact\b|\bartifacts you control\b|\bfor each artifact you control\b/],
@@ -204,12 +219,22 @@ export const AUTO_TAG_VOCABULARY: readonly string[] = Array.from(
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** A tribe's words as print capitalises them: the singular and the plural
- *  (from the tag, capitalised), whole words, case-sensitive. */
+/** A tribe in a TRIBAL phrase of rules text, the type as print capitalises
+ *  it (case-sensitive; the singular and the plural from the tag): "Goblin
+ *  creature token(s)" / "Goblin token(s)", "Goblins you control" / "Goblin
+ *  creatures you control", "other Goblins" / "other Goblin creatures",
+ *  "Goblin spell(s)". */
 const TRIBE_PATTERNS: readonly (readonly [tag: string, singular: string, pattern: RegExp])[] = TRIBES.map(([singular, tag]) => {
-  const plural = tag.charAt(0).toUpperCase() + tag.slice(1);
-  const forms = Array.from(new Set([singular, plural])).map(escapeRegExp).join("|");
-  return [tag, singular, new RegExp(`(?<![A-Za-z])(?:${forms})(?![A-Za-z])`)] as const;
+  const s = escapeRegExp(singular);
+  const p = escapeRegExp(tag.charAt(0).toUpperCase() + tag.slice(1));
+  const group = `(?:${p}|${s} creatures)`;
+  const phrase = [
+    `(?:${s}|${p}) (?:creature )?tokens?(?![A-Za-z])`,
+    `${group} you control(?![A-Za-z])`,
+    `[Oo]ther ${group}(?![A-Za-z])`,
+    `(?:${s}|${p}) spells?(?![A-Za-z])`,
+  ].join("|");
+  return [tag, singular, new RegExp(`(?<![A-Za-z])(?:${phrase})`)] as const;
 });
 
 const ACTION_PATTERNS: readonly (readonly [tag: string, pattern: RegExp])[] = KEYWORD_ACTION_TAGS.map((tag) => {
@@ -272,14 +297,18 @@ function keywordAbilitiesOf(rules: string): Set<string> {
  * The tags a card's words suggest, at most AUTO_TAG_LIMIT, in a fixed
  * order: tribes from the subtypes, themes from the subtypes, themes from
  * the rules text, the keyword abilities it has, the keyword actions it
- * names, then tribes its name or rules text names. The same input always
- * gives the same list.
+ * names, then tribes its rules text names in a tribal phrase. Every face's
+ * and part's rules text and subtypes are read (`otherFaces`), the name
+ * never. The same input always gives the same list.
  */
 export function autoTagsFor(input: AutoTagInput): string[] {
-  const title = (input.title ?? "").trim();
-  const rawRules = input.rules_text ?? "";
+  const faces: AutoTagFace[] = [input, ...(input.otherFaces ?? [])];
+  const rawRules = faces
+    .map((face) => face.rules_text ?? "")
+    .filter((text) => text.trim() !== "")
+    .join("\n");
   const rules = normalizedRules(rawRules);
-  const subtypes = subtypeList(input.subtypes);
+  const subtypes = faces.flatMap((face) => subtypeList(face.subtypes));
   const out: string[] = [];
   const add = (tag: string) => {
     if (!out.includes(tag)) out.push(tag);
@@ -305,7 +334,7 @@ export function autoTagsFor(input: AutoTagInput): string[] {
   for (const [tag, pattern] of ACTION_PATTERNS) {
     if (pattern.test(rules)) add(tag);
   }
-  const prose = `${title}\n${rawRules.replace(/\([^()]*\)/g, " ")}`;
+  const prose = rawRules.replace(/\([^()]*\)/g, " ").replace(/[’‘]/g, "'");
   for (const [tag, , pattern] of TRIBE_PATTERNS) {
     if (pattern.test(prose)) add(tag);
   }

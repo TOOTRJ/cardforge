@@ -33,13 +33,13 @@ function driver(initial: string) {
 const bolt: AutoTagInput = { title: "Lightning Bolt", rules_text: "Lightning Bolt deals 3 damage to any target.", card_type: "instant" };
 
 describe("a new card's Tags field", () => {
-  it("fills in as the name and rules text are typed, and follows them while untouched", () => {
+  it("fills in as the rules text and subtypes are typed, and follows them while untouched (never the name)", () => {
     const form = driver("");
     expect(form.render({ title: "", rules_text: "", card_type: "creature" })).toBe("");
-    expect(form.render({ title: "Shivan Dragon", rules_text: "", card_type: "creature" })).toBe("dragons");
-    expect(form.render({ title: "Shivan Dragon", rules_text: "Flying", card_type: "creature" })).toBe("flying, dragons");
+    expect(form.render({ title: "Shivan Dragon", rules_text: "", card_type: "creature" })).toBe("");
+    expect(form.render({ title: "Shivan Dragon", rules_text: "Flying", subtypes: "Dragon", card_type: "creature" })).toBe("dragons, flying");
     // The text changes again: the suggestion follows it, the dropped one goes.
-    expect(form.render({ title: "Shivan Wurm", rules_text: "Trample", card_type: "creature" })).toBe("trample, wurms");
+    expect(form.render({ title: "Shivan Wurm", rules_text: "Trample", subtypes: "Wurm", card_type: "creature" })).toBe("wurms, trample");
     expect(form.following).toBe(true);
   });
 

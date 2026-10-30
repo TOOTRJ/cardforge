@@ -43,7 +43,7 @@ describe("real cards", () => {
     ],
     ["Counterspell", { title: "Counterspell", rules_text: "Counter target spell.", card_type: "instant" }, ["counterspell"]],
     ["Divination", { title: "Divination", rules_text: "Draw two cards.", card_type: "sorcery" }, ["card draw"]],
-    ["Wrath of God", { title: "Wrath of God", rules_text: "Destroy all creatures. They can’t be regenerated.", card_type: "sorcery" }, ["board wipe", "gods"]],
+    ["Wrath of God", { title: "Wrath of God", rules_text: "Destroy all creatures. They can’t be regenerated.", card_type: "sorcery" }, ["board wipe"]],
     ["Swords to Plowshares", { title: "Swords to Plowshares", rules_text: "Exile target creature. Its controller gains life equal to its power.", card_type: "instant" }, ["removal"]],
     [
       "Llanowar Elves",
@@ -76,11 +76,11 @@ describe("real cards", () => {
       { title: "Goblin Instigator", rules_text: "When this creature enters, create a 1/1 red Goblin creature token.", subtypes: "Goblin, Rogue", card_type: "creature" },
       ["goblins", "rogues", "tokens"],
     ],
-    ["Opt", { title: "Opt", rules_text: "Scry 1.\nDraw a card.", card_type: "instant" }, ["card draw", "scry"]],
+    ["Opt (a lone \"Draw a card\" is a cantrip, not card draw)", { title: "Opt", rules_text: "Scry 1.\nDraw a card.", card_type: "instant" }, ["scry"]],
     [
       "Thought Scour",
       { title: "Thought Scour", rules_text: "Target player mills two cards. (They put the top two cards of their library into their graveyard.)\nDraw a card.", card_type: "instant" },
-      ["card draw", "mill"],
+      ["mill"],
     ],
     [
       "Hardened Scales",
@@ -113,9 +113,9 @@ describe("real cards", () => {
       ["snakes", "landfall"],
     ],
     [
-      "Giant Growth (a type in the name counts; the maker removes what doesn't fit)",
+      "Giant Growth (a type in the name never counts)",
       { title: "Giant Growth", rules_text: "Target creature gets +3/+3 until end of turn.", card_type: "instant" },
-      ["giants"],
+      [],
     ],
     [
       "Jolrael's Centaur: Flash and shroud, keyword line",
@@ -140,7 +140,7 @@ describe("real cards", () => {
     [
       "Flashback is a keyword and a graveyard card, never Flash",
       { title: "Think Twice", rules_text: "Draw a card.\nFlashback {2}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)", card_type: "instant" },
-      ["card draw", "graveyard", "flashback"],
+      ["graveyard", "flashback"],
     ],
     [
       "an Equipment and an Aura are tagged by subtype, never by Equip / Enchant",
@@ -149,7 +149,7 @@ describe("real cards", () => {
     ],
     [
       "words in prose are never a tribe: lower-case, inside a word",
-      { title: "Fishing Gear", rules_text: "Target pirate draws a card. Its controller cat-naps.", card_type: "instant" },
+      { title: "Fishing Gear", rules_text: "Target pirate draws two cards. Its controller cat-naps.", card_type: "instant" },
       ["card draw"],
     ],
     [
@@ -161,6 +161,76 @@ describe("real cards", () => {
       "Doubling Season: tokens and counters",
       { title: "Doubling Season", rules_text: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.\nIf an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.", card_type: "enchantment" },
       ["tokens"],
+    ],
+    // The review of PR #694: a name is never a tribe, and a tribe in rules
+    // text counts only in a tribal phrase.
+    ["Cat Burglar (name only; its own discard counts)", { title: "Cat Burglar", rules_text: "Whenever this creature deals combat damage to a player, that player discards a card.", subtypes: ["Human", "Rogue"], card_type: "creature" }, ["rogues", "discard"]],
+    ["Bat Out of Hell (name only)", { title: "Bat Out of Hell", rules_text: "Flying, haste", subtypes: ["Elemental", "Bat"], card_type: "creature" }, ["elementals", "bats", "flying", "haste"]],
+    [
+      "Lord of Atlantis: other Merfolk",
+      { title: "Lord of Atlantis", rules_text: "Other Merfolk get +1/+1 and have islandwalk.", subtypes: ["Merfolk"], card_type: "creature" },
+      ["merfolk"],
+    ],
+    [
+      "Goblin King: other Goblins (a tribe from rules text, not the subtype)",
+      { title: "Goblin King", rules_text: "Other Goblins get +1/+1 and have mountainwalk.", subtypes: ["Goblin"], card_type: "creature" },
+      ["goblins"],
+    ],
+    [
+      "Elvish Archdruid: Elves you control",
+      { title: "Elvish Archdruid", rules_text: "Other Elf creatures you control get +1/+1.\n{T}: Add {G} for each Elf you control.", subtypes: ["Elf", "Druid"], card_type: "creature" },
+      ["elves", "druids", "anthem"],
+    ],
+    [
+      "Dragonspeaker Shaman: Dragon spells",
+      { title: "Dragonspeaker Shaman", rules_text: "Dragon spells you cast cost {2} less to cast.", subtypes: ["Human", "Barbarian", "Shaman"], card_type: "creature" },
+      ["shamans", "dragons"],
+    ],
+    [
+      "a tribe merely named is not a tribal phrase",
+      { title: "Dragon’s Bane", rules_text: "Destroy target Dragon.", card_type: "instant" },
+      [],
+    ],
+    ["Doom Blade: nonblack", { title: "Doom Blade", rules_text: "Destroy target nonblack creature.", card_type: "instant" }, ["removal"]],
+    ["Go for the Throat: nonartifact", { title: "Go for the Throat", rules_text: "Destroy target nonartifact creature.", card_type: "instant" }, ["removal"]],
+    ["Assassinate: tapped", { title: "Assassinate", rules_text: "Destroy target tapped creature.", card_type: "sorcery" }, ["removal"]],
+    ["Divine Verdict: attacking or blocking", { title: "Divine Verdict", rules_text: "Destroy target attacking or blocking creature.", card_type: "instant" }, ["removal"]],
+    ["Thoughtseize: discards that card", { title: "Thoughtseize", rules_text: "Target player reveals their hand. You choose a nonland card from it. That player discards that card. You lose 2 life.", card_type: "sorcery" }, ["discard"]],
+    ["Clone: enters as a copy", { title: "Clone", rules_text: "You may have this creature enter as a copy of any creature on the battlefield.", subtypes: ["Shapeshifter"], card_type: "creature" }, ["copy"]],
+    ["Stroke of Genius: draws X", { title: "Stroke of Genius", rules_text: "Target player draws X cards.", card_type: "instant" }, ["card draw"]],
+    ["Harmonize: draw three", { title: "Harmonize", rules_text: "Draw three cards.", card_type: "sorcery" }, ["card draw"]],
+    ["Elvish Visionary: a cantrip creature", { title: "Elvish Visionary", rules_text: "When this creature enters, draw a card.", subtypes: ["Elf", "Shaman"], card_type: "creature" }, ["elves", "shamans"]],
+    [
+      "Delver of Secrets: the back face's text and subtypes",
+      {
+        title: "Delver of Secrets",
+        rules_text: "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform this creature.",
+        subtypes: ["Human", "Wizard"],
+        card_type: "creature",
+        otherFaces: [{ rules_text: "Flying", subtypes: "Human, Insect" }],
+      },
+      ["insects", "wizards", "flying"],
+    ],
+    [
+      "Fire // Ice: the second part's text, its name never",
+      {
+        title: "Fire",
+        rules_text: "Fire deals 2 damage divided as you choose among one or two targets.",
+        card_type: "instant",
+        otherFaces: [{ rules_text: "Tap target permanent.\nDraw a card." }],
+      },
+      [],
+    ],
+    [
+      "Bonecrusher Giant // Stomp: the adventure's damage",
+      {
+        title: "Bonecrusher Giant",
+        rules_text: "Whenever this creature becomes the target of a spell, Bonecrusher Giant deals 2 damage to that spell’s controller.",
+        subtypes: ["Giant"],
+        card_type: "creature",
+        otherFaces: [{ rules_text: "Damage can’t be prevented this turn. Stomp deals 2 damage to any target." }],
+      },
+      ["giants", "removal", "burn"],
     ],
     ["an empty card suggests nothing", { title: "", rules_text: "", card_type: "creature" }, []],
   ];
@@ -182,7 +252,7 @@ describe("the list", () => {
     };
     const tags = autoTagsFor(input);
     expect(tags).toHaveLength(AUTO_TAG_LIMIT);
-    expect(tags).toEqual(["dragons", "angels", "tokens", "card draw", "flying", "first strike"]);
+    expect(tags).toEqual(["dragons", "angels", "tokens", "flying", "first strike", "lifelink"]);
     expect(autoTagsFor(input)).toEqual(tags);
   });
 

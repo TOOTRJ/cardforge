@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
 // A NEW card's Tags field follows its words (owner 2026-10-30): while the
 // maker has not touched the field, it holds the tags it started with (blank,
-// or a challenge's tag from /create?tag=…) followed by what the card's name,
-// rules text and subtypes suggest (lib/cards/auto-tags.ts). The first change
+// or a challenge's tag from /create?tag=…) followed by what the card's rules
+// text and subtypes — every face's — suggest (lib/cards/auto-tags.ts). The first change
 // to the field the follow did not write — the maker typing, a challenge
 // toggle, an AI fill that writes tags — ends it for that card, as every
 // creator follow ends at a pick (followTokenTextBox, the pair follow); Start
 // over starts it again. Never on an edit or a remix (a stored card's tags,
 // and a remix's parent's, are a maker's choice): an edit never rewrites a
-// stored card's tags. The hook is components/creator/use-auto-tags.ts; these
-// are its pure parts.
+// stored card's tags; nor on a deck-card proxy. The hook is
+// components/creator/use-auto-tags.ts; these are its pure parts.
 // ---------------------------------------------------------------------------
 
 import { autoTagsFor, type AutoTagInput } from "@/lib/cards/auto-tags";

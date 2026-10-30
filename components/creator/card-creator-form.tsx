@@ -1219,9 +1219,12 @@ export function CardCreatorForm({
   const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const partColorFollow = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
   const markPartColorTouched = partColorFollow.markTouched;
-  // A new card's tags follow its name, rules text and subtypes until the
-  // Tags field changes under anything else (lib/creator/auto-tags-follow.ts).
-  const autoTags = useAutoTagsFollow({ control, setValue }, mode === "create");
+  // A new card's tags follow its rules text and subtypes (every face's)
+  // until the Tags field changes under anything else
+  // (lib/creator/auto-tags-follow.ts). Never a deck-card proxy
+  // (/create?deckCard=): it starts from the printing it copies, and its
+  // "unchanged" baseline (the reset after the import) must not move.
+  const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -5494,6 +5497,7 @@ export function CardCreatorForm({
                 userId={userId}
                 activeChallenge={activeChallenge}
                 revise={isRevise}
+                tagsAutoFilled={autoTags.following}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}
               />

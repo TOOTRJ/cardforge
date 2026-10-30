@@ -1366,16 +1366,23 @@ Rules and gotchas:
   six characters (migration 0136; a test holds the two tables together).
   Never compare a query with a stored title character for character.
 - Automatic tags (owner 2026-10-30): a NEW card's Tags field follows what
-  its name, rules text and subtypes suggest — ONE function, `autoTagsFor`
-  (`lib/cards/auto-tags.ts`: a fixed vocabulary of plural tribes, CR
-  keywords and themes, never a word the maker typed; reminder text read as
-  nothing; ≤ 6) — until the field changes under anything else (the maker,
-  a challenge toggle, an AI fill that writes tags; `stepAutoTagsFollow`,
-  `lib/creator/auto-tags-follow.ts`, wired by `useAutoTagsFollow`); Start
-  over starts it again. Create mode only: an edit never rewrites a stored
-  card's tags, a remix keeps its parent's, and the AI jobs and the deck
-  remix save what they did (no server-side tagging — it would put back a
-  tag the maker removed). A creator import is a new card: it follows.
+  its rules text and subtypes suggest — every face's and part's (the back,
+  a split card's second half), its NAME never ("Wrath of God" is no God) —
+  ONE function, `autoTagsFor` (`lib/cards/auto-tags.ts`: a fixed vocabulary
+  of plural tribes, CR keywords and themes, never a word the maker typed; a
+  tribe from rules text only in a tribal phrase — "Goblin creature token",
+  "Elves you control", "other Merfolk", "Dragon spells"; reminder text read
+  as nothing; ≤ 6) — until the field changes under anything else (the
+  maker, a challenge toggle, an AI fill that writes tags;
+  `stepAutoTagsFollow`, `lib/creator/auto-tags-follow.ts`, wired by
+  `useAutoTagsFollow`, which reads the field through `getValues` — a
+  StrictMode re-run must not end it); Start over starts it again. Create
+  mode only and never a deck-card proxy (`/create?deckCard=`, whose
+  "unchanged" baseline is the reset after its import): an edit never
+  rewrites a stored card's tags, a remix keeps its parent's, and the AI
+  jobs and the deck remix save what they did (no server-side tagging — it
+  would put back a tag the maker removed). A creator import is a new card:
+  it follows.
 - Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
   FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
   italic — stored as typed (no migration), read ONLY through
