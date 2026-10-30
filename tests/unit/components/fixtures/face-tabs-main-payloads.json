@@ -14,8 +14,12 @@
       "Rogue"
     ],
     "tags": [
+      "spirits",
+      "horrors",
       "rogues",
-      "vigilance"
+      "flying",
+      "vigilance",
+      "mill"
     ],
     "rarity": "common",
     "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
@@ -171,6 +175,8 @@
     ],
     "tags": [
       "rogues",
+      "removal",
+      "burn",
       "vigilance"
     ],
     "rarity": "common",
