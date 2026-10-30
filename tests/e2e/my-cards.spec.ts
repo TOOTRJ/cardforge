@@ -25,14 +25,10 @@ async function saveDraft(page: Page, title: string) {
   await page.getByTestId("save-as-draft").check();
   await page.getByRole("button", { name: /^save$/i }).dispatchEvent("click");
   await page.waitForURL(/\/card\/.+\/edit/);
-  // The draft save's SOFT redirect to /card/<slug>/edit is caught by the
-  // card-detail interceptor (app/@modal/(.)card/[username]/[slug]: "edit"
-  // lands in [slug]), whose HardNavigate RELOADS the page to reach the real
-  // editor. The URL changes before that reload starts, and
-  // waitForLoadState("networkidle") answers at once for the old document —
-  // so a goto made then is aborted by the reload (net::ERR_ABORTED). Wait
-  // for what only the reloaded editor draws: its <h1> is the card's title
-  // (/create's says "Forge a new card").
+  // The URL changes before the editor has drawn; wait for what only the
+  // editor draws: its <h1> is the card's title (/create's says "Forge a new
+  // card"). (The draft save's soft redirect used to be caught by the card
+  // modal's interceptor, which reloaded the page — that route is gone.)
   await expect(
     page.getByRole("heading", { level: 1, name: title, exact: true }),
   ).toBeVisible({ timeout: 20_000 });

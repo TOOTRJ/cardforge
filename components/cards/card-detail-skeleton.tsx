@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// CardDetailSkeleton — Suspense fallback while the intercepted card route
-// fetches. Mirrors CardDetailContent's modal-variant layout (hero card left,
+// CardDetailSkeleton — the card page's loading.tsx fallback. Mirrors
+// CardDetailContent's layout (hero card left,
 // info column right, full-width analytics panel below) so the swap to real
 // content doesn't jump. Uses the shared `.skeleton` shimmer from globals.css.
 // ---------------------------------------------------------------------------

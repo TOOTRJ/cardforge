@@ -101,21 +101,11 @@ import { formatShortDate } from "@/lib/format/dates";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
-// CardDetailContent — the shared body of the public card detail view.
-//
-// Rendered by BOTH:
-//   - app/(marketing)/card/[username]/[slug]/page.tsx  (variant="page")
-//   - app/@modal/(.)card/[username]/[slug]/page.tsx    (variant="modal",
-//     the intercepting route that shows the card in a dialog over the
-//     page the viewer clicked from)
-//
-// Variant differences:
-//   - "page" emits JSON-LD + breadcrumbs (crawlers only ever see the full
-//     page), the "Back to gallery" link, and the shared-element
-//     view-transition-name on the hero.
-//   - "modal" skips all of that — the dialog shell owns the close/expand
-//     affordances, and duplicating the view-transition-name while the
-//     originating grid tile is still on screen would void the transition.
+// CardDetailContent — the body of the public card page,
+// app/(marketing)/card/[username]/[slug]/page.tsx. It is the ONE card
+// detail view: every tile, row and link opens this page (the intercepting
+// route that drew a copy of it in a dialog, app/@modal, is gone — one
+// canonical page, one back button, one URL that looks the same on a reload).
 //
 // RLS gates which cards the viewer can read: anonymous + non-owner
 // viewers only see `public` / `unlisted` rows. Owners see their private
@@ -123,30 +113,18 @@ import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 // rendering before flipping visibility.
 // ---------------------------------------------------------------------------
 
-export type CardDetailVariant = "page" | "modal";
-
 export async function CardDetailContent({
   username,
   slug,
-  variant,
 }: {
   username: string;
   slug: string;
-  variant: CardDetailVariant;
 }) {
   const card = isSupabaseConfigured()
     ? await getCardByOwnerAndSlug(username, slug)
     : null;
 
-  if (!card) {
-    // In the modal the nearest not-found boundary is the root one, which
-    // would replace the whole page behind the dialog — render an inline
-    // empty state instead and let the shell's close button do its job.
-    if (variant === "modal") {
-      return <CardMissingNotice />;
-    }
-    notFound();
-  }
+  if (!card) notFound();
 
   const user = await getCurrentUser();
   const isOwner = Boolean(user && user.id === card.owner_id);
@@ -232,8 +210,7 @@ export async function CardDetailContent({
   const deckCount = publicDeckCount ?? inDecks.length;
 
   // Bump the view tally after the response ships — never for the owner's own
-  // views, and never blocking render. A modal open is a view of the card the
-  // same as the full page. Uses a public client + SECURITY DEFINER RPC, so it
+  // views, and never blocking render. Uses a public client + SECURITY DEFINER RPC, so it
   // can't rotate the viewer's session (see incrementCardView).
   if (!isOwner) {
     after(() => incrementCardView(card.id));
@@ -255,7 +232,7 @@ export async function CardDetailContent({
   // offers it, the details list it, the JSON-LD names it.
   const hasBackFace = rowHasBakedBack(card);
   const jsonLd =
-    variant === "page" && isShareable
+    isShareable
       ? buildCardJsonLd({
           inDecks,
           card,
@@ -267,13 +244,7 @@ export async function CardDetailContent({
       : null;
 
   return (
-    <div
-      className={
-        variant === "modal"
-          ? "w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
-          : "mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8"
-      }
-    >
+    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -282,7 +253,7 @@ export async function CardDetailContent({
       ) : null}
       {/* Breadcrumbs only for indexable cards — unlisted pages are noindex,
           so hierarchy signals there are wasted bytes. */}
-      {variant === "page" && card.visibility === "public" ? (
+      {card.visibility === "public" ? (
         <JsonLd
           data={breadcrumbJsonLd([
             { name: "Home", path: "/" },
@@ -291,15 +262,13 @@ export async function CardDetailContent({
           ])}
         />
       ) : null}
-      {variant === "page" ? (
-        <Link
-          href="/gallery"
-          className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Back to gallery
-        </Link>
-      ) : null}
+      <Link
+        href="/gallery"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back to gallery
+      </Link>
 
       <div className="flex flex-col gap-10">
       {/* grid-cols-1 (not the implicit auto column) so the info column is
@@ -310,13 +279,7 @@ export async function CardDetailContent({
           // Matches the gallery / dashboard / profile / set thumbnails'
           // view-transition-name so chromium-class browsers can animate a
           // shared-element transition between the grid tile and this hero.
-          // Page variant only: in the modal the originating tile is still
-          // on screen, and duplicate names skip the transition entirely.
-          style={
-            variant === "page"
-              ? { viewTransitionName: `card-${card.id}` }
-              : undefined
-          }
+          style={{ viewTransitionName: `card-${card.id}` }}
         >
           {/* The ONE row → preview mapper (shared with the bake and every
               tile), so the hero carries the design watermark and the
@@ -463,9 +426,8 @@ export async function CardDetailContent({
 
           {/* Share-traffic conversion: most anonymous visitors arrive from a
               shared link — meet the "I could make one of these" moment with
-              the create CTA right under the card actions. Page variant only;
-              in-app modal viewers already have the header CTA. */}
-          {variant === "page" && !user ? (
+              the create CTA right under the card actions. */}
+          {!user ? (
             <Link
               href="/signup"
               className="inline-flex w-fit items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15"
@@ -488,8 +450,8 @@ export async function CardDetailContent({
           {/* Card details as TEXT. The rendered preview shows all of this, but
               a crawler or answer engine reads none of it from an image — this
               block is what makes the page citable for "custom MTG {type}"
-              queries. Page variant only; the modal is for people. */}
-          {variant === "page" ? <CardDetails card={card} inDecks={inDecks} /> : null}
+              queries. */}
+          <CardDetails card={card} inDecks={inDecks} />
 
           {/* Discovery tags — at the bottom of the info card. */}
           {card.tags.length > 0 ? (
@@ -572,35 +534,7 @@ export async function CardDetailContent({
 }
 
 // ---------------------------------------------------------------------------
-// CardMissingNotice — modal-variant stand-in for notFound(). The card was
-// deleted, made private, or the link is wrong; the dialog shell still
-// provides Esc / ✕ / overlay-click to dismiss.
-// ---------------------------------------------------------------------------
-
-function CardMissingNotice() {
-  return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full border border-border/60 bg-elevated">
-        <Sparkles className="h-6 w-6 text-subtle" aria-hidden />
-      </span>
-      <div className="flex flex-col gap-1.5">
-        <h1 className="font-display text-xl font-semibold text-foreground">
-          Card not found
-        </h1>
-        <p className="max-w-sm text-sm text-muted">
-          This card may have been deleted, made private, or the link might be
-          wrong.
-        </p>
-      </div>
-      <Button asChild variant="outline" size="sm">
-        <Link href="/gallery">Browse the gallery</Link>
-      </Button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DecksWithCard — "Decks with this card" (TODO DK8.4), page and modal alike:
+// DecksWithCard — "Decks with this card" (TODO DK8.4):
 // the public decks the card's page names (listPublicDecksContaining — the
 // one list, by its one rule; the JSON-LD isPartOf reads it too) as
 // DeckTiles. The heading counts every such deck; the tiles are the newest.

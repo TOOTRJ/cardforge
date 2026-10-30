@@ -69,7 +69,6 @@ const FRAMELESS_PAGES: Record<string, string> = {
   "app/(onboarding)/onboarding/page.tsx": "framed by the onboarding layout",
   "app/(marketing)/card/[username]/[slug]/page.tsx": "CardDetailContent's 6xl frame (HAND_FRAMES_ALLOWED)",
   "app/(marketing)/card/[username]/page.tsx": "a redirect",
-  "app/@modal/(.)card/[username]/[slug]/page.tsx": "the card modal — a dialog, not a page",
 };
 
 const FRAME_OWNER = /<(?:PageContainer|DashboardShell|LegalPageShell)\b/;
