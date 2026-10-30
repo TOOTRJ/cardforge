@@ -1,11 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { revalidateDeckPaths } from "@/lib/decks/revalidate";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createDeckSchema, updateDeckSchema } from "@/lib/validation/deck";
+import { bracketFormatError, createDeckSchema, updateDeckSchema } from "@/lib/validation/deck";
 import { slugify } from "@/lib/validation/card";
 import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
@@ -102,6 +101,16 @@ async function recordDeckEvent(
   await recordFunnelEvent(createAdminClient(), { event, userId, props });
 }
 
+/** Every suffixed slug was taken (live decks, or old ones a renamed deck
+ *  still redirects from — migration 0155): plain words, never the
+ *  database's (TODO DK5.14). */
+function slugsExhausted(): DeckActionFailure {
+  return {
+    ok: false,
+    fieldErrors: { title: "Too many decks already use this name's link — try a different name." },
+  };
+}
+
 function slugCandidate(desired: string, attempt: number): string {
   if (attempt === 1) return desired;
   const suffix = `-${attempt}`;
@@ -162,6 +171,7 @@ export async function createDeckAction(
     : null;
   const reused = row !== null;
   let lastError: string | null = null;
+  let lastCode: string | null = null;
   for (let attempt = 1; !row && attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
     const { data, error } = await supabase
       .from("decks")
@@ -173,6 +183,7 @@ export async function createDeckAction(
       break;
     }
     lastError = error?.message ?? null;
+    lastCode = error?.code ?? null;
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
@@ -181,6 +192,7 @@ export async function createDeckAction(
     // a built-in background on a database 0150 hasn't reached.
     return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(insert.cover_url) } };
   }
+  if (!row && lastCode === UNIQUE_VIOLATION) return slugsExhausted();
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
@@ -303,6 +315,11 @@ export async function updateDeckAction(
     return { ok: false, formError: "Deck not found or not yours to edit." };
   }
 
+  // The bracket against the format the edit SAVES (the stored one when the
+  // edit leaves it alone): only a Commander deck takes one (TODO DK5.14).
+  const bracketError = bracketFormatError(data.format ?? existing.format, data.bracket);
+  if (bracketError) return { ok: false, fieldErrors: { bracket: bracketError } };
+
   const update: DeckUpdate = {};
   if (data.title !== undefined) update.title = data.title;
   if (data.description !== undefined)
@@ -315,12 +332,20 @@ export async function updateDeckAction(
   if (data.format !== undefined) update.format = data.format;
   if (data.visibility !== undefined) update.visibility = data.visibility;
 
+  // The slug follows a RENAME (TODO DK5.14): a new title's slug, suffixed
+  // when it's taken — another deck's live slug, or one a renamed deck still
+  // redirects from (migration 0155 reserves those, 23505). The slug the deck
+  // leaves is kept by the database (deck_slug_history), so its old links 308
+  // here. An explicit `slug` wins; an unchanged title keeps the slug.
   const desiredSlug =
-    data.slug !== undefined ? slugify(data.slug).slice(0, 80) || null : null;
+    data.slug !== undefined
+      ? slugify(data.slug).slice(0, 80) || null
+      : renamedSlugFor(data.title, existing.title);
   const changingSlug = desiredSlug !== null && desiredSlug !== existing.slug;
 
   let row: { id: string; slug: string } | null = null;
   let lastError: string | null = null;
+  let lastCode: string | null = null;
   const attempts = changingSlug ? MAX_SLUG_ATTEMPTS : 1;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const candidate = changingSlug
@@ -338,6 +363,7 @@ export async function updateDeckAction(
       break;
     }
     lastError = error?.message ?? null;
+    lastCode = error?.code ?? null;
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
@@ -346,6 +372,7 @@ export async function updateDeckAction(
     // a built-in background on a database 0150 hasn't reached.
     return { ok: false, fieldErrors: { cover_url: refusedDeckCoverMessage(update.cover_url) } };
   }
+  if (!row && lastCode === UNIQUE_VIOLATION) return slugsExhausted();
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not update deck." };
   }
@@ -353,11 +380,19 @@ export async function updateDeckAction(
   const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(row.slug, ownerUsername);
   if (existing.slug !== row.slug) {
-    revalidatePath(`/deck/${existing.slug}`);
-    revalidatePath(`/deck/${existing.slug}/edit`);
+    // The old URL is a 308 now: drop its cached page and tell IndexNow it
+    // moved (revalidateDeckPaths announces it with the profile).
+    revalidateDeckPaths(existing.slug, ownerUsername);
   }
 
   return { ok: true, deckId: row.id, slug: row.slug };
+}
+
+/** The slug a rename asks for: the new title's, or null when the title is
+ *  not changing (nothing asked). */
+function renamedSlugFor(title: string | undefined, storedTitle: string): string | null {
+  if (title === undefined || title === storedTitle) return null;
+  return slugify(title, 80, "deck").slice(0, 80) || null;
 }
 
 // ---------------------------------------------------------------------------

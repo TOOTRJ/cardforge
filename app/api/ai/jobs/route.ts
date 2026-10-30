@@ -38,6 +38,7 @@ import { SURPRISE_PRESET_ID, assemblePrompt, cleanTwist } from "@/lib/ai/presets
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { AI_DECK_FORMATS } from "@/lib/ai/deck-design";
+import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rateLimitedResponse } from "@/lib/api/responses";
@@ -113,7 +114,14 @@ const requestSchema = z.discriminatedUnion("kind", [
     // Present = generate ADDITIONAL cards into this existing deck.
     deck_id: z.string().uuid().optional(),
     // The wizard's starting point + power level (lib/decks/deck-types.ts).
-    deck_type: z.string().trim().max(60).optional(),
+    // A key the list doesn't know is dropped here, before the paid plan
+    // call — never refused by the deck's own schema after it (DK5.14).
+    deck_type: z
+      .string()
+      .trim()
+      .max(60)
+      .optional()
+      .transform((key) => (key && deckTypeByKey(key) ? key : undefined)),
     bracket: z.coerce.number().int().min(1).max(5).optional(),
   }),
   z.object({
