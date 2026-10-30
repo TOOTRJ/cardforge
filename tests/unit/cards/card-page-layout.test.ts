@@ -35,6 +35,20 @@ describe("the card page's layout", () => {
     expect(page).toContain('href: "#comments"');
     expect(page.indexOf("<CardComments")).toBeGreaterThan(page.indexOf('title="More like this"'));
   });
+
+  it("keeps the moderation lock's pieces (0156) for the owner", () => {
+    expect(page).toContain('from "@/lib/moderation/lock"');
+    expect(page).toContain("isOwner ? ownerVisibilityLabel(card) : VISIBILITY_LABELS[card.visibility]");
+    expect(page).toMatch(/isOwner && isModerationLocked\(card\) \?[\s\S]{0,300}\{MODERATION_LOCK_NOTE\}/);
+    expect(page).toContain("href={MODERATION_CONTACT_HREF}");
+    expect(page).toMatch(
+      /<RemixButton[\s\S]{0,400}unavailableReason=\{isModerationLocked\(card\) \? MODERATION_LOCKED_REMIX_MESSAGE : undefined\}/,
+    );
+  });
+
+  it("names each stats link by its label, not the bare number", () => {
+    expect(page).toContain('<span className="sr-only"> {s.label}</span>');
+  });
 });
 
 describe("formatStatCount", () => {

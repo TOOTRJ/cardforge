@@ -805,6 +805,9 @@ function CardStats({
                 {s.href ? (
                   <a href={s.href} className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50">
                     {value}
+                    {/* A link is named by its own text: the bare number
+                        alone says nothing out of the list's context. */}
+                    <span className="sr-only"> {s.label}</span>
                   </a>
                 ) : (
                   value
