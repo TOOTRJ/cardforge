@@ -84,7 +84,7 @@ export default async function SettingsPage({
       />
 
       <div className="mt-10 grid gap-4">
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Avatar & banner
@@ -112,7 +112,7 @@ export default async function SettingsPage({
 
         <CustomPipsPanel overrides={user ? await getPipOverrides(user.id) : {}} />
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Public profile
@@ -149,7 +149,7 @@ export default async function SettingsPage({
 
         <SurfaceCard
           id="links"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -173,7 +173,7 @@ export default async function SettingsPage({
 
         <SurfaceCard
           id="stores"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -201,7 +201,7 @@ export default async function SettingsPage({
 
         <SurfaceCard
           id="security"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -223,7 +223,7 @@ export default async function SettingsPage({
 
         <SurfaceCard
           id="email"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -244,7 +244,7 @@ export default async function SettingsPage({
           />
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Pinned cards
@@ -262,7 +262,7 @@ export default async function SettingsPage({
           </Suspense>
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Preferences
@@ -289,7 +289,7 @@ export default async function SettingsPage({
         {isBillingEnabled() ? (
           <SurfaceCard
             id="billing"
-            className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+            className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
           >
             <div className="flex flex-col gap-1">
               <h3 className="font-display text-lg font-semibold text-foreground">
@@ -313,7 +313,7 @@ export default async function SettingsPage({
           </SurfaceCard>
         ) : null}
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Card watermark
@@ -330,7 +330,7 @@ export default async function SettingsPage({
           />
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Usage
@@ -346,7 +346,7 @@ export default async function SettingsPage({
           </Suspense>
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Your data &amp; account
