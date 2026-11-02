@@ -9,10 +9,19 @@ import { formatStatCount } from "@/components/cards/card-detail-content";
 const page = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
 
 describe("the card page's layout", () => {
-  it("is framed by PageContainer (standard), its loading state too", () => {
-    expect(page).toMatch(/<PageContainer className="py-6 sm:py-10">/);
+  it("is framed by PageContainer (wide, TODO WD10), its loading state too", () => {
+    expect(page).toMatch(/<PageContainer size="wide" className="py-6 sm:py-10">/);
     const loading = readFileSync(join(process.cwd(), "app/(marketing)/card/[username]/[slug]/loading.tsx"), "utf8");
-    expect(loading).toMatch(/<PageContainer className="py-6 sm:py-10">/);
+    expect(loading).toMatch(/<PageContainer size="wide" className="py-6 sm:py-10">/);
+  });
+
+  it("uses the wide frame's width as columns, never longer lines (TODO WD10)", () => {
+    // The details keep their 42rem measure; the creator's panel joins them
+    // as a column of its own from 2xl.
+    expect(page).toContain("2xl:grid-cols-[minmax(0,42rem)_20rem]");
+    // The rows below the card are the card grid's one-row strips.
+    expect(page).toMatch(/<div className=\{ROW_GRID_CLASS\}>[\s\S]{0,300}rowTileClass\(index\)/);
+    expect(page).toContain("listMoreFromOwner(card.owner_id, card.id, ROW_MAX)");
   });
 
   it("keeps the text details, the JSON-LD and the breadcrumbs for every viewer", () => {

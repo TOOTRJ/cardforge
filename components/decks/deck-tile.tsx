@@ -290,10 +290,6 @@ export const DECK_ROW_SIZES = DECK_GRID_SIZES;
  *  1024 (the rail: 2) / 1212 (3) / 1660 (4). */
 export const DASHBOARD_DECK_GRID_SIZES =
   "(min-width: 1920px) 386px, (min-width: 1660px) calc((100vw - 376px) / 4), (min-width: 1212px) calc((100vw - 356px) / 3), (min-width: 1024px) calc((100vw - 336px) / 2), (min-width: 944px) calc((100vw - 88px) / 3), (min-width: 608px) calc((100vw - 52px) / 2), calc(100vw - 32px)";
-/** A DeckGrid tile in a frame narrower than the wide page's — the card
- *  page's "Decks with this card" (1152 px frame) and its modal: generous,
- *  never less. */
-export const DECK_NARROW_FRAME_SIZES = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
 
 /** DECK_GRID_CLASS in its own query container. */
 export function DeckGrid({ className, children }: { className?: string; children: React.ReactNode }) {

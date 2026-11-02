@@ -36,7 +36,9 @@ export function DeckChartCard({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("flex min-w-0 flex-col gap-4 rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5", className)}
+      // `relative`: the clip box of the sr-only table twin below (an
+      // absolute box sizes and clips against its containing block).
+      className={cn("relative flex min-w-0 flex-col gap-4 rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5", className)}
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
