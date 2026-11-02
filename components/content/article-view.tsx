@@ -8,8 +8,10 @@ import { ArticleToc } from "@/components/content/article-toc";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { faqJsonLd, JsonLd, type CrumbItem } from "@/components/seo/json-ld";
 import { PageContainer } from "@/components/layout/page-container";
+import { ReadingLayout } from "@/components/layout/reading-layout";
+import { RailCta, RailLinks } from "@/components/marketing/rail-cta";
 import { extractToc, slugifyTag, tagHubHref, type Article, type ArticleMeta } from "@/lib/content/articles";
-import { categoryPath, getArticleCategory } from "@/lib/content/article-categories";
+import { ARTICLE_CATEGORIES, categoryPath, getArticleCategory } from "@/lib/content/article-categories";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { formatCalendarDate } from "@/lib/format/dates";
 
@@ -50,8 +52,37 @@ export function ArticleView({
   ].filter((item) => item.depth <= (meta.tocDepth ?? 3));
 
   return (
-    <PageContainer className="py-12 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12">
-      <div className="max-w-3xl">
+    // The wide frame (TODO WD10 / WD6): the body at the reading measure
+    // (38rem, 18 px from sm), "On this page" and the guide's one action in
+    // the rail beside it, the Learn shelves on the left from 2xl.
+    <PageContainer size="wide" className="py-12">
+      <ReadingLayout
+        main="measure"
+        railOnPhone="hidden"
+        railLabel="On this page"
+        nav={
+          <div className="pt-16">
+            <RailLinks
+              title="Learn"
+              current={meta.category ? categoryPath(meta.category) : undefined}
+              links={[
+                ...ARTICLE_CATEGORIES.map((category) => ({ href: categoryPath(category.slug), label: category.label })),
+                { href: "/articles", label: "All articles" },
+              ]}
+            />
+          </div>
+        }
+        rail={
+          <div className="flex flex-col gap-6 lg:pt-16">
+            <ArticleToc items={toc} variant="sidebar" />
+            <RailCta
+              title={meta.cta?.title ?? "Put it into practice"}
+              description={meta.cta?.body ?? "Sign up free and try what you just read on a real card."}
+              action={{ href: "/create", label: meta.cta?.label ?? "Open the card creator" }}
+            />
+          </div>
+        }
+      >
         <JsonLd data={buildArticleJsonLd(meta)} />
         {meta.faq ? <JsonLd data={faqJsonLd(meta.faq)} /> : null}
         {/* The reader's path, not the URL: Home › Learn › <its category> ›
@@ -134,7 +165,7 @@ export function ArticleView({
 
         {/* Body — prose styling via arbitrary variants, same approach as
             LegalPageShell but tuned for long-form reading. */}
-        <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_sup]:text-[0.7em] [&_sup_a]:no-underline [&_section.footnotes]:mt-6 [&_section.footnotes]:border-t [&_section.footnotes]:border-border [&_section.footnotes]:pt-2 [&_section.footnotes]:text-sm [&_section.footnotes]:leading-6 [&_section.footnotes_p]:inline">
+        <article className="mt-10 flex flex-col gap-5 text-base leading-7 text-muted sm:text-lg sm:leading-8 [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_sup]:text-[0.7em] [&_sup_a]:no-underline [&_section.footnotes]:mt-6 [&_section.footnotes]:border-t [&_section.footnotes]:border-border [&_section.footnotes]:pt-2 [&_section.footnotes]:text-sm [&_section.footnotes]:leading-6 [&_section.footnotes_p]:inline">
           {body}
           {printsFaq ? (
             <section aria-labelledby={slugifyTag(FAQ_HEADING)} className="flex flex-col gap-4">
@@ -161,9 +192,10 @@ export function ArticleView({
           </aside>
         ) : null}
 
-        {/* CTA */}
-        <GlyphDivider className="my-12" />
-        <section className="relative overflow-hidden rounded-frame border border-border bg-surface p-8">
+        {/* CTA — under the article on a phone and a tablet; from lg it is
+            the rail's (one "Put it into practice" per page). */}
+        <GlyphDivider className="my-12 lg:hidden" />
+        <section className="relative overflow-hidden rounded-frame border border-border bg-surface p-8 lg:hidden">
           <div className="absolute inset-0 bg-radial-glow opacity-60" aria-hidden />
           <div className="relative flex flex-col gap-3">
             <h2 className="font-display text-xl font-semibold text-foreground">
@@ -203,15 +235,7 @@ export function ArticleView({
             </ul>
           </section>
         ) : null}
-      </div>
-
-      {/* Sticky "On this page" in the spare width right of the article
-          (owner request 2026-09-17). Same anchor links as the inline card. */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pt-16">
-          <ArticleToc items={toc} variant="sidebar" />
-        </div>
-      </aside>
+      </ReadingLayout>
     </PageContainer>
   );
 }

@@ -97,7 +97,7 @@ export default async function LearnCategoryPage({
   const topics = relatedTopics(articles);
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: category.title,
@@ -166,7 +166,7 @@ export default async function LearnCategoryPage({
             are a good place to start.
           </SurfaceCard>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
             {articles.map((article) => (
               <ArticleCard key={article.slug} article={article} currentPath={path} />
             ))}

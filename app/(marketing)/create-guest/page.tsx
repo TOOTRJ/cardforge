@@ -57,7 +57,9 @@ export default async function PreviewPage() {
   }
 
   return (
-    <PageContainer className="py-10">
+    // The creator keeps the standard frame until its redesign (TODO WD7,
+    // owner decision D8; page-container-structure.test.ts lists it).
+    <PageContainer size="standard" className="py-10">
       {/* Guest banner */}
       <div className="mb-6 flex items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3">
         <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
