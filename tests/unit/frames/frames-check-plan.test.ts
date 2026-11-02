@@ -82,6 +82,25 @@ describe("which objects an incremental check looks up", () => {
     expect(keysOf(p.changed).sort()).toEqual(["t1/w.png", "t2/w.png", "t7/w.png"]);
   });
 
+  // VERCEL_GIT_PREVIOUS_SHA is the last SUCCESSFUL deployment: one the
+  // Ignored Build Step skipped (CANCELED), or a build that failed, never
+  // becomes the base. The base is then OLDER, and the diff against it holds
+  // every change since — a superset of what a newer base would give.
+  it("an older base (a skipped or failed deployment in between) checks MORE, never less", () => {
+    const older = manifestOf(800);
+    const middle = structuredClone(older);
+    middle.files["mid/w.png"] = { hash: "dddddddddddd", bytes: 7 };
+    middle.files["t1/w.png"] = { ...middle.files["t1/w.png"], hash: "eeeeeeeeeeee" };
+    const current = structuredClone(middle);
+    current.files["new/w.png"] = { hash: "aaaaaaaaaaaa", bytes: 5 };
+    const fromMiddle = plan(current, middle);
+    const fromOlder = plan(current, older);
+    if (fromMiddle.mode !== "incremental" || fromOlder.mode !== "incremental") throw new Error("expected incremental");
+    expect(keysOf(fromMiddle.changed)).toEqual(["new/w.png"]);
+    expect(keysOf(fromOlder.changed).sort()).toEqual(["mid/w.png", "new/w.png", "t1/w.png"]);
+    for (const key of keysOf(fromMiddle.changed)) expect(keysOf(fromOlder.changed)).toContain(key);
+  });
+
   it("a manifest with nothing new looks up the canary alone; a small one is looked up whole", () => {
     const p = plan(base, base);
     if (p.mode !== "incremental") throw new Error(p.reason);
@@ -295,10 +314,12 @@ describe("the production build is wired to it", () => {
   });
 
   // VERCEL_GIT_PREVIOUS_SHA is set ONLY when the project has an Ignored Build
-  // Step. This one ALWAYS builds (exit 1 = build, exit 0 = skip): it is here
-  // for the variable alone. A later step that really skips builds replaces
-  // it — and must still never skip a production build of code.
-  it("vercel.json has an Ignored Build Step that always builds", () => {
-    expect(JSON.parse(read("vercel.json")).ignoreCommand).toBe("exit 1");
+  // Step: without one every production build silently falls back to the
+  // full check. WHICH step it is (one that always builds, or the notes-only
+  // skip) is its own concern and its own tests'.
+  it("vercel.json has an Ignored Build Step (what makes Vercel set VERCEL_GIT_PREVIOUS_SHA)", () => {
+    const { ignoreCommand } = JSON.parse(read("vercel.json"));
+    expect(typeof ignoreCommand).toBe("string");
+    expect(ignoreCommand.trim()).not.toBe("");
   });
 });
