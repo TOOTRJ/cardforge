@@ -3,7 +3,7 @@
 What makes ONE article on PipGlyph rank in classic search and get quoted by
 answer engines (Google AI Overviews / AI Mode, ChatGPT search, Copilot,
 Perplexity, Claude). Researched 2026-10-30 for the admin article composer
-(`/admin/articles`, migration 0153). Each recommendation says what the
+(`/admin/articles`, migration 0160). Each recommendation says what the
 evidence is, what PipGlyph now does by default, and what is left. "What we
 do" describes the composer and article pages built alongside this document
 (the admin articles PR); until it merges, the MDX guides already have the
@@ -26,11 +26,11 @@ a number in public, open the primary page.
    no special files or markup are needed [P: 37, 55]. What gets cited is
    clear, original, well-structured content that is easy to find. Optimise
    the article, not a side channel.
-2. **Lead with the answer.** In an 18,012-citation study, 44 % of ChatGPT
+2. **Lead with the answer.** In a study of more than 18,000 citations, 44 % of ChatGPT
    citations came from the first 30 % of the page [S: 63]. The composer now
    checks the opening paragraph and the question-led headings.
 3. **Be the source.** The GEO paper found that adding citations, quotations
-   and statistics raised visibility in generative answers by over 40 % [P:
+   and statistics raised visibility in generative answers by up to 40 % [P:
    65]. First-hand, specific, people-first content is also Google's own
    bar [P: 21]. PipGlyph's edge is that it can show its own renders and
    tools, which no other site has.
@@ -72,7 +72,7 @@ server refuses a schedule, a publish or a live edit until it is fixed.
 ### 1. Lead with the answer; write self-contained, question-led passages
 
 **Evidence.**
-- Kevin Indig's study of 18,012 ChatGPT citations found a "ski-ramp"
+- Kevin Indig's study of more than 18,000 ChatGPT citations found a "ski-ramp"
   shape: 44 % of citations come from the first 30 % of a page, 31 % from the
   middle and 25 % from the end. Inside a paragraph, 53 % come from the
   middle sentences. This is a correlation, not a mechanism [S: 63, 64].
@@ -92,7 +92,7 @@ against writing for machines:
 - No paragraph over 120 words: self-contained passages are easier to read
   and to quote.
 
-The five drafts follow the pattern. Each opens with a 40–70-word answer,
+The five drafts follow the pattern. Each opens with a 55–70-word answer,
 then has question-led sections that each answer themselves in their first
 sentence.
 
@@ -107,7 +107,7 @@ sentence.
   [S: 25, 26].
 - The GEO paper (Aggarwal et al., KDD 2024) found that adding citations,
   quotations from relevant sources and statistics raised visibility in
-  generative engines by over 40 %. Keyword stuffing did little [P: 65].
+  generative engines by up to 40 %. Keyword stuffing did little [P: 65].
 - Google's AI-features guide asks for "unique, non-commodity" content
   [P: 37].
 
@@ -329,13 +329,13 @@ A live edit and an unpublish announce too.
 
 ## Architecture decision: database articles JOIN the MDX files
 
-The 29 MDX guides stay files. Composer articles live in `public.articles`
+The 33 MDX guides stay files. Composer articles live in `public.articles`
 and share the same `/articles/<slug>` URL space, the same shelves and tag
 hubs, and the same page component. Why not replace the files:
 
 - **Every existing URL and its SEO keeps working unchanged.** That covers
   frontmatter dates, FAQ, `<CardScan>` rows, the tests that render every
-  guide, and the 308s from old tag hubs. A migration of 29 guides into rows
+  guide, and the 308s from old tag hubs. A migration of 33 guides into rows
   would re-date them and risk subtle rendering changes, for no reader
   benefit.
 - **Files are good at what they do:** reviewed in PRs, versioned, built
