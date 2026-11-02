@@ -251,11 +251,9 @@ describe("the grids' `sizes`, frame by frame, at every window from 320 to 2560 p
 
   // Generous lists: never less — they may ask for more.
   const generous: Array<[string, string, Grid, (vw: number) => number]> = [
-    ["a challenge's entries (window grid, standard page)", WINDOW_GRID_SIZES, windowGrid(2, 3, 4, 20), FRAMES.standard],
     ["the card page's related rows (window grid)", WINDOW_GRID_SIZES, windowGrid(2, 4, 4, 20), FRAMES.cardPage],
     ["the card page's top remixes (window grid)", WINDOW_GRID_SIZES, windowGrid(2, 4, 4, 16), FRAMES.cardPage],
     ["Settings' pinned-cards picker (window grid, a readable column at most)", WINDOW_GRID_SIZES, windowGrid(2, 3, 3, 12), FRAMES.readable],
-    ["the homepage's strip (card grid, standard page)", WINDOW_GRID_SIZES, CARD_GRID, FRAMES.standard],
     ["the card page's decks (deck grid, its 1152 px frame)", DECK_NARROW_FRAME_SIZES, DECK_GRID, FRAMES.cardPage],
   ];
   for (const [name, sizes, grid, frame] of generous) {
@@ -295,6 +293,10 @@ describe("every grid sits in a query container (source scan)", () => {
       ["app/(marketing)/gallery/gallery-view.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["app/(marketing)/gallery/type/[type]/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["app/(marketing)/gallery/tag/[tag]/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
+      // TODO WD10: the homepage's trending strip and a challenge's entries
+      // are on the wide frame too.
+      ["app/(marketing)/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
+      ["app/(marketing)/challenges/[slug]/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["components/decks/commander-row.tsx", /sizes: COMMANDER_ROW_SIZES/],
       ["app/(marketing)/profile/[username]/page.tsx", /sizes: CARD_GRID_SIZES/],
       ["app/(app)/feed/page.tsx", /sizes=\{DASHBOARD_CARD_GRID_SIZES\}/],
