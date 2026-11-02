@@ -86,6 +86,8 @@ describe("the deck editor's Format (3b.36)", () => {
   it("a save the server refuses on it focuses it, described by the error first", async () => {
     updateDeckAction.mockResolvedValue({ ok: false, fieldErrors: { format: "Pick a format." } });
     render(<DeckCreatorForm mode="edit" userId="u1" deck={DECK} embedded />);
+    // An edit sends only what changed (DK5.14): change something to save.
+    fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "Cinderwing Reborn" } });
     const save = screen.getByRole("button", { name: /save/i });
     save.focus();
     await act(async () => {

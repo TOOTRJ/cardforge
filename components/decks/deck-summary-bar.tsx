@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 // visitor never sees it, #645 / TODO DK0.9), the composition, the average
 // mana value and the lands, and — for the owner — "Edit next": the next
 // unchanged import in the order the list shows, opened in its Customize
-// flow (`/create?deckCard=`).
+// flow (`/create?deckCard=`) with its way back (TODO DK5.5): saved, the
+// creator returns to the deck at that card's anchor (`#next-<id>`) and the
+// focus comes back here — to an "Edit next" that by then names the next
+// one, so the walk goes on with one key.
 //
 // It sticks to the bottom of the screen while the cards scroll and rests
 // under the last of them (sticky, never fixed): it never covers what comes
@@ -39,6 +42,7 @@ export function DeckSummaryBar({
   editNext,
   unchanged,
   canManage,
+  className,
 }: {
   summary: DeckSummary;
   /** The owner's format check (0 = passes); null for a visitor. */
@@ -48,6 +52,8 @@ export function DeckSummaryBar({
   /** Cards still as imported (the composition's Imported). */
   unchanged: number;
   canManage: boolean;
+  /** The owner's page on a phone lifts it over the editing bar. */
+  className?: string;
 }) {
   const sizeText = summary.target ? `${summary.size} / ${summary.target}` : `${summary.size}`;
   const sizeLabel = summary.target
@@ -58,7 +64,10 @@ export function DeckSummaryBar({
   return (
     <section
       aria-label="Deck summary"
-      className="sticky bottom-2 z-20 rounded-frame border border-border bg-surface/95 px-3 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 sm:bottom-3 sm:px-4 sm:py-2.5"
+      className={cn(
+        "sticky bottom-2 z-20 rounded-frame border border-border bg-surface/95 px-3 py-2 shadow-[0_-12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur supports-[backdrop-filter]:bg-surface/85 sm:bottom-3 sm:px-4 sm:py-2.5",
+        className,
+      )}
     >
       <div className="flex items-center gap-x-4 gap-y-1">
         <ul className="flex min-w-0 flex-1 items-center gap-x-4 overflow-hidden py-1 text-xs text-muted sm:text-sm">
@@ -80,7 +89,7 @@ export function DeckSummaryBar({
                   <span className="text-foreground">{commanders.join(" & ")}</span>
                 </span>
               ) : (
-                <span>No commander yet</span>
+                <span className="min-w-0 truncate">No commander yet</span>
               )}
             </Item>
           ) : null}
@@ -120,6 +129,8 @@ export function DeckSummaryBar({
         {canManage && editNext ? (
           <Link
             href={editNext.href}
+            data-edit-next=""
+            data-edit-next-name={editNext.name}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md text-xs font-medium text-primary-bright underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 sm:text-sm"
             aria-label={`Edit next: customize ${editNext.name}${unchanged > 0 ? ` (${unchanged} card${unchanged === 1 ? "" : "s"} not changed yet)` : ""}`}
           >

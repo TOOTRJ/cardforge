@@ -1,6 +1,6 @@
 # Profiles, links and store cards (research, 2026-10-30)
 
-Research behind migration 0153 (`profile_links`, `profile_stores`): what a
+Research behind migration 0159 (`profile_links`, `profile_stores`): what a
 PipGlyph creator would want to link from their public profile, the URL shapes
 we can validate, and the brand rules for drawing each platform's mark. The
 registries this feeds are `lib/profile/link-kinds.ts` (links) and

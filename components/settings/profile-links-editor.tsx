@@ -18,7 +18,7 @@ import { saveProfileLinksAction, saveProfileStoresAction } from "@/app/(app)/set
 import { ProfileListEditor, type ListRow } from "@/components/settings/profile-list-editor";
 
 // ---------------------------------------------------------------------------
-// The two Settings editors of migration 0153 — "More links" and "Store
+// The two Settings editors of migration 0159 — "More links" and "Store
 // cards" — as client islands over ProfileListEditor (its schema and save
 // are functions, so they are bound here, on the client).
 // ---------------------------------------------------------------------------

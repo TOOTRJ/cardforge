@@ -17,6 +17,12 @@ import {
   DECK_NARROW_FRAME_SIZES,
   deckRowTileClass,
 } from "@/components/decks/deck-tile";
+import {
+  COMMANDER_ROW_GRID_CLASS,
+  COMMANDER_ROW_MAX,
+  COMMANDER_ROW_SIZES,
+  commanderRowTileClass,
+} from "@/components/decks/commander-row";
 
 // ---------------------------------------------------------------------------
 // TODO WD3 / WD4: the card and deck grids count their columns by the width
@@ -45,6 +51,9 @@ const FRAMES = {
   standard: (vw: number) => Math.min(vw, 1280) - 2 * gutter(vw),
   /** The card page's own 1152 px frame (its modal is narrower). */
   cardPage: (vw: number) => Math.min(vw, 1152) - 2 * gutter(vw),
+  /** /decks' commander row (TODO DK8.4): the wide frame less the glowing
+   *  surface's padding (p-5, sm:p-7) and its 1 px border. */
+  commanderRow: (vw: number) => Math.min(vw, 1920) - 2 * gutter(vw) - 2 * (vw < 640 ? 20 : 28) - 2,
   /** A `DashboardShell readable` column (Settings): 1024 px at most. */
   readable: (vw: number) => Math.min(1024, Math.min(vw, 1920) - 2 * gutter(vw) - (vw >= 1024 ? 252 : 0)),
 };
@@ -57,6 +66,10 @@ const CARD_GRID: Grid = {
 };
 const COMPACT_GRID: Grid = {
   columns: (w) => (w < 480 ? 2 : w < 640 ? 3 : w < 896 ? 4 : w < 1120 ? 5 : w < 1344 ? 6 : w < 1568 ? 7 : 8),
+  gap: () => 12,
+};
+const COMMANDER_ROW: Grid = {
+  columns: (w) => (w < 576 ? 3 : w < 768 ? 4 : w < 960 ? 5 : w < 1216 ? 6 : w < 1472 ? 7 : 8),
   gap: () => 12,
 };
 const DECK_GRID: Grid = {
@@ -166,6 +179,37 @@ describe("the card grid's columns", () => {
     ]);
   });
 
+  it("/decks' commander row: smaller tiles, 3 → 8 in one row, the tiles past the last column hidden (DK8.4)", () => {
+    expect(COMMANDER_ROW_GRID_CLASS.split(" ")).toEqual(
+      expect.arrayContaining([
+        "grid-cols-3",
+        "@min-[36rem]:grid-cols-4",
+        "@min-[48rem]:grid-cols-5",
+        "@min-[60rem]:grid-cols-6",
+        "@min-[76rem]:grid-cols-7",
+        "@min-[92rem]:grid-cols-8",
+      ]),
+    );
+    expect(COMMANDER_ROW_MAX).toBe(8);
+    expect(Array.from({ length: COMMANDER_ROW_MAX }, (_, i) => commanderRowTileClass(i))).toEqual([
+      "flex",
+      "flex",
+      "flex",
+      "hidden @min-[36rem]:flex",
+      "hidden @min-[48rem]:flex",
+      "hidden @min-[60rem]:flex",
+      "hidden @min-[76rem]:flex",
+      "hidden @min-[92rem]:flex",
+    ]);
+    const at = (vw: number) =>
+      `${COMMANDER_ROW.columns(FRAMES.commanderRow(vw), vw)} × ${Math.round(tile(COMMANDER_ROW, FRAMES.commanderRow, vw))}`;
+    expect([390, 1366, 1920].map(at)).toEqual(["3 × 97", "7 × 167", "8 × 214"]);
+    // Smaller than the card row's tile at every window.
+    for (const vw of WINDOWS) {
+      expect(tile(COMMANDER_ROW, FRAMES.commanderRow, vw), `${vw}px`).toBeLessThan(tile(CARD_GRID, FRAMES.wide, vw));
+    }
+  });
+
   it("a compact tile stays ~150–215 px in the dashboard", () => {
     for (const vw of WINDOWS.filter((vw) => vw >= 1024)) {
       const t = tile(COMPACT_GRID, FRAMES.dashboard, vw);
@@ -192,6 +236,7 @@ describe("the grids' `sizes`, frame by frame, at every window from 320 to 2560 p
     ["compact cards in the dashboard", DASHBOARD_COMPACT_GRID_SIZES, COMPACT_GRID, FRAMES.dashboard],
     ["decks on a wide page (DECK_GRID_SIZES)", DECK_GRID_SIZES, DECK_GRID, FRAMES.wide],
     ["decks in the dashboard (DASHBOARD_DECK_GRID_SIZES)", DASHBOARD_DECK_GRID_SIZES, DECK_GRID, FRAMES.dashboard],
+    ["/decks' commander row (COMMANDER_ROW_SIZES)", COMMANDER_ROW_SIZES, COMMANDER_ROW, FRAMES.commanderRow],
   ];
   for (const [name, sizes, grid, frame] of exact) {
     it(`${name}: never less than the tile, and never 12 px more`, () => {
@@ -250,7 +295,7 @@ describe("every grid sits in a query container (source scan)", () => {
       ["app/(marketing)/gallery/gallery-view.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["app/(marketing)/gallery/type/[type]/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["app/(marketing)/gallery/tag/[tag]/page.tsx", /sizes=\{CARD_GRID_SIZES\}/],
-      ["app/(marketing)/decks/decks-view.tsx", /sizes=\{CARD_GRID_SIZES\}/],
+      ["components/decks/commander-row.tsx", /sizes: COMMANDER_ROW_SIZES/],
       ["app/(marketing)/profile/[username]/page.tsx", /sizes: CARD_GRID_SIZES/],
       ["app/(app)/feed/page.tsx", /sizes=\{DASHBOARD_CARD_GRID_SIZES\}/],
       ["app/(app)/dashboard/decks/page.tsx", /sizes=\{DASHBOARD_DECK_GRID_SIZES\}/],

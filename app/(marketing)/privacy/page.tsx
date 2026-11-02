@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       eyebrow="Legal"
       title="Privacy"
       description="What we collect, why we collect it, and how to delete it."
-      lastUpdated="June 2026"
+      lastUpdated="October 2026"
     >
       <p className="rounded-md border border-border/60 bg-elevated px-4 py-3 text-foreground">
         <strong>The short version:</strong> PipGlyph collects the minimum it
@@ -160,6 +160,12 @@ export default function PrivacyPage() {
           opt-out browser add-on
         </a>
         ; the product works identically without it.
+      </p>
+      <p>
+        We also count, once per browser tab, which range of window widths
+        our pages are viewed at (such as 1366–1535 pixels) to decide how
+        wide pages should be — anonymously, with no cookie, no link to your
+        account and never your exact width or screen resolution.
       </p>
 
       <h2>7. Children</h2>

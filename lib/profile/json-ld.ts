@@ -14,18 +14,20 @@ import type { ProfileLink } from "@/lib/profile/link-kinds";
 export function buildProfileJsonLd(
   profile: ProfileWithStats,
   displayName: string,
-  extraLinks: readonly Pick<ProfileLink, "url">[] = [],
+  extraLinks: readonly Pick<ProfileLink, "kind" | "url">[] = [],
 ): Record<string, unknown> {
   const base = getSiteBaseUrl();
   const canonical = `${base}/profile/${profile.username}`;
   // Every link the creator vouches for (website, the column socials, the
-  // 0153 links — already re-checked by listProfileLinks), once each.
+  // 0159 links — already re-checked by listProfileLinks), once each. An
+  // "other" link is any https host — a page ABOUT them, not an identity of
+  // theirs — so it stays out of sameAs.
   const sameAs = [
     ...new Set(
       [
         profile.website_url,
         ...SOCIAL_PLATFORMS.map((p) => profile[p.key as SocialPlatformKey]),
-        ...extraLinks.map((link) => link.url),
+        ...extraLinks.filter((link) => link.kind !== "other").map((link) => link.url),
       ].filter((url): url is string => Boolean(url)),
     ),
   ];

@@ -6,13 +6,13 @@ import { PROFILE_STORES_MAX, STORE_PLATFORMS, STORE_TITLE_MAX } from "@/lib/prof
 import { TYPED_FORMS } from "@/lib/validation/typed-forms";
 
 // ---------------------------------------------------------------------------
-// Migration 0153 (profile links, store cards, the profile card search) holds
+// Migration 0159 (profile links, store cards, the profile card search) holds
 // the same lists, caps and fold as the app: a kind or platform added to a
 // registry without the CHECK fails every save with a 23514, and a fold that
 // drifts from typedForMatching's table misses "Urza’s" for "Urza's".
 // ---------------------------------------------------------------------------
 
-const sql = readFileSync(join(process.cwd(), "supabase/migrations/0153_profile_links.sql"), "utf8")
+const sql = readFileSync(join(process.cwd(), "supabase/migrations/0159_profile_links.sql"), "utf8")
   .split("\n")
   .filter((line) => !line.trim().startsWith("--"))
   .join("\n");
@@ -24,7 +24,7 @@ function checkList(constraint: string): string[] {
   return [...body.matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]);
 }
 
-describe("migration 0153", () => {
+describe("migration 0159", () => {
   it("lists exactly the link kinds of lib/profile/link-kinds.ts", () => {
     expect(checkList("profile_links_kind").sort()).toEqual(LINK_KINDS.map((k) => k.key).sort());
   });
@@ -53,6 +53,15 @@ describe("migration 0153", () => {
     // The setters are the signed-in user's only; neither is anon's.
     expect(sql).toMatch(/grant execute on function public\.set_profile_links\(jsonb\) to authenticated, service_role;/);
     expect(sql).not.toMatch(/set_profile_(links|stores)\(jsonb\) to anon/);
+    // 0155 / 0156's pattern: what prod's old project auto-granted is revoked
+    // before the explicit grants, so prod and a new branch agree.
+    expect(sql.indexOf("revoke all on table public.profile_links, public.profile_stores from public, anon, authenticated;"))
+      .toBeLessThan(sql.indexOf("grant select on table public.profile_links, public.profile_stores to anon;"));
+    expect(sql).toContain("revoke all on function public.set_profile_links(jsonb) from public, anon;");
+    expect(sql).toContain("revoke all on function public.set_profile_stores(jsonb) from public, anon;");
+    // No API role executes the cap's trigger function.
+    expect(sql).toContain("revoke all on function public.profile_links_enforce_cap() from public, anon, authenticated, service_role;");
+    expect(sql).not.toMatch(/grant [^;]*profile_links_enforce_cap/);
     // Nothing runs SECURITY DEFINER: RLS decides every read and write.
     expect(sql).not.toMatch(/security definer/i);
   });
@@ -72,8 +81,8 @@ describe("migration 0153", () => {
   });
 });
 
-describe("seeds/31_profile_links.sql", () => {
-  const seed = readFileSync(join(process.cwd(), "supabase/seeds/31_profile_links.sql"), "utf8");
+describe("seeds/33_profile_links.sql", () => {
+  const seed = readFileSync(join(process.cwd(), "supabase/seeds/33_profile_links.sql"), "utf8");
   const rows = [...seed.matchAll(/'d0000000-[^']+'::uuid, '([a-z]+)', '([^']+)'/g)].map((m) => [m[1], m[2]] as const);
 
   it("seeds links and stores the profile will draw", async () => {
@@ -87,5 +96,10 @@ describe("seeds/31_profile_links.sql", () => {
         : drawableProfileStores([{ platform: key, url, title: null }]);
       expect(row, `${key} ${url}`).toHaveLength(1);
     }
+  });
+
+  it("seeds a user's rows only while that user has none (a re-seed never stacks rows or trips the cap)", () => {
+    expect(seed).toMatch(/and not exists \(select 1 from public\.profile_links where owner_id = l\.owner_id\)/);
+    expect(seed).toMatch(/and not exists \(select 1 from public\.profile_stores where owner_id = s\.owner_id\)/);
   });
 });

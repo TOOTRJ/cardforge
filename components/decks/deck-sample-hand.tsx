@@ -58,7 +58,7 @@ const BUTTON_OFF = "cursor-not-allowed border-border/60 text-subtle";
 
 function HandCardPicture({ row }: { row: DeckRow<HandItem> }) {
   const { entry, card } = row.item;
-  if (row.isPrivate) return <PrivateCardFace name={row.privateName} />;
+  if (row.isPrivate) return <PrivateCardFace name={row.privateName} gone={row.isGone} />;
   const printing = entryPrintingImage(entry.image_url, "normal");
   const baked = Boolean(card && isStoredRenderUrl(card.rendered_image_url));
   if (card && (baked || !printing)) {

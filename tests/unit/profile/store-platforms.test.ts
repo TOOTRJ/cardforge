@@ -11,7 +11,7 @@ import {
 } from "@/lib/profile/store-platforms";
 
 // ---------------------------------------------------------------------------
-// Store cards (migration 0153, lib/profile/store-platforms.ts): https + each
+// Store cards (migration 0159, lib/profile/store-platforms.ts): https + each
 // platform's host allow-list (+ its storefront path), titles free of strong
 // language, a cap, and the profile re-checks rows before drawing them.
 // ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ describe("store platforms", () => {
     expect(storeUrlError(platform("ebay"), "https://www.ebay.co.uk/usr/forgecards")).toBeNull();
     expect(storeUrlError(platform("ebay"), "https://www.ebay.de/str/forgecards")).toBeNull();
     expect(storeUrlError(platform("ebay"), "https://www.ebay.com/itm/12345")).toMatch(/store link/);
-    expect(storeUrlError(platform("ebay"), "https://ebay.example/str/a")).toMatch(/isn't a eBay link/);
+    expect(storeUrlError(platform("ebay"), "https://ebay.example/str/a")).toMatch(/isn't an eBay link\./);
     expect(storeUrlError(platform("whatnot"), "https://www.whatnot.com/user/forge")).toBeNull();
     expect(storeUrlError(platform("tcgplayer"), "https://shop.tcgplayer.com/sellerfeedback/7df68429")).toBeNull();
     expect(storeUrlError(platform("cardmarket"), "https://www.cardmarket.com/de/Magic/Users/Forge")).toBeNull();
