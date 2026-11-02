@@ -11,12 +11,16 @@ import { addCardEntryRpc } from "@/lib/decks/membership";
 import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { listDeckMemberships, listPickerDecks } from "@/lib/decks/membership-queries";
 import { chunkIds } from "@/lib/supabase/select-all-rows";
+import { readVisibilityPreflight, type VisibilityPreflightRow } from "@/lib/cards/visibility-preflight";
+import { publishBlockReason } from "@/lib/decks/publish-block";
 import {
   FRAME_PREVIEW_MESSAGE,
   MAX_MEMBERSHIP_BATCH,
+  PUBLISH_REFUSED_MESSAGE,
   MAX_PICKER_CARDS,
   NOT_LINKABLE_MESSAGE,
   deckFullMessage,
+  deckShowsPrivateCards,
   type MembershipCardResult,
 } from "@/lib/decks/membership-copy";
 import type {
@@ -51,6 +55,27 @@ import type {
 //            loses the card, as the deck page's Unlink does
 //            (unlinkDeckCardAction). Each write counts on its own: one that
 //            lands is revalidated even if the other fails.
+//
+// The caller's own PRIVATE card joining a deck others can open (public or
+// unlisted) shows there as "Private card" to visitors (D11). TODO DK0.13
+// (owner 2026-10-29) offers to make it public first — decided HERE, from
+// the rows, never from the client:
+//   privateCards "ask"   such a card is NOT added: its result is
+//                        "private_card" (with the reason it can't go public
+//                        when its text holds strong language), and the
+//                        picker asks "Make it public" / "Add as private".
+//   privateCards "keep"  (the default: an Undo, a new deck's first card)
+//                        added as it is — today's behaviour.
+//   publish [ids]        cards (a subset of `add`) to make public BEFORE the
+//                        add, through THE site's visibility change
+//                        (updateCardsVisibilityAction — ownership, frame
+//                        previews, the strong-language rule, a second
+//                        face's name, the bake and the revalidation, as My
+//                        Cards' bulk bar). One still private after it is
+//                        "publish_refused" and NOT added — the maker picks
+//                        "Add as private" for that. Publish first, then
+//                        add: a publish that lands and an add that then
+//                        fails (the deck full) says both (`published`).
 // ---------------------------------------------------------------------------
 
 export type DeckMembershipActionResult =
@@ -82,6 +107,8 @@ const membershipSchema = z
     deckId: z.string().refine((id) => isUuid(id), "Invalid deck id."),
     add: cardIdsSchema(MAX_MEMBERSHIP_BATCH).default([]),
     remove: cardIdsSchema(MAX_MEMBERSHIP_BATCH).default([]),
+    privateCards: z.enum(["ask", "keep"]).default("keep"),
+    publish: cardIdsSchema(MAX_MEMBERSHIP_BATCH).default([]),
   })
   .refine((input) => input.add.length + input.remove.length > 0, { message: "No cards to change." })
   // The cap is the CALL's (one RPC or write per card), adds and removes
@@ -91,7 +118,14 @@ const membershipSchema = z
   })
   .refine((input) => !input.add.some((id) => input.remove.includes(id)), {
     message: "A card can't join and leave a deck at once.",
-  });
+  })
+  .refine(
+    (input) => {
+      const adding = new Set(input.add.map((id) => id.toLowerCase()));
+      return input.publish.every((id) => adding.has(id.toLowerCase()));
+    },
+    { message: "Only a card being added can be made public here." },
+  );
 
 type CardRow = { id: string; title: string; owner_id: string; visibility: string; frame_preview: boolean | null };
 type EntryRow = { id: string; deck_id: string; card_id: string | null; board: string; quantity: number };
@@ -110,6 +144,39 @@ function keepsLine(entry: RemovableEntry): boolean {
 
 const unique = (ids: readonly string[]) => Array.from(new Set(ids.map((id) => id.toLowerCase())));
 
+/** Of `cards`, the caller's own PRIVATE ones (never a frame preview) that a
+ *  deck of `deckVisibility` would show as "Private card" (TODO DK0.13) —
+ *  lower-cased ids — and, for each that can't go public as it is, why: the
+ *  publish's own rules, read on the stored row — its text (strong
+ *  language), its artwork (no art → no gallery; a double-faced back's too)
+ *  and an unnamed second face. Such a card is never sent to the publish
+ *  (one unnamed face would refuse the whole batch), and the dialog shows
+ *  the reason instead of "Make it public". Read with the caller's session. */
+async function privateCardsOf(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  deckVisibility: string | null | undefined,
+  cards: readonly CardRow[],
+): Promise<{ privateOwn: Set<string>; blockedReason: Map<string, string> }> {
+  const privateOwn = new Set(
+    deckShowsPrivateCards(deckVisibility)
+      ? cards
+          .filter((card) => card.owner_id === userId && card.visibility === "private" && card.frame_preview !== true)
+          .map((card) => card.id.toLowerCase())
+      : [],
+  );
+  const blockedReason = new Map<string, string>();
+  if (privateOwn.size === 0) return { privateOwn, blockedReason };
+  const read = await readVisibilityPreflight(supabase, [...privateOwn]);
+  const rows = new Map<string, VisibilityPreflightRow>((read.rows ?? []).map((row) => [row.id.toLowerCase(), row]));
+  for (const cardId of privateOwn) {
+    const row = rows.get(cardId);
+    const reason = row ? publishBlockReason(row) : null;
+    if (reason) blockedReason.set(cardId, reason);
+  }
+  return { privateOwn, blockedReason };
+}
+
 export async function changeDeckMembershipAction(payload: unknown): Promise<DeckMembershipActionResult> {
   const parsed = membershipSchema.safeParse(payload);
   if (!parsed.success) {
@@ -122,7 +189,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
   const supabase = await createClient();
   const { data: deck } = await supabase
     .from("decks")
-    .select("id, slug, title, owner_id")
+    .select("id, slug, title, owner_id, visibility")
     .eq("id", parsed.data.deckId)
     .maybeSingle();
   if (!deck || deck.owner_id !== user.id) {
@@ -130,6 +197,7 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
   }
 
   const addIds = unique(parsed.data.add);
+  const publishIds = new Set(unique(parsed.data.publish));
   const removeIds = unique(parsed.data.remove);
   const results: MembershipCardResult[] = [];
   let changed = false;
@@ -143,11 +211,50 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
       .in("id", ids);
     for (const card of (data ?? []) as CardRow[]) cardById.set(card.id.toLowerCase(), card);
   }
+  // ---- the caller's private cards in a deck others can open (DK0.13) ----
+  const asking = parsed.data.privateCards === "ask";
+  const { privateOwn, blockedReason } = await privateCardsOf(
+    supabase,
+    user.id,
+    deck.visibility,
+    addIds.filter((cardId) => asking || publishIds.has(cardId)).flatMap((cardId) => cardById.get(cardId) ?? []),
+  );
+  const published = new Set<string>();
+  /** The publish's refusal, for every card it was asked for. */
+  let publishError: string | null = null;
+  if (privateOwn.size > 0) {
+    // Publish first (a card its text keeps private is never sent: it would
+    // only be skipped), then add.
+    const sendable = [...privateOwn].filter((cardId) => publishIds.has(cardId) && !blockedReason.has(cardId));
+    if (sendable.length > 0) {
+      // Loaded when used: the card actions are a large module every deck
+      // action would otherwise pull in.
+      const { updateCardsVisibilityAction } = await import("@/lib/cards/actions");
+      const outcome = await updateCardsVisibilityAction(
+        sendable.map((cardId) => cardById.get(cardId)!.id),
+        "public",
+      );
+      if (!outcome.ok) {
+        publishError = outcome.error;
+      } else {
+        // What the publish really did, read back — never its count alone.
+        for (const ids of chunkIds(sendable)) {
+          const { data } = await supabase.from("cards").select("id, visibility").in("id", ids);
+          for (const row of (data ?? []) as Array<{ id: string; visibility: string }>) {
+            if (row.visibility === "public") published.add(row.id.toLowerCase());
+          }
+        }
+        if (published.size > 0) changed = true;
+      }
+    }
+  }
+
   let full = false;
   const inDeck: string[] = [];
   for (const cardId of addIds) {
+    const publishedFlag = published.has(cardId) ? { published: true as const } : {};
     if (full) {
-      results.push({ cardId, status: "deck_full", error: deckFullMessage(deck.title) });
+      results.push({ cardId, status: "deck_full", error: deckFullMessage(deck.title), ...publishedFlag });
       continue;
     }
     // RLS hides another creator's private card: it reads as missing.
@@ -164,26 +271,43 @@ export async function changeDeckMembershipAction(payload: unknown): Promise<Deck
       results.push({ cardId, status: "refused", error: NOT_LINKABLE_MESSAGE });
       continue;
     }
+    if (privateOwn.has(cardId) && !published.has(cardId)) {
+      const reason = blockedReason.get(cardId);
+      if (publishIds.has(cardId)) {
+        // Asked to go public and still private: not added (the maker may
+        // add it as private instead).
+        results.push({
+          cardId,
+          status: "publish_refused",
+          error: reason ?? publishError ?? PUBLISH_REFUSED_MESSAGE,
+        });
+        continue;
+      }
+      if (asking) {
+        results.push({ cardId, status: "private_card", ...(reason ? { blockedReason: reason } : {}) });
+        continue;
+      }
+    }
     const { added: wasAdded, error } = await addCardEntryRpc(supabase, deck.id, card.id, card.title, {
       source: "link",
     });
     if (error) {
       if (error.message.includes("deck_entry_limit")) {
         full = true;
-        results.push({ cardId, status: "deck_full", error: deckFullMessage(deck.title) });
+        results.push({ cardId, status: "deck_full", error: deckFullMessage(deck.title), ...publishedFlag });
       } else if (error.message.includes("deck_card_not_linkable")) {
-        results.push({ cardId, status: "refused", error: NOT_LINKABLE_MESSAGE });
+        results.push({ cardId, status: "refused", error: NOT_LINKABLE_MESSAGE, ...publishedFlag });
       } else {
-        results.push({ cardId, status: "failed", error: error.message });
+        results.push({ cardId, status: "failed", error: error.message, ...publishedFlag });
       }
       continue;
     }
     if (wasAdded === false) {
-      results.push({ cardId, status: "already" });
+      results.push({ cardId, status: "already", ...publishedFlag });
       inDeck.push(card.id);
       continue;
     }
-    results.push({ cardId, status: "added" });
+    results.push({ cardId, status: "added", ...publishedFlag });
     inDeck.push(card.id);
     changed = true;
   }
@@ -290,4 +414,63 @@ export async function getDeckPickerDataAction(cardIds: unknown): Promise<DeckPic
   );
   if (!memberships) return { ok: false, error: "Couldn't read your decks." };
   return { ok: true, decks, memberships };
+}
+
+export type PrivateCardOfferResult =
+  | {
+      ok: true;
+      /** The cards the deck would show as "Private card" — each with the
+       *  reason it can't be made public, when its text keeps it private.
+       *  Empty: nothing to ask. */
+      cards: Array<{ cardId: string; blockedReason?: string }>;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Would adding these cards to this deck show any as "Private card" (TODO
+ * DK0.13)? A READ, nothing written — for a surface that adds through its own
+ * path and asks first (the deck page's add box: its add is drawn at once,
+ * so it asks before it draws). The same answer changeDeckMembershipAction's
+ * `privateCards: "ask"` gives.
+ */
+export async function privateCardOfferAction(payload: unknown): Promise<PrivateCardOfferResult> {
+  const parsed = z
+    .object({
+      deckId: z.string().refine((id) => isUuid(id), "Invalid deck id."),
+      cardIds: cardIdsSchema(MAX_MEMBERSHIP_BATCH).min(1, "No cards."),
+    })
+    .safeParse(payload);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid cards." };
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase isn't configured." };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to add cards to decks." };
+
+  const supabase = await createClient();
+  const { data: deck } = await supabase
+    .from("decks")
+    .select("id, owner_id, visibility")
+    .eq("id", parsed.data.deckId)
+    .maybeSingle();
+  if (!deck || deck.owner_id !== user.id) return { ok: false, error: "Deck not found or not yours." };
+  if (!deckShowsPrivateCards(deck.visibility)) return { ok: true, cards: [] };
+
+  const ids = unique(parsed.data.cardIds);
+  const rows: CardRow[] = [];
+  for (const chunk of chunkIds(ids)) {
+    const { data } = await supabase
+      .from("cards")
+      .select("id, title, owner_id, visibility, frame_preview")
+      .in("id", chunk);
+    rows.push(...((data ?? []) as CardRow[]));
+  }
+  const { privateOwn, blockedReason } = await privateCardsOf(supabase, user.id, deck.visibility, rows);
+  return {
+    ok: true,
+    cards: ids
+      .filter((cardId) => privateOwn.has(cardId))
+      .map((cardId) => {
+        const reason = blockedReason.get(cardId);
+        return { cardId, ...(reason ? { blockedReason: reason } : {}) };
+      }),
+  };
 }

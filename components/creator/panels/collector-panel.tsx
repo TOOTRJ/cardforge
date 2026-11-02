@@ -2,9 +2,10 @@
 
 // The collector line's switches (TODO 4.9b) and the holofoil stamp's (TODO
 // 4.9c) on the Set & collector info step — ADDITIONS, opt-in per card (owner
-// rule 2026-09-29, lib/cards/anatomy.ts): a new card starts with the line on
-// in today's printed style ("2023") and the stamp on "auto" (the oval on a
-// rare or mythic); a stored card from before either shows it OFF with a
+// rule 2026-09-29, lib/cards/anatomy.ts): a new card starts with the line
+// OFF (owner 2026-10-30; switched on, it takes collectorStyleForNumber's
+// style) and the stamp on "auto" (the oval on a rare or mythic); an import
+// follows its printing; a stored card from before either shows it OFF with a
 // one-line hint until its owner switches it on — the line then in the 2015
 // style when its number carries a set size (a 2015-era import's "107/281"),
 // else the 2023 style (collectorStyleForNumber), the stamp on "auto"; an

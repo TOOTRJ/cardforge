@@ -575,6 +575,49 @@ describe("addToDeckAction — the add box's one add", () => {
     expect(state.membership).not.toHaveBeenCalled();
   });
 
+  it("privateCard publish (TODO DK0.13): the writer makes it public first; the answer says so", async () => {
+    state.rows = [];
+    state.membership.mockResolvedValue({
+      ok: true,
+      deckId: DECK,
+      deckTitle: "Ness",
+      deckSlug: "ness",
+      results: [{ cardId: CARD, status: "added", published: true }],
+      entries: [{ cardId: CARD, deckId: DECK, entryId: id(7), board: "main", quantity: 1 }],
+    });
+    db();
+    const result = await addToDeckAction({ deckId: DECK, board: "main", pick: { kind: "card", cardId: CARD }, privateCard: "publish" });
+    expect(state.membership).toHaveBeenCalledWith({ deckId: DECK, add: [CARD], publish: [CARD] });
+    expect(result).toMatchObject({ ok: true, entryId: id(7), published: true });
+  });
+
+  it("privateCard publish refused: not added, in the writer's words — and public-but-full says both", async () => {
+    state.rows = [];
+    state.membership.mockResolvedValue({
+      ok: true,
+      deckId: DECK,
+      deckTitle: "Ness",
+      deckSlug: "ness",
+      results: [{ cardId: CARD, status: "publish_refused", error: "Its rules text includes strong language, so it stays private. Remove it to publish." }],
+      entries: [],
+    });
+    db();
+    expect(
+      await addToDeckAction({ deckId: DECK, board: "main", pick: { kind: "card", cardId: CARD }, privateCard: "publish" }),
+    ).toEqual({ ok: false, error: "Its rules text includes strong language, so it stays private. Remove it to publish." });
+    state.membership.mockResolvedValue({
+      ok: true,
+      deckId: DECK,
+      deckTitle: "Ness",
+      deckSlug: "ness",
+      results: [{ cardId: CARD, status: "deck_full", error: "“Ness” is full.", published: true }],
+      entries: [],
+    });
+    expect(
+      await addToDeckAction({ deckId: DECK, board: "main", pick: { kind: "card", cardId: CARD }, privateCard: "publish" }),
+    ).toEqual({ ok: false, error: "Made public, but not added: “Ness” is full." });
+  });
+
   it("a refusal of the membership writer (D3, a full deck) comes back in its words", async () => {
     state.membership.mockResolvedValue({
       ok: true,

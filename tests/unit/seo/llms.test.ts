@@ -14,7 +14,7 @@ describe("/llms.txt", () => {
     for (const article of listArticles()) {
       expect(text).toContain(`https://www.pipglyph.com/articles/${article.slug}`);
     }
-    for (const path of ["/create", "/gallery", "/decks", "/challenges", "/pricing", "/help", "/sitemap.xml"]) {
+    for (const path of ["/create", "/gallery", "/decks", "/challenges", "/roadmap", "/pricing", "/help", "/sitemap.xml"]) {
       expect(text).toContain(`https://www.pipglyph.com${path}`);
     }
     expect(text).not.toMatch(/expansion[- ]set|set builder|\/preview\b|\/sets\b/i);

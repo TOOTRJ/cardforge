@@ -15,6 +15,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { AttributionCapture } from "@/components/analytics/attribution-capture";
+import { ScreenWidthBeacon } from "@/components/analytics/screen-width-beacon";
 import { AckSplash } from "@/components/updates/ack-splash";
 import { UpdatePrompt } from "@/components/updates/update-prompt";
 import "./globals.css";
@@ -192,13 +193,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-  modal,
 }: Readonly<{
   children: React.ReactNode;
-  // Parallel slot (app/@modal) for the intercepted card-detail dialog.
-  // Renders null via @modal/default.tsx except when a card tile click
-  // soft-navigates to /card/[username]/[slug].
-  modal: React.ReactNode;
 }>) {
   // The root layout reads NO cookies — that keeps every route eligible
   // for static rendering / CDN caching. data-theme is always "dark"
@@ -256,7 +252,6 @@ export default function RootLayout({
                 {/* The New deck dialog, openable from any page (TODO DK4). */}
                 <NewDeckProvider>
                   {children}
-                  {modal}
                   {/* "A new version is ready" pill — checks /api/version on
                       focus and reloads at the next safe moment. Sits inside the
                       runners so it never reloads over an in-flight job/export. */}
@@ -295,6 +290,8 @@ export default function RootLayout({
             interactions for analytics and insights. */}
         <Analytics />
         <AttributionCapture />
+        {/* One anonymous viewport-width bucket per tab session (TODO WD9). */}
+        <ScreenWidthBeacon />
         {/* Must-read site updates for signed-in users (see /admin/updates). */}
         <AckSplash />
       </body>

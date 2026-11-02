@@ -6,6 +6,8 @@
 // The ranking itself runs in SQL (migration 0086, list_gallery_cards):
 //   weight = 1 + 2·ln(1 + 0.05·views + 1·likes + 1.5·shares + 2·remixes)
 //   key    = −ln(u) / weight,  u = uniform(0,1) hashed from card id + seed
+//            ((32 md5 bits + 0.5) / 2³² — 0158; before it u ran to 1.5 and
+//            the heavier cards sorted LAST whenever u passed 1)
 //   order by key ascending (Efraimidis–Spirakis weighted sampling)
 // Every card has weight ≥ 1, so nothing is unreachable; the log keeps a
 // viral card from monopolising page one. `discoverWeight` mirrors the SQL so

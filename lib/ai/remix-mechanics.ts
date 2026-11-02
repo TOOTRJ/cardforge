@@ -18,6 +18,7 @@
 // the default M15 frame.
 
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import { isModerationLocked } from "@/lib/moderation/lock";
 import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-patch";
 import { DFC_REMIX_CREDITS, dfcImportLanding } from "@/lib/scryfall/dfc-import";
 import { finalizeImportMatch, remixFrameFor, remixSavedFrame, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
@@ -506,26 +507,33 @@ export function isEmblemRemixSource(source: { card_type?: string | null } | null
 }
 
 /** A deck's entries as the remix takes them, in deck order: every entry
- *  with a source (an own card or a printing) but the user's own EMBLEMS,
- *  which are counted instead. ONE filter for the estimate and the plan, so
+ *  with a source (an own card or a printing) but the user's own EMBLEMS and
+ *  own cards MODERATION hid (migration 0156; owner 2026-10-30: a locked
+ *  card is never remixed), which are counted instead. ONE filter for the estimate and the plan, so
  *  the batch cap cuts the same list in both. (A printed emblem is known
  *  only once its printing is resolved: the estimate prices it 0 and the
  *  plan drops what the estimate priced 0.) */
 export function remixableDeckItems<
   T extends {
     entry: { card_id: string | null; scryfall_id: string | null };
-    card: { card_type?: string | null } | null;
+    card: { card_type?: string | null; moderation_hidden_at?: string | null } | null;
   },
->(items: readonly T[]): { remixable: T[]; ownEmblems: number } {
+>(items: readonly T[]): { remixable: T[]; ownEmblems: number; moderationLocked: number } {
   const remixable: T[] = [];
   let ownEmblems = 0;
+  let moderationLocked = 0;
   for (const item of items) {
     if (!item.entry.card_id && !item.entry.scryfall_id) continue;
-    if (item.entry.card_id && isEmblemRemixSource(item.card)) ownEmblems += 1;
+    if (item.entry.card_id && isModerationLocked(item.card)) moderationLocked += 1;
+    else if (item.entry.card_id && isEmblemRemixSource(item.card)) ownEmblems += 1;
     else remixable.push(item);
   }
-  return { remixable, ownEmblems };
+  return { remixable, ownEmblems, moderationLocked };
 }
+
+/** The step error of a locked card an older plan still carries (0156). */
+export const REMIX_MODERATION_LEFT_OUT =
+  "This card was hidden by moderation, so it isn't remixed — it is left out of the new deck. Nothing was charged.";
 
 /**
  * The frames a remix SAVES on — the front's and, for a double-sided token

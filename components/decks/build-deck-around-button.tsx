@@ -19,16 +19,20 @@ export function BuildDeckAroundButton({
   cardTitle,
   className,
   size = "sm",
+  short = false,
 }: {
   cardId: string;
   cardTitle: string;
   className?: string;
   size?: "sm" | "md";
+  /** "Build around" — a small tile under a heading that already says what
+   *  the cards are for (the /decks commander row, TODO DK8.4). */
+  short?: boolean;
 }) {
   return (
     <NewDeckButton cardId={cardId} variant="outline" size={size} className={className} icon={false}>
       <Layers aria-hidden />
-      Build a deck around this card
+      {short ? "Build around" : "Build a deck around this card"}
       <span className="sr-only">: {cardTitle}</span>
     </NewDeckButton>
   );
