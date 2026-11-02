@@ -38,19 +38,21 @@ from (values
     $draft$Custom MTG Cards and Commander Brackets$draft$,
     $draft$Place a custom Magic card in the Commander bracket system: the effects that raise a bracket, how to spot a Game Changer, and how to label it.$draft$,
     $draft$The bracket system asks the same questions of every card, printed or homemade. Here is how to put those questions to your own designs before they reach the table.$draft$,
-    $draft$A custom card belongs in the bracket of the most powerful thing it does. Put your card to the same questions the Commander bracket system asks of printed cards: does it lock out lands, chain extra turns, win with one other card, tutor cheaply, or go into every deck of its colors? Each "yes" raises its bracket. Then say so on the card's page and in the decklist.
+    $draft$A custom card belongs in the bracket of the most powerful thing it does. Put your card to the same questions the Commander bracket system asks of printed cards: does it lock out lands, chain extra turns, win with one other card, go into every deck of its colors, or let a deck win sooner than the bracket expects? Each "yes" raises its bracket. Then say so on the card's page and in the decklist.
 
 ## What are Commander brackets?
 
-Commander brackets are a shared vocabulary for how strong a deck is, so four people can agree on a game before anyone shuffles. Wizards of the Coast and the Commander Format Panel introduced them in February 2025 with five tiers, and they have been revised since. In short:
+Commander brackets are a shared vocabulary for how strong a deck is, so four people can agree on a game before anyone shuffles. Wizards of the Coast and the Commander Format Panel introduced them in February 2025 with five tiers. The update of 21 October 2025 added a rough turn count for each tier: the earliest a game should normally be won or lost. In short:
 
-| Bracket | Name | What a deck there looks like |
-| --- | --- | --- |
-| 1 | Exhibition | A theme or a story first; winning is secondary |
-| 2 | Core | Roughly a preconstructed deck: focused, fair, slower |
-| 3 | Upgraded | Tuned and synergistic, with a few very strong cards |
-| 4 | Optimized | As strong as a casual deck gets; few limits |
-| 5 | cEDH | Competitive Commander, built to win quickly |
+| Bracket | Name | What a deck there looks like | Games last at least |
+| --- | --- | --- | --- |
+| 1 | Exhibition | A theme or a story first; winning is secondary | 9 turns |
+| 2 | Core | Unoptimized and straightforward; wins that build slowly and can be answered | 8 turns |
+| 3 | Upgraded | Tuned and synergistic, with a few very strong cards | 6 turns |
+| 4 | Optimized | As strong as a casual deck gets; few limits | 4 turns |
+| 5 | cEDH | Competitive Commander, built to win quickly | Any turn |
+
+Core used to be described as roughly the strength of a preconstructed deck. Since the October update it is defined by how its games feel instead: relaxed, social, and with nothing that ends the game out of nowhere.
 
 The tiers are guidance, not rules text. Their value is that they give a table the same words. A custom card needs those words even more than a printed one, because nobody at the table has seen it before.
 
@@ -61,8 +63,10 @@ The bracket descriptions watch a handful of effect families. They are worth lear
 - **Mass land denial.** Destroying, bouncing or locking down every player's lands, or stopping lands from untapping, makes games that nobody gets to play. The bracket system keeps it to the top tiers.
 - **Extra turns.** One extra turn is a big spell. A card that takes extra turns repeatedly, or that loops with another card, is a top-tier card.
 - **Two-card combos.** If your card and exactly one other card win the game or create an infinite loop, the deck is playing for an early, sudden win. That belongs high on the ladder, and the earlier in the game it can happen, the higher.
-- **Tutors.** Searching your library for a specific card makes a 100-card singleton deck play like a smaller, more consistent one. Lower brackets expect few of them.
-- **Game Changers.** A short list of individual printed cards whose power or efficiency warps games. Lower brackets play none, and the middle allows only a few. At launch, bracket 3 allowed three.
+- **Speed.** The turn counts in the table are the newest yardstick. If your card lets a deck win, or lock everyone out, well before its bracket's turn count, it belongs in a higher bracket, whatever else it does.
+- **Game Changers.** A short list of individual printed cards whose power or efficiency warps games. Brackets 1 and 2 play none, and bracket 3 allows up to three.
+
+Tutors are no longer a family of their own. The October 2025 update dropped the old advice to run only a few of them in the lower brackets: the most efficient tutors sit on the Game Changers list, and the turn counts catch the rest. A custom tutor is judged like any other card: is it a Game Changer, and does it make the deck win sooner than its bracket allows?
 
 <Figure src="/article-media/custom-cards-and-commander-brackets/bracket-questions.svg" alt="A flow of four yes-or-no questions, each yes pointing to a higher bracket" caption="Four questions to place a custom card. A rule of thumb, not the official list: when in doubt, ask the table." width="1600" height="900" />
 
@@ -80,7 +84,7 @@ The common miss is the custom commander. A legendary creature that draws a card 
 
 ## How do you cost a custom card for a target bracket?
 
-Decide the bracket first, then design down to it. A card for bracket 2 should feel like a strong uncommon in a preconstructed deck. It asks for setup, it can be answered, and it does one thing well. A card for bracket 4 can be efficient and narrow, because the decks around it are too.
+Decide the bracket first, then design down to it. A card for bracket 2 should feel like a strong uncommon in a relaxed, unoptimized deck. It asks for setup, it can be answered, and it does one thing well. A card for bracket 4 can be efficient and narrow, because the decks around it are too.
 
 Three practical levers keep a card in its bracket:
 
@@ -104,7 +108,7 @@ If you are not sure, round up. A deck that plays below its stated bracket surpri
 
 Here is one invented legendary creature, written two ways.
 
-**Version A:** "Whenever you cast your first spell each turn, search your library for a card with mana value equal to that spell's mana value, reveal it, and put it into your hand." It tutors every turn, in every deck. Call it a Game Changer; the deck is bracket 3 at the least, and probably 4.
+**Version A:** "Whenever you cast your first spell each turn, search your library for a card with mana value equal to that spell's mana value, reveal it, and put it into your hand." It finds the exact card the deck needs every turn, from the command zone, in every deck it leads. Call it a Game Changer; the deck is bracket 3 at the least, and probably 4.
 
 **Version B:** "Whenever you cast your first spell each turn, look at the top three cards of your library. Put one of them into your hand and the rest on the bottom in any order." It still rewards spells, but it digs instead of searching. It fits a bracket 2 deck and leaves room to build around it.
 
@@ -112,7 +116,7 @@ The theme is the same and the decks are different. Making that choice on purpose
 $draft$,
     array[$draft$formats$draft$, $draft$balance$draft$, $draft$card design$draft$]::text[],
     $draft$design$draft$,
-    $draft$[{"q":"Can custom cards be played in bracket games?","a":"Custom cards are never legal in sanctioned Commander, but brackets are a tool for casual pods, and a pod can agree to include customs. Judge each custom card with the same bracket questions you would ask of a printed card, and tell the table which bracket you think the deck is."},{"q":"Does a custom commander change a deck's bracket?","a":"A custom commander counts like any other card. If it tutors every turn, takes extra turns or wins with one other card, it pulls the whole deck up to the bracket those effects belong to, however gentle the other 99 cards are."},{"q":"How do I know if my custom card would be a Game Changer?","a":"Ask whether it would go into nearly every deck of its colors at almost any power level. Cards on the official Game Changers list share that trait: they make outsized amounts of mana or cards, find answers on demand, or shut opponents out. If your custom card does that, count it as one."},{"q":"Where do I find the current bracket rules?","a":"Wizards of the Coast and the Commander Format Panel publish the bracket descriptions and the Game Changers list, and both have been revised since the system launched in February 2025. Check the newest official version before a game, because limits per bracket can change."}]$draft$::jsonb,
+    $draft$[{"q":"Can custom cards be played in bracket games?","a":"Custom cards are never legal in sanctioned Commander, but brackets are a tool for casual pods, and a pod can agree to include customs. Judge each custom card with the same bracket questions you would ask of a printed card, and tell the table which bracket you think the deck is."},{"q":"Does a custom commander change a deck's bracket?","a":"A custom commander counts like any other card. If it takes extra turns, wins with one other card or lets the deck win far sooner than its bracket's turn guideline, it pulls the whole deck up to the bracket those effects belong to, however gentle the other 99 cards are."},{"q":"How do I know if my custom card would be a Game Changer?","a":"Ask whether it would go into nearly every deck of its colors at almost any power level. Cards on the official Game Changers list share that trait: they make outsized amounts of mana or cards, find answers on demand, or shut opponents out. If your custom card does that, count it as one."},{"q":"Where do I find the current bracket rules?","a":"Wizards of the Coast and the Commander Format Panel publish the bracket descriptions and the Game Changers list. Both have changed since the system launched in February 2025, most recently in the update of 21 October 2025. Check the newest official version before a game, because the expectations for each bracket can change."}]$draft$::jsonb,
     $draft$/article-media/custom-cards-and-commander-brackets/cover.svg$draft$,
     $draft$Five ascending steps labelled Exhibition, Core, Upgraded, Optimized and cEDH, with a custom card being placed on the third$draft$,
     1600::integer,
@@ -421,9 +425,9 @@ Use a personal name, a comma and an epithet. The personal name makes the charact
 
 - **Make the personal name pronounceable.** Two syllables, maybe three. Players will say it all game.
 - **Make the epithet do work.** "Lantern Keeper" says something; "the Powerful" does not.
-- **Use the short form in rules text.** Printed legendary cards refer to themselves by the personal name alone. On PipGlyph, write `~` in the rules text, and the card prints its own name there. Rename the card and the rules text follows.
+- **Decide how the rules text names the card.** Printed legendary cards often refer to themselves by the personal name alone. On PipGlyph, `~` in the rules text prints the card's full name, exactly as its title bar shows it (the nickname, on a frame that prints one), never a shortened form, and a rename follows it. For the short form, type the personal name out yourself; that text stays as typed when you rename the card.
 
-If you want a second name on the card, PipGlyph's **Nickname** field prints it in the title bar, and on the frames that support it the card's real name goes on a small plate hanging from the art. Printed cards with an alternate name work the same way. It is useful for a gift card or an in-joke, where the playful name goes on top and the real one stays readable.
+If you want a second name on the card, use PipGlyph's **Nickname** field. On the frames that support it, the nickname prints in the title bar and the card's real name goes on a small plate hanging from the art, the way printed cards with an alternate name do. On other frames the title bar keeps the real name, and the nickname appears on the card's page instead. It is useful for a gift card or an in-joke, where the playful name goes on top and the real one stays readable.
 
 ## How do you check a name isn't already taken?
 
