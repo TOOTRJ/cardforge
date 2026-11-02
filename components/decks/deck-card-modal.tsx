@@ -151,16 +151,14 @@ export function DeckCardModal({
   // A 7:5 proxy bake (Battle, Split) is shown whole in its own landscape box
   // inside the 5:7 frame, never cropped to its middle (TODO 3.26 review).
   const landscapeProxy = Boolean(shownImage && shownImage === proxyImage && isLandscapeFrame(card?.frame_style));
-  // Where the card "lives": a custom card / proxy has a PipGlyph page (a
-  // soft navigation there opens the site's large card modal over this
-  // deck); a real card points at Scryfall.
+  // Where the card "lives": a custom card / proxy has a PipGlyph page; a
+  // real card points at Scryfall.
   const cardPath = card
     ? buildCardPath({ slug: card.slug, owner: { username: item.cardOwner ? maker : ownerUsername } })
     : null;
   const scryfallHref = entry.scryfall_id ? `/go/scryfall/${entry.scryfall_id}` : null;
   // The PICTURE's link opens the face it shows (TODO 5.17): with Back chosen
-  // the card page — and the card modal a soft navigation opens — starts
-  // flipped (`?face=back`, components/cards/card-hero-preview.tsx).
+  // the card page starts flipped (`?face=back`, components/cards/card-hero-preview.tsx).
   const picturePath = cardPath && showingBack ? `${cardPath}?face=back` : cardPath;
 
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
@@ -214,7 +212,7 @@ export function DeckCardModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* xl, like the gallery's card modal — the card is the point here; on
+      {/* xl — the card is the point here; on
           a phone or a touch screen, a sheet from the bottom edge. */}
       <DialogContent
         size="xl"
@@ -553,8 +551,8 @@ export function DeckCardModal({
   );
 }
 
-/** The card image as a link — soft navigation for a PipGlyph card (the
- *  site's card modal opens over the deck), a new tab for Scryfall. Falls
+/** The card image as a link — soft navigation to a PipGlyph card's page,
+ *  a new tab for Scryfall. Falls
  *  back to a plain frame when there is nowhere to go. */
 function CardImageLink({
   href,
