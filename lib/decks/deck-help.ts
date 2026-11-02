@@ -16,7 +16,7 @@ export const TOTAL_MANA_VALUE_ARTICLE_HREF = `/articles/${TOTAL_MANA_VALUE_ARTIC
 export const TOTAL_MANA_VALUE_HELP = {
   title: "Total mana value",
   body: "Every card's mana value times its copies, added up over the main deck and the commander. Lands count as 0; the sideboard, a companion and the maybeboard aren't counted.",
-  use: "Two decks of the same size compare well by it: a lower total is a faster, cheaper deck.",
+  use: "Two decks of the same size compare well by it: a lower total is usually a faster, cheaper deck.",
   linkLabel: "How to judge and compare decks by total mana value",
 } as const;
 

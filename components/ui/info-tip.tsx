@@ -109,10 +109,13 @@ export function InfoTip({
           ref={triggerRef}
           type="button"
           aria-label={trigger ? undefined : label}
+          // The "i" is a 24 × 24 px target (WCAG 2.5.8) that takes the
+          // 20 px it always took in the line: the -0.5 margin hands the
+          // extra back, so nothing beside it moves.
           className={cn(
             trigger
               ? "inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
-              : "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-subtle transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 data-[state=open]:text-primary-bright",
+              : "-m-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-subtle transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 data-[state=open]:text-primary-bright",
             triggerClassName,
           )}
           onPointerEnter={(event) => {

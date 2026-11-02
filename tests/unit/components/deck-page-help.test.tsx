@@ -279,6 +279,37 @@ describe("the boards' help (TODO DK11 (c))", () => {
   });
 });
 
+describe("the boards' help sits BESIDE the group heading, never in its name", () => {
+  const items = [item(1, { name: "Zoey", board: "commander", type_line: "Legendary Creature" }), item(2, { name: "Bolt" }), item(3, { name: "Side Bolt", board: "side" })];
+
+  it.each(["list", "grid", "stacks"] as const)("%s view: the <h3> (and its section) is named by its text alone; the ⓘ is a button of its own beside it", (view) => {
+    render(<DeckCardList items={items} ownerUsername="kesh" canManage={false} initialPrefs={{ view, group: "board", sort: "mana" }} />);
+    const heading = screen.getByRole("heading", { level: 3, name: /^Commander\s*, 1 card$/ });
+    expect(screen.getByRole("region", { name: /^Commander\s*, 1 card$/ })).toBeTruthy();
+    const tip = screen.getByRole("button", { name: "About the Commander" });
+    expect(heading.contains(tip)).toBe(false);
+    // Beside it: the heading's own row.
+    expect(heading.parentElement?.contains(tip)).toBe(true);
+    for (const h of screen.getAllByRole("heading", { level: 3 })) expect(h.textContent).not.toMatch(/About/);
+  });
+
+  it("table view: the group's header cell is named by its button's text, the ⓘ beside it in the cell", () => {
+    render(<DeckCardList items={items} ownerUsername="kesh" canManage={false} initialPrefs={{ view: "table", group: "board", sort: "mana" }} />);
+    const cell = screen.getByRole("rowheader", { name: "Commander · 1" });
+    expect(within(cell).getByRole("button", { name: "About the Commander" })).toBeTruthy();
+  });
+
+  it("the ⓘ is a 24 × 24 px target that keeps its 20 px place in the line", () => {
+    render(
+      <InfoTip label="About the thing">
+        <p>It counts things.</p>
+      </InfoTip>,
+    );
+    const button = screen.getByRole("button", { name: "About the thing" });
+    expect(button.className.split(/\s+/)).toEqual(expect.arrayContaining(["h-6", "w-6", "-m-0.5"]));
+  });
+});
+
 describe("the breakdown's help (TODO DK11 (e))", () => {
   it("every chart, the total mana value, the draw odds have a help box", () => {
     const items = [
