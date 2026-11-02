@@ -54,14 +54,17 @@ import { DECK_BOARD_LABELS, type DeckBoard, type DeckCardEntry } from "@/types/d
 // Several at once (TODO DK5.17): every result can be TICKED while the list
 // stays open — Space on the highlighted result (once the arrows have moved
 // the highlight: before that Space types a space), or a click on its tick
-// box — and the ticks hold across searches. A count and "Add N" sit beside
-// the board; Ctrl / ⌘ Enter in the box does the same. Enter still adds the
+// box — and the ticks hold across searches. A count, "Add N" and "Clear
+// ticks" sit in the list panel's footer while the list is open (beside the
+// listbox, never options in it) and under the box while it is closed;
+// Ctrl / ⌘ Enter in the box does the same. Enter still adds the
 // highlighted result alone. The listbox is `aria-multiselectable`, each
 // option's `aria-selected` is its TICK (the highlight is the input's
 // aria-activedescendant), and each tick is said. "Add N" sends them all in
 // ONE call (addManyToDeckAction: one revalidation; each real card its own
 // `named` spend, as a single add), asking first about the maker's private
-// cards together (one dialog). Added, a card's tick goes; a refused one
+// cards together (one dialog). Added — alone or with the others — a card's
+// tick goes (a later "Add N" never adds it twice); a refused one
 // stays ticked with the reason said. The button that goes with the last
 // tick hands the focus to the box.
 //
@@ -335,6 +338,14 @@ export function DeckAddBox({ className }: { className?: string }) {
       const result = await editor.add(option.pick, to, option.preview(to), privateCard);
       settle(option.key);
       if (result.ok) {
+        // A ticked card added alone is in the deck now: its tick goes, or a
+        // later "Add N" would add a second copy.
+        setTicked((prev) => {
+          if (!prev.has(option.key)) return prev;
+          const next = new Map(prev);
+          next.delete(option.key);
+          return next;
+        });
         const made = result.published ? "Made public and added" : "Added";
         editor.announce(
           result.merged
@@ -609,6 +620,55 @@ export function DeckAddBox({ className }: { className?: string }) {
     : "";
   const expanded = open;
 
+  // The count, "Add N" and "Clear ticks" (TODO DK5.17): under the box while
+  // the list is closed, the list panel's footer while it is open. In the
+  // panel the buttons are for the pointer (tabIndex -1): the focus stays in
+  // the box, whose Ctrl / ⌘ Enter adds them, and Tab leaves as it always
+  // did — to the board picker, then this bar, under the box again.
+  const tickedBar = (place: "panel" | "below") => {
+    const inPanel = place === "panel";
+    return (
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2 text-xs text-muted",
+          inPanel && "shrink-0 border-t border-border/60 bg-surface px-2.5 py-2",
+        )}
+        data-testid="deck-add-ticked"
+        data-place={place}
+      >
+        <span>
+          <span className="font-medium text-foreground tabular-nums">{ticked.size}</span> ticked
+          <span className="sr-only">: {[...ticked.values()].map((option) => option.name).join(", ")}</span>
+        </span>
+        <button
+          type="button"
+          tabIndex={inPanel ? -1 : undefined}
+          onClick={() => void addTicked()}
+          disabled={[...ticked.keys()].every((key) => adding.has(key))}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/60 bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 disabled:opacity-60"
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+          Add {ticked.size} to {DECK_BOARD_LABELS[board]}
+        </button>
+        <button
+          type="button"
+          tabIndex={inPanel ? -1 : undefined}
+          onClick={clearTicks}
+          className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden />
+          Clear ticks
+        </button>
+        {inPanel ? (
+          // Said to a screen reader by the box's own hint.
+          <span aria-hidden className="ml-auto inline-flex items-center gap-1 text-[11px] text-subtle pointer-coarse:hidden">
+            <kbd className="rounded border border-border px-1 font-mono">Ctrl / ⌘ Enter</kbd> adds them
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -751,6 +811,10 @@ export function DeckAddBox({ className }: { className?: string }) {
                 ))}
               </ul>
             ) : null}
+            {/* The ticks' footer: beside the listbox, never an option in it.
+                Always in view (the listbox above it scrolls); its mousedown
+                is the panel's, cancelled, so a click keeps the box open. */}
+            {expanded && ticked.size > 0 ? tickedBar("panel") : null}
           </div>
         </div>
         <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted">
@@ -773,31 +837,9 @@ export function DeckAddBox({ className }: { className?: string }) {
           <BoardsHelp boards={boards} />
         </span>
       </div>
-      {ticked.size > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted" data-testid="deck-add-ticked">
-          <span>
-            <span className="font-medium text-foreground tabular-nums">{ticked.size}</span> ticked
-            <span className="sr-only">: {[...ticked.values()].map((option) => option.name).join(", ")}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => void addTicked()}
-            disabled={[...ticked.keys()].every((key) => adding.has(key))}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/60 bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 disabled:opacity-60"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            Add {ticked.size} to {DECK_BOARD_LABELS[board]}
-          </button>
-          <button
-            type="button"
-            onClick={clearTicks}
-            className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-            Clear ticks
-          </button>
-        </div>
-      ) : null}
+      {/* Closed, the ticks' bar sits under the box; open, it is the list
+          panel's footer (the list would cover it here). */}
+      {!expanded && ticked.size > 0 ? tickedBar("below") : null}
       <p id={`${baseId}-hint`} className="sr-only">
         Type to search. Up and down arrows move through the results; Enter adds the highlighted card to the {DECK_BOARD_LABELS[board]}. After
         moving with the arrows, Space ticks or unticks the highlighted card; Control Enter adds every ticked card.

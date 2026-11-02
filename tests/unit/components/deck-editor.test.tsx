@@ -702,6 +702,84 @@ describe("the add box — pick several, add once (DK5.17)", () => {
     });
   });
 
+  it("open, the count, Add N and Clear ticks are the list panel's footer — beside the listbox, never options; closed, under the box", async () => {
+    searchFor();
+    adds.addManyToDeckAction.mockResolvedValue({ ok: true, results: [{ ok: true, entryId: id(8), board: "main", quantity: 1, merged: false }] });
+    deckPage();
+    const box = await openBox();
+    await act(async () => {
+      fireEvent.click(option(/^Arcane Signet/).querySelector("[data-tick]")!);
+    });
+    const list = screen.getByRole("listbox", { name: "Cards to add" });
+    const footer = screen.getByTestId("deck-add-ticked");
+    expect(footer.getAttribute("data-place")).toBe("panel");
+    // In the panel, after the listbox — not in it, and no option.
+    expect(list.contains(footer)).toBe(false);
+    expect(list.parentElement?.contains(footer)).toBe(true);
+    expect(footer.closest("[role=option]")).toBeNull();
+    expect(within(list).queryAllByRole("button")).toEqual([]);
+    expect(footer.textContent).toMatch(/Ctrl \/ ⌘ Enter/);
+    // The pointer's: Tab from the box still leaves it (the focus stays in the box meanwhile).
+    const addN = within(footer).getByRole("button", { name: "Add 1 to Mainboard" });
+    expect(addN.tabIndex).toBe(-1);
+    expect(within(footer).getByRole("button", { name: "Clear ticks" }).tabIndex).toBe(-1);
+    // A press there must not take the focus off the box: the panel cancels the mousedown.
+    expect(fireEvent.mouseDown(addN)).toBe(false);
+    // Closed (Escape): one bar, under the box, in the Tab order.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Escape" });
+    });
+    const below = screen.getByTestId("deck-add-ticked");
+    expect(below.getAttribute("data-place")).toBe("below");
+    expect(within(below).getByRole("button", { name: "Add 1 to Mainboard" }).tabIndex).toBe(0);
+    expect(screen.getAllByRole("button", { name: "Add 1 to Mainboard" })).toHaveLength(1);
+    // Open again: back in the panel, and its Add N adds the ticked.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "ArrowDown" });
+    });
+    expect(screen.getByTestId("deck-add-ticked").getAttribute("data-place")).toBe("panel");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add 1 to Mainboard" }));
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      picks: [{ kind: "printing", scryfallId: RING_SF, name: "Arcane Signet" }],
+    });
+  });
+
+  it("a ticked card added ALONE loses its tick — a later Add N never adds it twice; a refused one keeps it", async () => {
+    searchFor();
+    adds.addToDeckAction.mockResolvedValueOnce({ ok: false, error: "Couldn't add Ember Wyrm." });
+    adds.addToDeckAction.mockResolvedValueOnce({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false });
+    deckPage();
+    const box = await openBox();
+    await act(async () => {
+      fireEvent.click(option(/^Ember Wyrm/).querySelector("[data-tick]")!);
+    });
+    expect(option(/^Ember Wyrm/).getAttribute("aria-selected")).toBe("true");
+    // Enter adds the highlighted one (Ember Wyrm, the first) alone — refused: still ticked.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter" });
+    });
+    await flush();
+    expect(option(/^Ember Wyrm/).getAttribute("aria-selected")).toBe("true");
+    // Again — it lands: the tick goes, and the bar with it.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter" });
+    });
+    await flush();
+    expect(adds.addToDeckAction).toHaveBeenCalledTimes(2);
+    expect(option(/^Ember Wyrm/).getAttribute("aria-selected")).toBe("false");
+    expect(screen.queryByTestId("deck-add-ticked")).toBeNull();
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).not.toHaveBeenCalled();
+  });
+
   it("a card the server refuses stays ticked, its reason said; the others land", async () => {
     searchFor();
     adds.addManyToDeckAction.mockResolvedValue({
