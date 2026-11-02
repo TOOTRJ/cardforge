@@ -29,6 +29,7 @@ import {
   trendingScore,
 } from "@/lib/cards/trending";
 import { narrowCard } from "@/lib/cards/narrow";
+import { isLegendaryCreature } from "@/lib/decks/first-card";
 import { lookupUsername } from "@/lib/profile/username";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { publicDeckCountsForCards } from "@/lib/decks/queries";
@@ -540,6 +541,31 @@ export async function listGalleryCards(
     });
     if (error || !data || data.length === 0) return [];
     return attachStats(data as CardRow[], "recent", { anonymous });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * "Cards to build around" on /decks (TODO DK8.4): public LEGENDARY CREATURES
+ * — the cards a Commander deck can lead with — not owned by an admin (0091's
+ * showcase rule), in Discover's weighted-random order for `seed` (migration
+ * 0157 `list_commander_cards`). /decks passes a fresh seed at each ISR
+ * regeneration, so the row is a new sample every time the page re-bakes.
+ * The SQL's test is `isLegendaryCreature` (lib/decks/first-card.ts), and the
+ * rows are held to it here too. Anonymous mode keeps the route static.
+ */
+export async function listCommanderCards(
+  options: { seed?: string; limit?: number; anonymous?: boolean } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { seed = "", limit = 12, anonymous = false } = options;
+  try {
+    const supabase = anonymous ? createPublicClient() : await createClient();
+    const { data, error } = await supabase.rpc("list_commander_cards", { p_seed: seed, p_limit: limit });
+    if (error || !data || data.length === 0) return [];
+    const rows = (data as CardRow[]).filter(isLegendaryCreature);
+    return attachStats(rows, "recent", { anonymous });
   } catch {
     return [];
   }

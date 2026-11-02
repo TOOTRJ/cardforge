@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { findMissing, mapLimit, objectExists, objectStatus } from "@/scripts/lib/frame-objects.mjs";
+import { DEADLINE, FramesCheckDeadline, findMissing, mapLimit, objectExists, objectStatus } from "@/scripts/lib/frame-objects.mjs";
 
 // The Frames published gate (scripts/frames-check.mjs) and the promote /
 // publish scripts decide "is this object in the bucket?" with objectExists.
@@ -127,5 +127,90 @@ describe("findMissing — the gate's two passes", () => {
     const missing = await findMissing(items, check, { confirmDelayMs: 0, maxConfirm: 25 });
     expect(missing).toHaveLength(30);
     expect(check).toHaveBeenCalledTimes(30);
+  });
+});
+
+describe("the whole check's budget (frames-check --budget-seconds; 2026-11-02: the gate hung to the job's timeout)", () => {
+  /** A fetch that never answers on its own — only an abort ends it. */
+  const hung = () =>
+    vi.fn((_u: string, init: RequestInit) => new Promise<Response>((_, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason))));
+
+  it("objectStatus ends a request in flight the moment the budget fires — 'deadline', never ok", async () => {
+    vi.stubGlobal("fetch", hung());
+    const budget = new AbortController();
+    const t0 = Date.now();
+    const pending = objectStatus("https://b/x", 10, { tries: 5, timeoutMs: 60_000, signal: budget.signal });
+    setTimeout(() => budget.abort(), 20);
+    expect(await pending).toEqual({ ok: false, status: DEADLINE });
+    expect(Date.now() - t0).toBeLessThan(5_000);
+  });
+
+  it("objectStatus ends its backoff too, and starts nothing once the budget is spent", async () => {
+    const fetch = vi.fn().mockImplementation(async () => head(429));
+    vi.stubGlobal("fetch", fetch);
+    const budget = new AbortController();
+    const pending = objectStatus("https://b/x", 10, { tries: 5, baseDelayMs: 60_000, signal: budget.signal });
+    setTimeout(() => budget.abort(), 20);
+    expect(await pending).toEqual({ ok: false, status: DEADLINE });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(await objectStatus("https://b/x", 10, { signal: budget.signal })).toEqual({ ok: false, status: DEADLINE });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("a budget that never fires changes nothing (and leaves no listener behind on its signal)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(head(429)).mockResolvedValue(head(200, 10)));
+    const budget = new AbortController();
+    const warnings: string[] = [];
+    const onWarning = (w: Error) => warnings.push(w.name);
+    process.on("warning", onWarning);
+    try {
+      for (let i = 0; i < 30; i += 1) {
+        expect(await objectStatus("https://b/x", 10, { baseDelayMs: 0, signal: budget.signal })).toEqual({ ok: true, status: "200" });
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    } finally {
+      process.off("warning", onWarning);
+    }
+    expect(warnings).not.toContain("MaxListenersExceededWarning");
+  });
+
+  it("findMissing throws FramesCheckDeadline when the budget fires in the first pass — never a pass, never misses it did not see", async () => {
+    const budget = new AbortController();
+    const progress: number[] = [];
+    let calls = 0;
+    const check = async (key: string) => {
+      calls += 1;
+      if (calls === 6) budget.abort();
+      if (budget.signal.aborted) return { ok: false, status: DEADLINE };
+      return key === "k1" ? { ok: false, status: "429" } : { ok: true, status: "206" };
+    };
+    const items = Array.from({ length: 100 }, (_, i) => `k${i}`);
+    const err = await findMissing(items, check, { limit: 2, confirmDelayMs: 0, signal: budget.signal, onProgress: (p) => progress.push(p.done) }).catch((e) => e);
+    expect(err).toBeInstanceOf(FramesCheckDeadline);
+    expect(err).toMatchObject({ total: 100, suspects: 1, statuses: { "429": 1 } });
+    expect(err.checked).toBeLessThan(10);
+    expect(calls).toBeLessThan(10);
+    expect(progress.at(-1)).toBe(err.checked);
+  });
+
+  it("findMissing throws FramesCheckDeadline when the budget fires in the confirm pass", async () => {
+    const budget = new AbortController();
+    const check = async (key: string, thorough: boolean) => {
+      if (thorough) {
+        budget.abort();
+        return { ok: false, status: DEADLINE };
+      }
+      return key.startsWith("miss") ? { ok: false, status: "400" } : { ok: true, status: "206" };
+    };
+    const err = await findMissing(["a", "miss1", "miss2", "b"], check, { confirmDelayMs: 0, signal: budget.signal }).catch((e) => e);
+    expect(err).toBeInstanceOf(FramesCheckDeadline);
+    expect(err).toMatchObject({ checked: 4, total: 4, suspects: 2, statuses: { "400": 2 } });
+  });
+
+  it("with time to spare it answers as before: every object found is a pass, a real miss is reported", async () => {
+    const budget = new AbortController();
+    const check = async (key: string) => (key === "real" ? { ok: false, status: "400" } : { ok: true, status: "206" });
+    expect(await findMissing(["a", "b"], check, { confirmDelayMs: 0, signal: budget.signal })).toEqual([]);
+    expect(await findMissing(["a", "real"], check, { confirmDelayMs: 0, signal: budget.signal })).toEqual([{ item: "real", status: "400" }]);
   });
 });

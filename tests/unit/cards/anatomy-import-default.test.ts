@@ -252,7 +252,7 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     expect(stored("fdn-122").colors).toEqual(["white", "blue"]);
     expect(stored("mkm-264").style).toEqual({ twoColor: true, collector: "2023", stamp: "none" }); // Meticulous Archive (a land)
     expect(stored("fdn-2").style).toEqual({ crown: true, collector: "2023", stamp: "none" });
-    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
   });
 });
 

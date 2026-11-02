@@ -478,10 +478,13 @@ export const DECK_PAGE_CARD_COLUMNS = [
   ...IMPORT_FINGERPRINT_FIELDS,
   "import_scryfall_id",
   "import_fingerprint",
+  // The moderation lock (0156): the owner's "private cards here" notice
+  // offers no "Make public" for a card moderation hid.
+  "moderation_hidden_at",
 ] as const;
 
 /** The page's columns a database may not have yet, by migration (0137,
- *  0141, 0144): PostgREST answers a select naming one with 42703, and the
+ *  0141, 0144, 0156): PostgREST answers a select naming one with 42703, and the
  *  read runs again without that migration's columns — the row then reads as
  *  such a database's `*` does. Remove each once its migration is on
  *  production and on dev. */
@@ -489,6 +492,7 @@ const DECK_PAGE_LATE_COLUMNS: readonly (readonly string[])[] = [
   ["printed_types"],
   ["nickname"],
   ["import_scryfall_id", "import_fingerprint"],
+  ["moderation_hidden_at"],
 ];
 
 type PageColumn = (typeof DECK_PAGE_CARD_COLUMNS)[number];
@@ -502,22 +506,33 @@ export type DeckPageCard = Omit<Pick<Card, PageColumn>, ProvenanceColumn> & Part
  *  the D3 filter, the makers' credit — with only DECK_PAGE_CARD_COLUMNS of
  *  each card. */
 export async function listDeckPageCards(deckId: string): Promise<DeckItem<DeckPageCard>[]> {
-  return readDeckItems(deckId, async (supabase, ids) => {
-    let columns: string[] = [...DECK_PAGE_CARD_COLUMNS];
-    for (;;) {
-      const { data, error } = await supabase.from("cards").select(columns.join(", ")).in("id", ids);
-      const missing =
-        error?.code === "42703"
-          ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
-          : undefined;
-      if (missing) {
-        columns = columns.filter((column) => !missing.includes(column));
-        continue;
-      }
-      if (error) return [];
-      return ((data ?? []) as unknown as CardRow[]).map((row) => narrowCard(row) as DeckPageCard);
+  return readDeckItems(deckId, async (supabase, ids) =>
+    (await readDeckPageCardRows((columns) => supabase.from("cards").select(columns).in("id", ids))) ?? [],
+  );
+}
+
+/** Cards read with DECK_PAGE_CARD_COLUMNS — the page's read, and the add
+ *  box's results (lib/decks/add-actions.ts), which the page draws as rows
+ *  the moment they are added. `select(columns)` builds the query; a
+ *  database missing a late column (DECK_PAGE_LATE_COLUMNS) is asked again
+ *  without it. Null on any other error. */
+export async function readDeckPageCardRows(
+  select: (columns: string) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>,
+): Promise<DeckPageCard[] | null> {
+  let columns: string[] = [...DECK_PAGE_CARD_COLUMNS];
+  for (;;) {
+    const { data, error } = await select(columns.join(", "));
+    const missing =
+      error?.code === "42703"
+        ? DECK_PAGE_LATE_COLUMNS.find((late) => late.some((column) => columns.includes(column) && (error.message ?? "").includes(column)))
+        : undefined;
+    if (missing) {
+      columns = columns.filter((column) => !missing.includes(column));
+      continue;
     }
-  });
+    if (error) return null;
+    return ((data ?? []) as unknown as CardRow[]).map((row) => narrowCard(row) as DeckPageCard);
+  }
 }
 
 type CardReader<C> = (supabase: Awaited<ReturnType<typeof createClient>>, ids: string[]) => Promise<C[]>;

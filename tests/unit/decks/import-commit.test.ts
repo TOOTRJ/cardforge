@@ -81,6 +81,7 @@ vi.mock("@/lib/scryfall/client", () => ({
 }));
 
 import { commitDeckImportAction, resolveDecklistAction } from "@/lib/decks/import";
+import { commitImportLines } from "@/lib/decks/import-commit";
 
 const scryfallBolt = {
   id: BOLT_ID,
@@ -226,6 +227,17 @@ describe("commitDeckImportAction", () => {
     });
     expect(result.ok).toBe(false);
     expect(s.rpcCalls).toEqual([]);
+  });
+
+  it("the deck page's single-card writes (an add, an undo) spend the `named` quota, never the import's", async () => {
+    const result = await commitImportLines(
+      { deckId: DECK, lines: [{ name: "Lightning Bolt", quantity: 1, board: "main", resolved: { scryfall_id: BOLT_ID } }] },
+      { quota: "named", revalidate: false },
+    );
+    expect(result.ok).toBe(true);
+    expect(s.rateActions).toEqual(["named"]);
+    expect(s.logActions).toEqual(["named"]);
+    expect(s.rpcCalls).toHaveLength(1);
   });
 
   it("asks Scryfall 75 ids at a time", async () => {

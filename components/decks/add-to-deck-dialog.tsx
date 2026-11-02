@@ -18,6 +18,7 @@ import {
   DeckQuickCreate,
 } from "@/components/decks/deck-membership-picker";
 import { useDeckMembership } from "@/components/decks/use-deck-membership";
+import { PrivateCardOfferDialog } from "@/components/decks/private-card-offer-dialog";
 import type { DeckCreateSurface } from "@/lib/decks/actions";
 
 // ---------------------------------------------------------------------------
@@ -28,7 +29,9 @@ import type { DeckCreateSurface } from "@/lib/decks/actions";
 // its chips again (`onChanged`).
 //
 // DeckMembershipPanel is the dialog's body on its own: the creator's box on
-// an edit shows it inline (owner decision D13).
+// an edit shows it inline (owner decision D13). It also asks about the
+// maker's PRIVATE cards a tick sends into a deck others can open (TODO
+// DK0.13, PrivateCardOfferDialog) — so every surface of the picker does.
 // ---------------------------------------------------------------------------
 
 export type DeckMembership = ReturnType<typeof useDeckMembership>;
@@ -38,12 +41,15 @@ export function DeckMembershipPanel({
   cardCount,
   surface,
   signInPath,
+  cardTitles,
 }: {
   membership: DeckMembership;
   cardCount: number;
   surface: DeckCreateSurface;
   /** Where "Sign in" comes back to, for a session that ended meanwhile. */
   signInPath?: string;
+  /** card id → title, for the private-card offer's words. */
+  cardTitles?: Readonly<Record<string, string>>;
 }) {
   if (membership.state === "loading") {
     return (
@@ -93,6 +99,15 @@ export function DeckMembershipPanel({
         }
       />
       <DeckMembershipStatusLine status={membership.status} />
+      <PrivateCardOfferDialog
+        open={membership.offer !== null}
+        deckTitle={membership.offer?.deck.title ?? ""}
+        cards={(membership.offer?.cards ?? []).map((card) => ({
+          ...card,
+          title: cardTitles?.[card.cardId] ?? cardTitles?.[card.cardId.toLowerCase()] ?? null,
+        }))}
+        onChoose={(choice) => void membership.resolveOffer(choice)}
+      />
     </div>
   );
 }
@@ -169,6 +184,7 @@ export function AddToDeckDialog({
             cardCount={cards.length}
             surface={surface}
             signInPath={signInPath}
+            cardTitles={Object.fromEntries(cards.flatMap((card) => [[card.id, card.title], [card.id.toLowerCase(), card.title]]))}
           />
         </div>
         <DialogFooter>

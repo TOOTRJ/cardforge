@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,9 @@ import { computeDeckCharts } from "@/lib/decks/deck-charts";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
 import { DECK_VIEW_COOKIE, deckRowsOf, deckStatusCountsOf, ENTRY_BADGE_COUNT_LABELS, statusCountRows } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 // Our storage host: a bake's pointers are drawn only from it.
 beforeEach(() => {
