@@ -15,6 +15,7 @@ import {
   getHelpSection,
   HELP_PATH,
   HELP_SECTION_SLUGS,
+  HELP_SECTIONS,
   helpGroupEntries,
   helpSectionMarkupEntries,
   helpSectionPath,
@@ -23,7 +24,10 @@ import {
   type HelpSection,
 } from "@/lib/content/help";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
-import { PageContainer } from "@/components/layout/page-container";
+import { MEASURE_CLASS, PageContainer } from "@/components/layout/page-container";
+import { ReadingLayout } from "@/components/layout/reading-layout";
+import { RailLinks } from "@/components/marketing/rail-cta";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // /help/[section] — one help topic (TODO NV6): its how-to, then its answers
@@ -88,8 +92,27 @@ export default async function HelpSectionPage({
   const toc = tocOf(section);
 
   return (
-    <PageContainer className="py-12 lg:grid lg:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] lg:gap-x-12 lg:py-16">
-      <div className="min-w-0 max-w-3xl">
+    <PageContainer size="wide" className="py-12 lg:py-16">
+      {/* The wide frame (TODO WD10): the answers keep a 48rem column with
+          each answer at the reading measure (WD6), "On this page" beside it. */}
+      <ReadingLayout
+        railLabel="On this page"
+        railOnPhone="hidden"
+        nav={
+          <div className="pt-16">
+            <RailLinks
+              title="Help topics"
+              current={path}
+              links={HELP_SECTIONS.map((topic) => ({ href: helpSectionPath(topic.slug), label: topic.title }))}
+            />
+          </div>
+        }
+        rail={
+          <div className="lg:pt-16">
+            <ArticleToc items={toc} variant="sidebar" />
+          </div>
+        }
+      >
         {markup.length > 0 ? <JsonLd data={faqJsonLd(markup)} /> : null}
         <Breadcrumbs
           items={[
@@ -138,7 +161,7 @@ export default async function HelpSectionPage({
                     <h3 className="font-display text-lg font-semibold leading-snug text-foreground">
                       {entry.q}
                     </h3>
-                    <p className="mt-2 text-sm leading-7 text-muted">{entry.a}</p>
+                    <p className={cn("mt-2 text-base leading-7 text-muted", MEASURE_CLASS)}>{entry.a}</p>
                     {landing ? (
                       <p className="mt-2 text-xs text-subtle">
                         From the{" "}
@@ -165,13 +188,7 @@ export default async function HelpSectionPage({
           label="Other help topics"
           className="mt-14 border-t border-border/40 pt-8"
         />
-      </div>
-
-      <aside className="hidden lg:block">
-        <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pt-16">
-          <ArticleToc items={toc} variant="sidebar" />
-        </div>
-      </aside>
+      </ReadingLayout>
     </PageContainer>
   );
 }

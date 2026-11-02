@@ -24,6 +24,7 @@ import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
+import { CardGrid, CARD_GRID_SIZES } from "@/components/cards/card-grid";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
 // inherited from the root layout; this just pins the canonical to "/" so it
@@ -93,7 +94,7 @@ export default async function HomePage() {
       {/* Proof before pitch: what the community forged THIS WEEK, right
           under the hero — live rank badges + weekly stats, one row, with the
           pulse line and the two doors out (forge one / see the gallery). */}
-      <PageContainer as="section" className="pb-10 pt-4">
+      <PageContainer as="section" size="wide" className="pb-10 pt-4">
         {isSupabaseConfigured() ? (
           <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
             <HomeTrending />
@@ -172,20 +173,25 @@ export default async function HomePage() {
       </section>
       ) : null}
 
-      <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-frame border border-gold/40 bg-linear-to-br from-surface via-surface to-elevated p-10 sm:p-14">
+      <PageContainer as="section" size="wide" className="pb-24">
+        <div className="relative overflow-hidden rounded-frame border border-gold/40 bg-linear-to-br from-surface via-surface to-elevated p-8 sm:p-14">
           <div className="absolute inset-0 bg-radial-glow" aria-hidden />
           <StarfieldBackdrop withGlyphs />
-          <div className="relative flex flex-col items-start gap-5">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Ready to craft something legendary?
-            </h2>
-            <p className="max-w-xl text-base leading-7 text-muted">
-              Join the creators already building worlds, one card at a time.
-              You&apos;re building more than cards — you&apos;re building a
-              legacy.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
+          {/* The frame's full width (TODO WD10): the words on the left, the
+              two doors on the right from lg — never a narrow box under a
+              six-column row. */}
+          <div className="relative flex flex-col items-start gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+            <div className="flex flex-col gap-5">
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Ready to craft something legendary?
+              </h2>
+              <p className="max-w-xl text-base leading-7 text-muted">
+                Join the creators already building worlds, one card at a time.
+                You&apos;re building more than cards — you&apos;re building a
+                legacy.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
               <Button asChild size="lg">
                 <Link href="/create">Start your journey</Link>
               </Button>
@@ -195,16 +201,13 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </PageContainer>
 
       <LatestGuides />
 
       {/* Guide links — internal links so the SEO landing pages aren't
           orphaned (crawlers weight homepage links heavily). */}
-      <nav
-        aria-label="Guides"
-        className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8"
-      >
+      <PageContainer as="nav" size="wide" aria-label="Guides" className="pb-16">
         <p className="text-center text-sm text-muted">
           Guides:{" "}
           {GUIDE_LINKS.map((g, i) => (
@@ -219,7 +222,7 @@ export default async function HomePage() {
             </span>
           ))}
         </p>
-      </nav>
+      </PageContainer>
     </>
   );
 }
@@ -232,10 +235,7 @@ async function LatestGuides() {
   const articles = (await listPublishedArticles()).slice(0, 3);
   if (articles.length === 0) return null;
   return (
-    <section
-      aria-labelledby="latest-guides"
-      className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 lg:px-8"
-    >
+    <PageContainer as="section" size="wide" aria-labelledby="latest-guides" className="pb-16">
       <div className="flex flex-col items-center gap-6 text-center">
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
@@ -252,7 +252,7 @@ async function LatestGuides() {
             written for people who make their own cards.
           </p>
         </div>
-        <ul className="grid w-full gap-4 text-left sm:grid-cols-3">
+        <ul className="grid w-full gap-4 text-left sm:grid-cols-3 2xl:gap-6">
           {articles.map((a) => (
             <li key={a.slug}>
               <Link
@@ -276,7 +276,7 @@ async function LatestGuides() {
           </Link>
         </Button>
       </div>
-    </section>
+    </PageContainer>
   );
 }
 
@@ -337,6 +337,7 @@ async function HomeTrending() {
       variant="hero"
       action={VIEW_GALLERY_LINK}
       footer={<TrendingPulseFooter pulse={pulse} />}
+      sizes={CARD_GRID_SIZES}
       // First card images in the viewport — preload instead of lazy-load.
       priority
     />
@@ -405,11 +406,11 @@ function PlaceholderGallery() {
         {VIEW_GALLERY_LINK}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CardGrid>
         {galleryPlaceholder.map((card) => (
           <CardPreviewPlaceholder key={card.title} card={card} />
         ))}
-      </div>
+      </CardGrid>
     </>
   );
 }

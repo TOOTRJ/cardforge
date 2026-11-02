@@ -45,7 +45,7 @@ export function MarketingHero({
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <PageContainer className="relative grid gap-12 py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-32">
+      <PageContainer size="wide" className="relative grid gap-12 py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-32">
         <div className="flex flex-col items-start gap-6">
           {/* Eyebrow */}
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
@@ -114,8 +114,10 @@ export function MarketingHero({
         </div>
 
         {/* Hero card preview — admin-featured community cards when curated,
-            otherwise the two tilted placeholder cards. */}
-        <div className="relative">
+            otherwise the two tilted placeholder cards. Capped at 36rem in the
+            wide frame (TODO WD10): two ~280 px cards, the size their `sizes`
+            asks for, centred in the column at every width. */}
+        <div className="relative mx-auto w-full max-w-xl self-center">
           <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-linear-to-br from-primary/25 via-gold/10 to-transparent blur-2xl" aria-hidden />
           {featured.length > 0 ? (
             <div className="flex flex-col gap-4">

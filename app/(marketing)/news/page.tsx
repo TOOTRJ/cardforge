@@ -50,7 +50,7 @@ export const revalidate = 300;
 export default async function NewsPage() {
   const { updates, upcoming } = await getNewsFeed();
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -64,7 +64,9 @@ export default async function NewsPage() {
         description="Fresh from the forge: every update as it ships, and a peek at what we're hammering on next."
       />
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {/* The wide frame (TODO WD10): release notes keep a 48rem column (a
+          note is a paragraph to read) and "Coming soon" sits beside it. */}
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,48rem)_20rem] lg:gap-12 xl:gap-16">
         <section aria-labelledby="updates-heading" className="flex flex-col gap-5">
           <h2 id="updates-heading" className="flex items-center gap-2 font-display text-2xl font-semibold text-foreground">
             <Megaphone className="h-5 w-5 text-gold" aria-hidden />

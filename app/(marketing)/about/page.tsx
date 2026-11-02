@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <LegalPageShell
+      current="/about"
       eyebrow="About"
       title={`What is ${siteConfig.name}?`}
       description={siteConfig.description}
