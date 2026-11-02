@@ -195,16 +195,24 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // trial converts; this is ours (docs/BILLING.md). The notification insert is
 // the durable part: a failure throws so Stripe retries; the email is best
 // effort on top (idempotent at the provider by subscription id).
-/** Does the user's comp HOLD this (live) trial? Reads the profile's comp end
- *  and asks the one test, `isCompHeldTrial`. False when it can't be read. */
-async function isTrialHeldByComp(admin: AdminClient, userId: string, sub: Stripe.Subscription): Promise<boolean> {
-  if (!sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY]) return false;
+/** The comp that HOLDS this (live) trial, or null: reads the profile's comp
+ *  and asks the one test, `isCompHeldTrial`. Its tier is the plan named as
+ *  complimentary (the 7-/1-day comp reminder names the same). Null when it
+ *  can't be read. */
+async function compHoldingTrial(
+  admin: AdminClient,
+  userId: string,
+  sub: Stripe.Subscription,
+): Promise<{ compTier: string | null } | null> {
+  if (!sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY]) return null;
   try {
-    const { data } = await admin.from("profiles").select("comp_expires_at").eq("id", userId).maybeSingle();
-    const compExpiresAt = (data as { comp_expires_at?: string | null } | null)?.comp_expires_at ?? null;
-    return isCompHeldTrial(sub as unknown as CompEndingSub, compExpiresAt);
+    const { data } = await admin.from("profiles").select("comp_tier, comp_expires_at").eq("id", userId).maybeSingle();
+    const row = data as { comp_tier?: string | null; comp_expires_at?: string | null } | null;
+    if (!isCompHeldTrial(sub as unknown as CompEndingSub, row?.comp_expires_at ?? null)) return null;
+    const compTier = row?.comp_tier === "plus" || row?.comp_tier === "pro" ? row.comp_tier : null;
+    return { compTier };
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -270,11 +278,12 @@ async function handleTrialWillEnd(
   );
   if (reminded) return;
 
-  const [tier, hasPaymentMethod, compHold] = await Promise.all([
+  const [tier, hasPaymentMethod, heldBy] = await Promise.all([
     resolveSubscriptionTier(sub, stripe),
     subscriptionHasPaymentMethod(sub, stripe),
-    isTrialHeldByComp(admin, userId, sub),
+    compHoldingTrial(admin, userId, sub),
   ]);
+  const compHold = heldBy != null;
   const price = sub.items?.data?.[0]?.price ?? null;
   const interval = price?.recurring?.interval ?? null;
   const payload = {
@@ -288,7 +297,7 @@ async function handleTrialWillEnd(
     // A trial a COMP holds ends when the complimentary period ends: the
     // copy says so, never "your trial" (lib/billing/comp-ending.ts). This
     // reminder speaks for that moment; the 1-day comp_ending stands down.
-    ...(compHold ? { compHold: true } : {}),
+    ...(compHold ? { compHold: true, ...(heldBy?.compTier ? { compTier: heldBy.compTier } : {}) } : {}),
   };
   const { error } = await admin.from("notifications").insert({
     recipient_id: userId,
@@ -314,6 +323,7 @@ async function handleTrialWillEnd(
             ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
             : null,
         compHold,
+        ...(heldBy?.compTier ? { compPlan: TIER_NAME[heldBy.compTier] } : {}),
       }),
       { idempotencyKey: `trial-ending:${sub.id}:${sub.trial_end ?? ""}` },
     );

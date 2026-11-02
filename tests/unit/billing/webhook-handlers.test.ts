@@ -776,6 +776,7 @@ describe("handleStripeEvent — trial_will_end", () => {
       legacyRow?: boolean;
       insertError?: string;
       compExpiresAt?: string;
+      compTier?: string;
     } = {},
   ) {
     const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
@@ -798,7 +799,7 @@ describe("handleStripeEvent — trial_will_end", () => {
               limit: () => chain,
               maybeSingle: async () =>
                 table === "profiles"
-                  ? { data: { id: "user-1", comp_expires_at: opts.compExpiresAt ?? null }, error: null }
+                  ? { data: { id: "user-1", comp_tier: opts.compTier ?? null, comp_expires_at: opts.compExpiresAt ?? null }, error: null }
                   : { data: earlier[0] ?? null, error: null },
               then: (resolve: (v: unknown) => void) => resolve({ data: earlier, error: null }),
             };
@@ -935,10 +936,12 @@ describe("handleStripeEvent — trial_will_end", () => {
 
     it("payload says compHold; the email names the complimentary period and the charge, never a trial", async () => {
       subscriptions.retrieve.mockResolvedValue(held());
-      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END });
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END, compTier: "pro" });
       await handleStripeEvent(fire(held()), { admin, stripe: trialStripe });
       expect(inserts).toHaveLength(1);
-      expect(inserts[0].row.payload).toMatchObject({ compHold: true, trialEnd: COMP_END, hasPaymentMethod: true });
+      // The comp's tier rides along, so the bell names the same plans as the
+      // comp reminder (lib/billing/comp-ending-run.ts).
+      expect(inserts[0].row.payload).toMatchObject({ compHold: true, compTier: "pro", trialEnd: COMP_END, hasPaymentMethod: true });
       const message = email.send.mock.calls[0][0];
       expect(message.subject).toMatch(/^Your complimentary PipGlyph Pro ends /);
       expect(message.text).toContain("Your card will be charged $15 / month then");

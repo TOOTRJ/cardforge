@@ -3,12 +3,14 @@ import "server-only";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
-import { resolveSubscriptionTier } from "@/lib/stripe/subscription-sync";
+import { resolveSubscriptionTier, subscriptionHasPaymentMethod } from "@/lib/stripe/subscription-sync";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import {
   COMP_ENDING_LOOKAHEAD_MS,
   compEndingDedupeKey,
   compEndingPlanFor,
   compEndingWindowOf,
+  isCompHeldTrial,
   type CompEndingPayload,
   type CompEndingSub,
 } from "@/lib/billing/comp-ending";
@@ -44,6 +46,8 @@ type CompProfile = {
 };
 
 export type CompEndingRunResult = {
+  /** The run did nothing: billing is off (NEXT_PUBLIC_BILLING_ENABLED). */
+  disabled?: boolean;
   checked: number;
   notified: number;
   emailed: number;
@@ -86,6 +90,9 @@ export async function sendCompEndingReminders(
   const now = deps.now ?? new Date();
   const stripe = deps.stripe !== undefined ? deps.stripe : isStripeConfigured() ? getStripe() : null;
   const result: CompEndingRunResult = { checked: 0, notified: 0, emailed: 0, alreadySent: 0, skipped: 0, errors: 0 };
+  // Billing off: no plan can be bought, so "choose a plan to keep it" (and
+  // every price line) would be false. Nothing is sent.
+  if (!isBillingEnabled()) return { ...result, disabled: true };
   const until = new Date(now.getTime() + COMP_ENDING_LOOKAHEAD_MS).toISOString();
 
   for (let from = 0; ; from += PAGE) {
@@ -111,6 +118,23 @@ export async function sendCompEndingReminders(
     if (rows.length < PAGE) break;
   }
   return result;
+}
+
+/** Did a comp-hold `trial_ending` reminder go out for this subscription and
+ *  THIS trial end (the comp's end, ± a minute)? */
+async function trialReminderSentFor(admin: AdminClient, subscriptionId: string, compExpiresAt: string): Promise<boolean> {
+  const { data, error } = await admin
+    .from("notifications")
+    .select("id, payload")
+    .eq("type", "trial_ending")
+    .eq("payload->>subscriptionId", subscriptionId)
+    .limit(20);
+  if (error) throw new Error(`trial reminder read failed: ${error.message}`);
+  const compSec = Math.floor(Date.parse(compExpiresAt) / 1000);
+  return ((data ?? []) as Array<{ payload: { trialEnd?: string | null; compHold?: boolean } | null }>).some((row) => {
+    const end = row.payload?.trialEnd ? Math.floor(Date.parse(row.payload.trialEnd) / 1000) : NaN;
+    return row.payload?.compHold === true && Number.isFinite(end) && Math.abs(end - compSec) <= 60;
+  });
 }
 
 async function remindOne(
@@ -144,12 +168,18 @@ async function remindOne(
     subscribedTier = await resolveSubscriptionTier(sub, stripe);
   }
 
+  // A held trial's 1-day reminder stands down only when the trial reminder
+  // for THIS end really went out (lib/billing/comp-ending.ts).
+  const held = isCompHeldTrial(sub as unknown as CompEndingSub | null, expiresAt);
+  const trialReminderSent =
+    held && window === "1d" && sub ? await trialReminderSentFor(admin, sub.id, expiresAt) : false;
   const plan = compEndingPlanFor({
     compTier: tier,
     compExpiresAt: expiresAt,
     window,
     sub: sub as unknown as CompEndingSub | null,
     subscribedTier,
+    trialReminderSent,
   });
   if (!plan.send) {
     result.skipped += 1;
@@ -161,11 +191,17 @@ async function remindOne(
     window,
     kind: plan.kind,
     tier,
+    ...(sub && plan.kind !== "free" ? { subscribedTier } : {}),
     expiresAt,
     ...(sub && plan.kind !== "free" ? { priceLabel: priceLabelOf(sub) } : {}),
     ...(plan.kind === "paying" ? { nextChargeAt: plan.nextChargeAt } : {}),
     ...(plan.kind === "plan_ending" ? { planEndsAt: plan.planEndsAt } : {}),
-    ...(plan.kind === "held_trial" && sub && stripe ? { cardLast4: await cardLast4Of(stripe, sub) } : {}),
+    ...(plan.kind === "held_trial" && sub && stripe
+      ? {
+          cardLast4: await cardLast4Of(stripe, sub),
+          hasPaymentMethod: await subscriptionHasPaymentMethod(sub, stripe),
+        }
+      : {}),
   };
 
   const { error } = await admin.from("notifications").insert({
@@ -193,10 +229,12 @@ async function remindOne(
       compEndingEmail(recipient, {
         kind: plan.kind,
         plan: TIER_NAME[tier] ?? "PipGlyph",
+        paidPlan: payload.subscribedTier ? (TIER_NAME[payload.subscribedTier] ?? null) : null,
         expiresAt,
         priceLabel: payload.priceLabel ?? null,
         nextChargeAt: payload.nextChargeAt ?? null,
         cardLast4: payload.cardLast4 ?? null,
+        hasPaymentMethod: payload.hasPaymentMethod,
         planEndsAt: payload.planEndsAt ?? null,
       }),
       { idempotencyKey: `comp-ending:${profile.id}:${payload.dedupeKey}` },

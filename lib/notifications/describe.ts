@@ -201,11 +201,15 @@ export function describeNotification(
         const interval = str(payload.interval);
         const price =
           amount != null ? `${formatMoney(amount, str(payload.currency) ?? "usd")}${interval ? ` / ${interval}` : ""}` : null;
+        // The COMP's plan is what ends; `tier` (the subscription's) is what
+        // is charged after — lower when a Plus trial was comped Pro.
+        const paid = TIER_LABEL[tier ?? ""] ?? "your plan";
+        const comp = TIER_LABEL[str(payload.compTier) ?? ""] ?? paid;
         return {
-          subject: `Your complimentary ${TIER_LABEL[tier ?? ""] ?? "plan"}`,
+          subject: `Your complimentary ${comp}`,
           body: `ends ${trialEnd ? `on ${formatShortDate(trialEnd)}` : "soon"} — ${
             hasPaymentMethod
-              ? `your card is charged ${price ?? "the plan price"} then; change or cancel any time before.`
+              ? `${comp !== paid ? `you go back to ${paid} and ` : ""}your card is charged ${price ?? "the plan price"} then; change or cancel any time before.`
               : "add a card to keep the plan, or it simply ends and your cards stay."
           }`,
           href: "/dashboard/billing",
@@ -310,29 +314,42 @@ export function describeNotification(
     }
     case "comp_ending": {
       // The daily comp-ending cron (lib/billing/comp-ending-run.ts), 7 days
-      // and 1 day before an admin comp ends; one copy per kind.
+      // and 1 day before an admin comp ends; one copy per kind. `tier` is the
+      // COMP's plan (what ends); `subscribedTier` the live plan's — what they
+      // go back to, named whenever it differs.
       const tier = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
+      const paidTier = TIER_LABEL[str(payload.subscribedTier) ?? ""] ?? null;
+      const goesBack = paidTier != null && paidTier !== tier;
       const expiresAt = str(payload.expiresAt);
       const ends = expiresAt ? `on ${formatShortDate(expiresAt)}` : "soon";
       const price = str(payload.priceLabel);
+      const back = goesBack ? ` you go back to ${paidTier}${price ? ` (${price})` : ""};` : "";
       const kind = str(payload.kind);
       if (kind === "held_trial") {
+        if (payload.hasPaymentMethod === false) {
+          return {
+            subject: `Your complimentary ${tier}`,
+            body: `ends ${ends}. There's no card on your account, so the plan simply ends then — nothing is charged. Add a card on the billing page to keep ${paidTier ?? tier}.`,
+            href: "/dashboard/billing",
+          };
+        }
         const last4 = str(payload.cardLast4);
         return {
           subject: `Your complimentary ${tier}`,
-          body: `ends ${ends}. ${last4 ? `Your card ending ••${last4}` : "Your card on file"} will be charged ${
+          body: `ends ${ends};${back || " then"} ${last4 ? `your card ending ••${last4}` : "your card on file"} will be charged ${
             price ?? "the plan price"
-          } then — cancel on the billing page before that date if you don't want to continue.`,
+          } — cancel on the billing page before that date if you don't want to continue.`,
           href: "/dashboard/billing",
         };
       }
       if (kind === "paying") {
         const next = str(payload.nextChargeAt);
+        const charge = next
+          ? `your next invoice, on ${formatShortDate(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}, less any comp credit still on your balance.`
+          : `invoices after that are charged as usual${price && !goesBack ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;
         return {
           subject: `Your complimentary ${tier}`,
-          body: `ends ${ends}; your next invoice${next ? ` on ${formatShortDate(next)}` : ""} is charged as usual${
-            price ? ` (${price})` : ""
-          }.`,
+          body: `ends ${ends};${back} ${charge}`,
           href: "/dashboard/billing",
         };
       }
@@ -340,7 +357,7 @@ export function describeNotification(
         const planEnds = str(payload.planEndsAt);
         return {
           subject: `Your complimentary ${tier}`,
-          body: `ends ${ends}. Your plan is cancelled and ends${
+          body: `ends ${ends}. ${goesBack ? `You go back to ${paidTier} until your plan ends` : "Your plan is cancelled and ends"}${
             planEnds ? ` on ${formatShortDate(planEnds)}` : " on its own date"
           }; nothing more is charged.`,
           href: "/dashboard/billing",
@@ -349,7 +366,7 @@ export function describeNotification(
       return {
         subject: `Your complimentary ${tier}`,
         body: `ends ${ends}. After that you'll be on Free — every card and deck you've made stays yours, and so do any AI credits left. Choose a plan to keep ${tier}.`,
-        href: "/pricing",
+        href: "/dashboard/billing",
       };
     }
     case "moderation_unhidden": {

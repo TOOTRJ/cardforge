@@ -22,6 +22,8 @@ export async function GET(request: Request) {
   if (denied) return denied;
   try {
     const result = await sendCompEndingReminders(createAdminClient());
+    // A failure is visible (as refill-credits does): Vercel marks the run red.
+    if (result.errors > 0) return NextResponse.json({ ok: false, ...result }, { status: 500 });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     return NextResponse.json(

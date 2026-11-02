@@ -106,6 +106,9 @@ export function compEndingPlanFor(input: {
   window: CompEndingWindow;
   sub: CompEndingSub | null;
   subscribedTier: PlanTier | null;
+  /** A `trial_ending` reminder (compHold) already went out for THIS trial
+   *  end — read by the runner only for a held trial's 1-day window. */
+  trialReminderSent?: boolean;
 }): CompEndingPlan {
   const { sub } = input;
   if (!sub || !LIVE.has(sub.status)) return { send: true, kind: "free" };
@@ -122,15 +125,24 @@ export function compEndingPlanFor(input: {
       : { send: true, kind: "plan_ending", planEndsAt: new Date(endsSec * 1000).toISOString() };
   }
   if (isCompHeldTrial(sub, input.compExpiresAt)) {
-    // 1 day out the trial reminder (3 days out, reworded for the comp) has
-    // already spoken for this moment: one email, not two.
-    return input.window === "1d"
+    // 1 day out, the trial reminder (3 days out, reworded for the comp)
+    // speaks for this moment — but ONLY when it really went out for this
+    // end: a comp re-dated to end within a day may get no trial_will_end
+    // from Stripe at all, and the user must not be charged unreminded.
+    return input.window === "1d" && input.trialReminderSent === true
       ? { send: false, reason: "trial_reminder_covers" }
       : { send: true, kind: "held_trial" };
   }
   const next =
     sub.status === "trialing" && typeof sub.trial_end === "number" ? sub.trial_end : periodEndOf(sub);
-  return { send: true, kind: "paying", nextChargeAt: next != null ? new Date(next * 1000).toISOString() : null };
+  // A next charge INSIDE the comp (the balance credit reduces it) is not
+  // "after the comp" — no date is named then; the copy says invoices after
+  // the comp's end are charged as usual, credit first.
+  return {
+    send: true,
+    kind: "paying",
+    nextChargeAt: next != null && next > compSec ? new Date(next * 1000).toISOString() : null,
+  };
 }
 
 /** The `comp_ending` notification payload (also the email's input). */
@@ -138,11 +150,18 @@ export type CompEndingPayload = {
   dedupeKey: string;
   window: CompEndingWindow;
   kind: CompEndingKind;
+  /** The COMP's tier (what ends). */
   tier: PlanTier;
+  /** The tier the live subscription PAYS for — what they go back to; absent
+   *  with no live plan. Differs from `tier` when a payer was comped higher. */
+  subscribedTier?: PlanTier | null;
   expiresAt: string;
-  /** "$6 / month" — the plan's price from Stripe. */
+  /** "$6 / month" — the subscription's own price from Stripe. */
   priceLabel?: string | null;
+  /** The next charge, only when it falls after the comp's end. */
   nextChargeAt?: string | null;
   cardLast4?: string | null;
+  /** Held trial: a card (or other payment method) is on file. */
+  hasPaymentMethod?: boolean;
   planEndsAt?: string | null;
 };

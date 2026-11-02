@@ -766,7 +766,9 @@ shell, gated by `email_preferences` like the trial reminder), **7 days and
 rules in `lib/billing/comp-ending.ts`) reads the profiles whose LIVE comp
 ends in the next 7 days: window `7d` = ends in (now + 1 d, now + 7 d], `1d` =
 ends in (now, now + 1 d]. Expired, cleared and undated comps — and admins —
-are never told.
+are never told, and nothing runs while billing is off (`isBillingEnabled()`:
+"choose a plan" and the prices would be false). A run with any failed
+profile answers 500 (as `refill-credits` does), so it shows as failed.
 
 - **Exactly once per comp per window:** the notification's
   `payload.dedupeKey` = `comp_ending:<comp end epoch>:<window>`, held by a
@@ -778,16 +780,26 @@ are never told.
   expanded; never a snapshot), one copy per kind:
   - `free` (no live plan, or a cancelled one ending with the comp): "Your
     complimentary Plus ends on <date>. After that you'll be on Free" + what
-    they keep + "Keep Plus" → `/pricing` (a comped user is sent on to the
-    billing page's plan grid);
-  - `held_trial` (the comp holds a card-backed trial, `isCompHeldTrial`):
-    "Your card ending ••<last4> will be charged <price> then" + how to
-    cancel before;
+    they keep + "Keep Plus" → `/dashboard/billing` (its plan grid);
+  - `held_trial` (the comp holds a trial, `isCompHeldTrial`): "Your card
+    ending ••<last4> will be charged <price> then" + how to cancel before —
+    or, with no payment method (`subscriptionHasPaymentMethod`), that the
+    plan simply ends and nothing is charged;
   - `paying` (an active plan — the credit — or a trial that runs on past the
-    comp): "your next invoice on <date> is charged as usual (<price>)";
+    comp): "your next invoice, on <date>, is charged as usual (<price>), less
+    any comp credit still on your balance" — a date only when the next
+    charge falls AFTER the comp's end; otherwise "invoices after <comp end>
+    are charged as usual; any comp credit still on your balance comes off
+    first" (the credit may still be reducing an invoice inside the comp);
   - `plan_ending` (a cancelled plan that runs past the comp): it ends on its
     own date, nothing more is charged.
-  A comp below the plan paid for is not told (its end changes nothing). A
+  The payload names BOTH plans: `tier` (the comp's — what ends) and
+  `subscribedTier` (the live subscription's — what is charged after). When
+  a payer was comped a HIGHER tier (a Plus plan or trial comped Pro) every
+  copy says "you go back to Plus (<Plus's price>)", never that the plan
+  "stays as it is"; the reworded trial reminder carries `compTier` and names
+  the same two plans. A comp below the plan paid for is not told (its end
+  changes nothing). A
   payer whose subscription can't be read is skipped that day (the next run
   retries inside the window).
 - **One email per moment — the TRIAL REMINDER speaks for a comp-held
@@ -797,8 +809,15 @@ are never told.
   the comp's end (± 60 s), the `trial_ending` notification (`compHold: true`)
   and email say it is the END OF THE COMPLIMENTARY PERIOD and that the card
   is charged <price> on <date> — never "your trial" — and the 1-day
-  `comp_ending` SKIPS that user. Its 7-day reminder is still sent. Any other
+  `comp_ending` SKIPS that user, but ONLY when such a reminder really went
+  out: a `trial_ending` row for that subscription with `compHold` and a
+  `trialEnd` equal to the comp's end. A comp re-dated to end within a day
+  may get no `trial_will_end` from Stripe at all, and then the 1-day
+  `comp_ending` is sent. Its 7-day reminder is always sent. Any other
   trial's reminder is unchanged.
+- The weekly activity digest lists `comp_ending` rows (price and card's
+  last four included) to the same user only, as it already does for
+  `trial_ending`.
 
 ### The balance credit on an active plan
 

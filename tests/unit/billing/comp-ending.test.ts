@@ -11,11 +11,19 @@ import { chainClient, called, payloadOf } from "@/tests/stubs/supabase-chain";
 
 const h = vi.hoisted(() => ({
   resolveSubscriptionTier: vi.fn(),
+  subscriptionHasPaymentMethod: vi.fn(),
   getRecipientFor: vi.fn(),
   sendEmail: vi.fn(),
   emailConfigured: true,
+  billing: true,
+  /** trial_ending rows the runner finds for a held trial's 1-day window. */
+  trialRows: [] as Array<{ id: string; payload: Record<string, unknown> }>,
 }));
-vi.mock("@/lib/stripe/subscription-sync", () => ({ resolveSubscriptionTier: h.resolveSubscriptionTier }));
+vi.mock("@/lib/stripe/subscription-sync", () => ({
+  resolveSubscriptionTier: h.resolveSubscriptionTier,
+  subscriptionHasPaymentMethod: h.subscriptionHasPaymentMethod,
+}));
+vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => h.billing }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
 vi.mock("@/lib/email/preferences", () => ({ getRecipientFor: h.getRecipientFor }));
 vi.mock("@/lib/email/send", () => ({
@@ -98,9 +106,18 @@ describe("what the end means — every user type × window", () => {
     expect(plan(null, w, undefined, null)).toEqual({ send: true, kind: "free" });
     expect(plan(sub({ status: "canceled" }), w)).toEqual({ send: true, kind: "free" });
   });
-  it("comp-HELD trial: the 7-day reminder is sent; the 1-day stands down for the trial reminder", () => {
+  it("comp-HELD trial: the 7-day reminder is sent; the 1-day stands down ONLY when the trial reminder went out", () => {
     expect(plan(heldTrial(IN_5D), "7d")).toEqual({ send: true, kind: "held_trial" });
-    expect(plan(heldTrial(IN_12H), "1d")).toEqual({ send: false, reason: "trial_reminder_covers" });
+    const oneDay = (trialReminderSent?: boolean) =>
+      compEndingPlanFor({ compTier: "plus", compExpiresAt: IN_12H, window: "1d", sub: heldTrial(IN_12H), subscribedTier: "plus", trialReminderSent });
+    expect(oneDay(true)).toEqual({ send: false, reason: "trial_reminder_covers" });
+    // A comp re-dated to end within a day: Stripe may send no trial_will_end.
+    expect(oneDay(false)).toEqual({ send: true, kind: "held_trial" });
+    expect(oneDay(undefined)).toEqual({ send: true, kind: "held_trial" });
+  });
+  it("a next charge INSIDE the comp (the credit reduces it) is not named as 'after the comp'", () => {
+    const early = sub({ items: { data: [{ current_period_end: nowSec + 2 * DAY, price: PLUS_MONTHLY }] } });
+    expect(plan(early, "7d")).toEqual({ send: true, kind: "paying", nextChargeAt: null });
   });
   it.each(["7d", "1d"] as const)("PAYING user on a credit, %s: the next invoice as usual", (w) => {
     expect(plan(sub(), w)).toEqual({ send: true, kind: "paying", nextChargeAt: iso(nowSec + 20 * DAY) });
@@ -128,6 +145,7 @@ function db(profiles: Row[], opts: { inserted?: Set<string> } = {}) {
   const seen = opts.inserted ?? new Set<string>();
   return chainClient((table, calls) => {
     if (table === "profiles") return { data: profiles };
+    if (table === "notifications" && called(calls, "select")) return { data: h.trialRows };
     if (table === "notifications" && called(calls, "insert")) {
       const row = payloadOf(calls, "insert") as { recipient_id: string; payload: { dedupeKey: string } };
       const key = `${row.recipient_id}|${row.payload.dedupeKey}`;
@@ -154,10 +172,13 @@ const profile = (over: Row = {}): Row => ({
   ...over,
 });
 const inserts = (stub: ReturnType<typeof db>) =>
-  stub.forTable("notifications").map((e) => payloadOf(e.calls, "insert") as { type: string; payload: Row });
+  stub.forTable("notifications").filter((e) => called(e.calls, "insert")).map((e) => payloadOf(e.calls, "insert") as { type: string; payload: Row });
 
 beforeEach(() => {
   h.emailConfigured = true;
+  h.billing = true;
+  h.trialRows = [];
+  h.subscriptionHasPaymentMethod.mockReset().mockResolvedValue(true);
   h.resolveSubscriptionTier.mockReset().mockResolvedValue("plus");
   h.getRecipientFor.mockReset().mockResolvedValue({ email: "u1@example.test", unsubscribeToken: "tok" });
   h.sendEmail.mockReset().mockResolvedValue({ ok: true, id: "em_1" });
@@ -186,11 +207,16 @@ describe("sendCompEndingReminders — the daily run", () => {
         payload: { dedupeKey: `comp_ending:${sec(end)}:${window}`, window, kind: "free", tier: "plus", expiresAt: end },
       }),
     ]);
+    expect(h.sendEmail.mock.calls[0][0].html).toContain("/dashboard/billing");
+    expect(h.sendEmail.mock.calls[0][0].html).not.toContain("/pricing");
+    expect(inserts(stub)).toEqual([
+      expect.objectContaining({
+      }),
+    ]);
     expect(h.getRecipientFor).toHaveBeenCalledWith(stub.client, "u1", "account");
     const [email, options] = h.sendEmail.mock.calls[0];
     expect(email.subject).toMatch(/^Your complimentary PipGlyph Plus ends /);
     expect(email.text).toContain("After that you'll be on Free");
-    expect(email.html).toContain("/pricing");
     expect(options).toEqual({ idempotencyKey: `comp-ending:u1:comp_ending:${sec(end)}:${window}` });
     expect(out).toMatchObject({ checked: 1, notified: 1, emailed: 1 });
   });
@@ -200,7 +226,13 @@ describe("sendCompEndingReminders — the daily run", () => {
     const stub = db([profile({ subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
     await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
     expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["default_payment_method"] });
-    expect(inserts(stub)[0].payload).toMatchObject({ kind: "held_trial", priceLabel: "$6 / month", cardLast4: "4242" });
+    expect(inserts(stub)[0].payload).toMatchObject({
+      kind: "held_trial",
+      subscribedTier: "plus",
+      priceLabel: "$6 / month",
+      cardLast4: "4242",
+      hasPaymentMethod: true,
+    });
     const email = h.sendEmail.mock.calls[0][0];
     expect(email.text).toContain("Your card ending ••4242 will be charged $6 / month then");
     expect(email.text).toContain("Cancel on the billing page before that date");
@@ -215,12 +247,71 @@ describe("sendCompEndingReminders — the daily run", () => {
   });
 
   it("HELD trial, 1d: NO comp_ending — the 3-day trial reminder spoke for it (one email, not two)", async () => {
+    h.trialRows = [{ id: "n_t", payload: { subscriptionId: "sub_1", trialEnd: IN_12H, compHold: true } }];
     const stripe = stripeWith(heldTrial(IN_12H));
     const stub = db([profile({ comp_expires_at: IN_12H, subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
     const out = await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
     expect(inserts(stub)).toEqual([]);
     expect(h.sendEmail).not.toHaveBeenCalled();
     expect(out).toMatchObject({ skipped: 1, notified: 0 });
+    // It asked for THIS subscription's trial reminders.
+    const read = stub.forTable("notifications").find((e) => called(e.calls, "select"))!.calls;
+    expect(read.find((c) => c.method === "eq" && c.args[0] === "type")?.args).toEqual(["type", "trial_ending"]);
+    expect(read.find((c) => c.method === "eq" && c.args[0] === "payload->>subscriptionId")?.args[1]).toBe("sub_1");
+  });
+
+  it("HELD trial, 1d, but NO trial reminder went out for this end (re-dated under a day): the 1-day comp_ending is sent", async () => {
+    // A reminder for the OLD end, or a plain trial reminder, does not count.
+    h.trialRows = [
+      { id: "n_old", payload: { subscriptionId: "sub_1", trialEnd: IN_5D, compHold: true } },
+      { id: "n_plain", payload: { subscriptionId: "sub_1", trialEnd: IN_12H } },
+    ];
+    const stripe = stripeWith(heldTrial(IN_12H));
+    const stub = db([profile({ comp_expires_at: IN_12H, subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
+    const out = await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    expect(inserts(stub)[0].payload).toMatchObject({ kind: "held_trial", window: "1d" });
+    expect(out).toMatchObject({ notified: 1, emailed: 1 });
+  });
+
+  it("HELD trial with NO card: says nothing is charged — the plan simply ends", async () => {
+    h.subscriptionHasPaymentMethod.mockResolvedValue(false);
+    const stripe = stripeWith({ ...heldTrial(IN_5D), default_payment_method: null });
+    stripe.customers.retrieve.mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: null } });
+    const stub = db([profile({ subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
+    await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    expect(inserts(stub)[0].payload).toMatchObject({ kind: "held_trial", hasPaymentMethod: false, cardLast4: null });
+    const email = h.sendEmail.mock.calls[0][0];
+    expect(email.text).toContain("There's no card on your account, so the plan simply ends then — nothing is charged.");
+    expect(email.text).not.toMatch(/will be charged/);
+  });
+
+  it("a payer comped ABOVE their plan (Pro comp on Plus): told they go back to Plus at Plus's price", async () => {
+    const stripe = stripeWith(sub());
+    const stub = db([profile({ comp_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_1" })]);
+    await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    expect(inserts(stub)[0].payload).toMatchObject({ kind: "paying", tier: "pro", subscribedTier: "plus", priceLabel: "$6 / month" });
+    const email = h.sendEmail.mock.calls[0][0];
+    expect(email.subject).toMatch(/^Your complimentary PipGlyph Pro ends /);
+    expect(email.text).toContain("and you go back to Plus ($6 / month).");
+    expect(email.text).not.toMatch(/stay exactly as they are/);
+  });
+
+  it("a held Plus trial comped PRO: the comp names Pro, the charge is Plus's", async () => {
+    const stripe = stripeWith(heldTrial(IN_5D));
+    const stub = db([profile({ comp_tier: "pro", subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
+    await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    const email = h.sendEmail.mock.calls[0][0];
+    expect(email.text).toContain("Your complimentary Pro period ends on");
+    expect(email.text).toContain("After that you go back to Plus ($6 / month): your card ending ••4242 will be charged $6 / month then.");
+    expect(email.text).not.toMatch(/Pro carries on/);
+  });
+
+  it("billing OFF: nothing is read or sent (the copy would be false)", async () => {
+    h.billing = false;
+    const stub = db([profile()]);
+    const out = await sendCompEndingReminders(stub.client as never, { stripe: null, now: NOW });
+    expect(out).toMatchObject({ disabled: true, checked: 0, notified: 0 });
+    expect(stub.log).toEqual([]);
   });
 
   it.each([
@@ -235,11 +326,14 @@ describe("sendCompEndingReminders — the daily run", () => {
       window,
       kind: "paying",
       tier: "plus",
+      subscribedTier: "plus",
       expiresAt: end,
       priceLabel: "$6 / month",
       nextChargeAt: iso(nowSec + 20 * DAY),
     });
-    expect(h.sendEmail.mock.calls[0][0].text).toMatch(/Your next invoice on .+ is charged as usual \(\$6 \/ month\)/);
+    expect(h.sendEmail.mock.calls[0][0].text).toMatch(
+      /Your next invoice, on .+, is charged as usual \(\$6 \/ month\), less any comp credit still on your balance\./,
+    );
   });
 
   it("DEDUPE: a second run the same day (or a later one in the same window) sends nothing", async () => {
@@ -310,16 +404,32 @@ describe("the copy (bell + email)", () => {
     const d = bell({ kind: "free", tier: "plus", expiresAt: IN_5D });
     expect(d.subject).toBe("Your complimentary Plus");
     expect(d.body).toMatch(/^ends on .+\. After that you'll be on Free — every card and deck you've made stays yours/);
-    expect(d.href).toBe("/pricing");
-  });
-  it("held trial: the card ending and the price, how to cancel", () => {
-    const d = bell({ kind: "held_trial", tier: "plus", expiresAt: IN_5D, cardLast4: "4242", priceLabel: "$6 / month" });
-    expect(d.body).toMatch(/Your card ending ••4242 will be charged \$6 \/ month then — cancel on the billing page/);
     expect(d.href).toBe("/dashboard/billing");
   });
+  it("held trial: the card ending and the price, how to cancel", () => {
+    const d = bell({ kind: "held_trial", tier: "plus", subscribedTier: "plus", expiresAt: IN_5D, cardLast4: "4242", priceLabel: "$6 / month", hasPaymentMethod: true });
+    expect(d.body).toMatch(/; then your card ending ••4242 will be charged \$6 \/ month — cancel on the billing page/);
+    expect(d.href).toBe("/dashboard/billing");
+    // Comped above the trial's plan: back to Plus, at Plus's price.
+    expect(bell({ kind: "held_trial", tier: "pro", subscribedTier: "plus", expiresAt: IN_5D, cardLast4: "4242", priceLabel: "$6 / month", hasPaymentMethod: true }).body).toMatch(
+      /; you go back to Plus \(\$6 \/ month\); your card ending ••4242 will be charged \$6 \/ month/,
+    );
+    // No card: nothing is charged.
+    expect(bell({ kind: "held_trial", tier: "plus", subscribedTier: "plus", expiresAt: IN_5D, hasPaymentMethod: false }).body).toMatch(
+      /no card on your account, so the plan simply ends then — nothing is charged/,
+    );
+  });
   it("paying: the next invoice as usual; plan_ending: nothing more is charged", () => {
-    expect(bell({ kind: "paying", tier: "pro", expiresAt: IN_5D, nextChargeAt: IN_5D, priceLabel: "$15 / month" }).body).toMatch(
-      /your next invoice on .+ is charged as usual \(\$15 \/ month\)\./,
+    expect(bell({ kind: "paying", tier: "pro", subscribedTier: "pro", expiresAt: IN_5D, nextChargeAt: IN_5D, priceLabel: "$15 / month" }).body).toMatch(
+      /your next invoice, on .+, is charged as usual \(\$15 \/ month\), less any comp credit still on your balance\./,
+    );
+    // The next charge falls inside the comp: no date is promised.
+    expect(bell({ kind: "paying", tier: "pro", subscribedTier: "pro", expiresAt: IN_5D, nextChargeAt: null, priceLabel: "$15 / month" }).body).toMatch(
+      /invoices after that are charged as usual \(\$15 \/ month\); any comp credit still on your balance comes off first\./,
+    );
+    // Comped above the plan: back to Plus.
+    expect(bell({ kind: "paying", tier: "pro", subscribedTier: "plus", expiresAt: IN_5D, nextChargeAt: null, priceLabel: "$6 / month" }).body).toMatch(
+      /; you go back to Plus \(\$6 \/ month\); invoices after that are charged as usual;/,
     );
     expect(bell({ kind: "plan_ending", tier: "plus", expiresAt: IN_5D, planEndsAt: IN_5D }).body).toMatch(/nothing more is charged/);
   });
@@ -331,6 +441,10 @@ describe("the copy (bell + email)", () => {
     expect(`${held.subject} ${held.body}`).not.toMatch(/trial/i);
     // Otherwise unchanged.
     expect(bell(payload, "trial_ending").subject).toBe("Your Plus trial");
+    // A Plus trial held by a PRO comp: names Pro, charges Plus — as the comp reminder does.
+    const proOverPlus = bell({ ...payload, compHold: true, compTier: "pro" }, "trial_ending");
+    expect(proOverPlus.subject).toBe("Your complimentary Pro");
+    expect(proOverPlus.body).toMatch(/you go back to Plus and your card is charged \$6 \/ month then/);
 
     const recipient = { email: "u1@example.test", unsubscribeToken: "tok" };
     const base = { plan: "Plus", trialEndsAt: IN_5D, hasPaymentMethod: true, priceLabel: "$6 / month" };
@@ -339,11 +453,17 @@ describe("the copy (bell + email)", () => {
     expect(heldEmail.text).toContain("Your card will be charged $6 / month then");
     expect(heldEmail.text.replace(/You're receiving this[^\n]*/, "")).not.toMatch(/trial/i);
     expect(trialEndingEmail(recipient, base).subject).toMatch(/^Your PipGlyph Plus trial ends /);
+    const proHeld = trialEndingEmail(recipient, { ...base, compHold: true, compPlan: "Pro" });
+    expect(proHeld.subject).toMatch(/^Your complimentary PipGlyph Pro ends /);
+    expect(proHeld.text).toContain("After that you go back to Plus ($6 / month): your card will be charged $6 / month then.");
+    const noCard = trialEndingEmail(recipient, { ...base, hasPaymentMethod: false, compHold: true });
+    expect(noCard.text).toContain("nothing is charged");
   });
   it("every email uses the one shell (unsubscribe headers on the account list)", () => {
     const email = compEndingEmail({ email: "u1@example.test", unsubscribeToken: "tok" }, { kind: "free", plan: "Plus", expiresAt: IN_5D });
     expect(email.headers).toHaveProperty("List-Unsubscribe");
     expect(email.html).toContain("Keep Plus");
+    expect(email.html).toContain("/dashboard/billing");
   });
 });
 
@@ -377,5 +497,27 @@ describe("0161 — the comp_ending kind", () => {
     );
     expect(SQL).not.toMatch(/create (table|view|(or replace )?function)/i);
     expect(readFileSync(join(dir, "0161_comp_ending_notifications.sql"), "utf8")).toMatch(/Grants: none needed/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("/api/cron/comp-ending", () => {
+  it("answers 500 when a profile failed (the run is visible as failed), 200 otherwise", async () => {
+    vi.resetModules();
+    const run = vi.fn();
+    vi.doMock("@/lib/billing/comp-ending-run", () => ({ sendCompEndingReminders: run }));
+    vi.doMock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+    vi.doMock("@/lib/api/cron-auth", () => ({ cronRouteGuard: () => null }));
+    const { GET } = await import("@/app/api/cron/comp-ending/route");
+    run.mockResolvedValueOnce({ checked: 2, notified: 1, emailed: 1, alreadySent: 0, skipped: 0, errors: 1 });
+    let res = await GET(new Request("http://x/api/cron/comp-ending"));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ ok: false, errors: 1 });
+    run.mockResolvedValueOnce({ checked: 1, notified: 1, emailed: 1, alreadySent: 0, skipped: 0, errors: 0 });
+    res = await GET(new Request("http://x/api/cron/comp-ending"));
+    expect(res.status).toBe(200);
+    vi.doUnmock("@/lib/billing/comp-ending-run");
+    vi.doUnmock("@/lib/supabase/admin");
+    vi.doUnmock("@/lib/api/cron-auth");
   });
 });
