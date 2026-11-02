@@ -114,7 +114,7 @@ export const siteConfig = {
               id: "community.roadmap",
               label: "Roadmap",
               href: "/roadmap",
-              description: "What we're building now, next and later",
+              description: "What we're building now and next",
             },
             {
               id: "community.feed",

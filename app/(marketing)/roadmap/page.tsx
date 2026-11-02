@@ -20,7 +20,7 @@ import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
 import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
-// /roadmap — the public roadmap (TODO NV12, part 2): Now / Next / Later and
+// /roadmap — the public roadmap (TODO NV12, part 2): Now / Next and
 // what recently shipped, from the typed data file lib/content/roadmap.ts
 // (no database; the owner edits it by PR). It links the two live lists
 // beside it: the requested frames (part 1) and What's new.
@@ -30,7 +30,7 @@ import { PageContainer } from "@/components/layout/page-container";
 
 const TITLE = "Roadmap";
 const DESCRIPTION =
-  "What PipGlyph is building now, what comes next and what we're exploring for later — plus what recently shipped. No dates, just the order.";
+  "What PipGlyph is building now and what comes next — plus what recently shipped. No dates, just the order.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -102,7 +102,7 @@ export default function RoadmapPage() {
       <PageHeader
         eyebrow="Community"
         title="Roadmap"
-        description="What we're building now, what comes next, and what we're exploring for later. No dates — just the order, and plain words about where each thing stands. It changes as we learn what you need."
+        description="What we're building now and what comes next. No dates — just the order, and plain words about where each thing stands. It changes as we learn what you need."
         actions={
           <>
             <Button asChild>
@@ -121,7 +121,7 @@ export default function RoadmapPage() {
         }
       />
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-3">
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
         {ROADMAP_COLUMNS.map((column) => (
           <section
             key={column.stage}
