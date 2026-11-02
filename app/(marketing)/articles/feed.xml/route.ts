@@ -1,18 +1,19 @@
-import { listArticles } from "@/lib/content/articles";
+import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { escapeXml } from "@/lib/seo/rss";
 
 // ---------------------------------------------------------------------------
-// /articles/feed.xml — RSS for the guides. force-static so it's built once and
-// CDN-cached, consistent with the rest of the marketing surface (filesystem
-// read only, no per-request data). Autodiscovery <link> lives on /articles.
+// /articles/feed.xml — RSS for the guides: the MDX files and the released
+// composer articles. Static and CDN-cached (ISR: a publish revalidates it,
+// and it is read again within 5 minutes regardless). Autodiscovery <link>
+// lives on /articles.
 // ---------------------------------------------------------------------------
 
-export const dynamic = "force-static";
+export const revalidate = 300;
 
-export function GET(): Response {
+export async function GET(): Promise<Response> {
   const base = getSiteBaseUrl();
-  const articles = listArticles();
+  const articles = await listPublishedArticles();
   const lastBuild = articles[0]?.updated ?? articles[0]?.date ?? new Date(0).toISOString();
 
   const items = articles

@@ -4,16 +4,19 @@ import { ArticleCard } from "@/components/content/article-card";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { CategoryLinks } from "@/components/content/category-links";
 import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { listArticles, listCategoryShelves } from "@/lib/content/articles";
+import { listPublishedArticles } from "@/lib/content/article-catalog";
+import { shelvesOf } from "@/lib/content/articles";
 import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
 // /articles — the guides index, every guide newest first; the /learn
-// category shelves sit above the list. Fully static: the list is read from
-// content/articles/ at build time.
+// category shelves sit above the list. Static (ISR): the MDX guides plus
+// the released composer articles (lib/content/article-catalog.ts); a
+// publish purges it, and it is read again within 5 minutes regardless.
 // ---------------------------------------------------------------------------
 
 export const dynamic = "error";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Articles — Custom MTG Card Design Guides",
@@ -25,8 +28,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ArticlesIndexPage() {
-  const articles = listArticles();
+export default async function ArticlesIndexPage() {
+  const articles = await listPublishedArticles();
 
   return (
     <PageContainer className="py-16">
@@ -56,7 +59,7 @@ export default function ArticlesIndexPage() {
       />
 
       <CategoryLinks
-        shelves={listCategoryShelves()}
+        shelves={shelvesOf(articles)}
         label="Browse by topic"
         className="mt-8"
       />
