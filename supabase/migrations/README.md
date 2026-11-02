@@ -401,3 +401,11 @@ instead. Each bullet: what the header says, and what is true now.
   owner accepted this gap on 2026-10-29; production held 391 entries that
   would read so once their card is deleted (`source is null and card_id is
   not null and scryfall_id is null`).
+- **0086 / 0091 / 0136 / 0141 (`list_gallery_cards`' Discover draw:
+  "Uniform (0,1) from the card id + seed")** — it was not. `bit(32)::bigint`
+  is unsigned (0 … 2³²−1), so `(bits + 2147483648.0) / 4294967296.0` put u
+  in [0.5, 1.5): -ln(u) went negative for half the cards and a heavier
+  weight sorted those LATER — the most-engaged cards came up least. 0158
+  redefines the function with `(bits + 0.5) / 4294967296.0`, in (0, 1),
+  and nothing else changed (`tests/unit/db/discover-shuffle-migration.test.ts`
+  holds every live shuffle to that range).
