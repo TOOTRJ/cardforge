@@ -1658,6 +1658,49 @@ Rules and gotchas:
   (`BAKED_TILE_PAGE_ROUTES` — file-system routes, route group included; a
   new ISR page that draws card tiles joins the list), which is not skipped —
   best effort, never relied on for correctness.
+- Articles (migration 0160, `docs/research/article-seo-2026-10.md`): the MDX
+  guides in `content/articles/` stay files; admins ALSO compose articles in
+  `public.articles` at `/admin/articles` (draft → scheduled → live; RLS: the
+  public reads `is_published AND publish_at <= now()`, writes are
+  `viewer_is_admin()`). Every public article surface — `/articles` + tag
+  hubs, `/learn` + shelves, the homepage's latest guides, the sitemap,
+  `/llms.txt`, the RSS feed, `/articles/[slug]` + its OG image — reads ONE
+  list, `lib/content/article-catalog.ts` (files win a slug clash; never read
+  `listArticles()` for a public list). The page draws through ONE component,
+  `ArticleView` (the composer's preview too). A release is announced ONCE by
+  `/api/cron/publish-articles` (every 10 min; `announceDueArticles`:
+  purge, then IndexNow, + `announced_at`) or "Publish now". The purge
+  EXPIRES `ARTICLES_TAG` — `updateTag` in a server action,
+  `revalidateTag(tag, { expire: 0 })` in the cron route, never `"max"`
+  (stale-while-revalidate kept an unpublished article up). ONE release gate,
+  `articleReleaseBlock` (`lib/content/article-release-gate.ts`: the
+  checklist's ERRORS — alt text on every picture, our media only, a
+  category, a real body, safe links, the body guard — and a compile of the
+  stored body), refuses a schedule, a publish and an edit of a SCHEDULED or
+  LIVE article; the cron puts a due row that fails it back to a draft and
+  logs why. A composer BODY is Markdown + `Mana` / `Callout` / `CardRow` /
+  `CardScan` / `Figure` with their own attributes only — never another
+  element, raw HTML, import / export, a `{…}` expression or an unsafe link
+  (`remarkArticleBodyGuard`, `lib/content/article-body-guard.ts`, first in
+  `composerArticleMdxOptions`: blockJS alone let `<script>`, `<iframe
+  srcdoc>`, `<form>`… through); every surface compiles it through
+  `compileArticleBody` (the page 404s a refused body, the preview shows
+  why) — the git guides keep `articleMdxOptions`. `content_updated_at`
+  (dateModified, sitemap lastmod) moves only on an edit marked a revision;
+  the slug is locked once `first_published_at` is set (0160's trigger: the
+  first write that sees the row public — published with `publish_at`
+  passed, or announced — never cleared; an unpublish keeps it). A composer
+  body's component attributes are quoted strings, and `CardScan` `src` /
+  `href` and `Mana` `cost` are required (`ARTICLE_BODY_REQUIRED`): the gate
+  compiles without rendering, so a value the components can't draw would
+  pass it and 500 the page; the components draw nothing for a non-string.
+  The public LIST
+  cache holds no bodies (2 MB `unstable_cache` limit; the page reads its own
+  by slug). Pictures: the moderated `set-covers` upload
+  (`purpose: "article-image"`), or a diagram under `public/article-media/`
+  (`media_url_allowed('article-image')`); never WotC art. Drafts shipped in
+  git live in `content/article-drafts/` (never public; "Import drafts" loads
+  them on production as drafts).
 - Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
   The root layout reads NO cookies (every route stays static/ISR-eligible):
   server HTML is always `data-theme="dark"` and the `<head>` no-flash script
