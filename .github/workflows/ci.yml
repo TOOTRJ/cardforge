@@ -600,8 +600,10 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.frames != 'false' }}
     runs-on: ubuntu-24.04
     # frames-check re-checks apparent misses one at a time with backoff
-    # (transient storage errors are common when several PRs run at once).
-    timeout-minutes: 10
+    # (transient storage errors are common when several PRs run at once),
+    # and FAILS at its own 13-minute budget (--budget-seconds 780; at 4 lookups in flight a slow storage day answers ~10 objects a second, ~430 s for 4,280) with what
+    # it saw, before this timeout cancels it silently.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
