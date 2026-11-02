@@ -44,6 +44,9 @@ export type DeckRemixEstimate = {
    *  emblem cards and printed emblems. Not in `cards`, priced nothing, no
    *  step. */
   emblems: number;
+  /** The user's own cards moderation hid (migration 0156; owner
+   *  2026-10-30): never remixed — not in `cards`, priced nothing, no step. */
+  moderationLocked: number;
   /** Scryfall entries the lookup couldn't resolve — priced one credit; the
    *  step fails them plainly ("Couldn't resolve the printing") and refunds. */
   unresolved: number;
@@ -72,12 +75,13 @@ async function resolvePrintings(ids: readonly string[]): Promise<Map<string, Scr
 export async function estimateDeckRemix(deckId: string, limit: number): Promise<DeckRemixEstimate> {
   const [user, deck] = await Promise.all([getCurrentUser(), getDeckById(deckId)]);
   if (!user || !deck || deck.owner_id !== user.id) {
-    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, unresolved: 0, creditsByEntry: {} };
+    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, moderationLocked: 0, unresolved: 0, creditsByEntry: {} };
   }
   const items = await listDeckCards(deckId);
   // The user's own emblems are left out before the batch cap (they take no
   // slot); a printed emblem is found below, once its printing is resolved.
-  const { remixable, ownEmblems } = remixableDeckItems(items);
+  // …and so are the user's own cards moderation hid (0156).
+  const { remixable, ownEmblems, moderationLocked } = remixableDeckItems(items);
   const taken = remixable.slice(0, Math.max(1, limit));
   const estimate: DeckRemixEstimate = {
     cards: taken.length,
@@ -85,6 +89,7 @@ export async function estimateDeckRemix(deckId: string, limit: number): Promise<
     doubleFaced: 0,
     skipped: Math.max(0, remixable.length - taken.length),
     emblems: ownEmblems,
+    moderationLocked,
     unresolved: 0,
     creditsByEntry: {},
   };

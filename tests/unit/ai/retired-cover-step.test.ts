@@ -26,6 +26,8 @@ const s = vi.hoisted(() => ({
   spend: vi.fn(),
   refund: vi.fn(),
   deckUpdates: [] as unknown[],
+  buildGuide: vi.fn(),
+  guidesOn: false,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -88,6 +90,15 @@ vi.mock("@/lib/decks/actions", async (importOriginal) => ({
   },
 }));
 
+vi.mock("@/lib/decks/guides", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/decks/guides")>()),
+  buildAndStoreDeckGuide: s.buildGuide,
+}));
+vi.mock("@/lib/ai/deck-ai-pause", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai/deck-ai-pause")>()),
+  areDeckGuidesEnabled: () => s.guidesOn,
+}));
+
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 
 const DECK_PLAN = {
@@ -126,6 +137,8 @@ beforeEach(() => {
   s.persistCalls = 0;
   s.aiCalls = [];
   s.deckUpdates = [];
+  s.guidesOn = false;
+  s.buildGuide.mockReset().mockResolvedValue({ ok: true, guide: {} });
   s.spend.mockReset().mockResolvedValue({ ok: true, balance: 4, charged: true });
   s.refund.mockReset().mockResolvedValue(true);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -181,5 +194,33 @@ describe("an old deck job's AI cover step (TODO DK6.3)", () => {
     expect(result).toMatchObject({ ok: true });
     expect(s.patched).toEqual([]);
     expectNothingSpentOrPainted();
+  });
+});
+
+// Deck guides are hidden (owner 2026-10-30, DECK_GUIDES_ENABLED): a deck
+// job already running (D6) reaches its free guide step and writes NO guide —
+// no AI call, nothing stored — and the step is done, so the job ends.
+describe("a running deck job's guide step while deck guides are hidden", () => {
+  function guideJob() {
+    oldJob("deck", { status: "done" });
+    (s.job.steps as Array<Record<string, unknown>>)[2] = { key: "guide", label: "How to play guide", status: "running" };
+  }
+
+  it("completes as done without building or storing a guide", async () => {
+    guideJob();
+    s.stepKey = "guide";
+    expect((await runNextJobStep("job-old", "guide")).ok).toBe(true);
+    expect(s.patched.map((p) => [p.key, p.patch.status])).toEqual([["guide", "done"]]);
+    expect(s.buildGuide).not.toHaveBeenCalled();
+    expectNothingSpentOrPainted();
+  });
+
+  it("the flag flipped back: the step builds the guide as before", async () => {
+    s.guidesOn = true;
+    guideJob();
+    s.stepKey = "guide";
+    await runNextJobStep("job-old", "guide");
+    expect(s.buildGuide).toHaveBeenCalledWith(DECK, "generation");
+    expect(s.patched.map((p) => [p.key, p.patch.status])).toEqual([["guide", "done"]]);
   });
 });

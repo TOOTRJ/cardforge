@@ -115,6 +115,64 @@ test.describe("deck CRUD + import", () => {
     await deleteDeck(page);
   });
 
+  test("builds on the page: the add box, a stepper, Remove with its Undo, and an Edit that comes back (TODO DK5 part 2)", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    const title = `E2E Builder ${Date.now()}`;
+    await page.goto("/dashboard/decks/new");
+    const dialog = page.getByRole("dialog", { name: "New deck" });
+    await dialog.getByRole("textbox", { name: "Deck name" }).fill(title);
+    await dialog.getByRole("radio", { name: "Modern" }).click();
+    await dialog.getByRole("textbox", { name: /paste a decklist/i }).fill("4 Mountain\n2 Island");
+    await dialog.getByRole("button", { name: /^create deck$/i }).click();
+    await page.waitForURL(/\/deck\/[^/?]+$/, { timeout: 60_000 });
+    await expectImportedLands(page, title);
+    const views = page.getByRole("radiogroup", { name: "View" });
+    await views.getByRole("radio", { name: "List" }).click();
+
+    // A stepper: drawn at once, and saved (a reload reads it back).
+    const island = page.getByRole("group", { name: "Copies of Island" }).first();
+    await island.getByRole("button", { name: "One more" }).click();
+    await expect(island).toContainText("3 copies");
+    await expect(page.getByRole("button", { name: /^island, 3 copies, imported$/i })).toBeVisible({ timeout: 15_000 });
+    // Saved once the stepper is no longer busy (until then, leaving the
+    // page asks first).
+    await expect(island).not.toHaveAttribute("aria-busy", "true", { timeout: 15_000 });
+    await page.reload();
+    await expect(page.getByRole("button", { name: /^island, 3 copies, imported$/i })).toBeVisible({ timeout: 15_000 });
+
+    // Every card's Edit carries its way back to it (DK5.5).
+    await page.getByRole("button", { name: "More for Island" }).first().click();
+    const menu = page.getByRole("menu", { name: "Island: actions" });
+    await expect(menu.getByRole("menuitem", { name: "Customize" })).toHaveAttribute(
+      "href",
+      /^\/create\?deckCard=[0-9a-f-]+&returnTo=%2Fdeck%2F[a-z0-9-]+%23entry-[0-9a-f-]+$/,
+    );
+    // Remove: out at once, and the toast's Undo puts it back.
+    await menu.getByRole("menuitem", { name: "Remove" }).click();
+    await expect(page.getByRole("button", { name: /^island, /i })).toHaveCount(0);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByRole("button", { name: /^island, 3 copies, imported$/i })).toBeVisible({ timeout: 30_000 });
+
+    // The add box: "/" focuses it, Enter adds the highlighted real card.
+    await page.locator("body").press("/");
+    const box = page.getByRole("combobox", { name: "Add cards" });
+    await expect(box).toBeFocused();
+    await box.fill("Sol Ring");
+    // The real card (its type line in its name), not a creator's card of
+    // the same name.
+    const real = page.getByRole("option", { name: /^Sol Ring, Artifact/ }).first();
+    await expect(real).toBeVisible({ timeout: 30_000 });
+    await real.hover();
+    await box.press("Enter");
+    await expect(page.getByRole("button", { name: /^sol ring, 1 copy, imported$/i })).toBeVisible({ timeout: 30_000 });
+    await box.press("Escape");
+
+    await deleteDeck(page);
+  });
+
   test("creates an empty deck from My Decks, lands on its first door, imports through the deck page, and deletes it", async ({
     page,
   }) => {

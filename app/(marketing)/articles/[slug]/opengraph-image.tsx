@@ -1,5 +1,6 @@
 import { ogImageResponse } from "@/lib/og/image-response";
-import { getArticle, listArticles } from "@/lib/content/articles";
+import { listArticles } from "@/lib/content/articles";
+import { getPublishedArticle, listPublishedArticles } from "@/lib/content/article-catalog";
 import {
   OG_SIZE,
   OgChip,
@@ -9,18 +10,25 @@ import {
 } from "@/lib/og/shell";
 import { BRAND } from "@/lib/brand/constants";
 
-// Social-preview card for guide pages. Articles carry no uploaded art, so
-// without this they'd unfurl with the generic site-wide OG image and lose the
-// title. Reads the MDX frontmatter via getArticle — filesystem only, so the
-// image prerenders statically alongside the page (dynamicParams = false).
+// Social-preview card for guide pages (1200 × 630): without it they'd unfurl
+// with the generic site-wide OG image and lose the title. Reads the guide
+// through the catalog (an MDX file or a released composer article), so it
+// prerenders with the page and ISR's a composer article released later.
 
 export const alt = "PipGlyph guide";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
-export function generateStaticParams() {
-  return listArticles().map(({ slug }) => ({ slug }));
+export async function generateStaticParams() {
+  try {
+    return (await listPublishedArticles()).map(({ slug }) => ({ slug }));
+  } catch {
+    return listArticles().map(({ slug }) => ({ slug }));
+  }
 }
+
+// A composer article released after the build gets its card on first ask.
+export const revalidate = 300;
 
 export default async function Image({
   params,
@@ -28,7 +36,7 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getPublishedArticle(slug);
 
   if (!article) {
     return ogImageResponse(

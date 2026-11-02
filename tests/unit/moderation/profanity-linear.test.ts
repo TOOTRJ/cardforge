@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, inject, it } from "vitest";
 import {
   containsProfanity,
   containsProfanityForTests,
@@ -341,9 +341,15 @@ describe("no catastrophic backtracking", () => {
   // "$") — and well under the bound on the rest, which are here because the
   // EMULATION must stay fast on them: each is asserted to be routed to it,
   // and the emulation itself is timed. Locally each takes at most ~6 ms
-  // (≈ 30 ms under coverage). The bound is generous for a slow CI runner
-  // with coverage on; a super-linear search still trips it.
+  // (≈ 30 ms under coverage; ≈ 100 ms on a CI runner with coverage on,
+  // main's full runs). The bound still holds there; a super-linear search
+  // trips it.
   const BOUND_MS = 150;
+  // v8 coverage (main's full runs, the nightly) makes the detector 5–8×
+  // slower, so the 16000-character test's ABSOLUTE bound — tuned on an
+  // uninstrumented run — is held only without it (every PR's unit shards,
+  // `npm run test:unit`). Its GROWTH bounds hold on every run.
+  const COVERAGE_ON = inject("coverageOn");
   const LENGTH = 4000;
   const shapes = [
     "*|", "|*", "*c", "*k", "*s", "*f", "*a", "4*", "4@", "*$", "*!", "*+", "*1|", "*i|", "f", "s", "$", "@",
@@ -358,6 +364,22 @@ describe("no catastrophic backtracking", () => {
     }
     return best;
   };
+  // The same, in CPU time spent on THIS thread (Node ≥ 23.9; CI runs 24):
+  // what the growth bounds below compare. A busy runner preempts a 200 ms
+  // run far more often than a 20 ms one, and wall clock charges that to
+  // the longer run — 6 coverage runs on a loaded laptop pushed the five-
+  // windows ratio from 5 to 11.5. CPU time is not charged for it.
+  const threadCpuUsage = (process as unknown as { threadCpuUsage?: () => { user: number; system: number } }).threadCpuUsage;
+  const cpuMs = threadCpuUsage ? () => { const u = threadCpuUsage.call(process); return (u.user + u.system) / 1000; } : () => performance.now();
+  const leastCpu = (run: () => unknown) => {
+    let best = Infinity;
+    for (let i = 0; i < 5; i++) {
+      const start = cpuMs();
+      run();
+      best = Math.min(best, cpuMs() - start);
+    }
+    return best;
+  };
 
   it.each(shapes)("%j repeated to 4000 characters: routed to the emulation, and fast", (unit) => {
     const text = unit.repeat(Math.ceil(LENGTH / unit.length)).slice(0, LENGTH);
@@ -366,10 +388,31 @@ describe("no catastrophic backtracking", () => {
     expect(fastest(() => containsProfanity(text))).toBeLessThan(BOUND_MS);
   });
 
+  // Its own timeout: each input is run five times a measure (`leastCpu`,
+  // `fastest`), and two inputs at up to 4 × BOUND_MS a run already pass
+  // vitest's default 5 s while every run is inside its bound — on CI with
+  // coverage on it took 5.6 s and timed out (main red from 2026-10-30,
+  // issue #684).
   it.each(["*|", "*$", "****888*8***8**é"])("%j at 16000 unbroken characters (one window) and 20000 in windows", (unit) => {
-    const unbroken = unit.repeat(Math.ceil(16000 / unit.length)).slice(0, 16000);
-    const cut = `${unit.repeat(Math.ceil(3900 / unit.length)).slice(0, 3900)} `.repeat(5);
-    expect(fastest(() => containsProfanity(unbroken))).toBeLessThan(4 * BOUND_MS);
-    expect(fastest(() => containsProfanity(cut))).toBeLessThan(4 * BOUND_MS);
-  });
+    const stretch = (n: number) => unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
+    const quarter = stretch(4000);
+    const unbroken = stretch(16000);
+    const window = `${stretch(3900)} `;
+    const cut = window.repeat(5);
+    const [cQuarter, cUnbroken, cWindow, cCut] = [quarter, unbroken, window, cut].map((text) => leastCpu(() => containsProfanity(text)));
+    // GROWTH, on every run, coverage or not: four times the text in one
+    // window costs ≈ 4× (3.9–4.8× measured, either way; up to 5.8× with six
+    // coverage runs at once on a loaded laptop), five windows ≈ 5× one
+    // (4.9–5.5×; up to 7.8× loaded). A quadratic search is 16× and 25×
+    // (each bound is half of that); the backtracking this guards against,
+    // orders of magnitude more.
+    expect(cUnbroken / cQuarter, `16000 vs 4000 unbroken: ${cUnbroken.toFixed(1)} / ${cQuarter.toFixed(1)} ms CPU`).toBeLessThan(8);
+    expect(cCut / cWindow, `5 windows vs 1: ${cCut.toFixed(1)} / ${cWindow.toFixed(1)} ms CPU`).toBeLessThan(12.5);
+    // The absolute bound (wall clock, as on the 4000-character shapes),
+    // without coverage only (see COVERAGE_ON).
+    if (!COVERAGE_ON) {
+      expect(fastest(() => containsProfanity(unbroken))).toBeLessThan(4 * BOUND_MS);
+      expect(fastest(() => containsProfanity(cut))).toBeLessThan(4 * BOUND_MS);
+    }
+  }, 60_000);
 });

@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { ArticleCard } from "@/components/content/article-card";
 import { itemListJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { getArticlesByTag, listTags } from "@/lib/content/articles";
+import { getPublishedArticlesByTag, listPublishedTags } from "@/lib/content/article-catalog";
 import { categoryForTagSlug } from "@/lib/content/article-categories";
 import { getCluster } from "@/lib/content/clusters";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
@@ -16,8 +16,9 @@ import { PageContainer } from "@/components/layout/page-container";
 // ---------------------------------------------------------------------------
 // /articles/tag/[tag] — a cluster hub. Every tag across the articles becomes
 // an indexable topic landing page: a pillar intro (from lib/content/clusters)
-// plus the list of guides that carry the tag. Fully static — tags come from
-// generateStaticParams, unknown tags 404 at the edge.
+// plus the list of guides that carry the tag. Static (ISR): the tags of the
+// MDX guides and the released composer articles; a tag a composer article
+// brings later renders on first request, and an unknown tag is a real 404.
 // ---------------------------------------------------------------------------
 
 type Params = { tag: string };
@@ -25,14 +26,16 @@ type Params = { tag: string };
 // A tag whose hub became a /learn category (card design, reference, card
 // makers, lore) has no page here: proxy.ts 308s /articles/tag/<slug> to
 // /learn/<category> before it would be served.
-export function generateStaticParams(): Params[] {
-  return listTags()
+export async function generateStaticParams(): Promise<Params[]> {
+  return (await listPublishedTags())
     .filter((t) => !categoryForTagSlug(t.slug))
     .map((t) => ({ tag: t.slug }));
 }
 
 export const dynamic = "error";
-export const dynamicParams = false;
+export const revalidate = 300;
+// A tag a composer article brings after the build is still a hub.
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,
@@ -40,8 +43,8 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { tag } = await params;
-  const found = categoryForTagSlug(tag) ? null : getArticlesByTag(tag);
-  if (!found) return { title: "Topic not found" };
+  const found = categoryForTagSlug(tag) ? null : await getPublishedArticlesByTag(tag);
+  if (!found) notFound();
   const cluster = getCluster(tag);
   // Index the substantive hubs (defined clusters, or any tag with 2+ guides);
   // keep one-off tag pages crawlable but out of the index so a pile of thin,
@@ -73,7 +76,7 @@ export default async function ArticleTagPage({
   params: Promise<Params>;
 }) {
   const { tag } = await params;
-  const found = categoryForTagSlug(tag) ? null : getArticlesByTag(tag);
+  const found = categoryForTagSlug(tag) ? null : await getPublishedArticlesByTag(tag);
   if (!found) notFound();
   const cluster = getCluster(tag);
 

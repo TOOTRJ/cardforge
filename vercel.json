@@ -24,6 +24,10 @@
     {
       "path": "/api/cron/auto-rebake",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/publish-articles",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

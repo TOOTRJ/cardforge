@@ -308,6 +308,8 @@ describe("every wrapper goes through CardTile (source scan)", () => {
       "components/cards/gallery-card-tile.tsx",
       "components/creator/dashboard-card-tile.tsx",
       "components/creator/liked-card-tile.tsx",
+      // /decks' commander row (TODO DK8.4).
+      "components/decks/commander-row.tsx",
       // The deck page's Stacks and Grid views (TODO DK5.3).
       "components/decks/deck-entry-tile.tsx",
       // A frame's example card on /frames (TODO NV8).

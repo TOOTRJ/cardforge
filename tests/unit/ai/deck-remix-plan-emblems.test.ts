@@ -115,6 +115,28 @@ describe("createDeckRemixJob leaves emblems out of the plan", () => {
     expect(plan.skipped).toBe(1);
   });
 
+  it("an own card moderation hid (0156; owner 2026-10-30) is left out like an emblem: no entry, no step, no slot", async () => {
+    s.items = [
+      entry("locked", { card_id: id(1) }, { card_type: "creature", moderation_hidden_at: "2026-10-29T00:00:00Z" }),
+      entry("a", { scryfall_id: id(2) }),
+      entry("b", { scryfall_id: id(3) }),
+    ];
+    const result = await createDeckRemixJob({ deckId: "deck-1", style: "ink", limit: 2 });
+    expect(result.ok).toBe(true);
+    const job = s.inserted.at(-1)!;
+    expect((job.plan as Plan).entries.map((e) => e.name)).toEqual(["a", "b"]);
+    expect((job.plan as Plan).skipped).toBe(0);
+    expect((job.steps as Step[]).map((step) => step.label)).not.toContain("locked");
+  });
+
+  it("a deck of locked cards alone creates no deck and no job", async () => {
+    s.items = [entry("locked", { card_id: id(1) }, { card_type: "creature", moderation_hidden_at: "2026-10-29T00:00:00Z" })];
+    const result = await createDeckRemixJob({ deckId: "deck-1", style: "ink", limit: 100 });
+    expect(result).toEqual({ ok: false, error: "Nothing to remix — emblems and cards hidden by moderation aren't remixed." });
+    expect(s.decksCreated).toBe(0);
+    expect(s.inserted).toEqual([]);
+  });
+
   it("a deck of emblems alone creates no deck and no job", async () => {
     s.items = [
       entry("own-emblem", { card_id: id(1) }, { card_type: "emblem" }),

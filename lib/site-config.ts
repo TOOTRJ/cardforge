@@ -111,6 +111,12 @@ export const siteConfig = {
               description: "Makers with public cards",
             },
             {
+              id: "community.roadmap",
+              label: "Roadmap",
+              href: "/roadmap",
+              description: "What we're building now and next",
+            },
+            {
               id: "community.feed",
               label: "Your feed",
               href: "/feed",
@@ -268,6 +274,7 @@ export const siteConfig = {
     { label: "Featured", href: "/admin/featured" },
     { label: "Challenges", href: "/admin/challenges" },
     { label: "Updates", href: "/admin/updates" },
+    { label: "Articles", href: "/admin/articles" },
     { label: "Scryfall usage", href: "/admin/scryfall" },
     { label: "Frame compare", href: "/admin/frame-compare" },
     { label: "Frame requests", href: "/admin/frame-requests" },
@@ -300,6 +307,7 @@ export const siteConfig = {
         { id: "community.decks", label: "Community decks", href: "/decks" },
         { id: "community.challenges", label: "Design challenges", href: "/challenges" },
         { id: "community.creators", label: "Creators", href: "/creators" },
+        { id: "community.roadmap", label: "Roadmap", href: "/roadmap" },
       ],
     },
     {

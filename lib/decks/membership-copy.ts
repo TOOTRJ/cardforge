@@ -1,4 +1,6 @@
 import { MAX_DECK_ENTRIES } from "@/lib/decks/import-plan";
+import { profaneFieldList, type ProfanityField } from "@/lib/moderation/profanity";
+import { HIDDEN_BY_MODERATION_LABEL, MODERATION_LOCK_NOTE } from "@/lib/moderation/lock";
 
 // ---------------------------------------------------------------------------
 // Deck membership, as words (TODO DK9): the creator's "Add to a deck" box,
@@ -33,14 +35,68 @@ export type MembershipCardStatus =
   /** Not added: the deck holds MAX_DECK_ENTRIES entries. */
   | "deck_full"
   /** The write failed (its error says why). */
-  | "failed";
+  | "failed"
+  /** Not added, nothing written: the caller's own PRIVATE card asked into a
+   *  deck others can open with `privateCards: "ask"` (TODO DK0.13) — the
+   *  picker offers "Make it public" / "Add as private". */
+  | "private_card"
+  /** Not added: asked to be made public first, and it is still private
+   *  (its text, a refused publish) — its error says why. */
+  | "publish_refused";
 
 export type MembershipCardResult = {
   cardId: string;
   status: MembershipCardStatus;
   /** For refused / failed: why, in words. */
   error?: string;
+  /** private_card: why it can't be made public — its text holds strong
+   *  language (owner policy 2026-10-28). Absent = it can. */
+  blockedReason?: string;
+  /** The card was made public by this call (`publish`) — on an added card,
+   *  and on one the deck then refused (it stays public). */
+  published?: true;
 };
+
+/** A deck whose visitors see a private card of its owner's as "Private
+ *  card" (D11): a public or unlisted one. */
+export function deckShowsPrivateCards(visibility: string | null | undefined): boolean {
+  return visibility === "public" || visibility === "unlisted";
+}
+
+/** The offer's line (TODO DK0.13, the owner's words). */
+export const PRIVATE_CARD_OFFER = "This card is private. Visitors will see “Private card” in this deck.";
+
+/** The same for several cards. */
+export function privateCardsOffer(count: number): string {
+  return count === 1
+    ? PRIVATE_CARD_OFFER
+    : `${count} of these cards are private. Visitors will see “Private card” in this deck in place of each.`;
+}
+
+/** Why a private card can't be made public: its text (owner policy
+ *  2026-10-28, lib/moderation/profanity.ts). */
+export function privateCardLanguageReason(fields: readonly ProfanityField[]): string {
+  return `Its ${profaneFieldList(fields)} includes strong language, so it stays private. Remove it to publish.`;
+}
+
+/** Why a private card can't be made public: no artwork (the single-card
+ *  rule — no artwork → no gallery; a double-faced card's back too). */
+export function privateCardArtReason(missing: "front" | "back"): string {
+  return missing === "back"
+    ? "Its back face has no artwork yet, so it stays private. Add artwork before publishing."
+    : "It has no artwork yet, so it stays private. Add artwork before publishing.";
+}
+
+/** Why a private card can't be made public: moderation hid it (migration
+ *  0156) — it stays private until an admin unhides it. */
+export const PRIVATE_CARD_MODERATION_REASON = `${HIDDEN_BY_MODERATION_LABEL}. ${MODERATION_LOCK_NOTE}`;
+
+/** Why a private card can't be made public: its second face has no name. */
+export const PRIVATE_CARD_UNNAMED_FACE_REASON =
+  "Its second face has no name yet, so it stays private. Name it in the editor before publishing.";
+
+/** A publish refused with no other words for it. */
+export const PUBLISH_REFUSED_MESSAGE = "It couldn't be made public, so it wasn't added — add it as private instead.";
 
 /** A deck at the 500-entry cap (`deck_entry_limit`, migrations 0143/0144),
  *  for ONE card or a few being added — the import's own message
@@ -81,16 +137,31 @@ export function describeMembershipResults(
     const added = count("added");
     const already = count("already");
     const full = count("deck_full");
-    const refused = results.filter((r) => r.status === "refused" || r.status === "failed");
+    const asked = count("private_card");
+    const refused = results.filter(
+      (r) => r.status === "refused" || r.status === "failed" || r.status === "publish_refused",
+    );
+    const madePublic = results.filter((r) => r.published).length;
     const parts: string[] = [];
-    if (added > 0) parts.push(single ? `Added to ${deck}.` : `Added ${cards(added)} to ${deck}.`);
+    if (added > 0) {
+      const publishedAll = madePublic > 0 && madePublic === added && results.every((r) => r.status !== "added" || r.published);
+      if (single && publishedAll) parts.push(`Made public and added to ${deck}.`);
+      else if (publishedAll) parts.push(`Made ${cards(added)} public and added them to ${deck}.`);
+      else {
+        parts.push(single ? `Added to ${deck}.` : `Added ${cards(added)} to ${deck}.`);
+        if (madePublic > 0) parts.push(`${cards(madePublic)} made public.`);
+      }
+    } else if (madePublic > 0) {
+      parts.push(single ? "Made public." : `${cards(madePublic)} made public.`);
+    }
     if (already > 0) parts.push(single ? `Already in ${deck}.` : `${cards(already)} already in it.`);
     if (full > 0) parts.push(deckFullMessage(deckTitle));
     if (refused.length > 0) {
       const reason = refused[0]?.error ?? "It couldn't be added.";
       parts.push(single ? reason : `${cards(refused.length)} not added: ${reason}`);
     }
-    const failed = full + refused.length;
+    if (asked > 0) parts.push(single ? "Not added — it's private." : `${cards(asked)} not added: private.`);
+    const failed = full + refused.length + asked;
     return {
       tone: failed > 0 ? (added > 0 ? "info" : "error") : "success",
       message: parts.join(" "),

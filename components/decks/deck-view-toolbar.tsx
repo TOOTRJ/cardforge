@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { LayoutGrid, Layers, List, Sparkles, Table2 } from "lucide-react";
+import { CheckSquare, LayoutGrid, Layers, List, Sparkles, Table2 } from "lucide-react";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
   DECK_GROUP_LABELS,
@@ -16,13 +16,16 @@ import {
   type DeckViewPrefs,
   type StatusFilter,
 } from "@/lib/decks/deck-view";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // The deck list's toolbar (TODO DK5.3 / DK5.6 / DK5.12): the view (a
 // ChipGroup — one tab stop, arrows move, Space / Enter picks), "Group by"
 // and "Sort by" (native selects with their own labels), the status filter
 // (a ChipGroup whose chips carry their counts — part of each chip's name),
-// and "custom cards ⇄ real cards" for a deck with PipGlyph cards in it.
+// "custom cards ⇄ real cards" for a deck with PipGlyph cards in it, and —
+// the owner's — Select (TODO DK5.4: the selection's way in that is no
+// gesture, WCAG 2.5.7; a long press and Shift + click are the shortcuts).
 // ---------------------------------------------------------------------------
 
 const VIEW_ICONS: Record<DeckView, ChipOption<DeckView>["icon"]> = {
@@ -41,6 +44,10 @@ const VIEW_OPTIONS: ChipOption<DeckView>[] = DECK_VIEWS.map((view) => ({
 const SELECT_CLASS =
   "h-9 rounded-md border border-border bg-background/60 px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50";
 
+/** The toolbar's Select toggle — where the focus goes when a selection ends
+ *  with none of its cards left to hand it to. */
+export const DECK_SELECT_TOGGLE_ID = "deck-select-toggle";
+
 export function DeckViewToolbar({
   prefs,
   onPrefs,
@@ -48,6 +55,7 @@ export function DeckViewToolbar({
   filterOptions,
   onFilter,
   proxyToggle,
+  select = null,
 }: {
   prefs: DeckViewPrefs;
   onPrefs: (patch: Partial<DeckViewPrefs>) => void;
@@ -56,6 +64,8 @@ export function DeckViewToolbar({
   onFilter: (next: StatusFilter) => void;
   /** Null when the deck has no PipGlyph card to show instead of its printing. */
   proxyToggle: { showProxies: boolean; onToggle: () => void } | null;
+  /** The owner's Select toggle (null for a visitor). */
+  select?: { selecting: boolean; onToggle: () => void } | null;
 }) {
   const groupId = useId();
   const sortId = useId();
@@ -117,16 +127,37 @@ export function DeckViewToolbar({
         onChange={onFilter}
         keepCase
       />
-      {proxyToggle ? (
-        <button
-          type="button"
-          onClick={proxyToggle.onToggle}
-          aria-pressed={proxyToggle.showProxies}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 xl:ml-auto"
-        >
-          <Sparkles className="h-3 w-3" aria-hidden />
-          {proxyToggle.showProxies ? "Showing custom cards" : "Showing real cards"}
-        </button>
+      {proxyToggle || select ? (
+        <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
+          {proxyToggle ? (
+            <button
+              type="button"
+              onClick={proxyToggle.onToggle}
+              aria-pressed={proxyToggle.showProxies}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+            >
+              <Sparkles className="h-3 w-3" aria-hidden />
+              {proxyToggle.showProxies ? "Showing custom cards" : "Showing real cards"}
+            </button>
+          ) : null}
+          {select ? (
+            <button
+              type="button"
+              id={DECK_SELECT_TOGGLE_ID}
+              onClick={select.onToggle}
+              aria-pressed={select.selecting}
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 pointer-coarse:h-11",
+                select.selecting
+                  ? "border-primary bg-primary/15 text-primary-bright"
+                  : "border-border text-muted hover:border-border-strong hover:text-foreground",
+              )}
+            >
+              <CheckSquare className="h-3.5 w-3.5" aria-hidden />
+              Select
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

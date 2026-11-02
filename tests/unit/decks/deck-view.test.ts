@@ -12,6 +12,7 @@ import {
   filterDeckRows,
   groupDeckRows,
   nextUnchangedImport,
+  NO_LONGER_AVAILABLE,
   parseDeckViewPrefs,
   serializeDeckViewPrefs,
   sortDeckRows,
@@ -169,6 +170,23 @@ describe("a row", () => {
     expect(after.fields).toEqual({ typeLine: null, cost: null, manaValue: null, colors: [], multicolorOnly: false });
     expect(after.rarity).toBeNull();
     expect(before.fields.cost).toBe("{2}{R}");
+  });
+
+  it("a visitor's DELETED card reads No longer available, not Private card (0153); the owner's keeps its name", () => {
+    const gone = item({ name: "Ashen Prototype", card_id: null, scryfall_id: null, source: "creator" });
+    const visitor = deckRowOf(publicDeckItems([gone], false)[0]!, false);
+    expect([visitor.name, visitor.isPrivate, visitor.isGone, visitor.privateName, visitor.badge]).toEqual([
+      NO_LONGER_AVAILABLE,
+      true,
+      true,
+      null,
+      "unavailable",
+    ]);
+    const owner = deckRowOf(gone, true);
+    expect([owner.name, owner.isPrivate, owner.isGone, owner.badge]).toEqual(["Ashen Prototype", false, false, "unavailable"]);
+    // A private card is still a Private card.
+    const priv = deckRowOf(item({ name: "Secret", card_id: "c-private", scryfall_id: null, source: "creator" }), false);
+    expect([priv.name, priv.isGone]).toEqual([PRIVATE_CARD_NAME, false]);
   });
 
   it("badges a gone card No longer available — for the owner only when it was linked", () => {

@@ -149,6 +149,9 @@ export type DeckRemixContext = {
   deckSlug: string;
   deckTitle: string;
   entryName: string;
+  /** The deck's visibility: a public / unlisted one shows a private card
+   *  as "Private card" — the creator's deck box says so (TODO DK0.13). */
+  deckVisibility?: Visibility;
 };
 
 /**
