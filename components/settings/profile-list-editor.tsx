@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
@@ -17,6 +17,9 @@ import type { ListSaveResult, RowFieldErrors } from "@/app/(app)/settings/link-a
 // "Store cards" (migration 0159). Each row is a choice (link kind / store
 // platform), an https URL and one optional text (a label / a title); rows
 // move up and down and are removed with the focus handed on (useRowFocus).
+// A move arrow at the top / bottom is aria-disabled with no click handler,
+// never `disabled` (a button that turns disabled under the focus drops it
+// to <body>), and after a move the focus follows the row to its new place.
 // The list is checked with the SAME zod schema the server action runs
 // (lib/profile/link-kinds.ts, lib/profile/store-platforms.ts) before it is
 // sent, and saved whole: the server's per-row errors land under the inputs.
@@ -87,6 +90,7 @@ export function ProfileListEditor({
   const [rowErrors, setRowErrors] = useState<RowFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const focusAfterMove = useRef<string | null>(null);
 
   const payload = useMemo(
     () =>
@@ -120,15 +124,24 @@ export function ProfileListEditor({
   };
 
   const move = (index: number, by: -1 | 1) => {
+    const target = index + by;
+    if (target < 0 || target >= rows.length) return;
     setRows((list) => {
-      const target = index + by;
-      if (target < 0 || target >= list.length) return list;
       const next = [...list];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
     setRowErrors({});
+    // The focus follows the row: the same arrow, on its new place (the keyed
+    // reorder can move the focused node out from under the browser).
+    focusAfterMove.current = `${baseId}-${target}-${by < 0 ? "up" : "down"}`;
   };
+
+  useEffect(() => {
+    if (!focusAfterMove.current) return;
+    document.getElementById(focusAfterMove.current)?.focus();
+    focusAfterMove.current = null;
+  }, [rows]);
 
   const remove = (index: number) => {
     setRows((list) => list.filter((_, i) => i !== index));
@@ -205,6 +218,8 @@ export function ProfileListEditor({
           const errors = rowErrors[index] ?? {};
           const id = (field: string) => `${baseId}-${index}-${field}`;
           const name = `${noun[0].toUpperCase()}${noun.slice(1)} ${index + 1}`;
+          const atTop = index === 0;
+          const atBottom = index === rows.length - 1;
           return (
             <li key={row.key}>
               <fieldset className="grid gap-2 rounded-md border border-border/50 bg-background/40 p-3 sm:grid-cols-[10rem_1fr] sm:items-start">
@@ -287,23 +302,25 @@ export function ProfileListEditor({
                     </label>
                     <div className="flex items-center gap-1">
                       <Button
+                        id={id("up")}
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-10 w-10 px-0"
-                        onClick={() => move(index, -1)}
-                        disabled={index === 0}
+                        className={cn("h-10 w-10 px-0", atTop && "cursor-not-allowed opacity-50")}
+                        onClick={atTop ? undefined : () => move(index, -1)}
+                        aria-disabled={atTop ? "true" : undefined}
                         aria-label={`Move ${name} up`}
                       >
                         <ArrowUp className="h-4 w-4" aria-hidden />
                       </Button>
                       <Button
+                        id={id("down")}
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-10 w-10 px-0"
-                        onClick={() => move(index, 1)}
-                        disabled={index === rows.length - 1}
+                        className={cn("h-10 w-10 px-0", atBottom && "cursor-not-allowed opacity-50")}
+                        onClick={atBottom ? undefined : () => move(index, 1)}
+                        aria-disabled={atBottom ? "true" : undefined}
                         aria-label={`Move ${name} down`}
                       >
                         <ArrowDown className="h-4 w-4" aria-hidden />

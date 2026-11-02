@@ -95,6 +95,41 @@ describe("ProfileLinksEditor", () => {
   });
 });
 
+describe("ProfileLinksEditor move arrows", () => {
+  const two = [
+    { choice: "kofi", url: "https://ko-fi.com/a", text: "" },
+    { choice: "twitch", url: "https://www.twitch.tv/b", text: "" },
+  ];
+
+  it("keep an edge arrow focusable: aria-disabled, never disabled, and a press does nothing", async () => {
+    render(<ProfileLinksEditor initialRows={two} />);
+    const up = screen.getByRole("button", { name: "Move Link 1 up" });
+    const down = screen.getByRole("button", { name: "Move Link 2 down" });
+    for (const edge of [up, down]) {
+      expect(edge.getAttribute("aria-disabled")).toBe("true");
+      expect(edge.hasAttribute("disabled")).toBe(false);
+    }
+    await act(async () => fireEvent.click(up));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+    // Nothing moved, so nothing changed: Save stays off.
+    expect(saveLinks).not.toHaveBeenCalled();
+  });
+
+  it("move the focus with the row when it reaches the top (never to <body>)", async () => {
+    render(<ProfileLinksEditor initialRows={two} />);
+    const up = screen.getByRole("button", { name: "Move Link 2 up" });
+    up.focus();
+    await act(async () => fireEvent.click(up));
+    const focused = document.activeElement as HTMLElement;
+    expect(focused.getAttribute("aria-label")).toBe("Move Link 1 up");
+    expect(focused.getAttribute("aria-disabled")).toBe("true");
+    // The focused row is the one that moved (twitch, now first).
+    const firstUrl = screen.getAllByRole("textbox", { name: /URL/ })[0] as HTMLInputElement;
+    expect(firstUrl.value).toBe("https://www.twitch.tv/b");
+    expect(focused.closest("fieldset")?.contains(firstUrl)).toBe(true);
+  });
+});
+
 describe("ProfileStoresEditor", () => {
   it("saves a store with its title", async () => {
     render(<ProfileStoresEditor initialRows={[]} />);
