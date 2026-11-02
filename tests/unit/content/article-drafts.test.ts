@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { compileMDX } from "next-mdx-remote/rsc";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { articleMdxOptions, mdxComponents } from "@/components/content/mdx-components";
+import { composerArticleMdxOptions, mdxComponents } from "@/components/content/mdx-components";
 import { listArticles } from "@/lib/content/articles";
 import { parseArticleDraft, readArticleDrafts } from "@/lib/content/article-drafts";
 import { articleInputSchema, bodyImages } from "@/lib/content/article-shared";
@@ -12,7 +12,7 @@ import { buildArticleDraftsSeed, parseDraftForSeed } from "@/scripts/lib/article
 
 // ---------------------------------------------------------------------------
 // The drafts shipped for the owner (content/article-drafts/): each parses
-// as a composer article, renders through the article page's own MDX options,
+// as a composer article, renders through the composer options (the body guard),
 // passes every ERROR of the SEO checklist but the marked image placeholders
 // the owner fills, and leaves no advice unmet but the byline the owner picks.
 // The preview seed is the generator's output of these very files.
@@ -63,7 +63,7 @@ describe("the shipped article drafts", () => {
   });
 
   it.each(drafts.map((d) => [d.slug, d] as const))("%s renders, every picture ours and described", async (_slug, draft) => {
-    const { content } = await compileMDX({ source: draft.input.body, options: articleMdxOptions, components: mdxComponents });
+    const { content } = await compileMDX({ source: draft.input.body, options: composerArticleMdxOptions, components: mdxComponents });
     const html = renderToStaticMarkup(content);
     const images = bodyImages(draft.input.body);
     expect(images.length).toBeGreaterThan(0);
@@ -105,7 +105,7 @@ describe("the shipped article drafts", () => {
       });
       return seed;
     });
-    const committed = readFileSync(join(process.cwd(), "supabase/seeds/32_article_drafts.sql"), "utf8");
+    const committed = readFileSync(join(process.cwd(), "supabase/seeds/35_article_drafts.sql"), "utf8");
     expect(committed).toBe(buildArticleDraftsSeed(seedDrafts));
   });
 });
