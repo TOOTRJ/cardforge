@@ -32,19 +32,19 @@ import { FRAME_TEMPLATE_VALUES, type Card, type FrameStyle } from "@/types/card"
 // ---------------------------------------------------------------------------
 
 describe("the keys and the defaults", () => {
-  it("collector and star are anatomy keys; a new card starts with the line on in the 2023 style and no ★", () => {
+  it("collector and star are anatomy keys; a new card starts with the line off (owner 2026-10-30) and no ★", () => {
     // (`stamp` joined with TODO 4.9c, `dfcIcon` after it with TODO 5.0a —
     // tests/unit/cards/holo-stamp.test.ts, dfc-anatomy.test.ts; `rulesAlign`
     // with TODO 4.21e — tests/unit/cards/rules-align.test.ts; `border` with
     // TODO 4.30 — tests/unit/cards/white-border.test.ts; `partColor` with
     // TODO 4.26 — tests/unit/cards/part-color.test.ts.)
     expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border", "partColor"]);
-    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
     expect("star" in NEW_CARD_ANATOMY).toBe(false);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const slotted = (COLLECTOR_TEMPLATES as readonly string[]).includes(template);
       expect(frameAnatomyOf(template).collector, template).toBe(slotted);
-      expect(anatomyDefaults(template).collector, template).toBe(slotted ? "2023" : undefined);
+      expect(anatomyDefaults(template).collector, template).toBe(slotted ? "off" : undefined);
       expect("star" in anatomyDefaults(template), template).toBe(false);
     }
   });
@@ -76,22 +76,22 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(normalizeAnatomy(untouched, "m15", "creature")).toBe(untouched);
   });
 
-  it("a new card gets collector '2023' where the template has the slot, never a ★; an explicit value survives", () => {
-    expect(newCardFrameStyle({ template: "m15" }, "creature")).toMatchObject({ collector: "2023" });
+  it("a new card gets collector 'off' where the template has the slot, never a ★; an explicit value survives", () => {
+    expect(newCardFrameStyle({ template: "m15" }, "creature")).toMatchObject({ collector: "off" });
     expect("star" in newCardFrameStyle({ template: "m15" }, "creature")).toBe(false);
     // (…and the stamp on "auto" where the frame has the notch, 4.9c — the
     // walker, never a token frame.)
-    expect(newCardFrameStyle({ template: "m15pw" }, "planeswalker")).toEqual({ template: "m15pw", collector: "2023", stamp: "auto" });
-    expect(newCardFrameStyle({ template: "m15token", finish: "regular" }, "token")).toEqual({ template: "m15token", finish: "regular", collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15pw" }, "planeswalker")).toEqual({ template: "m15pw", collector: "off", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15token", finish: "regular" }, "token")).toEqual({ template: "m15token", finish: "regular", collector: "off" });
     expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toMatchObject({ collector: "2015", star: true });
     expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toMatchObject({ collector: "off" });
     // No slot on extendedart: no collector key (it starts with the crown
     // and pair switches it draws). The borderless frames have the line and
     // the stamp since 4.9d.
     expect(newCardFrameStyle({ template: "extendedart" }, "creature")).toEqual({ template: "extendedart", crown: true, twoColor: true });
-    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true, collector: "off", stamp: "auto" });
     // The creator's all-on switches on a frame with the slot but no crown.
-    expect(newCardFrameStyle({ template: "m15devoid", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15devoid", collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15devoid", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15devoid", collector: "off", stamp: "auto" });
   });
 });
 
@@ -233,9 +233,9 @@ describe("the editor (card-fields, revise)", () => {
   });
 
   it("a new card starts on; a remix starts on unless the parent turned it off (4.6.0's rule), with the parent's ★", () => {
-    expect(defaultValuesFor(null, []).frame_style).toMatchObject({ collector: "2023" });
+    expect(defaultValuesFor(null, []).frame_style).toMatchObject({ collector: "off" });
     expect("star" in defaultValuesFor(null, []).frame_style).toBe(false);
-    expect(remixValuesFrom(savedCard({ template: "m15", finish: "regular" }), []).frame_style).toMatchObject({ collector: "2023" });
+    expect(remixValuesFrom(savedCard({ template: "m15", finish: "regular" }), []).frame_style).toMatchObject({ collector: "off" });
     expect(remixValuesFrom(savedCard({ template: "m15", collector: "off" }), []).frame_style).toMatchObject({ collector: "off" });
     expect(remixValuesFrom(savedCard({ template: "m15", collector: "2015", star: true }), []).frame_style).toMatchObject({ collector: "2015", star: true });
     expect("star" in remixValuesFrom(savedCard({ template: "m15", collector: "2015" }), []).frame_style).toBe(false);
@@ -249,7 +249,7 @@ describe("imports follow the printing (importedAnatomy / importedFormAnatomy)", 
     expect(importedAnatomy({}, "m15").style).toEqual({});
     expect(importedFormAnatomy({ collector: "2015", star: true })).toEqual({ crown: true, twoColor: true, collector: "2015", star: true, stamp: "auto" });
     expect(importedFormAnatomy({ collector: "off" })).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
-    expect(importedFormAnatomy({})).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(importedFormAnatomy({})).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
     // Saved on a frame without the slot, the printing's switches are dropped.
     expect(newCardFrameStyle({ template: "fullartland", collector: "2023", star: true }, "creature")).toEqual({ template: "fullartland" });
   });

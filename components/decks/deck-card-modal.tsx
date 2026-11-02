@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -49,6 +49,9 @@ import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status"
 import { effectiveEntryFields } from "@/lib/decks/effective-entry";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import { DeckCoverPicks } from "@/components/decks/deck-cover-picks";
+import { PrivateCardOfferDialog } from "@/components/decks/private-card-offer-dialog";
+import { privateCardOfferAction } from "@/lib/decks/membership-actions";
+import { deckShowsPrivateCards } from "@/lib/decks/membership-copy";
 import type { CoverPickRow } from "@/lib/decks/featured";
 import { cn } from "@/lib/utils";
 import { typedForMatching } from "@/lib/validation/print-typography";
@@ -148,19 +151,45 @@ export function DeckCardModal({
   // A 7:5 proxy bake (Battle, Split) is shown whole in its own landscape box
   // inside the 5:7 frame, never cropped to its middle (TODO 3.26 review).
   const landscapeProxy = Boolean(shownImage && shownImage === proxyImage && isLandscapeFrame(card?.frame_style));
-  // Where the card "lives": a custom card / proxy has a PipGlyph page (a
-  // soft navigation there opens the site's large card modal over this
-  // deck); a real card points at Scryfall.
+  // Where the card "lives": a custom card / proxy has a PipGlyph page; a
+  // real card points at Scryfall.
   const cardPath = card
     ? buildCardPath({ slug: card.slug, owner: { username: item.cardOwner ? maker : ownerUsername } })
     : null;
   const scryfallHref = entry.scryfall_id ? `/go/scryfall/${entry.scryfall_id}` : null;
   // The PICTURE's link opens the face it shows (TODO 5.17): with Back chosen
-  // the card page — and the card modal a soft navigation opens — starts
-  // flipped (`?face=back`, components/cards/card-hero-preview.tsx).
+  // the card page starts flipped (`?face=back`, components/cards/card-hero-preview.tsx).
   const picturePath = cardPath && showingBack ? `${cardPath}?face=back` : cardPath;
 
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const linkButtonRef = useRef<HTMLButtonElement | null>(null);
+  // The maker's PRIVATE card linked into a deck others can open (TODO
+  // DK0.13): asked first — "Make it public" / "Add as private".
+  const [linkOffer, setLinkOffer] = useState<{ cardId: string; title: string; blockedReason?: string } | null>(null);
+  const link = (cardId: string, title: string) => {
+    if (!editor || !deckShowsPrivateCards(editor.deck.visibility)) {
+      mutate(() => linkDeckCardAction(entry.id, cardId));
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const asked = await privateCardOfferAction({ deckId: entry.deck_id, cardIds: [cardId] });
+        if (!asked.ok) {
+          toast.error(asked.error);
+          return;
+        }
+        const offered = asked.cards[0];
+        if (offered) {
+          setLinkOffer({ cardId, title, ...(offered.blockedReason ? { blockedReason: offered.blockedReason } : {}) });
+          return;
+        }
+        const result = await linkDeckCardAction(entry.id, cardId);
+        if (!result.ok) toast.error(result.error ?? "Something went wrong.");
+      } catch {
+        toast.error("The change didn't reach the server — check your connection.");
+      }
+    });
+  };
 
   // A link or an unlink: the action revalidates the deck page, whose new
   // rows come back with its answer. A request that throws (offline, a
@@ -183,7 +212,7 @@ export function DeckCardModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* xl, like the gallery's card modal — the card is the point here; on
+      {/* xl — the card is the point here; on
           a phone or a touch screen, a sheet from the bottom edge. */}
       <DialogContent
         size="xl"
@@ -443,6 +472,7 @@ export function DeckCardModal({
                       size="sm"
                       disabled={isPending}
                       onClick={() => setLinkPickerOpen((prev) => !prev)}
+                      ref={linkButtonRef}
                     >
                       <Link2 className="h-3.5 w-3.5" aria-hidden />
                       Link an existing card
@@ -488,12 +518,29 @@ export function DeckCardModal({
                 {linkPickerOpen && !card ? (
                   <LinkCardPicker
                     disabled={isPending}
-                    onPick={(cardId) => {
+                    onPick={(cardId, title) => {
                       setLinkPickerOpen(false);
-                      mutate(() => linkDeckCardAction(entry.id, cardId));
+                      // The picker leaves: its pick's focus goes back to
+                      // the button that opened it.
+                      linkButtonRef.current?.focus();
+                      link(cardId, title);
                     }}
                   />
                 ) : null}
+                <PrivateCardOfferDialog
+                  open={linkOffer !== null}
+                  deckTitle={editor?.deck.title ?? ""}
+                  cards={linkOffer ? [linkOffer] : []}
+                  fallbackFocus={() => linkButtonRef.current}
+                  onChoose={(choice) => {
+                    const held = linkOffer;
+                    setLinkOffer(null);
+                    if (!held || choice === "cancel") return;
+                    mutate(() =>
+                      linkDeckCardAction(entry.id, held.cardId, choice === "publish" ? { publish: true } : {}),
+                    );
+                  }}
+                />
               </div>
             ) : null}
           </div>
@@ -504,8 +551,8 @@ export function DeckCardModal({
   );
 }
 
-/** The card image as a link — soft navigation for a PipGlyph card (the
- *  site's card modal opens over the deck), a new tab for Scryfall. Falls
+/** The card image as a link — soft navigation to a PipGlyph card's page,
+ *  a new tab for Scryfall. Falls
  *  back to a plain frame when there is nowhere to go. */
 function CardImageLink({
   href,

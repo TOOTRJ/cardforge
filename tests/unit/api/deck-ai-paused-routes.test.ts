@@ -11,10 +11,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // in ai-jobs-route.test.ts and remix-estimate-route.test.ts.) The pause is
 // mocked here — on and off — so the routes are held whichever way the
 // constant is set.
+//
+// Deck guides are hidden too (owner 2026-10-30, `DECK_GUIDES_ENABLED`): the
+// guide route answers 403 DECK_GUIDES_COMING_SOON whatever the pause says.
+// The pause cases below run with guides on, so each switch is held alone.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
   paused: true,
+  guidesOn: true,
   user: { id: "user-1" } as { id: string } | null,
   rate: vi.fn(),
   spend: vi.fn(),
@@ -28,6 +33,7 @@ const s = vi.hoisted(() => ({
 vi.mock("@/lib/ai/deck-ai-pause", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/deck-ai-pause")>()),
   isDeckAiPaused: () => s.paused,
+  areDeckGuidesEnabled: () => s.guidesOn,
 }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -93,6 +99,7 @@ const nothingRan = () => {
 
 beforeEach(() => {
   s.paused = true;
+  s.guidesOn = true;
   s.user = { id: "user-1" };
   s.rate.mockReset().mockResolvedValue({ ok: true });
   s.spend.mockReset().mockResolvedValue({ ok: true, balance: 4, charged: true });
@@ -148,7 +155,50 @@ describe("the same routes with the pause lifted (the one constant flipped)", () 
   });
 });
 
+describe("POST /api/decks/[id]/guide while deck guides are hidden", () => {
+  const GUIDES_BODY = {
+    ok: false,
+    code: "DECK_GUIDES_COMING_SOON",
+    error:
+      "Deck guides are being reworked and will be back with AI deck tools. Guides already written are saved. No credits were used.",
+  };
+
+  beforeEach(() => {
+    s.guidesOn = false;
+  });
+
+  it("refuses with 403 DECK_GUIDES_COMING_SOON before the Pro check, any charge or AI call — paused or not", async () => {
+    for (const paused of [true, false]) {
+      s.paused = paused;
+      const { status, json } = await guide();
+      expect(status).toBe(403);
+      expect(json).toEqual(GUIDES_BODY);
+      nothingRan();
+    }
+  });
+
+  it("signed out is still the sign-in answer", async () => {
+    s.user = null;
+    expect((await guide()).status).toBe(401);
+    nothingRan();
+  });
+
+  it("the flag flipped back (and the pause lifted): a guide is written as before", async () => {
+    s.guidesOn = true;
+    s.paused = false;
+    expect((await guide()).status).toBe(200);
+    expect(s.guide).toHaveBeenCalledWith("deck-1", "analysis");
+  });
+});
+
 describe("lib/ai/deck-ai-pause.ts", () => {
+  it("deck guides are hidden: one constant, read through one function", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/ai/deck-ai-pause")>("@/lib/ai/deck-ai-pause");
+    expect(actual.DECK_GUIDES_ENABLED).toBe(false);
+    expect(actual.areDeckGuidesEnabled()).toBe(actual.DECK_GUIDES_ENABLED);
+    expect(actual.deckGuidesComingSoonBody().code).toBe("DECK_GUIDES_COMING_SOON");
+  });
+
   it("the routes' answer: one code, the shared sentence, and no credit taken", async () => {
     const actual = await vi.importActual<typeof import("@/lib/ai/deck-ai-pause")>("@/lib/ai/deck-ai-pause");
     expect(actual.deckAiPausedBody()).toEqual(PAUSED_BODY);

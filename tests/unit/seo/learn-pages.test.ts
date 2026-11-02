@@ -80,10 +80,12 @@ describe("/learn/[category]", () => {
     expect(meta.robots).toEqual(indexed ? undefined : { index: false, follow: true });
   });
 
-  it("indexes today's two full shelves and keeps the one-guide shelves out", async () => {
+  it("indexes today's three full shelves and keeps the one-guide shelf out", async () => {
     expect((await generateMetadata(paramsOf("design"))).robots).toBeUndefined();
     expect((await generateMetadata(paramsOf("reference"))).robots).toBeUndefined();
-    expect((await generateMetadata(paramsOf("lore"))).robots).toEqual({ index: false, follow: true });
+    // The Behind the Cards series (TODO NV13) filled the lore shelf.
+    expect((await generateMetadata(paramsOf("lore"))).robots).toBeUndefined();
+    expect((await generateMetadata(paramsOf("comparisons"))).robots).toEqual({ index: false, follow: true });
   });
 
   it("answers a real 404 for anything that is not a category, in the metadata and the page", async () => {

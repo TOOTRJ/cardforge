@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { updateCardsVisibilityAction } from "@/lib/cards/actions";
-import { strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import { artlessSkippedLine, strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
+import Link from "next/link";
+import {
+  HIDDEN_BY_MODERATION_LABEL,
+  MODERATION_CONTACT_HREF,
+  moderationLockedSkippedLine,
+} from "@/lib/moderation/lock";
 
 // ---------------------------------------------------------------------------
 // Private cards in a deck others can open (owner decision D11, TODO DK5.17)
@@ -17,7 +23,10 @@ import { strongLanguageSkippedLine } from "@/lib/cards/bulk-visibility-copy";
 // in the hero's fan (lib/decks/featured.ts). "Make public" is the site's own
 // visibility change (updateCardsVisibilityAction — My Cards' bulk bar uses
 // it): its rules hold here too, so a card whose text holds strong language
-// stays private (owner policy 2026-10-28) and the toast says why.
+// stays private (owner policy 2026-10-28) and the toast says why. A card
+// moderation hid (migration 0156, lib/moderation/lock.ts) is listed with
+// "Hidden by moderation" and no button — it stays private until an admin
+// unhides it — and is never part of "Make all public".
 // ---------------------------------------------------------------------------
 
 /** Past this many cards the list folds behind "Show all". */
@@ -27,7 +36,7 @@ export function DeckPrivateCardsNotice({
   cards,
   deckVisibility,
 }: {
-  cards: Array<{ id: string; title: string }>;
+  cards: Array<{ id: string; title: string; moderationLocked?: boolean }>;
   deckVisibility: "public" | "unlisted";
 }) {
   const router = useRouter();
@@ -35,6 +44,8 @@ export function DeckPrivateCardsNotice({
   const [busy, setBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? cards : cards.slice(0, SHOWN);
+  const offerable = cards.filter((card) => !card.moderationLocked);
+  const anyLocked = offerable.length < cards.length;
 
   const makePublic = (ids: string[], key: string) => {
     setBusy(key);
@@ -46,7 +57,16 @@ export function DeckPrivateCardsNotice({
         return;
       }
       const published = result.count === 1 ? "1 card is public now." : `${result.count} cards are public now.`;
-      toast.success([published, strongLanguageSkippedLine(result.skippedLanguage)].filter(Boolean).join(" "));
+      toast.success(
+        [
+          published,
+          strongLanguageSkippedLine(result.skippedLanguage),
+          artlessSkippedLine(result.skippedArtless),
+          moderationLockedSkippedLine(result.skippedModeration),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
       router.refresh();
     });
   };
@@ -63,18 +83,27 @@ export function DeckPrivateCardsNotice({
           <p className="text-sm leading-6 text-muted">
             {who}, but visitors see a “Private card” tile in place of {cards.length === 1 ? "it" : "each"} — never
             its name or art. Make {cards.length === 1 ? "it" : "them"} public to show your work.
+            {anyLocked ? (
+              <>
+                {" "}A card hidden by moderation stays private until our team reviews it —{" "}
+                <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
+                  contact us
+                </Link>{" "}
+                with questions.
+              </>
+            ) : null}
           </p>
         </div>
-        {cards.length > 1 ? (
+        {offerable.length > 1 ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
             disabled={isPending}
-            onClick={() => makePublic(cards.map((card) => card.id), "all")}
+            onClick={() => makePublic(offerable.map((card) => card.id), "all")}
           >
             {busy === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Globe className="h-3.5 w-3.5" aria-hidden />}
-            Make all {cards.length} public
+            Make all {offerable.length} public
           </Button>
         ) : null}
       </div>
@@ -82,6 +111,9 @@ export function DeckPrivateCardsNotice({
         {shown.map((card) => (
           <li key={card.id} className="flex items-center justify-between gap-3 px-3 py-2">
             <span className="min-w-0 truncate text-sm text-foreground">{card.title}</span>
+            {card.moderationLocked ? (
+              <span className="shrink-0 text-xs text-muted">{HIDDEN_BY_MODERATION_LABEL}</span>
+            ) : (
             <Button
               type="button"
               size="sm"
@@ -94,6 +126,7 @@ export function DeckPrivateCardsNotice({
               {busy === card.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Globe className="h-3.5 w-3.5" aria-hidden />}
               Make public
             </Button>
+            )}
           </li>
         ))}
       </ul>

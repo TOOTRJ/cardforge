@@ -49,9 +49,10 @@ test("the /learn categories render, index from three guides, and an unknown one 
   expect(html).toMatch(/rel="canonical" href="[^"]*\/learn\/design"/);
   expect(html).not.toMatch(/name="robots" content="noindex/);
   expect(html).toContain('aria-label="Breadcrumb"');
-  // One guide on the lore shelf today: rendered, noindex + follow.
+  // The lore shelf holds the "Behind the cards" series (NV13): three or more
+  // guides, so it is indexed like the others.
   const lore = await (await request.get("/learn/lore")).text();
-  expect(lore).toMatch(/name="robots" content="noindex, follow"/);
+  expect(lore).not.toMatch(/name="robots" content="noindex/);
   for (const path of ["/learn/nope", "/learn/card-design"]) {
     expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(404);
   }
