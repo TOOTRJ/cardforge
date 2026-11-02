@@ -7,7 +7,7 @@ import { DeckLiveProgress } from "@/components/decks/deck-live-progress";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import Link from "next/link";
 import { Suspense, cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { after, userAgent } from "next/server";
 import { AlertTriangle, ArrowLeft, ImagePlus, Pencil } from "lucide-react";
@@ -18,11 +18,13 @@ import { DeckCardList } from "@/components/decks/deck-card-list";
 import { CommanderSlot, DeckStartDoors } from "@/components/decks/deck-start-doors";
 import { DeckPrivateCardsNotice } from "@/components/decks/deck-private-cards-notice";
 import { publicDeckWarning } from "@/lib/decks/private-card-name";
+import { isModerationLocked } from "@/lib/moderation/lock";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
 import { DeckCopyDecklist } from "@/components/decks/deck-copy-decklist";
 import { rowHasBakedBack } from "@/lib/cards/faces";
-import { DeckGuideSection } from "@/components/decks/deck-guide-section";
-import { getDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
+import { DeckGuideComingSoon, DeckGuideSection } from "@/components/decks/deck-guide-section";
+import { readShownDeckGuide, type DeckGuideRead } from "@/lib/decks/guides";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 import { deckToText, exportEntriesOf } from "@/lib/decks/export-text";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
@@ -30,6 +32,7 @@ import { ShareTargets } from "@/components/cards/share-targets";
 import { DeckFeedbackButton, DeckFeedbackFooter } from "@/components/feedback/deck-feedback-dialog";
 import { DeckBetaBanner } from "@/components/decks/deck-beta-banner";
 import { recordDeckView } from "@/lib/decks/views";
+import { findRenamedDeckSlug } from "@/lib/decks/slug-history";
 import {
   countDeckEntries,
   getDeckBySlugWithOwner,
@@ -63,6 +66,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
+import { DeckActivitySlot } from "@/components/decks/deck-activity-slot";
 import { PageContainer } from "@/components/layout/page-container";
 
 // ---------------------------------------------------------------------------
@@ -107,7 +111,9 @@ export async function generateMetadata({
     return { title: titleFromSlug(slug) };
   }
   const deck = await getDeckBySlugWithOwner(slug);
-  // A missing/unreadable deck is a real 404, never a titled 200 (soft 404).
+  // A renamed deck's old slug is a 308 to its current one (TODO DK5.14);
+  // anything else missing/unreadable is a real 404, never a titled 200.
+  if (!deck) await redirectRenamedDeckOrNotFound(slug);
   if (!deck) notFound();
   const entryCount = deck.visibility === "public" ? await countDeckEntries(deck.id) : 0;
 
@@ -150,13 +156,30 @@ export async function generateMetadata({
   };
 }
 
-/** The owner's own cards in the deck that are private (D11), once each. */
-function ownPrivateCards(items: readonly DeckItem<DeckPageCard>[], ownerId: string): Array<{ id: string; title: string }> {
-  const seen = new Map<string, string>();
+/** No deck has this slug: a deck that GAVE IT UP on a rename answers a 308
+ *  to its current slug (migration 0155, lib/decks/slug-history.ts — the
+ *  viewer's read, so a private deck's old link stays a 404 for anyone but
+ *  its owner), keeping the page's own ?import=1; else the 404. Before any
+ *  Suspense boundary, as the SEO contract asks of notFound(). */
+async function redirectRenamedDeckOrNotFound(slug: string, search?: { import?: string }): Promise<never> {
+  const current = await findRenamedDeckSlug(slug);
+  if (current) permanentRedirect(`/deck/${current}${search?.import === "1" ? "?import=1" : ""}`);
+  notFound();
+}
+
+/** The owner's own cards in the deck that are private (D11), once each —
+ *  a card moderation hid (0156) marked, so the notice offers it nothing. */
+function ownPrivateCards(
+  items: readonly DeckItem<DeckPageCard>[],
+  ownerId: string,
+): Array<{ id: string; title: string; moderationLocked: boolean }> {
+  const seen = new Map<string, { id: string; title: string; moderationLocked: boolean }>();
   for (const { card } of items) {
-    if (card && card.owner_id === ownerId && card.visibility === "private") seen.set(card.id, card.title);
+    if (card && card.owner_id === ownerId && card.visibility === "private") {
+      seen.set(card.id, { id: card.id, title: card.title, moderationLocked: isModerationLocked(card) });
+    }
   }
-  return [...seen].map(([id, title]) => ({ id, title }));
+  return [...seen.values()];
 }
 
 export default async function DeckDetailPage({
@@ -171,6 +194,7 @@ export default async function DeckDetailPage({
     isSupabaseConfigured() ? getDeckBySlugWithOwner(slug) : null,
     getCurrentUser(),
   ]);
+  if (!deck) await redirectRenamedDeckOrNotFound(slug, await searchParams);
   if (!deck) notFound();
 
   const isOwner = Boolean(user && user.id === deck.owner_id);
@@ -178,8 +202,12 @@ export default async function DeckDetailPage({
 
   // Started now, awaited where they're drawn (their own Suspense
   // boundaries): the guide, and the owner's AI job state (deck AI is
-  // paused, but a job already running finishes — D6).
-  const guide = getDeckGuide(deck.id).catch(() => null);
+  // paused, but a job already running finishes — D6). While deck guides are
+  // hidden (owner 2026-10-30, lib/ai/deck-ai-pause.ts) the guide is never
+  // read (`readShownDeckGuide`): no deck_guide_for_viewer call, no text in
+  // the page.
+  const guidesShown = areDeckGuidesEnabled();
+  const guide = readShownDeckGuide(deck.id).catch(() => null);
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
@@ -456,7 +484,7 @@ export default async function DeckDetailPage({
               items={shownItems}
               ownerUsername={deck.owner?.username ?? null}
               canManage
-              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format }}
+              deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format, visibility: deck.visibility }}
               // The owner's cover picks in the card pop-up (TODO DK6.4).
               coverOwnerId={deck.owner_id}
               initialPrefs={viewPrefs}
@@ -516,6 +544,17 @@ export default async function DeckDetailPage({
         ) : null}
       </DeckCurveFilterProvider>
 
+      {/* Deck activity (TODO DK7.4): the OWNER's views and likes over time,
+          Pro (a locked preview otherwise) — a client island a visitor's page
+          never references. */}
+      {isOwner ? (
+        <DeckActivitySlot
+          deckId={deck.id}
+          canView={entitlements.effectiveTier === "pro"}
+          isPrivate={deck.visibility === "private"}
+        />
+      ) : null}
+
       {/* The playtest (TODO DK7.2): odds and a sample hand off the
           mainboard, for every viewer — the rows as THIS viewer reads them
           (a visitor never meets a private card's title or art). */}
@@ -545,6 +584,7 @@ export default async function DeckDetailPage({
           <DeckGuideSlot
             deckId={deck.id}
             guide={guide}
+            hidden={!guidesShown}
             isOwner={isOwner}
             viewerIsPro={entitlements.effectiveTier === "pro"}
             hasCards={hasCards}
@@ -583,16 +623,21 @@ async function DeckJobsSlot({
 async function DeckGuideSlot({
   deckId,
   guide,
+  hidden,
   isOwner,
   viewerIsPro,
   hasCards,
 }: {
   deckId: string;
   guide: Promise<DeckGuideRead | null>;
+  /** Deck guides are hidden: the "Coming soon" section, no guide read. */
+  hidden: boolean;
   isOwner: boolean;
   viewerIsPro: boolean;
   hasCards: boolean;
 }) {
+  // Hidden: the one "Coming soon" look for every viewer; no guide was read.
+  if (hidden) return <DeckGuideComingSoon />;
   const read = await guide;
   return (
     <DeckGuideSection

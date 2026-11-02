@@ -9,7 +9,9 @@ import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 // the user to a plan without prop-drilling. Mounted once in the root layout.
 
 type UpgradeModalContextValue = {
-  open: (reason?: UpgradeReason) => void;
+  /** `surface` names the control that opened it, for the funnel's
+   *  `upgrade_modal_open` row (an allow-listed prop). */
+  open: (reason?: UpgradeReason, surface?: string) => void;
 };
 
 const UpgradeModalContext = createContext<UpgradeModalContextValue | null>(null);
@@ -27,12 +29,12 @@ export function UpgradeModalProvider({
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<UpgradeReason>("generic");
 
-  const openModal = useCallback((nextReason: UpgradeReason = "generic") => {
+  const openModal = useCallback((nextReason: UpgradeReason = "generic", surface?: string) => {
     setReason(nextReason);
     setOpen(true);
     // Funnel: which gate the user hit (out of credits, watermark, capacity…)
     // — the single best signal of what actually sells a plan.
-    trackFunnelEvent("upgrade_modal_open", { reason: nextReason });
+    trackFunnelEvent("upgrade_modal_open", surface ? { reason: nextReason, surface } : { reason: nextReason });
   }, []);
 
   return (

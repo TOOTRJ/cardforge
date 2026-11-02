@@ -28,6 +28,13 @@ import { DECK_BOARD_LABELS, DECK_BOARD_VALUES, isDeckBoard, type DeckBoard } fro
 //            never a client-side insert. A PipGlyph card already on ANOTHER board
 //            stays where it is: the answer says where (a deck holds one
 //            entry a card).
+//
+//   `privateCard: "publish"` (TODO DK0.13): the maker's own private card
+//            made public FIRST, through the membership writer's `publish`
+//            (the site's visibility change and every gate it has) — still
+//            private after it, it is not added and the answer says why.
+//            The box asks before it adds (privateCardOfferAction); "keep",
+//            the default, adds it as it is.
 // ---------------------------------------------------------------------------
 
 export type DeckAddResult =
@@ -40,6 +47,8 @@ export type DeckAddResult =
       merged: boolean;
       /** The entry's name as the deck stores it, where the add read it. */
       name?: string;
+      /** The card was made public on the way in (`privateCard: "publish"`). */
+      published?: true;
     }
   | {
       ok: false;
@@ -64,6 +73,7 @@ const addSchema = z.object({
   deckId: z.string().refine((id) => isUuid(id), "Invalid deck id."),
   board: z.enum(DECK_BOARD_VALUES),
   pick: pickSchema,
+  privateCard: z.enum(["keep", "publish"]).default("keep"),
 });
 
 /** A row of the deck as an add reads it. */
@@ -136,9 +146,18 @@ export async function addToDeckAction(payload: unknown): Promise<DeckAddResult> 
         elsewhere: { entryId: elsewhere.id, board: elsewhere.board },
       };
     }
-    const result = await changeDeckMembershipAction({ deckId: deck.id, add: [pick.cardId] });
+    const result = await changeDeckMembershipAction({
+      deckId: deck.id,
+      add: [pick.cardId],
+      ...(parsed.data.privateCard === "publish" ? { publish: [pick.cardId] } : {}),
+    });
     if (!result.ok) return { ok: false, error: result.error };
     const outcome = result.results[0];
+    if (outcome?.published && outcome.status !== "added" && outcome.status !== "already") {
+      // Public now, but the deck refused it: both are said.
+      await revalidateDeckEntryChange(supabase, user.id, deck.slug);
+      return { ok: false, error: `Made public, but not added: ${outcome.error ?? "try again."}` };
+    }
     const entry = result.entries.find((row) => row.cardId.toLowerCase() === pick.cardId.toLowerCase());
     if (!outcome || (outcome.status !== "added" && outcome.status !== "already") || !entry) {
       return { ok: false, error: outcome?.error ?? "Couldn't add the card. Try again." };
@@ -157,6 +176,7 @@ export async function addToDeckAction(payload: unknown): Promise<DeckAddResult> 
       quantity: entry.quantity,
       merged: outcome.status === "already",
       name: rows.find((row) => row.id === entry.entryId)?.name,
+      ...(outcome.published ? { published: true as const } : {}),
     };
   }
 

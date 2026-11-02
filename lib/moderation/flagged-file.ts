@@ -141,7 +141,7 @@ async function hideCardUsing(admin: AdminClient, file: FlaggedFile, action: Extr
   const urls = CARD_PICTURE_COLUMNS.flatMap((column) => urlsNamingFile(row[column], file));
   if (!urls.length) return skipped(action, NO_LONGER);
   srcs.push(...urls);
-  const hidden = await hideCard(admin, action.cardId, { resolvedBy: null });
+  const hidden = await hideCard(admin, action.cardId, { resolvedBy: null, reason: "flagged_file" });
   if (!hidden.ok) return hidden.notFound ? skipped(action, "no such card") : failed(action, hidden.error);
   return done(action, `hidden (was ${String(row.visibility)})`);
 }

@@ -605,7 +605,9 @@ describe("the holofoil stamp's arch on the Prepare frame (TODO 4.27b) — the ar
   // over the arch's crown clipped TLA #112, which the unstamped box fits at
   // the floor. Only the creature's box reaches it; the page's ends above.
   const TEMPLATES = ["prepare", "extendedartprepare"] as const;
-  const stampedText = (template: FrameTemplate, rulesText: string | null | undefined, flavorText: string | null | undefined) => {
+  /** The creature's box with and without the arch (the sweep reads these
+   *  alone: the page is the matrix's business, below). */
+  const stampedBox = (template: FrameTemplate, rulesText: string | null | undefined, flavorText: string | null | undefined) => {
     const layout = getFrameProfile(template);
     const slot = (layout.overlays ?? []).find((o) => o.anatomy === "holoStamp");
     if (!slot || slot.anatomy !== "holoStamp") throw new Error(`${template} has no notch`);
@@ -615,11 +617,15 @@ describe("the holofoil stamp's arch on the Prepare frame (TODO 4.27b) — the ar
     const aspect = aspectOf(layout);
     const plain = mainRulesLayout({ layout, rulesText, flavorText, aspect, show });
     const arch = mainRulesLayout({ layout, rulesText, flavorText, aspect, show: stampShow });
-    const pagePlain = adventureRulesLayout({ layout, rulesText: rulesText ?? flavorText, aspect, show });
-    const pageArch = adventureRulesLayout({ layout, rulesText: rulesText ?? flavorText, aspect, show: stampShow });
+    return { layout, aspect, show, stampShow, plain, arch };
+  };
+  const stamped = (template: FrameTemplate, text: RulesCase) => {
+    const { layout, aspect, show, stampShow, plain, arch } = stampedBox(template, text.rules, text.flavor);
+    const rulesText = text.rules ?? text.flavor;
+    const pagePlain = adventureRulesLayout({ layout, rulesText, aspect, show });
+    const pageArch = adventureRulesLayout({ layout, rulesText, aspect, show: stampShow });
     return { plain, arch, pagePlain, pageArch };
   };
-  const stamped = (template: FrameTemplate, text: RulesCase) => stampedText(template, text.rules, text.flavor);
   const SWEEP_WORDS =
     "Whenever this creature attacks each opponent loses two life and you gain two life then draw a card and discard a card unless you control an artifact Flying vigilance and trample until end of turn target creature gets plus three plus three and gains first strike when it dies return it to the battlefield under its owner's control at the beginning of your upkeep scry two then you may sacrifice a land if you do create a treasure token search your library for a basic land card reveal it put it into your hand then shuffle".split(" ");
   const sweepText = (n: number) => `${Array.from({ length: n }, (_, i) => SWEEP_WORDS[i % SWEEP_WORDS.length]).join(" ")}.`;
@@ -659,7 +665,7 @@ describe("the holofoil stamp's arch on the Prepare frame (TODO 4.27b) — the ar
     for (const template of TEMPLATES) {
       const lost: number[] = [];
       for (let n = 1; n <= 95; n += 1) {
-        const { plain, arch } = stampedText(template, sweepText(n), null);
+        const { plain, arch } = stampedBox(template, sweepText(n), null);
         expect(arch.sizePx, `${template} · ${n} words`).toBeLessThanOrEqual(plain.sizePx);
         if (plain.clipped) expect(arch.clipped, `${template} · ${n} words`).toBe(true);
         if (arch.clipped && !plain.clipped) {
@@ -669,7 +675,10 @@ describe("the holofoil stamp's arch on the Prepare frame (TODO 4.27b) — the ar
       }
       expect(lost, template).toEqual([77]);
     }
-  });
+    // 380 layouts: its own timeout, as the borderless sweep above has —
+    // under coverage on CI (main's full runs) it took 6 s and failed the
+    // default 5 s (main red from 2026-10-30, issue #684).
+  }, 300_000);
 
   /** The stamped layouts both templates draw, once per distinct input (the
    *  two share the creature's box). */

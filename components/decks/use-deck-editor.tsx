@@ -38,6 +38,7 @@ import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import type { RemovedEntry } from "@/lib/decks/entry-batch";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
 import type { DeckBoard, DeckFormat } from "@/types/deck";
+import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The owner's deck page as an editor (TODO DK5.4 / DK5.8) — every edit the
@@ -79,7 +80,14 @@ import type { DeckBoard, DeckFormat } from "@/types/deck";
  *  edit of it is on its way. */
 export type EditorItem = DeckItem<DeckPageCard> & { pending?: true; saving?: true };
 
-export type DeckEditorDeck = { id: string; slug: string; title: string; format: DeckFormat };
+export type DeckEditorDeck = {
+  id: string;
+  slug: string;
+  title: string;
+  format: DeckFormat;
+  /** Public / unlisted: the add box asks about a private card (TODO DK0.13). */
+  visibility?: Visibility;
+};
 
 type UndoStep = { label: string; run: () => void };
 
@@ -94,8 +102,14 @@ export type DeckEditor = {
   /** The entries out of the deck — with an Undo. */
   remove: (entryIds: readonly string[]) => void;
   /** One card onto `board` (the add box). `preview`: the row drawn while
-   *  the server writes a NEW line. */
-  add: (pick: AddPick, board: DeckBoard, preview: EditorItem | null) => Promise<DeckAddResult>;
+   *  the server writes a NEW line. `privateCard: "publish"`: the maker's
+   *  private card made public first (TODO DK0.13). */
+  add: (
+    pick: AddPick,
+    board: DeckBoard,
+    preview: EditorItem | null,
+    privateCard?: "keep" | "publish",
+  ) => Promise<DeckAddResult>;
   /** Undo the last change. */
   undo: () => void;
   /** What Undo would undo, in words — null: nothing. */
@@ -408,7 +422,12 @@ export function DeckEditorProvider({
 
   // ---- the add box's add -------------------------------------------------
   const add = useCallback(
-    async (pick: AddPick, board: DeckBoard, preview: EditorItem | null): Promise<DeckAddResult> => {
+    async (
+      pick: AddPick,
+      board: DeckBoard,
+      preview: EditorItem | null,
+      privateCard: "keep" | "publish" = "keep",
+    ): Promise<DeckAddResult> => {
       // The row it lands on, as the server will pick it (one copy more), or
       // the new line's preview.
       const target = addTargetEntry(
@@ -422,7 +441,13 @@ export function DeckEditorProvider({
           ? { kind: "insert", items: [{ ...preview, pending: true as const }] }
           : { kind: "update", updates: [] };
       const name = pick.kind === "card" ? pick.title : pick.name;
-      const outcome = await send(op, () => addToDeckAction({ deckId: deck.id, board, pick: wire(pick) }), {
+      const outcome = await send(op, () =>
+          addToDeckAction({
+            deckId: deck.id,
+            board,
+            pick: wire(pick),
+            ...(privateCard === "publish" ? { privateCard } : {}),
+          }), {
         failure: `Couldn't add ${name}.`,
         onDone: (result) => {
           if (!result.ok) return;

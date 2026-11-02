@@ -16,7 +16,9 @@ import { lookupUsername } from "@/lib/profile/username";
 // In order, each step checked (they used to be fire-and-forget: a rejected
 // update still produced "Card hidden" while the card stayed public):
 //   1. the card → private, every render pointer (both faces', 0126 + 0134)
-//      cleared, in ONE update;
+//      cleared AND the moderation lock set (migration 0156,
+//      lib/moderation/lock.ts: it stays private until an admin unhides it),
+//      in ONE update;
 //   2. every render object (the PNG + thumb of each face) removed from the
 //      owner's card-renders folder (removeRenderObjects retries once and
 //      logs);
@@ -28,6 +30,17 @@ import { lookupUsername } from "@/lib/profile/username";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+/** Why moderation hid the card — the lock's reason CODE (0156's CHECK),
+ *  never report text. */
+export type HideCardReason = "report" | "flagged_file";
+
+/** A database 0156 hasn't reached (PostgREST: no such column in its schema
+ *  cache, or Postgres' own undefined_column) — the hide must still happen. */
+function isMissingLockColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return (error.code === "PGRST204" || error.code === "42703") && (error.message ?? "").includes("moderation_hidden");
+}
+
 export type HideCardResult =
   | { ok: true; ownerId: string }
   | { ok: false; error: string; notFound?: true };
@@ -35,7 +48,7 @@ export type HideCardResult =
 export async function hideCard(
   admin: AdminClient,
   cardId: string,
-  options: { resolvedBy: string | null },
+  options: { resolvedBy: string | null; reason: HideCardReason },
 ): Promise<HideCardResult> {
   const { data: card, error: readError } = await admin
     .from("cards")
@@ -45,10 +58,18 @@ export async function hideCard(
   if (readError) return { ok: false, error: `Couldn't read the card: ${readError.message}` };
   if (!card) return { ok: false, error: "Card not found — it may already be deleted.", notFound: true };
 
-  const { error: hideError } = await admin
+  const hide = { visibility: "private" as const, ...CLEARED_RENDER_POINTERS };
+  let { error: hideError } = await admin
     .from("cards")
-    .update({ visibility: "private", ...CLEARED_RENDER_POINTERS })
+    .update({ ...hide, moderation_hidden_at: new Date().toISOString(), moderation_hidden_reason: options.reason })
     .eq("id", cardId);
+  if (isMissingLockColumn(hideError)) {
+    // Between a deploy and migration 0156 landing: hide without the lock
+    // rather than not at all (0156's backfill then locks it if a report was
+    // actioned; a rescan hide with no report stays unlocked — logged).
+    console.error(`[moderation] ${cardId} hidden without the lock — migration 0156 has not landed here`);
+    ({ error: hideError } = await admin.from("cards").update(hide).eq("id", cardId));
+  }
   if (hideError) return { ok: false, error: `Couldn't hide the card: ${hideError.message}` };
 
   const { error: removeError } = await removeRenderObjects(card.owner_id, [cardId]);

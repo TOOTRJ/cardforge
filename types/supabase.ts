@@ -828,6 +828,11 @@ export type Database = {
           tags: string[];
           supertype: string | null;
           nickname: string | null;
+          /** The moderation lock (migration 0156, lib/moderation/lock.ts): set by
+           *  the moderation hide, cleared only by admin_unhide_card. Optional: a
+           *  select that does not name it (or a database before 0156) has none. */
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types: string | null;
           /** Import provenance (migration 0144, TODO DK2.5): the Scryfall
            *  printing the card was started from and the fingerprint of what it
@@ -895,6 +900,8 @@ export type Database = {
           tags?: string[];
           supertype?: string | null;
           nickname?: string | null;
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title: string;
@@ -954,6 +961,8 @@ export type Database = {
           tags?: string[];
           supertype?: string | null;
           nickname?: string | null;
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title?: string;
@@ -1850,6 +1859,34 @@ export type Database = {
           },
         ];
       };
+      // Migration 0155 — each slug a deck gave up on a rename (written by the
+      // decks_record_slug_change trigger only; read where the deck's link is).
+      deck_slug_history: {
+        Row: {
+          old_slug: string;
+          deck_id: string;
+          created_at: string;
+        };
+        Insert: {
+          old_slug: string;
+          deck_id: string;
+          created_at?: string;
+        };
+        Update: {
+          old_slug?: string;
+          deck_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_slug_history_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Migration 0151 — today's salt for deck_views keys (service role).
       deck_view_salts: {
         Row: {
@@ -2045,16 +2082,125 @@ export type Database = {
           },
         ];
       };
+      // Migration 0159 — a profile's extra links (lib/profile/link-kinds.ts).
+      profile_links: {
+        Row: {
+          id: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          kind?: string;
+          url?: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_links_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Migration 0159 — a profile's store cards (lib/profile/store-platforms.ts).
+      profile_stores: {
+        Row: {
+          id: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          platform?: string;
+          url?: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_stores_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      // migration 0153 — the admins an article may be bylined to (an admin
+      // migration 0160 — the admins an article may be bylined to (an admin
       // caller only; lib/content/db-articles.ts listAuthorOptions).
       admin_list_article_authors: {
         Args: Record<string, never>;
         Returns: { id: string; username: string; display_name: string | null }[];
+      };
+      // Migration 0159 — the Settings editors' whole-list saves (caller's rows).
+      set_profile_links: {
+        Args: { p_links: Json };
+        Returns: undefined;
+      };
+      set_profile_stores: {
+        Args: { p_stores: Json };
+        Returns: undefined;
+      };
+      // Migration 0159 — the profile page's card search (public cards only).
+      list_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+          p_sort?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      count_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+        };
+        Returns: number;
       };
       consume_credits: {
         Args: { p_amount: number; p_reason: string; p_ref?: string };
@@ -2153,6 +2299,19 @@ export type Database = {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; views: number }[];
       };
+      // Migration 0154 — the caller's OWN deck's likes per UTC day they were
+      // given, oldest first, zeros included; no rows for anyone else's deck.
+      deck_likes_by_day: {
+        Args: { p_deck_id: string; p_days?: number };
+        Returns: { day: string; likes: number }[];
+      };
+      // Migration 0156 — an admin clears a card's moderation lock (it stays
+      // private) and its owner is notified; the owner's id, or null when the
+      // card was not locked. Anyone but an admin: insufficient_privilege.
+      admin_unhide_card: {
+        Args: { p_card_id: string };
+        Returns: string | null;
+      };
       // Migration 0151 — a deck's AI guide as its page shows it to the
       // caller (lib/decks/guides.ts): no row, or `readable` with the text
       // only for a Pro viewer (redacted for anyone but the owner).
@@ -2198,6 +2357,10 @@ export type Database = {
           p_offset?: number;
           p_hide_admin_cards?: boolean;
         };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      list_commander_cards: {
+        Args: { p_seed?: string; p_limit?: number };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
       list_trending_pool: {

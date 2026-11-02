@@ -1,8 +1,10 @@
 import "server-only";
 
 import { requireAdminClient } from "./users-queries";
+import type { createAdminClient } from "@/lib/supabase/admin";
 import type { FunnelEvent } from "@/lib/analytics/funnel-events";
 import { attributionSource, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { SCREEN_WIDTH_BUCKETS, type ScreenWidthBucket } from "@/lib/analytics/screen-width";
 
 // ---------------------------------------------------------------------------
 // The admin Funnel panel's data: counts per funnel event for two trailing
@@ -26,12 +28,18 @@ export type TrialEngagementRow = {
   generations: number;
   downloads: number;
 };
+/** One row of the "Screen widths" table: tab sessions per bucket and their
+ *  share of every bucketed session in the window (null when there are none). */
+export type ScreenWidthRow = { bucket: ScreenWidthBucket; label: string; sessions: number; share: number | null };
 export type FunnelSummary = {
   windows: FunnelWindow[];
   /** Signups by first-touch source, last 30 days. */
   signupSources: SignupSource[];
   /** Trials started in the last 30 days and what they did in their 7 days. */
   trials: TrialEngagementRow[];
+  /** Anonymous viewport-width buckets, last 30 days (TODO WD9); null when
+   *  the read failed — never zeros standing in for an error. */
+  screenWidths: ScreenWidthRow[] | null;
 };
 
 export const FUNNEL_WINDOWS_DAYS = [7, 30] as const;
@@ -60,6 +68,7 @@ const LABEL: Record<FunnelEvent, string> = {
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",
   nav_click: "Nav clicks",
+  screen_width: "Screen-width sessions",
   pack_purchased: "Packs purchased",
   deck_created: "Decks created",
   deck_card_customized: "Deck cards customized",
@@ -111,6 +120,44 @@ export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): 
     .slice(0, limit);
 }
 
+/** Pure: every bucket in width order (empty ones too, so the table's shape
+ *  never moves), each with its share of the total to one decimal. */
+export function buildScreenWidths(counts: Partial<Record<ScreenWidthBucket, number>>): ScreenWidthRow[] {
+  const total = SCREEN_WIDTH_BUCKETS.reduce((sum, b) => sum + (counts[b.key] ?? 0), 0);
+  return SCREEN_WIDTH_BUCKETS.map(({ key, label }) => {
+    const sessions = counts[key] ?? 0;
+    return { bucket: key, label, sessions, share: total > 0 ? Math.round((sessions / total) * 1000) / 10 : null };
+  });
+}
+
+/** One exact head count per bucket (seven small index reads): a row read
+ *  would stop at PostgREST's row cap, and the counts need no SQL function. */
+async function readScreenWidths(
+  admin: ReturnType<typeof createAdminClient>,
+  since: string,
+): Promise<ScreenWidthRow[] | null> {
+  const results = await Promise.all(
+    SCREEN_WIDTH_BUCKETS.map(({ key }) =>
+      admin
+        .from("funnel_events")
+        .select("id", { count: "exact", head: true })
+        .eq("event", "screen_width")
+        .eq("props->>bucket", key)
+        .gte("created_at", since),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    console.error("getFunnelSummary: screen widths read failed", failed.error.message);
+    return null;
+  }
+  const counts: Partial<Record<ScreenWidthBucket, number>> = {};
+  SCREEN_WIDTH_BUCKETS.forEach(({ key }, i) => {
+    counts[key] = results[i].count ?? 0;
+  });
+  return buildScreenWidths(counts);
+}
+
 export async function getFunnelSummary(): Promise<FunnelSummary | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
@@ -129,9 +176,10 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     windows.push(buildFunnel(counts, days));
   }
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [signups, trials] = await Promise.all([
+  const [signups, trials, screenWidths] = await Promise.all([
     admin.from("funnel_events").select("props").eq("event", "signup").gte("created_at", since30).limit(5000),
     admin.rpc("admin_trial_engagement", { p_since: since30 }),
+    readScreenWidths(admin, since30),
   ]);
   if (signups.error) console.warn("getFunnelSummary: signups", signups.error.message);
   if (trials.error) console.warn("getFunnelSummary: trials", trials.error.message);
@@ -148,5 +196,6 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
       generations: Number(row.generations),
       downloads: Number(row.downloads),
     })),
+    screenWidths,
   };
 }

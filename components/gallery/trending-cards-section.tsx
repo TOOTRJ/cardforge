@@ -24,6 +24,17 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 // show an awkward empty header above no content.
 // ---------------------------------------------------------------------------
 
+/** The "hero" variant's glowing surface — the gallery's and the home page's
+ *  "Trending now" block. Exported so another headline row (the /decks
+ *  commander row, TODO DK8.4) wears the same glow, never a copy of it. Its
+ *  padding is p-5 / sm:p-7 inside a 1 px border — a row's `sizes` counts it. */
+export const TRENDING_HERO_SURFACE_CLASS =
+  "relative overflow-hidden rounded-2xl border border-gold/35 bg-[radial-gradient(120%_80%_at_0%_0%,color-mix(in_oklab,var(--color-gold)_16%,transparent),transparent_60%),radial-gradient(90%_70%_at_100%_100%,color-mix(in_oklab,var(--color-accent)_14%,transparent),transparent_60%)] bg-surface/70 p-5 shadow-[0_30px_80px_-40px_color-mix(in_oklab,var(--color-gold)_45%,transparent)] sm:p-7";
+
+/** The eyebrow's shape (its colour is the variant's: gold on the hero). */
+export const SECTION_EYEBROW_CLASS =
+  "inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em]";
+
 type TrendingCardsSectionProps = {
   cards: CardWithStats[];
   /** Whether the current viewer is signed in. Used to decide whether the
@@ -78,17 +89,13 @@ export function TrendingCardsSection({
     <section
       aria-labelledby="trending-heading"
       className={cn(
-        hero &&
-          "relative overflow-hidden rounded-2xl border border-gold/35 bg-[radial-gradient(120%_80%_at_0%_0%,color-mix(in_oklab,var(--color-gold)_16%,transparent),transparent_60%),radial-gradient(90%_70%_at_100%_100%,color-mix(in_oklab,var(--color-accent)_14%,transparent),transparent_60%)] bg-surface/70 p-5 shadow-[0_30px_80px_-40px_color-mix(in_oklab,var(--color-gold)_45%,transparent)] sm:p-7",
+        hero && TRENDING_HERO_SURFACE_CLASS,
       )}
     >
       <div className="mb-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
         <div className="flex flex-col gap-1.5">
           <span
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em]",
-              hero ? "text-gold-strong" : "text-primary-bright",
-            )}
+            className={cn(SECTION_EYEBROW_CLASS, hero ? "text-gold-strong" : "text-primary-bright")}
           >
             <Flame className={cn("h-3.5 w-3.5", hero && "animate-pulse")} aria-hidden />
             {eyebrow}

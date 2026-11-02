@@ -219,7 +219,7 @@ export function DeckOwnerTools({
               <FileText className="h-4 w-4 text-accent" aria-hidden />
               Deck details
             </DialogTitle>
-            <DialogDescription>Name, description, format, visibility and cover.</DialogDescription>
+            <DialogDescription>Name, format, deck type, bracket, description, cover and visibility.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <DeckCreatorForm

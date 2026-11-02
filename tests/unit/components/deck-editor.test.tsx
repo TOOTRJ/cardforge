@@ -41,6 +41,8 @@ const actions = vi.hoisted(() => ({
 vi.mock("@/lib/decks/card-actions", () => actions);
 const adds = vi.hoisted(() => ({ addToDeckAction: vi.fn() }));
 vi.mock("@/lib/decks/add-actions", () => adds);
+const offers = vi.hoisted(() => ({ privateCardOfferAction: vi.fn() }));
+vi.mock("@/lib/decks/membership-actions", () => offers);
 
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import type { DeckItem } from "@/lib/decks/queries";
@@ -80,13 +82,13 @@ const item = (n: number, over: Record<string, unknown> = {}) => ({ entry: entry(
 const BOLT = () => item(1, { name: "Lightning Bolt", quantity: 2 });
 const RING = () => item(2, { name: "Sol Ring", type_line: "Artifact", mana_cost: "{1}" });
 
-function deckPage(items: DeckItem[] = [BOLT(), RING()]) {
+function deckPage(items: DeckItem[] = [BOLT(), RING()], deck: typeof DECK & { visibility?: "public" | "unlisted" | "private" } = DECK) {
   return render(
     <DeckCardList
       items={items}
       ownerUsername="kesh"
       canManage
-      deck={DECK}
+      deck={deck}
       initialPrefs={{ view: "list", group: "none", sort: "name" }}
       summary={{ format: "casual", analytics: { total: 3, byBoard: { main: 3, side: 0, maybe: 0, commander: 0, companion: 0 }, averageManaValue: 1, lands: 0 }, formatIssues: 0 }}
     />,
@@ -111,7 +113,7 @@ const flush = () => act(async () => new Promise((resolve) => setTimeout(resolve,
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.pipglyph.com");
-  for (const fn of [...Object.values(actions), ...Object.values(adds), ...Object.values(router), toast.error, toast.warning, toast]) fn.mockReset?.();
+  for (const fn of [...Object.values(actions), ...Object.values(adds), ...Object.values(offers), ...Object.values(router), toast.error, toast.warning, toast]) fn.mockReset?.();
 });
 afterEach(() => {
   cleanup();
@@ -570,5 +572,142 @@ describe("the add box (DK5.2) — an ARIA combobox", () => {
       "Ember Wyrm is already in the deck, on the Sideboard. Move it there to change boards.",
     );
     expect(toast.error).toHaveBeenCalledWith("Couldn't add Ember Wyrm.", expect.anything());
+  });
+});
+
+describe("the add box — a private card into a deck others can open (DK0.13)", () => {
+  const WYRM = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const results = (visibility: string) => ({
+    ok: true,
+    mine: [
+      {
+        card: { id: WYRM, owner_id: "me", slug: "ember-wyrm", title: "Ember Wyrm", visibility, rendered_image_url: null, rendered_thumb_url: null, rendered_back_image_url: null, rendered_back_thumb_url: null, cost: "{3}{R}", card_type: "creature", color_identity: ["red"], frame_style: { template: "m15" } },
+        maker: null,
+      },
+    ],
+    community: [],
+  });
+  const searchFor = (visibility: string) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () => (String(url).startsWith("/api/decks/add-search") ? results(visibility) : { ok: true, results: [] }),
+      })),
+    );
+  const PUBLIC_DECK = { ...DECK, visibility: "public" as const };
+
+  async function pickWyrm() {
+    const box = screen.getByRole("combobox", { name: "Add cards" });
+    await act(async () => {
+      box.focus();
+      fireEvent.change(box, { target: { value: "em" } });
+    });
+    await waitFor(() => expect(screen.getByRole("option", { name: /^Ember Wyrm/ })).toBeTruthy());
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter" });
+    });
+    await flush();
+    return box;
+  }
+
+  it("asks first — nothing is drawn or sent — and Make it public adds it with the publish", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({ ok: true, cards: [{ cardId: WYRM }] });
+    adds.addToDeckAction.mockResolvedValue({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false, published: true });
+    deckPage(undefined, PUBLIC_DECK);
+    await pickWyrm();
+    expect(offers.privateCardOfferAction).toHaveBeenCalledWith({ deckId: DECK.id, cardIds: [WYRM] });
+    const dialog = screen.getByRole("dialog", { name: "Add “Ember Wyrm” to “Ness”?" });
+    expect(dialog.textContent).toContain("This card is private. Visitors will see “Private card” in this deck.");
+    expect(adds.addToDeckAction).not.toHaveBeenCalled();
+    // The focus is in the dialog, on its first answer.
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Make it public" }));
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "Make it public" }));
+    });
+    await flush();
+    expect(adds.addToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      pick: { kind: "card", cardId: WYRM },
+      privateCard: "publish",
+    });
+    expect(status()).toBe("Made public and added Ember Wyrm to the Mainboard.");
+  });
+
+  it("Add as private: today's add", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({ ok: true, cards: [{ cardId: WYRM }] });
+    adds.addToDeckAction.mockResolvedValue({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false });
+    deckPage(undefined, PUBLIC_DECK);
+    await pickWyrm();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add as private" }));
+    });
+    await flush();
+    expect(adds.addToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      pick: { kind: "card", cardId: WYRM },
+    });
+  });
+
+  it("Escape is Cancel: nothing added, said, and the focus goes back to the box", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({ ok: true, cards: [{ cardId: WYRM }] });
+    deckPage(undefined, PUBLIC_DECK);
+    const box = await pickWyrm();
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      fireEvent.keyDown(dialog, { key: "Escape" });
+    });
+    await flush();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(adds.addToDeckAction).not.toHaveBeenCalled();
+    expect(status()).toBe("Ember Wyrm not added.");
+    expect(document.activeElement).toBe(box);
+  });
+
+  it("a card its text keeps private: the reason instead of Make it public; Add as private stays", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({
+      ok: true,
+      cards: [{ cardId: WYRM, blockedReason: "Its rules text includes strong language, so it stays private. Remove it to publish." }],
+    });
+    deckPage(undefined, PUBLIC_DECK);
+    await pickWyrm();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: /Make/ })).toBeNull();
+    expect(dialog.textContent).toContain("Its rules text includes strong language, so it stays private.");
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Add as private" }));
+  });
+
+  it("no question for a PRIVATE deck, nor for a public card", async () => {
+    searchFor("private");
+    adds.addToDeckAction.mockResolvedValue({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false });
+    const page = deckPage(undefined, { ...DECK, visibility: "private" });
+    await pickWyrm();
+    expect(offers.privateCardOfferAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(adds.addToDeckAction).toHaveBeenCalledTimes(1);
+    page.unmount();
+
+    searchFor("public");
+    deckPage(undefined, PUBLIC_DECK);
+    await pickWyrm();
+    expect(offers.privateCardOfferAction).not.toHaveBeenCalled();
+    expect(adds.addToDeckAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("the server says it is no longer private: added at once, no question", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({ ok: true, cards: [] });
+    adds.addToDeckAction.mockResolvedValue({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false });
+    deckPage(undefined, PUBLIC_DECK);
+    await pickWyrm();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(adds.addToDeckAction).toHaveBeenCalledTimes(1);
   });
 });

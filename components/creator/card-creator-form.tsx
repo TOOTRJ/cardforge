@@ -250,6 +250,7 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
+import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
@@ -402,6 +403,7 @@ import {
 } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import { creatorLanguageFields, NO_STRONG_LANGUAGE, strongLanguageChoices } from "@/lib/creator/strong-language";
+import { isModerationLocked, moderationLockedSavedMessage } from "@/lib/moderation/lock";
 import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
 import {
   isFramePreviewSave,
@@ -1223,6 +1225,12 @@ export function CardCreatorForm({
   const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const partColorFollow = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
   const markPartColorTouched = partColorFollow.markTouched;
+  // A new card's tags follow its rules text and subtypes (every face's)
+  // until the Tags field changes under anything else
+  // (lib/creator/auto-tags-follow.ts). Never a deck-card proxy
+  // (/create?deckCard=): it starts from the printing it copies, and its
+  // "unchanged" baseline (the reset after the import) must not move.
+  const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -1440,6 +1448,9 @@ export function CardCreatorForm({
   // Read only where it is shown (the Publish panel), not on every keystroke.
   const languageChoices =
     stepKey === "publish" ? strongLanguageChoices(watched, languageContextFor(watched)) : NO_STRONG_LANGUAGE;
+  // The moderation lock (migration 0156, lib/moderation/lock.ts): an edit of
+  // a card moderation hid saves private, and the Publish step says why.
+  const moderationLocked = isEdit && isModerationLocked(card);
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -3938,6 +3949,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    autoTags.restart();
     remixNicknameClearedRef.current = false;
     stashedSecondPartRef.current = {};
     secondPartFields.forget();
@@ -4001,8 +4013,9 @@ export function CardCreatorForm({
     // …and strong language in the text makes it private too (the Publish
     // step says so; the server applies the same rule).
     const languageFields = creatorLanguageFields(values, chosenVisibility, languageContextFor(values));
+    // …and so does the moderation lock (an edit of a card moderation hid).
     const finalVisibility =
-      languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
+      moderationLocked || languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
         ? "private"
         : chosenVisibility;
 
@@ -4525,8 +4538,16 @@ export function CardCreatorForm({
       // Kept private for the strong language in its text (the Publish
       // step's note, or the server): ONE toast says so.
       const editLanguageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
-      const editSavedVisibility = result.forcedPrivate ? "private" : finalVisibility;
-      toast.success(editLanguageNotice ? strongLanguageSavedMessage(payload.title, editLanguageNotice) : "Changes saved.");
+      const editSavedVisibility = result.forcedPrivate || result.moderationLocked ? "private" : finalVisibility;
+      // …and for the moderation lock (0156), when the maker asked for more.
+      const editLockNotice = result.moderationLocked === true || (moderationLocked && chosenVisibility !== "private");
+      toast.success(
+        editLockNotice
+          ? moderationLockedSavedMessage(payload.title)
+          : editLanguageNotice
+            ? strongLanguageSavedMessage(payload.title, editLanguageNotice)
+            : "Changes saved.",
+      );
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
       // …and its nickname (TODO 6.3), when this save sent one.
@@ -5018,8 +5039,13 @@ export function CardCreatorForm({
       <CreatorDeckBox
         mode={mode}
         cardId={isEdit ? (card?.id ?? null) : null}
+        cardTitle={isEdit ? (card?.title ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
+        publicLanguageFields={() => {
+          const values = methods.getValues();
+          return creatorLanguageFields(values, "public", languageContextFor(values));
+        }}
       />
     );
   const stepPanels = (
@@ -5502,8 +5528,10 @@ export function CardCreatorForm({
                 userId={userId}
                 activeChallenge={activeChallenge}
                 revise={isRevise}
+                tagsAutoFilled={autoTags.following}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}
+                moderationLocked={moderationLocked}
               />
             ) : null}
       </div>

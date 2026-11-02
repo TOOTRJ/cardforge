@@ -113,8 +113,13 @@ test.describe("double-faced editor", () => {
       // The card page flips: the live hero's corner button turns it over.
       await page.getByRole("link", { name: /view public page/i }).click();
       await page.waitForURL(/\/card\/[^/]+\/[^/]+$/);
+      // The URL changes on the route's loading skeleton, before the card
+      // page has drawn — and under `next dev` its first visit compiles the
+      // whole route (≈5 s cold on CI). Wait for what only the card page
+      // draws, its <h1> (the card's name), with room for that compile.
+      await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible({ timeout: 20_000 });
       const flip = page.getByRole("button", { name: /flip to back face/i });
-      await expect(flip).toBeVisible();
+      await expect(flip).toBeVisible({ timeout: 20_000 });
       await flip.click();
       await expect(page.getByRole("button", { name: /flip to front face/i })).toBeVisible();
     });
