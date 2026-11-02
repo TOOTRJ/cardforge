@@ -1666,7 +1666,13 @@ Rules and gotchas:
   why) — the git guides keep `articleMdxOptions`. `content_updated_at`
   (dateModified, sitemap lastmod) moves only on an edit marked a revision;
   the slug is locked once `first_published_at` is set (0160's trigger: the
-  first announce, never cleared — an unpublish keeps it). The public LIST
+  first write that sees the row public — published with `publish_at`
+  passed, or announced — never cleared; an unpublish keeps it). A composer
+  body's component attributes are quoted strings, and `CardScan` `src` /
+  `href` and `Mana` `cost` are required (`ARTICLE_BODY_REQUIRED`): the gate
+  compiles without rendering, so a value the components can't draw would
+  pass it and 500 the page; the components draw nothing for a non-string.
+  The public LIST
   cache holds no bodies (2 MB `unstable_cache` limit; the page reads its own
   by slug). Pictures: the moderated `set-covers` upload
   (`purpose: "article-image"`), or a diagram under `public/article-media/`

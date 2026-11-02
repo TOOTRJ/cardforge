@@ -22,7 +22,11 @@ import { isSafeArticleHref } from "@/lib/content/article-shared";
 //     (a BLOCKING item, lib/content/article-seo-checklist.ts).
 //
 // The rule: Markdown (GFM) plus the five article components, each with its
-// own attributes only — never another element, raw HTML (MDX reads it as
+// own attributes only, every value a quoted string, and the ones it can't
+// draw without present (ARTICLE_BODY_REQUIRED) — the compile never renders,
+// so "passes the gate" has to mean "renders": a bare `href`, an
+// `href={…}` blockJS empties or a <Mana> with no cost compiled, passed and
+// then threw on the page (a 500). Never another element, raw HTML (MDX reads it as
 // JSX, so it is an element like any other), import / export, a `{…}`
 // expression (blockJS drops it silently: a mana cost typed as `{2}{R}` in
 // prose vanished) or a link whose target isn't https://, a site path, a
@@ -41,7 +45,13 @@ export const ARTICLE_BODY_COMPONENTS: Readonly<Record<string, readonly string[]>
   Figure: ["src", "alt", "caption", "width", "height"],
 };
 
-type MdxAttribute = { type: string; name?: string; value?: unknown };
+/** The attributes a component can't draw without. */
+export const ARTICLE_BODY_REQUIRED: Readonly<Record<string, readonly string[]>> = {
+  Mana: ["cost"],
+  CardScan: ["src", "href"],
+};
+
+type MdxAttribute ={ type: string; name?: string; value?: unknown };
 type MdNode = {
   type: string;
   name?: string | null;
@@ -73,6 +83,7 @@ function problemsInTree(tree: MdNode): string[] {
           );
           break;
         }
+        const given = new Set<string>();
         for (const attr of node.attributes ?? []) {
           if (attr.type !== "mdxJsxAttribute" || !attr.name) {
             problems.push(`<${name}> takes no {…} spread${at(node)}.`);
@@ -82,9 +93,27 @@ function problemsInTree(tree: MdNode): string[] {
             problems.push(`<${name}> has no "${attr.name}" attribute${at(node)}.`);
             continue;
           }
-          if (attr.name === "href" && typeof attr.value === "string" && !isSafeArticleHref(attr.value)) {
+          // A value is a quoted string, always. A bare attribute arrives as
+          // `true`, and blockJS DROPS a {…} value (the attribute is then
+          // undefined) — either way the component got what it can't draw
+          // (a 500 at render, after every check had passed). That includes
+          // width={1600}: written as width="1600" it keeps its size; as an
+          // expression blockJS would silently drop it.
+          if (typeof attr.value !== "string") {
+            problems.push(
+              `<${name} ${attr.name}> needs a quoted value${at(node)} — write ${attr.name}="…"${
+                attr.value === null || attr.value === undefined ? "" : ", not {…}"
+              }.`,
+            );
+            continue;
+          }
+          given.add(attr.name);
+          if (attr.name === "href" && !isSafeArticleHref(attr.value)) {
             problems.push(`<${name}> links to "${attr.value}"${at(node)} — use https://.`);
           }
+        }
+        for (const required of ARTICLE_BODY_REQUIRED[name] ?? []) {
+          if (!given.has(required)) problems.push(`<${name}> needs ${required}="…"${at(node)}.`);
         }
         break;
       }

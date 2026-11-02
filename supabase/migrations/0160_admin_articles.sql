@@ -20,12 +20,17 @@
 --                               + IndexNow). /api/cron/publish-articles
 --                               announces every released row with none; an
 --                               unpublish or a reschedule clears it.
---   first_published_at          when the article FIRST went out (the first
---                               announce: the earlier of publish_at and
---                               announced_at). Set once by a trigger, never
---                               cleared or moved — an unpublish keeps it —
---                               and while it is set the slug is locked
---                               (the composer refuses, and so does the
+--   first_published_at          when the article FIRST went public: its
+--                               publish_at (or the announce, if earlier).
+--                               Set by a trigger on the first write that
+--                               sees the row public — is_published with
+--                               publish_at passed, or announced — whether
+--                               that write publishes it, announces it,
+--                               renames or unpublishes it (RLS shows a row
+--                               at publish_at, before the cron announces
+--                               it). Never cleared or moved — an unpublish
+--                               keeps it — and the slug is locked from then
+--                               on (the composer refuses, and so does the
 --                               trigger): a URL that has been public stays.
 --   cover_url / cover_alt       the cover (Article.image, the article's OG
 --                               image source); alt text is REQUIRED with a
@@ -105,19 +110,34 @@ returns trigger
 language plpgsql
 set search_path = ''
 as $$
+declare
+  v_was_public boolean := false;
 begin
-  if tg_op = 'UPDATE' and old.first_published_at is not null then
-    -- Never cleared, never moved — whatever the row update says.
-    new.first_published_at := old.first_published_at;
+  if tg_op = 'UPDATE' then
+    -- Public before this write: stamped, announced, or released by time
+    -- alone (is_published with publish_at passed — RLS has shown it since
+    -- publish_at, whether or not the cron has run).
+    v_was_public := old.first_published_at is not null
+      or old.announced_at is not null
+      or (old.is_published and old.publish_at <= now());
+  end if;
+  if v_was_public then
+    -- Never cleared, never moved — whatever the row update says; a row
+    -- public by time alone gets its date now (this write may unpublish it).
+    new.first_published_at := coalesce(
+      old.first_published_at,
+      least(old.publish_at, coalesce(old.announced_at, old.publish_at))
+    );
     if new.slug is distinct from old.slug then
       raise exception 'article_slug_locked: a published article keeps its URL'
         using errcode = 'check_violation';
     end if;
-  elsif new.announced_at is not null then
-    -- The first announce: the release time (or the announce, if earlier).
-    new.first_published_at := least(new.publish_at, new.announced_at);
+  elsif new.announced_at is not null or (new.is_published and new.publish_at <= now()) then
+    -- Public from this write on: the release time (or the announce, if
+    -- earlier).
+    new.first_published_at := least(new.publish_at, coalesce(new.announced_at, new.publish_at));
   else
-    -- Not announced yet: nothing to record, whatever the writer sent.
+    -- Not public yet: nothing to record, whatever the writer sent.
     new.first_published_at := null;
   end if;
   return new;
@@ -132,12 +152,12 @@ create trigger articles_first_published
   on public.articles
   for each row execute function public.articles_first_published();
 
--- A row announced before the column existed (an earlier draft of this
+-- A row public before the column existed (an earlier draft of this
 -- migration on a preview branch) gets its date now. Idempotent.
 update public.articles
-   set first_published_at = least(publish_at, announced_at)
+   set first_published_at = least(publish_at, coalesce(announced_at, publish_at))
  where first_published_at is null
-   and announced_at is not null;
+   and (announced_at is not null or (is_published and publish_at <= now()));
 
 -- ===========================================================================
 -- RLS
