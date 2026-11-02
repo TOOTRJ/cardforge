@@ -9,18 +9,42 @@
 // with --if-production (package.json "build"), so an unpromoted manifest
 // fails the Vercel production deploy and the previous one keeps serving.
 // Public reads only — no key.
+//
+// --incremental (the production build only; owner 2026-11-02): look up the
+// objects that are new or changed since the last successful deployment of
+// this branch, plus a rotating canary of the rest — scripts/lib/
+// frames-check-plan.mjs says why that is safe and when it falls back to the
+// full check (any doubt). CI's "Frames published" job always runs in full,
+// on every merge and every night.
 // ---------------------------------------------------------------------------
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
 import { FramesCheckDeadline, findMissing, frameObjectKey, objectStatus, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { planFramesCheck } from "./lib/frames-check-plan.mjs";
 
 if (process.argv.includes("--if-production") && process.env.VERCEL_ENV !== "production") process.exit(0);
 const at = process.argv.indexOf("--origin");
 const origin = at >= 0 ? process.argv[at + 1] : publicBaseFor(`https://${PRODUCTION_SUPABASE_REF}.supabase.co`);
 const manifest = readManifest();
-const entries = Object.entries(manifest.files);
-if (entries.length === 0) {
+if (Object.keys(manifest.files).length === 0) {
   console.log("Frame manifest is empty — every frame is still served from public/frames.");
   process.exit(0);
+}
+const plan = planFramesCheck({
+  manifest,
+  incremental: process.argv.includes("--incremental"),
+  originIsProduction: at < 0,
+  env: process.env,
+});
+const entries = plan.entries;
+const total = Object.keys(manifest.files).length;
+if (plan.mode === "incremental") {
+  console.log(
+    `Incremental check: ${plan.changed.length} new or changed manifest object(s) since ${plan.baseSha.slice(0, 12)} ` +
+      `(the last successful deployment of this branch) + a canary of ${plan.canary.length} of the ${plan.unchanged} unchanged. ` +
+      "CI's nightly \"Frames published\" checks them all.",
+  );
+} else if (process.argv.includes("--incremental")) {
+  console.log(`Full check: ${plan.reason}.`);
 }
 // At most 4 lookups in flight, and every apparent miss is re-checked on its
 // own before it counts: this runs against PRODUCTION storage (a small
@@ -77,4 +101,11 @@ if (missing.length) {
   console.error("The owner runs `npm run frames:promote` (docs/FRAMES.md) before this merges.");
   process.exit(1);
 }
-console.log(`✓ All ${entries.length} manifest objects are published at ${origin}.`);
+if (plan.mode === "incremental") {
+  console.log(
+    `✓ All ${entries.length} checked manifest objects (${plan.changed.length} new or changed, ${plan.canary.length} canary) are published at ${origin}; ` +
+      `the other ${total - entries.length} are unchanged since ${plan.baseSha.slice(0, 12)}.`,
+  );
+} else {
+  console.log(`✓ All ${entries.length} manifest objects are published at ${origin}.`);
+}

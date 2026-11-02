@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/check-dev-env.mjs && next dev",
     "dev:prod": "ALLOW_PROD_DB=1 node --env-file=.env.prod-peek scripts/check-dev-env.mjs && ALLOW_PROD_DB=1 node --env-file=.env.prod-peek node_modules/next/dist/bin/next dev",
-    "build": "node scripts/frames-check.mjs --if-production && next build",
+    "build": "node scripts/frames-check.mjs --if-production --incremental && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
