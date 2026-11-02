@@ -39,13 +39,16 @@ import { Button } from "@/components/ui/button";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCIAL_PLATFORMS, type SocialPlatformKey } from "@/lib/auth/schemas";
-import { getSiteBaseUrl } from "@/lib/site-url";
-import { absoluteProfileMediaUrl } from "@/lib/profile/default-media";
 import { JsonLd } from "@/components/seo/json-ld";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { PageContainer } from "@/components/layout/page-container";
 import { CARD_GRID_SIZES, CardGrid } from "@/components/cards/card-grid";
+import { LinkIcon } from "@/components/profile/link-icon";
+import { listProfileLinks } from "@/lib/profile/links-queries";
+import { profileLinkName, type ProfileLink } from "@/lib/profile/link-kinds";
+import { USER_LINK_REL } from "@/lib/profile/store-platforms";
+import { buildProfileJsonLd } from "@/lib/profile/json-ld";
 
 type Params = { username: string };
 
@@ -110,10 +113,11 @@ export default async function ProfilePage({
 
   const viewer = await getCurrentUser();
   const isOwnProfile = Boolean(viewer && viewer.id === profile.id);
-  const [following, followCounts, publicDeckCount] = await Promise.all([
+  const [following, followCounts, publicDeckCount, extraLinks] = await Promise.all([
     viewer && !isOwnProfile ? isFollowing(profile.id) : Promise.resolve(false),
     getFollowCounts(profile.id),
     countPublicDecksByOwner(profile.id),
+    listProfileLinks(profile.id),
   ]);
 
   const displayName =
@@ -128,7 +132,7 @@ export default async function ProfilePage({
 
   return (
     <PageContainer size="wide" className="py-12" style={accentStyle}>
-      <JsonLd data={buildProfileJsonLd(profile, displayName)} />
+      <JsonLd data={buildProfileJsonLd(profile, displayName, extraLinks)} />
       <Link
         href="/gallery"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -147,6 +151,7 @@ export default async function ProfilePage({
         isOwnProfile={isOwnProfile}
         viewerSignedIn={Boolean(viewer)}
         initialFollowing={following}
+        extraLinks={extraLinks}
       />
 
       <Suspense fallback={<PinnedRowSkeleton />}>
@@ -272,6 +277,7 @@ function ProfileHero({
   isOwnProfile,
   viewerSignedIn,
   initialFollowing,
+  extraLinks,
 }: {
   profile: ProfileWithStats;
   displayName: string;
@@ -282,6 +288,7 @@ function ProfileHero({
   isOwnProfile: boolean;
   viewerSignedIn: boolean;
   initialFollowing: boolean;
+  extraLinks: ProfileLink[];
 }) {
   return (
     <div className="overflow-hidden rounded-frame border border-border bg-surface">
@@ -306,7 +313,7 @@ function ProfileHero({
                 {profile.bio}
               </p>
             ) : null}
-            <ProfileLinks profile={profile} />
+            <ProfileLinks profile={profile} extraLinks={extraLinks} />
           </div>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -412,13 +419,19 @@ function ProfileAvatar({
   );
 }
 
-function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
+function ProfileLinks({
+  profile,
+  extraLinks,
+}: {
+  profile: ProfileWithStats;
+  extraLinks: ProfileLink[];
+}) {
   const socialEntries = SOCIAL_PLATFORMS.flatMap((p) => {
     const url = profile[p.key as SocialPlatformKey];
     return url ? [{ ...p, url }] : [];
   });
 
-  if (!profile.website_url && socialEntries.length === 0) return null;
+  if (!profile.website_url && socialEntries.length === 0 && extraLinks.length === 0) return null;
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -433,7 +446,7 @@ function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
           {profile.website_url.replace(/^https?:\/\//, "")}
         </a>
       ) : null}
-      {socialEntries.length > 0 ? (
+      {socialEntries.length > 0 || extraLinks.length > 0 ? (
         <ul className="flex flex-wrap items-center gap-1.5">
           {socialEntries.map((entry) => (
             <li key={entry.key}>
@@ -445,6 +458,21 @@ function ProfileLinks({ profile }: { profile: ProfileWithStats }) {
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted transition-colors hover:bg-elevated hover:text-[var(--profile-accent,var(--color-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
               >
                 <SocialIcon platform={entry.key} className="h-4 w-4" />
+              </a>
+            </li>
+          ))}
+          {extraLinks.map((link) => (
+            <li key={link.id}>
+              {/* A user's own link: rel="me" lets Mastodon & co. verify it. */}
+              <a
+                href={link.url}
+                target="_blank"
+                rel={`me ${USER_LINK_REL}`}
+                aria-label={profileLinkName(link)}
+                title={profileLinkName(link)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-elevated/60 text-muted transition-colors hover:bg-elevated hover:text-[var(--profile-accent,var(--color-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+              >
+                <LinkIcon kind={link.kind} className="h-4 w-4" />
               </a>
             </li>
           ))}
@@ -594,48 +622,6 @@ function ProfileCardTile({
       </div>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// ProfilePage + Person JSON-LD — Google's profile-page structured data
-// shape. sameAs collects the creator's own links (website + socials) so
-// search engines can connect this profile to their wider identity.
-// ---------------------------------------------------------------------------
-
-function buildProfileJsonLd(
-  profile: ProfileWithStats,
-  displayName: string,
-): Record<string, unknown> {
-  const base = getSiteBaseUrl();
-  const canonical = `${base}/profile/${profile.username}`;
-  const sameAs = [
-    profile.website_url,
-    ...SOCIAL_PLATFORMS.map((p) => profile[p.key as SocialPlatformKey]),
-  ].filter((url): url is string => Boolean(url));
-
-  const person: Record<string, unknown> = {
-    "@type": "Person",
-    name: displayName,
-    alternateName: `@${profile.username}`,
-    url: canonical,
-    description:
-      profile.bio?.trim() || `Custom cards forged by @${profile.username} on PipGlyph.`,
-  };
-  // Built-in avatars are stored site-relative; structured data needs absolute.
-  const avatarUrl = absoluteProfileMediaUrl(
-    profileMediaSrc("avatar", profile.avatar_url, profile.id),
-    base,
-  );
-  if (avatarUrl) person.image = avatarUrl;
-  if (sameAs.length > 0) person.sameAs = sameAs;
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    dateCreated: profile.created_at,
-    mainEntity: person,
-    url: canonical,
-  };
 }
 
 function NotConfigured({ username }: { username: string }) {
