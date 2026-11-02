@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   ChevronRight,
-  Download,
   ExternalLink,
   Flame,
   Pencil,
@@ -383,11 +382,12 @@ export async function CardDetailContent({
                 downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
                 frameTemplate={frameTemplateOf(card.frame_style)}
                 hasBackFace={hasBackFace}
-                trigger={
-                  <Button variant={isOwner ? "outline" : "primary"} className="w-full sm:w-auto">
-                    <Download className="h-4 w-4" aria-hidden /> Download
-                  </Button>
-                }
+                // The trigger's look as PROPS — never a <Button> element: the
+                // modal puts its trigger under Radix's `DialogTrigger asChild`,
+                // and an element sent from this server component can arrive
+                // as a lazy reference Radix renders as nothing (a hydration
+                // error, 2026-11-02; download-modal.tsx).
+                trigger={{ variant: isOwner ? "outline" : "primary", className: "w-full sm:w-auto" }}
               />
               {/* Another creator's card into one of your decks (TODO DK9.4,
                   owner decision D3): a PUBLIC one by "Add to deck"; one that
