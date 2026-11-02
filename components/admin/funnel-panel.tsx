@@ -90,6 +90,8 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
           {summary.trials.length === 0 ? (
             <p className="text-sm text-muted">No trials in the window.</p>
           ) : (
+            // Seven columns: it scrolls inside its box on a phone, never the page.
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-subtle">
@@ -120,6 +122,7 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
         <ScreenWidthsTable rows={summary.screenWidths} />
