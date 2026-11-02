@@ -245,7 +245,7 @@ export async function resolveCardReportsAction(input: {
     // pointer cleared, both render objects removed, the pending reports
     // actioned, then the purge — pages AND the CDN copies (share image,
     // /render-cdn bake). The flagged-file rescan hides a card the same way.
-    const hidden = await hideCard(admin, input.cardId, { resolvedBy: profile.id });
+    const hidden = await hideCard(admin, input.cardId, { resolvedBy: profile.id, reason: "report" });
     if (!hidden.ok) return { ok: false, error: hidden.error };
   } else {
     const { error } = await admin
@@ -260,5 +260,34 @@ export async function resolveCardReportsAction(input: {
   }
 
   revalidatePath("/admin/moderation");
+  return { ok: true };
+}
+
+// Admin-only. Clears the moderation lock (migration 0156,
+// lib/moderation/lock.ts) through admin_unhide_card — the database's own
+// viewer_is_admin() gate, on the admin's session — which also notifies the
+// owner ('moderation_unhidden') in the same transaction. It does NOT
+// republish: the card stays private and its owner decides.
+export async function unhideCardAction(input: { cardId: string }): Promise<ResolveResult> {
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
+  if (!isUuid(input.cardId)) return { ok: false, error: "Invalid card id." };
+
+  const supabase = await createClient();
+  const { data: ownerId, error } = await supabase.rpc("admin_unhide_card", { p_card_id: input.cardId });
+  if (error) {
+    console.error("[moderation] unhide failed:", error.message);
+    return { ok: false, error: `Couldn't unhide the card: ${error.message}` };
+  }
+  if (!ownerId) return { ok: false, error: "This card isn't hidden by moderation (any more)." };
+
+  revalidatePath("/admin/moderation");
+  // The owner's own surfaces (My Cards, the card page) drop the label. A
+  // private card is never announced (visibility "private").
+  if (isAdminConfigured()) {
+    const admin = createAdminClient();
+    const { data: card } = await admin.from("cards").select("slug").eq("id", input.cardId).maybeSingle();
+    if (card?.slug) revalidateCardPaths(card.slug, await lookupUsername(admin, ownerId), { visibility: "private" });
+  }
   return { ok: true };
 }

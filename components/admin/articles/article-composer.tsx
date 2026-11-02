@@ -38,6 +38,7 @@ import { inputClass, textareaClass } from "@/components/ui/field-classes";
 import { ARTICLE_CATEGORIES } from "@/lib/content/article-categories";
 import {
   ARTICLE_LIMITS,
+  articleSlugLocked,
   articleStatus,
   slugFromTitle,
   type ArticleFaqItem,
@@ -170,7 +171,7 @@ export function ArticleComposer({
   const bodyImageInput = useRef<HTMLInputElement>(null);
 
   const status: ArticleStatus = article ? articleStatus(article) : "draft";
-  const slugLocked = Boolean(article?.announced_at);
+  const slugLocked = article ? articleSlugLocked(article) : false;
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setState((s) => ({ ...s, [key]: value }));
 
@@ -708,14 +709,26 @@ export function ArticleComposer({
           </div>
           {blocking.length > 0 ? (
             <p className="m-0 text-sm text-danger" role="status">
-              Scheduling and publishing wait for {blocking.length} required fix{blocking.length === 1 ? "" : "es"} in the checklist.
+              Scheduling and publishing wait for{" "}
+              {/* Below the form on a phone (one column): the link takes the
+                  admin to the list instead of leaving them to scroll for it. */}
+              <a href="#article-checklist" className="font-semibold underline underline-offset-2">
+                {blocking.length} required fix{blocking.length === 1 ? "" : "es"} in the checklist
+              </a>
+              .
             </p>
           ) : null}
         </SurfaceCard>
       </form>
 
-      <aside className="flex flex-col gap-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
-        <h2 className="m-0 font-display text-lg font-semibold text-foreground">SEO checklist</h2>
+      <aside
+        id="article-checklist"
+        aria-labelledby="article-checklist-heading"
+        className="flex scroll-mt-24 flex-col gap-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto"
+      >
+        <h2 id="article-checklist-heading" className="m-0 font-display text-lg font-semibold text-foreground">
+          SEO checklist
+        </h2>
         <p className="m-0 text-xs text-muted">
           {blocking.length} required · {warnings.length} advice · {checklist.length - blocking.length - warnings.length} done.
           From <code>docs/research/article-seo-2026-10.md</code>.

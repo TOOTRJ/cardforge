@@ -10,6 +10,7 @@ import type { Article } from "@/lib/content/articles";
 const composed = vi.hoisted(() => ({ articles: [] as Article[] }));
 vi.mock("@/lib/content/db-articles", () => ({
   listReleasedComposerArticles: async () => composed.articles,
+  getReleasedComposerArticle: async (slug: string) => composed.articles.find((a) => a.meta.slug === slug) ?? null,
 }));
 
 import { listArticles } from "@/lib/content/articles";

@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 31_admin_articles.sql — composer articles (migration 0153) so a preview
+-- 34_admin_articles.sql — composer articles (migration 0160) so a preview
 -- branch, the dev database and the local stack show the backlog at
 -- /admin/articles (sign in as dev_admin):
 --
@@ -15,7 +15,7 @@
 -- Times are relative to the seed run (now() ± days). Never against
 -- production. Idempotent: fixed ids + ON CONFLICT DO NOTHING (a reseed keeps
 -- what an admin changed). No credential in here (the repo is public).
--- Article ids a1530000-…-0001 to …-0004.
+-- Article ids a1600000-…-0001 to …-0004.
 -- ---------------------------------------------------------------------------
 
 do $guard$
@@ -40,7 +40,7 @@ select
   (select p.id from public.profiles p where p.id = 'd0000000-0000-4000-a000-000000000001'::uuid)
 from (values
   (
-    'a1530000-0000-4000-a000-000000000001'::uuid,
+    'a1600000-0000-4000-a000-000000000001'::uuid,
     'seed-how-the-article-backlog-works',
     'Seed: how the article backlog works',
     'How the PipGlyph article backlog works',
@@ -73,7 +73,7 @@ An edit of a live article updates the page at once. The public updated date move
     true, now() - interval '1 day', now() - interval '1 day'
   ),
   (
-    'a1530000-0000-4000-a000-000000000002'::uuid,
+    'a1600000-0000-4000-a000-000000000002'::uuid,
     'seed-a-scheduled-article',
     'Seed: a scheduled article',
     null,
@@ -100,7 +100,7 @@ $body$ || repeat('Seed paragraph text keeps the body above the minimum length fo
     true, now() + interval '3 days', null
   ),
   (
-    'a1530000-0000-4000-a000-000000000003'::uuid,
+    'a1600000-0000-4000-a000-000000000003'::uuid,
     'seed-a-second-scheduled-article',
     'Seed: a second scheduled article',
     null,
@@ -123,7 +123,7 @@ $body$ || repeat('Seed paragraph text keeps the body above the minimum length fo
     true, now() + interval '6 days', null
   ),
   (
-    'a1530000-0000-4000-a000-000000000004'::uuid,
+    'a1600000-0000-4000-a000-000000000004'::uuid,
     'seed-an-unfinished-draft',
     'Seed: an unfinished draft',
     null,

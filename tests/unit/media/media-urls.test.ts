@@ -221,7 +221,7 @@ describe("drawableCardMedia — what both card renderers may draw", () => {
 // The TS table and migration 0127's media_url_allowed() must agree, or the
 // app would draw what the database refuses (or the other way round).
 // The NEWEST migration that defines media_url_allowed() is the rule the
-// database runs (0127, re-stated by 0150 and 0153 with one branch each).
+// database runs (0127, re-stated by 0150 and 0160 with one branch each).
 const latestMediaUrlAllowed = (): string => {
   const dir = join(process.cwd(), "supabase/migrations");
   const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort();

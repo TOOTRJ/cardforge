@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
-import { HelpCircle, Lock, Maximize2 } from "lucide-react";
+import { Ban, HelpCircle, Lock, Maximize2 } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { TwoFacesMark } from "@/components/cards/two-faces-mark";
 import { HOVER_REST_MS } from "@/components/cards/baked-card-flip";
@@ -12,6 +12,7 @@ import { cardCornersClass } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { hasBackPicture } from "@/lib/cards/tile-faces";
 import { entryPrintingImage } from "@/lib/decks/entry-image";
+import { GONE_CARD_NAME, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import { cn } from "@/lib/utils";
 import { DECK_BOARD_LABELS } from "@/types/deck";
 
@@ -143,8 +144,15 @@ export function DeckPreviewPane({
           <img key={picture} src={picture} alt={row.name} decoding="async" className="absolute inset-0 h-full w-full bg-[#101015] object-cover" />
         ) : (
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted">
-            {row.isPrivate ? <Lock className="h-5 w-5" aria-hidden /> : <HelpCircle className="h-5 w-5" aria-hidden />}
-            {row.isPrivate ? "Private card" : "No picture"}
+            {row.isGone ? (
+              <Ban className="h-5 w-5" aria-hidden />
+            ) : row.isPrivate ? (
+              <Lock className="h-5 w-5" aria-hidden />
+            ) : (
+              <HelpCircle className="h-5 w-5" aria-hidden />
+            )}
+            {/* A visitor's deleted card (0153) is gone, not private. */}
+            {row.isPrivate ? (row.isGone ? GONE_CARD_NAME : PRIVATE_CARD_NAME) : "No picture"}
           </span>
         )}
       </div>

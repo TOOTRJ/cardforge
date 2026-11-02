@@ -36,6 +36,9 @@ export default defineConfig({
     // Playwright tests live alongside but are NOT vitest-runnable; the
     // e2e runner picks them up via its own glob.
     exclude: ["node_modules", "tests/e2e/**", ".next/**"],
+    // Provides `inject("coverageOn")`: a wall-clock test reads it, since v8
+    // coverage makes timed code several times slower (tests/stubs/coverage-flag.ts).
+    globalSetup: ["tests/stubs/coverage-flag.ts"],
     coverage: {
       provider: "v8",
       include: ["lib/**", "components/**"],

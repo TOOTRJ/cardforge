@@ -5,7 +5,7 @@ import { announceDueArticles } from "@/lib/content/article-publish";
 
 // ---------------------------------------------------------------------------
 // /api/cron/publish-articles — the scheduled release of composer articles
-// (migration 0153). Every 10 minutes (vercel.json). A scheduled article is
+// (migration 0160). Every 10 minutes (vercel.json). A scheduled article is
 // already PUBLIC the moment its publish_at passes (RLS: is_published AND
 // publish_at <= now(); the cached reads catch up within 5 minutes); this run
 // is what makes it land everywhere at once — the article, the hubs, the

@@ -140,7 +140,8 @@ Rules and gotchas:
   (`deck_entry_hidden`, `isPrivateForViewer`) — is the deck OWNER's row
   alone (`deck_cards` read policy); a surface that LISTS a deck's rows for
   anyone reads them through `deck_entries_for_viewer` (`readDeckItems`:
-  masked, "Private card") — the table hands a visitor none of them. A
+  masked "Private card", a deleted card "No longer available" — 0153,
+  `hiddenEntryName`) — the table hands a visitor none of them. A
   hidden entry adds nothing to the default cover's colours for ANY viewer,
   owner included (`lib/decks/cover.ts`), so the tiles and the share image
   (which read the table) and the page draw one cover for everyone. The
@@ -831,7 +832,8 @@ Rules and gotchas:
   line and its ★, 4.9b): `frame_style.crown` / `twoColor`, drawn only
   `=== true`, `frame_style.collector` (`"2015"` / `"2023"` / `"off"`; drawn
   for a style) and `star` (`true` or absent) (`lib/cards/anatomy.ts`); new
-  cards start on, every save runs `normalizeAnatomy`, an edit sends only
+  cards start on — but the collector line, which starts `"off"` (owner
+  2026-10-30; an import follows its printing) — every save runs `normalizeAnatomy`, an edit sends only
   `frame_anatomy`, and a piece is declared on a `PROFILES` entry only — the
   old frames' pairs too (4.6h: `modern`, `modernland`, `retroland`; masters
   SYNTHESISED from the template's own finished masters, `oldFramePairLayers`,
@@ -1364,6 +1366,24 @@ Rules and gotchas:
   the deck copy-limit names) — the gallery's SQL title search folds the same
   six characters (migration 0136; a test holds the two tables together).
   Never compare a query with a stored title character for character.
+- Automatic tags (owner 2026-10-30): a NEW card's Tags field follows what
+  its rules text and subtypes suggest — every face's and part's (the back,
+  a split card's second half), its NAME never ("Wrath of God" is no God) —
+  ONE function, `autoTagsFor` (`lib/cards/auto-tags.ts`: a fixed vocabulary
+  of plural tribes, CR keywords and themes, never a word the maker typed; a
+  tribe from rules text only in a tribal phrase — "Goblin creature token",
+  "Elves you control", "other Merfolk", "Dragon spells"; reminder text read
+  as nothing; ≤ 6) — until the field changes under anything else (the
+  maker, a challenge toggle, an AI fill that writes tags;
+  `stepAutoTagsFollow`, `lib/creator/auto-tags-follow.ts`, wired by
+  `useAutoTagsFollow`, which reads the field through `getValues` — a
+  StrictMode re-run must not end it); Start over starts it again. Create
+  mode only and never a deck-card proxy (`/create?deckCard=`, whose
+  "unchanged" baseline is the reset after its import): an edit never
+  rewrites a stored card's tags, a remix keeps its parent's, and the AI
+  jobs and the deck remix save what they did (no server-side tagging — it
+  would put back a tag the maker removed). A creator import is a new card:
+  it follows.
 - Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
   FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
   italic — stored as typed (no migration), read ONLY through
@@ -1616,7 +1636,7 @@ Rules and gotchas:
   (`BAKED_TILE_PAGE_ROUTES` — file-system routes, route group included; a
   new ISR page that draws card tiles joins the list), which is not skipped —
   best effort, never relied on for correctness.
-- Articles (migration 0153, `docs/research/article-seo-2026-10.md`): the MDX
+- Articles (migration 0160, `docs/research/article-seo-2026-10.md`): the MDX
   guides in `content/articles/` stay files; admins ALSO compose articles in
   `public.articles` at `/admin/articles` (draft → scheduled → live; RLS: the
   public reads `is_published AND publish_at <= now()`, writes are
@@ -1627,12 +1647,28 @@ Rules and gotchas:
   `listArticles()` for a public list). The page draws through ONE component,
   `ArticleView` (the composer's preview too). A release is announced ONCE by
   `/api/cron/publish-articles` (every 10 min; `announceDueArticles`:
-  revalidate + IndexNow + `announced_at`) or "Publish now"; a schedule /
-  publish / live edit is refused while `articleSeoChecklist` has an ERROR on
-  it (alt text on every picture, our media only, a category, a real body,
-  safe links) — the composer shows the same list. `content_updated_at`
-  (dateModified, sitemap lastmod) moves only on an edit marked a revision; a
-  published slug is locked. Pictures: the moderated `set-covers` upload
+  purge, then IndexNow, + `announced_at`) or "Publish now". The purge
+  EXPIRES `ARTICLES_TAG` — `updateTag` in a server action,
+  `revalidateTag(tag, { expire: 0 })` in the cron route, never `"max"`
+  (stale-while-revalidate kept an unpublished article up). ONE release gate,
+  `articleReleaseBlock` (`lib/content/article-release-gate.ts`: the
+  checklist's ERRORS — alt text on every picture, our media only, a
+  category, a real body, safe links, the body guard — and a compile of the
+  stored body), refuses a schedule, a publish and an edit of a SCHEDULED or
+  LIVE article; the cron puts a due row that fails it back to a draft and
+  logs why. A composer BODY is Markdown + `Mana` / `Callout` / `CardRow` /
+  `CardScan` / `Figure` with their own attributes only — never another
+  element, raw HTML, import / export, a `{…}` expression or an unsafe link
+  (`remarkArticleBodyGuard`, `lib/content/article-body-guard.ts`, first in
+  `composerArticleMdxOptions`: blockJS alone let `<script>`, `<iframe
+  srcdoc>`, `<form>`… through); every surface compiles it through
+  `compileArticleBody` (the page 404s a refused body, the preview shows
+  why) — the git guides keep `articleMdxOptions`. `content_updated_at`
+  (dateModified, sitemap lastmod) moves only on an edit marked a revision;
+  the slug is locked once `first_published_at` is set (0160's trigger: the
+  first announce, never cleared — an unpublish keeps it). The public LIST
+  cache holds no bodies (2 MB `unstable_cache` limit; the page reads its own
+  by slug). Pictures: the moderated `set-covers` upload
   (`purpose: "article-image"`), or a diagram under `public/article-media/`
   (`media_url_allowed('article-image')`); never WotC art. Drafts shipped in
   git live in `content/article-drafts/` (never public; "Import drafts" loads

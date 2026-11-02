@@ -389,6 +389,15 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   active days and saves / generations / downloads inside the 7-day window.
 - **Bots**: `/api/events` drops requests whose User-Agent `isbot` recognises,
   matching Vercel Analytics' policy.
+- **Screen widths** (TODO WD9, no migration): `ScreenWidthBeacon` (root
+  layout) posts ONE `screen_width` event per tab session (a `sessionStorage`
+  flag) carrying the `window.innerWidth` bucket alone
+  (`lib/analytics/screen-width.ts`: `<640` … `2560+`, stored as safe keys) —
+  first-party only (`postFunnelEvent`, never GA4 / Vercel Analytics), never
+  under `navigator.webdriver`, a prerendered page only once shown.
+  `/api/events` records it ANONYMOUS even for a signed-in visitor (the
+  session is never read; props = the bucket, nothing else). The panel's
+  "Screen widths (last 30 days)" table reads one exact head count per bucket.
 
 ## A cancelled subscription (2026-10-07)
 

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   configured: true,
-  announce: vi.fn(async () => ({ announced: ["a"], indexNow: true })),
+  announce: vi.fn(async () => ({ announced: ["a"], heldBack: [], indexNow: true })),
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({}),
@@ -38,7 +38,7 @@ describe("GET /api/cron/publish-articles", () => {
   it("announces what is due", async () => {
     const res = await get();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, announced: ["a"], indexNow: true });
+    expect(await res.json()).toEqual({ ok: true, announced: ["a"], heldBack: [], indexNow: true });
   });
 
   it("answers 500 on a failure", async () => {

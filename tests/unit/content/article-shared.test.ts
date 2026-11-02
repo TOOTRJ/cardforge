@@ -15,7 +15,7 @@ import {
 import { ARTICLE_CATEGORY_SLUGS } from "@/lib/content/article-categories";
 
 // ---------------------------------------------------------------------------
-// Composer articles' shared half: the form schema mirrors migration 0153's
+// Composer articles' shared half: the form schema mirrors migration 0160's
 // CHECKs, the release rule is RLS's, and the Markdown readers the checklist
 // and the publish gate share find what the page draws.
 // ---------------------------------------------------------------------------

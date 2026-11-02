@@ -109,6 +109,9 @@ export function parseEnvFile(file) {
   return out;
 }
 
+/** objectStatus's status for a lookup its caller's budget cut short. */
+export const DEADLINE = "deadline";
+
 /**
  * Ask for a public object's FIRST BYTE and say what happened:
  * { ok, status }. `ok` is true when it exists at the expected size (the
@@ -124,15 +127,24 @@ export function parseEnvFile(file) {
  * (0.5, 1, 2, 4 s) and a timeout per attempt. `status` is the last HTTP
  * status, "timeout"/"network", or "size <n>" — frames-check prints it.
  * (2026-09-25: first-400-is-missing, a hung HEAD, and 429s from several CI
- * runs at once each failed the gate on objects that were there.)
+ * runs at once each failed the gate on objects that were there.) `signal`
+ * is the caller's whole budget (frames-check's deadline): once it fires the
+ * request in flight and any backoff end at once with status "deadline" —
+ * never `ok`, and never a miss to report (findMissing throws
+ * FramesCheckDeadline instead).
+ * @param {string} url
+ * @param {number} expectedBytes
+ * @param {{ tries?: number, baseDelayMs?: number, timeoutMs?: number, signal?: AbortSignal }} [options]
+ * @returns {Promise<{ ok: boolean, status: string }>}
  */
-export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs = 500, timeoutMs = 10_000 } = {}) {
+export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs = 500, timeoutMs = 10_000, signal } = {}) {
   let status = "network";
   for (let attempt = 1; attempt <= tries; attempt += 1) {
+    if (signal?.aborted) return { ok: false, status: DEADLINE };
     try {
       const res = await fetch(url, {
         headers: { Range: "bytes=0-0" },
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: signal ? AbortSignal.any([AbortSignal.timeout(timeoutMs), signal]) : AbortSignal.timeout(timeoutMs),
       });
       // Never download the body (a server that ignores Range sends it all).
       await res.body?.cancel().catch(() => {});
@@ -146,11 +158,28 @@ export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs 
         return { ok: false, status: `size ${size}` };
       }
     } catch (err) {
+      if (signal?.aborted) return { ok: false, status: DEADLINE };
       status = err?.name === "TimeoutError" || err?.name === "AbortError" ? "timeout" : "network";
     }
-    if (attempt < tries) await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** (attempt - 1)));
+    if (attempt < tries) await pause(baseDelayMs * 2 ** (attempt - 1), signal);
   }
-  return { ok: false, status };
+  return { ok: false, status: signal?.aborted ? DEADLINE : status };
+}
+
+/** Wait `ms`, or less if `signal` fires first (never rejects; the listener
+ *  is removed either way — one signal serves thousands of lookups). */
+function pause(ms, signal) {
+  if (!signal) return new Promise((r) => setTimeout(r, ms));
+  return new Promise((resolve) => {
+    if (signal.aborted) return resolve();
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done);
+  });
 }
 
 /**
@@ -198,6 +227,20 @@ export async function objectExists(url, expectedBytes, opts) {
 }
 
 /**
+ * Thrown by findMissing when its `signal` fires before every item has an
+ * answer: the gate could not VERIFY the manifest, which is neither a pass
+ * nor a list of misses. `checked` items answered, `suspects` of them not ok
+ * so far, `statuses` counts their last answers.
+ */
+export class FramesCheckDeadline extends Error {
+  constructor({ checked, total, suspects, statuses }) {
+    super(`ran out of time with ${checked}/${total} checked`);
+    this.name = "FramesCheckDeadline";
+    Object.assign(this, { checked, total, suspects, statuses });
+  }
+}
+
+/**
  * Which of `items` are missing. `check(item, thorough)` returns
  * { ok, status }. A quick first pass runs `limit` at a time; then — after
  * `confirmDelayMs` — every apparent miss is checked again THOROUGHLY, one at
@@ -205,16 +248,50 @@ export async function objectExists(url, expectedBytes, opts) {
  * own. More than `maxConfirm` misses is not a blip (a manifest nobody
  * promoted): those are reported without the slow confirm pass. Returns
  * [{ item, status }] for the misses.
+ *
+ * `signal` is the whole check's budget: once it fires no new lookup starts
+ * (a `check` given the same signal ends its own at once) and findMissing
+ * throws FramesCheckDeadline — never a pass, and never misses it did not
+ * see. `onProgress({ done, total, suspects })` follows the first pass.
+ * (2026-11-02: two "Frames published" runs went silent until the job's
+ * 10-minute timeout — 4280 lookups through a slow CDN, each inside its own
+ * timeout.)
+ * @template T
+ * @param {T[]} items
+ * @param {(item: T, thorough: boolean) => Promise<{ ok: boolean, status: string }>} check
+ * @param {{ limit?: number, confirmDelayMs?: number, maxConfirm?: number, signal?: AbortSignal,
+ *   onProgress?: (progress: { done: number, total: number, suspects: number }) => void }} [options]
+ * @returns {Promise<Array<{ item: T, status: string }>>}
  */
-export async function findMissing(items, check, { limit = 4, confirmDelayMs = 3000, maxConfirm = 25 } = {}) {
-  const first = await mapLimit(items, limit, async (item) => ({ item, result: await check(item, false) }));
-  const suspects = first.filter((r) => !r.result.ok);
+export async function findMissing(items, check, { limit = 4, confirmDelayMs = 3000, maxConfirm = 25, signal, onProgress } = {}) {
+  let done = 0;
+  let suspectCount = 0;
+  const first = await mapLimit(items, limit, async (item) => {
+    if (signal?.aborted) return { item, result: null };
+    const result = await check(item, false);
+    if (result.status !== DEADLINE) {
+      done += 1;
+      if (!result.ok) suspectCount += 1;
+      onProgress?.({ done, total: items.length, suspects: suspectCount });
+    }
+    return { item, result };
+  });
+  const answered = first.filter((r) => r.result && r.result.status !== DEADLINE);
+  const suspects = answered.filter((r) => !r.result.ok);
+  const deadline = (checked) => {
+    const statuses = {};
+    for (const { result } of suspects) statuses[result.status] = (statuses[result.status] ?? 0) + 1;
+    return new FramesCheckDeadline({ checked, total: items.length, suspects: suspects.length, statuses });
+  };
+  if (answered.length < items.length) throw deadline(answered.length);
   if (suspects.length === 0) return [];
   if (suspects.length > maxConfirm) return suspects.map(({ item, result }) => ({ item, status: result.status }));
-  await new Promise((r) => setTimeout(r, confirmDelayMs));
+  await pause(confirmDelayMs, signal);
   const missing = [];
   for (const { item } of suspects) {
+    if (signal?.aborted) throw deadline(items.length);
     const result = await check(item, true);
+    if (result.status === DEADLINE) throw deadline(items.length);
     if (!result.ok) missing.push({ item, status: result.status });
   }
   return missing;

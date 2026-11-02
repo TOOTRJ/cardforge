@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { ArticleComposer } from "@/components/admin/articles/article-composer";
-import { loadComposerContext } from "@/lib/content/article-composer-data";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
+import { loadComposerContext, type ComposerContext } from "@/lib/content/article-composer-data";
 import { getCurrentProfile } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -17,7 +18,20 @@ export default async function NewArticlePage() {
   // Non-admins get a 404 (don't reveal the route exists); RLS gates writes.
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) notFound();
-  const context = await loadComposerContext(null);
+  let context: ComposerContext;
+  try {
+    context = await loadComposerContext(null);
+  } catch (error) {
+    // A database without the table (0160 not applied) — the list's card,
+    // never a crash.
+    console.warn("[admin] new article:", error);
+    return (
+      <DashboardShell readable>
+        <PageHeader eyebrow="Admin · Articles" title="New article" />
+        <AdminLoadError what="the articles" />
+      </DashboardShell>
+    );
+  }
   return (
     <DashboardShell>
       <PageHeader

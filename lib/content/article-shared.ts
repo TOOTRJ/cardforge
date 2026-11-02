@@ -4,7 +4,7 @@ import { ARTICLE_CATEGORY_SLUGS, type ArticleCategorySlug } from "@/lib/content/
 // ---------------------------------------------------------------------------
 // Composer articles — the shared (client-safe) half: the row type, the form
 // schema the composer and the server actions both parse (mirroring migration
-// 0153's CHECKs), the release status, and the Markdown readers the SEO
+// 0160's CHECKs), the release status, and the Markdown readers the SEO
 // checklist and the server's publish gate share (images, links, headings).
 //
 // A composer article lives beside the MDX guides in content/articles/: same
@@ -35,15 +35,32 @@ export type ArticleRow = {
   publish_at: string | null;
   content_updated_at: string | null;
   announced_at: string | null;
+  /** The first release (0160's trigger: set once, never cleared) — the slug
+   *  is locked while it is set. */
+  first_published_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 /** The columns every read selects (one list, so a new column is a choice). */
 export const ARTICLE_COLUMNS =
-  "id, slug, title, seo_title, description, excerpt, body, tags, category, faq, cover_url, cover_alt, cover_width, cover_height, author_id, is_published, publish_at, content_updated_at, announced_at, created_at, updated_at";
+  "id, slug, title, seo_title, description, excerpt, body, tags, category, faq, cover_url, cover_alt, cover_width, cover_height, author_id, is_published, publish_at, content_updated_at, announced_at, first_published_at, created_at, updated_at";
 
-// The CHECK constraints of migration 0153, in one place.
+/** ARTICLE_COLUMNS without the body — what a LIST reads (the public list is
+ *  an unstable_cache entry, 2 MB at most: never every body in one entry). */
+export const ARTICLE_LIST_COLUMNS = ARTICLE_COLUMNS.replace(" body,", "");
+
+/** A URL that has been public stays put: the slug is locked once the article
+ *  first went out (first_published_at) — or while it is live and the cron
+ *  hasn't announced it yet. */
+export function articleSlugLocked(
+  row: Pick<ArticleRow, "first_published_at" | "is_published" | "publish_at">,
+  now: Date = new Date(),
+): boolean {
+  return Boolean(row.first_published_at) || articleStatus(row, now) === "live";
+}
+
+// The CHECK constraints of migration 0160, in one place.
 export const ARTICLE_LIMITS = {
   slug: { min: 3, max: 90 },
   title: { min: 3, max: 120 },
@@ -65,7 +82,7 @@ export const ARTICLE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export type ArticleStatus = "draft" | "scheduled" | "live";
 
 /** Draft (not published), scheduled (published, release time ahead) or live —
- *  the public rule is migration 0153's RLS: is_published AND publish_at <= now(). */
+ *  the public rule is migration 0160's RLS: is_published AND publish_at <= now(). */
 export function articleStatus(
   row: Pick<ArticleRow, "is_published" | "publish_at">,
   now: Date = new Date(),

@@ -13,11 +13,11 @@ import {
   type TagInfo,
 } from "@/lib/content/articles";
 import type { ArticleCategorySlug } from "@/lib/content/article-categories";
-import { listReleasedComposerArticles } from "@/lib/content/db-articles";
+import { getReleasedComposerArticle, listReleasedComposerArticles } from "@/lib/content/db-articles";
 
 // ---------------------------------------------------------------------------
 // The site's ONE list of guides: the MDX files in content/articles/ JOINED by
-// the released composer articles (migration 0153). Every public article
+// the released composer articles (migration 0160). Every public article
 // surface reads it — /articles and its tag hubs, /learn and its shelves, the
 // homepage's latest guides, the sitemap, /llms.txt and the RSS feed — so a
 // scheduled article lands on all of them at once.
@@ -44,7 +44,7 @@ export async function getPublishedArticle(slug: string): Promise<Article | null>
   const file = getArticle(slug);
   if (file) return file;
   if (!/^[a-z0-9-]+$/.test(slug)) return null;
-  return (await listReleasedComposerArticles()).find((a) => a.meta.slug === slug) ?? null;
+  return getReleasedComposerArticle(slug);
 }
 
 export async function listPublishedCategoryShelves(): Promise<CategoryShelf[]> {

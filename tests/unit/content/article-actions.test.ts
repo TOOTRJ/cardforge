@@ -5,8 +5,11 @@ import type { ArticleRow } from "@/lib/content/article-shared";
 // ---------------------------------------------------------------------------
 // The composer's writes: admins only; the form schema first; an MDX guide's
 // slug refused; a schedule / publish refused while the SEO checklist has an
-// ERROR on the stored row; a published URL never renamed; a live edit moves
-// the public "Updated" date only when marked a revision.
+// ERROR on the stored row (or a body the guard refuses); an edit of a
+// scheduled or live article held to the same gate; a URL that has ever been
+// public never renamed (first_published_at, which an unpublish keeps); a live
+// edit moves the public "Updated" date only when marked a revision; the
+// purge EXPIRES the cache (updateTag), never "max".
 // ---------------------------------------------------------------------------
 
 const ID = "a0000000-0000-4000-a000-000000000001";
@@ -24,7 +27,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => state.db.client,
   getCurrentProfile: async () => (state.admin ? { id: ADMIN, is_admin: true } : { id: ADMIN, is_admin: false }),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn(), unstable_cache: <T,>(fn: T) => fn }));
+const cacheCalls = vi.hoisted(() => ({ updateTag: vi.fn(), revalidateTag: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: cacheCalls.revalidateTag,
+  updateTag: cacheCalls.updateTag,
+  unstable_cache: <T,>(fn: T) => fn,
+}));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: vi.fn() }));
 vi.mock("@/lib/seo/indexnow", () => ({ notifyIndexNow: vi.fn(async () => true) }));
 vi.mock("@/lib/content/article-catalog", () => ({ listPublishedArticles: async () => [] }));
@@ -59,6 +68,7 @@ function storedRow(overrides: Partial<ArticleRow> = {}): ArticleRow {
     publish_at: null,
     content_updated_at: null,
     announced_at: null,
+    first_published_at: null,
     created_at: "2026-10-01T00:00:00Z",
     updated_at: "2026-10-01T00:00:00Z",
     ...overrides,
@@ -113,6 +123,33 @@ describe("the composer's actions", () => {
     expect(writes()).toEqual([]);
   });
 
+  it("keeps the URL locked after an unpublish (first_published_at is never cleared)", async () => {
+    state.row = storedRow({ first_published_at: "2026-10-02T00:00:00Z" });
+    expect(await saveArticleAction(ID, { ...INPUT, slug: "renamed" })).toMatchObject({ ok: false, fieldErrors: { slug: "Locked once published." } });
+    expect(writes()).toEqual([]);
+  });
+
+  it("lets a never-published draft change its URL", async () => {
+    expect(await saveArticleAction(ID, { ...INPUT, slug: "renamed" })).toMatchObject({ ok: true, status: "draft" });
+  });
+
+  it("holds an edit of a SCHEDULED article to the release gate", async () => {
+    state.row = storedRow({ is_published: true, publish_at: "2099-01-01T15:00:00Z" });
+    const result = await saveArticleAction(ID, { ...INPUT, body: `${INPUT.body}\n\n<script>alert(1)</script>` });
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("markdown and the article components only") });
+    expect(writes()).toEqual([]);
+    // A draft may hold it while it is being written (the checklist shows it).
+    state.row = storedRow();
+    expect(await saveArticleAction(ID, { ...INPUT, body: `${INPUT.body}\n\n<script>alert(1)</script>` })).toMatchObject({ ok: true });
+  });
+
+  it("refuse to schedule or publish a body the guard refuses", async () => {
+    state.row = storedRow({ body: `${INPUT.body}\n\n<iframe srcdoc="<script>alert(1)</script>"></iframe>` });
+    expect(await scheduleArticleAction(ID, "2099-01-01T15:00:00Z")).toMatchObject({ ok: false, error: expect.stringContaining("markdown and the article components only") });
+    expect(await publishArticleNowAction(ID)).toMatchObject({ ok: false });
+    expect(writes()).toEqual([]);
+  });
+
   it("move the Updated date only for a marked revision of a live article", async () => {
     state.row = storedRow({ is_published: true, publish_at: "2026-10-02T00:00:00Z", announced_at: "2026-10-02T00:00:00Z" });
     await saveArticleAction(ID, INPUT);
@@ -140,8 +177,12 @@ describe("the composer's actions", () => {
     });
   });
 
-  it("publish now: live and announced in one write", async () => {
+  it("publish now: live and announced in one write, the cache expired at once", async () => {
+    cacheCalls.updateTag.mockClear();
+    cacheCalls.revalidateTag.mockClear();
     expect(await publishArticleNowAction(ID)).toEqual({ ok: true, id: ID, status: "live" });
+    expect(cacheCalls.updateTag).toHaveBeenCalledWith("articles");
+    expect(cacheCalls.revalidateTag).not.toHaveBeenCalled();
     const payload = payloadOf(writes()[0].calls, "update") as Record<string, unknown>;
     expect(payload.is_published).toBe(true);
     expect(payload.announced_at).toBe(payload.publish_at);

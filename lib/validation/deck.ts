@@ -3,6 +3,8 @@ import { DECK_FORMAT_VALUES } from "@/types/deck";
 import { VISIBILITY_VALUES } from "@/types/card";
 import { isSafeImageUrl } from "@/lib/validation/card";
 import { isDefaultDeckCover } from "@/lib/decks/default-covers";
+import { deckTypeByKey } from "@/lib/decks/deck-types";
+import { formatHasBracket } from "@/lib/decks/deck-details";
 
 // Mirrors the DB check constraints on the decks table exactly.
 // supabase/migrations/0055_decks.sql is the source of truth.
@@ -82,7 +84,36 @@ const deckFormatSchema = deckFormatBaseSchema.default("commander");
 const deckVisibilityBaseSchema = z.enum(VISIBILITY_VALUES);
 const deckVisibilitySchema = deckVisibilityBaseSchema.default("public");
 
-export const createDeckSchema = z.object({
+// The deck's type (0083: text ≤ 60): one of DECK_TYPES' keys
+// (lib/decks/deck-types.ts — the AI wizard's list, the hero's chip), or null
+// for none. A row may hold an older free-text value the list doesn't know;
+// an edit that doesn't touch the field never sends it (DK5.14).
+export const deckTypeSchema = z
+  .string()
+  .trim()
+  .max(60, "Deck type must be 60 characters or fewer.")
+  .refine((key) => deckTypeByKey(key) !== null, "Pick a deck type from the list.")
+  .nullable();
+
+// The Commander power bracket (0083: 1–5 or null). Only a format with a
+// bracket takes one (formatHasBracket) — checked against the format being
+// SAVED: on a create here, on an edit by the action (the stored format when
+// the edit leaves the format alone).
+export const deckBracketSchema = z.coerce
+  .number()
+  .int("Bracket must be a whole number.")
+  .min(1, "Bracket must be between 1 and 5.")
+  .max(5, "Bracket must be between 1 and 5.")
+  .nullable();
+
+/** Why a deck of `format` may not hold `bracket`, or null when it may.
+ *  Clearing (null / absent) is always allowed. */
+export function bracketFormatError(format: string, bracket: number | null | undefined): string | null {
+  if (bracket === null || bracket === undefined) return null;
+  return formatHasBracket(format) ? null : "Only a Commander deck has a bracket.";
+}
+
+const deckBaseSchema = z.object({
   title: deckTitleSchema,
   slug: deckSlugSchema.optional(),
   description: deckDescriptionSchema,
@@ -91,12 +122,28 @@ export const createDeckSchema = z.object({
   format: deckFormatSchema,
   visibility: deckVisibilitySchema,
   /** Tribe/archetype key from lib/decks/deck-types.ts (AI starting point). */
-  deck_type: z.string().trim().max(60).nullable().optional(),
+  deck_type: deckTypeSchema.optional(),
   /** Commander power bracket 1–5; null for other formats. */
-  bracket: z.coerce.number().int().min(1).max(5).nullable().optional(),
+  bracket: deckBracketSchema.optional(),
 });
 
-export const updateDeckSchema = createDeckSchema.partial().extend({
-  format: deckFormatBaseSchema.optional(),
-  visibility: deckVisibilityBaseSchema.optional(),
+export const createDeckSchema = deckBaseSchema.superRefine((deck, ctx) => {
+  const message = bracketFormatError(deck.format, deck.bracket);
+  if (message) ctx.addIssue({ code: "custom", path: ["bracket"], message });
 });
+
+// An edit's bracket is checked against the format it SAVES — the stored one
+// when the edit leaves the format alone — so updateDeckAction runs
+// bracketFormatError once it has read the deck; here only when the edit
+// names both.
+export const updateDeckSchema = deckBaseSchema
+  .partial()
+  .extend({
+    format: deckFormatBaseSchema.optional(),
+    visibility: deckVisibilityBaseSchema.optional(),
+  })
+  .superRefine((deck, ctx) => {
+    if (deck.format === undefined) return;
+    const message = bracketFormatError(deck.format, deck.bracket);
+    if (message) ctx.addIssue({ code: "custom", path: ["bracket"], message });
+  });

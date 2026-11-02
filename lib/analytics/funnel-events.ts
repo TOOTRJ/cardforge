@@ -58,6 +58,10 @@ export const CLIENT_FUNNEL_EVENTS = [
   // (NAV_SURFACES). Owner decision D9: Gallery moved under Community, and
   // its header clicks are watched.
   "nav_click",
+  // One per tab session, ANONYMOUS even when signed in (TODO WD9): the
+  // viewport's width bucket alone (lib/analytics/screen-width.ts) —
+  // /api/events records it with no user id and no other prop.
+  "screen_width",
 ] as const;
 
 /** Where a nav_click's link sat. */
@@ -94,7 +98,7 @@ const PROP_KEYS = new Set([
   "scheduled", "sessionId", "subscriptionId",
   "referrer", "utmSource", "utmMedium", "utmCampaign",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
-  "item",
+  "item", "bucket",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;

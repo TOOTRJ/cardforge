@@ -12,6 +12,7 @@ import {
   MessageCircle,
   MessageSquare,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -42,6 +43,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   credit_refill_failed: Coins,
   deck_like: Heart,
   deck_card_added: Layers,
+  moderation_unhidden: ShieldCheck,
 };
 
 export function NotificationRow({

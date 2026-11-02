@@ -19,7 +19,7 @@ import {
 // carries the metadata, and everything renders fully static at build
 // time (generateStaticParams reads this same directory). Adding a guide
 // is: drop a file, ship a deploy. Admins also compose and schedule guides in
-// the database (/admin/articles, migration 0153); lib/content/
+// the database (/admin/articles, migration 0160); lib/content/
 // article-catalog.ts merges both into the site's one list. The list helpers
 // below take a list (`shelvesOf`, `tagsOf`, …) so the catalog reuses them.
 // ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ export type ArticleMeta = {
   /** Rough read time from word count — display sugar only. */
   readingMinutes: number;
   /** Where the guide comes from: an MDX file here, or a composer article
-   *  (migration 0153, lib/content/db-articles.ts). Undefined = a file. */
+   *  (migration 0160, lib/content/db-articles.ts). Undefined = a file. */
   source?: "file" | "composer";
   /** The cover picture (composer articles): Article.image and the picture
    *  under the headline. Alt text is required with it. */

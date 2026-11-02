@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArticleView } from "@/components/content/article-view";
+import { compileArticleBody } from "@/lib/content/article-body";
 import { composerArticle, getArticleForAdmin, getAuthor } from "@/lib/content/db-articles";
 import { getPublishedRelatedArticles } from "@/lib/content/article-catalog";
 import { articleStatus } from "@/lib/content/article-shared";
@@ -32,13 +33,24 @@ export default async function ArticlePreviewPage({ params }: { params: Promise<{
   const article = composerArticle(previewRow, await getAuthor(row.author_id));
   const related = await getPublishedRelatedArticles(row.slug, 3);
   const status = articleStatus(row);
+  // The same compile the public page and the publish gate run: a refused
+  // body is shown as the reason, never drawn.
+  const compiled = await compileArticleBody(article.content, "composer");
+  const body = compiled.ok ? (
+    compiled.content
+  ) : (
+    <div role="alert" className="rounded-frame border border-accent/50 bg-accent/10 p-4 text-sm leading-6 text-foreground">
+      <p className="m-0 font-semibold">This body can&apos;t be drawn — it won&apos;t publish until it is fixed.</p>
+      <p className="m-0 mt-1 whitespace-pre-wrap break-words">{compiled.error}</p>
+    </div>
+  );
   return (
     <>
       <div className="border-b border-gold/40 bg-gold/10 px-4 py-2 text-center text-sm text-gold-strong" role="note">
         Preview of the saved {status === "live" ? "live article" : status === "scheduled" ? "scheduled article" : "draft"} —
         not public{status === "live" ? " here (the live page is /articles/" + row.slug + ")" : ""}.
       </div>
-      <ArticleView article={article} related={related} />
+      <ArticleView article={article} related={related} body={body} />
     </>
   );
 }
