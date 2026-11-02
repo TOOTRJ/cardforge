@@ -26,6 +26,7 @@ import { SocialIcon } from "@/components/profile/social-icon";
 import { LinkIcon } from "@/components/profile/link-icon";
 import { StoreCard } from "@/components/profile/store-card";
 import { ProfileCardFilters } from "@/components/profile/profile-card-filters";
+import { AnnounceProfileCards, ProfileCardsLiveRegion } from "@/components/profile/profile-cards-live-region";
 import {
   getProfileByUsername,
   listPinnedCardsForProfile,
@@ -72,7 +73,7 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // /profile/[username] — a creator's public page: the hero (banner, avatar,
-// bio, stats, every link), their STORE cards (migration 0153), pinned cards,
+// bio, stats, every link), their STORE cards (migration 0159), pinned cards,
 // ALL their public cards (searched, filtered and paged in the database —
 // list_profile_cards; the query string is the state, lib/profile/
 // card-params.ts) and their public decks.
@@ -222,25 +223,26 @@ export default async function ProfilePage({
           count={profile.public_cards_count}
           noun="public card"
         />
-        {profile.public_cards_count > 0 ? (
-          <div className="mt-5">
-            <ProfileCardFilters />
+        {/* The results' live region sits OUT here: the Suspense below is
+            keyed on the filters, so one inside it remounts unannounced. */}
+        <ProfileCardsLiveRegion>
+          {profile.public_cards_count > 0 ? (
+            <div className="mt-5">
+              <ProfileCardFilters />
+            </div>
+          ) : null}
+          <div className="mt-6">
+            <Suspense key={profileCardsKey(cardParams)} fallback={<ProfileCardsSkeleton count={12} />}>
+              <ProfileCards
+                ownerId={profile.id}
+                ownerUsername={handle}
+                displayName={displayName}
+                params={cardParams}
+                totalPublic={profile.public_cards_count}
+              />
+            </Suspense>
           </div>
-        ) : null}
-        <div className="mt-6">
-          <Suspense
-            key={`${cardParams.q}|${cardParams.color ?? ""}|${cardParams.type ?? ""}|${cardParams.sort}|${cardParams.page}`}
-            fallback={<ProfileCardsSkeleton count={12} />}
-          >
-            <ProfileCards
-              ownerId={profile.id}
-              ownerUsername={handle}
-              displayName={displayName}
-              params={cardParams}
-              totalPublic={profile.public_cards_count}
-            />
-          </Suspense>
-        </div>
+        </ProfileCardsLiveRegion>
       </section>
 
       {publicDeckCount > 0 ? (
@@ -516,10 +518,10 @@ function ProfileAvatar({
 const LINK_CHIP =
   "inline-flex h-9 max-w-full items-center gap-1.5 rounded-full border border-border/70 bg-elevated/50 px-3 text-xs font-medium text-muted transition-colors hover:border-[var(--profile-accent,var(--color-primary))] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60";
 
-/** Every link the creator added — website, the column socials, the 0153
+/** Every link the creator added — website, the column socials, the 0159
  *  links — as labelled chips (the name is on screen, not only in a
  *  tooltip). The profile columns are host-gated by the profile schema; the
- *  0153 rows were re-checked by listProfileLinks. */
+ *  0159 rows were re-checked by listProfileLinks. */
 function ProfileLinks({
   profile,
   extraLinks,
@@ -691,6 +693,12 @@ function PinnedRowSkeleton() {
 // All cards (searched, filtered, paged in the database)
 // ---------------------------------------------------------------------------
 
+/** The filters and page a results view answers: the key of its Suspense
+ *  boundary, and what the live region compares to tell a new view. */
+function profileCardsKey(params: ProfileCardParams): string {
+  return `${params.q}|${params.color ?? ""}|${params.type ?? ""}|${params.sort}|${params.page}`;
+}
+
 async function ProfileCards({
   ownerId,
   ownerUsername,
@@ -727,37 +735,44 @@ async function ProfileCards({
   ]);
   const filtered = Boolean(params.q || params.color || params.type);
 
+  const filterKey = profileCardsKey(params);
   if (cards.length === 0) {
     return (
-      <EmptyState
-        icon={Search}
-        title={filtered ? "No cards match" : "Nothing on this page"}
-        description={
-          filtered
-            ? `None of ${displayName}'s public cards match these filters.`
-            : "This page is past the last card."
-        }
-        action={
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/profile/${encodeURIComponent(ownerUsername)}#cards`} scroll={false}>
-              Show all cards
-            </Link>
-          </Button>
-        }
-      />
+      <>
+        <AnnounceProfileCards
+          filterKey={filterKey}
+          text={filtered ? "No cards match these filters." : "This page is past the last card."}
+        />
+        <EmptyState
+          icon={Search}
+          title={filtered ? "No cards match" : "Nothing on this page"}
+          description={
+            filtered
+              ? `None of ${displayName}'s public cards match these filters.`
+              : "This page is past the last card."
+          }
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/profile/${encodeURIComponent(ownerUsername)}#cards`} scroll={false}>
+                Show all cards
+              </Link>
+            </Button>
+          }
+        />
+      </>
     );
   }
 
   const pages = Math.max(1, Math.ceil(total / PROFILE_CARDS_PAGE_SIZE));
   const from = offset + 1;
   const to = offset + cards.length;
+  const summary = filtered
+    ? `${total.toLocaleString("en-US")} ${total === 1 ? "card matches" : "cards match"}`
+    : `Showing ${from}–${to} of ${total.toLocaleString("en-US")}`;
   return (
     <>
-      <p className="mb-4 text-sm text-muted" aria-live="polite">
-        {filtered
-          ? `${total.toLocaleString("en-US")} ${total === 1 ? "card matches" : "cards match"}`
-          : `Showing ${from}–${to} of ${total.toLocaleString("en-US")}`}
-      </p>
+      <AnnounceProfileCards filterKey={filterKey} text={summary} />
+      <p className="mb-4 text-sm text-muted">{summary}</p>
       <CardGrid>
         {cards.map((card) => (
           <ProfileCardTile

@@ -644,7 +644,7 @@ export async function listPublicCardsByOwner(
   }
 }
 
-/** The profile page's card orders (list_profile_cards, migration 0153). */
+/** The profile page's card orders (list_profile_cards, migration 0159). */
 export type ProfileCardSort = "recent" | "newest" | "popular" | "name";
 
 export type ProfileCardFilters = {
@@ -657,10 +657,10 @@ export type ProfileCardFilters = {
  * One page of a creator's PUBLIC cards for their profile, searched (title
  * and nickname, the printed quotes and dashes folded both sides —
  * typedForMatching here, the same table in SQL), filtered and ordered in
- * the database (migration 0153's list_profile_cards), plus the result
- * count for the pager. A database 0153 hasn't reached answers PGRST202:
+ * the database (migration 0159's list_profile_cards), plus the result
+ * count for the pager. A database 0159 hasn't reached answers PGRST202:
  * an unfiltered page then falls back to listPublicCardsByOwner (the
- * profile's list before 0153), a filtered one to no results.
+ * profile's list before 0159), a filtered one to no results.
  */
 export async function listProfileCards(
   ownerId: string,

@@ -9,7 +9,7 @@ import {
 } from "@/lib/profile/store-platforms";
 
 // ---------------------------------------------------------------------------
-// StoreCard — one of a creator's stores on their profile (migration 0153):
+// StoreCard — one of a creator's stores on their profile (migration 0159):
 // a whole-card link out, the platform's NAME as text beside a neutral icon
 // (no platform's logo is drawn — the brand rules and the decision are in
 // docs/research/profiles-and-stores-2026-10.md), the maker's title (else the

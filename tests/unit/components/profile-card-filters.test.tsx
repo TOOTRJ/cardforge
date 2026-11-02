@@ -42,6 +42,14 @@ describe("ProfileCardFilters", () => {
     expect(replace).toHaveBeenLastCalledWith("/profile/forge?color=blue", { scroll: false });
   });
 
+  it("names each colour chip by its label alone (the pip letter is decoration)", () => {
+    render(<ProfileCardFilters />);
+    for (const name of ["White", "Blue", "Black", "Red", "Green", "Colorless", "Multicolor"]) {
+      expect(screen.getByRole("radio", { name })).toBeTruthy();
+    }
+    expect(screen.queryByRole("radio", { name: /^W\s*White$/ })).toBeNull();
+  });
+
   it("clears every filter at once", () => {
     search = "q=bolt&color=red&type=instant&sort=name";
     render(<ProfileCardFilters />);

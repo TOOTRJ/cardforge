@@ -8,7 +8,7 @@ import {
 // ---------------------------------------------------------------------------
 // The profile page's card-section query string (?q= &color= &type= &sort=
 // &page=) — ONE parser for the server page (list_profile_cards, migration
-// 0153) and the filter bar. Anything it doesn't know reads as unset, so a
+// 0159) and the filter bar. Anything it doesn't know reads as unset, so a
 // hand-edited URL never reaches the database as a bad value.
 // ---------------------------------------------------------------------------
 

@@ -43,7 +43,12 @@ const COLOR_OPTIONS: ChipOption<ColorIdentity | "all">[] = [
   ...COLOR_IDENTITY_VALUES.map((color) => ({
     value: color,
     label: COLOR_IDENTITY_LABELS[color],
-    leading: <ManaPip symbol={COLOR_TO_PIP[color]} size="sm" />,
+    // Decoration: the chip is named by its label ("White"), never "W White".
+    leading: (
+      <span aria-hidden="true" className="inline-flex">
+        <ManaPip symbol={COLOR_TO_PIP[color]} size="sm" />
+      </span>
+    ),
   })),
 ];
 

@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { StoreCard } from "@/components/profile/store-card";
 import type { ProfileStore } from "@/lib/profile/store-platforms";
 
-// A profile's store card (migration 0153): one link out to the store, its
+// A profile's store card (migration 0159): one link out to the store, its
 // platform named as text (no brand logo), the maker's title or the
 // platform's blurb, a "Visit store" call to action, user-generated rel and a
 // new tab said in its name.
