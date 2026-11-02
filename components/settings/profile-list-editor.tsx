@@ -14,7 +14,7 @@ import type { ListSaveResult, RowFieldErrors } from "@/app/(app)/settings/link-a
 
 // ---------------------------------------------------------------------------
 // ProfileListEditor — the Settings row editor behind "More links" and
-// "Store cards" (migration 0153). Each row is a choice (link kind / store
+// "Store cards" (migration 0159). Each row is a choice (link kind / store
 // platform), an https URL and one optional text (a label / a title); rows
 // move up and down and are removed with the focus handed on (useRowFocus).
 // The list is checked with the SAME zod schema the server action runs

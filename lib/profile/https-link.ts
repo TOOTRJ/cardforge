@@ -33,7 +33,27 @@ export function parseHttpsLink(raw: string): URL | null {
   // A dotted name with a letter in its last label: no IP literal, no
   // "localhost", no bare word.
   if (!/^[a-z0-9.-]+\.[a-z][a-z0-9-]*$/.test(host)) return null;
+  // What is stored is `href` (normalizedHttpsLink): it must fit too.
+  if (url.href.length > PROFILE_LINK_URL_MAX) return null;
   return url;
+}
+
+/** The URL as it is STORED: the parsed `href` — scheme and host in lower
+ *  case ("HTTPS://Moxfield.com/x" → "https://moxfield.com/x"), which the
+ *  database's case-sensitive `^https://` CHECK accepts — or the trimmed
+ *  input when it doesn't parse (the schema has refused it already). */
+export function normalizedHttpsLink(raw: string): string {
+  return parseHttpsLink(raw)?.href ?? raw.trim();
+}
+
+/** "a" or "an" before a platform's name, by its first SOUND: an initialism
+ *  reads its letters ("an MTGGoldfish", "a TCGplayer"), a word its vowel
+ *  ("an eBay", "an Etsy", "a Moxfield"). */
+export function withArticle(name: string): string {
+  const first = name.charAt(0);
+  const initialism = /^[A-Z]{2}/.test(name);
+  const an = initialism ? "AEFHILMNORSX".includes(first) : /^[aeiou]/i.test(first);
+  return `${an ? "an" : "a"} ${name}`;
 }
 
 /** True when `host` is one of `allowed` or a subdomain of one

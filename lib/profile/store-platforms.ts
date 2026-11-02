@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { containsProfanity } from "@/lib/moderation/profanity";
-import { hostMatches, parseHttpsLink, PROFILE_LINK_URL_MAX } from "@/lib/profile/https-link";
+import {
+  hostMatches,
+  normalizedHttpsLink,
+  parseHttpsLink,
+  PROFILE_LINK_URL_MAX,
+  withArticle,
+} from "@/lib/profile/https-link";
 import { STRONG_LANGUAGE_PROFILE_TEXT } from "@/lib/profile/link-kinds";
 
 // ---------------------------------------------------------------------------
-// A profile's STORE cards (migration 0153, `profile_stores`): where a
+// A profile's STORE cards (migration 0159, `profile_stores`): where a
 // creator sells cards — the prominent "Visit store" cards on their profile.
 // ONE registry, read by the Settings editor, the shared zod schema, the
 // profile's store card and the migration's `platform` CHECK
@@ -166,7 +172,7 @@ export function storeUrlError(platform: StorePlatform, raw: string): string | nu
   const url = parseHttpsLink(raw);
   if (!url) return "Enter a full https:// link to your store.";
   if (platform.hosts.length > 0 && !hostMatches(url.hostname, platform.hosts)) {
-    return `That isn't a ${platform.label} link.`;
+    return `That isn't ${withArticle(platform.label)} link.`;
   }
   if (platform.paths && !platform.paths.some((re) => re.test(url.pathname)) && !isShopSubdomain(platform, url)) {
     return `Paste your ${platform.label} store link, like ${platform.placeholder}.`;
@@ -193,7 +199,9 @@ export const profileStoreSchema = z
     if (!platform) return;
     const error = storeUrlError(platform, value.url);
     if (error) ctx.addIssue({ code: "custom", path: ["url"], message: error });
-  });
+  })
+  // Stored as parsed: scheme and host in lower case (the CHECK is `^https://`).
+  .transform((value) => ({ ...value, url: normalizedHttpsLink(value.url) }));
 
 export const profileStoresSchema = z
   .array(profileStoreSchema)

@@ -3,7 +3,7 @@ import { buildProfileJsonLd } from "@/lib/profile/json-ld";
 import type { ProfileWithStats } from "@/lib/cards/queries";
 
 // The profile's Person JSON-LD names every link its creator vouches for in
-// `sameAs` — the website, the column socials and the 0153 links — once each.
+// `sameAs` — the website, the column socials and the 0159 links — once each.
 
 const profile = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -26,8 +26,8 @@ const profile = {
 describe("buildProfileJsonLd", () => {
   it("adds the extra links to sameAs, without repeats", () => {
     const ld = buildProfileJsonLd(profile, "Forge", [
-      { url: "https://moxfield.com/users/forge" },
-      { url: "https://x.com/forge" },
+      { kind: "moxfield", url: "https://moxfield.com/users/forge" },
+      { kind: "other", url: "https://x.com/forge" },
     ]);
     const person = ld.mainEntity as Record<string, unknown>;
     expect(person.sameAs).toEqual([
@@ -35,6 +35,14 @@ describe("buildProfileJsonLd", () => {
       "https://x.com/forge",
       "https://moxfield.com/users/forge",
     ]);
+  });
+
+  it("leaves an \"other\" link out of sameAs (any host — not an identity)", () => {
+    const ld = buildProfileJsonLd({ ...profile, website_url: null, twitter_url: null }, "Forge", [
+      { kind: "other", url: "https://blog.example/about-forge" },
+      { kind: "twitch", url: "https://www.twitch.tv/forge" },
+    ]);
+    expect((ld.mainEntity as Record<string, unknown>).sameAs).toEqual(["https://www.twitch.tv/forge"]);
   });
 
   it("leaves sameAs out when there is no link", () => {

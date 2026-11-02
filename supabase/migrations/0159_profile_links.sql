@@ -1,4 +1,4 @@
--- 0153_profile_links.sql — a profile's extra LINKS, its STORE cards, and a
+-- 0159_profile_links.sql — a profile's extra LINKS, its STORE cards, and a
 -- server-side search of a creator's public cards for the profile page.
 --
 -- 1. profile_links — the MTG sites, socials and support pages a creator
@@ -40,12 +40,16 @@
 --    count_profile_cards (the result count the pager prints). SECURITY
 --    INVOKER: RLS on cards still decides, and the public filter is explicit.
 --
--- Grants (CLAUDE.md "Every migration states its grants"; new projects grant
--- nothing by default): the two tables — select to anon, select / insert /
--- update / delete to authenticated, all to service_role; RLS narrows it.
--- The functions: the setters to authenticated (+ service_role), the card
--- search to anon / authenticated / service_role, the trigger function to
--- nobody (a trigger runs it). Every function revokes PUBLIC first.
+-- Grants (CLAUDE.md "Every migration states its grants"; prod's old project
+-- auto-grants new public objects to the API roles, a new project grants
+-- nothing — the revokes make them agree, as 0155 / 0156 do): the two tables
+-- — everything revoked from public, anon and authenticated first, then
+-- select to anon, select / insert / update / delete to authenticated, all
+-- to service_role; RLS narrows it. The functions: the setters revoked from
+-- public and anon, granted to authenticated (+ service_role); the card
+-- search to anon / authenticated / service_role; the trigger function
+-- revoked from public and every API role — none executes it (a
+-- trigger runs it).
 --
 -- Ships through a PR; never applied ad-hoc. Idempotent.
 
@@ -183,7 +187,7 @@ begin
 end;
 $$;
 
-revoke all on function public.profile_links_enforce_cap() from public;
+revoke all on function public.profile_links_enforce_cap() from public, anon, authenticated, service_role;
 
 drop trigger if exists profile_links_enforce_cap on public.profile_links;
 create trigger profile_links_enforce_cap
@@ -330,12 +334,13 @@ $$;
 
 -- Grants --------------------------------------------------------------------
 
+revoke all on table public.profile_links, public.profile_stores from public, anon, authenticated;
 grant select on table public.profile_links, public.profile_stores to anon;
 grant select, insert, update, delete on table public.profile_links, public.profile_stores to authenticated;
 grant all on table public.profile_links, public.profile_stores to service_role;
 
-revoke all on function public.set_profile_links(jsonb) from public;
-revoke all on function public.set_profile_stores(jsonb) from public;
+revoke all on function public.set_profile_links(jsonb) from public, anon;
+revoke all on function public.set_profile_stores(jsonb) from public, anon;
 grant execute on function public.set_profile_links(jsonb) to authenticated, service_role;
 grant execute on function public.set_profile_stores(jsonb) to authenticated, service_role;
 

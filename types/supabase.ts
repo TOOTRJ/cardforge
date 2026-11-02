@@ -2007,7 +2007,7 @@ export type Database = {
           },
         ];
       };
-      // Migration 0153 — a profile's extra links (lib/profile/link-kinds.ts).
+      // Migration 0159 — a profile's extra links (lib/profile/link-kinds.ts).
       profile_links: {
         Row: {
           id: string;
@@ -2046,7 +2046,7 @@ export type Database = {
           },
         ];
       };
-      // Migration 0153 — a profile's store cards (lib/profile/store-platforms.ts).
+      // Migration 0159 — a profile's store cards (lib/profile/store-platforms.ts).
       profile_stores: {
         Row: {
           id: string;
@@ -2090,7 +2090,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      // Migration 0153 — the Settings editors' whole-list saves (caller's rows).
+      // Migration 0159 — the Settings editors' whole-list saves (caller's rows).
       set_profile_links: {
         Args: { p_links: Json };
         Returns: undefined;
@@ -2099,7 +2099,7 @@ export type Database = {
         Args: { p_stores: Json };
         Returns: undefined;
       };
-      // Migration 0153 — the profile page's card search (public cards only).
+      // Migration 0159 — the profile page's card search (public cards only).
       list_profile_cards: {
         Args: {
           p_owner: string;

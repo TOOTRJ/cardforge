@@ -11,13 +11,13 @@ import {
 } from "@/lib/profile/store-platforms";
 
 // ---------------------------------------------------------------------------
-// A profile's links and store cards (migration 0153). Viewer-independent:
+// A profile's links and store cards (migration 0159). Viewer-independent:
 // the tables are public-read, so the cookie-free client reads them (the
 // profile page's other reads decide whether it is dynamic). Every row is
 // re-checked before it is handed out (`drawable*`): the database only holds
 // the shape, and a row written straight through the API skips the Settings
 // actions' host allow-lists and strong-language check. A database migration
-// 0153 hasn't reached reads as no rows (42P01), never an error page.
+// 0159 hasn't reached reads as no rows (42P01), never an error page.
 // ---------------------------------------------------------------------------
 
 export const listProfileLinks = cache(async (ownerId: string): Promise<ProfileLink[]> => {

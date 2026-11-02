@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
-// Settings → "More links" / "Store cards" (migration 0153): the editor checks
+// Settings → "More links" / "Store cards" (migration 0159): the editor checks
 // the list with the server's own schema before sending it (a bad link never
 // leaves the page), sends the rows in order under the payload keys the RPCs
 // read, puts a server error under its row, and hands the focus on when a row

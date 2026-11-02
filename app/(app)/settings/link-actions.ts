@@ -8,7 +8,7 @@ import { profileLinksSchema } from "@/lib/profile/link-kinds";
 import { profileStoresSchema } from "@/lib/profile/store-platforms";
 
 // ---------------------------------------------------------------------------
-// The Settings editors' saves (migration 0153). Each saves its WHOLE list in
+// The Settings editors' saves (migration 0159). Each saves its WHOLE list in
 // one call: the shared zod schema first (host allow-lists, path shapes, the
 // strong-language check on labels and titles, caps, duplicates), then ONE
 // RPC that replaces the caller's rows in a transaction (RLS decides; the

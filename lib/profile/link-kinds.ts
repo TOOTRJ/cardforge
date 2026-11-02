@@ -1,9 +1,15 @@
 import { z } from "zod";
 import { containsProfanity } from "@/lib/moderation/profanity";
-import { hostMatches, parseHttpsLink, PROFILE_LINK_URL_MAX } from "@/lib/profile/https-link";
+import {
+  hostMatches,
+  normalizedHttpsLink,
+  parseHttpsLink,
+  PROFILE_LINK_URL_MAX,
+  withArticle,
+} from "@/lib/profile/https-link";
 
 // ---------------------------------------------------------------------------
-// A profile's extra LINKS (migration 0153, `profile_links`): the MTG sites a
+// A profile's extra LINKS (migration 0159, `profile_links`): the MTG sites a
 // creator plays and builds on, the socials the seven profile columns don't
 // cover, support pages, and one "other https link". ONE registry — the
 // Settings editor's choices, the zod schema the editor and the server
@@ -221,7 +227,7 @@ export function linkUrlError(kind: LinkKind, raw: string): string | null {
   const url = parseHttpsLink(raw);
   if (!url) return "Enter a full https:// link.";
   if (kind.hosts.length > 0 && !hostMatches(url.hostname, kind.hosts)) {
-    return `That isn't a ${kind.label} link (${kind.hosts.join(" or ")}).`;
+    return `That isn't ${withArticle(kind.label)} link (${kind.hosts.join(" or ")}).`;
   }
   if (kind.paths && !kind.paths.some((re) => re.test(url.pathname))) {
     return `Paste your ${kind.label} profile link, like ${kind.placeholder}.`;
@@ -254,7 +260,9 @@ export const profileLinkSchema = z
     if (kind.key === "other" && !value.label) {
       ctx.addIssue({ code: "custom", path: ["label"], message: "Name this link." });
     }
-  });
+  })
+  // Stored as parsed: scheme and host in lower case (the CHECK is `^https://`).
+  .transform((value) => ({ ...value, url: normalizedHttpsLink(value.url) }));
 
 export const profileLinksSchema = z
   .array(profileLinkSchema)
@@ -282,11 +290,14 @@ export type ProfileLink = {
 };
 
 /** The rows a profile may DRAW: a known kind whose URL still passes its
- *  test (a row written straight through the API skips the action). */
-export function drawableProfileLinks<T extends { kind: string; url: string }>(rows: readonly T[]): T[] {
+ *  test and a label with no strong language (a row written straight through
+ *  the API skips the action) — drawableProfileStores' rule. */
+export function drawableProfileLinks<T extends { kind: string; url: string; label?: string | null }>(
+  rows: readonly T[],
+): T[] {
   return rows.filter((row) => {
     const kind = linkKindOf(row.kind);
-    return kind !== null && linkUrlError(kind, row.url) === null;
+    return kind !== null && linkUrlError(kind, row.url) === null && !containsProfanity(row.label);
   });
 }
 

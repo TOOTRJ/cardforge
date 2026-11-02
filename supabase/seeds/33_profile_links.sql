@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
--- 31_profile_links.sql — extra profile LINKS and STORE cards (migration
--- 0153), so a preview branch, the dev database and the local stack have a
+-- 33_profile_links.sql — extra profile LINKS and STORE cards (migration
+-- 0159), so a preview branch, the dev database and the local stack have a
 -- profile to look at: dev_pro ("Priya Prosmith") with MTG-site, social and
 -- support links and three store cards; dev_artist with two links and one
 -- store. dev_free and dev_new keep none (the empty states).
@@ -11,9 +11,11 @@
 -- here (the repo is public).
 --
 -- Runs after 10_dev_data.sql (config.toml → [db.seed] sql_paths, filename
--- order). Never against production. Idempotent: fixed ids + ON CONFLICT DO
--- NOTHING; a row whose account is missing (this file run on its own) is
--- skipped.
+-- order). Never against production. Idempotent: a user's links (or stores)
+-- are seeded only while that user has NONE — a re-seed after the user saved
+-- their own list never stacks rows on it or trips the 12 / 4 cap — plus
+-- fixed ids + ON CONFLICT DO NOTHING; a row whose account is missing (this
+-- file run on its own) is skipped.
 -- ---------------------------------------------------------------------------
 
 do $guard$
@@ -38,6 +40,7 @@ from (values
   ('e1530000-0000-4000-a000-000000000008'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'reddit', 'https://www.reddit.com/user/dev_artist_ari', null, 1)
 ) as l (id, owner_id, kind, url, label, position)
 where exists (select 1 from public.profiles where id = l.owner_id)
+  and not exists (select 1 from public.profile_links where owner_id = l.owner_id)
 on conflict (id) do nothing;
 
 insert into public.profile_stores (id, owner_id, platform, url, title, position)
@@ -49,4 +52,5 @@ from (values
   ('e1531000-0000-4000-a000-000000000004'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'etsy', 'https://www.etsy.com/shop/DevArtistAlters', 'Hand-painted alters', 0)
 ) as s (id, owner_id, platform, url, title, position)
 where exists (select 1 from public.profiles where id = s.owner_id)
+  and not exists (select 1 from public.profile_stores where owner_id = s.owner_id)
 on conflict (id) do nothing;

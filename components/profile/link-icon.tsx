@@ -3,7 +3,7 @@ import { BarChart3, Layers, Link2, Repeat, Swords, Trophy } from "lucide-react";
 import type { LinkKindKey } from "@/lib/profile/link-kinds";
 
 // ---------------------------------------------------------------------------
-// LinkIcon — the glyph beside each extra profile link (migration 0153,
+// LinkIcon — the glyph beside each extra profile link (migration 0159,
 // lib/profile/link-kinds.ts; the seven column socials keep SocialIcon).
 //
 // Socials and support pages draw their own mark — the single-colour path

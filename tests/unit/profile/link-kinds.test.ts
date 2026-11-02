@@ -10,10 +10,16 @@ import {
   profileLinksSchema,
 } from "@/lib/profile/link-kinds";
 import { SOCIAL_PLATFORMS } from "@/lib/auth/schemas";
-import { displayLink, hostMatches, parseHttpsLink } from "@/lib/profile/https-link";
+import {
+  displayLink,
+  hostMatches,
+  normalizedHttpsLink,
+  parseHttpsLink,
+  withArticle,
+} from "@/lib/profile/https-link";
 
 // ---------------------------------------------------------------------------
-// A profile's extra links (migration 0153, lib/profile/link-kinds.ts): every
+// A profile's extra links (migration 0159, lib/profile/link-kinds.ts): every
 // kind is https + its site's hosts (+ its profile path where it has one),
 // "other" takes any https page and needs a name, labels refuse strong
 // language, and the profile page re-checks rows before it draws them.
@@ -59,6 +65,27 @@ describe("parseHttpsLink", () => {
     expect(hostMatches("moxfield.com", ["moxfield.com"])).toBe(true);
     expect(hostMatches("notmoxfield.com", ["moxfield.com"])).toBe(false);
     expect(hostMatches("moxfield.com.evil.example", ["moxfield.com"])).toBe(false);
+  });
+
+  it("stores a link with its scheme and host in lower case (the database's CHECK is case-sensitive)", () => {
+    expect(normalizedHttpsLink("HTTPS://Moxfield.COM/users/Forge")).toBe("https://moxfield.com/users/Forge");
+    const parsed = profileLinkSchema.safeParse({ kind: "moxfield", url: " HTTPS://www.Moxfield.com/users/Forge " });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.url).toBe("https://www.moxfield.com/users/Forge");
+    // What the migration's CHECK holds every stored url to.
+    expect(parsed.data.url).toMatch(/^https:\/\/[^\s/?#]+\.[^\s/?#]+/);
+  });
+
+  it("picks a or an by the name's first sound", () => {
+    expect(withArticle("eBay")).toBe("an eBay");
+    expect(withArticle("Etsy")).toBe("an Etsy");
+    expect(withArticle("ArtStation")).toBe("an ArtStation");
+    expect(withArticle("Untapped.gg")).toBe("an Untapped.gg");
+    expect(withArticle("MTGGoldfish")).toBe("an MTGGoldfish");
+    expect(withArticle("TCGplayer")).toBe("a TCGplayer");
+    expect(withArticle("Moxfield")).toBe("a Moxfield");
+    expect(linkUrlError(kind("artstation"), "https://evil.example/a")).toMatch(/^That isn't an ArtStation link/);
   });
 
   it("prints a link without its scheme or trailing slash", () => {
@@ -152,6 +179,15 @@ describe("link kinds", () => {
       { kind: "gone", url: "https://a.example/" },
     ];
     expect(drawableProfileLinks(rows)).toEqual([rows[0]]);
+  });
+
+  it("draw no row whose label holds strong language (a label written past the action)", () => {
+    const rows = [
+      { kind: "other", url: "https://a.example/", label: "Hell's Caretaker" },
+      { kind: "other", url: "https://b.example/", label: `${rot13("shpx")} this` },
+      { kind: "kofi", url: "https://ko-fi.com/forge", label: null },
+    ];
+    expect(drawableProfileLinks(rows)).toEqual([rows[0], rows[2]]);
   });
 
   it("name a link by its site, and its label", () => {
