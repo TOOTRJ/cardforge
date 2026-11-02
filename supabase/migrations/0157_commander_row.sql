@@ -19,6 +19,11 @@
 --     weighted 1 + 2·ln(1 + engagement), drawn by -ln(u) / weight with u
 --     uniform from md5(id || seed) — stable within a seed, fresh across
 --     seeds, a popular card more likely but never a monopoly.
+--   * u = (32 md5 bits + 0.5) / 2³², in (0, 1). `bit(32)::bigint` is
+--     UNSIGNED (0 … 2³²−1): 0086's `+ 2147483648.0` put u in [0.5, 1.5),
+--     where -ln(u) is negative and a heavier card sorts LATER — the
+--     gallery's copy is corrected by 0158; this draw is pinned by
+--     tests/unit/db/commander-row-migration.test.ts.
 --
 -- SECURITY INVOKER: the caller's RLS applies (anon reads public cards
 -- only; the function asks for public anyway). Nothing stored changes.
@@ -44,7 +49,7 @@ as $$
         + 1.5 * c.share_count
         + 2.0 * (select count(*) from public.cards r where r.parent_card_id = c.id)) as discover_weight,
       greatest(
-        (('x' || substr(md5(c.id::text || coalesce(p_seed, '')), 1, 8))::bit(32)::bigint + 2147483648.0) / 4294967296.0,
+        (('x' || substr(md5(c.id::text || coalesce(p_seed, '')), 1, 8))::bit(32)::bigint + 0.5) / 4294967296.0,
         1e-9) as discover_u
     from public.cards c
     cross join lateral (
