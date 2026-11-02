@@ -809,8 +809,12 @@ describe("handleStripeEvent — trial_will_end", () => {
     return { admin: admin as any, inserts };
   }
   const customers = { retrieve: vi.fn() };
+  // The handler re-reads the subscription (Stripe's CURRENT state). By
+  // default the read answers nothing, so the event's copy stands; the
+  // release tests script what Stripe really answers.
+  const subscriptions = { retrieve: vi.fn() };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trialStripe = { customers } as any;
+  const trialStripe = { customers, subscriptions } as any;
   const trialSub = (extra: Record<string, unknown> = {}) => ({
     id: "sub_trial",
     customer: "cus_1",
@@ -826,6 +830,7 @@ describe("handleStripeEvent — trial_will_end", () => {
 
   beforeEach(() => {
     customers.retrieve.mockReset().mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: null } });
+    subscriptions.retrieve.mockReset().mockResolvedValue(null);
   });
 
   it("no card anywhere: notification says so, email says the plan simply ends", async () => {
@@ -914,20 +919,79 @@ describe("handleStripeEvent — trial_will_end", () => {
     expect(email.send).not.toHaveBeenCalled();
   });
 
-  it("a trial ending NOW (a comp released with trial_end: 'now') gets no 'ends soon' reminder (finding 7)", async () => {
-    const at = (created: number) =>
-      ({ id: "evt_twe", type: "customer.subscription.trial_will_end", created, data: { object: trialSub() } }) as never;
-    // Fired at the trial's end, or within a minute of it (or after): nothing.
-    for (const created of [1_790_735_200, 1_790_735_200 - 60, 1_790_735_200 + 300]) {
+  describe("a comp hold released with trial_end: 'now' (finding 7 — Stripe's real shape)", () => {
+    // What Stripe sends at the release (sandbox run, 2026-11): the event's
+    // data.object is the PRE-update copy — still trialing, its trial_end the
+    // HELD comp end weeks out — fired the moment the trial was ended.
+    const HELD_END = 1_790_735_200;
+    const RELEASED_AT = HELD_END - 25 * 86_400;
+    const staleEvent = () =>
+      ({
+        id: "evt_twe",
+        type: "customer.subscription.trial_will_end",
+        created: RELEASED_AT,
+        data: { object: trialSub({ trial_end: HELD_END }) },
+      }) as never;
+
+    it("the live subscription has already converted (active): no reminder", async () => {
+      subscriptions.retrieve.mockResolvedValue(trialSub({ status: "active", trial_end: RELEASED_AT }));
       const { admin, inserts } = makeTrialAdmin();
-      await handleStripeEvent(at(created), { admin, stripe: trialStripe });
+      await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+      expect(subscriptions.retrieve).toHaveBeenCalledWith("sub_trial");
       expect(inserts).toHaveLength(0);
-    }
-    expect(email.send).not.toHaveBeenCalled();
-    // Fired the usual 3 days ahead: reminded.
-    const { admin, inserts } = makeTrialAdmin();
-    await handleStripeEvent(at(1_790_735_200 - 3 * 86_400), { admin, stripe: trialStripe });
-    expect(inserts).toHaveLength(1);
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it("the live subscription is still trialing but its trial ends NOW (within a minute): no reminder", async () => {
+      for (const liveEnd of [RELEASED_AT, RELEASED_AT + 60]) {
+        subscriptions.retrieve.mockResolvedValue(trialSub({ trial_end: liveEnd }));
+        const { admin, inserts } = makeTrialAdmin();
+        await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+        expect(inserts).toHaveLength(0);
+      }
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it("an ordinary reminder uses the LIVE trial end for the payload, the dedupe and the email key", async () => {
+      // The event copy names the held end; Stripe now holds a later one (a
+      // comp extended after the event fired): the reminder names the real date.
+      const liveEnd = HELD_END + 10 * 86_400;
+      subscriptions.retrieve.mockResolvedValue(trialSub({ trial_end: liveEnd }));
+      const { admin, inserts } = makeTrialAdmin({ notifiedFor: new Date(HELD_END * 1000).toISOString() });
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 3 * 86_400, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0].row.payload).toMatchObject({ trialEnd: new Date(liveEnd * 1000).toISOString() });
+      expect(email.send.mock.calls[0][1]).toEqual({ idempotencyKey: `trial-ending:sub_trial:${liveEnd}` });
+    });
+
+    it("the re-read fails: falls back to the event's copy (and its own guard)", async () => {
+      subscriptions.retrieve.mockRejectedValue(new Error("stripe down"));
+      // The stale copy weeks out: the fallback can't tell — it reminds.
+      let { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0].row.payload).toMatchObject({ trialEnd: new Date(HELD_END * 1000).toISOString() });
+      // An event copy whose trial ends at the event: the guard still holds.
+      ({ admin, inserts } = makeTrialAdmin());
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 30, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(0);
+    });
+
+    it("fired the usual 3 days ahead with a live trial matching the event: reminded", async () => {
+      subscriptions.retrieve.mockResolvedValue(trialSub());
+      const { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 3 * 86_400, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(1);
+    });
   });
 
   it("the notification is the durable part: an insert failure throws (Stripe retries); a missing email setup or recipient is fine", async () => {

@@ -727,6 +727,26 @@ free users. **Clearing a comp after the trial's own end has passed** ends
 the trial now and charges (owner answer 3) — the user's notification then
 says only that the comp ended, never "your trial now runs until" today.
 
+Not moved: a comp below the plan paid for. The admin's toast says what
+happened in one line (`compStripeNote` / `compCreditNote`); the user's
+`comp_plan` notification adds "Your free trial now runs until …; nothing is
+charged before then." only when the comp HOLDS the trial. `trial_will_end`
+is once per subscription AND trial end, so a moved trial is reminded again
+before the charge that really happens. The handler re-reads the
+subscription (Stripe's CURRENT state, never the event's snapshot — the
+event copy only when the read fails): releasing a hold with `trial_end:
+"now"` fires `trial_will_end` whose `data.object` is the PRE-update copy
+(still trialing, the held end weeks out — seen in a sandbox run), so the
+live status and `trial_end` decide; a live trial ending within a minute of
+the event gets no reminder, and the live `trial_end` keys the dedupe, the
+payload and the email. A comp-held trial cancelled after the trial it would
+have had without the comp is not a lapsed trial (`isUnconvertedTrial` reads
+`pipglyph_trial_end_before_comp`): no `trial_lapsed` row, no win-back; and
+Checkout never applies the win-back coupon to a comp hold (its first
+invoice is the hold's $0). The billing page names a comp over a live
+subscription in one line (`liveCompChargeLine`: "nothing is charged before
+then" only when Stripe's trial really reaches the comp's end).
+
 ### The balance credit on an active plan
 
 One shared helper, `lib/billing/balance-credit.ts` (the referral programme's

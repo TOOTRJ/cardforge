@@ -195,16 +195,33 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // effort on top (idempotent at the provider by subscription id).
 /** A trial ending within this long of the event is ending NOW: an admin
  *  released a comp hold with `trial_end: "now"` (lib/billing/comp-stripe.ts),
- *  and Stripe may still send `trial_will_end` for it. The charge happens at
- *  once — a "your trial ends soon" email arriving with the receipt is wrong. */
+ *  and Stripe sends `trial_will_end` for it. The charge happens at once — a
+ *  "your trial ends soon" email arriving with the receipt is wrong. */
 const TRIAL_ENDING_NOW_SECONDS = 60;
 
 async function handleTrialWillEnd(
-  sub: Stripe.Subscription,
+  eventSub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
   opts: { firedAt?: number | null } = {},
 ): Promise<void> {
   const { admin, stripe } = deps;
+  // Stripe's CURRENT state, never the event's snapshot (CLAUDE.md "Billing
+  // storefront"; the same rule as syncSubscriptionForUser). Releasing a comp
+  // hold with `trial_end: "now"` fires trial_will_end whose `data.object` is
+  // the PRE-update copy — still trialing, its trial_end the held comp end
+  // weeks out — while the live subscription has already converted. Read
+  // in a real sandbox run (2026-11). The event copy is the fallback only
+  // when the read fails.
+  let sub = eventSub;
+  try {
+    const live = await stripe.subscriptions.retrieve(eventSub.id);
+    if (live && typeof live === "object" && live.id === eventSub.id) sub = live;
+  } catch (error) {
+    console.warn(
+      "[stripe] trial_will_end: couldn't re-read the subscription; using the event's copy:",
+      error instanceof Error ? error.message : error,
+    );
+  }
   if (sub.status !== "trialing") return;
   if (
     typeof opts.firedAt === "number" &&
