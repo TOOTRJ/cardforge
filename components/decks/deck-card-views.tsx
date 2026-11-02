@@ -13,7 +13,9 @@ import { deckRowLabel, stackColumnsOf, type DeckGroup, type DeckSort, type DeckV
 import { formatUtcDate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY } from "@/types/card";
-import { DECK_BOARD_LABELS } from "@/types/deck";
+import { InfoTip } from "@/components/ui/info-tip";
+import { BOARD_HELP } from "@/lib/decks/deck-help";
+import { DECK_BOARD_LABELS, isDeckBoard } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // The deck's groups drawn in one of the four views (TODO DK5.3, WD5):
@@ -75,7 +77,22 @@ export function DeckGroupViews({
   return <StacksView groups={groups} showProxies={showProxies} ui={ui} />;
 }
 
-/** A group's heading — its disclosure button, the group's name and count. */
+/** A board's help (TODO DK11 (c)): what it is and what it counts toward —
+ *  beside a group that IS a board (the Sideboard, the Commander…). */
+function BoardHelpTip({ groupKey }: { groupKey: string }) {
+  if (!isDeckBoard(groupKey)) return null;
+  const help = BOARD_HELP[groupKey];
+  return (
+    <InfoTip label={`About the ${help.title}`} side="bottom" align="start">
+      <p className="font-semibold text-foreground">{help.title}</p>
+      <p className="mt-1">{help.body}</p>
+      <p className="mt-1">{help.counts}</p>
+    </InfoTip>
+  );
+}
+
+/** A group's heading — its disclosure button, the group's name and count,
+ *  and a board's help. */
 function GroupHeading({
   id,
   group,
@@ -109,6 +126,9 @@ function GroupHeading({
           {group.count} card{group.count === 1 ? "" : "s"}
         </span>
       </button>
+      <span className="ml-1 inline-flex align-middle font-sans normal-case tracking-normal">
+        <BoardHelpTip groupKey={group.key} />
+      </span>
     </h3>
   );
 }
@@ -455,6 +475,9 @@ function TableView({
                     <ChevronDown className={cn("h-3 w-3 transition-transform motion-reduce:transition-none", !open && "-rotate-90")} aria-hidden />
                     {group.label} <span className="font-normal tabular-nums text-subtle">· {group.count}</span>
                   </button>
+                  <span className="ml-1 inline-flex align-middle">
+                    <BoardHelpTip groupKey={group.key} />
+                  </span>
                 </th>
               </tr>
               {open ? group.rows.map((row) => <TableRow key={row.id} row={row} showProxies={showProxies} ui={ui} />) : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatHasCommander, formatHasFreeMulligan, formatIsMultiplayer, isBasicLand, validateDeck } from "@/lib/decks/format-rules";
+import { formatIsMultiplayer, isBasicLand, validateDeck } from "@/lib/decks/format-rules";
 import { DECK_FORMAT_VALUES, type DeckBoard } from "@/types/deck";
 
 type Entry = { name: string; board: DeckBoard; quantity: number };
@@ -56,6 +56,22 @@ describe("validateDeck — commander", () => {
     const warnings = validateDeck("commander", deck);
     expect(codes(warnings)).toEqual(["copy_limit"]);
     expect(warnings[0].message).toContain("Lightning Bolt");
+    // No ids given: no entries named (the summary bar links nothing).
+    expect(warnings[0].entryIds).toBeUndefined();
+  });
+
+  it("a copy-limit issue names its entries, in the deck's order — the summary bar's link to the card (TODO DK11 (d))", () => {
+    const deck = [
+      { id: "e1", ...entry("Lightning Bolt", 3) },
+      { id: "e2", ...entry("Shock", 1) },
+      { id: "e3", ...entry("Lightning Bolt", 2, "side") },
+      { id: "e4", ...entry("Island", 40) },
+      { id: "e5", ...entry("Ponder", 4) },
+    ];
+    const warnings = validateDeck("modern", deck);
+    expect(warnings.find((w) => w.code === "copy_limit")?.entryIds).toEqual(["e1", "e3"]);
+    // An issue about the whole deck names none.
+    expect(validateDeck("commander", deck).filter((w) => w.code !== "copy_limit").every((w) => w.entryIds === undefined)).toBe(true);
   });
 
   it("enforces fixed-count exceptions (Seven Dwarves ≤ 7, Nazgûl ≤ 9)", () => {
@@ -204,15 +220,10 @@ describe("isBasicLand", () => {
   });
 });
 
-describe("the playtest's game: turn order and the free mulligan", () => {
+describe("the playtest's game: turn order", () => {
   it("Commander and Oathbreaker are multiplayer — every player draws on turn one (CR 103.8c); Brawl is 1v1 (103.8a)", () => {
     expect(DECK_FORMAT_VALUES.filter(formatIsMultiplayer)).toEqual(["commander", "oathbreaker"]);
     expect(formatIsMultiplayer("brawl")).toBe(false);
     expect(formatIsMultiplayer("standard_brawl")).toBe(false);
-  });
-
-  it("the first mulligan is free in every commander format, Brawl included (CR 103.5c) — and nowhere else", () => {
-    expect(DECK_FORMAT_VALUES.filter(formatHasFreeMulligan)).toEqual(["commander", "brawl", "standard_brawl", "oathbreaker"]);
-    expect(DECK_FORMAT_VALUES.filter(formatHasFreeMulligan)).toEqual(DECK_FORMAT_VALUES.filter(formatHasCommander));
   });
 });

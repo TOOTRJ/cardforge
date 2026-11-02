@@ -90,7 +90,7 @@ function deckPage(items: DeckItem[] = [BOLT(), RING()], deck: typeof DECK & { vi
       canManage
       deck={deck}
       initialPrefs={{ view: "list", group: "none", sort: "name" }}
-      summary={{ format: "casual", analytics: { total: 3, byBoard: { main: 3, side: 0, maybe: 0, commander: 0, companion: 0 }, averageManaValue: 1, lands: 0 }, formatIssues: 0 }}
+      summary={{ format: "casual", analytics: { total: 3, byBoard: { main: 3, side: 0, maybe: 0, commander: 0, companion: 0 }, averageManaValue: 1, totalManaValue: 3, lands: 0 }, formatIssues: [] }}
     />,
   );
 }

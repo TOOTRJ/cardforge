@@ -13,6 +13,7 @@ const analytics: DeckAnalytics = {
   byType: { Battle: 0, Planeswalker: 0, Creature: 24, Instant: 4, Sorcery: 6, Artifact: 2, Enchantment: 3, Land: 21, Other: 0 },
   lands: 21,
   averageManaValue: 2.9,
+  totalManaValue: 113,
 };
 
 describe("pdfSafe", () => {

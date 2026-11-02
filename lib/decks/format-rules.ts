@@ -24,6 +24,10 @@ export type DeckWarning = {
     | "commander_count"
     | "companion_count";
   message: string;
+  /** A warning about specific cards (a copy limit): their entries, in the
+   *  deck's order — the summary bar's issue list links to the first one's
+   *  row (TODO DK11 (d)). Only when the entries came with their ids. */
+  entryIds?: string[];
 };
 
 const BASIC_LAND_NAMES = new Set(
@@ -114,13 +118,7 @@ export function formatIsMultiplayer(format: DeckFormat): boolean {
   return FORMAT_SPECS[format].multiplayer === true;
 }
 
-/** True where a player's first mulligan is free (CR 103.5c): a multiplayer
- *  game, and any Brawl game — every commander format. */
-export function formatHasFreeMulligan(format: DeckFormat): boolean {
-  return formatIsMultiplayer(format) || format === "brawl" || format === "standard_brawl";
-}
-
-type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity">;
+type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity"> & { id?: string };
 
 export function validateDeck(
   format: DeckFormat,
@@ -138,6 +136,7 @@ export function validateDeck(
   let commanderCount = 0;
   let companionCount = 0;
   const copiesByName = new Map<string, number>();
+  const idsByName = new Map<string, string[]>();
 
   for (const entry of entries) {
     if (entry.board === "maybe") continue;
@@ -154,6 +153,7 @@ export function validateDeck(
     // above hold the typed name. One name either way.
     const key = typedForMatching(entry.name.trim().toLowerCase());
     copiesByName.set(key, (copiesByName.get(key) ?? 0) + entry.quantity);
+    if (entry.id) idsByName.set(key, [...(idsByName.get(key) ?? []), entry.id]);
   }
 
   // Companions live outside the deck proper in every format that has them.
@@ -191,6 +191,7 @@ export function validateDeck(
             limit === 1
               ? `“${titleCase(key)}” appears ${copies}× — ${formatLabel(format)} is singleton (basics excepted).`
               : `“${titleCase(key)}” appears ${copies}× — the limit is ${limit} copies across mainboard and sideboard.`,
+          ...(idsByName.has(key) ? { entryIds: idsByName.get(key) } : {}),
         });
       }
     }
