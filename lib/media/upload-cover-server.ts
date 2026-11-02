@@ -43,7 +43,7 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 
 /** The longest side an article image is stored at (the article column is
  *  48rem; 1600 px covers it at 2× and keeps the LCP picture light). */
-export const ARTICLE_IMAGE_MAX_PX = 1600;
+const ARTICLE_IMAGE_MAX_PX = 1600;
 
 export type UploadCoverServerResult =
   | {

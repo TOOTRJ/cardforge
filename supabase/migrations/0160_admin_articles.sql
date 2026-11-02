@@ -1,6 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 0153_admin_articles.sql — articles admins compose and schedule (the
--- orchestrator renumbers this placeholder at merge).
+-- 0160_admin_articles.sql — articles admins compose and schedule.
 --
 -- The guides in content/articles/*.mdx stay as they are (every URL, its
 -- frontmatter, its tests). This table ADDS the composer's articles: the same
@@ -21,6 +20,13 @@
 --                               + IndexNow). /api/cron/publish-articles
 --                               announces every released row with none; an
 --                               unpublish or a reschedule clears it.
+--   first_published_at          when the article FIRST went out (the first
+--                               announce: the earlier of publish_at and
+--                               announced_at). Set once by a trigger, never
+--                               cleared or moved — an unpublish keeps it —
+--                               and while it is set the slug is locked
+--                               (the composer refuses, and so does the
+--                               trigger): a URL that has been public stays.
 --   cover_url / cover_alt       the cover (Article.image, the article's OG
 --                               image source); alt text is REQUIRED with a
 --                               cover — a CHECK, not only the composer.
@@ -41,8 +47,9 @@
 --     service_role (the publish cron).
 --   * media_url_allowed: EXECUTE for anon, authenticated, service_role, as
 --     0127 / 0150.
---   * guard_article_media_columns: EXECUTE revoked from public, anon,
---     authenticated (a trigger fires regardless; no API role may call it).
+--   * guard_article_media_columns, articles_first_published: EXECUTE
+--     revoked from public, anon, authenticated (a trigger fires regardless;
+--     no API role may call it).
 --   * admin_list_article_authors: EXECUTE for authenticated + service_role
 --     (it answers an admin caller only); revoked from public and anon.
 --
@@ -72,6 +79,7 @@ create table if not exists public.articles (
   publish_at timestamptz,
   content_updated_at timestamptz,
   announced_at timestamptz,
+  first_published_at timestamptz,
   created_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -81,8 +89,55 @@ create table if not exists public.articles (
   )
 );
 
+-- A database that ran an earlier draft of this migration (a preview branch)
+-- has the table without the column.
+alter table public.articles add column if not exists first_published_at timestamptz;
+
 create index if not exists articles_release_idx
   on public.articles (is_published, publish_at desc);
+
+-- ===========================================================================
+-- first_published_at: set once, never cleared; the slug locks with it
+-- ===========================================================================
+
+create or replace function public.articles_first_published()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' and old.first_published_at is not null then
+    -- Never cleared, never moved — whatever the row update says.
+    new.first_published_at := old.first_published_at;
+    if new.slug is distinct from old.slug then
+      raise exception 'article_slug_locked: a published article keeps its URL'
+        using errcode = 'check_violation';
+    end if;
+  elsif new.announced_at is not null then
+    -- The first announce: the release time (or the announce, if earlier).
+    new.first_published_at := least(new.publish_at, new.announced_at);
+  else
+    -- Not announced yet: nothing to record, whatever the writer sent.
+    new.first_published_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.articles_first_published() from public, anon, authenticated;
+
+drop trigger if exists articles_first_published on public.articles;
+create trigger articles_first_published
+  before insert or update
+  on public.articles
+  for each row execute function public.articles_first_published();
+
+-- A row announced before the column existed (an earlier draft of this
+-- migration on a preview branch) gets its date now. Idempotent.
+update public.articles
+   set first_published_at = least(publish_at, announced_at)
+ where first_published_at is null
+   and announced_at is not null;
 
 -- ===========================================================================
 -- RLS
@@ -162,7 +217,7 @@ begin
      and p_url ~ '^(https://(www\.)?pipglyph\.com)?/defaults/(avatars/avatar|banners/banner)-(0[1-9]|1[0-9]|2[0-5])\.webp$' then
     return true;
   end if;
-  -- PipGlyph's own article diagrams (0153, public/article-media): a
+  -- PipGlyph's own article diagrams (0160, public/article-media): a
   -- site-relative file the repo ships, never a host.
   if p_kind = 'article-image'
      and p_url ~ '^/article-media/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*\.(svg|png|webp)$' then

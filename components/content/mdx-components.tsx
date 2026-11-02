@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { slugifyTag } from "@/lib/content/articles";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
+import { remarkArticleBodyGuard } from "@/lib/content/article-body-guard";
 
 // ---------------------------------------------------------------------------
 // MDX component map for article bodies (passed to MDXRemote). Everything here
@@ -115,7 +116,7 @@ function CardScan({
   src: string;
   href: string;
 }) {
-  if (!src.startsWith(CARD_SCAN_HOST)) return null;
+  if (!src.startsWith(CARD_SCAN_HOST) || !href.startsWith("https://")) return null;
   return (
     <figure className="m-0 flex w-36 flex-col gap-2 sm:w-44 group-data-[size=large]:w-40 sm:group-data-[size=large]:w-64">
       <a href={href} target="_blank" rel="noopener noreferrer">
@@ -265,6 +266,18 @@ export const mdxComponents = {
  *  renders every guide with these options to keep that honest. */
 export const articleMdxOptions = {
   mdxOptions: { remarkPlugins: [remarkGfm, remarkUnwrapImages] },
+} satisfies MDXRemoteProps["options"];
+
+/** Compile options for a COMPOSER article's body (written in the browser,
+ *  stored in the database): the same, with the body guard first — any
+ *  element outside the five article components, raw HTML, import / export,
+ *  a {…} expression or an unsafe link fails the compile
+ *  (lib/content/article-body-guard.ts). blockJS / blockDangerousJS are
+ *  next-mdx-remote's defaults, stated so a change to them is a choice. */
+export const composerArticleMdxOptions = {
+  mdxOptions: { remarkPlugins: [remarkArticleBodyGuard, remarkGfm, remarkUnwrapImages] },
+  blockJS: true,
+  blockDangerousJS: true,
 } satisfies MDXRemoteProps["options"];
 
 type MdNode = { type: string; value?: string; children?: MdNode[] };

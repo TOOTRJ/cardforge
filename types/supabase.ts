@@ -1384,6 +1384,7 @@ export type Database = {
         Row: {
           author_id: string | null;
           announced_at: string | null;
+          first_published_at: string | null;
           body: string;
           category: string | null;
           content_updated_at: string | null;
@@ -1408,6 +1409,7 @@ export type Database = {
         Insert: {
           author_id?: string | null;
           announced_at?: string | null;
+          first_published_at?: string | null;
           body?: string;
           category?: string | null;
           content_updated_at?: string | null;
@@ -1432,6 +1434,7 @@ export type Database = {
         Update: {
           author_id?: string | null;
           announced_at?: string | null;
+          first_published_at?: string | null;
           body?: string;
           category?: string | null;
           content_updated_at?: string | null;

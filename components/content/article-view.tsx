@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { MDXRemote } from "next-mdx-remote/rsc";
+import type { ReactNode } from "react";
 import { ArrowRight, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { ArticleToc } from "@/components/content/article-toc";
-import { articleMdxOptions, mdxComponents } from "@/components/content/mdx-components";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { faqJsonLd, JsonLd, type CrumbItem } from "@/components/seo/json-ld";
 import { PageContainer } from "@/components/layout/page-container";
@@ -16,9 +15,11 @@ import { formatCalendarDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // One guide, as /articles/[slug] draws it — an MDX file or a composer article
-// (migration 0153) alike, and the composer's preview (/admin/articles/[id]/
+// (migration 0160) alike, and the composer's preview (/admin/articles/[id]/
 // preview) through the very same component, so what an admin checks is what
-// goes out.
+// goes out. The BODY arrives compiled (`body`, lib/content/article-body.tsx's
+// compileArticleBody): the page 404s a composer body the guard refuses, the
+// preview shows why — neither draws a body that didn't compile.
 //
 // What every guide carries by default (docs/research/article-seo-2026-10.md):
 // Article JSON-LD (headline, description, image, dates, author, publisher,
@@ -34,9 +35,12 @@ export const FAQ_HEADING = "Frequently asked questions";
 export function ArticleView({
   article,
   related,
+  body,
 }: {
   article: Article;
   related: ArticleMeta[];
+  /** The compiled body (compileArticleBody). */
+  body: ReactNode;
 }) {
   const { meta, content } = article;
   const printsFaq = meta.source === "composer" && Boolean(meta.faq?.length);
@@ -131,7 +135,7 @@ export function ArticleView({
         {/* Body — prose styling via arbitrary variants, same approach as
             LegalPageShell but tuned for long-form reading. */}
         <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_sup]:text-[0.7em] [&_sup_a]:no-underline [&_section.footnotes]:mt-6 [&_section.footnotes]:border-t [&_section.footnotes]:border-border [&_section.footnotes]:pt-2 [&_section.footnotes]:text-sm [&_section.footnotes]:leading-6 [&_section.footnotes_p]:inline">
-          <MDXRemote source={content} components={mdxComponents} options={articleMdxOptions} />
+          {body}
           {printsFaq ? (
             <section aria-labelledby={slugifyTag(FAQ_HEADING)} className="flex flex-col gap-4">
               <h2 id={slugifyTag(FAQ_HEADING)}>{FAQ_HEADING}</h2>

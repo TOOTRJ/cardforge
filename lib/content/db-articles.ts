@@ -9,6 +9,7 @@ import { isArticleCategory } from "@/lib/content/article-categories";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import {
   ARTICLE_COLUMNS,
+  ARTICLE_LIST_COLUMNS,
   bodyPlainText,
   wordCount,
   type ArticleFaqItem,
@@ -17,7 +18,7 @@ import {
 import type { Article, ArticleAuthor, ArticleMeta } from "@/lib/content/articles";
 
 // ---------------------------------------------------------------------------
-// Composer articles (migration 0153) — the reads.
+// Composer articles (migration 0160) — the reads.
 //
 // Public: cookie-free and cached under ARTICLES_TAG, so every article surface
 // stays static / ISR. Release is RLS's (is_published AND publish_at <= now()):
@@ -52,6 +53,17 @@ const AUTHOR_COLUMNS =
 
 export type PublishedComposerArticle = { row: ArticleRow; author: ArticleAuthor | null };
 
+/** A list entry: the row WITHOUT its body (the list cache stays small) and
+ *  the body's word count, worked out where the body was read. */
+type ListedComposerArticle = { row: Omit<ArticleRow, "body">; words: number; author: ArticleAuthor | null };
+
+/** "The table isn't there" — a database 0160 hasn't reached. Postgres says
+ *  42P01; PostgREST answers PGRST205 from its schema cache (which is what a
+ *  supabase-js read gets). */
+export function isMissingArticlesTable(error: { code?: string | null } | null | undefined): boolean {
+  return error?.code === "42P01" || error?.code === "PGRST205";
+}
+
 /** A stored FAQ value → the items (anything malformed is dropped). */
 export function faqOf(value: unknown): ArticleFaqItem[] {
   if (!Array.isArray(value)) return [];
@@ -79,9 +91,13 @@ export function authorOf(row: AuthorRow | null | undefined): ArticleAuthor | nul
   };
 }
 
-/** A row as the article pages read it (the same shape as an MDX guide). */
-export function composerArticle(row: ArticleRow, author: ArticleAuthor | null): Article {
-  const words = wordCount(bodyPlainText(row.body));
+/** A row as the article pages read it (the same shape as an MDX guide).
+ *  `words`: the body's count when the body isn't in hand (a list entry). */
+export function composerArticle(
+  row: Omit<ArticleRow, "body"> & { body?: string },
+  author: ArticleAuthor | null,
+  words: number = wordCount(bodyPlainText(row.body ?? "")),
+): Article {
   const coverSrc = drawableMediaUrl("article-image", row.cover_url);
   const faq = faqOf(row.faq);
   const meta: ArticleMeta = {
@@ -105,7 +121,7 @@ export function composerArticle(row: ArticleRow, author: ArticleAuthor | null): 
         : undefined,
     author: author ?? undefined,
   };
-  return { meta, content: row.body };
+  return { meta, content: row.body ?? "" };
 }
 
 async function readAuthors(
@@ -123,16 +139,20 @@ async function readAuthors(
 }
 
 const loadReleased = unstable_cache(
-  async (): Promise<PublishedComposerArticle[]> => {
+  async (): Promise<ListedComposerArticle[]> => {
     const supabase = createPublicClient();
+    // What the cache KEEPS is the list columns and each body's word count
+    // (the "N min read" every list prints) — never the bodies: an
+    // unstable_cache entry holds 2 MB at most, and 500 bodies of up to
+    // 100 000 characters would not fit. The body is read here only to be
+    // counted; the page reads its own (loadReleasedBySlug).
     const { data, error } = await supabase
       .from("articles")
-      .select(ARTICLE_COLUMNS)
+      .select(`${ARTICLE_LIST_COLUMNS}, body`)
       .order("publish_at", { ascending: false })
       .limit(500);
     if (error) {
-      // 42P01 = the table isn't there (a database 0153 hasn't reached).
-      if (error.code !== "42P01") console.warn("[articles] public read failed:", error.message);
+      if (!isMissingArticlesTable(error)) console.warn("[articles] public read failed:", error.message);
       return [];
     }
     const rows = (data ?? []) as unknown as ArticleRow[];
@@ -140,20 +160,55 @@ const loadReleased = unstable_cache(
       supabase,
       [...new Set(rows.map((r) => r.author_id).filter((id): id is string => Boolean(id)))],
     );
-    return rows.map((row) => ({ row, author: row.author_id ? authors.get(row.author_id) ?? null : null }));
+    return rows.map(({ body, ...row }) => ({
+      row,
+      words: wordCount(bodyPlainText(body ?? "")),
+      author: row.author_id ? authors.get(row.author_id) ?? null : null,
+    }));
   },
-  [ARTICLES_TAG, "released"],
+  [ARTICLES_TAG, "released-list"],
   { revalidate: ARTICLES_REVALIDATE_SECONDS, tags: [ARTICLES_TAG] },
 );
 
-/** Every released composer article, newest first (RLS hides the rest). */
+/** One released article WITH its body (the page), cached per slug. */
+const loadReleasedBySlug = unstable_cache(
+  async (slug: string): Promise<PublishedComposerArticle | null> => {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.from("articles").select(ARTICLE_COLUMNS).eq("slug", slug).maybeSingle();
+    if (error) {
+      if (!isMissingArticlesTable(error)) console.warn("[articles] public read failed:", error.message);
+      return null;
+    }
+    if (!data) return null;
+    const row = data as unknown as ArticleRow;
+    const authors = await readAuthors(supabase, row.author_id ? [row.author_id] : []);
+    return { row, author: row.author_id ? authors.get(row.author_id) ?? null : null };
+  },
+  [ARTICLES_TAG, "released-one"],
+  { revalidate: ARTICLES_REVALIDATE_SECONDS, tags: [ARTICLES_TAG] },
+);
+
+/** Every released composer article, newest first (RLS hides the rest) — the
+ *  list: `content` is empty (the body is read per article). */
 export const listReleasedComposerArticles = cache(async (): Promise<Article[]> => {
   if (!isSupabaseConfigured()) return [];
   try {
-    return (await loadReleased()).map(({ row, author }) => composerArticle(row, author));
+    return (await loadReleased()).map(({ row, words, author }) => composerArticle(row, author, words));
   } catch (error) {
     console.warn("[articles] public read threw:", error);
     return [];
+  }
+});
+
+/** One released composer article with its body (null = none released). */
+export const getReleasedComposerArticle = cache(async (slug: string): Promise<Article | null> => {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const found = await loadReleasedBySlug(slug);
+    return found ? composerArticle(found.row, found.author) : null;
+  } catch (error) {
+    console.warn("[articles] public read threw:", error);
+    return null;
   }
 });
 

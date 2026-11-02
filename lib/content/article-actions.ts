@@ -6,20 +6,16 @@ import { isUuid } from "@/lib/ids";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listArticles } from "@/lib/content/articles";
-import { listPublishedArticles } from "@/lib/content/article-catalog";
 import {
   ARTICLE_COLUMNS,
   articleInputSchema,
+  articleSlugLocked,
   articleStatus,
   type ArticleInput,
   type ArticleRow,
   type ParsedArticleInput,
 } from "@/lib/content/article-shared";
-import {
-  articleSeoChecklist,
-  blockingItems,
-  type ChecklistInput,
-} from "@/lib/content/article-seo-checklist";
+import { articleReleaseBlock } from "@/lib/content/article-release-gate";
 import { faqOf } from "@/lib/content/db-articles";
 import { articleAnnouncePaths, revalidateArticleSurfaces } from "@/lib/content/article-publish";
 import { readArticleDrafts } from "@/lib/content/article-drafts";
@@ -27,11 +23,14 @@ import { notifyIndexNow } from "@/lib/seo/indexnow";
 
 // ---------------------------------------------------------------------------
 // The composer's writes (/admin/articles). Admin-gated twice: the profile
-// check here, and migration 0153's RLS (viewer_is_admin()) on every write the
+// check here, and migration 0160's RLS (viewer_is_admin()) on every write the
 // cookie-bound client makes. Every input goes through articleInputSchema
-// (the CHECKs of 0153); a schedule or a publish also has to pass the SEO
-// checklist's errors (lib/content/article-seo-checklist.ts) on the STORED
-// row, so what goes out is what was checked.
+// (the CHECKs of 0160); a schedule, a publish and an edit of a SCHEDULED or
+// LIVE article also have to pass the release gate
+// (lib/content/article-release-gate.ts: the SEO checklist's errors and a
+// compile of the body with the body guard) on the row as it will be stored,
+// so what goes out is what was checked — an edit can't slip a refused body
+// into the backlog after its schedule passed.
 //
 // A live article changes in public at once: its edit purges the surfaces and
 // tells IndexNow. A scheduled one goes out with /api/cron/publish-articles.
@@ -80,6 +79,13 @@ function rowError(error: { code?: string; message: string }, fallback: string): 
   if (error.code === "23505") {
     return { ok: false, error: "Another article already has this slug.", fieldErrors: { slug: "Already taken." } };
   }
+  if (error.message.startsWith("article_slug_locked")) {
+    return {
+      ok: false,
+      error: "This article has been published — its URL can't change.",
+      fieldErrors: { slug: "Locked once published." },
+    };
+  }
   if (error.message.startsWith("media_url_not_allowed")) {
     return {
       ok: false,
@@ -99,11 +105,17 @@ async function readRow(id: string): Promise<ArticleRow | null> {
   return { ...row, faq: faqOf(row.faq) };
 }
 
-/** The live surfaces changed (an edit, a publish, an unpublish, a delete). */
+/** The live surfaces changed (an edit, a publish, an unpublish, a delete):
+ *  expire the cached reads at once (updateTag — never "max", which served
+ *  an unpublished article on), THEN tell IndexNow. */
 function announce(rows: ReadonlyArray<Pick<ArticleRow, "slug" | "category" | "tags">>) {
-  revalidateArticleSurfaces(rows.map((r) => r.slug));
+  revalidateArticleSurfaces(
+    rows.map((r) => r.slug),
+    "action",
+  );
   const paths = articleAnnouncePaths(rows);
-  // Off the request path — IndexNow is best-effort and never delays a save.
+  // Off the request path, after the purge above — IndexNow is best-effort
+  // and never delays a save.
   if (paths.length > 0) after(() => notifyIndexNow(paths));
 }
 
@@ -149,16 +161,18 @@ export async function saveArticleAction(
   if (!existing) return { ok: false, error: "Unknown article." };
   const status = articleStatus(existing);
   // A URL that has been public stays put: renaming it would 404 every link.
-  if (existing.announced_at && parsed.data.slug !== existing.slug) {
+  // first_published_at is never cleared, so an unpublish doesn't unlock it.
+  if (articleSlugLocked(existing) && parsed.data.slug !== existing.slug) {
     return {
       ok: false,
       error: "This article has been published — its URL can't change.",
       fieldErrors: { slug: "Locked once published." },
     };
   }
-  if (status === "live") {
-    // A live article stays as checked as it was when it went out.
-    const blocked = await blockingMessage(columnsOf(parsed.data));
+  if (status === "live" || status === "scheduled") {
+    // A live article stays as checked as it was when it went out, and a
+    // scheduled one as checked as it was when it was scheduled.
+    const blocked = await articleReleaseBlock(columnsOf(parsed.data));
     if (blocked) return { ok: false, error: blocked };
   }
   const { error } = await supabase
@@ -178,32 +192,6 @@ export async function saveArticleAction(
   return { ok: true, id, status };
 }
 
-function checklistInputOf(row: ReturnType<typeof columnsOf>): ChecklistInput {
-  return {
-    slug: row.slug,
-    title: row.title,
-    seoTitle: row.seo_title,
-    description: row.description,
-    body: row.body,
-    tags: row.tags ?? [],
-    category: row.category,
-    faq: row.faq,
-    coverUrl: row.cover_url,
-    coverAlt: row.cover_alt,
-    authorId: row.author_id,
-  };
-}
-
-/** The checklist's blocking errors, as one sentence (null = none). */
-async function blockingMessage(row: ReturnType<typeof columnsOf>): Promise<string | null> {
-  const fileSlugs = listArticles().map((a) => a.slug);
-  const known = (await listPublishedArticles()).map((a) => a.slug);
-  const items = articleSeoChecklist(checklistInputOf(row), { fileSlugs, knownSlugs: known });
-  const blocking = blockingItems(items);
-  if (blocking.length === 0) return null;
-  return `Fix before publishing: ${blocking.map((item) => item.label.toLowerCase()).join("; ")}.`;
-}
-
 /** Put a saved article in the backlog: public at `publishAtIso` (UTC). */
 export async function scheduleArticleAction(id: string, publishAtIso: string): Promise<ArticleActionResult> {
   const gate = await requireAdmin();
@@ -216,7 +204,7 @@ export async function scheduleArticleAction(id: string, publishAtIso: string): P
   }
   const row = await readRow(id);
   if (!row) return { ok: false, error: "Unknown article." };
-  const blocked = await blockingMessage(row);
+  const blocked = await articleReleaseBlock(row);
   if (blocked) return { ok: false, error: blocked };
   const wasLive = articleStatus(row) === "live";
   const supabase = await createClient();
@@ -239,7 +227,7 @@ export async function publishArticleNowAction(id: string): Promise<ArticleAction
   const row = await readRow(id);
   if (!row) return { ok: false, error: "Unknown article." };
   if (articleStatus(row) === "live") return { ok: true, id, status: "live" };
-  const blocked = await blockingMessage(row);
+  const blocked = await articleReleaseBlock(row);
   if (blocked) return { ok: false, error: blocked };
   const now = new Date().toISOString();
   const supabase = await createClient();

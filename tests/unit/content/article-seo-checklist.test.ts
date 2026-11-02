@@ -113,7 +113,8 @@ describe("the article SEO checklist", () => {
       "length-min",
     );
     const body = `${GOOD.body}\n\n[bad](javascript:alert(1))`;
-    expect(blockingItems(articleSeoChecklist({ ...GOOD, body }, CONTEXT)).map((i) => i.id)).toEqual(["links-safe"]);
+    // The body guard refuses the link too (it would be drawn as an <a>).
+    expect(blockingItems(articleSeoChecklist({ ...GOOD, body }, CONTEXT)).map((i) => i.id)).toEqual(["body-markup", "links-safe"]);
   });
 
   it("blocks a draft that still holds an image placeholder", () => {

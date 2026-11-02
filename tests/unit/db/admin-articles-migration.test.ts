@@ -4,8 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ARTICLE_DIAGRAM, isAllowedMediaUrl, MEDIA_KIND_BUCKETS } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
-// Migration 0153 (admin articles — a placeholder number the orchestrator
-// renumbers, so it is found by name):
+// Migration 0160 (admin articles; found by name):
 //   * the public reads released rows only; admins read and write everything,
 //     through viewer_is_admin() (0080) — never a profiles subquery;
 //   * grants stated, never a blanket grant (CLAUDE.md);
@@ -26,11 +25,11 @@ const fn = (sql: string, name: string) =>
   new RegExp(`create or replace function public\\.${name}[\\s\\S]*?\\$\\$;`).exec(sql)![0];
 
 describe(`${file}`, () => {
-  it("is the newest migration (a placeholder renumbered at merge)", () => {
-    const numbers = readdirSync(dir)
-      .filter((f) => /^\d{4}_.*\.sql$/.test(f))
-      .map((f) => Number(f.slice(0, 4)));
-    expect(Number(file.slice(0, 4))).toBe(Math.max(...numbers));
+  it("comes after 0159 (the newest migration on main when it was numbered) and shares its number with none", () => {
+    const n = Number(file.slice(0, 4));
+    expect(n).toBeGreaterThan(159);
+    const sameNumber = readdirSync(dir).filter((f) => f.startsWith(file.slice(0, 5)));
+    expect(sameNumber).toEqual([file]);
   });
 
   it("turns RLS on with the released-rows read and admin-only writes", () => {
@@ -63,6 +62,23 @@ describe(`${file}`, () => {
   it("requires alt text with a cover, and a time with a release", () => {
     expect(SQL).toMatch(/cover_url is null or \(cover_alt is not null and char_length\(btrim\(cover_alt\)\) > 0\)/);
     expect(SQL).toContain("check (not is_published or publish_at is not null)");
+  });
+
+  it("keeps the first release date for good and locks the slug with it", () => {
+    expect(SQL).toContain("first_published_at timestamptz,");
+    expect(SQL).toContain("alter table public.articles add column if not exists first_published_at timestamptz;");
+    const trigger = fn(SQL, "articles_first_published");
+    // Once set: never cleared or moved, and the slug can't change.
+    expect(trigger).toMatch(/if tg_op = 'UPDATE' and old\.first_published_at is not null then\s+-- [^\n]*\n\s+new\.first_published_at := old\.first_published_at;/);
+    expect(trigger).toContain("raise exception 'article_slug_locked");
+    // Set at the first announce, from the release time.
+    expect(trigger).toContain("new.first_published_at := least(new.publish_at, new.announced_at);");
+    expect(SQL).toMatch(/create trigger articles_first_published\s+before insert or update\s+on public\.articles/);
+    expect(statements).toContain(
+      "revoke all on function public.articles_first_published() from public, anon, authenticated",
+    );
+    // The backfill is idempotent (only rows with no date yet).
+    expect(SQL).toMatch(/where first_published_at is null\s+and announced_at is not null/);
   });
 
   it("guards the cover like every picture column", () => {

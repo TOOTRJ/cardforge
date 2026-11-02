@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArticleView } from "@/components/content/article-view";
+import { compileArticleBody } from "@/lib/content/article-body";
 import { listArticles } from "@/lib/content/articles";
 import {
   getPublishedArticle,
@@ -10,7 +11,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // /articles/[slug] — one guide: an MDX file (content/articles/) or a released
-// composer article (migration 0153), drawn by ArticleView. Static: the files
+// composer article (migration 0160), drawn by ArticleView. Static: the files
 // and the composer articles live at build time are pre-rendered; one released
 // later renders on its first request and is then cached (ISR), and the
 // publish purges it (lib/content/article-publish.ts). An unknown slug — or a
@@ -69,6 +70,13 @@ export default async function ArticlePage({
   const { slug } = await params;
   const article = await getPublishedArticle(slug);
   if (!article) notFound();
+  // A composer body the guard refuses (stored before it existed) is never
+  // drawn: a 404, never a page with the refused markup or a 500.
+  const body = await compileArticleBody(article.content, article.meta.source === "composer" ? "composer" : "file");
+  if (!body.ok) {
+    console.warn(`[articles] /articles/${slug} body refused:`, body.error);
+    notFound();
+  }
   const related = await getPublishedRelatedArticles(article.meta.slug, 3);
-  return <ArticleView article={article} related={related} />;
+  return <ArticleView article={article} related={related} body={body.content} />;
 }

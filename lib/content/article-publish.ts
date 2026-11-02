@@ -1,10 +1,12 @@
 import "server-only";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { tagHubHref } from "@/lib/content/articles";
 import { categoryPath, isArticleCategory } from "@/lib/content/article-categories";
 import { ARTICLES_TAG } from "@/lib/content/db-articles";
+import { ARTICLE_COLUMNS, type ArticleRow } from "@/lib/content/article-shared";
+import { articleReleaseBlock } from "@/lib/content/article-release-gate";
 import { notifyIndexNow } from "@/lib/seo/indexnow";
 
 // ---------------------------------------------------------------------------
@@ -20,6 +22,15 @@ import { notifyIndexNow } from "@/lib/seo/indexnow";
 //     sitemap);
 //   * `announced_at`, so the cron announces each release once.
 //
+// The purge EXPIRES the cached reads — never `revalidateTag(tag, "max")`,
+// which is stale-while-revalidate and served the article as it was (an
+// unpublished or deleted one stayed up; lib/cards/frame-profile-override-
+// actions.ts and lib/cards/cache-purge.ts document the same trap): a server
+// action uses `updateTag` (read-your-own-writes), the cron route
+// `revalidateTag(tag, { expire: 0 })` (updateTag is for actions only).
+// IndexNow is told only AFTER the purge, so a crawler it sends reads the new
+// page.
+//
 // Plain module, not "use server": these are helpers, not endpoints.
 // ---------------------------------------------------------------------------
 
@@ -27,9 +38,12 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 
 type Announceable = { slug: string; category: string | null; tags: string[] | null };
 
-/** Purge every surface that lists or renders guides. */
-export function revalidateArticleSurfaces(slugs: readonly string[] = []): void {
-  revalidateTag(ARTICLES_TAG, "max");
+/** Purge every surface that lists or renders guides. `from`: a server
+ *  action ("action", updateTag) or a route handler ("route", an immediate
+ *  expiry) — Next allows updateTag in a server action only. */
+export function revalidateArticleSurfaces(slugs: readonly string[] = [], from: "action" | "route" = "action"): void {
+  if (from === "action") updateTag(ARTICLES_TAG);
+  else revalidateTag(ARTICLES_TAG, { expire: 0 });
   for (const slug of slugs) revalidatePath(`/articles/${slug}`);
   // "layout" = the path and everything under it: every article, the tag
   // hubs, feed.xml; the /learn shelves.
@@ -57,13 +71,20 @@ export function articleAnnouncePaths(articles: readonly Announceable[]): string[
   return [...paths];
 }
 
-export type AnnounceResult = { announced: string[]; indexNow: boolean };
+export type HeldBackArticle = { slug: string; reason: string };
+export type AnnounceResult = { announced: string[]; heldBack: HeldBackArticle[]; indexNow: boolean };
 
 /**
  * Announce every released composer article that hasn't been yet
- * (is_published, publish_at <= now(), announced_at null): purge, stamp,
- * IndexNow. Service role (the cron, or an admin action after its own check).
- * Idempotent — a second run finds nothing to announce.
+ * (is_published, publish_at <= now(), announced_at null): gate, purge, stamp,
+ * IndexNow. Service role (the cron route). Idempotent — a second run finds
+ * nothing to announce.
+ *
+ * Each due row passes the release gate first (articleReleaseBlock: the
+ * checklist's errors and the body's compile). One that fails is HELD BACK —
+ * put back to a draft (is_published false: RLS already showed it once its
+ * time passed, so leaving it scheduled would keep it public) and logged with
+ * the reason; the composer then shows it as a draft with the same list.
  */
 export async function announceDueArticles(
   admin: AdminClient,
@@ -71,26 +92,57 @@ export async function announceDueArticles(
 ): Promise<AnnounceResult> {
   const { data, error } = await admin
     .from("articles")
-    .select("id, slug, category, tags")
+    .select(ARTICLE_COLUMNS)
     .eq("is_published", true)
     .lte("publish_at", now.toISOString())
     .is("announced_at", null)
     .limit(100);
   if (error) throw new Error(error.message);
-  const due = (data ?? []) as Array<Announceable & { id: string }>;
-  if (due.length === 0) return { announced: [], indexNow: false };
+  const rows = (data ?? []) as unknown as ArticleRow[];
+  if (rows.length === 0) return { announced: [], heldBack: [], indexNow: false };
 
-  const { error: stampError } = await admin
-    .from("articles")
-    .update({ announced_at: now.toISOString() })
-    .in(
-      "id",
-      due.map((row) => row.id),
-    )
-    .is("announced_at", null);
-  if (stampError) throw new Error(stampError.message);
+  const due: ArticleRow[] = [];
+  const heldBack: Array<HeldBackArticle & { id: string }> = [];
+  for (const row of rows) {
+    const reason = await articleReleaseBlock(row);
+    if (reason) heldBack.push({ id: row.id, slug: row.slug, reason });
+    else due.push(row);
+  }
 
-  revalidateArticleSurfaces(due.map((row) => row.slug));
-  const indexNow = await notifyIndexNow(articleAnnouncePaths(due));
-  return { announced: due.map((row) => row.slug), indexNow };
+  if (heldBack.length > 0) {
+    for (const held of heldBack) {
+      console.warn(`[articles] held back /articles/${held.slug} (back to a draft): ${held.reason}`);
+    }
+    const { error: holdError } = await admin
+      .from("articles")
+      .update({ is_published: false, updated_at: now.toISOString() })
+      .in(
+        "id",
+        heldBack.map((row) => row.id),
+      )
+      .is("announced_at", null);
+    if (holdError) throw new Error(holdError.message);
+  }
+
+  if (due.length > 0) {
+    const { error: stampError } = await admin
+      .from("articles")
+      .update({ announced_at: now.toISOString() })
+      .in(
+        "id",
+        due.map((row) => row.id),
+      )
+      .is("announced_at", null);
+    if (stampError) throw new Error(stampError.message);
+  }
+
+  // The purge first (a held-back row may already sit in a cached list), and
+  // only then IndexNow — for the rows that went out.
+  revalidateArticleSurfaces([...due, ...heldBack].map((row) => row.slug), "route");
+  const indexNow = due.length > 0 ? await notifyIndexNow(articleAnnouncePaths(due)) : false;
+  return {
+    announced: due.map((row) => row.slug),
+    heldBack: heldBack.map(({ slug, reason }) => ({ slug, reason })),
+    indexNow,
+  };
 }

@@ -1,4 +1,5 @@
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
+import { ARTICLE_BODY_COMPONENTS, articleBodyProblems } from "@/lib/content/article-body-guard";
 import {
   bodyHeadings,
   bodyImages,
@@ -148,6 +149,18 @@ export function articleSeoChecklist(
     ok: descLength >= DESCRIPTION_RANGE.min && descLength <= DESCRIPTION_RANGE.max,
     hint: `It is ${descLength}. The summary is the meta description, the OG text and the RSS line: one or two sentences that say what the reader gets.`,
     rec: 4,
+  });
+
+  // The body guard (lib/content/article-body-guard.ts): the same rule the
+  // compile runs, so the list says what the server will refuse.
+  const markupProblems = articleBodyProblems(body);
+  add({
+    id: "body-markup",
+    label: "The body is Markdown and the article components only",
+    level: "error",
+    ok: markupProblems.length === 0,
+    hint: `${markupProblems.slice(0, 3).join(" ")}${markupProblems.length > 3 ? ` (+${markupProblems.length - 3} more)` : ""} Allowed: Markdown and ${Object.keys(ARTICLE_BODY_COMPONENTS).map((c) => `<${c}>`).join(", ")} — no other element, raw HTML, script or {…} expression.`,
+    rec: 3,
   });
 
   // --- Answer first ---------------------------------------------------------
