@@ -68,7 +68,7 @@
 // words. The bytes and the file name are the link's, unchanged.
 // ---------------------------------------------------------------------------
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import {
   Crown,
   Download,
@@ -90,7 +90,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import type { VariantProps } from "class-variance-authority";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
@@ -180,9 +181,14 @@ function cornersHint(isPaid: boolean, format: CardImageFormat, print: boolean): 
 type DownloadModalProps = {
   cardId: string;
   cardSlug: string;
-  /** Optional custom trigger. When omitted the modal renders its own
-   *  "Download" button styled as an outline button. */
-  trigger?: ReactNode;
+  /** How the "Download" button that opens the modal looks (an outline
+   *  button by default). PROPS, never an element: the button is built here,
+   *  inside the client component, because it sits under Radix's
+   *  `DialogTrigger asChild` — an element a SERVER component hands in can
+   *  arrive as a lazy Flight reference, which Radix's Slot does not take for
+   *  an element (it renders nothing), so whether the server drew the button
+   *  was a race and hydration failed (the card page, 2026-11-02). */
+  trigger?: DownloadTriggerProps;
   /** Tab to open first. Defaults to "single" since one card on one page
    *  is the most common pick (free users always start on Image). */
   defaultTab?: DownloadTab;
@@ -202,6 +208,16 @@ type DownloadModalProps = {
    *  rowHasBakedBack): the Face / Faces switches and "Include back faces"
    *  show. Default false — a single-faced card's modal is unchanged. */
   hasBackFace?: boolean;
+};
+
+/** The trigger button's look — plain data, so a server component can pass
+ *  it (see `trigger` above). */
+export type DownloadTriggerProps = {
+  variant?: VariantProps<typeof buttonVariants>["variant"];
+  size?: VariantProps<typeof buttonVariants>["size"];
+  className?: string;
+  /** The button's text, and so its accessible name; "Download" by default. */
+  label?: string;
 };
 
 type DownloadTab = "png" | "single";
@@ -341,11 +357,10 @@ export function DownloadModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="outline">
-            <Download className="h-4 w-4" aria-hidden /> Download
-          </Button>
-        )}
+        <Button variant={trigger?.variant ?? "outline"} size={trigger?.size} className={trigger?.className}>
+          {/* One text node, " Download", as the hand-written button had. */}
+          <Download className="h-4 w-4" aria-hidden />{` ${trigger?.label ?? "Download"}`}
+        </Button>
       </DialogTrigger>
       <DialogContent size="md">
         <DialogHeader>
