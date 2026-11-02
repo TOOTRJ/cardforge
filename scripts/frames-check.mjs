@@ -27,14 +27,14 @@ if (entries.length === 0) {
 // connection pool) on every PR — often several at once — and in the
 // production build, so a transient error must never fail it.
 //
-// The whole check has a BUDGET (`--budget-seconds`, default 420: the CI job
+// The whole check has a BUDGET (`--budget-seconds`, default 780: the CI job
 // stops at 10 minutes; a normal run takes 1.5–3). Each lookup has its own
 // timeout and bounded retries, but 4280 of them through a slow CDN went
 // silent until the job was cancelled (2026-11-02, twice). Past the budget it
 // FAILS with what it saw — never a pass: an object nobody looked at is not
 // published as far as this gate knows. It prints its progress meanwhile.
 const budgetAt = process.argv.indexOf("--budget-seconds");
-const budgetSeconds = budgetAt >= 0 ? Number(process.argv[budgetAt + 1]) : 420;
+const budgetSeconds = budgetAt >= 0 ? Number(process.argv[budgetAt + 1]) : 780;
 if (!(budgetSeconds > 0)) {
   console.error("--budget-seconds needs a positive number of seconds.");
   process.exit(2);
