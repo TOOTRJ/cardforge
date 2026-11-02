@@ -185,6 +185,37 @@ describe("validateDeck — 60-card constructed", () => {
   });
 });
 
+describe("validateDeck — the commander and companion issues name their rows (TODO DK11 (d))", () => {
+  const withIds = (rows: Entry[]) => rows.map((row, index) => ({ id: `e${index}`, ...row }));
+
+  it("more than two commanders: the Commander zone's rows, in the deck's order", () => {
+    const deck = withIds([entry("A", 1, "commander"), ...filler(2), entry("B", 1, "commander"), entry("C", 1, "commander"), ...filler(95)]);
+    const issue = validateDeck("commander", deck).find((w) => w.code === "commander_count");
+    expect(issue?.message).toBe("3 commanders — at most 2 (partners) are allowed.");
+    expect(issue?.entryIds).toEqual(["e0", "e3", "e4"]);
+  });
+
+  it("a commander zone where the format has none: its rows", () => {
+    const deck = withIds([...filler(60), entry("Someone", 1, "commander")]);
+    const issue = validateDeck("standard", deck).find((w) => w.code === "commander_count");
+    expect(issue?.message).toBe("Standard doesn't use a commander zone.");
+    expect(issue?.entryIds).toEqual(["e60"]);
+  });
+
+  it("more than one companion: the Companion zone's rows", () => {
+    const deck = withIds([entry("Lurrus", 1, "companion"), ...filler(60), entry("Yorion", 1, "companion")]);
+    const issue = validateDeck("standard", deck).find((w) => w.code === "companion_count");
+    expect(issue?.message).toBe("Only one companion is allowed — this deck has 2.");
+    expect(issue?.entryIds).toEqual(["e0", "e61"]);
+  });
+
+  it("no commander at all names nothing (there is no row); without ids, nothing either", () => {
+    expect(validateDeck("commander", withIds(filler(100))).find((w) => w.code === "commander_count")?.entryIds).toBeUndefined();
+    const plain = [...filler(60), entry("Lurrus", 1, "companion"), entry("Yorion", 1, "companion"), entry("Someone", 1, "commander")];
+    expect(validateDeck("standard", plain).every((w) => w.entryIds === undefined)).toBe(true);
+  });
+});
+
 describe("validateDeck — other formats", () => {
   it("Standard Brawl is exactly 60 incl. commander, singleton", () => {
     const legal = [entry("Cmd", 1, "commander"), ...filler(59)];

@@ -24,8 +24,8 @@ export type DeckWarning = {
     | "commander_count"
     | "companion_count";
   message: string;
-  /** A warning about specific cards (a copy limit): their entries, in the
-   *  deck's order — the summary bar's issue list links to the first one's
+  /** A warning about specific cards (a copy limit, the commander or
+   *  companion zone's rows): their entries, in the deck's order — the summary bar's issue list links to the first one's
    *  row (TODO DK11 (d)). Only when the entries came with their ids. */
   entryIds?: string[];
 };
@@ -137,6 +137,8 @@ export function validateDeck(
   let companionCount = 0;
   const copiesByName = new Map<string, number>();
   const idsByName = new Map<string, string[]>();
+  const commanderIds: string[] = [];
+  const companionIds: string[] = [];
 
   for (const entry of entries) {
     if (entry.board === "maybe") continue;
@@ -145,8 +147,14 @@ export function validateDeck(
     } else {
       deckSize += entry.quantity;
     }
-    if (entry.board === "commander") commanderCount += entry.quantity;
-    if (entry.board === "companion") companionCount += entry.quantity;
+    if (entry.board === "commander") {
+      commanderCount += entry.quantity;
+      if (entry.id) commanderIds.push(entry.id);
+    }
+    if (entry.board === "companion") {
+      companionCount += entry.quantity;
+      if (entry.id) companionIds.push(entry.id);
+    }
 
     // A custom card's entry is named by its title, stored as print sets it
     // since TODO 6.11 (“Dragon’s Approach”); an imported entry and the lists
@@ -214,12 +222,14 @@ export function validateDeck(
       warnings.push({
         code: "commander_count",
         message: `${commanderCount} commanders — at most 2 (partners) are allowed.`,
+        ...(commanderIds.length > 0 ? { entryIds: commanderIds } : {}),
       });
     }
   } else if (commanderCount > 0 && format !== "casual") {
     warnings.push({
       code: "commander_count",
       message: `${formatLabel(format)} doesn't use a commander zone.`,
+      ...(commanderIds.length > 0 ? { entryIds: commanderIds } : {}),
     });
   }
 
@@ -227,6 +237,7 @@ export function validateDeck(
     warnings.push({
       code: "companion_count",
       message: `Only one companion is allowed — this deck has ${companionCount}.`,
+      ...(companionIds.length > 0 ? { entryIds: companionIds } : {}),
     });
   }
 
