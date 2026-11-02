@@ -1,3 +1,4 @@
+import { AI_TEXT_FIELD_KEYS } from "@/lib/cards/ai-provenance-keys";
 import { STATION_MAX_THRESHOLD, STATION_MAX_TIERS, STATION_ROW_MAX_CHARS } from "@/lib/cards/station";
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
@@ -697,6 +698,13 @@ const baseCardSchema = z.object({
    *  private and is flagged `frame_preview` (migration 0121). Anyone else's
    *  request is ignored and the gate applies as usual. */
   frame_preview: z.boolean().optional(),
+  /** The parts the creator says AI wrote and the maker left as written (an
+   *  AI fill or idea applied this session — TODO CP1,
+   *  lib/cards/ai-provenance.ts). A CLAIM only: the actions keep a part
+   *  only when a receipt the server wrote at generation time holds the same
+   *  text (lib/cards/ai-provenance-server.ts); the column itself is the
+   *  server's (migration 0161). Sent only when there is one. */
+  ai_fields: z.array(z.enum(AI_TEXT_FIELD_KEYS)).max(AI_TEXT_FIELD_KEYS.length).optional(),
 });
 
 /** A NEW card also says whether it still prints what its Scryfall import

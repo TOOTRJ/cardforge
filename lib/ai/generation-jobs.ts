@@ -48,6 +48,7 @@ import {
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { addCardAiFields, generatedCardParts, recordAiReceipt } from "@/lib/cards/ai-provenance-server";
 import {
   logAiCall,
   type AiActionLabel,
@@ -666,32 +667,33 @@ async function runGeneratedCardStep(
           toughness: card.toughness,
         }),
       });
+      const payload = {
+        title: card.title,
+        game_system_id: gameSystemId,
+        cost: card.cost ?? undefined,
+        color_identity: card.color_identity,
+        supertype: card.supertype ?? undefined,
+        card_type: card.card_type,
+        subtypes: card.subtypes,
+        // A token prints a black set symbol, never a rarity: a NEW token
+        // saves as common whatever the designer said (owner decision
+        // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
+        // hides the rarity chips, so a token saved rare here could never
+        // be set back in the creator.
+        rarity: card.card_type === "token" ? "common" : card.rarity,
+        rules_text: card.rules_text ?? undefined,
+        ...(station ?? {}),
+        flavor_text: card.flavor_text ?? undefined,
+        power: card.power ?? undefined,
+        toughness: card.toughness ?? undefined,
+        loyalty: card.loyalty ?? undefined,
+        defense: card.defense ?? undefined,
+        visibility: "private",
+        artist_credit: await aiArtistCredit(),
+        ...config.createExtras,
+      };
       const result = await createCardAction(
-        {
-          title: card.title,
-          game_system_id: gameSystemId,
-          cost: card.cost ?? undefined,
-          color_identity: card.color_identity,
-          supertype: card.supertype ?? undefined,
-          card_type: card.card_type,
-          subtypes: card.subtypes,
-          // A token prints a black set symbol, never a rarity: a NEW token
-          // saves as common whatever the designer said (owner decision
-          // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
-          // hides the rarity chips, so a token saved rare here could never
-          // be set back in the creator.
-          rarity: card.card_type === "token" ? "common" : card.rarity,
-          rules_text: card.rules_text ?? undefined,
-          ...(station ?? {}),
-          flavor_text: card.flavor_text ?? undefined,
-          power: card.power ?? undefined,
-          toughness: card.toughness ?? undefined,
-          loyalty: card.loyalty ?? undefined,
-          defense: card.defense ?? undefined,
-          visibility: "private",
-          artist_credit: await aiArtistCredit(),
-          ...config.createExtras,
-        },
+        payload,
         // A card designed for a deck (its createExtras' deck_id) joins it as
         // the AI's (deck_cards.source, migration 0144).
         { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
@@ -709,6 +711,10 @@ async function runGeneratedCardStep(
       }
       cardId = result.cardId;
       forcedPrivate = result.forcedPrivate;
+      // The card AI wrote whole (TODO CP1, migration 0161): every text part
+      // it has is the AI's — until the maker rewrites one. Its picture is
+      // marked by the database when the paint below attaches it.
+      await addCardAiFields(cardId, userId, generatedCardParts(payload));
       await config.afterCreate?.(cardId);
     }
 
@@ -1872,6 +1878,10 @@ async function runCardFillStep(
         fill.back_face = { ...fill.back_face, art_url: persisted.publicUrl };
       }
     }
+    // What the AI wrote, kept as the server has it (TODO CP1, migration
+    // 0161): a save that still holds this text may say AI wrote it. Only the
+    // generated fields — the pinned ones are the maker's.
+    await recordAiReceipt(userId, "fill", [plan.fields]);
     return {
       ...step,
       status: "done",
@@ -2899,6 +2909,15 @@ async function executeDeckRemixStep(
   if (!result.ok) {
     return { ...step, status: "failed", error: createFailureMessage(result) };
   }
+  // What the AI wrote of the remix (TODO CP1, migration 0161): the name it
+  // gave each face and its flavour — the rules stay the printing's (or, for
+  // an own card, are inherited by the action where they were the AI's). The
+  // pictures are marked by the database.
+  await addCardAiFields(result.cardId, userId, [
+    "title",
+    ...(identity.flavor_text?.trim() ? (["flavor_text"] as const) : []),
+    ...(named.back_face?.title?.trim() ? (["back.title"] as const) : []),
+  ]);
 
   if (job.deck_id) {
     await setDeckEntryDetails(
