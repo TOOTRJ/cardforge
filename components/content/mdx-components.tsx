@@ -55,7 +55,12 @@ function Heading3({ children }: { children?: ReactNode }) {
   return <h3 id={slugifyTag(childrenToString(children))}>{children}</h3>;
 }
 
-export function Mana({ cost }: { cost: string }) {
+/** Every article component takes strings only: an MDX attribute can arrive as
+ *  `true` (bare) or undefined (a {…} value blockJS dropped) — draw nothing
+ *  then, never throw (lib/content/article-body-guard.ts refuses both before
+ *  a composer body is saved). */
+export function Mana({ cost }: { cost?: unknown }) {
+  if (typeof cost !== "string") return null;
   return <ManaCostGlyphs cost={cost} size="sm" className="align-middle" />;
 }
 
@@ -116,6 +121,7 @@ function CardScan({
   src: string;
   href: string;
 }) {
+  if (typeof src !== "string" || typeof href !== "string") return null;
   if (!src.startsWith(CARD_SCAN_HOST) || !href.startsWith("https://")) return null;
   return (
     <figure className="m-0 flex w-36 flex-col gap-2 sm:w-44 group-data-[size=large]:w-40 sm:group-data-[size=large]:w-64">
@@ -186,7 +192,8 @@ export function Figure({
   width?: number | string;
   height?: number | string;
 }) {
-  if (!src || !alt?.trim() || !isAllowedMediaUrl("article-image", src)) return null;
+  if (typeof src !== "string" || typeof alt !== "string") return null;
+  if (!src || !alt.trim() || !isAllowedMediaUrl("article-image", src)) return null;
   const w = Number(width) || undefined;
   const h = Number(height) || undefined;
   return (

@@ -68,17 +68,24 @@ describe(`${file}`, () => {
     expect(SQL).toContain("first_published_at timestamptz,");
     expect(SQL).toContain("alter table public.articles add column if not exists first_published_at timestamptz;");
     const trigger = fn(SQL, "articles_first_published");
-    // Once set: never cleared or moved, and the slug can't change.
-    expect(trigger).toMatch(/if tg_op = 'UPDATE' and old\.first_published_at is not null then\s+-- [^\n]*\n\s+new\.first_published_at := old\.first_published_at;/);
+    // Public before the write — stamped, announced, or released by time alone
+    // (RLS shows a row at publish_at, before the cron runs): the date is kept
+    // (or taken now) and the slug can't change.
+    expect(trigger).toMatch(
+      /v_was_public := old\.first_published_at is not null\s+or old\.announced_at is not null\s+or \(old\.is_published and old\.publish_at <= now\(\)\);/,
+    );
+    expect(trigger).toMatch(/new\.first_published_at := coalesce\(\s+old\.first_published_at,/);
     expect(trigger).toContain("raise exception 'article_slug_locked");
-    // Set at the first announce, from the release time.
-    expect(trigger).toContain("new.first_published_at := least(new.publish_at, new.announced_at);");
+    // Set by the write that makes it public, from the release time.
+    expect(trigger).toContain(
+      "elsif new.announced_at is not null or (new.is_published and new.publish_at <= now()) then",
+    );
     expect(SQL).toMatch(/create trigger articles_first_published\s+before insert or update\s+on public\.articles/);
     expect(statements).toContain(
       "revoke all on function public.articles_first_published() from public, anon, authenticated",
     );
     // The backfill is idempotent (only rows with no date yet).
-    expect(SQL).toMatch(/where first_published_at is null\s+and announced_at is not null/);
+    expect(SQL).toMatch(/where first_published_at is null\s+and \(announced_at is not null or \(is_published and publish_at <= now\(\)\)\)/);
   });
 
   it("guards the cover like every picture column", () => {
