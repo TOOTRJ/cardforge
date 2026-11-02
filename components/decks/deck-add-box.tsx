@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Loader2, Plus, Search } from "lucide-react";
+import { Check, Loader2, Plus, Search, X } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { useDeckEditor, type EditorItem } from "@/components/decks/use-deck-editor";
-import { PrivateCardOfferDialog } from "@/components/decks/private-card-offer-dialog";
+import { PrivateCardOfferDialog, type PrivateOfferCard } from "@/components/decks/private-card-offer-dialog";
+import { InfoTip } from "@/components/ui/info-tip";
+import { BOARD_HELP } from "@/lib/decks/deck-help";
 import { privateCardOfferAction } from "@/lib/decks/membership-actions";
 import { deckShowsPrivateCards } from "@/lib/decks/membership-copy";
 import type { AddCandidate } from "@/lib/decks/add-search-queries";
@@ -13,6 +15,7 @@ import {
   inDeckCountForCard,
   inDeckCountForName,
   inDeckLabel,
+  MAX_ADD_BATCH,
   normalizeAddQuery,
   rankRealCards,
   scryfallPictureAt,
@@ -47,6 +50,20 @@ import { DECK_BOARD_LABELS, type DeckBoard, type DeckCardEntry } from "@/types/d
 // owner's page — outside a field — focuses the box; the empty deck's doors,
 // the commander slot and the phone bar's Add open it (`pipglyph:deck-tool`
 // "add" / "add-commander").
+//
+// Several at once (TODO DK5.17): every result can be TICKED while the list
+// stays open — Space on the highlighted result (once the arrows have moved
+// the highlight: before that Space types a space), or a click on its tick
+// box — and the ticks hold across searches. A count and "Add N" sit beside
+// the board; Ctrl / ⌘ Enter in the box does the same. Enter still adds the
+// highlighted result alone. The listbox is `aria-multiselectable`, each
+// option's `aria-selected` is its TICK (the highlight is the input's
+// aria-activedescendant), and each tick is said. "Add N" sends them all in
+// ONE call (addManyToDeckAction: one revalidation; each real card its own
+// `named` spend, as a single add), asking first about the maker's private
+// cards together (one dialog). Added, a card's tick goes; a refused one
+// stays ticked with the reason said. The button that goes with the last
+// tick hands the focus to the box.
 //
 // An add goes through the page's editor (components/decks/use-deck-editor):
 // the card is drawn at once — a new row, or one copy more on the row it
@@ -149,6 +166,11 @@ export function DeckAddBox({ className }: { className?: string }) {
     real: { status: "idle" },
   });
   const [adding, setAdding] = useState<Set<string>>(new Set());
+  // The ticked results, in the order ticked — kept across searches.
+  const [ticked, setTicked] = useState<ReadonlyMap<string, AddOption>>(new Map());
+  // The arrows moved the highlight since the last character typed: Space
+  // ticks (else it types a space — card names have them).
+  const [navigating, setNavigating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const searched = useRef<string | null>(null);
   // The full invitation where it fits; a phone gets the short one.
@@ -299,6 +321,8 @@ export function DeckAddBox({ className }: { className?: string }) {
   // The maker's private card into a deck others can open (TODO DK0.13): the
   // question waiting on them, and the add it holds.
   const [offer, setOffer] = useState<{ option: AddOption; board: DeckBoard; blockedReason?: string } | null>(null);
+  // "Add N" holding for the private-card question: the batch and the cards asked about.
+  const [batchOffer, setBatchOffer] = useState<{ options: AddOption[]; board: DeckBoard; cards: PrivateOfferCard[] } | null>(null);
   const settle = (key: string) =>
     setAdding((prev) => {
       const next = new Set(prev);
@@ -326,7 +350,7 @@ export function DeckAddBox({ className }: { className?: string }) {
   );
   const addOption = useCallback(
     async (option: AddOption) => {
-      if (!editor || adding.has(option.key) || offer) return;
+      if (!editor || adding.has(option.key) || offer || batchOffer) return;
       setAdding((prev) => new Set(prev).add(option.key));
       setNotice(null);
       if (option.privateOwn && option.pick.kind === "card" && deckShowsPrivateCards(editor.deck.visibility)) {
@@ -351,8 +375,129 @@ export function DeckAddBox({ className }: { className?: string }) {
       }
       await commitAdd(option, board, "keep");
     },
-    [adding, board, commitAdd, editor, offer],
+    [adding, batchOffer, board, commitAdd, editor, offer],
   );
+
+  // ---- ticking, and "Add N" (TODO DK5.17) ------------------------------
+  const toggleTick = (option: AddOption) => {
+    const next = new Map(ticked);
+    const on = !next.has(option.key);
+    if (on) {
+      if (next.size >= MAX_ADD_BATCH) {
+        editor?.announce(`At most ${MAX_ADD_BATCH} cards at a time — add these first.`);
+        return;
+      }
+      next.set(option.key, option);
+    } else next.delete(option.key);
+    setTicked(next);
+    editor?.announce(`${option.name} ${on ? "ticked" : "unticked"}. ${next.size} ticked.`);
+  };
+  const clearTicks = () => {
+    setTicked(new Map());
+    editor?.announce("Ticks cleared.");
+    inputRef.current?.focus({ preventScroll: true });
+  };
+  const commitBatch = useCallback(
+    async (options: AddOption[], to: DeckBoard, publish: string[]) => {
+      if (!editor) return;
+      const result = await editor.addMany(
+        options.map((option) => ({ pick: option.pick, preview: option.preview(to) })),
+        to,
+        publish,
+      );
+      setAdding((prev) => {
+        const next = new Set(prev);
+        for (const option of options) next.delete(option.key);
+        return next;
+      });
+      if (!result.ok) {
+        setNotice(result.error);
+        return;
+      }
+      const landed = options.filter((_, index) => result.results[index]?.ok);
+      const refused = options.flatMap((option, index) => {
+        const row = result.results[index];
+        return row && !row.ok ? [{ option, error: row.error }] : [];
+      });
+      setTicked((prev) => {
+        const next = new Map(prev);
+        for (const option of landed) next.delete(option.key);
+        return next;
+      });
+      const where = boardPhrase(to);
+      const added =
+        landed.length === 0
+          ? "Nothing added."
+          : refused.length === 0
+            ? `Added ${landed.length === 1 ? landed[0]!.name : `${landed.length} cards`} to ${where}.`
+            : `Added ${landed.length} of ${options.length} cards to ${where}.`;
+      const why = refused.map(({ option, error }) => `${option.name}: ${error}`).join(" ");
+      editor.announce(why ? `${added} ${why}` : added);
+      setNotice(why || null);
+      // The last tick gone, "Add N" goes with it: the focus to the box.
+      if (refused.length === 0) requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+    },
+    [editor],
+  );
+  const addTicked = useCallback(async () => {
+    if (!editor || ticked.size === 0 || offer || batchOffer) return;
+    const options = [...ticked.values()].filter((option) => !adding.has(option.key));
+    if (options.length === 0) return;
+    setAdding((prev) => {
+      const next = new Set(prev);
+      for (const option of options) next.add(option.key);
+      return next;
+    });
+    setNotice(null);
+    const asking = deckShowsPrivateCards(editor.deck.visibility)
+      ? options.flatMap((option) => (option.privateOwn && option.pick.kind === "card" ? [option.pick.cardId] : []))
+      : [];
+    if (asking.length > 0) {
+      let asked: Awaited<ReturnType<typeof privateCardOfferAction>>;
+      try {
+        asked = await privateCardOfferAction({ deckId: editor.deck.id, cardIds: asking });
+      } catch {
+        asked = { ok: false, error: "Couldn't reach the server. Try again." };
+      }
+      if (!asked.ok) {
+        setAdding((prev) => {
+          const next = new Set(prev);
+          for (const option of options) next.delete(option.key);
+          return next;
+        });
+        setNotice(asked.error);
+        return;
+      }
+      if (asked.cards.length > 0) {
+        const titleOf = (cardId: string) => options.find((option) => option.pick.kind === "card" && option.pick.cardId === cardId)?.name ?? null;
+        setBatchOffer({
+          options,
+          board,
+          cards: asked.cards.map((card) => ({ cardId: card.cardId, title: titleOf(card.cardId), ...(card.blockedReason ? { blockedReason: card.blockedReason } : {}) })),
+        });
+        return;
+      }
+    }
+    await commitBatch(options, board, []);
+  }, [adding, batchOffer, board, commitBatch, editor, offer, ticked]);
+  const answerBatchOffer = (choice: "publish" | "keep" | "cancel") => {
+    const held = batchOffer;
+    setBatchOffer(null);
+    if (!held) return;
+    if (choice === "cancel") {
+      setAdding((prev) => {
+        const next = new Set(prev);
+        for (const option of held.options) next.delete(option.key);
+        return next;
+      });
+      editor?.announce("Nothing added. The cards are still ticked.");
+      return;
+    }
+    // "Make public": every card asked about that CAN go public; one its
+    // text keeps private is added as it is.
+    const publish = choice === "publish" ? held.cards.filter((card) => !card.blockedReason).map((card) => card.cardId) : [];
+    void commitBatch(held.options, held.board, publish);
+  };
   const answerOffer = (choice: "publish" | "keep" | "cancel") => {
     const held = offer;
     setOffer(null);
@@ -377,12 +522,24 @@ export function DeckAddBox({ className }: { className?: string }) {
       const step = event.key === "ArrowDown" ? 1 : -1;
       const next = index < 0 ? (step > 0 ? 0 : options.length - 1) : (index + step + options.length) % options.length;
       setActive(options[next]!.key);
+      setNavigating(true);
+      return;
+    }
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      if (ticked.size === 0) return;
+      event.preventDefault();
+      void addTicked();
       return;
     }
     if (event.key === "Enter") {
       if (!open || !activeOption) return;
       event.preventDefault();
       void addOption(activeOption);
+      return;
+    }
+    if (event.key === " " && navigating && open && activeOption && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      toggleTick(activeOption);
       return;
     }
     if (event.key === "Escape") {
@@ -475,6 +632,7 @@ export function DeckAddBox({ className }: { className?: string }) {
             onChange={(event) => {
               setQuery(event.target.value);
               setOpen(true);
+              setNavigating(false);
             }}
             onFocus={() => setOpen(true)}
             onClick={() => setOpen(true)}
@@ -501,6 +659,7 @@ export function DeckAddBox({ className }: { className?: string }) {
               id={listId}
               role="listbox"
               aria-label="Cards to add"
+              aria-multiselectable="true"
               className={cn("max-h-[min(55vh,25rem)] overflow-y-auto", anyOption ? "p-1" : "p-0")}
             >
               {grouped.map(({ key, options: list }) =>
@@ -514,24 +673,50 @@ export function DeckAddBox({ className }: { className?: string }) {
                       {SECTION_LABELS[key]}
                     </div>
                     {list.map((option) => {
-                      const selected = option.key === activeOption?.key;
+                      // The highlight (the arrows', the pointer's) and the
+                      // tick are two things: aria-selected is the tick.
+                      const highlighted = option.key === activeOption?.key;
+                      const isTicked = ticked.has(option.key);
                       const busy = adding.has(option.key);
                       return (
                         <div
                           key={option.key}
                           id={`${baseId}-${option.key}`}
                           role="option"
-                          aria-selected={selected}
+                          aria-selected={isTicked}
                           aria-label={[option.name, option.meta, option.inDeck].filter(Boolean).join(", ")}
+                          data-highlighted={highlighted ? "" : undefined}
                           onClick={() => void addOption(option)}
                           onMouseMove={() => {
-                            if (!selected) setActive(option.key);
+                            if (!highlighted) setActive(option.key);
                           }}
                           className={cn(
                             "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm",
-                            selected ? "bg-primary/15 text-foreground" : "text-foreground hover:bg-elevated",
+                            highlighted ? "bg-primary/15 text-foreground ring-1 ring-inset ring-primary/40" : "text-foreground hover:bg-elevated",
                           )}
                         >
+                          {/* The tick box: a click here ticks; anywhere else
+                              on the row adds this card alone. */}
+                          <span
+                            aria-hidden
+                            data-tick=""
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleTick(option);
+                            }}
+                            className={cn(
+                              "-my-1 -ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-elevated",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "flex h-4 w-4 items-center justify-center rounded border",
+                                isTicked ? "border-primary-bright bg-primary text-white" : "border-border-strong bg-background/60",
+                              )}
+                            >
+                              {isTicked ? <Check className="h-3 w-3" /> : null}
+                            </span>
+                          </span>
                           {option.picture ? (
                             // eslint-disable-next-line @next/next/no-img-element -- a 600 px thumb or Scryfall's small picture
                             <img src={option.picture} alt="" loading="lazy" decoding="async" className="h-10 w-7 shrink-0 rounded-sm bg-[#101015] object-cover" />
@@ -547,7 +732,7 @@ export function DeckAddBox({ className }: { className?: string }) {
                             <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{option.inDeck}</span>
                           ) : null}
                           <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center text-primary-bright">
-                            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : selected ? <Plus className="h-4 w-4" /> : null}
+                            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : highlighted ? <Plus className="h-4 w-4" /> : null}
                           </span>
                         </div>
                       );
@@ -582,9 +767,40 @@ export function DeckAddBox({ className }: { className?: string }) {
             ))}
           </select>
         </label>
+        {/* What each board is (TODO DK11 (c)) — outside the label, whose
+            click would open the select. */}
+        <span className="hidden sm:inline-flex">
+          <BoardsHelp boards={boards} />
+        </span>
       </div>
+      {ticked.size > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted" data-testid="deck-add-ticked">
+          <span>
+            <span className="font-medium text-foreground tabular-nums">{ticked.size}</span> ticked
+            <span className="sr-only">: {[...ticked.values()].map((option) => option.name).join(", ")}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void addTicked()}
+            disabled={[...ticked.keys()].every((key) => adding.has(key))}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/60 bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 disabled:opacity-60"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Add {ticked.size} to {DECK_BOARD_LABELS[board]}
+          </button>
+          <button
+            type="button"
+            onClick={clearTicks}
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+            Clear ticks
+          </button>
+        </div>
+      ) : null}
       <p id={`${baseId}-hint`} className="sr-only">
-        Type to search. Up and down arrows move through the results; Enter adds the highlighted card to the {DECK_BOARD_LABELS[board]}.
+        Type to search. Up and down arrows move through the results; Enter adds the highlighted card to the {DECK_BOARD_LABELS[board]}. After
+        moving with the arrows, Space ticks or unticks the highlighted card; Control Enter adds every ticked card.
       </p>
       {notice ? (
         <p className="text-xs text-danger" data-testid="deck-add-notice">
@@ -606,6 +822,29 @@ export function DeckAddBox({ className }: { className?: string }) {
         onChoose={answerOffer}
         fallbackFocus={() => inputRef.current}
       />
+      <PrivateCardOfferDialog
+        open={batchOffer !== null}
+        deckTitle={editor?.deck.title ?? ""}
+        cards={batchOffer?.cards ?? []}
+        onChoose={answerBatchOffer}
+        fallbackFocus={() => inputRef.current}
+      />
     </div>
+  );
+}
+
+/** What each board the box can add to is, in one box (TODO DK11 (c)). */
+function BoardsHelp({ boards }: { boards: readonly DeckBoard[] }) {
+  return (
+    <InfoTip label="About the boards" side="bottom" align="end" className="w-80">
+      <ul className="flex flex-col gap-1.5">
+        {boards.map((board) => (
+          <li key={board}>
+            <span className="font-semibold text-foreground">{BOARD_HELP[board].title}:</span> {BOARD_HELP[board].body}{" "}
+            {BOARD_HELP[board].counts}
+          </li>
+        ))}
+      </ul>
+    </InfoTip>
   );
 }

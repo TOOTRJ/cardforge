@@ -20,7 +20,7 @@ import {
   restoreDeckEntriesAction,
   updateDeckEntriesAction,
 } from "@/lib/decks/card-actions";
-import { addToDeckAction, type DeckAddResult } from "@/lib/decks/add-actions";
+import { addManyToDeckAction, addToDeckAction, type DeckAddManyResult, type DeckAddResult } from "@/lib/decks/add-actions";
 import { addTargetEntry, type AddPick } from "@/lib/decks/add-search";
 import { createEntryQueue, type QueueOutcome } from "@/lib/decks/entry-queue";
 import {
@@ -91,6 +91,9 @@ export type DeckEditorDeck = {
 
 type UndoStep = { label: string; run: () => void };
 
+/** One card of an "Add N": what to add and the row drawn for a new line. */
+export type AddManyPick = { pick: AddPick; preview: EditorItem | null };
+
 export type DeckEditor = {
   deck: DeckEditorDeck;
   /** The rows with every edit on its way drawn in. */
@@ -110,6 +113,10 @@ export type DeckEditor = {
     preview: EditorItem | null,
     privateCard?: "keep" | "publish",
   ) => Promise<DeckAddResult>;
+  /** Several cards onto `board` in ONE call (the add box's "Add N", TODO
+   *  DK5.17): drawn at once, one undo for them all. `publish`: the maker's
+   *  private cards (by id) made public first. */
+  addMany: (picks: readonly AddManyPick[], board: DeckBoard, publish?: readonly string[]) => Promise<DeckAddManyResult>;
   /** Undo the last change. */
   undo: () => void;
   /** What Undo would undo, in words — null: nothing. */
@@ -389,6 +396,18 @@ export function DeckEditorProvider({
     [announce, deck.id, send],
   );
 
+  /** Several removals no one undoes (an "Add N"'s undo). */
+  const removeQuietlyMany = useCallback(
+    (ids: string[], who: string) =>
+      void send({ kind: "remove", ids }, () => removeDeckEntriesAction({ deckId: deck.id, entryIds: ids }), {
+        failure: `Couldn't take ${who} out again.`,
+        onDone: (result) => {
+          if (result.ok) announce(`${who} ${ids.length > 1 ? "are" : "is"} out of the deck again.`);
+        },
+      }),
+    [announce, deck.id, send],
+  );
+
   const remove = useCallback(
     (entryIds: readonly string[]) => {
       const wanted = new Set(entryIds);
@@ -471,6 +490,70 @@ export function DeckEditorProvider({
     [deck.id, pushUndo, removeQuietly, resolveId, send, update],
   );
 
+  // ---- the add box's "Add N" (TODO DK5.17) ------------------------------
+  const addMany = useCallback(
+    async (picks: readonly AddManyPick[], board: DeckBoard, publish: readonly string[] = []): Promise<DeckAddManyResult> => {
+      // Each card drawn where the server will land it: one copy more on its
+      // board's row — two picks on one row, two more — or its new line.
+      const rows = drawnRef.current.filter((item) => !item.pending).map((item) => item.entry);
+      const bumped = new Map<string, number>();
+      const inserts: Array<EditorItem & { pending: true }> = [];
+      for (const { pick, preview } of picks) {
+        const target = addTargetEntry(rows, pick, board);
+        if (target) bumped.set(target.id, (bumped.get(target.id) ?? target.quantity) + 1);
+        else if (preview) inserts.push({ ...preview, pending: true as const });
+      }
+      const ops: EntryOp[] = [];
+      if (bumped.size > 0) ops.push({ kind: "update", updates: [...bumped].map(([id, quantity]) => ({ id, quantity })) });
+      if (inserts.length > 0) ops.push({ kind: "insert", items: inserts });
+      const op: EntryOp = { kind: "batch", ops };
+      const names = picks.map(({ pick }) => (pick.kind === "card" ? pick.title : pick.name));
+      const who = whoOf(names);
+      const outcome = await send(
+        op,
+        () =>
+          addManyToDeckAction({
+            deckId: deck.id,
+            board,
+            picks: picks.map(({ pick }) => wire(pick)),
+            ...(publish.length > 0 ? { publish: [...publish] } : {}),
+          }),
+        {
+          failure: `Couldn't add ${who}.`,
+          onDone: (result) => {
+            if (!result.ok) return;
+            // One undo for every card that landed: copies back where it
+            // merged, the new lines out.
+            const landed = result.results.flatMap((row, index) => (row.ok ? [{ row, name: names[index]! }] : []));
+            if (landed.length === 0) return;
+            const label = `Undo: add ${whoOf(landed.map(({ name }) => name))}`;
+            pushUndo({
+              label,
+              run: () => {
+                const here = (id: string) => drawnRef.current.some((item) => item.entry.id === id);
+                // Several picks on one row: back to before the first.
+                const back = new Map<string, number>();
+                const out = new Set<string>();
+                for (const { row } of landed) {
+                  const id = resolveId(row.entryId);
+                  if (!here(id)) continue;
+                  if (row.merged) back.set(id, Math.min(back.get(id) ?? Infinity, row.quantity - 1));
+                  else out.add(id);
+                }
+                const patches = [...back].filter(([id, quantity]) => quantity >= 1 && !out.has(id)).map(([id, quantity]) => ({ id, quantity }));
+                if (patches.length > 0) update(patches, "quantity", false);
+                if (out.size > 0) removeQuietlyMany([...out], whoOf(landed.filter(({ row }) => out.has(resolveId(row.entryId))).map(({ name }) => name)));
+              },
+            });
+          },
+        },
+      );
+      if ((outcome.status === "done" || outcome.status === "failed") && outcome.value) return outcome.value;
+      return { ok: false, error: LOST_REQUEST };
+    },
+    [deck.id, pushUndo, removeQuietlyMany, resolveId, send, update],
+  );
+
   const undo = useCallback(() => {
     const taken = takeUndo();
     if (!taken) {
@@ -495,8 +578,8 @@ export function DeckEditorProvider({
   }, [undo]);
 
   const value = useMemo<DeckEditor>(
-    () => ({ deck, items, step, move, remove, add, undo, undoLabel, announce, holdFocusOn }),
-    [deck, items, step, move, remove, add, undo, undoLabel, announce, holdFocusOn],
+    () => ({ deck, items, step, move, remove, add, addMany, undo, undoLabel, announce, holdFocusOn }),
+    [deck, items, step, move, remove, add, addMany, undo, undoLabel, announce, holdFocusOn],
   );
 
   return (

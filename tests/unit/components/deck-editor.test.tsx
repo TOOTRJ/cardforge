@@ -39,7 +39,7 @@ const actions = vi.hoisted(() => ({
   listMyCardsLiteAction: vi.fn(async () => ({ ok: true, cards: [] })),
 }));
 vi.mock("@/lib/decks/card-actions", () => actions);
-const adds = vi.hoisted(() => ({ addToDeckAction: vi.fn() }));
+const adds = vi.hoisted(() => ({ addToDeckAction: vi.fn(), addManyToDeckAction: vi.fn() }));
 vi.mock("@/lib/decks/add-actions", () => adds);
 const offers = vi.hoisted(() => ({ privateCardOfferAction: vi.fn() }));
 vi.mock("@/lib/decks/membership-actions", () => offers);
@@ -512,7 +512,10 @@ describe("the add box (DK5.2) — an ARIA combobox", () => {
       fireEvent.keyDown(box, { key: "ArrowDown" });
     });
     expect(highlighted()).toMatch(/^Sol Ring/);
-    expect(screen.getByRole("option", { name: /^Sol Ring/ }).getAttribute("aria-selected")).toBe("true");
+    // The highlight is the input's active descendant; aria-selected is a
+    // TICK (DK5.17): none yet.
+    expect(screen.getByRole("option", { name: /^Sol Ring/ }).hasAttribute("data-highlighted")).toBe(true);
+    expect(screen.getByRole("option", { name: /^Sol Ring/ }).getAttribute("aria-selected")).toBe("false");
     // The board it names.
     await act(async () => {
       fireEvent.change(screen.getByRole("combobox", { name: "Add to" }), { target: { value: "side" } });
@@ -572,6 +575,207 @@ describe("the add box (DK5.2) — an ARIA combobox", () => {
       "Ember Wyrm is already in the deck, on the Sideboard. Move it there to change boards.",
     );
     expect(toast.error).toHaveBeenCalledWith("Couldn't add Ember Wyrm.", expect.anything());
+  });
+});
+
+describe("the add box — pick several, add once (DK5.17)", () => {
+  const WYRM = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const RING_SF = "581b7327-3215-4a4f-b4ae-d9d4002ba882";
+  const results = (visibility = "public") => ({
+    ok: true,
+    mine: [
+      {
+        card: { id: WYRM, owner_id: "me", slug: "ember-wyrm", title: "Ember Wyrm", visibility, rendered_image_url: null, rendered_thumb_url: null, rendered_back_image_url: null, rendered_back_thumb_url: null, cost: "{3}{R}", card_type: "creature", color_identity: ["red"], frame_style: { template: "m15" } },
+        maker: null,
+      },
+    ],
+    community: [],
+  });
+  const SCRYFALL = { ok: true, results: [{ id: RING_SF, name: "Arcane Signet", type_line: "Artifact", mana_cost: "{2}", rarity: "common", set: "c21", print_url: null }] };
+  const searchFor = (visibility = "public") =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () => (String(url).startsWith("/api/decks/add-search") ? results(visibility) : SCRYFALL),
+      })),
+    );
+
+  async function openBox() {
+    const box = screen.getByRole("combobox", { name: "Add cards" });
+    await act(async () => {
+      box.focus();
+      fireEvent.change(box, { target: { value: "arc" } });
+    });
+    await waitFor(() => expect(screen.getByRole("option", { name: /^Arcane Signet/ })).toBeTruthy());
+    return box;
+  }
+  const option = (name: RegExp) => screen.getByRole("option", { name });
+
+  it("Space ticks the highlighted result once the arrows moved — a count, Add N, ONE call", async () => {
+    searchFor();
+    adds.addManyToDeckAction.mockResolvedValue({
+      ok: true,
+      results: [
+        { ok: true, entryId: id(8), board: "main", quantity: 1, merged: false },
+        { ok: true, entryId: id(9), board: "main", quantity: 1, merged: false },
+      ],
+    });
+    deckPage();
+    const box = await openBox();
+    const list = screen.getByRole("listbox", { name: "Cards to add" });
+    expect(list.getAttribute("aria-multiselectable")).toBe("true");
+    // Before the arrows, Space is a space (card names have them).
+    const typed = fireEvent.keyDown(box, { key: " " });
+    expect(typed).toBe(true);
+    expect(option(/^Ember Wyrm/).getAttribute("aria-selected")).toBe("false");
+    // ↓ to Arcane Signet, Space ticks it; ↑ to Ember Wyrm, Space ticks it.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "ArrowDown" });
+    });
+    await act(async () => {
+      fireEvent.keyDown(box, { key: " " });
+    });
+    expect(option(/^Arcane Signet/).getAttribute("aria-selected")).toBe("true");
+    await flush();
+    expect(status()).toBe("Arcane Signet ticked. 1 ticked.");
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "ArrowUp" });
+    });
+    await act(async () => {
+      fireEvent.keyDown(box, { key: " " });
+    });
+    expect(option(/^Ember Wyrm/).getAttribute("aria-selected")).toBe("true");
+    // The list stays open; nothing was sent.
+    expect(box.getAttribute("aria-expanded")).toBe("true");
+    expect(adds.addToDeckAction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("deck-add-ticked").textContent).toMatch(/^2 ticked/);
+    const addN = screen.getByRole("button", { name: "Add 2 to Mainboard" });
+    await act(async () => {
+      fireEvent.click(addN);
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).toHaveBeenCalledTimes(1);
+    expect(adds.addManyToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      picks: [
+        { kind: "printing", scryfallId: RING_SF, name: "Arcane Signet" },
+        { kind: "card", cardId: WYRM },
+      ],
+    });
+    expect(adds.addToDeckAction).not.toHaveBeenCalled();
+    expect(status()).toBe("Added 2 cards to the Mainboard.");
+    // The ticks went, and Add N with them: the focus is back in the box.
+    expect(screen.queryByTestId("deck-add-ticked")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(box));
+  });
+
+  it("Enter still adds the highlighted result alone; a click on a tick box ticks; Ctrl Enter adds the ticked", async () => {
+    searchFor();
+    adds.addToDeckAction.mockResolvedValue({ ok: true, entryId: id(9), board: "main", quantity: 1, merged: false });
+    adds.addManyToDeckAction.mockResolvedValue({ ok: true, results: [{ ok: true, entryId: id(8), board: "main", quantity: 1, merged: false }] });
+    deckPage();
+    const box = await openBox();
+    await act(async () => {
+      fireEvent.click(option(/^Arcane Signet/).querySelector("[data-tick]")!);
+    });
+    expect(option(/^Arcane Signet/).getAttribute("aria-selected")).toBe("true");
+    expect(adds.addToDeckAction).not.toHaveBeenCalled();
+    // Enter: the highlighted one (Ember Wyrm, the first), alone.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter" });
+    });
+    await flush();
+    expect(adds.addToDeckAction).toHaveBeenCalledWith({ deckId: DECK.id, board: "main", pick: { kind: "card", cardId: WYRM } });
+    expect(adds.addManyToDeckAction).not.toHaveBeenCalled();
+    // Ctrl Enter: the ticked one.
+    await act(async () => {
+      fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      picks: [{ kind: "printing", scryfallId: RING_SF, name: "Arcane Signet" }],
+    });
+  });
+
+  it("a card the server refuses stays ticked, its reason said; the others land", async () => {
+    searchFor();
+    adds.addManyToDeckAction.mockResolvedValue({
+      ok: true,
+      results: [
+        { ok: true, entryId: id(8), board: "main", quantity: 1, merged: false },
+        { ok: false, error: "Ember Wyrm is already in the deck, on the Sideboard. Move it there to change boards." },
+      ],
+    });
+    deckPage();
+    await openBox();
+    for (const name of [/^Arcane Signet/, /^Ember Wyrm/]) {
+      await act(async () => {
+        fireEvent.click(option(name).querySelector("[data-tick]")!);
+      });
+    }
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add 2 to Mainboard" }));
+    });
+    await flush();
+    expect(status()).toBe(
+      "Added 1 of 2 cards to the Mainboard. Ember Wyrm: Ember Wyrm is already in the deck, on the Sideboard. Move it there to change boards.",
+    );
+    expect(screen.getByTestId("deck-add-notice").textContent).toMatch(/^Ember Wyrm: /);
+    expect(screen.getByRole("button", { name: "Add 1 to Mainboard" })).toBeTruthy();
+  });
+
+  it("the maker's private cards are asked about together; Cancel adds nothing and keeps the ticks", async () => {
+    searchFor("private");
+    offers.privateCardOfferAction.mockResolvedValue({ ok: true, cards: [{ cardId: WYRM }] });
+    adds.addManyToDeckAction.mockResolvedValue({
+      ok: true,
+      results: [
+        { ok: true, entryId: id(8), board: "main", quantity: 1, merged: false },
+        { ok: true, entryId: id(9), board: "main", quantity: 1, merged: false, published: true },
+      ],
+    });
+    deckPage(undefined, { ...DECK, visibility: "public" });
+    await openBox();
+    for (const name of [/^Arcane Signet/, /^Ember Wyrm/]) {
+      await act(async () => {
+        fireEvent.click(option(name).querySelector("[data-tick]")!);
+      });
+    }
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add 2 to Mainboard" }));
+    });
+    await flush();
+    expect(offers.privateCardOfferAction).toHaveBeenCalledWith({ deckId: DECK.id, cardIds: [WYRM] });
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      fireEvent.keyDown(dialog, { key: "Escape" });
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).not.toHaveBeenCalled();
+    expect(status()).toBe("Nothing added. The cards are still ticked.");
+    // Asked again: Make it public sends the card in `publish`.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add 2 to Mainboard" }));
+    });
+    await flush();
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Make it public" }));
+    });
+    await flush();
+    expect(adds.addManyToDeckAction).toHaveBeenCalledWith({
+      deckId: DECK.id,
+      board: "main",
+      picks: [
+        { kind: "printing", scryfallId: RING_SF, name: "Arcane Signet" },
+        { kind: "card", cardId: WYRM },
+      ],
+      publish: [WYRM],
+    });
   });
 });
 

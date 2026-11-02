@@ -1999,7 +1999,16 @@ Rules and gotchas:
   `addToDeckAction` lands a card where `addTargetEntry` says (one copy more
   on the board's row, the real card's before your version — never a second
   line for the same card) or brings it in through the membership writer / a
-  ONE-LINE decklist commit. The commit's core is `commitImportLines`
+  ONE-LINE decklist commit. Several at once (TODO DK5.17): results are
+  TICKED while the list stays open (Space once the arrows moved the
+  highlight — before that it types a space —, a click on the tick box; the
+  listbox `aria-multiselectable`, `aria-selected` = the tick, the highlight
+  the input's active descendant) and "Add N" / Ctrl ⌘ Enter sends them in
+  ONE `addManyToDeckAction` (≤ `MAX_ADD_BATCH`: each lands as one add —
+  PipGlyph cards in one membership call, each real card its own one-line
+  commit on `named` —, a result per card, ONE revalidation; the editor's
+  `addMany` draws them as one `batch` op with one undo); Enter still adds
+  the highlighted one alone. The commit's core is `commitImportLines`
   (`lib/decks/import-commit.ts`): a decklist import spends
   `deck_import_commit`, the add box's add and an undo the single-card
   `named` quota — the caller's choice, never the browser's. The bulk bar
