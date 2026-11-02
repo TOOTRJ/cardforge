@@ -133,8 +133,12 @@ export function trialEndingEmail(
     hasPaymentMethod: boolean;
     /** "$6 / month" — null when the price isn't known. */
     priceLabel: string | null;
+    /** The trial is one a COMP holds (lib/billing/comp-ending.ts
+     *  isCompHeldTrial): its end is the end of the complimentary period. */
+    compHold?: boolean;
   },
 ): OutgoingEmail {
+  if (input.compHold) return compHeldTrialEndingEmail(recipient, input);
   const site = getSiteBaseUrl();
   const f = footer(
     "account",
@@ -181,6 +185,148 @@ export function trialEndingEmail(
     }),
     text: renderEmailText({
       heading: `Your ${input.plan} trial ends ${date}`,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
+/** The trial reminder for a trial a comp HOLDS: the end of the
+ *  complimentary period, never "your trial". */
+function compHeldTrialEndingEmail(
+  recipient: Recipient,
+  input: { plan: string; trialEndsAt: string; priceLabel: string | null; hasPaymentMethod: boolean },
+): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer(
+    "account",
+    recipient,
+    "You're receiving this because your complimentary PipGlyph plan is about to end.",
+  );
+  const date = formatDateIn(input.trialEndsAt, "long", "UTC");
+  const at = ` (${formatUtcTime(input.trialEndsAt)})`;
+  const plan = escapeHtml(input.plan);
+  const price = input.priceLabel ? escapeHtml(input.priceLabel) : "the plan price";
+  const cta = { label: "Open billing", url: `${site}/dashboard/billing` };
+  const paragraphs = input.hasPaymentMethod
+    ? [
+        `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}. Your card will be charged ${price} then, and ${plan} carries on exactly as it is.`,
+        "Want to change plans or cancel first? Both take one click on the billing page — cancel any time before the date and you won't be charged.",
+      ]
+    : [
+        `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}. There's no card on your account, so the plan will simply end then — nothing is charged.`,
+        `To keep ${plan} (${price}), add a card before the date. Either way, every card you've made stays yours.`,
+      ];
+  return {
+    to: recipient.email,
+    subject: `Your complimentary PipGlyph ${input.plan} ends ${date}`,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader: input.hasPaymentMethod
+        ? `Your card is charged ${input.priceLabel ?? "the plan price"} on ${date}.`
+        : `Add a card before ${date} to keep ${input.plan}.`,
+      heading: `Your complimentary ${plan} ends ${escapeHtml(date)}`,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading: `Your complimentary ${input.plan} ends ${date}`,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
+// --- Complimentary plan ending (account list) ----------------------------------------
+
+export type CompEndingEmailInput = {
+  kind: "free" | "held_trial" | "paying" | "plan_ending";
+  /** "Plus" | "Pro" — the comp's tier. */
+  plan: string;
+  /** ISO end of the comp. */
+  expiresAt: string;
+  /** "$6 / month" — the live plan's price, when there is one. */
+  priceLabel?: string | null;
+  nextChargeAt?: string | null;
+  cardLast4?: string | null;
+  planEndsAt?: string | null;
+};
+
+/** "Your complimentary plan ends soon" — 7 days and 1 day before an admin
+ *  comp ends (lib/billing/comp-ending-run.ts), one message per kind. */
+export function compEndingEmail(recipient: Recipient, input: CompEndingEmailInput): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer(
+    "account",
+    recipient,
+    "You're receiving this because your complimentary PipGlyph plan is about to end.",
+  );
+  const date = formatDateIn(input.expiresAt, "long", "UTC");
+  const at = ` (${formatUtcTime(input.expiresAt)})`;
+  const plan = escapeHtml(input.plan);
+  const price = input.priceLabel ? escapeHtml(input.priceLabel) : null;
+  const billing = { label: "Open billing", url: `${site}/dashboard/billing` };
+  let paragraphs: string[];
+  let cta = billing;
+  let preheader: string;
+  if (input.kind === "held_trial") {
+    const card = input.cardLast4 ? `Your card ending ••${escapeHtml(input.cardLast4)}` : "Your card on file";
+    paragraphs = [
+      `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}. ${card} will be charged ${price ?? "the plan price"} then, and ${plan} carries on exactly as it is.`,
+      "Don't want to continue? Cancel on the billing page before that date and nothing is charged — every card you've made stays yours.",
+    ];
+    preheader = `${input.cardLast4 ? `Card ••${input.cardLast4}` : "Your card"} is charged ${input.priceLabel ?? "the plan price"} on ${date}.`;
+  } else if (input.kind === "paying") {
+    const next = input.nextChargeAt ? formatDateIn(input.nextChargeAt, "long", "UTC") : null;
+    paragraphs = [
+      `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}. Your next invoice${
+        next ? ` on <strong>${next}</strong>` : ""
+      } is charged as usual${price ? ` (${price})` : ""}.`,
+      "Nothing else changes: your plan, credits and cards stay exactly as they are. Plan and payment details are on the billing page.",
+    ];
+    preheader = `Your next invoice${next ? ` on ${next}` : ""} is charged as usual.`;
+  } else if (input.kind === "plan_ending") {
+    const ends = input.planEndsAt ? formatDateIn(input.planEndsAt, "long", "UTC") : null;
+    paragraphs = [
+      `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}. Your plan is cancelled and ends${
+        ends ? ` on <strong>${ends}</strong>` : " on its own date"
+      }; nothing more is charged.`,
+      "Changed your mind? You can resume the plan on the billing page. Either way, every card you've made stays yours.",
+    ];
+    preheader = `Your complimentary ${input.plan} ends on ${date}.`;
+  } else {
+    paragraphs = [
+      `Your complimentary ${plan} ends on <strong>${date}</strong>${at}. After that you'll be on Free.`,
+      "You keep everything you've made: every card and deck stays yours, and so do any AI credits left on your account. Free's limits apply from then on — fewer saved cards, and watermarked downloads.",
+      `Want to keep ${plan}? Choose a plan before the date and nothing changes.`,
+    ];
+    cta = { label: `Keep ${input.plan}`, url: `${site}/pricing` };
+    preheader = `After ${date} you'll be on Free — choose a plan to keep ${input.plan}.`;
+  }
+  return {
+    to: recipient.email,
+    subject: `Your complimentary PipGlyph ${input.plan} ends ${date}`,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader,
+      heading: `Your complimentary ${plan} ends ${escapeHtml(date)}`,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading: `Your complimentary ${input.plan} ends ${date}`,
       lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
       cta,
       footerNote: f.footerNote,

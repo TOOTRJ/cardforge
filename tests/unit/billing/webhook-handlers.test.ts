@@ -770,7 +770,13 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
 // ---------------------------------------------------------------------------
 describe("handleStripeEvent — trial_will_end", () => {
   function makeTrialAdmin(
-    opts: { alreadyNotified?: boolean; notifiedFor?: string; legacyRow?: boolean; insertError?: string } = {},
+    opts: {
+      alreadyNotified?: boolean;
+      notifiedFor?: string;
+      legacyRow?: boolean;
+      insertError?: string;
+      compExpiresAt?: string;
+    } = {},
   ) {
     const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
     // An earlier reminder for this subscription: for its CURRENT trial end
@@ -792,7 +798,7 @@ describe("handleStripeEvent — trial_will_end", () => {
               limit: () => chain,
               maybeSingle: async () =>
                 table === "profiles"
-                  ? { data: { id: "user-1" }, error: null }
+                  ? { data: { id: "user-1", comp_expires_at: opts.compExpiresAt ?? null }, error: null }
                   : { data: earlier[0] ?? null, error: null },
               then: (resolve: (v: unknown) => void) => resolve({ data: earlier, error: null }),
             };
@@ -917,6 +923,41 @@ describe("handleStripeEvent — trial_will_end", () => {
     await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
     expect(inserts).toHaveLength(0);
     expect(email.send).not.toHaveBeenCalled();
+  });
+
+  describe("a trial a COMP holds: the reminder is the end of the complimentary period (owner 2026-11-02)", () => {
+    const END = 1_790_735_200;
+    const COMP_END = new Date(END * 1000).toISOString();
+    const held = (extra: Record<string, unknown> = {}) =>
+      trialSub({ default_payment_method: "pm_1", metadata: { pipglyph_trial_end_before_comp: String(END - 20 * 86_400) }, ...extra });
+    const fire = (object: unknown) =>
+      ({ id: "evt_twe", type: "customer.subscription.trial_will_end", created: END - 3 * 86_400, data: { object } }) as never;
+
+    it("payload says compHold; the email names the complimentary period and the charge, never a trial", async () => {
+      subscriptions.retrieve.mockResolvedValue(held());
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END });
+      await handleStripeEvent(fire(held()), { admin, stripe: trialStripe });
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0].row.payload).toMatchObject({ compHold: true, trialEnd: COMP_END, hasPaymentMethod: true });
+      const message = email.send.mock.calls[0][0];
+      expect(message.subject).toMatch(/^Your complimentary PipGlyph Pro ends /);
+      expect(message.text).toContain("Your card will be charged $15 / month then");
+      expect(message.text.replace(/You're receiving this[^\n]*/, "")).not.toMatch(/trial/i);
+    });
+
+    it("a comp that ends BEFORE the trial (the 7-day trial won): an ordinary trial reminder", async () => {
+      subscriptions.retrieve.mockResolvedValue(held());
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: new Date((END - 2 * 86_400) * 1000).toISOString() });
+      await handleStripeEvent(fire(held()), { admin, stripe: trialStripe });
+      expect(inserts[0].row.payload).not.toHaveProperty("compHold");
+      expect(email.send.mock.calls[0][0].subject).toMatch(/^Your PipGlyph Pro trial ends /);
+    });
+
+    it("no pre-comp key on the subscription: unchanged copy (and the profile is not read for it)", async () => {
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END });
+      await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+      expect(inserts[0].row.payload).not.toHaveProperty("compHold");
+    });
   });
 
   describe("a comp hold released with trial_end: 'now' (finding 7 — Stripe's real shape)", () => {

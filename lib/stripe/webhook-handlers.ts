@@ -1,5 +1,7 @@
 import "server-only";
 
+import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { isCompHeldTrial, type CompEndingSub } from "@/lib/billing/comp-ending";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -193,6 +195,19 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // trial converts; this is ours (docs/BILLING.md). The notification insert is
 // the durable part: a failure throws so Stripe retries; the email is best
 // effort on top (idempotent at the provider by subscription id).
+/** Does the user's comp HOLD this (live) trial? Reads the profile's comp end
+ *  and asks the one test, `isCompHeldTrial`. False when it can't be read. */
+async function isTrialHeldByComp(admin: AdminClient, userId: string, sub: Stripe.Subscription): Promise<boolean> {
+  if (!sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY]) return false;
+  try {
+    const { data } = await admin.from("profiles").select("comp_expires_at").eq("id", userId).maybeSingle();
+    const compExpiresAt = (data as { comp_expires_at?: string | null } | null)?.comp_expires_at ?? null;
+    return isCompHeldTrial(sub as unknown as CompEndingSub, compExpiresAt);
+  } catch {
+    return false;
+  }
+}
+
 /** A trial ending within this long of the event is ending NOW: an admin
  *  released a comp hold with `trial_end: "now"` (lib/billing/comp-stripe.ts),
  *  and Stripe sends `trial_will_end` for it. The charge happens at once — a
@@ -255,9 +270,10 @@ async function handleTrialWillEnd(
   );
   if (reminded) return;
 
-  const [tier, hasPaymentMethod] = await Promise.all([
+  const [tier, hasPaymentMethod, compHold] = await Promise.all([
     resolveSubscriptionTier(sub, stripe),
     subscriptionHasPaymentMethod(sub, stripe),
+    isTrialHeldByComp(admin, userId, sub),
   ]);
   const price = sub.items?.data?.[0]?.price ?? null;
   const interval = price?.recurring?.interval ?? null;
@@ -269,6 +285,10 @@ async function handleTrialWillEnd(
     amountCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
     currency: price?.currency ?? "usd",
     interval,
+    // A trial a COMP holds ends when the complimentary period ends: the
+    // copy says so, never "your trial" (lib/billing/comp-ending.ts). This
+    // reminder speaks for that moment; the 1-day comp_ending stands down.
+    ...(compHold ? { compHold: true } : {}),
   };
   const { error } = await admin.from("notifications").insert({
     recipient_id: userId,
@@ -293,6 +313,7 @@ async function handleTrialWillEnd(
           payload.amountCents != null && interval
             ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
             : null,
+        compHold,
       }),
       { idempotencyKey: `trial-ending:${sub.id}:${sub.trial_end ?? ""}` },
     );

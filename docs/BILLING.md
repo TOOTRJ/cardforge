@@ -756,6 +756,50 @@ invoice is the hold's $0). The billing page names a comp over a live
 subscription in one line (`liveCompChargeLine`: "nothing is charged before
 then" only when Stripe's trial really reaches the comp's end).
 
+### "Your complimentary plan ends soon" (owner 2026-11-02)
+
+Every comp is told before it ends: a `comp_ending` notification (migration
+0161 adds the kind) AND an "account" email (`compEndingEmail`, the one
+shell, gated by `email_preferences` like the trial reminder), **7 days and
+1 day** before `comp_expires_at`. A daily cron, `/api/cron/comp-ending`
+(`vercel.json`, 14:30 UTC, `cronRouteGuard`; `lib/billing/comp-ending-run.ts`,
+rules in `lib/billing/comp-ending.ts`) reads the profiles whose LIVE comp
+ends in the next 7 days: window `7d` = ends in (now + 1 d, now + 7 d], `1d` =
+ends in (now, now + 1 d]. Expired, cleared and undated comps — and admins —
+are never told.
+
+- **Exactly once per comp per window:** the notification's
+  `payload.dedupeKey` = `comp_ending:<comp end epoch>:<window>`, held by a
+  unique partial index (0161) with the recipient. The insert is the dedupe:
+  a 23505 means "already told" and no email follows. The comp's END is in
+  the key, so a re-dated comp is told afresh. The email's idempotency key is
+  `comp-ending:<user>:<dedupeKey>`.
+- **What it says** — read from Stripe's CURRENT subscription (re-read, card
+  expanded; never a snapshot), one copy per kind:
+  - `free` (no live plan, or a cancelled one ending with the comp): "Your
+    complimentary Plus ends on <date>. After that you'll be on Free" + what
+    they keep + "Keep Plus" → `/pricing` (a comped user is sent on to the
+    billing page's plan grid);
+  - `held_trial` (the comp holds a card-backed trial, `isCompHeldTrial`):
+    "Your card ending ••<last4> will be charged <price> then" + how to
+    cancel before;
+  - `paying` (an active plan — the credit — or a trial that runs on past the
+    comp): "your next invoice on <date> is charged as usual (<price>)";
+  - `plan_ending` (a cancelled plan that runs past the comp): it ends on its
+    own date, nothing more is charged.
+  A comp below the plan paid for is not told (its end changes nothing). A
+  payer whose subscription can't be read is skipped that day (the next run
+  retries inside the window).
+- **One email per moment — the TRIAL REMINDER speaks for a comp-held
+  trial.** Stripe's `trial_will_end` (3 days before) reaches the same user
+  at almost the same moment as the 1-day comp reminder. So: when the live
+  subscription carries `pipglyph_trial_end_before_comp` and its trial end is
+  the comp's end (± 60 s), the `trial_ending` notification (`compHold: true`)
+  and email say it is the END OF THE COMPLIMENTARY PERIOD and that the card
+  is charged <price> on <date> — never "your trial" — and the 1-day
+  `comp_ending` SKIPS that user. Its 7-day reminder is still sent. Any other
+  trial's reminder is unchanged.
+
 ### The balance credit on an active plan
 
 One shared helper, `lib/billing/balance-credit.ts` (the referral programme's
