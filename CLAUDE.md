@@ -1384,7 +1384,7 @@ Rules and gotchas:
   jobs and the deck remix save what they did (no server-side tagging — it
   would put back a tag the maker removed). A creator import is a new card:
   it follows.
-- AI provenance (TODO CP1, migration 0161): `cards.ai_fields` = the PARTS
+- AI provenance (TODO CP1, migration 0162): `cards.ai_fields` = the PARTS
   whose current content AI wrote (`title`, `cost`, `type_line`,
   `rules_text`, `flavor_text`, `stats`, `art` and `back.…`;
   `lib/cards/ai-provenance.ts` is the ONE vocabulary and the page's rule —

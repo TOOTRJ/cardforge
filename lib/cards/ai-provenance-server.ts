@@ -10,10 +10,10 @@ import {
 } from "@/lib/cards/ai-provenance";
 
 // ---------------------------------------------------------------------------
-// The server's half of AI provenance (TODO CP1, migration 0161;
+// The server's half of AI provenance (TODO CP1, migration 0162;
 // lib/cards/ai-provenance.ts holds the vocabulary). Every write here goes
 // through the service role — no API role may touch `cards.ai_fields`
-// (0161's guard) or `card_ai_receipts`.
+// (0162's guard) or `card_ai_receipts`.
 //
 //   * recordAiReceipt — what an AI fill or a "Get ideas" batch wrote, kept
 //     as the server received it, so a later save's claim can be checked.
@@ -43,7 +43,7 @@ function adminReady(): boolean {
   return isAdminConfigured();
 }
 
-/** Postgres / PostgREST's answers for a database 0161 hasn't reached. */
+/** Postgres / PostgREST's answers for a database 0162 hasn't reached. */
 const MISSING = new Set(["PGRST202", "PGRST205", "42883", "42P01", "42703", "PGRST204"]);
 
 export type AiReceiptSource = "fill" | "idea";

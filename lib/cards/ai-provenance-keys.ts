@@ -1,4 +1,4 @@
-// The parts of a card AI provenance names (TODO CP1, migration 0161's
+// The parts of a card AI provenance names (TODO CP1, migration 0162's
 // `cards_ai_fields_known`) — dependency-free so the card schema can read
 // them. Everything else is lib/cards/ai-provenance.ts.
 

@@ -1,4 +1,4 @@
--- 0161 — AI provenance (TODO CP1, owner 2026-10-30): the card page says how
+-- 0162 — AI provenance (TODO CP1, owner 2026-10-30): the card page says how
 -- much of a card AI made — "Card generated with AI", "AI helped with parts
 -- of this card", "Art generated with AI" — and the label FOLLOWS EDITS. The
 -- vocabulary and the page's rule are lib/cards/ai-provenance.ts; the
@@ -96,7 +96,7 @@ alter table public.cards
   add column if not exists ai_fields text[] not null default '{}';
 
 comment on column public.cards.ai_fields is
-  'The parts of the card whose current content AI wrote (TODO CP1, 0161): title, cost, type_line, rules_text, flavor_text, stats, art and back.… — written only by the server (add_card_ai_fields); a part an API-role update changes is dropped and the art parts are derived from the picture''s address (cards_track_ai_fields). Not an edit (set_cards_updated_at ignores it).';
+  'The parts of the card whose current content AI wrote (TODO CP1, 0162): title, cost, type_line, rules_text, flavor_text, stats, art and back.… — written only by the server (add_card_ai_fields); a part an API-role update changes is dropped and the art parts are derived from the picture''s address (cards_track_ai_fields). Not an edit (set_cards_updated_at ignores it).';
 
 do $$
 begin
@@ -277,7 +277,7 @@ create table if not exists public.card_ai_receipts (
 );
 
 comment on table public.card_ai_receipts is
-  'What the AI wrote, as the server received it (TODO CP1, 0161): a card_fill step''s fields and every "Get ideas" batch. The card actions check a creator''s AI-field claim against it. Service role only.';
+  'What the AI wrote, as the server received it (TODO CP1, 0162): a card_fill step''s fields and every "Get ideas" batch. The card actions check a creator''s AI-field claim against it. Service role only.';
 
 create index if not exists card_ai_receipts_owner_created_idx
   on public.card_ai_receipts (owner_id, created_at desc);

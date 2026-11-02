@@ -237,7 +237,7 @@ export async function CardDetailContent({
   // A back with a body of its own (lib/cards/faces.ts): the download modal
   // offers it, the details list it, the JSON-LD names it.
   const hasBackFace = rowHasBakedBack(card);
-  // How much of the card AI made (TODO CP1, migration 0161): the stored
+  // How much of the card AI made (TODO CP1, migration 0162): the stored
   // parts read against the card as it is — a tag under the byline, a line
   // in Card details, the image's source type in the JSON-LD.
   const aiProvenance = aiProvenanceOf(card);

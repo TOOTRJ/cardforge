@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 34_card_ai_provenance.sql — AI provenance (migration 0161, TODO CP1), so a
+-- 36_card_ai_provenance.sql — AI provenance (migration 0162, TODO CP1), so a
 -- preview branch, the dev database and the local stack show each card-page
 -- label without spending a credit:
 --
@@ -18,8 +18,8 @@
 --
 -- Runs after 10_dev_data.sql (config.toml → [db.seed] sql_paths, filename
 -- order). Never against production. Idempotent (sets the same list). The
--- seed runs as the database owner, which 0161's guard lets write the column
--- (an API role can't). On a database 0161 hasn't reached the file is skipped
+-- seed runs as the database owner, which 0162's guard lets write the column
+-- (an API role can't). On a database 0162 hasn't reached the file is skipped
 -- whole. No credential in here (the repo is public).
 -- ---------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ begin
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'cards' and column_name = 'ai_fields'
   ) then
-    raise notice '34_card_ai_provenance: migration 0161 has not run here — skipped';
+    raise notice '36_card_ai_provenance: migration 0162 has not run here — skipped';
     return;
   end if;
 

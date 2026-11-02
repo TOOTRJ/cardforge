@@ -41,7 +41,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      /** 0161 (TODO CP1) — what the AI wrote, as the server received it (a
+      /** 0162 (TODO CP1) — what the AI wrote, as the server received it (a
        *  card_fill step's fields, a "Get ideas" batch). Service role only. */
       card_ai_receipts: {
         Row: {
@@ -866,11 +866,11 @@ export type Database = {
            *  Insert-only — an API role can't change them. */
           import_scryfall_id: string | null;
           import_fingerprint: string | null;
-          /** AI provenance (migration 0161, TODO CP1): the parts whose
+          /** AI provenance (migration 0162, TODO CP1): the parts whose
            *  current content AI wrote (lib/cards/ai-provenance.ts). Written
            *  by the server alone (add_card_ai_fields); an API-role edit that
            *  changes a part drops it, the art parts are derived. (A row
-           *  read from a database 0161 hasn't reached has none: readers
+           *  read from a database 0162 hasn't reached has none: readers
            *  take it as `?? []`.) */
           ai_fields: string[];
           template_id: string | null;
@@ -2484,7 +2484,7 @@ export type Database = {
       /** 0143; 0144 added the entry's origin (p_source: creator | link |
        *  ai_generate | ai_remix, default creator) and the printing an AI
        *  restyle keeps (p_scryfall_id). */
-      /** 0161 (TODO CP1) — the server's one writer of a card's AI text
+      /** 0162 (TODO CP1) — the server's one writer of a card's AI text
        *  parts: adds, never removes; the owner's card only. Service role. */
       add_card_ai_fields: {
         Args: {

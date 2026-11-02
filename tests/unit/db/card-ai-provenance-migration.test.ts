@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
-// Migration 0161 (TODO CP1): AI provenance is the SERVER's. Read as text —
+// Migration 0162 (TODO CP1): AI provenance is the SERVER's. Read as text —
 // the guard's behaviour was proved on Postgres 16 when it was written (the
 // PR body has the scenarios); this holds the shape that makes it hold.
 // ---------------------------------------------------------------------------
 
-const sql = readFileSync(join(process.cwd(), "supabase/migrations/0161_card_ai_provenance.sql"), "utf8");
+const sql = readFileSync(join(process.cwd(), "supabase/migrations/0162_card_ai_provenance.sql"), "utf8");
 const code = sql
   .split("\n")
   .filter((line) => !line.trim().startsWith("--"))
@@ -16,7 +16,7 @@ const code = sql
 
 const fn = (name: string) => new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$;`).exec(code)?.[1] ?? "";
 
-describe("0161 — the column", () => {
+describe("0162 — the column", () => {
   it("adds ai_fields as a NOT NULL text[] defaulting to none, kept to the known parts", () => {
     expect(code).toMatch(/add column if not exists ai_fields text\[\] not null default '\{\}'/);
     expect(code).toMatch(/constraint cards_ai_fields_known\s+check \(\s*ai_fields <@ array\[/);
@@ -31,7 +31,7 @@ describe("0161 — the column", () => {
   });
 });
 
-describe("0161 — the guard (cards_track_ai_fields)", () => {
+describe("0162 — the guard (cards_track_ai_fields)", () => {
   const body = fn("track_card_ai_fields");
 
   it("fires before every insert and update, on every row", () => {
@@ -62,7 +62,7 @@ describe("0161 — the guard (cards_track_ai_fields)", () => {
   });
 });
 
-describe("0161 — grants (revoke first)", () => {
+describe("0162 — grants (revoke first)", () => {
   it("the receipts are the service role's alone, behind RLS with no policy", () => {
     expect(code).toMatch(/create table if not exists public\.card_ai_receipts/);
     expect(code).toMatch(/alter table public\.card_ai_receipts enable row level security;/);
@@ -88,7 +88,7 @@ describe("0161 — grants (revoke first)", () => {
   });
 });
 
-describe("0161 — the backfill proves what it marks", () => {
+describe("0162 — the backfill proves what it marks", () => {
   it("the art: a no-op write of the rows whose picture is in the AI art store", () => {
     expect(code).toMatch(/update public\.cards\s+set ai_fields = ai_fields\s+where public\.card_ai_art_url\(art_url\)\s+or public\.card_ai_art_url\(back_face ->> 'art_url'\);/);
   });

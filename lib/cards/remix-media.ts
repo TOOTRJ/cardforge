@@ -98,7 +98,7 @@ export async function adoptRemixMedia(
     if (copies.has(url)) continue;
     const ext = /\.([A-Za-z0-9]{1,5})$/.exec(key)?.[1]?.toLowerCase() ?? "png";
     // A copy of an AI picture keeps the AI art store's prefix (TODO CP1,
-    // migration 0161 card_ai_art_url): its pixels are still the AI's, and
+    // migration 0162 card_ai_art_url): its pixels are still the AI's, and
     // the remix's page says so.
     const aiPicture = /^ai-/.test(key.split("/").pop() ?? "");
     const name = `${aiPicture ? "ai" : "remix"}-${randomId()}.${ext}`;

@@ -19,10 +19,10 @@ import {
 // ---------------------------------------------------------------------------
 // AI provenance's vocabulary (TODO CP1, lib/cards/ai-provenance.ts): the page's
 // labels from the stored parts, the canonical value a claim is checked with,
-// the creator's claims — and the one table the app and migration 0161 share.
+// the creator's claims — and the one table the app and migration 0162 share.
 // ---------------------------------------------------------------------------
 
-const MIGRATION = readFileSync(join(process.cwd(), "supabase/migrations/0161_card_ai_provenance.sql"), "utf8");
+const MIGRATION = readFileSync(join(process.cwd(), "supabase/migrations/0162_card_ai_provenance.sql"), "utf8");
 const USER = "11111111-1111-4111-8111-111111111111";
 const AI_ART = `https://abc.supabase.co/storage/v1/object/public/card-art/${USER}/ai-0f3c.png`;
 
@@ -91,7 +91,7 @@ describe("what the card page says", () => {
     expect(provenance).toEqual({ text: null, art: false });
     expect(aiProvenanceLabels(provenance)).toEqual([]);
     expect(aiProvenanceSentence(provenance)).toBeNull();
-    // …and a row from a database 0161 hasn't reached.
+    // …and a row from a database 0162 hasn't reached.
     expect(aiProvenanceOf(card)).toEqual({ text: null, art: false });
   });
 

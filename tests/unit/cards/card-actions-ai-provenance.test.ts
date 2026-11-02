@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
-// The card actions and AI provenance (TODO CP1, migration 0161):
+// The card actions and AI provenance (TODO CP1, migration 0162):
 //   * a save's `ai_fields` is a CLAIM — kept only where a receipt of the same
 //     owner holds the same text as the row being written, and then written
 //     by the SERVICE ROLE (add_card_ai_fields), never in the row the user's
-//     session writes (0161's guard refuses an API role naming the column);
+//     session writes (0162's guard refuses an API role naming the column);
 //   * a remix inherits its parent's AI parts it still holds unchanged;
 //   * a save with no claim reads no receipt and writes no provenance.
 // (An edit's rewrite of a part is dropped by the database itself.)

@@ -703,7 +703,7 @@ const baseCardSchema = z.object({
    *  lib/cards/ai-provenance.ts). A CLAIM only: the actions keep a part
    *  only when a receipt the server wrote at generation time holds the same
    *  text (lib/cards/ai-provenance-server.ts); the column itself is the
-   *  server's (migration 0161). Sent only when there is one. */
+   *  server's (migration 0162). Sent only when there is one. */
   ai_fields: z.array(z.enum(AI_TEXT_FIELD_KEYS)).max(AI_TEXT_FIELD_KEYS.length).optional(),
 });
 

@@ -3,14 +3,14 @@ import { normalizeManaCost } from "@/lib/cards/mana-order";
 import { AI_TEXT_FIELD_KEYS, type AiFieldKey, type AiTextFieldKey } from "@/lib/cards/ai-provenance-keys";
 
 // ---------------------------------------------------------------------------
-// AI provenance (TODO CP1, migration 0161) — how much of a card AI made, as
+// AI provenance (TODO CP1, migration 0162) — how much of a card AI made, as
 // the card page says it: "Card generated with AI", "AI helped with parts of
 // this card", "Art generated with AI". Pure and client-safe: the card page,
 // the creator's claims and the card actions' check all read this ONE
 // vocabulary.
 //
 // What is stored is `cards.ai_fields`: the PARTS of the card whose current
-// content AI wrote. The database keeps it honest (0161's
+// content AI wrote. The database keeps it honest (0162's
 // `cards_track_ai_fields` trigger):
 //   * an API role (anon / authenticated) never writes it — an insert naming
 //     a part, or an update changing the list, is refused;
@@ -45,7 +45,7 @@ export function isAiTextFieldKey(value: unknown): value is AiTextFieldKey {
 }
 
 /** The columns (paths into the row) each part stands for — the trigger's
- *  table (0161 `card_ai_field_paths`) word for word; a unit test holds the
+ *  table (0162 `card_ai_field_paths`) word for word; a unit test holds the
  *  two together. A part is CHANGED when any of its paths changed. */
 export const AI_FIELD_PATHS: Record<AiFieldKey, readonly string[]> = {
   title: ["title"],
@@ -64,7 +64,7 @@ export const AI_FIELD_PATHS: Record<AiFieldKey, readonly string[]> = {
   "back.art": ["back_face.art_url"],
 };
 
-/** The address of a picture the server's AI art store wrote (0161
+/** The address of a picture the server's AI art store wrote (0162
  *  `card_ai_art_url`, the same pattern): `…/storage/v1/object/public/
  *  card-art/<uuid>/ai-<name>`. A remix's copy of one keeps the prefix
  *  (lib/cards/remix-media.ts) — its pixels are still AI's. */

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import printings from "../scryfall/fixtures/import-printings.json";
 
 // ---------------------------------------------------------------------------
-// Every AI job marks what it made (TODO CP1, migration 0161) — through the
+// Every AI job marks what it made (TODO CP1, migration 0162) — through the
 // service role, never in the card action's payload (the pinned payloads in
 // job-payloads-pinned.test.ts stay main's):
 //   * the card / deck job: every text part of the card it wrote;

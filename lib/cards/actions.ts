@@ -654,7 +654,7 @@ export async function createCardAction(
     };
   }
 
-  // AI provenance (TODO CP1, migration 0161): the parts the creator claims
+  // AI provenance (TODO CP1, migration 0162): the parts the creator claims
   // AI wrote — kept only where a receipt the server wrote holds the same
   // text as the row — and a remix's parts that are still its parent's AI
   // text. Written by the service role (an API role can't name the column);
@@ -1238,7 +1238,7 @@ export async function updateCardAction(
     };
   }
 
-  // AI provenance (TODO CP1, migration 0161): the database dropped every
+  // AI provenance (TODO CP1, migration 0162): the database dropped every
   // part this edit changed; a part the creator claims (a new AI fill or
   // idea, unchanged since) is added back where a receipt holds its text.
   if (data.ai_fields?.length) {

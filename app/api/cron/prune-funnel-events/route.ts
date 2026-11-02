@@ -16,7 +16,7 @@ import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
 // already over — record_deck_view drops those itself, but only when a view
 // comes in. Each prune is its own delete: one failing never stops the other.
 //
-// …and the AI receipts (migration 0161, lib/cards/ai-provenance-server.ts)
+// …and the AI receipts (migration 0162, lib/cards/ai-provenance-server.ts)
 // past 90 days: a creator's claim is checked against the last 30.
 // ---------------------------------------------------------------------------
 

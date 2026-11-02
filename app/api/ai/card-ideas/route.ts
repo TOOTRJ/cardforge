@@ -158,7 +158,7 @@ export async function POST(request: Request) {
       }),
     );
     // What the AI wrote, kept where only the server writes (TODO CP1,
-    // migration 0161): a card saved with an idea's text still as written
+    // migration 0162): a card saved with an idea's text still as written
     // may say so on its page. Best effort.
     await recordAiReceipt(user.id, "idea", ideas);
     // Keep the batch (migration 0092) so a closed tab doesn't waste the

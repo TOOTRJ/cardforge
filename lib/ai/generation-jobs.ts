@@ -711,7 +711,7 @@ async function runGeneratedCardStep(
       }
       cardId = result.cardId;
       forcedPrivate = result.forcedPrivate;
-      // The card AI wrote whole (TODO CP1, migration 0161): every text part
+      // The card AI wrote whole (TODO CP1, migration 0162): every text part
       // it has is the AI's — until the maker rewrites one. Its picture is
       // marked by the database when the paint below attaches it.
       await addCardAiFields(cardId, userId, generatedCardParts(payload));
@@ -1879,7 +1879,7 @@ async function runCardFillStep(
       }
     }
     // What the AI wrote, kept as the server has it (TODO CP1, migration
-    // 0161): a save that still holds this text may say AI wrote it. Only the
+    // 0162): a save that still holds this text may say AI wrote it. Only the
     // generated fields — the pinned ones are the maker's.
     await recordAiReceipt(userId, "fill", [plan.fields]);
     return {
@@ -2909,7 +2909,7 @@ async function executeDeckRemixStep(
   if (!result.ok) {
     return { ...step, status: "failed", error: createFailureMessage(result) };
   }
-  // What the AI wrote of the remix (TODO CP1, migration 0161): the name it
+  // What the AI wrote of the remix (TODO CP1, migration 0162): the name it
   // gave each face and its flavour — the rules stay the printing's (or, for
   // an own card, are inherited by the action where they were the AI's). The
   // pictures are marked by the database.
