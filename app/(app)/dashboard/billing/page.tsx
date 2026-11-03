@@ -30,6 +30,7 @@ import {
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
 import { isStripeConfigured } from "@/lib/stripe/client";
+import { viewerPlanSwitchLock } from "@/lib/stripe/plan-switch-lock";
 import { LocalDate } from "@/components/ui/local-date";
 import { compOverLiveSubscription, liveCompChargeLine } from "@/lib/billing/comp-stripe";
 
@@ -72,6 +73,10 @@ export default async function BillingPage() {
     getEntitlements(),
     getCreditsUsedThisMonth(),
   ]);
+  // A comp paid for in Stripe holds the plan → no "Switch to" (BL1): the
+  // lock the server enforces, read from the subscription (a coupon's
+  // round-up tail included).
+  const planSwitchLock = await viewerPlanSwitchLock(profile);
   const viewer = billingViewerFromProfile(
     profile
       ? {
@@ -80,13 +85,10 @@ export default async function BillingPage() {
           cancel_at_period_end: profile.cancel_at_period_end ?? false,
           current_period_end: profile.current_period_end ?? null,
           subscription_ends_at: profile.subscription_ends_at ?? null,
-          // A comp holds the plan → no "Switch to" (BL1).
-          subscription_tier: profile.subscription_tier ?? null,
-          comp_tier: profile.comp_tier ?? null,
-          comp_expires_at: profile.comp_expires_at ?? null,
         }
       : null,
     entitlements,
+    planSwitchLock,
   );
   const stripeDetails = await getStripeBillingDetails(
     profile?.stripe_customer_id,

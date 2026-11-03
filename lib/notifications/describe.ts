@@ -103,6 +103,7 @@ export function describeNotification(
       const creditCents = num(payload.creditCents);
       const freeInvoices = num(payload.freeInvoices);
       const chargedFrom = str(payload.chargedFrom);
+      const scheduleCancelled = str(payload.scheduleCancelled);
       return {
         subject: "PipGlyph team",
         body: tier
@@ -122,6 +123,12 @@ export function describeNotification(
                 ? ` Your next ${freeInvoices === 1 ? "monthly invoice is" : `${freeInvoices} monthly invoices are`} free${
                     chargedFrom ? `; billing resumes as usual on ${formatShortDate(chargedFrom)}` : ""
                   }.`
+                : ""
+            }${
+              // The plan change the user had scheduled, cancelled because a
+              // comp now holds the plan (BL1).
+              scheduleCancelled
+                ? ` Your scheduled change to ${scheduleCancelled} was cancelled — you can schedule it again once the complimentary plan ends.`
                 : ""
             }`
           : "ended your complimentary plan access.",

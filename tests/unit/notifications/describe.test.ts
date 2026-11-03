@@ -56,6 +56,16 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     );
   });
 
+  it("a scheduled plan change the comp cancelled (BL1, finding P2): said, and that it can be made again", () => {
+    const body = (payload: Record<string, unknown>) =>
+      describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
+    expect(body({ tier: "pro", expiresAt: "2027-02-01T12:00:00Z", freeInvoices: 3, scheduleCancelled: "Plus (monthly)" })).toBe(
+      "gave you Pro plan access until Feb 1, 2027 — enjoy. Your next 3 monthly invoices are free. Your scheduled change to Plus (monthly) was cancelled — you can schedule it again once the complimentary plan ends.",
+    );
+    // A revoke never names one.
+    expect(body({ tier: null, scheduleCancelled: "Plus (monthly)" })).toBe("ended your complimentary plan access.");
+  });
+
   it("describes card limit overrides and resets", () => {
     expect(
       describeNotification({ type: "card_limit", actor, card: null, threadId: null, payload: { limit: 2500 } }, { isAdmin: false }).body,

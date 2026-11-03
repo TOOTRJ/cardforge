@@ -24,14 +24,8 @@ import {
   type CompFacts,
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
-import {
-  compPlanLockMessage,
-  compPlanSwitchLock,
-  couponPlanSwitchLock,
-  laterPlanSwitchLock,
-  type PlanSwitchLock,
-} from "@/lib/billing/comp-switch-lock";
-import { discountsOf, hasCompCouponGrant, type CouponSubFacts } from "@/lib/billing/comp-coupon";
+import { compPlanLockMessage, type PlanSwitchLock } from "@/lib/billing/comp-switch-lock";
+import { compLockOfSubscription, readSubscriptionCompLock, type LockRead } from "./plan-switch-lock";
 import { releasePendingChange, scheduleIdOf } from "./schedule";
 import { portalSessionParams } from "./portal";
 import { getStripe, isStripeConfigured } from "./client";
@@ -93,50 +87,15 @@ export type BillingActionResult =
       compLock?: PlanSwitchLock & { note?: string };
     };
 
-/** Does a comp hold this subscription's plan (no switch while it does)?
- *  The profile's comp — only a profile WITH one reads the tier paid for
- *  (`resolveSubscriptionTier` never throws; null falls back to the
- *  profile's tier) — and, on a subscription that names our coupon grant,
- *  the coupon itself, which can run past the comp's end (the 15-day
- *  round-up) and would free a switch's invoice. No extra call for anyone
- *  else. A read that fails is `"unreadable"`: the caller refuses with a
- *  plain retry line — it never claims a comp, and never lets the switch
- *  through. */
-async function compLockFor(
-  stripe: Stripe,
-  customer: { comp: CompFacts; subscribedTier: string | null },
-  sub: Stripe.Subscription,
-): Promise<PlanSwitchLock | null | "unreadable"> {
-  const profileLock = customer.comp.tier
-    ? compPlanSwitchLock({
-        compTier: customer.comp.tier,
-        compExpiresAt: customer.comp.expiresAt,
-        subscribedTier: (await resolveSubscriptionTier(sub, stripe)) ?? customer.subscribedTier,
-        subscriptionStatus: sub.status,
-      })
-    : null;
-  if (!hasCompCouponGrant(sub.metadata)) return profileLock;
-  const coupon = await readCouponPlanSwitchLock(stripe, sub.id);
-  if (coupon === "unreadable") return coupon;
-  return laterPlanSwitchLock(profileLock, coupon);
-}
-
-/** Our comp coupon still running on a subscription (read expanded). */
-async function readCouponPlanSwitchLock(
-  stripe: Stripe,
-  subscriptionId: string,
-): Promise<PlanSwitchLock | null | "unreadable"> {
-  try {
-    const read = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["discounts"] });
-    if (discountsOf(read as unknown as CouponSubFacts).unreadable) return "unreadable";
-    return couponPlanSwitchLock(read as unknown as CouponSubFacts, Math.floor(Date.now() / 1000));
-  } catch (error) {
-    console.error(
-      "[stripe] Couldn't read the subscription's discounts (switch refused):",
-      error instanceof Error ? error.message : error,
-    );
-    return "unreadable";
-  }
+/** Is this subscription's plan locked by a comp (no switch while it is)?
+ *  Read from Stripe's own record of the comp — our coupon grant / discount,
+ *  a #688 credit grant, a held trial (lib/stripe/plan-switch-lock.ts) —
+ *  never the profile (findings P1, P3a). Only a subscription naming our
+ *  coupon grant is read again (expanded); a customer never comped costs no
+ *  extra call. `"unreadable"`: the caller refuses with a plain retry line —
+ *  it never claims a comp, and never lets the switch through. */
+function compLockFor(stripe: Stripe, sub: Stripe.Subscription): Promise<LockRead> {
+  return compLockOfSubscription(stripe, sub);
 }
 
 /** The switch couldn't be checked against a comp coupon — try again. */
@@ -168,9 +127,6 @@ async function ensureStripeCustomer(): Promise<
       hasSubscribedBefore: boolean;
       /** The profile's admin comp (lib/billing/comp-stripe.ts). */
       comp: CompFacts;
-      /** The tier the profile says the subscription pays for — the lock's
-       *  fallback when Stripe's own price names none. */
-      subscribedTier: string | null;
     }
   | { ok: false; error: string }
 > {
@@ -183,7 +139,6 @@ async function ensureStripeCustomer(): Promise<
     tier: profile?.comp_tier === "plus" || profile?.comp_tier === "pro" ? profile.comp_tier : null,
     expiresAt: profile?.comp_expires_at ?? null,
   };
-  const subscribedTier = profile?.subscription_tier ?? null;
   if (profile?.stripe_customer_id) {
     return {
       ok: true,
@@ -191,7 +146,6 @@ async function ensureStripeCustomer(): Promise<
       userId: user.id,
       hasSubscribedBefore,
       comp,
-      subscribedTier,
     };
   }
 
@@ -220,7 +174,7 @@ async function ensureStripeCustomer(): Promise<
     return { ok: false, error: "Couldn't link your billing account. Try again." };
   }
 
-  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp, subscribedTier };
+  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
 }
 
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
@@ -437,7 +391,7 @@ export async function createCheckoutSessionAction(
           // coupon that couldn't be read is treated the same way — the card
           // flow alone, which is what needs fixing — never a refusal that
           // keeps a past-due customer from their card.
-          const lock = await compLockFor(stripe, customer, delinquent);
+          const lock = await compLockFor(stripe, delinquent);
           const comped = lock != null;
           const params = portalSessionParams({
             customer: customer.customerId,
@@ -471,9 +425,10 @@ export async function createCheckoutSessionAction(
         // No plan switches while a comp is on (owner 2026-11-02, BL1): the
         // comp is paid for in Stripe (a held trial, a coupon, a balance
         // credit) and no switch may carry it — refused BEFORE anything is
-        // touched (a pending downgrade stays; nothing is released). The comp
-        // is the profile's: a Stripe read can never claim one.
-        const lock = await compLockFor(stripe, customer, live);
+        // touched (a pending downgrade stays; nothing is released). Read from
+        // the subscription's own record of the comp; a failed read refuses
+        // with a retry line that claims no comp.
+        const lock = await compLockFor(stripe, live);
         if (lock === "unreadable") return SWITCH_UNREADABLE;
         if (lock) return compLockRefusal(lock);
         if (live.items.data[0]?.price?.id === priceId) {
@@ -947,26 +902,26 @@ export async function createPortalSessionAction(
   }
 
   // A comped plan's portal never offers plan switching (BL1,
-  // lib/stripe/portal.ts): the profile's comp, and — once that has ended —
-  // the monthly coupon it may leave running (the 15-day round-up), read
-  // only for a profile that names a comp. A read that fails opens nothing.
-  let lock = compPlanSwitchLock({
-    compTier: profile.comp_tier,
-    compExpiresAt: profile.comp_expires_at,
-    subscribedTier: profile.subscription_tier,
-    subscriptionStatus: profile.subscription_status,
-  });
-  if (!lock && profile.comp_tier && profile.stripe_subscription_id) {
-    const coupon = await readCouponPlanSwitchLock(getStripe(), profile.stripe_subscription_id);
-    if (coupon === "unreadable") return { ok: false, error: "Couldn't open the billing portal. Try again." };
-    lock = coupon;
-  }
+  // lib/stripe/portal.ts) — decided from the SUBSCRIPTION's record of the
+  // comp, whatever the profile says (finding P1: a cleared comp whose
+  // rounded-up coupon still ran opened the default portal, where a switch to
+  // annual took the 100 % off for the year). One read per portal session.
+  // Unreadable: treated as comped — the card and cancel flows still open
+  // (finding P3g: a card fix is never blocked), the home only on the
+  // no-switch configuration, else a plain retry line that claims nothing.
+  const lockRead: LockRead = profile.stripe_subscription_id
+    ? await readSubscriptionCompLock(getStripe(), profile.stripe_subscription_id)
+    : null;
+  const lock = lockRead === "unreadable" ? null : lockRead;
   const params = portalSessionParams({
     customer: profile.stripe_customer_id,
     returnUrl,
     flowData,
-    comped: lock != null,
+    comped: lockRead != null,
   });
+  if (!params && lockRead === "unreadable") {
+    return { ok: false, error: "Couldn't open the billing portal. Try again." };
+  }
   if (!params) {
     const note = "Until then, update your card or cancel from the billing page.";
     return {

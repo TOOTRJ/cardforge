@@ -69,7 +69,7 @@ beforeEach(() => {
   compStripe.applyCompToSubscription
     .mockReset()
     .mockResolvedValue({ change: null, trialEnd: null, note: null, failed: false });
-  compStripe.releaseScheduleForCompChange.mockReset().mockResolvedValue({ ok: true, note: null });
+  compStripe.releaseScheduleForCompChange.mockReset().mockResolvedValue({ ok: true, note: null, cancelled: null });
 });
 
 describe("admin gate", () => {
@@ -159,28 +159,46 @@ describe("adminSetCompTierAction", () => {
     // The comp is applied to Stripe AFTER the row is written.
     expect(compStripe.applyCompToSubscription).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
   });
-  it("a comp change with a SCHEDULED downgrade releases it FIRST and tells the admin (owner 2026-11-02)", async () => {
+  it("a comp that holds the plan releases a SCHEDULED downgrade FIRST and tells the admin AND the user (owner 2026-11-02, P2)", async () => {
     const stub = db({ subscriptionStatus: "active" });
     const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
-    compStripe.releaseScheduleForCompChange.mockResolvedValue({ ok: true, note: "The scheduled change to Plus (monthly) was cancelled." });
+    compStripe.releaseScheduleForCompChange.mockResolvedValue({
+      ok: true,
+      note: "The scheduled change to Plus (monthly) was cancelled.",
+      cancelled: "Plus (monthly)",
+    });
     compStripe.applyCompToSubscription.mockResolvedValue({ change: null, trialEnd: null, note: "Their next monthly invoice is free …", failed: false });
     expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({
       ok: true,
       stripeNote: "The scheduled change to Plus (monthly) was cancelled. Their next monthly invoice is free …",
     });
-    expect(compStripe.releaseScheduleForCompChange).toHaveBeenCalledWith(stub.client, TARGET);
+    // The comp as it will be saved decides (release only when Stripe pays for it).
+    expect(compStripe.releaseScheduleForCompChange).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
     const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
     expect(update).toBeTruthy();
     // Released before the row is written and before Stripe is touched.
     expect(compStripe.releaseScheduleForCompChange.mock.invocationCallOrder[0]).toBeLessThan(
       compStripe.applyCompToSubscription.mock.invocationCallOrder[0],
     );
+    // The USER is told their change was cancelled and can be made again.
+    expect(notification(stub)).toMatchObject({ type: "comp_plan", payload: { tier: "pro", expiresAt, scheduleCancelled: "Plus (monthly)" } });
+  });
+  it("nothing released (the comp puts nothing on Stripe): the user's notice says nothing about a schedule", async () => {
+    const stub = db({ subscriptionStatus: "active" });
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
+    expect(notification(stub)).toEqual({ recipient_id: TARGET, actor_id: ADMIN, type: "comp_plan", payload: { tier: "plus", expiresAt } });
+  });
+  it("a REVOKE never touches the user's scheduled change", async () => {
+    db({ subscriptionStatus: "active", compTier: "plus" });
+    expect((await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null })).ok).toBe(true);
+    expect(compStripe.releaseScheduleForCompChange).not.toHaveBeenCalled();
   });
   it("a release that FAILS refuses the comp change: no row written, Stripe untouched, no notification", async () => {
     const stub = db({ subscriptionStatus: "active", compTier: "plus" });
     compStripe.releaseScheduleForCompChange.mockResolvedValue({ ok: false, error: "Their scheduled plan change couldn't be cancelled on Stripe — the comp was not changed. Try again." });
-    const result = await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null });
-    // (a revoke: the previous comp is named by the profile read)
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    const result = await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt });
     expect(compStripe.releaseScheduleForCompChange).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/comp was not changed/) });
     expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);

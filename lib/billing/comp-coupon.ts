@@ -1,6 +1,14 @@
 import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { addMonthsUtc, periodMonthsAndDays } from "@/lib/billing/balance-credit";
-import { MAX_TRIAL_SECONDS, type CompFacts } from "@/lib/billing/comp-stripe";
+import {
+  MAX_TRIAL_SECONDS,
+  TRIAL_END_BEFORE_COMP_KEY,
+  compCreditChangeFor,
+  compTrialChangeFor,
+  parseCompCreditGrant,
+  type CompFacts,
+  type CompSubscriptionFacts,
+} from "@/lib/billing/comp-stripe";
 import { formatUtcDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
@@ -304,7 +312,9 @@ export type CompCouponChange =
   | {
       kind: "keep";
       grant: CompCouponGrant;
-      discountId: string;
+      /** Our discount still on (null: its months are already freed — the
+       *  grant alone stays named until the comp's end). */
+      discountId: string | null;
       /** The grant's metadata when only its end moved inside the same months;
        *  null = nothing to write. */
       grantMeta: string | null;
@@ -314,6 +324,9 @@ export type CompCouponChange =
       /** Our discount to take off (null: only the grant's metadata is left). */
       discountId: string | null;
       reason: "comp_released" | "comp_too_short";
+      /** The grant's metadata to write with it — absent: the grant is
+       *  closed (""); a value: the comp still holds and stays named. */
+      grantMeta?: string;
     }
   | {
       kind: "none";
@@ -364,12 +377,20 @@ export function compCouponChangeFor(input: {
   const discount = activeCompDiscountOf(sub, nowSec);
   const why = compHoldReason(comp, subscribedTier, nowSec);
 
+  // A CLEARED comp (no tier on the profile — an admin's revoke) takes our
+  // discount off even after its grant ended: a rounded-up coupon's tail
+  // (`COMP_COUPON_ROUND_UP_DAYS`) would otherwise keep freeing invoices —
+  // and, once nothing on the profile named a comp, any plan switched onto
+  // (finding P1). A comp that merely EXPIRED keeps its tail: those free
+  // invoices are its own rounded-up months.
+  const clearedTail = why != null && comp.tier == null && discount != null;
+
   if (sub.status !== "active") {
     // A plan in dunning (past_due, unpaid…) is never given a coupon — but a
     // REVOKE (or a comp that no longer holds) takes ours off whatever the
     // status: once the card is fixed, the next invoice must be charged. (An
     // expired comp's coupon keeps its own months, as on an active plan.)
-    if (why != null && open) {
+    if ((why != null && open) || clearedTail) {
       return { kind: "remove", discountId: discount?.id ?? null, reason: "comp_released" };
     }
     return { kind: "none", reason: "not_active" };
@@ -385,13 +406,32 @@ export function compCouponChangeFor(input: {
     const grant = { startSec, endSec: end, months };
     // Invoices the grant already freed (it has been on since its start),
     // and — a NEW grant over an earlier comp's coupon still running — the
-    // ones that coupon still owes.
+    // ones that coupon still owes. Both free the NEXT renewals, so they
+    // overlap: the new coupon frees the union, the larger of the two —
+    // never their sum (finding P2: a comp landing on an earlier comp's
+    // rounded-up tail freed one invoice too many).
     const done = renewalsIn(sub, startSec, nowSec).length;
     const carry = !open && discount?.end != null ? renewalsIn(sub, nowSec, discount.end - 1).length : 0;
-    const owed = months - done + carry;
+    const owed = Math.max(months - done, carry);
     if (owed <= 0) {
-      return open || discount
-        ? { kind: "remove", discountId: discount?.id ?? null, reason: "comp_too_short" }
+      // Nothing more to free. An OPEN grant stays named — moved to the new
+      // end — so the comp-ending reminder keeps the coupon's wording (the
+      // next renewal is the charge) instead of falling back to #688's credit
+      // copy (finding P3e); only a discount still running comes off.
+      if (open) {
+        const meta = compCouponGrantMeta(grant);
+        if (!discount) {
+          return {
+            kind: "keep",
+            grant,
+            discountId: null,
+            grantMeta: sub.metadata?.[COMP_COUPON_GRANT_KEY] === meta ? null : meta,
+          };
+        }
+        return { kind: "remove", discountId: discount.id, reason: "comp_too_short", grantMeta: meta };
+      }
+      return discount
+        ? { kind: "remove", discountId: discount.id, reason: "comp_too_short" }
         : { kind: "none", reason: "comp_too_short" };
     }
     if (open && discount && open.months === months) {
@@ -406,11 +446,47 @@ export function compCouponChangeFor(input: {
     return { kind: "apply", grant, couponMonths: owed, replaces: discount?.id ?? null, reason: "comp_frees_invoices" };
   }
 
-  // No comp holds the plan: a running grant's coupon comes off. An earlier
-  // comp's coupon whose grant has ENDED (the comp expired) keeps freeing the
-  // invoices it was sized for — those are the comp's own months.
-  if (open) return { kind: "remove", discountId: discount?.id ?? null, reason: "comp_released" };
+  // No comp holds the plan: a running grant's coupon comes off, and so does
+  // a CLEARED comp's tail. An earlier comp's coupon whose grant has ENDED
+  // (the comp expired, still named) keeps freeing the invoices it was sized
+  // for — those are the comp's own months.
+  if (open || clearedTail) return { kind: "remove", discountId: discount?.id ?? null, reason: "comp_released" };
   return { kind: "none", reason: why === "no_comp" && isEnding(sub) ? "ending" : why };
+}
+
+/**
+ * Will saving `comp` leave it PAID FOR in Stripe on this subscription — a
+ * held trial, our coupon grant, or a #688 credit grant — so the plan is
+ * locked while it runs? The same branches as `applyCompToSubscription`
+ * (comp-stripe-apply.ts), read before anything is written: an admin's comp
+ * change releases a scheduled downgrade ONLY then (finding P2 — a comp below
+ * the plan, too short to free an invoice, on an ending plan… changes nothing
+ * in Stripe and must not cancel the user's own scheduled change).
+ * `sub` read with its discounts expanded.
+ */
+export function compPaidInStripe(input: {
+  sub: CouponSubFacts & CompSubscriptionFacts;
+  subscribedTier: PlanTier;
+  comp: CompFacts;
+  now?: Date;
+}): boolean {
+  const { sub, subscribedTier, comp, now } = input;
+  const nowSec = Math.floor((now ?? new Date()).getTime() / 1000);
+  if (compHoldReason(comp, subscribedTier, nowSec) != null) return false;
+  if (sub.status === "trialing") {
+    const t = compTrialChangeFor({ sub, subscribedTier, comp, now });
+    if (t.kind === "set_trial_end") return t.reason === "comp_holds_trial";
+    return t.reason === "unchanged" && Boolean(sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY]);
+  }
+  if (sub.status !== "active") return false;
+  const credit = parseCompCreditGrant(sub.metadata);
+  const creditRunning = credit != null && credit.endSec > nowSec;
+  if (isMonthlyPrice(priceOf(sub)) && !creditRunning) {
+    const c = compCouponChangeFor({ sub, subscribedTier, comp, now });
+    return c.kind === "apply" || c.kind === "keep" || (c.kind === "remove" && c.grantMeta != null);
+  }
+  const c = compCreditChangeFor({ sub, subscribedTier, comp, now });
+  return c.kind === "settle" && c.reason === "comp_credits_period";
 }
 
 /**
@@ -437,6 +513,28 @@ export function compBillingNeedsReconcile(input: {
   return !monthly || !holds;
 }
 
+const DUNNING_STATUSES: ReadonlySet<string> = new Set(["past_due", "unpaid", "incomplete", "paused"]);
+
+/**
+ * Did this `customer.subscription.updated` bring a plan BACK to billing —
+ * an ending plan resumed (in the app, the portal or the dashboard) or a
+ * dunning plan paid up — so a comp saved while it couldn't take one (an
+ * ending plan frees no invoice; dunning gets no coupon, no credit) is
+ * applied now (finding P3d)? `previous` = the event's
+ * `previous_attributes` (only the fields that changed).
+ */
+export function compBillingReactivated(
+  sub: { status?: string | null; cancel_at_period_end?: boolean | null; cancel_at?: number | null },
+  previous: { status?: string | null; cancel_at_period_end?: boolean | null; cancel_at?: number | null } | null | undefined,
+): boolean {
+  if (!previous) return false;
+  if (sub.status !== "active" && sub.status !== "trialing") return false;
+  const recovered = typeof previous.status === "string" && DUNNING_STATUSES.has(previous.status);
+  const wasEnding = previous.cancel_at_period_end === true || typeof previous.cancel_at === "number";
+  const resumed = wasEnding && !sub.cancel_at_period_end && typeof sub.cancel_at !== "number";
+  return recovered || resumed;
+}
+
 /** A coupon grant is named on the subscription (the webhook's cheap first
  *  test before it reads the profile). */
 export function hasCompCouponGrant(meta: Record<string, string> | null | undefined): boolean {
@@ -455,7 +553,9 @@ export function compCouponNote(
       return `Their next ${n === 1 ? "monthly invoice is" : `${n} monthly invoices are`} free — a 100%-off complimentary coupon on their Stripe subscription.${from}`;
     }
     case "keep":
-      return "Their complimentary coupon is already on their Stripe subscription.";
+      return change.discountId
+        ? "Their complimentary coupon is already on their Stripe subscription."
+        : "The complimentary coupon has already freed the invoices this comp covers; their next invoice is charged as usual.";
     case "remove":
       return change.reason === "comp_too_short"
         ? "The comp no longer reaches another invoice: the complimentary coupon is off and their next invoice is charged as usual."

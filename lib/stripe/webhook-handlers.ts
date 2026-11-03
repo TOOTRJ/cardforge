@@ -189,10 +189,12 @@ async function handleSubscriptionEvent(
   // A comped plan that changed shape (monthly ↔ annual, a tier above the
   // comp, a downgrade's phase change, a #688 credit on a monthly plan):
   // the comp moves between its coupon and its balance credit (BL1,
-  // lib/billing/comp-coupon.ts). Only subscriptions naming a comp grant;
+  // lib/billing/comp-coupon.ts) — and a plan brought back to billing (an
+  // ending plan resumed, dunning paid up) takes a comp still running. Only
+  // subscriptions naming a comp grant, or that reactivation;
   // idempotent, never throws.
   if (!opts.isCreationEvent) {
-    await reconcileCompBilling(admin, stripe, userId, sub, tier ?? null);
+    await reconcileCompBilling(admin, stripe, userId, sub, tier ?? null, undefined, opts.previous ?? null);
   }
 }
 

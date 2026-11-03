@@ -4,6 +4,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { ANONYMOUS_BILLING_VIEWER, billingViewerFromProfile } from "@/lib/billing/viewer";
+import { viewerPlanSwitchLock } from "@/lib/stripe/plan-switch-lock";
 import { PricingContent } from "../pricing/pricing-content";
 
 // ---------------------------------------------------------------------------
@@ -40,12 +41,13 @@ export default async function PricingMemberPage() {
       ? {
           subscription_status: profile.subscription_status ?? null,
           stripe_customer_id: profile.stripe_customer_id ?? null,
-          subscription_tier: profile.subscription_tier ?? null,
-          comp_tier: profile.comp_tier ?? null,
-          comp_expires_at: profile.comp_expires_at ?? null,
         }
       : null,
     entitlements,
+    // A paid viewer leaves for the billing page below; anyone else whose
+    // subscription a comp still holds in Stripe sees the same lock the
+    // server enforces (BL1).
+    entitlements.isPaid ? null : await viewerPlanSwitchLock(profile),
   );
   // A paid account (live Plus/Pro, an admin comp, an admin) has nothing to
   // shop for here: its plan, plan changes and credit packs live on the

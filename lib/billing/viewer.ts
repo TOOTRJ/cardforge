@@ -2,7 +2,7 @@ import type { PlanTier } from "@/lib/billing/plans";
 import type { HeaderUser } from "@/components/layout/site-header";
 import type { Entitlements } from "@/lib/billing/entitlements";
 import { planEndingOf } from "@/lib/billing/plan-ending";
-import { compPlanSwitchLock, type PlanSwitchLock } from "@/lib/billing/comp-switch-lock";
+import type { PlanSwitchLock } from "@/lib/billing/comp-switch-lock";
 
 // ---------------------------------------------------------------------------
 // The viewer's billing state as the storefront sees it (/pricing, the upgrade
@@ -83,11 +83,12 @@ export function billingViewerFromProfile(
     cancel_at_period_end?: boolean | null;
     current_period_end?: string | null;
     subscription_ends_at?: string | null;
-    subscription_tier?: string | null;
-    comp_tier?: string | null;
-    comp_expires_at?: string | null;
   } | null,
   entitlements: Pick<Entitlements, "isPaid" | "effectiveTier">,
+  /** The comp's plan-switch lock as the server reads it from Stripe
+   *  (`viewerPlanSwitchLock`, lib/stripe/plan-switch-lock.ts) — the same
+   *  rule the server enforces, so a coupon's round-up tail shows too. */
+  planSwitchLock: PlanSwitchLock | null = null,
 ): BillingViewer {
   const status = profile?.subscription_status ?? null;
   const hasLiveSubscription = status != null && LIVE_SUBSCRIPTION_STATUSES.has(status);
@@ -105,11 +106,6 @@ export function billingViewerFromProfile(
     // synced before 0135 with no period end) is ending all the same.
     subscriptionEnding: hasLiveSubscription && (ending != null || Boolean(profile?.cancel_at_period_end)),
     subscriptionEndsAt: ending?.endsAt ?? null,
-    planSwitchLock: compPlanSwitchLock({
-      compTier: profile?.comp_tier,
-      compExpiresAt: profile?.comp_expires_at,
-      subscribedTier: profile?.subscription_tier,
-      subscriptionStatus: status,
-    }),
+    planSwitchLock,
   };
 }

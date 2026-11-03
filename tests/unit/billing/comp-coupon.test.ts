@@ -32,6 +32,8 @@ import {
   COMP_COUPON_GRANT_KEY,
   COMP_COUPON_ROUND_UP_DAYS,
   compBillingNeedsReconcile,
+  compBillingReactivated,
+  compPaidInStripe,
   couponCoveredUntil,
   compCouponChangeFor,
   STRIPE_COUPON_NAME_MAX,
@@ -493,7 +495,7 @@ describe("a MONTHLY plan: grant, the renewal at $0, re-save, revoke", () => {
     await grant(stripe, comp("plus", THREE_MONTHS), NOW);
     stripe.renew(); // Nov 20, $0
     const out = await grant(stripe, comp("plus", ONE_MONTH), stripe.at(sec("2026-11-25T12:00:00Z")));
-    expect(out.coupon?.change).toEqual({ kind: "remove", discountId: "di_1", reason: "comp_too_short" });
+    expect(out.coupon?.change).toMatchObject({ kind: "remove", discountId: "di_1", reason: "comp_too_short" });
     expect(stripe.renew().charged).toBe(600); // Dec 20
   });
 
@@ -785,32 +787,223 @@ describe("a plan changed OUTSIDE the app while couponed (the webhook's safety ne
   });
 });
 
+
 // ---------------------------------------------------------------------------
-describe("a comp change while a downgrade is scheduled (owner 2026-11-02)", () => {
-  it("the schedule is RELEASED first and the admin is told what was cancelled", async () => {
-    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: { id: "sub_sched_1", nextPrice: PLUS_MONTHLY } });
-    const out = await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never });
-    expect(out).toEqual({ ok: true, note: "The scheduled change to Plus (monthly) was cancelled." });
+describe("a comp change while a downgrade is scheduled (owner 2026-11-02; finding P2: only when the comp holds the plan)", () => {
+  const SCHEDULED = { id: "sub_sched_1", nextPrice: PLUS_MONTHLY };
+  const release = (stripe: Fake, c: { tier: "plus" | "pro" | null; expiresAt: string | null }, now: Date = NOW) =>
+    releaseScheduleForCompChange(db({ subscription_tier: "pro" }).client as never, "u1", c, { stripe: stripe as never, now });
+
+  it("a comp PAID FOR in Stripe releases it first; the admin and the user are told what was cancelled", async () => {
+    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: SCHEDULED });
+    const out = await release(stripe, comp("pro", THREE_MONTHS));
+    expect(out).toEqual({
+      ok: true,
+      note: "The scheduled change to Plus (monthly) was cancelled (the user is told they can schedule it again after the comp).",
+      cancelled: "Plus (monthly)",
+    });
     expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith("sub_sched_1");
-    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["schedule.phases.items.price"] });
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["discounts", "schedule.phases.items.price"] });
     // The comp then goes on a plan no phase will rewrite.
     const applied = await grant(stripe, comp("pro", THREE_MONTHS), NOW);
     expect(applied.coupon?.change.kind).toBe("apply");
     expect(stripe.st.schedule).toBeNull();
   });
 
+  it("a comp that puts NOTHING on Stripe leaves the user's own scheduled change alone", async () => {
+    // Below the plan, no end date, under half a month, more than 730 days.
+    for (const c of [
+      comp("plus", THREE_MONTHS),
+      comp("pro", null),
+      comp("pro", iso(nowSec + 10 * DAY)),
+      comp("pro", iso(nowSec + 800 * DAY)),
+    ]) {
+      const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: SCHEDULED });
+      expect(await release(stripe, c)).toEqual({ ok: true, note: null, cancelled: null });
+      expect(stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+      expect(stripe.st.schedule).not.toBeNull();
+    }
+    // A plan set to end frees no invoice either.
+    const ending = fakeStripe({ price: PRO_MONTHLY, schedule: SCHEDULED, cancelAtPeriodEnd: true });
+    expect(await release(ending, comp("pro", THREE_MONTHS))).toEqual({ ok: true, note: null, cancelled: null });
+    expect(ending.subscriptionSchedules.release).not.toHaveBeenCalled();
+  });
+
+  it("an ANNUAL plan's comp is paid for as a balance credit: that releases too", async () => {
+    const stripe = fakeStripe({ price: PLUS_ANNUAL, schedule: { id: "sub_sched_1", nextPrice: PLUS_MONTHLY } });
+    const out = await releaseScheduleForCompChange(db().client as never, "u1", comp("plus", THREE_MONTHS), {
+      stripe: stripe as never,
+      now: NOW,
+    });
+    expect(out).toMatchObject({ ok: true, cancelled: "Plus (monthly)" });
+  });
+
   it("a release that FAILS refuses the comp change — never half applied", async () => {
-    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: { id: "sub_sched_1", nextPrice: PLUS_MONTHLY } });
+    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: SCHEDULED });
     stripe.subscriptionSchedules.release.mockRejectedValueOnce(new Error("Stripe down"));
-    const out = await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never });
-    expect(out).toMatchObject({ ok: false, error: expect.stringMatching(/comp was not changed/) });
+    expect(await release(stripe, comp("pro", THREE_MONTHS))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/comp was not changed/),
+    });
   });
 
   it("a read that fails refuses too; no schedule = nothing to say", async () => {
-    const stripe = fakeStripe({});
-    expect(await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never })).toEqual({ ok: true, note: null });
+    const stripe = fakeStripe({ price: PRO_MONTHLY });
+    expect(await release(stripe, comp("pro", THREE_MONTHS))).toEqual({ ok: true, note: null, cancelled: null });
     expect(stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
     stripe.subscriptions.retrieve.mockRejectedValueOnce(new Error("Stripe down"));
-    expect(await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never })).toMatchObject({ ok: false });
+    expect(await release(stripe, comp("pro", THREE_MONTHS))).toMatchObject({ ok: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("the independent check's second round (#726)", () => {
+  it("P2 STACKING — comp 1 (Jan 2 → Feb 18, billed on the 1st) frees Feb 1 + Mar 1; comp 2 on Feb 20 → Mar 20 frees Mar 1 ONLY, never Apr 1 too", async () => {
+    const stripe = fakeStripe({ anchor: sec("2026-12-01T12:00:00Z"), cycle: 2, clock: sec("2027-01-02T12:00:00Z") });
+    // Jan 2 → Feb 18 = one month + 16 days: rounded UP to 2 — a coupon to Mar 2.
+    const first = await grant(stripe, comp("plus", "2027-02-18T12:00:00.000Z"));
+    expect(first.coupon?.change).toMatchObject({ kind: "apply", couponMonths: 2 });
+    expect(stripe.renew().charged).toBe(0); // Feb 1
+    // Feb 20: comp 1 ended (its grant closed Feb 18), its coupon still owes Mar 1.
+    const second = await grant(stripe, comp("plus", "2027-03-20T12:00:00.000Z"), stripe.at(sec("2027-02-20T12:00:00Z")));
+    // Comp 2 owes one invoice (Mar 1) and the old coupon one (Mar 1): the
+    // SAME invoice — the union is one, never their sum.
+    expect(second.coupon?.change).toMatchObject({ kind: "apply", couponMonths: 1 });
+    expect(ours(stripe)).toHaveLength(1);
+    expect(stripe.renew().charged).toBe(0); // Mar 1
+    expect(stripe.renew().charged).toBe(600); // Apr 1 — charged
+    expect(stripe.st.invoices.map((i) => i.charged)).toEqual([0, 0, 600]);
+  });
+
+  it("P1 — a CLEARED comp's rounded-up tail comes off: the invoice after the comp is charged", async () => {
+    // Nov 1 → Dec 17 = one month + 16 days → a 2-month coupon (to Jan 1): it
+    // frees Nov 20 and Dec 20, though the comp ends Dec 17.
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", "2026-12-17T12:00:00.000Z"));
+    expect(stripe.renew().charged).toBe(0); // Nov 20
+    // Dec 18: the grant has ended; the coupon still runs. A revoke (comp cleared).
+    const out = await grant(stripe, comp(null, null), stripe.at(sec("2026-12-18T12:00:00Z")));
+    expect(out.coupon?.change).toMatchObject({ kind: "remove", reason: "comp_released" });
+    expect(ours(stripe)).toEqual([]);
+    expect(stripe.renew().charged).toBe(600); // Dec 20 — charged
+  });
+
+  it("…while a comp that merely EXPIRED keeps its tail (those are its own rounded-up months)", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", "2026-12-17T12:00:00.000Z"));
+    stripe.renew(); // Nov 20
+    stripe.subscriptions.update.mockClear();
+    await grant(stripe, comp("plus", "2026-12-17T12:00:00.000Z"), stripe.at(sec("2026-12-18T12:00:00Z")));
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(stripe.renew().charged).toBe(0); // Dec 20 — the round-up's invoice
+  });
+
+  it("P3e — extending a ROUNDED-DOWN comp after its coupon ended keeps the grant named (moved to the new end)", async () => {
+    // Nov 1 → Dec 12 = one month + 11 days → 1 month: the coupon (to Dec 1)
+    // freed Nov 20; the comp runs on to Dec 12.
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", "2026-12-12T12:00:00.000Z"));
+    stripe.renew(); // Nov 20
+    const at = stripe.at(sec("2026-12-02T12:00:00Z"));
+    // The coupon ran out Dec 1 (its discount ended; Stripe drops it at the next invoice).
+    const out = await grant(stripe, comp("plus", "2026-12-14T12:00:00.000Z"), at);
+    expect(out.coupon?.change).toMatchObject({ kind: "keep", discountId: null });
+    expect(stripe.st.metadata[COMP_COUPON_GRANT_KEY]).toBe(`${nowSec}:${sec("2026-12-14T12:00:00Z")}:1`);
+    expect(stripe.renew().charged).toBe(600); // Dec 20
+  });
+
+  it("…and SHORTENED with the discount still running: it comes off, the grant moved — never cleared", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS));
+    stripe.renew(); // Nov 20
+    const out = await grant(stripe, comp("plus", ONE_MONTH), stripe.at(sec("2026-11-25T12:00:00Z")));
+    expect(out.coupon?.change).toMatchObject({ kind: "remove", reason: "comp_too_short" });
+    expect(ours(stripe)).toEqual([]);
+    expect(stripe.st.metadata[COMP_COUPON_GRANT_KEY]).toBe(`${nowSec}:${sec(ONE_MONTH)}:1`);
+  });
+
+  it("compPaidInStripe: our coupon or credit, a comp the plan can carry — nothing else", async () => {
+    const paid = async (s: Fake, c: { tier: "plus" | "pro" | null; expiresAt: string | null }, tier: "plus" | "pro" = "plus") =>
+      compPaidInStripe({
+        sub: (await s.subscriptions.retrieve("sub_1", { expand: ["discounts"] })) as never,
+        subscribedTier: tier,
+        comp: c,
+        now: NOW,
+      });
+    expect(await paid(fakeStripe({}), comp("plus", THREE_MONTHS))).toBe(true);
+    expect(await paid(fakeStripe({ price: PLUS_ANNUAL }), comp("plus", THREE_MONTHS))).toBe(true);
+    expect(await paid(fakeStripe({ price: PRO_MONTHLY }), comp("plus", THREE_MONTHS), "pro")).toBe(false);
+    expect(await paid(fakeStripe({}), comp("plus", null))).toBe(false);
+    expect(await paid(fakeStripe({}), comp("plus", iso(nowSec + 800 * DAY)))).toBe(false);
+    expect(await paid(fakeStripe({}), comp("plus", iso(nowSec + 10 * DAY)))).toBe(false);
+    expect(await paid(fakeStripe({ cancelAtPeriodEnd: true }), comp("plus", THREE_MONTHS))).toBe(false);
+    expect(await paid(fakeStripe({ status: "past_due" }), comp("plus", THREE_MONTHS))).toBe(false);
+    expect(await paid(fakeStripe({}), comp(null, null))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("P3d — a plan brought back to billing takes a comp still running (the webhook is the one writer)", () => {
+  it("compBillingReactivated: an ending plan resumed, a dunning plan paid up — nothing else", () => {
+    const live = { status: "active", cancel_at_period_end: false, cancel_at: null };
+    expect(compBillingReactivated(live, { cancel_at_period_end: true })).toBe(true);
+    expect(compBillingReactivated(live, { cancel_at: 1_800_000_000 })).toBe(true);
+    expect(compBillingReactivated(live, { status: "past_due" })).toBe(true);
+    expect(compBillingReactivated({ ...live, status: "trialing" }, { status: "unpaid" })).toBe(true);
+    expect(compBillingReactivated(live, { status: "trialing" })).toBe(false);
+    expect(compBillingReactivated(live, { cancel_at_period_end: false })).toBe(false);
+    expect(compBillingReactivated(live, null)).toBe(false);
+    expect(compBillingReactivated({ ...live, cancel_at_period_end: true }, { cancel_at: 1_800_000_000 })).toBe(false);
+    expect(compBillingReactivated({ ...live, status: "past_due" }, { status: "unpaid" })).toBe(false);
+  });
+
+  it("a comp saved on an ENDING plan (no coupon then) goes on when the plan is resumed", async () => {
+    const stripe = fakeStripe({ cancelAtPeriodEnd: true });
+    await grant(stripe, comp("plus", THREE_MONTHS));
+    expect(ours(stripe)).toEqual([]);
+    stripe.st.cancel_at_period_end = false; // resumed (in the app or the portal)
+    const eventSub = await stripe.subscriptions.retrieve("sub_1");
+    const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", NOW, {
+      cancel_at_period_end: true,
+    });
+    expect(out?.coupon?.change.kind).toBe("apply");
+    expect(ours(stripe)).toHaveLength(1);
+    expect([stripe.renew(), stripe.renew(), stripe.renew(), stripe.renew()].map((i) => i.charged)).toEqual([0, 0, 0, 600]);
+  });
+
+  it("a comp saved on a PAST_DUE plan goes on once it is paid up; a re-delivered event writes nothing more", async () => {
+    const stripe = fakeStripe({ status: "past_due" });
+    await applyCompToSubscription(db({ subscription_status: "past_due" }).client as never, "u1", comp("plus", THREE_MONTHS), {
+      stripe: stripe as never,
+      now: NOW,
+    });
+    expect(ours(stripe)).toEqual([]);
+    stripe.st.status = "active";
+    const eventSub = await stripe.subscriptions.retrieve("sub_1");
+    const first = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", NOW, { status: "past_due" });
+    expect(first?.coupon?.change.kind).toBe("apply");
+    stripe.subscriptions.update.mockClear();
+    const again = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", NOW, { status: "past_due" });
+    expect(again?.coupon?.change.kind).toBe("keep");
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(ours(stripe)).toHaveLength(1);
+  });
+
+  it("no comp running (cleared, expired, below the plan) → nothing is written", async () => {
+    for (const over of [{ comp_tier: null, comp_expires_at: null }, { comp_expires_at: "2026-10-01T00:00:00.000Z" }]) {
+      const stripe = fakeStripe({});
+      const eventSub = await stripe.subscriptions.retrieve("sub_1");
+      const out = await reconcileCompBilling(db(over).client as never, stripe as never, "u1", eventSub as never, "plus", NOW, {
+        cancel_at_period_end: true,
+      });
+      expect(out).toBeNull();
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    }
+    const pro = fakeStripe({ price: PRO_MONTHLY });
+    const out = await reconcileCompBilling(db().client as never, pro as never, "u1", (await pro.subscriptions.retrieve("sub_1")) as never, "pro", NOW, {
+      status: "past_due",
+    });
+    expect(out).toBeNull();
+    expect(pro.subscriptions.update).not.toHaveBeenCalled();
   });
 });

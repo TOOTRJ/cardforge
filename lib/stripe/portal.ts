@@ -41,7 +41,8 @@ export function portalSessionParams(input: {
   customer: string;
   returnUrl: string;
   flowData?: FlowData;
-  /** A comp holds this customer's plan (compPlanSwitchLock). */
+  /** A comp holds this customer's plan in Stripe — or that couldn't be
+   *  read (lib/stripe/plan-switch-lock.ts): fail closed. */
   comped: boolean;
 }): Stripe.BillingPortal.SessionCreateParams | null {
   const { customer, returnUrl, flowData, comped } = input;

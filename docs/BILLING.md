@@ -874,12 +874,27 @@ credit below — a 100 % coupon there would free the whole year.
 - **Extending / shortening** keeps the grant's start and re-sizes: owed =
   N(start → new end) − the renewals since the start (already freed). Owed
   > 0 and different → the old discount is replaced by a coupon of the owed
-  months, in one update; owed ≤ 0 → the coupon comes off.
+  months, in one update; owed ≤ 0 → the coupon comes off, but the grant
+  stays NAMED, moved to the new end (finding P3e: an extension of a
+  rounded-DOWN comp after its coupon ran out — Nov 1 → Dec 12 frees Nov 20
+  only, extended on Dec 2 to Dec 14 — must keep the coupon's wording in the
+  comp-ending reminder, not fall back to #688's credit copy).
+- **A new comp over an earlier comp's running coupon** (the 15-day
+  round-up's tail) frees the UNION of the two, never their sum: owed =
+  max(N − freed, the renewals the old coupon still covers) (finding P2).
+  Example: billed on the 1st, comp 1 Jan 2 → Feb 18 rounds up to 2 months
+  (a coupon to Mar 2: Feb 1 and Mar 1 free); comp 2 saved Feb 20 → Mar 20
+  owes Mar 1, which the old coupon also covers → ONE month, Apr 1 charged.
 - **Revoking** (clearing, a comp now below the plan) removes our discount
   and closes the grant in one update; the next invoice is charged as usual.
   An invoice already issued at $0 stays (nothing is pro-rated or clawed
-  back). A comp that simply EXPIRED keeps its coupon until the coupon ends
-  by itself — those free invoices are the comp's own months.
+  back). A CLEAR removes our discount even after the grant ended (finding
+  P1: the round-up's tail, once nothing on the profile named a comp, kept
+  freeing invoices — and opened the default portal, where a switch to
+  annual took the 100 % off for the year). The cost of that: a comp
+  cleared during its tail forfeits the rounded-up invoice — a deliberate
+  admin act. A comp that simply EXPIRED keeps its coupon until the coupon
+  ends by itself — those free invoices are the comp's own months.
 - **The order of the writes** (P3 a): the coupon is made (or read) FIRST,
   then ONE `subscriptions.update` attaches it and writes the grant — nothing
   is taken off before the replacement is on. On the credit path (annual) the
@@ -898,6 +913,18 @@ credit below — a 100 % coupon there would free the whole year.
   the retried invoice is then charged.
 - **A cancelled monthly plan** gets no coupon (no invoice to free); a grant
   already running on it is kept.
+- **Brought back to billing** (finding P3d): when an ending plan is resumed
+  (the in-app Resume, the portal's renew, the dashboard) or a dunning plan
+  is paid up, `customer.subscription.updated` (its `previous_attributes`:
+  `cancel_at_period_end` / `cancel_at` set before, or a dunning `status`;
+  `compBillingReactivated`) re-runs `applyCompToSubscription` for a comp
+  that still holds the plan — the coupon (or credit, or held trial) it
+  couldn't take when saved goes on now; one already there is kept.
+  The WEBHOOK is the one writer for this, not the resume action as well:
+  two applies racing on the credit path could each open a grant and credit
+  the period twice (the coupon path is safe — `discounts` replaces the
+  list), and the webhook covers every way back (in-app, portal, dashboard,
+  a retried payment).
 - **#688 balance credits are NOT migrated** (owner 2026-11-02). A monthly
   plan comped by #688's credit before BL1 keeps the credit until it runs
   out; a re-save while it runs stays on the credit path (extend / shorten
@@ -907,46 +934,93 @@ credit below — a 100 % coupon there would free the whole year.
   the user in full. Annual plans keep the credit for good.
 - **No plan switches while a comp is on** (owner 2026-11-02 — every way of
   carrying a comp across a switch leaked money in the independent check).
-  `lib/billing/comp-switch-lock.ts` is the one rule: an UNEXPIRED comp at or
-  above the plan paid for, on a trialing, active or dunning subscription —
-  or our comp coupon still RUNNING on it (the 15-day round-up can outlive
-  the comp) — locks the plan until the later of the two ends:
+  THE lock is `subscriptionCompLock` (`lib/billing/comp-switch-lock.ts`):
+  the plan is locked exactly while the comp is PAID FOR IN STRIPE on that
+  subscription — our coupon grant open, our coupon discount still RUNNING
+  (the 15-day round-up can outlive the comp), a #688 credit grant open, or
+  a trial a comp holds (`pipglyph_trial_end_before_comp`) — until the
+  latest of their ends. It is read from the SUBSCRIPTION, never the
+  profile (findings P1, P3a): a comp cleared during its coupon's tail still
+  locks while the coupon runs; a comp that put NOTHING on Stripe (below the
+  plan, a legacy no-end-date or > 730-day comp on a paying plan, too short
+  to free an invoice, saved on a plan set to end) locks nothing — its
+  payer pays full price and may switch:
   - the storefront (`/pricing` → billing page grid, the upgrade modal)
     shows "Your plan is complimentary until <date> — you can change plans
     after that." instead of any Switch button (`pricingCtaFor` →
-    `comp_locked`, the date a `<LocalDateText>` in the viewer's zone);
+    `comp_locked`, the date a `<LocalDateText>` in the viewer's zone). The
+    pages read the SAME lock (`viewerPlanSwitchLock`,
+    `lib/stripe/plan-switch-lock.ts`: one Stripe read, only for a profile
+    that has ever been comped — `comp_tier` set, an expired comp too —
+    so the round-up's tail shows; finding P3b). If Stripe can't be read
+    the page shows the profile's comp (`compPlanSwitchLock`) — display
+    only, the server decides on its own read;
   - `createCheckoutSessionAction` refuses every switch (upgrade, downgrade,
     monthly ↔ annual, a trial's switch, a no-card trial's superseding
     checkout, a plan set to end) BEFORE anything is touched — a pending
     downgrade is not released by a refused click; the error carries
     `compLock` and the toast re-words it in the viewer's zone. The coupon
-    is read (`expand: ["discounts"]`) only for a subscription whose
+    is read again (`expand: ["discounts"]`) only for a subscription whose
     metadata names our grant; a read that fails refuses with "Couldn't
     check your plan with Stripe. Try again in a moment." — it never claims
     a comp and never lets the switch through. A customer never comped
     costs no extra Stripe call;
-  - the Customer Portal (`lib/stripe/portal.ts`) opens a comped customer's
-    session on the NO-SWITCH configuration
-    (`STRIPE_PORTAL_CONFIG_NO_PLAN_SWITCH`, owner step below). Without it
-    the portal HOME is refused (it would offer switching) with the same
-    line plus "Until then, update your card or cancel from the billing
-    page."; the card and cancel flows still open and return to the app,
-    never to the home. A past-due comped customer gets the card flow.
+  - the Customer Portal (`lib/stripe/portal.ts`) decides on the
+    subscription too — ONE read per portal session, whatever the profile
+    says — and opens a locked customer's session on the NO-SWITCH
+    configuration (`STRIPE_PORTAL_CONFIG_NO_PLAN_SWITCH`, owner step
+    below). Without it the portal HOME is refused (it would offer
+    switching) with the same line plus "Until then, update your card or
+    cancel from the billing page."; the card and cancel flows still open
+    and return to the app, never to the home. An unreadable subscription
+    is treated as locked: the card and cancel flows still open (finding
+    P3g — a card fix is never blocked), the home only on the no-switch
+    configuration, else "Couldn't open the billing portal. Try again." A
+    past-due comped customer gets the card flow.
   - after the lock ends it all opens by itself.
-- **A comp change while a downgrade is scheduled** (owner 2026-11-02):
-  `adminSetCompTierAction` first releases the schedule
-  (`releaseScheduleForCompChange`) and the admin's toast says "The
-  scheduled change to Plus (monthly) was cancelled." If the subscription
-  can't be read, or the release fails, the comp change is REFUSED — the
-  profile isn't written. So a comp never sits on a subscription with a
+- **A comp change while a downgrade is scheduled** (owner 2026-11-02,
+  narrowed by finding P2): `adminSetCompTierAction` releases a downgrade
+  the USER scheduled ONLY when the comp as saved will be paid for in
+  Stripe (`compPaidInStripe` — the coupon, the credit or a held trial: the
+  cases that lock the plan). A revoke, or a comp that puts nothing on
+  Stripe, leaves the user's own change alone. When it does release, the
+  admin's toast says "The scheduled change to Plus (monthly) was
+  cancelled …" and the USER's `comp_plan` notification says "Your
+  scheduled change to Plus (monthly) was cancelled — you can schedule it
+  again once the complimentary plan ends." (`scheduleCancelled`,
+  `lib/notifications/describe.ts`). If the subscription can't be read, or
+  the release fails, the comp change is REFUSED — the profile isn't
+  written. So a comp Stripe pays for never sits on a subscription with a
   phase ahead (no discount is ever copied into a phase).
 - **The safety net.** `customer.subscription.updated` runs
-  `reconcileCompBilling` only for a subscription naming an open coupon
-  grant, and acts only when the plan was changed OUTSIDE the app (the
-  Stripe dashboard): a coupon on a plan that isn't monthly any more, or
-  that the comp no longer holds, comes off (the rest of the comp on the
-  credit, from the end of the free invoice). Matching plans write nothing
-  (so our own update's event stops there).
+  `reconcileCompBilling` for a subscription naming an open coupon grant
+  (and for one brought back to billing, above). For the former it acts
+  only when the plan was changed OUTSIDE the app (the Stripe dashboard): a
+  coupon on a plan that isn't monthly any more, or that the comp no longer
+  holds, comes off (the rest of the comp on the credit, from the end of
+  the free invoice). Matching plans write nothing (so our own update's
+  event stops there).
+- **Races beside an admin's comp save** (finding P3f — documented, no code):
+  - *the user switches while the admin saves*: the switch reads the lock
+    from the subscription; a save that lands between that read and the
+    switch's own Stripe call can see its coupon carried onto the new plan.
+    The webhook's safety net then re-runs the comp on the new plan (a
+    coupon off an annual price, onto the credit). Narrow (seconds) and
+    self-correcting.
+  - *the user schedules a downgrade while the admin saves*: the release
+    runs BEFORE the profile write; a downgrade scheduled after the release
+    and before the coupon goes on carries the old discounts into its phase.
+    The phase change is a `customer.subscription.updated`, so the safety
+    net re-runs the comp there. Narrow.
+  - *two admins save at once*: each update is idempotent per grant; the
+    coupon path's `discounts` replaces the whole list (never two of ours);
+    the credit path is keyed by the grant's start, so two DIFFERENT comps
+    saved at the same second could each settle — the profile row is the
+    last writer and a re-save settles the balance to it.
+  - *a resume / a dunning recovery while the admin saves*: the webhook's
+    re-apply and the admin's apply can run together; on the coupon path
+    the later write wins with the same coupon, on the credit path see the
+    previous line (a re-save settles it).
 - **What people see.** The admin's toast: "Their next 3 monthly invoices are
   free — a 100%-off complimentary coupon on their Stripe subscription.
   Billing resumes as usual on Feb 20, 2027 UTC." (`compCouponNote`). The
@@ -993,6 +1067,27 @@ refused with the lock's line, and only the card and cancel flows open
 (they return to the app). A malformed value (not `bpc_…`) counts as unset.
 Nothing else reads it; a customer without a comp keeps the default portal.
 
+**Also turn OFF the two doors to the DEFAULT configuration** that the app
+doesn't open (finding P2 / P3c of the second check — both use the default
+configuration, which offers plan switching):
+
+- Dashboard → Settings → Billing → Customer portal → **"Customer portal
+  link"** (the no-code login page, `billing.stripe.com/p/login/…`):
+  deactivate it. A comped customer who signs in there gets the default
+  portal's home, switch included.
+- Dashboard → Settings → Billing → **Customer emails** (subscriptions,
+  invoices, "manage your subscription" links): turn off the **portal
+  links** in the emails Stripe sends (our own emails link to
+  `/dashboard/billing`, which opens the right configuration).
+
+Do both in the SANDBOX and LIVE. Then verify in the sandbox (with the
+no-switch `bpc_…` set in `.env.local`): as a comped test customer, open
+"Update card" and "Cancel" from `/dashboard/billing` and click every link
+inside the flow — none may lead to a plan switch (the after-completion
+redirect returns to the app; the no-switch configuration has no
+`subscription_update`). This needs a browser session on the sandbox
+portal; the check script below does not click through the portal.
+
 #### The sandbox test-clock check (`npm run stripe:sandbox-comp-check`)
 
 `scripts/stripe-sandbox-comp-check.mjs` runs the comp's Stripe code — the
@@ -1021,7 +1116,13 @@ clock (and with it the customer) in `finally`:
    the first charge at full price after it;
 5. a pre-existing #688 balance credit on a monthly plan, then the comp
    re-saved (extended) → stays a credit: invoices $0 until the credit is
-   spent, then full price — nothing clawed back.
+   spent, then full price — nothing clawed back;
+6. STACKING (finding P2): billed on the 1st, comp 1 Jan 2 → Feb 18 (a
+   2-month coupon to Mar 2), then on Feb 20 comp 2 → Mar 20 → Feb 1 and
+   Mar 1 free, Apr 1 at full price (the union, never the sum).
+
+It also lists (read-only) the sandbox's portal configurations and says
+whether one has plan switching off — it never creates or changes one.
 
 A wrong amount exits non-zero. Results of the last run are in the BL1 PR.
 

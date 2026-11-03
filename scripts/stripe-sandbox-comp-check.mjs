@@ -257,10 +257,24 @@ async function compWithScheduledDowngrade(ctx) {
   const admin = fakeAdmin(profile);
   await clock.advance(clock.t0 + DAY, "one day into the period");
   // The admin action's order: release FIRST, the comp only if it worked.
-  const release = await apply.releaseScheduleForCompChange(admin, "sandbox-user", { stripe });
-  log(`  release: ${release.ok ? release.note : `REFUSED — ${release.error}`}`);
-  check(result, release.ok && /scheduled change to Plus \(monthly\) was cancelled/.test(release.note ?? ""), "the scheduled downgrade was not released with its note");
+  // A comp BELOW the plan puts nothing on Stripe: the user's own change stays (P2).
+  const below = await apply.releaseScheduleForCompChange(
+    admin,
+    "sandbox-user",
+    { tier: "plus", expiresAt: iso(monthsAfter(clock.now, 2)) },
+    { stripe, now: new Date(clock.now * 1000) },
+  );
+  check(result, below.ok && below.cancelled == null, "a comp below the plan released the user's scheduled change");
+  const kept = await stripe.subscriptions.retrieve(sub.id);
+  check(result, kept.schedule != null, "the schedule is gone after a comp that holds nothing");
   const comp = { tier: "pro", expiresAt: iso(monthsAfter(clock.now, 2)) };
+  const release = await apply.releaseScheduleForCompChange(admin, "sandbox-user", comp, { stripe, now: new Date(clock.now * 1000) });
+  log(`  release: ${release.ok ? release.note : `REFUSED — ${release.error}`}`);
+  check(
+    result,
+    release.ok && release.cancelled === "Plus (monthly)" && /scheduled change to Plus \(monthly\) was cancelled/.test(release.note ?? ""),
+    "the scheduled downgrade was not released with its note",
+  );
   const out = await apply.applyCompToSubscription(admin, "sandbox-user", comp, { stripe, now: new Date(clock.now * 1000) });
   log(`  comp saved (Pro, 2 months): ${out.note}`);
   check(result, out.coupon?.change.kind === "apply", "the comp did not attach a coupon");
@@ -356,6 +370,77 @@ async function preexisting688Credit(ctx) {
   expectAmounts(result, invoices, [P, 0, 0, 0, P]);
 }
 
+/** A monthly Plus plan with a comp of one month + 16 days saved a day in:
+ *  the 15-day round-up makes it a 2-month coupon that outlives the comp. */
+async function roundedUpComp(ctx) {
+  const { clock, price, log, result } = ctx;
+  const { customer, pm } = await customerWithCard(clock);
+  const sub = await stripe.subscriptions.create({ customer: customer.id, items: [{ price: price.plus_monthly.id }], default_payment_method: pm.id });
+  const profile = { stripe_customer_id: customer.id, stripe_subscription_id: sub.id, subscription_tier: "plus", subscription_status: "active" };
+  const admin = fakeAdmin(profile);
+  await clock.advance(clock.t0 + DAY, "one day into the period");
+  const firstEnd = monthsAfter(clock.now, 1) + 16 * DAY;
+  const first = await apply.applyCompToSubscription(admin, "sandbox-user", { tier: "plus", expiresAt: iso(firstEnd) }, {
+    stripe,
+    now: new Date(clock.now * 1000),
+  });
+  log(`  comp 1 saved (1 month + 16 days → ${first.coupon?.change.couponMonths ?? "?"} months): ${first.note}`);
+  check(result, first.coupon?.change.kind === "apply" && first.coupon.change.couponMonths === 2, "comp 1 did not attach a 2-month coupon");
+  await clock.advance(monthsAfter(clock.t0, 1) + 2 * HOUR, "renewal 1 + 2h");
+  // Two days after comp 1 ended: its coupon still covers renewal 2.
+  await clock.advance(firstEnd + 2 * DAY, "comp 1 ended two days ago; its coupon still runs");
+  return { sub, admin };
+}
+
+/** 6. STACKING (finding P2): a second comp over the first's rounded-up tail
+ *  frees the UNION — renewal 2 once — never one invoice more. */
+async function stacking(ctx) {
+  const { clock, price, log, result } = ctx;
+  const { sub, admin } = await roundedUpComp(ctx);
+  const second = await apply.applyCompToSubscription(admin, "sandbox-user", { tier: "plus", expiresAt: iso(monthsAfter(clock.now, 1)) }, {
+    stripe,
+    now: new Date(clock.now * 1000),
+  });
+  log(`  comp 2 saved (1 month): ${second.note}`);
+  check(result, second.coupon?.change.kind === "apply" && second.coupon.change.couponMonths === 1, `comp 2's coupon was ${second.coupon?.change.couponMonths ?? "?"} months, expected 1 (the union)`);
+  for (let k = 2; k <= 3; k++) await clock.advance(monthsAfter(clock.t0, k) + 2 * HOUR, `renewal ${k} + 2h`);
+  const invoices = await invoicesOf(sub.id);
+  printInvoices(log, invoices, clock.t0);
+  const P = price.plus_monthly.unit_amount;
+  expectAmounts(result, invoices, [P, 0, 0, P]);
+}
+
+/** 7. A comp CLEARED during its rounded-up tail (finding P1): the tail comes
+ *  off — the next renewal is charged. */
+async function clearedTail(ctx) {
+  const { clock, price, log, result } = ctx;
+  const { sub, admin } = await roundedUpComp(ctx);
+  const cleared = await apply.applyCompToSubscription(admin, "sandbox-user", { tier: null, expiresAt: null }, {
+    stripe,
+    now: new Date(clock.now * 1000),
+  });
+  log(`  comp CLEARED during the tail: ${cleared.note}`);
+  check(result, !cleared.failed && cleared.coupon?.change.kind === "remove", `the clear did not remove the tail (${cleared.coupon?.change.kind ?? "none"})`);
+  await clock.advance(monthsAfter(clock.t0, 2) + 2 * HOUR, "renewal 2 + 2h");
+  const invoices = await invoicesOf(sub.id);
+  printInvoices(log, invoices, clock.t0);
+  const P = price.plus_monthly.unit_amount;
+  expectAmounts(result, invoices, [P, 0, P]);
+}
+
+/** Read-only: the sandbox's portal configurations — is there one with plan
+ *  switching OFF (the owner step)? Never creates or changes one. */
+async function portalConfigurations() {
+  const list = await stripe.billingPortal.configurations.list({ limit: 100, active: true });
+  const noSwitch = list.data.filter((c) => !c.features?.subscription_update?.enabled);
+  const login = list.data.filter((c) => c.login_page?.enabled);
+  console.log(
+    `Sandbox portal configurations (active): ${list.data.length}; with plan switching OFF: ${
+      noSwitch.length ? noSwitch.map((c) => `${c.id}${c.is_default ? " (default)" : ""}`).join(", ") : "none"
+    }; with the no-code login page ON: ${login.length ? login.map((c) => `${c.id}${c.is_default ? " (default)" : ""}`).join(", ") : "none"}`,
+  );
+}
+
 // --- run -----------------------------------------------------------------------
 
 const SCENARIOS = [
@@ -364,6 +449,8 @@ const SCENARIOS = [
   ["3. comp while a downgrade is scheduled", compWithScheduledDowngrade],
   ["4. comp on a trialing plan", trialing],
   ["5. a pre-existing #688 credit runs out untouched", preexisting688Credit],
+  ["6. a second comp over the first's rounded-up tail (the union)", stacking],
+  ["7. a comp cleared during its rounded-up tail", clearedTail],
 ];
 
 const only = process.argv.slice(2).map(Number).filter(Boolean);
@@ -375,6 +462,11 @@ try {
   process.exit(1);
 }
 console.log(`Sandbox prices: Plus monthly ${money(price.plus_monthly.unit_amount)}, Pro monthly ${money(price.pro_monthly.unit_amount)}`);
+try {
+  await portalConfigurations();
+} catch (error) {
+  console.log(`(Couldn't list the portal configurations: ${safeMessage(error)})`);
+}
 
 const results = await Promise.all(
   SCENARIOS.filter((_, i) => !only.length || only.includes(i + 1)).map(async ([name, run]) => {

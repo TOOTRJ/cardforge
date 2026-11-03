@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const stripe = vi.hoisted(() => ({ retrieve: vi.fn() }));
+vi.mock("@/lib/stripe/client", () => ({
+  getStripe: () => ({ subscriptions: { retrieve: stripe.retrieve } }),
+  isStripeConfigured: () => true,
+}));
+
 import {
   billingActionErrorText,
   compPlanLockMessage,
@@ -6,15 +13,22 @@ import {
   compPlanSwitchLock,
   couponPlanSwitchLock,
   laterPlanSwitchLock,
+  subscriptionCompLock,
 } from "@/lib/billing/comp-switch-lock";
+import { COMP_COUPON_GRANT_KEY, type DiscountLike } from "@/lib/billing/comp-coupon";
+import { COMP_CREDIT_GRANT_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import { billingViewerFromProfile, billingViewerFromUser } from "@/lib/billing/viewer";
+import { viewerPlanSwitchLock } from "@/lib/stripe/plan-switch-lock";
 import { pricingCtaFor } from "@/components/billing/pricing-cta";
 
 // ---------------------------------------------------------------------------
-// BL1 (owner 2026-11-02): no plan switches while a comp is on. The ONE rule
-// (compPlanSwitchLock), the storefront's buttons it turns into a line
-// (pricingCtaFor → "comp_locked") and the words, date in the viewer's zone.
-// The server actions' refusals are in stripe-actions.test.ts.
+// BL1 (owner 2026-11-02): no plan switches while a comp is on. THE lock is
+// the comp as Stripe pays for it (subscriptionCompLock, read by the server
+// and — through viewerPlanSwitchLock — by the storefront); the profile's
+// comp (compPlanSwitchLock) is only the page's fallback when Stripe can't be
+// read. The storefront's buttons turn into a line (pricingCtaFor →
+// "comp_locked"), the date in the viewer's zone. The server actions'
+// refusals are in stripe-actions.test.ts.
 // ---------------------------------------------------------------------------
 
 const NOW = new Date("2026-11-02T12:00:00Z");
@@ -25,7 +39,7 @@ const lock = (over: Partial<Parameters<typeof compPlanSwitchLock>[0]> = {}) =>
     NOW,
   );
 
-describe("compPlanSwitchLock", () => {
+describe("compPlanSwitchLock — the profile fallback the page shows when Stripe can't be read", () => {
   it("an unexpired comp at or above the plan, on a subscription Stripe still has, locks switching until its end", () => {
     expect(lock()).toEqual({ until: END });
     expect(lock({ compTier: "pro" })).toEqual({ until: END });
@@ -81,19 +95,54 @@ describe("the coupon a comp leaves running (the 15-day round-up)", () => {
   });
 });
 
-describe("the storefront: no 'Switch to …' while a comp is on", () => {
-  const profile = {
-    subscription_status: "active",
-    stripe_customer_id: "cus_1",
-    subscription_tier: "plus",
-    comp_tier: "pro",
-    comp_expires_at: "2099-01-01T00:00:00.000Z",
-  };
-  it("the server's viewer carries the lock; every paid card says the line instead of a button", () => {
-    const viewer = billingViewerFromProfile(profile, { isPaid: true, effectiveTier: "pro" });
-    expect(viewer.planSwitchLock).toEqual({ until: "2099-01-01T00:00:00.000Z" });
-    expect(pricingCtaFor(viewer, "plus")).toEqual({ kind: "comp_locked", until: "2099-01-01T00:00:00.000Z" });
-    expect(pricingCtaFor(viewer, "pro")).toEqual({ kind: "comp_locked", until: "2099-01-01T00:00:00.000Z" });
+describe("THE lock: the comp as Stripe pays for it (subscriptionCompLock — findings P1, P3a)", () => {
+  const nowSec = NOW.getTime() / 1000;
+  const endSec = nowSec + 60 * 86400;
+  const at = (s: number) => new Date(s * 1000).toISOString();
+  const base = { status: "active", discounts: [] as DiscountLike[], metadata: {} as Record<string, string> };
+  const ours = (end: number) => ({ id: "di_1", end, source: { coupon: "pipglyph_comp_100off_2m" } });
+
+  it("an open coupon grant, our running discount, a #688 credit grant, a comp-held trial: locked until the latest end", () => {
+    expect(subscriptionCompLock({ ...base, metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec - 86400}:${endSec}:2` } }, nowSec)).toEqual({ until: at(endSec) });
+    // The round-up tail: the grant has ended, the discount still runs.
+    expect(
+      subscriptionCompLock(
+        { ...base, metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec - 60 * 86400}:${nowSec - 86400}:2` }, discounts: [ours(endSec)] },
+        nowSec,
+      ),
+    ).toEqual({ until: at(endSec) });
+    expect(subscriptionCompLock({ ...base, metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec - 86400}:${endSec}` } }, nowSec)).toEqual({ until: at(endSec) });
+    expect(
+      subscriptionCompLock({ ...base, status: "trialing", trial_end: endSec, metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(nowSec + 86400) } }, nowSec),
+    ).toEqual({ until: at(endSec) });
+    // The later of two.
+    expect(
+      subscriptionCompLock(
+        { ...base, metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec - 86400}:${nowSec + 86400}:1` }, discounts: [ours(endSec)] },
+        nowSec,
+      ),
+    ).toEqual({ until: at(endSec) });
+  });
+
+  it("a comp that put NOTHING on Stripe locks nothing — a legacy no-end-date or > 730-day comp on a paying plan included (P3a)", () => {
+    expect(subscriptionCompLock(base, nowSec)).toBeNull();
+    // A plain trial (no comp held it), an ended grant with no discount left,
+    // another coupon, a cancelled subscription.
+    expect(subscriptionCompLock({ ...base, status: "trialing", trial_end: endSec }, nowSec)).toBeNull();
+    expect(subscriptionCompLock({ ...base, metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec - 9e5}:${nowSec - 1}:1` } }, nowSec)).toBeNull();
+    expect(subscriptionCompLock({ ...base, discounts: [{ id: "di_2", end: endSec, source: { coupon: "SUBSCRIBER_PACKS_20" } }] }, nowSec)).toBeNull();
+    expect(subscriptionCompLock({ ...base, status: "canceled", metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec}:${endSec}:2` } }, nowSec)).toBeNull();
+  });
+});
+
+describe("the storefront: no 'Switch to …' while a comp holds the plan", () => {
+  const profile = { subscription_status: "active", stripe_customer_id: "cus_1" };
+  const LOCK = { until: "2099-01-01T00:00:00.000Z" };
+  it("the server's viewer carries the lock it was given; every paid card says the line instead of a button", () => {
+    const viewer = billingViewerFromProfile(profile, { isPaid: true, effectiveTier: "pro" }, LOCK);
+    expect(viewer.planSwitchLock).toEqual(LOCK);
+    expect(pricingCtaFor(viewer, "plus")).toEqual({ kind: "comp_locked", until: LOCK.until });
+    expect(pricingCtaFor(viewer, "pro")).toEqual({ kind: "comp_locked", until: LOCK.until });
     // The free card still opens the (comped, no-switch) portal to manage.
     expect(pricingCtaFor(viewer, "free")).toEqual({ kind: "portal", label: "Manage plan" });
   });
@@ -111,11 +160,50 @@ describe("the storefront: no 'Switch to …' while a comp is on", () => {
     } as never);
     expect(pricingCtaFor(viewer, "pro")).toEqual({ kind: "comp_locked", until: null });
   });
-  it("no comp (or a comp below the plan): 'Switch to …' as before", () => {
-    const plain = billingViewerFromProfile({ ...profile, comp_tier: null, comp_expires_at: null }, { isPaid: true, effectiveTier: "plus" });
+  it("no lock: 'Switch to …' as before", () => {
+    const plain = billingViewerFromProfile(profile, { isPaid: true, effectiveTier: "plus" });
     expect(plain.planSwitchLock).toBeNull();
     expect(pricingCtaFor(plain, "pro")).toEqual({ kind: "checkout", label: "Switch to Pro" });
-    const below = billingViewerFromProfile({ ...profile, subscription_tier: "pro", comp_tier: "plus" }, { isPaid: true, effectiveTier: "pro" });
-    expect(pricingCtaFor(below, "plus")).toEqual({ kind: "checkout", label: "Switch to Plus" });
+  });
+});
+
+describe("viewerPlanSwitchLock: the page shows the lock the server enforces (P3b)", () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const tailEnd = nowSec + 10 * 86400;
+  const row = {
+    stripe_subscription_id: "sub_1",
+    subscription_status: "active",
+    subscription_tier: "plus",
+    comp_tier: "plus",
+    // The comp has ENDED; its rounded-up coupon still runs (the tail).
+    comp_expires_at: new Date((nowSec - 86400) * 1000).toISOString(),
+  };
+  beforeEach(() => {
+    stripe.retrieve.mockReset();
+  });
+
+  it("the round-up tail locks the grid as it locks the server, read from the subscription", async () => {
+    stripe.retrieve.mockResolvedValue({
+      id: "sub_1",
+      status: "active",
+      metadata: { [COMP_COUPON_GRANT_KEY]: `${nowSec - 40 * 86400}:${nowSec - 86400}:2` },
+      discounts: [{ id: "di_1", end: tailEnd, source: { coupon: "pipglyph_comp_100off_2m" } }],
+    });
+    expect(await viewerPlanSwitchLock(row)).toEqual({ until: new Date(tailEnd * 1000).toISOString() });
+    expect(stripe.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["discounts"] });
+  });
+
+  it("never comped (or no subscription): no Stripe call, no lock", async () => {
+    expect(await viewerPlanSwitchLock({ ...row, comp_tier: null })).toBeNull();
+    expect(await viewerPlanSwitchLock({ ...row, stripe_subscription_id: null })).toBeNull();
+    expect(await viewerPlanSwitchLock(null)).toBeNull();
+    expect(stripe.retrieve).not.toHaveBeenCalled();
+  });
+
+  it("Stripe unreadable: the profile's comp stands in (display only)", async () => {
+    stripe.retrieve.mockRejectedValue(new Error("Stripe down"));
+    const live = { ...row, comp_expires_at: "2099-01-01T00:00:00.000Z" };
+    expect(await viewerPlanSwitchLock(live)).toEqual({ until: "2099-01-01T00:00:00.000Z" });
+    expect(await viewerPlanSwitchLock(row)).toBeNull();
   });
 });

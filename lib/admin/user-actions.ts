@@ -217,17 +217,20 @@ export async function adminSetCompTierAction(input: {
   });
   if (endDateError) return { ok: false, error: endDateError };
 
-  // A comp change (grant, extend, shorten, revoke) while a downgrade is
-  // scheduled RELEASES that schedule first (owner 2026-11-02, BL1): no plan
-  // switch happens while a comp is on, and the schedule's next phase would
-  // carry the subscription's discounts as they were when it was made. If it
-  // can't be released, the comp is NOT changed — never half applied.
-  const hadComp = (target as { comp_tier?: string | null }).comp_tier != null;
+  // A comp that will be PAID FOR in Stripe (coupon, credit, held trial —
+  // the cases that lock the plan) RELEASES a downgrade the user scheduled
+  // first (owner 2026-11-02, BL1): the schedule's next phase would carry
+  // the subscription's discounts as they were when it was made. Any other
+  // comp change (a revoke, a comp below the plan, too short to free an
+  // invoice…) leaves the user's own change alone. If the release fails, the
+  // comp is NOT changed — never half applied. The user is told below.
   let releaseNote: string | null = null;
-  if (tier != null || hadComp) {
-    const release = await releaseScheduleForCompChange(admin, userId);
+  let scheduleCancelled: string | null = null;
+  if (tier != null) {
+    const release = await releaseScheduleForCompChange(admin, userId, { tier, expiresAt });
     if (!release.ok) return { ok: false, error: release.error };
     releaseNote = release.note;
+    scheduleCancelled = release.cancelled;
   }
 
   const { error } = await admin
@@ -282,6 +285,9 @@ export async function adminSetCompTierAction(input: {
             ...(stripeOutcome.coupon.chargedFrom ? { chargedFrom: stripeOutcome.coupon.chargedFrom } : {}),
           }
         : {}),
+      // The user's own scheduled plan change this comp cancelled — they can
+      // schedule it again once the comp ends (lib/notifications/describe.ts).
+      ...(scheduleCancelled ? { scheduleCancelled } : {}),
     },
   });
 

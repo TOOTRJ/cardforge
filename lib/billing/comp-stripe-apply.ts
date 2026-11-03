@@ -18,18 +18,22 @@ import {
   parseCompCreditGrant,
   type CompCreditChange,
   type CompFacts,
+  type CompSubscriptionFacts,
   type CompTrialChange,
 } from "@/lib/billing/comp-stripe";
 import {
   COMP_COUPON_GRANT_KEY,
   activeCompDiscountOf,
   compBillingNeedsReconcile,
+  compBillingReactivated,
   compCouponChangeFor,
   compCouponGrantMeta,
   compCouponId,
   compCouponName,
   compCouponNote,
   compCouponOutlook,
+  compHoldReason,
+  compPaidInStripe,
   compDiscountsOf,
   couponCoveredUntil,
   discountsOf,
@@ -253,17 +257,21 @@ async function applyCoupon(
       coupon = outlookOf(change, facts, kept?.end ?? change.grant.endSec, nowSec);
     } else if (change.kind === "remove") {
       // Our discount(s) off — every one, should two ever be there — and the
-      // grant closed, in one update, WHATEVER the status (a revoke on a plan
-      // in dunning too). Invoices already issued stay as they are.
+      // grant closed (or, for a comp that still holds but frees nothing
+      // more, moved to its new end), in one update, WHATEVER the status (a
+      // revoke on a plan in dunning too). Invoices already issued stay.
       const ours = compDiscountsOf(facts).map((d) => d.id);
+      const grantMeta = change.grantMeta ?? "";
       await stripe.subscriptions.update(
         sub.id,
         {
           ...(ours.length ? { discounts: otherDiscounts.length ? otherDiscounts : "" } : {}),
           proration_behavior: "none",
-          metadata: { [COMP_COUPON_GRANT_KEY]: "" },
+          metadata: { [COMP_COUPON_GRANT_KEY]: grantMeta },
         },
-        { idempotencyKey: `comp-coupon:${sub.id}:remove:${ours.join(",") || "meta"}:${sub.metadata?.[COMP_COUPON_GRANT_KEY] ?? ""}` },
+        {
+          idempotencyKey: `comp-coupon:${sub.id}:remove:${ours.join(",") || "meta"}:${sub.metadata?.[COMP_COUPON_GRANT_KEY] ?? ""}:${grantMeta}`,
+        },
       );
       coupon = { change, freeInvoices: 0, chargedFrom: null };
     } else {
@@ -519,54 +527,71 @@ function failed(userId: string, error: unknown): CompStripeOutcome {
 // --- A comp change while a downgrade is scheduled ----------------------------
 
 export type ScheduleReleaseOutcome =
-  | { ok: true; note: string | null }
+  /** `cancelled`: the plan the released change was to (for the USER's
+   *  notice — "Plus (monthly)"), null when nothing was released. */
+  | { ok: true; note: string | null; cancelled: string | null }
   | { ok: false; error: string };
 
 const TIER_LABEL: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro" };
 
+const NO_RELEASE: ScheduleReleaseOutcome = { ok: true, note: null, cancelled: null };
+
+const READ_FAILED =
+  "Couldn't read their Stripe subscription to check for a scheduled plan change — the comp was not changed. Try again.";
+
 /**
- * BEFORE an admin's comp change (grant, extend, shorten, revoke) touches
- * the profile or Stripe: a downgrade scheduled for the end of the period
+ * BEFORE an admin's comp change (grant, extend, shorten) touches the profile
+ * or Stripe: a downgrade the USER scheduled for the end of the period
  * (lib/stripe/actions.ts scheduleDowngrade) is RELEASED first (owner
- * 2026-11-02, TODO BL1) — its next phase would otherwise carry the
+ * 2026-11-02, TODO BL1) — but ONLY when the comp as saved will be PAID FOR
+ * in Stripe (`compPaidInStripe`: our coupon or credit, or a held trial — the
+ * cases where the plan is locked). Its next phase would otherwise carry the
  * subscription's discounts as they were when it was made, and no switch may
- * happen while a comp is on anyway. `ok: false` = the release (or the read
- * that finds it) failed: the caller must NOT change the comp — never half
- * applied. A subscription with no pending change is left untouched.
+ * happen while the comp holds the plan. A comp that puts nothing on Stripe
+ * (below the plan, no end date, too short to free an invoice, on an ending
+ * plan) or a revoke leaves the user's own change alone (finding P2). The
+ * caller tells the user what was cancelled (`cancelled`, the comp_plan
+ * notification). `ok: false` = the release (or the read that decides it)
+ * failed: the caller must NOT change the comp — never half applied.
  */
 export async function releaseScheduleForCompChange(
   admin: AdminClient,
   userId: string,
-  deps: { stripe?: Stripe } = {},
+  comp: CompFacts,
+  deps: { stripe?: Stripe; now?: Date } = {},
 ): Promise<ScheduleReleaseOutcome> {
-  if (!deps.stripe && !isStripeConfigured()) return { ok: true, note: null };
+  if (!deps.stripe && !isStripeConfigured()) return NO_RELEASE;
   const { data: profile } = await admin
     .from("profiles")
-    .select("stripe_subscription_id, subscription_status")
+    .select("stripe_subscription_id, subscription_status, subscription_tier")
     .eq("id", userId)
     .maybeSingle();
   const subId = profile?.stripe_subscription_id ?? null;
   const status = profile?.subscription_status ?? null;
-  if (!subId || status === "canceled" || status === "incomplete_expired") return { ok: true, note: null };
+  if (!subId || status === "canceled" || status === "incomplete_expired") return NO_RELEASE;
   const stripe = deps.stripe ?? getStripe();
   let sub: Stripe.Subscription;
+  let subscribedTier: PlanTier;
   try {
-    sub = await stripe.subscriptions.retrieve(subId, { expand: ["schedule.phases.items.price"] });
+    sub = await stripe.subscriptions.retrieve(subId, { expand: ["discounts", "schedule.phases.items.price"] });
+    subscribedTier =
+      (await resolveSubscriptionTier(sub, stripe)) ?? ((profile?.subscription_tier ?? "free") as PlanTier);
   } catch (error) {
     console.warn(
       `releaseScheduleForCompChange(${userId}): read failed`,
       error instanceof Error ? error.message : error,
     );
-    return {
-      ok: false,
-      error: "Couldn't read their Stripe subscription to check for a scheduled plan change — the comp was not changed. Try again.",
-    };
+    return { ok: false, error: READ_FAILED };
   }
   const schedule = sub.schedule;
-  if (!schedule) return { ok: true, note: null };
+  if (!schedule) return NO_RELEASE;
+  const facts = sub as unknown as CouponSubFacts & CompSubscriptionFacts;
+  // Never decide on a guess about which discount is ours.
+  if (discountsOf(facts).unreadable) return { ok: false, error: READ_FAILED };
+  if (!compPaidInStripe({ sub: facts, subscribedTier, comp, now: deps.now })) return NO_RELEASE;
   const pending = typeof schedule === "string" ? null : pendingChangeOf(schedule as unknown as ScheduleLike);
   // A schedule with no phase ahead changes nothing at a phase boundary.
-  if (typeof schedule !== "string" && !pending) return { ok: true, note: null };
+  if (typeof schedule !== "string" && !pending) return NO_RELEASE;
   try {
     await releasePendingChange(stripe, sub);
   } catch (error) {
@@ -582,7 +607,11 @@ export async function releaseScheduleForCompChange(
   const to = pending?.tier
     ? `${TIER_LABEL[pending.tier] ?? pending.tier}${pending.interval ? ` (${pending.interval === "year" ? "annual" : "monthly"})` : ""}`
     : "another plan";
-  return { ok: true, note: `The scheduled change to ${to} was cancelled.` };
+  return {
+    ok: true,
+    note: `The scheduled change to ${to} was cancelled (the user is told they can schedule it again after the comp).`,
+    cancelled: to,
+  };
 }
 
 // --- The webhook's safety net -----------------------------------------------------
@@ -603,8 +632,12 @@ export async function reconcileCompBilling(
   eventSub: Stripe.Subscription,
   subscribedTier: PlanTier | null,
   now?: Date,
+  /** The event's `previous_attributes` — a plan brought back to billing
+   *  (resumed, or paid up after dunning) re-applies a comp still running. */
+  previous?: Partial<Stripe.Subscription> | null,
 ): Promise<CompStripeOutcome | null> {
-  if (eventSub.status !== "active" || !hasCompCouponGrant(eventSub.metadata)) return null;
+  const reactivated = compBillingReactivated(eventSub, previous);
+  if (!reactivated && (eventSub.status !== "active" || !hasCompCouponGrant(eventSub.metadata))) return null;
   try {
     const { data } = await admin.from("profiles").select("comp_tier, comp_expires_at").eq("id", userId).maybeSingle();
     const row = data as { comp_tier?: string | null; comp_expires_at?: string | null } | null;
@@ -612,6 +645,19 @@ export async function reconcileCompBilling(
       tier: row?.comp_tier === "plus" || row?.comp_tier === "pro" ? row.comp_tier : null,
       expiresAt: row?.comp_expires_at ?? null,
     };
+    // Resumed / recovered: a comp saved while the plan couldn't take it —
+    // an ending plan frees no invoice, dunning gets nothing — is applied
+    // now, if it still holds the plan (P3d). The webhook is the ONE writer
+    // for this (never also the resume action): two applies racing on the
+    // credit path could each open a grant and credit the period twice.
+    // Idempotent: a comp already on Stripe is kept as it is.
+    if (reactivated) {
+      const nowSec = Math.floor((now ?? new Date()).getTime() / 1000);
+      if (!subscribedTier || compHoldReason(comp, subscribedTier, nowSec) != null) return null;
+      const outcome = await applyCompToSubscription(admin, userId, comp, { stripe, now });
+      if (outcome.failed) console.warn(`reconcileCompBilling(${userId}) after reactivation: ${outcome.note}`);
+      return outcome;
+    }
     if (!compBillingNeedsReconcile({ sub: eventSub as unknown as CouponSubFacts, subscribedTier, comp, now })) return null;
     const outcome = await applyCompToSubscription(admin, userId, comp, { stripe, now });
     if (outcome.failed) console.warn(`reconcileCompBilling(${userId}): ${outcome.note}`);

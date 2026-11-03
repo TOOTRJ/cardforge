@@ -1,4 +1,5 @@
-import { activeCompDiscountOf, type CouponSubFacts } from "@/lib/billing/comp-coupon";
+import { activeCompDiscountOf, parseCompCouponGrant, type CouponSubFacts } from "@/lib/billing/comp-coupon";
+import { TRIAL_END_BEFORE_COMP_KEY, parseCompCreditGrant } from "@/lib/billing/comp-stripe";
 import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { dateTextToString, type DateText } from "@/lib/format/dates";
 
@@ -18,16 +19,47 @@ import { dateTextToString, type DateText } from "@/lib/format/dates";
 // plan switching (lib/stripe/portal.ts). After the comp's end it all opens
 // again by itself.
 //
-// "A comp holds the plan": an UNEXPIRED comp at or above the tier the live
-// subscription pays for (`compOverLiveSubscription`'s rule), on a
-// subscription Stripe still has (trialing, active, or in dunning). A comp
-// below the plan changes nothing in Stripe, so it locks nothing. The comp is
-// the PROFILE's — never something read from Stripe: a failed Stripe read
-// can never claim a comp.
+// THE lock is `subscriptionCompLock`: the plan is locked exactly while the
+// comp is PAID FOR IN STRIPE on that subscription (finding P3a) — our coupon
+// grant open or our discount still running (the 15-day round-up can outlive
+// the comp), a #688 credit grant open, or a trial held by a comp — until the
+// latest of their ends. A comp that put nothing on Stripe (below the plan,
+// no end date, too short to free an invoice, a plan set to end) locks
+// nothing: its payer pays full price and may switch. Every SERVER decision
+// reads it from the subscription (lib/stripe/plan-switch-lock.ts). A failed
+// read never claims a comp: the server refuses with a plain retry line.
+//
+// `compPlanSwitchLock` (the profile's comp alone) is only the storefront's
+// FALLBACK when Stripe can't be read for the page — never a server decision.
 // ---------------------------------------------------------------------------
 
 /** Subscription statuses a comp's billing can sit on. */
-const LOCKABLE_STATUSES: ReadonlySet<string> = new Set(["trialing", "active", "past_due", "unpaid"]);
+const LOCKABLE_STATUSES: ReadonlySet<string> = new Set(["trialing", "active", "past_due", "unpaid", "paused"]);
+
+export type CompLockSubFacts = CouponSubFacts & { trial_end?: number | null };
+
+/** The plan's lock from Stripe's own record of the comp (`sub` read with its
+ *  discounts EXPANDED; a bare discount id reads as none of ours — callers
+ *  expand whenever our coupon grant is named). */
+export function subscriptionCompLock(sub: CompLockSubFacts, nowSec: number): PlanSwitchLock | null {
+  if (!LOCKABLE_STATUSES.has(sub.status ?? "")) return null;
+  const at = (sec: number): PlanSwitchLock => ({ until: new Date(sec * 1000).toISOString() });
+  let lock: PlanSwitchLock | null = null;
+  const coupon = parseCompCouponGrant(sub.metadata);
+  if (coupon && coupon.endSec > nowSec) lock = laterPlanSwitchLock(lock, at(coupon.endSec));
+  lock = laterPlanSwitchLock(lock, couponPlanSwitchLock(sub, nowSec));
+  const credit = parseCompCreditGrant(sub.metadata);
+  if (credit && credit.endSec > nowSec) lock = laterPlanSwitchLock(lock, at(credit.endSec));
+  if (
+    sub.status === "trialing" &&
+    sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY] &&
+    typeof sub.trial_end === "number" &&
+    sub.trial_end > nowSec
+  ) {
+    lock = laterPlanSwitchLock(lock, at(sub.trial_end));
+  }
+  return lock;
+}
 
 export type PlanSwitchLock = {
   /** ISO end of the comp (null: a legacy comp with no end date). */
