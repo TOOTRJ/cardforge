@@ -3,6 +3,7 @@
 import { withPrintedTypes, withPrintedTypesUpdate } from "@/lib/cards/type-line-field";
 import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
+import { addCardAiFields, inheritedAiParts, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
 import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import {
@@ -653,6 +654,16 @@ export async function createCardAction(
     };
   }
 
+  // AI provenance (TODO CP1, migration 0162): the parts the creator claims
+  // AI wrote — kept only where a receipt the server wrote holds the same
+  // text as the row — and a remix's parts that are still its parent's AI
+  // text. Written by the service role (an API role can't name the column);
+  // the pictures are derived by the database itself. Never fails the save.
+  await addCardAiFields(row.id, user.id, [
+    ...(await verifiedAiClaims(user.id, data.ai_fields, insert)),
+    ...inheritedAiParts(parent, insert),
+  ]);
+
   // Drop the card into its chosen deck as a custom-only mainboard entry,
   // with how it got there (options.deckEntry; the creator's add by
   // default). Best-effort — a deck hiccup never rolls back the card save. A
@@ -1225,6 +1236,17 @@ export async function updateCardAction(
       ok: false,
       formError: error?.message ?? "Could not update card.",
     };
+  }
+
+  // AI provenance (TODO CP1, migration 0162): the database dropped every
+  // part this edit changed; a part the creator claims (a new AI fill or
+  // idea, unchanged since) is added back where a receipt holds its text.
+  if (data.ai_fields?.length) {
+    await addCardAiFields(
+      row.id,
+      user.id,
+      await verifiedAiClaims(user.id, data.ai_fields, { ...existing, ...update }),
+    );
   }
 
   const ownerUsername = await getCurrentUsername();

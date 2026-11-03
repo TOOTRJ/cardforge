@@ -16,7 +16,7 @@ describe("the card page's layout", () => {
   });
 
   it("keeps the text details, the JSON-LD and the breadcrumbs for every viewer", () => {
-    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} />");
+    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} />");
     expect(page).toMatch(/const jsonLd =\s*isShareable\s*\? buildCardJsonLd\(/);
     expect(page).toContain("breadcrumbJsonLd([");
     expect(page).toContain('<nav aria-label="Breadcrumb"');

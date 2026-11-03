@@ -1,5 +1,6 @@
 "use client";
 
+import { aiFieldClaims, fillWrittenParts, recordAiOrigins, type AiFieldOrigins } from "@/lib/cards/ai-provenance";
 import {
   memo,
   useCallback,
@@ -1181,6 +1182,14 @@ export function CardCreatorForm({
   // A remix's one nickname clear (owner N3, "Clear once"): spent by the
   // first rename — by hand (clearRemixNicknameOnRename), an idea or a fill.
   const remixNicknameClearedRef = useRef(false);
+  // What AI wrote into this form, part by part (TODO CP1,
+  // lib/cards/ai-provenance.ts): an AI fill or idea records the parts it
+  // wrote; a save CLAIMS those whose value is still exactly the AI's, and
+  // the server keeps a claim only where its receipt holds the same text. A
+  // part the maker rewrote is simply no longer claimed — no reset needed.
+  // (A holder object, not a ref: the save reads it while its handler is
+  // built, which the compiler's ref rule forbids.)
+  const [aiOrigins] = useState<{ parts: AiFieldOrigins }>(() => ({ parts: new Map() }));
   // The hand rename's clear, ONE rule for the two moments it is read: the
   // maker leaving the title field, and a save that never left it (Enter in
   // the title submitted with no blur until TODO 3b.21 — kept for any submit
@@ -2847,6 +2856,14 @@ export function CardCreatorForm({
         seedStructuredRows(patchedKind, patch.rules_text);
       }
     }
+
+    // The idea's parts, as the AI wrote them (TODO CP1). The type line is
+    // locked while revising, so a revise never takes it.
+    recordAiOrigins(
+      aiOrigins.parts,
+      fillWrittenParts(patch, { revise: isRevise }),
+      { ...patch, subtypes: patch.subtypes_text !== undefined ? parseSubtypes(patch.subtypes_text) : undefined },
+    );
   };
 
   // Apply a Scryfall import payload. Fields not present in the patch are
@@ -3680,6 +3697,8 @@ export function CardCreatorForm({
       setValue("frame_style.firstPartColor", fill.first_part_color, { shouldDirty: true });
     }
     if (filledFrame) settleTokenTextFollow();
+    // The fill's parts, as the AI wrote them (TODO CP1).
+    recordAiOrigins(aiOrigins.parts, fillWrittenParts(fill, { revise: isRevise }), fill);
   };
 
   const handleAiFill = async (options: AiFillOptions): Promise<void> => {
@@ -4344,6 +4363,12 @@ export function CardCreatorForm({
       // frame_style.
       ...(isEdit && card ? { frame_anatomy: frameAnatomyPatchFor(card, values) } : {}),
     };
+
+    // The parts AI wrote that this save still holds as written (TODO CP1):
+    // a claim the server checks against its receipts. Absent otherwise, so
+    // every other save's payload is what it was.
+    const aiClaims = aiFieldClaims(aiOrigins.parts, payload);
+    if (aiClaims.length > 0) Object.assign(payload, { ai_fields: aiClaims });
 
     startTransition(async () => {
       const applyFieldErrors = (

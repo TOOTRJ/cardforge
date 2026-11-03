@@ -1384,6 +1384,35 @@ Rules and gotchas:
   jobs and the deck remix save what they did (no server-side tagging — it
   would put back a tag the maker removed). A creator import is a new card:
   it follows.
+- AI provenance (TODO CP1, migration 0162): `cards.ai_fields` = the PARTS
+  whose current content AI wrote (`title`, `cost`, `type_line`,
+  `rules_text`, `flavor_text`, `stats`, `art` and `back.…`;
+  `lib/cards/ai-provenance.ts` is the ONE vocabulary and the page's rule —
+  "Card generated with AI" = every text part the card has is AI's, "AI
+  helped with parts" = some, "Art generated with AI" on its own). The
+  database keeps it honest (`cards_track_ai_fields`): an API role never
+  writes the list (insert naming a part / update changing it →
+  insufficient_privilege), an API role's edit that CHANGES a part's columns
+  drops that part (never guessed from text; the rules part is `rules_text`
+  AND rows `face_content` already held — NULL → rows is an untouched edit's
+  dual write and drops nothing; `printed_types`' NULL and "" are two
+  values), and the
+  ART parts are derived
+  on every write from the picture's address — only `persistGeneratedArt`
+  names a `card-art/<user>/ai-…` object (a remix copy keeps the prefix,
+  `remix-media.ts`); never give another writer that prefix. Text parts are
+  added by the service role alone (`add_card_ai_fields`, through
+  `lib/cards/ai-provenance-server.ts`): the AI jobs for the cards they write
+  (never in the card action's payload — the pinned payloads stay main's), and
+  the card actions for the creator's CLAIMS (`ai_fields` on the payload, sent
+  only when non-empty: the parts an AI fill / idea wrote that the field still
+  holds), each kept only where a server-written `card_ai_receipts` row holds
+  the same text — written when the SERVER plans it (the fill job, the card /
+  deck job's design, every ideas batch), never from a job row's `plan`,
+  which its owner may insert (0059); a remix inherits its parent's unchanged
+  AI parts (a deck remix's names are made in its step). A new AI path that
+  writes card text records a receipt at plan time or marks its card from
+  server-held output; page data only — no renderer or bake reads it.
 - Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
   FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
   italic — stored as typed (no migration), read ONLY through

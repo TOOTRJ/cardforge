@@ -118,6 +118,10 @@ export const REVISABLE_PAYLOAD_KEYS = [
   // a colour pair only ever refines a multicolour card
   // (lib/cards/anatomy.ts applyFrameAnatomyPatch).
   "frame_anatomy",
+  // The parts the creator says AI wrote and the edit left as written (TODO
+  // CP1) — a CLAIM the server checks against its receipts; sent only when
+  // there is one.
+  "ai_fields",
 ] as const;
 
 export type RevisablePayloadKey = (typeof REVISABLE_PAYLOAD_KEYS)[number];
