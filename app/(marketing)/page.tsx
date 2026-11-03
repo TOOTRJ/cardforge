@@ -24,6 +24,7 @@ import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
+import { FeaturedDeckThemes } from "@/components/decks/featured-deck-themes";
 import { CardGrid, CARD_GRID_SIZES } from "@/components/cards/card-grid";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
@@ -103,6 +104,31 @@ export default async function HomePage() {
           <PlaceholderGallery />
         )}
       </PageContainer>
+
+      {/* The admin's featured themed decks (migration 0167) — the cards
+          above, in play. Cookie-free like the rest of the page; no live
+          theme: no section. */}
+      {isSupabaseConfigured() ? (
+        // No skeleton: the page is prerendered (ISR), and a panel that may
+        // turn out to have no theme must not flash in and out.
+        <Suspense fallback={null}>
+          <FeaturedDeckThemes
+            maxThemes={2}
+            likeRedirect="/"
+            frame={(section) => (
+              <PageContainer size="wide" className="pb-12">
+                {section}
+              </PageContainer>
+            )}
+            action={
+              <Link href="/decks" className="inline-flex items-center gap-1 text-sm font-medium text-primary-bright underline-offset-4 hover:underline">
+                All community decks
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            }
+          />
+        </Suspense>
+      ) : null}
 
       <FeatureGrid />
 

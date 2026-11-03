@@ -108,7 +108,8 @@ export function DeckTile({
   /** "owner" = My decks: the deck's visibility instead of the author, and
    *  the counts as text (no heart for one's own deck). */
   variant?: "public" | "owner";
-  headingLevel?: "h2" | "h3";
+  /** "h4" under a sub-heading of its own (a featured theme's). */
+  headingLevel?: "h2" | "h3" | "h4";
   /** The cover's next/image `sizes` — the grid's column width. */
   sizes?: string;
   /** Where a signed-out heart returns after the login. */

@@ -298,6 +298,72 @@ export async function listTrendingDecks(limit = DECK_ROW_MAX): Promise<PublicDec
   }
 }
 
+/** "Discover" on /decks (migration 0167's `list_discover_decks`): a
+ *  weighted shuffle of public, non-empty decks of real creators — a deck of
+ *  10+ cards and a liked or viewed one come up more often
+ *  (lib/decks/discover.ts). One shuffle per `seed`. Cookie-free (the
+ *  landing stays ISR); a database 0167 hasn't reached lists none. */
+export async function listDiscoverDecks(seed: string, limit = 24): Promise<PublicDeckListing[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_discover_decks", { p_seed: seed, p_limit: limit });
+    if (error || !Array.isArray(data) || data.length === 0) return [];
+    return await hydratePublicDecks(supabase, data, null);
+  } catch {
+    return [];
+  }
+}
+
+export type FeaturedDeckTheme = {
+  id: string;
+  title: string;
+  blurb: string | null;
+  decks: PublicDeckListing[];
+};
+
+/** "Featured themed decks" (/decks and the home page; migration 0167): the
+ *  admin's live themes in order, each with its decks a visitor may see —
+ *  public, non-empty, a real creator's — read through ONE function,
+ *  `list_featured_deck_themes` (the pick tables grant the API roles
+ *  nothing). The decks are then read as every public list reads them (the
+ *  public client, `visibility = public` again) and hydrated once for all
+ *  themes. A theme left with no deck is left out. Cookie-free. */
+export async function listFeaturedDeckThemes(
+  options: { themes?: number; decksPerTheme?: number } = {},
+): Promise<FeaturedDeckTheme[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { themes = 3, decksPerTheme = DECK_ROW_MAX } = options;
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_featured_deck_themes", {
+      p_themes: themes,
+      p_decks: decksPerTheme,
+    });
+    if (error || !Array.isArray(data) || data.length === 0) return [];
+    const ids = Array.from(new Set(data.flatMap((row) => row.deck_ids ?? [])));
+    if (ids.length === 0) return [];
+    const { data: rows } = await supabase
+      .from("decks")
+      .select("*")
+      .in("id", ids)
+      .eq("visibility", "public")
+      .gt("card_count", 0);
+    const listed = await hydratePublicDecks(supabase, rows ?? [], null);
+    const byId = new Map(listed.map((deck) => [deck.id, deck]));
+    return data
+      .map((row) => ({
+        id: row.theme_id,
+        title: row.title,
+        blurb: row.blurb,
+        decks: (row.deck_ids ?? []).flatMap((id) => byId.get(id) ?? []),
+      }))
+      .filter((theme) => theme.decks.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 /** Public decks by one creator — the profile page's "Decks by X" section.
  *  Cookie-free public client + likes off the denormalized column, so the
  *  caller stays viewer-independent. Empty decks are left out (DK0.8), as

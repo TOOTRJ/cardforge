@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Compass, Sparkles, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -14,6 +14,7 @@ import {
   CommanderCardsSectionSkeleton,
 } from "@/components/decks/commander-row";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
+import { FeaturedDeckThemes, FeaturedDeckThemesSkeleton } from "@/components/decks/featured-deck-themes";
 import {
   DeckGrid,
   DECK_GRID_SIZES,
@@ -21,7 +22,9 @@ import {
   DeckTileSkeleton,
 } from "@/components/decks/deck-tile";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
-import { listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
+import { listDiscoverDecks, listPublicDecks, type PublicDecksSort } from "@/lib/decks/queries";
+import { DISCOVER_DECKS_MAX } from "@/lib/decks/discover";
+import { discoverSeedNow } from "@/lib/cards/discover";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { listCommanderCards } from "@/lib/cards/queries";
 import { randomId } from "@/lib/ids";
@@ -35,9 +38,13 @@ import { PageContainer } from "@/components/layout/page-container";
 // The community decks browse is two routes with one result grid:
 //
 //   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
-//     on top, then "Trending now" (the week's most-liked decks, TODO DK8.2),
-//     "Cards to build around" (public legendary creatures, a random sample
-//     per regeneration, DK8.4) and the newest public decks. Never reads searchParams, so it stays on the CDN.
+//     on top, then "Featured themed decks" (the admin's themes, migration
+//     0167), "Trending now" (the week's most-liked decks, TODO DK8.2 — the
+//     gallery's glowing hero block), "Cards to build around" (public
+//     legendary creatures, a random sample per regeneration, DK8.4) and
+//     "Discover" (a weighted shuffle of non-empty decks, 0167 — it replaced
+//     "Newest public decks", which ordered by the last EDIT). Never reads
+//     searchParams, so it stays on the CDN.
 //   - /decks/browse (DecksBrowse) → dynamic. Search, the sort, the format
 //     chips and one creator's decks (?owner=, a profile's "See all decks";
 //     DK8.5) with the results; every control navigates WITHIN this route
@@ -138,12 +145,22 @@ export function DecksLanding() {
         </Suspense>
       ) : null}
 
-      {/* The week's most-liked decks, then the commanders to build around.
-          Both rows hide themselves when they have nothing to show. */}
+      {/* The admin's featured themes, then the week's most-liked decks —
+          the two headline blocks, each its own glow — then the commanders
+          to build around. Each hides itself when it has nothing to show. */}
       {configured ? (
         <div className="mt-10">
-          <Suspense fallback={<DeckRowSkeleton />}>
+          <Suspense fallback={<FeaturedDeckThemesSkeleton />}>
+            <FeaturedDeckThemes />
+          </Suspense>
+        </div>
+      ) : null}
+      {configured ? (
+        <div className="mt-10">
+          <Suspense fallback={<DeckRowSkeleton variant="hero" />}>
             <TrendingDecksRow
+              variant="hero"
+              heading="Hot this week"
               description="Public decks picking up likes in the last 7 days."
               href={`${DECKS_BROWSE_PATH}?sort=popular`}
               hrefLabel="See the most liked"
@@ -159,24 +176,70 @@ export function DecksLanding() {
         </div>
       ) : null}
 
-      <div className="mt-12 flex flex-col gap-1">
-        <h2 className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-          Newest public decks
-        </h2>
-        <p className="max-w-2xl text-sm leading-6 text-muted">
-          The latest builds published by the community.
-        </p>
-      </div>
-      <div className="mt-6">
-        {!configured ? (
-          <DecksOffline />
-        ) : (
-          <Suspense fallback={<DecksSkeletonGrid count={PAGE_SIZE} />}>
-            <PublicDecksResults page={1} sort="recent" />
-          </Suspense>
-        )}
-      </div>
+      <section aria-labelledby="discover-decks-heading" className="mt-12 border-t border-border/40 pt-8">
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+            <Compass className="h-3.5 w-3.5" aria-hidden />
+            Discover
+          </span>
+          <h2
+            id="discover-decks-heading"
+            className="font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+          >
+            Explore community decks
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted">
+            A fresh shuffle on every visit — full decks of 10 cards or more and the ones the community likes and views turn up more often, but every deck gets its turn.
+          </p>
+        </div>
+        <div className="mt-6">
+          {!configured ? (
+            <DecksOffline />
+          ) : (
+            <Suspense fallback={<DecksSkeletonGrid count={DISCOVER_DECKS_MAX} />}>
+              <DiscoverDecks />
+            </Suspense>
+          )}
+        </div>
+      </section>
     </PageContainer>
+  );
+}
+
+/** "Discover" on /decks (migration 0167, lib/decks/discover.ts): a weighted
+ *  shuffle of public, non-empty decks of real creators — never an empty
+ *  deck, a deck of 10+ cards and a liked or viewed one more often. A fresh
+ *  seed per ISR bake (the gallery's time bucket), so the grid changes
+ *  between visits and the page stays static. */
+async function DiscoverDecks() {
+  const decks = await listDiscoverDecks(discoverSeedNow(), DISCOVER_DECKS_MAX);
+  if (decks.length === 0) {
+    return (
+      <EmptyState
+        icon={BookOpen}
+        title="No public decks yet"
+        description="Be the first to publish a public deck — they'll show up here for everyone."
+        action={<NewDeckButton>Build a deck</NewDeckButton>}
+      />
+    );
+  }
+  const art = await listDeckTileArt(decks, { anonymous: true });
+  return (
+    <>
+      <DeckGrid>
+        {decks.map((deck) => (
+          <DeckTile key={deck.id} deck={deck} art={art.get(deck.id)} sizes={DECK_GRID_SIZES} />
+        ))}
+      </DeckGrid>
+      <div className="mt-10 flex justify-center border-t border-border/40 pt-6">
+        <Button asChild variant="outline">
+          <Link href={DECKS_BROWSE_PATH}>
+            Browse every deck
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </Button>
+      </div>
+    </>
   );
 }
 
