@@ -13,6 +13,7 @@ import {
   compCreditChangeFor,
   compCreditLedgerKey,
   compCreditNote,
+  compCreditOpenKey,
   compStripeNote,
   compTrialChangeFor,
   parseCompCreditGrant,
@@ -299,6 +300,19 @@ function outlookOf(change: CompCouponChange, sub: CouponSubFacts, endSec: number
   };
 }
 
+/** Stripe refused a request for its idempotency key: the key was used with
+ *  other parameters (`idempotency_error`) or is in flight right now (409). */
+function isIdempotencyConflict(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { type?: unknown; statusCode?: unknown; raw?: { type?: unknown } };
+  return (
+    e.type === "StripeIdempotencyError" ||
+    e.type === "idempotency_error" ||
+    e.raw?.type === "idempotency_error" ||
+    e.statusCode === 409
+  );
+}
+
 /** Error codes the Stripe SDK puts on a StripeError. */
 function stripeCode(error: unknown): string | null {
   if (!error || typeof error !== "object") return null;
@@ -360,6 +374,7 @@ async function applyCreditPath(
   comp: CompFacts,
   now: Date | undefined,
   userId: string,
+  reread = false,
 ): Promise<CompStripeOutcome> {
   const nowSec = Math.floor((now ?? new Date()).getTime() / 1000);
   const facts = sub as unknown as CouponSubFacts;
@@ -390,6 +405,18 @@ async function applyCreditPath(
   // leaves the coupon on and the credit's grant named — a re-save finds the
   // grant and its ledger (nothing posted twice) and takes the coupon off.
   const settled = await settleCredit(stripe, sub, subscribedTier, change, userId);
+  if (settled.raced) {
+    // Another apply of this comp opened the grant first (item 3): settle on
+    // ITS grant — re-read once, never a second opening.
+    if (reread) return failed(userId, new Error("comp credit grant opening raced twice"));
+    let fresh: Stripe.Subscription;
+    try {
+      fresh = await stripe.subscriptions.retrieve(sub.id, { expand: SUB_EXPAND });
+    } catch (error) {
+      return failed(userId, error);
+    }
+    return applyCreditPath(stripe, fresh, subscribedTier, comp, now, userId, true);
+  }
   if (settled.failed || !takeOff) return settled.outcome;
   try {
     await stripe.subscriptions.update(sub.id, takeOff);
@@ -417,7 +444,7 @@ async function settleCredit(
   subscribedTier: PlanTier,
   change: CompCreditChange,
   userId: string,
-): Promise<{ outcome: CompStripeOutcome; failed: boolean; credit: CompStripeOutcome["credit"] }> {
+): Promise<{ outcome: CompStripeOutcome; failed: boolean; credit: CompStripeOutcome["credit"]; raced?: true }> {
   const price = sub.items?.data?.[0]?.price ?? null;
   const currency = price?.currency ?? "usd";
   const money = (cents: number) => formatMoney(cents, currency);
@@ -446,9 +473,22 @@ async function settleCredit(
   let keptCents = 0;
   try {
     // A NEW grant is named on the subscription before any money moves: a
-    // re-save after a failure finds the same grant and its ledger.
+    // re-save after a failure finds the same grant and its ledger. The write
+    // is keyed by the state it replaces (`compCreditOpenKey`): of two
+    // applies racing from one state, only the first opens a grant.
     if (change.opensGrant) {
-      await stripe.subscriptions.update(sub.id, { metadata: { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } });
+      try {
+        await stripe.subscriptions.update(
+          sub.id,
+          { metadata: { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } },
+          { idempotencyKey: compCreditOpenKey(sub.id, sub.metadata?.[COMP_CREDIT_GRANT_KEY]) },
+        );
+      } catch (error) {
+        if (isIdempotencyConflict(error)) {
+          return { outcome: { change: null, trialEnd: null, note: null, failed: true }, failed: true, credit: null, raced: true };
+        }
+        throw error;
+      }
     }
     const target = periodCreditCents({
       price,

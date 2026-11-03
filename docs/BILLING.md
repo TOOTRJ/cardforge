@@ -921,10 +921,18 @@ credit below — a 100 % coupon there would free the whole year.
   that still holds the plan — the coupon (or credit, or held trial) it
   couldn't take when saved goes on now; one already there is kept.
   The WEBHOOK is the one writer for this, not the resume action as well:
-  two applies racing on the credit path could each open a grant and credit
-  the period twice (the coupon path is safe — `discounts` replaces the
-  list), and the webhook covers every way back (in-app, portal, dashboard,
-  a retried payment).
+  it covers every way back (in-app, portal, dashboard, a retried payment).
+  A re-apply racing an admin's save of the same comp credits once (the
+  grant opening is keyed, below — round-3 item 3).
+  While the plan is set to end, the comp is NOT on Stripe yet, so the
+  subscription locks nothing — but `createCheckoutSessionAction` refuses
+  every switch on an ending live plan while the PROFILE's comp would hold
+  its current tier (`compHoldReason` → null; round-3 item 4): a downgrade
+  would resume the plan first, the re-apply would then put the comp on,
+  and the downgrade's schedule would sit on a plan the comp pays for. The
+  storefront shows the same lock (`viewerPlanSwitchLock` →
+  `endingPlanCompLock`, read from the profile's `cancel_at_period_end` /
+  `subscription_ends_at`). Resume first; switch after the comp.
 - **#688 balance credits are NOT migrated** (owner 2026-11-02). A monthly
   plan comped by #688's credit before BL1 keeps the credit until it runs
   out; a re-save while it runs stays on the credit path (extend / shorten
@@ -951,10 +959,16 @@ credit below — a 100 % coupon there would free the whole year.
     `comp_locked`, the date a `<LocalDateText>` in the viewer's zone). The
     pages read the SAME lock (`viewerPlanSwitchLock`,
     `lib/stripe/plan-switch-lock.ts`: one Stripe read, only for a profile
-    that has ever been comped — `comp_tier` set, an expired comp too —
-    so the round-up's tail shows; finding P3b). If Stripe can't be read
-    the page shows the profile's comp (`compPlanSwitchLock`) — display
-    only, the server decides on its own read;
+    whose comp is current, has no end, or ended within the last 45 days
+    (`compMayStillLock`, `COMP_LOCK_TAIL_DAYS` — an expired comp too, so
+    the round-up's tail shows, finding P3b; `comp_tier` is never cleared
+    on expiry, so an older comp costs no call on every page load — round-3
+    item 1). The read waits at most 3 s with no retry
+    (`STOREFRONT_LOCK_READ_TIMEOUT_MS`, never the SDK's 80 s default). If
+    Stripe can't be read in time the page shows the profile's comp
+    (`compPlanSwitchLock`) — display only, the server decides on its own
+    read; a subscription Stripe says is gone (`resource_missing`) locks
+    nothing;
   - `createCheckoutSessionAction` refuses every switch (upgrade, downgrade,
     monthly ↔ annual, a trial's switch, a no-card trial's superseding
     checkout, a plan set to end) BEFORE anything is touched — a pending
@@ -1012,15 +1026,34 @@ credit below — a 100 % coupon there would free the whole year.
     and before the coupon goes on carries the old discounts into its phase.
     The phase change is a `customer.subscription.updated`, so the safety
     net re-runs the comp there. Narrow.
-  - *two admins save at once*: each update is idempotent per grant; the
-    coupon path's `discounts` replaces the whole list (never two of ours);
-    the credit path is keyed by the grant's start, so two DIFFERENT comps
-    saved at the same second could each settle — the profile row is the
-    last writer and a re-save settles the balance to it.
-  - *a resume / a dunning recovery while the admin saves*: the webhook's
-    re-apply and the admin's apply can run together; on the coupon path
-    the later write wins with the same coupon, on the credit path see the
-    previous line (a re-save settles it).
+  - *two applies at once* (two admins, or an admin's save beside the
+    webhook's re-apply after a resume / a dunning recovery): the coupon
+    path's `discounts` replaces the whole list (never two of ours; the
+    later write wins with the same coupon). On the credit path the write
+    that OPENS a grant is keyed by the grant metadata it replaces
+    (`compCreditOpenKey`: `comp-credit-open:<sub>:<prior meta or none>`),
+    so of two applies racing from one state — even seconds apart, each
+    with its own `startSec = now` — Stripe runs the first and refuses the
+    second (`idempotency_error`, or 409 while the first is in flight). The
+    second re-reads the subscription ONCE and settles on the first's grant
+    (one ledger key; its post deduped by the post's own key); a second
+    refusal fails safe — nothing posted, "save the comp again". A revoke
+    writes `released:<start>:<at>` instead of clearing the key, so a later
+    legitimate grant (even the same end within 24 h) never reuses an
+    opening key. Two DIFFERENT comps (another end date) saved at once still
+    settle on ONE grant — the second re-reads the first's and settles its
+    own end on it; the profile row is the last writer and a re-save
+    settles the balance to it (round-3 item 3).
+  - *a comp BELOW the plan, then the user's own downgrade onto the comp's
+    tier* (known under-give, documented — round-3 item 5): a comp below
+    the plan puts nothing on Stripe and locks nothing, so the user may
+    downgrade; when the schedule's phase change lands them on the comp's
+    tier, nothing re-applies the comp (the safety net only acts on a
+    subscription naming an open coupon grant, or one brought back to
+    billing). The comped user then PAYS for a plan their comp covers until
+    an admin re-saves the comp. It never over-gives; the admin toast at
+    save time already says "The comp is below their plan, so it changes
+    nothing."
 - **What people see.** The admin's toast: "Their next 3 monthly invoices are
   free — a 100%-off complimentary coupon on their Stripe subscription.
   Billing resumes as usual on Feb 20, 2027 UTC." (`compCouponNote`). The
@@ -1065,7 +1098,13 @@ Billing → Customer portal → "Add a configuration", or the API's
 Until it is set the app FAILS CLOSED: a comped customer's portal home is
 refused with the lock's line, and only the card and cancel flows open
 (they return to the app). A malformed value (not `bpc_…`) counts as unset.
-Nothing else reads it; a customer without a comp keeps the default portal.
+Nothing else reads it. A customer whose subscription reads with NO comp
+lock — never comped, or a subscription Stripe says no longer exists
+(`resource_missing`: no lock, round-3 item 2) — keeps the default portal.
+A TRANSIENT read failure (a timeout, a 5xx) is treated as locked: the card
+and cancel flows still open, the home only on the no-switch configuration
+— until it is set that customer sees "Couldn't open the billing portal.
+Try again." for the home, whether or not they were ever comped.
 
 **Also turn OFF the two doors to the DEFAULT configuration** that the app
 doesn't open (finding P2 / P3c of the second check — both use the default
@@ -1154,7 +1193,13 @@ NEGATIVE customer-balance transaction, a claw-back a POSITIVE one.
   of the same comp posts nothing. The Stripe idempotency key is
   `comp:<sub>:<start>:<posted>-><target>:credit|clawback`, so a retried
   request or two admins saving at once post once. A grant whose end has
-  passed is finished; the next comp opens a new one.
+  passed is finished; the next comp opens a new one. The metadata write
+  that OPENS a grant carries its own idempotency key, the state it
+  replaces (`comp-credit-open:<sub>:<prior meta or none>`): two applies
+  racing from one state open ONE grant, the other settles on it (see
+  "Races" above). A revoke leaves `released:<start>:<at>` (never parsed as
+  a grant) rather than an empty key, so every later opening has a key of
+  its own.
 - **Extending** a running comp credits the difference (the grant's start
   never moves; one grant covers at most 730 days from its start).
 - **Shortening / clearing / dropping below the plan:** the target becomes

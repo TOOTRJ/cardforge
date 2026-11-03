@@ -610,6 +610,24 @@ describe("createCheckoutSessionAction", () => {
       });
     }
 
+    it("a plan set to END with nothing on Stripe yet: refused while the profile's comp would hold it on resume (round-3 item 4)", async () => {
+      // The comp is put on Stripe when the plan resumes (the reactivation
+      // re-apply); a downgrade would resume it and leave its schedule there.
+      for (const extra of [{ cancel_at_period_end: true }, { cancel_at: Date.parse("2026-12-20T00:00:00Z") / 1000 }]) {
+        s.live = sub("price_pro_monthly", "month", "active", { schedule: null, metadata: {}, ...extra }) as never;
+        expect(await createCheckoutSessionAction({ kind: "subscription", tier: "plus" })).toEqual(refused);
+        nothingTouched();
+      }
+    });
+
+    it("…but not when the comp wouldn't hold it (below the plan): the downgrade is scheduled as before", async () => {
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "plus", comp_expires_at: COMP_END };
+      s.live = sub("price_pro_monthly", "month", "active", { schedule: null, metadata: {}, cancel_at_period_end: true }) as never;
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+      expect(JSON.stringify(result)).not.toMatch(/complimentary/i);
+      expect(s.subscriptionsUpdate).toHaveBeenCalledWith("sub_live", { cancel_at_period_end: false });
+    });
+
     it('refuses before "You\'re already on that plan"', async () => {
       s.live = sub("price_pro_monthly", "month") as never;
       expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual(refused);
@@ -1391,6 +1409,15 @@ describe("createPortalSessionAction for a COMPED customer (BL1: no plan switchin
     s.subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
     expect(await createPortalSessionAction()).toEqual({ ok: false, error: "Couldn't open the billing portal. Try again." });
     expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("a subscription Stripe says is GONE (resource_missing) is no lock: the default portal (round-3 item 2)", async () => {
+    s.profile = { ...comped, comp_tier: null, comp_expires_at: null } as never;
+    s.subscriptionsRetrieve.mockRejectedValueOnce(
+      Object.assign(new Error("No such subscription: 'sub_live'"), { code: "resource_missing", statusCode: 404 }),
+    );
+    expect(await createPortalSessionAction()).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.portalCreate.mock.calls[0]?.[0]).toEqual({ customer: "cus_1", return_url: "https://test.local/dashboard/billing" });
   });
 
   it("an ended comp with no coupon left: the default portal", async () => {

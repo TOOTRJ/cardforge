@@ -106,7 +106,7 @@ function fakeAdmin(profile) {
 }
 
 async function prices() {
-  const list = await stripe.prices.list({ lookup_keys: ["plus_monthly", "pro_monthly"], active: true, limit: 10 });
+  const list = await stripe.prices.list({ lookup_keys: ["plus_monthly", "pro_monthly", "plus_annual"], active: true, limit: 10 });
   const by = Object.fromEntries(list.data.map((p) => [p.lookup_key, p]));
   if (!by.plus_monthly || !by.pro_monthly) {
     throw new Error("The sandbox catalog has no plus_monthly / pro_monthly lookup key (docs/BILLING.md §2).");
@@ -428,6 +428,84 @@ async function clearedTail(ctx) {
   expectAmounts(result, invoices, [P, 0, P]);
 }
 
+/** A client whose FIRST subscription read answers `stale` (a read made
+ *  before another apply wrote) — every other call is the real one. */
+function staleOnce(stale) {
+  let used = false;
+  const subs = new Proxy(stripe.subscriptions, {
+    get(target, prop) {
+      if (prop === "retrieve") {
+        return async (...args) => {
+          if (!used) {
+            used = true;
+            return stale;
+          }
+          return target.retrieve(...args);
+        };
+      }
+      const v = target[prop];
+      return typeof v === "function" ? v.bind(target) : v;
+    },
+  });
+  return new Proxy(stripe, {
+    get(target, prop) {
+      if (prop === "subscriptions") return subs;
+      const v = target[prop];
+      return typeof v === "function" ? v.bind(target) : v;
+    },
+  });
+}
+
+/** The comp's balance transactions on a customer (credits < 0). */
+async function compLedgerOf(customerId) {
+  const list = await stripe.customers.listBalanceTransactions(customerId, { limit: 100 });
+  return list.data.filter((t) => t.metadata?.[compStripe.COMP_CREDIT_LEDGER_KEY]);
+}
+
+/** 8. ANNUAL plan: two applies of the same comp racing (round-3 item 3) —
+ *  at once (an admin save beside the webhook's re-apply), and seconds apart
+ *  from one stale read. Each must credit the period ONCE. */
+async function creditRace(ctx) {
+  const { clock, price, log, result } = ctx;
+  if (!price.plus_annual) throw new Error("The sandbox catalog has no plus_annual lookup key (docs/BILLING.md §2).");
+  const comp = { tier: "plus", expiresAt: iso(clock.now + 60 * DAY) };
+  for (const mode of ["concurrent", "stale read, 4 s apart"]) {
+    const { customer, pm } = await customerWithCard(clock);
+    const sub = await stripe.subscriptions.create({ customer: customer.id, items: [{ price: price.plus_annual.id }], default_payment_method: pm.id });
+    const profile = { stripe_customer_id: customer.id, stripe_subscription_id: sub.id, subscription_tier: "plus", subscription_status: "active" };
+    const admin = fakeAdmin(profile);
+    const at = (dt) => new Date((clock.now + dt) * 1000);
+    let outs;
+    if (mode === "concurrent") {
+      outs = await Promise.all([
+        apply.applyCompToSubscription(admin, "sandbox-user", comp, { stripe, now: at(0) }),
+        apply.applyCompToSubscription(admin, "sandbox-user", comp, { stripe, now: at(4) }),
+      ]);
+    } else {
+      const before = await stripe.subscriptions.retrieve(sub.id, { expand: ["discounts"] });
+      const a = await apply.applyCompToSubscription(admin, "sandbox-user", comp, { stripe, now: at(0) });
+      const b = await apply.applyCompToSubscription(admin, "sandbox-user", comp, { stripe: staleOnce(before), now: at(4) });
+      outs = [a, b];
+    }
+    const ledger = await compLedgerOf(customer.id);
+    const credits = ledger.filter((t) => t.amount < 0);
+    const read = await stripe.subscriptions.retrieve(sub.id);
+    const target = balance.periodCreditCents({
+      price: price.plus_annual,
+      tier: "plus",
+      startSec: compStripe.parseCompCreditGrant(read.metadata)?.startSec ?? clock.now,
+      endSec: Math.floor(Date.parse(comp.expiresAt) / 1000),
+    });
+    log(
+      `  ${mode}: ${outs.map((o) => (o.failed ? "failed" : `posted ${money(o.credit?.postedCents ?? 0)}`)).join(" | ")}; ` +
+        `comp credits on the balance: ${credits.map((t) => money(-t.amount)).join(", ") || "none"} (period ${money(target)})`,
+    );
+    check(result, credits.length === 1, `${mode}: ${credits.length} comp credits posted — expected ONE`);
+    check(result, credits.length !== 1 || -credits[0].amount === target, `${mode}: the credit is not the period's price`);
+    check(result, outs.some((o) => !o.failed), `${mode}: neither apply succeeded`);
+  }
+}
+
 /** Read-only: the sandbox's portal configurations — is there one with plan
  *  switching OFF (the owner step)? Never creates or changes one. */
 async function portalConfigurations() {
@@ -451,6 +529,7 @@ const SCENARIOS = [
   ["5. a pre-existing #688 credit runs out untouched", preexisting688Credit],
   ["6. a second comp over the first's rounded-up tail (the union)", stacking],
   ["7. a comp cleared during its rounded-up tail", clearedTail],
+  ["8. annual credit: two applies of one comp racing credit once", creditRace],
 ];
 
 const only = process.argv.slice(2).map(Number).filter(Boolean);

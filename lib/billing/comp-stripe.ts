@@ -248,10 +248,34 @@ export function liveCompChargeLine(input: {
 // ---------------------------------------------------------------------------
 
 /** Subscription metadata key naming the comp GRANT whose credit is on the
- *  customer's balance: `<startSec>:<endSec>` (the period it pays for). "" /
- *  absent = none. A grant whose end has passed is finished: the next comp
- *  opens a new one. */
+ *  customer's balance: `<startSec>:<endSec>` (the period it pays for).
+ *  Absent = none; `released:<startSec>:<atSec>` = a grant a revoke ended (it
+ *  reads as none — kept only so the next opening's key differs, see
+ *  `compCreditOpenKey`). A grant whose end has passed is finished: the next
+ *  comp opens a new one. */
 export const COMP_CREDIT_GRANT_KEY = "pipglyph_comp_credit";
+
+/** The metadata a revoke leaves: never parsed as a grant. */
+export function compCreditReleasedMeta(grant: CompCreditGrant, atSec: number): string {
+  return `released:${grant.startSec}:${atSec}`;
+}
+
+/**
+ * The idempotency key of the write that OPENS a credit grant — the
+ * subscription and the grant metadata it replaces (round-3 item 3). Two
+ * applies of a comp racing from the same state (a webhook re-apply and an
+ * admin save landing in different seconds would otherwise open two grants,
+ * `startSec = now`, under two ledger keys: a double credit) send the SAME
+ * key with different starts: Stripe runs the first and refuses the second
+ * (`idempotency_error`, or 409 while the first is in flight), whose writer
+ * re-reads the subscription and settles on the grant the first opened — one
+ * ledger key, posts deduped by their own keys. Every opening and every
+ * release changes the metadata, so a LATER legitimate opening never reuses
+ * a key (a revoke leaves `compCreditReleasedMeta`, never "").
+ */
+export function compCreditOpenKey(subscriptionId: string, priorMeta: string | null | undefined): string {
+  return `comp-credit-open:${subscriptionId}:${priorMeta || "none"}`;
+}
 
 /** Balance-transaction metadata key: the ledger key of the grant a credit or
  *  claw-back belongs to (`compCreditLedgerKey`). */
@@ -281,7 +305,8 @@ export type CompCreditChange =
       grant: CompCreditGrant;
       /** The credit should pay for [grant.startSec, coverUntilSec). */
       coverUntilSec: number;
-      /** The metadata to write (`<start>:<end>`, or "" once released). */
+      /** The metadata to write (`<start>:<end>`, or `compCreditReleasedMeta`
+       *  once released). */
       grantMeta: string;
       /** A new grant writes its metadata BEFORE any money moves. */
       opensGrant: boolean;
@@ -368,11 +393,12 @@ export function compCreditChangeFor(input: {
   // No comp holds the plan any more: the time already lived through stays
   // paid for; the rest comes back (capped at what is unspent — the writer).
   if (open) {
+    const coverUntilSec = Math.max(open.startSec, Math.min(open.endSec, nowSec));
     return {
       kind: "settle",
       grant: open,
-      coverUntilSec: Math.max(open.startSec, Math.min(open.endSec, nowSec)),
-      grantMeta: "",
+      coverUntilSec,
+      grantMeta: compCreditReleasedMeta(open, coverUntilSec),
       opensGrant: false,
       reason: "comp_released",
     };

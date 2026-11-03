@@ -249,7 +249,7 @@ describe("a comp on a LIVE (active) subscription — owner answer 1: the payer p
     });
     expect(compCreditLedgerKey("sub_1", { startSec: sec(NOW), endSec: sec(longer) })).toBe(`comp:sub_1:${sec(NOW)}`);
   });
-  it("cleared (or dropped below the plan): released — covers only the time lived through, metadata cleared", () => {
+  it("cleared (or dropped below the plan): released — covers only the time lived through, the grant marked released", () => {
     const meta = { [COMP_CREDIT_GRANT_KEY]: `${sec(NOW)}:${sec(COMP_30)}` };
     const later = new Date(NOW.getTime() + days(10) * 1000);
     for (const comp of [{ tier: null, expiresAt: null }, { tier: "plus" as const, expiresAt: COMP_30 }]) {
@@ -258,7 +258,7 @@ describe("a comp on a LIVE (active) subscription — owner answer 1: the payer p
         kind: "settle",
         grant: { startSec: sec(NOW), endSec: sec(COMP_30) },
         coverUntilSec: sec(later),
-        grantMeta: "",
+        grantMeta: `released:${sec(NOW)}:${sec(later)}`,
         opensGrant: false,
         reason: "comp_released",
       });

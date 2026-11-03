@@ -25,6 +25,7 @@ import {
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 import { compPlanLockMessage, type PlanSwitchLock } from "@/lib/billing/comp-switch-lock";
+import { compHoldReason } from "@/lib/billing/comp-coupon";
 import { compLockOfSubscription, readSubscriptionCompLock, type LockRead } from "./plan-switch-lock";
 import { releasePendingChange, scheduleIdOf } from "./schedule";
 import { portalSessionParams } from "./portal";
@@ -431,6 +432,19 @@ export async function createCheckoutSessionAction(
         const lock = await compLockFor(stripe, live);
         if (lock === "unreadable") return SWITCH_UNREADABLE;
         if (lock) return compLockRefusal(lock);
+        // A plan set to END carries nothing of the comp on Stripe yet — it is
+        // put on when the plan resumes (the reactivation re-apply). A switch
+        // here would resume it first (a downgrade's schedule, the portal's
+        // confirm) and leave the switch on a plan the comp then pays for:
+        // refused while the profile's comp would hold the current plan
+        // (round-3 item 4). Resume first; switch after the comp.
+        if (live.cancel_at_period_end || typeof live.cancel_at === "number" || subscriptionEndsAt(live) != null) {
+          const currentTier = await resolveSubscriptionTier(live, stripe);
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (currentTier && currentTier !== "free" && compHoldReason(customer.comp, currentTier, nowSec) == null) {
+            return compLockRefusal({ until: customer.comp.expiresAt });
+          }
+        }
         if (live.items.data[0]?.price?.id === priceId) {
           return { ok: false, error: "You're already on that plan." };
         }

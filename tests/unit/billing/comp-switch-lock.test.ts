@@ -18,7 +18,13 @@ import {
 import { COMP_COUPON_GRANT_KEY, type DiscountLike } from "@/lib/billing/comp-coupon";
 import { COMP_CREDIT_GRANT_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import { billingViewerFromProfile, billingViewerFromUser } from "@/lib/billing/viewer";
-import { viewerPlanSwitchLock } from "@/lib/stripe/plan-switch-lock";
+import {
+  COMP_LOCK_TAIL_DAYS,
+  STOREFRONT_LOCK_READ_TIMEOUT_MS,
+  compMayStillLock,
+  readSubscriptionCompLock,
+  viewerPlanSwitchLock,
+} from "@/lib/stripe/plan-switch-lock";
 import { pricingCtaFor } from "@/components/billing/pricing-cta";
 
 // ---------------------------------------------------------------------------
@@ -190,7 +196,31 @@ describe("viewerPlanSwitchLock: the page shows the lock the server enforces (P3b
       discounts: [{ id: "di_1", end: tailEnd, source: { coupon: "pipglyph_comp_100off_2m" } }],
     });
     expect(await viewerPlanSwitchLock(row)).toEqual({ until: new Date(tailEnd * 1000).toISOString() });
-    expect(stripe.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["discounts"] });
+    // A bounded read: a few seconds, no retry, never the SDK's 80 s (round-3 item 1).
+    expect(stripe.retrieve).toHaveBeenCalledWith(
+      "sub_1",
+      { expand: ["discounts"] },
+      { timeout: STOREFRONT_LOCK_READ_TIMEOUT_MS, maxNetworkRetries: 0 },
+    );
+    expect(STOREFRONT_LOCK_READ_TIMEOUT_MS).toBeLessThanOrEqual(5000);
+  });
+
+  it("a comp that ended more than the tail ago costs no Stripe call (comp_tier is never cleared)", async () => {
+    const old = { ...row, comp_expires_at: new Date((nowSec - (COMP_LOCK_TAIL_DAYS + 1) * 86400) * 1000).toISOString() };
+    expect(await viewerPlanSwitchLock(old)).toBeNull();
+    expect(stripe.retrieve).not.toHaveBeenCalled();
+    // The tail covers a rounded-up coupon: at most one monthly period past the comp.
+    expect(COMP_LOCK_TAIL_DAYS).toBeGreaterThan(31);
+  });
+
+  it("compMayStillLock: current, no end, or ended within the tail", () => {
+    const now = Date.parse("2026-11-02T00:00:00Z");
+    const day = 86_400_000;
+    expect(compMayStillLock({ comp_tier: null, comp_expires_at: null }, now)).toBe(false);
+    expect(compMayStillLock({ comp_tier: "plus", comp_expires_at: null }, now)).toBe(true);
+    expect(compMayStillLock({ comp_tier: "plus", comp_expires_at: new Date(now + day).toISOString() }, now)).toBe(true);
+    expect(compMayStillLock({ comp_tier: "plus", comp_expires_at: new Date(now - 44 * day).toISOString() }, now)).toBe(true);
+    expect(compMayStillLock({ comp_tier: "plus", comp_expires_at: new Date(now - 46 * day).toISOString() }, now)).toBe(false);
   });
 
   it("never comped (or no subscription): no Stripe call, no lock", async () => {
@@ -205,5 +235,24 @@ describe("viewerPlanSwitchLock: the page shows the lock the server enforces (P3b
     const live = { ...row, comp_expires_at: "2099-01-01T00:00:00.000Z" };
     expect(await viewerPlanSwitchLock(live)).toEqual({ until: "2099-01-01T00:00:00.000Z" });
     expect(await viewerPlanSwitchLock(row)).toBeNull();
+  });
+
+  it("a plan set to END with nothing on Stripe yet shows the lock the server enforces while the comp would hold it (round-3 item 4)", async () => {
+    stripe.retrieve.mockResolvedValue({ id: "sub_1", status: "active", metadata: {}, discounts: [] });
+    const until = new Date((nowSec + 30 * 86400) * 1000).toISOString();
+    const ending = { ...row, comp_tier: "pro", subscription_tier: "pro", comp_expires_at: until, cancel_at_period_end: true };
+    expect(await viewerPlanSwitchLock(ending)).toEqual({ until });
+    expect(await viewerPlanSwitchLock({ ...ending, cancel_at_period_end: false, subscription_ends_at: until })).toEqual({ until });
+    // Renewing as usual, or a comp below the plan: nothing to lock.
+    expect(await viewerPlanSwitchLock({ ...ending, cancel_at_period_end: false })).toBeNull();
+    expect(await viewerPlanSwitchLock({ ...ending, comp_tier: "plus" })).toBeNull();
+  });
+
+  it("a subscription Stripe says is gone (resource_missing) locks nothing, never 'unreadable' (round-3 item 2)", async () => {
+    const client = { subscriptions: { retrieve: stripe.retrieve } };
+    stripe.retrieve.mockRejectedValue(Object.assign(new Error("No such subscription"), { code: "resource_missing", statusCode: 404 }));
+    expect(await readSubscriptionCompLock(client as never, "sub_gone")).toBeNull();
+    stripe.retrieve.mockRejectedValue(Object.assign(new Error("timeout"), { type: "StripeConnectionError" }));
+    expect(await readSubscriptionCompLock(client as never, "sub_1")).toBe("unreadable");
   });
 });

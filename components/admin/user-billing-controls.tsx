@@ -202,8 +202,7 @@ export function CompTierForm({
       </Button>
       {requiresExpiry ? (
         <p className="w-full text-xs leading-5 text-muted">
-          {COMP_COUPON_SHORT_NOTE} While a comp is on they can&apos;t change plans, and saving a comp cancels a
-          scheduled plan change.
+          {`${COMP_COUPON_SHORT_NOTE} While a comp is on they can't change plans, and saving a comp cancels a scheduled plan change.`}
         </p>
       ) : null}
     </form>

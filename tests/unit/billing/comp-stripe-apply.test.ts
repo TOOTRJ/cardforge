@@ -184,9 +184,11 @@ describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balan
   it("a new grant: names it on the subscription FIRST, then credits a twelfth of the year — idempotent key", async () => {
     const stripe = stripeWith(activeSub());
     const out = await run(stripe, { tier: "plus", expiresAt: MONTH_END });
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
-      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` },
-    });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      "sub_1",
+      { metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` } },
+      { idempotencyKey: "comp-credit-open:sub_1:none" },
+    );
     expect(stripe.subscriptions.update.mock.invocationCallOrder[0]).toBeLessThan(
       stripe.customers.createBalanceTransaction.mock.invocationCallOrder[0],
     );
@@ -266,7 +268,9 @@ describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balan
       expect.objectContaining({ amount: 336, metadata: expect.objectContaining({ kind: "comp_clawback" }) }),
       { idempotencyKey: `${grantKey}:500->164:clawback` },
     );
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      metadata: { [COMP_CREDIT_GRANT_KEY]: `released:${nowSec}:${nowSec + 10 * 86_400}` },
+    });
     expect(out.credit).toMatchObject({ postedCents: -336, keptCents: 0 });
     expect(out.note).toBe("Took back $3.36 of unused comp credit from their Stripe balance.");
 
@@ -281,7 +285,9 @@ describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balan
     stripe = stripeWith(activeSub(meta), { ledger: [credited(-500)], balance: 0 });
     out = await run(stripe, { tier: null, expiresAt: null }, later);
     expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      metadata: { [COMP_CREDIT_GRANT_KEY]: `released:${nowSec}:${nowSec + 10 * 86_400}` },
+    });
   });
 
   it("a release never posts a FRESH credit (a retry after a failed metadata clear)", async () => {
@@ -292,7 +298,9 @@ describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balan
     });
     await run(stripe, { tier: null, expiresAt: null }, new Date(NOW.getTime() + 11 * 86_400_000));
     expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      metadata: { [COMP_CREDIT_GRANT_KEY]: `released:${nowSec}:${nowSec + 11 * 86_400}` },
+    });
   });
 
   it("a MONTHLY plan is no longer credited: its comp is the coupon (BL1)", async () => {
@@ -330,8 +338,10 @@ describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balan
     const out = await run(stripe, { tier: "plus", expiresAt: MONTH_END });
     expect(out.failed).toBe(true);
     expect(out.note).toMatch(/couldn't be updated/);
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
-      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` },
-    });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      "sub_1",
+      { metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` } },
+      { idempotencyKey: "comp-credit-open:sub_1:none" },
+    );
   });
 });

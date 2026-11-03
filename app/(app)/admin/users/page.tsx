@@ -562,7 +562,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle
                 title="Comp a plan"
-                hint="The higher of the comp and the Stripe tier applies while unexpired. None clears the comp and its expiry. On a live Stripe plan the comp needs an expiry: a trial is held until it ends, and an active plan gets the comp period's price on its Stripe balance (the unused part comes back if it is shortened or cleared)."
+                hint="The higher of the comp and the Stripe tier applies while unexpired. None clears the comp and its expiry. On a live Stripe plan the comp needs an expiry: a trial is held until it ends, an active monthly plan's next invoices are free (a 100%-off coupon), and an active annual plan gets the comp period's price on its Stripe balance (the unused part comes back if it is shortened or cleared)."
               />
               <CompTierForm
                 userId={user.id}

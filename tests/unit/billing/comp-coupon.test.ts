@@ -46,7 +46,7 @@ import {
   renewalsIn,
   type CouponSubFacts,
 } from "@/lib/billing/comp-coupon";
-import { COMP_CREDIT_GRANT_KEY, COMP_CREDIT_LEDGER_KEY, compCreditLedgerKey } from "@/lib/billing/comp-stripe";
+import { COMP_CREDIT_GRANT_KEY, COMP_CREDIT_LEDGER_KEY, compCreditLedgerKey, compCreditOpenKey, parseCompCreditGrant } from "@/lib/billing/comp-stripe";
 import { addMonthsUtc, periodCreditCents } from "@/lib/billing/balance-credit";
 
 const DAY = 86_400;
@@ -88,6 +88,24 @@ function fakeStripe(opts: {
   const coupons = opts.coupons ?? new Map<string, Coupon>();
   const ledger: Txn[] = [...(opts.ledger ?? [])];
   const idem = new Map<string, unknown>();
+  const idemParams = new Map<string, string>();
+  /** Stripe's idempotency: the same key replays its answer; with OTHER
+   *  parameters it is refused (`idempotency_error`). */
+  const replay = (key: string | undefined, params: unknown): { hit: boolean; out?: unknown } => {
+    if (!key || !idem.has(key)) return { hit: false };
+    if (idemParams.get(key) !== JSON.stringify(params)) {
+      throw Object.assign(new Error("Keys for idempotent requests can only be used with the same parameters"), {
+        type: "StripeIdempotencyError",
+        raw: { type: "idempotency_error" },
+      });
+    }
+    return { hit: true, out: idem.get(key) };
+  };
+  const remember = (key: string | undefined, params: unknown, out: unknown) => {
+    if (!key) return;
+    idem.set(key, out);
+    idemParams.set(key, JSON.stringify(params));
+  };
   let n = 0;
   const st = {
     clock: opts.clock ?? nowSec,
@@ -143,7 +161,8 @@ function fakeStripe(opts: {
           params: { metadata?: Record<string, string>; discounts?: "" | Array<{ coupon?: string; discount?: string }>; expand?: string[] },
           options?: { idempotencyKey?: string },
         ) => {
-          if (options?.idempotencyKey && idem.has(options.idempotencyKey)) return idem.get(options.idempotencyKey);
+          const seen = replay(options?.idempotencyKey, params);
+          if (seen.hit) return seen.out;
           if ("discounts" in params) {
             const next: Disc[] = [];
             for (const d of params.discounts === "" ? [] : (params.discounts ?? [])) {
@@ -170,7 +189,7 @@ function fakeStripe(opts: {
             else st.metadata[k] = v;
           }
           const out = view(params.expand);
-          if (options?.idempotencyKey) idem.set(options.idempotencyKey, out);
+          remember(options?.idempotencyKey, params, out);
           return out;
         },
       ),
@@ -203,10 +222,11 @@ function fakeStripe(opts: {
       listBalanceTransactions: vi.fn(async () => ({ data: [...ledger].reverse(), has_more: false })),
       createBalanceTransaction: vi.fn(
         async (_c: string, params: { amount: number; metadata: Record<string, string> }, options?: { idempotencyKey?: string }) => {
-          if (options?.idempotencyKey && idem.has(options.idempotencyKey)) return idem.get(options.idempotencyKey);
+          const seen = replay(options?.idempotencyKey, params);
+          if (seen.hit) return seen.out;
           const txn = { id: `cbtxn_${ledger.length + 1}`, amount: params.amount, metadata: params.metadata };
           ledger.push(txn);
-          if (options?.idempotencyKey) idem.set(options.idempotencyKey, txn);
+          remember(options?.idempotencyKey, params, txn);
           return txn;
         },
       ),
@@ -559,6 +579,77 @@ describe("an ANNUAL plan stays on the balance credit", () => {
     );
     expect(stripe.st.discounts).toEqual([]);
     expect(out.credit?.postedCents).toBe(500);
+  });
+
+  const annual = () => fakeStripe({ price: PLUS_ANNUAL, anchor: sec("2026-06-01T12:00:00Z"), cycle: 1 });
+  const credits = (stripe: Fake) => stripe.ledger.filter((t) => t.amount < 0);
+
+  it("two applies of the SAME comp racing from one state, seconds apart, credit ONCE (round-3 item 3)", async () => {
+    const stripe = annual();
+    // Both read the subscription before either writes: no grant yet.
+    const before = await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] });
+    // The admin's save (second 0) opens the grant and credits it…
+    const a = await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    // …the webhook's re-apply, four seconds later, still holds the old read.
+    stripe.subscriptions.retrieve.mockResolvedValueOnce(before);
+    const b = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(nowSec + 4));
+    expect(a.failed).toBe(false);
+    expect(b.failed).toBe(false);
+    expect(credits(stripe)).toHaveLength(1);
+    expect(a.credit?.postedCents).toBe(1500);
+    expect(b.credit?.postedCents).toBe(0);
+    // ONE grant, the first opener's: the second settled on it.
+    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBe(`${nowSec}:${sec(THREE_MONTHS)}`);
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledTimes(4); // ours, A, B (stale), B re-read
+  });
+
+  it("…and the opening write is keyed by the state it replaces", async () => {
+    const stripe = annual();
+    await grant(stripe, comp("plus", ONE_MONTH), NOW);
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      "sub_1",
+      { metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${sec(ONE_MONTH)}` } },
+      { idempotencyKey: compCreditOpenKey("sub_1", undefined) },
+    );
+    expect(compCreditOpenKey("sub_1", undefined)).toBe("comp-credit-open:sub_1:none");
+  });
+
+  it("a race still in flight (409) re-reads and never opens a second grant", async () => {
+    const stripe = annual();
+    const before = await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] });
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    stripe.subscriptions.update.mockImplementationOnce(async () => {
+      throw Object.assign(new Error("in flight"), { statusCode: 409 });
+    });
+    stripe.subscriptions.retrieve.mockResolvedValueOnce(before);
+    const b = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(nowSec + 2));
+    expect(b.failed).toBe(false);
+    expect(credits(stripe)).toHaveLength(1);
+  });
+
+  it("a race that can't be settled on a re-read fails safe — no credit, the admin saves again", async () => {
+    const stripe = annual();
+    const before = await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] });
+    stripe.subscriptions.update.mockImplementation(async () => {
+      throw Object.assign(new Error("in flight"), { statusCode: 409 });
+    });
+    stripe.subscriptions.retrieve.mockResolvedValueOnce(before).mockResolvedValueOnce(before);
+    const out = await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    expect(out.failed).toBe(true);
+    expect(credits(stripe)).toHaveLength(0);
+  });
+
+  it("a revoke leaves a 'released' mark, so a later grant with the SAME end opens (and credits) afresh", async () => {
+    const stripe = annual();
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    const later = stripe.at(nowSec + 3600);
+    await grant(stripe, comp(null, null), later);
+    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBe(`released:${nowSec}:${nowSec + 3600}`);
+    expect(parseCompCreditGrant(stripe.st.metadata)).toBeNull();
+    const again = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(nowSec + 7200));
+    expect(again.failed).toBe(false);
+    expect(again.credit?.postedCents).toBeGreaterThan(0);
+    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBe(`${nowSec + 7200}:${sec(THREE_MONTHS)}`);
   });
 });
 
