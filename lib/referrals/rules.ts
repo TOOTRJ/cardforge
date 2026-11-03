@@ -54,7 +54,7 @@ export type ReferralStatus = "signed_up" | "first_card" | "rewarded" | "capped" 
  *  reason: a blocked referral reads "Not eligible". */
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   signed_up: "Signed up",
-  first_card: "First card saved — pending",
+  first_card: "First card saved",
   rewarded: "Rewarded",
   capped: "Limit reached",
   blocked: "Not eligible",

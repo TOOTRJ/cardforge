@@ -14,6 +14,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { MONTHLY_CREDITS } from "@/lib/billing/plans";
 import { getMyReferralDashboard } from "@/lib/referrals/queries";
+import type { ReferralRow } from "@/lib/referrals/summary";
 import {
   REFERRAL_ACTIVATION_WINDOW_DAYS,
   REFERRAL_STATUS_LABELS,
@@ -50,8 +51,8 @@ const REWARD_LABEL = {
 function noRewardText(status: ReferralStatus): string {
   if (status === "signed_up") return "Waiting for their first card";
   // Claimed only once both emails are confirmed; the hourly sweep finishes it.
-  if (status === "first_card") return "Pending";
-  if (status === "capped") return "None — limit reached";
+  if (status === "first_card") return "Pending — waiting on a confirmed email";
+  if (status === "capped") return "None for you — they still got theirs";
   return "—";
 }
 
@@ -88,8 +89,8 @@ export default async function ReferralsPage() {
               <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
             </li>
             <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <span className="font-semibold text-foreground">3. You both get a free month</span> as soon as you&apos;ve
-              both confirmed your email. On a paid plan, it comes off your next bill.
+              <span className="font-semibold text-foreground">3. You both get a free month</span>{" "}
+              as soon as you&apos;ve both confirmed your email. On a paid plan, it comes off your next bill.
             </li>
           </ol>
           <p className="text-xs leading-5 text-subtle">
@@ -135,9 +136,9 @@ export default async function ReferralsPage() {
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-subtle">
                   <th scope="col" className="px-4 py-3 font-medium">Friend</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Joined</th>
+                  <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Joined</th>
                   <th scope="col" className="px-4 py-3 font-medium">Status</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Your reward</th>
+                  <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Your reward</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,21 +155,18 @@ export default async function ReferralsPage() {
                         "A new member"
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted">
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-muted sm:table-cell">
                       <LocalDate iso={row.signedUpAt} />
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={STATUS_BADGE[row.status]}>{REFERRAL_STATUS_LABELS[row.status]}</Badge>
+                      {/* On a phone the reward column is hidden: the reward reads under the badge. */}
+                      <span className="mt-1.5 block text-xs text-muted sm:hidden">
+                        <RewardText row={row} />
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-muted">
-                      {row.reward ? (
-                        <span className="inline-flex items-center gap-1.5 text-foreground">
-                          <Gift className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-                          {REWARD_LABEL[row.reward]}
-                        </span>
-                      ) : (
-                        noRewardText(row.status)
-                      )}
+                    <td className="hidden px-4 py-3 text-muted sm:table-cell">
+                      <RewardText row={row} />
                     </td>
                   </tr>
                 ))}
@@ -191,6 +189,17 @@ export default async function ReferralsPage() {
         </p>
       ) : null}
     </DashboardShell>
+  );
+}
+
+function RewardText({ row }: { row: ReferralRow }) {
+  return row.reward ? (
+    <span className="inline-flex items-center gap-1.5 text-foreground">
+      <Gift className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
+      {REWARD_LABEL[row.reward]}
+    </span>
+  ) : (
+    <>{noRewardText(row.status)}</>
   );
 }
 
