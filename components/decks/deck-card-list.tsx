@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CheckSquare, ClipboardPaste, FileText, Pencil, Trash2 } from "lucide-react";
+import { CheckSquare, ClipboardPaste, FileText, History, Pencil, Redo2, Trash2 } from "lucide-react";
+import { DeckHistoryControls } from "@/components/decks/deck-history-controls";
+import { DeckHistoryDialog } from "@/components/decks/deck-history-dialog";
 import { ArrowDown, ChartColumn, X } from "lucide-react";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
 import { CURVE_FILTER_NOTICE_ID, useDeckCurveFilter } from "@/components/decks/deck-curve-filter";
@@ -617,6 +619,11 @@ function DeckCardArea({
       : { kind: "item", label: "Select cards", icon: <CheckSquare className="h-3.5 w-3.5" />, onSelect: () => setSelecting(true) },
     { kind: "item", label: "Import a decklist", icon: <ClipboardPaste className="h-3.5 w-3.5" />, onSelect: () => openDeckTool("paste") },
     { kind: "item", label: "Deck details", icon: <FileText className="h-3.5 w-3.5" />, onSelect: () => openDeckTool("details") },
+    // Undo is the bar's own button; Redo and the history are here (DK5.13).
+    ...(editor?.redoLabel
+      ? [{ kind: "item" as const, label: editor.redoLabel, icon: <Redo2 className="h-3.5 w-3.5" />, onSelect: editor.redo }]
+      : []),
+    { kind: "item", label: "Deck history", icon: <History className="h-3.5 w-3.5" />, onSelect: () => openDeckTool("history") },
   ];
 
   return (
@@ -636,9 +643,16 @@ function DeckCardArea({
       }}
     >
       {editing ? <DeckAddBox /> : null}
+      {/* The change history (TODO DK5.13): opened by the toolbar's History
+          or the phone bar's More menu. */}
+      {editing ? <DeckHistoryDialog /> : null}
 
       {empty ? (
-        emptyState
+        <>
+          {/* An emptied deck has no toolbar: its Undo / Redo / History stay. */}
+          {editing ? <DeckHistoryControls className="hidden md:flex" /> : null}
+          {emptyState}
+        </>
       ) : (
         <>
           {showsCommanderSlot ? commanderSlot : null}
@@ -654,6 +668,7 @@ function DeckCardArea({
                 ? { selecting, onToggle: () => (selecting ? stopSelecting() : setSelecting(true)) }
                 : null
             }
+            editTools={editing ? <DeckHistoryControls /> : null}
           />
 
           <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_22rem]">

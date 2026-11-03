@@ -34,6 +34,15 @@ import {
   type EntryPatch,
 } from "@/lib/decks/entry-ops";
 import { isTypingTarget } from "@/lib/decks/entry-shortcuts";
+import {
+  combineReverses,
+  createUndoHistory,
+  redoWords,
+  undoWords,
+  type Reverse,
+  type UndoHistory,
+  type UndoLabels,
+} from "@/lib/decks/undo-history";
 import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import type { RemovedEntry } from "@/lib/decks/entry-batch";
 import type { DeckItem, DeckPageCard } from "@/lib/decks/queries";
@@ -61,11 +70,15 @@ import type { Visibility } from "@/types/card";
 //     never answered (offline, a deploy) also asks the server again: its
 //     state is unknown. While an edit is on its way, leaving the page asks
 //     first (useLeaveWarning: an unload can cut the request off).
-//   * UNDO: the last changes, newest first (a removal's toast, the phone
-//     bar's Undo, ⌘/Ctrl Z outside a field). An edit's undo is the edit
-//     back; a removal's is restoreDeckEntriesAction — the lines back through
-//     the paths cards come in by — and the entries' new ids then stand for
-//     the old ones in the undos still waiting.
+//   * UNDO / REDO (TODO DK5.13): the last changes, newest first (the
+//     toolbar's Undo / Redo, a removal's toast, the phone bar, ⌘/Ctrl Z and
+//     ⇧⌘Z / Ctrl Y outside a field) — ONE stack, lib/decks/undo-history.ts:
+//     every change is recorded as its reverse, and a reverse hands back its
+//     own reverse, which is the redo. An edit's undo is the edit back; a
+//     removal's is restoreDeckEntriesAction — the lines back through the
+//     paths cards come in by — and the entries' new ids then stand for the
+//     old ones in the steps still waiting. A version restored from the
+//     change history is one more step.
 //   * ONE VOICE: `announce` is the page's polite live region.
 //   * THE FOCUS STAYS: an edit made from a card's opener (a key) or a menu
 //     that moves the card to another group re-draws its opener there, and a
@@ -89,7 +102,24 @@ export type DeckEditorDeck = {
   visibility?: Visibility;
 };
 
-type UndoStep = { label: string; run: () => void };
+/** Where a change's reverse goes (lib/decks/undo-history.ts). */
+type Sink = (next: Reverse | null) => void;
+
+/** The History dialog's "Restore this version" (TODO DK5.13): the version
+ *  (the newest change id it keeps), its words, and the server call — the
+ *  dialog's, so this file imports no history action. */
+export type VersionRestoreRequest = {
+  changeId: number;
+  /** "the version of 3 Nov, 14:02" */
+  label: string;
+  write: (changeId: number) => Promise<VersionRestoreAnswer>;
+};
+export type VersionRestoreAnswer =
+  | { ok: true; headBefore: number | null; said: string }
+  | { ok: false; error: string; stale?: true };
+
+/** The queue's line every version restore waits on. */
+const VERSION_KEY = "deck:version";
 
 /** One card of an "Add N": what to add and the row drawn for a new line. */
 export type AddManyPick = { pick: AddPick; preview: EditorItem | null };
@@ -119,8 +149,15 @@ export type DeckEditor = {
   addMany: (picks: readonly AddManyPick[], board: DeckBoard, publish?: readonly string[]) => Promise<DeckAddManyResult>;
   /** Undo the last change. */
   undo: () => void;
+  /** Make the last undone change again (TODO DK5.13). */
+  redo: () => void;
   /** What Undo would undo, in words — null: nothing. */
   undoLabel: string | null;
+  /** What Redo would make again, in words — null: nothing. */
+  redoLabel: string | null;
+  /** The deck's rows back as a version of its change history had them —
+   *  undoable (TODO DK5.13). */
+  restoreVersion: (request: VersionRestoreRequest) => Promise<VersionRestoreAnswer>;
   announce: (text: string) => void;
   /** The focus goes back to this card's opener once an edit has re-drawn
    *  it (a menu's pick: the menu held the focus). */
@@ -144,7 +181,6 @@ export function reduceEditorItems(items: EditorItem[], op: EntryOp): EditorItem[
   return next.map((item) => (saving.has(item.entry.id) && !item.saving ? { ...item, saving: true as const } : item));
 }
 
-const UNDO_LIMIT = 20;
 export const LOST_REQUEST = "The change didn't reach the server — check your connection.";
 
 const nameOf = (item: Pick<EditorItem, "entry" | "card">) => item.card?.title ?? item.entry.name;
@@ -236,9 +272,10 @@ export function DeckEditorProvider({
     [],
   );
 
-  // ---- the undo stack ----------------------------------------------------
-  const undoStack = useRef<UndoStep[]>([]);
-  const [undoLabel, setUndoLabel] = useState<string | null>(null);
+  // ---- the undo / redo stacks (TODO DK5.13: lib/decks/undo-history.ts) --
+  const [labels, setLabels] = useState<UndoLabels>({ undo: null, redo: null });
+  const history = useRef<UndoHistory | null>(null);
+  if (!history.current) history.current = createUndoHistory(setLabels);
   /** A removed entry's id → the id of the entry that came back for it. */
   const renamed = useRef(new Map<string, string>());
   const resolveId = useCallback((id: string) => {
@@ -246,21 +283,15 @@ export function DeckEditorProvider({
     for (let hops = 0; hops < 8 && renamed.current.has(current); hops += 1) current = renamed.current.get(current)!;
     return current;
   }, []);
-  const pushUndo = useCallback((step: UndoStep) => {
-    undoStack.current = [...undoStack.current, step].slice(-UNDO_LIMIT);
-    setUndoLabel(step.label);
-  }, []);
-  /** Takes `step` (or the last one) off the stack; null when it is gone —
-   *  already undone from elsewhere. */
-  const takeUndo = useCallback((step?: UndoStep): UndoStep | null => {
-    const stack = undoStack.current;
-    const index = step ? stack.lastIndexOf(step) : stack.length - 1;
-    if (index < 0) return null;
-    const taken = stack[index]!;
-    undoStack.current = [...stack.slice(0, index), ...stack.slice(index + 1)];
-    setUndoLabel(undoStack.current.at(-1)?.label ?? null);
-    return taken;
-  }, []);
+  /** Where a change's reverse goes once the server has it: a fresh edit's
+   *  onto Undo under `label`; an undo's / redo's back to the stack that
+   *  ran it (`Sink`). */
+  const sinkFor = useCallback(
+    (to: Sink | { label: string }): Sink =>
+      typeof to === "function" ? to : (next) => next && history.current!.record({ label: to.label, reverse: next }, "edit"),
+    [],
+  );
+  const isHere = useCallback((id: string) => drawnRef.current.some((item) => item.entry.id === id && !item.pending), []);
 
   // ---- one edit: drawn, queued, answered ---------------------------------
   // Edits on their way: leaving the page (a reload, a closed tab) asks first
@@ -277,18 +308,24 @@ export function DeckEditorProvider({
         /** Said when the server refuses it or never answers. */
         failure: string;
         onDone?: (value: T) => void;
+        /** Anything but "done": refused, lost, superseded or cancelled. */
+        onMissed?: () => void;
+        /** More entries to wait behind than the op's own (a version
+         *  restore waits for every edit on its way). */
+        keys?: readonly string[];
       },
     ): Promise<QueueOutcome<T>> =>
       new Promise((resolve) => {
         setWriting((count) => count + 1);
         startTransition(async () => {
           draw(op);
-          const outcome = await queue.run(opEntryIds(op), write, {
+          const outcome = await queue.run(options.keys ?? opEntryIds(op), write, {
             coalesce: options.coalesce,
             failed: (value) => !value.ok,
           });
           setWriting((count) => Math.max(0, count - 1));
           if (outcome.status === "done") options.onDone?.(outcome.value);
+          else options.onMissed?.();
           if (outcome.status === "failed") {
             const value = outcome.value as Answer | undefined;
             const reason = value && !value.ok ? value.error : LOST_REQUEST;
@@ -310,38 +347,48 @@ export function DeckEditorProvider({
     return drawnRef.current.filter((item) => wanted.has(item.entry.id)).map(nameOf);
   }, []);
 
-  /** Patches as ONE update: drawn, written, undoable. */
+  // Every edit below takes `to`: where its reverse goes once the server has
+  // it — `{ label }` for the reader's own edit (onto Undo, Redo cleared), or
+  // the Sink of the Undo / Redo that ran it (lib/decks/undo-history.ts).
+  // Whatever happens, the Sink is answered exactly once: the reverse, or
+  // null when nothing was done (refused, lost, the entries gone).
+
+  /** Patches as ONE update: drawn, written, its reverse recorded. */
   const update = useCallback(
-    function update(patches: EntryPatch[], kind: "quantity" | "board", undoable = true) {
-      if (patches.length === 0) return;
+    function update(
+      patches: EntryPatch[],
+      kind: "quantity" | "board",
+      to: Sink | "edit" = "edit",
+      /** What the reverse writes, when the caller knows it (an undo's
+       *  reverse is the edit's own patches) — else read off the rows. */
+      known?: EntryPatch[],
+    ) {
+      if (patches.length === 0) {
+        if (to !== "edit") to(null);
+        return;
+      }
       const ids = patches.map((patch) => patch.id);
-      const before = restoringPatches(drawnRef.current, ids);
+      const before = known ?? restoringPatches(drawnRef.current, ids);
       const op: EntryOp = { kind: "update", updates: patches };
       const who = whoOf(namesOf(ids));
       const said = describeEdit(op, namesOf(ids));
+      const sink = sinkFor(to === "edit" ? { label: said.replace(/\.$/, "") } : to);
       // Said at once — the page already shows it.
       announce(said);
       if (!heldFocus.current) holdActive();
       void send(op, () => updateDeckEntriesAction({ deckId: deck.id, updates: patches }), {
         coalesce: kind,
         failure: kind === "board" ? `Couldn't move ${who} — back where it was.` : `Couldn't change ${who} — back to what it was.`,
-        onDone: () => {
-          if (!undoable) return;
-          pushUndo({
-            label: `Undo: ${said.replace(/\.$/, "")}`,
-            run: () =>
-              update(
-                before
-                  .map((patch) => ({ ...patch, id: resolveId(patch.id) }))
-                  .filter((patch) => drawnRef.current.some((item) => item.entry.id === patch.id)),
-                kind,
-                false,
-              ),
-          });
-        },
+        onDone: () =>
+          sink((done) => {
+            const here = (list: EntryPatch[]) =>
+              list.map((patch) => ({ ...patch, id: resolveId(patch.id) })).filter((patch) => isHere(patch.id));
+            update(here(before), kind, done, here(patches));
+          }),
+        onMissed: () => sink(null),
       });
     },
-    [announce, deck.id, holdActive, namesOf, pushUndo, resolveId, send],
+    [announce, deck.id, holdActive, isHere, namesOf, resolveId, send, sinkFor],
   );
 
   const step = useCallback(
@@ -353,9 +400,14 @@ export function DeckEditorProvider({
     [update],
   );
 
-  // ---- removal, and its undo ---------------------------------------------
+  // ---- removal, and the way back -----------------------------------------
+  // A removal's reverse puts the lines back (restore); a restore's reverse
+  // takes the lines it brought back out again (removeQuietly) — so a removal
+  // undone can be redone, and an add undone (a removal) can be redone (the
+  // same line back).
+  const removeQuietlyRef = useRef<(ids: string[], who: string, sink: Sink) => void>(() => {});
   const restore = useCallback(
-    (removed: RemovedEntry[], drawnAs: EditorItem[]) => {
+    (removed: RemovedEntry[], drawnAs: EditorItem[], sink: Sink) => {
       // The rows as they were, drawn until the server has them back.
       const op: EntryOp = {
         kind: "insert",
@@ -365,48 +417,60 @@ export function DeckEditorProvider({
       const plural = removed.length > 1;
       void send(op, () => restoreDeckEntriesAction({ deckId: deck.id, entries: removed }), {
         failure: `Couldn't put ${who} back.`,
+        onMissed: () => sink(null),
         onDone: (result) => {
-          if (!result.ok) return;
+          if (!result.ok) {
+            sink(null);
+            return;
+          }
           for (const row of result.restored) if (row.to) renamed.current.set(row.from, row.to);
+          const back = result.restored.flatMap((row) => (row.to ? [row.to] : []));
+          sink(
+            back.length === 0
+              ? null
+              : (done) => {
+                  const here = back.map(resolveId).filter(isHere);
+                  if (here.length === 0) done(null);
+                  else removeQuietlyRef.current(here, who, done);
+                },
+          );
           const notes = result.restored.flatMap((row) => (row.note ? [row.note] : []));
           if (notes.length === 0) {
             announce(`${who} ${plural ? "are" : "is"} back in the deck.`);
             return;
           }
-          const back = result.restored.some((row) => row.to);
-          toast.warning(back ? `${who} ${plural ? "are" : "is"} back, with a note.` : `Couldn't put ${who} back.`, {
+          toast.warning(back.length > 0 ? `${who} ${plural ? "are" : "is"} back, with a note.` : `Couldn't put ${who} back.`, {
             description: notes.slice(0, 3).join(" ") + (notes.length > 3 ? ` …and ${notes.length - 3} more.` : ""),
           });
           announce(notes.join(" "));
         },
       });
     },
-    [announce, deck.id, send],
+    [announce, deck.id, isHere, resolveId, send],
   );
 
-  /** A removal no one undoes (an add's undo): no toast, no undo of its own. */
+  /** A removal made by an Undo or a Redo: no toast of its own. */
   const removeQuietly = useCallback(
-    (id: string, name: string) =>
-      void send({ kind: "remove", ids: [id] }, () => removeDeckEntriesAction({ deckId: deck.id, entryIds: [id] }), {
-        failure: `Couldn't take ${name} out again.`,
-        onDone: (result) => {
-          if (result.ok) announce(`${name} is out of the deck again.`);
-        },
-      }),
-    [announce, deck.id, send],
-  );
-
-  /** Several removals no one undoes (an "Add N"'s undo). */
-  const removeQuietlyMany = useCallback(
-    (ids: string[], who: string) =>
+    (ids: string[], who: string, sink: Sink) => {
+      const wanted = new Set(ids);
+      const drawnAs = drawnRef.current.filter((item) => wanted.has(item.entry.id) && !item.pending);
       void send({ kind: "remove", ids }, () => removeDeckEntriesAction({ deckId: deck.id, entryIds: ids }), {
         failure: `Couldn't take ${who} out again.`,
+        onMissed: () => sink(null),
         onDone: (result) => {
-          if (result.ok) announce(`${who} ${ids.length > 1 ? "are" : "is"} out of the deck again.`);
+          if (!result.ok) {
+            sink(null);
+            return;
+          }
+          announce(`${who} ${ids.length > 1 ? "are" : "is"} out of the deck again.`);
+          const drawn = drawnAs.filter((item) => result.removed.some((row) => row.id === item.entry.id));
+          sink((done) => restore(result.removed, drawn, done));
         },
-      }),
-    [announce, deck.id, send],
+      });
+    },
+    [announce, deck.id, restore, send],
   );
+  removeQuietlyRef.current = removeQuietly;
 
   const remove = useCallback(
     (entryIds: readonly string[]) => {
@@ -423,20 +487,23 @@ export function DeckEditorProvider({
           if (!result.ok) return;
           const removed = result.removed;
           const drawn = drawnAs.filter((item) => removed.some((row) => row.id === item.entry.id));
-          const undoStep: UndoStep = { label: `Undo: remove ${who}`, run: () => restore(removed, drawn) };
-          pushUndo(undoStep);
+          const steps = history.current!;
+          steps.record({ label: `remove ${who}`, reverse: (done) => restore(removed, drawn, done) }, "edit");
+          const undoStep = steps.top("undo");
           toast(`Removed ${who}.`, {
             duration: 8000,
             action: {
               label: "Undo",
               // Gone already (undone from the bar or the keys): nothing.
-              onClick: () => takeUndo(undoStep)?.run(),
+              onClick: () => {
+                if (undoStep) steps.run("undo", undoStep);
+              },
             },
           });
         },
       });
     },
-    [announce, deck.id, holdNeighbour, pushUndo, restore, send, takeUndo],
+    [announce, deck.id, holdNeighbour, restore, send],
   );
 
   // ---- the add box's add -------------------------------------------------
@@ -470,16 +537,7 @@ export function DeckEditorProvider({
         failure: `Couldn't add ${name}.`,
         onDone: (result) => {
           if (!result.ok) return;
-          const was = result.quantity - 1;
-          pushUndo({
-            label: `Undo: add ${name}`,
-            run: () => {
-              const id = resolveId(result.entryId);
-              if (!drawnRef.current.some((item) => item.entry.id === id)) return;
-              if (result.merged && was >= 1) update([{ id, quantity: was }], "quantity", false);
-              else removeQuietly(id, name);
-            },
-          });
+          history.current!.record({ label: `add ${name}`, reverse: addedReverse([{ row: result, name }]) }, "edit");
         },
       });
       if (outcome.status === "done" || outcome.status === "failed") {
@@ -487,8 +545,34 @@ export function DeckEditorProvider({
       }
       return { ok: false, error: LOST_REQUEST };
     },
-    [deck.id, pushUndo, removeQuietly, resolveId, send, update],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- addedReverse reads refs only
+    [deck.id, send],
   );
+
+  /** The reverse of cards that landed: copies back where an add merged
+   *  (several picks on one row: back to before the first), the new lines
+   *  out — as ONE step (one ⌘Z takes all four of an "Add 4" back out, one
+   *  ⇧⌘Z puts them in again). */
+  function addedReverse(landed: ReadonlyArray<{ row: { entryId: string; merged: boolean; quantity: number }; name: string }>): Reverse {
+    return (done) => {
+      const back = new Map<string, number>();
+      const out = new Set<string>();
+      for (const { row } of landed) {
+        const id = resolveId(row.entryId);
+        if (!isHere(id)) continue;
+        if (row.merged) back.set(id, Math.min(back.get(id) ?? Infinity, row.quantity - 1));
+        else out.add(id);
+      }
+      const patches = [...back].filter(([id, quantity]) => quantity >= 1 && !out.has(id)).map(([id, quantity]) => ({ id, quantity }));
+      const parts: Reverse[] = [];
+      if (patches.length > 0) parts.push((sink) => update(patches, "quantity", sink));
+      if (out.size > 0) {
+        const who = whoOf(landed.filter(({ row }) => out.has(resolveId(row.entryId))).map(({ name }) => name));
+        parts.push((sink) => removeQuietly([...out], who, sink));
+      }
+      combineReverses(parts)(done);
+    };
+  }
 
   // ---- the add box's "Add N" (TODO DK5.17) ------------------------------
   const addMany = useCallback(
@@ -522,64 +606,91 @@ export function DeckEditorProvider({
           failure: `Couldn't add ${who}.`,
           onDone: (result) => {
             if (!result.ok) return;
-            // One undo for every card that landed: copies back where it
-            // merged, the new lines out.
             const landed = result.results.flatMap((row, index) => (row.ok ? [{ row, name: names[index]! }] : []));
             if (landed.length === 0) return;
-            const label = `Undo: add ${whoOf(landed.map(({ name }) => name))}`;
-            pushUndo({
-              label,
-              run: () => {
-                const here = (id: string) => drawnRef.current.some((item) => item.entry.id === id);
-                // Several picks on one row: back to before the first.
-                const back = new Map<string, number>();
-                const out = new Set<string>();
-                for (const { row } of landed) {
-                  const id = resolveId(row.entryId);
-                  if (!here(id)) continue;
-                  if (row.merged) back.set(id, Math.min(back.get(id) ?? Infinity, row.quantity - 1));
-                  else out.add(id);
-                }
-                const patches = [...back].filter(([id, quantity]) => quantity >= 1 && !out.has(id)).map(([id, quantity]) => ({ id, quantity }));
-                if (patches.length > 0) update(patches, "quantity", false);
-                if (out.size > 0) removeQuietlyMany([...out], whoOf(landed.filter(({ row }) => out.has(resolveId(row.entryId))).map(({ name }) => name)));
-              },
-            });
+            history.current!.record(
+              { label: `add ${whoOf(landed.map(({ name }) => name))}`, reverse: addedReverse(landed) },
+              "edit",
+            );
           },
         },
       );
       if ((outcome.status === "done" || outcome.status === "failed") && outcome.value) return outcome.value;
       return { ok: false, error: LOST_REQUEST };
     },
-    [deck.id, pushUndo, removeQuietlyMany, resolveId, send, update],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- addedReverse reads refs only
+    [deck.id, send],
+  );
+
+  // ---- a version from the change history (TODO DK5.13) ------------------
+  // The History dialog's "Restore this version": one server call that puts
+  // the deck's rows back as they were after a recorded change. It waits
+  // behind every edit on its way (every row's line in the queue), and its
+  // reverse is a restore to the version it replaced — so Undo takes a
+  // restore back, and Redo makes it again. A fresh restore empties the
+  // session's stacks first: their steps name rows it may have replaced.
+  const restoreVersion = useCallback(
+    function restoreVersion(
+      request: VersionRestoreRequest,
+      to: Sink | "edit" = "edit",
+    ): Promise<VersionRestoreAnswer> {
+      const keys = [VERSION_KEY, ...drawnRef.current.map((item) => item.entry.id)];
+      const sink = sinkFor(to === "edit" ? { label: `restore ${request.label}` } : to);
+      return send({ kind: "batch", ops: [] }, () => request.write(request.changeId), {
+        keys,
+        failure: `Couldn't restore ${request.label}.`,
+        onMissed: () => sink(null),
+        onDone: (result) => {
+          if (!result.ok) {
+            sink(null);
+            return;
+          }
+          announce(result.said);
+          if (to === "edit") history.current!.clear();
+          const back = result.headBefore;
+          sink(back === null ? null : (done) => void restoreVersion({ ...request, changeId: back }, done));
+        },
+      }).then((outcome) =>
+        (outcome.status === "done" || outcome.status === "failed") && outcome.value
+          ? outcome.value
+          : { ok: false as const, error: LOST_REQUEST },
+      );
+    },
+    [announce, send, sinkFor],
   );
 
   const undo = useCallback(() => {
-    const taken = takeUndo();
-    if (!taken) {
-      announce("Nothing to undo.");
-      return;
-    }
-    taken.run();
-  }, [announce, takeUndo]);
+    if (!history.current!.run("undo")) announce("Nothing to undo.");
+  }, [announce]);
+  const redo = useCallback(() => {
+    if (!history.current!.run("redo")) announce("Nothing to redo.");
+  }, [announce]);
 
-  // ⌘/Ctrl Z outside a field, with no dialog open: the last change back.
+  // ⌘/Ctrl Z outside a field, with no dialog open: the last change back;
+  // ⇧⌘Z / Ctrl Y: the last undo made again.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "z" || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const which = key === "z" ? (event.shiftKey ? "redo" : "undo") : key === "y" && event.ctrlKey && !event.shiftKey ? "redo" : null;
+      if (!which) return;
       if (isTypingTarget(event.target)) return;
       if (document.querySelector("[role=dialog][data-state=open], [role=alertdialog][data-state=open], [role=menu]")) return;
-      if (undoStack.current.length === 0) return;
+      if (!history.current!.labels()[which]) return;
       event.preventDefault();
-      undo();
+      if (which === "undo") undo();
+      else redo();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [undo]);
+  }, [undo, redo]);
+
+  const undoLabel = labels.undo ? undoWords(labels.undo) : null;
+  const redoLabel = labels.redo ? redoWords(labels.redo) : null;
 
   const value = useMemo<DeckEditor>(
-    () => ({ deck, items, step, move, remove, add, addMany, undo, undoLabel, announce, holdFocusOn }),
-    [deck, items, step, move, remove, add, addMany, undo, undoLabel, announce, holdFocusOn],
+    () => ({ deck, items, step, move, remove, add, addMany, undo, redo, undoLabel, redoLabel, restoreVersion, announce, holdFocusOn }),
+    [deck, items, step, move, remove, add, addMany, undo, redo, undoLabel, redoLabel, restoreVersion, announce, holdFocusOn],
   );
 
   return (

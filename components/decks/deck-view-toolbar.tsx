@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { CheckSquare, LayoutGrid, Layers, List, Sparkles, Table2 } from "lucide-react";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
@@ -24,7 +24,8 @@ import { cn } from "@/lib/utils";
 // and "Sort by" (native selects with their own labels), the status filter
 // (a ChipGroup whose chips carry their counts — part of each chip's name),
 // "custom cards ⇄ real cards" for a deck with PipGlyph cards in it, and —
-// the owner's — Select (TODO DK5.4: the selection's way in that is no
+// the owner's — Undo · Redo · History (TODO DK5.13, passed in as
+// `editTools`) and Select (TODO DK5.4: the selection's way in that is no
 // gesture, WCAG 2.5.7; a long press and Shift + click are the shortcuts).
 // ---------------------------------------------------------------------------
 
@@ -56,6 +57,7 @@ export function DeckViewToolbar({
   onFilter,
   proxyToggle,
   select = null,
+  editTools = null,
 }: {
   prefs: DeckViewPrefs;
   onPrefs: (patch: Partial<DeckViewPrefs>) => void;
@@ -66,6 +68,8 @@ export function DeckViewToolbar({
   proxyToggle: { showProxies: boolean; onToggle: () => void } | null;
   /** The owner's Select toggle (null for a visitor). */
   select?: { selecting: boolean; onToggle: () => void } | null;
+  /** The owner's Undo · Redo · History (TODO DK5.13, DeckHistoryControls). */
+  editTools?: ReactNode;
 }) {
   const groupId = useId();
   const sortId = useId();
@@ -127,8 +131,9 @@ export function DeckViewToolbar({
         onChange={onFilter}
         keepCase
       />
-      {proxyToggle || select ? (
+      {proxyToggle || select || editTools ? (
         <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
+          {editTools}
           {proxyToggle ? (
             <button
               type="button"

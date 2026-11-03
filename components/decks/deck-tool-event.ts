@@ -2,7 +2,8 @@
 // The deck page's owner tools, opened from anywhere on the page by ONE
 // window event (`pipglyph:deck-tool`): the details dialog and the decklist
 // import (DeckOwnerTools listens), and the add box (DeckAddBox listens —
-// "add", or "add-commander" with the Commander board chosen). A module of
+// "add", or "add-commander" with the Commander board chosen) and the deck's
+// change history (DeckHistoryDialog listens — "history"). A module of
 // its own so the card list and the doors can open them without loading the
 // dialogs' code.
 // ---------------------------------------------------------------------------
@@ -11,7 +12,7 @@
 export type DeckImportTool = "paste" | "names" | "commander";
 
 /** What a page control can open. */
-export type DeckTool = "details" | DeckImportTool | "add" | "add-commander";
+export type DeckTool = "details" | DeckImportTool | "add" | "add-commander" | "history";
 
 export const DECK_TOOL_EVENT = "pipglyph:deck-tool";
 
