@@ -1,7 +1,7 @@
 -- 0164_deck_entry_changes.sql — a deck's change history (TODO DK5.13: "Undo
 -- and history — change history with restore, Plus 30 days, Pro full").
 --
--- NUMBERING: written as 0164 while PR #722 claims 0163; renumbered at merge
+-- NUMBERING: 0164, the next after main's 0163 (#722); renumbered at merge
 -- if another migration lands first.
 --
 -- 1. THE LOG. public.deck_entry_changes holds one row per change to a deck's
