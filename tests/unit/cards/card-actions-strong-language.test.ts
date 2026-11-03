@@ -5,6 +5,7 @@ import {
   payloadOf,
   type ChainAnswer,
 } from "@/tests/stubs/supabase-chain";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 
 // ---------------------------------------------------------------------------
 // Strong language makes a card private (owner policy 2026-10-28,
@@ -144,6 +145,26 @@ describe("createCardAction — strong language", () => {
       forcedPrivate: { reason: "profanity", fields: ["rules_text"] },
     });
     expect(insertOf(stub).visibility).toBe("private");
+  });
+
+  // The AI card step creates its card public WITH its picture at the fit,
+  // in one insert (paint first, #722): the rule runs on that insert.
+  it("the AI card step's create (public, its art at the fit) whose text holds it is stored private, and says why", async () => {
+    const stub = db();
+    const result = await createCardAction(
+      payload({
+        visibility: "public",
+        art_position: fitArtToWindow(),
+        flavor_text: `${STRONG}, said the goblin.`,
+      }),
+    );
+    expect(result).toEqual({
+      ok: true,
+      cardId: CARD,
+      slug: "test",
+      forcedPrivate: { reason: "profanity", fields: ["flavor_text"] },
+    });
+    expect(insertOf(stub)).toMatchObject({ visibility: "private", art_url: "https://example.com/art.png", art_position: fitArtToWindow() });
   });
 
   it("reads every field: name, type line, flavour, tags, a second face", async () => {

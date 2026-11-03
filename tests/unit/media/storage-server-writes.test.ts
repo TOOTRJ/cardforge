@@ -184,7 +184,7 @@ import {
   uploadProfileMediaServerAction,
 } from "@/lib/profile/upload-server";
 import { deleteCustomPipAction, saveCustomPipAction } from "@/lib/pips/actions";
-import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 
 const publicUrl = (bucket: string, key: string) =>
@@ -468,6 +468,28 @@ describe("AI art lands in the caller's card-art folder", () => {
     expect(result).toEqual({ ok: false, error: "The artwork was painted but couldn't be saved. Try again.", failure: "art_store" });
     expect(state.scans).toEqual([]);
     error.mockRestore();
+  });
+});
+
+describe("an AI picture no card holds is removed (#722: a refused insert after its paint)", () => {
+  // The address is read only on OUR storage origin (ownStorageObject).
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    return () => vi.unstubAllEnvs();
+  });
+
+  it("removes the caller's own ai-* object, through the service role", async () => {
+    await discardGeneratedArt(USER, publicUrl("card-art", `${USER}/ai-1234.jpg`));
+    expect(removes()).toEqual([{ bucket: "card-art", op: "remove", keys: [`${USER}/ai-1234.jpg`] }]);
+  });
+
+  it("never touches another user's folder, a non-AI picture, another bucket or a foreign host", async () => {
+    await discardGeneratedArt(USER, publicUrl("card-art", `${OTHER}/ai-1234.jpg`));
+    await discardGeneratedArt(USER, publicUrl("card-art", `${USER}/upload-1234.jpg`));
+    await discardGeneratedArt(USER, publicUrl("profile-media", `${USER}/ai-1234.jpg`));
+    await discardGeneratedArt(USER, `https://evil.example/storage/v1/object/public/card-art/${USER}/ai-1234.jpg`);
+    await discardGeneratedArt(USER, "not a url");
+    expect(state.ops).toEqual([]);
   });
 });
 
