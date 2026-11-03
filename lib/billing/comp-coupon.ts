@@ -1,11 +1,6 @@
 import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { addMonthsUtc, periodMonthsAndDays } from "@/lib/billing/balance-credit";
-import {
-  COMP_CREDIT_GRANT_KEY,
-  MAX_TRIAL_SECONDS,
-  parseCompCreditGrant,
-  type CompFacts,
-} from "@/lib/billing/comp-stripe";
+import { MAX_TRIAL_SECONDS, type CompFacts } from "@/lib/billing/comp-stripe";
 import { formatUtcDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
@@ -42,12 +37,19 @@ import { formatUtcDate } from "@/lib/format/dates";
 //     next invoice is charged as usual. An invoice already issued at $0
 //     stays as it is (nothing is pro-rated, nothing clawed back).
 //   • ANNUAL plans keep #688's pro-rated balance credit — a 100 % coupon on
-//     an annual price would free the whole year. A switch between the two
-//     moves the comp: monthly → annual takes the coupon off and credits the
-//     rest of the comp (from the end of the invoice the coupon already
-//     freed); annual → monthly claws the credit back (unspent part) and
-//     frees the invoices still owed with a coupon.
-// ---------------------------------------------------------------------------
+//     an annual price would free the whole year.
+//   • NO PLAN SWITCH while a comp is on (owner 2026-11-02, after the
+//     independent check: every way of moving a comp between the coupon and
+//     the credit around a switch leaked money). The app refuses every
+//     switch (lib/billing/comp-switch-lock.ts), the portal opens without
+//     plan switching for a comped customer (lib/stripe/portal.ts), and a
+//     comp change releases a scheduled downgrade FIRST
+//     (`releaseScheduleForCompChange`, lib/billing/comp-stripe-apply.ts).
+//   • A #688 balance credit already running is NEVER moved onto a coupon
+//     (owner 2026-11-02): it runs out under #688's rules — a claw-back while
+//     a renewal's invoice is still a draft (the balance is applied when it
+//     FINALIZES, about an hour later) charged a comped user.
+// // ---------------------------------------------------------------------------
 
 /** Every comp coupon id starts with this; nothing else does. */
 export const COMP_COUPON_PREFIX = "pipglyph_comp_100off_";
@@ -57,19 +59,26 @@ export const COMP_COUPON_PREFIX = "pipglyph_comp_100off_";
  *  absent = none. */
 export const COMP_COUPON_GRANT_KEY = "pipglyph_comp_coupon";
 
-/** Subscription metadata key: the unix second an in-app plan switch moved a
- *  coupon comp onto the balance credit. While it is fresh the comp stays a
- *  credit (the customer may still be on the portal's confirm page — putting
- *  the coupon back then would free the switch's invoice). */
-export const COMP_SWITCH_HOLD_KEY = "pipglyph_comp_switch";
-export const COMP_SWITCH_HOLD_SECONDS = 86_400;
-
-/** The comp's leftover days that round up to one more free invoice. */
+/**
+ * The comp's leftover days that round up to one more free invoice — and so
+ * the shortest comp that frees an invoice on a MONTHLY plan at all: a comp
+ * under 15 days covers no invoice (its perks still apply; the plan bills as
+ * usual). Owner 2026-11-02 (BL1): keep it at 15 days. The admin's comp
+ * form says it (`COMP_COUPON_SHORT_NOTE`); docs/BILLING.md has the rule.
+ */
 export const COMP_COUPON_ROUND_UP_DAYS = 15;
 
-/** The coupon's name on invoices and receipts. */
+/** The comp form's line for the rule above. */
+export const COMP_COUPON_SHORT_NOTE = `On a monthly plan, a comp under ${COMP_COUPON_ROUND_UP_DAYS} days doesn't cover an invoice (15 days or more over whole months frees one more).`;
+
+/** Stripe refuses a coupon `name` longer than this ("must be at most 40
+ *  characters") — the sandbox run caught the first name (43). */
+export const STRIPE_COUPON_NAME_MAX = 40;
+
+/** The coupon's name on invoices and receipts (≤ 39 characters for any
+ *  comp a save allows — 730 days at most, so two-digit months). */
 export function compCouponName(months: number): string {
-  return `PipGlyph complimentary plan (${months} month${months === 1 ? "" : "s"} free)`;
+  return `PipGlyph complimentary (${months} month${months === 1 ? "" : "s"} free)`;
 }
 
 /** The ONE coupon id for a comp of `months` monthly invoices. */
@@ -194,12 +203,6 @@ export function compCouponGrantMeta(grant: CompCouponGrant): string {
   return `${grant.startSec}:${grant.endSec}:${grant.months}`;
 }
 
-/** An in-app plan switch moved the comp onto the credit less than a day ago. */
-export function compSwitchHeld(meta: Record<string, string> | null | undefined, nowSec: number): boolean {
-  const raw = Number(meta?.[COMP_SWITCH_HOLD_KEY] ?? "");
-  return Number.isFinite(raw) && raw > 0 && nowSec - raw < COMP_SWITCH_HOLD_SECONDS;
-}
-
 /** How many monthly invoices a comp from `startSec` to `endSec` frees. */
 export function compCouponMonths(startSec: number, endSec: number): number {
   const { months, days } = periodMonthsAndDays(startSec, endSec);
@@ -261,16 +264,27 @@ export function compCouponOutlook(
 
 /**
  * Where the coupon has already paid the plan up to: the end of the CURRENT
- * period when that period's invoice fell inside our discount (it was $0),
- * else `nowSec`. A comp moved onto the balance credit is credited from here,
- * so the free invoice is never paid for twice.
+ * period when that period's invoice was one the comp's coupon freed, else
+ * `nowSec`. Keyed off the comp's GRANT (its start never moves while it is
+ * open) and a comp discount still on the subscription — never the
+ * discount's own `start`: an extended or shortened comp's discount is
+ * replaced mid-period, and its start says nothing about the invoice the
+ * one before it freed. Used when a coupon comp must move onto the balance
+ * credit (a plan changed outside the app), so that time is paid once.
  */
-export function couponCoveredUntil(sub: CouponSubFacts, discount: DiscountLike | null, nowSec: number): number {
+export function couponCoveredUntil(
+  sub: CouponSubFacts,
+  grant: CompCouponGrant | null,
+  discount: DiscountLike | null,
+  nowSec: number,
+): number {
   const item = sub.items?.data?.[0];
   const start = item?.current_period_start ?? null;
   const end = item?.current_period_end ?? null;
-  if (!discount || start == null || end == null || discount.start == null) return nowSec;
-  const inside = start >= discount.start - 60 && (discount.end == null || start < discount.end);
+  if (!grant || !discount || start == null || end == null) return nowSec;
+  // The current period's invoice came after the grant began and before the
+  // comp's end — with our discount still on, it was a free one.
+  const inside = start >= grant.startSec - 60 && start < grant.endSec;
   return inside ? Math.max(nowSec, end) : nowSec;
 }
 
@@ -342,31 +356,36 @@ export function compCouponChangeFor(input: {
   subscribedTier: PlanTier;
   comp: CompFacts;
   now?: Date;
-  /** A NEW grant starts here (never later than now) instead of now: the
-   *  start of the balance credit it replaces — the invoices since then,
-   *  paid by that credit, count as already freed. */
-  grantStartSec?: number;
 }): CompCouponChange {
   const { sub, subscribedTier, comp } = input;
   const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
-  if (sub.status !== "active") return { kind: "none", reason: "not_active" };
-
   const stored = parseCompCouponGrant(sub.metadata);
   const open = stored && stored.endSec > nowSec ? stored : null;
   const discount = activeCompDiscountOf(sub, nowSec);
   const why = compHoldReason(comp, subscribedTier, nowSec);
+
+  if (sub.status !== "active") {
+    // A plan in dunning (past_due, unpaid…) is never given a coupon — but a
+    // REVOKE (or a comp that no longer holds) takes ours off whatever the
+    // status: once the card is fixed, the next invoice must be charged. (An
+    // expired comp's coupon keeps its own months, as on an active plan.)
+    if (why != null && open) {
+      return { kind: "remove", discountId: discount?.id ?? null, reason: "comp_released" };
+    }
+    return { kind: "none", reason: "not_active" };
+  }
 
   if (why == null) {
     const end = Math.floor(Date.parse(comp.expiresAt as string) / 1000);
     // A plan set to stop sees no more invoices: nothing to free (the comp
     // carries the perks after it). A grant already running is kept as it is.
     if (!open && isEnding(sub)) return { kind: "none", reason: "ending" };
-    const startSec = open ? open.startSec : Math.min(nowSec, input.grantStartSec ?? nowSec);
+    const startSec = open ? open.startSec : nowSec;
     const months = compCouponMonths(startSec, end);
     const grant = { startSec, endSec: end, months };
-    // Invoices the grant already freed (it has been on since its start — or
-    // the credit it replaces paid them), and — a NEW grant over an earlier
-    // comp's coupon still running — the ones that coupon still owes.
+    // Invoices the grant already freed (it has been on since its start),
+    // and — a NEW grant over an earlier comp's coupon still running — the
+    // ones that coupon still owes.
     const done = renewalsIn(sub, startSec, nowSec).length;
     const carry = !open && discount?.end != null ? renewalsIn(sub, nowSec, discount.end - 1).length : 0;
     const owed = months - done + carry;
@@ -395,12 +414,12 @@ export function compCouponChangeFor(input: {
 }
 
 /**
- * Should a subscription event re-run the comp's billing? Only when the plan
- * no longer matches how its comp is paid for: a coupon grant on a plan that
- * isn't monthly any more (a switch to annual), above the comp, or held for a
- * switch; or a balance-credit grant on a MONTHLY plan the comp holds (a
- * switch from annual, or a #688 credit from before BL1) — which moves onto
- * the coupon.
+ * Should a subscription event re-run the comp's billing? A SAFETY NET only —
+ * the app refuses plan switches while a comp is on and the comped portal
+ * offers none, so this is a plan changed outside both (the Stripe
+ * dashboard): a coupon grant on a plan that isn't monthly any more (a 100 %
+ * coupon would free the year) or that the comp no longer holds. A #688
+ * balance credit is NEVER moved (owner 2026-11-02): it runs out by itself.
  */
 export function compBillingNeedsReconcile(input: {
   sub: CouponSubFacts;
@@ -411,20 +430,17 @@ export function compBillingNeedsReconcile(input: {
   const { sub, comp } = input;
   if (sub.status !== "active" || !input.subscribedTier) return false;
   const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
-  const monthly = isMonthlyPrice(priceOf(sub));
-  const held = compSwitchHeld(sub.metadata, nowSec);
   const coupon = parseCompCouponGrant(sub.metadata);
-  const credit = parseCompCreditGrant(sub.metadata);
+  if (!coupon || coupon.endSec <= nowSec) return false;
+  const monthly = isMonthlyPrice(priceOf(sub));
   const holds = compHoldReason(comp, input.subscribedTier, nowSec) == null;
-  if (coupon && coupon.endSec > nowSec && (!monthly || held || !holds)) return true;
-  if (credit && credit.endSec > nowSec && monthly && !held && holds) return true;
-  return false;
+  return !monthly || !holds;
 }
 
-/** Either comp grant is named on the subscription (the webhook's cheap
- *  first test before it reads the profile). */
-export function hasCompBillingGrant(meta: Record<string, string> | null | undefined): boolean {
-  return Boolean(meta?.[COMP_COUPON_GRANT_KEY] || meta?.[COMP_CREDIT_GRANT_KEY]);
+/** A coupon grant is named on the subscription (the webhook's cheap first
+ *  test before it reads the profile). */
+export function hasCompCouponGrant(meta: Record<string, string> | null | undefined): boolean {
+  return Boolean(meta?.[COMP_COUPON_GRANT_KEY]);
 }
 
 /** The admin toast's line for a coupon change. */

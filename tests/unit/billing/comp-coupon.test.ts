@@ -8,11 +8,14 @@ import { chainClient } from "@/tests/stubs/supabase-chain";
 //
 // Stripe is SIMULATED here (no keys, no network): subscriptions carry
 // discounts, coupons live in a store keyed by id, the customer balance is a
-// ledger, and `renew()` issues the renewal invoice the way Stripe's docs
-// describe a repeating coupon — the discount applies to an invoice created
-// at or after its `start` and before its `end` (start + duration_in_months).
-// The owner's test-clock run on the sandbox checks that model for real (the
-// PR body's checklist).
+// ledger, and a renewal is TWO steps, as Stripe does it: `roll()` creates
+// the renewal invoice as a DRAFT at the period's end — its discount fixed
+// then (a repeating coupon applies to an invoice created at or after its
+// `start` and before its `end`) — and `finalize()` applies the customer
+// BALANCE about an hour later. A claw-back in between charged a comped user
+// under the first draft of BL1 (finding P1); `renew()` is the two together.
+// scripts/stripe-sandbox-comp-check.mjs runs the same scenarios on a real
+// sandbox test clock.
 // ---------------------------------------------------------------------------
 
 const sync = vi.hoisted(() => ({ syncSubscriptionForUser: vi.fn(), resolveSubscriptionTier: vi.fn() }));
@@ -22,16 +25,19 @@ vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: 
 import {
   applyCompToSubscription,
   ensureCompCoupon,
-  moveCompOffCouponForSwitch,
   reconcileCompBilling,
+  releaseScheduleForCompChange,
 } from "@/lib/billing/comp-stripe-apply";
 import {
   COMP_COUPON_GRANT_KEY,
-  COMP_SWITCH_HOLD_KEY,
+  COMP_COUPON_ROUND_UP_DAYS,
   compBillingNeedsReconcile,
+  couponCoveredUntil,
   compCouponChangeFor,
+  STRIPE_COUPON_NAME_MAX,
   compCouponId,
   compCouponMonths,
+  compCouponName,
   compCouponNote,
   compCouponOutlook,
   isCompCouponShape,
@@ -73,6 +79,9 @@ function fakeStripe(opts: {
   ledger?: Txn[];
   cancelAtPeriodEnd?: boolean;
   clock?: number;
+  status?: string;
+  /** A scheduled downgrade (lib/stripe/actions.ts scheduleDowngrade). */
+  schedule?: { id: string; nextPrice: Price } | null;
 }) {
   const coupons = opts.coupons ?? new Map<string, Coupon>();
   const ledger: Txn[] = [...(opts.ledger ?? [])];
@@ -86,7 +95,9 @@ function fakeStripe(opts: {
     metadata: { ...(opts.metadata ?? {}) } as Record<string, string>,
     discounts: [...(opts.discounts ?? [])] as Disc[],
     cancel_at_period_end: opts.cancelAtPeriodEnd ?? false,
-    invoices: [] as Array<{ at: number; subtotal: number; discounted: number; balanceUsed: number; charged: number; discountId: string | null }>,
+    status: opts.status ?? "active",
+    schedule: opts.schedule ?? null,
+    invoices: [] as Array<{ at: number; subtotal: number; discounted: number; balanceUsed: number; charged: number; discountId: string | null; status: "draft" | "paid" }>,
   };
   const step = () => (st.price.recurring.interval === "year" ? 12 : 1);
   const periodStart = () => addMonths(st.anchor, (st.cycle - 1) * step());
@@ -95,13 +106,26 @@ function fakeStripe(opts: {
     id: "sub_1",
     object: "subscription",
     customer: "cus_1",
-    status: "active",
+    status: st.status,
     cancel_at_period_end: st.cancel_at_period_end,
     cancel_at: null,
     trial_end: null,
     billing_cycle_anchor: st.anchor,
     metadata: { ...st.metadata },
     discounts: expand?.includes("discounts") ? st.discounts.map((d) => ({ ...d })) : st.discounts.map((d) => d.id),
+    schedule: !st.schedule
+      ? null
+      : expand?.some((e) => e.startsWith("schedule"))
+        ? {
+            id: st.schedule.id,
+            end_behavior: "release",
+            current_phase: { start_date: periodStart(), end_date: periodEnd() },
+            phases: [
+              { start_date: periodStart(), end_date: periodEnd(), items: [{ price: st.price }] },
+              { start_date: periodEnd(), end_date: addMonths(periodEnd(), 1), items: [{ price: st.schedule.nextPrice }] },
+            ],
+          }
+        : st.schedule.id,
     items: { data: [{ id: "si_1", current_period_start: periodStart(), current_period_end: periodEnd(), price: st.price }] },
   });
   const balance = () => ledger.reduce((sum, t) => sum + t.amount, 0);
@@ -149,6 +173,13 @@ function fakeStripe(opts: {
         },
       ),
     },
+    subscriptionSchedules: {
+      release: vi.fn(async (id: string) => {
+        if (st.schedule?.id !== id) throw Object.assign(new Error("No such schedule"), { code: "resource_missing" });
+        st.schedule = null;
+        return { id, status: "released" };
+      }),
+    },
     coupons: {
       retrieve: vi.fn(async (id: string) => {
         const c = coupons.get(id);
@@ -157,6 +188,9 @@ function fakeStripe(opts: {
       }),
       create: vi.fn(async (params: Coupon) => {
         if (coupons.has(params.id)) throw Object.assign(new Error("exists"), { code: "resource_already_exists" });
+        // Stripe's own limit (the sandbox run hit it): a longer name is refused.
+        const name = (params as { name?: string }).name ?? "";
+        if (name.length > 40) throw new Error(`Invalid string: ${name}; must be at most 40 characters`);
         const c = { ...params, object: "coupon", valid: true, amount_off: null };
         coupons.set(params.id, c);
         return { ...c };
@@ -175,22 +209,35 @@ function fakeStripe(opts: {
         },
       ),
     },
-    /** The clock moves to the period's end and Stripe issues the renewal. */
-    renew() {
+    /** The period rolls: the clock moves to its end and Stripe creates the
+     *  renewal invoice as a DRAFT — its discount fixed now, no balance yet. */
+    roll() {
       st.clock = periodEnd();
       st.cycle += 1;
       const subtotal = st.price.unit_amount;
       const d = st.discounts.find((x) => x.start <= st.clock && (x.end == null || st.clock < x.end)) ?? null;
       const pct = d ? Number(coupons.get(d.source.coupon)?.percent_off ?? 0) : 0;
       const discounted = Math.round(subtotal * (1 - pct / 100));
-      const credit = Math.max(0, -balance());
-      const balanceUsed = Math.min(credit, discounted);
-      if (balanceUsed > 0) ledger.push({ id: `cbtxn_${ledger.length + 1}`, amount: balanceUsed, metadata: {} });
       // Stripe drops a repeating discount once it has ended.
       st.discounts = st.discounts.filter((x) => x.end == null || x.end > st.clock);
-      const invoice = { at: st.clock, subtotal, discounted, balanceUsed, charged: discounted - balanceUsed, discountId: d?.id ?? null };
+      const invoice = { at: st.clock, subtotal, discounted, balanceUsed: 0, charged: discounted, discountId: d?.id ?? null, status: "draft" as "draft" | "paid" };
       st.invoices.push(invoice);
       return invoice;
+    },
+    /** About an hour later the draft FINALIZES: the customer balance (a
+     *  credit) is applied now, what is left is charged. */
+    finalize(invoice = st.invoices[st.invoices.length - 1]) {
+      const credit = Math.max(0, -balance());
+      const balanceUsed = Math.min(credit, invoice.discounted);
+      if (balanceUsed > 0) ledger.push({ id: `cbtxn_${ledger.length + 1}`, amount: balanceUsed, metadata: {} });
+      invoice.balanceUsed = balanceUsed;
+      invoice.charged = invoice.discounted - balanceUsed;
+      invoice.status = "paid";
+      return invoice;
+    },
+    /** A whole renewal: the draft, then its finalization. */
+    renew() {
+      return stripe.finalize(stripe.roll());
     },
     /** Jump the clock without a renewal (an admin re-save later on). */
     at(s: number) {
@@ -233,6 +280,14 @@ describe("the pure rules", () => {
     expect(compCouponId(12)).toBe("pipglyph_comp_100off_12m");
     expect(() => compCouponId(0)).toThrow();
     expect(() => compCouponId(1.5)).toThrow();
+  });
+
+  it("the coupon's name fits Stripe's 40-character limit for every comp a save allows (the sandbox run refused 43)", () => {
+    expect(compCouponName(1)).toBe("PipGlyph complimentary (1 month free)");
+    expect(compCouponName(3)).toBe("PipGlyph complimentary (3 months free)");
+    // A comp is at most 730 days: never more than 25 months, rounded up.
+    expect(compCouponMonths(0, 730 * 86400)).toBeLessThanOrEqual(25);
+    for (let n = 1; n <= 99; n++) expect(compCouponName(n).length).toBeLessThanOrEqual(STRIPE_COUPON_NAME_MAX);
   });
 
   it("only the exact shape is ours: 100 % off, repeating, the id's months", () => {
@@ -308,9 +363,9 @@ describe("a MONTHLY plan: grant, the renewal at $0, re-save, revoke", () => {
         percent_off: 100,
         duration: "repeating",
         duration_in_months: 1,
-        name: "PipGlyph complimentary plan (1 month free)",
+        name: "PipGlyph complimentary (1 month free)",
       }),
-      { idempotencyKey: "comp-coupon-create:pipglyph_comp_100off_1m" },
+      { idempotencyKey: expect.stringMatching(/^comp-coupon-create:pipglyph_comp_100off_1m:[0-9a-f-]{36}$/) },
     );
     expect(stripe.subscriptions.update).toHaveBeenCalledTimes(1);
     const [, params] = stripe.subscriptions.update.mock.calls[0];
@@ -506,205 +561,256 @@ describe("an ANNUAL plan stays on the balance credit", () => {
 });
 
 // ---------------------------------------------------------------------------
-describe("switching plan while comped", () => {
-  const NOV25 = sec("2026-11-25T12:00:00Z");
+describe("a #688 balance credit already on a MONTHLY plan runs out under #688's rules (owner 2026-11-02)", () => {
+  // Plus $6 monthly, comped Nov 1 → Feb 1 under #688: the credit for the
+  // comp period sits on the balance.
+  const creditGrant = { startSec: nowSec, endSec: sec(THREE_MONTHS) };
+  const ledgerKey = compCreditLedgerKey("sub_1", creditGrant);
+  const credited = periodCreditCents({ price: PLUS_MONTHLY, tier: "plus", startSec: nowSec, endSec: sec(THREE_MONTHS) });
+  const with688 = () =>
+    fakeStripe({
+      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${sec(THREE_MONTHS)}` },
+      ledger: [{ id: "cbtxn_0", amount: -credited, metadata: { [COMP_CREDIT_LEDGER_KEY]: ledgerKey } }],
+    });
 
-  it("monthly → ANNUAL in the app: before the portal opens, the coupon comes off and the rest of the comp is credited from the end of the invoice it already freed", async () => {
-    const stripe = fakeStripe({});
-    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
-    stripe.renew(); // Nov 20 → Dec 20 is free
-    stripe.at(NOV25);
-    const live = await stripe.subscriptions.retrieve("sub_1");
-    const moved = await moveCompOffCouponForSwitch(stripe as never, live as never, {
-      userId: "u1",
-      comp: comp("plus", THREE_MONTHS),
-      target: { tier: "plus", period: "annual" },
-      now: new Date(NOV25 * 1000),
-    });
-    expect(moved.moved).toBe(true);
-    // No 100 % coupon left to free the annual invoice.
-    expect(ours(stripe)).toEqual([]);
-    expect(stripe.st.metadata[COMP_COUPON_GRANT_KEY]).toBeUndefined();
-    expect(stripe.st.metadata[COMP_SWITCH_HOLD_KEY]).toBe(String(NOV25));
-    // The credit pays Dec 20 → Feb 1 (the free invoice already paid Nov 20 → Dec 20).
-    const dec20 = sec("2026-12-20T12:00:00Z");
-    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBe(`${dec20}:${sec(THREE_MONTHS)}`);
-    const expected = periodCreditCents({ price: PLUS_MONTHLY, tier: "plus", startSec: dec20, endSec: sec(THREE_MONTHS) });
-    expect(expected).toBe(837); // $72 × (1/12 + 12/365)
-    expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
-      "cus_1",
-      expect.objectContaining({ amount: -837, metadata: expect.objectContaining({ [COMP_CREDIT_LEDGER_KEY]: compCreditLedgerKey("sub_1", { startSec: dec20, endSec: sec(THREE_MONTHS) }) }) }),
-      expect.anything(),
-    );
-    // The coupon came off in the SAME update that named the credit's grant (before any money).
-    const first = stripe.subscriptions.update.mock.calls.findIndex(([, p]) => (p as { discounts?: unknown }).discounts === "");
-    expect((stripe.subscriptions.update.mock.calls[first][1] as { metadata: Record<string, string> }).metadata).toMatchObject({
-      [COMP_COUPON_GRANT_KEY]: "",
-      [COMP_CREDIT_GRANT_KEY]: `${dec20}:${sec(THREE_MONTHS)}`,
-    });
-    expect(stripe.subscriptions.update.mock.invocationCallOrder[first]).toBeLessThan(
-      stripe.customers.createBalanceTransaction.mock.invocationCallOrder[0],
-    );
-  });
-
-  it("the customer ABANDONS the portal: the comp stays a credit while the switch hold is fresh (a re-save or event changes nothing)", async () => {
-    const stripe = fakeStripe({});
-    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
-    stripe.renew();
-    stripe.at(NOV25);
-    await moveCompOffCouponForSwitch(stripe as never, (await stripe.subscriptions.retrieve("sub_1")) as never, {
-      userId: "u1",
-      comp: comp("plus", THREE_MONTHS),
-      target: { tier: "plus", period: "annual" },
-      now: new Date(NOV25 * 1000),
-    });
-    stripe.subscriptions.update.mockClear();
-    stripe.customers.createBalanceTransaction.mockClear();
-    const out = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(NOV25 + 3600));
-    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
-    expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
+  it("the old P1: a re-save AND a webhook event while the renewal is still a DRAFT claw nothing back — invoices $0, $0, $0, then the full price", async () => {
+    expect(credited).toBe(1800);
+    const stripe = with688();
+    const draft = stripe.roll(); // Nov 20: the draft, balance not yet applied
+    expect(draft).toMatchObject({ status: "draft", discounted: 600 });
+    // Inside the draft window: the admin re-saves the same comp, and a
+    // subscription.updated event reaches the webhook.
+    const inWindow = stripe.at(draft.at + 30 * 60);
+    const out = await grant(stripe, comp("plus", THREE_MONTHS), inWindow);
+    const eventSub = await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] });
+    expect(await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", inWindow)).toBeNull();
+    expect(out.failed).toBe(false);
     expect(out.credit?.postedCents).toBe(0);
-    expect(compBillingNeedsReconcile({ sub: (await stripe.subscriptions.retrieve("sub_1")) as never, subscribedTier: "plus", comp: comp("plus", THREE_MONTHS), now: new Date((NOV25 + 3600) * 1000) })).toBe(false);
-    // The credit (#688's pro-rated one) pays what the comp still owes:
-    // Dec 20 in full, Jan 20 for the 12 comp days left in it.
-    expect([stripe.renew(), stripe.renew()].map((i) => i.charged)).toEqual([0, 363]);
-  });
-
-  it("monthly → a HIGHER monthly tier the comp covers (a Pro comp on Plus, switching to Pro): the coupon stays", async () => {
-    const stripe = fakeStripe({});
-    await grant(stripe, comp("pro", THREE_MONTHS), NOW);
-    const moved = await moveCompOffCouponForSwitch(stripe as never, (await stripe.subscriptions.retrieve("sub_1")) as never, {
-      userId: "u1",
-      comp: comp("pro", THREE_MONTHS),
-      target: { tier: "pro", period: "monthly" },
-      now: NOW,
-    });
-    expect(moved).toEqual({ moved: false, note: null });
-    expect(ours(stripe)).toHaveLength(1);
-  });
-
-  it("monthly Plus comp → Pro monthly (above the comp): moved off the coupon first", async () => {
-    const stripe = fakeStripe({});
-    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
-    const moved = await moveCompOffCouponForSwitch(stripe as never, (await stripe.subscriptions.retrieve("sub_1")) as never, {
-      userId: "u1",
-      comp: comp("plus", THREE_MONTHS),
-      target: { tier: "pro", period: "monthly" },
-      now: NOW,
-    });
-    expect(moved.moved).toBe(true);
-    expect(ours(stripe)).toEqual([]);
-  });
-
-  it("no comp coupon on the plan: the switch is untouched", async () => {
-    const stripe = fakeStripe({});
-    const moved = await moveCompOffCouponForSwitch(stripe as never, (await stripe.subscriptions.retrieve("sub_1")) as never, {
-      userId: "u1",
-      comp: comp(null, null),
-      target: { tier: "plus", period: "annual" },
-      now: NOW,
-    });
-    expect(moved).toEqual({ moved: false, note: null });
-    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
-  });
-
-  it("a switch made in Stripe's own portal (the coupon still on an ANNUAL price): the webhook takes it off", async () => {
-    const stripe = fakeStripe({});
-    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
-    // The portal switched the price at Nov 25 and started an annual period.
-    stripe.st.price = PLUS_ANNUAL;
-    stripe.st.anchor = NOV25;
-    stripe.st.cycle = 1;
-    stripe.at(NOV25 + 60);
-    const eventSub = await stripe.subscriptions.retrieve("sub_1");
-    const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", new Date((NOV25 + 60) * 1000));
-    expect(out?.failed).toBe(false);
-    expect(ours(stripe)).toEqual([]);
-    // The switch's invoice fell inside the discount: the comp is paid for to
-    // the period's end — no credit on top.
-    expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
-    expect(out?.note).toMatch(/Took the complimentary coupon off/);
-  });
-
-  it("ANNUAL → monthly (a downgrade's phase change): the credit's unspent part comes back, then a coupon for what is still owed", async () => {
-    // Annual Plus renewing Dec 1; comped Plus Nov 1 → Feb 1 on the credit ($15).
-    const annualAnchor = sec("2025-12-01T12:00:00Z");
-    const ledgerKey = compCreditLedgerKey("sub_1", { startSec: nowSec, endSec: sec(THREE_MONTHS) });
-    const stripe = fakeStripe({
-      price: PLUS_ANNUAL,
-      anchor: annualAnchor,
-      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${sec(THREE_MONTHS)}` },
-      ledger: [{ id: "cbtxn_0", amount: -1500, metadata: { [COMP_CREDIT_LEDGER_KEY]: ledgerKey } }],
-    });
-    // Dec 1: the schedule's next phase — Plus MONTHLY from here, its first
-    // invoice ($6) paid by the credit on the balance.
-    const dec1 = sec("2026-12-01T12:00:00Z");
-    stripe.st.price = PLUS_MONTHLY;
-    stripe.st.anchor = dec1;
-    stripe.st.cycle = 1;
-    stripe.ledger.push({ id: "cbtxn_inv", amount: 600, metadata: {} });
-    stripe.at(dec1 + 60);
-    const eventSub = await stripe.subscriptions.retrieve("sub_1");
-    expect(compBillingNeedsReconcile({ sub: eventSub as never, subscribedTier: "plus", comp: comp("plus", THREE_MONTHS), now: new Date((dec1 + 60) * 1000) })).toBe(true);
-    const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", new Date((dec1 + 60) * 1000));
-    // The whole credit comes back that is unspent ($9); the $6 that paid
-    // Dec 1's invoice stays — that invoice is the comp's first.
-    expect(out?.credit).toMatchObject({ postedCents: -900, keptCents: 600 });
-    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBeUndefined();
-    // A 3-month comp (from the credit's start, Nov 1) with one invoice
-    // already paid: the coupon frees the two still owed, then billing resumes.
-    expect(out?.coupon?.change).toMatchObject({ kind: "apply", couponMonths: 2, grant: { startSec: nowSec, months: 3 } });
-    expect([stripe.renew(), stripe.renew(), stripe.renew()].map((i) => [iso(i.at).slice(0, 10), i.charged])).toEqual([
-      ["2027-01-01", 0],
-      ["2027-02-01", 0],
-      ["2027-03-01", 600],
+    stripe.finalize(draft);
+    stripe.renew();
+    stripe.renew();
+    stripe.renew();
+    expect(stripe.st.invoices.map((i) => [iso(i.at).slice(0, 10), i.charged])).toEqual([
+      ["2026-11-20", 0],
+      ["2026-12-20", 0],
+      ["2027-01-20", 0],
+      ["2027-02-20", 600],
     ]);
-    expect(stripe.ledger.reduce((sum, t) => sum + t.amount, 0)).toBe(0); // nothing left on the balance
+    // Never a claw-back, never a coupon.
+    expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
+    expect(stripe.coupons.create).not.toHaveBeenCalled();
+    expect(stripe.coupons.retrieve).not.toHaveBeenCalled();
+    expect(stripe.st.discounts).toEqual([]);
   });
 
-  it("a #688 credit on a MONTHLY plan moves onto the coupon at the next event — never both paying the same invoice", async () => {
-    const ledgerKey = compCreditLedgerKey("sub_1", { startSec: nowSec, endSec: sec(THREE_MONTHS) });
-    const stripe = fakeStripe({
-      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${sec(THREE_MONTHS)}` },
-      ledger: [{ id: "cbtxn_0", amount: -1800, metadata: { [COMP_CREDIT_LEDGER_KEY]: ledgerKey } }],
-    });
-    stripe.renew(); // Nov 20: $6 of the credit pays it
-    const at = stripe.st.clock + 60;
-    const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", (await stripe.subscriptions.retrieve("sub_1")) as never, "plus", stripe.at(at));
-    // The $12 still unspent comes back; the $6 that paid Nov 20 stays.
-    expect(out?.credit).toMatchObject({ postedCents: -1200, keptCents: 600 });
-    expect(stripe.st.metadata[COMP_CREDIT_GRANT_KEY]).toBeUndefined();
-    // Nov 20 counted as freed (the credit paid it): Dec 20 and Jan 20 free,
-    // Feb 20 charged — three invoices for three months, as a fresh grant.
-    expect(out?.coupon?.change).toMatchObject({ kind: "apply", couponMonths: 2 });
-    expect([stripe.renew(), stripe.renew(), stripe.renew()].map((i) => i.charged)).toEqual([0, 0, 600]);
-    expect(stripe.ledger.reduce((sum, t) => sum + t.amount, 0)).toBe(0);
+  it("the webhook's safety net never even looks at a #688 credit on a monthly plan", async () => {
+    const stripe = with688();
+    const sub = await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] });
+    expect(compBillingNeedsReconcile({ sub: sub as never, subscribedTier: "plus", comp: comp("plus", THREE_MONTHS), now: NOW })).toBe(false);
+    const stub = db();
+    expect(await reconcileCompBilling(stub.client as never, stripe as never, "u1", sub as never, "plus", NOW)).toBeNull();
+    expect(stub.log).toEqual([]);
   });
 
-  it("a #688 credit on a monthly plan whose comp is CLEARED is released as #688 does — the time lived through stays paid for", async () => {
-    const ledgerKey = compCreditLedgerKey("sub_1", { startSec: nowSec, endSec: sec(THREE_MONTHS) });
-    const stripe = fakeStripe({
-      metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${sec(THREE_MONTHS)}` },
-      ledger: [{ id: "cbtxn_0", amount: -1800, metadata: { [COMP_CREDIT_LEDGER_KEY]: ledgerKey } }],
-    });
+  it("EXTENDED, it stays a credit — #688's settlement, no coupon", async () => {
+    const stripe = with688();
+    const out = await grant(stripe, comp("plus", "2027-03-01T12:00:00.000Z"), stripe.at(nowSec + 5 * DAY));
+    expect(out.credit?.postedCents).toBeGreaterThan(0);
+    expect(stripe.coupons.create).not.toHaveBeenCalled();
+    expect(stripe.st.discounts).toEqual([]);
+  });
+
+  it("CLEARED, it is released as #688 does — the time lived through stays paid for", async () => {
+    const stripe = with688();
     const out = await grant(stripe, comp(null, null), stripe.at(nowSec + 10 * DAY));
     // 10 days lived = $72 × 10/365 = $1.97 stays; $16.03 comes back. No coupon.
     expect(out.credit?.postedCents).toBe(-1603);
     expect(stripe.coupons.create).not.toHaveBeenCalled();
     expect(stripe.st.discounts).toEqual([]);
   });
+});
 
-  it("a plan that matches its comp's billing is left alone by the webhook (its own update event stops there)", async () => {
+// ---------------------------------------------------------------------------
+describe("the coupon across drafts, mid-period changes and dunning", () => {
+  it("a comp granted mid-period: the renewal drafts take the discount when they are CREATED — $0, $0, $0, then $6", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(sec("2026-11-10T08:00:00Z")));
+    const drafts = [stripe.roll(), stripe.roll(), stripe.roll(), stripe.roll()];
+    expect(drafts.map((d) => d.discounted)).toEqual([0, 0, 0, 600]);
+    drafts.forEach((d) => stripe.finalize(d));
+    expect(stripe.st.invoices.map((i) => i.charged)).toEqual([0, 0, 0, 600]);
+  });
+
+  it("the round-up rule is ONE named constant: 15 days (owner 2026-11-02)", () => {
+    expect(COMP_COUPON_ROUND_UP_DAYS).toBe(15);
+    expect(compCouponMonths(nowSec, nowSec + (COMP_COUPON_ROUND_UP_DAYS - 1) * DAY)).toBe(0);
+    expect(compCouponMonths(nowSec, nowSec + COMP_COUPON_ROUND_UP_DAYS * DAY)).toBe(1);
+  });
+
+  it("'covered' is keyed off the comp's GRANT, never the replaced discount's mid-period start", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", ONE_MONTH), NOW);
+    stripe.renew(); // Nov 20 → Dec 20, freed
+    await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(sec("2026-11-25T12:00:00Z"))); // extended: a NEW discount, started Nov 25
+    const sub = (await stripe.subscriptions.retrieve("sub_1", { expand: ["discounts"] })) as unknown as CouponSubFacts;
+    const discount = sub.discounts?.[0] as { start: number };
+    expect(discount.start).toBe(sec("2026-11-25T12:00:00Z"));
+    const g = { startSec: nowSec, endSec: sec(THREE_MONTHS), months: 3 };
+    const at = sec("2026-11-26T12:00:00Z");
+    expect(couponCoveredUntil(sub, g, discount as never, at)).toBe(sec("2026-12-20T12:00:00Z"));
+    // No grant (or no discount): nothing is covered past now.
+    expect(couponCoveredUntil(sub, null, discount as never, at)).toBe(at);
+    expect(couponCoveredUntil(sub, g, null, at)).toBe(at);
+  });
+
+  it("SHORTENED mid-period while still owed: re-sized, the next invoices follow the new end", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    const out = await grant(stripe, comp("plus", "2027-01-01T12:00:00.000Z"), stripe.at(sec("2026-11-05T12:00:00Z")));
+    expect(out.coupon?.change).toMatchObject({ kind: "apply", couponMonths: 2, replaces: "di_1" });
+    expect([stripe.renew(), stripe.renew(), stripe.renew()].map((i) => i.charged)).toEqual([0, 0, 600]);
+  });
+
+  it("REVOKE on a PAST_DUE plan takes the coupon off too (P3e) — once the card is fixed, the next invoice is charged", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    stripe.st.status = "past_due";
+    const out = await applyCompToSubscription(db({ subscription_status: "past_due" }).client as never, "u1", comp(null, null), {
+      stripe: stripe as never,
+      now: stripe.at(nowSec + 3 * DAY),
+    });
+    expect(out.failed).toBe(false);
+    expect(out.coupon?.change).toMatchObject({ kind: "remove", reason: "comp_released" });
+    expect(ours(stripe)).toEqual([]);
+    expect(stripe.st.metadata[COMP_COUPON_GRANT_KEY]).toBeUndefined();
+    stripe.st.status = "active";
+    expect(stripe.renew().charged).toBe(600);
+  });
+
+  it("a past_due plan is never GIVEN a coupon", async () => {
+    const stripe = fakeStripe({ status: "past_due" });
+    await applyCompToSubscription(db({ subscription_status: "past_due" }).client as never, "u1", comp("plus", THREE_MONTHS), {
+      stripe: stripe as never,
+      now: NOW,
+    });
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(stripe.coupons.create).not.toHaveBeenCalled();
+  });
+
+  it("a failed attach leaves the subscription exactly as it was, and the admin sees the failure (P3a)", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", ONE_MONTH), NOW);
+    stripe.subscriptions.update.mockRejectedValueOnce(new Error("Stripe down"));
+    const out = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(nowSec + DAY));
+    expect(out.failed).toBe(true);
+    expect(out.note).toMatch(/Stripe couldn't be updated/);
+    // The old discount and grant are untouched — nothing was taken off.
+    expect(ours(stripe)).toHaveLength(1);
+    expect(stripe.st.metadata[COMP_COUPON_GRANT_KEY]).toBe(`${nowSec}:${sec(ONE_MONTH)}:1`);
+    // A re-save applies it from the SAME grant start (never restarted at now).
+    const again = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(nowSec + 2 * DAY));
+    expect(again.coupon?.change).toMatchObject({ kind: "apply", grant: { startSec: nowSec } });
+  });
+
+  it("a coupon create always carries a FRESH idempotency key, and a deleted coupon is made again (P3f)", async () => {
+    const coupons = new Map<string, Coupon>();
+    const stripe = fakeStripe({ coupons });
+    await ensureCompCoupon(stripe as never, 2);
+    coupons.delete("pipglyph_comp_100off_2m"); // deleted in the dashboard
+    await ensureCompCoupon(stripe as never, 2);
+    expect(stripe.coupons.create).toHaveBeenCalledTimes(2);
+    const keys = stripe.coupons.create.mock.calls.map((c) => (c as unknown as [unknown, { idempotencyKey: string }])[1].idempotencyKey);
+    expect(new Set(keys).size).toBe(2);
+    expect(coupons.has("pipglyph_comp_100off_2m")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("a plan changed OUTSIDE the app while couponed (the webhook's safety net)", () => {
+  const NOV25 = sec("2026-11-25T12:00:00Z");
+
+  it("the coupon left on an ANNUAL price comes off; the switch's invoice inside the discount means no credit on top", async () => {
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    stripe.renew(); // Nov 20, freed
+    stripe.st.price = PLUS_ANNUAL;
+    stripe.st.anchor = sec("2026-11-20T12:00:00Z");
+    stripe.st.cycle = 1;
+    stripe.at(NOV25 + 60);
+    const eventSub = await stripe.subscriptions.retrieve("sub_1");
+    const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", eventSub as never, "plus", new Date((NOV25 + 60) * 1000));
+    expect(out?.failed).toBe(false);
+    expect(ours(stripe)).toEqual([]);
+    expect(out?.note).toMatch(/Took the complimentary coupon off/);
+  });
+
+  it("the credit goes on BEFORE the coupon comes off; a failed removal is retried by a re-save without a second credit (P3a)", async () => {
+    // A coupon grant from Nov 1 left on an annual plan whose current period
+    // began before it (no invoice of it was freed): the comp moves onto the
+    // credit from now.
+    const stripe = fakeStripe({});
+    await grant(stripe, comp("plus", THREE_MONTHS), NOW);
+    stripe.st.price = PLUS_ANNUAL;
+    stripe.st.anchor = sec("2026-06-01T12:00:00Z");
+    stripe.st.cycle = 1;
+    const real = stripe.subscriptions.update.getMockImplementation()!;
+    stripe.subscriptions.update.mockImplementation(async (id, params, options) => {
+      if ((params as { discounts?: unknown }).discounts === "") throw new Error("Stripe down");
+      return real(id, params, options);
+    });
+    const out = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(NOV25 + 3600));
+    expect(out.failed).toBe(true);
+    expect(out.credit?.postedCents).toBeGreaterThan(0);
+    expect(out.note).toMatch(/coupon couldn't be taken off/);
+    expect(ours(stripe)).toHaveLength(1); // still on — nothing removed before its replacement
+    const posted = stripe.customers.createBalanceTransaction.mock.calls.length;
+    stripe.subscriptions.update.mockImplementation(real);
+    const again = await grant(stripe, comp("plus", THREE_MONTHS), stripe.at(NOV25 + 7200));
+    expect(again.failed).toBe(false);
+    expect(stripe.customers.createBalanceTransaction.mock.calls.length).toBe(posted); // no second credit
+    expect(ours(stripe)).toEqual([]);
+  });
+
+  it("a plan that matches its comp's billing is left alone (its own update event stops there)", async () => {
     const stripe = fakeStripe({});
     await grant(stripe, comp("plus", THREE_MONTHS), NOW);
     stripe.subscriptions.update.mockClear();
     const out = await reconcileCompBilling(db().client as never, stripe as never, "u1", (await stripe.subscriptions.retrieve("sub_1")) as never, "plus", NOW);
     expect(out).toBeNull();
     expect(stripe.subscriptions.update).not.toHaveBeenCalled();
-    // No grant named at all: not even the profile is read.
     const plain = fakeStripe({});
     const stub = db();
     expect(await reconcileCompBilling(stub.client as never, plain as never, "u1", (await plain.subscriptions.retrieve("sub_1")) as never, "plus", NOW)).toBeNull();
     expect(stub.log).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("a comp change while a downgrade is scheduled (owner 2026-11-02)", () => {
+  it("the schedule is RELEASED first and the admin is told what was cancelled", async () => {
+    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: { id: "sub_sched_1", nextPrice: PLUS_MONTHLY } });
+    const out = await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never });
+    expect(out).toEqual({ ok: true, note: "The scheduled change to Plus (monthly) was cancelled." });
+    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith("sub_sched_1");
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["schedule.phases.items.price"] });
+    // The comp then goes on a plan no phase will rewrite.
+    const applied = await grant(stripe, comp("pro", THREE_MONTHS), NOW);
+    expect(applied.coupon?.change.kind).toBe("apply");
+    expect(stripe.st.schedule).toBeNull();
+  });
+
+  it("a release that FAILS refuses the comp change — never half applied", async () => {
+    const stripe = fakeStripe({ price: PRO_MONTHLY, schedule: { id: "sub_sched_1", nextPrice: PLUS_MONTHLY } });
+    stripe.subscriptionSchedules.release.mockRejectedValueOnce(new Error("Stripe down"));
+    const out = await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never });
+    expect(out).toMatchObject({ ok: false, error: expect.stringMatching(/comp was not changed/) });
+  });
+
+  it("a read that fails refuses too; no schedule = nothing to say", async () => {
+    const stripe = fakeStripe({});
+    expect(await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never })).toEqual({ ok: true, note: null });
+    expect(stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+    stripe.subscriptions.retrieve.mockRejectedValueOnce(new Error("Stripe down"));
+    expect(await releaseScheduleForCompChange(db().client as never, "u1", { stripe: stripe as never })).toMatchObject({ ok: false });
   });
 });

@@ -1,9 +1,11 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { resolveSubscriptionTier, syncSubscriptionForUser } from "@/lib/stripe/subscription-sync";
+import { releasePendingChange } from "@/lib/stripe/schedule";
 import {
   COMP_CREDIT_GRANT_KEY,
   COMP_CREDIT_LEDGER_KEY,
@@ -20,7 +22,6 @@ import {
 } from "@/lib/billing/comp-stripe";
 import {
   COMP_COUPON_GRANT_KEY,
-  COMP_SWITCH_HOLD_KEY,
   activeCompDiscountOf,
   compBillingNeedsReconcile,
   compCouponChangeFor,
@@ -30,11 +31,9 @@ import {
   compCouponNote,
   compCouponOutlook,
   compDiscountsOf,
-  compHoldReason,
-  compSwitchHeld,
   couponCoveredUntil,
   discountsOf,
-  hasCompBillingGrant,
+  hasCompCouponGrant,
   isCompCouponShape,
   isMonthlyPrice,
   parseCompCouponGrant,
@@ -50,8 +49,9 @@ import {
   periodCreditCents,
   unspentCreditCents,
 } from "@/lib/billing/balance-credit";
+import { pendingChangeOf, type ScheduleLike } from "@/lib/billing/subscription-details";
 import { formatMoney } from "@/lib/format/money";
-import type { BillingPeriod, PlanTier } from "@/lib/billing/plans";
+import type { PlanTier } from "@/lib/billing/plans";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -87,18 +87,25 @@ const STRIPE_FAILED_NOTE =
  *  (a bare discount id can't be told apart from ours). */
 const SUB_EXPAND = ["discounts"];
 
+/** Statuses a coupon grant can be left on after the plan stopped paying —
+ *  a revoke still takes ours off there (finding P3e). */
+const DUNNING = new Set(["past_due", "unpaid", "incomplete", "paused"]);
+
 /**
  * Bring the user's live Stripe subscription in line with their comp
  * (lib/billing/comp-stripe.ts, lib/billing/comp-coupon.ts) AFTER the
  * profile's comp columns were written. Best effort: the comp itself is the
- * profile row; a Stripe failure is reported, logged, and leaves the
- * subscription as it was.
+ * profile row; a Stripe failure is reported (`failed`, shown to the admin
+ * as an error), logged, and leaves the subscription as it was.
  *
  *   trialing → the trial is held to the comp's end (or put back);
  *   active, monthly → a 100%-off repeating coupon frees the comp's months of
- *              invoices (or comes off);
+ *              invoices (or comes off) — unless a #688 balance credit is
+ *              still running there: it stays a credit and runs out under
+ *              #688's rules (never clawed back to attach a coupon);
  *   active, annual  → the comp period's share of the price goes on the
- *              customer balance (or the unused part comes back).
+ *              customer balance (or the unused part comes back);
+ *   dunning   → a revoke takes the comp's coupon off; nothing is added.
  */
 export async function applyCompToSubscription(
   admin: AdminClient,
@@ -131,6 +138,13 @@ export async function applyCompToSubscription(
 
   if (sub.status === "active") {
     return applyActive(stripe, sub, subscribedTier, comp, deps.now, userId);
+  }
+  if (DUNNING.has(sub.status)) {
+    const facts = sub as unknown as CouponSubFacts;
+    if (parseCompCouponGrant(sub.metadata) || compDiscountsOf(facts).length) {
+      if (discountsOf(facts).unreadable) return failed(userId, new Error("subscription discounts not expanded"));
+      return applyCoupon(stripe, sub, subscribedTier, comp, deps.now, userId);
+    }
   }
 
   const change = compTrialChangeFor({ sub, subscribedTier, comp, now: deps.now });
@@ -167,9 +181,8 @@ export async function applyCompToSubscription(
   return outcome;
 }
 
-/** An ACTIVE subscription: a monthly plan the comp is paid for with the
- *  coupon, anything else (annual, or a monthly plan an in-app switch is
- *  moving) with the balance credit. */
+/** An ACTIVE subscription: a monthly plan's comp is the coupon; an annual
+ *  plan's — or a monthly plan still carrying a #688 credit — the credit. */
 async function applyActive(
   stripe: Stripe,
   sub: Stripe.Subscription,
@@ -182,8 +195,13 @@ async function applyActive(
   const nowSec = Math.floor((now ?? new Date()).getTime() / 1000);
   // Never guess which discount is ours: refuse rather than add a second.
   if (discountsOf(facts).unreadable) return failed(userId, new Error("subscription discounts not expanded"));
-  const monthly = isMonthlyPrice(priceOf(facts)) && !compSwitchHeld(sub.metadata, nowSec);
-  return monthly
+  // A #688 credit still running is NEVER clawed back to attach a coupon
+  // (owner 2026-11-02): its balance pays the next invoices only when they
+  // FINALIZE, about an hour after the renewal's draft — a claw-back in that
+  // window charged a comped user (finding P1). The comp stays a credit.
+  const credit = parseCompCreditGrant(sub.metadata);
+  const creditRunning = credit != null && credit.endSec > nowSec;
+  return isMonthlyPrice(priceOf(facts)) && !creditRunning
     ? applyCoupon(stripe, sub, subscribedTier, comp, now, userId)
     : applyCreditPath(stripe, sub, subscribedTier, comp, now, userId);
 }
@@ -199,119 +217,67 @@ async function applyCoupon(
   userId: string,
 ): Promise<CompStripeOutcome> {
   const nowSec = Math.floor((now ?? new Date()).getTime() / 1000);
-  const notes: string[] = [];
-  let credit: CompStripeOutcome["credit"] = null;
-  let current = sub;
-
-  // 1. A balance credit still open on this MONTHLY plan (the plan came from
-  //    annual, or #688 credited it before BL1) is released FIRST, WHOLE: all
-  //    of it that is still unspent comes back, and the coupon's grant starts
-  //    where the credit's did — the invoices since then (paid by that
-  //    credit: what stays with them) count as already freed, so the comp
-  //    frees its months once, never a coupon on top of a credit for the same
-  //    time. A failed claw-back stops here: no coupon is added.
-  //    Only when the coupon would FREE an invoice: a comp that was cleared,
-  //    dropped below the plan or has no invoice left to free stays #688's
-  //    credit (its release keeps the time already lived through paid for).
-  const creditGrant = parseCompCreditGrant(sub.metadata);
-  let couponStartSec: number | undefined;
-  if (creditGrant && creditGrant.endSec > nowSec) {
-    couponStartSec = creditGrant.startSec;
-    const would = compCouponChangeFor({
-      sub: sub as unknown as CouponSubFacts,
-      subscribedTier,
-      comp,
-      now,
-      grantStartSec: couponStartSec,
-    });
-    if (would.kind !== "apply") return applyCreditPath(stripe, sub, subscribedTier, comp, now, userId);
-    const release: CompCreditChange = {
-      kind: "settle",
-      grant: creditGrant,
-      coverUntilSec: creditGrant.startSec,
-      grantMeta: "",
-      opensGrant: false,
-      reason: "comp_released",
-    };
-    const settled = await settleCredit(stripe, sub, subscribedTier, release, userId, null);
-    if (settled.failed) return settled.outcome;
-    credit = settled.credit;
-    current = settled.sub ?? current;
-    const line = settled.outcome.note;
-    if (line && settled.credit && (settled.credit.postedCents !== 0 || settled.credit.keptCents > 0)) notes.push(line);
-  }
-
-  // 2. The coupon.
-  const facts = current as unknown as CouponSubFacts;
-  const change = compCouponChangeFor({ sub: facts, subscribedTier, comp, now, grantStartSec: couponStartSec });
+  const facts = sub as unknown as CouponSubFacts;
+  const change = compCouponChangeFor({ sub: facts, subscribedTier, comp, now });
   const otherDiscounts = discountsOf(facts)
     .list.filter((d) => !compDiscountsOf(facts).some((ours) => ours.id === d.id))
     .map((d) => ({ discount: d.id }));
-  const staleSwitch = Boolean(current.metadata?.[COMP_SWITCH_HOLD_KEY]);
-  let coupon: CompCouponOutcome | null = null;
+  let coupon: CompCouponOutcome;
   try {
     if (change.kind === "apply") {
+      // The coupon is found (or made) BEFORE anything changes: a failure
+      // here leaves the subscription exactly as it was.
       const couponId = await ensureCompCoupon(stripe, change.couponMonths);
       const grantMeta = compCouponGrantMeta(change.grant);
       // ONE update: our old discount out, the new one in, the grant named —
-      // a re-save reads the grant and does nothing; a retry posts once.
+      // nothing is removed unless the new discount goes on with it; a
+      // re-save reads the grant and does nothing; a retry posts once.
       const updated = await stripe.subscriptions.update(
-        current.id,
+        sub.id,
         {
           discounts: [...otherDiscounts, { coupon: couponId }],
           proration_behavior: "none",
-          metadata: { [COMP_COUPON_GRANT_KEY]: grantMeta, ...(staleSwitch ? { [COMP_SWITCH_HOLD_KEY]: "" } : {}) },
+          metadata: { [COMP_COUPON_GRANT_KEY]: grantMeta },
           expand: SUB_EXPAND,
         },
-        { idempotencyKey: `comp-coupon:${current.id}:${grantMeta}:${couponId}:${change.replaces ?? "new"}` },
+        { idempotencyKey: `comp-coupon:${sub.id}:${grantMeta}:${couponId}:${change.replaces ?? "new"}` },
       );
       const attached = activeCompDiscountOf(updated as unknown as CouponSubFacts, nowSec);
       const endSec = attached?.end ?? Math.floor(addMonthsUtc(nowSec * 1000, change.couponMonths) / 1000);
       coupon = outlookOf(change, updated as unknown as CouponSubFacts, endSec, nowSec);
     } else if (change.kind === "keep") {
-      if (change.grantMeta != null || staleSwitch) {
-        await stripe.subscriptions.update(current.id, {
-          metadata: {
-            ...(change.grantMeta != null ? { [COMP_COUPON_GRANT_KEY]: change.grantMeta } : {}),
-            ...(staleSwitch ? { [COMP_SWITCH_HOLD_KEY]: "" } : {}),
-          },
-        });
+      if (change.grantMeta != null) {
+        await stripe.subscriptions.update(sub.id, { metadata: { [COMP_COUPON_GRANT_KEY]: change.grantMeta } });
       }
       const kept = activeCompDiscountOf(facts, nowSec);
       coupon = outlookOf(change, facts, kept?.end ?? change.grant.endSec, nowSec);
     } else if (change.kind === "remove") {
       // Our discount(s) off — every one, should two ever be there — and the
-      // grant closed, in one update. Invoices already issued stay as they are.
+      // grant closed, in one update, WHATEVER the status (a revoke on a plan
+      // in dunning too). Invoices already issued stay as they are.
       const ours = compDiscountsOf(facts).map((d) => d.id);
       await stripe.subscriptions.update(
-        current.id,
+        sub.id,
         {
           ...(ours.length ? { discounts: otherDiscounts.length ? otherDiscounts : "" } : {}),
           proration_behavior: "none",
-          metadata: { [COMP_COUPON_GRANT_KEY]: "", ...(staleSwitch ? { [COMP_SWITCH_HOLD_KEY]: "" } : {}) },
+          metadata: { [COMP_COUPON_GRANT_KEY]: "" },
         },
-        { idempotencyKey: `comp-coupon:${current.id}:remove:${ours.join(",") || "meta"}:${current.metadata?.[COMP_COUPON_GRANT_KEY] ?? ""}` },
+        { idempotencyKey: `comp-coupon:${sub.id}:remove:${ours.join(",") || "meta"}:${sub.metadata?.[COMP_COUPON_GRANT_KEY] ?? ""}` },
       );
       coupon = { change, freeInvoices: 0, chargedFrom: null };
     } else {
       coupon = { change, freeInvoices: 0, chargedFrom: null };
     }
   } catch (error) {
-    const out = failed(userId, error);
-    if (credit && credit.postedCents !== 0) {
-      out.credit = credit;
-      out.note = `${notes.join(" ")} ${STRIPE_FAILED_NOTE}`.trim();
-    }
-    return out;
+    return failed(userId, error);
   }
-  const line = compCouponNote(change, coupon);
-  if (line) notes.push(line);
   return {
     change: null,
     trialEnd: null,
-    credit,
+    credit: null,
     coupon,
-    note: notes.length ? notes.join(" ") : null,
+    note: compCouponNote(change, coupon),
     failed: false,
   };
 }
@@ -336,7 +302,12 @@ function stripeCode(error: unknown): string | null {
 /**
  * The ONE coupon for a comp of `months` invoices: read by its deterministic
  * id, created on first use (100 % off, repeating, `duration_in_months`).
- * A coupon under that id with any other shape is never applied.
+ * A coupon under that id with any other shape is never applied — nor one
+ * whose create answer came back other than the shape asked for.
+ *
+ * The create's idempotency key is FRESH per create (finding P3f): a fixed
+ * key let Stripe replay, within 24 h, the answer for a coupon since DELETED
+ * — a recreate then "succeeded" without a coupon to attach.
  */
 export async function ensureCompCoupon(stripe: Stripe, months: number): Promise<string> {
   const id = compCouponId(months);
@@ -346,6 +317,7 @@ export async function ensureCompCoupon(stripe: Stripe, months: number): Promise<
   } catch (error) {
     if (stripeCode(error) !== "resource_missing") throw error;
   }
+  if (coupon && (coupon as { deleted?: boolean }).deleted === true) coupon = null;
   if (!coupon) {
     try {
       coupon = await stripe.coupons.create(
@@ -357,7 +329,7 @@ export async function ensureCompCoupon(stripe: Stripe, months: number): Promise<
           name: compCouponName(months),
           metadata: { pipglyph_kind: "comp" },
         },
-        { idempotencyKey: `comp-coupon-create:${id}` },
+        { idempotencyKey: `comp-coupon-create:${id}:${randomUUID()}` },
       );
     } catch (error) {
       // Two saves at once: the other one created it.
@@ -371,7 +343,7 @@ export async function ensureCompCoupon(stripe: Stripe, months: number): Promise<
   return id;
 }
 
-// --- Annual (and a switch away from monthly): the balance credit ------------
+// --- Annual: the balance credit -------------------------------------------------
 
 async function applyCreditPath(
   stripe: Stripe,
@@ -385,31 +357,41 @@ async function applyCreditPath(
   const facts = sub as unknown as CouponSubFacts;
   const ours = compDiscountsOf(facts);
   const couponGrant = parseCompCouponGrant(sub.metadata);
-  // Never a 100 % coupon on a plan that isn't monthly (it would free the
-  // whole year): ours comes off. The credit then starts where the invoice
-  // the coupon already freed ends — that time is paid for once.
-  const grantStartSec = couponCoveredUntil(facts, activeCompDiscountOf(facts, nowSec), nowSec);
+  const openCouponGrant = couponGrant && couponGrant.endSec > nowSec ? couponGrant : null;
+  // A coupon left on a plan that isn't monthly any more (changed outside the
+  // app — switches are refused while comped) comes off: a 100 % coupon on an
+  // annual price would free the year. The credit then starts where the
+  // invoice the coupon already freed ends, so that time is paid for once —
+  // read from the comp's GRANT, never the discount's own start.
+  const grantStartSec = couponCoveredUntil(facts, openCouponGrant, activeCompDiscountOf(facts, nowSec), nowSec);
   const change = compCreditChangeFor({ sub, subscribedTier, comp, now, grantStartSec });
   const otherDiscounts = discountsOf(facts)
     .list.filter((d) => !ours.some((o) => o.id === d.id))
     .map((d) => ({ discount: d.id }));
-  const takeOff =
+  const takeOff: Stripe.SubscriptionUpdateParams | null =
     ours.length || couponGrant
       ? {
           ...(ours.length ? { discounts: otherDiscounts.length ? otherDiscounts : ("" as const) } : {}),
           proration_behavior: "none" as const,
-          metadata: { [COMP_COUPON_GRANT_KEY]: "" } as Record<string, string>,
+          metadata: { [COMP_COUPON_GRANT_KEY]: "" },
         }
       : null;
-  if (change.kind === "none" && takeOff) {
-    try {
-      await stripe.subscriptions.update(sub.id, takeOff);
-    } catch (error) {
-      return failed(userId, error);
-    }
+
+  // The credit FIRST, the coupon off AFTER (finding P3a): value is only
+  // removed once its replacement is in place. A failure between the two
+  // leaves the coupon on and the credit's grant named — a re-save finds the
+  // grant and its ledger (nothing posted twice) and takes the coupon off.
+  const settled = await settleCredit(stripe, sub, subscribedTier, change, userId);
+  if (settled.failed || !takeOff) return settled.outcome;
+  try {
+    await stripe.subscriptions.update(sub.id, takeOff);
+  } catch (error) {
+    const out = failed(userId, error);
+    out.credit = settled.credit;
+    out.note = `${settled.outcome.note ?? ""} Their complimentary coupon couldn't be taken off — save the comp again.`.trim();
+    return out;
   }
-  const settled = await settleCredit(stripe, sub, subscribedTier, change, userId, change.kind === "settle" ? takeOff : null);
-  if (!settled.failed && ours.length) {
+  if (ours.length) {
     const line = "Took the complimentary coupon off their subscription (it is for monthly plans only).";
     settled.outcome.note = settled.outcome.note ? `${line} ${settled.outcome.note}` : line;
   }
@@ -418,9 +400,8 @@ async function applyCreditPath(
 
 /**
  * Settle a balance-credit change against the Stripe ledger (one key per
- * grant; only the difference moves). `firstUpdate` — the coupon coming off —
- * is written in the SAME update that names a new grant (or before any money
- * moves on an open one), so the two never both pay for the same time.
+ * grant; only the difference moves). A NEW grant is named on the
+ * subscription before any money moves.
  */
 async function settleCredit(
   stripe: Stripe,
@@ -428,8 +409,7 @@ async function settleCredit(
   subscribedTier: PlanTier,
   change: CompCreditChange,
   userId: string,
-  firstUpdate: Stripe.SubscriptionUpdateParams | null,
-): Promise<{ outcome: CompStripeOutcome; failed: boolean; credit: CompStripeOutcome["credit"]; sub: Stripe.Subscription | null }> {
+): Promise<{ outcome: CompStripeOutcome; failed: boolean; credit: CompStripeOutcome["credit"] }> {
   const price = sub.items?.data?.[0]?.price ?? null;
   const currency = price?.currency ?? "usd";
   const money = (cents: number) => formatMoney(cents, currency);
@@ -445,30 +425,22 @@ async function settleCredit(
       },
       failed: false,
       credit,
-      sub: null,
     };
   }
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
   if (!customerId) {
-    return { outcome: failed(userId, new Error("subscription has no customer")), failed: true, credit: null, sub: null };
+    return { outcome: failed(userId, new Error("subscription has no customer")), failed: true, credit: null };
   }
 
   const ledgerKey = compCreditLedgerKey(sub.id, change.grant);
   const meta = { [COMP_CREDIT_LEDGER_KEY]: ledgerKey, supabase_user_id: userId };
   let postedCents = 0;
   let keptCents = 0;
-  let updatedSub: Stripe.Subscription | null = null;
   try {
     // A NEW grant is named on the subscription before any money moves: a
     // re-save after a failure finds the same grant and its ledger.
-    if (change.opensGrant || firstUpdate) {
-      updatedSub = await stripe.subscriptions.update(sub.id, {
-        ...(firstUpdate ?? {}),
-        metadata: {
-          ...(firstUpdate?.metadata ?? {}),
-          ...(change.opensGrant ? { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } : {}),
-        },
-      });
+    if (change.opensGrant) {
+      await stripe.subscriptions.update(sub.id, { metadata: { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } });
     }
     const target = periodCreditCents({
       price,
@@ -511,7 +483,7 @@ async function settleCredit(
       }
     }
     if (!change.opensGrant && sub.metadata?.[COMP_CREDIT_GRANT_KEY] !== change.grantMeta) {
-      updatedSub = await stripe.subscriptions.update(sub.id, { metadata: { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } });
+      await stripe.subscriptions.update(sub.id, { metadata: { [COMP_CREDIT_GRANT_KEY]: change.grantMeta } });
     }
   } catch (error) {
     const out = failed(userId, error);
@@ -520,7 +492,7 @@ async function settleCredit(
       out.credit = { change, postedCents, keptCents, currency };
       out.note = `${compCreditNote(change, { postedCents, keptCents, money })} Saving the comp's record on Stripe failed — save the comp again.`;
     }
-    return { outcome: out, failed: true, credit: out.credit ?? null, sub: null };
+    return { outcome: out, failed: true, credit: out.credit ?? null };
   }
   const credit = { change, postedCents, keptCents, currency };
   return {
@@ -533,10 +505,6 @@ async function settleCredit(
     },
     failed: false,
     credit,
-    // What the caller reads next: the subscription as it was, with the
-    // metadata these updates wrote (an update's answer carries bare discount
-    // ids — never let it replace the expanded ones).
-    sub: updatedSub ? { ...sub, metadata: { ...(sub.metadata ?? {}), ...(updatedSub.metadata ?? {}) } } : null,
   };
 }
 
@@ -548,48 +516,85 @@ function failed(userId: string, error: unknown): CompStripeOutcome {
   return { change: null, trialEnd: null, note: STRIPE_FAILED_NOTE, failed: true };
 }
 
-// --- Plan switches while comped ------------------------------------------------
+// --- A comp change while a downgrade is scheduled ----------------------------
+
+export type ScheduleReleaseOutcome =
+  | { ok: true; note: string | null }
+  | { ok: false; error: string };
+
+const TIER_LABEL: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro" };
 
 /**
- * BEFORE an in-app plan switch that is charged now (the portal's confirm
- * page): a comp coupon must not free the switch's invoice when the new plan
- * leaves its cover — an annual price (the coupon would free the year) or a
- * tier above the comp. The coupon comes off and the rest of the comp goes on
- * the balance credit (#688's), held there for a day (`COMP_SWITCH_HOLD_KEY`:
- * the customer may still be on the confirm page). A switch inside the
- * comp's cover (a Pro comp on Plus, switching to Pro monthly) keeps it.
- *
- * Throws when Stripe can't be moved: the caller must NOT open the switch then.
+ * BEFORE an admin's comp change (grant, extend, shorten, revoke) touches
+ * the profile or Stripe: a downgrade scheduled for the end of the period
+ * (lib/stripe/actions.ts scheduleDowngrade) is RELEASED first (owner
+ * 2026-11-02, TODO BL1) — its next phase would otherwise carry the
+ * subscription's discounts as they were when it was made, and no switch may
+ * happen while a comp is on anyway. `ok: false` = the release (or the read
+ * that finds it) failed: the caller must NOT change the comp — never half
+ * applied. A subscription with no pending change is left untouched.
  */
-export async function moveCompOffCouponForSwitch(
-  stripe: Stripe,
-  live: Stripe.Subscription,
-  input: { userId: string; comp: CompFacts; target: { tier: PlanTier; period: BillingPeriod }; now?: Date },
-): Promise<{ moved: boolean; note: string | null }> {
-  const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
-  const sub = await stripe.subscriptions.retrieve(live.id, { expand: SUB_EXPAND });
-  const facts = sub as unknown as CouponSubFacts;
-  if (discountsOf(facts).unreadable) throw new Error("subscription discounts not expanded");
-  if (!activeCompDiscountOf(facts, nowSec)) return { moved: false, note: null };
-  const stays = input.target.period === "monthly" && compHoldReason(input.comp, input.target.tier, nowSec) == null;
-  if (stays) return { moved: false, note: null };
-  const subscribedTier = (await resolveSubscriptionTier(sub, stripe)) ?? input.target.tier;
-  const held = await stripe.subscriptions.update(sub.id, {
-    metadata: { [COMP_SWITCH_HOLD_KEY]: String(nowSec) },
-    expand: SUB_EXPAND,
-  });
-  const outcome = await applyCreditPath(stripe, held, subscribedTier, input.comp, input.now, input.userId);
-  if (outcome.failed) throw new Error(outcome.note ?? "comp could not be moved off the coupon");
-  return { moved: true, note: outcome.note };
+export async function releaseScheduleForCompChange(
+  admin: AdminClient,
+  userId: string,
+  deps: { stripe?: Stripe } = {},
+): Promise<ScheduleReleaseOutcome> {
+  if (!deps.stripe && !isStripeConfigured()) return { ok: true, note: null };
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_subscription_id, subscription_status")
+    .eq("id", userId)
+    .maybeSingle();
+  const subId = profile?.stripe_subscription_id ?? null;
+  const status = profile?.subscription_status ?? null;
+  if (!subId || status === "canceled" || status === "incomplete_expired") return { ok: true, note: null };
+  const stripe = deps.stripe ?? getStripe();
+  let sub: Stripe.Subscription;
+  try {
+    sub = await stripe.subscriptions.retrieve(subId, { expand: ["schedule.phases.items.price"] });
+  } catch (error) {
+    console.warn(
+      `releaseScheduleForCompChange(${userId}): read failed`,
+      error instanceof Error ? error.message : error,
+    );
+    return {
+      ok: false,
+      error: "Couldn't read their Stripe subscription to check for a scheduled plan change — the comp was not changed. Try again.",
+    };
+  }
+  const schedule = sub.schedule;
+  if (!schedule) return { ok: true, note: null };
+  const pending = typeof schedule === "string" ? null : pendingChangeOf(schedule as unknown as ScheduleLike);
+  // A schedule with no phase ahead changes nothing at a phase boundary.
+  if (typeof schedule !== "string" && !pending) return { ok: true, note: null };
+  try {
+    await releasePendingChange(stripe, sub);
+  } catch (error) {
+    console.warn(
+      `releaseScheduleForCompChange(${userId}): release failed`,
+      error instanceof Error ? error.message : error,
+    );
+    return {
+      ok: false,
+      error: "Their scheduled plan change couldn't be cancelled on Stripe — the comp was not changed. Try again.",
+    };
+  }
+  const to = pending?.tier
+    ? `${TIER_LABEL[pending.tier] ?? pending.tier}${pending.interval ? ` (${pending.interval === "year" ? "annual" : "monthly"})` : ""}`
+    : "another plan";
+  return { ok: true, note: `The scheduled change to ${to} was cancelled.` };
 }
 
+// --- The webhook's safety net -----------------------------------------------------
+
 /**
- * After `customer.subscription.updated`: when the plan no longer matches
- * how its comp is paid for (a switch between monthly and annual, a tier
- * above the comp, a switch hold that has run out, a #688 credit on a monthly
- * plan), re-run the comp on Stripe's CURRENT subscription. Idempotent — a
- * matching plan writes nothing, so its own update event stops here. Never
- * throws (the webhook's sync is what must succeed).
+ * After `customer.subscription.updated`: a coupon comp on a plan that no
+ * longer fits it (changed outside the app — the app refuses plan switches
+ * while comped and the comped portal offers none) is re-run on Stripe's
+ * CURRENT subscription: off an annual price (onto the credit), off a plan
+ * the comp no longer holds. A #688 credit is never touched here. Idempotent
+ * — a matching plan writes nothing. Never throws (the webhook's sync is
+ * what must succeed).
  */
 export async function reconcileCompBilling(
   admin: AdminClient,
@@ -599,7 +604,7 @@ export async function reconcileCompBilling(
   subscribedTier: PlanTier | null,
   now?: Date,
 ): Promise<CompStripeOutcome | null> {
-  if (eventSub.status !== "active" || !hasCompBillingGrant(eventSub.metadata)) return null;
+  if (eventSub.status !== "active" || !hasCompCouponGrant(eventSub.metadata)) return null;
   try {
     const { data } = await admin.from("profiles").select("comp_tier, comp_expires_at").eq("id", userId).maybeSingle();
     const row = data as { comp_tier?: string | null; comp_expires_at?: string | null } | null;

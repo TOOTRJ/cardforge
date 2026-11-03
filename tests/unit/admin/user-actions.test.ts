@@ -24,7 +24,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
-const compStripe = vi.hoisted(() => ({ applyCompToSubscription: vi.fn() }));
+const compStripe = vi.hoisted(() => ({ applyCompToSubscription: vi.fn(), releaseScheduleForCompChange: vi.fn() }));
 vi.mock("@/lib/billing/comp-stripe-apply", () => compStripe);
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: vi.fn(),
@@ -40,14 +40,14 @@ import {
   adminSetCompTierAction,
 } from "@/lib/admin/user-actions";
 
-function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null } = {}) {
+function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null; compTier?: string | null } = {}) {
   const stub = chainClient((table, calls): ChainAnswer => {
     if (table === "profiles" && called(calls, "select")) {
       const id = calls.find((c) => c.method === "eq")?.args[1];
       return {
         data:
           opts.targetExists !== false && id === TARGET
-            ? { id, subscription_status: opts.subscriptionStatus ?? null }
+            ? { id, subscription_status: opts.subscriptionStatus ?? null, comp_tier: opts.compTier ?? null }
             : null,
       };
     }
@@ -69,6 +69,7 @@ beforeEach(() => {
   compStripe.applyCompToSubscription
     .mockReset()
     .mockResolvedValue({ change: null, trialEnd: null, note: null, failed: false });
+  compStripe.releaseScheduleForCompChange.mockReset().mockResolvedValue({ ok: true, note: null });
 });
 
 describe("admin gate", () => {
@@ -157,6 +158,44 @@ describe("adminSetCompTierAction", () => {
     });
     // The comp is applied to Stripe AFTER the row is written.
     expect(compStripe.applyCompToSubscription).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
+  });
+  it("a comp change with a SCHEDULED downgrade releases it FIRST and tells the admin (owner 2026-11-02)", async () => {
+    const stub = db({ subscriptionStatus: "active" });
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    compStripe.releaseScheduleForCompChange.mockResolvedValue({ ok: true, note: "The scheduled change to Plus (monthly) was cancelled." });
+    compStripe.applyCompToSubscription.mockResolvedValue({ change: null, trialEnd: null, note: "Their next monthly invoice is free …", failed: false });
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({
+      ok: true,
+      stripeNote: "The scheduled change to Plus (monthly) was cancelled. Their next monthly invoice is free …",
+    });
+    expect(compStripe.releaseScheduleForCompChange).toHaveBeenCalledWith(stub.client, TARGET);
+    const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
+    expect(update).toBeTruthy();
+    // Released before the row is written and before Stripe is touched.
+    expect(compStripe.releaseScheduleForCompChange.mock.invocationCallOrder[0]).toBeLessThan(
+      compStripe.applyCompToSubscription.mock.invocationCallOrder[0],
+    );
+  });
+  it("a release that FAILS refuses the comp change: no row written, Stripe untouched, no notification", async () => {
+    const stub = db({ subscriptionStatus: "active", compTier: "plus" });
+    compStripe.releaseScheduleForCompChange.mockResolvedValue({ ok: false, error: "Their scheduled plan change couldn't be cancelled on Stripe — the comp was not changed. Try again." });
+    const result = await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null });
+    // (a revoke: the previous comp is named by the profile read)
+    expect(compStripe.releaseScheduleForCompChange).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/comp was not changed/) });
+    expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
+    expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
+    expect(stub.forTable("notifications")).toEqual([]);
+  });
+  it("a Stripe failure is an ERROR the admin sees (stripeFailed), the comp row saved", async () => {
+    db({ subscriptionStatus: "active" });
+    compStripe.applyCompToSubscription.mockResolvedValue({ change: null, trialEnd: null, note: "Stripe couldn't be updated …", failed: true });
+    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).toEqual({
+      ok: true,
+      stripeNote: "Stripe couldn't be updated …",
+      stripeFailed: true,
+    });
   });
   it("a comp that held the user's trial says so to the admin and names the trial's new end to the user", async () => {
     const stub = db();

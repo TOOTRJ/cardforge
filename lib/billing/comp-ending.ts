@@ -161,9 +161,15 @@ export function compEndingPlanFor(input: {
   // invoices, so the next CHARGE is the first renewal at or after the
   // coupon's end — named whether it falls before or after the comp's end.
   // With the coupon already over (or never attached: a comp under half a
-  // month), it is simply the next renewal.
+  // month), it is simply the next renewal. Only the CURRENT comp's grant
+  // counts (finding P3d): a grant whose end is not this comp's end — an
+  // earlier comp's, left in the metadata after it ended — says nothing about
+  // how this comp is paid for.
   const facts = sub as unknown as CouponSubFacts;
-  if (sub.status === "active" && (activeCompDiscountOf(facts, nowSec) || parseCompCouponGrant(sub.metadata))) {
+  const grant = parseCompCouponGrant(sub.metadata);
+  const currentGrant =
+    grant != null && grant.endSec > nowSec && Math.abs(grant.endSec - compSec) <= HELD_TRIAL_TOLERANCE_SECONDS;
+  if (sub.status === "active" && currentGrant) {
     const couponEnd = activeCompDiscountOf(facts, nowSec)?.end ?? null;
     const charged =
       couponEnd != null ? firstRenewalAtOrAfter(facts, Math.max(couponEnd, nowSec + 1)) : periodEndOf(sub);

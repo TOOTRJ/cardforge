@@ -21,6 +21,7 @@ import {
 import { dateTextToString, type DateText } from "@/lib/format/dates";
 import { LocalDateText } from "@/components/ui/local-date";
 import { navigateTo } from "@/lib/routing/navigate";
+import { billingActionErrorText } from "@/lib/billing/comp-switch-lock";
 
 // ---------------------------------------------------------------------------
 // "Resume <Plan>" — un-cancels a plan that is set to end, in the app
@@ -94,7 +95,7 @@ export function ResumePlanButton({
         navigateTo(result.url);
         return;
       }
-      toast.error(result.error);
+      toast.error(billingActionErrorText(result));
       if (result.fallback !== "portal") {
         setOpen(false);
         return;

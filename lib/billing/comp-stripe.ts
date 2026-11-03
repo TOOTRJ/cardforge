@@ -23,7 +23,8 @@ import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 //   • an ACTIVE MONTHLY subscription (TODO BL1, owner 2026-11-02): a 100 %
 //     off repeating COUPON frees the comp's months of invoices instead of a
 //     credit — lib/billing/comp-coupon.ts. The credit below is for ANNUAL
-//     plans (and the switch between the two).
+//     plans (and a #688 credit still running on a monthly plan, which runs
+//     out under its own rules — never moved onto a coupon).
 //   • an ACTIVE subscription (owner answer 1, 2026-10-30): the payer pays
 //     NOTHING for the comp period — the comp's share of the subscription's
 //     own price goes on the Stripe CUSTOMER BALANCE (`compCreditChangeFor`,

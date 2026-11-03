@@ -11,6 +11,7 @@ import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatUtcDate } from "@/lib/format/dates";
+import { COMP_COUPON_SHORT_NOTE } from "@/lib/billing/comp-coupon";
 import { Button } from "@/components/ui/button";
 import {
   adminBillingHealthAction,
@@ -146,6 +147,14 @@ export function CompTierForm({
         toast.error(result.error);
         return;
       }
+      if (result.stripeFailed) {
+        // The comp row is saved, but Stripe isn't in line with it yet.
+        toast.error("Comp saved, but Stripe wasn't updated.", {
+          description: result.stripeNote ?? undefined,
+        });
+        router.refresh();
+        return;
+      }
       toast.success(
         tier === ""
           ? "Comp cleared."
@@ -191,6 +200,12 @@ export function CompTierForm({
         {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
         Save comp
       </Button>
+      {requiresExpiry ? (
+        <p className="w-full text-xs leading-5 text-muted">
+          {COMP_COUPON_SHORT_NOTE} While a comp is on they can&apos;t change plans, and saving a comp cancels a
+          scheduled plan change.
+        </p>
+      ) : null}
     </form>
   );
 }

@@ -13,6 +13,8 @@ import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
 import type { BillingViewer } from "@/lib/billing/viewer";
 import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
+import { LocalDateText } from "@/components/ui/local-date";
+import { compPlanLockText } from "@/lib/billing/comp-switch-lock";
 
 // Client wrapper for the pricing grid: owns the monthly/annual toggle and emits
 // the right CTA per plan (signup link / Stripe checkout / portal) from the
@@ -83,6 +85,13 @@ export function PricingPlans({
           >
             {cta.label}
           </ResumePlanButton>
+        );
+      case "comp_locked":
+        // No plan switch while a comp is on (BL1): one line, no button.
+        return (
+          <p className="text-sm leading-6 text-muted">
+            <LocalDateText parts={compPlanLockText(cta.until)} />
+          </p>
         );
       default:
         return null;

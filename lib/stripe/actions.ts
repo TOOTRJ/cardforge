@@ -24,8 +24,16 @@ import {
   type CompFacts,
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
-import { moveCompOffCouponForSwitch } from "@/lib/billing/comp-stripe-apply";
-import { COMP_COUPON_GRANT_KEY, compDiscountsOf, type CouponSubFacts } from "@/lib/billing/comp-coupon";
+import {
+  compPlanLockMessage,
+  compPlanSwitchLock,
+  couponPlanSwitchLock,
+  laterPlanSwitchLock,
+  type PlanSwitchLock,
+} from "@/lib/billing/comp-switch-lock";
+import { discountsOf, hasCompCouponGrant, type CouponSubFacts } from "@/lib/billing/comp-coupon";
+import { releasePendingChange, scheduleIdOf } from "./schedule";
+import { portalSessionParams } from "./portal";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import {
@@ -75,7 +83,73 @@ export type BillingActionResult =
   | { ok: true; url: string }
   /** `fallback: "portal"`: the in-app step failed where Stripe's own page can
    *  still do it — the button opens the Customer Portal. */
-  | { ok: false; error: string; fallback?: "portal" };
+  | {
+      ok: false;
+      error: string;
+      fallback?: "portal";
+      /** Refused because a comp holds the plan (no plan switches while a comp
+       *  is on, owner 2026-11-02): the client says it with the date in the
+       *  viewer's own zone (lib/billing/comp-switch-lock.ts). */
+      compLock?: PlanSwitchLock & { note?: string };
+    };
+
+/** Does a comp hold this subscription's plan (no switch while it does)?
+ *  The profile's comp — only a profile WITH one reads the tier paid for
+ *  (`resolveSubscriptionTier` never throws; null falls back to the
+ *  profile's tier) — and, on a subscription that names our coupon grant,
+ *  the coupon itself, which can run past the comp's end (the 15-day
+ *  round-up) and would free a switch's invoice. No extra call for anyone
+ *  else. A read that fails is `"unreadable"`: the caller refuses with a
+ *  plain retry line — it never claims a comp, and never lets the switch
+ *  through. */
+async function compLockFor(
+  stripe: Stripe,
+  customer: { comp: CompFacts; subscribedTier: string | null },
+  sub: Stripe.Subscription,
+): Promise<PlanSwitchLock | null | "unreadable"> {
+  const profileLock = customer.comp.tier
+    ? compPlanSwitchLock({
+        compTier: customer.comp.tier,
+        compExpiresAt: customer.comp.expiresAt,
+        subscribedTier: (await resolveSubscriptionTier(sub, stripe)) ?? customer.subscribedTier,
+        subscriptionStatus: sub.status,
+      })
+    : null;
+  if (!hasCompCouponGrant(sub.metadata)) return profileLock;
+  const coupon = await readCouponPlanSwitchLock(stripe, sub.id);
+  if (coupon === "unreadable") return coupon;
+  return laterPlanSwitchLock(profileLock, coupon);
+}
+
+/** Our comp coupon still running on a subscription (read expanded). */
+async function readCouponPlanSwitchLock(
+  stripe: Stripe,
+  subscriptionId: string,
+): Promise<PlanSwitchLock | null | "unreadable"> {
+  try {
+    const read = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["discounts"] });
+    if (discountsOf(read as unknown as CouponSubFacts).unreadable) return "unreadable";
+    return couponPlanSwitchLock(read as unknown as CouponSubFacts, Math.floor(Date.now() / 1000));
+  } catch (error) {
+    console.error(
+      "[stripe] Couldn't read the subscription's discounts (switch refused):",
+      error instanceof Error ? error.message : error,
+    );
+    return "unreadable";
+  }
+}
+
+/** The switch couldn't be checked against a comp coupon — try again. */
+const SWITCH_UNREADABLE: BillingActionResult = {
+  ok: false,
+  error: "Couldn't check your plan with Stripe. Try again in a moment.",
+};
+
+/** A switch refused while a comp holds the plan — the error string is the
+ *  UTC fallback; the client re-words it in the viewer's zone. */
+function compLockRefusal(lock: PlanSwitchLock): BillingActionResult {
+  return { ok: false, error: compPlanLockMessage(lock.until, "UTC"), compLock: lock };
+}
 
 // Ensure the current user has a Stripe customer, creating + persisting one on
 // first use. stripe_customer_id MUST be written with the service role: it's a
@@ -94,6 +168,9 @@ async function ensureStripeCustomer(): Promise<
       hasSubscribedBefore: boolean;
       /** The profile's admin comp (lib/billing/comp-stripe.ts). */
       comp: CompFacts;
+      /** The tier the profile says the subscription pays for — the lock's
+       *  fallback when Stripe's own price names none. */
+      subscribedTier: string | null;
     }
   | { ok: false; error: string }
 > {
@@ -106,6 +183,7 @@ async function ensureStripeCustomer(): Promise<
     tier: profile?.comp_tier === "plus" || profile?.comp_tier === "pro" ? profile.comp_tier : null,
     expiresAt: profile?.comp_expires_at ?? null,
   };
+  const subscribedTier = profile?.subscription_tier ?? null;
   if (profile?.stripe_customer_id) {
     return {
       ok: true,
@@ -113,6 +191,7 @@ async function ensureStripeCustomer(): Promise<
       userId: user.id,
       hasSubscribedBefore,
       comp,
+      subscribedTier,
     };
   }
 
@@ -141,7 +220,7 @@ async function ensureStripeCustomer(): Promise<
     return { ok: false, error: "Couldn't link your billing account. Try again." };
   }
 
-  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
+  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp, subscribedTier };
 }
 
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
@@ -201,46 +280,6 @@ async function createPlanSwitchSession(
   });
   if (!session.url) return { ok: false, error: "Couldn't start the plan change." };
   return { ok: true, url: session.url };
-}
-
-/** The ids of the comp coupon's discounts on a subscription (BL1), read
- *  with the discounts expanded. Only a subscription naming a coupon grant is
- *  read again. */
-async function compDiscountIdsOf(stripe: Stripe, live: Stripe.Subscription): Promise<string[]> {
-  if (!live.metadata?.[COMP_COUPON_GRANT_KEY]) return [];
-  const sub = await stripe.subscriptions.retrieve(live.id, { expand: ["discounts"] });
-  return compDiscountsOf(sub as unknown as CouponSubFacts).map((d) => d.id);
-}
-
-/** A schedule phase's discounts as update parameters (the same discounts,
- *  by id where Stripe gives one). */
-function phaseDiscountsOf(
-  phase: Stripe.SubscriptionSchedule.Phase,
-): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] {
-  const idOf = (v: unknown): string | null =>
-    typeof v === "string" ? v : v && typeof v === "object" && typeof (v as { id?: unknown }).id === "string" ? (v as { id: string }).id : null;
-  const out: Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] = [];
-  for (const d of phase.discounts ?? []) {
-    const discount = idOf(d.discount);
-    const coupon = idOf(d.coupon);
-    const promotion = idOf(d.promotion_code);
-    if (discount) out.push({ discount });
-    else if (coupon) out.push({ coupon });
-    else if (promotion) out.push({ promotion_code: promotion });
-  }
-  return out;
-}
-
-function scheduleIdOf(schedule: Stripe.Subscription["schedule"]): string | null {
-  if (!schedule) return null;
-  return typeof schedule === "string" ? schedule : schedule.id;
-}
-
-/** Drop a pending plan change (the subscription stays on its current
- *  price). A no-op without one. */
-async function releasePendingChange(stripe: Stripe, sub: Stripe.Subscription): Promise<void> {
-  const scheduleId = scheduleIdOf(sub.schedule);
-  if (scheduleId) await stripe.subscriptionSchedules.release(scheduleId);
 }
 
 /**
@@ -314,21 +353,12 @@ async function scheduleDowngrade(
     resumedFirst = true;
   }
   try {
-    // A monthly comp's coupon on the subscription (BL1): the phases must say
-    // what happens to it — kept on the current phase, carried onto a MONTHLY
-    // new price (the same discount, its end unchanged), and never onto an
-    // annual one (it would free the year; the webhook moves the comp onto the
-    // balance credit at the phase change).
-    const compDiscountIds = await compDiscountIdsOf(stripe, live);
     const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
     const current = schedule.phases[0];
     if (!current) {
       if (!resumedFirst) return { ok: false, error: "Couldn't read your current plan." };
       throw new Error(`Schedule ${schedule.id} has no current phase.`);
     }
-    const currentDiscounts = phaseDiscountsOf(current);
-    const nextDiscounts =
-      target.period === "monthly" ? compDiscountIds.map((id) => ({ discount: id })) : [];
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: "release",
       phases: [
@@ -339,8 +369,6 @@ async function scheduleDowngrade(
             price: typeof item.price === "string" ? item.price : item.price.id,
             quantity: item.quantity ?? 1,
           })),
-          // The current phase keeps the discounts it was created with.
-          ...(currentDiscounts.length ? { discounts: currentDiscounts } : {}),
         },
         {
           items: [{ price: target.priceId, quantity: 1 }],
@@ -348,11 +376,6 @@ async function scheduleDowngrade(
           // subscription back, renewing on that price.
           duration: { interval: target.period === "annual" ? "year" : "month", interval_count: 1 },
           proration_behavior: "none",
-          ...(nextDiscounts.length
-            ? { discounts: nextDiscounts }
-            : compDiscountIds.length
-              ? { discounts: "" as const }
-              : {}),
         },
       ],
     });
@@ -410,10 +433,26 @@ export async function createCheckoutSessionAction(
         // the card gets fixed (and where Stripe reactivates the plan).
         const delinquent = await findDelinquentSubscription(stripe, customer.customerId);
         if (delinquent) {
-          const portal = await stripe.billingPortal.sessions.create({
+          // A comped plan's portal never offers plan switching (BL1). A
+          // coupon that couldn't be read is treated the same way — the card
+          // flow alone, which is what needs fixing — never a refusal that
+          // keeps a past-due customer from their card.
+          const lock = await compLockFor(stripe, customer, delinquent);
+          const comped = lock != null;
+          const params = portalSessionParams({
             customer: customer.customerId,
-            return_url: `${base}/dashboard/billing`,
+            returnUrl: `${base}/dashboard/billing`,
+            // The card is what needs fixing: a comped customer with no
+            // no-switch configuration still gets that flow.
+            ...(comped ? { flowData: { type: "payment_method_update" as const } } : {}),
+            comped,
           });
+          if (!params) {
+            return lock && lock !== "unreadable"
+              ? compLockRefusal(lock)
+              : { ok: false, error: "Couldn't open the billing portal." };
+          }
+          const portal = await stripe.billingPortal.sessions.create(params);
           if (!portal.url) return { ok: false, error: "Couldn't open the billing portal." };
           return { ok: true, url: portal.url };
         }
@@ -429,6 +468,14 @@ export async function createCheckoutSessionAction(
       // trial end over and collects the card.
       let carryTrialEnd: number | null = null;
       if (live) {
+        // No plan switches while a comp is on (owner 2026-11-02, BL1): the
+        // comp is paid for in Stripe (a held trial, a coupon, a balance
+        // credit) and no switch may carry it — refused BEFORE anything is
+        // touched (a pending downgrade stays; nothing is released). The comp
+        // is the profile's: a Stripe read can never claim one.
+        const lock = await compLockFor(stripe, customer, live);
+        if (lock === "unreadable") return SWITCH_UNREADABLE;
+        if (lock) return compLockRefusal(lock);
         if (live.items.data[0]?.price?.id === priceId) {
           return { ok: false, error: "You're already on that plan." };
         }
@@ -452,27 +499,6 @@ export async function createCheckoutSessionAction(
           // …. By confirming, your updated subscription will be renewed" —
           // read in the sandbox 2026-10-07), so no resume is needed first.
           await releasePendingChange(stripe, live);
-          // A monthly comp's 100%-off coupon must not free the switch's
-          // invoice when the new plan leaves its cover (annual, or above the
-          // comp): it comes off first and the rest of the comp goes on the
-          // balance credit (BL1, lib/billing/comp-stripe-apply.ts). If that
-          // can't be done, the switch is NOT opened.
-          try {
-            await moveCompOffCouponForSwitch(stripe, live, {
-              userId: customer.userId,
-              comp: customer.comp,
-              target,
-            });
-          } catch (error) {
-            console.error(
-              `[stripe] Couldn't move the comp off its coupon before a plan switch (${live.id}):`,
-              error instanceof Error ? error.message : error,
-            );
-            return {
-              ok: false,
-              error: "Your plan is complimentary right now and couldn't be prepared for the change. Try again in a moment.",
-            };
-          }
           return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         supersedes = live.id;
@@ -920,13 +946,39 @@ export async function createPortalSessionAction(
     };
   }
 
+  // A comped plan's portal never offers plan switching (BL1,
+  // lib/stripe/portal.ts): the profile's comp, and — once that has ended —
+  // the monthly coupon it may leave running (the 15-day round-up), read
+  // only for a profile that names a comp. A read that fails opens nothing.
+  let lock = compPlanSwitchLock({
+    compTier: profile.comp_tier,
+    compExpiresAt: profile.comp_expires_at,
+    subscribedTier: profile.subscription_tier,
+    subscriptionStatus: profile.subscription_status,
+  });
+  if (!lock && profile.comp_tier && profile.stripe_subscription_id) {
+    const coupon = await readCouponPlanSwitchLock(getStripe(), profile.stripe_subscription_id);
+    if (coupon === "unreadable") return { ok: false, error: "Couldn't open the billing portal. Try again." };
+    lock = coupon;
+  }
+  const params = portalSessionParams({
+    customer: profile.stripe_customer_id,
+    returnUrl,
+    flowData,
+    comped: lock != null,
+  });
+  if (!params) {
+    const note = "Until then, update your card or cancel from the billing page.";
+    return {
+      ok: false,
+      error: `${compPlanLockMessage(lock?.until ?? null, "UTC")} ${note}`,
+      compLock: { until: lock?.until ?? null, note },
+    };
+  }
+
   try {
     const stripe = getStripe();
-    const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
-      return_url: returnUrl,
-      ...(flowData ? { flow_data: flowData } : {}),
-    });
+    const session = await stripe.billingPortal.sessions.create(params);
     return { ok: true, url: session.url };
   } catch (error) {
     console.error(

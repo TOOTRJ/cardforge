@@ -60,6 +60,9 @@ type HeaderUser = {
    *  menu's "Pro · ends Oct 23, 2026" line (lib/billing/plan-ending.ts). */
   subscriptionEndsAt?: string | null;
   subscriptionEndingKind?: "plan" | "trial" | null;
+  /** A comp holds the plan: no plan switch until `until` (BL1,
+   *  lib/billing/comp-switch-lock.ts). */
+  planSwitchLock?: { until: string | null } | null;
   /** Shows the admin pages in the Account menu. */
   isAdmin?: boolean;
 };

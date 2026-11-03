@@ -158,7 +158,7 @@ function asInterval(value: string | null | undefined): "month" | "year" | null {
 /** The first phase that starts after the current one — the plan the
  *  subscription moves to. Null without a schedule, or when every remaining
  *  phase is the current one (a released or exhausted schedule). */
-function pendingChangeOf(
+export function pendingChangeOf(
   schedule: SubscriptionDetailsLike["schedule"],
   now = Date.now() / 1000,
 ): PendingChangeSummary | null {

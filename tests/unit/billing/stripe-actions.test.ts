@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CREDIT_PACKS, PACK_SUBSCRIBER_COUPON_ID, TRIAL_DAYS, TRIAL_WINBACK_COUPON_ID } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,7 @@ const s = vi.hoisted(() => ({
     stripe_subscription_id?: string | null;
     comp_tier?: string | null;
     comp_expires_at?: string | null;
+    subscription_tier?: string | null;
   },
   adminConfigured: true,
   stripeConfigured: true,
@@ -558,73 +559,159 @@ describe("createCheckoutSessionAction", () => {
     expect(s.scheduleCreate).not.toHaveBeenCalled();
   });
 
-  // BL1: a monthly comp's 100%-off coupon across a plan change.
-  describe("a plan change while a monthly comp's COUPON is on (BL1)", () => {
-    const COUPON_META = { [COMP_COUPON_GRANT_KEY]: "1790000000:1797000000:3" };
-    const compDiscount = { id: "di_comp", start: 1_790_000_000, end: 1_797_000_000, source: { type: "coupon", coupon: "pipglyph_comp_100off_3m" } };
-    const comped = (price: string, interval: string) => ({
+  // BL1 (owner 2026-11-02): NO plan switch while a comp is on — every path
+  // refuses, before anything is touched, with the comp's end date.
+  describe("no plan switches while a comp is on (BL1)", () => {
+    const COMP_END = "2027-02-01T12:00:00.000Z";
+    const sub = (price: string, interval: string, status = "active", extra: Record<string, unknown> = {}) => ({
       id: "sub_live",
-      status: "active",
+      status,
       customer: "cus_1",
-      metadata: { ...COUPON_META },
-      items: { data: [{ id: "si_1", current_period_start: 1_790_000_000, current_period_end: 1_792_600_000, price: { id: price, recurring: { interval } } }] },
+      schedule: "sub_sched_pending",
+      default_payment_method: "pm_1",
+      metadata: { [COMP_COUPON_GRANT_KEY]: "1790000000:1797000000:3" },
+      items: { data: [{ id: "si_1", price: { id: price, recurring: { interval } } }] },
+      ...extra,
     });
+    const refused = {
+      ok: false,
+      error: "Your plan is complimentary until February 1, 2027 — you can change plans after that.",
+      compLock: { until: COMP_END },
+    };
+    const nothingTouched = () => {
+      expect(s.portalCreate).not.toHaveBeenCalled();
+      expect(s.checkoutCreate).not.toHaveBeenCalled();
+      expect(s.scheduleCreate).not.toHaveBeenCalled();
+      expect(s.scheduleUpdate).not.toHaveBeenCalled();
+      // A pending downgrade is NOT released by a refused click (P3c).
+      expect(s.scheduleRelease).not.toHaveBeenCalled();
+      expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    };
     beforeEach(() => {
-      s.scheduleCreate.mockResolvedValue({
-        id: "sub_sched_1",
-        phases: [
-          {
-            start_date: 1_790_000_000,
-            end_date: 1_792_600_000,
-            items: [{ price: { id: "price_pro_monthly" }, quantity: 1 }],
-            discounts: [{ coupon: null, discount: "di_comp", promotion_code: null }],
-          },
-        ],
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: COMP_END };
+    });
+
+    const cases: Array<[string, () => ReturnType<typeof sub>, { tier: "plus" | "pro"; period?: "monthly" | "annual" }]> = [
+      ["an UPGRADE (Plus → Pro monthly)", () => sub("price_plus_monthly", "month"), { tier: "pro" }],
+      ["a DOWNGRADE (Pro → Plus monthly, scheduleDowngrade)", () => sub("price_pro_monthly", "month"), { tier: "plus" }],
+      ["monthly → ANNUAL", () => sub("price_pro_monthly", "month"), { tier: "pro", period: "annual" }],
+      ["annual → MONTHLY (a downgrade)", () => sub("price_pro_annual", "year"), { tier: "pro", period: "monthly" }],
+      ["a card-backed TRIAL's switch", () => sub("price_plus_monthly", "month", "trialing"), { tier: "pro" }],
+      ["a legacy no-card trial's superseding checkout", () => sub("price_plus_monthly", "month", "trialing", { default_payment_method: null }), { tier: "pro" }],
+      ["a plan set to end", () => sub("price_pro_monthly", "month", "active", { cancel_at_period_end: true }), { tier: "plus" }],
+    ];
+    for (const [label, live, target] of cases) {
+      it(`refuses ${label} with the comp's end date — nothing touched`, async () => {
+        s.live = live() as never;
+        expect(await createCheckoutSessionAction({ kind: "subscription", ...target })).toEqual(refused);
+        nothingTouched();
+      });
+    }
+
+    it('refuses before "You\'re already on that plan" — and a comp with no end date says so without a date', async () => {
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: null };
+      s.live = sub("price_pro_monthly", "month") as never;
+      expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({
+        ok: false,
+        error: "Your plan is complimentary right now — you can change plans after it ends.",
+        compLock: { until: null },
       });
     });
 
-    it("a DOWNGRADE to a monthly price keeps the comp's discount on the current phase AND carries it onto the new one", async () => {
-      s.live = comped("price_pro_monthly", "month") as never;
-      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_pro_monthly", "month"), discounts: [compDiscount] }));
-      await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
-      const phases = s.scheduleUpdate.mock.calls[0][1].phases;
-      expect(phases[0].discounts).toEqual([{ discount: "di_comp" }]);
-      expect(phases[1].discounts).toEqual([{ discount: "di_comp" }]);
+    it("a comp BELOW the plan paid for locks nothing; an EXPIRED comp locks nothing", async () => {
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "plus", comp_expires_at: COMP_END };
+      s.live = sub("price_pro_monthly", "month", "active", { schedule: null }) as never;
+      expect((await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "annual" })).ok).toBe(true);
+      s.portalCreate.mockClear();
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: "2020-01-01T00:00:00.000Z" };
+      expect((await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "annual" })).ok).toBe(true);
     });
 
-    it("a DOWNGRADE to an ANNUAL price never carries the 100% coupon onto it (it would free the year)", async () => {
-      s.live = comped("price_pro_monthly", "month") as never;
-      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_pro_monthly", "month"), discounts: [compDiscount] }));
-      await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
-      const phases = s.scheduleUpdate.mock.calls[0][1].phases;
-      expect(phases[0].discounts).toEqual([{ discount: "di_comp" }]);
-      expect(phases[1].discounts).toBe("");
+    it("a NON-comped switch makes no extra Stripe read, and a failure never claims a comp (P3b)", async () => {
+      s.profile = { stripe_customer_id: "cus_1" };
+      // Never comped: no comp on the profile, no coupon grant on the subscription.
+      s.live = sub("price_plus_monthly", "month", "active", { schedule: null, metadata: {} }) as never;
+      s.portalCreate.mockRejectedValueOnce(new Error("stripe down"));
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toMatch(/complimentary/i);
+      expect(s.subscriptionsRetrieve).not.toHaveBeenCalled();
     });
 
-    it("an UPGRADE to annual takes the coupon off BEFORE the portal's confirm page opens", async () => {
-      s.profile = { stripe_customer_id: "cus_1" }; // the comp has ended: nothing to credit
-      s.live = comped("price_plus_monthly", "month") as never;
-      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_plus_monthly", "month"), discounts: [compDiscount] }));
-      s.subscriptionsUpdate.mockImplementation(async (_id: string, p: { metadata?: Record<string, string> }) => ({
-        ...comped("price_plus_monthly", "month"),
-        discounts: [compDiscount],
-        metadata: { ...COUPON_META, ...(p.metadata ?? {}) },
-      }));
-      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
+    // The owner's 15-day round-up can leave the coupon running past the
+    // comp's end: while it runs it frees whatever invoice a switch makes.
+    const couponTo = (endIso: string) => ({
+      discounts: [
+        {
+          id: "di_comp",
+          start: Date.parse("2026-10-01T00:00:00Z") / 1000,
+          end: Date.parse(endIso) / 1000,
+          source: { coupon: { id: "pipglyph_comp_100off_2m" } },
+        },
+      ],
+    });
+
+    it("the comp has ENDED but its coupon still runs: refused until the coupon's end (read only because the grant is named)", async () => {
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: "2026-11-01T00:00:00.000Z" };
+      s.live = sub("price_plus_monthly", "month", "active", { schedule: null, ...couponTo("2027-01-20T00:00:00.000Z") }) as never;
+      expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({
+        ok: false,
+        error: "Your plan is complimentary until January 20, 2027 — you can change plans after that.",
+        compLock: { until: "2027-01-20T00:00:00.000Z" },
+      });
+      expect(s.subscriptionsRetrieve).toHaveBeenCalledWith("sub_live", { expand: ["discounts"] });
+      nothingTouched();
+    });
+
+    it("a coupon running LATER than the comp moves the date to the coupon's end", async () => {
+      s.live = sub("price_plus_monthly", "month", "active", { schedule: null, ...couponTo("2027-03-01T00:00:00.000Z") }) as never;
+      expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toMatchObject({
+        compLock: { until: "2027-03-01T00:00:00.000Z" },
+      });
+    });
+
+    it("a coupon that already ENDED locks nothing once the comp is over", async () => {
+      s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: "2026-11-01T00:00:00.000Z" };
+      s.live = sub("price_plus_monthly", "month", "active", { schedule: null, ...couponTo("2026-10-20T00:00:00.000Z") }) as never;
+      expect((await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).ok).toBe(true);
+    });
+
+    it("a failed coupon read REFUSES the switch with a plain retry line — never claiming a comp, nothing touched", async () => {
+      s.profile = { stripe_customer_id: "cus_1" };
+      s.live = sub("price_plus_monthly", "month", "active", { schedule: null }) as never;
+      s.subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+      expect(result).toEqual({ ok: false, error: "Couldn't check your plan with Stripe. Try again in a moment." });
+      expect(JSON.stringify(result)).not.toMatch(/complimentary/i);
+      nothingTouched();
+    });
+
+    it("a past-due customer whose coupon can't be read still gets the card flow (never kept from their card)", async () => {
+      s.profile = { stripe_customer_id: "cus_1" };
+      s.live = null;
+      s.delinquent = sub("price_plus_monthly", "month", "past_due") as never;
+      s.subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+      expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({
+        ok: true,
+        url: "https://portal.test/session",
+      });
+      expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({ flow_data: { type: "payment_method_update" } });
+    });
+
+    it("a comped PAST-DUE customer's portal opens only the card flow (no plan switching), back to the app after", async () => {
+      s.live = null;
+      s.delinquent = sub("price_plus_monthly", "month", "past_due") as never;
+      s.subscriptionsRetrieve.mockImplementation(async () => s.delinquent);
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
       expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
-      const off = s.subscriptionsUpdate.mock.calls.findIndex(([, p]) => (p as { discounts?: unknown }).discounts === "");
-      expect(off).toBeGreaterThanOrEqual(0);
-      expect(s.subscriptionsUpdate.mock.calls[off][1]).toMatchObject({ metadata: { [COMP_COUPON_GRANT_KEY]: "" } });
-      expect(s.subscriptionsUpdate.mock.invocationCallOrder[off]).toBeLessThan(s.portalCreate.mock.invocationCallOrder[0]);
-    });
-
-    it("if the coupon can't be taken off, the switch is NOT opened (it would be free)", async () => {
-      s.live = comped("price_plus_monthly", "month") as never;
-      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_plus_monthly", "month"), discounts: [compDiscount] }));
-      s.subscriptionsUpdate.mockRejectedValue(new Error("stripe down"));
-      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
-      expect(result).toEqual({ ok: false, error: expect.stringMatching(/complimentary/) });
-      expect(s.portalCreate).not.toHaveBeenCalled();
+      expect(s.portalCreate).toHaveBeenCalledWith({
+        customer: "cus_1",
+        return_url: "https://test.local/dashboard/billing",
+        flow_data: {
+          type: "payment_method_update",
+          after_completion: { type: "redirect", redirect: { return_url: "https://test.local/dashboard/billing" } },
+        },
+      });
     });
   });
 
@@ -1193,5 +1280,109 @@ describe("createPortalSessionAction", () => {
       error: "There's no active subscription to cancel.",
     });
     expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("createPortalSessionAction for a COMPED customer (BL1: no plan switching while a comp is on)", () => {
+  const COMP_END = "2027-02-01T12:00:00.000Z";
+  const comped = {
+    stripe_customer_id: "cus_1",
+    stripe_subscription_id: "sub_live",
+    subscription_status: "active",
+    subscription_tier: "plus",
+    comp_tier: "plus",
+    comp_expires_at: COMP_END,
+  };
+  const ENV = "STRIPE_PORTAL_CONFIG_NO_PLAN_SWITCH";
+  afterEach(() => {
+    delete process.env[ENV];
+  });
+
+  it("with the no-switch configuration set, every session (home and flows) opens ON it", async () => {
+    process.env[ENV] = "bpc_noswitch123";
+    s.profile = comped as never;
+    expect(await createPortalSessionAction()).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.portalCreate).toHaveBeenLastCalledWith({
+      customer: "cus_1",
+      return_url: "https://test.local/dashboard/billing",
+      configuration: "bpc_noswitch123",
+    });
+    await createPortalSessionAction("subscription_cancel");
+    expect(s.portalCreate.mock.calls[1]?.[0]).toMatchObject({
+      configuration: "bpc_noswitch123",
+      flow_data: { type: "subscription_cancel" },
+    });
+  });
+
+  it("WITHOUT it, it fails CLOSED: no portal home (it would offer switching), the date said", async () => {
+    s.profile = comped as never;
+    expect(await createPortalSessionAction()).toEqual({
+      ok: false,
+      error:
+        "Your plan is complimentary until February 1, 2027 — you can change plans after that. Until then, update your card or cancel from the billing page.",
+      compLock: { until: COMP_END, note: "Until then, update your card or cancel from the billing page." },
+    });
+    expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("WITHOUT it, the card and cancel flows still open — and return to the app, never the portal home", async () => {
+    s.profile = comped as never;
+    await createPortalSessionAction("payment_method_update");
+    expect(s.portalCreate.mock.calls[0]?.[0]).toEqual({
+      customer: "cus_1",
+      return_url: "https://test.local/dashboard/billing",
+      flow_data: {
+        type: "payment_method_update",
+        after_completion: { type: "redirect", redirect: { return_url: "https://test.local/dashboard/billing" } },
+      },
+    });
+  });
+
+  it("a malformed configuration id is never used (fails closed the same way)", async () => {
+    process.env[ENV] = "not-a-config";
+    s.profile = comped as never;
+    expect((await createPortalSessionAction()).ok).toBe(false);
+    expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("a comp that has ENDED but left its coupon running still opens the no-switch portal", async () => {
+    process.env[ENV] = "bpc_noswitch123";
+    s.profile = { ...comped, comp_expires_at: "2026-10-01T00:00:00.000Z" } as never;
+    s.subscriptionsRetrieve.mockImplementation(async () => ({
+      id: "sub_live",
+      status: "active",
+      discounts: [{ id: "di_comp", end: Date.parse("2099-01-20T00:00:00Z") / 1000, source: { coupon: "pipglyph_comp_100off_2m" } }],
+    }));
+    await createPortalSessionAction();
+    expect(s.subscriptionsRetrieve).toHaveBeenCalledWith("sub_live", { expand: ["discounts"] });
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({ configuration: "bpc_noswitch123" });
+  });
+
+  it("an ended comp whose subscription can't be read opens NO portal (fails closed, claims nothing)", async () => {
+    s.profile = { ...comped, comp_expires_at: "2026-10-01T00:00:00.000Z" } as never;
+    s.subscriptionsRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+    expect(await createPortalSessionAction()).toEqual({ ok: false, error: "Couldn't open the billing portal. Try again." });
+    expect(s.portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("an ended comp with no coupon left: the default portal", async () => {
+    s.profile = { ...comped, comp_expires_at: "2026-10-01T00:00:00.000Z" } as never;
+    s.subscriptionsRetrieve.mockImplementation(async () => ({ id: "sub_live", status: "active", discounts: [] }));
+    await createPortalSessionAction();
+    expect(s.portalCreate.mock.calls[0]?.[0]).toEqual({ customer: "cus_1", return_url: "https://test.local/dashboard/billing" });
+  });
+
+  it("a non-comped customer (or a comp below the plan) gets the default portal as before", async () => {
+    s.profile = { ...comped, comp_tier: null, comp_expires_at: null } as never;
+    await createPortalSessionAction();
+    // No comp named: nothing more is read.
+    expect(s.subscriptionsRetrieve).not.toHaveBeenCalled();
+    s.profile = { ...comped, subscription_tier: "pro", comp_tier: "plus" } as never;
+    s.subscriptionsRetrieve.mockImplementation(async () => ({ id: "sub_live", status: "active", discounts: [] }));
+    await createPortalSessionAction();
+    expect(s.portalCreate.mock.calls.map((c) => c[0])).toEqual([
+      { customer: "cus_1", return_url: "https://test.local/dashboard/billing" },
+      { customer: "cus_1", return_url: "https://test.local/dashboard/billing" },
+    ]);
   });
 });

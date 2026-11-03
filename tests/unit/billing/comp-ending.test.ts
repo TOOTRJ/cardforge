@@ -437,6 +437,18 @@ describe("a monthly comp's COUPON (BL1): the next charge is read from the coupon
       billing: "coupon",
     });
   });
+  it("a STALE grant — an earlier comp's, ended, left in the metadata — is not this comp's: no coupon branch (P3d)", () => {
+    const stale = couponSub(1, {
+      metadata: { [COMP_COUPON_GRANT_KEY]: `${sec("2026-06-01T00:00:00Z")}:${sec("2026-07-01T00:00:00Z")}:1` },
+      discounts: [],
+    });
+    const out = plan(stale);
+    expect(out).toMatchObject({ send: true, kind: "paying" });
+    expect(out).not.toHaveProperty("billing");
+    // A grant still OPEN but for another end date (not this comp's) — neither.
+    const other = couponSub(1, { metadata: { [COMP_COUPON_GRANT_KEY]: `${START}:${sec(IN_5D) + 30 * 86_400}:2` } });
+    expect(plan(other)).not.toHaveProperty("billing");
+  });
   it("the run sends billing \"coupon\" and the date; the email names the usual price and no comp credit", async () => {
     const stripe = stripeWith(couponSub(1));
     const stub = db([profile({ subscription_status: "active", stripe_subscription_id: "sub_1" })]);

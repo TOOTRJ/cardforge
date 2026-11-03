@@ -25,6 +25,9 @@ export type PricingCta =
   | { kind: "portal"; label: string }
   | { kind: "checkout"; label: string }
   | { kind: "resume"; label: string; planName: string }
+  /** A comp holds the plan: no switch until it ends (BL1) — the card says
+   *  so (`compPlanLockText`) instead of offering a button. */
+  | { kind: "comp_locked"; until: string | null }
   | { kind: "none" };
 
 const PAID_NAME: Record<Exclude<PlanTier, "free">, string> = { plus: "Plus", pro: "Pro" };
@@ -75,6 +78,11 @@ export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta
     DELINQUENT_SUBSCRIPTION_STATUSES.has(viewer.subscriptionStatus ?? "");
   if (delinquent && viewer.hasBillingAccount) {
     return { kind: "portal", label: "Update payment to continue" };
+  }
+  // A comp holds the plan: no plan switch until it ends (owner 2026-11-02,
+  // lib/billing/comp-switch-lock.ts; the server refuses it too).
+  if (viewer.planSwitchLock) {
+    return { kind: "comp_locked", until: viewer.planSwitchLock.until };
   }
   // Subscribed → switch tiers IN PLACE (the server action moves an active
   // subscription through the portal's confirm-update flow and carries a

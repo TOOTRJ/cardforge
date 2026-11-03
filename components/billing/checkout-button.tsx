@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { createCheckoutSessionAction, type CheckoutInput } from "@/lib/stripe/actions";
 import { cn } from "@/lib/utils";
 import { navigateTo } from "@/lib/routing/navigate";
+import { billingActionErrorText } from "@/lib/billing/comp-switch-lock";
 import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 
 type CheckoutButtonProps = {
@@ -45,7 +46,7 @@ export function CheckoutButton({
       if (result.ok) {
         navigateTo(result.url);
       } else {
-        toast.error(result.error);
+        toast.error(billingActionErrorText(result));
       }
     });
   }

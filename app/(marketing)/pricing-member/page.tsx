@@ -40,6 +40,9 @@ export default async function PricingMemberPage() {
       ? {
           subscription_status: profile.subscription_status ?? null,
           stripe_customer_id: profile.stripe_customer_id ?? null,
+          subscription_tier: profile.subscription_tier ?? null,
+          comp_tier: profile.comp_tier ?? null,
+          comp_expires_at: profile.comp_expires_at ?? null,
         }
       : null,
     entitlements,

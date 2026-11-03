@@ -13,7 +13,7 @@ import {
   resolveSubscriptionTier,
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
-import { applyCompToSubscription } from "@/lib/billing/comp-stripe-apply";
+import { applyCompToSubscription, releaseScheduleForCompChange } from "@/lib/billing/comp-stripe-apply";
 import { compEndDateError } from "@/lib/billing/comp-stripe";
 
 // Admin user tools — grant credits, comp a plan, raise the saved-card cap.
@@ -175,6 +175,9 @@ export type AdminSetCompTierResult =
       /** What the comp did to a live Stripe subscription, in one line for the
        *  admin (lib/billing/comp-stripe.ts) — null when there is none. */
       stripeNote?: string | null;
+      /** Stripe couldn't be brought in line (the comp row IS saved): the
+       *  admin is shown an error, not a success, and saves again. */
+      stripeFailed?: boolean;
     }
   | ActionError;
 
@@ -198,7 +201,7 @@ export async function adminSetCompTierAction(input: {
   const { admin } = gate;
   const { data: target } = await admin
     .from("profiles")
-    .select("id, subscription_status")
+    .select("id, subscription_status, comp_tier")
     .eq("id", userId)
     .maybeSingle();
   if (!target) {
@@ -213,6 +216,19 @@ export async function adminSetCompTierAction(input: {
     expiresAt,
   });
   if (endDateError) return { ok: false, error: endDateError };
+
+  // A comp change (grant, extend, shorten, revoke) while a downgrade is
+  // scheduled RELEASES that schedule first (owner 2026-11-02, BL1): no plan
+  // switch happens while a comp is on, and the schedule's next phase would
+  // carry the subscription's discounts as they were when it was made. If it
+  // can't be released, the comp is NOT changed — never half applied.
+  const hadComp = (target as { comp_tier?: string | null }).comp_tier != null;
+  let releaseNote: string | null = null;
+  if (tier != null || hadComp) {
+    const release = await releaseScheduleForCompChange(admin, userId);
+    if (!release.ok) return { ok: false, error: release.error };
+    releaseNote = release.note;
+  }
 
   const { error } = await admin
     .from("profiles")
@@ -269,7 +285,8 @@ export async function adminSetCompTierAction(input: {
     },
   });
 
-  return { ok: true, stripeNote: stripeOutcome.note };
+  const stripeNote = [releaseNote, stripeOutcome.note].filter(Boolean).join(" ") || null;
+  return { ok: true, stripeNote, ...(stripeOutcome.failed ? { stripeFailed: true } : {}) };
 }
 
 // ---------------------------------------------------------------------------

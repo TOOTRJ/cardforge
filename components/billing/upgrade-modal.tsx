@@ -26,7 +26,8 @@ import {
   TRIAL_DAYS,
   type PaidTier,
 } from "@/lib/billing/plans";
-import { LocalDate } from "@/components/ui/local-date";
+import { LocalDate, LocalDateText } from "@/components/ui/local-date";
+import { compPlanLockText } from "@/lib/billing/comp-switch-lock";
 
 export type UpgradeReason =
   | "credits"
@@ -169,6 +170,13 @@ function PlanCta({
         >
           {cta.label}
         </CheckoutButton>
+      );
+    case "comp_locked":
+      // No plan switch while a comp is on (BL1): one line, no button.
+      return (
+        <p className="text-xs leading-5 text-muted">
+          <LocalDateText parts={compPlanLockText(cta.until)} />
+        </p>
       );
     default:
       return null;

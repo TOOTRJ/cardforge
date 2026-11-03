@@ -15,6 +15,7 @@ import type { HeaderUser } from "@/components/layout/site-header";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { planEndingOf } from "@/lib/billing/plan-ending";
+import { compPlanSwitchLock } from "@/lib/billing/comp-switch-lock";
 
 // ---------------------------------------------------------------------------
 // GET /api/me — the header auth island's data source.
@@ -98,6 +99,16 @@ export async function GET() {
     // When it stops — the avatar menu and the upgrade modal say so.
     subscriptionEndsAt: ending?.endsAt ?? null,
     subscriptionEndingKind: ending?.kind ?? null,
+    // No plan switch while a comp holds the plan (BL1) — the upgrade modal's
+    // paid rows say so instead of "Switch to …".
+    planSwitchLock: isBillingEnabled()
+      ? compPlanSwitchLock({
+          compTier: profile?.comp_tier,
+          compExpiresAt: profile?.comp_expires_at,
+          subscribedTier: profile?.subscription_tier,
+          subscriptionStatus: profile?.subscription_status,
+        })
+      : null,
     isAdmin: profile?.is_admin ?? false,
   };
 
