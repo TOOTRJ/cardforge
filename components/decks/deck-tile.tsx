@@ -3,7 +3,7 @@ import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
 import { Eye, Heart } from "lucide-react";
 import { BRAND } from "@/lib/brand/constants";
-import { ManaPip } from "@/components/cards/mana-pip";
+import { ColorPips, type PipColor } from "@/components/cards/color-pip";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { DeckCardFan } from "@/components/decks/deck-card-fan";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,7 +66,7 @@ const NO_ART: DeckTileArt = { colors: null, fan: [] };
 const PIP_ORDER: readonly DeckCoverColor[] = ["W", "U", "B", "R", "G", "M"];
 
 /** The deck's colours as a tile names them, WUBRG first; null = unknown. */
-export function deckTilePips(colors: readonly DeckCoverColor[] | null): { symbols: string[]; label: string } | null {
+export function deckTilePips(colors: readonly DeckCoverColor[] | null): { symbols: PipColor[]; label: string } | null {
   if (!colors) return null;
   const symbols = PIP_ORDER.filter((c) => colors.includes(c));
   if (symbols.length === 0) return { symbols: ["C"], label: COLOR_IDENTITY_LABELS.colorless };
@@ -176,15 +176,7 @@ export function DeckTile({
           {pips ? (
             <span className="inline-flex items-center gap-0.5">
               <span className="sr-only">Colors: {pips.label}</span>
-              <span aria-hidden className="inline-flex items-center gap-0.5">
-                {pips.symbols.map((symbol) =>
-                  symbol === "M" ? (
-                    <span key={symbol} className="inline-block h-3.5 w-3.5 rounded-full border border-gold/60 bg-gold" />
-                  ) : (
-                    <ManaPip key={symbol} symbol={symbol} size="xs" />
-                  ),
-                )}
-              </span>
+              <ColorPips colors={pips.symbols} size={16} decorative />
             </span>
           ) : null}
         </p>
