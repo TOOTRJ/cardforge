@@ -75,6 +75,20 @@ export function parityHarnessEnabled(env: Record<string, string | undefined> = p
 }
 export const PARITY_PAGE_EXTENSIONS = ["tsx", "ts", "jsx", "js", "parity.tsx"];
 
+// Type-checking inside `next build` is skipped on VERCEL only (owner
+// 2026-11-02, docs/research/vercel-build-cost-2026-11.md §3.6: 49–51 s of
+// every Vercel build, about a quarter of all build time). CI already
+// type-checks every commit: its "Typecheck, lint, build" job runs
+// `npm run typecheck` and then `npm run build` with no VERCEL in its env —
+// so that build still type-checks Next's generated route types, which a
+// bare `tsc --noEmit` on a fresh checkout does not see — and the required
+// "Typecheck, lint, unit" check gates every merge on it. A local
+// `npm run build` keeps the check too. Vercel sets VERCEL=1 in every build
+// it runs (tests/unit/devops/vercel-build-typecheck.test.ts).
+export function skipBuildTypeCheck(env: Record<string, string | undefined> = process.env): boolean {
+  return env.VERCEL === "1";
+}
+
 // Baseline security headers on every response. No full Content-Security-
 // Policy yet (Next's inline runtime, Stripe.js and GA would each need
 // allow-listing and a nonce pipeline); these four carry no such risk:
@@ -98,6 +112,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },
   ...(parityHarnessEnabled() ? { pageExtensions: PARITY_PAGE_EXTENSIONS } : {}),
+  // Vercel builds only: see skipBuildTypeCheck() above. Everywhere else
+  // (CI's build, a local build) `next build` type-checks as before.
+  typescript: {
+    ignoreBuildErrors: skipBuildTypeCheck(),
+  },
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },

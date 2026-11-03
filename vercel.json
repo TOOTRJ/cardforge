@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "exit 1",
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
   "crons": [
     {
       "path": "/api/cron/refill-credits",

@@ -934,8 +934,10 @@ cards; a removal changes no case).
    deploy and the previous deployment keeps serving. Since 2026-11-02 that
    build looks up only the objects that are new or changed since the last
    successful production deployment (`VERCEL_GIT_PREVIOUS_SHA`, which Vercel
-   sets only because `vercel.json` has an `ignoreCommand` that always
-   builds), plus a canary of 200 of the rest that rotates per commit. Any
+   sets only because `vercel.json` has an `ignoreCommand`:
+   `scripts/vercel-ignore-build.mjs`, the notes-only skip — a skipped
+   deployment is never the base, so the diff then reaches further back),
+   plus a canary of 200 of the rest that rotates per commit. Any
    doubt (no previous SHA, a git error) is the full check, and
    `FRAMES_CHECK_FULL=1` on the project forces it
    (`scripts/lib/frames-check-plan.mjs`). CI runs the FULL check on every

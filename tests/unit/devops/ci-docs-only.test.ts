@@ -980,6 +980,7 @@ describe("the tests a notes-only pull request runs", () => {
     "tests/unit/render/parity-matrix.test.ts": "failure messages that point the reader at tests/parity/README.md",
     "tests/unit/devops/ci-docs-only.test.ts": "this file: the paths the classifier is tested with",
     "tests/unit/devops/ci-unit-shards.test.ts": "the workflow's job id `docs`, in a list of job ids",
+    "tests/unit/devops/vercel-ignore-build.test.ts": "the paths Vercel's Ignored Build Step is tested with (fake diffs and a temporary repository)",
   };
 
   it("npm run test:docs is exactly the list", () => {
