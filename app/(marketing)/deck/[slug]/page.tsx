@@ -67,6 +67,8 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
+import { deckTilePips } from "@/components/decks/deck-tile";
+import { ColorPips } from "@/components/cards/color-pip";
 import { DeckActivitySlot } from "@/components/decks/deck-activity-slot";
 import { PageContainer } from "@/components/layout/page-container";
 
@@ -235,6 +237,8 @@ export default async function DeckDetailPage({
   // The owner's upload, else the default its colours pick (lib/decks/cover.ts);
   // the fan as any viewer may see it (no private card — lib/decks/featured.ts).
   const cover = deckCoverOf(deck, deckCoverColors(items));
+  // The deck's colours as its tile names them (TODO UI1): the same pips.
+  const heroPips = deckTilePips(deckCoverColors(items));
   const featured = featuredCardsOf(shownItems, deck);
   // The breakdown's "Card status": THE status count the list's chips and the
   // summary bar say (the viewer's rows, each card under the badge it wears).
@@ -346,6 +350,12 @@ export default async function DeckDetailPage({
         chips={
           <>
             <HeroChip tone="gold">{DECK_FORMAT_LABELS[deck.format]}</HeroChip>
+            {heroPips ? (
+              <HeroChip>
+                <span className="sr-only">Colors: {heroPips.label}</span>
+                <ColorPips colors={heroPips.symbols} size={16} decorative />
+              </HeroChip>
+            ) : null}
             {deckType?.label ? <HeroChip>{deckType.label}</HeroChip> : null}
             {bracket ? (
               <HeroChip title={bracket.blurb}>
