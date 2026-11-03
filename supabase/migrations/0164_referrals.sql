@@ -1,6 +1,7 @@
--- 0153_referrals.sql — a double-sided referral program (2026-10-30).
--- Ships through a PR; never applied ad-hoc. (Placeholder number: the
--- orchestrator renumbers it at merge time.)
+-- 0164_referrals.sql — a double-sided referral program (2026-10-30).
+-- Ships through a PR; never applied ad-hoc. (Renumbered 0153 → 0164 when
+-- main was merged in on 2026-11-03 — after 0162 and open PR #722's 0163;
+-- the number may move again at merge.)
 --
 -- Every user gets a referral link (`/?ref=<code>`). A NEW account that signs
 -- up through it — first-touch attribution, sessionStorage → hidden fields →
@@ -178,8 +179,8 @@ begin
   if not found then
     return null;
   end if;
-  -- One referrer at a time (hashtext of the id; 0153's lock namespace 153).
-  perform pg_advisory_xact_lock(153, hashtext(v_row.referrer_id::text));
+  -- One referrer at a time (hashtext of the id; 0164's lock namespace 164).
+  perform pg_advisory_xact_lock(164, hashtext(v_row.referrer_id::text));
   -- Re-read under the lock: only a first_card row moves, once.
   select * into v_row from public.referrals where id = p_referral_id for update;
   if v_row.status <> 'first_card' then
@@ -279,7 +280,7 @@ revoke all on function public.admin_referral_stats(timestamptz) from public, ano
 grant execute on function public.admin_referral_stats(timestamptz) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- 4. Notification kinds (the list as of 0149 + the two new ones)
+-- 4. Notification kinds (the list as of 0161 + the two new ones)
 -- ---------------------------------------------------------------------------
 alter table public.notifications
   drop constraint if exists notifications_type_check;
@@ -291,7 +292,7 @@ alter table public.notifications
       'credit_grant', 'comp_plan', 'card_limit', 'render_update', 'site_update',
       'deck_generated', 'trial_ending', 'payment_received', 'checkout_reminder',
       'trial_lapsed', 'render_sweep_paused', 'credit_refill_failed',
-      'deck_like', 'deck_card_added',
+      'deck_like', 'deck_card_added', 'moderation_unhidden', 'comp_ending',
       'referral_signup', 'referral_reward'
     )
   );

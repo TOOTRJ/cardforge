@@ -10,10 +10,12 @@ import {
   normalizeReferralCode,
 } from "@/lib/referrals/rules";
 import { referralFraudVerdict, type ReferralBlockReason } from "@/lib/referrals/fraud";
-import { oneMonthCents, planReferralMonth, type ReferralRewardProfile } from "@/lib/referrals/reward";
+import { planReferralMonth, type ReferralRewardProfile } from "@/lib/referrals/reward";
+import { creditCustomerBalance, oneMonthCents } from "@/lib/billing/balance-credit";
+import { applyCompToSubscription } from "@/lib/billing/comp-stripe-apply";
 
 // ---------------------------------------------------------------------------
-// The referral program's server side — the service role only (0153: users
+// The referral program's server side — the service role only (0164: users
 // read their rows, nobody but the server writes them). Two entry points:
 //
 //   recordReferralSignup  a NEW account arrived through a link (the signup
@@ -241,22 +243,35 @@ async function grantMonth(
         .update({ comp_tier: plan.tier, comp_expires_at: plan.expiresAt })
         .eq("id", userId);
       if (error) throw new Error(error.message);
+      // The comp goes through #688's flow like an admin's: the profile row
+      // first, then the live subscription brought in line with it (a held
+      // trial / an active plan's balance credit). planReferralMonth only
+      // comps a user whose plan isn't renewing (free, comped, cancelled, a
+      // broken payment), where that step changes nothing — it keeps the two
+      // writers of comp_tier on one path. Best effort, like the admin's.
+      await applyCompToSubscription(
+        admin,
+        userId,
+        { tier: plan.tier, expiresAt: plan.expiresAt },
+        { ...(stripe ? { stripe } : {}), now: ctx.now },
+      );
       return { kind: "comp_month", tier: plan.tier, expiresAt: plan.expiresAt };
     }
     const sub = await (stripe as Stripe).subscriptions.retrieve(plan.subscriptionId);
     const price = sub.items?.data?.[0]?.price ?? null;
     const amountCents = oneMonthCents(price, plan.tier);
     const currency = price?.currency ?? "usd";
-    await (stripe as Stripe).customers.createBalanceTransaction(
-      plan.customerId,
-      {
-        amount: -amountCents,
-        currency,
-        description: "PipGlyph referral — one free month",
-        metadata: { referral_id: ctx.referralId, side: ctx.side },
-      },
-      { idempotencyKey: `referral:${ctx.referralId}:${ctx.side}` },
-    );
+    // main's one balance-credit writer (lib/billing/balance-credit.ts). Its
+    // metadata names the referral, never the comp ledger's key, so an admin
+    // comp's credit / claw-back never counts it.
+    await creditCustomerBalance(stripe as Stripe, {
+      customerId: plan.customerId,
+      cents: amountCents,
+      currency,
+      description: "PipGlyph referral — one free month",
+      metadata: { referral_id: ctx.referralId, side: ctx.side },
+      idempotencyKey: `referral:${ctx.referralId}:${ctx.side}`,
+    });
     return { kind: "balance_credit", amountCents, currency };
   } catch (error) {
     console.error(
@@ -312,7 +327,7 @@ async function notify(
     type: input.type,
     payload: input.payload,
   });
-  // 23505: already told (0153's once-per-referral index).
+  // 23505: already told (0164's once-per-referral index).
   if (error && error.code !== "23505") {
     console.warn(`[referrals] ${input.type} notification failed:`, error.message);
   }

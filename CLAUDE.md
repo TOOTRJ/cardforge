@@ -1605,15 +1605,18 @@ Rules and gotchas:
   because deck covers and card set icons live there. A card's printed set
   symbol (`set_icon_url` / `set_icon_code`, the Set icon step) is a rendering
   feature and stays.
-- Referrals (migration 0153, `docs/BILLING.md` "Referrals"): ONE code per
+- Referrals (migration 0164, `docs/BILLING.md` "Referrals"): ONE code per
   user (`my_referral_code()`), the link `/?ref=<code>` rides the first-touch
   attribution (sessionStorage → hidden `attr_ref` → `signupAction`; a Google
   sign-up through onboarding's finish) — never a cookie. The reward waits
   for the FIRST saved card (`recordActivity` → `qualifyReferral` in
   `after()`): fraud rules in `lib/referrals/fraud.ts`, caps ONLY through
   `claim_referral_reward()` (atomic; the numbers are `lib/referrals/rules.ts`),
-  each side's month from `planReferralMonth` (a comp month, or a Stripe
-  balance credit for a renewing plan — never a coupon or a moved trial).
+  each side's month from `planReferralMonth` (a comp month written through
+  #688's comp flow — the columns, then `applyCompToSubscription` — or, for a
+  renewing plan, a balance credit through `creditCustomerBalance` /
+  `oneMonthCents` in `lib/billing/balance-credit.ts`; never a coupon, a
+  moved trial or a second balance writer).
   Users read their rows through a COLUMN grant (no fraud reason, no Stripe
   detail); writes are the service role's.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:

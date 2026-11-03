@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 31_referrals.sql — the referral program (migration 0153), so a preview
+-- 37_referrals.sql — the referral program (migration 0164), so a preview
 -- branch, the dev database and the local stack show each case:
 --
 --   Codes — every seeded account has a fixed code (dev_free: d0000003, so
@@ -12,7 +12,7 @@
 --     of Plus; dev_new: the same) and the two notifications.
 --   The referral_signup notification dev_free got when dev_new joined.
 --
--- Runs after 30_*.sql (config.toml → [db.seed] sql_paths, filename order).
+-- Runs after 36_*.sql (config.toml → [db.seed] sql_paths, filename order).
 -- Never against production. Idempotent: fixed ids + ON CONFLICT DO NOTHING.
 -- No credential in here (the repo is public). Rows whose accounts are
 -- missing are skipped.

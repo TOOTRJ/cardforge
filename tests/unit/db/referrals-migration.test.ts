@@ -1,15 +1,15 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
-// 0153 (referrals): RLS on every table, grants stated, users read a status
+// 0164 (referrals): RLS on every table, grants stated, users read a status
 // and never a fraud reason or a Stripe detail, the caps step is the service
-// role's alone, and the notification list keeps every kind 0149 allowed.
+// role's alone, and the notification list keeps every kind 0161 allowed.
 // ---------------------------------------------------------------------------
 
 const dir = join(process.cwd(), "supabase/migrations");
-const sql = readFileSync(join(dir, "0153_referrals.sql"), "utf8");
+const sql = readFileSync(join(dir, "0164_referrals.sql"), "utf8");
 
 function typeCheckKinds(text: string): string[] {
   const all = [...text.matchAll(/add constraint notifications_type_check\s+check \(\s*type in \(([\s\S]*?)\)\s*\)/g)];
@@ -18,7 +18,7 @@ function typeCheckKinds(text: string): string[] {
   return [...last[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 }
 
-describe("migration 0153 — referrals", () => {
+describe("migration 0164 — referrals", () => {
   it("enables RLS on both tables, with own-or-admin read policies through viewer_is_admin()", () => {
     for (const table of ["referral_codes", "referrals"]) {
       expect(sql).toContain(`alter table public.${table} enable row level security;`);
@@ -47,7 +47,7 @@ describe("migration 0153 — referrals", () => {
   it("the caps step is service-role only and takes the caps as arguments under an advisory lock", () => {
     expect(sql).toContain("revoke all on function public.claim_referral_reward(uuid, int, int) from public, anon, authenticated;");
     expect(sql).toContain("grant execute on function public.claim_referral_reward(uuid, int, int) to service_role;");
-    expect(sql).toContain("pg_advisory_xact_lock(153, hashtext(v_row.referrer_id::text))");
+    expect(sql).toContain("pg_advisory_xact_lock(164, hashtext(v_row.referrer_id::text))");
     expect(sql).toContain("if v_row.status <> 'first_card' then");
   });
 
@@ -56,16 +56,21 @@ describe("migration 0153 — referrals", () => {
     expect(sql).toContain("revoke all on function public.admin_referral_stats(timestamptz) from public, anon;");
   });
 
-  it("keeps every notification kind 0149 allowed and adds the two referral kinds", () => {
-    const before = typeCheckKinds(readFileSync(join(dir, "0149_deck_tiles_trending.sql"), "utf8"));
-    const after = typeCheckKinds(sql);
-    expect(after).toEqual(expect.arrayContaining(before));
-    expect(after).toEqual(expect.arrayContaining(["referral_signup", "referral_reward"]));
-    expect(after.length).toBe(before.length + 2);
+  it("keeps every notification kind 0161 allowed (the last to redefine it) and adds the two referral kinds", () => {
+    const before = typeCheckKinds(readFileSync(join(dir, "0161_comp_ending_notifications.sql"), "utf8"));
+    expect(before).toEqual(expect.arrayContaining(["moderation_unhidden", "comp_ending"]));
+    expect(typeCheckKinds(sql)).toEqual([...before, "referral_signup", "referral_reward"]);
+  });
+
+  it("no migration between 0161 and this one redefined the CHECK", () => {
+    const later = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) > "0161" && f.slice(0, 4) < "0164");
+    for (const f of later) {
+      expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("notifications_type_check");
+    }
   });
 
   it("the seed file exercises it with no credential", () => {
-    const seed = readFileSync(join(process.cwd(), "supabase/seeds/31_referrals.sql"), "utf8");
+    const seed = readFileSync(join(process.cwd(), "supabase/seeds/37_referrals.sql"), "utf8");
     expect(seed).toContain("Refusing to seed dev data");
     expect(seed).toContain("insert into public.referrals");
     expect(seed).not.toMatch(/password|sk_(live|test)_|service_role_key/i);

@@ -413,7 +413,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0153 — referrals.
+      // Migration 0164 — referrals.
       referral_codes: {
         Row: { user_id: string; code: string; created_at: string };
         Insert: { user_id: string; code: string; created_at?: string };
@@ -2639,7 +2639,7 @@ export type Database = {
         Args: { p_since: string };
         Returns: { event: string; n: number; users: number }[];
       };
-      // Migration 0153 — referrals.
+      // Migration 0164 — referrals.
       my_referral_code: {
         Args: Record<string, never>;
         Returns: string | null;

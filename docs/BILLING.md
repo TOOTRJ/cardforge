@@ -871,7 +871,7 @@ sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
 `proration_behavior: none` — run it once on a test clock.
 
-## Referrals (2026-10-30, migration 0153)
+## Referrals (2026-10-30, migration 0164)
 
 Research and the numbers behind each rule: `docs/research/conversion-2026-10.md`
 §3 and §8. Code: `lib/referrals/` (rules, fraud, reward, server).
@@ -906,7 +906,7 @@ ONE conditional update (a second save or a retry finds nothing), then
    lock): `REFERRAL_MONTHLY_CAP` (3 a UTC month) and `REFERRAL_LIFETIME_CAP`
    (12) rewarded referrals; past either the row is `capped` and the FRIEND
    still gets their month;
-4. each side's month and one `referral_reward` notification (0153's unique
+4. each side's month and one `referral_reward` notification (0164's unique
    index: once per referral and side).
 
 **What "one free month" is** (`planReferralMonth`, `lib/referrals/reward.ts`):
@@ -919,9 +919,20 @@ ONE conditional update (a second save or a retry finds nothing), then
 | a broken payment | a comp month of Plus |
 | an admin, or an open-ended comp | nothing (nothing to add) |
 
-A comp month is a comp in every way: perks, the tier's monthly credits
-(`refillTierFor`), capacity — and, since the plans audit, Checkout while
-comped starts billing when it ends. A balance credit that fails (Stripe
+A comp month is a comp in every way, written through the same flow as an
+admin's (#688, "Comps and a live subscription" above): the profile's comp
+columns, then `applyCompToSubscription` — for the accounts the table comps
+(no renewing plan) that step finds nothing to move. It brings perks, the
+tier's monthly credits (`refillTierFor`, through the daily refill's ledger
+rows — the referral grants no credits of its own), capacity, Checkout while
+comped starting billing when it ends, and the `comp_ending` reminders 7 days
+and 1 day before it ends. The balance credit is main's one writer
+(`creditCustomerBalance`, priced by `oneMonthCents` in
+`lib/billing/balance-credit.ts`), its metadata the referral's
+(`referral_id`, `side`) — never the comp ledger's `pipglyph_comp_grant`, so
+an admin comp's settlement never counts it. One interaction: an admin comp's
+claw-back is capped at the customer's UNSPENT balance, which may by then be
+a referral credit (open question in the PR). A balance credit that fails (Stripe
 down) is recorded as `none` with `grant_failed` on the row
 (`referrer_reward_detail`), visible to admins; no retry job.
 

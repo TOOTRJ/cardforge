@@ -34,6 +34,12 @@ function db() {
   const stub = chainClient((table: string, calls: ChainCall[]): ChainAnswer => {
     if (table === "referral_codes") return { data: world.codeOwner ? { user_id: world.codeOwner } : null };
     if (table === "profiles" && called(calls, "select") && called(calls, "in")) return { data: world.profiles };
+    // applyCompToSubscription's read (#688's comp flow, after a comp month).
+    const columns = calls.find((c) => c.method === "select")?.args[0];
+    if (table === "profiles" && typeof columns === "string" && columns.startsWith("stripe_customer_id")) {
+      const id = calls.find((c) => c.method === "eq")?.args[1];
+      return { data: world.profiles.find((p) => p.id === id) ?? null };
+    }
     if (table === "profiles" && called(calls, "select")) {
       return { data: { created_at: world.refereeCreatedAt, subscription_status: world.refereeStatus } };
     }
@@ -239,6 +245,44 @@ describe("qualifyReferral (the first saved card)", () => {
     expect(profileUpdates(stub).map((u) => u.id)).toEqual([REFEREE]);
     const details = referralUpdates(stub).at(-1)!;
     expect(details).toMatchObject({ referrer_reward: "balance_credit", referee_reward: "comp_month" });
+  });
+
+  it("a comp month goes through #688's comp flow: a cancelled plan is read on Stripe and nothing is credited", async () => {
+    world.profiles = [
+      {
+        id: REFERRER,
+        subscription_tier: "plus",
+        subscription_status: "active",
+        cancel_at_period_end: true,
+        subscription_ends_at: at(10),
+        stripe_customer_id: "cus_a",
+        stripe_subscription_id: "sub_a",
+      },
+      { id: REFEREE, subscription_tier: "free" },
+    ];
+    const createBalanceTransaction = vi.fn(async () => ({ id: "cbtxn_1" }));
+    const retrieve = vi.fn(async () => ({
+      id: "sub_a",
+      status: "active",
+      cancel_at_period_end: true,
+      customer: "cus_a",
+      metadata: {},
+      items: { data: [{ price: { unit_amount: 600, currency: "usd", recurring: { interval: "month" } } }] },
+    }));
+    const stripe = {
+      subscriptions: { retrieve, update: vi.fn() },
+      prices: { retrieve: vi.fn() },
+      customers: { createBalanceTransaction, listPaymentMethods: vi.fn(async () => ({ data: [] })) },
+    };
+    const stub = db();
+    const result = await qualifyReferral(stub.client as never, REFEREE, { now: NOW, stripe: stripe as never });
+    expect(result).toMatchObject({ status: "rewarded", referrer: { kind: "comp_month", tier: "plus", expiresAt: at(10 + REFERRAL_MONTH_DAYS) } });
+    // applyCompToSubscription read the live subscription; a plan set to stop
+    // is never credited (its table: "a CANCELLED plan, still running").
+    expect(retrieve).toHaveBeenCalledWith("sub_a");
+    expect(createBalanceTransaction).not.toHaveBeenCalled();
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    expect(profileUpdates(stub).map((u) => u.id).sort()).toEqual([REFEREE, REFERRER].sort());
   });
 
   it("a Stripe failure on a credit is recorded as none (never a throw; the comp side still lands)", async () => {

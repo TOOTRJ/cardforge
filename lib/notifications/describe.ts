@@ -143,7 +143,7 @@ export function describeNotification(
       };
     }
     case "referral_signup":
-      // Someone joined through the recipient's referral link (0153).
+      // Someone joined through the recipient's referral link (0164).
       return {
         subject: actorName,
         body: "joined PipGlyph with your referral link. You'll both get a free month when they save their first card.",
