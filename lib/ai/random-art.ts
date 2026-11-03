@@ -2,7 +2,8 @@ import "server-only";
 
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import { ownStorageObject } from "@/lib/media/storage-hosts";
+import { fileNameInFolder, isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { randomId } from "@/lib/ids";
 import { AI_FAILURE_COPY, ART_NUDITY_BLOCKED_COPY } from "@/lib/ai/failure";
 import { scanImageBytes } from "@/lib/moderation/image-scan";
@@ -110,4 +111,23 @@ export async function persistGeneratedArt(
     return storeFailed();
   }
   return { ok: true, publicUrl: art.publicUrl(name) };
+}
+
+/**
+ * Remove a picture persistGeneratedArt stored that no card will hold (an AI
+ * card step whose insert was refused after its paint, #722). Best effort:
+ * only an `ai-` object in `userId`'s own `card-art` folder, never throws —
+ * a leftover is the orphan sweep's.
+ */
+export async function discardGeneratedArt(userId: string, publicUrl: string): Promise<void> {
+  try {
+    const object = ownStorageObject(publicUrl);
+    if (!object || object.bucket !== "card-art") return;
+    const name = fileNameInFolder(userId, object.key);
+    if (!name || !name.startsWith("ai-")) return;
+    const { error } = await userFolder("card-art", userId).remove([name]);
+    if (error) console.warn(`[ai:art] couldn't remove unused ${name}: ${error.message}`);
+  } catch (error) {
+    console.warn("[ai:art] couldn't remove an unused picture:", error);
+  }
 }

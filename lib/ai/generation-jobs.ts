@@ -47,7 +47,7 @@ import {
   artPromptLadder,
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
-import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { addCardAiFields, generatedCardParts, recordAiReceipt, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import {
   logAiCall,
@@ -124,7 +124,9 @@ import {
   remixSavedFrames,
   scryfallRemixMechanics,
 } from "@/lib/ai/remix-mechanics";
-import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
+import { cardFieldsFace, frameKindGateError, type CardKindFields } from "@/lib/cards/frame-kind-gate";
+import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
+import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateTakesBackBody } from "@/lib/cards/dfc";
@@ -150,6 +152,12 @@ import {
 } from "@/lib/ai/failure";
 import { DesignNotUsableError, designFreshly } from "@/lib/ai/design-variety";
 import { recentAiTitles } from "@/lib/ai/recent-designs";
+import {
+  OWNER_JOB_COLUMNS,
+  PENDING_BACK_STEP_LABEL,
+  PENDING_STEP_LABEL,
+  earnedStepLabel,
+} from "@/lib/ai/job-privacy";
 
 // ---------------------------------------------------------------------------
 // AI generation jobs — the batch pipeline behind deck generation, deck
@@ -162,9 +170,10 @@ import { recentAiTitles } from "@/lib/ai/recent-designs";
 //   PLAN  (create*Job): one design call for every card (single batch =
 //         cross-card cohesion), then the target deck is created/loaded and
 //         the job row written with one step per card (+ the guide).
-//   STEP  (runNextJobStep): create one card (private → no bake) and paint
-//         its art. Steps are retry-safe: a step that already created its
-//         card only redoes the art.
+//   STEP  (runNextJobStep): paint one card's art, then create the card WITH
+//         it in one insert (#722: no card row before its paid picture).
+//         Steps are retry-safe: a step that holds a card (one a job planned
+//         before that created) only redoes that card's art.
 //
 // Credits: 1 per card, spent as each card step completes (same
 // "generate_deck" ledger reason as the legacy route). Free when billing is
@@ -263,6 +272,10 @@ export type GenerationJobRow = {
   error: string | null;
 };
 
+/** A job as its OWNER's session reads it (migration 0163): every column
+ *  but `plan`, which only the service role reads (lib/ai/job-privacy.ts). */
+export type GenerationJobView = Omit<GenerationJobRow, "plan">;
+
 /** Single-card job (migration 0061): the card text is designed at plan time
  *  (fast), the one step creates + paints it. Replaced the synchronous
  *  /api/ai/random-card request, which ran 60–90s and got cut + re-run at the
@@ -275,6 +288,10 @@ type CardJobPlan = {
   frame_template: string | null;
   /** Deck-aware design: the step adds the finished card to this deck. */
   deck_id?: string | null;
+  /** The step's designed label (its title), written when the step is done
+   *  (lib/ai/job-privacy.ts) — until then the step reads a placeholder.
+   *  Absent on plans made before it. */
+  step_labels?: Record<string, string>;
 };
 
 /** RETIRED 2026-09-16 (owner decision): the image-to-image "Remix with AI"
@@ -334,6 +351,10 @@ type CardFillJobPlan = {
     };
     brief?: string;
   };
+  /** Each step's designed label ("Title", "Front // Back", the back's
+   *  title), written when that step is done (lib/ai/job-privacy.ts) —
+   *  until then a placeholder. Absent on plans made before it. */
+  step_labels?: Record<string, string>;
 };
 
 /** The step key of a double-faced fill's BACK picture (PR 3). */
@@ -396,14 +417,14 @@ const GUIDE_STEP_KEY = "guide";
 
 export async function getGenerationJob(
   jobId: string,
-): Promise<GenerationJobRow | null> {
+): Promise<GenerationJobView | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("ai_generation_jobs")
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .eq("id", jobId)
     .maybeSingle();
-  return (data as unknown as GenerationJobRow) ?? null;
+  return (data as unknown as GenerationJobView) ?? null;
 }
 
 export type RunStepResult =
@@ -421,8 +442,9 @@ export type RunStepResult =
  * The step is CLAIMED atomically first (pending → running, migration 0066),
  * so concurrent requests — parallel workers, a retry racing a still-running
  * attempt, a second tab — can never execute the same step twice. Persists
- * the outcome via patch_job_step. Card creation is retry-safe (a step whose
- * card exists only redoes the art).
+ * the outcome via patch_job_step. A card step paints first and creates its
+ * card with the picture; a step whose card exists (planned before #722)
+ * only redoes that card's art.
  */
 export async function runNextJobStep(
   jobId: string,
@@ -492,6 +514,12 @@ export async function runNextJobStep(
       refunded: outcome.refunded ?? null,
       refund_pending: outcome.refund_pending ?? null,
     };
+  }
+  // A step's designed title is its label once it is DONE — paid for — and
+  // never before (lib/ai/job-privacy.ts).
+  if (result.status === "done") {
+    const earned = earnedStepLabel(job.plan, result.key);
+    if (earned) result = { ...result, label: earned };
   }
   if (result.status === "failed") {
     console.warn(
@@ -610,9 +638,13 @@ type GeneratedCardStepConfig = {
 /**
  * THE card step — shared by single-card and deck generation so the
  * pipeline can't drift between flows (it had: three copies with different
- * refund coverage). Charge → create private card → paint + publish, with the
- * credit wrapper refunding any failed attempt. A retry of a step whose card
- * exists (card_id memo) skips creation and only redoes the art.
+ * refund coverage). Charge → PAINT → create the card WITH its art in one
+ * insert (owner 2026-11-02, #722), with the credit wrapper refunding any
+ * failed attempt. Its text is the plan's — designed before any charge — so
+ * no row holds it until the picture it was paid for exists: a paint that
+ * fails saves nothing (the text was never readable unpaid; before, a card
+ * created first kept its text through a refunded paint). A step whose card
+ * already exists (a job planned before this) only re-paints that card.
  */
 async function runGeneratedCardStep(
   userId: string,
@@ -638,127 +670,153 @@ async function runGeneratedCardStep(
   }
   return withCreditedStep(userId, jobId, 1, config.reason, step, async () => {
     const card = config.card;
-    let cardId = step.card_id;
-    // The create is private, so only a flow's own extras could ask for more;
-    // the publish below is where the strong-language rule usually speaks.
-    let forcedPrivate: ForcedPrivateNotice | undefined;
-
-    if (!cardId) {
-      const gameSystemId = await activeGameSystemId();
-      if (!gameSystemId) {
-        return { ...step, status: "failed", error: "No game system configured." };
-      }
-
-      // A card that lands on a STATION frame (TODO 4.27a, PR 3) saves as the
-      // creator saves a new one: the canonical text beside its rows
-      // (`face_content.station`), the power / toughness on the tier the
-      // text plates. Null for every other card — the payload is then what
-      // it always was (stationSaveFields; a Spacecraft with no tier never
-      // lands there: resolveGeneratedFrame).
-      const extras = config.createExtras ?? {};
-      const station = stationSaveFields({
-        template: (extras.frame_style as { template?: string } | undefined)?.template,
-        rulesText: card.rules_text,
-        hasPt: printsPowerToughness({
-          cardType: card.card_type,
-          supertype: (extras.supertype as string | undefined) ?? card.supertype,
-          subtypes: card.subtypes,
-          power: card.power,
-          toughness: card.toughness,
-        }),
-      });
-      const payload = {
-        title: card.title,
-        game_system_id: gameSystemId,
-        cost: card.cost ?? undefined,
-        color_identity: card.color_identity,
-        supertype: card.supertype ?? undefined,
-        card_type: card.card_type,
-        subtypes: card.subtypes,
-        // A token prints a black set symbol, never a rarity: a NEW token
-        // saves as common whatever the designer said (owner decision
-        // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
-        // hides the rarity chips, so a token saved rare here could never
-        // be set back in the creator.
-        rarity: card.card_type === "token" ? "common" : card.rarity,
-        rules_text: card.rules_text ?? undefined,
-        ...(station ?? {}),
-        flavor_text: card.flavor_text ?? undefined,
-        power: card.power ?? undefined,
-        toughness: card.toughness ?? undefined,
-        loyalty: card.loyalty ?? undefined,
-        defense: card.defense ?? undefined,
-        visibility: "private",
-        artist_credit: await aiArtistCredit(),
-        ...config.createExtras,
-      };
-      const result = await createCardAction(
-        payload,
-        // A card designed for a deck (its createExtras' deck_id) joins it as
-        // the AI's (deck_cards.source, migration 0144).
-        { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
-      );
-      if (!result.ok) {
-        return {
-          ...step,
-          status: "failed",
-          error: createFailureMessage(result),
-          failure: "save_failed",
-          // The DB trigger (migration 0104) can still say no when parallel
-          // steps race for the last slot — same code, same client handling.
-          error_code: result.reason === "capacity" ? "CARD_CAPACITY" : undefined,
-        };
-      }
-      cardId = result.cardId;
-      forcedPrivate = result.forcedPrivate;
-      // The card AI wrote whole (TODO CP1, migration 0162): every text part
-      // it has is the AI's — until the maker rewrites one. Its picture is
-      // marked by the database when the paint below attaches it. The plan
-      // is read from a job row its OWNER may insert (0059), so a part is
-      // marked only where the receipt the server kept when it designed the
-      // card (createCardGenerationJob / createDeckGenerationJob) holds the
-      // plan's text.
-      await addCardAiFields(cardId, userId, await verifiedAiClaims(userId, generatedCardParts(payload), card));
-      await config.afterCreate?.(cardId);
-    }
-
-    // The picture's shape: the window of the frame the card is ON (TODO
-    // 4.48b) — the one it was just created with, or, on a retry of a step
-    // whose card exists, the one it was saved with.
-    const shape = await generatedCardArtShape(
-      step.card_id ? cardId : null,
-      generatedCardArtFace(card, config.createExtras),
-    );
-    await logAiCall(userId, config.artLogAction);
     // Every run rewords the art prompt (moderation refuses identical text),
     // and a refusal walks straight to the next rung inside this step.
     const attempt = (step.attempts ?? 0) + 1;
-    const published = await paintAndPublishCard(
-      cardId,
-      artPromptLadder(attempt, config.artPrompt, fallbackInputsFor(card, config.style)),
-      shape,
+    const prompts = artPromptLadder(attempt, config.artPrompt, fallbackInputsFor(card, config.style));
+
+    if (step.card_id) {
+      // A card a job planned before paint-first created and never painted:
+      // the picture's shape is the window of the frame it was SAVED on.
+      const cardId = step.card_id;
+      const shape = await generatedCardArtShape(cardId, generatedCardArtFace(card, config.createExtras));
+      await logAiCall(userId, config.artLogAction);
+      const published = await paintAndPublishCard(cardId, prompts, shape);
+      if (!published.ok) {
+        return {
+          ...step,
+          status: "failed",
+          card_id: cardId,
+          attempts: attempt,
+          error: published.error,
+          failure: published.failure,
+        };
+      }
+      return {
+        ...step,
+        status: "done",
+        card_id: cardId,
+        attempts: attempt,
+        error: undefined,
+        image_model: published.model,
+        ...(published.forcedPrivate ? { forced_private: published.forcedPrivate } : {}),
+      };
+    }
+
+    const gameSystemId = await activeGameSystemId();
+    if (!gameSystemId) {
+      return { ...step, status: "failed", error: "No game system configured." };
+    }
+
+    // A card that lands on a STATION frame (TODO 4.27a, PR 3) saves as the
+    // creator saves a new one: the canonical text beside its rows
+    // (`face_content.station`), the power / toughness on the tier the
+    // text plates. Null for every other card — the payload is then what
+    // it always was (stationSaveFields; a Spacecraft with no tier never
+    // lands there: resolveGeneratedFrame).
+    const extras = config.createExtras ?? {};
+    const station = stationSaveFields({
+      template: (extras.frame_style as { template?: string } | undefined)?.template,
+      rulesText: card.rules_text,
+      hasPt: printsPowerToughness({
+        cardType: card.card_type,
+        supertype: (extras.supertype as string | undefined) ?? card.supertype,
+        subtypes: card.subtypes,
+        power: card.power,
+        toughness: card.toughness,
+      }),
+    });
+    const payload = {
+      title: card.title,
+      game_system_id: gameSystemId,
+      cost: card.cost ?? undefined,
+      color_identity: card.color_identity,
+      supertype: card.supertype ?? undefined,
+      card_type: card.card_type,
+      subtypes: card.subtypes,
+      // A token prints a black set symbol, never a rarity: a NEW token
+      // saves as common whatever the designer said (owner decision
+      // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
+      // hides the rarity chips, so a token saved rare here could never
+      // be set back in the creator.
+      rarity: card.card_type === "token" ? "common" : card.rarity,
+      rules_text: card.rules_text ?? undefined,
+      ...(station ?? {}),
+      flavor_text: card.flavor_text ?? undefined,
+      power: card.power ?? undefined,
+      toughness: card.toughness ?? undefined,
+      loyalty: card.loyalty ?? undefined,
+      defense: card.defense ?? undefined,
+      visibility: "private",
+      artist_credit: await aiArtistCredit(),
+      ...config.createExtras,
+    };
+
+    // The save's cheap refusals before a paid picture (the capacity check
+    // ran before the reserve): a frame the card can't be saved on fails the
+    // step as the create would — the same words, refunded — with no paint.
+    const refusal = await generatedCardSaveRefusal(payload);
+    if (refusal) {
+      return { ...step, status: "failed", attempts: attempt, error: refusal, failure: "save_failed" };
+    }
+
+    // The picture first, in the shape of the art window of the frame the
+    // card is created on (TODO 4.48b) — stored (moderation scan included,
+    // persistGeneratedArt) before any card row exists.
+    await logAiCall(userId, config.artLogAction);
+    const painted = await paintGeneratedArt(
+      prompts,
+      artShapeForFace(generatedCardArtFace(card, config.createExtras)),
     );
-    if (!published.ok) {
+    if (!painted.ok) {
+      return { ...step, status: "failed", attempts: attempt, error: painted.error, failure: painted.failure };
+    }
+
+    // …then the card WITH it, as main's paintAndPublishCard left it: the
+    // art, its automatic fit (TODO 3b.18: the window filled, centred) and
+    // public — the action's rules still decide what is stored (the
+    // strong-language rule keeps it private and says so, `forcedPrivate`),
+    // and its deferred bake is the card's one bake.
+    const result = await createCardAction(
+      { ...payload, art_url: painted.url, art_position: fitArtToWindow(), visibility: "public" },
+      // A card designed for a deck (its createExtras' deck_id) joins it as
+      // the AI's (deck_cards.source, migration 0144).
+      { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
+    );
+    if (!result.ok) {
+      // No card holds the picture: it goes (best effort, never throws).
+      await discardGeneratedArt(userId, painted.url);
       return {
         ...step,
         status: "failed",
-        card_id: cardId,
         attempts: attempt,
-        error: published.error,
-        failure: published.failure,
+        error: createFailureMessage(result),
+        failure: "save_failed",
+        // The DB trigger (migration 0104) can still say no when parallel
+        // steps race for the last slot — same code, same client handling.
+        error_code: result.reason === "capacity" ? "CARD_CAPACITY" : undefined,
       };
     }
-    // A card the publish kept private for the strong language in its text
+    const cardId = result.cardId;
+    // The card AI wrote whole (TODO CP1, migration 0162): every text part
+    // it has is the AI's — until the maker rewrites one. Its picture is
+    // marked by the database from the address it was created with. The plan
+    // is read from a job row its OWNER may insert (0059), so a part is
+    // marked only where the receipt the server kept when it designed the
+    // card (createCardGenerationJob / createDeckGenerationJob) holds the
+    // plan's text.
+    await addCardAiFields(cardId, userId, await verifiedAiClaims(userId, generatedCardParts(payload), card));
+    await config.afterCreate?.(cardId);
+    // A card the action kept private for the strong language in its text
     // (lib/moderation/profanity.ts) says so on its step.
-    const notice = published.forcedPrivate ?? forcedPrivate;
     return {
       ...step,
       status: "done",
       card_id: cardId,
       attempts: attempt,
       error: undefined,
-      image_model: published.model,
-      ...(notice ? { forced_private: notice } : {}),
+      image_model: painted.model,
+      ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
     };
   });
 }
@@ -896,7 +954,7 @@ export async function loadOwnedDeckContext(
 }
 
 export type CreateCardJobResult =
-  | { ok: true; job: GenerationJobRow }
+  | { ok: true; job: GenerationJobView }
   /** `code`: a station fill whose empty tier came back empty (no job,
    *  nothing charged), or the kind of a plan-time design failure
    *  (lib/ai/failure.ts) — nothing is reserved at plan time, so its message
@@ -1035,9 +1093,10 @@ export async function createCardGenerationJob(
     style: input.style?.trim() || null,
     frame_template: frameTemplate ?? null,
     deck_id: deckContext?.deck.id ?? null,
+    step_labels: { "card:0": card.title },
   };
   const steps: JobStep[] = [
-    { key: "card:0", label: card.title, status: "pending" },
+    { key: "card:0", label: PENDING_STEP_LABEL, status: "pending" },
   ];
 
   const supabase = await createClient();
@@ -1058,7 +1117,7 @@ export async function createCardGenerationJob(
       plan: plan as unknown as Json,
       steps: steps as unknown as Json,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
@@ -1067,7 +1126,7 @@ export async function createCardGenerationJob(
   // the step marks the card it saves only where this receipt holds the
   // plan's text — the job row is owner-insertable (0059).
   await recordAiReceipt(user.id, "job", [card]);
-  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+  return { ok: true, job: jobRow as unknown as GenerationJobView };
 }
 
 // ---------------------------------------------------------------------------
@@ -1370,13 +1429,18 @@ async function insertFillJob(
    *  front's. */
   backLabel?: string,
 ): Promise<CreateCardJobResult> {
+  // The labels are designed titles: the plan keeps them and each step takes
+  // its own once done — paid for (lib/ai/job-privacy.ts).
+  const stepLabels: Record<string, string> = { "fill:0": label };
+  if (backLabel) stepLabels[FILL_BACK_STEP_KEY] = backLabel;
+  const storedPlan: CardFillJobPlan = { ...plan, step_labels: stepLabels };
   const steps: JobStep[] = [
     {
       key: "fill:0",
-      label,
+      label: PENDING_STEP_LABEL,
       status: "pending",
     },
-    ...(backLabel ? [{ key: FILL_BACK_STEP_KEY, label: backLabel, status: "pending" as const }] : []),
+    ...(backLabel ? [{ key: FILL_BACK_STEP_KEY, label: PENDING_BACK_STEP_LABEL, status: "pending" as const }] : []),
   ];
 
   const supabase = await createClient();
@@ -1395,10 +1459,10 @@ async function insertFillJob(
         scope: input.scope ?? "create",
         claimed_at: null,
       },
-      plan: plan as unknown as Json,
+      plan: storedPlan as unknown as Json,
       steps: steps as unknown as Json,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
@@ -1409,7 +1473,7 @@ async function insertFillJob(
   // plan the server just made — never at step time from the row's plan,
   // which its owner may insert (0059).
   await recordAiReceipt(userId, "fill", [plan.fields]);
-  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+  return { ok: true, job: jobRow as unknown as GenerationJobView };
 }
 
 /** A designed field over the pinned one (undefined = not designed). */
@@ -1795,7 +1859,9 @@ async function runCardFillBackStep(
         attempt,
         `${backArt.prompt}${style}${direction} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
         {
-          title: plan.fields.back_face?.title ?? step.label,
+          // A step's label waits in the plan (lib/ai/job-privacy.ts): the
+          // back's name as main read it from the step.
+          title: plan.fields.back_face?.title ?? earnedStepLabel(plan, step.key) ?? step.label,
           typeLine: backArt.face.card_type,
           colors: backArt.face.color_identity as ColorIdentity[],
           style: plan.style,
@@ -1859,7 +1925,9 @@ async function runCardFillStep(
           attempt,
           `${plan.art_prompt}${style}${direction} NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.`,
           {
-            title: plan.fields.title ?? step.label,
+            // A title the maker locked is the step's label, which waits in
+            // the plan (lib/ai/job-privacy.ts) — never the placeholder.
+            title: plan.fields.title ?? earnedStepLabel(plan, step.key) ?? step.label,
             typeLine: plan.fields.card_type ?? null,
             colors: plan.fields.color_identity ?? null,
             style: plan.style,
@@ -1894,7 +1962,7 @@ async function runCardFillStep(
     }
     // (The receipt of what the AI wrote was kept when the server planned
     // the fill — insertFillJob — never from this row's plan, which its
-    // owner may insert: migration 0162.)
+    // owner may insert: the owner insert policy, migration 0059.)
     return {
       ...step,
       status: "done",
@@ -1984,7 +2052,7 @@ export type CreateDeckJobInput = {
 };
 
 export type CreateDeckJobResult =
-  | { ok: true; job: GenerationJobRow; deckSlug: string }
+  | { ok: true; job: GenerationJobView; deckSlug: string }
   | { ok: false; error: string };
 
 export async function createDeckGenerationJob(
@@ -2086,7 +2154,7 @@ export async function createDeckGenerationJob(
       steps: steps as unknown as Json,
       deck_id: deckId,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
@@ -2097,7 +2165,7 @@ export async function createDeckGenerationJob(
   await recordAiReceipt(user.id, "job", planResult.cards);
   return {
     ok: true,
-    job: jobRow as unknown as GenerationJobRow,
+    job: jobRow as unknown as GenerationJobView,
     deckSlug: deckSlug ?? "",
   };
 }
@@ -2263,44 +2331,55 @@ export async function createDeckRemixJob(
       steps: steps as unknown as Json,
       deck_id: created.deckId,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the remix job." };
   }
   return {
     ok: true,
-    job: jobRow as unknown as GenerationJobRow,
+    job: jobRow as unknown as GenerationJobView,
     deckSlug: created.slug,
   };
 }
 
 
+/** Paint a generated card's picture and store it — the image (its prompt
+ *  ladder, inside the step's budget) and persistGeneratedArt (the nudity
+ *  scan on the bytes: a blocked picture is never stored, `art_blocked`). */
+async function paintGeneratedArt(
+  prompts: readonly string[],
+  shape: ArtShape,
+): Promise<{ ok: true; url: string; model: string } | { ok: false; error: string; failure: AiFailureKind }> {
+  // Painted in the shape of the card's own art window (TODO 4.48b). The
+  // card is created (or attached) and baked after, in the same 180 s
+  // function: the picture waits a little less than a fill's.
+  const image = await generateImageWithFallbacks(prompts, shape, { budgetMs: CARD_STEP_IMAGE_BUDGET_MS });
+  if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
+  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
+  // A picture our nudity scan blocked (never stored) or one not stored.
+  if (!persisted.ok) return { ok: false, error: persisted.error, failure: persisted.failure };
+  return { ok: true, url: persisted.publicUrl, model: image.model };
+}
+
 /**
- * Paint a card's art and PUBLISH it in one updateCardAction call — through
- * the action (never a raw table update) so validation runs and the Satori
- * bake fires for the now-public card. Cards are created private, then go
- * public together with their art; a failed image leaves a private draft
- * the retry re-paints. AI output defaults to public (owner decision,
- * 2026-07-10).
+ * Paint an EXISTING card's art and PUBLISH it in one updateCardAction call —
+ * through the action (never a raw table update) so validation runs and the
+ * Satori bake fires for the now-public card. Only a step whose card a job
+ * planned before paint-first created (#722) still comes here: a new card is
+ * created with its art (runGeneratedCardStep). AI output defaults to public
+ * (owner decision, 2026-07-10).
  */
 async function paintAndPublishCard(
   cardId: string,
   prompts: readonly string[],
   shape: ArtShape,
 ): Promise<{ ok: true; model: string; forcedPrivate?: ForcedPrivateNotice } | { ok: false; error: string; failure: AiFailureKind }> {
-  // Painted in the shape of the card's own art window (TODO 4.48b).
-  // The card is created before and attached + baked after, in the same
-  // 180 s function: the picture waits a little less than a fill's.
-  const image = await generateImageWithFallbacks(prompts, shape, { budgetMs: CARD_STEP_IMAGE_BUDGET_MS });
-  if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
-
-  const persisted = await persistGeneratedArt(image.bytes, image.contentType);
-  // A picture our nudity scan blocked (never stored) or one not stored.
-  if (!persisted.ok) return { ok: false, error: persisted.error, failure: persisted.failure };
+  const painted = await paintGeneratedArt(prompts, shape);
+  if (!painted.ok) return painted;
 
   const updated = await updateCardAction(cardId, {
-    art_url: persisted.publicUrl,
+    art_url: painted.url,
     // The automatic fit (TODO 3b.18): the picture fills the frame's window,
     // centred — whatever frame the plan picked.
     art_position: fitArtToWindow(),
@@ -2315,7 +2394,42 @@ async function paintAndPublishCard(
   }
   // The card's text held strong language: the action stored it private
   // instead (owner policy 2026-10-28) — never a failed step.
-  return updated.forcedPrivate ? { ok: true, model: image.model, forcedPrivate: updated.forcedPrivate } : { ok: true, model: image.model };
+  return updated.forcedPrivate ? { ok: true, model: painted.model, forcedPrivate: updated.forcedPrivate } : { ok: true, model: painted.model };
+}
+
+/**
+ * What createCardAction's frame gates would refuse a generated card's
+ * payload on (verification in the frame's colour, a second part in its own,
+ * the kind gate) — read BEFORE its picture is painted, so a refused save
+ * costs no paint. The action still gates the insert itself; this is the
+ * same three calls on the same fields, never a looser or a stricter rule.
+ */
+async function generatedCardSaveRefusal(payload: Record<string, unknown>): Promise<string | null> {
+  const frameStyle = (payload.frame_style ?? undefined) as
+    | (FrameAnatomyStyle & { template?: string })
+    | undefined;
+  const template = frameStyle?.template;
+  const colors = payload.color_identity as ColorIdentity[] | undefined;
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  const gateError = frameGateError(
+    template,
+    frameGateColors(
+      template,
+      { partColor: frameStyle?.partColor ?? true, firstPartColor: frameStyle?.firstPartColor, plainLandMaster: frameStyle?.plainLandMaster },
+      colors,
+    ),
+    verifiedKeys,
+  );
+  if (gateError) return gateError;
+  if (drawsPartColor(template) && frameStyle?.partColor !== false) {
+    const partError = partColorGateError(
+      template,
+      (payload.back_face as { color_identity?: ColorIdentity[] } | null | undefined)?.color_identity,
+      verifiedKeys,
+    );
+    if (partError) return partError;
+  }
+  return frameKindGateError(template, cardFieldsFace(payload as CardKindFields));
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {
