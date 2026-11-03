@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY } from "@/types/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { BOARD_HELP } from "@/lib/decks/deck-help";
+import { DropZoneHint, dropZoneClass } from "@/components/decks/use-board-drag";
 import { DECK_BOARD_LABELS, isDeckBoard } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
@@ -167,8 +168,15 @@ function StacksView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProx
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         const contentId = `${headingId}-cards`;
+        const zone = ui.dropZone(group.key);
         return (
-          <section key={group.key} aria-labelledby={headingId} className="flex max-w-full flex-col gap-2.5">
+          <section
+            key={group.key}
+            aria-labelledby={headingId}
+            {...zone.props}
+            className={cn("relative flex max-w-full flex-col gap-2.5", dropZoneClass(zone.state))}
+          >
+            <DropZoneHint hint={zone.hint} />
             <GroupHeading id={headingId} group={group} ui={ui} contentId={contentId} />
             <div id={contentId} hidden={ui.isCollapsed(group.key)} className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-6">
               {stackColumnsOf(group.rows).map((column, c) => (
@@ -187,7 +195,7 @@ function StacksView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProx
                   )}
                 >
                   {column.map((row) => (
-                    <li key={row.id} className={cn(row.item.pending && "opacity-60")}>
+                    <li key={row.id} {...ui.dragProps(row)} className={cn(row.item.pending && "opacity-60")}>
                       <DeckEntryTile row={row} opener={ui.openerProps(row, labelOf(row))} showProxies={showProxies} sizes="192px" />
                       {ui.selecting ? <SelectedMark selected={ui.isSelected(row.id)} /> : null}
                     </li>
@@ -213,8 +221,15 @@ function GridView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxie
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         const contentId = `${headingId}-cards`;
+        const zone = ui.dropZone(group.key);
         return (
-          <section key={group.key} aria-labelledby={headingId} className="flex flex-col gap-3">
+          <section
+            key={group.key}
+            aria-labelledby={headingId}
+            {...zone.props}
+            className={cn("relative flex flex-col gap-3", dropZoneClass(zone.state))}
+          >
+            <DropZoneHint hint={zone.hint} />
             <GroupHeading id={headingId} group={group} ui={ui} contentId={contentId} />
             {/* Columns are added, never grown: two on a phone, as many
                 10.5 rem cards as the width takes (the 600 px thumb stays
@@ -225,7 +240,7 @@ function GridView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxie
               className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,calc(50%_-_0.5rem)),1fr))] gap-x-4 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]"
             >
               {group.rows.map((row) => (
-                <li key={row.id} className={cn("relative", row.item.pending && "opacity-60")}>
+                <li key={row.id} {...ui.dragProps(row)} className={cn("relative", row.item.pending && "opacity-60")}>
                   <DeckEntryTile
                     row={row}
                     opener={ui.openerProps(row, labelOf(row))}
@@ -258,8 +273,15 @@ function ListView({ groups, showProxies, ui }: { groups: ViewGroup[]; showProxie
       {groups.map((group, index) => {
         const headingId = `${baseId}-g${index}`;
         const contentId = `${headingId}-cards`;
+        const zone = ui.dropZone(group.key);
         return (
-          <section key={group.key} aria-labelledby={headingId} className="mb-4 break-inside-avoid">
+          <section
+            key={group.key}
+            aria-labelledby={headingId}
+            {...zone.props}
+            className={cn("relative mb-4 break-inside-avoid", dropZoneClass(zone.state))}
+          >
+            <DropZoneHint hint={zone.hint} />
             <SurfaceCard className="flex min-w-0 flex-col gap-1 p-3 sm:p-4">
               <GroupHeading
                 id={headingId}
@@ -295,7 +317,7 @@ function EntryRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean
   const controls = ui.editing && !ui.selecting && !row.item.pending;
 
   return (
-    <li className={cn("flex items-center gap-1", row.item.pending && "opacity-60")}>
+    <li {...ui.dragProps(row)} className={cn("flex items-center gap-1", row.item.pending && "opacity-60")}>
       <button
         type="button"
         {...opener}
