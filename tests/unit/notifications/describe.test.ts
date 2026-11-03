@@ -305,6 +305,17 @@ describe("describeNotification — deck likes and cards added to decks", () => {
     });
   });
 
+  it("deck_cloned (TODO DK5.16, 0164): who copied which of your decks, linking YOUR deck (the copy starts private)", () => {
+    expect(
+      describeNotification({ type: "deck_cloned", actor, card: null, threadId: null, payload: deckPayload }, { isAdmin: false }),
+    ).toEqual({ subject: "Ana", body: 'copied your deck "Artificer\'s Arsenal" to remix it.', href: "/deck/artificers-arsenal" });
+    expect(describeNotification({ type: "deck_cloned", actor: null, card: null, threadId: null, payload: {} }, { isAdmin: false })).toEqual({
+      subject: "Someone",
+      body: "copied your deck to remix it.",
+      href: "/dashboard/decks",
+    });
+  });
+
   it("deck_card_added, one card: who added which card to which deck, linking the deck", () => {
     const one = { ...deckPayload, cardIds: ["c1"], count: 1 };
     expect(

@@ -5,6 +5,7 @@ import {
   Bell,
   CirclePause,
   Coins,
+  Copy,
   Crown,
   Heart,
   Layers,
@@ -44,6 +45,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   credit_refill_failed: Coins,
   deck_like: Heart,
   deck_card_added: Layers,
+  deck_cloned: Copy,
   moderation_unhidden: ShieldCheck,
 };
 

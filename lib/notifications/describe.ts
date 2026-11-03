@@ -152,6 +152,18 @@ export function describeNotification(
         href: slug ? `/deck/${slug}` : "/dashboard/decks",
       };
     }
+    case "deck_cloned": {
+      // Someone copied your deck into their own (TODO DK5.16, 0164) — once
+      // per copier and deck. The payload names YOUR deck; the copy starts
+      // private, so the link is your deck's page.
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      return {
+        subject: actorName,
+        body: `copied your deck${title ? ` "${title}"` : ""} to remix it.`,
+        href: slug ? `/deck/${slug}` : "/dashboard/decks",
+      };
+    }
     case "deck_card_added": {
       // Another creator's public deck now holds your cards (D3) — ONE row
       // per deck, its cards merged in (0149: payload.cardIds / count; the
