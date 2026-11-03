@@ -1,8 +1,12 @@
 # Editing cards inside the deck: research, recommendation and plan (DK5.18)
 
 2026-10-30. Research and mockups only: nothing here is built, and nothing is
-ticked in `TODO.md`. The owner decides before any build. (DK5.18 is not yet
-written into `TODO.md`. This document follows the task brief.)
+ticked in `TODO.md`.
+
+**Owner decision (2026-11-02): build the recommendation.** The edit drawer
+(b), with the full-screen modal (a) as its narrow form. Bulk "Edit fields…"
+leaves frame and colours out. The stepper redesign (6.29) stays untouched.
+The answers to §9 are written under each question.
 
 Mockups (static HTML, open from disk, dark by default):
 [`mockups/deck-editing/index.html`](mockups/deck-editing/index.html).
@@ -519,7 +523,7 @@ review step read. It applies only to cards still holding the new value.
   review step says "also in 2 other decks" where `public_deck_card_pairs`
   (or the owner's own decks) knows it.
 
-## 8. Build plan (PR-sized; nothing starts before the owner answers §9)
+## 8. Build plan (PR-sized; approved by the owner 2026-11-02)
 
 1. **PR 1: host seam + full-screen editor (option (a) shape).**
    - Code: the `host` prop; the guard in host mode; the context route; the
@@ -552,20 +556,28 @@ review step read. It applies only to cards still holding the new value.
   arrangements; /create unchanged and pinned). Is that within "host the
   existing editor", or does it touch 6.29? If it touches 6.29, ship option
   (a) only: PR 1 + 3 + 4 + 5.
+  **Answer (2026-11-02): within it.** PR 2 ships; 6.29 stays untouched.
 - **Q2.** A **modal** drawer (deck visible but not clickable; ‹ › to walk),
   or a non-modal side peek (click another row directly; more a11y work)?
   Recommended: modal.
+  **Answer (2026-11-02): modal.**
 - **Q3.** After a save, stay in the drawer (recommended), or close and return
   focus to the row (today's DK5.5 feel)?
+  **Answer (2026-11-02): stay in the drawer.**
 - **Q4.** Keep "Open full page ↗" in the drawer permanently, or only while
   the flag is on?
+  **Answer (2026-11-02): keep it permanently** (a cheap way out to the
+  full creator; the owner took the recommendations as a whole).
 - **Q5.** Bulk **frame / colour** changes are blocked by the 2026-09-16 lock.
   Keep them out (recommended), or allow a gated bulk frame change?
+  **Answer (2026-11-02): keep them out.**
 - **Q6.** Bulk **collector numbers**: "number them in deck order" (1/60 …)?
   Not in the plan unless asked.
+  **Answer (2026-11-02): not in the plan.**
 - **Q7.** Bulk scope beyond own cards: should "Customize all" (make your
   version of N real cards) exist? It creates N cards against the capacity
   cap. Not in the plan.
+  **Answer (2026-11-02): not in the plan.**
 
 ## Files
 
