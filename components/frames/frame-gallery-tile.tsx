@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { CardTile } from "@/components/cards/card-tile";
-import { ManaPip } from "@/components/cards/mana-pip";
+import { ColorPips, toPipColor, type PipColor } from "@/components/cards/color-pip";
 import { FrameMasterPlaceholder } from "@/components/frames/frame-master-placeholder";
 import {
   frameAnchorId,
@@ -29,10 +29,6 @@ import type { FrameExample } from "@/lib/frames/frame-gallery-queries";
 /** The tile picture's `sizes`: the card grid's in the wide frame (/frames,
  *  TODO WD10). */
 const TILE_SIZES = CARD_GRID_SIZES;
-
-/** The colour dots' symbol per frame colour key; gold has no mana symbol of
- *  its own and is drawn as the deck tiles draw it. */
-const PIP_SYMBOL: Record<string, string> = { w: "W", u: "U", b: "B", r: "R", g: "G", c: "C" };
 
 export function FrameGalleryTile({ entry, example }: { entry: FrameGalleryEntry; example: FrameExample | null }) {
   const headingId = `${frameAnchorId(entry.template)}-name`;
@@ -86,15 +82,11 @@ export function FrameGalleryTile({ entry, example }: { entry: FrameGalleryEntry;
           </p>
           <p className="flex items-center">
             <span className="sr-only">{verifiedColorsPhrase(entry.colorKeys)}</span>
-            <span aria-hidden className="inline-flex flex-wrap items-center gap-0.5">
-              {entry.colorKeys.map((key) =>
-                PIP_SYMBOL[key] ? (
-                  <ManaPip key={key} symbol={PIP_SYMBOL[key]} size="xs" />
-                ) : (
-                  <span key={key} className="inline-block h-3.5 w-3.5 rounded-full border border-gold/60 bg-gold" />
-                ),
-              )}
-            </span>
+            <ColorPips
+              colors={entry.colorKeys.map(toPipColor).filter((c): c is PipColor => c != null)}
+              size={16}
+              decorative
+            />
           </p>
           <div className="mt-auto flex flex-col gap-1 pt-2">
             {example ? (

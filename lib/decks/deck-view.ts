@@ -427,6 +427,10 @@ function groupOf<R>(key: string, label: string, rows: R[]): DeckGroup<R> {
   return { key, label, rows, count: quantityOf(rows as unknown as Pick<DeckRow, "quantity">[]) };
 }
 
+/** The boards whose cards Group by "None" shows in its one "Deck" group
+ *  (key "deck") — the zones' cards first, then the mainboard. */
+export const NONE_GROUP_BOARDS = ["commander", "companion", "main"] as const satisfies readonly DeckBoard[];
+
 /** The rows in their groups, each group sorted, empty groups left out. */
 export function groupDeckRows<R extends DeckRow>(rows: readonly R[], group: DeckGroupBy, sort: DeckSort): DeckGroup<R>[] {
   const sorted = sortDeckRows(rows, sort);
@@ -441,7 +445,7 @@ export function groupDeckRows<R extends DeckRow>(rows: readonly R[], group: Deck
   if (group === "none") {
     // The deck as one group, its zones' cards first; the sideboard and the
     // maybeboard after it, never mixed in.
-    const deck = (["commander", "companion", "main"] as const).flatMap((board) => byBoard.get(board) ?? []);
+    const deck = NONE_GROUP_BOARDS.flatMap((board) => byBoard.get(board) ?? []);
     if (deck.length > 0) groups.push(groupOf("deck", "Deck", deck));
     for (const board of ["side", "maybe"] as const) {
       const boardRows = byBoard.get(board);

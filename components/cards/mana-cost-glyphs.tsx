@@ -224,8 +224,9 @@ const MS_LINE_EM = 1.35;
  *  those px. */
 const emOf = (px: number, emPx: number) => `${(px / emPx).toFixed(4)}em`;
 
-// One pip of a CARD (CardPreview only: the cost rows, the rules text, the
-// flipside strip, the saga rail), inside a parent whose font size is a PLAIN
+// One pip of a CARD (CardPreview: the cost rows, the rules text, the
+// flipside strip, the saga rail — and off the card, a card's or deck's
+// COLOURS through ColorPip / ColorPips, TODO UI1), inside a parent whose font size is a PLAIN
 // pip's disc (1 em = one plain disc) — the bake's ManaGem at the stored HD
 // bake's whole px where that disc is `discPx` wide, from the SAME
 // description (lib/cards/mana-gem.ts manaGemSpec): the disc's own diameter

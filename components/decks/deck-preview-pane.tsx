@@ -42,8 +42,13 @@ export type PreviewStore = {
   get: () => string | null;
   /** Shows a card at once (the keyboard's focus, a click). */
   set: (entryId: string | null) => void;
-  /** A pointer on a card: shown once it has rested there HOVER_REST_MS. */
-  rest: (entryId: string) => void;
+  /** A pointer on a card: shown once it has rested there HOVER_REST_MS.
+   *  `at` is the pointer's place (clientX / clientY). */
+  rest: (entryId: string, at?: { x: number; y: number }) => void;
+  /** The list moved under a still pointer (a drop re-renders it): no rest
+   *  starts until the pointer really moves — its first place after this is
+   *  only remembered. */
+  quietUntilMoved: () => void;
   /** The pointer left the card: a rest it hadn't finished is dropped. */
   leave: (entryId: string) => void;
   /** While held (the pane's own menu open), no pointer changes the card. */
@@ -54,6 +59,9 @@ export type PreviewStore = {
 export function createPreviewStore(restMs: number = HOVER_REST_MS): PreviewStore {
   let current: string | null = null;
   let held = false;
+  // After quietUntilMoved: "waiting" for the pointer's first place, then
+  // that place until a rest arrives from anywhere else.
+  let quiet: "off" | "waiting" | { x: number; y: number } = "off";
   let resting: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
   const listeners = new Set<() => void>();
   const show = (entryId: string | null) => {
@@ -71,7 +79,15 @@ export function createPreviewStore(restMs: number = HOVER_REST_MS): PreviewStore
       drop();
       show(entryId);
     },
-    rest: (entryId) => {
+    rest: (entryId, at) => {
+      if (quiet !== "off") {
+        if (!at) return;
+        if (quiet === "waiting" || (quiet.x === at.x && quiet.y === at.y)) {
+          quiet = { x: at.x, y: at.y };
+          return;
+        }
+        quiet = "off";
+      }
       if (held || entryId === current) {
         if (resting?.id !== entryId) drop();
         return;
@@ -88,6 +104,10 @@ export function createPreviewStore(restMs: number = HOVER_REST_MS): PreviewStore
     },
     leave: (entryId) => {
       if (resting?.id === entryId) drop();
+    },
+    quietUntilMoved: () => {
+      drop();
+      quiet = "waiting";
     },
     hold: (next) => {
       held = next;

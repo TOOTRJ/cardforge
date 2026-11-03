@@ -1,6 +1,7 @@
 import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import type { DeckRow } from "@/lib/decks/deck-view";
 import type { EditorItem } from "@/components/decks/use-deck-editor";
+import type { DragSourceProps, DropZone } from "@/components/decks/use-board-drag";
 
 // ---------------------------------------------------------------------------
 // What the deck's views (components/decks/deck-card-views.tsx) are handed to
@@ -49,4 +50,9 @@ export type DeckRowUi = {
   menuButton: (row: ViewRow) => ReactNode;
   isCollapsed: (groupKey: string) => boolean;
   toggleGroup: (groupKey: string) => void;
+  /** The owner's drag between boards (TODO DK5.15, use-board-drag.tsx): a
+   *  card's wrapper props — empty for a visitor and on touch. */
+  dragProps: (row: ViewRow) => DragSourceProps;
+  /** A group as a drop zone while a card is held — idle otherwise. */
+  dropZone: (groupKey: string) => DropZone;
 };

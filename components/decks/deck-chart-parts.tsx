@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { ManaPip } from "@/components/cards/mana-pip";
+import { ColorPip } from "@/components/cards/color-pip";
 import type { ColorBalanceRow } from "@/lib/decks/deck-charts";
 import { cn } from "@/lib/utils";
 
@@ -178,7 +178,7 @@ export function ColorBalance({ rows }: { rows: ColorBalanceRow[] }) {
       {rows.map((row) => (
         <li key={row.color} className="grid grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)] gap-x-3 text-xs">
           <span className="flex min-w-0 items-center gap-2 self-start pt-0.5">
-            <ManaPip symbol={row.color} size="sm" className="shadow-none" />
+            <ColorPip color={row.color} size={18} decorative />
             <span className="truncate text-foreground">{row.label}</span>
           </span>
           <span className="flex min-w-0 flex-col gap-1.5">
