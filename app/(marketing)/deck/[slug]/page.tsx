@@ -69,6 +69,12 @@ import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
 import { DeckActivitySlot } from "@/components/decks/deck-activity-slot";
 import { PageContainer } from "@/components/layout/page-container";
+// TODO DK5.16: tokens, the copy and its credit, similar decks.
+import { CloneDeckButton } from "@/components/decks/clone-deck-button";
+import { DeckRemixCreditSlot } from "@/components/decks/deck-remix-credit";
+import { DeckTokensSection } from "@/components/decks/deck-tokens-section";
+import { SimilarDecksRow } from "@/components/decks/similar-decks-row";
+import { getDeckRemixCredit } from "@/lib/decks/remix-credit";
 
 // ---------------------------------------------------------------------------
 // The deck page (TODO DK5.1) — ONE URL, read-only for visitors, the owner's
@@ -212,6 +218,8 @@ export default async function DeckDetailPage({
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
+  // A clone's "remixed from" credit (TODO DK5.16), under its own boundary.
+  const remixCredit = getDeckRemixCredit(deck.id);
   const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
@@ -428,9 +436,23 @@ export default async function DeckDetailPage({
               />
             ) : null}
             {exportMenu}
+            {/* Copy deck (TODO DK5.16): the viewer's private copy. */}
+            {hasCards ? (
+              <CloneDeckButton
+                deckId={deck.id}
+                deckSlug={deck.slug}
+                deckTitle={deck.title}
+                signedIn={Boolean(user)}
+                isOwner={isOwner}
+                className="h-9"
+              />
+            ) : null}
           </div>
         }
       />
+      <Suspense fallback={null}>
+        <DeckRemixCreditSlot credit={remixCredit} />
+      </Suspense>
 
       {isOwner && user ? (
         <div className="mt-4 flex flex-col gap-4">
@@ -558,6 +580,14 @@ export default async function DeckDetailPage({
         ) : null}
       </DeckCurveFilterProvider>
 
+      {/* Tokens & emblems (TODO DK5.16): what the viewer's rows make —
+          display only, never entries. Streams in (Scryfall, cached). */}
+      {hasCards ? (
+        <Suspense fallback={null}>
+          <DeckTokensSection items={shownItems} />
+        </Suspense>
+      ) : null}
+
       {/* Deck activity (TODO DK7.4): the OWNER's views and likes over time,
           Pro (a locked preview otherwise) — a client island a visitor's page
           never references. */}
@@ -601,6 +631,13 @@ export default async function DeckDetailPage({
           />
         </Suspense>
       </div>
+      {/* Similar decks (TODO DK5.16): public decks only, cookie-free reads;
+          nothing similar → no row. */}
+      {isPublic && hasCards ? (
+        <Suspense fallback={null}>
+          <SimilarDecksRow deckId={deck.id} likeRedirect={`/deck/${deck.slug}`} />
+        </Suspense>
+      ) : null}
       <DeckFeedbackFooter deckId={deck.id} signedIn={Boolean(user)} />
     </PageContainer>
   );

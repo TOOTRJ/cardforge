@@ -298,6 +298,25 @@ export async function listTrendingDecks(limit = DECK_ROW_MAX): Promise<PublicDec
   }
 }
 
+/** "Similar decks" (TODO DK5.16) for a PUBLIC deck: real creators' public,
+ *  non-empty decks sharing its commander, or its colour identity and
+ *  SIMILAR_DECKS_MIN_SHARED cards (migration 0164's `list_similar_decks`,
+ *  lib/decks/similar-decks.ts). Cookie-free — the public client, no like
+ *  read — so it adds nothing viewer-dependent to the page; a deck that
+ *  isn't public, an empty answer or a database the function hasn't reached
+ *  lists none (the row is hidden). */
+export async function listSimilarDecks(deckId: string, limit = DECK_ROW_MAX): Promise<PublicDeckListing[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_similar_decks", { p_deck_id: deckId, p_limit: limit });
+    if (error || !Array.isArray(data) || data.length === 0) return [];
+    return await hydratePublicDecks(supabase, data, null);
+  } catch {
+    return [];
+  }
+}
+
 /** Public decks by one creator — the profile page's "Decks by X" section.
  *  Cookie-free public client + likes off the denormalized column, so the
  *  caller stays viewer-independent. Empty decks are left out (DK0.8), as
