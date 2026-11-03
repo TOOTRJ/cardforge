@@ -5,12 +5,14 @@
 --   Codes — every seeded account has a fixed code (dev_free: d0000003, so
 --     its link is /?ref=d0000003).
 --   dev_pro → dev_artist   REWARDED 10 days ago: dev_pro's month was a
---     balance credit ($15, a live Pro plan), dev_artist's a comp month of
---     Plus (recorded only — dev_artist's profile is not changed here).
+--     balance credit ($15, a live Pro plan), dev_artist's a month of Plus
+--     (recorded only — dev_artist's profile and credits are not changed
+--     here).
 --   dev_free → dev_new     SIGNED UP, no card yet: sign in as dev_new and
---     save a first card to watch both months land (dev_free: a comp month
---     of Plus; dev_new: the same) and the two notifications.
---   The referral_signup notification dev_free got when dev_new joined.
+--     save a first card to watch both months land at once (dev_free and
+--     dev_new: a month of Plus each, with 30 AI credits) and the two
+--     referral_reward notifications. (Seeded emails are confirmed.)
+--   dev_pro's referral_reward notification for the first row.
 --
 -- Runs after 36_*.sql (config.toml → [db.seed] sql_paths, filename order).
 -- Never against production. Idempotent: fixed ids + ON CONFLICT DO NOTHING.
@@ -50,9 +52,10 @@ from (values
    'd0000000-0000-4000-a000-000000000002'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid,
    'd0000002', 'rewarded',
    now() - interval '12 days', now() - interval '10 days', now() - interval '10 days',
-   'balance_credit', 'comp_month',
+   'balance_credit', 'plus_month',
    '{"kind": "balance_credit", "amountCents": 1500, "currency": "usd"}'::jsonb,
-   jsonb_build_object('kind', 'comp_month', 'tier', 'plus', 'expiresAt', now() + interval '20 days')),
+   jsonb_build_object('kind', 'plus_month', 'tier', 'plus', 'startsAt', now() - interval '10 days',
+                      'expiresAt', now() + interval '20 days', 'credits', 30)),
   ('e0000000-0000-4000-a000-000000000002'::uuid,
    'd0000000-0000-4000-a000-000000000003'::uuid, 'd0000000-0000-4000-a000-000000000005'::uuid,
    'd0000003', 'signed_up',
@@ -69,10 +72,7 @@ select v.recipient_id, v.actor_id, v.type, v.payload
 from (values
   ('d0000000-0000-4000-a000-000000000002'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid,
    'referral_reward',
-   '{"referralId": "e0000000-0000-4000-a000-000000000001", "side": "referrer", "reward": "balance_credit", "amountCents": 1500, "currency": "usd"}'::jsonb),
-  ('d0000000-0000-4000-a000-000000000003'::uuid, 'd0000000-0000-4000-a000-000000000005'::uuid,
-   'referral_signup',
-   '{"referralId": "e0000000-0000-4000-a000-000000000002"}'::jsonb)
+   '{"referralId": "e0000000-0000-4000-a000-000000000001", "side": "referrer", "reward": "balance_credit", "amountCents": 1500, "currency": "usd"}'::jsonb)
 ) as v (recipient_id, actor_id, type, payload)
 where exists (select 1 from public.profiles p where p.id = v.recipient_id)
   and exists (select 1 from public.referrals r where r.id = (v.payload ->> 'referralId')::uuid)

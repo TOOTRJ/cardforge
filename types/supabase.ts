@@ -420,11 +420,17 @@ export type Database = {
         Update: { user_id?: string; code?: string; created_at?: string };
         Relationships: [];
       };
+      referral_email_fingerprints: {
+        Row: { fingerprint: string; referral_id: string | null; first_seen_at: string };
+        Insert: { fingerprint: string; referral_id?: string | null; first_seen_at?: string };
+        Update: { fingerprint?: string; referral_id?: string | null; first_seen_at?: string };
+        Relationships: [];
+      };
       referrals: {
         Row: {
           id: string;
           referrer_id: string;
-          referee_id: string;
+          referee_id: string | null;
           code: string;
           status: string;
           block_reason: string | null;
@@ -435,12 +441,13 @@ export type Database = {
           referee_reward: string | null;
           referrer_reward_detail: Json;
           referee_reward_detail: Json;
+          grant_attempts: number;
           created_at: string;
         };
         Insert: {
           id?: string;
           referrer_id: string;
-          referee_id: string;
+          referee_id?: string | null;
           code: string;
           status?: string;
           block_reason?: string | null;
@@ -451,12 +458,13 @@ export type Database = {
           referee_reward?: string | null;
           referrer_reward_detail?: Json;
           referee_reward_detail?: Json;
+          grant_attempts?: number;
           created_at?: string;
         };
         Update: {
           id?: string;
           referrer_id?: string;
-          referee_id?: string;
+          referee_id?: string | null;
           code?: string;
           status?: string;
           block_reason?: string | null;
@@ -467,6 +475,7 @@ export type Database = {
           referee_reward?: string | null;
           referrer_reward_detail?: Json;
           referee_reward_detail?: Json;
+          grant_attempts?: number;
           created_at?: string;
         };
         Relationships: [];
@@ -1151,6 +1160,8 @@ export type Database = {
           // Migration 0135 — when a cancelled subscription stops.
           subscription_ends_at: string | null;
           subscription_canceled_at: string | null;
+          // Migration 0164 — a referral's month of Plus.
+          referral_plus_until: string | null;
           credits: number;
           is_admin: boolean;
           // Columns added by migration 0060 — folded in here until the
@@ -1190,6 +1201,8 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          // Migration 0164 — a referral's month of Plus.
+          referral_plus_until?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -1226,6 +1239,8 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          // Migration 0164 — a referral's month of Plus.
+          referral_plus_until?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -2646,7 +2661,20 @@ export type Database = {
       };
       claim_referral_reward: {
         Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number };
+        /** 'rewarded' | 'capped_month' | 'capped_lifetime', or null. */
         Returns: string | null;
+      };
+      normalize_referral_email: {
+        Args: { p_email: string | null };
+        Returns: string | null;
+      };
+      referral_email_in_use: {
+        Args: { p_user_id: string; p_normalized: string };
+        Returns: boolean;
+      };
+      grant_referral_plus_month: {
+        Args: { p_referral_id: string; p_side: string; p_days: number; p_credits: number };
+        Returns: Json | null;
       };
       admin_referral_stats: {
         Args: { p_since: string };
@@ -2737,6 +2765,8 @@ export type Database = {
           // Migration 0135 (absent until it is applied).
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          // Migration 0164 — a referral's month of Plus.
+          referral_plus_until?: string | null;
         }[];
       };
       owner_export_stamp: {

@@ -30,6 +30,10 @@ export type Entitlements = {
   /** The live subscription is cancelled and ends on a date (the profile's
    *  stored state, lib/billing/plan-ending.ts) — null when it renews. */
   planEnding: PlanEnding | null;
+  /** The paid tier comes ONLY from a referral month of Plus (0164) — its end.
+   *  Such a month brought its AI credits with it, once: there is no monthly
+   *  refill (the refill never reads it). Absent / null otherwise. */
+  referralMonthUntil?: string | null;
 };
 
 type Perks = Pick<
@@ -104,7 +108,19 @@ export type BillingProfileSlice = {
   is_admin: boolean | null;
   comp_tier: string | null;
   comp_expires_at: string | null;
+  /** A referral's free month of Plus (migration 0164) — a Plus overlay kept
+   *  apart from the admin comp. Optional: rows read before 0164 lack it. */
+  referral_plus_until?: string | null;
 };
+
+/** A referral month of Plus is running (profiles.referral_plus_until). */
+export function referralPlusActive(
+  profile: Pick<BillingProfileSlice, "referral_plus_until">,
+  now: Date = new Date(),
+): boolean {
+  const until = profile.referral_plus_until ? Date.parse(profile.referral_plus_until) : NaN;
+  return Number.isFinite(until) && until > now.getTime();
+}
 
 /** Resolve which tier's perks actually apply for a profile row: subscription
  *  must be active/trialing, and an unexpired admin comp takes the HIGHER of
@@ -122,9 +138,11 @@ export function effectiveTierForProfile(profile: BillingProfileSlice): PlanTier 
     compTier != null &&
     (profile.comp_expires_at == null ||
       new Date(profile.comp_expires_at) > new Date());
-  return compActive && RANK[compTier] > RANK[subscribedTier]
-    ? compTier
-    : subscribedTier;
+  const withComp =
+    compActive && RANK[compTier] > RANK[subscribedTier] ? compTier : subscribedTier;
+  // A referral month is Plus (0164; card_capacity_for and
+  // owner_export_stamp read it the same way) — it can only ADD.
+  return referralPlusActive(profile) && RANK.plus > RANK[withComp] ? "plus" : withComp;
 }
 
 export async function getEntitlements(): Promise<Entitlements> {
@@ -141,6 +159,11 @@ export async function getEntitlements(): Promise<Entitlements> {
   const effectiveTier = profile
     ? effectiveTierForProfile(profile)
     : ("free" as PlanTier);
+  const withoutReferral = profile
+    ? effectiveTierForProfile({ ...profile, referral_plus_until: null })
+    : ("free" as PlanTier);
+  const referralMonthUntil =
+    profile && effectiveTier !== withoutReferral ? (profile.referral_plus_until ?? null) : null;
 
   const perks: Perks = { ...BASE_PERKS, ...TIER_PERKS[effectiveTier] };
 
@@ -160,6 +183,7 @@ export async function getEntitlements(): Promise<Entitlements> {
     currentPeriodEnd: profile?.current_period_end ?? null,
     cancelAtPeriodEnd: profile?.cancel_at_period_end ?? false,
     planEnding: planEndingOf(profile),
+    referralMonthUntil,
     ...perks,
   };
 }

@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   emailDomain,
   isDisposableDomain,
-  normalizeEmail,
+  normalizeReferralEmail,
   referralFraudVerdict,
 } from "@/lib/referrals/fraud";
 import { oneMonthCents, planReferralMonth } from "@/lib/referrals/reward";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
-  REFERRAL_MONTH_DAYS,
   normalizeReferralCode,
   referralLink,
 } from "@/lib/referrals/rules";
@@ -35,10 +36,20 @@ describe("codes and links", () => {
 
 describe("fraud rules", () => {
   it("one inbox is one address: case, +tags, Gmail dots and googlemail.com", () => {
-    expect(normalizeEmail("Jo.Smith+promo@GoogleMail.com")).toBe("josmith@gmail.com");
-    expect(normalizeEmail("jo.smith@outlook.com")).toBe("jo.smith@outlook.com");
-    expect(normalizeEmail("nope")).toBeNull();
+    expect(normalizeReferralEmail("Jo.Smith+promo@GoogleMail.com")).toBe("josmith@gmail.com");
+    expect(normalizeReferralEmail("jo.smith@outlook.com")).toBe("jo.smith@outlook.com");
+    expect(normalizeReferralEmail("nope")).toBeNull();
     expect(emailDomain("a@Sub.Example.org")).toBe("sub.example.org");
+  });
+
+  it("normalizeReferralEmail answers the shared case table (its SQL twin, normalize_referral_email, is held to the same file)", () => {
+    const cases = JSON.parse(
+      readFileSync(join(process.cwd(), "tests/unit/referrals/email-normalization-cases.json"), "utf8"),
+    ) as Array<[string | null, string | null]>;
+    expect(cases.length).toBeGreaterThan(15);
+    for (const [input, expected] of cases) {
+      expect(normalizeReferralEmail(input), JSON.stringify(input)).toBe(expected);
+    }
   });
 
   it("self-referral by email blocks BOTH sides", () => {
@@ -83,18 +94,13 @@ describe("fraud rules", () => {
 });
 
 describe("how one free month is delivered", () => {
-  it("a free user: a comp month of Plus from today", () => {
-    expect(planReferralMonth({ subscription_tier: "free" }, NOW)).toEqual({ kind: "comp_month", tier: "plus", expiresAt: at(REFERRAL_MONTH_DAYS) });
+  it("a free user: a month of Plus (the database places it and grants ONE Plus allotment)", () => {
+    expect(planReferralMonth({ subscription_tier: "free" }, NOW)).toEqual({ kind: "plus_month" });
   });
 
-  it("a running comp: the month is added to its end, at its (higher) tier", () => {
-    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(10) }, NOW)).toEqual({
-      kind: "comp_month",
-      tier: "pro",
-      expiresAt: at(10 + REFERRAL_MONTH_DAYS),
-    });
-    // An expired comp counts for nothing.
-    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(-1) }, NOW)).toMatchObject({ tier: "plus", expiresAt: at(REFERRAL_MONTH_DAYS) });
+  it("a running or expired comp with an end date: a month of Plus (the database starts it after the comp)", () => {
+    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(10) }, NOW)).toEqual({ kind: "plus_month" });
+    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(-1) }, NOW)).toEqual({ kind: "plus_month" });
   });
 
   it("an open-ended comp or an admin: nothing to add", () => {
@@ -110,20 +116,11 @@ describe("how one free month is delivered", () => {
     }
   });
 
-  it("a cancelled plan still running: a comp month that starts when the plan ends, at its tier", () => {
-    expect(
-      planReferralMonth(
-        { subscription_tier: "pro", subscription_status: "active", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1", subscription_ends_at: at(5) },
-        NOW,
-      ),
-    ).toEqual({ kind: "comp_month", tier: "pro", expiresAt: at(5 + REFERRAL_MONTH_DAYS) });
-  });
-
-  it("a broken payment (past_due): a comp month of Plus", () => {
-    expect(planReferralMonth({ subscription_tier: "pro", subscription_status: "past_due", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" }, NOW)).toMatchObject({
-      kind: "comp_month",
-      tier: "plus",
-    });
+  it("a cancelled plan still running, or a broken payment: a month of Plus, never a balance credit", () => {
+    const sub = { subscription_tier: "pro", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" };
+    expect(planReferralMonth({ ...sub, subscription_status: "active", subscription_ends_at: at(5) }, NOW)).toEqual({ kind: "plus_month" });
+    expect(planReferralMonth({ ...sub, subscription_status: "active", cancel_at_period_end: true }, NOW)).toEqual({ kind: "plus_month" });
+    expect(planReferralMonth({ ...sub, subscription_status: "past_due" }, NOW)).toEqual({ kind: "plus_month" });
   });
 
   it("one month's price: the monthly price, a twelfth of an annual one, the list price as a fallback", () => {

@@ -1,5 +1,4 @@
-import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
-import { REFERRAL_MONTH_DAYS } from "@/lib/referrals/rules";
+import type { PlanTier } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // How "one free month" reaches a user (docs/BILLING.md "Referrals"; research
@@ -10,12 +9,16 @@ import { REFERRAL_MONTH_DAYS } from "@/lib/referrals/rules";
 //     (an annual plan: a twelfth of the year). Stripe applies it to the next
 //     invoice by itself; the plan's status, dates and trial are untouched —
 //     no second trial path, no annual year made free by a 100 %-off coupon.
+//     Its AI credits are the plan's own (the invoice's refill).
 //   * anyone else — free, comped, a cancelled plan still running, a broken
-//     payment → a COMP month (profiles.comp_tier / comp_expires_at, the admin
-//     comp's columns): Plus, or the higher tier they already have; 30 days
-//     added to whatever runs longest — an unexpired comp, or a cancelled
-//     plan's end date — so a month is never swallowed by one already owed.
-//   * an admin (unlimited) or an open-ended comp (no end to add to) → none.
+//     payment → a month of PLUS (`plus_month`): profiles.referral_plus_until,
+//     a Plus overlay kept apart from the admin comp, and ONE Plus allotment
+//     of AI credits granted with it (owner 2026-11-02). The database decides
+//     where the month starts — after a running referral month, an unexpired
+//     comp or a cancelled plan's end — under a per-user lock
+//     (0164's grant_referral_plus_month), so two rewards never race.
+//   * an admin (unlimited), or an open-ended comp (it never ends, so a month
+//     after it never starts) → none.
 // ---------------------------------------------------------------------------
 
 export type ReferralRewardProfile = {
@@ -33,10 +36,9 @@ export type ReferralRewardProfile = {
 
 export type ReferralMonthPlan =
   | { kind: "balance_credit"; customerId: string; subscriptionId: string; tier: PlanTier }
-  | { kind: "comp_month"; tier: PlanTier; expiresAt: string }
+  | { kind: "plus_month" }
   | { kind: "none"; reason: "admin" | "comp_open_ended" };
 
-const DAY_MS = 86_400_000;
 const LIVE = new Set(["active", "trialing"]);
 
 function paidTier(value: string | null | undefined): PlanTier | null {
@@ -57,26 +59,12 @@ export function planReferralMonth(profile: ReferralRewardProfile, now: Date = ne
     };
   }
 
-  const nowMs = now.getTime();
   const compTier = paidTier(profile.comp_tier);
   const compExpiryMs = profile.comp_expires_at ? Date.parse(profile.comp_expires_at) : null;
-  const compActive = compTier != null && (compExpiryMs == null || compExpiryMs > nowMs);
+  const compActive = compTier != null && (compExpiryMs == null || compExpiryMs > now.getTime());
   if (compActive && compExpiryMs == null) return { kind: "none", reason: "comp_open_ended" };
 
-  let tier: PlanTier = "plus";
-  if (compActive && compTier && TIER_RANK[compTier] > TIER_RANK[tier]) tier = compTier;
-  if (subTier && TIER_RANK[subTier] > TIER_RANK[tier]) tier = subTier;
-
-  // The month starts where what is already owed ends.
-  const endsMs = live && ending
-    ? Date.parse(profile.subscription_ends_at ?? profile.current_period_end ?? "")
-    : NaN;
-  const base = Math.max(
-    nowMs,
-    compActive && compExpiryMs != null ? compExpiryMs : 0,
-    Number.isFinite(endsMs) ? endsMs : 0,
-  );
-  return { kind: "comp_month", tier, expiresAt: new Date(base + REFERRAL_MONTH_DAYS * DAY_MS).toISOString() };
+  return { kind: "plus_month" };
 }
 
 /** One month of a subscription price in cents (a twelfth of a yearly one)

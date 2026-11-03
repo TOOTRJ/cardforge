@@ -84,6 +84,7 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   | "cancel_at_period_end"
   | "subscription_ends_at"
   | "subscription_canceled_at"
+  | "referral_plus_until"
   | "credits"
   | "comp_tier"
   | "comp_expires_at"
@@ -98,6 +99,7 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   cancel_at_period_end: false,
   subscription_ends_at: null,
   subscription_canceled_at: null,
+  referral_plus_until: null,
   credits: 0,
   comp_tier: null,
   comp_expires_at: null,
