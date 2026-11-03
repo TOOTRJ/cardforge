@@ -91,7 +91,8 @@
 --   * deck_history_pro_ends, deck_restore_leases: SELECT to service_role
 --     only (written by the definer functions alone).
 --   * log_deck_entry_change(), stamp_deck_history_pro_end(): no API role
---     (triggers only). deck_history_owner_is_pro(),
+--     (triggers only — revoked from service_role too, which its default
+--     privileges would otherwise give EXECUTE). deck_history_owner_is_pro(),
 --     cap_deck_entry_changes(), deck_entry_change_snapshot(): service_role.
 --   * prune_deck_entry_changes(): service_role only.
 --   * claim_deck_restore(), release_deck_restore(): authenticated (each
@@ -284,6 +285,15 @@ begin
     insert into public.deck_history_pro_ends (owner_id, ended_at)
     values (new.id, now())
     on conflict (owner_id) do update set ended_at = excluded.ended_at;
+  elsif old.comp_tier = 'pro' and old.comp_expires_at is not null and old.comp_expires_at <= now()
+    and (new.comp_tier is distinct from old.comp_tier or new.comp_expires_at is distinct from old.comp_expires_at) then
+    -- A Pro comp that ran out by the clock is already "not Pro" in OLD, so
+    -- the branch above never sees it end; and the write that clears or
+    -- changes it takes away the prune's comp_expires_at fallback. Keep its
+    -- expiry as the day Pro ended (a later stamp wins).
+    insert into public.deck_history_pro_ends as e (owner_id, ended_at)
+    values (new.id, old.comp_expires_at)
+    on conflict (owner_id) do update set ended_at = greatest(e.ended_at, excluded.ended_at);
   end if;
   return null;
 end;
@@ -448,8 +458,8 @@ grant select on table public.deck_restore_leases to service_role;
 revoke all on function public.deck_entry_change_snapshot(public.deck_cards) from public, anon, authenticated;
 grant execute on function public.deck_entry_change_snapshot(public.deck_cards) to service_role;
 
-revoke all on function public.log_deck_entry_change() from public, anon, authenticated;
-revoke all on function public.stamp_deck_history_pro_end() from public, anon, authenticated;
+revoke all on function public.log_deck_entry_change() from public, anon, authenticated, service_role;
+revoke all on function public.stamp_deck_history_pro_end() from public, anon, authenticated, service_role;
 
 revoke all on function public.deck_history_owner_is_pro(boolean, text, text, text, timestamptz) from public, anon, authenticated;
 grant execute on function public.deck_history_owner_is_pro(boolean, text, text, text, timestamptz) to service_role;
