@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/publish-articles",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/comp-ending",
+      "schedule": "30 14 * * *"
     }
   ]
 }

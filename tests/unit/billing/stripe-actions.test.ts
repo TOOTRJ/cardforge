@@ -19,6 +19,8 @@ const s = vi.hoisted(() => ({
     stripe_customer_id: string | null;
     subscription_status?: string | null;
     stripe_subscription_id?: string | null;
+    comp_tier?: string | null;
+    comp_expires_at?: string | null;
   },
   adminConfigured: true,
   stripeConfigured: true,
@@ -147,6 +149,7 @@ import {
 } from "@/lib/stripe/actions";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { clearPriceCache } from "@/lib/stripe/prices";
+import { TRIAL_END_BEFORE_COMP_KEY, compTrialChangeFor } from "@/lib/billing/comp-stripe";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const checkoutParams = () => s.checkoutCreate.mock.calls[0]?.[0] as Record<string, unknown> & {
@@ -266,6 +269,118 @@ describe("createCheckoutSessionAction", () => {
         expect.objectContaining({ customer: "cus_1", status: "all" }),
       );
     }
+  });
+
+  it("a COMPED user who subscribes is charged only when the comp ends (owner rule 2026-10-30)", async () => {
+    const compEnd = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    const compEndSec = Math.floor(Date.parse(compEnd) / 1000);
+    // Trial-eligible: the comp's end is later than the 7-day trial's, and wins.
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: compEnd };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    let params = checkoutParams();
+    expect(params.subscription_data).toMatchObject({
+      trial_end: compEndSec,
+      trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+    });
+    expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+    expect(params).not.toHaveProperty("payment_method_collection");
+    // Not trial-eligible: the comp alone holds the first charge.
+    s.checkoutCreate.mockClear();
+    s.history = [{ id: "sub_old", status: "canceled" }];
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    params = checkoutParams();
+    expect(params.subscription_data).toMatchObject({ trial_end: compEndSec });
+    // A plan ABOVE the comp is bought now: no hold.
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "plus", comp_expires_at: compEnd };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    params = checkoutParams();
+    expect(params.subscription_data).not.toHaveProperty("trial_end");
+  });
+
+  it("a comp hold names the trial end it would have had WITHOUT the comp, so clearing the comp releases it (finding 1)", async () => {
+    const compEnd = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    const compEndSec = Math.floor(Date.parse(compEnd) / 1000);
+    const nowSec = () => Math.floor(Date.now() / 1000);
+
+    // Not trial-eligible (a former subscriber): the hold's "own end" is the
+    // checkout itself — clearing the comp ends the trial NOW and charges.
+    s.history = [{ id: "sub_old", status: "canceled" }];
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled", comp_tier: "plus", comp_expires_at: compEnd };
+    const before = nowSec();
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    let data = checkoutParams().subscription_data as { trial_end: number; metadata: Record<string, string> };
+    expect(data.trial_end).toBe(compEndSec);
+    const own = Number(data.metadata[TRIAL_END_BEFORE_COMP_KEY]);
+    expect(own).toBeGreaterThanOrEqual(before);
+    expect(own).toBeLessThanOrEqual(nowSec());
+    expect(data.metadata.supabase_user_id).toBe(USER);
+    // The subscription Stripe creates from it, then the admin clears the comp:
+    let sub = { status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
+    expect(compTrialChangeFor({ sub, subscribedTier: "plus", comp: { tier: null, expiresAt: null } })).toEqual({
+      kind: "set_trial_end",
+      trialEnd: "now",
+      beforeComp: "",
+      reason: "comp_released_trial",
+    });
+
+    // Trial-eligible: the hold's own end is the 7-day trial's — clearing the
+    // comp puts the trial back on it.
+    s.checkoutCreate.mockClear();
+    s.history = [];
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "plus", comp_expires_at: compEnd };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    data = checkoutParams().subscription_data as { trial_end: number; metadata: Record<string, string> };
+    const trialDaysEnd = Number(data.metadata[TRIAL_END_BEFORE_COMP_KEY]);
+    expect(Math.abs(trialDaysEnd - (nowSec() + TRIAL_DAYS * 86_400))).toBeLessThanOrEqual(5);
+    sub = { status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
+    expect(compTrialChangeFor({ sub, subscribedTier: "plus", comp: { tier: null, expiresAt: null } })).toMatchObject({
+      kind: "set_trial_end",
+      trialEnd: trialDaysEnd,
+    });
+
+    // No comp: no hold, no metadata key.
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1" };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect((checkoutParams().subscription_data as { metadata: Record<string, string> }).metadata).toEqual({ supabase_user_id: USER });
+  });
+
+  it("a comp that ends BEFORE the 7-day trial: the trial's end wins (Math.max)", async () => {
+    // 3 days out: past Checkout's 48 h minimum, inside the 7-day trial.
+    s.profile = {
+      stripe_customer_id: "cus_1",
+      comp_tier: "plus",
+      comp_expires_at: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+    };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    const data = checkoutParams().subscription_data as { trial_end: number; metadata: Record<string, string> };
+    const expected = Math.floor(Date.now() / 1000) + TRIAL_DAYS * 86_400;
+    expect(Math.abs(data.trial_end - expected)).toBeLessThanOrEqual(5);
+    expect(data).not.toHaveProperty("trial_period_days");
+    // The trial outlasts the comp: nothing to move, now or when it is cleared.
+    expect(Number(data.metadata[TRIAL_END_BEFORE_COMP_KEY])).toBe(data.trial_end);
+  });
+
+  it("never spends the win-back coupon on a comp hold's $0 first invoice (finding 6)", async () => {
+    s.history = [{ id: "sub_old", status: "canceled" }];
+    s.lapsedTrial = true;
+    s.profile = {
+      stripe_customer_id: "cus_1",
+      subscription_status: "canceled",
+      comp_tier: "plus",
+      comp_expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    const params = checkoutParams();
+    expect(params).not.toHaveProperty("discounts");
+    expect(params.allow_promotion_codes).toBe(true);
+    expect(params.metadata).toMatchObject({ discount: "none" });
+    // The same lapsed former trialist with no comp still gets it.
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams().discounts).toEqual([{ coupon: TRIAL_WINBACK_COUPON_ID }]);
   });
 
   it("fails TOWARD no trial when Stripe's history can't be read", async () => {

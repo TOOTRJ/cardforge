@@ -37,6 +37,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   message: MessageSquare,
   credit_grant: Coins,
   comp_plan: Crown,
+  comp_ending: Crown,
   card_limit: Layers,
   render_update: Sparkles,
   render_sweep_paused: CirclePause,

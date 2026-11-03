@@ -1,5 +1,7 @@
 import "server-only";
 
+import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { isCompHeldTrial, type CompEndingSub } from "@/lib/billing/comp-ending";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -193,12 +195,64 @@ const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
 // trial converts; this is ours (docs/BILLING.md). The notification insert is
 // the durable part: a failure throws so Stripe retries; the email is best
 // effort on top (idempotent at the provider by subscription id).
-async function handleTrialWillEnd(
+/** The comp that HOLDS this (live) trial, or null: reads the profile's comp
+ *  and asks the one test, `isCompHeldTrial`. Its tier is the plan named as
+ *  complimentary (the 7-/1-day comp reminder names the same). Null when it
+ *  can't be read. */
+async function compHoldingTrial(
+  admin: AdminClient,
+  userId: string,
   sub: Stripe.Subscription,
+): Promise<{ compTier: string | null } | null> {
+  if (!sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY]) return null;
+  try {
+    const { data } = await admin.from("profiles").select("comp_tier, comp_expires_at").eq("id", userId).maybeSingle();
+    const row = data as { comp_tier?: string | null; comp_expires_at?: string | null } | null;
+    if (!isCompHeldTrial(sub as unknown as CompEndingSub, row?.comp_expires_at ?? null)) return null;
+    const compTier = row?.comp_tier === "plus" || row?.comp_tier === "pro" ? row.comp_tier : null;
+    return { compTier };
+  } catch {
+    return null;
+  }
+}
+
+/** A trial ending within this long of the event is ending NOW: an admin
+ *  released a comp hold with `trial_end: "now"` (lib/billing/comp-stripe.ts),
+ *  and Stripe sends `trial_will_end` for it. The charge happens at once — a
+ *  "your trial ends soon" email arriving with the receipt is wrong. */
+const TRIAL_ENDING_NOW_SECONDS = 60;
+
+async function handleTrialWillEnd(
+  eventSub: Stripe.Subscription,
   deps: { admin: AdminClient; stripe: Stripe },
+  opts: { firedAt?: number | null } = {},
 ): Promise<void> {
   const { admin, stripe } = deps;
+  // Stripe's CURRENT state, never the event's snapshot (CLAUDE.md "Billing
+  // storefront"; the same rule as syncSubscriptionForUser). Releasing a comp
+  // hold with `trial_end: "now"` fires trial_will_end whose `data.object` is
+  // the PRE-update copy — still trialing, its trial_end the held comp end
+  // weeks out — while the live subscription has already converted. Read
+  // in a real sandbox run (2026-11). The event copy is the fallback only
+  // when the read fails.
+  let sub = eventSub;
+  try {
+    const live = await stripe.subscriptions.retrieve(eventSub.id);
+    if (live && typeof live === "object" && live.id === eventSub.id) sub = live;
+  } catch (error) {
+    console.warn(
+      "[stripe] trial_will_end: couldn't re-read the subscription; using the event's copy:",
+      error instanceof Error ? error.message : error,
+    );
+  }
   if (sub.status !== "trialing") return;
+  if (
+    typeof opts.firedAt === "number" &&
+    typeof sub.trial_end === "number" &&
+    sub.trial_end - opts.firedAt <= TRIAL_ENDING_NOW_SECONDS
+  ) {
+    return;
+  }
   // Already cancelled (the portal's `cancel_at`, or the flag): the trial ends
   // and nothing is charged, so "your card is charged then" would be false —
   // and the customer needs no reminder of a conversion that won't happen.
@@ -207,31 +261,43 @@ async function handleTrialWillEnd(
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 
-  // Once per subscription — a retried delivery (or a second event after a
-  // trial extension) must not notify twice.
-  const { data: existing } = await admin
+  // Once per subscription AND trial end — a retried delivery must not notify
+  // twice, but a trial an admin comp MOVED (lib/billing/comp-stripe.ts) is
+  // reminded again before its new date: the first reminder named a charge
+  // that no longer happens then, and card-network rules want one before the
+  // charge that does.
+  const trialEndIso = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null;
+  const { data: earlier } = await admin
     .from("notifications")
-    .select("id")
+    .select("id, payload")
     .eq("type", "trial_ending")
     .eq("payload->>subscriptionId", sub.id)
-    .limit(1)
-    .maybeSingle();
-  if (existing) return;
+    .limit(20);
+  const reminded = ((earlier ?? []) as Array<{ payload: { trialEnd?: string | null } | null }>).some(
+    (row) => (row.payload?.trialEnd ?? null) === trialEndIso || row.payload?.trialEnd == null,
+  );
+  if (reminded) return;
 
-  const [tier, hasPaymentMethod] = await Promise.all([
+  const [tier, hasPaymentMethod, heldBy] = await Promise.all([
     resolveSubscriptionTier(sub, stripe),
     subscriptionHasPaymentMethod(sub, stripe),
+    compHoldingTrial(admin, userId, sub),
   ]);
+  const compHold = heldBy != null;
   const price = sub.items?.data?.[0]?.price ?? null;
   const interval = price?.recurring?.interval ?? null;
   const payload = {
     subscriptionId: sub.id,
     tier,
-    trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    trialEnd: trialEndIso,
     hasPaymentMethod,
     amountCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
     currency: price?.currency ?? "usd",
     interval,
+    // A trial a COMP holds ends when the complimentary period ends: the
+    // copy says so, never "your trial" (lib/billing/comp-ending.ts). This
+    // reminder speaks for that moment; the 1-day comp_ending stands down.
+    ...(compHold ? { compHold: true, ...(heldBy?.compTier ? { compTier: heldBy.compTier } : {}) } : {}),
   };
   const { error } = await admin.from("notifications").insert({
     recipient_id: userId,
@@ -256,8 +322,10 @@ async function handleTrialWillEnd(
           payload.amountCents != null && interval
             ? `${formatMoney(payload.amountCents, payload.currency)} / ${interval}`
             : null,
+        compHold,
+        ...(heldBy?.compTier ? { compPlan: TIER_NAME[heldBy.compTier] } : {}),
       }),
-      { idempotencyKey: `trial-ending:${sub.id}` },
+      { idempotencyKey: `trial-ending:${sub.id}:${sub.trial_end ?? ""}` },
     );
   } catch (error) {
     console.warn(
@@ -780,7 +848,9 @@ export async function handleStripeEvent(
       );
       break;
     case "customer.subscription.trial_will_end":
-      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps);
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription, deps, {
+        firedAt: typeof event.created === "number" ? event.created : null,
+      });
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;

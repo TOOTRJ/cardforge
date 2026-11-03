@@ -31,6 +31,7 @@ import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
 import { isStripeConfigured } from "@/lib/stripe/client";
 import { LocalDate } from "@/components/ui/local-date";
+import { compOverLiveSubscription, liveCompChargeLine } from "@/lib/billing/comp-stripe";
 
 export const metadata: Metadata = {
   title: "Billing & subscription",
@@ -94,6 +95,9 @@ export default async function BillingPage() {
   const delinquent = !live && status != null && DELINQUENT_SUBSCRIPTION_STATUSES.has(status);
   const comped =
     entitlements.isPaid && !live && !delinquent && (profile?.comp_tier != null || profile?.is_admin);
+  // An admin comp over a LIVE subscription (lib/billing/comp-stripe.ts):
+  // the perks follow the comp; a trial is held until it ends.
+  const liveComp = live && profile ? compOverLiveSubscription(profile) : null;
   const sub = stripeDetails?.subscription ?? null;
   const priceLine = sub?.amountCents != null && sub.interval
     ? `${formatMoney(sub.amountCents, sub.currency)} / ${sub.interval}`
@@ -121,6 +125,22 @@ export default async function BillingPage() {
   // The plan grid below reads the same fact (the profile flag can lag the
   // live read until the next webhook event).
   const gridViewer = { ...viewer, subscriptionEnding: live && ending };
+  // What a comp over a live plan means for the next charge
+  // (lib/billing/comp-stripe.ts `liveCompChargeLine`).
+  const liveCompLine = liveComp
+    ? {
+        trial_held: " — your trial runs at least that long, so nothing is charged before then.",
+        balance_credit: " — the comp period's price goes on your billing balance and comes off your next invoices.",
+        own_dates: " — your subscription keeps its own billing dates.",
+      }[
+        liveCompChargeLine({
+          status,
+          ending,
+          compExpiresAt: liveComp.expiresAt,
+          stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
+        })
+      ]
+    : null;
   const capacity = entitlements.cardCapacity;
   const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
@@ -175,6 +195,17 @@ export default async function BillingPage() {
               compExpiresAt={profile?.comp_expires_at ?? null}
             />
           </p>
+          {liveComp ? (
+            <p className="text-sm leading-6 text-muted">
+              {planForTier(liveComp.tier).name} is complimentary
+              {liveComp.expiresAt ? (
+                <>
+                  {" "}until <LocalDate iso={liveComp.expiresAt} />
+                </>
+              ) : null}
+              {liveCompLine}
+            </p>
+          ) : null}
 
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat

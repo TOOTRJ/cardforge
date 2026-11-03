@@ -18,6 +18,11 @@ import {
 } from "@/lib/billing/plans";
 import { formatMoney } from "@/lib/format/money";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
+import {
+  TRIAL_END_BEFORE_COMP_KEY,
+  compHoldsCheckoutUntil,
+  type CompFacts,
+} from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
@@ -85,6 +90,8 @@ async function ensureStripeCustomer(): Promise<
        *  writes subscription_status and never clears it) — trial-ineligible
        *  even if Stripe's customer record were ever lost or replaced. */
       hasSubscribedBefore: boolean;
+      /** The profile's admin comp (lib/billing/comp-stripe.ts). */
+      comp: CompFacts;
     }
   | { ok: false; error: string }
 > {
@@ -93,12 +100,17 @@ async function ensureStripeCustomer(): Promise<
 
   const profile = await getCurrentProfile();
   const hasSubscribedBefore = profile?.subscription_status != null;
+  const comp: CompFacts = {
+    tier: profile?.comp_tier === "plus" || profile?.comp_tier === "pro" ? profile.comp_tier : null,
+    expiresAt: profile?.comp_expires_at ?? null,
+  };
   if (profile?.stripe_customer_id) {
     return {
       ok: true,
       customerId: profile.stripe_customer_id,
       userId: user.id,
       hasSubscribedBefore,
+      comp,
     };
   }
 
@@ -127,7 +139,7 @@ async function ensureStripeCustomer(): Promise<
     return { ok: false, error: "Couldn't link your billing account. Try again." };
   }
 
-  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore };
+  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
 }
 
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
@@ -417,9 +429,31 @@ export async function createCheckoutSessionAction(
         !live &&
         !customer.hasSubscribedBefore &&
         (await isTrialEligible(stripe, customer.customerId));
+      // A comp of this plan (or a higher one) that is still running: nothing
+      // is charged before it ends, then the plan bills normally (owner rule
+      // 2026-10-30, lib/billing/comp-stripe.ts). The trial, if any, keeps
+      // whichever end is later.
+      const compHold = live ? null : compHoldsCheckoutUntil(customer.comp, input.tier);
+      const checkoutSec = Math.floor(Date.now() / 1000);
+      const trialDaysEnd = checkoutSec + TRIAL_DAYS * 86_400;
+      const heldTrialEnd =
+        compHold == null
+          ? null
+          : Math.max(compHold, withTrial ? trialDaysEnd : 0, carryTrialEnd ?? 0);
+      // The trial end the subscription would have had WITHOUT the comp —
+      // what clearing or shortening the comp puts back (compTrialChangeFor
+      // reads it): the 7-day trial's end, a carried trial's end, or — no
+      // trial at all — the checkout itself (cleared → charged at once).
+      // Also what tells a cancel during the hold from a lapsed trial
+      // (isUnconvertedTrial).
+      const trialEndBeforeComp =
+        heldTrialEnd == null ? null : withTrial ? trialDaysEnd : (carryTrialEnd ?? checkoutSec);
       // Win-back: a trial that ended unconverted within the last 30 days
       // buys its first month at a discount — applied here, never as a code.
-      const winback = !live && !withTrial && (await hasRecentLapsedTrial(customer.userId));
+      // Never on a comp hold: the first invoice is the hold's $0 one, and a
+      // once-off coupon would be spent on it.
+      const winback =
+        !live && !withTrial && heldTrialEnd == null && (await hasRecentLapsedTrial(customer.userId));
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
@@ -441,8 +475,20 @@ export async function createCheckoutSessionAction(
           ...(supersedes ? { supersedes_subscription_id: supersedes } : {}),
         },
         subscription_data: {
-          metadata: { supabase_user_id: customer.userId },
-          ...(withTrial
+          metadata: {
+            supabase_user_id: customer.userId,
+            ...(trialEndBeforeComp != null
+              ? { [TRIAL_END_BEFORE_COMP_KEY]: String(trialEndBeforeComp) }
+              : {}),
+          },
+          ...(heldTrialEnd != null
+            ? {
+                trial_end: heldTrialEnd,
+                trial_settings: {
+                  end_behavior: { missing_payment_method: "cancel" as const },
+                },
+              }
+            : withTrial
             ? {
                 trial_period_days: TRIAL_DAYS,
                 trial_settings: {

@@ -704,3 +704,169 @@ handling sees the new price on the same subscription (upgrade and downgrade),
 subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.
+
+## Comps and a live subscription (audit 2026-10-30)
+
+An admin comp (`profiles.comp_tier` / `comp_expires_at`, set on
+`/admin/users` → a user → Comp) is an OVERLAY on the profile: perks are the
+higher of the comp and the live subscription (`effectiveTierForProfile`),
+credits the higher of the two tiers' monthly allotment (`refillTierFor` —
+a comp is owed its tier like a payer, even on a trial), and capacity the
+same in the database (`card_capacity_for`, 0104). It expires by itself: no
+job, the next read is the plan underneath.
+
+Until this audit a comp never touched Stripe, so a user on a card-backed
+trial who was comped "a free month" was CHARGED when the 7-day trial ended,
+inside the month. The owner's rule: **a comp month is free, the month after
+it is charged normally.** `lib/billing/comp-stripe.ts` decides,
+`lib/billing/comp-stripe-apply.ts` writes (best effort, after the row):
+
+| The user has | A comp (same tier or higher, dated) | When it ends / is cleared |
+|---|---|---|
+| a TRIAL that renews | `trial_end` moved to the comp's end (never earlier than its own; `proration_behavior: none`); the old end kept in the subscription's metadata `pipglyph_trial_end_before_comp` | the trial converts at that second — the card, the subscription's own price. Cleared or shortened: the trial goes back to its own end, or ends now if that has passed (the charge it would have made) |
+| an ACTIVE plan (incl. a scheduled downgrade) | the comp period's share of the subscription's own price is CREDITED to the Stripe customer balance (owner answer 1, 2026-10-30); status, dates and trial untouched — Stripe takes it off the next invoices | ends: nothing more happens (the credit was for that period). Shortened or cleared: the part not yet lived through is CLAWED BACK, capped at the credit still unspent |
+| a CANCELLED plan, still running | nothing — it stops on its date; the comp carries the perks after it (a credit would sit unused) | free; nothing is charged |
+| no subscription, then subscribes from the billing page | Checkout starts it with `trial_end` = the comp's end (when ≥ 48 h out, the plan bought ≤ the comp; the 7-day trial's end if later) and writes `pipglyph_trial_end_before_comp` = the 7-day trial's end, or the checkout time when there is no trial, so clearing the comp puts it back (or charges at once) | charged normally |
+
+**A comp on a trialing or paying user needs an END DATE** (owner answer 2):
+`adminSetCompTierAction` refuses one without (`compEndDateError` — status
+`trialing`, `active` or `past_due`), and one more than 730 days out; the
+admin form marks the expiry required for such a user. "No expiry" stays for
+free users. **Clearing a comp after the trial's own end has passed** ends
+the trial now and charges (owner answer 3) — the user's notification then
+says only that the comp ended, never "your trial now runs until" today.
+
+Not moved: a comp below the plan paid for. The admin's toast says what
+happened in one line (`compStripeNote` / `compCreditNote`); the user's
+`comp_plan` notification adds "Your free trial now runs until …; nothing is
+charged before then." only when the comp HOLDS the trial. `trial_will_end`
+is once per subscription AND trial end, so a moved trial is reminded again
+before the charge that really happens. The handler re-reads the
+subscription (Stripe's CURRENT state, never the event's snapshot — the
+event copy only when the read fails): releasing a hold with `trial_end:
+"now"` fires `trial_will_end` whose `data.object` is the PRE-update copy
+(still trialing, the held end weeks out — seen in a sandbox run), so the
+live status and `trial_end` decide; a live trial ending within a minute of
+the event gets no reminder, and the live `trial_end` keys the dedupe, the
+payload and the email. A comp-held trial cancelled after the trial it would
+have had without the comp is not a lapsed trial (`isUnconvertedTrial` reads
+`pipglyph_trial_end_before_comp`): no `trial_lapsed` row, no win-back; and
+Checkout never applies the win-back coupon to a comp hold (its first
+invoice is the hold's $0). The billing page names a comp over a live
+subscription in one line (`liveCompChargeLine`: "nothing is charged before
+then" only when Stripe's trial really reaches the comp's end).
+
+### "Your complimentary plan ends soon" (owner 2026-11-02)
+
+Every comp is told before it ends: a `comp_ending` notification (migration
+0161 adds the kind) AND an "account" email (`compEndingEmail`, the one
+shell, gated by `email_preferences` like the trial reminder), **7 days and
+1 day** before `comp_expires_at`. A daily cron, `/api/cron/comp-ending`
+(`vercel.json`, 14:30 UTC, `cronRouteGuard`; `lib/billing/comp-ending-run.ts`,
+rules in `lib/billing/comp-ending.ts`) reads the profiles whose LIVE comp
+ends in the next 7 days: window `7d` = ends in (now + 1 d, now + 7 d], `1d` =
+ends in (now, now + 1 d]. Expired, cleared and undated comps — and admins —
+are never told, and nothing runs while billing is off (`isBillingEnabled()`:
+"choose a plan" and the prices would be false). A run with any failed
+profile answers 500 (as `refill-credits` does), so it shows as failed.
+
+- **Exactly once per comp per window:** the notification's
+  `payload.dedupeKey` = `comp_ending:<comp end epoch>:<window>`, held by a
+  unique partial index (0161) with the recipient. The insert is the dedupe:
+  a 23505 means "already told" and no email follows. The comp's END is in
+  the key, so a re-dated comp is told afresh. The email's idempotency key is
+  `comp-ending:<user>:<dedupeKey>`.
+- **What it says** — read from Stripe's CURRENT subscription (re-read, card
+  expanded; never a snapshot), one copy per kind:
+  - `free` (no live plan, or a cancelled one ending with the comp): "Your
+    complimentary Plus ends on <date>. After that you'll be on Free" + what
+    they keep + "Keep Plus" → `/dashboard/billing` (its plan grid);
+  - `held_trial` (the comp holds a trial, `isCompHeldTrial`): "Your card
+    ending ••<last4> will be charged <price> then" + how to cancel before —
+    or, with no payment method (`subscriptionHasPaymentMethod`), that the
+    plan simply ends and nothing is charged;
+  - `paying` (an active plan — the credit — or a trial that runs on past the
+    comp): "your next invoice, on <date>, is charged as usual (<price>), less
+    any comp credit still on your balance" — a date only when the next
+    charge falls AFTER the comp's end; otherwise "invoices after <comp end>
+    are charged as usual; any comp credit still on your balance comes off
+    first" (the credit may still be reducing an invoice inside the comp);
+  - `plan_ending` (a cancelled plan that runs past the comp): it ends on its
+    own date, nothing more is charged.
+  The payload names BOTH plans: `tier` (the comp's — what ends) and
+  `subscribedTier` (the live subscription's — what is charged after). When
+  a payer was comped a HIGHER tier (a Plus plan or trial comped Pro) every
+  copy says "you go back to Plus (<Plus's price>)", never that the plan
+  "stays as it is"; the reworded trial reminder carries `compTier` and names
+  the same two plans. A comp below the plan paid for is not told (its end
+  changes nothing). A
+  payer whose subscription can't be read is skipped that day (the next run
+  retries inside the window).
+- **One email per moment — the TRIAL REMINDER speaks for a comp-held
+  trial.** Stripe's `trial_will_end` (3 days before) reaches the same user
+  at almost the same moment as the 1-day comp reminder. So: when the live
+  subscription carries `pipglyph_trial_end_before_comp` and its trial end is
+  the comp's end (± 60 s), the `trial_ending` notification (`compHold: true`)
+  and email say it is the END OF THE COMPLIMENTARY PERIOD and that the card
+  is charged <price> on <date> — never "your trial" — and the 1-day
+  `comp_ending` SKIPS that user, but ONLY when such a reminder really went
+  out: a `trial_ending` row for that subscription with `compHold` and a
+  `trialEnd` equal to the comp's end. A comp re-dated to end within a day
+  may get no `trial_will_end` from Stripe at all, and then the 1-day
+  `comp_ending` is sent. Its 7-day reminder is always sent. Any other
+  trial's reminder is unchanged.
+- The weekly activity digest lists `comp_ending` rows (price and card's
+  last four included) to the same user only, as it already does for
+  `trial_ending`.
+
+### The balance credit on an active plan
+
+One shared helper, `lib/billing/balance-credit.ts` (the referral programme's
+free month for a payer uses it too): a credit is a NEGATIVE customer-balance
+transaction, a claw-back a POSITIVE one.
+
+- **Amount** (`periodCreditCents`): `yearly price × (whole months ÷ 12 +
+  leftover days ÷ 365)`, rounded to the cent once. The yearly price is the
+  subscription's own: a monthly price × 12, an annual price as it is. The
+  period is counted in whole CALENDAR months from the grant's start (UTC),
+  a period ending within one day of a whole month counting as that month
+  (the admin's picker lands at midnight), then whole leftover days (nearest).
+  - Monthly $6 Plus, comp of one calendar month → `72 × 1/12` = **$6**.
+    Three months → **$18**. 30 days from Oct 29 (ends Nov 28, one day
+    short of a month) → `72 × 30/365` = **$5.92**.
+  - Annual $60 Plus, one calendar month → `60 × 1/12` = **$5**; 45 days
+    from Nov 1 (Dec 1 + 15 days) → `60 × (1/12 + 15/365)` = **$7.47**. The
+    credit sits on the balance until the next ANNUAL renewal takes it.
+- **One ledger key per grant.** A grant opens when a comp first holds an
+  active plan: the subscription's metadata `pipglyph_comp_credit` =
+  `<startSec>:<endSec>` is written BEFORE any money moves, and every balance
+  transaction carries `metadata.pipglyph_comp_grant` = `comp:<sub>:<startSec>`.
+  Each save reads the ledger (the customer's balance transactions under that
+  key, credits minus claw-backs) and posts only `target − posted`: a re-save
+  of the same comp posts nothing. The Stripe idempotency key is
+  `comp:<sub>:<start>:<posted>-><target>:credit|clawback`, so a retried
+  request or two admins saving at once post once. A grant whose end has
+  passed is finished; the next comp opens a new one.
+- **Extending** a running comp credits the difference (the grant's start
+  never moves; one grant covers at most 730 days from its start).
+- **Shortening / clearing / dropping below the plan:** the target becomes
+  the grant's start → the new end (shortened) or → NOW (cleared: the time
+  already lived through stays paid for). The difference is clawed back,
+  **capped at the customer's credit still unspent** (`-customer.balance`):
+  credit an invoice already used paid for time the user had and is never
+  turned into a debt. What the cap kept is named in the admin's toast. A
+  clearing never posts a fresh credit. On clearing, the grant's metadata is
+  removed.
+- The user's `comp_plan` notification names the amount credited ("We've put
+  $6 on your billing balance…"); the admin's toast names what was credited
+  or taken back (`compCreditNote`).
+- Not sandbox-verified either (no Stripe key in the session that built
+  it): the balance credit and claw-back — run them once on a test clock
+  with the trial move below.
+
+Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
+question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
+while comped), `webhook-handlers.test.ts` (the second reminder). Not
+sandbox-verified (no Stripe key in the session that built it): updating
+`trial_end` on a card-backed trialing subscription with
+`proration_behavior: none` — run it once on a test clock.
