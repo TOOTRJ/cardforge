@@ -24,6 +24,17 @@ describe("the card page's layout", () => {
     expect(page).toContain("listMoreFromOwner(card.owner_id, card.id, ROW_MAX)");
   });
 
+  it("draws its loading skeleton in the same columns, so nothing shifts at 2xl", () => {
+    const skeleton = readFileSync(join(process.cwd(), "components/cards/card-detail-skeleton.tsx"), "utf8");
+    const infoColumn =
+      "flex min-w-0 max-w-2xl flex-col gap-6 2xl:grid 2xl:max-w-none 2xl:grid-cols-[minmax(0,42rem)_20rem] 2xl:items-start 2xl:gap-x-12";
+    expect(page).toContain(`className="${infoColumn}"`);
+    expect(skeleton).toContain(`className="${infoColumn}"`);
+    // The creator's panel: its own sticky column from 2xl in both.
+    expect(page).toContain('className="min-w-0 2xl:sticky 2xl:top-24"');
+    expect(skeleton).toContain('className="min-w-0 2xl:sticky 2xl:top-24"');
+  });
+
   it("keeps the text details, the JSON-LD and the breadcrumbs for every viewer", () => {
     expect(page).toContain("<CardDetails card={card} inDecks={inDecks} />");
     expect(page).toMatch(/const jsonLd =\s*isShareable\s*\? buildCardJsonLd\(/);
