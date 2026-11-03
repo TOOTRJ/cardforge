@@ -929,9 +929,20 @@ cards; a removal changes no case).
    Every object is checked against the manifest's full sha256 before upload.
 5. CI's **Frames published** check (`npm run frames:check`) turns green once
    production serves every manifest object. Then merge. The production build
-   runs the same check (`npm run build` with `--if-production`), so an
-   unpromoted manifest fails the Vercel production deploy and the previous
-   deployment keeps serving.
+   runs the same check (`npm run build` with `--if-production
+   --incremental`), so an unpromoted manifest fails the Vercel production
+   deploy and the previous deployment keeps serving. Since 2026-11-02 that
+   build looks up only the objects that are new or changed since the last
+   successful production deployment (`VERCEL_GIT_PREVIOUS_SHA`, which Vercel
+   sets only because `vercel.json` has an `ignoreCommand`:
+   `scripts/vercel-ignore-build.mjs`, the notes-only skip — a skipped
+   deployment is never the base, so the diff then reaches further back),
+   plus a canary of 200 of the rest that rotates per commit. Any
+   doubt (no previous SHA, a git error) is the full check, and
+   `FRAMES_CHECK_FULL=1` on the project forces it
+   (`scripts/lib/frames-check-plan.mjs`). CI runs the FULL check on every
+   merge and every night; a red one off a pull request opens one issue,
+   "CI: frames are missing from production's bucket".
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged, and the owner's
@@ -7967,8 +7978,10 @@ foil-printing ★ is `frame_style.star` (`true` or absent — a flag, no sheen,
 free for every plan; a Foil or Etched finish prints the ★ without it —
 owner 2026-10-02: etched is a foil treatment and every etched print
 carries the ★). Both join `FRAME_ANATOMY_KEYS`, so they travel in an
-edit's `frame_anatomy` patch like the crown. A new card starts `"2023"`;
-a remix starts on unless the parent turned it off; an import follows the
+edit's `frame_anatomy` patch like the crown. A new card starts `"off"`
+(owner 2026-10-30, `NEW_CARD_ANATOMY`: it names no set or number yet;
+before that it started `"2023"`); a remix keeps its parent's (off where
+the parent named none); an import follows the
 printing (`printed_collector` / `printed_star`, below); every save drops
 both keys on a template without the slot. No `CARD_LAYOUT_VERSION` bump, no
 sweep, no badge: production's 886 visible cards baked byte-identical at
@@ -8278,7 +8291,7 @@ frames had neither — one follow-up for the family. `m15borderless`,
 declare both since, and the borderless planeswalkers (`m15borderlesspw`,
 `m15borderlesspwtall`) since owner Round 70 (below). An ADDITION, exactly as 4.9b / 4.9c: the same
 switches (`frame_style.stamp` / `collector` / `star`), new cards on by
-default, a stored borderless card keeps its look (it was saved with neither
+default (the collector line off since 2026-10-30), a stored borderless card keeps its look (it was saved with neither
 key — `normalizeAnatomy` dropped them on a template without the slot — so
 none draws until its owner switches them on), imports follow the printing
 (`printed_stamp` / `printed_collector` already name the printing's; a

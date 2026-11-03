@@ -8,6 +8,7 @@ import {
 import { updateDeckCardAction } from "@/lib/decks/card-actions";
 import {
   MAX_MEMBERSHIP_BATCH,
+  deckShowsPrivateCards,
   describeMembershipResults,
   type MembershipCardResult,
 } from "@/lib/decks/membership-copy";
@@ -35,6 +36,17 @@ import type { DeckEntryPatch } from "@/components/decks/deck-membership-picker";
 
 export type DeckMembershipStatus = { tone: "success" | "error" | "info"; message: string };
 
+/** The caller's own private cards a tick asked into a deck others can open
+ *  (TODO DK0.13): nothing of them was written — the picker asks "Make it
+ *  public" / "Add as private" (PrivateCardOfferDialog). */
+export type PrivateCardOffer = {
+  deck: PickerDeck;
+  cards: Array<{ cardId: string; blockedReason?: string }>;
+};
+
+/** The maker's answer: publish then add, add as private, or neither. */
+export type PrivateCardChoice = "publish" | "keep" | "cancel";
+
 type Loaded = { decks: PickerDeck[]; memberships: DeckMemberships };
 
 /** Everything known for ONE set of cards (`key`): an answer for cards no
@@ -56,6 +68,7 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
   // Something was written: a list behind the picker (My Cards' chips) is
   // out of date until it is read again.
   const [changed, setChanged] = useState(false);
+  const [offer, setOffer] = useState<(PrivateCardOffer & { key: string }) | null>(null);
 
   useEffect(() => {
     if (!enabled || !key) return;
@@ -93,18 +106,39 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
     });
 
   /** `cards` into (or out of) `deck`, in calls of MAX_MEMBERSHIP_BATCH; the
-   *  memberships follow each answer. */
-  const write = async (deck: PickerDeck, cards: readonly string[], adding: boolean) => {
+   *  memberships follow each answer. An add into a deck others can open
+   *  ASKS about the caller's private cards (the server decides which they
+   *  are) unless `choice` answers it: "publish" makes `publish` public
+   *  first, "keep" adds them as they are. */
+  const write = async (
+    deck: PickerDeck,
+    cards: readonly string[],
+    adding: boolean,
+    choice?: { publish: readonly string[] } | "keep",
+  ) => {
     const askedFor = key;
     setBusy(deck.id, true);
     const results: MembershipCardResult[] = [];
     let error: string | null = null;
+    // The deck's visibility as the picker read it: a private deck never
+    // asks (the server checks the deck's own row all the same).
+    const ask = adding && choice === undefined && deckShowsPrivateCards(deck.visibility);
     for (let i = 0; i < cards.length; i += MAX_MEMBERSHIP_BATCH) {
       const chunk = cards.slice(i, i + MAX_MEMBERSHIP_BATCH);
       let result: Awaited<ReturnType<typeof changeDeckMembershipAction>>;
       try {
+        const publish =
+          choice && choice !== "keep"
+            ? chunk.filter((cardId) => choice.publish.some((id) => id.toLowerCase() === cardId.toLowerCase()))
+            : [];
         result = await changeDeckMembershipAction(
-          adding ? { deckId: deck.id, add: chunk } : { deckId: deck.id, remove: chunk },
+          !adding
+            ? { deckId: deck.id, remove: chunk }
+            : ask
+              ? { deckId: deck.id, add: chunk, privateCards: "ask" }
+              : publish.length > 0
+                ? { deckId: deck.id, add: chunk, publish }
+                : { deckId: deck.id, add: chunk },
         );
       } catch {
         result = { ok: false, error: NETWORK_ERROR };
@@ -135,9 +169,47 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
       if (result.results.some((r) => r.status === "deck_full")) break;
     }
     setBusy(deck.id, false);
-    if (results.some((r) => r.status === "added" || r.status === "removed")) setChanged(true);
-    const status = error ? { tone: "error" as const, message: error } : describeMembershipResults(results, deck.title, adding);
-    update(askedFor, (prev) => ({ ...prev, status }));
+    if (results.some((r) => r.status === "added" || r.status === "removed" || r.published)) setChanged(true);
+    const asked = results.filter((r) => r.status === "private_card");
+    const said = results.filter((r) => r.status !== "private_card");
+    if (asked.length > 0) {
+      setOffer({
+        key: askedFor,
+        deck,
+        cards: asked.map((r) => ({ cardId: r.cardId, ...(r.blockedReason ? { blockedReason: r.blockedReason } : {}) })),
+      });
+    }
+    // What the rest did; the asked cards wait on the offer (said nothing
+    // yet — never "not added" while the question is open).
+    const status = error
+      ? { tone: "error" as const, message: error }
+      : said.length > 0
+        ? describeMembershipResults(said, deck.title, adding)
+        : null;
+    update(askedFor, (prev) => ({ ...prev, status: status ?? (asked.length > 0 ? null : prev.status) }));
+  };
+
+  /** The maker's answer to the private-card offer. */
+  const resolveOffer = async (choice: PrivateCardChoice) => {
+    const current = offer;
+    setOffer(null);
+    if (!current || current.key !== key) return;
+    const ids = current.cards.map((card) => card.cardId);
+    if (choice === "cancel") {
+      update(current.key, (prev) => ({
+        ...prev,
+        status: { tone: "info", message: ids.length === 1 ? "Not added." : `${ids.length} cards not added.` },
+      }));
+      return;
+    }
+    await write(
+      current.deck,
+      ids,
+      true,
+      choice === "keep"
+        ? "keep"
+        : { publish: current.cards.filter((card) => !card.blockedReason).map((card) => card.cardId) },
+    );
   };
 
   /** Tick (add every card not in it yet) or untick (remove every card in it). */
@@ -201,6 +273,9 @@ export function useDeckMembership(cardIds: readonly string[], { enabled = true }
     pending,
     status: current?.status ?? null,
     changed,
+    /** The private-card question waiting on the maker (TODO DK0.13). */
+    offer: offer && offer.key === key ? { deck: offer.deck, cards: offer.cards } : null,
+    resolveOffer,
     toggle,
     updateEntry,
     addCreatedDeck,

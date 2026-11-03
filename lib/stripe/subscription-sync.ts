@@ -9,6 +9,7 @@ import {
   type PlanTier,
 } from "@/lib/billing/plans";
 import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
+import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import {
   endsByPeriodEnd,
   subscriptionEndsAt,
@@ -535,10 +536,20 @@ export async function subscriptionHasPaymentMethod(
 }
 
 /** A deleted subscription that never converted: it ended at (or before) its
- *  trial end — cancelled during the trial, or the trial expired unpaid. */
+ *  trial end — cancelled during the trial, or the trial expired unpaid.
+ *
+ *  A trial an admin COMP held (lib/billing/comp-stripe.ts) is judged against
+ *  the trial it would have had WITHOUT the comp (`TRIAL_END_BEFORE_COMP_KEY`):
+ *  cancelled during the comp's extra time — or during a comp hold that was
+ *  never a free trial at all (a comped former subscriber's checkout: the key
+ *  is the checkout time) — it is not a lapsed trial, and gets no
+ *  `trial_lapsed` row or win-back offer. */
 export function isUnconvertedTrial(sub: SubscriptionLike): boolean {
   if (typeof sub.trial_end !== "number" || typeof sub.ended_at !== "number") return false;
-  return sub.ended_at <= sub.trial_end + 60;
+  const rawBefore = sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY];
+  const before = rawBefore ? Number(rawBefore) : NaN;
+  const trialEnd = Number.isFinite(before) && before > 0 ? Math.min(before, sub.trial_end) : sub.trial_end;
+  return sub.ended_at <= trialEnd + 60;
 }
 
 /** The customer's newest subscription whose payment is broken (past_due,

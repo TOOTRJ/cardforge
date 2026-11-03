@@ -25,9 +25,14 @@
 //            pull request restores from main) and "Frames published"
 //            (owner 2026-10-16).
 //   nightly  the schedule: the unit shards with coverage and the floors, on
-//            main as it is (a verified merge runs no unit test on main).
+//            main as it is (a verified merge runs no unit test on main), and
+//            the FULL "Frames published" check (owner 2026-11-02: the
+//            production build checks only new objects and a canary,
+//            scripts/lib/frames-check-plan.mjs — this finds an older object
+//            deleted by hand within a day).
 //   idle     the schedule, when a run of ci.yml on this very commit already
-//            passed the coverage floors: nothing runs.
+//            passed the coverage floors: only "Frames published" (the bucket
+//            can change with no commit).
 //
 // NOTES — the allow-list. Never turn it into a deny-list: a new kind of
 // file must land on the heavy side until someone says otherwise.
@@ -93,8 +98,8 @@ export const DOCS_READING_TESTS = [
 export const TIERS = {
   full: { static: true, unit: true, heavy: true, frames: true, warm: false, docs: false },
   verified: { static: false, unit: false, heavy: false, frames: true, warm: true, docs: false },
-  nightly: { static: false, unit: true, heavy: false, frames: false, warm: false, docs: false },
-  idle: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: false },
+  nightly: { static: false, unit: true, heavy: false, frames: true, warm: false, docs: false },
+  idle: { static: false, unit: false, heavy: false, frames: true, warm: false, docs: false },
   draft: { static: true, unit: false, heavy: false, frames: false, warm: false, docs: true },
   notes: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: true },
 };
@@ -163,8 +168,10 @@ export function classifyChange({ event, files, draft, treeIsPrHead, prRunGreen, 
   /** @returns {{ tier: "full", reason: string, code?: string[] }} */
   const full = (/** @type {string} */ reason, extra = {}) => ({ tier: "full", reason: `${reason}: everything runs`, ...extra });
   if (event === "schedule") {
-    if (alreadyCovered === true) return { tier: "idle", reason: "a run of ci.yml on this commit already passed the coverage floors: nothing runs" };
-    return { tier: "nightly", reason: "the nightly coverage run: the unit shards with coverage, and the floors, on main as it is" };
+    if (alreadyCovered === true) {
+      return { tier: "idle", reason: "a run of ci.yml on this commit already passed the coverage floors: only the nightly full \"Frames published\" check runs" };
+    }
+    return { tier: "nightly", reason: "the nightly run: the unit shards with coverage, and the floors, on main as it is, and the full \"Frames published\" check" };
   }
   if (event !== "pull_request" && event !== "push") return full(`event "${event ?? ""}" is neither a pull request nor a push`);
   if (!Array.isArray(files)) return full("the changed files could not be read");

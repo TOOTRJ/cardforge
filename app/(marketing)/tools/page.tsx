@@ -64,7 +64,7 @@ const TOOL_ICONS: Record<string, LucideIcon> = {
 
 export default function ToolsPage() {
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={itemListJsonLd({
           name: "PipGlyph tools",
@@ -88,7 +88,7 @@ export default function ToolsPage() {
         description="One card creator at the center, and the tools around it: an AI generator, a pip editor, a deck builder and print sheets. Free to start; a few extras come with a plan."
       />
 
-      <ul className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <ul className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:gap-6">
         {TOOLS.map((tool) => (
           <li key={tool.slug} className="flex">
             <ToolCard tool={tool} />

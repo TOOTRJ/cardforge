@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // GuideCrossLinks — "keep exploring" block for the SEO landing pages. Pass
@@ -16,11 +17,11 @@ export const GUIDE_LINKS = [
   { href: "/help", label: "Help & FAQ" },
 ] as const;
 
-export function GuideCrossLinks({ current }: { current: string }) {
+export function GuideCrossLinks({ current, className }: { current: string; className?: string }) {
   const others = GUIDE_LINKS.filter((g) => g.href !== current);
   if (others.length === 0) return null;
   return (
-    <nav aria-label="Related guides" className="mt-10">
+    <nav aria-label="Related guides" className={cn("mt-10", className)}>
       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
         Keep exploring
       </p>

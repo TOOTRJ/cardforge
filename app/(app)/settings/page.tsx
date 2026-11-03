@@ -30,6 +30,11 @@ import { planEndingOf } from "@/lib/billing/plan-ending";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { listProfileLinks, listProfileStores } from "@/lib/profile/links-queries";
+import {
+  ProfileLinksEditor,
+  ProfileStoresEditor,
+} from "@/components/settings/profile-links-editor";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -52,6 +57,9 @@ export default async function SettingsPage({
   ) : null;
 
   const emailPreferences = await getMyEmailPreferences();
+  const [profileLinks, profileStores] = profile
+    ? await Promise.all([listProfileLinks(profile.id), listProfileStores(profile.id)])
+    : [[], []];
   // "Incomplete" = still on the handle the signup trigger minted.
   const profileIncomplete = isGeneratedUsername(profile?.username);
 
@@ -76,7 +84,7 @@ export default async function SettingsPage({
       />
 
       <div className="mt-10 grid gap-4">
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Avatar & banner
@@ -104,7 +112,7 @@ export default async function SettingsPage({
 
         <CustomPipsPanel overrides={user ? await getPipOverrides(user.id) : {}} />
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Public profile
@@ -140,8 +148,60 @@ export default async function SettingsPage({
         </SurfaceCard>
 
         <SurfaceCard
+          id="links"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              More links
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Your decks on Moxfield or Archidekt, your stream, your Patreon —
+              up to 12 links, shown with their icons on your profile. Each is
+              checked against its site&apos;s address; &ldquo;Other link&rdquo;
+              takes any https:// page.
+            </p>
+          </div>
+          <ProfileLinksEditor
+            initialRows={profileLinks.map((link) => ({
+              choice: link.kind,
+              url: link.url,
+              text: link.label ?? "",
+            }))}
+          />
+        </SurfaceCard>
+
+        <SurfaceCard
+          id="stores"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 className="font-display text-lg font-semibold text-foreground">
+              Store cards
+            </h3>
+            <p className="text-sm leading-6 text-muted">
+              Sell cards on TCGplayer, eBay, Whatnot or Cardmarket? Add up to
+              4 stores and your profile shows a &ldquo;Visit store&rdquo; card
+              for each. Titles are public: keep them free of strong language.
+            </p>
+            <p className="mt-2 text-xs leading-5 text-subtle">
+              Link your real shop. Wizards of the Coast&apos;s Fan Content
+              Policy doesn&apos;t allow selling proxies of real Magic cards,
+              so don&apos;t present your PipGlyph designs as ones for sale.
+            </p>
+          </div>
+          <ProfileStoresEditor
+            initialRows={profileStores.map((store) => ({
+              choice: store.platform,
+              url: store.url,
+              text: store.title ?? "",
+            }))}
+          />
+        </SurfaceCard>
+
+        <SurfaceCard
           id="security"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -163,7 +223,7 @@ export default async function SettingsPage({
 
         <SurfaceCard
           id="email"
-          className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+          className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         >
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
@@ -184,7 +244,7 @@ export default async function SettingsPage({
           />
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Pinned cards
@@ -202,7 +262,7 @@ export default async function SettingsPage({
           </Suspense>
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Preferences
@@ -229,7 +289,7 @@ export default async function SettingsPage({
         {isBillingEnabled() ? (
           <SurfaceCard
             id="billing"
-            className="grid scroll-mt-24 gap-6 p-6 sm:grid-cols-[1fr_2fr]"
+            className="grid scroll-mt-24 gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
           >
             <div className="flex flex-col gap-1">
               <h3 className="font-display text-lg font-semibold text-foreground">
@@ -253,7 +313,7 @@ export default async function SettingsPage({
           </SurfaceCard>
         ) : null}
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Card watermark
@@ -270,7 +330,7 @@ export default async function SettingsPage({
           />
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Usage
@@ -286,7 +346,7 @@ export default async function SettingsPage({
           </Suspense>
         </SurfaceCard>
 
-        <SurfaceCard className="grid gap-6 p-6 sm:grid-cols-[1fr_2fr]">
+        <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
             <h3 className="font-display text-lg font-semibold text-foreground">
               Your data &amp; account

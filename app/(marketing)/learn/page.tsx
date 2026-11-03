@@ -9,7 +9,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { CATEGORY_ICONS } from "@/components/content/category-icons";
 import { collectionPageJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { categoryPath } from "@/lib/content/article-categories";
-import { listCategoryShelves, type CategoryShelf } from "@/lib/content/articles";
+import type { CategoryShelf } from "@/lib/content/articles";
+import { listPublishedCategoryShelves } from "@/lib/content/article-catalog";
 import { getNewsFeed } from "@/lib/updates/queries";
 import { formatReleaseDate, updateAnchorId, type SiteUpdate } from "@/lib/updates/shared";
 import { siteOpenGraph, siteTwitter } from "@/lib/seo/share-metadata";
@@ -93,13 +94,13 @@ const USING_PIPGLYPH: UsingLink[] = [
 ];
 
 export default async function LearnPage() {
-  const shelves = listCategoryShelves();
+  const shelves = await listPublishedCategoryShelves();
   const { updates } = await getNewsFeed();
   const latest = updates.slice(0, LATEST_UPDATES);
   const guideCount = shelves.reduce((sum, shelf) => sum + shelf.articles.length, 0);
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: "Learn on PipGlyph",
@@ -140,7 +141,7 @@ export default async function LearnPage() {
         <h2 id="topics-heading" className="sr-only">
           Guides by topic
         </h2>
-        <ul className="grid gap-5 md:grid-cols-2">
+        <ul className="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
           {shelves.map((shelf) => (
             <li key={shelf.category.slug} className="flex">
               <CategoryCard shelf={shelf} />

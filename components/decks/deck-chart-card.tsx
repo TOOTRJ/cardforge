@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { Table2 } from "lucide-react";
+import { InfoTip } from "@/components/ui/info-tip";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -12,7 +13,20 @@ import { cn } from "@/lib/utils";
 // shows it in the chart's place for anyone who'd rather read the numbers.
 // A chart that is its own accessible control (the mana curve's bars, each
 // named with its numbers) passes `accessibleChart`: nothing of it is hidden.
+// `help` (TODO DK11 (e)) puts an info box beside the title — what the chart
+// reads and how to read it, on hover or keyboard focus (lib/decks/deck-help).
 // ---------------------------------------------------------------------------
+
+/** A breakdown part's help box — the chart cards', the playtest's and the
+ *  activity's one look. */
+export function ChartHelp({ help }: { help: { title: string; body: string } }) {
+  return (
+    <InfoTip label={`About ${help.title.toLowerCase()}`} side="top" align="start">
+      <p className="font-semibold text-foreground">{help.title}</p>
+      <p className="mt-1">{help.body}</p>
+    </InfoTip>
+  );
+}
 
 export function DeckChartCard({
   title,
@@ -21,9 +35,12 @@ export function DeckChartCard({
   table,
   accessibleChart = false,
   footer,
+  help,
   className,
 }: {
   title: string;
+  /** What the chart reads, in an info box beside the title. */
+  help?: { title: string; body: string };
   description?: ReactNode;
   chart: ReactNode;
   table: ReactNode;
@@ -36,13 +53,18 @@ export function DeckChartCard({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("flex min-w-0 flex-col gap-4 rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5", className)}
+      // `relative`: the clip box of the sr-only table twin below (an
+      // absolute box sizes and clips against its containing block).
+      className={cn("relative flex min-w-0 flex-col gap-4 rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5", className)}
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 id={headingId} className="text-sm font-semibold text-foreground">
-            {title}
-          </h3>
+          <div className="flex items-center gap-1">
+            <h3 id={headingId} className="text-sm font-semibold text-foreground">
+              {title}
+            </h3>
+            {help ? <ChartHelp help={help} /> : null}
+          </div>
           {description ? <div className="mt-1 text-xs leading-5 text-muted">{description}</div> : null}
         </div>
         <button

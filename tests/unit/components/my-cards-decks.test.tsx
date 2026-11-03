@@ -148,7 +148,7 @@ describe("My Cards — a card's decks", () => {
     await act(async () => {
       fireEvent.click(burn);
     });
-    expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: DECK, add: [id(2)] });
+    expect(actions.changeDeckMembershipAction).toHaveBeenCalledWith({ deckId: DECK, add: [id(2)], privateCards: "ask" });
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
     });

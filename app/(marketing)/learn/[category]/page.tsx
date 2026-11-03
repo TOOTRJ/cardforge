@@ -18,8 +18,10 @@ import {
   isIndexableCategory,
 } from "@/lib/content/article-categories";
 import {
-  listArticlesInCategory,
-  listCategoryShelves,
+  listPublishedArticlesInCategory,
+  listPublishedCategoryShelves,
+} from "@/lib/content/article-catalog";
+import {
   slugifyTag,
   tagHubHref,
   type ArticleMeta,
@@ -32,9 +34,9 @@ import { PageContainer } from "@/components/layout/page-container";
 // (lib/content/article-categories.ts), its guides newest first, the topics
 // (tags) they touch, and the other shelves.
 //
-// Fully static: the four categories are the only params (anything else is a
-// real 404 — dynamicParams = false, and notFound() in both the metadata and
-// the page, ahead of any boundary). A category renders whatever it holds,
+// Fully static: the four categories are built ahead of time; anything else is a
+// real 404 — notFound() in both the metadata and the page, ahead of any
+// boundary. A category renders whatever it holds,
 // but it is indexed and sitemapped only from CATEGORY_MIN_ARTICLES guides
 // (the deck format hubs' rule); below that it is `noindex, follow`.
 // ---------------------------------------------------------------------------
@@ -46,7 +48,13 @@ export function generateStaticParams(): Params[] {
 }
 
 export const dynamic = "error";
-export const dynamicParams = false;
+// Unknown keys render on demand and 404 through notFound(); never
+// `dynamicParams = false` (tests/unit/content/no-dynamic-params-false.test.ts:
+// under `next start` an expired tag turned every built page into a 404).
+export const dynamicParams = true;
+// The shelf also lists released composer articles (lib/content/
+// article-catalog.ts); a publish purges it.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -56,7 +64,7 @@ export async function generateMetadata({
   const { category: slug } = await params;
   const category = getArticleCategory(slug);
   if (!category) notFound();
-  const count = listArticlesInCategory(category.slug).length;
+  const count = (await listPublishedArticlesInCategory(category.slug)).length;
   const path = categoryPath(category.slug);
   const title = category.title;
   return {
@@ -87,12 +95,12 @@ export default async function LearnCategoryPage({
   const category = getArticleCategory(slug);
   if (!category) notFound();
 
-  const articles = listArticlesInCategory(category.slug);
+  const articles = await listPublishedArticlesInCategory(category.slug);
   const path = categoryPath(category.slug);
   const topics = relatedTopics(articles);
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: category.title,
@@ -161,7 +169,7 @@ export default async function LearnCategoryPage({
             are a good place to start.
           </SurfaceCard>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
             {articles.map((article) => (
               <ArticleCard key={article.slug} article={article} currentPath={path} />
             ))}
@@ -170,7 +178,7 @@ export default async function LearnCategoryPage({
       </div>
 
       <CategoryLinks
-        shelves={listCategoryShelves()}
+        shelves={await listPublishedCategoryShelves()}
         current={category.slug}
         label="Other topics"
         className="mt-14 border-t border-border/40 pt-8"

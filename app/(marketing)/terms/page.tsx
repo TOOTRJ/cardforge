@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalPageShell
+      current="/terms"
       eyebrow="Legal"
       title="Terms of Service"
       description="A plain-English overview of the rules for using PipGlyph. This is MVP boilerplate — review with a lawyer before relying on it for anything serious."

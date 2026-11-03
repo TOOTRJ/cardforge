@@ -159,7 +159,8 @@ export default async function AdminScryfallPage() {
               hint="Trend below"
             />
           </div>
-          <SurfaceCard className="p-4">
+          {/* Scrolls inside its card on a phone (four columns), never the page. */}
+          <SurfaceCard className="overflow-x-auto p-4">
             <PerActionTable snapshot={snapshot} />
           </SurfaceCard>
         </section>

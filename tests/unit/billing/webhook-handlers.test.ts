@@ -770,7 +770,14 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
 // ---------------------------------------------------------------------------
 describe("handleStripeEvent — trial_will_end", () => {
   function makeTrialAdmin(
-    opts: { alreadyNotified?: boolean; notifiedFor?: string; insertError?: string } = {},
+    opts: {
+      alreadyNotified?: boolean;
+      notifiedFor?: string;
+      legacyRow?: boolean;
+      insertError?: string;
+      compExpiresAt?: string;
+      compTier?: string;
+    } = {},
   ) {
     const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
     // An earlier reminder for this subscription: for its CURRENT trial end
@@ -779,7 +786,10 @@ describe("handleStripeEvent — trial_will_end", () => {
       ? [{ id: "n_1", payload: { subscriptionId: "sub_trial", trialEnd: "2026-09-30T02:26:40.000Z" } }]
       : opts.notifiedFor
         ? [{ id: "n_0", payload: { subscriptionId: "sub_trial", trialEnd: opts.notifiedFor } }]
-        : [];
+        : opts.legacyRow
+          ? // A reminder written before reminders carried their trial end.
+            [{ id: "n_legacy", payload: { subscriptionId: "sub_trial" } }]
+          : [];
     const admin = {
       from(table: string) {
         return {
@@ -789,7 +799,7 @@ describe("handleStripeEvent — trial_will_end", () => {
               limit: () => chain,
               maybeSingle: async () =>
                 table === "profiles"
-                  ? { data: { id: "user-1" }, error: null }
+                  ? { data: { id: "user-1", comp_tier: opts.compTier ?? null, comp_expires_at: opts.compExpiresAt ?? null }, error: null }
                   : { data: earlier[0] ?? null, error: null },
               then: (resolve: (v: unknown) => void) => resolve({ data: earlier, error: null }),
             };
@@ -806,8 +816,12 @@ describe("handleStripeEvent — trial_will_end", () => {
     return { admin: admin as any, inserts };
   }
   const customers = { retrieve: vi.fn() };
+  // The handler re-reads the subscription (Stripe's CURRENT state). By
+  // default the read answers nothing, so the event's copy stands; the
+  // release tests script what Stripe really answers.
+  const subscriptions = { retrieve: vi.fn() };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const trialStripe = { customers } as any;
+  const trialStripe = { customers, subscriptions } as any;
   const trialSub = (extra: Record<string, unknown> = {}) => ({
     id: "sub_trial",
     customer: "cus_1",
@@ -823,6 +837,7 @@ describe("handleStripeEvent — trial_will_end", () => {
 
   beforeEach(() => {
     customers.retrieve.mockReset().mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: null } });
+    subscriptions.retrieve.mockReset().mockResolvedValue(null);
   });
 
   it("no card anywhere: notification says so, email says the plan simply ends", async () => {
@@ -900,6 +915,127 @@ describe("handleStripeEvent — trial_will_end", () => {
     expect(inserts).toHaveLength(1);
     expect(inserts[0].row.payload).toMatchObject({ trialEnd: "2026-09-30T02:26:40.000Z" });
     expect(email.send.mock.calls[0][1]).toEqual({ idempotencyKey: "trial-ending:sub_trial:1790735200" });
+  });
+
+  it("a LEGACY reminder row (no trialEnd in its payload) still counts: never a second reminder for it", async () => {
+    // The dedupe's `trialEnd == null` clause: rows from before the per-end
+    // key can't say which end they named, so they hold the subscription.
+    const { admin, inserts } = makeTrialAdmin({ legacyRow: true });
+    await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+    expect(inserts).toHaveLength(0);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  describe("a trial a COMP holds: the reminder is the end of the complimentary period (owner 2026-11-02)", () => {
+    const END = 1_790_735_200;
+    const COMP_END = new Date(END * 1000).toISOString();
+    const held = (extra: Record<string, unknown> = {}) =>
+      trialSub({ default_payment_method: "pm_1", metadata: { pipglyph_trial_end_before_comp: String(END - 20 * 86_400) }, ...extra });
+    const fire = (object: unknown) =>
+      ({ id: "evt_twe", type: "customer.subscription.trial_will_end", created: END - 3 * 86_400, data: { object } }) as never;
+
+    it("payload says compHold; the email names the complimentary period and the charge, never a trial", async () => {
+      subscriptions.retrieve.mockResolvedValue(held());
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END, compTier: "pro" });
+      await handleStripeEvent(fire(held()), { admin, stripe: trialStripe });
+      expect(inserts).toHaveLength(1);
+      // The comp's tier rides along, so the bell names the same plans as the
+      // comp reminder (lib/billing/comp-ending-run.ts).
+      expect(inserts[0].row.payload).toMatchObject({ compHold: true, compTier: "pro", trialEnd: COMP_END, hasPaymentMethod: true });
+      const message = email.send.mock.calls[0][0];
+      expect(message.subject).toMatch(/^Your complimentary PipGlyph Pro ends /);
+      expect(message.text).toContain("Your card will be charged $15 / month then");
+      expect(message.text.replace(/You're receiving this[^\n]*/, "")).not.toMatch(/trial/i);
+    });
+
+    it("a comp that ends BEFORE the trial (the 7-day trial won): an ordinary trial reminder", async () => {
+      subscriptions.retrieve.mockResolvedValue(held());
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: new Date((END - 2 * 86_400) * 1000).toISOString() });
+      await handleStripeEvent(fire(held()), { admin, stripe: trialStripe });
+      expect(inserts[0].row.payload).not.toHaveProperty("compHold");
+      expect(email.send.mock.calls[0][0].subject).toMatch(/^Your PipGlyph Pro trial ends /);
+    });
+
+    it("no pre-comp key on the subscription: unchanged copy (and the profile is not read for it)", async () => {
+      const { admin, inserts } = makeTrialAdmin({ compExpiresAt: COMP_END });
+      await handleStripeEvent(event(trialSub()), { admin, stripe: trialStripe });
+      expect(inserts[0].row.payload).not.toHaveProperty("compHold");
+    });
+  });
+
+  describe("a comp hold released with trial_end: 'now' (finding 7 — Stripe's real shape)", () => {
+    // What Stripe sends at the release (sandbox run, 2026-11): the event's
+    // data.object is the PRE-update copy — still trialing, its trial_end the
+    // HELD comp end weeks out — fired the moment the trial was ended.
+    const HELD_END = 1_790_735_200;
+    const RELEASED_AT = HELD_END - 25 * 86_400;
+    const staleEvent = () =>
+      ({
+        id: "evt_twe",
+        type: "customer.subscription.trial_will_end",
+        created: RELEASED_AT,
+        data: { object: trialSub({ trial_end: HELD_END }) },
+      }) as never;
+
+    it("the live subscription has already converted (active): no reminder", async () => {
+      subscriptions.retrieve.mockResolvedValue(trialSub({ status: "active", trial_end: RELEASED_AT }));
+      const { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+      expect(subscriptions.retrieve).toHaveBeenCalledWith("sub_trial");
+      expect(inserts).toHaveLength(0);
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it("the live subscription is still trialing but its trial ends NOW (within a minute): no reminder", async () => {
+      for (const liveEnd of [RELEASED_AT, RELEASED_AT + 60]) {
+        subscriptions.retrieve.mockResolvedValue(trialSub({ trial_end: liveEnd }));
+        const { admin, inserts } = makeTrialAdmin();
+        await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+        expect(inserts).toHaveLength(0);
+      }
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it("an ordinary reminder uses the LIVE trial end for the payload, the dedupe and the email key", async () => {
+      // The event copy names the held end; Stripe now holds a later one (a
+      // comp extended after the event fired): the reminder names the real date.
+      const liveEnd = HELD_END + 10 * 86_400;
+      subscriptions.retrieve.mockResolvedValue(trialSub({ trial_end: liveEnd }));
+      const { admin, inserts } = makeTrialAdmin({ notifiedFor: new Date(HELD_END * 1000).toISOString() });
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 3 * 86_400, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0].row.payload).toMatchObject({ trialEnd: new Date(liveEnd * 1000).toISOString() });
+      expect(email.send.mock.calls[0][1]).toEqual({ idempotencyKey: `trial-ending:sub_trial:${liveEnd}` });
+    });
+
+    it("the re-read fails: falls back to the event's copy (and its own guard)", async () => {
+      subscriptions.retrieve.mockRejectedValue(new Error("stripe down"));
+      // The stale copy weeks out: the fallback can't tell — it reminds.
+      let { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(staleEvent(), { admin, stripe: trialStripe });
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0].row.payload).toMatchObject({ trialEnd: new Date(HELD_END * 1000).toISOString() });
+      // An event copy whose trial ends at the event: the guard still holds.
+      ({ admin, inserts } = makeTrialAdmin());
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 30, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(0);
+    });
+
+    it("fired the usual 3 days ahead with a live trial matching the event: reminded", async () => {
+      subscriptions.retrieve.mockResolvedValue(trialSub());
+      const { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 3 * 86_400, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(1);
+    });
   });
 
   it("the notification is the durable part: an insert failure throws (Stripe retries); a missing email setup or recipient is fine", async () => {

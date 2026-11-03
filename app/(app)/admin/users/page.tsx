@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { isUuid } from "@/lib/ids";
 import { planEndingAdminLabel, planEndingOf } from "@/lib/billing/plan-ending";
 import { cancellationStats } from "@/lib/admin/user-cancellation";
+import { compNeedsEndDate } from "@/lib/billing/comp-stripe";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -561,9 +562,14 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle
                 title="Comp a plan"
-                hint="The higher of the comp and the Stripe tier applies while unexpired. None clears the comp and its expiry."
+                hint="The higher of the comp and the Stripe tier applies while unexpired. None clears the comp and its expiry. On a live Stripe plan the comp needs an expiry: a trial is held until it ends, and an active plan gets the comp period's price on its Stripe balance (the unused part comes back if it is shortened or cleared)."
               />
-              <CompTierForm userId={user.id} compTier={compTier} compExpiresAt={user.comp_expires_at} />
+              <CompTierForm
+                userId={user.id}
+                compTier={compTier}
+                compExpiresAt={user.comp_expires_at}
+                requiresExpiry={compNeedsEndDate(user.subscription_status)}
+              />
             </section>
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle

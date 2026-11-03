@@ -30,6 +30,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { ownDeckReturnPath } from "@/lib/decks/return-to";
 import { PageContainer } from "@/components/layout/page-container";
 
 // File-system param name is `username` because the sibling
@@ -43,7 +44,9 @@ type EditCardPageProps = {
   // Admin frame preview (TODO 2.1) — ignored for everyone else. `step` is
   // the creator's own (read client-side); it is listed so the banner's
   // "Exit preview" link keeps it.
-  searchParams?: Promise<{ previewFrames?: string | string[]; step?: string }>;
+  // `returnTo`: opened from a deck page's Edit (TODO DK5.5) — a save goes
+  // back to that card on the deck (lib/decks/return-to.ts deckReturnPath).
+  searchParams?: Promise<{ previewFrames?: string | string[]; step?: string; returnTo?: string }>;
 };
 
 export async function generateMetadata({
@@ -121,7 +124,9 @@ export default async function EditCardPage({
   const previewCard = card.frame_preview === true;
 
   return (
-    <PageContainer className="py-10">
+    // The creator keeps the standard frame until its redesign (TODO WD7,
+    // owner decision D8; page-container-structure.test.ts lists it).
+    <PageContainer size="standard" className="py-10">
       <PageHeader
         eyebrow="Editing"
         title={card.title}
@@ -185,6 +190,9 @@ export default async function EditCardPage({
       <div className="mt-10">
         <CardCreatorForm
           mode="edit"
+          // Back to the deck it was opened from — one of the user's own decks
+          // only (TODO DK5.5).
+          returnTo={ownDeckReturnPath(search.returnTo, myDecks.map((deck) => deck.slug))}
           userId={user.id}
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}

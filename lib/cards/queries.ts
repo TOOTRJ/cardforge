@@ -29,9 +29,11 @@ import {
   trendingScore,
 } from "@/lib/cards/trending";
 import { narrowCard } from "@/lib/cards/narrow";
+import { isLegendaryCreature } from "@/lib/decks/first-card";
 import { lookupUsername } from "@/lib/profile/username";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { publicDeckCountsForCards } from "@/lib/decks/queries";
+import { typedForMatching } from "@/lib/validation/typed-forms";
 
 // Composed shape: card + owner profile + like count + viewer's like state.
 // Used by the gallery and any "card tile" listing.
@@ -546,6 +548,31 @@ export async function listGalleryCards(
 }
 
 /**
+ * "Cards to build around" on /decks (TODO DK8.4): public LEGENDARY CREATURES
+ * — the cards a Commander deck can lead with — not owned by an admin (0091's
+ * showcase rule), in Discover's weighted-random order for `seed` (migration
+ * 0157 `list_commander_cards`). /decks passes a fresh seed at each ISR
+ * regeneration, so the row is a new sample every time the page re-bakes.
+ * The SQL's test is `isLegendaryCreature` (lib/decks/first-card.ts), and the
+ * rows are held to it here too. Anonymous mode keeps the route static.
+ */
+export async function listCommanderCards(
+  options: { seed?: string; limit?: number; anonymous?: boolean } = {},
+): Promise<CardWithStats[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { seed = "", limit = 12, anonymous = false } = options;
+  try {
+    const supabase = anonymous ? createPublicClient() : await createClient();
+    const { data, error } = await supabase.rpc("list_commander_cards", { p_seed: seed, p_limit: limit });
+    if (error || !data || data.length === 0) return [];
+    const rows = (data as CardRow[]).filter(isLegendaryCreature);
+    return attachStats(rows, "recent", { anonymous });
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Resolves a profile's `pinned_card_ids` array into full card rows. We
  * filter out cards that:
  *   - no longer exist (the array isn't FK-bound, so this can happen)
@@ -614,6 +641,61 @@ export async function listPublicCardsByOwner(
     return attachStats(data, "recent");
   } catch {
     return [];
+  }
+}
+
+/** The profile page's card orders (list_profile_cards, migration 0159). */
+export type ProfileCardSort = "recent" | "newest" | "popular" | "name";
+
+export type ProfileCardFilters = {
+  search?: string;
+  colorIdentity?: ColorIdentity;
+  cardType?: CardType;
+};
+
+/**
+ * One page of a creator's PUBLIC cards for their profile, searched (title
+ * and nickname, the printed quotes and dashes folded both sides —
+ * typedForMatching here, the same table in SQL), filtered and ordered in
+ * the database (migration 0159's list_profile_cards), plus the result
+ * count for the pager. A database 0159 hasn't reached answers PGRST202:
+ * an unfiltered page then falls back to listPublicCardsByOwner (the
+ * profile's list before 0159), a filtered one to no results.
+ */
+export async function listProfileCards(
+  ownerId: string,
+  options: ProfileCardFilters & { sort?: ProfileCardSort; limit?: number; offset?: number } = {},
+): Promise<{ cards: CardWithStats[]; total: number }> {
+  if (!isSupabaseConfigured()) return { cards: [], total: 0 };
+  const { limit = 24, offset = 0, sort = "recent" } = options;
+  const search = options.search?.trim() ? typedForMatching(options.search.trim()) : null;
+  const filters = {
+    p_owner: ownerId,
+    p_search: search,
+    p_color: options.colorIdentity ?? null,
+    p_card_type: options.cardType ?? null,
+  };
+  try {
+    const supabase = await createClient();
+    const [{ data, error }, { data: total, error: countError }] = await Promise.all([
+      supabase.rpc("list_profile_cards", { ...filters, p_sort: sort, p_limit: limit, p_offset: offset }),
+      supabase.rpc("count_profile_cards", filters),
+    ]);
+    if (error || countError) {
+      const missing = error?.code === "PGRST202" || countError?.code === "PGRST202";
+      if (missing && !search && !filters.p_color && !filters.p_card_type) {
+        const cards = await listPublicCardsByOwner(ownerId, { limit, offset });
+        return { cards, total: cards.length + offset };
+      }
+      return { cards: [], total: 0 };
+    }
+    const rows = (data ?? []) as CardRow[];
+    return {
+      cards: rows.length > 0 ? await attachStats(rows, "recent") : [],
+      total: typeof total === "number" ? total : rows.length,
+    };
+  } catch {
+    return { cards: [], total: 0 };
   }
 }
 

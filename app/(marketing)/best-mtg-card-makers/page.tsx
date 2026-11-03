@@ -3,11 +3,14 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
+import { GUIDE_LINKS, GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { COMPARISON_FAQ } from "@/lib/content/faq";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
-import { PageContainer } from "@/components/layout/page-container";
+import { MEASURE_CLASS, PageContainer } from "@/components/layout/page-container";
+import { ReadingLayout } from "@/components/layout/reading-layout";
+import { cn } from "@/lib/utils";
+import { LandingRail } from "@/components/marketing/rail-cta";
 
 // ---------------------------------------------------------------------------
 // SEO landing page: /best-mtg-card-makers
@@ -108,8 +111,15 @@ export default function BestMtgCardMakersPage() {
   };
 
   return (
-    <PageContainer className="py-16">
-      <div className="max-w-4xl">
+    <PageContainer size="wide" className="py-16">
+      {/* The wide frame (TODO WD10): a 48rem column, each FAQ answer at the
+          reading measure (WD6), and the page's action + the other guides in
+          the rail beside it (phones keep the inline copies). */}
+      <ReadingLayout
+        railOnPhone="hidden"
+        railLabel="Start here"
+        rail={<LandingRail current="/best-mtg-card-makers" links={GUIDE_LINKS} />}
+      >
       <JsonLd data={faqJsonLd} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -225,7 +235,7 @@ export default function BestMtgCardMakersPage() {
         >
           What happened to CardConjurer, and what it means
         </h2>
-        <div className="flex flex-col gap-4 text-sm leading-7 text-muted">
+        <div className={cn("flex flex-col gap-4 text-base leading-7 text-muted", MEASURE_CLASS)}>
           <p>
             CardConjurer was, for years, one of the most popular custom-card
             renderers, prized for its high-fidelity frames. In November 2022
@@ -318,13 +328,13 @@ export default function BestMtgCardMakersPage() {
               <h3 className="font-display mb-2 text-lg font-semibold text-foreground">
                 {q}
               </h3>
-              <p className="text-sm leading-7 text-muted">{a}</p>
+              <p className={cn("text-base leading-7 text-muted", MEASURE_CLASS)}>{a}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <GuideCrossLinks current="/best-mtg-card-makers" />
+      <GuideCrossLinks current="/best-mtg-card-makers" className="lg:hidden" />
 
       {/* CTA footer */}
       <section
@@ -358,7 +368,7 @@ export default function BestMtgCardMakersPage() {
           </p>
         </div>
       </section>
-    </div>
+      </ReadingLayout>
     </PageContainer>
   );
 }

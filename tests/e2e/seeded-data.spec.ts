@@ -37,10 +37,14 @@ test.describe("seeded dev data renders", () => {
       page.getByRole("link", { name: /thornback behemoth/i }).first(),
     ).toBeVisible();
     // "Void Tithe" is seeded UNLISTED: reachable by link, never listed here —
-    // and not counted in the "N public" badge (dev_artist has 15 public cards:
-    // 14, plus Veyra's emblem since 6.23's seed).
+    // and not counted in the cards section's "N public cards" (dev_artist has
+    // 15 public cards: 14, plus Veyra's emblem since 6.23's seed), nor in the
+    // hero's "Cards" stat, which links to that section.
     await expect(page.getByRole("link", { name: /void tithe/i })).toHaveCount(0);
-    await expect(page.getByText(/^15 public$/)).toBeVisible();
+    await expect(page.getByText(/^15 public cards$/)).toBeVisible();
+    await expect(
+      page.getByRole("list", { name: "Stats" }).getByRole("link", { name: /^15\s*cards$/i }),
+    ).toBeVisible();
   });
 
   test("an unlisted card still opens by direct link", async ({ page }) => {

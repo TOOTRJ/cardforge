@@ -155,7 +155,7 @@ describe("0144 — other creators' public cards (DK2.9, D3)", () => {
     const page = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
     expect(page.match(/listPublicDecksContaining\(/g)).toHaveLength(1);
     expect(page).toContain("schema.isPartOf = inDecks.map(");
-    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} />");
+    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} />");
   });
 });
 

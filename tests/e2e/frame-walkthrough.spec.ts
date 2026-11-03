@@ -55,7 +55,9 @@ test.describe("admin frame walk-through", () => {
     await expect(saveButton).toBeEnabled();
     await saveButton.dispatchEvent("click");
     await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=all/);
-    await expect(page.getByTestId("frame-preview-banner")).toContainText(/frame preview/);
+    // The URL changes on the loading skeleton, before the editor has drawn —
+    // and under `next dev` a first visit compiles the route (seconds, cold).
+    await expect(page.getByTestId("frame-preview-banner")).toContainText(/frame preview/, { timeout: 20_000 });
     await expect(page.getByText("Private", { exact: true }).first()).toBeVisible();
 
     // My Cards badges it "Frame preview", and a bulk "Make public" of only

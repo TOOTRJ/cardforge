@@ -14,6 +14,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateCardIdeas } from "@/lib/ai/card-ideas";
+import { recordAiReceipt } from "@/lib/cards/ai-provenance-server";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { recentAiTitles } from "@/lib/ai/recent-designs";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
@@ -156,6 +157,10 @@ export async function POST(request: Request) {
         avoidTypes,
       }),
     );
+    // What the AI wrote, kept where only the server writes (TODO CP1,
+    // migration 0162): a card saved with an idea's text still as written
+    // may say so on its page. Best effort.
+    await recordAiReceipt(user.id, "idea", ideas);
     // Keep the batch (migration 0092) so a closed tab doesn't waste the
     // credit — the dialog offers "reopen your last ideas". Best-effort.
     try {

@@ -1,6 +1,8 @@
 import "server-only";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
+import { areDeckGuidesEnabled } from "@/lib/ai/deck-ai-pause";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
+import { formatHasBracket } from "@/lib/decks/deck-details";
 
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,6 +20,7 @@ import {
 } from "@/lib/cards/actions";
 import { getCardById } from "@/lib/cards/queries";
 import type { ForcedPrivateNotice } from "@/lib/moderation/profanity";
+import { isModerationLocked } from "@/lib/moderation/lock";
 import { createDeckAction } from "@/lib/decks/actions";
 import { listDeckCards } from "@/lib/decks/queries";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
@@ -45,6 +48,7 @@ import {
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { addCardAiFields, generatedCardParts, recordAiReceipt, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import {
   logAiCall,
   type AiActionLabel,
@@ -110,6 +114,7 @@ import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import {
   REMIX_EMBLEM_LEFT_OUT,
+  REMIX_MODERATION_LEFT_OUT,
   isEmblemRemixSource,
   ownCardRemixFrame,
   ownCardTextStandIn,
@@ -662,32 +667,33 @@ async function runGeneratedCardStep(
           toughness: card.toughness,
         }),
       });
+      const payload = {
+        title: card.title,
+        game_system_id: gameSystemId,
+        cost: card.cost ?? undefined,
+        color_identity: card.color_identity,
+        supertype: card.supertype ?? undefined,
+        card_type: card.card_type,
+        subtypes: card.subtypes,
+        // A token prints a black set symbol, never a rarity: a NEW token
+        // saves as common whatever the designer said (owner decision
+        // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
+        // hides the rarity chips, so a token saved rare here could never
+        // be set back in the creator.
+        rarity: card.card_type === "token" ? "common" : card.rarity,
+        rules_text: card.rules_text ?? undefined,
+        ...(station ?? {}),
+        flavor_text: card.flavor_text ?? undefined,
+        power: card.power ?? undefined,
+        toughness: card.toughness ?? undefined,
+        loyalty: card.loyalty ?? undefined,
+        defense: card.defense ?? undefined,
+        visibility: "private",
+        artist_credit: await aiArtistCredit(),
+        ...config.createExtras,
+      };
       const result = await createCardAction(
-        {
-          title: card.title,
-          game_system_id: gameSystemId,
-          cost: card.cost ?? undefined,
-          color_identity: card.color_identity,
-          supertype: card.supertype ?? undefined,
-          card_type: card.card_type,
-          subtypes: card.subtypes,
-          // A token prints a black set symbol, never a rarity: a NEW token
-          // saves as common whatever the designer said (owner decision
-          // 2026-09-29, TODO 3b.15) — the creator's rule. The token kind
-          // hides the rarity chips, so a token saved rare here could never
-          // be set back in the creator.
-          rarity: card.card_type === "token" ? "common" : card.rarity,
-          rules_text: card.rules_text ?? undefined,
-          ...(station ?? {}),
-          flavor_text: card.flavor_text ?? undefined,
-          power: card.power ?? undefined,
-          toughness: card.toughness ?? undefined,
-          loyalty: card.loyalty ?? undefined,
-          defense: card.defense ?? undefined,
-          visibility: "private",
-          artist_credit: await aiArtistCredit(),
-          ...config.createExtras,
-        },
+        payload,
         // A card designed for a deck (its createExtras' deck_id) joins it as
         // the AI's (deck_cards.source, migration 0144).
         { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
@@ -705,6 +711,14 @@ async function runGeneratedCardStep(
       }
       cardId = result.cardId;
       forcedPrivate = result.forcedPrivate;
+      // The card AI wrote whole (TODO CP1, migration 0162): every text part
+      // it has is the AI's — until the maker rewrites one. Its picture is
+      // marked by the database when the paint below attaches it. The plan
+      // is read from a job row its OWNER may insert (0059), so a part is
+      // marked only where the receipt the server kept when it designed the
+      // card (createCardGenerationJob / createDeckGenerationJob) holds the
+      // plan's text.
+      await addCardAiFields(cardId, userId, await verifiedAiClaims(userId, generatedCardParts(payload), card));
       await config.afterCreate?.(cardId);
     }
 
@@ -1049,6 +1063,10 @@ export async function createCardGenerationJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // What the AI designed, as the server has it (TODO CP1, migration 0162):
+  // the step marks the card it saves only where this receipt holds the
+  // plan's text — the job row is owner-insertable (0059).
+  await recordAiReceipt(user.id, "job", [card]);
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
@@ -1385,6 +1403,12 @@ async function insertFillJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // What the AI wrote, kept as the server has it (TODO CP1, migration
+  // 0162): a save that still holds this text may say AI wrote it. Only the
+  // generated fields — the pinned ones are the maker's. Kept HERE, from the
+  // plan the server just made — never at step time from the row's plan,
+  // which its owner may insert (0059).
+  await recordAiReceipt(userId, "fill", [plan.fields]);
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
@@ -1868,6 +1892,9 @@ async function runCardFillStep(
         fill.back_face = { ...fill.back_face, art_url: persisted.publicUrl };
       }
     }
+    // (The receipt of what the AI wrote was kept when the server planned
+    // the fill — insertFillJob — never from this row's plan, which its
+    // owner may insert: migration 0162.)
     return {
       ...step,
       status: "done",
@@ -1978,16 +2005,21 @@ export async function createDeckGenerationJob(
     existingContext = owned.context;
   }
 
+  // The deck's format decides whether a bracket applies at all (TODO
+  // DK5.14: Commander only) — a stored bracket on a deck that left Commander
+  // is never handed to the AI. A deck type is a key from the list or none.
+  const planFormat = (existingDeck?.format as DeckFormat) ?? input.format;
+  const deckType = deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null);
   let planResult;
   try {
     planResult = await generateDeckPlan({
       theme: input.theme,
       style: input.style,
-      format: (existingDeck?.format as DeckFormat) ?? input.format,
+      format: planFormat,
       size: input.size,
       existing: existingContext,
-      deckType: deckTypeByKey(input.deckType ?? existingDeck?.deck_type ?? null),
-      bracket: input.bracket ?? existingDeck?.bracket ?? null,
+      deckType,
+      bracket: formatHasBracket(planFormat) ? (input.bracket ?? existingDeck?.bracket ?? null) : null,
     });
   } catch (error) {
     const failed = planDesignFailure(error, "deck");
@@ -2004,8 +2036,9 @@ export async function createDeckGenerationJob(
         description: planResult.concept.deck_description,
         format: input.format,
         visibility: "public",
-        deck_type: input.deckType ?? null,
-        bracket: input.format === "commander" ? (input.bracket ?? null) : null,
+        // Only a key the list knows (createDeckSchema refuses any other).
+        deck_type: deckTypeByKey(input.deckType ?? null)?.key ?? null,
+        bracket: formatHasBracket(input.format) ? (input.bracket ?? null) : null,
       },
       { redirectAfterCreate: false },
     );
@@ -2058,6 +2091,10 @@ export async function createDeckGenerationJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // The cards the AI designed, as the server has them (TODO CP1, migration
+  // 0162): each step marks the card it saves only where this receipt holds
+  // the plan's text — the job row is owner-insertable (0059).
+  await recordAiReceipt(user.id, "job", planResult.cards);
   return {
     ok: true,
     job: jobRow as unknown as GenerationJobRow,
@@ -2147,14 +2184,18 @@ export async function createDeckRemixJob(
   // out before the batch cap — the estimate's own filter — and a printed
   // one is what the estimate priced 0. No step, no charge; the new deck
   // has no emblem.
-  const { remixable, ownEmblems } = remixableDeckItems(items);
+  // …and so are the user's own cards moderation hid (0156; owner
+  // 2026-10-30): no step, no charge.
+  const { remixable, ownEmblems, moderationLocked } = remixableDeckItems(items);
   const capped = remixable.slice(0, input.limit);
   const taken = capped.filter((item) => input.creditsByEntry?.[item.entry.id] !== 0);
   if (taken.length === 0) {
     return {
       ok: false,
       error:
-        ownEmblems > 0 || capped.length > 0
+        moderationLocked > 0
+          ? "Nothing to remix — emblems and cards hidden by moderation aren't remixed."
+          : ownEmblems > 0 || capped.length > 0
           ? "Nothing to remix — emblems aren't remixed."
           : "Nothing to remix — the deck has no resolved cards yet.",
     };
@@ -2405,8 +2446,15 @@ async function runDeckRemixStep(
   // An EMBLEM is not remixed (owner 2026-10-13). A new plan has no step for
   // one; an older plan's step is refused here — before the reserve, so no
   // ledger row is written, and before any AI call.
-  if (entry.card_id && isEmblemRemixSource(await getCardById(entry.card_id))) {
-    return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+  // …nor is a card moderation hid (0156), refused the same way.
+  if (entry.card_id) {
+    const source = await getCardById(entry.card_id);
+    if (isModerationLocked(source)) {
+      return { ...step, status: "failed", error: REMIX_MODERATION_LEFT_OUT, spend_ref: null };
+    }
+    if (isEmblemRemixSource(source)) {
+      return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+    }
   }
 
   // A failed remix step carries no card_id, so its retry reruns the whole
@@ -2878,6 +2926,15 @@ async function executeDeckRemixStep(
   if (!result.ok) {
     return { ...step, status: "failed", error: createFailureMessage(result) };
   }
+  // What the AI wrote of the remix (TODO CP1, migration 0162): the name it
+  // gave each face and its flavour — the rules stay the printing's (or, for
+  // an own card, are inherited by the action where they were the AI's). The
+  // pictures are marked by the database.
+  await addCardAiFields(result.cardId, userId, [
+    "title",
+    ...(identity.flavor_text?.trim() ? (["flavor_text"] as const) : []),
+    ...(named.back_face?.title?.trim() ? (["back.title"] as const) : []),
+  ]);
 
   if (job.deck_id) {
     await setDeckEntryDetails(
@@ -2940,6 +2997,10 @@ function retiredCoverStep(step: JobStep): JobStep {
  *  Never charged; a failure is retryable like any other step. */
 async function runGuideStep(job: GenerationJobRow, step: JobStep): Promise<JobStep> {
   if (!job.deck_id) return { ...step, status: "failed", error: "Job has no deck to describe." };
+  // Deck guides are hidden (owner 2026-10-30, lib/ai/deck-ai-pause.ts): a
+  // job already running writes none — no AI call, nothing stored. "done",
+  // not "failed": the step is free and could not be retried into a guide.
+  if (!areDeckGuidesEnabled()) return { ...step, status: "done", error: undefined };
   const result = await buildAndStoreDeckGuide(job.deck_id, "generation");
   if (!result.ok) return { ...step, status: "failed", error: result.error };
   return { ...step, status: "done", error: undefined };

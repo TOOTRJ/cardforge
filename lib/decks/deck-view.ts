@@ -6,7 +6,13 @@ import {
   type EffectiveEntryFields,
 } from "@/lib/decks/effective-entry";
 import { deckEntryStatus, deckEntryUnavailable } from "@/lib/decks/entry-status";
-import { isPrivateForViewer, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
+import {
+  GONE_CARD_NAME,
+  hiddenEntryName,
+  isGoneForViewer,
+  isPrivateForViewer,
+  PRIVATE_CARD_NAME,
+} from "@/lib/decks/private-card-name";
 import { COLOR_IDENTITY_LABELS, RARITY_LABELS } from "@/types/card";
 import {
   DECK_BOARD_LABELS,
@@ -125,7 +131,7 @@ export type EntryBadge = DeckEntryStatus | "unavailable";
 /** The status filter: every row, or the rows wearing one badge. */
 export type StatusFilter = "all" | EntryBadge;
 
-export const NO_LONGER_AVAILABLE = "No longer available";
+export const NO_LONGER_AVAILABLE = GONE_CARD_NAME;
 
 export const ENTRY_BADGE_ORDER: readonly EntryBadge[] = ["imported", "edited", "remix", "original", "not_found", "unavailable"];
 
@@ -169,6 +175,9 @@ export type DeckRow<I extends ViewItem = ViewItem> = {
    *  none (the entry has no printing, or its name was hidden). */
   privateName: string | null;
   isPrivate: boolean;
+  /** A visitor's DELETED card (0153): drawn as "No longer available", not
+   *  "Private card" (isPrivate is true too). */
+  isGone: boolean;
   status: DeckEntryStatus;
   badge: EntryBadge;
   fields: EffectiveEntryFields;
@@ -189,9 +198,10 @@ export function deckRowOf<I extends ViewItem>(item: I, viewerIsOwner: boolean): 
     id: entry.id,
     board: entry.board,
     quantity: entry.quantity,
-    name: isPrivate ? PRIVATE_CARD_NAME : (card?.title ?? entry.name),
+    name: isPrivate ? hiddenEntryName(entry, viewerIsOwner) : (card?.title ?? entry.name),
     privateName: isPrivate && entry.scryfall_id && entry.name !== PRIVATE_CARD_NAME ? entry.name : null,
     isPrivate,
+    isGone: isGoneForViewer(entry, viewerIsOwner),
     status,
     badge: deckEntryUnavailable(entry, card, viewerIsOwner) ? "unavailable" : status,
     fields,

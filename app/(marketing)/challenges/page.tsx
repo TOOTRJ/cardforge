@@ -40,7 +40,7 @@ export default async function ChallengesPage() {
   const past = challenges.filter((c) => !isActive(c));
 
   return (
-    <PageContainer className="py-16">
+    <PageContainer size="wide" className="py-16">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -148,7 +148,7 @@ export default async function ChallengesPage() {
           >
             Past challenges
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {past.map((challenge) => (
               <SurfaceCard key={challenge.id} className="flex flex-col gap-2 p-5">
                 <h3 className="font-display text-lg font-semibold text-foreground">
