@@ -566,8 +566,9 @@ review step read. It applies only to cards still holding the new value.
   **Answer (2026-11-02): stay in the drawer.**
 - **Q4.** Keep "Open full page ↗" in the drawer permanently, or only while
   the flag is on?
-  **Answer (2026-11-02): keep it permanently** (a cheap way out to the
-  full creator; the owner took the recommendations as a whole).
+  **Answer (2026-11-02): keep it permanently.** This question had no
+  recommendation; the build takes "keep" (a cheap way out to the full
+  creator) unless the owner says otherwise.
 - **Q5.** Bulk **frame / colour** changes are blocked by the 2026-09-16 lock.
   Keep them out (recommended), or allow a gated bulk frame change?
   **Answer (2026-11-02): keep them out.**
