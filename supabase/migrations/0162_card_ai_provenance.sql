@@ -30,7 +30,9 @@
 --      column a field the maker touched). A part is its columns
 --      (card_ai_field_paths, held to lib/cards/ai-provenance.ts
 --      AI_FIELD_PATHS by a unit test; the rules part is `rules_text` AND
---      `face_content`, the rows a walker / saga / station draws first);
+--      `face_content`, the rows a walker / saga / station draws first —
+--      rows the card already had, changed or removed: NULL → rows is the
+--      editor's dual write of an untouched card and drops nothing);
 --      "changed" reads JSON null, "" and [] as one empty value — but
 --      `printed_types`' NULL (the built line) and "" (emptied) as two;
 --    * the ART parts are re-derived on EVERY write, by every role, from the
@@ -229,6 +231,13 @@ begin
           and case
             when p.path[cardinality(p.path)] = 'printed_types'
               then nullif(v_new #> p.path, 'null'::jsonb) is distinct from nullif(v_old #> p.path, 'null'::jsonb)
+            -- Rows the card ALREADY had, changed or removed. NULL → rows is
+            -- the editor's dual write of an untouched walker / saga (the
+            -- rows its plain text already says; rules_text stays byte for
+            -- byte — a dual write that changes it drops the part there).
+            when p.path = array['face_content']
+              then public.card_ai_norm(v_old #> p.path) is not null
+                and public.card_ai_norm(v_new #> p.path) is distinct from public.card_ai_norm(v_old #> p.path)
             else public.card_ai_norm(v_new #> p.path) is distinct from public.card_ai_norm(v_old #> p.path)
           end
       )

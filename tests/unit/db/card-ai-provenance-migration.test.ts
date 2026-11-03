@@ -57,12 +57,20 @@ describe("0162 — the guard (cards_track_ai_fields)", () => {
 
   it('reads printed_types raw: NULL (the built line) and "" (emptied) print differently', () => {
     expect(body).toMatch(
-      /when p\.path\[cardinality\(p\.path\)\] = 'printed_types'\s+then nullif\(v_new #> p\.path, 'null'::jsonb\) is distinct from nullif\(v_old #> p\.path, 'null'::jsonb\)\s+else public\.card_ai_norm/,
+      /when p\.path\[cardinality\(p\.path\)\] = 'printed_types'\s+then nullif\(v_new #> p\.path, 'null'::jsonb\) is distinct from nullif\(v_old #> p\.path, 'null'::jsonb\)\s+when/,
     );
   });
 
   it("the rules part is the text AND the rows drawn before it (face_content)", () => {
     expect(fn("card_ai_field_paths")).toContain("('rules_text', array['face_content'])");
+  });
+
+  it("face_content counts only when the card already had rows: NULL → rows (an untouched edit's dual write) drops nothing", () => {
+    expect(body).toMatch(
+      /when p\.path = array\['face_content'\]\s+then public\.card_ai_norm\(v_old #> p\.path\) is not null\s+and public\.card_ai_norm\(v_new #> p\.path\) is distinct from public\.card_ai_norm\(v_old #> p\.path\)/,
+    );
+    // …and rules_text itself is still compared on its own row of the table.
+    expect(fn("card_ai_field_paths")).toContain("('rules_text', array['rules_text'])");
   });
 
   it("derives the art parts from the picture's address on every write", () => {

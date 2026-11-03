@@ -54,7 +54,10 @@ export const AI_FIELD_PATHS: Record<AiFieldKey, readonly string[]> = {
   cost: ["cost"],
   type_line: ["card_type", "supertype", "subtypes", "printed_types"],
   // The rows a walker / saga / station draws BEFORE the text (the renderers
-  // read `face_content` first): a change to them is a change to the rules.
+  // read `face_content` first): a change to rows the card ALREADY had is a
+  // change to the rules. NULL → rows is the editor's dual write of an
+  // untouched walker / saga and drops nothing (the trigger's rule; nothing
+  // in the app decides a drop from this table — it is the trigger's mirror).
   // (A second face has no rows of its own — backFaceSchema.)
   rules_text: ["rules_text", "face_content"],
   flavor_text: ["flavor_text"],

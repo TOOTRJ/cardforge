@@ -1394,7 +1394,9 @@ Rules and gotchas:
   writes the list (insert naming a part / update changing it →
   insufficient_privilege), an API role's edit that CHANGES a part's columns
   drops that part (never guessed from text; the rules part is `rules_text`
-  AND `face_content`; `printed_types`' NULL and "" are two values), and the
+  AND rows `face_content` already held — NULL → rows is an untouched edit's
+  dual write and drops nothing; `printed_types`' NULL and "" are two
+  values), and the
   ART parts are derived
   on every write from the picture's address — only `persistGeneratedArt`
   names a `card-art/<user>/ai-…` object (a remix copy keeps the prefix,
