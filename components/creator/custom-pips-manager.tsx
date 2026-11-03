@@ -15,6 +15,7 @@ import {
   type CustomPipSymbol,
   type PipOverrides,
 } from "@/lib/pips/override";
+import { announcePipsChanged } from "@/lib/creator/pips-changed";
 
 // ---------------------------------------------------------------------------
 // CustomPipsManager — the six core-symbol slots with upload/replace/remove.
@@ -22,7 +23,8 @@ import {
 //
 // Uploading swaps the ICON everywhere the owner's cost pips render (picker,
 // live preview, exports); removing reverts to the standard mana-font glyph.
-// Server truth flows back via router.refresh() → updated pipOverrides prop.
+// Server truth flows back via router.refresh() → updated pipOverrides prop
+// (and `announcePipsChanged` for a host that holds its own copy).
 // ---------------------------------------------------------------------------
 
 type CustomPipsManagerProps = {
@@ -98,6 +100,7 @@ function PipSlot({
       if (result.ok) {
         toast.success(`Custom ${label.toLowerCase()} pip saved.`);
         router.refresh();
+        announcePipsChanged();
       } else {
         setOptimistic(null);
         toast.error(result.error);
@@ -112,6 +115,7 @@ function PipSlot({
         setOptimistic(null);
         toast.success(`${label} pip reset to standard.`);
         router.refresh();
+        announcePipsChanged();
       } else {
         toast.error(result.error);
       }

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Component,
   lazy,
   Suspense,
   useCallback,
@@ -15,7 +16,7 @@ import {
 } from "react";
 import Link from "next/link";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, Loader2, X } from "lucide-react";
 import type { CreatorHost, CreatorLeaveCheck } from "@/components/creator/creator-host";
 import { DeckEntryStatusBadge } from "@/components/decks/deck-entry-status-badge";
 import type { ViewRow } from "@/components/decks/deck-row-ui";
@@ -28,6 +29,7 @@ import {
   type DeckEditShared,
 } from "@/lib/decks/inline-editor-shared";
 import { entryEditTarget } from "@/lib/decks/return-to";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -657,29 +659,88 @@ function DeckEditDrawer({
             style={{ "--creator-sticky-top": "1rem", "--creator-sticky-switch": "0rem" } as CSSProperties}
           >
             {target ? (
-              <Suspense fallback={<DeckEditDrawerLoading />}>
-                <DeckEditDrawerBody
-                  deckId={deck.id}
-                  target={target}
-                  bindLeave={bindLeave}
-                  focusHome={focusHome}
-                  onSettled={settleFocus}
-                  sharedCache={sharedCache}
-                  scrollRoot={scrollRoot}
-                  wide={wide}
-                  saveAndNext={saveAndNext}
-                  fullPageHref={fullPageHref}
-                  onRequestClose={onRequestClose}
-                  onCloseNow={onCloseNow}
-                  onRetarget={onRetarget}
-                />
-              </Suspense>
+              <DeckEditDrawerBoundary target={target} fullPageHref={fullPageHref} onClose={onCloseNow}>
+                <Suspense fallback={<DeckEditDrawerLoading />}>
+                  <DeckEditDrawerBody
+                    deckId={deck.id}
+                    target={target}
+                    bindLeave={bindLeave}
+                    focusHome={focusHome}
+                    onSettled={settleFocus}
+                    sharedCache={sharedCache}
+                    scrollRoot={scrollRoot}
+                    wide={wide}
+                    saveAndNext={saveAndNext}
+                    fullPageHref={fullPageHref}
+                    onRequestClose={onRequestClose}
+                    onCloseNow={onCloseNow}
+                    onRetarget={onRetarget}
+                  />
+                </Suspense>
+              </DeckEditDrawerBoundary>
             ) : null}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
+}
+
+/**
+ * Catches what the drawer's body throws while it draws — its lazy chunk
+ * failing to load above all, or the creator throwing — so the DECK PAGE
+ * stays (above the drawer there is only app/error.tsx, which replaces the
+ * whole page; the New deck dialog's boundary is the same idea). Another
+ * card of the walk tries again (never a remount per card: the body keeps
+ * its reads across the walk). The form is gone, so nothing is left to ask
+ * about: "Back to the deck" closes at once.
+ */
+export class DeckEditDrawerBoundary extends Component<
+  { target: string; fullPageHref: string; onClose: () => void; children: ReactNode },
+  { failed: string | null }
+> {
+  state: { failed: string | null } = { failed: null };
+
+  static getDerivedStateFromError(): { failed: string | null } {
+    return { failed: "" };
+  }
+
+  static getDerivedStateFromProps(
+    props: { target: string },
+    state: { failed: string | null },
+  ): { failed: string | null } | null {
+    // Stamp the failure with the card it happened on; a walk to another
+    // card clears it.
+    if (state.failed === "") return { failed: props.target };
+    if (state.failed !== null && state.failed !== props.target) return { failed: null };
+    return null;
+  }
+
+  componentDidCatch(error: unknown): void {
+    console.error("The deck's edit drawer failed to draw", error);
+  }
+
+  render() {
+    if (this.state.failed === null) return this.props.children;
+    return (
+      <div role="alert" data-deck-edit-failed="" className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
+        <AlertTriangle className="h-6 w-6 text-gold-strong" aria-hidden />
+        <p className="text-sm text-foreground">The editor couldn&rsquo;t open here.</p>
+        <p className="text-xs text-muted">Open the card on its own page, or go back to the deck.</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={this.props.onClose}>
+            Back to the deck
+          </Button>
+          <Button asChild size="sm">
+            <Link href={this.props.fullPageHref}>
+              Open full page
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 }
 
 /** While the chunk or the card is on its way. */

@@ -4048,6 +4048,12 @@ export function CardCreatorForm({
     options: {
       afterSave?: () => void;
       onFailure?: (message: string) => void;
+      /** The host's "Save & next" (TODO DK5.18): on an edit, `afterSave`
+       *  (the walk) runs only if nothing was typed while the save was in
+       *  flight — else the card stays, saved, its newer changes still
+       *  unsent and guarded. Never for the leave dialog, whose "Save"
+       *  continues the leave the maker asked for. */
+      afterSaveUnlessTyped?: boolean;
     } = {},
   ) => {
     setServerError(null);
@@ -4538,7 +4544,14 @@ export function CardCreatorForm({
         // page would go to the deck, the card or its editor. No share
         // prompt: the maker stays at work in the deck.
         if (host) {
-          host.onSaved({ cardId: result.cardId, slug: result.slug, mode, linked });
+          host.onSaved({
+            cardId: result.cardId,
+            slug: result.slug,
+            mode,
+            linked,
+            // The deck the box put it in (none when that deck refused it).
+            deckId: result.deckEntryError ? null : (payload.deck_id ?? null),
+          });
           options.afterSave?.();
           return;
         }
@@ -4662,8 +4675,12 @@ export function CardCreatorForm({
       // made during the save are still unsent.
       // Hosted (TODO DK5.18) it always stays: the host keeps the card open.
       const returning = !host && Boolean(returnTo) && !typedDuringSave;
+      // "Save & next" with keystrokes the save didn't send: no walk.
+      const heldByTyping = Boolean(options.afterSaveUnlessTyped) && typedDuringSave;
+      const afterSave = heldByTyping ? undefined : options.afterSave;
+      if (heldByTyping) toast.message("Saved. You kept typing — save again to move on to the next card.");
       const staysInEditor =
-        !options.afterSave &&
+        !afterSave &&
         !returning &&
         (Boolean(host) || !(intent === "save" && editSavedVisibility === "public"));
       if (!(typedDuringSave && staysInEditor)) await guard.release();
@@ -4671,11 +4688,11 @@ export function CardCreatorForm({
         // The host reads the saved row back (the keyed reset's fresh truth)
         // and the deck's rows with it.
         host.onSaved({ cardId: card.id, slug: result.slug, mode, linked: false });
-        options.afterSave?.();
+        afterSave?.();
         return;
       }
-      if (options.afterSave) {
-        options.afterSave();
+      if (afterSave) {
+        afterSave();
         return;
       }
       if (returning && returnTo) {
@@ -5800,7 +5817,7 @@ export function CardCreatorForm({
   // The same save, then `afterSave` (the host's "Save & next").
   const submitThen = (afterSave: () => void) => {
     spendRemixRenameClear(getValues("title") ?? "");
-    void handleSubmit((values) => runSubmit(values, "save", { afterSave }), onInvalidSave)();
+    void handleSubmit((values) => runSubmit(values, "save", { afterSave, afterSaveUnlessTyped: true }), onInvalidSave)();
   };
 
   const actionBar = (

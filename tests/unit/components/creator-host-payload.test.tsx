@@ -229,7 +229,7 @@ describe("hosted saves send what the page sends (DK5.18)", () => {
       return save("createCardAction");
     });
     expect(hosted).toEqual(page);
-    await waitFor(() => expect(host.onSaved).toHaveBeenCalledWith({ cardId: CARD_ID, slug: "saved", mode: "create", linked: true }));
+    await waitFor(() => expect(host.onSaved).toHaveBeenCalledWith({ cardId: CARD_ID, slug: "saved", mode: "create", linked: true, deckId: null }));
     expect(actions.linkDeckCardAction).toHaveBeenCalledWith(ENTRY_ID, CARD_ID, { surface: "creator" });
     expect(router.replace).not.toHaveBeenCalled();
   });
@@ -268,3 +268,51 @@ describe("hosted saves send what the page sends (DK5.18)", () => {
     expect(payload.deck_id ?? null).toBeNull();
   });
 });
+
+describe("Save & next on an edit never drops what was typed during the save (DK5.18 re-check)", () => {
+  function hostWithNext() {
+    const host = makeHost();
+    const onNext = vi.fn();
+    host.saveAndNext = { label: "Save & next", onNext };
+    return { host, onNext };
+  }
+  const saveAndNext = () => screen.getByRole("button", { name: /Save & next/ }) as HTMLButtonElement;
+
+  it("keystrokes made while the save was in flight: saved, no walk — the newer text stays, unsent and guarded", async () => {
+    let land!: () => void;
+    actions.updateCardAction.mockImplementation(
+      () => new Promise((resolve) => (land = () => resolve({ ok: true, cardId: CARD_ID, slug: "saved" }))),
+    );
+    const { host, onNext } = hostWithNext();
+    renderForm({ mode: "edit", card: storedCard(), host });
+    await type("flavor_text", "The river keeps what it is paid.");
+    await waitFor(() => expect(saveAndNext().disabled).toBe(false));
+    await click(saveAndNext());
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    await type("flavor_text", "The river keeps what it is paid, and more.");
+    await act(async () => land());
+    await waitFor(() => expect(host.onSaved).toHaveBeenCalledTimes(1));
+    expect(onNext).not.toHaveBeenCalled();
+    expect(toast.message).toHaveBeenCalledWith(expect.stringMatching(/save again to move on/i));
+    expect(document.querySelector<HTMLTextAreaElement>("[name='flavor_text']")?.value).toBe("The river keeps what it is paid, and more.");
+    // Still a change to save: Save is on, and the guard still asks.
+    await waitFor(() => expect(saveButton().disabled).toBe(false));
+    const ask = (host.bindLeave as ReturnType<typeof vi.fn>).mock.calls.map(([fn]) => fn).filter(Boolean).at(-1) as
+      | ((proceed: () => void) => boolean)
+      | undefined;
+    const proceed = vi.fn();
+    expect(ask?.(proceed)).toBe(true);
+    expect(proceed).not.toHaveBeenCalled();
+  });
+
+  it("nothing typed during the save: it walks on", async () => {
+    const { host, onNext } = hostWithNext();
+    renderForm({ mode: "edit", card: storedCard(), host });
+    await type("flavor_text", "The river keeps what it is paid.");
+    await waitFor(() => expect(saveAndNext().disabled).toBe(false));
+    await click(saveAndNext());
+    await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1));
+    expect(host.onSaved).toHaveBeenCalledTimes(1);
+  });
+});
+

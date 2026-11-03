@@ -24,6 +24,9 @@ export type CreatorHostSaved = {
   mode: "create" | "edit" | "remix";
   /** A deck entry's card (deckRemix) was linked into the entry. */
   linked: boolean;
+  /** A new card / remix: the deck the creator's deck box added it to
+   *  (null: none, or that deck refused it). Absent on an edit. */
+  deckId?: string | null;
 };
 
 /** The hosted creator's leave check (see `CreatorHost.bindLeave`). */

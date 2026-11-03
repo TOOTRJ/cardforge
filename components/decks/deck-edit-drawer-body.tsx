@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import type { CreatorHost, CreatorHostSaved } from "@/components/creator/creator-host";
 import { DeckEditDrawerLoading, type DeckEditSharedCache } from "@/components/decks/deck-edit-drawer";
 import { Button } from "@/components/ui/button";
+import { onPipsChanged } from "@/lib/creator/pips-changed";
 import { revalidateDeckAfterInlineSaveAction } from "@/lib/decks/inline-editor-actions";
 import {
   DECK_EDIT_NEW,
@@ -105,6 +107,13 @@ export default function DeckEditDrawerBody({
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<{ target: string; message: string } | null>(null);
   const [after, setAfter] = useState<AfterCreate | null>(null);
+  // A failed read belongs to that ONE open of the card: walked away and
+  // back, the card is read again — loading, then the card or a new error.
+  const [errorTarget, setErrorTarget] = useState(target);
+  if (errorTarget !== target) {
+    setErrorTarget(target);
+    if (error) setError(null);
+  }
   const targetRef = useRef(target);
   useEffect(() => {
     targetRef.current = target;
@@ -123,6 +132,7 @@ export default function DeckEditDrawerBody({
         if (!shared) throw new Error("The editor couldn't open. Try again, or open the full page.");
         if (body.shared) sharedCache.set(body.shared);
         setLoaded({ target, value: body.target, shared });
+        setError(null);
         // Walked back to an entry left mid-settle: it opens as it is now.
         setAfter((prev) => (prev && prev.target === target ? null : prev));
       })
@@ -133,6 +143,25 @@ export default function DeckEditDrawerBody({
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a target already read (a new card's entry) is not read again
   }, [deckId, target]);
+
+  // A custom pip saved or removed in the creator: the page-wide props are
+  // read again (the pip overrides are among them), the form kept.
+  useEffect(
+    () =>
+      onPipsChanged(() => {
+        sharedCache.set(null);
+        const at = targetRef.current;
+        readEditContext(deckId, at, { shared: true })
+          .then((body) => {
+            if (!body.shared) return;
+            sharedCache.set(body.shared);
+            const fresh = body.shared;
+            setLoaded((prev) => (prev && prev.target === at ? { ...prev, shared: fresh } : prev));
+          })
+          .catch(() => undefined);
+      }),
+    [deckId, sharedCache],
+  );
 
   const shown = loaded && loaded.target === target ? loaded : null;
   const afterShown = after && after.target === target ? after : null;
@@ -145,9 +174,11 @@ export default function DeckEditDrawerBody({
   }, [shownValue, onSettled]);
 
   // The latest callbacks, for the host the form keeps.
-  const live = useRef({ onRequestClose, onCloseNow, onRetarget, shown });
+  const router = useRouter();
+  const push = router.push;
+  const live = useRef({ onRequestClose, onCloseNow, onRetarget, shown, push });
   useEffect(() => {
-    live.current = { onRequestClose, onCloseNow, onRetarget, shown };
+    live.current = { onRequestClose, onCloseNow, onRetarget, shown, push };
   });
 
   const host = useMemo<CreatorHost>(
@@ -190,8 +221,18 @@ export default function DeckEditDrawerBody({
             const shared = body.shared ?? current.shared;
             if (madeNew) {
               if (!body.target.entryId) {
-                // Saved with the deck box unticked: the card isn't this deck's.
-                toast.message("Saved. The card isn't in this deck — find it in My Cards.");
+                // Saved into ANOTHER deck the box picked, or none: the card
+                // isn't this deck's. Say where it went.
+                const into = saved.deckId ? shared.myDecks.find((deck) => deck.id === saved.deckId) : undefined;
+                if (into) {
+                  toast.success(`Saved into “${into.title}”.`, {
+                    action: into.slug ? { label: "Open deck", onClick: () => live.current.push(`/deck/${into.slug}`) } : undefined,
+                  });
+                } else {
+                  toast.message("Saved — it isn't in a deck. Find it in My Cards.", {
+                    action: { label: "My Cards", onClick: () => live.current.push("/dashboard/cards") },
+                  });
+                }
                 setAfter(null);
                 live.current.onCloseNow();
                 return;

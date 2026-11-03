@@ -56,10 +56,13 @@ const body = vi.hoisted(() => ({
   props: null as BodyProps | null,
   dirty: false,
   pending: null as null | (() => void),
+  /** The target whose body throws while it draws (a chunk that won't load). */
+  throwsOn: null as string | null,
 }));
 vi.mock("@/components/decks/deck-edit-drawer-body", () => ({
   default: function StubBody(props: BodyProps) {
     body.props = props;
+    if (body.throwsOn === props.target) throw new Error("chunk failed to load");
     const { bindLeave } = props;
     useEffect(() => {
       bindLeave((proceed) => {
@@ -155,6 +158,7 @@ beforeEach(() => {
   body.props = null;
   body.dirty = false;
   body.pending = null;
+  body.throwsOn = null;
   router.push.mockReset();
   router.replace.mockReset();
   router.refresh.mockReset();
@@ -451,5 +455,41 @@ describe("the drawer's history entry, focus and the walk's ends (DK5.18 review)"
     deckPage({ canManage: false, inlineEditor: true });
     const asked = qsa.mock.calls.filter(([selector]) => String(selector).includes("data-editing"));
     expect(asked).toEqual([]);
+  });
+});
+
+describe("a body that fails to draw (DK5.18 re-check)", () => {
+  it("keeps the deck page: the drawer says so, with Open full page and a way back — another card tries again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    body.throwsOn = id(1);
+    deckPage({ inlineEditor: true });
+    await act(async () => {
+      fireEvent.click(within(await openMenu("Lightning Bolt")).getByRole("menuitem", { name: "Customize" }));
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Lightning Bolt" });
+    const alert = within(dialog).getByRole("alert");
+    expect(alert.textContent).toContain("The editor couldn’t open here.");
+    expect(within(alert).getByRole("link", { name: /Open full page/ }).getAttribute("href")).toBe(
+      `/create?deckCard=${id(1)}&returnTo=${encodeURIComponent(`/deck/ness#entry-${id(1)}`)}`,
+    );
+    // The deck page is still there behind it.
+    expect(row(2)).not.toBeNull();
+    // The next card of the walk draws.
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "Next card: Sol Ring" }));
+    });
+    await screen.findByRole("dialog", { name: "Sol Ring" });
+    expect(screen.getByTestId("drawer-body").textContent).toBe(id(2));
+    expect(screen.queryByRole("alert")).toBeNull();
+    // Back on the broken one, then "Back to the deck" closes at once.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Previous card: Lightning Bolt" }));
+    });
+    const again = await screen.findByRole("dialog", { name: "Lightning Bolt" });
+    await act(async () => {
+      fireEvent.click(within(within(again).getByRole("alert")).getByRole("button", { name: "Back to the deck" }));
+    });
+    await waitFor(() => expect(drawer()).toBeNull());
+    expect(search()).toBeNull();
   });
 });
