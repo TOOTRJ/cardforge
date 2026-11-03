@@ -2,9 +2,9 @@
 
 import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 
-// Client entry point for deck-cover and card set-icon uploads. The upload
-// itself runs server-side (lib/media/upload-cover-server.ts) so every image
-// passes the moderation scan; this wrapper only gives instant feedback on the
+// Client entry point for deck-cover, card set-icon and article-image
+// uploads. The upload itself runs server-side (lib/media/upload-cover-
+// server.ts) so every image passes the moderation scan; this wrapper only gives instant feedback on the
 // obvious rejections before the bytes leave the browser.
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -16,7 +16,7 @@ const ALLOWED_MIME_TYPES = new Set([
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB — matches the set-covers bucket cap.
 
 export type UploadCoverResult =
-  | { ok: true; publicUrl: string; path: string }
+  | { ok: true; publicUrl: string; path: string; width: number | null; height: number | null }
   | { ok: false; error: string };
 
 /**
@@ -24,12 +24,13 @@ export type UploadCoverResult =
  * user's folder. `_userId` is kept for call-site compatibility; the server
  * derives the owner from the session, never from the argument.
  * `purpose: "deck-cover"` stores it as the 16:9 cover standard (1600×900
- * WebP, lib/decks/cover-normalize.ts); a set icon is stored as uploaded.
+ * WebP, lib/decks/cover-normalize.ts); `"article-image"` as WebP no larger
+ * than ARTICLE_IMAGE_MAX_PX (the composer); a set icon is stored as uploaded.
  */
 export async function uploadCoverImage(
   _userId: string,
   file: File,
-  options: { purpose?: "deck-cover" } = {},
+  options: { purpose?: "deck-cover" | "article-image" } = {},
 ): Promise<UploadCoverResult> {
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     return { ok: false, error: "Only PNG, JPEG, WebP, and GIF images are allowed." };

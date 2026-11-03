@@ -1,4 +1,5 @@
-import { listArticles, listCategoryShelves, type ArticleMeta } from "@/lib/content/articles";
+import { shelvesOf, type ArticleMeta } from "@/lib/content/articles";
+import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { categoryPath } from "@/lib/content/article-categories";
 import { HELP_SECTIONS, helpSectionPath } from "@/lib/content/help";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -8,10 +9,12 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 // from the same sources as the pages so it can't drift (the hand-written
 // public/llms.txt it replaces still advertised the removed sets feature and
 // the old /preview URL). Google says it ignores the file; the cost is one
-// static route, and engines that do read it get an accurate index.
+// static route, and engines that do read it get an accurate index. The
+// guides are the MDX files AND the released composer articles (ISR: a publish
+// revalidates this route; it is read again within 5 minutes regardless).
 // ---------------------------------------------------------------------------
 
-export const dynamic = "force-static";
+export const revalidate = 300;
 
 const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/mtg-card-maker", "MTG Card Maker", "What the card creator does, how to make a custom card, FAQ with direct answers."],
@@ -31,16 +34,18 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
   ["/frames", "Frames", "Every card frame the creator offers — the 1993, 1997, 2003 and 2015 borders, variations such as borderless and snow, card layouts and showcases — with the colors each is verified in and an example card."],
+  ["/roadmap", "Roadmap", "What PipGlyph is building now and next, and what recently shipped — no dates, each item marked exploring, building or shipped."],
   ["/frames/requested", "Requested frames", "The card frames people asked for, most requested first, and whether each is requested, being checked or built."],
   ["/press", "Press kit", "Logos, brand marks and boilerplate."],
   ["/about", "About", "What PipGlyph is and the principles behind it."],
 ];
 
-export function GET() {
+export async function GET() {
   const base = getSiteBaseUrl();
+  const articles = await listPublishedArticles();
   const guideLine = (article: ArticleMeta) =>
     `- [${article.title}](${base}/articles/${article.slug}): ${article.description}`;
-  const uncategorized = listArticles().filter((article) => !article.category);
+  const uncategorized = articles.filter((article) => !article.category);
   const lines: string[] = [
     "# PipGlyph",
     "",
@@ -61,7 +66,7 @@ export function GET() {
     "## Guides",
     "",
     // One list per /learn category, in menu order (a guide has exactly one).
-    ...listCategoryShelves()
+    ...shelvesOf(articles)
       .filter((shelf) => shelf.articles.length > 0)
       .flatMap(({ category, articles }) => [
         `### [${category.label}](${base}${categoryPath(category.slug)})`,

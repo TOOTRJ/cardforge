@@ -7,22 +7,21 @@ import { cn } from "@/lib/utils";
 // tests/unit/components/page-container-structure.test.ts scans for one). A
 // size per what the page DOES:
 //
-//   standard  1280 px — reading-first and marketing pages: home, pricing,
-//             challenges, news, about, help, legal, the SEO landings, sign-in
-//             and onboarding, the creator (owner decision D8: it keeps its
-//             width until TODO 6.29).
-//   wide      1920 px — the browse grids (the gallery, its browse and hubs,
-//             community decks and their format hubs, profiles), the deck
-//             page and the whole dashboard; and the site header and footer
-//             ALWAYS (owner decision D7: the logo never moves between a
-//             standard and a wide page).
+//   wide      1920 px — THE DEFAULT, and every page of the site since TODO
+//             WD10 (owner 2026-10-30): the header, footer and every page
+//             root share one frame, so the first word of a page sits under
+//             the logo at every width.
+//   standard  1280 px — the creator alone (/create, the card editor, the
+//             guest creator) until its redesign (WD7, owner decision D8);
+//             the structure test lists where it may appear.
 //   full      no limit — a workspace that wants the whole window.
 //
 // Every size has the same side padding (16 / 24 / 32 px), so in a window up
-// to 1280 px wide the three draw the same frame. The extra width of a wide page goes to MORE
-// columns, never wider tiles (components/cards/card-grid.tsx), and running
-// text never goes wide: a paragraph keeps its own measure (`max-w-2xl`, or
-// <Measure> below for long reading).
+// to 1280 px wide the three draw the same frame. The extra width of a wide
+// page goes to MORE columns (components/cards/card-grid.tsx) or to a RAIL
+// beside the text (components/layout/reading-layout.tsx), never to wider
+// tiles or longer lines: running text keeps its measure (<Measure> below,
+// READING_TEXT_CLASS, a ReadingLayout column).
 // ---------------------------------------------------------------------------
 
 /** Each size's cap. A bar that lines its content up with the page (My
@@ -39,7 +38,7 @@ export type PageContainerSize = keyof typeof PAGE_CONTAINER_MAX_WIDTH;
 const FRAME = "mx-auto w-full px-4 sm:px-6 lg:px-8";
 
 /** The frame's classes, for a caller that can't render the component. */
-export function pageContainerClass(size: PageContainerSize = "standard"): string {
+export function pageContainerClass(size: PageContainerSize = "wide"): string {
   return `${FRAME} ${PAGE_CONTAINER_MAX_WIDTH[size]}`;
 }
 
@@ -52,7 +51,7 @@ export type PageContainerProps = HTMLAttributes<HTMLElement> & {
   as?: FrameElement;
 };
 
-export function PageContainer({ size = "standard", as: Tag = "div", className, ...rest }: PageContainerProps) {
+export function PageContainer({ size = "wide", as: Tag = "div", className, ...rest }: PageContainerProps) {
   return <Tag className={cn(pageContainerClass(size), className)} {...rest} />;
 }
 

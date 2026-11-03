@@ -44,8 +44,8 @@ export default async function SignupPage({
           className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-foreground"
         >
           Supabase isn&apos;t configured yet. Add{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
+          <code className="break-all font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+          <code className="break-all font-mono text-xs">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>{" "}
           to <code className="font-mono text-xs">.env.local</code> to enable
           signup.
         </div>

@@ -20,7 +20,7 @@ import { PageContainer } from "@/components/layout/page-container";
 
 export function PricingContent({ initialViewer }: { initialViewer?: BillingViewer }) {
   return (
-    <PageContainer className="py-16 lg:py-24">
+    <PageContainer size="wide" className="py-16 lg:py-24">
       <Suspense fallback={null}>
         <BillingReturnToast />
       </Suspense>
@@ -50,7 +50,12 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
 
       {/* Plans (with monthly/annual toggle); viewer state hydrates
           client-side so the page stays static. */}
-      <PricingPlans initialViewer={initialViewer} />
+      {/* The plans keep their 1152 px row in the wide frame (TODO WD10):
+          three plan cards side by side read as a comparison only while each
+          stays near 360 px. */}
+      <div className="mx-auto max-w-6xl">
+        <PricingPlans initialViewer={initialViewer} />
+      </div>
 
       {/* Credit packs */}
       <div className="mx-auto mt-20 max-w-3xl">

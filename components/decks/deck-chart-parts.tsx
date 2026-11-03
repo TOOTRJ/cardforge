@@ -235,10 +235,26 @@ export function ColorBalanceTable({ rows }: { rows: ColorBalanceRow[] }) {
 
 /** One headline number (the stat tile): a label, the value in the UI face
  *  with proportional figures, a line of context. */
-export function StatTile({ label, value, detail, className }: { label: string; value: ReactNode; detail: ReactNode; className?: string }) {
+export function StatTile({
+  label,
+  value,
+  detail,
+  help,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  detail: ReactNode;
+  /** An info box beside the label (TODO DK11). */
+  help?: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5 rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5", className)}>
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">{label}</span>
+      <span className="flex items-center gap-1">
+        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">{label}</span>
+        {help}
+      </span>
       <span className="text-3xl font-semibold tracking-tight text-foreground">{value}</span>
       <span className="text-xs leading-5 text-muted">{detail}</span>
     </div>

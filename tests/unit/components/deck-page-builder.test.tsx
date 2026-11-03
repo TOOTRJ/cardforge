@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,9 @@ import { computeDeckCharts } from "@/lib/decks/deck-charts";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
 import { DECK_VIEW_COOKIE, deckRowsOf, deckStatusCountsOf, ENTRY_BADGE_COUNT_LABELS, statusCountRows } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 // Our storage host: a bake's pointers are drawn only from it.
 beforeEach(() => {
@@ -281,6 +285,7 @@ describe("the sticky summary bar", () => {
     total: 99,
     byBoard: { main: 98, side: 0, maybe: 3, commander: 1, companion: 0 },
     averageManaValue: 3.31,
+    totalManaValue: 208,
     lands: 36,
   };
 
@@ -291,7 +296,7 @@ describe("the sticky summary bar", () => {
         ownerUsername="kesh"
         canManage
         initialPrefs={{ view: "list", group: "type", sort: "mana" }}
-        summary={{ format: "commander", analytics, formatIssues: 1 }}
+        summary={{ format: "commander", analytics, formatIssues: [{ code: "deck_size", message: "Commander decks are exactly 100 cards including the commander — this one has 99." }] }}
       />,
     );
     const bar = screen.getByRole("region", { name: "Deck summary" });
@@ -301,12 +306,16 @@ describe("the sticky summary bar", () => {
     expect(bar.textContent).toContain("Zoey");
     // The composition is the rows' own count (the chips' and the breakdown's).
     expect(bar.textContent).toContain("Imported 2 · Edited 0 · Remix 0 · Original 0");
-    expect(within(bar).getByRole("link", { name: /1 format issue/ }).getAttribute("href")).toBe("#format-check");
+    // The format check's count opens its list (TODO DK11 (d)).
+    expect(within(bar).getByRole("button", { name: "1 format issue" }).getAttribute("aria-expanded")).toBe("false");
+    // The total mana value, with its info box (TODO DK11 (b)).
+    expect(bar.textContent).toMatch(/Total mana value\s*208/);
+    expect(within(bar).getByRole("button", { name: "About total mana value" })).toBeTruthy();
     // The first unchanged import in the order the list shows (Zoey, the commander group).
     const next = within(bar).getByRole("link", { name: /^Edit next/ });
     expect(next.getAttribute("href")).toMatch(/^\/create\?deckCard=00000000-/);
     expect(next.getAttribute("aria-label")).toBe("Edit next: customize Zoey (2 cards not changed yet)");
-    // Nothing in it holds the focus: links and text only.
+    // Nothing in it traps the focus: links, text and info buttons only.
     expect(bar.querySelectorAll("[tabindex]")).toHaveLength(0);
     owner.unmount();
 
@@ -342,7 +351,7 @@ describe("the sticky summary bar", () => {
           ownerUsername="kesh"
           canManage
           initialPrefs={{ view: "list", group: "type", sort: "mana" }}
-          summary={{ format: "casual", analytics: computeDeckAnalytics(items), formatIssues: 0 }}
+          summary={{ format: "casual", analytics: computeDeckAnalytics(items), formatIssues: [] }}
         />
         {/* The page's breakdown, fed the way the page feeds it. */}
         <DeckAnalyticsPanel
@@ -378,7 +387,7 @@ describe("the sticky summary bar", () => {
     render(
       <DeckSummaryBar
         summary={deckSummaryOf("commander", { ...analytics, byBoard: { ...analytics.byBoard, commander: 0 } }, [], NO_CARDS)}
-        formatIssues={0}
+        formatIssues={[]}
         editNext={null}
         unchanged={0}
         canManage

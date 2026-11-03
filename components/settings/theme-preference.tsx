@@ -81,7 +81,7 @@ export function ThemePreference() {
             aria-checked={active}
             onClick={() => select(value)}
             className={cn(
-              "inline-flex flex-1 items-center justify-center gap-1.5 rounded px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+              "inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1.5 py-2 text-sm font-medium min-[360px]:gap-1.5 min-[360px]:px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
               active
                 ? "bg-elevated text-foreground"
                 : "text-muted hover:text-foreground",

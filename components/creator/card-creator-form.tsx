@@ -1,5 +1,6 @@
 "use client";
 
+import { aiFieldClaims, fillWrittenParts, recordAiOrigins, type AiFieldOrigins } from "@/lib/cards/ai-provenance";
 import {
   memo,
   useCallback,
@@ -250,6 +251,7 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
+import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
@@ -402,6 +404,7 @@ import {
 } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import { creatorLanguageFields, NO_STRONG_LANGUAGE, strongLanguageChoices } from "@/lib/creator/strong-language";
+import { isModerationLocked, moderationLockedSavedMessage } from "@/lib/moderation/lock";
 import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
 import {
   isFramePreviewSave,
@@ -451,6 +454,10 @@ type CardCreatorFormProps = {
    *  from the entry's Scryfall card on mount, and on save the new card links
    *  back as the entry's proxy before returning to the deck. */
   deckRemix?: DeckRemixContext | null;
+  /** Where a save returns to (TODO DK5.5): the deck page at the card being
+   *  edited, already whitelisted by the page (lib/decks/return-to.ts
+   *  deckReturnPath). Null: where a save always goes. */
+  returnTo?: string | null;
   /** Whether ANTHROPIC_API_KEY is set on the server — gates the AI panel. */
   aiConfigured: boolean;
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
@@ -774,6 +781,7 @@ export function CardCreatorForm({
   aiDecks = null,
   canDesignForDeck = false,
   deckRemix = null,
+  returnTo = null,
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
@@ -1174,6 +1182,14 @@ export function CardCreatorForm({
   // A remix's one nickname clear (owner N3, "Clear once"): spent by the
   // first rename — by hand (clearRemixNicknameOnRename), an idea or a fill.
   const remixNicknameClearedRef = useRef(false);
+  // What AI wrote into this form, part by part (TODO CP1,
+  // lib/cards/ai-provenance.ts): an AI fill or idea records the parts it
+  // wrote; a save CLAIMS those whose value is still exactly the AI's, and
+  // the server keeps a claim only where its receipt holds the same text. A
+  // part the maker rewrote is simply no longer claimed — no reset needed.
+  // (A holder object, not a ref: the save reads it while its handler is
+  // built, which the compiler's ref rule forbids.)
+  const [aiOrigins] = useState<{ parts: AiFieldOrigins }>(() => ({ parts: new Map() }));
   // The hand rename's clear, ONE rule for the two moments it is read: the
   // maker leaving the title field, and a save that never left it (Enter in
   // the title submitted with no blur until TODO 3b.21 — kept for any submit
@@ -1218,6 +1234,12 @@ export function CardCreatorForm({
   const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const partColorFollow = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
   const markPartColorTouched = partColorFollow.markTouched;
+  // A new card's tags follow its rules text and subtypes (every face's)
+  // until the Tags field changes under anything else
+  // (lib/creator/auto-tags-follow.ts). Never a deck-card proxy
+  // (/create?deckCard=): it starts from the printing it copies, and its
+  // "unchanged" baseline (the reset after the import) must not move.
+  const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -1435,6 +1457,9 @@ export function CardCreatorForm({
   // Read only where it is shown (the Publish panel), not on every keystroke.
   const languageChoices =
     stepKey === "publish" ? strongLanguageChoices(watched, languageContextFor(watched)) : NO_STRONG_LANGUAGE;
+  // The moderation lock (migration 0156, lib/moderation/lock.ts): an edit of
+  // a card moderation hid saves private, and the Publish step says why.
+  const moderationLocked = isEdit && isModerationLocked(card);
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -2831,6 +2856,14 @@ export function CardCreatorForm({
         seedStructuredRows(patchedKind, patch.rules_text);
       }
     }
+
+    // The idea's parts, as the AI wrote them (TODO CP1). The type line is
+    // locked while revising, so a revise never takes it.
+    recordAiOrigins(
+      aiOrigins.parts,
+      fillWrittenParts(patch, { revise: isRevise }),
+      { ...patch, subtypes: patch.subtypes_text !== undefined ? parseSubtypes(patch.subtypes_text) : undefined },
+    );
   };
 
   // Apply a Scryfall import payload. Fields not present in the patch are
@@ -3664,6 +3697,8 @@ export function CardCreatorForm({
       setValue("frame_style.firstPartColor", fill.first_part_color, { shouldDirty: true });
     }
     if (filledFrame) settleTokenTextFollow();
+    // The fill's parts, as the AI wrote them (TODO CP1).
+    recordAiOrigins(aiOrigins.parts, fillWrittenParts(fill, { revise: isRevise }), fill);
   };
 
   const handleAiFill = async (options: AiFillOptions): Promise<void> => {
@@ -3933,6 +3968,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    autoTags.restart();
     remixNicknameClearedRef.current = false;
     stashedSecondPartRef.current = {};
     secondPartFields.forget();
@@ -3996,8 +4032,9 @@ export function CardCreatorForm({
     // …and strong language in the text makes it private too (the Publish
     // step says so; the server applies the same rule).
     const languageFields = creatorLanguageFields(values, chosenVisibility, languageContextFor(values));
+    // …and so does the moderation lock (an edit of a card moderation hid).
     const finalVisibility =
-      languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
+      moderationLocked || languageFields.length > 0 || (chosenVisibility === "public" && !values.art_url.trim())
         ? "private"
         : chosenVisibility;
 
@@ -4327,6 +4364,12 @@ export function CardCreatorForm({
       ...(isEdit && card ? { frame_anatomy: frameAnatomyPatchFor(card, values) } : {}),
     };
 
+    // The parts AI wrote that this save still holds as written (TODO CP1):
+    // a claim the server checks against its receipts. Absent otherwise, so
+    // every other save's payload is what it was.
+    const aiClaims = aiFieldClaims(aiOrigins.parts, payload);
+    if (aiClaims.length > 0) Object.assign(payload, { ai_fields: aiClaims });
+
     startTransition(async () => {
       const applyFieldErrors = (
         fieldErrors: Record<string, string | undefined> | undefined,
@@ -4455,7 +4498,7 @@ export function CardCreatorForm({
           } else {
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
-          linkedHome = `/deck/${deckRemix.deckSlug}`;
+          linkedHome = returnTo ?? `/deck/${deckRemix.deckSlug}`;
         }
 
         if (options.afterSave) {
@@ -4520,8 +4563,16 @@ export function CardCreatorForm({
       // Kept private for the strong language in its text (the Publish
       // step's note, or the server): ONE toast says so.
       const editLanguageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
-      const editSavedVisibility = result.forcedPrivate ? "private" : finalVisibility;
-      toast.success(editLanguageNotice ? strongLanguageSavedMessage(payload.title, editLanguageNotice) : "Changes saved.");
+      const editSavedVisibility = result.forcedPrivate || result.moderationLocked ? "private" : finalVisibility;
+      // …and for the moderation lock (0156), when the maker asked for more.
+      const editLockNotice = result.moderationLocked === true || (moderationLocked && chosenVisibility !== "private");
+      toast.success(
+        editLockNotice
+          ? moderationLockedSavedMessage(payload.title)
+          : editLanguageNotice
+            ? strongLanguageSavedMessage(payload.title, editLanguageNotice)
+            : "Changes saved.",
+      );
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
       // …and its nickname (TODO 6.3), when this save sent one.
@@ -4565,12 +4616,20 @@ export function CardCreatorForm({
       // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
       // to be pressed twice after a save) — unless we stay in the editor
       // with unsent keystrokes, which keep their guard.
+      // Opened from a deck (TODO DK5.5): back to it — unless keystrokes
+      // made during the save are still unsent.
+      const returning = Boolean(returnTo) && !typedDuringSave;
       const staysInEditor =
         !options.afterSave &&
+        !returning &&
         !(intent === "save" && editSavedVisibility === "public");
       if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
+        return;
+      }
+      if (returning && returnTo) {
+        router.push(returnTo);
         return;
       }
       if (intent === "save" && editSavedVisibility === "public") {
@@ -5005,8 +5064,13 @@ export function CardCreatorForm({
       <CreatorDeckBox
         mode={mode}
         cardId={isEdit ? (card?.id ?? null) : null}
+        cardTitle={isEdit ? (card?.title ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
+        publicLanguageFields={() => {
+          const values = methods.getValues();
+          return creatorLanguageFields(values, "public", languageContextFor(values));
+        }}
       />
     );
   const stepPanels = (
@@ -5489,8 +5553,10 @@ export function CardCreatorForm({
                 userId={userId}
                 activeChallenge={activeChallenge}
                 revise={isRevise}
+                tagsAutoFilled={autoTags.following}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
                 strongLanguage={languageChoices}
+                moderationLocked={moderationLocked}
               />
             ) : null}
       </div>

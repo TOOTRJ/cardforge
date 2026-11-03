@@ -36,6 +36,9 @@ export default defineConfig({
     // Playwright tests live alongside but are NOT vitest-runnable; the
     // e2e runner picks them up via its own glob.
     exclude: ["node_modules", "tests/e2e/**", ".next/**"],
+    // Provides `inject("coverageOn")`: a wall-clock test reads it, since v8
+    // coverage makes timed code several times slower (tests/stubs/coverage-flag.ts).
+    globalSetup: ["tests/stubs/coverage-flag.ts"],
     coverage: {
       provider: "v8",
       include: ["lib/**", "components/**"],
@@ -68,6 +71,9 @@ export default defineConfig({
       // to resolve under vitest; stub it so server modules (e.g.
       // lib/stripe/config.ts) remain unit-testable.
       "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
+      // `next/dynamic` loads a chunk on first render and suspends; the stub
+      // imports it at once so a test never asserts on an empty place.
+      "next/dynamic": path.resolve(__dirname, "tests/stubs/next-dynamic.tsx"),
     },
   },
 });

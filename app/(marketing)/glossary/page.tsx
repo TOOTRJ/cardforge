@@ -48,7 +48,7 @@ export const metadata: Metadata = {
 
 export default function GlossaryPage() {
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={definedTermSetJsonLd({
           name: "PipGlyph glossary",
@@ -84,18 +84,21 @@ export default function GlossaryPage() {
         className="relative overflow-hidden rounded-frame border border-border bg-surface p-8 sm:p-10"
       >
         <div className="absolute inset-0 bg-radial-glow opacity-60" aria-hidden />
-        <div className="relative flex flex-col gap-4">
-          <h2
-            id="glossary-cta-heading"
-            className="font-display text-2xl font-semibold text-foreground"
-          >
-            Put the words on a card
-          </h2>
-          <p className="max-w-lg text-sm leading-6 text-muted">
-            The creator gives each part of a card its own field, with a live preview as you
-            type. No account needed to start.
-          </p>
-          <div className="flex flex-wrap gap-3">
+        {/* The frame's full width (TODO WD10): words left, doors right from lg. */}
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+          <div className="flex flex-col gap-4">
+            <h2
+              id="glossary-cta-heading"
+              className="font-display text-2xl font-semibold text-foreground"
+            >
+              Put the words on a card
+            </h2>
+            <p className="max-w-lg text-sm leading-6 text-muted">
+              The creator gives each part of a card its own field, with a live preview as you
+              type. No account needed to start.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href="/create">Open the creator</Link>
             </Button>

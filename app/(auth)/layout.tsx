@@ -13,7 +13,7 @@ export default function AuthLayout({
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <PageContainer as="header" className="relative z-10 flex items-center justify-between py-6">
+      <PageContainer as="header" size="wide" className="relative z-10 flex items-center justify-between py-6">
         <Logo />
         <Link
           href="/"

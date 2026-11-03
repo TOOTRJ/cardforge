@@ -1,4 +1,4 @@
-import { TIER_RANK, planForTier, type PlanTier } from "@/lib/billing/plans";
+import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { REFERRAL_MONTH_DAYS } from "@/lib/referrals/rules";
 
 // ---------------------------------------------------------------------------
@@ -79,19 +79,7 @@ export function planReferralMonth(profile: ReferralRewardProfile, now: Date = ne
   return { kind: "comp_month", tier, expiresAt: new Date(base + REFERRAL_MONTH_DAYS * DAY_MS).toISOString() };
 }
 
-/** One month of a subscription price in cents: the monthly price, or a
- *  twelfth of a yearly one (rounded). The plan's list price when Stripe's
- *  price can't be read. */
-export function oneMonthCents(
-  price: { unit_amount?: number | null; recurring?: { interval?: string; interval_count?: number } | null } | null | undefined,
-  tier: PlanTier,
-): number {
-  const unit = price?.unit_amount;
-  const interval = price?.recurring?.interval;
-  const count = Math.max(1, price?.recurring?.interval_count ?? 1);
-  if (typeof unit === "number" && unit > 0) {
-    if (interval === "year") return Math.round(unit / (12 * count));
-    if (interval === "month") return Math.round(unit / count);
-  }
-  return Math.round(planForTier(tier).priceUsd * 100);
-}
+/** One month of a subscription price in cents (a twelfth of a yearly one)
+ *  — main's shared helper (lib/billing/balance-credit.ts, #688), so a
+ *  referral month and an admin comp price time the same way. */
+export { oneMonthCents } from "@/lib/billing/balance-credit";

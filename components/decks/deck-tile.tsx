@@ -27,7 +27,9 @@ import { cn } from "@/lib/utils";
 //     default background, dark in both themes) with the first three cards
 //     of its page's fan in front (lib/decks/tile-art.ts: 600 px bake thumbs
 //     or Scryfall printings, never a private card or another creator's
-//     card that isn't public). Decorative — the title names the deck;
+//     card that isn't public). Decorative — the title names the deck — and
+//     click-through: it takes no pointer events, so a click on the cover OR
+//     on a fanned card opens the deck through the title's link (DK8.5);
 //   * the title — the tile's ONE link, stretched over the whole tile by its
 //     ::after, so the controls below it (the author's handle, the heart)
 //     are its siblings, never inside it (no control in a link);
@@ -122,10 +124,16 @@ export function DeckTile({
       as="article"
       className="group relative flex h-full min-w-0 flex-col gap-0 overflow-hidden p-0 transition-colors hover:border-border-strong focus-within:border-border-strong"
     >
-      {/* The picture is decorative: the title link names the deck. */}
+      {/* The picture is decorative: the title link names the deck. It takes
+          NO pointer events (TODO DK8.5): the fan's cards are positioned and
+          turned, so they paint OVER the title's stretched ::after and a
+          click on one landed on a picture with nothing to do. Now every
+          click on the picture falls through to that link — the fan stays a
+          picture, never a control of its own (no control in a control), and
+          the tile keeps its one tab stop. */}
       <div
         aria-hidden
-        className="@container relative aspect-video w-full overflow-hidden"
+        className="@container pointer-events-none relative aspect-video w-full overflow-hidden"
         style={{ backgroundColor: BRAND.navy }}
       >
         <Image
@@ -282,10 +290,6 @@ export const DECK_ROW_SIZES = DECK_GRID_SIZES;
  *  1024 (the rail: 2) / 1212 (3) / 1660 (4). */
 export const DASHBOARD_DECK_GRID_SIZES =
   "(min-width: 1920px) 386px, (min-width: 1660px) calc((100vw - 376px) / 4), (min-width: 1212px) calc((100vw - 356px) / 3), (min-width: 1024px) calc((100vw - 336px) / 2), (min-width: 944px) calc((100vw - 88px) / 3), (min-width: 608px) calc((100vw - 52px) / 2), calc(100vw - 32px)";
-/** A DeckGrid tile in a frame narrower than the wide page's — the card
- *  page's "Decks with this card" (1152 px frame) and its modal: generous,
- *  never less. */
-export const DECK_NARROW_FRAME_SIZES = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
 
 /** DECK_GRID_CLASS in its own query container. */
 export function DeckGrid({ className, children }: { className?: string; children: React.ReactNode }) {

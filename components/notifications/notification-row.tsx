@@ -13,6 +13,7 @@ import {
   MessageCircle,
   MessageSquare,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -37,12 +38,14 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   message: MessageSquare,
   credit_grant: Coins,
   comp_plan: Crown,
+  comp_ending: Crown,
   card_limit: Layers,
   render_update: Sparkles,
   render_sweep_paused: CirclePause,
   credit_refill_failed: Coins,
   deck_like: Heart,
   deck_card_added: Layers,
+  moderation_unhidden: ShieldCheck,
   referral_signup: UserPlus,
   referral_reward: Gift,
 };

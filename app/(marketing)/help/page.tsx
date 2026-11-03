@@ -73,7 +73,7 @@ export default function HelpPage() {
   );
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <HelpHashForward targets={helpForwardTargets()} />
       <JsonLd
         data={collectionPageJsonLd({
@@ -170,15 +170,18 @@ export default function HelpPage() {
         className="relative mt-16 overflow-hidden rounded-frame border border-border bg-surface p-8 sm:p-10"
       >
         <div className="absolute inset-0 bg-radial-glow opacity-60" aria-hidden />
-        <div className="relative flex flex-col gap-4">
-          <h2 id="hub-more" className="font-display text-2xl font-semibold text-foreground">
-            Still stuck?
-          </h2>
-          <p className="max-w-xl text-sm leading-6 text-muted">
-            Tell us what you were trying to do — the feedback form reaches the team once
-            you&apos;re signed in. New features and fixes land on What&apos;s new first.
-          </p>
-          <div className="flex flex-wrap gap-3">
+        {/* The frame's full width (TODO WD10): words left, doors right from lg. */}
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+          <div className="flex flex-col gap-4">
+            <h2 id="hub-more" className="font-display text-2xl font-semibold text-foreground">
+              Still stuck?
+            </h2>
+            <p className="max-w-xl text-sm leading-6 text-muted">
+              Tell us what you were trying to do — the feedback form reaches the team once
+              you&apos;re signed in. New features and fixes land on What&apos;s new first.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href="/feedback">Send feedback</Link>
             </Button>

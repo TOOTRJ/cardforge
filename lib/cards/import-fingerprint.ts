@@ -91,6 +91,9 @@ export const IMPORT_FINGERPRINT_EXCLUDED = [
   "source_scryfall_id",
   "import_scryfall_id",
   "import_fingerprint",
+  // AI provenance (TODO CP1, migration 0162): what AI made of the card,
+  // written by the server — not the card itself.
+  "ai_fields",
   "frame_preview",
   "metadata",
   "oracle_text",

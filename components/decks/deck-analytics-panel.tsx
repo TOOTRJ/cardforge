@@ -13,11 +13,15 @@ import { DeckManaCurve, ManaCurveTable } from "@/components/decks/deck-mana-curv
 import type { DeckAnalytics } from "@/lib/decks/analytics";
 import type { DeckCharts } from "@/lib/decks/deck-charts";
 import type { KeywordCount, KeywordKind } from "@/lib/decks/keyword-frequency";
+import { BREAKDOWN_HELP } from "@/lib/decks/deck-help";
+import { TotalManaValueTip } from "@/components/decks/deck-summary-bar";
 
 // ---------------------------------------------------------------------------
 // The deck page's breakdown (TODO DK7.1 / DK7.3) — free for every viewer.
 // Headline numbers first (the deck's size, its lands, the average and
-// median mana value without lands), then the charts: the curve (its bars
+// median mana value without lands, the total mana value — TODO DK11 (b),
+// with its info box), then the charts — each with its help box (DK11 (e),
+// lib/decks/deck-help.ts): the curve (its bars
 // filter the list above), colour symbols against sources, types, rarity,
 // the cards by status (THE status count the list's chips and the summary
 // bar say, deckStatusCountsOf) and the keywords. Every number is
@@ -94,7 +98,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatTile
           label="Deck size"
           value={deckSize}
@@ -103,12 +107,19 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         <StatTile label="Lands" value={analytics.lands} detail="Kept off the curve and the averages" />
         <StatTile label="Average mana value" value={formatValue(charts.averageManaValue)} detail="Nonland cards — lands excluded" />
         <StatTile label="Median mana value" value={formatValue(charts.medianManaValue)} detail="Nonland cards — lands excluded" />
+        <StatTile
+          label="Total mana value"
+          value={formatValue(analytics.totalManaValue)}
+          detail={`Every mana value × copies in the ${counted}; lands count 0`}
+          help={<TotalManaValueTip side="bottom" />}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <DeckChartCard
           className="lg:col-span-2"
           title="Mana curve"
+          help={BREAKDOWN_HELP.curve}
           description={
             <>
               {charts.curveCards} nonland card{charts.curveCards === 1 ? "" : "s"} in the {counted}, by mana value
@@ -121,6 +132,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         />
         <DeckChartCard
           title="Card types"
+          help={BREAKDOWN_HELP.types}
           description={`Every card in the ${counted} — an artifact creature counts as a creature.`}
           chart={typeRows.length > 0 ? <HorizontalBars rows={typeRows} total={charts.deckCards} /> : <Empty>Add cards to see types.</Empty>}
           table={<BarsTable caption="Cards by type" label="Type" rows={typeRows} total={charts.deckCards} />}
@@ -129,6 +141,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         <DeckChartCard
           className="lg:col-span-2"
           title="Color symbols and sources"
+          help={BREAKDOWN_HELP.colors}
           description={
             <>
               Each color&rsquo;s share of the symbols in the costs against its share of the mana sources. A source is a land or a
@@ -154,6 +167,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         />
         <DeckChartCard
           title="Rarity"
+          help={BREAKDOWN_HELP.rarity}
           description="By each card's printed rarity (an edited card's own)."
           chart={rarityRows.length > 0 ? <HorizontalBars rows={rarityRows} total={charts.total} /> : <Empty>No rarities yet.</Empty>}
           table={<BarsTable caption="Cards by rarity" label="Rarity" rows={rarityRows} total={charts.total} />}
@@ -161,6 +175,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
 
         <DeckChartCard
           title="Composition"
+          help={BREAKDOWN_HELP.composition}
           description="Every card by status: imported, edited, remixed or original."
           chart={<HorizontalBars rows={statusRows} total={statusTotal} />}
           table={<BarsTable caption="Cards by status" label="Status" rows={statusRows} total={statusTotal} />}
@@ -168,6 +183,7 @@ export function DeckAnalyticsPanel({ analytics, charts, statusCounts }: DeckAnal
         <DeckChartCard
           className="lg:col-span-2"
           title="Keywords"
+          help={BREAKDOWN_HELP.keywords}
           description={
             keywords.cardsRead > 0
               ? `Read from the rules text of ${keywords.cardsRead} of the ${charts.total} cards: the ones made on PipGlyph (a real card’s text isn’t on the page). Counted in cards.`

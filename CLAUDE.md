@@ -140,7 +140,8 @@ Rules and gotchas:
   (`deck_entry_hidden`, `isPrivateForViewer`) — is the deck OWNER's row
   alone (`deck_cards` read policy); a surface that LISTS a deck's rows for
   anyone reads them through `deck_entries_for_viewer` (`readDeckItems`:
-  masked, "Private card") — the table hands a visitor none of them. A
+  masked "Private card", a deleted card "No longer available" — 0153,
+  `hiddenEntryName`) — the table hands a visitor none of them. A
   hidden entry adds nothing to the default cover's colours for ANY viewer,
   owner included (`lib/decks/cover.ts`), so the tiles and the share image
   (which read the table) and the page draw one cover for everyone. The
@@ -831,7 +832,8 @@ Rules and gotchas:
   line and its ★, 4.9b): `frame_style.crown` / `twoColor`, drawn only
   `=== true`, `frame_style.collector` (`"2015"` / `"2023"` / `"off"`; drawn
   for a style) and `star` (`true` or absent) (`lib/cards/anatomy.ts`); new
-  cards start on, every save runs `normalizeAnatomy`, an edit sends only
+  cards start on — but the collector line, which starts `"off"` (owner
+  2026-10-30; an import follows its printing) — every save runs `normalizeAnatomy`, an edit sends only
   `frame_anatomy`, and a piece is declared on a `PROFILES` entry only — the
   old frames' pairs too (4.6h: `modern`, `modernland`, `retroland`; masters
   SYNTHESISED from the template's own finished masters, `oldFramePairLayers`,
@@ -1364,6 +1366,53 @@ Rules and gotchas:
   the deck copy-limit names) — the gallery's SQL title search folds the same
   six characters (migration 0136; a test holds the two tables together).
   Never compare a query with a stored title character for character.
+- Automatic tags (owner 2026-10-30): a NEW card's Tags field follows what
+  its rules text and subtypes suggest — every face's and part's (the back,
+  a split card's second half), its NAME never ("Wrath of God" is no God) —
+  ONE function, `autoTagsFor` (`lib/cards/auto-tags.ts`: a fixed vocabulary
+  of plural tribes, CR keywords and themes, never a word the maker typed; a
+  tribe from rules text only in a tribal phrase — "Goblin creature token",
+  "Elves you control", "other Merfolk", "Dragon spells"; reminder text read
+  as nothing; ≤ 6) — until the field changes under anything else (the
+  maker, a challenge toggle, an AI fill that writes tags;
+  `stepAutoTagsFollow`, `lib/creator/auto-tags-follow.ts`, wired by
+  `useAutoTagsFollow`, which reads the field through `getValues` — a
+  StrictMode re-run must not end it); Start over starts it again. Create
+  mode only and never a deck-card proxy (`/create?deckCard=`, whose
+  "unchanged" baseline is the reset after its import): an edit never
+  rewrites a stored card's tags, a remix keeps its parent's, and the AI
+  jobs and the deck remix save what they did (no server-side tagging — it
+  would put back a tag the maker removed). A creator import is a new card:
+  it follows.
+- AI provenance (TODO CP1, migration 0162): `cards.ai_fields` = the PARTS
+  whose current content AI wrote (`title`, `cost`, `type_line`,
+  `rules_text`, `flavor_text`, `stats`, `art` and `back.…`;
+  `lib/cards/ai-provenance.ts` is the ONE vocabulary and the page's rule —
+  "Card generated with AI" = every text part the card has is AI's, "AI
+  helped with parts" = some, "Art generated with AI" on its own). The
+  database keeps it honest (`cards_track_ai_fields`): an API role never
+  writes the list (insert naming a part / update changing it →
+  insufficient_privilege), an API role's edit that CHANGES a part's columns
+  drops that part (never guessed from text; the rules part is `rules_text`
+  AND rows `face_content` already held — NULL → rows is an untouched edit's
+  dual write and drops nothing; `printed_types`' NULL and "" are two
+  values), and the
+  ART parts are derived
+  on every write from the picture's address — only `persistGeneratedArt`
+  names a `card-art/<user>/ai-…` object (a remix copy keeps the prefix,
+  `remix-media.ts`); never give another writer that prefix. Text parts are
+  added by the service role alone (`add_card_ai_fields`, through
+  `lib/cards/ai-provenance-server.ts`): the AI jobs for the cards they write
+  (never in the card action's payload — the pinned payloads stay main's), and
+  the card actions for the creator's CLAIMS (`ai_fields` on the payload, sent
+  only when non-empty: the parts an AI fill / idea wrote that the field still
+  holds), each kept only where a server-written `card_ai_receipts` row holds
+  the same text — written when the SERVER plans it (the fill job, the card /
+  deck job's design, every ideas batch), never from a job row's `plan`,
+  which its owner may insert (0059); a remix inherits its parent's unchanged
+  AI parts (a deck remix's names are made in its step). A new AI path that
+  writes card text records a receipt at plan time or marks its card from
+  server-held output; page data only — no renderer or bake reads it.
 - Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
   FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
   italic — stored as typed (no migration), read ONLY through
@@ -1556,15 +1605,18 @@ Rules and gotchas:
   because deck covers and card set icons live there. A card's printed set
   symbol (`set_icon_url` / `set_icon_code`, the Set icon step) is a rendering
   feature and stays.
-- Referrals (migration 0153, `docs/BILLING.md` "Referrals"): ONE code per
+- Referrals (migration 0164, `docs/BILLING.md` "Referrals"): ONE code per
   user (`my_referral_code()`), the link `/?ref=<code>` rides the first-touch
   attribution (sessionStorage → hidden `attr_ref` → `signupAction`; a Google
   sign-up through onboarding's finish) — never a cookie. The reward waits
   for the FIRST saved card (`recordActivity` → `qualifyReferral` in
   `after()`): fraud rules in `lib/referrals/fraud.ts`, caps ONLY through
   `claim_referral_reward()` (atomic; the numbers are `lib/referrals/rules.ts`),
-  each side's month from `planReferralMonth` (a comp month, or a Stripe
-  balance credit for a renewing plan — never a coupon or a moved trial).
+  each side's month from `planReferralMonth` (a comp month written through
+  #688's comp flow — the columns, then `applyCompToSubscription` — or, for a
+  renewing plan, a balance credit through `creditCustomerBalance` /
+  `oneMonthCents` in `lib/billing/balance-credit.ts`; never a coupon, a
+  moved trial or a second balance writer).
   Users read their rows through a COLUMN grant (no fraud reason, no Stripe
   detail); writes are the service role's.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
@@ -1627,6 +1679,49 @@ Rules and gotchas:
   (`BAKED_TILE_PAGE_ROUTES` — file-system routes, route group included; a
   new ISR page that draws card tiles joins the list), which is not skipped —
   best effort, never relied on for correctness.
+- Articles (migration 0160, `docs/research/article-seo-2026-10.md`): the MDX
+  guides in `content/articles/` stay files; admins ALSO compose articles in
+  `public.articles` at `/admin/articles` (draft → scheduled → live; RLS: the
+  public reads `is_published AND publish_at <= now()`, writes are
+  `viewer_is_admin()`). Every public article surface — `/articles` + tag
+  hubs, `/learn` + shelves, the homepage's latest guides, the sitemap,
+  `/llms.txt`, the RSS feed, `/articles/[slug]` + its OG image — reads ONE
+  list, `lib/content/article-catalog.ts` (files win a slug clash; never read
+  `listArticles()` for a public list). The page draws through ONE component,
+  `ArticleView` (the composer's preview too). A release is announced ONCE by
+  `/api/cron/publish-articles` (every 10 min; `announceDueArticles`:
+  purge, then IndexNow, + `announced_at`) or "Publish now". The purge
+  EXPIRES `ARTICLES_TAG` — `updateTag` in a server action,
+  `revalidateTag(tag, { expire: 0 })` in the cron route, never `"max"`
+  (stale-while-revalidate kept an unpublished article up). ONE release gate,
+  `articleReleaseBlock` (`lib/content/article-release-gate.ts`: the
+  checklist's ERRORS — alt text on every picture, our media only, a
+  category, a real body, safe links, the body guard — and a compile of the
+  stored body), refuses a schedule, a publish and an edit of a SCHEDULED or
+  LIVE article; the cron puts a due row that fails it back to a draft and
+  logs why. A composer BODY is Markdown + `Mana` / `Callout` / `CardRow` /
+  `CardScan` / `Figure` with their own attributes only — never another
+  element, raw HTML, import / export, a `{…}` expression or an unsafe link
+  (`remarkArticleBodyGuard`, `lib/content/article-body-guard.ts`, first in
+  `composerArticleMdxOptions`: blockJS alone let `<script>`, `<iframe
+  srcdoc>`, `<form>`… through); every surface compiles it through
+  `compileArticleBody` (the page 404s a refused body, the preview shows
+  why) — the git guides keep `articleMdxOptions`. `content_updated_at`
+  (dateModified, sitemap lastmod) moves only on an edit marked a revision;
+  the slug is locked once `first_published_at` is set (0160's trigger: the
+  first write that sees the row public — published with `publish_at`
+  passed, or announced — never cleared; an unpublish keeps it). A composer
+  body's component attributes are quoted strings, and `CardScan` `src` /
+  `href` and `Mana` `cost` are required (`ARTICLE_BODY_REQUIRED`): the gate
+  compiles without rendering, so a value the components can't draw would
+  pass it and 500 the page; the components draw nothing for a non-string.
+  The public LIST
+  cache holds no bodies (2 MB `unstable_cache` limit; the page reads its own
+  by slug). Pictures: the moderated `set-covers` upload
+  (`purpose: "article-image"`), or a diagram under `public/article-media/`
+  (`media_url_allowed('article-image')`); never WotC art. Drafts shipped in
+  git live in `content/article-drafts/` (never public; "Import drafts" loads
+  them on production as drafts).
 - Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
   The root layout reads NO cookies (every route stays static/ISR-eligible):
   server HTML is always `data-theme="dark"` and the `<head>` no-flash script
@@ -1768,22 +1863,38 @@ Rules and gotchas:
   the sibling) and never bring back a hidden rewrite: Next's client router
   reuses the cached static tree for a same-path query change and never calls
   the server, so the URL changed while the grid stayed frozen (2026-09-22).
-- Page width (TODO WD1, WD3, WD4, WD8): every page frame is `<PageContainer
-  size="standard|wide|full">` (`components/layout/page-container.tsx`;
+- Page width (TODO WD1, WD3, WD4, WD8, WD10): every page frame is
+  `<PageContainer>` (`components/layout/page-container.tsx`;
   `page-container-structure.test.ts` fails on a hand-written
-  `mx-auto … max-w-7xl px-4`). Standard (1280) = reading and marketing pages
-  and the creator (D8); wide (1920) = the browse pages, profiles, the deck
-  page, the dashboard (`DashboardShell readable` caps a page of forms at
-  1024) and ALWAYS the header, footer and ribbon (D7). Extra width is more
-  columns, never wider tiles: card grids are `CardGrid` / `CARD_GRID_CLASS`
-  (2 / 3 / 4 / 5 / 6 by CONTAINER width — the grid sits in an `@container`;
-  the five-column step keeps 1440–1536 px laptops near 260–280 px tiles
-  (owner 2026-10-29)), deck grids `DeckGrid` (1 / 2 / 3 / 4). A tile drawn
+  `mx-auto … max-w-7xl px-4`), and EVERY page is WIDE (1920; owner
+  2026-10-30) — `wide` is the default, so the header, footer, ribbon (D7)
+  and every page root share one left edge. `size="standard"` (1280) is the
+  creator's alone (`/create`, the card editor, `/create-guest`: WD7 is on
+  hold with its redesign) and the test refuses it anywhere else; `full` is
+  for a workspace. Extra width is more columns or a rail, never wider tiles
+  or longer lines: card grids are `CardGrid` / `CARD_GRID_CLASS` (2 / 3 / 4
+  / 5 / 6 by CONTAINER width — the grid sits in an `@container`; the
+  five-column step keeps 1440–1536 px laptops near 260–280 px tiles (owner
+  2026-10-29)), one-row strips `ROW_GRID_CLASS` + `rowTileClass` (the card
+  page's rows too), deck grids `DeckGrid` (1 / 2 / 3 / 4). A tile drawn
   from a bigger file than its thumbnail asks for its FRAME's `sizes`
   (`CARD_GRID_SIZES` / `DECK_GRID_SIZES` on a wide page, the `DASHBOARD_*`
   lists in the dashboard; `card-grid.test.ts` holds each to its tile) — the
   thumbnail's default is the generous window-grid answer. Running text keeps
-  a measure.
+  its measure INSIDE the wide frame (WD6): `<Measure>` / `MEASURE_CLASS`
+  (38rem) and `READING_TEXT_CLASS` (16 px, 18 px from sm), or ONE layout
+  for a reading page, `ReadingLayout` (`components/layout/reading-layout.tsx`:
+  a 38rem "measure" or 48rem "column" main, a sticky RAIL from lg — the
+  page's action, related pages, "On this page" — and an optional left list
+  from 2xl) with the rail's pieces `RailCta` / `RailLinks`
+  (`components/marketing/rail-cta.tsx`): the legal shell, help sections,
+  the SEO landings and every article (`ArticleView`). A page of forms caps
+  its column (`DashboardShell readable`: 1024); a centred card (auth,
+  unsubscribe) stays centred. Nothing past 320 px scrolls sideways: a grid
+  whose columns can meet a wide child is `grid-cols-1` / `minmax(0,…)`
+  (an implicit column sizes to its min-content), a table scrolls in its
+  own box, and an sr-only element inside a scroller needs a `relative`
+  ancestor inside it.
 - Decks (2026-10-28 plan, TODO DK0–DK2; owner decisions D1–D13): a deck
   STORES `card_count` / `linked_card_count` (0143: physical cards,
   maybeboard out; kept by ONE statement trigger, `sync_deck_from_entries`,
@@ -1954,6 +2065,71 @@ Rules and gotchas:
   maybeboard apart from the deck. Every group stays in the accessibility
   tree: no `content-visibility` or windowing on the card area (it hid
   off-screen groups from screen readers and made the page jump).
+  The OWNER's page is the deck's editor (DK5 part 2): ONE provider,
+  `DeckEditorProvider` (`components/decks/use-deck-editor.tsx`), makes every
+  edit — steppers, Move to, Remove, the selection's bulk bar, the add box —
+  draws it at once (useOptimistic over the server's rows; every edit is the
+  VALUE it wants, `lib/decks/entry-ops.ts`) and sends it through the write
+  queue (`lib/decks/entry-queue.ts`: one line per entry, a waiting edit
+  replaced by a newer one of its kind, a failure cancelling the edits on top
+  of it). The writes are the batch actions of `lib/decks/card-actions.ts`
+  (`updateDeckEntriesAction` / `removeDeckEntriesAction`: one deck a call,
+  every statement held to `deck_id`, ONE revalidation —
+  `revalidateDeckEntryChange`: the deck's paths with IndexNow and My Cards'
+  chips); their revalidation brings the page back with the answer — never a
+  `router.refresh()` per edit (only after a request that never answered,
+  or a `stale` refusal: the entries are gone, removed in another tab).
+  A refusal rolls back and is SAID (toast + the live region); leaving with a
+  write on its way asks first. A Move NEVER merges: two rows of one printing
+  on one board are legitimate (your version beside the real card, a cover
+  pick), so nothing may assume one row per key. A removal's Undo (the toast,
+  the phone bar, ⌘Z) is `restoreDeckEntriesAction` — the lines back through
+  the paths cards come in by, NEVER a direct insert, and each removed entry
+  a NEW row of its own: `stageRestoreLines` (`lib/decks/entry-batch.ts`)
+  writes each line onto a board where no row has its key (its own, else a
+  free one, then moved home), since `import_deck_entries` merges a line into
+  the first row with its key; only that new row gets the entry's board, card
+  (D3 judged again) and cover pick (`featured_rank`); a line merged after all
+  (another tab) is taken back out and said. A card alone comes back through
+  `changeDeckMembershipAction`; what can't come back says why. The add box
+  (`deck-add-box.tsx`, an ARIA combobox, "/" outside a field) searches My
+  cards and other creators' public cards through GET `/api/decks/add-search`
+  (a route, not an action: cancellable, never queued behind edits; no rate
+  limit of its own yet — every limiter is a table with a label CHECK, a
+  migration) and real cards through `/api/scryfall/search` (`order=edhrec`,
+  its quota; ranked by `rankRealCards`: an exact word beats a longer word);
+  `addToDeckAction` lands a card where `addTargetEntry` says (one copy more
+  on the board's row, the real card's before your version — never a second
+  line for the same card) or brings it in through the membership writer / a
+  ONE-LINE decklist commit. Several at once (TODO DK5.17): results are
+  TICKED while the list stays open (Space once the arrows moved the
+  highlight — before that it types a space —, a click on the tick box; the
+  listbox `aria-multiselectable`, `aria-selected` = the tick, the highlight
+  the input's active descendant) and "Add N" / Ctrl ⌘ Enter sends them in
+  ONE `addManyToDeckAction` (≤ `MAX_ADD_BATCH`: each lands as one add —
+  PipGlyph cards in one membership call, each real card its own one-line
+  commit on `named` —, a result per card, ONE revalidation; the editor's
+  `addMany` draws them as one `batch` op with one undo); Enter still adds
+  the highlighted one alone. The commit's core is `commitImportLines`
+  (`lib/decks/import-commit.ts`): a decklist import spends
+  `deck_import_commit`, the add box's add and an undo the single-card
+  `named` quota — the caller's choice, never the browser's. The bulk bar
+  is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
+  `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
+  screen at load may be: a lazy part's controls are dead until its chunk
+  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
+  `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
+  creator and the editor follow only through `deckReturnPath` (a deck page,
+  our `#entry-` / `#next-` anchor, nothing else — the card editor only to
+  one of the user's OWN decks, `ownDeckReturnPath`); "Edit next" comes back
+  to `#next-<id>` with the focus on the next one. A row's keys (+ − M S) act
+  only on a focused opener; selection is Select / Shift + click / a long
+  press (touch), and its Done hands the focus to the card picked last (else
+  the Select toggle), never `<body>`; the pop-up is a bottom sheet on touch;
+  the large preview pane mounts from 1280 px only (its picture the 600 px
+  thumb, never the HD PNG) and follows the focus at once but a pointer only
+  once it RESTS (`HOVER_REST_MS`), holding while its menu is open — its
+  buttons never act on a card the pointer only crossed.
   The breakdown's charts (TODO DK7, free for everyone) are
   `computeDeckCharts` (`lib/decks/deck-charts.ts`, over `deckRowsOf`: the
   effective fields, the maybeboard never counted; its curve adds up to
@@ -1964,7 +2140,21 @@ Rules and gotchas:
   the average / median mana value, Card types and the lands count the main
   deck and the commander only, never the sideboard or a companion
   (`countsTowardDeckStats`: also the summary bar, the report PDF and the AI
-  deck brief / guide) (owner 2026-10-29). A curve
+  deck brief / guide) (owner 2026-10-29). The TOTAL mana value (TODO DK11
+  (b): `DeckAnalytics.totalManaValue`, mana value × copies over those same
+  cards, lands 0) is in the summary bar and the breakdown with ONE info box
+  (`TotalManaValueTip`) linking the guide
+  `content/articles/total-mana-value-mtg-decks.mdx`. Every help box on the
+  page — the boards, each breakdown part, the format issues' list — is
+  `InfoTip` (`components/ui/info-tip.tsx`: a resting mouse or a KEYBOARD
+  focus shows it and takes no focus, a press pins it and moves the focus
+  in, Escape hands it back; a portal, so no `overflow` clips it) and its
+  words are `lib/decks/deck-help.ts`, held to the counting code by
+  `tests/unit/decks/deck-help.test.ts` — change a counting rule and its
+  words together. A format issue about a card (`DeckWarning.entryIds`,
+  validateDeck given the entries' ids) links to that card's row: the list's
+  `goToEntry` lifts a filter, the curve filter or a folded group, then
+  scrolls, marks and focuses it. A curve
   bar FILTERS the list above through `DeckCurveFilterProvider`
   (`components/decks/deck-curve-filter.tsx`, around both sections; it
   holds the picked column only — the ids come from the page's latest
@@ -1975,11 +2165,12 @@ Rules and gotchas:
   `lib/decks/draw-odds.ts`, `lib/decks/sample-hand.ts`) shuffles the
   MAINBOARD and reads the viewer's rows (`publicDeckItems`); its pictures
   are the list's (600 px thumbs, printings on 5:7 tiles, a "Private card"
-  face). Turn order and the free mulligan come from `lib/decks/format-rules.ts`
+  face). Turn order comes from `lib/decks/format-rules.ts`
   (`formatIsMultiplayer`: Commander / Oathbreaker are on the draw with no
-  play / draw choice, CR 103.8c — Brawl is 1v1; `formatHasFreeMulligan`:
-  every commander format, CR 103.5c); a kept hand (Keep or a draw) takes
-  no more mulligans. Keywords read only the rules text a PipGlyph card carries
+  play / draw choice, CR 103.8c — Brawl is 1v1). The sample hand has NO
+  mulligan (owner 2026-10-30, TODO DK11 (f)): seven cards, then draws; a
+  hand the reader doesn't like is a New hand — never bring the London
+  mulligan back without the owner. Keywords read only the rules text a PipGlyph card carries
   (`lib/decks/keyword-frequency.ts`; deck_cards stores no Oracle text).
   What the API hands out matches the page (TODO DK0.11, migration 0151).
   An UNLISTED deck is link-only: the decks policy admits it only to a

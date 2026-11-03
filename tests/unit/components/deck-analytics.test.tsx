@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -8,7 +9,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 // curve's bars filter the deck list above (one tab stop, the arrow keys, a
 // pick takes the focus to the list's notice, "Back to the curve" and the
 // two "Clear filter"s), every chart's table twin and its "Table" switch, the
-// draw odds and the sample hand's London mulligan — a visitor's private card
+// draw odds and the sample hand — a visitor's private card
 // a "Private card" face, never its title.
 // ---------------------------------------------------------------------------
 
@@ -41,6 +42,9 @@ import { computeDeckAnalytics } from "@/lib/decks/analytics";
 import { computeDeckCharts, viewerDeckBreakdown } from "@/lib/decks/deck-charts";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 import type { DeckItem } from "@/lib/decks/queries";
+
+// The owner's parts are `next/dynamic` chunks: in before any test draws.
+beforeAll(() => dynamicReady());
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.pipglyph.com");
@@ -381,59 +385,39 @@ describe("the playtest", () => {
     expect(within(lands).getAllByRole("rowheader")[0].textContent).toBe("Turn 17 cards");
   });
 
-  it("a sample hand, the London mulligan and a draw — keyboard-ready, said aloud", async () => {
-    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={7} />);
+  it("a sample hand and its draws — no mulligan (owner 2026-10-30), said aloud", () => {
+    render(<DeckSampleHand items={deck()} canManage seed={7} />);
     // Nothing shuffled, no picture loaded, until asked.
     expect(screen.queryByRole("list", { name: /^Hand/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
     expect(screen.getByRole("list", { name: "Hand, 7 cards" })).toBeTruthy();
     expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Hand 1: \d+ lands?, \d+ spells?\.$/);
-
-    fireEvent.click(screen.getByRole("button", { name: "Mulligan" }));
-    const keep = screen.getByRole("button", { name: /^Keep 6 cards/ });
-    expect(keep.getAttribute("aria-disabled")).toBe("true");
-    // Draw waits for the hand to be kept.
-    expect(screen.getByRole("button", { name: /^Draw a card/ }).getAttribute("aria-disabled")).toBe("true");
-    const picks = screen.getAllByRole("button", { name: /: put on the bottom$/ });
-    expect(picks).toHaveLength(7);
-    fireEvent.click(picks[0]);
-    // One card owed: another pick MOVES the choice.
-    fireEvent.click(picks[1]);
-    expect(picks.map((pick) => pick.getAttribute("aria-pressed"))).toEqual(["false", "true", "false", "false", "false", "false", "false"]);
-    fireEvent.click(screen.getByRole("button", { name: "Keep 6 cards" }));
-    expect(screen.getByRole("list", { name: "Hand, 6 cards" })).toBeTruthy();
-    // Kept: no more mulligans — the button stays (the focus never drops), off,
-    // its reason in its name, and a click does nothing.
-    const mulliganOff = screen.getByRole("button", { name: "Mulligan (the hand is kept: deal a new hand)" });
-    expect(mulliganOff.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(mulliganOff);
-    expect(screen.getByRole("list", { name: "Hand, 6 cards" })).toBeTruthy();
-    const draw = screen.getByRole("button", { name: "Draw a card" });
-    await waitFor(() => expect(document.activeElement).toBe(draw));
-    fireEvent.click(draw);
-    expect(screen.getByRole("list", { name: "Hand, 7 cards" })).toBeTruthy();
-    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Drew .+: 7 cards in hand\.$/);
-    expect(screen.getByRole("button", { name: /^Mulligan/ }).getAttribute("aria-disabled")).toBe("true");
-    // New hand starts again: Mulligan is back.
-    fireEvent.click(screen.getByRole("button", { name: "New hand" }));
-    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
-  });
-
-  it("a card drawn keeps the hand: no mulligan after a draw", () => {
-    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={3} />);
-    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
-    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
+    // The mulligan controls are gone: no Mulligan, no Keep, no bottom picks.
+    expect(screen.queryByRole("button", { name: /Mulligan/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Keep/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /put on the bottom/ })).toBeNull();
+    expect(screen.queryByText(/mulligan/i)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Draw a card" }));
     expect(screen.getByRole("list", { name: "Hand, 8 cards" })).toBeTruthy();
-    const mulligan = screen.getByRole("button", { name: "Mulligan (the hand is kept: deal a new hand)" });
-    expect(mulligan.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(mulligan);
+    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/^Drew .+: 8 cards in hand\.$/);
+    // The odds are next door: the help box says so.
+    expect(screen.getByRole("button", { name: "About sample hand" })).toBeTruthy();
+  });
+
+  it("the library runs out: Draw a card stays, off, its reason in its name", () => {
+    const small = [item({ name: "Forest", type_line: "Basic Land — Forest", quantity: 8 })];
+    render(<DeckSampleHand items={small} canManage seed={3} />);
+    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
+    fireEvent.click(screen.getByRole("button", { name: "Draw a card" }));
     expect(screen.getByRole("list", { name: "Hand, 8 cards" })).toBeTruthy();
-    expect(screen.getByText(/^Kept · /)).toBeTruthy();
+    const off = screen.getByRole("button", { name: "Draw a card (the library is empty)" });
+    expect(off.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(off);
+    expect(screen.getByRole("list", { name: "Hand, 8 cards" })).toBeTruthy();
   });
 
   it("every New hand is said aloud — the hand's number makes each line new", () => {
-    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={11} />);
+    render(<DeckSampleHand items={deck()} canManage seed={11} />);
     const live = () => document.querySelector("[aria-live]")?.textContent;
     fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
     expect(live()).toMatch(/^Hand 1: /);
@@ -443,20 +427,9 @@ describe("the playtest", () => {
     expect(live()).toMatch(/^Hand 3: \d+ lands?, \d+ spells?\.$/);
   });
 
-  it("a Brawl deck's first mulligan is free in Brawl — never 'multiplayer Commander' (CR 103.5c)", () => {
-    render(<DeckSampleHand items={deck()} canManage freeMulliganFormat="Brawl" seed={5} />);
-    expect(screen.getByText(/the first is free in Brawl\./)).toBeTruthy();
-    expect(screen.queryByText(/multiplayer/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
-    fireEvent.click(screen.getByRole("button", { name: "Mulligan" }));
-    expect(document.querySelector("[aria-live]")?.textContent).toMatch(/The first mulligan is free in Brawl: nothing goes to the bottom\.$/);
-    // Nothing owed and nothing kept: another mulligan is there.
-    expect(screen.getByRole("button", { name: "Mulligan" }).getAttribute("aria-disabled")).toBeNull();
-  });
-
   it("the same seed deals the same hand", () => {
     const hand = () => {
-      render(<DeckSampleHand items={deck()} canManage freeMulliganFormat={null} seed={42} />);
+      render(<DeckSampleHand items={deck()} canManage seed={42} />);
       fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
       const names = within(screen.getByRole("list", { name: /^Hand/ }))
         .getAllByRole("img")
@@ -471,7 +444,7 @@ describe("the playtest", () => {
     const items = [
       item({ name: "Private card", card_id: "c-private", scryfall_id: null, source: "creator", image_url: null, quantity: 7 }),
     ];
-    render(<DeckSampleHand items={items} canManage={false} freeMulliganFormat={null} seed={1} />);
+    render(<DeckSampleHand items={items} canManage={false} seed={1} />);
     fireEvent.click(screen.getByRole("button", { name: "Draw a hand" }));
     const hand = screen.getByRole("list", { name: "Hand, 7 cards" });
     expect(within(hand).getAllByText("Private card").length).toBeGreaterThan(0);

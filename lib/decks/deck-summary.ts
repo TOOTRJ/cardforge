@@ -6,8 +6,8 @@ import type { DeckFormat } from "@/types/deck";
 // ---------------------------------------------------------------------------
 // The deck page's sticky summary bar (TODO DK5.9) as data: the count
 // against the format's size, the commander, the composition (each kind of
-// card), the average mana value and the lands. The size, the average and
-// the lands are the deck's breakdown's (computeDeckAnalytics: the main deck
+// card), the average and the total mana value (TODO DK11 (b)) and the
+// lands. The size, the mana values and the lands are the deck's breakdown's (computeDeckAnalytics: the main deck
 // and the commander, countsTowardDeckStats); the composition is THE status count the chips and the breakdown
 // say too (deckStatusCountsOf, lib/decks/deck-view.ts) — so the bar, the
 // chips and the breakdown never disagree. The format check's verdict and
@@ -33,12 +33,15 @@ export type DeckSummary = {
   commanders: string[] | null;
   composition: Array<{ badge: EntryBadge; count: number }>;
   averageManaValue: number | null;
+  /** The main deck's and the commander's mana value × copies, lands as 0
+   *  (computeDeckAnalytics' totalManaValue, TODO DK11 (b)). */
+  totalManaValue: number;
   lands: number;
 };
 
 export function deckSummaryOf(
   format: DeckFormat,
-  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "lands">,
+  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "totalManaValue" | "lands">,
   /** The commander zone's names as the viewer's list shows them. */
   commanderNames: readonly string[],
   /** The deck's cards per badge (deckStatusCountsOf). */
@@ -66,6 +69,7 @@ export function deckSummaryOf(
     commanders: formatHasCommander(format) ? [...commanderNames] : null,
     composition: statusCountRows(statusCounts),
     averageManaValue: analytics.averageManaValue,
+    totalManaValue: analytics.totalManaValue,
     lands: analytics.lands,
   };
 }

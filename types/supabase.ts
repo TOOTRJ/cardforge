@@ -41,6 +41,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      /** 0162 (TODO CP1) — what the AI wrote, as the server received it (a
+       *  card_fill job's fields, the cards a card / deck job designed, a
+       *  "Get ideas" batch). Service role only. */
+      card_ai_receipts: {
+        Row: {
+          id: string;
+          owner_id: string;
+          source: string;
+          values: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          source: string;
+          values: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          source?: string;
+          values?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       card_idea_batches: {
         Row: {
           id: string;
@@ -386,7 +413,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0153 — referrals.
+      // Migration 0164 — referrals.
       referral_codes: {
         Row: { user_id: string; code: string; created_at: string };
         Insert: { user_id: string; code: string; created_at?: string };
@@ -886,6 +913,11 @@ export type Database = {
           tags: string[];
           supertype: string | null;
           nickname: string | null;
+          /** The moderation lock (migration 0156, lib/moderation/lock.ts): set by
+           *  the moderation hide, cleared only by admin_unhide_card. Optional: a
+           *  select that does not name it (or a database before 0156) has none. */
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types: string | null;
           /** Import provenance (migration 0144, TODO DK2.5): the Scryfall
            *  printing the card was started from and the fingerprint of what it
@@ -893,6 +925,13 @@ export type Database = {
            *  Insert-only — an API role can't change them. */
           import_scryfall_id: string | null;
           import_fingerprint: string | null;
+          /** AI provenance (migration 0162, TODO CP1): the parts whose
+           *  current content AI wrote (lib/cards/ai-provenance.ts). Written
+           *  by the server alone (add_card_ai_fields); an API-role edit that
+           *  changes a part drops it, the art parts are derived. (A row
+           *  read from a database 0162 hasn't reached has none: readers
+           *  take it as `?? []`.) */
+          ai_fields: string[];
           template_id: string | null;
           title: string;
           toughness: string | null;
@@ -949,10 +988,13 @@ export type Database = {
           source_scryfall_id?: string | null;
           import_scryfall_id?: string | null;
           import_fingerprint?: string | null;
+          ai_fields?: string[];
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
           nickname?: string | null;
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title: string;
@@ -1008,10 +1050,13 @@ export type Database = {
           source_scryfall_id?: string | null;
           import_scryfall_id?: string | null;
           import_fingerprint?: string | null;
+          ai_fields?: string[];
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
           nickname?: string | null;
+          moderation_hidden_at?: string | null;
+          moderation_hidden_reason?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title?: string;
@@ -1429,6 +1474,84 @@ export type Database = {
         };
         Relationships: [];
       };
+      articles: {
+        Row: {
+          author_id: string | null;
+          announced_at: string | null;
+          first_published_at: string | null;
+          body: string;
+          category: string | null;
+          content_updated_at: string | null;
+          cover_alt: string | null;
+          cover_height: number | null;
+          cover_url: string | null;
+          cover_width: number | null;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          excerpt: string | null;
+          faq: Json;
+          id: string;
+          is_published: boolean;
+          publish_at: string | null;
+          seo_title: string | null;
+          slug: string;
+          tags: string[];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_id?: string | null;
+          announced_at?: string | null;
+          first_published_at?: string | null;
+          body?: string;
+          category?: string | null;
+          content_updated_at?: string | null;
+          cover_alt?: string | null;
+          cover_height?: number | null;
+          cover_url?: string | null;
+          cover_width?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description: string;
+          excerpt?: string | null;
+          faq?: Json;
+          id?: string;
+          is_published?: boolean;
+          publish_at?: string | null;
+          seo_title?: string | null;
+          slug: string;
+          tags?: string[];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string | null;
+          announced_at?: string | null;
+          first_published_at?: string | null;
+          body?: string;
+          category?: string | null;
+          content_updated_at?: string | null;
+          cover_alt?: string | null;
+          cover_height?: number | null;
+          cover_url?: string | null;
+          cover_width?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          excerpt?: string | null;
+          faq?: Json;
+          id?: string;
+          is_published?: boolean;
+          publish_at?: string | null;
+          seo_title?: string | null;
+          slug?: string;
+          tags?: string[];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       site_updates: {
         Row: {
           ack_until: string | null;
@@ -1833,6 +1956,34 @@ export type Database = {
           },
         ];
       };
+      // Migration 0155 — each slug a deck gave up on a rename (written by the
+      // decks_record_slug_change trigger only; read where the deck's link is).
+      deck_slug_history: {
+        Row: {
+          old_slug: string;
+          deck_id: string;
+          created_at: string;
+        };
+        Insert: {
+          old_slug: string;
+          deck_id: string;
+          created_at?: string;
+        };
+        Update: {
+          old_slug?: string;
+          deck_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_slug_history_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Migration 0151 — today's salt for deck_views keys (service role).
       deck_view_salts: {
         Row: {
@@ -2028,11 +2179,126 @@ export type Database = {
           },
         ];
       };
+      // Migration 0159 — a profile's extra links (lib/profile/link-kinds.ts).
+      profile_links: {
+        Row: {
+          id: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          kind: string;
+          url: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          kind?: string;
+          url?: string;
+          label?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_links_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Migration 0159 — a profile's store cards (lib/profile/store-platforms.ts).
+      profile_stores: {
+        Row: {
+          id: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          platform: string;
+          url: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          platform?: string;
+          url?: string;
+          title?: string | null;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_stores_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      // migration 0160 — the admins an article may be bylined to (an admin
+      // caller only; lib/content/db-articles.ts listAuthorOptions).
+      admin_list_article_authors: {
+        Args: Record<string, never>;
+        Returns: { id: string; username: string; display_name: string | null }[];
+      };
+      // Migration 0159 — the Settings editors' whole-list saves (caller's rows).
+      set_profile_links: {
+        Args: { p_links: Json };
+        Returns: undefined;
+      };
+      set_profile_stores: {
+        Args: { p_stores: Json };
+        Returns: undefined;
+      };
+      // Migration 0159 — the profile page's card search (public cards only).
+      list_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+          p_sort?: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      count_profile_cards: {
+        Args: {
+          p_owner: string;
+          p_search?: string | null;
+          p_color?: string | null;
+          p_card_type?: string | null;
+        };
+        Returns: number;
+      };
       consume_credits: {
         Args: { p_amount: number; p_reason: string; p_ref?: string };
         Returns: {
@@ -2130,6 +2396,19 @@ export type Database = {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; views: number }[];
       };
+      // Migration 0154 — the caller's OWN deck's likes per UTC day they were
+      // given, oldest first, zeros included; no rows for anyone else's deck.
+      deck_likes_by_day: {
+        Args: { p_deck_id: string; p_days?: number };
+        Returns: { day: string; likes: number }[];
+      };
+      // Migration 0156 — an admin clears a card's moderation lock (it stays
+      // private) and its owner is notified; the owner's id, or null when the
+      // card was not locked. Anyone but an admin: insufficient_privilege.
+      admin_unhide_card: {
+        Args: { p_card_id: string };
+        Returns: string | null;
+      };
       // Migration 0151 — a deck's AI guide as its page shows it to the
       // caller (lib/decks/guides.ts): no row, or `readable` with the text
       // only for a Pro viewer (redacted for anyone but the owner).
@@ -2175,6 +2454,10 @@ export type Database = {
           p_offset?: number;
           p_hide_admin_cards?: boolean;
         };
+        Returns: Database["public"]["Tables"]["cards"]["Row"][];
+      };
+      list_commander_cards: {
+        Args: { p_seed?: string; p_limit?: number };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
       list_trending_pool: {
@@ -2260,6 +2543,16 @@ export type Database = {
       /** 0143; 0144 added the entry's origin (p_source: creator | link |
        *  ai_generate | ai_remix, default creator) and the printing an AI
        *  restyle keeps (p_scryfall_id). */
+      /** 0162 (TODO CP1) — the server's one writer of a card's AI text
+       *  parts: adds, never removes; the owner's card only. Service role. */
+      add_card_ai_fields: {
+        Args: {
+          p_card_id: string;
+          p_owner_id: string;
+          p_fields: string[];
+        };
+        Returns: string[] | null;
+      };
       add_custom_deck_entry: {
         Args: {
           p_deck_id: string;
@@ -2346,7 +2639,7 @@ export type Database = {
         Args: { p_since: string };
         Returns: { event: string; n: number; users: number }[];
       };
-      // Migration 0153 — referrals.
+      // Migration 0164 — referrals.
       my_referral_code: {
         Args: Record<string, never>;
         Returns: string | null;

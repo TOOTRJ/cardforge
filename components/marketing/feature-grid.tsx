@@ -66,7 +66,7 @@ const features: Feature[] = [
 
 export function FeatureGrid() {
   return (
-    <PageContainer as="section" className="py-24">
+    <PageContainer as="section" size="wide" className="py-24">
       <SectionHeading
         align="center"
         eyebrow="Built for Magic fans"
@@ -75,7 +75,7 @@ export function FeatureGrid() {
         className="mb-12"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:gap-6">
         {features.map(({ icon: Icon, tone, title, description }) => (
           <SurfaceCard
             key={title}

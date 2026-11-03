@@ -10,7 +10,7 @@ import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 // covered perks they were already paying for. The owner's rule: a comp month
 // is free, and the month after it is charged NORMALLY.
 //
-// The rule, one pure decision (`compTrialChangeFor`):
+// The rule, two pure decisions (`compTrialChangeFor`, `compCreditChangeFor`):
 //   • a TRIALING subscription that renews (not cancelled) under a comp of the
 //     same or a higher tier with an end date: the trial is moved to end when
 //     the comp ends (`trial_end` = the later of the two, never earlier than
@@ -20,13 +20,24 @@ import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 //     (`TRIAL_END_BEFORE_COMP_KEY`), so clearing or shortening the comp puts it
 //     back (or ends the trial now when that date has passed — the charge it
 //     would have made already).
-//   • an ACTIVE subscription: left alone — it keeps billing as usual and the
-//     comp adds perks on top (owner question 1 in the audit PR; a referral's
-//     free month for a payer is a balance credit, not a comp).
+//   • an ACTIVE subscription (owner answer 1, 2026-10-30): the payer pays
+//     NOTHING for the comp period — the comp's share of the subscription's
+//     own price goes on the Stripe CUSTOMER BALANCE (`compCreditChangeFor`,
+//     priced by lib/billing/balance-credit.ts `periodCreditCents`), and
+//     Stripe takes it off the next invoices. Status, dates and trial are
+//     untouched. One ledger key per comp grant (the subscription's
+//     `COMP_CREDIT_GRANT_KEY` metadata names the grant; each balance
+//     transaction carries it), so a re-save posts only the difference.
+//     Shortening or revoking claws back the part not yet lived through,
+//     capped at the credit still unspent on the balance.
 //   • a cancelled (ending) subscription: left alone — it stops on its date and
 //     the comp carries the perks after it; nothing is charged after the comp.
-//   • a comp with NO end date, or one past Stripe's trial limit: left alone
-//     (an open-ended trial can't be set); the admin is told it still bills.
+//   • a comp with NO end date on a trialing or paying user is REFUSED by the
+//     admin action (owner answer 2, `compNeedsEndDate`); a free user may
+//     still be comped with no expiry. Nor may such a comp run past 730 days
+//     (Stripe's trial limit; the same bound for a credit).
+//   • clearing a comp after the trial's own end has passed ends the trial
+//     NOW and charges — the charge it would have made anyway (owner answer 3).
 // ---------------------------------------------------------------------------
 
 /** Subscription metadata key: the trial end (unix seconds) before a comp
@@ -145,7 +156,7 @@ export function compStripeNote(change: CompTrialChange, opts: { live: boolean })
   if (!opts.live) return null;
   switch (change.reason) {
     case "not_trialing":
-      return "Their Stripe subscription keeps billing as usual during the comp.";
+      return "Their Stripe subscription is neither trialing nor active, so it keeps billing on its own dates.";
     case "comp_no_expiry":
       return "No end date: their Stripe trial still converts and charges on its own date.";
     case "comp_too_long":
@@ -198,4 +209,207 @@ export function compOverLiveSubscription(
   // it can hold a trial (compTrialChangeFor), and the page says so.
   if (TIER_RANK[tier] < TIER_RANK[paid]) return null;
   return { tier, expiresAt: profile.comp_expires_at ?? null };
+}
+
+/**
+ * What the billing page says about the next charge under a comp over a live
+ * plan. "Nothing is charged before then" ONLY when Stripe's own trial
+ * really runs to the comp's end — a comp the trial could not be held for
+ * (or a hold that failed) must not promise it.
+ */
+export function liveCompChargeLine(input: {
+  status: string | null | undefined;
+  ending: boolean;
+  compExpiresAt: string | null;
+  stripeTrialEnd: string | null | undefined;
+}): "trial_held" | "balance_credit" | "own_dates" {
+  if (!input.compExpiresAt) return "own_dates";
+  if (input.status === "trialing") {
+    return input.stripeTrialEnd != null && Date.parse(input.stripeTrialEnd) >= Date.parse(input.compExpiresAt)
+      ? "trial_held"
+      : "own_dates";
+  }
+  return input.status === "active" && !input.ending ? "balance_credit" : "own_dates";
+}
+
+// ---------------------------------------------------------------------------
+// A comp on an ACTIVE (paying) subscription → a customer-balance credit
+// (owner answer 1, 2026-10-30). docs/BILLING.md "Comps and a live
+// subscription" has the maths; lib/billing/balance-credit.ts prices it.
+// ---------------------------------------------------------------------------
+
+/** Subscription metadata key naming the comp GRANT whose credit is on the
+ *  customer's balance: `<startSec>:<endSec>` (the period it pays for). "" /
+ *  absent = none. A grant whose end has passed is finished: the next comp
+ *  opens a new one. */
+export const COMP_CREDIT_GRANT_KEY = "pipglyph_comp_credit";
+
+/** Balance-transaction metadata key: the ledger key of the grant a credit or
+ *  claw-back belongs to (`compCreditLedgerKey`). */
+export const COMP_CREDIT_LEDGER_KEY = "pipglyph_comp_grant";
+
+export type CompCreditGrant = { startSec: number; endSec: number };
+
+export function parseCompCreditGrant(meta: Record<string, string> | null | undefined): CompCreditGrant | null {
+  const raw = meta?.[COMP_CREDIT_GRANT_KEY];
+  if (!raw) return null;
+  const m = /^(\d+):(\d+)$/.exec(raw);
+  if (!m) return null;
+  const startSec = Number(m[1]);
+  const endSec = Number(m[2]);
+  return endSec > startSec ? { startSec, endSec } : null;
+}
+
+/** One ledger key per comp grant: the subscription and the grant's start. */
+export function compCreditLedgerKey(subscriptionId: string, grant: CompCreditGrant): string {
+  return `comp:${subscriptionId}:${grant.startSec}`;
+}
+
+export type CompCreditChange =
+  | {
+      kind: "settle";
+      /** The grant the credit belongs to (its START never moves). */
+      grant: CompCreditGrant;
+      /** The credit should pay for [grant.startSec, coverUntilSec). */
+      coverUntilSec: number;
+      /** The metadata to write (`<start>:<end>`, or "" once released). */
+      grantMeta: string;
+      /** A new grant writes its metadata BEFORE any money moves. */
+      opensGrant: boolean;
+      /**
+       * comp_credits_period: a new or re-saved comp (credit the difference,
+       *   or claw back when the ledger is over — a shortened comp);
+       * comp_released: the comp no longer holds — only a CLAW-BACK of the
+       *   time not yet lived through, never a fresh credit.
+       */
+      reason: "comp_credits_period" | "comp_released";
+    }
+  | {
+      kind: "none";
+      reason: "not_active" | "ending" | "comp_lower_tier" | "comp_no_expiry" | "comp_too_long" | "no_comp";
+    };
+
+/**
+ * The balance credit a comp needs on an ACTIVE subscription. Pure: the
+ * amounts are priced by the writer from the subscription's price and the
+ * ledger (Stripe's balance transactions under `compCreditLedgerKey`).
+ */
+export function compCreditChangeFor(input: {
+  sub: CompSubscriptionFacts;
+  subscribedTier: PlanTier;
+  comp: CompFacts;
+  now?: Date;
+}): CompCreditChange {
+  const { sub, subscribedTier, comp } = input;
+  const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
+  if (sub.status !== "active") return { kind: "none", reason: "not_active" };
+
+  const stored = parseCompCreditGrant(sub.metadata);
+  const open = stored && stored.endSec > nowSec ? stored : null;
+
+  const compExpirySec = comp.expiresAt ? Math.floor(Date.parse(comp.expiresAt) / 1000) : null;
+  const compActive = comp.tier != null && (compExpirySec == null || compExpirySec > nowSec);
+  let why: "comp_lower_tier" | "comp_no_expiry" | "comp_too_long" | "no_comp" | null = null;
+  if (!compActive) why = "no_comp";
+  else if (TIER_RANK[comp.tier as PlanTier] < TIER_RANK[subscribedTier]) why = "comp_lower_tier";
+  else if (compExpirySec == null) why = "comp_no_expiry";
+  else if (compExpirySec - nowSec > MAX_TRIAL_SECONDS) why = "comp_too_long";
+
+  if (why == null) {
+    const end = compExpirySec as number;
+    if (open) {
+      return {
+        kind: "settle",
+        grant: open,
+        // One grant pays for at most 730 days from its start.
+        coverUntilSec: Math.min(end, open.startSec + MAX_TRIAL_SECONDS),
+        grantMeta: `${open.startSec}:${end}`,
+        opensGrant: false,
+        reason: "comp_credits_period",
+      };
+    }
+    // A plan set to stop never sees another invoice: a credit would sit on
+    // the balance unused. The comp carries the perks after it ends.
+    if (isEnding(sub)) return { kind: "none", reason: "ending" };
+    return {
+      kind: "settle",
+      grant: { startSec: nowSec, endSec: end },
+      coverUntilSec: end,
+      grantMeta: `${nowSec}:${end}`,
+      opensGrant: true,
+      reason: "comp_credits_period",
+    };
+  }
+
+  // No comp holds the plan any more: the time already lived through stays
+  // paid for; the rest comes back (capped at what is unspent — the writer).
+  if (open) {
+    return {
+      kind: "settle",
+      grant: open,
+      coverUntilSec: Math.max(open.startSec, Math.min(open.endSec, nowSec)),
+      grantMeta: "",
+      opensGrant: false,
+      reason: "comp_released",
+    };
+  }
+  return { kind: "none", reason: why === "no_comp" && isEnding(sub) ? "ending" : why };
+}
+
+/** The admin toast's line for a balance settlement (cents > 0 credited,
+ *  < 0 clawed back; `keptCents` = a claw-back the unspent cap stopped). */
+export function compCreditNote(
+  change: CompCreditChange,
+  moved: { postedCents: number; keptCents: number; money: (cents: number) => string },
+): string | null {
+  if (change.kind === "none") {
+    switch (change.reason) {
+      case "ending":
+        return "Their plan is cancelled and stops on its own date, so nothing is credited; the comp carries the perks after it.";
+      case "comp_lower_tier":
+        return "The comp is below their plan, so it changes nothing.";
+      default:
+        return null;
+    }
+  }
+  const { postedCents, keptCents, money } = moved;
+  const kept = keptCents > 0 ? ` ${money(keptCents)} had already paid an invoice and stays with them.` : "";
+  if (postedCents > 0) {
+    return `Credited ${money(postedCents)} to their Stripe balance for the comp period — their next invoices take it, so they pay nothing for it.`;
+  }
+  if (postedCents < 0) return `Took back ${money(-postedCents)} of unused comp credit from their Stripe balance.${kept}`;
+  if (keptCents > 0) return `No unused comp credit was left to take back.${kept}`;
+  return change.reason === "comp_released"
+    ? "No comp credit was left to take back."
+    : "Their comp credit is already on their Stripe balance.";
+}
+
+/** The subscription statuses that are "trialing or paying": a comp on them
+ *  needs an end date (owner answer 2, 2026-10-30) — Stripe can't hold a
+ *  trial open-ended, and an open-ended credit has no amount. `past_due` is
+ *  a payer in dunning: Stripe still retries the card. */
+const NEEDS_END_DATE = new Set(["trialing", "active", "past_due"]);
+
+export function compNeedsEndDate(subscriptionStatus: string | null | undefined): boolean {
+  return NEEDS_END_DATE.has(subscriptionStatus ?? "");
+}
+
+/** The admin action's refusal for a comp a live subscription can't take, or
+ *  null when it may be saved. */
+export function compEndDateError(input: {
+  subscriptionStatus: string | null | undefined;
+  tier: PlanTier | null;
+  expiresAt: string | null;
+  now?: Date;
+}): string | null {
+  if (input.tier == null || !compNeedsEndDate(input.subscriptionStatus)) return null;
+  if (input.expiresAt == null) {
+    return "This user has a live Stripe subscription (trialing or paying): set an expiry date. A comp with no end date is for free users only.";
+  }
+  const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
+  const end = Math.floor(Date.parse(input.expiresAt) / 1000);
+  if (end - nowSec > MAX_TRIAL_SECONDS) {
+    return "A comp on a live Stripe subscription can run at most 730 days. Pick an earlier expiry.";
+  }
+  return null;
 }

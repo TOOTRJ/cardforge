@@ -35,8 +35,8 @@ function openMenu() {
 afterEach(cleanup);
 
 describe("UserMenu admin shortcuts", () => {
-  it("lists all twelve admin pages for an admin, in the rail's order, Frame requests after Frame compare (D5)", () => {
-    expect(ADMIN_SHORTCUTS).toHaveLength(12);
+  it("lists all thirteen admin pages for an admin, in the rail's order, Frame requests after Frame compare (D5)", () => {
+    expect(ADMIN_SHORTCUTS).toHaveLength(13);
     render(<UserMenu username="dev_admin" displayName="Dev Admin" isAdmin />);
     openMenu();
     const admin = screen.getByRole("navigation", { name: "Admin" });

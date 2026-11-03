@@ -21,7 +21,10 @@ import { PageContainer } from "@/components/layout/page-container";
 // ---------------------------------------------------------------------------
 
 export const revalidate = 3600;
-export const dynamicParams = false;
+// Unknown keys render on demand and 404 through notFound(); never
+// `dynamicParams = false` (tests/unit/content/no-dynamic-params-false.test.ts:
+// under `next start` an expired tag turned every built page into a 404).
+export const dynamicParams = true;
 
 type Params = { format: string };
 
