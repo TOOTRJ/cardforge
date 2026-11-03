@@ -298,8 +298,12 @@ export type CompEndingEmailInput = {
   expiresAt: string;
   /** "$6 / month" — the live plan's price, when there is one. */
   priceLabel?: string | null;
-  /** The next charge — only when it falls AFTER the comp's end. */
+  /** The next charge — only when it falls AFTER the comp's end; with
+   *  `billing: "coupon"`, the first invoice the comp's coupon no longer frees. */
   nextChargeAt?: string | null;
+  /** "coupon": a MONTHLY plan whose comp is a 100%-off coupon (BL1) — whole
+   *  invoices are free, so there is no comp credit to mention. */
+  billing?: "coupon";
   cardLast4?: string | null;
   /** A card (or other payment method) is on file (held trial). */
   hasPaymentMethod?: boolean;
@@ -348,9 +352,16 @@ export function compEndingEmail(recipient: Recipient, input: CompEndingEmailInpu
       : `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}.`;
     // The next charge can fall INSIDE the comp (the balance credit then
     // reduces it): a date is named only when it is after the comp's end.
-    const charge = next
-      ? `Your next invoice, on <strong>${next}</strong>, is charged as usual${price ? ` (${price})` : ""}, less any comp credit still on your balance.`
-      : `Invoices after ${date} are charged as usual${price ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;
+    // A monthly comp's COUPON (BL1) frees whole invoices: the date is the
+    // first invoice it no longer frees, and there is no credit to mention.
+    const coupon = input.billing === "coupon";
+    const charge = coupon
+      ? next
+        ? `Your next charge, on <strong>${next}</strong>, is the usual price${price ? ` (${price})` : ""} — the complimentary discount covers your invoices until then.`
+        : `Invoices after the complimentary discount are charged at the usual price${price ? ` (${price})` : ""}.`
+      : next
+        ? `Your next invoice, on <strong>${next}</strong>, is charged as usual${price ? ` (${price})` : ""}, less any comp credit still on your balance.`
+        : `Invoices after ${date} are charged as usual${price ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;
     paragraphs = [
       `${opening} ${charge}`,
       goesBack
@@ -360,7 +371,9 @@ export function compEndingEmail(recipient: Recipient, input: CompEndingEmailInpu
     preheader = goesBack
       ? `After ${date} you go back to ${paidPlanName}.`
       : next
-        ? `Your next invoice on ${next} is charged as usual.`
+        ? coupon
+          ? `Your next charge, on ${next}, is the usual price.`
+          : `Your next invoice on ${next} is charged as usual.`
         : `Invoices after ${date} are charged as usual.`;
   } else if (input.kind === "plan_ending") {
     const ends = input.planEndsAt ? formatDateIn(input.planEndsAt, "long", "UTC") : null;

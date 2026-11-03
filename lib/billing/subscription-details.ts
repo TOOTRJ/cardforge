@@ -4,6 +4,7 @@ import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { tierForPrice, type PriceLike } from "@/lib/stripe/config";
 import type { PlanTier } from "@/lib/billing/plans";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
+import { activeCompDiscountOf, type CouponSubFacts } from "@/lib/billing/comp-coupon";
 
 // ---------------------------------------------------------------------------
 // What the billing page shows from Stripe itself — the bits the profile row
@@ -61,6 +62,9 @@ export type SubscriptionSummary = {
    *  renews (lib/billing/subscription-ending.ts). */
   endsAt: string | null;
   pendingChange: PendingChangeSummary | null;
+  /** ISO end of the comp's 100%-off coupon on this subscription (a MONTHLY
+   *  comp, BL1 — lib/billing/comp-coupon.ts), or null when it carries none. */
+  compCouponEndsAt: string | null;
 };
 
 export type StripeBillingDetails = {
@@ -102,6 +106,8 @@ export type SubscriptionDetailsLike = {
   default_payment_method?: string | PaymentMethodLike | null;
   /** Expanded (`schedule.phases.items.price`) when a change is pending. */
   schedule?: string | ScheduleLike | null;
+  /** Expanded (`discounts`): the comp coupon is read from it. */
+  discounts?: CouponSubFacts["discounts"];
   items: {
     data: Array<{
       current_period_end?: number | null;
@@ -173,6 +179,11 @@ function pendingChangeOf(
   };
 }
 
+function compCouponEndOf(sub: SubscriptionDetailsLike): string | null {
+  const discount = activeCompDiscountOf({ status: sub.status, discounts: sub.discounts }, Math.floor(Date.now() / 1000));
+  return discount ? (discount.end != null ? new Date(discount.end * 1000).toISOString() : null) : null;
+}
+
 /** Pure: shape Stripe's objects into what the page renders. */
 export function summarizeBillingDetails(input: {
   customer: CustomerLike | null;
@@ -197,6 +208,7 @@ export function summarizeBillingDetails(input: {
         // A plan that is ending has no "next plan": the schedule's later
         // phases never start.
         pendingChange: endsAt != null || isOver(sub.status) ? null : pendingChangeOf(sub.schedule),
+        compCouponEndsAt: compCouponEndOf(sub),
       }
     : null;
 
@@ -242,7 +254,7 @@ export async function getStripeBillingDetails(
       subscriptionId
         ? stripe.subscriptions
             .retrieve(subscriptionId, {
-              expand: ["default_payment_method", "schedule.phases.items.price"],
+              expand: ["default_payment_method", "schedule.phases.items.price", "discounts"],
             })
             .catch(() => null)
         : Promise.resolve(null),

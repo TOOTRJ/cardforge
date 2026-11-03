@@ -2,6 +2,7 @@ import "server-only";
 
 import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import { isCompHeldTrial, type CompEndingSub } from "@/lib/billing/comp-ending";
+import { reconcileCompBilling } from "@/lib/billing/comp-stripe-apply";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -184,6 +185,15 @@ async function handleSubscriptionEvent(
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
   });
+
+  // A comped plan that changed shape (monthly ↔ annual, a tier above the
+  // comp, a downgrade's phase change, a #688 credit on a monthly plan):
+  // the comp moves between its coupon and its balance credit (BL1,
+  // lib/billing/comp-coupon.ts). Only subscriptions naming a comp grant;
+  // idempotent, never throws.
+  if (!opts.isCreationEvent) {
+    await reconcileCompBilling(admin, stripe, userId, sub, tier ?? null);
+  }
 }
 
 const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };

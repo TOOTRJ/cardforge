@@ -130,6 +130,8 @@ export default async function BillingPage() {
   const liveCompLine = liveComp
     ? {
         trial_held: " — your trial runs at least that long, so nothing is charged before then.",
+        // The coupon's own end follows as a <LocalDate> below.
+        coupon: " — a 100% complimentary discount makes your monthly invoices free",
         balance_credit: " — the comp period's price goes on your billing balance and comes off your next invoices.",
         own_dates: " — your subscription keeps its own billing dates.",
       }[
@@ -138,9 +140,14 @@ export default async function BillingPage() {
           ending,
           compExpiresAt: liveComp.expiresAt,
           stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
+          compCoupon: stripeDetails?.subscription?.compCouponEndsAt != null,
         })
       ]
     : null;
+  // A monthly comp's coupon (BL1): its end, named after the "coupon" line
+  // (that line is chosen exactly when the subscription carries one).
+  const liveCompCouponEnd =
+    liveComp && status === "active" ? (stripeDetails?.subscription?.compCouponEndsAt ?? null) : null;
   const capacity = entitlements.cardCapacity;
   const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
@@ -204,6 +211,11 @@ export default async function BillingPage() {
                 </>
               ) : null}
               {liveCompLine}
+              {liveCompCouponEnd ? (
+                <>
+                  {" "}until <LocalDate iso={liveCompCouponEnd} />; the first invoice after that is charged as usual.
+                </>
+              ) : null}
             </p>
           ) : null}
 

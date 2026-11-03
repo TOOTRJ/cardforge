@@ -20,6 +20,10 @@ import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 //     (`TRIAL_END_BEFORE_COMP_KEY`), so clearing or shortening the comp puts it
 //     back (or ends the trial now when that date has passed — the charge it
 //     would have made already).
+//   • an ACTIVE MONTHLY subscription (TODO BL1, owner 2026-11-02): a 100 %
+//     off repeating COUPON frees the comp's months of invoices instead of a
+//     credit — lib/billing/comp-coupon.ts. The credit below is for ANNUAL
+//     plans (and the switch between the two).
 //   • an ACTIVE subscription (owner answer 1, 2026-10-30): the payer pays
 //     NOTHING for the comp period — the comp's share of the subscription's
 //     own price goes on the Stripe CUSTOMER BALANCE (`compCreditChangeFor`,
@@ -222,13 +226,17 @@ export function liveCompChargeLine(input: {
   ending: boolean;
   compExpiresAt: string | null;
   stripeTrialEnd: string | null | undefined;
-}): "trial_held" | "balance_credit" | "own_dates" {
+  /** The subscription carries the comp's 100%-off coupon (a MONTHLY plan,
+   *  BL1): its invoices are free, not credited. */
+  compCoupon?: boolean;
+}): "trial_held" | "coupon" | "balance_credit" | "own_dates" {
   if (!input.compExpiresAt) return "own_dates";
   if (input.status === "trialing") {
     return input.stripeTrialEnd != null && Date.parse(input.stripeTrialEnd) >= Date.parse(input.compExpiresAt)
       ? "trial_held"
       : "own_dates";
   }
+  if (input.status === "active" && input.compCoupon) return "coupon";
   return input.status === "active" && !input.ending ? "balance_credit" : "own_dates";
 }
 
@@ -286,7 +294,16 @@ export type CompCreditChange =
     }
   | {
       kind: "none";
-      reason: "not_active" | "ending" | "comp_lower_tier" | "comp_no_expiry" | "comp_too_long" | "no_comp";
+      reason:
+        | "not_active"
+        | "ending"
+        | "comp_lower_tier"
+        | "comp_no_expiry"
+        | "comp_too_long"
+        | "no_comp"
+        /** A comp coupon's free invoice already pays for the rest of the comp
+         *  (a monthly → annual move, lib/billing/comp-coupon.ts). */
+        | "covered";
     };
 
 /**
@@ -299,6 +316,10 @@ export function compCreditChangeFor(input: {
   subscribedTier: PlanTier;
   comp: CompFacts;
   now?: Date;
+  /** A NEW grant starts here instead of now — the end of the invoice a comp
+   *  coupon already freed, when the comp moves off a monthly coupon onto the
+   *  credit (BL1). Never earlier than now. */
+  grantStartSec?: number;
 }): CompCreditChange {
   const { sub, subscribedTier, comp } = input;
   const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
@@ -331,11 +352,13 @@ export function compCreditChangeFor(input: {
     // A plan set to stop never sees another invoice: a credit would sit on
     // the balance unused. The comp carries the perks after it ends.
     if (isEnding(sub)) return { kind: "none", reason: "ending" };
+    const startSec = Math.max(nowSec, input.grantStartSec ?? nowSec);
+    if (startSec >= end) return { kind: "none", reason: "covered" };
     return {
       kind: "settle",
-      grant: { startSec: nowSec, endSec: end },
+      grant: { startSec, endSec: end },
       coverUntilSec: end,
-      grantMeta: `${nowSec}:${end}`,
+      grantMeta: `${startSec}:${end}`,
       opensGrant: true,
       reason: "comp_credits_period",
     };
@@ -368,6 +391,8 @@ export function compCreditNote(
         return "Their plan is cancelled and stops on its own date, so nothing is credited; the comp carries the perks after it.";
       case "comp_lower_tier":
         return "The comp is below their plan, so it changes nothing.";
+      case "covered":
+        return "The invoice their complimentary coupon already freed covers the rest of the comp, so nothing is credited.";
       default:
         return null;
     }

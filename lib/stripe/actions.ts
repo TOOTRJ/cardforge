@@ -24,6 +24,8 @@ import {
   type CompFacts,
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
+import { moveCompOffCouponForSwitch } from "@/lib/billing/comp-stripe-apply";
+import { COMP_COUPON_GRANT_KEY, compDiscountsOf, type CouponSubFacts } from "@/lib/billing/comp-coupon";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import {
@@ -201,6 +203,34 @@ async function createPlanSwitchSession(
   return { ok: true, url: session.url };
 }
 
+/** The ids of the comp coupon's discounts on a subscription (BL1), read
+ *  with the discounts expanded. Only a subscription naming a coupon grant is
+ *  read again. */
+async function compDiscountIdsOf(stripe: Stripe, live: Stripe.Subscription): Promise<string[]> {
+  if (!live.metadata?.[COMP_COUPON_GRANT_KEY]) return [];
+  const sub = await stripe.subscriptions.retrieve(live.id, { expand: ["discounts"] });
+  return compDiscountsOf(sub as unknown as CouponSubFacts).map((d) => d.id);
+}
+
+/** A schedule phase's discounts as update parameters (the same discounts,
+ *  by id where Stripe gives one). */
+function phaseDiscountsOf(
+  phase: Stripe.SubscriptionSchedule.Phase,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] {
+  const idOf = (v: unknown): string | null =>
+    typeof v === "string" ? v : v && typeof v === "object" && typeof (v as { id?: unknown }).id === "string" ? (v as { id: string }).id : null;
+  const out: Stripe.SubscriptionScheduleUpdateParams.Phase.Discount[] = [];
+  for (const d of phase.discounts ?? []) {
+    const discount = idOf(d.discount);
+    const coupon = idOf(d.coupon);
+    const promotion = idOf(d.promotion_code);
+    if (discount) out.push({ discount });
+    else if (coupon) out.push({ coupon });
+    else if (promotion) out.push({ promotion_code: promotion });
+  }
+  return out;
+}
+
 function scheduleIdOf(schedule: Stripe.Subscription["schedule"]): string | null {
   if (!schedule) return null;
   return typeof schedule === "string" ? schedule : schedule.id;
@@ -284,12 +314,21 @@ async function scheduleDowngrade(
     resumedFirst = true;
   }
   try {
+    // A monthly comp's coupon on the subscription (BL1): the phases must say
+    // what happens to it — kept on the current phase, carried onto a MONTHLY
+    // new price (the same discount, its end unchanged), and never onto an
+    // annual one (it would free the year; the webhook moves the comp onto the
+    // balance credit at the phase change).
+    const compDiscountIds = await compDiscountIdsOf(stripe, live);
     const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
     const current = schedule.phases[0];
     if (!current) {
       if (!resumedFirst) return { ok: false, error: "Couldn't read your current plan." };
       throw new Error(`Schedule ${schedule.id} has no current phase.`);
     }
+    const currentDiscounts = phaseDiscountsOf(current);
+    const nextDiscounts =
+      target.period === "monthly" ? compDiscountIds.map((id) => ({ discount: id })) : [];
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: "release",
       phases: [
@@ -300,6 +339,8 @@ async function scheduleDowngrade(
             price: typeof item.price === "string" ? item.price : item.price.id,
             quantity: item.quantity ?? 1,
           })),
+          // The current phase keeps the discounts it was created with.
+          ...(currentDiscounts.length ? { discounts: currentDiscounts } : {}),
         },
         {
           items: [{ price: target.priceId, quantity: 1 }],
@@ -307,6 +348,11 @@ async function scheduleDowngrade(
           // subscription back, renewing on that price.
           duration: { interval: target.period === "annual" ? "year" : "month", interval_count: 1 },
           proration_behavior: "none",
+          ...(nextDiscounts.length
+            ? { discounts: nextDiscounts }
+            : compDiscountIds.length
+              ? { discounts: "" as const }
+              : {}),
         },
       ],
     });
@@ -406,6 +452,27 @@ export async function createCheckoutSessionAction(
           // …. By confirming, your updated subscription will be renewed" —
           // read in the sandbox 2026-10-07), so no resume is needed first.
           await releasePendingChange(stripe, live);
+          // A monthly comp's 100%-off coupon must not free the switch's
+          // invoice when the new plan leaves its cover (annual, or above the
+          // comp): it comes off first and the rest of the comp goes on the
+          // balance credit (BL1, lib/billing/comp-stripe-apply.ts). If that
+          // can't be done, the switch is NOT opened.
+          try {
+            await moveCompOffCouponForSwitch(stripe, live, {
+              userId: customer.userId,
+              comp: customer.comp,
+              target,
+            });
+          } catch (error) {
+            console.error(
+              `[stripe] Couldn't move the comp off its coupon before a plan switch (${live.id}):`,
+              error instanceof Error ? error.message : error,
+            );
+            return {
+              ok: false,
+              error: "Your plan is complimentary right now and couldn't be prepared for the change. Try again in a moment.",
+            };
+          }
           return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         supersedes = live.id;

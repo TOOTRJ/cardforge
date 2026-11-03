@@ -39,6 +39,8 @@ import {
 } from "@/lib/billing/comp-ending";
 import { sendCompEndingReminders } from "@/lib/billing/comp-ending-run";
 import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { COMP_COUPON_GRANT_KEY } from "@/lib/billing/comp-coupon";
+import { addMonthsUtc } from "@/lib/billing/balance-credit";
 import { describeNotification } from "@/lib/notifications/describe";
 import { compEndingEmail, trialEndingEmail } from "@/lib/email/messages";
 
@@ -225,7 +227,7 @@ describe("sendCompEndingReminders — the daily run", () => {
     const stripe = stripeWith(heldTrial(IN_5D));
     const stub = db([profile({ subscription_status: "trialing", stripe_subscription_id: "sub_1" })]);
     await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
-    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["default_payment_method"] });
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", { expand: ["default_payment_method", "discounts"] });
     expect(inserts(stub)[0].payload).toMatchObject({
       kind: "held_trial",
       subscribedTier: "plus",
@@ -396,6 +398,92 @@ describe("sendCompEndingReminders — the daily run", () => {
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// BL1: a MONTHLY plan's comp is a 100%-off coupon — the reminder reads the
+// coupon's END: the next charge is the first renewal it no longer frees.
+// ---------------------------------------------------------------------------
+describe("a monthly comp's COUPON (BL1): the next charge is read from the coupon's end", () => {
+  const ANCHOR = sec("2026-10-20T12:00:00Z"); // renews on the 20th at noon
+  const START = sec("2026-10-08T14:30:00Z"); // the comp (and its coupon) began Oct 8
+  const couponSub = (months: number, over: Row = {}) =>
+    sub({
+      billing_cycle_anchor: ANCHOR,
+      metadata: { [COMP_COUPON_GRANT_KEY]: `${START}:${sec(IN_5D)}:${months}` },
+      discounts: [
+        {
+          id: "di_1",
+          start: START,
+          end: Math.floor(addMonthsUtc(START * 1000, months) / 1000),
+          source: { type: "coupon", coupon: `pipglyph_comp_100off_${months}m` },
+        },
+      ],
+      items: { data: [{ current_period_start: ANCHOR, current_period_end: sec("2026-11-20T12:00:00Z"), price: PLUS_MONTHLY }] },
+      ...over,
+    });
+  const plan = (s: Row, window: "7d" | "1d" = "7d") =>
+    compEndingPlanFor({ compTier: "plus", compExpiresAt: IN_5D, window, sub: s as never, subscribedTier: "plus", now: NOW });
+
+  it("a 1-month coupon (it freed Oct 20): the next charge is Nov 20 — the first renewal at or after its end", () => {
+    expect(plan(couponSub(1))).toEqual({ send: true, kind: "paying", nextChargeAt: "2026-11-20T12:00:00.000Z", billing: "coupon" });
+  });
+  it("a 2-month coupon still frees Nov 20 (after the comp's end): the next charge is Dec 20", () => {
+    expect(plan(couponSub(2), "1d")).toEqual({ send: true, kind: "paying", nextChargeAt: "2026-12-20T12:00:00.000Z", billing: "coupon" });
+  });
+  it("the coupon already ran out (only its grant is named): the next renewal is the charge", () => {
+    expect(plan(couponSub(1, { discounts: [] }))).toEqual({
+      send: true,
+      kind: "paying",
+      nextChargeAt: "2026-11-20T12:00:00.000Z",
+      billing: "coupon",
+    });
+  });
+  it("the run sends billing \"coupon\" and the date; the email names the usual price and no comp credit", async () => {
+    const stripe = stripeWith(couponSub(1));
+    const stub = db([profile({ subscription_status: "active", stripe_subscription_id: "sub_1" })]);
+    await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    expect(inserts(stub)[0].payload).toMatchObject({
+      kind: "paying",
+      billing: "coupon",
+      nextChargeAt: "2026-11-20T12:00:00.000Z",
+      priceLabel: "$6 / month",
+      subscribedTier: "plus",
+    });
+    const [email] = h.sendEmail.mock.calls[0];
+    expect(email.text).toContain("Your next charge, on November 20, 2026, is the usual price ($6 / month)");
+    expect(email.text).toContain("the complimentary discount covers your invoices until then");
+    expect(email.text).not.toMatch(/comp credit/);
+  });
+  it("a #688 credit plan's reminder is unchanged (no billing key)", async () => {
+    const stripe = stripeWith(sub());
+    const stub = db([profile({ subscription_status: "active", stripe_subscription_id: "sub_1" })]);
+    await sendCompEndingReminders(stub.client as never, { stripe: stripe as never, now: NOW });
+    expect(inserts(stub)[0].payload).not.toHaveProperty("billing");
+    expect(h.sendEmail.mock.calls[0][0].text).toContain("less any comp credit still on your balance");
+  });
+  it("the bell: the usual price once, never a comp credit; comped above the plan, the price is said with the plan", () => {
+    const bell = (payload: Row) =>
+      describeNotification({ type: "comp_ending", actor: null, card: null, threadId: null, payload }, { isAdmin: false });
+    expect(
+      bell({ kind: "paying", billing: "coupon", tier: "plus", subscribedTier: "plus", expiresAt: IN_5D, nextChargeAt: "2026-11-20T12:00:00.000Z", priceLabel: "$6 / month" }).body,
+    ).toMatch(/^ends on .+; your next charge, on Nov 20, 2026, is the usual price \(\$6 \/ month\)\.$/);
+    expect(
+      bell({ kind: "paying", billing: "coupon", tier: "pro", subscribedTier: "plus", expiresAt: IN_5D, nextChargeAt: "2026-11-20T12:00:00.000Z", priceLabel: "$6 / month" }).body,
+    ).toMatch(/; you go back to Plus \(\$6 \/ month\); your next charge, on Nov 20, 2026, is the usual price\.$/);
+    expect(bell({ kind: "paying", billing: "coupon", tier: "plus", subscribedTier: "plus", expiresAt: IN_5D, nextChargeAt: null, priceLabel: "$6 / month" }).body).toMatch(
+      /invoices after the complimentary discount are charged at the usual price \(\$6 \/ month\)\./,
+    );
+  });
+  it("the email, comped above the plan: back to Plus at Plus's price", () => {
+    const email = compEndingEmail(
+      { email: "u1@example.test", unsubscribeToken: "tok" } as never,
+      { kind: "paying", billing: "coupon", plan: "Pro", paidPlan: "Plus", expiresAt: IN_5D, priceLabel: "$6 / month", nextChargeAt: "2026-11-20T12:00:00.000Z" },
+    );
+    expect(email.text).toContain("and you go back to Plus ($6 / month).");
+    expect(email.text).toContain("Your next charge, on November 20, 2026, is the usual price ($6 / month)");
+    expect(email.html).toContain("<strong>November 20, 2026</strong>");
+  });
+});
+
 describe("the copy (bell + email)", () => {
   const bell = (payload: Row, type = "comp_ending") =>
     describeNotification({ type, actor: null, card: null, threadId: null, payload }, { isAdmin: false });

@@ -48,8 +48,9 @@ export function oneMonthCents(price: RecurringPriceLike, tier: PlanTier): number
 }
 
 /** `ms` moved `n` calendar months on (UTC), the day clamped to the month's
- *  last (Jan 31 + 1 month = Feb 28/29). */
-function addMonthsUtc(ms: number, n: number): number {
+ *  last (Jan 31 + 1 month = Feb 28/29). Shared with the monthly comp coupon
+ *  (lib/billing/comp-coupon.ts), which reads a plan's renewals the same way. */
+export function addMonthsUtc(ms: number, n: number): number {
   const d = new Date(ms);
   const day = d.getUTCDate();
   d.setUTCDate(1);

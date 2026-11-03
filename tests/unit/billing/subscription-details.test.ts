@@ -68,6 +68,7 @@ describe("summarizeBillingDetails", () => {
       cancelAtPeriodEnd: false,
       endsAt: null,
       pendingChange: null,
+      compCouponEndsAt: null,
     });
     expect(details.paymentMethod).toEqual({ brand: "visa", last4: "4242", expMonth: 12, expYear: 2034 });
     // Drafts are Stripe's in-progress objects, never something to show.

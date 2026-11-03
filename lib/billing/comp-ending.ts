@@ -1,5 +1,12 @@
 import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import {
+  activeCompDiscountOf,
+  firstRenewalAtOrAfter,
+  parseCompCouponGrant,
+  type CouponSubFacts,
+  type PriceLike,
+} from "@/lib/billing/comp-coupon";
 
 // ---------------------------------------------------------------------------
 // "Your complimentary plan ends soon" (owner 2026-11-02) — the pure half.
@@ -21,7 +28,13 @@ import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 //                          (lib/billing/comp-stripe.ts): the card is charged
 //                          the plan's price at the comp's end;
 //              paying      an active plan (or a trial that runs on past the
-//                          comp): the next invoice is charged as usual;
+//                          comp): the next invoice is charged as usual —
+//                          on a MONTHLY plan the comp's coupon (BL1,
+//                          lib/billing/comp-coupon.ts) decides that date:
+//                          the first renewal at or after the coupon's END
+//                          (`billing: "coupon"`), which may fall after the
+//                          comp's end or, when the comp's months rounded
+//                          down, before it;
 //              plan_ending a cancelled plan that runs past the comp: it
 //                          ends on its own date, nothing more is charged.
 //   one email per moment: a comp-held trial is ALSO reminded by Stripe's
@@ -65,7 +78,16 @@ export type CompEndingSub = {
   cancel_at?: number | null;
   current_period_end?: number | null;
   metadata?: Record<string, string> | null;
-  items?: { data?: Array<{ current_period_end?: number | null }> } | null;
+  billing_cycle_anchor?: number | null;
+  /** Expanded (`expand: ["discounts"]`) to read the comp coupon's end. */
+  discounts?: CouponSubFacts["discounts"];
+  items?: {
+    data?: Array<{
+      current_period_start?: number | null;
+      current_period_end?: number | null;
+      price?: PriceLike;
+    }>;
+  } | null;
 };
 
 /** Does a comp HOLD this trial — the trial a comp moved (or Checkout started
@@ -91,7 +113,7 @@ const LIVE = new Set(["trialing", "active", "past_due"]);
 export type CompEndingPlan =
   | { send: true; kind: "free" }
   | { send: true; kind: "held_trial" }
-  | { send: true; kind: "paying"; nextChargeAt: string | null }
+  | { send: true; kind: "paying"; nextChargeAt: string | null; billing?: "coupon" }
   | { send: true; kind: "plan_ending"; planEndsAt: string }
   | { send: false; reason: "comp_below_plan" | "trial_reminder_covers" };
 
@@ -109,8 +131,10 @@ export function compEndingPlanFor(input: {
   /** A `trial_ending` reminder (compHold) already went out for THIS trial
    *  end — read by the runner only for a held trial's 1-day window. */
   trialReminderSent?: boolean;
+  now?: Date;
 }): CompEndingPlan {
   const { sub } = input;
+  const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
   if (!sub || !LIVE.has(sub.status)) return { send: true, kind: "free" };
   // A comp below the plan paid for changed nothing — its end changes nothing.
   if (input.subscribedTier && TIER_RANK[input.compTier] < TIER_RANK[input.subscribedTier]) {
@@ -132,6 +156,23 @@ export function compEndingPlanFor(input: {
     return input.window === "1d" && input.trialReminderSent === true
       ? { send: false, reason: "trial_reminder_covers" }
       : { send: true, kind: "held_trial" };
+  }
+  // A MONTHLY plan whose comp is a coupon (BL1): the coupon frees whole
+  // invoices, so the next CHARGE is the first renewal at or after the
+  // coupon's end — named whether it falls before or after the comp's end.
+  // With the coupon already over (or never attached: a comp under half a
+  // month), it is simply the next renewal.
+  const facts = sub as unknown as CouponSubFacts;
+  if (sub.status === "active" && (activeCompDiscountOf(facts, nowSec) || parseCompCouponGrant(sub.metadata))) {
+    const couponEnd = activeCompDiscountOf(facts, nowSec)?.end ?? null;
+    const charged =
+      couponEnd != null ? firstRenewalAtOrAfter(facts, Math.max(couponEnd, nowSec + 1)) : periodEndOf(sub);
+    return {
+      send: true,
+      kind: "paying",
+      nextChargeAt: charged != null && charged > nowSec ? new Date(charged * 1000).toISOString() : null,
+      billing: "coupon",
+    };
   }
   const next =
     sub.status === "trialing" && typeof sub.trial_end === "number" ? sub.trial_end : periodEndOf(sub);
@@ -158,8 +199,13 @@ export type CompEndingPayload = {
   expiresAt: string;
   /** "$6 / month" — the subscription's own price from Stripe. */
   priceLabel?: string | null;
-  /** The next charge, only when it falls after the comp's end. */
+  /** The next charge, only when it falls after the comp's end — or, with
+   *  `billing: "coupon"`, the first invoice the comp's coupon no longer
+   *  frees, wherever it falls. */
   nextChargeAt?: string | null;
+  /** "coupon": a monthly plan's comp is its 100%-off coupon (BL1) — whole
+   *  invoices are free, so no "comp credit" wording. Absent: #688's copy. */
+  billing?: "coupon";
   cardLast4?: string | null;
   /** Held trial: a card (or other payment method) is on file. */
   hasPaymentMethod?: boolean;

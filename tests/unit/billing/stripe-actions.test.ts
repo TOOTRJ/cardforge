@@ -150,6 +150,7 @@ import {
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { clearPriceCache } from "@/lib/stripe/prices";
 import { TRIAL_END_BEFORE_COMP_KEY, compTrialChangeFor } from "@/lib/billing/comp-stripe";
+import { COMP_COUPON_GRANT_KEY } from "@/lib/billing/comp-coupon";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const checkoutParams = () => s.checkoutCreate.mock.calls[0]?.[0] as Record<string, unknown> & {
@@ -555,6 +556,76 @@ describe("createCheckoutSessionAction", () => {
       },
     });
     expect(s.scheduleCreate).not.toHaveBeenCalled();
+  });
+
+  // BL1: a monthly comp's 100%-off coupon across a plan change.
+  describe("a plan change while a monthly comp's COUPON is on (BL1)", () => {
+    const COUPON_META = { [COMP_COUPON_GRANT_KEY]: "1790000000:1797000000:3" };
+    const compDiscount = { id: "di_comp", start: 1_790_000_000, end: 1_797_000_000, source: { type: "coupon", coupon: "pipglyph_comp_100off_3m" } };
+    const comped = (price: string, interval: string) => ({
+      id: "sub_live",
+      status: "active",
+      customer: "cus_1",
+      metadata: { ...COUPON_META },
+      items: { data: [{ id: "si_1", current_period_start: 1_790_000_000, current_period_end: 1_792_600_000, price: { id: price, recurring: { interval } } }] },
+    });
+    beforeEach(() => {
+      s.scheduleCreate.mockResolvedValue({
+        id: "sub_sched_1",
+        phases: [
+          {
+            start_date: 1_790_000_000,
+            end_date: 1_792_600_000,
+            items: [{ price: { id: "price_pro_monthly" }, quantity: 1 }],
+            discounts: [{ coupon: null, discount: "di_comp", promotion_code: null }],
+          },
+        ],
+      });
+    });
+
+    it("a DOWNGRADE to a monthly price keeps the comp's discount on the current phase AND carries it onto the new one", async () => {
+      s.live = comped("price_pro_monthly", "month") as never;
+      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_pro_monthly", "month"), discounts: [compDiscount] }));
+      await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+      const phases = s.scheduleUpdate.mock.calls[0][1].phases;
+      expect(phases[0].discounts).toEqual([{ discount: "di_comp" }]);
+      expect(phases[1].discounts).toEqual([{ discount: "di_comp" }]);
+    });
+
+    it("a DOWNGRADE to an ANNUAL price never carries the 100% coupon onto it (it would free the year)", async () => {
+      s.live = comped("price_pro_monthly", "month") as never;
+      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_pro_monthly", "month"), discounts: [compDiscount] }));
+      await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
+      const phases = s.scheduleUpdate.mock.calls[0][1].phases;
+      expect(phases[0].discounts).toEqual([{ discount: "di_comp" }]);
+      expect(phases[1].discounts).toBe("");
+    });
+
+    it("an UPGRADE to annual takes the coupon off BEFORE the portal's confirm page opens", async () => {
+      s.profile = { stripe_customer_id: "cus_1" }; // the comp has ended: nothing to credit
+      s.live = comped("price_plus_monthly", "month") as never;
+      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_plus_monthly", "month"), discounts: [compDiscount] }));
+      s.subscriptionsUpdate.mockImplementation(async (_id: string, p: { metadata?: Record<string, string> }) => ({
+        ...comped("price_plus_monthly", "month"),
+        discounts: [compDiscount],
+        metadata: { ...COUPON_META, ...(p.metadata ?? {}) },
+      }));
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
+      expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
+      const off = s.subscriptionsUpdate.mock.calls.findIndex(([, p]) => (p as { discounts?: unknown }).discounts === "");
+      expect(off).toBeGreaterThanOrEqual(0);
+      expect(s.subscriptionsUpdate.mock.calls[off][1]).toMatchObject({ metadata: { [COMP_COUPON_GRANT_KEY]: "" } });
+      expect(s.subscriptionsUpdate.mock.invocationCallOrder[off]).toBeLessThan(s.portalCreate.mock.invocationCallOrder[0]);
+    });
+
+    it("if the coupon can't be taken off, the switch is NOT opened (it would be free)", async () => {
+      s.live = comped("price_plus_monthly", "month") as never;
+      s.subscriptionsRetrieve.mockImplementation(async () => ({ ...comped("price_plus_monthly", "month"), discounts: [compDiscount] }));
+      s.subscriptionsUpdate.mockRejectedValue(new Error("stripe down"));
+      const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus", period: "annual" });
+      expect(result).toEqual({ ok: false, error: expect.stringMatching(/complimentary/) });
+      expect(s.portalCreate).not.toHaveBeenCalled();
+    });
   });
 
   it("a downgrade replaces a pending one and un-cancels a plan set to end — the click asked for Plus after this period, not nothing", async () => {

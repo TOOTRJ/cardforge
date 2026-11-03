@@ -202,6 +202,35 @@ describe("adminSetCompTierAction", () => {
     await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
     expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, creditCents: 600, currency: "usd" } });
   });
+  it("a MONTHLY payer's comp coupon (BL1) names the free invoices and when billing resumes — only when this save attached it", async () => {
+    const expiresAt = new Date(Date.now() + 90 * 86_400_000).toISOString();
+    let stub = db({ subscriptionStatus: "active" });
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: null,
+      trialEnd: null,
+      credit: null,
+      coupon: { change: { kind: "apply" }, freeInvoices: 3, chargedFrom: "2027-02-20T12:00:00.000Z" },
+      note: "Their next 3 monthly invoices are free …",
+      failed: false,
+    });
+    await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
+    expect(notification(stub)).toMatchObject({
+      payload: { tier: "plus", expiresAt, freeInvoices: 3, chargedFrom: "2027-02-20T12:00:00.000Z" },
+    });
+    expect((notification(stub) as { payload: Record<string, unknown> }).payload).not.toHaveProperty("creditCents");
+
+    // A re-save that KEPT the coupon says nothing new about invoices.
+    stub = db({ subscriptionStatus: "active" });
+    compStripe.applyCompToSubscription.mockResolvedValue({
+      change: null,
+      trialEnd: null,
+      coupon: { change: { kind: "keep" }, freeInvoices: 3, chargedFrom: "2027-02-20T12:00:00.000Z" },
+      note: "Their complimentary coupon is already on their Stripe subscription.",
+      failed: false,
+    });
+    await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
+    expect((notification(stub) as { payload: Record<string, unknown> }).payload).not.toHaveProperty("freeInvoices");
+  });
   it.each(["trialing", "active", "past_due"])(
     "a %s user's comp needs an end date (owner answer 2): refused, nothing written",
     async (status) => {

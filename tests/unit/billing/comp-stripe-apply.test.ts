@@ -156,10 +156,12 @@ describe("applyCompToSubscription", () => {
 // An ACTIVE (paying) plan: the comp period goes on the customer balance
 // (owner answer 1, 2026-10-30). Stripe is the ledger; one key per grant.
 // ---------------------------------------------------------------------------
-describe("applyCompToSubscription — a paying (active) plan gets a balance credit", () => {
+// Since BL1 the credit is for ANNUAL plans (a monthly plan's comp is a 100%-off
+// coupon — tests/unit/billing/comp-coupon.test.ts), so these run on $60 / year.
+describe("applyCompToSubscription — a paying (active) ANNUAL plan gets a balance credit", () => {
   const MONTHLY = { unit_amount: 600, currency: "usd", recurring: { interval: "month", interval_count: 1 } };
   const ANNUAL = { unit_amount: 6000, currency: "usd", recurring: { interval: "year", interval_count: 1 } };
-  const activeSub = (metadata: Record<string, string> = {}, price: Record<string, unknown> = MONTHLY) => ({
+  const activeSub = (metadata: Record<string, string> = {}, price: Record<string, unknown> = ANNUAL) => ({
     id: "sub_1",
     customer: "cus_1",
     status: "active",
@@ -179,7 +181,7 @@ describe("applyCompToSubscription — a paying (active) plan gets a balance cred
   const run = (stripe: ReturnType<typeof stripeWith>, comp: { tier: "plus" | "pro" | null; expiresAt: string | null }, now = NOW) =>
     applyCompToSubscription(db(ACTIVE).client as never, "u1", comp, { stripe: stripe as never, now });
 
-  it("a new grant: names it on the subscription FIRST, then credits one month's price — idempotent key", async () => {
+  it("a new grant: names it on the subscription FIRST, then credits a twelfth of the year — idempotent key", async () => {
     const stripe = stripeWith(activeSub());
     const out = await run(stripe, { tier: "plus", expiresAt: MONTH_END });
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
@@ -191,20 +193,22 @@ describe("applyCompToSubscription — a paying (active) plan gets a balance cred
     expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
       "cus_1",
       expect.objectContaining({
-        amount: -600,
+        amount: -500,
         currency: "usd",
         metadata: { [COMP_CREDIT_LEDGER_KEY]: grantKey, supabase_user_id: "u1", kind: "comp_credit" },
       }),
-      { idempotencyKey: `${grantKey}:0->600:credit` },
+      { idempotencyKey: `${grantKey}:0->500:credit` },
     );
     // Never a trial or a price change on a paying plan.
     expect(stripe.subscriptions.update.mock.calls.every(([, p]) => !("trial_end" in (p as object)))).toBe(true);
-    expect(out).toMatchObject({ failed: false, credit: { postedCents: 600, keptCents: 0, currency: "usd" } });
-    expect(out.note).toMatch(/Credited \$6 to their Stripe balance/);
+    expect(out).toMatchObject({ failed: false, credit: { postedCents: 500, keptCents: 0, currency: "usd" } });
+    expect(out.note).toMatch(/Credited \$5 to their Stripe balance/);
+    // Never a coupon on an annual plan (it would free the whole year).
+    expect(stripe.subscriptions.update.mock.calls.every(([, p]) => !("discounts" in (p as object)))).toBe(true);
   });
 
   it("a RE-SAVE of the same comp posts nothing: the ledger already holds it", async () => {
-    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` }), { ledger: [credited(-600)] });
+    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` }), { ledger: [credited(-500)] });
     const out = await run(stripe, { tier: "plus", expiresAt: MONTH_END }, new Date(NOW.getTime() + 3_600_000));
     expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
     expect(stripe.subscriptions.update).not.toHaveBeenCalled();
@@ -216,85 +220,92 @@ describe("applyCompToSubscription — a paying (active) plan gets a balance cred
     const stripe = stripeWith(activeSub(), {
       ledger: [
         { id: "cbtxn_r", amount: -1500, metadata: { referral_id: "r1" } },
-        { id: "cbtxn_o", amount: -600, metadata: { [COMP_CREDIT_LEDGER_KEY]: "comp:sub_1:1" } },
+        { id: "cbtxn_o", amount: -500, metadata: { [COMP_CREDIT_LEDGER_KEY]: "comp:sub_1:1" } },
       ],
     });
     await run(stripe, { tier: "plus", expiresAt: MONTH_END });
-    expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith("cus_1", expect.objectContaining({ amount: -600 }), expect.anything());
+    expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith("cus_1", expect.objectContaining({ amount: -500 }), expect.anything());
   });
 
-  it("EXTENDED to three months: credits the difference only ($12), the grant's start kept", async () => {
-    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` }), { ledger: [credited(-600)] });
+  it("EXTENDED to three months: credits the difference only ($10), the grant's start kept", async () => {
+    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` }), { ledger: [credited(-500)] });
     const out = await run(stripe, { tier: "pro", expiresAt: THREE_MONTHS });
     expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
       "cus_1",
-      expect.objectContaining({ amount: -1200 }),
-      { idempotencyKey: `${grantKey}:600->1800:credit` },
+      expect.objectContaining({ amount: -1000 }),
+      { idempotencyKey: `${grantKey}:500->1500:credit` },
     );
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
       metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${threeMonthsSec}` },
     });
-    expect(out.credit?.postedCents).toBe(1200);
+    expect(out.credit?.postedCents).toBe(1000);
   });
 
   it("SHORTENED from three months to one: two months come back", async () => {
-    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${threeMonthsSec}` }), { ledger: [credited(-1800)] });
+    const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${threeMonthsSec}` }), { ledger: [credited(-1500)] });
     const out = await run(stripe, { tier: "plus", expiresAt: MONTH_END });
     expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
       "cus_1",
-      expect.objectContaining({ amount: 1200, metadata: expect.objectContaining({ kind: "comp_clawback" }) }),
-      { idempotencyKey: `${grantKey}:1800->600:clawback` },
+      expect.objectContaining({ amount: 1000, metadata: expect.objectContaining({ kind: "comp_clawback" }) }),
+      { idempotencyKey: `${grantKey}:1500->500:clawback` },
     );
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
       metadata: { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` },
     });
-    expect(out.credit?.postedCents).toBe(-1200);
+    expect(out.credit?.postedCents).toBe(-1000);
   });
 
   it("CLEARED ten days in: the unlived days come back — capped at the credit still unspent", async () => {
     const meta = { [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` };
     const later = new Date(NOW.getTime() + 10 * 86_400_000);
-    // All still unspent: 10 days lived = 7200 × 10/365 = 197; 600 − 197 = 403 back.
-    let stripe = stripeWith(activeSub(meta), { ledger: [credited(-600)] });
+    // All still unspent: 10 days lived = 6000 × 10/365 = 164; 500 − 164 = 336 back.
+    let stripe = stripeWith(activeSub(meta), { ledger: [credited(-500)] });
     let out = await run(stripe, { tier: null, expiresAt: null }, later);
     expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
       "cus_1",
-      expect.objectContaining({ amount: 403, metadata: expect.objectContaining({ kind: "comp_clawback" }) }),
-      { idempotencyKey: `${grantKey}:600->197:clawback` },
+      expect.objectContaining({ amount: 336, metadata: expect.objectContaining({ kind: "comp_clawback" }) }),
+      { idempotencyKey: `${grantKey}:500->164:clawback` },
     );
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
-    expect(out.credit).toMatchObject({ postedCents: -403, keptCents: 0 });
-    expect(out.note).toBe("Took back $4.03 of unused comp credit from their Stripe balance.");
+    expect(out.credit).toMatchObject({ postedCents: -336, keptCents: 0 });
+    expect(out.note).toBe("Took back $3.36 of unused comp credit from their Stripe balance.");
 
     // An invoice already spent most of it: only the $1 left comes back — never a debt.
-    stripe = stripeWith(activeSub(meta), { ledger: [credited(-600)], balance: -100 });
+    stripe = stripeWith(activeSub(meta), { ledger: [credited(-500)], balance: -100 });
     out = await run(stripe, { tier: null, expiresAt: null }, later);
     expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith("cus_1", expect.objectContaining({ amount: 100 }), expect.anything());
-    expect(out.credit).toMatchObject({ postedCents: -100, keptCents: 303 });
-    expect(out.note).toMatch(/\$3\.03 had already paid an invoice and stays with them/);
+    expect(out.credit).toMatchObject({ postedCents: -100, keptCents: 236 });
+    expect(out.note).toMatch(/\$2\.36 had already paid an invoice and stays with them/);
 
     // Nothing unspent at all: nothing posted, the grant still closed.
-    stripe = stripeWith(activeSub(meta), { ledger: [credited(-600)], balance: 0 });
+    stripe = stripeWith(activeSub(meta), { ledger: [credited(-500)], balance: 0 });
     out = await run(stripe, { tier: null, expiresAt: null }, later);
     expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
   });
 
   it("a release never posts a FRESH credit (a retry after a failed metadata clear)", async () => {
-    // Day 10 already took the ledger back to 197; on day 11 the grant is
+    // Day 10 already took the ledger back to 164; on day 11 the grant is
     // still named (the clear failed): nothing moves, the clear is retried.
     const stripe = stripeWith(activeSub({ [COMP_CREDIT_GRANT_KEY]: `${nowSec}:${monthEndSec}` }), {
-      ledger: [credited(-600), { id: "cbtxn_2", amount: 403, metadata: { [COMP_CREDIT_LEDGER_KEY]: grantKey } }],
+      ledger: [credited(-500), { id: "cbtxn_2", amount: 336, metadata: { [COMP_CREDIT_LEDGER_KEY]: grantKey } }],
     });
     await run(stripe, { tier: null, expiresAt: null }, new Date(NOW.getTime() + 11 * 86_400_000));
     expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
     expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_1", { metadata: { [COMP_CREDIT_GRANT_KEY]: "" } });
   });
 
-  it("an ANNUAL plan: a month's comp is a twelfth of the year ($60 → $5)", async () => {
-    const stripe = stripeWith(activeSub({}, ANNUAL));
-    await run(stripe, { tier: "plus", expiresAt: MONTH_END });
-    expect(stripe.customers.createBalanceTransaction).toHaveBeenCalledWith("cus_1", expect.objectContaining({ amount: -500 }), expect.anything());
+  it("a MONTHLY plan is no longer credited: its comp is the coupon (BL1)", async () => {
+    const stripe = {
+      ...stripeWith(activeSub({}, MONTHLY)),
+      coupons: {
+        retrieve: vi.fn().mockRejectedValue(Object.assign(new Error("No such coupon"), { code: "resource_missing" })),
+        create: vi.fn().mockImplementation(async (p: Record<string, unknown>) => ({ ...p, valid: true })),
+      },
+    };
+    const out = await run(stripe as never, { tier: "plus", expiresAt: MONTH_END });
+    expect(stripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
+    expect(out.coupon?.change.kind).toBe("apply");
   });
 
   it("a plan set to END: no credit (no invoice would take it); the admin is told why", async () => {

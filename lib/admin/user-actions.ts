@@ -229,10 +229,11 @@ export async function adminSetCompTierAction(input: {
 
   // A comp month is FREE and the month after it is charged normally (owner,
   // 2026-10-30): a card-backed trial is held until the comp ends, and put
-  // back when the comp is cleared or shortened; an ACTIVE plan gets the comp
-  // period's price on its Stripe balance (clawed back, unspent part only,
-  // when shortened or cleared). Best effort — the comp row above is what
-  // grants the perks.
+  // back when the comp is cleared or shortened; an ACTIVE monthly plan gets
+  // a 100%-off coupon for the comp's months (BL1; removed when cleared), an
+  // ACTIVE annual plan the comp period's price on its Stripe balance (clawed
+  // back, unspent part only, when shortened or cleared). Best effort — the
+  // comp row above is what grants the perks.
   const stripeOutcome = await applyCompToSubscription(admin, userId, {
     tier,
     expiresAt: tier == null ? null : expiresAt,
@@ -256,6 +257,14 @@ export async function adminSetCompTierAction(input: {
       // A paying user's comp period credited to their Stripe balance.
       ...(tier != null && stripeOutcome.credit && stripeOutcome.credit.postedCents > 0
         ? { creditCents: stripeOutcome.credit.postedCents, currency: stripeOutcome.credit.currency }
+        : {}),
+      // A MONTHLY plan's comp: the invoices its 100%-off coupon frees (BL1) —
+      // only when this save attached it (a re-save that kept it says nothing new).
+      ...(tier != null && stripeOutcome.coupon?.change.kind === "apply" && stripeOutcome.coupon.freeInvoices > 0
+        ? {
+            freeInvoices: stripeOutcome.coupon.freeInvoices,
+            ...(stripeOutcome.coupon.chargedFrom ? { chargedFrom: stripeOutcome.coupon.chargedFrom } : {}),
+          }
         : {}),
     },
   });

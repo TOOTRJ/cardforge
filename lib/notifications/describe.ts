@@ -101,6 +101,8 @@ export function describeNotification(
       const expiresAt = str(payload.expiresAt);
       const trialEnd = str(payload.trialEnd);
       const creditCents = num(payload.creditCents);
+      const freeInvoices = num(payload.freeInvoices);
+      const chargedFrom = str(payload.chargedFrom);
       return {
         subject: "PipGlyph team",
         body: tier
@@ -113,6 +115,13 @@ export function describeNotification(
               // A paying user's comp period, credited to their billing balance.
               creditCents != null && creditCents > 0
                 ? ` We've put ${formatMoney(creditCents, str(payload.currency) ?? "usd")} on your billing balance, so the comp period costs you nothing.`
+                : ""
+            }${
+              // A MONTHLY plan's comp: a 100%-off coupon frees whole invoices (BL1).
+              freeInvoices != null && freeInvoices > 0
+                ? ` Your next ${freeInvoices === 1 ? "monthly invoice is" : `${freeInvoices} monthly invoices are`} free${
+                    chargedFrom ? `; billing resumes as usual on ${formatShortDate(chargedFrom)}` : ""
+                  }.`
                 : ""
             }`
           : "ended your complimentary plan access.",
@@ -344,6 +353,20 @@ export function describeNotification(
       }
       if (kind === "paying") {
         const next = str(payload.nextChargeAt);
+        if (str(payload.billing) === "coupon") {
+          // A monthly comp's 100%-off coupon (BL1): whole invoices are free
+          // until the first one it no longer covers — no credit to mention.
+          const usual = `the usual price${price && !goesBack ? ` (${price})` : ""}`;
+          return {
+            subject: `Your complimentary ${tier}`,
+            body: `ends ${ends};${back} ${
+              next
+                ? `your next charge, on ${formatShortDate(next)}, is ${usual}.`
+                : `invoices after the complimentary discount are charged at ${usual}.`
+            }`,
+            href: "/dashboard/billing",
+          };
+        }
         const charge = next
           ? `your next invoice, on ${formatShortDate(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}, less any comp credit still on your balance.`
           : `invoices after that are charged as usual${price && !goesBack ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;

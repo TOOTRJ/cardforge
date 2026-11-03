@@ -163,7 +163,8 @@ async function remindOne(
       return;
     }
     sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
-      expand: ["default_payment_method"],
+      // Discounts expanded: a monthly comp's coupon end decides the next charge (BL1).
+      expand: ["default_payment_method", "discounts"],
     });
     subscribedTier = await resolveSubscriptionTier(sub, stripe);
   }
@@ -180,6 +181,7 @@ async function remindOne(
     sub: sub as unknown as CompEndingSub | null,
     subscribedTier,
     trialReminderSent,
+    now,
   });
   if (!plan.send) {
     result.skipped += 1;
@@ -195,6 +197,7 @@ async function remindOne(
     expiresAt,
     ...(sub && plan.kind !== "free" ? { priceLabel: priceLabelOf(sub) } : {}),
     ...(plan.kind === "paying" ? { nextChargeAt: plan.nextChargeAt } : {}),
+    ...(plan.kind === "paying" && plan.billing === "coupon" ? { billing: "coupon" as const } : {}),
     ...(plan.kind === "plan_ending" ? { planEndsAt: plan.planEndsAt } : {}),
     ...(plan.kind === "held_trial" && sub && stripe
       ? {
@@ -233,6 +236,7 @@ async function remindOne(
         expiresAt,
         priceLabel: payload.priceLabel ?? null,
         nextChargeAt: payload.nextChargeAt ?? null,
+        ...(payload.billing ? { billing: payload.billing } : {}),
         cardLast4: payload.cardLast4 ?? null,
         hasPaymentMethod: payload.hasPaymentMethod,
         planEndsAt: payload.planEndsAt ?? null,

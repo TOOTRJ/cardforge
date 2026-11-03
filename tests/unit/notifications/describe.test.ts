@@ -45,6 +45,17 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     ).toBe("ended your complimentary plan access.");
   });
 
+  it("a monthly comp's coupon (BL1): the free invoices and when billing resumes", () => {
+    const body = (payload: Record<string, unknown>) =>
+      describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
+    expect(body({ tier: "plus", expiresAt: "2027-02-01T12:00:00Z", freeInvoices: 3, chargedFrom: "2027-02-20T12:00:00Z" })).toBe(
+      "gave you Plus plan access until Feb 1, 2027 — enjoy. Your next 3 monthly invoices are free; billing resumes as usual on Feb 20, 2027.",
+    );
+    expect(body({ tier: "plus", expiresAt: "2026-12-01T12:00:00Z", freeInvoices: 1 })).toBe(
+      "gave you Plus plan access until Dec 1, 2026 — enjoy. Your next monthly invoice is free.",
+    );
+  });
+
   it("describes card limit overrides and resets", () => {
     expect(
       describeNotification({ type: "card_limit", actor, card: null, threadId: null, payload: { limit: 2500 } }, { isAdmin: false }).body,
