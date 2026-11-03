@@ -184,9 +184,9 @@ beforeEach(() => {
   s.updateNotice = null;
 });
 
-describe("an AI card job (create private → paint → publish)", () => {
-  it("a publish the action kept private puts the notice on the done step", async () => {
-    s.updateNotice = NOTICE;
+describe("an AI card job (paint → create public WITH the art, #722)", () => {
+  it("a create the action kept private puts the notice on the done step", async () => {
+    s.createNotice = NOTICE;
     const step = await runCardJob();
     expect(step.status).toBe("done");
     expect(step.forced_private).toEqual(NOTICE);

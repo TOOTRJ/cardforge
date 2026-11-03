@@ -28,6 +28,6 @@ export async function GET(
       { status: 404 },
     );
   }
-  // The owner's read holds no plan (migration 0162, lib/ai/job-privacy.ts).
+  // The owner's read holds no plan (migration 0163, lib/ai/job-privacy.ts).
   return NextResponse.json({ ok: true, job }, { status: 200 });
 }

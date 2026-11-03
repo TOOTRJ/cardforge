@@ -118,7 +118,9 @@ async function runCardJob(card: Record<string, unknown>, frame: string) {
   const result = await runNextJobStep("job-1", "card:0");
   expect(result.ok).toBe(true);
   expect(s.patched.at(-1)?.status).toBe("done");
-  return { created: s.created.at(-1)!, art: s.updated.at(-1)! };
+  // Paint first (#722): the card is CREATED with its picture — no update.
+  expect(s.updated).toEqual([]);
+  return { created: s.created.at(-1)!, art: s.created.at(-1)! };
 }
 
 beforeEach(() => {
@@ -128,7 +130,7 @@ beforeEach(() => {
 });
 
 describe("an AI picture lands on the automatic fit", () => {
-  it.each(["saga", "m15", "m15borderless"])("on %s: the art is attached at the fit — filled, centred, untouched", async (frame) => {
+  it.each(["saga", "m15", "m15borderless"])("on %s: the card is created with the art at the fit — filled, centred, untouched", async (frame) => {
     const { art } = await runCardJob(designed, frame);
     expect(art.art_url).toBe("https://example.supabase.co/storage/v1/object/public/card-art/x.png");
     expect(art.art_position).toEqual(fitArtToWindow());

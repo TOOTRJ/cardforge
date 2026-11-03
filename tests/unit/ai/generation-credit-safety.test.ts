@@ -34,6 +34,8 @@ const s = vi.hoisted(() => ({
   inserted: [] as Record<string, unknown>[],
   patched: [] as Record<string, unknown>[],
   created: [] as Record<string, unknown>[],
+  updated: [] as Array<{ id: string; payload: Record<string, unknown> }>,
+  aiFields: [] as Array<{ cardId: string; ownerId: string; parts: string[] }>,
   spend: vi.fn(),
   refund: vi.fn(),
   job: null as unknown as Record<string, unknown>,
@@ -99,6 +101,16 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => s.verified }));
+// #717's text marks still land on the card the step creates (paint first).
+vi.mock("@/lib/cards/ai-provenance-server", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/cards/ai-provenance-server")>();
+  return {
+    ...real,
+    addCardAiFields: async (cardId: string, ownerId: string, parts: readonly string[]) => {
+      s.aiFields.push({ cardId, ownerId, parts: [...parts] });
+    },
+  };
+});
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => null }));
 vi.mock("ai", async (importOriginal) => ({
   ...(await importOriginal<typeof import("ai")>()),
@@ -156,11 +168,15 @@ vi.mock("@/lib/cards/actions", () => ({
     s.created.push(payload);
     return s.createResult ?? { ok: true, cardId: "card-1", slug: "made" };
   },
-  updateCardAction: async () => ({ ok: true }),
+  updateCardAction: async (id: string, payload: Record<string, unknown>) => {
+    s.updated.push({ id, payload });
+    return { ok: true };
+  },
 }));
 
 import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { failedStepMessage } from "@/lib/ai/failure";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import { LAYOUT_DESIGNS, WANT_ALL } from "./fixtures/layout-designs";
 import { DFC_DESIGNS, DFC_FRONT, TRANSFORM } from "./fixtures/dfc-designs";
@@ -196,8 +212,15 @@ const FILL_PLAN = {
   deck_id: null,
 };
 const CARD_PLAN = { card: designed(), style: null, frame_template: "m15", deck_id: null };
+const DECK_PLAN = { deck_title: "Deck", strategy: "Go wide.", theme: "embers", style: null, format: "commander", cards: [designed()], roles: ["creature"], quantities: [1] };
 
-function job(kind: string, plan: Record<string, unknown>, stepKey: string, step: Record<string, unknown> = {}) {
+function job(
+  kind: string,
+  plan: Record<string, unknown>,
+  stepKey: string,
+  step: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
+) {
   s.stepKey = stepKey;
   s.job = {
     id: "job-1",
@@ -209,6 +232,7 @@ function job(kind: string, plan: Record<string, unknown>, stepKey: string, step:
     error: null,
     plan,
     steps: [{ key: stepKey, label: "Card", status: "running", ...step }],
+    ...extra,
   };
 }
 
@@ -225,6 +249,8 @@ beforeEach(() => {
   s.inserted = [];
   s.patched = [];
   s.created = [];
+  s.updated = [];
+  s.aiFields = [];
   s.answers = [];
   s.prompts = [];
   s.designError = null;
@@ -383,7 +409,9 @@ describe("the single-card step", () => {
     job("card", CARD_PLAN, "card:0");
     const step = await runStep("card:0");
     expect(step).toMatchObject({ status: "failed", failure: "save_failed", refunded: 1 });
-    expect(s.imageCalls).toBe(0);
+    // Paint first (#722): the picture was painted before the save said no.
+    expect(s.imageCalls).toBe(1);
+    expect(step.card_id ?? null).toBeNull();
     expect(failedStepMessage(step)).toBe(
       "That frame isn't available in red yet — pick another frame or colour. Your credit was returned.",
     );
@@ -399,15 +427,57 @@ describe("the single-card step", () => {
     expect(failedStepMessage(step)).toBe("Something went wrong while making this card. Try again. Your credit was returned.");
   });
 
-  it("art our nudity scan blocked: refunded once, the scan's sentence (the card stays a private draft)", async () => {
+  it("art our nudity scan blocked: refunded once, the scan's sentence, and NO card row (paint first, #722)", async () => {
     s.persistBlocked = true;
     job("card", CARD_PLAN, "card:0");
     const step = await runStep("card:0");
-    expect(step).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1, card_id: "card-1" });
+    expect(step).toMatchObject({ status: "failed", failure: "art_blocked", refunded: 1 });
+    expect(step.card_id ?? null).toBeNull();
+    expect(s.created).toEqual([]);
     expect(s.refund).toHaveBeenCalledTimes(1);
     expect(failedStepMessage(step)).toBe(
       "This artwork was blocked by our nudity filter. Try again or change the prompt. Your credit was returned.",
     );
+  });
+
+  // PAINT FIRST (owner 2026-11-02, #722): the plan's text reaches a row only
+  // with the picture it was paid for — a paint that fails saves nothing.
+  it.each(["card", "deck"] as const)("%s step: a failed paint leaves NO card row and refunds once", async (kind) => {
+    s.image = { ok: false, error: "x", failure: "art_timeout", safetyBlocked: false };
+    if (kind === "card") job("card", CARD_PLAN, "card:0");
+    else job("deck", DECK_PLAN, "card:0", {}, { deck_id: "deck-1" });
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "failed", failure: "art_timeout", refunded: 1 });
+    expect(step.card_id ?? null).toBeNull();
+    expect(s.created).toEqual([]);
+    expect(s.updated).toEqual([]);
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["card", "deck"] as const)("%s step: a picture painted creates exactly ONE card, with it — public, at the fit, no update", async (kind) => {
+    if (kind === "card") job("card", CARD_PLAN, "card:0");
+    else job("deck", DECK_PLAN, "card:0", {}, { deck_id: "deck-1" });
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "done", card_id: "card-1", refunded: null });
+    expect(s.created).toHaveLength(1);
+    expect(s.created[0]).toMatchObject({
+      art_url: expect.stringMatching(/^https:\/\//),
+      art_position: fitArtToWindow(),
+      visibility: "public",
+    });
+    expect(s.updated).toEqual([]);
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(s.aiFields.map((call) => call.cardId)).toEqual(["card-1"]);
+  });
+
+  it("a step whose card a job planned before paint-first created only re-paints THAT card", async () => {
+    job("card", CARD_PLAN, "card:0", { card_id: "card-old" });
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "done", card_id: "card-old" });
+    expect(s.created).toEqual([]);
+    expect(s.updated).toHaveLength(1);
+    expect(s.updated[0]).toMatchObject({ id: "card-old", payload: { art_position: fitArtToWindow(), visibility: "public" } });
   });
 
   it("a success settles: the ref is stamped and no refund runs", async () => {

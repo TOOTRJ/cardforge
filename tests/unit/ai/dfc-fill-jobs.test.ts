@@ -292,6 +292,30 @@ describe("the designed titles wait for the paid steps (fix(ai), lib/ai/job-priva
   });
 });
 
+describe("a title the maker locked still names the fallback picture (F2, #722)", () => {
+  it("the last rung of each step's ladder reads the plan's label, never the placeholder", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    await fill("transform");
+    const row = s.inserted.at(-1)!;
+    // A locked title is no designed field: the plan holds it only as the
+    // step's label (`step_labels`), the step itself the placeholder.
+    const stored = structuredClone(row.plan) as StoredPlan;
+    delete stored.fields.title;
+    delete stored.fields.back_face!.title;
+    stored.step_labels = { "fill:0": "Ember Warden // Ash Ravager", "fill:1": "Ash Ravager" };
+    // Two attempts already spent: the third paints the fallback alone.
+    const steps = (row.steps as Array<Record<string, unknown>>).map((step) => ({ ...step, attempts: 2 }));
+    s.job = { id: "job-1", owner_id: USER, kind: "card_fill", status: "generating", request: {}, deck_id: null, error: null, plan: stored, steps };
+    for (const key of ["fill:0", "fill:1"]) expect((await runNextJobStep("job-1", key)).ok).toBe(true);
+    expect(s.imagePrompts).toHaveLength(2);
+    expect(s.imagePrompts[0]).toHaveLength(1);
+    expect(s.imagePrompts[0]![0]).toContain('evoking "Ember Warden // Ash Ravager"');
+    expect(s.imagePrompts[1]).toHaveLength(1);
+    expect(s.imagePrompts[1]![0]).toContain('evoking "Ash Ravager"');
+    expect(s.imagePrompts.flat().join(" ")).not.toMatch(/Your card|Back face/);
+  });
+});
+
 describe("the fit, at plan time — nothing reserved before it", () => {
   it("a back that can't be saved is redone ONCE, told why", async () => {
     const broken = { ...structuredClone(TRANSFORM), back_face: null };

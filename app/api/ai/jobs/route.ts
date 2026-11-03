@@ -260,7 +260,7 @@ export async function GET() {
   // sensible background resume for one, so they are never offered here.
   const { data } = await supabase
     .from("ai_generation_jobs")
-    // Never `plan`: no API role can read it (migration 0162).
+    // Never `plan`: no API role can read it (migration 0163).
     .select(OWNER_JOB_COLUMNS)
     .eq("status", "generating")
     .neq("kind", "card_fill")

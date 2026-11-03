@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// What a job's OWNER can read before its paid step runs (migration 0162).
+// What a job's OWNER can read before its paid step runs (migration 0163).
 //
 // A job's text is designed at PLAN time and paid for when its step runs
 // (lib/ai/generation-jobs.ts). Its owner reads the row through their own
 // session — the app's reads and PostgREST alike — so anything designed that
 // sits in a column they can read is AI text they never paid for:
 //
-//   * `plan` holds every designed field. No API role reads it (0162: a
+//   * `plan` holds every designed field. No API role reads it (0163: a
 //     column grant without it) — the server reads it with the service role.
 //     Every owner-session read of the table names OWNER_JOB_COLUMNS, never
 //     "*" (a `select *` asks for `plan` and is refused).
@@ -16,7 +16,7 @@
 //     `step_labels`; a plan made before them keeps the label it was given.
 // ---------------------------------------------------------------------------
 
-/** Every column of `ai_generation_jobs` but `plan` — the grant 0162 gives
+/** Every column of `ai_generation_jobs` but `plan` — the grant 0163 gives
  *  `authenticated`, and what an owner-session read selects. A new column is
  *  readable by the owner only once a migration grants it here too. */
 export const OWNER_JOB_COLUMNS =

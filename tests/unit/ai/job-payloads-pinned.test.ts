@@ -201,6 +201,25 @@ function labelsWaitForTheStep(record: unknown): unknown {
   return record;
 }
 
+/** fix(ai) #722, PAINT FIRST (owner 2026-11-02): a single-card or deck card
+ *  step paints its picture BEFORE the card exists and creates the card WITH
+ *  it in one insert, so a refunded paint never leaves the plan's text in a
+ *  row. The create payload gains exactly the three keys main's
+ *  paintAndPublishCard wrote in its follow-up update — the stored art, its
+ *  automatic fit (fitArtToWindow) and public — and nothing else: every text
+ *  field is main's, byte for byte. Laid over main's record (not re-recorded). */
+const PAINTED_FIRST = {
+  art_url: `https://example.supabase.co/storage/v1/object/public/card-art/${USER}/x.png`,
+  art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+  visibility: "public",
+};
+function paintedFirst(record: unknown): unknown {
+  const row = record as { saved?: Record<string, unknown> | null };
+  if (row.saved) Object.assign(row.saved, PAINTED_FIRST);
+  return record;
+}
+const isCardStepRecord = (name: string) => name.startsWith("card step · ") || name.startsWith("deck step · ");
+
 /** Compare with main's record (or record it). JSON round-trip: what a
  *  payload is on the wire — an `undefined` key is no key. */
 function pinned(name: string, value: unknown) {
@@ -208,7 +227,9 @@ function pinned(name: string, value: unknown) {
   fresh[name] = wire;
   if (UPDATE) return;
   expect(recorded, `no record for "${name}" — run with JOB_PAYLOADS_UPDATE=1 on main's lib/`).toHaveProperty([name]);
-  const changed = MEANT_CHANGES[name] ?? (isPlanRecord(recorded[name]) ? labelsWaitForTheStep : undefined);
+  const changed =
+    MEANT_CHANGES[name] ??
+    (isPlanRecord(recorded[name]) ? labelsWaitForTheStep : isCardStepRecord(name) ? paintedFirst : undefined);
   if (changed) {
     // A change this branch MEANS, laid over main's record (equal, not
     // byte for byte: the keys it adds land where the wire puts them).
