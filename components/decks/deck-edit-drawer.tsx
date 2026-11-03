@@ -25,6 +25,7 @@ import {
   DECK_EDIT_PARAM,
   parseDeckEditParam,
   withDeckEditParam,
+  type DeckEditShared,
 } from "@/lib/decks/inline-editor-shared";
 import { entryEditTarget } from "@/lib/decks/return-to";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,12 @@ export function isPlainClick(event: ReactMouseEvent): boolean {
   return !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 }
 
+/** The page-wide creator props, kept by the drawer for the page visit. */
+export type DeckEditSharedCache = {
+  get: () => DeckEditShared | null;
+  set: (shared: DeckEditShared | null) => void;
+};
+
 export type DeckInlineEdit = {
   /** Open the drawer on an entry (or "new"). */
   open: (target: string) => void;
@@ -92,11 +99,37 @@ function urlTarget(): string | null {
   return parseDeckEditParam(new URLSearchParams(window.location.search).get(DECK_EDIT_PARAM));
 }
 
+/** The history entry the drawer pushed carries this key (its target): an
+ *  arrival on it — Back from "Open full page", a reload, Forward — finds
+ *  the deck's own entry under it already, and never pushes a second copy. */
+const ENTRY_MARK = "pipglyphDeckEdit";
+
+function markOf(state: unknown): string | null {
+  const mark = (state as Record<string, unknown> | null)?.[ENTRY_MARK];
+  return typeof mark === "string" ? mark : null;
+}
+
 function setUrl(target: string | null, how: "push" | "replace") {
   const href = withDeckEditParam(`${window.location.pathname}${window.location.search}${window.location.hash}`, target);
-  // Native history: Next.js syncs it (useSearchParams), no navigation.
-  if (how === "push") window.history.pushState(null, "", href);
-  else window.history.replaceState(null, "", href);
+  // Native history: Next.js syncs it (useSearchParams), no navigation. Its
+  // patched pushState / replaceState copy the router's own state into ours
+  // (never spread history.state here: with `__NA` in it Next skips the URL).
+  const state = target ? { [ENTRY_MARK]: target } : null;
+  if (how === "push") window.history.pushState(state, "", href);
+  else window.history.replaceState(state, "", href);
+}
+
+/** Keep the mark on the current entry: a router update that does not keep
+ *  custom history state (a server action's refresh) writes the entry again
+ *  without it. No URL argument — Next then leaves its router alone. */
+function keepMark(target: string) {
+  if (urlTarget() !== target || markOf(window.history.state) === target) return;
+  window.history.replaceState({ [ENTRY_MARK]: target }, "");
+}
+
+/** The drawer's heading (the focus's home inside it). */
+function drawerHeading(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("[data-deck-edit-drawer] [data-deck-edit-title]");
 }
 
 export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }: Options): {
@@ -118,16 +151,48 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
     leaveRef.current = ask;
   }, []);
   const [chunkWanted, setChunkWanted] = useState(false);
+  /** The creator's page-wide props (decks, capacity, verified frames…),
+   *  read with the first open and kept for the visit; a save that changes
+   *  them (a new card: capacity, decks) drops them for the next read. */
+  const sharedRef = useRef<DeckEditShared | null>(null);
+  const sharedCache = useMemo<DeckEditSharedCache>(
+    () => ({
+      get: () => sharedRef.current,
+      set: (shared) => {
+        sharedRef.current = shared;
+      },
+    }),
+    [],
+  );
 
   const prefetch = useCallback(() => {
     void loadBody().catch(() => undefined);
+  }, []);
+
+  /** Where the focus was when the drawer asked to leave: "Keep editing"
+   *  puts it back there (else the drawer's heading) — never <body>. */
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const remember = () => {
+    const active = document.activeElement;
+    returnFocus.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  };
+  const focusHome = useCallback(() => {
+    if (targetRef.current === null) return; // closed: the row's hand-back
+    const el = returnFocus.current;
+    returnFocus.current = null;
+    const home =
+      el && el.isConnected && el.closest("[data-deck-edit-drawer]") && !(el as HTMLButtonElement).disabled ? el : drawerHeading();
+    home?.focus({ preventScroll: true });
   }, []);
 
   /** Ask (with changes) before `proceed`. */
   const askThen = (proceed: () => void, force = false) => {
     const ask = leaveRef.current;
     if (force || !ask) proceed();
-    else ask(proceed);
+    else {
+      remember();
+      ask(proceed);
+    }
   };
 
   const closeNow = useCallback(() => {
@@ -150,7 +215,10 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
       };
       const ask = leaveRef.current;
       if (force || !ask) go();
-      else ask(go);
+      else {
+        remember();
+        ask(go);
+      }
     },
     [setTarget],
   );
@@ -187,8 +255,13 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
     const openFromUrl = () => {
       const initial = urlTarget();
       if (!initial || targetRef.current !== null) return;
-      setUrl(null, "replace");
-      setUrl(initial, "push");
+      // An entry the drawer pushed (Back from "Open full page", a reload of
+      // it): the deck's own entry is under it already. Anything else (a
+      // shared link) becomes the deck's entry plus the drawer's on top.
+      if (markOf(window.history.state) !== initial) {
+        setUrl(null, "replace");
+        setUrl(initial, "push");
+      }
       pushed.current = true;
       opener.current = initial;
       setChunkWanted(true);
@@ -224,9 +297,10 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
       const current = targetRef.current;
       if (fromUrl === current) return;
       if (current === null) {
-        // Forward onto an edit.
+        // Forward onto an edit: the drawer's own entry (marked) sits on the
+        // deck's, so closing goes back to it.
         if (fromUrl) {
-          pushed.current = false;
+          pushed.current = markOf(window.history.state) === fromUrl;
           opener.current = fromUrl;
           setChunkWanted(true);
           setTarget(fromUrl);
@@ -249,6 +323,7 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
         setTarget(fromUrl);
       };
       const ask = leaveRef.current;
+      if (ask) remember();
       asked = ask ? ask(proceed) : (proceed(), false);
       if (asked) {
         setUrl(current, "push");
@@ -259,17 +334,25 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
     return () => window.removeEventListener("popstate", onPop);
   }, [enabled, deck, setTarget]);
 
-  // The row being edited is marked on the deck behind the drawer.
+  // The drawer's history entry keeps its mark while it is open.
   useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    for (const marked of Array.from(list.querySelectorAll("[data-editing]"))) {
-      if (marked.getAttribute("data-deck-entry") !== target) marked.removeAttribute("data-editing");
-    }
-    if (target && target !== DECK_EDIT_NEW) {
-      list.querySelectorAll(`[data-deck-entry="${target}"]`).forEach((el) => el.setAttribute("data-editing", ""));
-    }
+    if (enabled && target) keepMark(target);
   });
+
+  // The row being edited is marked on the deck behind the drawer — only
+  // where the drawer is on, and only when the target or the rows change.
+  const marked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const want = target && target !== DECK_EDIT_NEW ? target : null;
+    const list = listRef.current;
+    if (!list || (want === null && marked.current === null)) return;
+    for (const el of Array.from(list.querySelectorAll("[data-editing]"))) {
+      if (el.getAttribute("data-deck-entry") !== want) el.removeAttribute("data-editing");
+    }
+    if (want) list.querySelectorAll(`[data-deck-entry="${CSS.escape(want)}"]`).forEach((el) => el.setAttribute("data-editing", ""));
+    marked.current = want;
+  }, [enabled, target, groups, allGroups, listRef]);
 
   // Closed: the focus back to the row that opened it — never <body>.
   const wasOpen = useRef(false);
@@ -322,8 +405,9 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
   const row = target && target !== DECK_EDIT_NEW ? (rowsById.get(target) ?? null) : null;
   const edit = row ? entryEditTarget(row.item, deck.slug) : null;
   // "Save & next": the next unchanged import (DK5.5's "Edit next" walk).
+  // Never on a new card ("＋ Create new card" makes one, then stops).
   const nextImport =
-    target === null
+    target === null || target === DECK_EDIT_NEW
       ? null
       : nextUnchangedImport(allGroups.map((group) => ({ ...group, rows: group.rows.filter((r) => r.id !== target && !r.item.pending) })));
 
@@ -340,6 +424,8 @@ export function useDeckEditDrawer({ enabled, deck, groups, allGroups, listRef }:
       next={next}
       nextImport={nextImport}
       bindLeave={bindLeave}
+      focusHome={focusHome}
+      sharedCache={sharedCache}
       onRequestClose={() => askThen(closeNow)}
       onCloseNow={closeNow}
       onWalk={walkTo}
@@ -366,6 +452,8 @@ type DrawerProps = {
   next: ViewRow | null;
   nextImport: ViewRow | null;
   bindLeave: CreatorHost["bindLeave"];
+  focusHome: () => void;
+  sharedCache: DeckEditSharedCache;
   onRequestClose: () => void;
   onCloseNow: () => void;
   onWalk: (target: string, force?: boolean) => void;
@@ -377,7 +465,14 @@ const HEADER_BUTTON =
 
 function eyebrowOf(label: string, position: DrawerProps["position"], deckTitle: string, isNew: boolean): string {
   if (isNew) return `New card · into ${deckTitle}`;
-  const doing = label === "Edit card" ? "Editing" : label === "Remix" ? "Your version of another creator's card" : "Your version of a real card";
+  const doing =
+    label === "Edit card"
+      ? "Editing"
+      : label === "Remix"
+        ? "Your version of another creator's card"
+        : label === "Customize"
+          ? "Your version of a real card"
+          : "A card of your own in this entry's place";
   return position ? `${doing} · ${position.index} of ${position.total} in ${position.group}` : doing;
 }
 
@@ -393,6 +488,8 @@ function DeckEditDrawer({
   next,
   nextImport,
   bindLeave,
+  focusHome,
+  sharedCache,
   onRequestClose,
   onCloseNow,
   onWalk,
@@ -401,6 +498,25 @@ function DeckEditDrawer({
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const [wide, setWide] = useState<boolean | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  /** The focus never rests on <body>, on the drawer's box itself (where
+   *  Radix puts it when the focused element is removed — a form remounted
+   *  after a save) or on a control that just turned itself off (‹ at the
+   *  first card): it goes to the heading. */
+  const settleFocus = useCallback(() => {
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (!titleRef.current?.isConnected) return;
+      if (!active || active === document.body || active === contentRef.current || (active as HTMLButtonElement).disabled) {
+        titleRef.current.focus({ preventScroll: true });
+      }
+    }, 0);
+  }, []);
+  // Each card of the walk, and each retarget (a new card on its entry).
+  useEffect(() => {
+    if (open) settleFocus();
+  }, [open, target, settleFocus]);
 
   useEffect(() => {
     if (!scrollRoot || typeof ResizeObserver === "undefined") return;
@@ -437,7 +553,13 @@ function DeckEditDrawer({
           className="fixed inset-0 z-50 bg-black/40 transition-opacity duration-150 data-[state=closed]:opacity-0"
         />
         <DialogPrimitive.Content
+          ref={contentRef}
           data-deck-edit-drawer=""
+          onFocus={(event) => {
+            // The box itself took the focus (Radix, after the focused
+            // element was removed): the heading has it instead.
+            if (event.target === event.currentTarget) titleRef.current?.focus({ preventScroll: true });
+          }}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             titleRef.current?.focus();
@@ -500,7 +622,7 @@ function DeckEditDrawer({
                 <p className="truncate text-xs text-muted">{eyebrowOf(label, position, deck.title, isNew)}</p>
                 <div className="flex min-w-0 items-center gap-2">
                   <DialogPrimitive.Title asChild>
-                    <h2 ref={titleRef} tabIndex={-1} className="truncate font-display text-base font-semibold text-foreground focus:outline-none sm:text-lg">
+                    <h2 ref={titleRef} tabIndex={-1} data-deck-edit-title="" className="truncate font-display text-base font-semibold text-foreground focus:outline-none sm:text-lg">
                       {title}
                     </h2>
                   </DialogPrimitive.Title>
@@ -509,6 +631,11 @@ function DeckEditDrawer({
               </div>
               <Link
                 href={fullPageHref}
+                // Back from the full page lands on this marked entry, and
+                // the drawer reopens on it without another history entry.
+                onClick={() => {
+                  if (target) keepMark(target);
+                }}
                 className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 sm:text-sm"
               >
                 <span className="hidden sm:inline">Open full page</span>
@@ -535,6 +662,9 @@ function DeckEditDrawer({
                   deckId={deck.id}
                   target={target}
                   bindLeave={bindLeave}
+                  focusHome={focusHome}
+                  onSettled={settleFocus}
+                  sharedCache={sharedCache}
                   scrollRoot={scrollRoot}
                   wide={wide}
                   saveAndNext={saveAndNext}

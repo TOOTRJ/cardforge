@@ -50,6 +50,7 @@ type BodyProps = {
   saveAndNext: { label: string; onNext: () => void } | null;
   fullPageHref: string;
   onRequestClose: () => void;
+  focusHome: () => void;
 };
 const body = vi.hoisted(() => ({
   props: null as BodyProps | null,
@@ -349,5 +350,106 @@ describe("switch on: edit in a drawer over the deck (DK5.18)", () => {
     deckPage({ inlineEditor: true });
     expect(await screen.findByRole("dialog", { name: "Sol Ring" }, { timeout: 3000 })).toBeTruthy();
     expect(search()).toBe(id(2));
+  });
+});
+
+describe("the drawer's history entry, focus and the walk's ends (DK5.18 review)", () => {
+  it("marks the entry it pushes, and reopens on a marked one (Back from the full page, a reload) without a second copy", async () => {
+    const push = vi.spyOn(window.history, "pushState");
+    deckPage({ inlineEditor: true });
+    await act(async () => {
+      fireEvent.click(within(await openMenu("Sol Ring")).getByRole("menuitem", { name: "Customize" }));
+    });
+    await screen.findByRole("dialog", { name: "Sol Ring" });
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push.mock.calls[0][0]).toEqual({ pipglyphDeckEdit: id(2) });
+    cleanup();
+
+    // Back from "Open full page" lands on that marked entry.
+    window.history.replaceState({ pipglyphDeckEdit: id(2) }, "", `/deck/ness?edit=${id(2)}`);
+    push.mockClear();
+    const replace = vi.spyOn(window.history, "replaceState");
+    deckPage({ inlineEditor: true });
+    await screen.findByRole("dialog", { name: "Sol Ring" }, { timeout: 3000 });
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+    // …and it is still the drawer's own entry: closing goes Back off it.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Close the editor" }));
+    });
+    await waitFor(() => expect(drawer()).toBeNull());
+    expect(window.history.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("a shared link (no mark) still becomes the deck's entry plus the drawer's", async () => {
+    window.history.replaceState(null, "", `/deck/ness?edit=${id(2)}`);
+    const push = vi.spyOn(window.history, "pushState");
+    deckPage({ inlineEditor: true });
+    await screen.findByRole("dialog", { name: "Sol Ring" }, { timeout: 3000 });
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it("'Keep editing' puts the focus back where it was in the drawer — or on its heading — never <body>", async () => {
+    deckPage({ inlineEditor: true });
+    await act(async () => {
+      fireEvent.click(within(await openMenu("Lightning Bolt")).getByRole("menuitem", { name: "Customize" }));
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Lightning Bolt" });
+    await screen.findByTestId("drawer-body");
+    body.dirty = true;
+    const nextButton = within(dialog).getByRole("button", { name: "Next card: Sol Ring" });
+    nextButton.focus();
+    await act(async () => {
+      fireEvent.keyDown(dialog, { key: "Escape" });
+    });
+    expect(body.pending).toBeTypeOf("function");
+    // The leave dialog took the focus and closed ("Keep editing").
+    (document.activeElement as HTMLElement | null)?.blur();
+    await act(async () => {
+      body.props?.focusHome();
+    });
+    expect(document.activeElement).toBe(nextButton);
+
+    // Nothing to go back to: the heading.
+    (document.activeElement as HTMLElement | null)?.blur();
+    await act(async () => {
+      body.props?.focusHome();
+    });
+    expect(document.activeElement).toBe(within(dialog).getByRole("heading", { name: "Lightning Bolt" }));
+  });
+
+  it("‹ turning itself off at the first card hands the focus to the heading", async () => {
+    deckPage({ inlineEditor: true });
+    await act(async () => {
+      fireEvent.click(within(await openMenu("Sol Ring")).getByRole("menuitem", { name: "Customize" }));
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Sol Ring" });
+    const prev = within(dialog).getByRole("button", { name: "Previous card: Lightning Bolt" });
+    prev.focus();
+    await act(async () => {
+      fireEvent.click(prev);
+    });
+    await screen.findByRole("dialog", { name: "Lightning Bolt" });
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Lightning Bolt" })));
+  });
+
+  it("offers no 'Save & next' on a new card", async () => {
+    deckPage({ inlineEditor: true });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /create new card/i }));
+    });
+    await screen.findByRole("dialog", { name: "New card" });
+    await screen.findByTestId("drawer-body");
+    expect(body.props?.saveAndNext).toBeNull();
+  });
+
+  it("never looks for rows to mark while the drawer is off, or for a visitor", async () => {
+    const qsa = vi.spyOn(Element.prototype, "querySelectorAll");
+    const page = deckPage();
+    page.rerender(<></>);
+    cleanup();
+    deckPage({ canManage: false, inlineEditor: true });
+    const asked = qsa.mock.calls.filter(([selector]) => String(selector).includes("data-editing"));
+    expect(asked).toEqual([]);
   });
 });

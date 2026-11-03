@@ -59,6 +59,9 @@ type BoxProps = {
   /** The fields whose strong language would keep a public save private —
    *  read when the private-card note shows (a new card). */
   publicLanguageFields?: () => ProfanityField[];
+  /** Hosted by the deck's edit drawer (TODO DK5.18): a save stays there —
+   *  it never "returns" anywhere. */
+  hosted?: boolean;
 };
 
 export function CreatorDeckBox({
@@ -69,6 +72,7 @@ export function CreatorDeckBox({
   deckRemix,
   className,
   publicLanguageFields,
+  hosted = false,
 }: BoxProps) {
   const headingId = useId();
   let body: React.ReactNode;
@@ -76,7 +80,16 @@ export function CreatorDeckBox({
     body = (
       <>
         <p className="text-xs leading-5 text-muted" data-testid="creator-deck-return">
-          Saving returns you to <span className="font-medium text-foreground">&ldquo;{deckRemix.deckTitle}&rdquo;</span>.
+          {hosted ? (
+            <>
+              Saving puts it into <span className="font-medium text-foreground">&ldquo;{deckRemix.deckTitle}&rdquo;</span>
+              {" in this entry’s place. You stay here."}
+            </>
+          ) : (
+            <>
+              Saving returns you to <span className="font-medium text-foreground">&ldquo;{deckRemix.deckTitle}&rdquo;</span>.
+            </>
+          )}
         </p>
         <PrivateCardDeckNote
           deckVisibility={deckRemix.deckVisibility}

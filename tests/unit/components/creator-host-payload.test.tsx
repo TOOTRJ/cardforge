@@ -244,6 +244,22 @@ describe("hosted saves send what the page sends (DK5.18)", () => {
     expect(hosted.deck_id).toBe(DECK_ID);
   });
 
+  it("the deck box says where a save goes: back to the deck on the page, the entry's place in the drawer", () => {
+    const deckRemix: DeckRemixContext = {
+      deckCardId: ENTRY_ID,
+      scryfallId: null,
+      deckSlug: "ness",
+      deckTitle: "Ness",
+      entryName: "Sol Ring",
+      deckVisibility: "public",
+    };
+    renderForm({ mode: "create", deckRemix, myDecks: MY_DECKS });
+    expect(screen.getByTestId("creator-deck-return").textContent).toBe("Saving returns you to “Ness”.");
+    cleanup();
+    renderForm({ mode: "create", deckRemix, myDecks: MY_DECKS, host: makeHost() });
+    expect(screen.getByTestId("creator-deck-return").textContent).toBe("Saving puts it into “Ness” in this entry’s place. You stay here.");
+  });
+
   it("a deck it doesn't own is never picked for it", async () => {
     renderForm({ mode: "create", myDecks: MY_DECKS, initialDeckId: "66666666-6666-4666-8666-666666666666" });
     await type("title", "Ember Scout");

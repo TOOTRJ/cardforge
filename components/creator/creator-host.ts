@@ -50,4 +50,8 @@ export type CreatorHost = {
   scrollRoot: HTMLElement | null;
   /** "Save & next" beside Save: saves, then the host moves on. Null: none. */
   saveAndNext?: { label: string; onNext: () => void } | null;
+  /** The leave dialog closed and the host is still open ("Keep editing"):
+   *  the host puts the focus back inside itself (the element focused before
+   *  it asked, else its heading) — never <body>. */
+  focusHome?: () => void;
 };

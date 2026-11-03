@@ -7,6 +7,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
+import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { getDeckInlineEditorMode } from "@/lib/decks/inline-editor";
 import {
@@ -29,7 +30,7 @@ import type { Deck, DeckRemixContext } from "@/types/deck";
 // goes (lib/decks/return-to.ts entryEditTarget), from the database:
 //
 //   the owner's own card          → edit it
-//   another creator's card (D3)   → a remix of it, taking the entry's place
+//   another creator's PUBLIC card → a remix of it, taking the entry's place
 //                                    (read through RLS, as /create?remix=)
 //   no card (a printing, a gone
 //   card, a placeholder)          → a new card on the entry (deckRemix)
@@ -145,10 +146,14 @@ export async function deckEditTarget(
     entryName: entry.name,
     deckVisibility: deck.visibility,
   };
-  // The entry's card as THIS viewer may read it (RLS) — null for a card
-  // that's gone or another creator's private one: then, as DK5.5, a new
-  // card of the owner's own takes the entry's place.
-  const card: Card | null = entry.card_id ? await getCardById(entry.card_id) : null;
+  // The entry's card as the DECK may show it (D3, the read side of
+  // canLinkIntoDeck — exactly listDeckCards' rule): the owner's own at any
+  // visibility, another creator's only while PUBLIC. RLS alone hands out an
+  // unlisted card, so a card that is gone, private or unlisted reads as
+  // null: then, as DK5.5's page, a new card of the owner's own takes the
+  // entry's place ("Make your own version") — never a remix of it.
+  const read: Card | null = entry.card_id ? await getCardById(entry.card_id) : null;
+  const card: Card | null = read && canLinkIntoDeck(read, userId) ? read : null;
   const own = Boolean(card && card.owner_id === userId);
   const fullPageHref = entryEditTarget(
     { entry, card: card ? { id: card.id, slug: card.slug } : null, cardOwner: card && !own ? card.owner_id : null },

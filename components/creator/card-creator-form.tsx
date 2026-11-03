@@ -5121,6 +5121,7 @@ export function CardCreatorForm({
         cardTitle={isEdit ? (card?.title ?? null) : null}
         myDecks={myDecks}
         deckRemix={deckRemix}
+        hosted={Boolean(host)}
         publicLanguageFields={() => {
           const values = methods.getValues();
           return creatorLanguageFields(values, "public", languageContextFor(values));
@@ -5711,6 +5712,7 @@ export function CardCreatorForm({
             }
             saving={isSubmitting}
             saveError={leaveSaveError}
+            onCloseFocus={host?.focusHome}
             onStay={() => {
               setLeaveSaveError(null);
               guard.clearPending();

@@ -17,6 +17,13 @@ const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
 
+/** The suite runs against a LOCAL Supabase (.env.e2e: 127.0.0.1:54321).
+ *  A spec that flips a site-wide setting runs only there — never against
+ *  the shared dev database other people test on. */
+const localSupabase = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/.test(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+);
+
 test.describe("public decks browse", () => {
   test("the landing offers search + browse-all; /decks/browse carries the format filters", async ({
     page,
@@ -207,9 +214,13 @@ test.describe("deck CRUD + import", () => {
   test("edits a card in the drawer over the deck — saved in place, Back closes it, full screen on a phone (TODO DK5.18)", async ({
     page,
   }) => {
-    // The e2e user is an admin: the switch on "Admins only" gives them the
-    // drawer (the specs run one at a time — workers: 1 — and it is put back
-    // to Off whatever happens).
+    // The admin switch (site_settings.deck_inline_editor) is SITE-WIDE: this
+    // case turns it on, so it runs only against a local Supabase — never
+    // the shared dev database, where it would change the deck page for
+    // everyone testing there. The e2e user is an admin: "Admins only" gives
+    // them the drawer (the specs run one at a time — workers: 1 — and the
+    // switch is put back to Off whatever happens).
+    test.skip(!localSupabase, "flips a site-wide switch: local Supabase only (NEXT_PUBLIC_SUPABASE_URL)");
     await signIn(page);
     const setSwitch = async (label: RegExp) => {
       await page.goto("/admin/deck-editor");

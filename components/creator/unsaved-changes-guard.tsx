@@ -187,6 +187,11 @@ type UnsavedChangesDialogProps = {
   onSave: () => void;
   onLeave: () => void;
   onStay: () => void;
+  /** Where the focus goes when the dialog closes. The dialog has no trigger
+   *  (a link, Back or the host opened it), so Radix would hand the focus to
+   *  <body>; hosted (the deck's edit drawer, TODO DK5.18) the host puts it
+   *  back in the drawer. Absent: Radix's default, as on the full page. */
+  onCloseFocus?: () => void;
 };
 
 export function UnsavedChangesDialog({
@@ -199,11 +204,18 @@ export function UnsavedChangesDialog({
   onSave,
   onLeave,
   onStay,
+  onCloseFocus,
 }: UnsavedChangesDialogProps) {
+  const closeFocus = onCloseFocus
+    ? (event: Event) => {
+        event.preventDefault();
+        onCloseFocus();
+      }
+    : undefined;
   if (generating) {
     return (
       <Dialog open={open} onOpenChange={(next) => (next ? undefined : onStay())}>
-        <DialogContent size="sm">
+        <DialogContent size="sm" onCloseAutoFocus={closeFocus}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TriangleAlert className="h-4 w-4 text-gold-strong" aria-hidden />
@@ -235,7 +247,7 @@ export function UnsavedChangesDialog({
       // the navigation.
       onOpenChange={(next) => (next || saving ? undefined : onStay())}
     >
-      <DialogContent size="sm">
+      <DialogContent size="sm" onCloseAutoFocus={closeFocus}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4 text-gold-strong" aria-hidden />
