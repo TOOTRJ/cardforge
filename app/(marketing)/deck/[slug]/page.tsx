@@ -261,7 +261,7 @@ export default async function DeckDetailPage({
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
   const hasCards = items.length > 0;
   // "Copy deck" only when the copy would hold an entry (TODO DK5.16).
-  const canCopy = cloneableEntryCount(items) > 0;
+  const canCopy = cloneableEntryCount(items, user?.id ?? null) > 0;
   const usesCommander = formatHasCommander(deck.format);
   const hasMainboard = items.some((item) => item.entry.board === "main" && item.entry.quantity > 0);
 

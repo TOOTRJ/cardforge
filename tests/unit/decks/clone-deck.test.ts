@@ -118,18 +118,26 @@ describe("cloneableEntryCount — no empty copy", () => {
     expect(
       cloneableEntryCount([
         { entry: { card_id: null, scryfall_id: "p1", source: "import" }, card: null },
-        { entry: { card_id: PUBLIC_CARD, scryfall_id: null, source: "creator" }, card: { id: PUBLIC_CARD } },
+        { entry: { card_id: PUBLIC_CARD, scryfall_id: null, source: "creator" }, card: { owner_id: "someone", visibility: "public" } },
         { entry: { card_id: null, scryfall_id: null, source: "manual" }, card: null },
         { entry: { card_id: null, scryfall_id: null, source: null }, card: null },
-      ]),
+      ], "viewer"),
     ).toBe(4);
+  });
+  it("keeps the viewer's own card at any visibility, never another owner's unlisted one they can read", () => {
+    const unlisted = { entry: { card_id: PRIVATE_CARD, scryfall_id: null, source: "creator" }, card: { owner_id: "deck-owner", visibility: "unlisted" } };
+    // The deck owner's unlisted card: readable by a visitor, but clone_deck
+    // leaves it behind — no "Copy deck" for a deck of only those.
+    expect(cloneableEntryCount([unlisted], "visitor")).toBe(0);
+    expect(cloneableEntryCount([unlisted], null)).toBe(0);
+    expect(cloneableEntryCount([unlisted], "deck-owner")).toBe(1);
   });
   it("leaves out a card the viewer can't read (no printing) and a gone card", () => {
     expect(
       cloneableEntryCount([
         { entry: { card_id: PRIVATE_CARD, scryfall_id: null, source: "creator" }, card: null },
         { entry: { card_id: null, scryfall_id: null, source: "link" }, card: null },
-      ]),
+      ], "viewer"),
     ).toBe(0);
   });
 });

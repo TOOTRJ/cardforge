@@ -7,7 +7,7 @@
 // reads (a printing by its real card's name, a public PipGlyph card by its
 // id), never a basic land, the sideboard, the maybeboard or a STAPLE (a card
 // in more than SIMILAR_DECKS_STAPLE_SHARE of the public non-empty decks AND
-// in at least SIMILAR_DECKS_STAPLE_MIN_DECKS of them — Sol Ring alone never
+// in more than SIMILAR_DECKS_STAPLE_MIN_DECKS of them — Sol Ring alone never
 // makes two decks similar; a shared commander still does). The deck page's
 // row (components/decks/similar-decks-row.tsx) reads it cookie-free, cached
 // an hour per deck (listSimilarDecks), and is hidden when nothing is similar.

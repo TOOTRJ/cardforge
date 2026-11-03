@@ -21,20 +21,28 @@ type CloneEntryLike = {
   source?: string | null;
 };
 
+type CloneCardLike = { owner_id?: string | null; visibility?: string | null } | null | undefined;
+
 /** clone_deck()'s rule for one entry, as the page reads it (`card` is what
  *  the viewer's read handed back — null for a card they can't read): a
- *  printing, a card that comes along, or a plain line (no card, a source
- *  that brings none). */
-export function entryComesAlong(entry: CloneEntryLike, card: unknown): boolean {
+ *  printing, a card that comes along (public, or the viewer's own — the
+ *  SQL's keep_card; another owner's unlisted card the viewer can READ still
+ *  stays behind), or a plain line (no card, a source that brings none). */
+export function entryComesAlong(entry: CloneEntryLike, card: CloneCardLike, viewerId: string | null): boolean {
   if (entry.scryfall_id) return true;
-  if (entry.card_id) return Boolean(card);
+  if (entry.card_id) {
+    return Boolean(card && (card.visibility === "public" || (viewerId !== null && card.owner_id === viewerId)));
+  }
   return !bringsCard(entry.source);
 }
 
 /** How many of the page's entries a copy would hold — "Copy deck" is
  *  offered only above 0 (never an empty copy). */
-export function cloneableEntryCount(items: ReadonlyArray<{ entry: CloneEntryLike; card: unknown }>): number {
-  return items.filter((item) => entryComesAlong(item.entry, item.card)).length;
+export function cloneableEntryCount(
+  items: ReadonlyArray<{ entry: CloneEntryLike; card: CloneCardLike }>,
+  viewerId: string | null,
+): number {
+  return items.filter((item) => entryComesAlong(item.entry, item.card, viewerId)).length;
 }
 
 export type CloneSourceRow = CloneEntryLike & { id: string; name: string; type_line?: string | null };
