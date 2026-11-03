@@ -39,6 +39,7 @@ import {
   createUndoHistory,
   redoWords,
   undoWords,
+  type HistoryStep,
   type Reverse,
   type UndoHistory,
   type UndoLabels,
@@ -117,6 +118,11 @@ export type VersionRestoreRequest = {
 export type VersionRestoreAnswer =
   | { ok: true; headBefore: number | null; said: string }
   | { ok: false; error: string; stale?: true };
+/** What the dialog gets back: the words, and `undo` — THIS restore back
+ *  (the toast's Undo), false and nothing done once it no longer can be. */
+export type VersionRestoreResult =
+  | { ok: true; said: string; undo: () => boolean }
+  | { ok: false; error: string; stale?: true };
 
 /** The queue's line every version restore waits on. */
 const VERSION_KEY = "deck:version";
@@ -157,7 +163,7 @@ export type DeckEditor = {
   redoLabel: string | null;
   /** The deck's rows back as a version of its change history had them —
    *  undoable (TODO DK5.13). */
-  restoreVersion: (request: VersionRestoreRequest) => Promise<VersionRestoreAnswer>;
+  restoreVersion: (request: VersionRestoreRequest) => Promise<VersionRestoreResult>;
   announce: (text: string) => void;
   /** The focus goes back to this card's opener once an edit has re-drawn
    *  it (a menu's pick: the menu held the focus). */
@@ -506,6 +512,33 @@ export function DeckEditorProvider({
     [announce, deck.id, holdNeighbour, restore, send],
   );
 
+  /** The reverse of cards that landed: copies back where an add merged
+   *  (several picks on one row: back to before the first), the new lines
+   *  out — as ONE step (one ⌘Z takes all four of an "Add 4" back out, one
+   *  ⇧⌘Z puts them in again). */
+  const addedReverse = useCallback(
+    (landed: ReadonlyArray<{ row: { entryId: string; merged: boolean; quantity: number }; name: string }>): Reverse =>
+      (done) => {
+        const back = new Map<string, number>();
+        const out = new Set<string>();
+        for (const { row } of landed) {
+          const id = resolveId(row.entryId);
+          if (!isHere(id)) continue;
+          if (row.merged) back.set(id, Math.min(back.get(id) ?? Infinity, row.quantity - 1));
+          else out.add(id);
+        }
+        const patches = [...back].filter(([id, quantity]) => quantity >= 1 && !out.has(id)).map(([id, quantity]) => ({ id, quantity }));
+        const parts: Reverse[] = [];
+        if (patches.length > 0) parts.push((sink) => update(patches, "quantity", sink));
+        if (out.size > 0) {
+          const who = whoOf(landed.filter(({ row }) => out.has(resolveId(row.entryId))).map(({ name }) => name));
+          parts.push((sink) => removeQuietly([...out], who, sink));
+        }
+        combineReverses(parts)(done);
+      },
+    [isHere, removeQuietly, resolveId, update],
+  );
+
   // ---- the add box's add -------------------------------------------------
   const add = useCallback(
     async (
@@ -545,34 +578,8 @@ export function DeckEditorProvider({
       }
       return { ok: false, error: LOST_REQUEST };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- addedReverse reads refs only
-    [deck.id, send],
+    [addedReverse, deck.id, send],
   );
-
-  /** The reverse of cards that landed: copies back where an add merged
-   *  (several picks on one row: back to before the first), the new lines
-   *  out — as ONE step (one ⌘Z takes all four of an "Add 4" back out, one
-   *  ⇧⌘Z puts them in again). */
-  function addedReverse(landed: ReadonlyArray<{ row: { entryId: string; merged: boolean; quantity: number }; name: string }>): Reverse {
-    return (done) => {
-      const back = new Map<string, number>();
-      const out = new Set<string>();
-      for (const { row } of landed) {
-        const id = resolveId(row.entryId);
-        if (!isHere(id)) continue;
-        if (row.merged) back.set(id, Math.min(back.get(id) ?? Infinity, row.quantity - 1));
-        else out.add(id);
-      }
-      const patches = [...back].filter(([id, quantity]) => quantity >= 1 && !out.has(id)).map(([id, quantity]) => ({ id, quantity }));
-      const parts: Reverse[] = [];
-      if (patches.length > 0) parts.push((sink) => update(patches, "quantity", sink));
-      if (out.size > 0) {
-        const who = whoOf(landed.filter(({ row }) => out.has(resolveId(row.entryId))).map(({ name }) => name));
-        parts.push((sink) => removeQuietly([...out], who, sink));
-      }
-      combineReverses(parts)(done);
-    };
-  }
 
   // ---- the add box's "Add N" (TODO DK5.17) ------------------------------
   const addMany = useCallback(
@@ -618,8 +625,7 @@ export function DeckEditorProvider({
       if ((outcome.status === "done" || outcome.status === "failed") && outcome.value) return outcome.value;
       return { ok: false, error: LOST_REQUEST };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- addedReverse reads refs only
-    [deck.id, send],
+    [addedReverse, deck.id, send],
   );
 
   // ---- a version from the change history (TODO DK5.13) ------------------
@@ -633,8 +639,9 @@ export function DeckEditorProvider({
     function restoreVersion(
       request: VersionRestoreRequest,
       to: Sink | "edit" = "edit",
-    ): Promise<VersionRestoreAnswer> {
+    ): Promise<VersionRestoreResult> {
       const keys = [VERSION_KEY, ...drawnRef.current.map((item) => item.entry.id)];
+      let recorded: HistoryStep | null = null;
       const sink = sinkFor(to === "edit" ? { label: `restore ${request.label}` } : to);
       return send({ kind: "batch", ops: [] }, () => request.write(request.changeId), {
         keys,
@@ -649,12 +656,29 @@ export function DeckEditorProvider({
           if (to === "edit") history.current!.clear();
           const back = result.headBefore;
           sink(back === null ? null : (done) => void restoreVersion({ ...request, changeId: back }, done));
+          // The step this restore just recorded (a fresh one: on top).
+          if (to === "edit" && back !== null) recorded = history.current!.top("undo");
         },
-      }).then((outcome) =>
-        (outcome.status === "done" || outcome.status === "failed") && outcome.value
-          ? outcome.value
-          : { ok: false as const, error: LOST_REQUEST },
-      );
+      }).then((outcome): VersionRestoreResult => {
+        if (outcome.status !== "done" && outcome.status !== "failed") return { ok: false, error: LOST_REQUEST };
+        const value = outcome.value;
+        if (!value) return { ok: false, error: LOST_REQUEST };
+        if (!value.ok) return value;
+        const step = recorded;
+        return {
+          ok: true,
+          said: value.said,
+          // THIS restore back — only while it is still the newest step: once
+          // undone (⌘Z, the toolbar) it is not on Undo any more, and under a
+          // newer edit its reverse (the whole deck back to the version it
+          // replaced) would take that edit back with it.
+          undo: () => {
+            const steps = history.current!;
+            if (!step || steps.top("undo") !== step) return false;
+            return steps.run("undo", step);
+          },
+        };
+      });
     },
     [announce, send, sinkFor],
   );

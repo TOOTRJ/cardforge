@@ -352,4 +352,113 @@ describe("the History dialog", () => {
     // changes are put back.
     expect(history.restoreDeckVersionAction).toHaveBeenLastCalledWith({ deckId: DECK.id, changeId: 15 });
   });
+
+  const twoVersions = {
+    ok: true,
+    access: { kind: "full" },
+    headId: 12,
+    nextBefore: null,
+    versions: [
+      { headId: 12, at: "2026-11-02T10:00:00Z", summary: "Removed Sol Ring", changes: [{ id: 12, text: "Removed Sol Ring" }], count: 1, byOwner: true },
+      { headId: 9, at: "2026-11-01T12:00:00Z", summary: "Added Bolt", changes: [{ id: 9, text: "Added Bolt" }], count: 1, byOwner: true },
+      { headId: 7, at: "2026-11-01T10:00:00Z", summary: "Added Sol Ring", changes: [{ id: 7, text: "Added Sol Ring" }], count: 1, byOwner: true },
+    ],
+  };
+  /** A restore of the version `changeId` (9 or 7), through the dialog; the
+   *  toast's Undo. */
+  const restoreThrough = async (changeId: number) => {
+    const dialog = await openHistory();
+    // Pro's line names the 30-day grace once Pro ends (owner 2026-11-02).
+    expect(dialog.getByText("Pro keeps every version of this deck. If Pro ends, older history is kept 30 days.")).toBeTruthy();
+    const buttons = dialog.getAllByRole("button", { name: /^Restore this version/ });
+    await press(buttons[changeId === 9 ? 0 : 1]!);
+    await press(dialog.getByRole("button", { name: /^Restore the version of/ }));
+    expect(history.restoreDeckVersionAction).toHaveBeenLastCalledWith({ deckId: DECK.id, changeId });
+    const call = toast.mock.calls.find(([text]) => typeof text === "string" && text.startsWith("Restored"))!;
+    return (call[1] as { action: { onClick: () => void } }).action.onClick;
+  };
+
+  it("the restore toast's Undo takes back THAT restore while it is the newest step", async () => {
+    history.listDeckHistoryAction.mockResolvedValue(twoVersions);
+    history.restoreDeckVersionAction.mockResolvedValue({ ok: true, headBefore: 12, removed: 0, changed: 0, restored: 1, notes: [] });
+    deckPage();
+    const toastUndo = await restoreThrough(7);
+    history.restoreDeckVersionAction.mockResolvedValue({ ok: true, headBefore: 14, removed: 1, changed: 0, restored: 0, notes: [] });
+    await act(async () => toastUndo());
+    await flush();
+    expect(history.restoreDeckVersionAction).toHaveBeenLastCalledWith({ deckId: DECK.id, changeId: 12 });
+    expect(history.restoreDeckVersionAction).toHaveBeenCalledTimes(2);
+    expect(redoButton().getAttribute("aria-label")).toMatch(/^Redo: restore the version of /);
+  });
+
+  it("the toast's Undo does nothing under an edit made since — never undoes that edit, never the restore over it", async () => {
+    history.listDeckHistoryAction.mockResolvedValue(twoVersions);
+    history.restoreDeckVersionAction.mockResolvedValue({ ok: true, headBefore: 12, removed: 0, changed: 0, restored: 1, notes: [] });
+    deckPage();
+    const toastUndo = await restoreThrough(7);
+    await press(copiesOf("Lightning Bolt").getByRole("button", { name: "One more" }));
+    const writes = actions.updateDeckEntriesAction.mock.calls.length;
+    await act(async () => toastUndo());
+    await flush();
+    expect(history.restoreDeckVersionAction).toHaveBeenCalledTimes(1);
+    expect(actions.updateDeckEntriesAction.mock.calls.length).toBe(writes);
+    // The edit is still the toolbar's to undo, and the restore under it.
+    expect(undoButton().getAttribute("aria-label")).toBe("Undo: Lightning Bolt: 3 copies");
+    expect(screen.getByText(/can't be undone from here/)).toBeTruthy();
+  });
+
+  it("the toast's Undo does nothing once ⌘Z has undone the restore — never twice", async () => {
+    history.listDeckHistoryAction.mockResolvedValue(twoVersions);
+    history.restoreDeckVersionAction.mockResolvedValue({ ok: true, headBefore: 12, removed: 0, changed: 0, restored: 1, notes: [] });
+    deckPage();
+    const toastUndo = await restoreThrough(7);
+    history.restoreDeckVersionAction.mockResolvedValue({ ok: true, headBefore: 14, removed: 1, changed: 0, restored: 0, notes: [] });
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: "z", metaKey: true });
+    });
+    await flush();
+    expect(history.restoreDeckVersionAction).toHaveBeenCalledTimes(2);
+    await act(async () => toastUndo());
+    await flush();
+    expect(history.restoreDeckVersionAction).toHaveBeenCalledTimes(2);
+    // The redo the ⌘Z left is still there.
+    expect(redoButton().getAttribute("aria-label")).toMatch(/^Redo: restore the version of /);
+  });
+
+  it("Cancel on the confirm hands the focus back to that row's \"Restore this version\"", async () => {
+    history.listDeckHistoryAction.mockResolvedValue(twoVersions);
+    deckPage();
+    const dialog = await openHistory();
+    const second = dialog.getAllByRole("button", { name: /^Restore this version/ })[1]!;
+    const name = second.getAttribute("aria-label");
+    await press(second);
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+    expect(document.activeElement).toBe(dialog.getByRole("button", { name: /^Restore the version of/ }));
+    await act(async () => {
+      cancel.focus();
+      fireEvent.click(cancel);
+    });
+    await flush();
+    expect(dialog.queryByRole("button", { name: "Cancel" })).toBeNull();
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(name);
+  });
+
+  it("opened from the phone bar's More menu, it hands the focus back to More when it closes", async () => {
+    history.listDeckHistoryAction.mockResolvedValue(twoVersions);
+    deckPage();
+    const bar = within(screen.getByRole("navigation", { name: "Deck editing" }));
+    const more = bar.getByRole("button", { name: "More" });
+    await act(async () => {
+      fireEvent.click(more);
+    });
+    const menu = await screen.findByRole("menu", { name: "More" });
+    await press(within(menu).getByRole("menuitem", { name: "Deck history" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Deck history" }));
+    await act(async () => {
+      fireEvent.keyDown(dialog.getAllByRole("button", { name: /^Restore this version/ })[0]!, { key: "Escape" });
+    });
+    await flush();
+    expect(screen.queryByRole("dialog", { name: "Deck history" })).toBeNull();
+    expect(document.activeElement).toBe(more);
+  });
 });

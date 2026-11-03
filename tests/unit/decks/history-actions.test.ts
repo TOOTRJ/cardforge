@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   version: null as null | { id: number; changed_at: string },
   log: [] as unknown[],
   rows: [] as unknown[],
+  claim: { ok: true, token: "77777777-7777-4777-8777-777777777777" } as Record<string, unknown>,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -58,9 +59,14 @@ function db() {
     }
     return { data: null };
   });
+  // 0165's restore claim: granted unless a test says otherwise.
+  stub.rpc.mockImplementation((async (name: string) =>
+    name === "claim_deck_restore" ? { data: state.claim, error: null } : { data: null, error: null }) as never);
   state.client = stub.client;
   return stub;
 }
+
+const TOKEN = "77777777-7777-4777-8777-777777777777";
 
 beforeEach(() => {
   state.user = { id: USER };
@@ -69,6 +75,7 @@ beforeEach(() => {
   state.version = null;
   state.log = [];
   state.rows = [];
+  state.claim = { ok: true, token: TOKEN };
   for (const fn of Object.values(actions)) fn.mockReset();
 });
 
@@ -105,6 +112,55 @@ describe("listDeckHistoryAction", () => {
     state.tier = "pro";
     expect(await listDeckHistoryAction({ deckId: DECK })).toMatchObject({ ok: true, access: { kind: "full" } });
     expect(stub.forTable("deck_entry_changes").some((entry) => called(entry.calls, "gte"))).toBe(false);
+  });
+});
+
+describe("listDeckHistoryAction's pages end on a version", () => {
+  // 450 changes of ONE restore (one transaction), then two older versions.
+  const burst = Array.from({ length: 450 }, (_, n) => ({
+    id: 1000 - n,
+    entry_id: id(n + 1),
+    op: "insert",
+    before: null,
+    after: snap(`Card ${n}`),
+    actor_id: USER,
+    tx: 77,
+    changed_at: recent(1),
+  }));
+  // …then an import of 200 lines, then one older change.
+  const older = [
+    ...Array.from({ length: 200 }, (_, n) => ({ id: 500 - n, entry_id: id(600 + n), op: "insert", before: null, after: snap(`Line ${n}`), actor_id: USER, tx: 50, changed_at: recent(60) })),
+    { id: 100, entry_id: id(900), op: "delete", before: snap("Swamp", 2), after: null, actor_id: USER, tx: 40, changed_at: recent(120) },
+  ];
+  const log = [...burst, ...older];
+
+  function pagedDb() {
+    const stub = chainClient((table: string, calls: ChainCall[]): ChainAnswer => {
+      if (table === "decks") return { data: { id: DECK, owner_id: USER } };
+      if (called(calls, "limit", 1)) return { data: log.slice(0, 1) };
+      const before = calls.find((c) => c.method === "lt")?.args[1] as number | undefined;
+      const limit = calls.find((c) => c.method === "limit")!.args[0] as number;
+      return { data: log.filter((row) => before === undefined || row.id < before).slice(0, limit) };
+    });
+    state.client = stub.client;
+    return stub;
+  }
+
+  it("reads a burst longer than a page to its end — one version, never two across pages", async () => {
+    const stub = pagedDb();
+    const first = await listDeckHistoryAction({ deckId: DECK });
+    expect(first).toMatchObject({ ok: true, headId: 1000 });
+    if (!first.ok) throw new Error("unreachable");
+    expect(first.versions).toHaveLength(1);
+    expect(first.versions[0]).toMatchObject({ headId: 1000, count: 450 });
+    // The next page starts right after the burst's last change.
+    expect(first.nextBefore).toBe(551);
+    expect(stub.forTable("deck_entry_changes").filter((entry) => called(entry.calls, "limit", 301))).toHaveLength(2);
+
+    const second = await listDeckHistoryAction({ deckId: DECK, before: first.nextBefore! });
+    if (!second.ok) throw new Error("unreachable");
+    expect(second.versions.map((version) => [version.headId, version.count])).toEqual([[500, 200], [100, 1]]);
+    expect(second.nextBefore).toBeNull();
   });
 });
 
@@ -184,6 +240,47 @@ describe("restoreDeckVersionAction", () => {
     // never an update that links it.
     expect(actions.updateDeckEntriesAction).not.toHaveBeenCalled();
     expect(actions.restoreDeckEntriesAction.mock.calls[0]![0]).toMatchObject({ deckId: DECK, entries: [{ cardId: id(70) }] });
+  });
+
+  const removedSince = () => {
+    state.version = { id: 1, changed_at: recent(60) };
+    state.rows = [];
+    state.log = [{ id: 2, entry_id: id(5), op: "delete", before: snap("Island", 3), after: null, actor_id: USER, tx: 2, changed_at: recent(1) }];
+  };
+
+  it("claims the deck from the head it planned on, writes, then releases the claim", async () => {
+    const stub = db();
+    removedSince();
+    const order: string[] = [];
+    stub.rpc.mockImplementation((async (name: string) => {
+      order.push(name);
+      return name === "claim_deck_restore" ? { data: state.claim, error: null } : { data: null, error: null };
+    }) as never);
+    actions.restoreDeckEntriesAction.mockImplementation(async () => (order.push("restore"), { ok: true, restored: [{ from: id(5), to: id(9) }] }));
+    expect(await restoreDeckVersionAction({ deckId: DECK, changeId: 1 })).toMatchObject({ ok: true, restored: 1, headBefore: 2 });
+    expect(order).toEqual(["claim_deck_restore", "restore", "release_deck_restore"]);
+    expect(stub.rpc).toHaveBeenCalledWith("claim_deck_restore", { p_deck_id: DECK, p_head: 2 });
+    expect(stub.rpc).toHaveBeenCalledWith("release_deck_restore", { p_deck_id: DECK, p_token: TOKEN });
+  });
+
+  it("the claim refused — the deck changed since the plan was read, or another restore holds it — writes nothing", async () => {
+    db();
+    removedSince();
+    state.claim = { ok: false, reason: "stale" };
+    expect(await restoreDeckVersionAction({ deckId: DECK, changeId: 1 })).toMatchObject({ ok: false, stale: true });
+    state.claim = { ok: false, reason: "busy" };
+    expect(await restoreDeckVersionAction({ deckId: DECK, changeId: 1 })).toMatchObject({ ok: false, error: expect.stringContaining("Another restore") });
+    for (const fn of Object.values(actions)) expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("releases the claim even when a write refuses", async () => {
+    const stub = db();
+    state.version = { id: 3, changed_at: recent(60) };
+    state.rows = [{ id: id(3), ...snap("Bolt") }];
+    state.log = [{ id: 6, entry_id: id(3), op: "insert", before: null, after: snap("Bolt"), actor_id: USER, tx: 6, changed_at: recent(3) }];
+    actions.removeDeckEntriesAction.mockResolvedValue({ ok: false, error: "No." });
+    expect(await restoreDeckVersionAction({ deckId: DECK, changeId: 3 })).toEqual({ ok: false, error: "No." });
+    expect(stub.rpc).toHaveBeenLastCalledWith("release_deck_restore", { p_deck_id: DECK, p_token: TOKEN });
   });
 
   it("nothing to write when the deck already reads as the version", async () => {

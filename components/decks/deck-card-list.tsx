@@ -12,7 +12,7 @@ import { DeckGroupViews } from "@/components/decks/deck-card-views";
 import { EntryMenuButton, EntryStepper, MenuTrigger } from "@/components/decks/deck-entry-controls";
 import { DeckAddBox } from "@/components/decks/deck-add-box";
 import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
-import { DeckMobileBar } from "@/components/decks/deck-mobile-bar";
+import { DeckMobileBar, deckMoreButton } from "@/components/decks/deck-mobile-bar";
 // The bulk bar loads in a chunk of its own, when a selection starts.
 import { DeckBulkBar } from "@/components/decks/deck-owner-parts";
 import { createPreviewStore, DeckPreviewPane } from "@/components/decks/deck-preview-pane";
@@ -623,7 +623,7 @@ function DeckCardArea({
     ...(editor?.redoLabel
       ? [{ kind: "item" as const, label: editor.redoLabel, icon: <Redo2 className="h-3.5 w-3.5" />, onSelect: editor.redo }]
       : []),
-    { kind: "item", label: "Deck history", icon: <History className="h-3.5 w-3.5" />, onSelect: () => openDeckTool("history") },
+    { kind: "item", label: "Deck history", icon: <History className="h-3.5 w-3.5" />, onSelect: () => openDeckTool("history", deckMoreButton()) },
   ];
 
   return (

@@ -18,6 +18,11 @@
 //   Redo              → the step comes off REDO and runs; what it hands back
 //                       goes onto UNDO — REDO is kept.
 //
+// An Undo's answer arrives once the server has it — and a fresh edit made
+// while it was on its way has already cleared REDO: that answer is the redo
+// of a branch that is gone (its base is stale), so it is DROPPED, never put
+// back on REDO over the newer edit.
+//
 // A step's words are the change's own ("add Sol Ring", "Moved Sol Ring to
 // the Sideboard") — the page puts "Undo: " / "Redo: " in front. Several
 // reverses that make ONE change ("Add 4": copies back on one row, three new
@@ -56,6 +61,9 @@ export const UNDO_LIMIT = 20;
 export function createUndoHistory(onChange: (labels: UndoLabels) => void = () => {}, limit = UNDO_LIMIT): UndoHistory {
   let undo: HistoryStep[] = [];
   let redo: HistoryStep[] = [];
+  /** Fresh edits recorded so far: an Undo answered after another one has a
+   *  stale base. */
+  let edits = 0;
   const labels = (): UndoLabels => ({ undo: undo.at(-1)?.label ?? null, redo: redo.at(-1)?.label ?? null });
   const changed = () => onChange(labels());
   const push = (stack: HistoryStep[], step: HistoryStep) => [...stack, step].slice(-limit);
@@ -64,7 +72,10 @@ export function createUndoHistory(onChange: (labels: UndoLabels) => void = () =>
     if (origin === "undo") redo = push(redo, step);
     else {
       undo = push(undo, step);
-      if (origin === "edit") redo = [];
+      if (origin === "edit") {
+        redo = [];
+        edits += 1;
+      }
     }
     changed();
   }
@@ -85,10 +96,13 @@ export function createUndoHistory(onChange: (labels: UndoLabels) => void = () =>
     const taken = take(which, step);
     if (!taken) return false;
     let answered = false;
+    const base = edits;
     taken.reverse((next) => {
       // A reverse answers once; a second answer is a bug, never a step.
       if (answered) return;
       answered = true;
+      // An undo's redo whose branch a fresh edit has since cleared: gone.
+      if (which === "undo" && edits !== base) return;
       if (next) record({ label: taken.label, reverse: next }, which);
     });
     return true;

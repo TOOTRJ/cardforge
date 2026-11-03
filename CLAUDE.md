@@ -2127,14 +2127,21 @@ Rules and gotchas:
   toolbar's Undo · Redo (`deck-history-controls.tsx`), ⌘Z / ⇧⌘Z / Ctrl Y, a
   removal's toast and the phone bar all run it. A new editor edit records
   its reverse there, never a second stack. The SERVER's history is
-  `deck_entry_changes` (0164), written by ONE row trigger on `deck_cards`
+  `deck_entry_changes` (0165), written by ONE row trigger on `deck_cards`
   (every write path, once; append-only for every API role; the owner reads
   it through RLS) — never insert into it from code. The plan gate is
   `historyAccessFor` on `getEntitlements` in `lib/decks/history-actions.ts`
   (Pro full, Plus 30 days, free locked: session undo only); the weekly
-  prune cron calls `prune_deck_entry_changes`. "Restore this version"
+  prune cron calls `prune_deck_entry_changes` — an owner whose Pro ENDS
+  keeps the older rows 30 days more (owner 2026-11-02), from when Pro ended
+  as `deck_history_pro_ends` records it (a `profiles` trigger stamps the
+  write that ends it; a comp run out by the clock is its
+  `comp_expires_at`), never from "now"; a deck keeps at most its newest
+  `DECK_HISTORY_MAX_ROWS` (10,000). "Restore this version"
   (`planRestore`) writes ONLY through the batch actions — removals, updates
-  and `restoreDeckEntriesAction` (D3 judged again) — never a direct insert.
+  and `restoreDeckEntriesAction` (D3 judged again) — never a direct insert,
+  after `claim_deck_restore` (the entry lock, the plan's head re-read, one
+  restore per deck at a time).
   The breakdown's charts (TODO DK7, free for everyone) are
   `computeDeckCharts` (`lib/decks/deck-charts.ts`, over `deckRowsOf`: the
   effective fields, the maybeboard never counted; its curve adds up to

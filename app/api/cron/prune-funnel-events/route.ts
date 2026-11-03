@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cronRouteGuard } from "@/lib/api/cron-auth";
 import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { DECK_HISTORY_PLUS_DAYS } from "@/lib/decks/deck-history";
+import { DECK_HISTORY_MAX_ROWS, DECK_HISTORY_PLUS_DAYS, DECK_HISTORY_PRO_GRACE_DAYS } from "@/lib/decks/deck-history";
 
 // ---------------------------------------------------------------------------
 // /api/cron/prune-funnel-events — weekly: drop funnel rows older than the
@@ -21,12 +21,14 @@ import { DECK_HISTORY_PLUS_DAYS } from "@/lib/decks/deck-history";
 // …and the AI receipts (migration 0162, lib/cards/ai-provenance-server.ts)
 // past 90 days: a creator's claim is checked against the last 30.
 //
-// …and the deck change history (migration 0164, TODO DK5.13): rows past
+// …and the deck change history (migration 0165, TODO DK5.13): rows past
 // DECK_HISTORY_PLUS_DAYS of every deck whose owner isn't Pro (Pro keeps the
-// full history) and every row of a deck that is gone — by plan only while
-// billing is on (off, everyone is unlocked: only the orphans go). The
-// History view also never reads past the plan's window, so a row a week
-// from its prune is never shown.
+// full history; an owner whose Pro ENDED keeps them DECK_HISTORY_PRO_GRACE_DAYS
+// more — owner 2026-11-02), every row of a deck that is gone, and every
+// deck's changes past its newest DECK_HISTORY_MAX_ROWS — by plan only while
+// billing is on (off, everyone is unlocked: only the orphans and the cap
+// go). The History view also never reads past the plan's window, so a row
+// a week from its prune is never shown.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -62,9 +64,11 @@ export async function GET(request: Request) {
   const history = await admin.rpc("prune_deck_entry_changes", {
     p_keep_days: DECK_HISTORY_PLUS_DAYS,
     p_by_plan: isBillingEnabled(),
+    p_grace_days: DECK_HISTORY_PRO_GRACE_DAYS,
+    p_max_rows: DECK_HISTORY_MAX_ROWS,
   });
 
-  // A database 0164 has not reached yet (the app can deploy first): nothing
+  // A database 0165 has not reached yet (the app can deploy first): nothing
   // to prune there, never a failed run.
   const historyError =
     history.error && !["PGRST202", "42883"].includes(history.error.code ?? "") ? history.error : null;

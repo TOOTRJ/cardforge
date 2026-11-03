@@ -8,8 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { DECK_TOOL_EVENT, type DeckToolDetail } from "@/components/decks/deck-tool-event";
 import { useDeckEditor, type VersionRestoreAnswer } from "@/components/decks/use-deck-editor";
+import { useRowFocus } from "@/components/creator/use-row-focus";
 import { listDeckHistoryAction, restoreDeckVersionAction, type DeckHistoryResult } from "@/lib/decks/history-actions";
-import { DECK_HISTORY_PLUS_DAYS, type HistoryVersion } from "@/lib/decks/deck-history";
+import {
+  DECK_HISTORY_PLUS_DAYS,
+  DECK_HISTORY_PRO_GRACE_DAYS,
+  type HistoryVersion,
+} from "@/lib/decks/deck-history";
 import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 
 // ---------------------------------------------------------------------------
@@ -23,7 +28,12 @@ import { DECK_CARDS_HEADING_ID } from "@/lib/decks/deck-view";
 //     Cancel — the focus moves onto the confirm), then goes through the
 //     editor (restoreVersion): it waits behind every edit on its way, the
 //     page redraws with the server's rows, and it is one Undo away — the
-//     toast's Undo and the toolbar's.
+//     toolbar's, and the toast's, which undoes THAT restore only while it
+//     is still the newest step (never an edit made since; never twice).
+//     Cancel hands the focus back to the row's "Restore this version"
+//     (useRowFocus: the confirm leaves with its buttons). A restore the
+//     server refuses as stale (the deck changed since the list was read)
+//     reads the list again.
 //   * The plan is the server's word (listDeckHistoryAction reads it every
 //     time): Pro reads everything, Plus the last 30 days with one line about
 //     Pro, free a locked panel with the upgrade button — the session's undo
@@ -50,6 +60,10 @@ export function DeckHistoryDialog() {
   const [confirming, setConfirming] = useState<number | null>(null);
   const [restoring, setRestoring] = useState<number | null>(null);
   const opener = useRef<HTMLElement | null>(null);
+  const listRef = useRef<HTMLOListElement | null>(null);
+  // Each row's "Restore this version" is its `data-row-remove` button (the
+  // hook's mark): Cancel removes the confirm, and the focus goes to it.
+  const focusRestoreButton = useRowFocus(listRef);
   const deckId = editor?.deck.id ?? null;
 
   const read = useCallback(
@@ -105,11 +119,25 @@ export function DeckHistoryDialog() {
       },
     });
     setRestoring(null);
-    if (!answer.ok) return;
+    if (!answer.ok) {
+      // The deck moved under the list (another tab, an import): read again.
+      if (answer.stale) {
+        setConfirming(null);
+        void read();
+      }
+      return;
+    }
     setOpen(false);
     toast(answer.said, {
       duration: 8000,
-      action: { label: "Undo", onClick: () => editor.undo() },
+      action: {
+        label: "Undo",
+        // THIS restore back — nothing once it has been undone, or under an
+        // edit made since (the toolbar's Undo takes that one first).
+        onClick: () => {
+          if (!answer.undo()) editor.announce("That restore can't be undone from here any more — use the toolbar's Undo.");
+        },
+      },
     });
   };
 
@@ -158,14 +186,14 @@ export function DeckHistoryDialog() {
             <>
               <p className="mb-3 text-xs text-subtle">
                 {load.data.access.kind === "full"
-                  ? "Pro keeps every version of this deck."
+                  ? `Pro keeps every version of this deck. If Pro ends, older history is kept ${DECK_HISTORY_PRO_GRACE_DAYS} days.`
                   : `Plus keeps the last ${load.data.access.days} days of changes. Pro keeps every version.`}
               </p>
               {load.data.versions.length === 0 ? (
                 <p className="py-6 text-sm text-muted">No changes yet — they&rsquo;ll appear here as you edit.</p>
               ) : (
-                <ol className="flex flex-col gap-2" aria-label="Versions">
-                  {load.data.versions.map((version) => {
+                <ol ref={listRef} className="flex flex-col gap-2" aria-label="Versions">
+                  {load.data.versions.map((version, index) => {
                     const current = version.headId === load.data.headId;
                     const when = formatWhen(version.at);
                     return (
@@ -192,7 +220,19 @@ export function DeckHistoryDialog() {
                               >
                                 {restoring === version.headId ? "Restoring…" : "Restore"}
                               </Button>
-                              <Button size="sm" variant="ghost" disabled={restoring !== null} onClick={() => setConfirming(null)}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={restoring !== null}
+                                onClick={() => {
+                                  setConfirming(null);
+                                  // The row's own button: the rows before it
+                                  // that have one (the current version has none).
+                                  focusRestoreButton(
+                                    load.data.versions.slice(0, index).filter((row) => row.headId !== load.data.headId).length,
+                                  );
+                                }}
+                              >
                                 Cancel
                               </Button>
                             </span>
@@ -200,6 +240,7 @@ export function DeckHistoryDialog() {
                             <Button
                               size="sm"
                               variant="outline"
+                              data-row-remove=""
                               disabled={restoring !== null}
                               aria-label={`Restore this version — ${when}`}
                               onClick={() => setConfirming(version.headId)}

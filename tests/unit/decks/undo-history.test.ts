@@ -50,6 +50,29 @@ describe("createUndoHistory", () => {
     expect(labels.at(-1)).toEqual({ undo: null, redo: "add Sol Ring" });
   });
 
+  it("an Undo answered AFTER a fresh edit is dropped — never a redo of the branch that edit cleared", () => {
+    const history = createUndoHistory();
+    const deck = world();
+    history.record({ label: "older", reverse: deck.edit(1) }, "edit");
+    history.record({ label: "newest", reverse: deck.edit(2) }, "edit");
+    // The undo goes out; its answer waits on the server.
+    let answer: ((next: Reverse | null) => void) | null = null;
+    const slow: Reverse = (done) => {
+      answer = done;
+    };
+    history.record({ label: "slow", reverse: slow }, "edit");
+    history.run("undo");
+    // A fresh edit lands first.
+    history.record({ label: "fresh", reverse: deck.edit(5) }, "edit");
+    expect(history.labels()).toEqual({ undo: "fresh", redo: null });
+    answer!((done) => done(null));
+    // Redo stays empty: "slow"'s redo was made on a base that is gone.
+    expect(history.labels()).toEqual({ undo: "fresh", redo: null });
+    // An undo answered with no edit in between still refills Redo.
+    history.run("undo");
+    expect(history.labels()).toEqual({ undo: "newest", redo: "fresh" });
+  });
+
   it("walks back newest first and forward oldest first", () => {
     const history = createUndoHistory();
     const deck = world();

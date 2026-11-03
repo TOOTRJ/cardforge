@@ -7,7 +7,7 @@ import type { EntryPatch } from "@/lib/decks/entry-ops";
 import type { RemovedEntry } from "@/lib/decks/entry-batch";
 
 // ---------------------------------------------------------------------------
-// A deck's change history (TODO DK5.13, migration 0164) as pure data — what
+// A deck's change history (TODO DK5.13, migration 0165) as pure data — what
 // the History dialog lists and what "Restore this version" writes. Client-
 // safe; the reads and writes are lib/decks/history-actions.ts.
 //
@@ -21,6 +21,12 @@ import type { RemovedEntry } from "@/lib/decks/entry-batch";
 //   Free   none: the toolbar's undo / redo for the session — the History
 //          view is a Plus perk (owner's DK5.13 brief; its rows are kept 30
 //          days all the same, so an upgrade shows the last month at once)
+//
+// An owner who STOPS being Pro (past_due, cancelled, downgraded) keeps the
+// rows past the lower plan's 30 days for DECK_HISTORY_PRO_GRACE_DAYS more
+// after Pro ended (owner 2026-11-02; 0165's deck_history_pro_ends records
+// when) — back on Pro inside them, the whole history is there again — and
+// every deck keeps at most its newest DECK_HISTORY_MAX_ROWS changes.
 //
 // A VERSION is a run of changes made together — one write, or one burst of
 // writes by the same person (a bulk move, an "Add 4", a restore) within
@@ -36,6 +42,10 @@ import type { RemovedEntry } from "@/lib/decks/entry-batch";
 
 /** How far back a Plus plan reads the history (and the prune keeps it). */
 export const DECK_HISTORY_PLUS_DAYS = 30;
+/** How long rows past that window are kept once an owner's Pro ends. */
+export const DECK_HISTORY_PRO_GRACE_DAYS = 30;
+/** The most changes a deck keeps, whatever the plan (0165's cap). */
+export const DECK_HISTORY_MAX_ROWS = 10_000;
 /** Changes closer than this, by the same person, read as one version. */
 export const VERSION_GAP_MS = 3000;
 /** Rows a page of the History view reads. */
@@ -74,7 +84,7 @@ export function withinHistory(access: HistoryAccess, changedAt: string, now: Dat
 // Rows
 // ---------------------------------------------------------------------------
 
-/** An entry as the log keeps it (0164 deck_entry_change_snapshot). */
+/** An entry as the log keeps it (0165 deck_entry_change_snapshot). */
 export type EntrySnapshot = {
   name: string;
   board: DeckBoard;
