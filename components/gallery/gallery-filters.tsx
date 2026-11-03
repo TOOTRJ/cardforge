@@ -20,7 +20,7 @@ import {
   RARITY_LABELS,
   COLOR_IDENTITY_LABELS,
 } from "@/types/card";
-import { ManaPip } from "@/components/cards/mana-pip";
+import { ColorPip, pipColorOfIdentity } from "@/components/cards/color-pip";
 import { cn } from "@/lib/utils";
 import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -393,20 +393,6 @@ function FilterRow({
   );
 }
 
-
-// Maps a ColorIdentity value to the mana pip symbol used for rendering.
-const COLOR_TO_PIP: Record<ColorIdentity, string> = {
-  white: "W",
-  blue: "U",
-  black: "B",
-  red: "R",
-  green: "G",
-  colorless: "C",
-  multicolor: "M",
-};
-
-// Human-readable label for aria purposes.
-
 function ColorChip({
   color,
   active,
@@ -416,8 +402,6 @@ function ColorChip({
   active: boolean;
   onClick: () => void;
 }) {
-  const pipSymbol = COLOR_TO_PIP[color];
-
   return (
     <button
       type="button"
@@ -431,7 +415,7 @@ function ColorChip({
           : "opacity-60 hover:opacity-100",
       )}
     >
-      <ManaPip symbol={pipSymbol} size="md" />
+      <ColorPip color={pipColorOfIdentity(color)} size={20} decorative />
     </button>
   );
 }
