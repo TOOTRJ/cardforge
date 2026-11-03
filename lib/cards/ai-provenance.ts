@@ -46,12 +46,17 @@ export function isAiTextFieldKey(value: unknown): value is AiTextFieldKey {
 
 /** The columns (paths into the row) each part stands for — the trigger's
  *  table (0162 `card_ai_field_paths`) word for word; a unit test holds the
- *  two together. A part is CHANGED when any of its paths changed. */
+ *  two together. A part is CHANGED when any of its paths changed — JSON
+ *  null, "" and [] read as one empty value, except `printed_types`, whose
+ *  NULL (the built line) and "" (emptied) print differently. */
 export const AI_FIELD_PATHS: Record<AiFieldKey, readonly string[]> = {
   title: ["title"],
   cost: ["cost"],
   type_line: ["card_type", "supertype", "subtypes", "printed_types"],
-  rules_text: ["rules_text"],
+  // The rows a walker / saga / station draws BEFORE the text (the renderers
+  // read `face_content` first): a change to them is a change to the rules.
+  // (A second face has no rows of its own — backFaceSchema.)
+  rules_text: ["rules_text", "face_content"],
   flavor_text: ["flavor_text"],
   stats: ["power", "toughness", "loyalty", "defense"],
   art: ["art_url"],

@@ -29,8 +29,10 @@
 --      never guessed from the text; CLAUDE.md's edit rule makes a changed
 --      column a field the maker touched). A part is its columns
 --      (card_ai_field_paths, held to lib/cards/ai-provenance.ts
---      AI_FIELD_PATHS by a unit test); "changed" reads JSON null, "" and []
---      as one empty value;
+--      AI_FIELD_PATHS by a unit test; the rules part is `rules_text` AND
+--      `face_content`, the rows a walker / saga / station draws first);
+--      "changed" reads JSON null, "" and [] as one empty value — but
+--      `printed_types`' NULL (the built line) and "" (emptied) as two;
 --    * the ART parts are re-derived on EVERY write, by every role, from the
 --      picture's address (2): an AI picture replaced by the maker's own
 --      upload drops the label by itself, and the AI paths need no writer
@@ -43,10 +45,12 @@
 --    the parts the creator claims once a receipt matches). Adds, never
 --    removes; only the owner's card. Service role only.
 --
--- 5. card_ai_receipts: what the AI wrote, as the server received it — the
---    card_fill step's fields and every "Get ideas" batch — so a creator's
---    claim ("this field still holds the AI's text") is checked against a
---    row no user can write. Service role only (RLS on, no policy); the
+-- 5. card_ai_receipts: what the AI wrote, as the server received it — a
+--    card_fill job's fields, the cards a card / deck job designed and every
+--    "Get ideas" batch, each written when the server PLANS it — so a
+--    creator's claim ("this field still holds the AI's text") and an AI
+--    job's own marking are checked against a row no user can write (a job
+--    row's plan is owner-insertable, 0059, so it is never the proof). Service role only (RLS on, no policy); the
 --    weekly prune keeps 90 days (lib/cards/ai-provenance-server.ts reads
 --    30).
 --
@@ -62,8 +66,9 @@
 --       rows are owner-INSERTABLE — 0059's insert policy — so a job row
 --       alone proves nothing.) Its text parts are marked only where the
 --       card STILL holds the job's text: for 'card' / 'deck', each part
---       equal to the plan's designed card (typography folded: ’ ‘ “ ” — – •
---       read as the keyboard's characters, case and runs of spaces too); for
+--       equal to the plan's designed card (print typography folded on both
+--       sides — quotes, dashes, a line's list mark, case, spaces — and a
+--       cost compared as its pips in any order); for
 --       'deck_remix', the title the AI renamed it to (the step's label, when
 --       it differs from the printing's name).
 --    NOT backfilled: AI fills and ideas poured into the creator (a fill's
@@ -144,6 +149,7 @@ as $$
     ('type_line', array['subtypes']),
     ('type_line', array['printed_types']),
     ('rules_text', array['rules_text']),
+    ('rules_text', array['face_content']),
     ('flavor_text', array['flavor_text']),
     ('stats', array['power']),
     ('stats', array['toughness']),
@@ -165,6 +171,9 @@ $$;
 
 -- One spelling of "empty": a missing key, JSON null, "" and [] alike (the
 -- editor resends a second face whole; an emptied field may travel as "").
+-- Never for `printed_types` (the trigger reads it raw, JSON null = missing):
+-- there NULL is the built line and "" an emptied one — they print
+-- differently (TODO 3b.16).
 create or replace function public.card_ai_norm(p_value jsonb)
 returns jsonb
 language sql
@@ -217,7 +226,11 @@ begin
       where not exists (
         select 1 from public.card_ai_field_paths() as p
         where p.part = kept
-          and public.card_ai_norm(v_new #> p.path) is distinct from public.card_ai_norm(v_old #> p.path)
+          and case
+            when p.path[cardinality(p.path)] = 'printed_types'
+              then nullif(v_new #> p.path, 'null'::jsonb) is distinct from nullif(v_old #> p.path, 'null'::jsonb)
+            else public.card_ai_norm(v_new #> p.path) is distinct from public.card_ai_norm(v_old #> p.path)
+          end
       )
     );
   end if;
@@ -268,7 +281,10 @@ $$;
 create table if not exists public.card_ai_receipts (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users (id) on delete cascade,
-  source text not null check (source in ('fill', 'idea')),
+  -- 'fill': a card_fill job's fields; 'job': the cards a card / deck job
+  -- designed; 'idea': a "Get ideas" batch. Each written when the SERVER
+  -- planned it (never from a job row's plan, which its owner may insert).
+  source text not null check (source in ('fill', 'idea', 'job')),
   -- An array of row-shaped values (title, cost, card_type, supertype,
   -- subtypes, rules_text, flavor_text, power, toughness, loyalty, defense,
   -- back_face) — one per fill, one per idea of a batch.
@@ -277,7 +293,7 @@ create table if not exists public.card_ai_receipts (
 );
 
 comment on table public.card_ai_receipts is
-  'What the AI wrote, as the server received it (TODO CP1, 0162): a card_fill step''s fields and every "Get ideas" batch. The card actions check a creator''s AI-field claim against it. Service role only.';
+  'What the AI wrote, as the server received it (TODO CP1, 0162): a card_fill job''s fields, the cards a card / deck job designed and every "Get ideas" batch, written when the server plans them. The card actions check a creator''s AI-field claim, and an AI job its own marking, against it. Service role only.';
 
 create index if not exists card_ai_receipts_owner_created_idx
   on public.card_ai_receipts (owner_id, created_at desc);
@@ -323,6 +339,15 @@ where public.card_ai_art_url(art_url)
 -- b. The text of the cards an AI job made. The fold is the backfill's alone
 --    (dropped below): the plan holds the designer's raw text, the card the
 --    text as print sets it (TODO 6.11).
+--    Everything print typography (lib/validation/print-typography.ts) does to
+--    a typed text is folded on BOTH sides, so the plan's keyboard text meets
+--    the card's printed one: curly quotes and apostrophes (‘ ’ “ ”, all it
+--    introduces) are the keyboard's; a line's opening list mark or
+--    attribution dash (- * • —, "-- Serra") is one mark; any run of hyphens
+--    or dashes with the spaces round it (`--`, ` - `, ` — `, "wait—what")
+--    is one hyphen; case and runs of whitespace go. Folding both sides
+--    alike can only make more texts EQUAL — a near-miss of the AI's own
+--    text, never a hand-written one.
 create or replace function public.card_ai_backfill_fold(p_text text)
 returns text
 language sql
@@ -330,12 +355,41 @@ immutable
 set search_path = ''
 as $$
   select nullif(
-    btrim(regexp_replace(lower(translate(coalesce(p_text, ''), '’‘“”—–•', '''''""--*')), '\s+', ' ', 'g')),
+    btrim(regexp_replace(
+      regexp_replace(
+        regexp_replace(
+          lower(translate(coalesce(p_text, ''), '’‘“”—–', '''''""--')),
+          '^[ \t]*[-*•]+[ \t]*', '•', 'gn'),
+        '\s*-+\s*', '-', 'g'),
+      '\s+', ' ', 'g')),
     ''
   );
 $$;
 
+-- A mana cost as a bag of pips: the card stores the cost in print's pip
+-- order (lib/cards/mana-order.ts normalizeManaCost), the plan as the
+-- designer wrote it. A cost with text outside its braces is folded as text.
+create or replace function public.card_ai_backfill_cost(p_cost text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when btrim(regexp_replace(coalesce(p_cost, ''), '\{[^}]*\}', '', 'g')) <> ''
+      then public.card_ai_backfill_fold(p_cost)
+    else (
+      select string_agg(pip, '' order by pip)
+      from (
+        select upper(m[1]) as pip
+        from regexp_matches(coalesce(p_cost, ''), '(\{[^}]*\})', 'g') as m
+      ) as pips
+    )
+  end;
+$$;
+
 revoke all on function public.card_ai_backfill_fold(text) from public, anon, authenticated;
+revoke all on function public.card_ai_backfill_cost(text) from public, anon, authenticated;
 
 with job_steps as (
   select
@@ -389,7 +443,7 @@ parts as (
     union all
     select 'cost'
     where dd.d is not null and c.cost is not null
-      and public.card_ai_backfill_fold(c.cost) = public.card_ai_backfill_fold(dd.d ->> 'cost')
+      and public.card_ai_backfill_cost(c.cost) = public.card_ai_backfill_cost(dd.d ->> 'cost')
     union all
     select 'type_line'
     where dd.d is not null and c.card_type is not null
@@ -439,6 +493,7 @@ from per_card as pc
 where c.id = pc.cid
   and not (pc.found <@ c.ai_fields);
 
+drop function public.card_ai_backfill_cost(text);
 drop function public.card_ai_backfill_fold(text);
 
 -- Grants ---------------------------------------------------------------------

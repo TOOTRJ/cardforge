@@ -55,6 +55,16 @@ describe("0162 — the guard (cards_track_ai_fields)", () => {
     expect(body).toContain("public.card_ai_norm(v_new #> p.path) is distinct from public.card_ai_norm(v_old #> p.path)");
   });
 
+  it('reads printed_types raw: NULL (the built line) and "" (emptied) print differently', () => {
+    expect(body).toMatch(
+      /when p\.path\[cardinality\(p\.path\)\] = 'printed_types'\s+then nullif\(v_new #> p\.path, 'null'::jsonb\) is distinct from nullif\(v_old #> p\.path, 'null'::jsonb\)\s+else public\.card_ai_norm/,
+    );
+  });
+
+  it("the rules part is the text AND the rows drawn before it (face_content)", () => {
+    expect(fn("card_ai_field_paths")).toContain("('rules_text', array['face_content'])");
+  });
+
   it("derives the art parts from the picture's address on every write", () => {
     expect(body).toContain("where part not in ('art', 'back.art')");
     expect(body).toContain("public.card_ai_art_url(new.art_url)");
@@ -65,6 +75,7 @@ describe("0162 — the guard (cards_track_ai_fields)", () => {
 describe("0162 — grants (revoke first)", () => {
   it("the receipts are the service role's alone, behind RLS with no policy", () => {
     expect(code).toMatch(/create table if not exists public\.card_ai_receipts/);
+    expect(code).toContain("check (source in ('fill', 'idea', 'job'))");
     expect(code).toMatch(/alter table public\.card_ai_receipts enable row level security;/);
     expect(code).not.toMatch(/create policy[\s\S]*?on public\.card_ai_receipts/);
     expect(code).toMatch(/revoke all on table public\.card_ai_receipts from public, anon, authenticated;\s+grant select, insert, delete on table public\.card_ai_receipts to service_role;/);
@@ -106,5 +117,16 @@ describe("0162 — the backfill proves what it marks", () => {
   it("only adds parts, and leaves no helper of its own behind", () => {
     expect(code).toMatch(/set ai_fields = array\(\s+select distinct part from unnest\(c\.ai_fields \|\| pc\.found\)/);
     expect(code).toContain("drop function public.card_ai_backfill_fold(text);");
+    expect(code).toContain("drop function public.card_ai_backfill_cost(text);");
+  });
+
+  it("folds what print typography does to a typed text, and a cost as its pips in any order", () => {
+    const fold = fn("card_ai_backfill_fold");
+    expect(fold).toContain(`translate(coalesce(p_text, ''), '’‘“”—–', '''''""--')`);
+    // A line's list mark / attribution dash, then any run of hyphens with its spaces.
+    expect(fold).toContain(String.raw`'^[ \t]*[-*•]+[ \t]*', '•', 'gn'`);
+    expect(fold).toContain(String.raw`'\s*-+\s*', '-', 'g'`);
+    expect(fn("card_ai_backfill_cost")).toContain("string_agg(pip, '' order by pip)");
+    expect(code).toContain("public.card_ai_backfill_cost(c.cost) = public.card_ai_backfill_cost(dd.d ->> 'cost')");
   });
 });

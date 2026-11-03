@@ -59,6 +59,8 @@ describe("the migration and the app name the same parts", () => {
     for (const row of rows) (sql[row.part] ??= []).push(row.path);
     const app = Object.fromEntries(AI_TEXT_FIELD_KEYS.map((key) => [key, [...AI_FIELD_PATHS[key]]]));
     expect(sql).toEqual(app);
+    // The rows a walker / saga / station draws before its text are the rules.
+    expect(sql.rules_text).toEqual(["rules_text", "face_content"]);
   });
 
   it("the art pattern is the database's", () => {
