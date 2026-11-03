@@ -64,7 +64,7 @@ describe("0165: deck_entry_changes", () => {
     expect(SQL).toContain("grant select on table public.deck_restore_leases to service_role;");
     expect(SQL).not.toMatch(/grant [^;]* to anon/);
     for (const trigger of ["log_deck_entry_change()", "stamp_deck_history_pro_end()"]) {
-      expect(SQL).toContain(`revoke all on function public.${trigger} from public, anon, authenticated;`);
+      expect(SQL).toContain(`revoke all on function public.${trigger} from public, anon, authenticated, service_role;`);
       expect(SQL).not.toContain(`grant execute on function public.${trigger}`);
     }
     expect(SQL).toContain("revoke all on function public.prune_deck_entry_changes(integer, boolean, integer, integer) from public, anon, authenticated;");
@@ -90,6 +90,9 @@ describe("0165: deck_entry_changes", () => {
     expect(SQL).toContain("greatest( e.ended_at, case when p.comp_tier = 'pro' and p.comp_expires_at <= now() then p.comp_expires_at end )");
     expect(SQL).toContain("< now() - make_interval(days => greatest(coalesce(p_grace_days, 30), 0));");
     expect(SQL).toContain("p_grace_days integer default 30,");
+    // An expired Pro comp cleared later keeps its expiry as the day Pro ended.
+    expect(SQL).toContain("elsif old.comp_tier = 'pro' and old.comp_expires_at is not null and old.comp_expires_at <= now() and (new.comp_tier is distinct from old.comp_tier or new.comp_expires_at is distinct from old.comp_expires_at) then");
+    expect(SQL).toContain("values (new.id, old.comp_expires_at) on conflict (owner_id) do update set ended_at = greatest(e.ended_at, excluded.ended_at);");
     expect(DECK_HISTORY_PRO_GRACE_DAYS).toBe(30);
   });
 
