@@ -2103,7 +2103,18 @@ Rules and gotchas:
   is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
   `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
   screen at load may be: a lazy part's controls are dead until its chunk
-  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
+  loads and hydrates (a row's "⋯" clicked after a reload never opened).
+  A card DRAGS onto another board (TODO DK5.15; Stacks, Grid, List): native
+  HTML drag, ONE hook (`components/decks/use-board-drag.tsx`, rules in
+  `lib/decks/board-drag.ts`) — on a fine pointer only (`BOARD_DRAG_QUERY`;
+  touch keeps its long-press select and its scroll), never from a control
+  beside the card, a picked card carrying the selection; a group is the
+  board it stands for (`boardOfGroup`: `main-*` / "deck" = the mainboard),
+  a drop target only where the menus offer the board (`moveTargets`), plus
+  a tray of the format's boards while a card is held; a drop IS the
+  editor's `move` (one write, said, undoable, focus held) — never a second
+  move path, and no judgment of a card for the commander zone the menus
+  don't make. Every entry's Edit is
   `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
   creator and the editor follow only through `deckReturnPath` (a deck page,
   our `#entry-` / `#next-` anchor, nothing else — the card editor only to
