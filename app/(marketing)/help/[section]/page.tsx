@@ -33,9 +33,9 @@ import { cn } from "@/lib/utils";
 // /help/[section] — one help topic (TODO NV6): its how-to, then its answers
 // in groups, every one under its stable anchor (lib/content/help.ts).
 //
-// Fully static: the eight sections are the only params (anything else is a
-// real 404 — dynamicParams = false, and notFound() in both the metadata and
-// the page, ahead of any boundary). Every section is indexed and
+// Fully static: the eight sections are built ahead of time; anything else is a
+// real 404 — notFound() in both the metadata and the page, ahead of any
+// boundary. Every section is indexed and
 // self-canonical. Its FAQPage JSON-LD carries only the answers whose ONE
 // markup home is this page — a landing page's answers are shown here too,
 // with a link back, but marked up there (faqMarkupHomeOf).
@@ -48,7 +48,10 @@ export function generateStaticParams(): Params[] {
 }
 
 export const dynamic = "error";
-export const dynamicParams = false;
+// Unknown keys render on demand and 404 through notFound(); never
+// `dynamicParams = false` (tests/unit/content/no-dynamic-params-false.test.ts:
+// under `next start` an expired tag turned every built page into a 404).
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,
