@@ -1602,7 +1602,14 @@ Rules and gotchas:
   `COLOR_LETTER_IDENTITY` in `types/card.ts`, OG chrome in
   `lib/og/chrome.tsx` (edge-safe; the sharp pre-fetch lives in
   `lib/og/shell.tsx`), like toggles through `lib/social/like-toggle.ts`,
-  render upload/delete through `lib/cards/bake-core.ts`.
+  render upload/delete through `lib/cards/bake-core.ts`, a card's or deck's
+  COLOURS on the UI through `ColorPip` / `ColorPips`
+  (`components/cards/color-pip.tsx`, TODO UI1: the card's own pips over
+  `CardPip` / `manaGemSpec`, {C} for colourless, the five-way split disc
+  for multicolour — never a coloured dot; `color-pip-surfaces.test.ts`;
+  COSTS and symbols off the card — the cost picker, the rules toolbar,
+  `InlinePips`, the custom-pips manager — still draw mana-font's
+  `.ms-cost` look, a second look until they are moved too).
 - Sets (`card_sets` / `card_set_items` / `set_likes`, the `/sets` and
   `/set/[slug]` routes, the AI "set" job kind) were REMOVED on 2026-09-22 —
   app in #337, schema in migration 0105 (owner-confirmed; 8 sets from 5
@@ -1615,15 +1622,33 @@ Rules and gotchas:
   attribution (sessionStorage → hidden `attr_ref` → `signupAction`; a Google
   sign-up through onboarding's finish) — never a cookie. The reward waits
   for the FIRST saved card (`recordActivity` → `qualifyReferral` in
-  `after()`): fraud rules in `lib/referrals/fraud.ts`, caps ONLY through
-  `claim_referral_reward()` (atomic; the numbers are `lib/referrals/rules.ts`),
-  each side's month from `planReferralMonth` (a comp month written through
-  #688's comp flow — the columns, then `applyCompToSubscription` — or, for a
-  renewing plan, a balance credit through `creditCustomerBalance` /
-  `oneMonthCents` in `lib/billing/balance-credit.ts`; never a coupon, a
-  moved trial or a second balance writer).
-  Users read their rows through a COLUMN grant (no fraud reason, no Stripe
-  detail); writes are the service role's.
+  `after()`), rewarded AT ONCE once both emails are CONFIRMED (no hold; the
+  hourly `/api/cron/referral-rewards` sweep retries what waits or failed —
+  every write once per referral and side). Fraud rules in
+  `lib/referrals/fraud.ts`. ONE email, ONE referral month ever (owner
+  2026-11-02): ONE normalization, `normalizeReferralEmail` (SQL twin
+  `normalize_referral_email()`, both held to
+  `tests/unit/referrals/email-normalization-cases.json`), and what is kept is
+  a KEYED hash (HMAC-SHA256 under the server-only `REFERRAL_EMAIL_HASH_KEY`,
+  `lib/referrals/email-fingerprint.ts`) in `referral_email_fingerprints`
+  (no user id, outlives every account, service role only) — never the
+  address, never an unkeyed hash; another live account's address or an
+  earlier referral's fingerprint → `email_reused`, nobody rewarded, the
+  friend never told why; no key → fail closed (nothing granted, logged).
+  Never rotate the key casually. Caps ONLY through `claim_referral_reward()`
+  (atomic; the numbers are `lib/referrals/rules.ts`; `referee_id` is SET
+  NULL on delete so the cap keeps its evidence), each side's month from
+  `planReferralMonth`: a month of PLUS in its own column
+  (`profiles.referral_plus_until`, through `grant_referral_plus_month()` —
+  atomic, with ONE Plus allotment of credits; NEVER the admin comp's
+  columns, and the monthly refill never reads it) or, for a renewing plan,
+  a balance credit through `creditCustomerBalance` / `oneMonthCents`. The
+  plan readers that take it as Plus: `effectiveTierForProfile`,
+  `card_capacity_for()`, `owner_export_stamp()` — a new reader of "the
+  tier" reads it too. Nothing runs with billing off. Advisory locks use
+  the NAMED namespace `hashtext('pipglyph.referrals')`, never a migration
+  number. Users read their rows through a COLUMN grant (no fraud reason, no
+  Stripe detail); writes are the service role's.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
@@ -2122,7 +2147,18 @@ Rules and gotchas:
   is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
   `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
   screen at load may be: a lazy part's controls are dead until its chunk
-  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
+  loads and hydrates (a row's "⋯" clicked after a reload never opened).
+  A card DRAGS onto another board (TODO DK5.15; Stacks, Grid, List): native
+  HTML drag, ONE hook (`components/decks/use-board-drag.tsx`, rules in
+  `lib/decks/board-drag.ts`) — on a fine pointer only (`BOARD_DRAG_QUERY`;
+  touch keeps its long-press select and its scroll), never from a control
+  beside the card, a picked card carrying the selection; a group is the
+  board it stands for (`boardOfGroup`: `main-*` / "deck" = the mainboard),
+  a drop target only where the menus offer the board (`moveTargets`), plus
+  a tray of the format's boards while a card is held; a drop IS the
+  editor's `move` (one write, said, undoable, focus held) — never a second
+  move path, and no judgment of a card for the commander zone the menus
+  don't make. Every entry's Edit is
   `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
   creator and the editor follow only through `deckReturnPath` (a deck page,
   our `#entry-` / `#next-` anchor, nothing else — the card editor only to

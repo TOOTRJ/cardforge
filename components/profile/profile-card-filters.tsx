@@ -11,7 +11,7 @@ import {
   type CardType,
   type ColorIdentity,
 } from "@/types/card";
-import { ManaPip } from "@/components/cards/mana-pip";
+import { ColorPip, pipColorOfIdentity } from "@/components/cards/color-pip";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { useSearchParamPatch } from "@/lib/routing/use-search-param-patch";
 import {
@@ -28,16 +28,6 @@ import {
 // one page.
 // ---------------------------------------------------------------------------
 
-const COLOR_TO_PIP: Record<ColorIdentity, string> = {
-  white: "W",
-  blue: "U",
-  black: "B",
-  red: "R",
-  green: "G",
-  colorless: "C",
-  multicolor: "M",
-};
-
 const COLOR_OPTIONS: ChipOption<ColorIdentity | "all">[] = [
   { value: "all", label: "All colours" },
   ...COLOR_IDENTITY_VALUES.map((color) => ({
@@ -45,9 +35,7 @@ const COLOR_OPTIONS: ChipOption<ColorIdentity | "all">[] = [
     label: COLOR_IDENTITY_LABELS[color],
     // Decoration: the chip is named by its label ("White"), never "W White".
     leading: (
-      <span aria-hidden="true" className="inline-flex">
-        <ManaPip symbol={COLOR_TO_PIP[color]} size="sm" />
-      </span>
+      <ColorPip color={pipColorOfIdentity(color)} size={18} decorative />
     ),
   })),
 ];

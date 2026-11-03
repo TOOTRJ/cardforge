@@ -11,8 +11,20 @@
 export const REFERRAL_MONTHLY_CAP = 3;
 /** Months a referrer can ever earn (a year free). */
 export const REFERRAL_LIFETIME_CAP = 12;
-/** "One free month" as a comp: days added to a comp's end. */
+/** "One free month" of Plus: days of profiles.referral_plus_until
+ *  (0164's grant_referral_plus_month), with ONE Plus allotment of AI credits
+ *  (MONTHLY_CREDITS.plus) granted with it — owner 2026-11-02. */
 export const REFERRAL_MONTH_DAYS = 30;
+/** Both emails must be confirmed before either side is rewarded (owner
+ *  2026-11-02). A first card whose emails are still unconfirmed this many
+ *  days later expires. There is NO hold after the friend qualifies (owner
+ *  2026-11-02: the 72-hour hold was dropped — rewards land at once). */
+export const REFERRAL_CONFIRM_WINDOW_DAYS = 30;
+/** A side whose grant failed is retried by the sweep this many times, then
+ *  recorded as "none" (reason grant_failed) for an admin to look at. */
+export const REFERRAL_GRANT_MAX_ATTEMPTS = 5;
+/** Rows the retry sweep reads per run, per kind. */
+export const REFERRAL_SWEEP_BATCH = 100;
 /** The first card must come within this many days of the signup. */
 export const REFERRAL_ACTIVATION_WINDOW_DAYS = 30;
 /** A referral claimed after signup (the Google sign-in path claims it at
@@ -42,7 +54,7 @@ export type ReferralStatus = "signed_up" | "first_card" | "rewarded" | "capped" 
  *  reason: a blocked referral reads "Not eligible". */
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   signed_up: "Signed up",
-  first_card: "First card saved",
+  first_card: "First card saved — pending",
   rewarded: "Rewarded",
   capped: "Monthly limit reached",
   blocked: "Not eligible",

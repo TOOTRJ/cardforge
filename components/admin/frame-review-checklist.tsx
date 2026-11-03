@@ -29,6 +29,7 @@ import {
   statusCountsLabel,
 } from "@/lib/admin/frame-checklist-groups";
 import { cn } from "@/lib/utils";
+import { FrameKeyPip } from "@/components/cards/color-pip";
 
 // ---------------------------------------------------------------------------
 // The frame verification checklist — every (template, color) combination the
@@ -103,27 +104,6 @@ export type ChecklistEra = {
   label: string;
   templates: ChecklistTemplate[];
 };
-
-const COLOR_DOT: Record<string, string> = {
-  w: "#f7eccb",
-  u: "#7cc3ee",
-  b: "#5b5550",
-  r: "#ec6f4c",
-  g: "#79b664",
-  c: "#b8b5b3",
-  m: "conic-gradient(from 45deg, #cfb787, #7cc3ee, #ec6f4c, #79b664, #c98cf7, #cfb787)",
-};
-
-function ColorDot({ colorKey }: { colorKey: string }) {
-  const bg = COLOR_DOT[colorKey] ?? "#b8b5b3";
-  return (
-    <span
-      aria-hidden
-      className="inline-block h-3 w-3 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]"
-      style={{ background: bg }}
-    />
-  );
-}
 
 const STORAGE_PREFIX = "pipglyph.frameChecklist.open.";
 
@@ -235,7 +215,7 @@ function ComboRow({
           }
         />
       </span>
-      <ColorDot colorKey={combo.colorKey} />
+      <FrameKeyPip colorKey={combo.colorKey} />
       {combo.reference ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}

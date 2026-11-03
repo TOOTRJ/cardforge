@@ -17,11 +17,21 @@
 //                         real friends share one; nor does a reserved TLD
 //                         (.test — the seeded dev accounts).
 //
+// A friend whose account is DELETED before the reward step is blocked too
+// (account_deleted — set by lib/referrals/server.ts, not by these rules).
+//
 // Self-referral by id is impossible in the database (referrals'
 // `referrer_id <> referee_id` check); by email it is same_email.
 // ---------------------------------------------------------------------------
 
-export type ReferralBlockReason = "same_email" | "same_card" | "same_domain" | "disposable_email" | "not_new";
+export type ReferralBlockReason =
+  | "same_email"
+  | "same_card"
+  | "same_domain"
+  | "disposable_email"
+  | "not_new"
+  | "account_deleted"
+  | "email_reused";
 
 /** Free / consumer mail domains: a shared one says nothing. */
 export const FREE_MAIL_DOMAINS: ReadonlySet<string> = new Set([
@@ -65,11 +75,17 @@ export function emailDomain(email: string | null | undefined): string | null {
   return domain || null;
 }
 
-/** One inbox, one string: lowercase, no "+tag", Gmail's dots ignored and
- *  googlemail.com read as gmail.com. */
-export function normalizeEmail(email: string | null | undefined): string | null {
+/** One inbox, one string (owner 2026-11-02): trimmed and lowercase;
+ *  everything from the first "+" to the "@" dropped (every domain); for
+ *  gmail.com / googlemail.com the local part's dots dropped too and
+ *  googlemail.com read as gmail.com. The LAST "@" splits the address. Its
+ *  SQL twin is 0164's normalize_referral_email — one table of cases holds
+ *  both (tests/unit/referrals/email-normalization-cases.json); change them
+ *  together. */
+export function normalizeReferralEmail(email: string | null | undefined): string | null {
   if (!email) return null;
-  const trimmed = email.trim().toLowerCase();
+  // The same characters SQL's btrim(…, E' \t\r\n') removes.
+  const trimmed = email.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "").toLowerCase();
   const at = trimmed.lastIndexOf("@");
   if (at < 1) return null;
   let local = trimmed.slice(0, at);
@@ -108,8 +124,8 @@ export type ReferralFraudVerdict =
 
 export function referralFraudVerdict(facts: ReferralFraudFacts): ReferralFraudVerdict {
   if (facts.notNew) return { block: "not_new", refereeRewarded: false };
-  const a = normalizeEmail(facts.referrerEmail);
-  const b = normalizeEmail(facts.refereeEmail);
+  const a = normalizeReferralEmail(facts.referrerEmail);
+  const b = normalizeReferralEmail(facts.refereeEmail);
   if (a && b && a === b) return { block: "same_email", refereeRewarded: false };
   if (facts.sameCard) return { block: "same_card", refereeRewarded: false };
   const refereeDomain = emailDomain(facts.refereeEmail);

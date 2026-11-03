@@ -93,8 +93,14 @@ export default async function BillingPage() {
   const status = entitlements.status;
   const live = viewer.hasLiveSubscription;
   const delinquent = !live && status != null && DELINQUENT_SUBSCRIPTION_STATUSES.has(status);
+  // A referral's free month of Plus (0164) reads as a complimentary plan,
+  // with its own line below; its AI credits came with it, once.
+  const referralUntil = !live && !delinquent ? (entitlements.referralMonthUntil ?? null) : null;
   const comped =
-    entitlements.isPaid && !live && !delinquent && (profile?.comp_tier != null || profile?.is_admin);
+    entitlements.isPaid &&
+    !live &&
+    !delinquent &&
+    (profile?.comp_tier != null || profile?.is_admin || referralUntil != null);
   // An admin comp over a LIVE subscription (lib/billing/comp-stripe.ts):
   // the perks follow the comp; a trial is held until it ends.
   const liveComp = live && profile ? compOverLiveSubscription(profile) : null;
@@ -142,7 +148,7 @@ export default async function BillingPage() {
       ]
     : null;
   const capacity = entitlements.cardCapacity;
-  const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
+  const monthlyCredits = referralUntil ? 0 : MONTHLY_CREDITS[entitlements.effectiveTier];
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
   // hasn't paid yet) — the checkout action applies the same rule.
   const packDiscount = live && status === "active";
@@ -192,9 +198,15 @@ export default async function BillingPage() {
               planName={plan.name}
               priceLine={priceLine}
               hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
-              compExpiresAt={profile?.comp_expires_at ?? null}
+              compExpiresAt={referralUntil ?? profile?.comp_expires_at ?? null}
             />
           </p>
+          {referralUntil ? (
+            <p className="text-sm leading-6 text-muted">
+              Your free month of Plus came from a referral and runs until <LocalDate iso={referralUntil} />. Its{" "}
+              {MONTHLY_CREDITS.plus} AI credits were added when it started; there is no monthly refill.
+            </p>
+          ) : null}
           {liveComp ? (
             <p className="text-sm leading-6 text-muted">
               {planForTier(liveComp.tier).name} is complimentary
@@ -210,7 +222,13 @@ export default async function BillingPage() {
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat
               label={monthlyCredits > 0 ? "AI credits a month" : "AI credits"}
-              value={monthlyCredits > 0 ? String(monthlyCredits) : `${SIGNUP_CREDITS} at sign-up`}
+              value={
+                monthlyCredits > 0
+                  ? String(monthlyCredits)
+                  : referralUntil
+                    ? `${MONTHLY_CREDITS.plus} with the free month`
+                    : `${SIGNUP_CREDITS} at sign-up`
+              }
             />
             <Stat
               label="Saved cards"

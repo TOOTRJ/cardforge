@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   signup_grant: "Welcome credits",
   subscription_refill: "Monthly plan credits",
   trial_grant: "Free-trial credits",
+  referral_month: "Referral month of Plus",
   pack_purchase: "Credit pack",
   refund: "Refund",
   // Spends — one per AiActionLabel
