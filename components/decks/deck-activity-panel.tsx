@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Lock, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
-import { DeckChartCard } from "@/components/decks/deck-chart-card";
+import { ChartHelp, DeckChartCard } from "@/components/decks/deck-chart-card";
+import { BREAKDOWN_HELP } from "@/lib/decks/deck-help";
 import { DataTable } from "@/components/decks/deck-chart-parts";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { getDeckActivityAction } from "@/lib/decks/activity-actions";
@@ -63,9 +64,12 @@ export function DeckActivityPanel({
     <section aria-labelledby={DECK_ACTIVITY_HEADING_ID} className="mt-14 flex max-w-7xl flex-col gap-6">
       <div className="flex flex-col gap-1 border-b border-gold/20 pb-4">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">Only you see this · Pro</span>
-        <h2 id={DECK_ACTIVITY_HEADING_ID} className="font-display text-2xl font-semibold tracking-tight text-foreground">
-          Deck activity
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 id={DECK_ACTIVITY_HEADING_ID} className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Deck activity
+          </h2>
+          <ChartHelp help={BREAKDOWN_HELP.activity} />
+        </div>
         <p className="max-w-2xl text-sm leading-6 text-muted">
           How many people opened this deck and liked it, day by day, against the period before.
         </p>
@@ -212,6 +216,7 @@ function SeriesChart({ series }: { series: ActivitySeries }) {
   return (
     <DeckChartCard
       title={title}
+      help={BREAKDOWN_HELP[series.metric]}
       description={`${countNoun(series.metric, series.total)} in the last ${series.days} days, ${per}.`}
       chart={
         series.total === 0 ? (

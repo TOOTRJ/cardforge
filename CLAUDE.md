@@ -2042,7 +2042,16 @@ Rules and gotchas:
   `addToDeckAction` lands a card where `addTargetEntry` says (one copy more
   on the board's row, the real card's before your version — never a second
   line for the same card) or brings it in through the membership writer / a
-  ONE-LINE decklist commit. The commit's core is `commitImportLines`
+  ONE-LINE decklist commit. Several at once (TODO DK5.17): results are
+  TICKED while the list stays open (Space once the arrows moved the
+  highlight — before that it types a space —, a click on the tick box; the
+  listbox `aria-multiselectable`, `aria-selected` = the tick, the highlight
+  the input's active descendant) and "Add N" / Ctrl ⌘ Enter sends them in
+  ONE `addManyToDeckAction` (≤ `MAX_ADD_BATCH`: each lands as one add —
+  PipGlyph cards in one membership call, each real card its own one-line
+  commit on `named` —, a result per card, ONE revalidation; the editor's
+  `addMany` draws them as one `batch` op with one undo); Enter still adds
+  the highlighted one alone. The commit's core is `commitImportLines`
   (`lib/decks/import-commit.ts`): a decklist import spends
   `deck_import_commit`, the add box's add and an undo the single-card
   `named` quota — the caller's choice, never the browser's. The bulk bar
@@ -2072,7 +2081,21 @@ Rules and gotchas:
   the average / median mana value, Card types and the lands count the main
   deck and the commander only, never the sideboard or a companion
   (`countsTowardDeckStats`: also the summary bar, the report PDF and the AI
-  deck brief / guide) (owner 2026-10-29). A curve
+  deck brief / guide) (owner 2026-10-29). The TOTAL mana value (TODO DK11
+  (b): `DeckAnalytics.totalManaValue`, mana value × copies over those same
+  cards, lands 0) is in the summary bar and the breakdown with ONE info box
+  (`TotalManaValueTip`) linking the guide
+  `content/articles/total-mana-value-mtg-decks.mdx`. Every help box on the
+  page — the boards, each breakdown part, the format issues' list — is
+  `InfoTip` (`components/ui/info-tip.tsx`: a resting mouse or a KEYBOARD
+  focus shows it and takes no focus, a press pins it and moves the focus
+  in, Escape hands it back; a portal, so no `overflow` clips it) and its
+  words are `lib/decks/deck-help.ts`, held to the counting code by
+  `tests/unit/decks/deck-help.test.ts` — change a counting rule and its
+  words together. A format issue about a card (`DeckWarning.entryIds`,
+  validateDeck given the entries' ids) links to that card's row: the list's
+  `goToEntry` lifts a filter, the curve filter or a folded group, then
+  scrolls, marks and focuses it. A curve
   bar FILTERS the list above through `DeckCurveFilterProvider`
   (`components/decks/deck-curve-filter.tsx`, around both sections; it
   holds the picked column only — the ids come from the page's latest
@@ -2083,11 +2106,12 @@ Rules and gotchas:
   `lib/decks/draw-odds.ts`, `lib/decks/sample-hand.ts`) shuffles the
   MAINBOARD and reads the viewer's rows (`publicDeckItems`); its pictures
   are the list's (600 px thumbs, printings on 5:7 tiles, a "Private card"
-  face). Turn order and the free mulligan come from `lib/decks/format-rules.ts`
+  face). Turn order comes from `lib/decks/format-rules.ts`
   (`formatIsMultiplayer`: Commander / Oathbreaker are on the draw with no
-  play / draw choice, CR 103.8c — Brawl is 1v1; `formatHasFreeMulligan`:
-  every commander format, CR 103.5c); a kept hand (Keep or a draw) takes
-  no more mulligans. Keywords read only the rules text a PipGlyph card carries
+  play / draw choice, CR 103.8c — Brawl is 1v1). The sample hand has NO
+  mulligan (owner 2026-10-30, TODO DK11 (f)): seven cards, then draws; a
+  hand the reader doesn't like is a New hand — never bring the London
+  mulligan back without the owner. Keywords read only the rules text a PipGlyph card carries
   (`lib/decks/keyword-frequency.ts`; deck_cards stores no Oracle text).
   What the API hands out matches the page (TODO DK0.11, migration 0151).
   An UNLISTED deck is link-only: the decks policy admits it only to a

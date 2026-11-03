@@ -71,6 +71,7 @@ describe("the summary bar's numbers (DK5.9)", () => {
     total: 100,
     byBoard: { main: 99, side: 0, maybe: 4, commander: 1, companion: 0 },
     averageManaValue: 3.3,
+    totalManaValue: 208,
     lands: 36,
     ...over,
   });

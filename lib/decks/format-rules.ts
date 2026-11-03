@@ -24,6 +24,10 @@ export type DeckWarning = {
     | "commander_count"
     | "companion_count";
   message: string;
+  /** A warning about specific cards (a copy limit, the commander or
+   *  companion zone's rows): their entries, in the deck's order — the summary bar's issue list links to the first one's
+   *  row (TODO DK11 (d)). Only when the entries came with their ids. */
+  entryIds?: string[];
 };
 
 const BASIC_LAND_NAMES = new Set(
@@ -114,13 +118,7 @@ export function formatIsMultiplayer(format: DeckFormat): boolean {
   return FORMAT_SPECS[format].multiplayer === true;
 }
 
-/** True where a player's first mulligan is free (CR 103.5c): a multiplayer
- *  game, and any Brawl game — every commander format. */
-export function formatHasFreeMulligan(format: DeckFormat): boolean {
-  return formatIsMultiplayer(format) || format === "brawl" || format === "standard_brawl";
-}
-
-type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity">;
+type Entry = Pick<DeckCardEntry, "name" | "board" | "quantity"> & { id?: string };
 
 export function validateDeck(
   format: DeckFormat,
@@ -138,6 +136,9 @@ export function validateDeck(
   let commanderCount = 0;
   let companionCount = 0;
   const copiesByName = new Map<string, number>();
+  const idsByName = new Map<string, string[]>();
+  const commanderIds: string[] = [];
+  const companionIds: string[] = [];
 
   for (const entry of entries) {
     if (entry.board === "maybe") continue;
@@ -146,14 +147,21 @@ export function validateDeck(
     } else {
       deckSize += entry.quantity;
     }
-    if (entry.board === "commander") commanderCount += entry.quantity;
-    if (entry.board === "companion") companionCount += entry.quantity;
+    if (entry.board === "commander") {
+      commanderCount += entry.quantity;
+      if (entry.id) commanderIds.push(entry.id);
+    }
+    if (entry.board === "companion") {
+      companionCount += entry.quantity;
+      if (entry.id) companionIds.push(entry.id);
+    }
 
     // A custom card's entry is named by its title, stored as print sets it
     // since TODO 6.11 (“Dragon’s Approach”); an imported entry and the lists
     // above hold the typed name. One name either way.
     const key = typedForMatching(entry.name.trim().toLowerCase());
     copiesByName.set(key, (copiesByName.get(key) ?? 0) + entry.quantity);
+    if (entry.id) idsByName.set(key, [...(idsByName.get(key) ?? []), entry.id]);
   }
 
   // Companions live outside the deck proper in every format that has them.
@@ -191,6 +199,7 @@ export function validateDeck(
             limit === 1
               ? `“${titleCase(key)}” appears ${copies}× — ${formatLabel(format)} is singleton (basics excepted).`
               : `“${titleCase(key)}” appears ${copies}× — the limit is ${limit} copies across mainboard and sideboard.`,
+          ...(idsByName.has(key) ? { entryIds: idsByName.get(key) } : {}),
         });
       }
     }
@@ -213,12 +222,14 @@ export function validateDeck(
       warnings.push({
         code: "commander_count",
         message: `${commanderCount} commanders — at most 2 (partners) are allowed.`,
+        ...(commanderIds.length > 0 ? { entryIds: commanderIds } : {}),
       });
     }
   } else if (commanderCount > 0 && format !== "casual") {
     warnings.push({
       code: "commander_count",
       message: `${formatLabel(format)} doesn't use a commander zone.`,
+      ...(commanderIds.length > 0 ? { entryIds: commanderIds } : {}),
     });
   }
 
@@ -226,6 +237,7 @@ export function validateDeck(
     warnings.push({
       code: "companion_count",
       message: `Only one companion is allowed — this deck has ${companionCount}.`,
+      ...(companionIds.length > 0 ? { entryIds: companionIds } : {}),
     });
   }
 

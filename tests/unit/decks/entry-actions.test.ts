@@ -48,7 +48,7 @@ vi.mock("@/lib/decks/import-commit", () => ({ commitImportLines: state.commit })
 vi.mock("@/lib/decks/membership-actions", () => ({ changeDeckMembershipAction: state.membership }));
 
 import { removeDeckEntriesAction, restoreDeckEntriesAction, updateDeckEntriesAction } from "@/lib/decks/card-actions";
-import { addToDeckAction } from "@/lib/decks/add-actions";
+import { addManyToDeckAction, addToDeckAction } from "@/lib/decks/add-actions";
 
 const inArg = (calls: ChainCall[], column: string) =>
   (calls.find((c) => c.method === "in" && c.args[0] === column)?.args[1] ?? []) as string[];
@@ -631,6 +631,134 @@ describe("addToDeckAction — the add box's one add", () => {
     expect(await addToDeckAction({ deckId: DECK, board: "main", pick: { kind: "card", cardId: CARD } })).toEqual({
       ok: false,
       error: "You can add your own cards, or another creator's public card.",
+    });
+  });
+});
+
+describe("addManyToDeckAction — the add box's \"Add N\" (TODO DK5.17)", () => {
+  const SF2 = "22222222-2222-4222-8222-222222222222";
+  const CARD2 = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const membershipAnswer = (results: unknown[], entries: unknown[]) => ({
+    ok: true,
+    deckId: DECK,
+    deckTitle: "Ness",
+    deckSlug: "ness",
+    results,
+    entries,
+  });
+
+  it("every card lands as one add lands it — a result each, in order, and ONE revalidation", async () => {
+    state.rows = [row(1, { name: "Sol Ring", scryfall_id: SF, quantity: 2 })];
+    state.membership.mockResolvedValue(
+      membershipAnswer(
+        [{ cardId: CARD, status: "added" }, { cardId: CARD2, status: "added" }],
+        [
+          { cardId: CARD, deckId: DECK, entryId: id(7), board: "main", quantity: 1 },
+          { cardId: CARD2, deckId: DECK, entryId: id(8), board: "main", quantity: 1 },
+        ],
+      ),
+    );
+    state.commit.mockImplementation(async () => {
+      state.rows = [...state.rows, row(9, { name: "Arcane Signet", scryfall_id: SF2, board: "side" })];
+      return { ok: true, added: 1, merged: 0, placeholders: 0 };
+    });
+    const stub = db();
+    const result = await addManyToDeckAction({
+      deckId: DECK,
+      board: "side",
+      picks: [
+        { kind: "card", cardId: CARD },
+        { kind: "printing", scryfallId: SF2, name: "Arcane Signet" },
+        { kind: "card", cardId: CARD2 },
+      ],
+    });
+    // The PipGlyph cards in ONE membership call; the real card a one-line
+    // decklist on the single-card quota, as one add.
+    expect(state.membership).toHaveBeenCalledTimes(1);
+    expect(state.membership).toHaveBeenCalledWith({ deckId: DECK, add: [CARD, CARD2] });
+    expect(state.commit).toHaveBeenCalledTimes(1);
+    expect(state.commit).toHaveBeenCalledWith(
+      { deckId: DECK, lines: [{ name: "Arcane Signet", quantity: 1, board: "side", resolved: { scryfall_id: SF2 } }] },
+      { quota: "named", revalidate: false },
+    );
+    // The RPC writes the mainboard: both moved to the box's board in ONE write.
+    const moves = stub.forTable("deck_cards").filter((e) => called(e.calls, "update"));
+    expect(moves).toHaveLength(1);
+    expect(payloadOf(moves[0]!.calls, "update")).toEqual({ board: "side" });
+    expect(inArg(moves[0]!.calls, "id")).toEqual([id(7), id(8)]);
+    expect(result).toEqual({
+      ok: true,
+      results: [
+        expect.objectContaining({ ok: true, entryId: id(7), board: "side", merged: false }),
+        { ok: true, entryId: id(9), board: "side", quantity: 1, merged: false, name: "Arcane Signet" },
+        expect.objectContaining({ ok: true, entryId: id(8), board: "side", merged: false }),
+      ],
+    });
+    expect(state.revalidations).toEqual(["ness"]);
+  });
+
+  it("a card already on the board: one copy more — and a refusal fails that card alone", async () => {
+    state.rows = [row(1, { name: "Sol Ring", scryfall_id: SF, quantity: 2 }), row(2, { name: "Ember Wyrm", card_id: CARD, board: "side" })];
+    state.commit.mockResolvedValue({ ok: false, error: "Real-card search is busy — try again in a minute." });
+    db();
+    const result = await addManyToDeckAction({
+      deckId: DECK,
+      board: "main",
+      picks: [
+        { kind: "printing", scryfallId: SF, name: "Sol Ring" },
+        { kind: "card", cardId: CARD },
+        { kind: "printing", scryfallId: SF2, name: "Arcane Signet" },
+      ],
+    });
+    expect(result).toEqual({
+      ok: true,
+      results: [
+        { ok: true, entryId: id(1), board: "main", quantity: 3, merged: true, name: "Sol Ring" },
+        {
+          ok: false,
+          error: "Ember Wyrm is already in the deck, on the Sideboard. Move it there to change boards.",
+          elsewhere: { entryId: id(2), board: "side" },
+        },
+        { ok: false, error: "Real-card search is busy — try again in a minute." },
+      ],
+    });
+    expect(state.membership).not.toHaveBeenCalled();
+    // Something landed: revalidated, once.
+    expect(state.revalidations).toEqual(["ness"]);
+  });
+
+  it("publish names the private cards to make public first; nothing landed, no revalidation", async () => {
+    state.rows = [];
+    state.membership.mockResolvedValue(
+      membershipAnswer([{ cardId: CARD, status: "refused", error: "Not yours." }, { cardId: CARD2, status: "refused", error: "Not yours." }], []),
+    );
+    db();
+    const result = await addManyToDeckAction({
+      deckId: DECK,
+      board: "main",
+      picks: [
+        { kind: "card", cardId: CARD },
+        { kind: "card", cardId: CARD2 },
+      ],
+      publish: [CARD2],
+    });
+    expect(state.membership).toHaveBeenCalledWith({ deckId: DECK, add: [CARD, CARD2], publish: [CARD2] });
+    expect(result).toEqual({ ok: true, results: [{ ok: false, error: "Not yours." }, { ok: false, error: "Not yours." }] });
+    expect(state.revalidations).toEqual([]);
+  });
+
+  it("refuses an empty list, a card twice, too many cards and another owner's deck", async () => {
+    db();
+    expect(await addManyToDeckAction({ deckId: DECK, board: "main", picks: [] })).toEqual({ ok: false, error: "No cards to add." });
+    expect(
+      await addManyToDeckAction({ deckId: DECK, board: "main", picks: [{ kind: "card", cardId: CARD }, { kind: "card", cardId: CARD.toUpperCase() }] }),
+    ).toEqual({ ok: false, error: "Each card once." });
+    const many = Array.from({ length: 26 }, (_, n) => ({ kind: "printing" as const, scryfallId: id(n + 100), name: `Card ${n}` }));
+    expect(await addManyToDeckAction({ deckId: DECK, board: "main", picks: many })).toEqual({ ok: false, error: "At most 25 cards at a time." });
+    state.deck = { id: DECK, slug: "ness", title: "Ness", owner_id: "someone-else" };
+    expect(await addManyToDeckAction({ deckId: DECK, board: "main", picks: [{ kind: "card", cardId: CARD }] })).toEqual({
+      ok: false,
+      error: "Deck not found or not yours.",
     });
   });
 });

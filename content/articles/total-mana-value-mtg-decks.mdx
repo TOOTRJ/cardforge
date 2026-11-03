@@ -1,0 +1,115 @@
+---
+title: "Total Mana Value: How to Judge and Compare MTG Decks"
+description: "Total mana value adds up what a deck's spells cost. How to work it out, compare two decks by it, and when the average or the curve says more."
+date: "2026-11-02"
+tags: ["mana", "formats", "playtesting"]
+category: reference
+faq:
+  - q: "What is total mana value in Magic: The Gathering?"
+    a: "It is the sum of the mana value of every card in a deck, with each copy counted. Lands have no mana cost, so they add 0. On PipGlyph's deck page it covers the main deck and the commander; the sideboard, a companion and the maybeboard are left out."
+  - q: "Is a lower total mana value always better?"
+    a: "No. A lower total means the deck asks for less mana, which usually makes it faster, but a control or ramp deck is built to cast expensive spells on purpose. Compare totals between decks that want to do the same thing, in the same format, with the same number of cards."
+  - q: "Should I use total or average mana value?"
+    a: "Use both. The average tells you what a typical spell costs; the total also counts how many spells there are. Two decks can share an average while one plays eight more spells, and only the total shows that the second deck needs more mana over a game."
+  - q: "How do X spells, split cards and modal double-faced cards count?"
+    a: "An X in a cost counts as 0 when the card isn't being cast, so an X spell adds only its fixed part. A split card counts both halves added together. A modal double-faced card counts its front face, so a card with a spell on the front adds that spell's value even if you often play its land side."
+  - q: "What is a good total mana value for a Commander deck?"
+    a: "There is no single number, because a Commander deck's total depends on how many lands and how much ramp it runs. Compare it with decks of the same bracket and plan, and read it next to the land count and the curve rather than on its own."
+---
+
+**Total mana value is the sum of the mana value of every card in a deck, each copy counted, with lands adding 0.** It is one number that says how much mana a deck asks for across a game. Compared between two decks of the same format and size, a lower total usually means a faster, cheaper deck and a higher one a slower, more expensive deck. It works best next to the average mana value, the land count and the curve, not instead of them.
+
+## How to work out total mana value
+
+Take each nonland card, multiply its mana value by the number of copies, and add the results. A card's mana value is the total amount of mana in its cost, whatever the colors: a card that costs <Mana cost="{2}{R}{R}" /> has a mana value of 4, and four copies of it add 16.
+
+A few cost symbols need a second look:
+
+- **Hybrid symbols** count once. <Mana cost="{W/U}" /> adds 1. A symbol that can be paid with two generic mana or one colored mana, like <Mana cost="{2/W}" />, adds 2 — the larger of its two options.
+- **Phyrexian symbols** count as the colored mana they stand for, so <Mana cost="{G/P}" /> adds 1 even though you could pay life instead.
+- **X counts as 0** while a card is in your library or hand. An X spell adds only the fixed part of its cost.
+- **Lands** have no mana cost, so they add 0. That's why a deck's total really measures its spells.
+
+For the details of every symbol, see the [complete guide to mana symbols](/articles/mtg-mana-symbols-complete-guide).
+
+## Three decks, side by side
+
+Here are three 60-card decks, each counted the same way: copies at each mana value, times that value, added up.
+
+| Mana value | Aggro | Midrange | Control |
+| --- | --- | --- | --- |
+| 1 | 14 | 4 | 2 |
+| 2 | 14 | 10 | 10 |
+| 3 | 8 | 10 | 8 |
+| 4 | 2 | 7 | 7 |
+| 5 | 0 | 4 | 4 |
+| 6 | 0 | 1 | 2 |
+| 7 | 0 | 0 | 1 |
+| **Spells** | 38 | 36 | 34 |
+| **Lands** | 22 | 24 | 26 |
+| **Total mana value** | 74 | 108 | 113 |
+| **Average mana value** | 1.9 | 3.0 | 3.3 |
+
+The aggro deck's total is far below the other two: it plans to spend its mana early and run out of cards before the opponent stabilizes. The midrange and control decks are much closer in total than their averages suggest, because the control deck plays two fewer spells and two more lands.
+
+## Total or average: which one to read
+
+The **average** mana value is the total divided by the number of spells. It says what a typical spell costs, but it can't see how many spells there are. The **total** sees both.
+
+That matters when you compare builds. Cut two cheap creatures for two lands and the average goes up while the total goes down — the deck has fewer spells to pay for and more mana to pay with. Read on its own, the average would call the new build slower; the total shows it now asks less of its mana.
+
+A rough way to put the two together is to divide the total by the land count. In the table above that gives about 3.4 for aggro, 4.5 for midrange and 4.3 for control: how much spell each land is expected to carry. It's a rule of thumb for comparing your own builds, not a target.
+
+## What total mana value can't tell you
+
+A total is a summary, and it hides things a real game shows:
+
+- **Card draw and ramp.** A deck full of mana rocks and card draw can support a much higher total than its land count suggests.
+- **Cost reducers and alternative costs.** Convoke, delve, evoke and cards that cost less under a condition are counted at their printed cost, which may be far above what you usually pay.
+- **X spells.** They add only their fixed part, so a deck built around big X spells looks cheaper than it plays.
+- **The shape of the curve.** Two decks with the same total can have very different curves: one with a pile of two-drops, the other with a gap at two and a stack of five-drops. The curve tells you which turns the deck can actually use its mana.
+
+So use the total to ask a question, not to answer it. If your new build's total jumped by twenty, find out where: the curve will show the column that grew, and a few [practice games](/articles/how-to-playtest-custom-mtg-cards) will show whether the deck still curves out.
+
+## Comparing decks fairly
+
+A total is only comparable between decks that are alike:
+
+- **Same format and size.** A 100-card Commander deck has a far higher total than any 60-card deck simply because it holds more spells.
+- **Same plan.** Compare an aggro deck with aggro decks. A control deck's high total is the point, not a flaw.
+- **The same cards counted.** Leave out the sideboard and anything that isn't part of the deck you shuffle, or the totals measure different things.
+
+For Commander, compare within the same bracket and strategy, and read the total with the land and ramp count. A deck with 33 lands and twelve mana rocks can carry a higher total than one with 37 lands and none.
+
+## Total mana value on PipGlyph
+
+Every deck page shows the **total mana value** in its summary bar and in the deck breakdown. Rest the pointer on the info button beside it, or reach it with the keyboard, to see how it's counted:
+
+- the main deck and the commander are counted — the cards you play;
+- each card's mana value is multiplied by its copies;
+- lands count as 0, and a card with no known mana value adds nothing;
+- the sideboard, a companion and the maybeboard aren't counted.
+
+A card you've edited counts at its own new cost, so you can see how a custom card shifts a deck before you print it. The same cards make up the mana curve and the average beside it, so the three numbers always agree. Browse [community decks](/decks) to compare your totals with other builds, or [design a card](/create) to fill a gap in your curve.
+
+## FAQ
+
+### What is total mana value in Magic: The Gathering?
+
+It is the sum of the mana value of every card in a deck, with each copy counted. Lands have no mana cost, so they add 0. On PipGlyph's deck page it covers the main deck and the commander; the sideboard, a companion and the maybeboard are left out.
+
+### Is a lower total mana value always better?
+
+No. A lower total means the deck asks for less mana, which usually makes it faster, but a control or ramp deck is built to cast expensive spells on purpose. Compare totals between decks that want to do the same thing, in the same format, with the same number of cards.
+
+### Should I use total or average mana value?
+
+Use both. The average tells you what a typical spell costs; the total also counts how many spells there are. Two decks can share an average while one plays eight more spells, and only the total shows that the second deck needs more mana over a game.
+
+### How do X spells, split cards and modal double-faced cards count?
+
+An X in a cost counts as 0 when the card isn't being cast, so an X spell adds only its fixed part. A split card counts both halves added together. A modal double-faced card counts its front face, so a card with a spell on the front adds that spell's value even if you often play its land side.
+
+### What is a good total mana value for a Commander deck?
+
+There is no single number, because a Commander deck's total depends on how many lands and how much ramp it runs. Compare it with decks of the same bracket and plan, and read it next to the land count and the curve rather than on its own.
