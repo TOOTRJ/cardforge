@@ -17,7 +17,8 @@ import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { countPublicCards, getCommunityPulse, listTrendingCards } from "@/lib/cards/queries";
+import { countPublicCards, getCommunityPulse, listTrendingCardsByRange } from "@/lib/cards/queries";
+import { TRENDING_RANGE_WORDS, type TrendingRange } from "@/lib/cards/trending";
 import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
 import { listPublishedArticles } from "@/lib/content/article-catalog";
@@ -317,23 +318,30 @@ async function HomeStats() {
   );
 }
 
+const HOME_TRENDING_RANGES: readonly TrendingRange[] = ["week", "month", "all"];
+
 async function HomeTrending() {
   // Anonymous mode keeps this page static: no viewer lookup, no cookie
   // read. isAuthed=false just means the tile hearts render the
   // signed-out hint — QuickLikeButton re-checks the session cookie at
   // click time, so signed-in users on the cached page still like fine.
-  const [trending, pulse] = await Promise.all([
-    listTrendingCards({ limit: ROW_MAX, anonymous: true }),
+  // This week's row; a quiet week falls back to the month, then all time
+  // (migration 0166 never pads a range with cards nobody engaged with), and
+  // the words follow the range shown.
+  const [byRange, pulse] = await Promise.all([
+    listTrendingCardsByRange({ ranges: HOME_TRENDING_RANGES, limit: ROW_MAX, anonymous: true }),
     getCommunityPulse(),
   ]);
-  if (trending.length === 0) return <PlaceholderGallery />;
+  const range = HOME_TRENDING_RANGES.find((r) => byRange[r].length > 0);
+  if (!range) return <PlaceholderGallery />;
+  const period = TRENDING_RANGE_WORDS[range].period;
   return (
     <TrendingCardsSection
-      cards={trending}
+      cards={byRange[range]}
       isAuthed={false}
       eyebrow="Trending now"
-      heading="What the community is forging this week"
-      description="Real cards from real creators — ranked by this week's likes, comments and remixes. Tap one to see it up close."
+      heading={`What the community is forging ${period}`}
+      description={`Real cards from real creators — ranked by ${range === "all" ? "their" : `${period}'s`} likes, comments and remixes. Tap one to see it up close.`}
       variant="hero"
       action={VIEW_GALLERY_LINK}
       footer={<TrendingPulseFooter pulse={pulse} />}
