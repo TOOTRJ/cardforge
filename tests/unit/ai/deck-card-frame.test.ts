@@ -36,6 +36,8 @@ const USER = "11111111-1111-4111-8111-111111111111";
 
 const s = vi.hoisted(() => ({
   verified: [] as string[],
+  /** Answers for the next reads, before `verified` (a read that failed). */
+  verifiedReads: [] as string[][],
   created: [] as Record<string, unknown>[],
   patched: [] as Record<string, unknown>[],
   job: null as unknown as Record<string, unknown>,
@@ -76,7 +78,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     },
   }),
 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => s.verified }));
+vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => s.verifiedReads.shift() ?? s.verified }));
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => null }));
 vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
   const image = async () => ({ ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" });
@@ -224,8 +226,13 @@ describe("an AI deck card saves with its frame", () => {
   });
 
   it("saves no template where nothing published fits (the verified read failed): the default frame, as before", async () => {
-    s.verified = [];
+    // The step's frame read fails; the save's own gates read the list
+    // (#722: before the paint, as the card action does) and pass the
+    // default frame.
+    s.verifiedReads = [[]];
+    s.verified = SEED;
     const saved = await deckStep(KINDS[10]![1], "land");
+    expect(s.verifiedReads).toEqual([]);
     expect(JSON.parse(JSON.stringify(saved))).not.toHaveProperty("frame_style");
   });
 

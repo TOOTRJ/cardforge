@@ -47,7 +47,7 @@ import {
   artPromptLadder,
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
-import { persistGeneratedArt } from "@/lib/ai/random-art";
+import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { addCardAiFields, generatedCardParts, recordAiReceipt, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import {
   logAiCall,
@@ -124,7 +124,9 @@ import {
   remixSavedFrames,
   scryfallRemixMechanics,
 } from "@/lib/ai/remix-mechanics";
-import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
+import { cardFieldsFace, frameKindGateError, type CardKindFields } from "@/lib/cards/frame-kind-gate";
+import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
+import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateTakesBackBody } from "@/lib/cards/dfc";
@@ -168,9 +170,10 @@ import {
 //   PLAN  (create*Job): one design call for every card (single batch =
 //         cross-card cohesion), then the target deck is created/loaded and
 //         the job row written with one step per card (+ the guide).
-//   STEP  (runNextJobStep): create one card (private → no bake) and paint
-//         its art. Steps are retry-safe: a step that already created its
-//         card only redoes the art.
+//   STEP  (runNextJobStep): paint one card's art, then create the card WITH
+//         it in one insert (#722: no card row before its paid picture).
+//         Steps are retry-safe: a step that holds a card (one a job planned
+//         before that created) only redoes that card's art.
 //
 // Credits: 1 per card, spent as each card step completes (same
 // "generate_deck" ledger reason as the legacy route). Free when billing is
@@ -439,8 +442,9 @@ export type RunStepResult =
  * The step is CLAIMED atomically first (pending → running, migration 0066),
  * so concurrent requests — parallel workers, a retry racing a still-running
  * attempt, a second tab — can never execute the same step twice. Persists
- * the outcome via patch_job_step. Card creation is retry-safe (a step whose
- * card exists only redoes the art).
+ * the outcome via patch_job_step. A card step paints first and creates its
+ * card with the picture; a step whose card exists (planned before #722)
+ * only redoes that card's art.
  */
 export async function runNextJobStep(
   jobId: string,
@@ -748,6 +752,14 @@ async function runGeneratedCardStep(
       ...config.createExtras,
     };
 
+    // The save's cheap refusals before a paid picture (the capacity check
+    // ran before the reserve): a frame the card can't be saved on fails the
+    // step as the create would — the same words, refunded — with no paint.
+    const refusal = await generatedCardSaveRefusal(payload);
+    if (refusal) {
+      return { ...step, status: "failed", attempts: attempt, error: refusal, failure: "save_failed" };
+    }
+
     // The picture first, in the shape of the art window of the frame the
     // card is created on (TODO 4.48b) — stored (moderation scan included,
     // persistGeneratedArt) before any card row exists.
@@ -772,6 +784,8 @@ async function runGeneratedCardStep(
       { redirectAfterCreate: false, deckEntry: { source: "ai_generate" } },
     );
     if (!result.ok) {
+      // No card holds the picture: it goes (best effort, never throws).
+      await discardGeneratedArt(userId, painted.url);
       return {
         ...step,
         status: "failed",
@@ -1948,7 +1962,7 @@ async function runCardFillStep(
     }
     // (The receipt of what the AI wrote was kept when the server planned
     // the fill — insertFillJob — never from this row's plan, which its
-    // owner may insert: migration 0162.)
+    // owner may insert: the owner insert policy, migration 0059.)
     return {
       ...step,
       status: "done",
@@ -2381,6 +2395,41 @@ async function paintAndPublishCard(
   // The card's text held strong language: the action stored it private
   // instead (owner policy 2026-10-28) — never a failed step.
   return updated.forcedPrivate ? { ok: true, model: painted.model, forcedPrivate: updated.forcedPrivate } : { ok: true, model: painted.model };
+}
+
+/**
+ * What createCardAction's frame gates would refuse a generated card's
+ * payload on (verification in the frame's colour, a second part in its own,
+ * the kind gate) — read BEFORE its picture is painted, so a refused save
+ * costs no paint. The action still gates the insert itself; this is the
+ * same three calls on the same fields, never a looser or a stricter rule.
+ */
+async function generatedCardSaveRefusal(payload: Record<string, unknown>): Promise<string | null> {
+  const frameStyle = (payload.frame_style ?? undefined) as
+    | (FrameAnatomyStyle & { template?: string })
+    | undefined;
+  const template = frameStyle?.template;
+  const colors = payload.color_identity as ColorIdentity[] | undefined;
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  const gateError = frameGateError(
+    template,
+    frameGateColors(
+      template,
+      { partColor: frameStyle?.partColor ?? true, firstPartColor: frameStyle?.firstPartColor, plainLandMaster: frameStyle?.plainLandMaster },
+      colors,
+    ),
+    verifiedKeys,
+  );
+  if (gateError) return gateError;
+  if (drawsPartColor(template) && frameStyle?.partColor !== false) {
+    const partError = partColorGateError(
+      template,
+      (payload.back_face as { color_identity?: ColorIdentity[] } | null | undefined)?.color_identity,
+      verifiedKeys,
+    );
+    if (partError) return partError;
+  }
+  return frameKindGateError(template, cardFieldsFace(payload as CardKindFields));
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {

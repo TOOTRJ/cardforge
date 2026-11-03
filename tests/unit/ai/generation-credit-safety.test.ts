@@ -49,6 +49,7 @@ const s = vi.hoisted(() => ({
   persistOk: true,
   persistBlocked: false,
   persistCalls: 0,
+  discarded: [] as Array<{ userId: string; url: string }>,
   createResult: null as null | Record<string, unknown>,
   createThrows: null as Error | null,
   recentLabels: [] as string[],
@@ -142,6 +143,9 @@ vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
 // ai-art-nudity-scan.test.ts): our sentence, never the storage text, and
 // the scan's block as `art_blocked`.
 vi.mock("@/lib/ai/random-art", () => ({
+  discardGeneratedArt: async (userId: string, url: string) => {
+    s.discarded.push({ userId, url });
+  },
   persistGeneratedArt: async () => {
     s.persistCalls += 1;
     if (s.persistBlocked) {
@@ -260,6 +264,7 @@ beforeEach(() => {
   s.persistOk = true;
   s.persistBlocked = false;
   s.persistCalls = 0;
+  s.discarded = [];
   s.createResult = null;
   s.createThrows = null;
   s.recentLabels = [];
@@ -409,12 +414,36 @@ describe("the single-card step", () => {
     job("card", CARD_PLAN, "card:0");
     const step = await runStep("card:0");
     expect(step).toMatchObject({ status: "failed", failure: "save_failed", refunded: 1 });
-    // Paint first (#722): the picture was painted before the save said no.
+    // Paint first (#722): the insert said no after the picture was painted
+    // — and the picture no card holds is removed.
     expect(s.imageCalls).toBe(1);
     expect(step.card_id ?? null).toBeNull();
+    expect(s.discarded).toEqual([{ userId: USER, url: `https://example.supabase.co/storage/v1/object/public/card-art/${USER}/x.png` }]);
     expect(failedStepMessage(step)).toBe(
       "That frame isn't available in red yet — pick another frame or colour. Your credit was returned.",
     );
+  });
+
+  it.each(["card", "deck"] as const)("%s step: a frame the save would refuse fails BEFORE the paint — no picture, refunded, the save's words", async (kind) => {
+    s.verified = EVERY.filter((key) => !key.startsWith("m15/"));
+    if (kind === "card") job("card", CARD_PLAN, "card:0");
+    else job("deck", { ...DECK_PLAN, frame_template: "m15" }, "card:0", {}, { deck_id: "deck-1" });
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "failed", failure: "save_failed", refunded: 1 });
+    expect(s.imageCalls).toBe(0);
+    expect(s.persistCalls).toBe(0);
+    expect(s.created).toEqual([]);
+    expect(s.discarded).toEqual([]);
+    expect(failedStepMessage(step)).toMatch(/^That frame isn't available in .+ yet — pick another frame or colour\. Your credit was returned\.$/);
+  });
+
+  it("a frame that doesn't dress the card fails before the paint (the kind gate)", async () => {
+    job("card", { ...CARD_PLAN, frame_template: "emblem" }, "card:0");
+    const step = await runStep("card:0");
+    expect(step).toMatchObject({ status: "failed", failure: "save_failed", refunded: 1 });
+    expect(s.imageCalls).toBe(0);
+    expect(s.created).toEqual([]);
+    expect(failedStepMessage(step)).toMatch(/frame doesn't dress .+ cards — pick another frame\. Your credit was returned\.$/);
   });
 
   it("a step that throws is refunded once, and the internal text stays in the log", async () => {

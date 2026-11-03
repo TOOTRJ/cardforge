@@ -73,6 +73,8 @@ vi.mock("@/lib/cards/frame-reviews", () => ({
     [
       ["m15artifact", "c"],
       ["m15", "c"],
+      // The card job's white card on m15 (the save's frame gate, #722).
+      ["m15", "w"],
     ].map(([template, colour]) => frameComboKey(template as FrameTemplate, colour)),
 }));
 vi.mock("@/lib/scryfall/client", async (importOriginal) => ({
