@@ -14,6 +14,7 @@ function analytics(over: Partial<DeckAnalytics> = {}): DeckAnalytics {
     byType: { Battle: 0, Planeswalker: 1, Creature: 26, Instant: 6, Sorcery: 4, Artifact: 0, Enchantment: 0, Land: 23, Other: 0 },
     lands: 23,
     averageManaValue: 2.7,
+    totalManaValue: 99,
     ...over,
   };
 }

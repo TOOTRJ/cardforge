@@ -103,6 +103,8 @@ import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json
 import type { CardBackFace, FrameStyle, FaceContent } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
+import { aiProvenanceOf, aiProvenanceSentence, type AiProvenance } from "@/lib/cards/ai-provenance";
+import { AiProvenanceTags } from "@/components/cards/ai-provenance-tags";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the body of the public card page,
@@ -235,6 +237,10 @@ export async function CardDetailContent({
   // A back with a body of its own (lib/cards/faces.ts): the download modal
   // offers it, the details list it, the JSON-LD names it.
   const hasBackFace = rowHasBakedBack(card);
+  // How much of the card AI made (TODO CP1, migration 0162): the stored
+  // parts read against the card as it is — a tag under the byline, a line
+  // in Card details, the image's source type in the JSON-LD.
+  const aiProvenance = aiProvenanceOf(card);
   const jsonLd =
     isShareable
       ? buildCardJsonLd({
@@ -347,6 +353,7 @@ export async function CardDetailContent({
               sourceScryfallId={card.source_scryfall_id}
               otherRemixesCount={otherRemixesCount}
             />
+            <AiProvenanceTags provenance={aiProvenance} />
           </header>
 
           {/* The moderation lock (0156): the owner is told why the card
@@ -460,7 +467,7 @@ export async function CardDetailContent({
               a crawler or answer engine reads none of it from an image — this
               block is what makes the page citable for "custom MTG {type}"
               queries. */}
-          <CardDetails card={card} inDecks={inDecks} />
+          <CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} />
 
           {/* Discovery tags — under the details they describe. */}
           {card.tags.length > 0 ? (
@@ -1016,6 +1023,10 @@ export function NicknameLine({ nickname, frameStyle }: { nickname?: string | nul
   );
 }
 
+/** schema.org's IPTC digital source type for an image composited from
+ *  trained-algorithmic (AI) media — a card render with an AI picture. */
+export const AI_COMPOSITE_SOURCE_TYPE = "https://schema.org/CompositeWithTrainedAlgorithmicMediaDigitalSource";
+
 /** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
 export function buildCardJsonLd({
   inDecks,
@@ -1053,6 +1064,8 @@ export function buildCardJsonLd({
     back_face?: unknown;
     rendered_back_image_url?: string | null;
     owner_id?: string;
+    /** AI provenance (TODO CP1): the parts AI made. */
+    ai_fields?: string[] | null;
   };
   username: string;
   ownerDisplay: string;
@@ -1135,6 +1148,9 @@ export function buildCardJsonLd({
       caption: `${card.title} — custom MTG-style ${typeLine}${rarity ? `, ${rarity}` : ""}${
         card.cost ? `, mana cost ${describeManaCost(card.cost)}` : ""
       }${collector ? `, collector line ${collector}` : ""}`,
+      // The card image composites an AI picture (TODO CP1): IPTC's digital
+      // source type as schema.org names it. Text-only AI has no property.
+      ...(aiProvenanceOf(card).art ? { digitalSourceType: AI_COMPOSITE_SOURCE_TYPE } : {}),
     },
     keywords: keywords.join(", "),
     author: {
@@ -1247,6 +1263,7 @@ export function collectorLineText(card: {
 export function CardDetails({
   card,
   inDecks,
+  aiProvenance,
 }: {
   card: {
     cost: string | null;
@@ -1282,6 +1299,9 @@ export function CardDetails({
     back_face?: unknown;
   };
   inDecks: Array<{ slug: string; title: string }>;
+  /** What AI made of the card (TODO CP1): one row, absent for a card made
+   *  by hand. */
+  aiProvenance?: AiProvenance;
 }) {
   const typeLine = buildTypeLine({
     supertype: card.supertype,
@@ -1335,6 +1355,9 @@ export function CardDetails({
   const collector = collectorLineText(card);
   if (collector) rows.push(["Collector line", collector]);
   if (card.artist_credit?.trim()) rows.push(["Art", card.artist_credit.trim()]);
+  // How much of it AI made (TODO CP1) — nothing for a card made by hand.
+  const aiLine = aiProvenance ? aiProvenanceSentence(aiProvenance) : null;
+  if (aiLine) rows.push(["Made with AI", aiLine]);
   rows.push(["Created", formatShortDate(card.created_at)]);
   if (Date.parse(card.updated_at) - Date.parse(card.created_at) > 60_000) {
     rows.push(["Updated", formatShortDate(card.updated_at)]);

@@ -45,7 +45,7 @@ import { viewerDeckBreakdown } from "@/lib/decks/deck-charts";
 import { DeckCurveFilterProvider } from "@/components/decks/deck-curve-filter";
 import { DeckDrawOdds } from "@/components/decks/deck-draw-odds";
 import { DeckSampleHand } from "@/components/decks/deck-sample-hand";
-import { formatHasCommander, formatHasFreeMulligan, formatIsMultiplayer, validateDeck } from "@/lib/decks/format-rules";
+import { formatHasCommander, formatIsMultiplayer, validateDeck } from "@/lib/decks/format-rules";
 import {
   DECK_CARDS_HEADING_ID,
   DECK_VIEW_COOKIE,
@@ -56,6 +56,7 @@ import {
   parseDeckViewPrefs,
   statusCountRows,
 } from "@/lib/decks/deck-view";
+import { deckEntryAnchor } from "@/lib/decks/return-to";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -491,7 +492,7 @@ export default async function DeckDetailPage({
               summary={{
                 format: deck.format,
                 analytics,
-                formatIssues: warnings.length,
+                formatIssues: warnings,
               }}
               emptyState={<DeckStartDoors key="doors" commander={usesCommander} />}
               commanderSlot={usesCommander ? <CommanderSlot key="commander-slot" compact /> : null}
@@ -534,7 +535,20 @@ export default async function DeckDetailPage({
                 </h3>
                 <ul className="flex flex-col gap-1 text-sm leading-6 text-muted">
                   {warnings.map((warning, index) => (
-                    <li key={`${warning.code}-${index}`}>{warning.message}</li>
+                    <li key={`${warning.code}-${index}`}>
+                      {/* An issue about a card goes to its row (the list's
+                          #entry- anchor, TODO DK11 (d)). */}
+                      {warning.entryIds?.[0] ? (
+                        <a
+                          href={deckEntryAnchor(warning.entryIds[0])}
+                          className="rounded-sm text-foreground underline decoration-gold/50 underline-offset-4 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                        >
+                          {warning.message}
+                        </a>
+                      ) : (
+                        warning.message
+                      )}
+                    </li>
                   ))}
                 </ul>
               </SurfaceCard>
@@ -568,14 +582,10 @@ export default async function DeckDetailPage({
             <p className="max-w-2xl text-sm leading-6 text-muted">The odds of a shuffled mainboard, and a hand to try.</p>
           </div>
           {/* Commander and Oathbreaker are multiplayer (every player draws
-              on turn one, CR 103.8c); the Brawl formats are 1v1. The first
-              mulligan is free in all four (CR 103.5c). */}
+              on turn one, CR 103.8c); the Brawl formats are 1v1. No mulligan
+              in the sample hand (owner 2026-10-30, TODO DK11 (f)). */}
           <DeckDrawOdds items={shownItems} canManage={isOwner} commander={usesCommander} multiplayer={formatIsMultiplayer(deck.format)} />
-          <DeckSampleHand
-            items={shownItems}
-            canManage={isOwner}
-            freeMulliganFormat={formatHasFreeMulligan(deck.format) ? DECK_FORMAT_LABELS[deck.format] : null}
-          />
+          <DeckSampleHand items={shownItems} canManage={isOwner} />
         </section>
       ) : null}
 

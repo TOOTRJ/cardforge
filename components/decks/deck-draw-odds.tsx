@@ -2,6 +2,8 @@
 
 import { useId, useMemo, useState } from "react";
 import { ChipGroup } from "@/components/ui/chip-group";
+import { ChartHelp } from "@/components/decks/deck-chart-card";
+import { BREAKDOWN_HELP } from "@/lib/decks/deck-help";
 import { deckLibraryOf, defaultDrawPick, drawPickOptions } from "@/lib/decks/deck-charts";
 import { deckRowsOf } from "@/lib/decks/deck-view";
 import { cardOddsByTurn, formatOdds, hypergeometricAtLeast, landOddsTable, OPENING_HAND } from "@/lib/decks/draw-odds";
@@ -83,9 +85,12 @@ export function DeckDrawOdds({
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="deck-draw-odds-title" className="text-sm font-semibold text-foreground">
-            Draw odds
-          </h3>
+          <div className="flex items-center gap-1">
+            <h3 id="deck-draw-odds-title" className="text-sm font-semibold text-foreground">
+              Draw odds
+            </h3>
+            <ChartHelp help={BREAKDOWN_HELP.drawOdds} />
+          </div>
           <p className="mt-1 text-xs leading-5 text-muted">
             {`From the ${librarySize}-card mainboard${commander ? " (the commander waits in the command zone)" : ""}, for a kept opening seven.`}
             {multiplayer ? " In multiplayer every player draws on their first turn, so the odds are on the draw." : null}

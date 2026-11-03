@@ -13,7 +13,9 @@ import { deckRowLabel, stackColumnsOf, type DeckGroup, type DeckSort, type DeckV
 import { formatUtcDate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY } from "@/types/card";
-import { DECK_BOARD_LABELS } from "@/types/deck";
+import { InfoTip } from "@/components/ui/info-tip";
+import { BOARD_HELP } from "@/lib/decks/deck-help";
+import { DECK_BOARD_LABELS, isDeckBoard } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // The deck's groups drawn in one of the four views (TODO DK5.3, WD5):
@@ -75,7 +77,24 @@ export function DeckGroupViews({
   return <StacksView groups={groups} showProxies={showProxies} ui={ui} />;
 }
 
-/** A group's heading — its disclosure button, the group's name and count. */
+/** A board's help (TODO DK11 (c)): what it is and what it counts toward —
+ *  beside a group that IS a board (the Sideboard, the Commander…). */
+function BoardHelpTip({ groupKey }: { groupKey: string }) {
+  if (!isDeckBoard(groupKey)) return null;
+  const help = BOARD_HELP[groupKey];
+  return (
+    <InfoTip label={`About the ${help.title}`} side="bottom" align="start">
+      <p className="font-semibold text-foreground">{help.title}</p>
+      <p className="mt-1">{help.body}</p>
+      <p className="mt-1">{help.counts}</p>
+    </InfoTip>
+  );
+}
+
+/** A group's heading — its disclosure button, the group's name and count —
+ *  and a board's help BESIDE it, outside the <h3>: the heading's name (and
+ *  the section's, through aria-labelledby) is its text alone, never
+ *  "… About the Commander". */
 function GroupHeading({
   id,
   group,
@@ -91,25 +110,30 @@ function GroupHeading({
 }) {
   const open = !ui.isCollapsed(group.key);
   return (
-    <h3 id={id} className={cn("font-display text-base font-semibold text-foreground", className)}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={contentId}
-        onClick={() => ui.toggleGroup(group.key)}
-        className="-mx-1 inline-flex min-h-8 items-center gap-2 rounded-md px-1 text-left transition-colors hover:text-primary-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-      >
-        <ChevronDown
-          className={cn("h-3.5 w-3.5 shrink-0 text-subtle transition-transform motion-reduce:transition-none", !open && "-rotate-90")}
-          aria-hidden
-        />
-        {group.label}
-        <span className="font-sans text-xs font-normal tabular-nums text-subtle">
-          <span className="sr-only">, </span>
-          {group.count} card{group.count === 1 ? "" : "s"}
-        </span>
-      </button>
-    </h3>
+    <div className={cn("flex flex-wrap items-center font-display text-base font-semibold text-foreground", className)}>
+      <h3 id={id} className="min-w-0">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={contentId}
+          onClick={() => ui.toggleGroup(group.key)}
+          className="-mx-1 inline-flex min-h-8 items-center gap-2 rounded-md px-1 text-left transition-colors hover:text-primary-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+        >
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 shrink-0 text-subtle transition-transform motion-reduce:transition-none", !open && "-rotate-90")}
+            aria-hidden
+          />
+          {group.label}
+          <span className="font-sans text-xs font-normal tabular-nums text-subtle">
+            <span className="sr-only">, </span>
+            {group.count} card{group.count === 1 ? "" : "s"}
+          </span>
+        </button>
+      </h3>
+      <span className="ml-1 inline-flex font-sans normal-case tracking-normal">
+        <BoardHelpTip groupKey={group.key} />
+      </span>
+    </div>
   );
 }
 
@@ -383,6 +407,7 @@ function TableView({
   ui: DeckRowUi;
 }) {
   const captionId = useId();
+  const groupLabelId = useId();
   const columnCount = COLUMNS.length + (ui.editing ? 1 : 0);
   return (
     // Scrolls sideways on a narrow screen — by keyboard too (a named,
@@ -440,13 +465,17 @@ function TableView({
             ) : null}
           </tr>
         </thead>
-        {groups.map((group) => {
+        {groups.map((group, index) => {
           const open = !ui.isCollapsed(group.key);
           return (
             <tbody key={group.key} className="border-t border-border/60">
               <tr className="bg-elevated/40">
-                <th scope="rowgroup" colSpan={columnCount} className="px-3 py-1 text-xs font-semibold text-muted">
+                {/* The header cell is named by its button's text alone: the
+                    board's help beside it says itself only as a button of
+                    its own, never "… About the Commander" in the header. */}
+                <th scope="rowgroup" colSpan={columnCount} aria-labelledby={`${groupLabelId}-${index}`} className="px-3 py-1 text-xs font-semibold text-muted">
                   <button
+                    id={`${groupLabelId}-${index}`}
                     type="button"
                     aria-expanded={open}
                     onClick={() => ui.toggleGroup(group.key)}
@@ -455,6 +484,9 @@ function TableView({
                     <ChevronDown className={cn("h-3 w-3 transition-transform motion-reduce:transition-none", !open && "-rotate-90")} aria-hidden />
                     {group.label} <span className="font-normal tabular-nums text-subtle">· {group.count}</span>
                   </button>
+                  <span className="ml-1 inline-flex align-middle">
+                    <BoardHelpTip groupKey={group.key} />
+                  </span>
                 </th>
               </tr>
               {open ? group.rows.map((row) => <TableRow key={row.id} row={row} showProxies={showProxies} ui={ui} />) : null}

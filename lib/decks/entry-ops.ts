@@ -19,7 +19,9 @@ export type EntryOp =
   | { kind: "remove"; ids: string[] }
   /** Rows drawn while the server writes them: an add, or a removal undone
    *  (its old rows, ids and all, until the new ones arrive). */
-  | { kind: "insert"; items: PendingItem[] };
+  | { kind: "insert"; items: PendingItem[] }
+  /** Several edits drawn as one (the add box's "Add N", TODO DK5.17). */
+  | { kind: "batch"; ops: EntryOp[] };
 
 /** The entry fields an edit reads or writes. */
 type EditableEntry = { id: string; quantity: number; board: DeckBoard };
@@ -60,6 +62,8 @@ export function applyEntryOp<I extends EditableItem>(items: readonly I[], op: En
       const have = new Set(items.map((item) => item.entry.id));
       return [...items, ...(op.items.filter((item) => !have.has(item.entry.id)) as unknown as I[])];
     }
+    case "batch":
+      return op.ops.reduce<I[]>((drawn, inner) => applyEntryOp(drawn, inner), [...items]);
   }
 }
 
@@ -72,6 +76,8 @@ export function opEntryIds(op: EntryOp): string[] {
       return [...op.ids];
     case "insert":
       return op.items.map((item) => item.entry.id);
+    case "batch":
+      return op.ops.flatMap(opEntryIds);
   }
 }
 
@@ -130,6 +136,7 @@ export function describeEdit(op: EntryOp, names: readonly string[]): string {
     case "remove":
       return `Removed ${who}.`;
     case "insert":
+    case "batch":
       return `Added ${who}.`;
     case "update": {
       const boards = new Set(op.updates.map((patch) => patch.board).filter(Boolean));

@@ -133,6 +133,12 @@ export type DeckAnalytics = {
   /** Average mana value across the main deck's and the commander's non-land
    *  cards with a known value. */
   averageManaValue: number | null;
+  /** Total mana value (TODO DK11 (b)): every main-deck and commander card's
+   *  mana value × its copies, lands counted as 0 — the same cards and the
+   *  same value (effectiveEntryFields' `manaValue`, the shared
+   *  manaValueOfCost) the curve and the average read; a card with no known
+   *  value adds nothing. */
+  totalManaValue: number;
 };
 
 /** The deck's cards by status as a breakdown lists them (the deck page's
@@ -230,5 +236,6 @@ export function computeDeckAnalytics(
     byType,
     lands,
     averageManaValue: mvSample > 0 ? mvTotal / mvSample : null,
+    totalManaValue: mvTotal,
   };
 }

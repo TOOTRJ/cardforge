@@ -1,7 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2, Crown } from "lucide-react";
+import { InfoTip } from "@/components/ui/info-tip";
 import type { DeckSummary } from "@/lib/decks/deck-summary";
 import { ENTRY_BADGE_LABELS } from "@/lib/decks/deck-view";
+import { TOTAL_MANA_VALUE_ARTICLE_HREF, TOTAL_MANA_VALUE_HELP } from "@/lib/decks/deck-help";
+import type { DeckWarning } from "@/lib/decks/format-rules";
+import { deckEntryAnchor } from "@/lib/decks/return-to";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -21,8 +27,17 @@ import { cn } from "@/lib/utils";
 // plain landmark of links and text — nothing to trap the focus — and the
 // openers above keep clear of it when the focus scrolls them into view
 // (scroll-margin). It is one line at every width: the size, the commander
-// and the check always; the composition from 1280 px, the average and the
-// lands from 1536 px (all of them in the breakdown below).
+// and the check always; the total mana value from 1024 px, the composition
+// from 1280 px, the average and the lands from 1536 px (all of them in the
+// breakdown below).
+//
+// TODO DK11: the total mana value carries an info box (hover or keyboard
+// focus; a press pins it) that says how it is counted and links to the
+// guide on comparing decks by it; the format check's count opens the list
+// of its issues the same way, and an issue about a card (too many copies)
+// is a link that scrolls to THAT card's row and puts the focus on it
+// (`onGoToEntry`, the list's: a filter or a folded group hiding the row is
+// lifted first).
 // ---------------------------------------------------------------------------
 
 const SIZE_TONE: Record<DeckSummary["sizeState"], string> = {
@@ -39,14 +54,17 @@ function Item({ children, className }: { children: React.ReactNode; className?: 
 export function DeckSummaryBar({
   summary,
   formatIssues,
+  onGoToEntry,
   editNext,
   unchanged,
   canManage,
   className,
 }: {
   summary: DeckSummary;
-  /** The owner's format check (0 = passes); null for a visitor. */
-  formatIssues: number | null;
+  /** The owner's format check (empty = passes); null for a visitor. */
+  formatIssues: readonly DeckWarning[] | null;
+  /** Scroll to an entry's row and focus it (an issue's link). */
+  onGoToEntry?: (entryId: string) => void;
   /** The next unchanged import the Customize flow takes, or null. */
   editNext: { href: string; name: string } | null;
   /** Cards still as imported (the composition's Imported). */
@@ -95,22 +113,21 @@ export function DeckSummaryBar({
           ) : null}
           {formatIssues !== null ? (
             <Item>
-              {formatIssues === 0 ? (
+              {formatIssues.length === 0 ? (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5 text-primary-bright" aria-hidden />
                   <span>Format check passes</span>
                 </>
               ) : (
-                <a
-                  href="#format-check"
-                  className="inline-flex items-center gap-1.5 rounded-sm text-gold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
-                >
-                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-                  {formatIssues} format issue{formatIssues === 1 ? "" : "s"}
-                </a>
+                <FormatIssues issues={formatIssues} onGoToEntry={onGoToEntry} />
               )}
             </Item>
           ) : null}
+          <Item className="hidden lg:flex">
+            Total mana value{" "}
+            <span className="font-mono tabular-nums text-foreground">{formatTotal(summary.totalManaValue)}</span>
+            <TotalManaValueTip />
+          </Item>
           <Item className="hidden xl:flex">
             <span className="sr-only">Composition: </span>
             {summary.composition
@@ -143,5 +160,92 @@ export function DeckSummaryBar({
         ) : null}
       </div>
     </section>
+  );
+}
+
+/** A whole number as it is; a half mana (Un-sets) to one place. */
+function formatTotal(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+/** How the total mana value is counted, and the guide (TODO DK11 (b)) —
+ *  the bar's and the breakdown's one box. */
+export function TotalManaValueTip({ side = "top" }: { side?: "top" | "bottom" }) {
+  return (
+    <InfoTip label="About total mana value" side={side}>
+      <p className="font-semibold text-foreground">{TOTAL_MANA_VALUE_HELP.title}</p>
+      <p className="mt-1">{TOTAL_MANA_VALUE_HELP.body}</p>
+      <p className="mt-1">{TOTAL_MANA_VALUE_HELP.use}</p>
+      <p className="mt-2">
+        <Link
+          href={TOTAL_MANA_VALUE_ARTICLE_HREF}
+          className="font-medium text-primary-bright underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+        >
+          {TOTAL_MANA_VALUE_HELP.linkLabel}
+        </Link>
+      </p>
+    </InfoTip>
+  );
+}
+
+const ISSUE_LINK =
+  "rounded-sm text-foreground underline decoration-gold/50 underline-offset-4 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60";
+
+/** The owner's format issues: the count, and the list on hover / focus —
+ *  an issue about a card links to that card's row (TODO DK11 (d)). */
+function FormatIssues({
+  issues,
+  onGoToEntry,
+}: {
+  issues: readonly DeckWarning[];
+  onGoToEntry?: (entryId: string) => void;
+}) {
+  const count = `${issues.length} format issue${issues.length === 1 ? "" : "s"}`;
+  return (
+    <InfoTip
+      label={count}
+      side="top"
+      align="start"
+      className="w-80"
+      triggerClassName="text-gold underline-offset-4 hover:underline"
+      trigger={
+        <>
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+          {count}
+        </>
+      }
+    >
+      <p className="font-semibold text-foreground">Format check</p>
+      <ul className="mt-1.5 flex flex-col gap-1.5">
+        {issues.map((issue, index) => {
+          const entryId = issue.entryIds?.[0];
+          return (
+            <li key={`${issue.code}-${index}`} className="flex gap-1.5">
+              <AlertTriangle className="mt-1 h-3 w-3 shrink-0 text-gold" aria-hidden />
+              {entryId && onGoToEntry ? (
+                <a
+                  href={deckEntryAnchor(entryId)}
+                  data-format-issue-entry={entryId}
+                  className={ISSUE_LINK}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onGoToEntry(entryId);
+                  }}
+                >
+                  {issue.message}
+                </a>
+              ) : (
+                <span>{issue.message}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2">
+        <a href="#format-check" className="font-medium text-primary-bright underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60">
+          Open the format check
+        </a>
+      </p>
+    </InfoTip>
   );
 }

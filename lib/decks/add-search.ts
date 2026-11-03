@@ -77,6 +77,9 @@ export function inDeckLabel(count: InDeckCount): string | null {
 }
 
 /** What is being added. */
+/** The most cards one "Add N" sends (TODO DK5.17, addManyToDeckAction). */
+export const MAX_ADD_BATCH = 25;
+
 export type AddPick =
   | { kind: "card"; cardId: string; title: string }
   | { kind: "printing"; scryfallId: string; name: string };

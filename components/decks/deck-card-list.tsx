@@ -41,7 +41,7 @@ import {
 } from "@/lib/decks/deck-view";
 import { moveTargets, sideToggleBoard } from "@/lib/decks/entry-ops";
 import { entryShortcutOf } from "@/lib/decks/entry-shortcuts";
-import { formatHasCommander, validateDeck } from "@/lib/decks/format-rules";
+import { formatHasCommander, validateDeck, type DeckWarning } from "@/lib/decks/format-rules";
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { publicDeckItems } from "@/lib/decks/private-card-name";
 import { coverPickRowsOf, standsInFan } from "@/lib/decks/featured";
@@ -92,10 +92,10 @@ const LONG_PRESS_SLOP_PX = 10;
 export type DeckCardListSummary = {
   format: DeckFormat;
   /** The deck's breakdown (computeDeckAnalytics over the viewer's rows). */
-  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "lands">;
-  /** The owner's format check: how many issues (0 = passes). Null for a
+  analytics: Pick<DeckAnalytics, "total" | "byBoard" | "averageManaValue" | "totalManaValue" | "lands">;
+  /** The owner's format check: its issues (empty = passes). Null for a
    *  visitor, who never sees it (TODO DK0.9). */
-  formatIssues: number | null;
+  formatIssues: readonly DeckWarning[] | null;
 };
 
 type DeckCardListProps = {
@@ -323,6 +323,49 @@ function DeckCardArea({
       return next;
     });
 
+  // ---- to a card's row: a format issue's link (TODO DK11 (d)) --------------
+  // Scrolled to, marked for a moment and focused; a row a filter, the
+  // curve's filter or a folded group hides is shown first, then focused once
+  // the list has drawn it.
+  const revealEntry = (entryId: string): boolean => {
+    const opener = listRef.current?.querySelector<HTMLElement>(`[data-deck-entry="${entryId.replace(/["\\]/g, "")}"]`);
+    // A folded group keeps its cards in the page, hidden.
+    if (!opener || opener.closest("[hidden]")) return false;
+    opener.scrollIntoView?.({ block: "center" });
+    opener.setAttribute("data-flash", "");
+    window.setTimeout(() => opener.removeAttribute("data-flash"), 2400);
+    opener.focus({ preventScroll: true });
+    return true;
+  };
+  const goingTo = useRef<string | null>(null);
+  const [goTick, setGoTick] = useState(0);
+  const goToEntry = (entryId: string) => {
+    if (revealEntry(entryId)) return;
+    setFilter("all");
+    if (curve?.filter) curve.clear("heading");
+    const group = allGroups.find((candidate) => candidate.rows.some((row) => row.id === entryId));
+    if (group) {
+      setFolded((prev) => {
+        if (!prev.has(group.key)) return prev;
+        const next = new Set(prev);
+        next.delete(group.key);
+        return next;
+      });
+    }
+    goingTo.current = entryId;
+    setGoTick((n) => n + 1);
+  };
+  useEffect(() => {
+    const entryId = goingTo.current;
+    if (!entryId) return;
+    goingTo.current = null;
+    // After the curve's own focus move (an effect of the same commit).
+    requestAnimationFrame(() => {
+      if (!revealEntry(entryId)) editor?.announce("That card isn't in the list any more.");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per request; the helpers read the live DOM
+  }, [goTick]);
+
   // ---- the preview pane (TODO DK5.7) ---------------------------------------
   const [preview] = useState(createPreviewStore);
   const wide = useMediaQuery(PREVIEW_PANE_QUERY) === true;
@@ -526,7 +569,8 @@ function DeckCardArea({
   // with every edit.
   const liveAnalytics = useMemo(() => (editor ? computeDeckAnalytics(items) : null), [editor, items]);
   const liveIssues = useMemo(
-    () => (editor && summary ? validateDeck(summary.format, items.map((item) => item.entry)).length : null),
+    // With the entries' ids: an issue about a card links to its row.
+    () => (editor && summary ? validateDeck(summary.format, items.filter((item) => !item.pending).map((item) => item.entry)) : null),
     [editor, items, summary],
   );
   const bar = summary
@@ -687,6 +731,7 @@ function DeckCardArea({
                 <DeckSummaryBar
                   summary={bar.summary}
                   formatIssues={bar.formatIssues}
+                  onGoToEntry={goToEntry}
                   editNext={bar.editNext}
                   unchanged={counts.imported}
                   canManage={canManage}
