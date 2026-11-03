@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { importMergeKey, MAX_DECK_ENTRIES, type ImportEntry } from "@/lib/decks/import-plan";
@@ -66,7 +66,16 @@ describe("the app's deck-entry contract matches 0143", () => {
   });
 
   it("every Scryfall action the app rate-limits is one scryfall_calls accepts", () => {
-    const check = /add constraint scryfall_calls_action_check\s+check \(action in \(([^)]*)\)\)/.exec(SQL)?.[1] ?? "";
+    // The LATEST migration to redefine the CHECK (0143 added the commit's
+    // action; 0164 the deck page's tokens lookup).
+    const dir = join(process.cwd(), "supabase/migrations");
+    const latest = readdirSync(dir)
+      .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+      .sort()
+      .map((f) => strip(readFileSync(join(dir, f), "utf8")))
+      .filter((sql) => sql.includes("add constraint scryfall_calls_action_check"))
+      .at(-1) ?? SQL;
+    const check = [...latest.matchAll(/add constraint scryfall_calls_action_check\s+check \(action in \(([^)]*)\)\)/g)].at(-1)?.[1] ?? "";
     const allowed = [...check.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
     expect(allowed.sort()).toEqual(Object.keys(SCRYFALL_LIMITS).sort());
   });

@@ -1602,7 +1602,14 @@ Rules and gotchas:
   `COLOR_LETTER_IDENTITY` in `types/card.ts`, OG chrome in
   `lib/og/chrome.tsx` (edge-safe; the sharp pre-fetch lives in
   `lib/og/shell.tsx`), like toggles through `lib/social/like-toggle.ts`,
-  render upload/delete through `lib/cards/bake-core.ts`.
+  render upload/delete through `lib/cards/bake-core.ts`, a card's or deck's
+  COLOURS on the UI through `ColorPip` / `ColorPips`
+  (`components/cards/color-pip.tsx`, TODO UI1: the card's own pips over
+  `CardPip` / `manaGemSpec`, {C} for colourless, the five-way split disc
+  for multicolour — never a coloured dot; `color-pip-surfaces.test.ts`;
+  COSTS and symbols off the card — the cost picker, the rules toolbar,
+  `InlinePips`, the custom-pips manager — still draw mana-font's
+  `.ms-cost` look, a second look until they are moved too).
 - Sets (`card_sets` / `card_set_items` / `set_likes`, the `/sets` and
   `/set/[slug]` routes, the AI "set" job kind) were REMOVED on 2026-09-22 —
   app in #337, schema in migration 0105 (owner-confirmed; 8 sets from 5
@@ -2108,7 +2115,18 @@ Rules and gotchas:
   is a `next/dynamic` chunk (`deck-owner-parts.tsx`; under vitest
   `tests/stubs/next-dynamic.tsx`, `dynamicReady()`) — only a part NOT on
   screen at load may be: a lazy part's controls are dead until its chunk
-  loads and hydrates (a row's "⋯" clicked after a reload never opened). Every entry's Edit is
+  loads and hydrates (a row's "⋯" clicked after a reload never opened).
+  A card DRAGS onto another board (TODO DK5.15; Stacks, Grid, List): native
+  HTML drag, ONE hook (`components/decks/use-board-drag.tsx`, rules in
+  `lib/decks/board-drag.ts`) — on a fine pointer only (`BOARD_DRAG_QUERY`;
+  touch keeps its long-press select and its scroll), never from a control
+  beside the card, a picked card carrying the selection; a group is the
+  board it stands for (`boardOfGroup`: `main-*` / "deck" = the mainboard),
+  a drop target only where the menus offer the board (`moveTargets`), plus
+  a tray of the format's boards while a card is held; a drop IS the
+  editor's `move` (one write, said, undoable, focus held) — never a second
+  move path, and no judgment of a card for the commander zone the menus
+  don't make. Every entry's Edit is
   `entryEditTarget` (`lib/decks/return-to.ts`) with a `returnTo` the
   creator and the editor follow only through `deckReturnPath` (a deck page,
   our `#entry-` / `#next-` anchor, nothing else — the card editor only to
@@ -2216,6 +2234,27 @@ Rules and gotchas:
   follow-up). The app shipped BEFORE 0151 (#679): `getDeckGuide` and
   `recordDeckView` fall back to main's calls on PGRST202 — remove both once
   0151 is on production and dev.
+  A deck is COPIED (TODO DK5.16, migration 0164) through ONE database call,
+  `clone_deck` (`cloneDeckAction`, `lib/decks/clone.ts`): a PRIVATE copy of
+  a deck the caller may open, never its description or cover, no card made;
+  each entry by the deck rules — a card that can't be linked loses its link,
+  an entry with no printing whose card can't come along (or is gone) is
+  SKIPPED, a kept printing the page masks for the caller (strong language)
+  is copied as "Private card" (`maskedCloneEntryIds`: SQL can't run the
+  detector) — ≤ 500 rows. "Copy deck" shows only when the copy would hold
+  an entry (`cloneableEntryCount`). Lineage is its own table,
+  `deck_remix_sources` (a deck id is its LINK: never a column on `decks`),
+  no API role's, read only through `deck_remix_credit` (the source named
+  while public or the viewer's own, else "another deck"); a copy of the
+  caller's OWN deck ("Duplicate") writes no lineage and no `deck_cloned`
+  (once per cloner and deck). "Similar decks" is `list_similar_decks`
+  (public decks only, real creators, the same commander or the same colours
+  and ≥ 4 shared cards that aren't STAPLES — in more than 10 % and 20 of the
+  public decks, `lib/decks/similar-decks.ts` — matched by what every visitor
+  reads), read cookie-free and cached an hour (`listSimilarDecks`). "Tokens &
+  emblems" (`lib/decks/deck-tokens*.ts`) is display only: Scryfall
+  `all_parts` through the shared client with a timeout, a success cached a
+  day and a failure minutes, logged as `deck_tokens` on a signed-in viewer.
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /

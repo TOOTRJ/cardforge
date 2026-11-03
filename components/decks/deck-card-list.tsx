@@ -22,6 +22,7 @@ import { openDeckTool } from "@/components/decks/deck-tool-event";
 import { DECK_SELECT_TOGGLE_ID, DeckViewToolbar } from "@/components/decks/deck-view-toolbar";
 import { useMediaQuery } from "@/components/creator/use-media-query";
 import { DeckEditorProvider, useDeckEditor, type DeckEditor, type EditorItem } from "@/components/decks/use-deck-editor";
+import { useBoardDrag } from "@/components/decks/use-board-drag";
 import { computeDeckAnalytics, type DeckAnalytics } from "@/lib/decks/analytics";
 import { computeDeckCharts } from "@/lib/decks/deck-charts";
 import { deckSummaryOf } from "@/lib/decks/deck-summary";
@@ -407,6 +408,16 @@ function DeckCardArea({
       { kind: "item", label: "Remove", icon: <Trash2 className="h-3.5 w-3.5" />, danger: true, onSelect: () => editor.remove([row.id]) },
     ];
   };
+  // Dragging a card onto another board (TODO DK5.15): the menus' move.
+  const boardDrag = useBoardDrag({
+    editor,
+    hasCommander,
+    selection: { selecting: editing && selecting, ids: selectedIds },
+    // The dropped card takes the focus (and the pane); the list re-renders
+    // and scrolls under the still pointer — that is no hover.
+    onDropped: preview.quietUntilMoved,
+  });
+
   // The M key on a card with no "⋯" of its own: a menu at the card.
   const [keyMenu, setKeyMenu] = useState<MenuRequest | null>(null);
   const keyMenuAnchor = useRef<HTMLElement | null>(null);
@@ -465,10 +476,10 @@ function DeckCardArea({
       // the card those buttons act on.
       onFocus: () => preview.set(id),
       onPointerEnter: (event) => {
-        if (event.pointerType !== "touch") preview.rest(id);
+        if (event.pointerType !== "touch") preview.rest(id, { x: event.clientX, y: event.clientY });
       },
       onPointerMove: (event) => {
-        if (event.pointerType !== "touch") preview.rest(id);
+        if (event.pointerType !== "touch") preview.rest(id, { x: event.clientX, y: event.clientY });
       },
       onPointerLeave: () => preview.leave(id),
     };
@@ -522,6 +533,8 @@ function DeckCardArea({
     menuButton: (row) => <EntryMenuButton name={row.name} items={rowMenuItems(row)} />,
     isCollapsed: (key) => folded.has(key),
     toggleGroup,
+    dragProps: (row) => boardDrag.dragProps(row.id, Boolean(row.item.pending)),
+    dropZone: boardDrag.dropZone,
   };
 
   // ---- back from the creator: the card, or the walk's next (TODO DK5.5) ----
@@ -815,6 +828,7 @@ function DeckCardArea({
             anchor={keyMenuAnchor}
             align="start"
           />
+          {boardDrag.tray}
           {selecting ? null : (
             <DeckMobileBar
               onAdd={() => openDeckTool("add")}

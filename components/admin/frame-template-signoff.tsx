@@ -40,6 +40,7 @@ import {
   isLowFrameScore,
 } from "@/lib/cards/frame-signoff";
 import { cn } from "@/lib/utils";
+import { FrameKeyPip } from "@/components/cards/color-pip";
 
 // ---------------------------------------------------------------------------
 // Per-template sign-off (TODO 2.4): every colour of one frame on one page —
@@ -93,16 +94,6 @@ export type SignOffColourView = {
   walkHref: string;
   compareHref: string;
   previews: FramePreviewListItem[];
-};
-
-const COLOR_DOT: Record<string, string> = {
-  w: "#f7eccb",
-  u: "#7cc3ee",
-  b: "#5b5550",
-  r: "#ec6f4c",
-  g: "#79b664",
-  c: "#b8b5b3",
-  m: "conic-gradient(from 45deg, #cfb787, #7cc3ee, #ec6f4c, #79b664, #c98cf7, #cfb787)",
 };
 
 function ScoreCell({ view }: { view: SignOffColourView }) {
@@ -335,11 +326,7 @@ export function FrameTemplateSignOff({
                   verified={view.verified}
                   referenceId={view.referenceId}
                 />
-                <span
-                  aria-hidden
-                  className="inline-block h-3 w-3 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]"
-                  style={{ background: COLOR_DOT[view.colorKey] ?? "#b8b5b3" }}
-                />
+                <FrameKeyPip colorKey={view.colorKey} />
                 <span className="w-6 text-xs font-semibold uppercase text-foreground">
                   {view.colorKey}
                 </span>

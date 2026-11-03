@@ -38,7 +38,7 @@ const s = vi.hoisted(() => ({
   moveError: null as { message: string } | null,
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("next/cache", () => ({ revalidatePath: () => {}, updateTag: () => {} }));
 vi.mock("next/navigation", () => ({ redirect: () => {} }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/decks/revalidate", () => ({ revalidateDeckPaths: () => {} }));
