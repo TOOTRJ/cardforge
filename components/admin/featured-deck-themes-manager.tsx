@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Eye, EyeOff, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { inputClass } from "@/components/ui/field-classes";
@@ -56,7 +57,7 @@ export function FeaturedDeckThemesManager({ themes }: { themes: AdminDeckTheme[]
         const result = await action();
         if (!result.ok) {
           if (onError) onError(result.error);
-          else toast.error(result.error);
+          else adminErrorToast("featured deck themes", result.error);
           resolve(false);
           return;
         }

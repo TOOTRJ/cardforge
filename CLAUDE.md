@@ -1994,6 +1994,14 @@ Rules and gotchas:
   decks only — `owner_is_creator`), cookie-free on /decks and the gallery
   (both stay ISR); /decks'
   controls live on /decks/browse alone (sort, ChipGroup formats, `?owner=`).
+  /decks' top (owner 2026-11-03, 0167) is "Featured themed decks" (also on
+  the home page: admin THEMES in /admin/featured, `deck_themes` /
+  `deck_theme_decks` service-role only, read through ONE function,
+  `list_featured_deck_themes`) and trending as the gallery's hero block;
+  its bottom is "Discover" (`list_discover_decks`: the gallery's weighted
+  draw, 10+ cards ×3, likes / views damped, `lib/decks/discover.ts`) — never
+  a list ordered by `updated_at` and called "newest" (every edit moves it).
+  Both pools are trending's: public, `card_count > 0`, `owner_is_creator`.
   Deck notifications (DK8.6, 0149): `deck_like` (a public deck, never the
   owner's own like, once per liker and deck — never retracted, so a like
   loop can't toast again) and `deck_card_added` (ONE row per recipient and
