@@ -173,8 +173,8 @@ describe("the tier", () => {
     expect(TIERS).toEqual({
       full: { static: true, unit: true, heavy: true, frames: true, warm: false, docs: false },
       verified: { static: false, unit: false, heavy: false, frames: true, warm: true, docs: false },
-      nightly: { static: false, unit: true, heavy: false, frames: false, warm: false, docs: false },
-      idle: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: false },
+      nightly: { static: false, unit: true, heavy: false, frames: true, warm: false, docs: false },
+      idle: { static: false, unit: false, heavy: false, frames: true, warm: false, docs: false },
       draft: { static: true, unit: false, heavy: false, frames: false, warm: false, docs: true },
       notes: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: true },
     });
@@ -308,8 +308,8 @@ describe("scripts/ci-classify-change.mjs", { timeout: 60_000 }, () => {
   const VERIFIED = out("verified", { frames: true, warm: true }, false);
   const DRAFT = out("draft", { static: true, docs: true }, false);
   const NOTES = out("notes", { docs: true }, false);
-  const NIGHTLY = out("nightly", { unit: true }, true);
-  const IDLE = out("idle", {}, false);
+  const NIGHTLY = out("nightly", { unit: true, frames: true }, true);
+  const IDLE = out("idle", { frames: true }, false);
 
   it("the expected outputs are the library's own", () => {
     expect(FULL_PR).toBe(`${Object.entries(tierOutputs("full", "pull_request")).map(([k, v]) => `${k}=${v}`).join("\n")}\n`);
@@ -650,8 +650,8 @@ describe("the workflow", () => {
     for (const id of ["e2e", "visual", "parity"]) expect(jobOf(id), id).toContain("needs.changes.outputs.heavy != 'false'");
   });
 
-  it("every job is the classifier, the gate, its cancelled-run marker, the coverage alert or in one group — a new job picks a side here", () => {
-    expect([...JOB_IDS].sort()).toEqual(["changes", "checks", "superseded", "coverage-alert", ...Object.values(GROUP_JOBS).flat()].sort());
+  it("every job is the classifier, the gate, its cancelled-run marker, one of the two alerts or in one group — a new job picks a side here", () => {
+    expect([...JOB_IDS].sort()).toEqual(["changes", "checks", "superseded", "coverage-alert", "frames-alert", ...Object.values(GROUP_JOBS).flat()].sort());
   });
 
   it("the classifier runs first on every event, on the checkout and a READ-ONLY token", () => {
@@ -740,8 +740,30 @@ describe("the workflow", () => {
     expect(alert).toMatch(/gh issue close "\$open"/);
     // No other job may write anything.
     const writes = [...yaml.matchAll(/^ {6}(\w[\w-]*): write$/gm)].map((m) => m[1]);
-    expect(writes).toEqual(["issues"]);
+    expect(writes).toEqual(["issues", "issues"]);
     expect(jobOf("checks")).not.toContain("coverage-alert");
+  });
+
+  // Owner 2026-11-02: the production build checks only the frames new since
+  // its last deployment and a canary (scripts/lib/frames-check-plan.mjs), so
+  // the FULL check runs every night — idle nights too — and a red one says so.
+  it("runs the full frames check every night, and its alert writes issues only and judges nothing", () => {
+    expect(TIERS.nightly.frames).toBe(true);
+    expect(TIERS.idle.frames).toBe(true);
+    expect(jobOf("frames")).toMatch(/^ {6}- run: node scripts\/frames-check\.mjs$/m);
+    expect(jobOf("frames")).not.toContain("--incremental");
+    const alert = jobOf("frames-alert");
+    expect(alert).toMatch(/^ {4}needs: \[changes, frames\]$/m);
+    expect(alert.match(/^ {4}if: .*$/gm)).toEqual([
+      "    if: ${{ !cancelled() && github.event_name != 'pull_request' && (needs.frames.result == 'failure' || needs.frames.result == 'success') }}",
+    ]);
+    expect(alert).toContain("\n    permissions:\n      issues: write\n    steps:\n");
+    expect(alert).toContain("RESULT: ${{ needs.frames.result }}");
+    expect(alert).not.toMatch(/uses:|secrets\.|continue-on-error/);
+    expect(alert).toContain(`title="CI: frames are missing from production's bucket"`);
+    expect(alert).toMatch(/gh issue create --title "\$title"/);
+    expect(alert).toMatch(/gh issue close "\$open"/);
+    expect(jobOf("checks")).not.toContain("frames-alert");
   });
 
   it("the notes job runs only on the classifier's yes, and runs the notes tests", () => {
@@ -818,14 +840,14 @@ describe("the gate, tier by tier", () => {
       coverage: "false",
       results: { changes: "success", static: "skipped", unit: "skipped", coverage: "skipped", docs: "skipped", ...off, frames: "success", warm: "success" },
     },
-    nightly: { coverage: "true", results: { changes: "success", static: "skipped", unit: "success", coverage: "success", docs: "skipped", ...off } },
-    idle: { coverage: "false", results: { changes: "success", static: "skipped", unit: "skipped", coverage: "skipped", docs: "skipped", ...off } },
+    nightly: { coverage: "true", results: { changes: "success", static: "skipped", unit: "success", coverage: "success", docs: "skipped", ...off, frames: "success" } },
+    idle: { coverage: "false", results: { changes: "success", static: "skipped", unit: "skipped", coverage: "skipped", docs: "skipped", ...off, frames: "success" } },
     draft: { coverage: "false", results: { changes: "success", static: "success", unit: "skipped", coverage: "skipped", docs: "success", ...off } },
     notes: { coverage: "false", results: { changes: "success", static: "skipped", unit: "skipped", coverage: "skipped", docs: "success", ...off } },
   };
   const tierOf = (shape: string) => shape.replace(/ \(.*\)$/, "");
   /** The jobs whose own check carries the verdict: they must RUN. */
-  const RAN: Record<string, string[]> = { full: ["frames", "e2e", "visual"], verified: ["frames"] };
+  const RAN: Record<string, string[]> = { full: ["frames", "e2e", "visual"], verified: ["frames"], nightly: ["frames"], idle: ["frames"] };
 
   // The gate's whole script, run as the runner runs it (bash -eo pipefail).
   // A cancelled DRAFT run passes as "superseded" — "Draft checks" stayed red

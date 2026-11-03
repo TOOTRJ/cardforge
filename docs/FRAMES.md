@@ -929,9 +929,20 @@ cards; a removal changes no case).
    Every object is checked against the manifest's full sha256 before upload.
 5. CI's **Frames published** check (`npm run frames:check`) turns green once
    production serves every manifest object. Then merge. The production build
-   runs the same check (`npm run build` with `--if-production`), so an
-   unpromoted manifest fails the Vercel production deploy and the previous
-   deployment keeps serving.
+   runs the same check (`npm run build` with `--if-production
+   --incremental`), so an unpromoted manifest fails the Vercel production
+   deploy and the previous deployment keeps serving. Since 2026-11-02 that
+   build looks up only the objects that are new or changed since the last
+   successful production deployment (`VERCEL_GIT_PREVIOUS_SHA`, which Vercel
+   sets only because `vercel.json` has an `ignoreCommand`:
+   `scripts/vercel-ignore-build.mjs`, the notes-only skip — a skipped
+   deployment is never the base, so the diff then reaches further back),
+   plus a canary of 200 of the rest that rotates per commit. Any
+   doubt (no previous SHA, a git error) is the full check, and
+   `FRAMES_CHECK_FULL=1` on the project forces it
+   (`scripts/lib/frames-check-plan.mjs`). CI runs the FULL check on every
+   merge and every night; a red one off a pull request opens one issue,
+   "CI: frames are missing from production's bucket".
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged, and the owner's
