@@ -42,7 +42,8 @@ export type Database = {
         Relationships: [];
       };
       /** 0162 (TODO CP1) — what the AI wrote, as the server received it (a
-       *  card_fill step's fields, a "Get ideas" batch). Service role only. */
+       *  card_fill job's fields, the cards a card / deck job designed, a
+       *  "Get ideas" batch). Service role only. */
       card_ai_receipts: {
         Row: {
           id: string;

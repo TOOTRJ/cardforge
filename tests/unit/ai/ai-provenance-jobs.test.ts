@@ -5,10 +5,14 @@ import printings from "../scryfall/fixtures/import-printings.json";
 // Every AI job marks what it made (TODO CP1, migration 0162) — through the
 // service role, never in the card action's payload (the pinned payloads in
 // job-payloads-pinned.test.ts stay main's):
-//   * the card / deck job: every text part of the card it wrote;
+//   * the card / deck job: every text part of the card it wrote — where the
+//     receipt the server kept when it DESIGNED the card holds the plan's
+//     text (a job row is owner-insertable, 0059: a forged plan marks
+//     nothing);
 //   * the deck remix: the name it gave the card (and its flavour);
-//   * the per-field fill: a RECEIPT of the fields it wrote, which a later
-//     creator save's claim is checked against (no card exists yet).
+//   * the per-field fill: a RECEIPT of the fields it wrote, kept when the
+//     server plans it, which a later creator save's claim is checked
+//     against (no card exists yet).
 // The pictures need no writer: the database derives them from the address
 // the AI art store gives them.
 // ---------------------------------------------------------------------------
@@ -53,12 +57,25 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
-    from: (table: string) => ({
-      insert: async (row: Record<string, unknown>) => {
-        if (table === "card_ai_receipts") s.receipts.push(row);
-        return { error: null };
-      },
-    }),
+    from: (table: string) => {
+      // verifiedAiClaims' read: select → eq → gte → order → limit, awaited.
+      const read = {
+        eq: () => read,
+        gte: () => read,
+        order: () => read,
+        limit: async () => ({
+          data: table === "card_ai_receipts" ? s.receipts.map((row) => ({ values: row.values })) : [],
+          error: null,
+        }),
+      };
+      return {
+        insert: async (row: Record<string, unknown>) => {
+          if (table === "card_ai_receipts") s.receipts.push(row);
+          return { error: null };
+        },
+        select: () => read,
+      };
+    },
     rpc: async (name: string, args: Record<string, unknown>) => {
       if (name === "claim_job_step") return { data: { job: s.job, step_key: s.stepKey }, error: null };
       if (name === "patch_job_step") return { data: s.job, error: null };
@@ -129,7 +146,7 @@ vi.mock("@/lib/cards/actions", () => ({
   updateCardAction: async () => ({ ok: true }),
 }));
 
-import { createCardFillJob, runNextJobStep } from "@/lib/ai/generation-jobs";
+import { createCardFillJob, createCardGenerationJob, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 
 const designed = (over: Record<string, unknown> = {}) => ({
@@ -163,8 +180,13 @@ beforeEach(() => {
   s.answers = [];
 });
 
+/** The receipt the server keeps when it designs a job's cards. */
+const jobReceipt = (...cards: Record<string, unknown>[]) =>
+  s.receipts.push({ owner_id: USER, source: "job", values: cards });
+
 describe("an AI job marks the card it wrote", () => {
   it("the single-card job: every text part the card has", async () => {
+    jobReceipt(designed());
     job("card", { card: designed(), style: null, frame_template: "m15", deck_id: null }, "card:0");
     expect((await runNextJobStep("job-1", "card:0")).ok).toBe(true);
     expect(s.marked).toEqual([
@@ -174,6 +196,7 @@ describe("an AI job marks the card it wrote", () => {
 
   it("the deck job: the same, a card with no flavour or stats without them", async () => {
     const card = designed({ title: "Riptide Calculus", cost: "{1}{U}", card_type: "instant", subtypes: [], color_identity: ["blue"], rules_text: "Draw a card.", flavor_text: null, power: null, toughness: null });
+    jobReceipt(designed(), card);
     job("deck", { deck_title: "Deck", strategy: "", theme: "", style: null, format: "standard", cards: [card], roles: ["noncreature"], quantities: [1] }, "card:0", { deck_id: "deck-1" });
     expect((await runNextJobStep("job-1", "card:0")).ok).toBe(true);
     expect(s.marked).toEqual([{ p_card_id: "card-1", p_owner_id: USER, p_fields: ["cost", "rules_text", "title", "type_line"] }]);
@@ -186,6 +209,31 @@ describe("an AI job marks the card it wrote", () => {
     expect((await runNextJobStep("job-1", "remix:0")).ok).toBe(true);
     expect(s.created).toHaveLength(1);
     expect(s.marked).toEqual([{ p_card_id: "card-1", p_owner_id: USER, p_fields: ["flavor_text", "title"] }]);
+  });
+
+  it("a FORGED plan (a job row its owner inserted) marks nothing the server didn't design", async () => {
+    // No receipt at all: the card is saved (the credit is the user's), unmarked.
+    job("card", { card: designed({ title: "My Own Words" }), style: null, frame_template: "m15", deck_id: null }, "card:0");
+    expect((await runNextJobStep("job-1", "card:0")).ok).toBe(true);
+    expect(s.created).toHaveLength(1);
+    expect(s.marked).toEqual([]);
+    // A real design, its rules rewritten in the row: every part but those.
+    jobReceipt(designed());
+    job("card", { card: designed({ rules_text: "Hand-written rules." }), style: null, frame_template: "m15", deck_id: null }, "card:0");
+    expect((await runNextJobStep("job-1", "card:0")).ok).toBe(true);
+    expect(s.marked).toEqual([
+      { p_card_id: "card-1", p_owner_id: USER, p_fields: ["cost", "flavor_text", "stats", "title", "type_line"] },
+    ]);
+  });
+
+  it("the card job keeps its receipt when the server designs it", async () => {
+    s.answers = [[designed()]];
+    const out = await createCardGenerationJob({ theme: "dragons" });
+    expect(out.ok).toBe(true);
+    expect(s.receipts).toHaveLength(1);
+    expect(s.receipts[0]).toMatchObject({ owner_id: USER, source: "job" });
+    const [value] = s.receipts[0]!.values as Record<string, unknown>[];
+    expect(value).toMatchObject({ title: "Emberwake Tyrant", rules_text: "Flying, haste", cost: "{3}{R}{R}" });
   });
 
   it("the card action's payload carries no provenance (the column is the server's)", async () => {
@@ -205,13 +253,14 @@ describe("the per-field fill keeps a receipt of what it wrote", () => {
       frame: undefined,
     });
     expect(out.ok).toBe(true);
+    // Kept when the server PLANS the fill — never from the row at step time.
+    const receipt = { owner_id: USER, source: "fill", values: [{ rules_text: "Flying, haste", flavor_text: "Its allies learned to fly behind it." }] };
+    expect(s.receipts).toEqual([receipt]);
     const row = s.inserted.at(-1)!;
     job("card_fill", row.plan as Record<string, unknown>, "fill:0");
     s.job.steps = row.steps as never;
     expect((await runNextJobStep("job-1", "fill:0")).ok).toBe(true);
-    expect(s.receipts).toEqual([
-      { owner_id: USER, source: "fill", values: [{ rules_text: "Flying, haste", flavor_text: "Its allies learned to fly behind it." }] },
-    ]);
+    expect(s.receipts).toEqual([receipt]);
     // A fill makes no card: nothing is marked until the creator saves.
     expect(s.marked).toEqual([]);
   });

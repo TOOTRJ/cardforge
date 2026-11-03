@@ -15,12 +15,15 @@ import {
 // through the service role — no API role may touch `cards.ai_fields`
 // (0162's guard) or `card_ai_receipts`.
 //
-//   * recordAiReceipt — what an AI fill or a "Get ideas" batch wrote, kept
-//     as the server received it, so a later save's claim can be checked.
+//   * recordAiReceipt — what an AI fill, a card / deck job's design or a
+//     "Get ideas" batch wrote, kept as the server received it WHEN IT
+//     PLANNED it (never read back from a job row's plan: 0059 lets the
+//     row's owner insert one), so a later claim can be checked.
 //   * verifiedAiClaims — the parts a creator's save CLAIMS (an AI fill or
-//     idea it applied, still exactly as written) that a receipt of the same
-//     owner from the last 30 days holds with the same text as the row being
-//     saved. A claim no receipt backs is dropped, never trusted.
+//     idea it applied, still exactly as written), or an AI job's step marks
+//     on the card it saves, that a receipt of the same owner from the last
+//     30 days holds with the same text. A claim no receipt backs is
+//     dropped, never trusted.
 //   * inheritedAiParts — a remix's parts that are still its parent's AI
 //     text (the parent's row is the proof: the server read it).
 //   * addCardAiFields — `add_card_ai_fields`: adds the parts, never removes.
@@ -46,7 +49,9 @@ function adminReady(): boolean {
 /** Postgres / PostgREST's answers for a database 0162 hasn't reached. */
 const MISSING = new Set(["PGRST202", "PGRST205", "42883", "42P01", "42703", "PGRST204"]);
 
-export type AiReceiptSource = "fill" | "idea";
+/** "fill": a card_fill job's fields; "job": the cards a card / deck job
+ *  designed; "idea": a "Get ideas" batch (0162's CHECK). */
+export type AiReceiptSource = "fill" | "idea" | "job";
 
 /** A fill or idea in row shape (title, cost, card_type, supertype,
  *  subtypes, rules_text, flavor_text, the stats, back_face). */

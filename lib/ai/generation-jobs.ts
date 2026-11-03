@@ -48,7 +48,7 @@ import {
   type FallbackArtInputs,
 } from "@/lib/ai/art-prompt-safety";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
-import { addCardAiFields, generatedCardParts, recordAiReceipt } from "@/lib/cards/ai-provenance-server";
+import { addCardAiFields, generatedCardParts, recordAiReceipt, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import {
   logAiCall,
   type AiActionLabel,
@@ -713,8 +713,12 @@ async function runGeneratedCardStep(
       forcedPrivate = result.forcedPrivate;
       // The card AI wrote whole (TODO CP1, migration 0162): every text part
       // it has is the AI's — until the maker rewrites one. Its picture is
-      // marked by the database when the paint below attaches it.
-      await addCardAiFields(cardId, userId, generatedCardParts(payload));
+      // marked by the database when the paint below attaches it. The plan
+      // is read from a job row its OWNER may insert (0059), so a part is
+      // marked only where the receipt the server kept when it designed the
+      // card (createCardGenerationJob / createDeckGenerationJob) holds the
+      // plan's text.
+      await addCardAiFields(cardId, userId, await verifiedAiClaims(userId, generatedCardParts(payload), card));
       await config.afterCreate?.(cardId);
     }
 
@@ -1059,6 +1063,10 @@ export async function createCardGenerationJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // What the AI designed, as the server has it (TODO CP1, migration 0162):
+  // the step marks the card it saves only where this receipt holds the
+  // plan's text — the job row is owner-insertable (0059).
+  await recordAiReceipt(user.id, "job", [card]);
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
@@ -1395,6 +1403,12 @@ async function insertFillJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // What the AI wrote, kept as the server has it (TODO CP1, migration
+  // 0162): a save that still holds this text may say AI wrote it. Only the
+  // generated fields — the pinned ones are the maker's. Kept HERE, from the
+  // plan the server just made — never at step time from the row's plan,
+  // which its owner may insert (0059).
+  await recordAiReceipt(userId, "fill", [plan.fields]);
   return { ok: true, job: jobRow as unknown as GenerationJobRow };
 }
 
@@ -1878,10 +1892,9 @@ async function runCardFillStep(
         fill.back_face = { ...fill.back_face, art_url: persisted.publicUrl };
       }
     }
-    // What the AI wrote, kept as the server has it (TODO CP1, migration
-    // 0162): a save that still holds this text may say AI wrote it. Only the
-    // generated fields — the pinned ones are the maker's.
-    await recordAiReceipt(userId, "fill", [plan.fields]);
+    // (The receipt of what the AI wrote was kept when the server planned
+    // the fill — insertFillJob — never from this row's plan, which its
+    // owner may insert: migration 0162.)
     return {
       ...step,
       status: "done",
@@ -2078,6 +2091,10 @@ export async function createDeckGenerationJob(
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
+  // The cards the AI designed, as the server has them (TODO CP1, migration
+  // 0162): each step marks the card it saves only where this receipt holds
+  // the plan's text — the job row is owner-insertable (0059).
+  await recordAiReceipt(user.id, "job", planResult.cards);
   return {
     ok: true,
     job: jobRow as unknown as GenerationJobRow,

@@ -1393,7 +1393,9 @@ Rules and gotchas:
   database keeps it honest (`cards_track_ai_fields`): an API role never
   writes the list (insert naming a part / update changing it →
   insufficient_privilege), an API role's edit that CHANGES a part's columns
-  drops that part (never guessed from text), and the ART parts are derived
+  drops that part (never guessed from text; the rules part is `rules_text`
+  AND `face_content`; `printed_types`' NULL and "" are two values), and the
+  ART parts are derived
   on every write from the picture's address — only `persistGeneratedArt`
   names a `card-art/<user>/ai-…` object (a remix copy keeps the prefix,
   `remix-media.ts`); never give another writer that prefix. Text parts are
@@ -1402,10 +1404,13 @@ Rules and gotchas:
   (never in the card action's payload — the pinned payloads stay main's), and
   the card actions for the creator's CLAIMS (`ai_fields` on the payload, sent
   only when non-empty: the parts an AI fill / idea wrote that the field still
-  holds) kept only where a server-written `card_ai_receipts` row (the fill
-  step, every ideas batch) holds the same text; a remix inherits its
-  parent's unchanged AI parts. A new AI path that writes card text records a
-  receipt or marks its card; page data only — no renderer or bake reads it.
+  holds), each kept only where a server-written `card_ai_receipts` row holds
+  the same text — written when the SERVER plans it (the fill job, the card /
+  deck job's design, every ideas batch), never from a job row's `plan`,
+  which its owner may insert (0059); a remix inherits its parent's unchanged
+  AI parts (a deck remix's names are made in its step). A new AI path that
+  writes card text records a receipt at plan time or marks its card from
+  server-held output; page data only — no renderer or bake reads it.
 - Flavour's upright words (layout v71): a balanced `*…*` pair on one line of
   FLAVOUR text is Scryfall's markup for words the print sets ROMAN inside the
   italic — stored as typed (no migration), read ONLY through
