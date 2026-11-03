@@ -39,6 +39,9 @@ const ACTION_LABELS: Record<string, string> = {
   deck_import: "Deck import (runs)",
   // One row per commit that re-fetched its printings (migration 0143).
   deck_import_commit: "Deck import commits",
+  // A deck page view whose tokens lookup reached Scryfall (0164) — signed-in
+  // viewers only (anonymous views can't be logged), never refused.
+  deck_tokens: "Deck page tokens",
 };
 
 function StatTile({

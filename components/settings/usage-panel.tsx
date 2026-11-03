@@ -39,6 +39,7 @@ const SCRYFALL_ACTION_LABEL: Record<ScryfallAction, string> = {
   import_art: "Art import",
   deck_import: "Deck import",
   deck_import_commit: "Deck import (saving)",
+  deck_tokens: "Deck tokens",
 };
 
 export async function UsagePanel() {

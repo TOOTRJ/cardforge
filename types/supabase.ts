@@ -2535,7 +2535,7 @@ export type Database = {
       };
       // Migration 0164 (TODO DK5.16) — clone a deck, its credit, similar decks.
       clone_deck: {
-        Args: { p_source_deck_id: string; p_title: string; p_slug: string };
+        Args: { p_source_deck_id: string; p_title: string; p_slug: string; p_masked_entry_ids?: string[] };
         Returns: Json;
       };
       deck_remix_credit: {

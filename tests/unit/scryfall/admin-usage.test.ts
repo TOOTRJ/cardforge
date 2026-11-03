@@ -65,10 +65,10 @@ describe("getScryfallAdminUsageSnapshot", () => {
     mocks.isAdminConfigured.mockReturnValue(true);
 
     // (minute, day) × search / named / import_art / deck_import /
-    // deck_import_commit — deck_import used to be missing from these figures
-    // while the 30-day total included it; the commit's own action (0143)
-    // joins them.
-    const counts = [2, 10, 1, 5, 0, 3, 1, 4, 2, 6];
+    // deck_import_commit / deck_tokens — deck_import used to be missing from
+    // these figures while the 30-day total included it; the commit's own
+    // action (0143) and the deck page's tokens lookup (0164) join them.
+    const counts = [2, 10, 1, 5, 0, 3, 1, 4, 2, 6, 1, 2];
     let call = 0;
     mocks.createAdminClient.mockReturnValue({
       rpc: (name: string) => {
@@ -97,9 +97,10 @@ describe("getScryfallAdminUsageSnapshot", () => {
       { action: "import_art", minute: 0, today: 3 },
       { action: "deck_import", minute: 1, today: 4 },
       { action: "deck_import_commit", minute: 2, today: 6 },
+      { action: "deck_tokens", minute: 1, today: 2 },
     ]);
-    expect(snapshot?.todayTotal).toBe(28);
-    expect(snapshot?.minuteTotal).toBe(6);
+    expect(snapshot?.todayTotal).toBe(30);
+    expect(snapshot?.minuteTotal).toBe(7);
     expect(snapshot?.daily).toHaveLength(2);
     // bigint counts can arrive as strings — coerced to numbers.
     expect(snapshot?.topUsers).toEqual([

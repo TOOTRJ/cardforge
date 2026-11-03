@@ -1,4 +1,6 @@
 import { slugify } from "@/lib/validation/card";
+import { bringsCard } from "@/lib/decks/entry-status";
+import { hidesEntryName } from "@/lib/decks/private-card-name";
 
 // ---------------------------------------------------------------------------
 // Clone a deck (TODO DK5.16) — the pure half of cloneDeckAction
@@ -7,8 +9,60 @@ import { slugify } from "@/lib/validation/card";
 // along is migration 0164's clone_deck(): the caller's own cards and public
 // ones keep their link, a printing keeps its printing, an entry with no
 // printing whose card can't come along is left out — never a private card's
-// name — ≤ 500 rows, no card made (saved-card capacity untouched).
+// name — ≤ 500 rows, no card made (saved-card capacity untouched). A kept
+// printing whose name or type line the source page masks for the caller
+// (strong language, publicDeckItems) is copied as "Private card": the app
+// names those entries (`maskedCloneEntryIds`) — SQL can't run the detector.
 // ---------------------------------------------------------------------------
+
+type CloneEntryLike = {
+  card_id: string | null;
+  scryfall_id?: string | null;
+  source?: string | null;
+};
+
+/** clone_deck()'s rule for one entry, as the page reads it (`card` is what
+ *  the viewer's read handed back — null for a card they can't read): a
+ *  printing, a card that comes along, or a plain line (no card, a source
+ *  that brings none). */
+export function entryComesAlong(entry: CloneEntryLike, card: unknown): boolean {
+  if (entry.scryfall_id) return true;
+  if (entry.card_id) return Boolean(card);
+  return !bringsCard(entry.source);
+}
+
+/** How many of the page's entries a copy would hold — "Copy deck" is
+ *  offered only above 0 (never an empty copy). */
+export function cloneableEntryCount(items: ReadonlyArray<{ entry: CloneEntryLike; card: unknown }>): number {
+  return items.filter((item) => entryComesAlong(item.entry, item.card)).length;
+}
+
+export type CloneSourceRow = CloneEntryLike & { id: string; name: string; type_line?: string | null };
+export type CloneSourceCard = { id: string; owner_id: string; visibility: string };
+
+/** The source's entries the copy writes as "Private card" for this caller:
+ *  a kept printing whose card can't come along (another user's card that
+ *  isn't public, or one the caller can't read) and whose name or type line
+ *  holds strong language — exactly what publicDeckItems masks for them. The
+ *  deck's owner sees every stored name (none). `cards`: the linked cards
+ *  the caller's read handed back. */
+export function maskedCloneEntryIds(
+  rows: readonly CloneSourceRow[],
+  cards: readonly CloneSourceCard[],
+  callerId: string,
+  deckOwnerId: string,
+): string[] {
+  if (callerId === deckOwnerId) return [];
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  return rows
+    .filter((row) => {
+      if (!row.scryfall_id || !row.card_id) return false;
+      const card = byId.get(row.card_id);
+      const comesAlong = Boolean(card && (card.visibility === "public" || card.owner_id === callerId));
+      return !comesAlong && hidesEntryName(row, null, false);
+    })
+    .map((row) => row.id);
+}
 
 /** What a copy's title ends in. */
 export const CLONE_TITLE_SUFFIX = " (remix)";
@@ -53,9 +107,13 @@ export function cloneErrorMessage(error: { code?: string | null; message?: strin
   return "The deck couldn't be copied. Please try again.";
 }
 
-/** What the maker is told once the copy exists. */
+/** What the maker is told once the copy exists. Both counts are ENTRIES
+ *  (deck lines — one may be several copies of a card), and an entry is left
+ *  out only for clone_deck()'s reasons: its card is someone else's private
+ *  or unlisted card, or it is no longer available. */
 export function cloneNotice(result: Pick<CloneResult, "copied" | "skipped">): string {
-  const copied = `${result.copied} entr${result.copied === 1 ? "y" : "ies"} copied`;
+  const entries = (n: number) => `${n} entr${n === 1 ? "y" : "ies"}`;
+  const copied = `${entries(result.copied)} copied`;
   if (result.skipped === 0) return `${copied}. Your copy is private until you publish it.`;
-  return `${copied}; ${result.skipped} card${result.skipped === 1 ? " was" : "s were"} left out (private or no longer available). Your copy is private until you publish it.`;
+  return `${copied}; ${entries(result.skipped)} left out (someone else's private or unlisted card, or no longer available). Your copy is private until you publish it.`;
 }

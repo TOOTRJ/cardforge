@@ -11,7 +11,7 @@
 --    deck's link. No API role reads or writes the table: clone_deck() writes
 --    it, deck_remix_credit() reads it.
 --
--- 2. CLONE. clone_deck(source, title, slug) — the caller's copy of a deck
+-- 2. CLONE. clone_deck(source, title, slug, masked) — the caller's copy of a deck
 --    they may open (public; unlisted, by its id — its link; or their own),
 --    in ONE transaction: a PRIVATE deck (the cloner publishes it when it is
 --    theirs) with the source's format, type and bracket — never its
@@ -27,7 +27,16 @@
 --        left and its source says it came with one — deck_entry_hidden's
 --        rule), is SKIPPED: never a name, cost or colour of a card the
 --        caller can't read;
---      * a plain line (no card, no printing, a non-card source) is copied.
+--      * a plain line (no card, no printing, a non-card source) is copied;
+--      * a kept printing whose card can't come along is copied as the
+--        source's page shows it to the caller: the entries in `masked`
+--        (the app's strong-language rule — ONE detector,
+--        lib/moderation/profanity.ts, which SQL can't run — the same rows
+--        publicDeckItems masks for this viewer) as "Private card" with no
+--        type line, never their stored name or type line. Display only:
+--        0152 hides no printing row, so this is the page's rule carried
+--        into the copy, and a caller who passes fewer ids masks less of
+--        THEIR OWN copy of text the API reads them already.
 --    Each copied row keeps its board, quantity, order, printing fields,
 --    cover pick and source (descriptive, 0144). The entry cap holds: more
 --    than 500 rows to copy refuses the clone (deck_entry_limit, as
@@ -38,6 +47,9 @@
 --    DEFINER (it writes the lineage), so it states every rule itself: the
 --    caller signed in, the source readable by them, the link rule above.
 --    Returns { deckId, slug, copied, skipped }.
+--
+--    The LINEAGE row is written only for another owner's deck: a
+--    "Duplicate" of the caller's own deck is credited to nobody.
 --
 -- 3. NOTIFICATION. 'deck_cloned' joins the type CHECK (0161's list + it,
 --    nothing dropped): the source's owner hears ONCE per cloner and deck
@@ -59,16 +71,33 @@
 --    lib/decks/similar-decks.ts, held to this by a test). Cards are matched
 --    only by what every visitor reads: a printing by its real card's name,
 --    a PUBLIC PipGlyph card by its id — never a hidden entry; basic lands,
---    the sideboard and the maybeboard don't count. Ranked by a shared
+--    the sideboard and the maybeboard don't count, and neither does a
+--    STAPLE: a card in more than 10 % of the public non-empty decks AND in
+--    more than 20 of them (SIMILAR_DECKS_STAPLE_SHARE /
+--    SIMILAR_DECKS_STAPLE_MIN_DECKS — the floor keeps a small catalogue
+--    from calling every card a staple), so Sol Ring and Command Tower alone
+--    never make two decks "similar" (a shared COMMANDER still does). The
+--    "same commander or ≥ 4 shared" filter runs BEFORE any colour is read:
+--    only that shortlist's colours are computed. A deck's colours are its
+--    entries' letters, an entry with none (a card added from the creator:
+--    deck_cards.color_identity is '{}') falling back to its PUBLIC card's
+--    own colours (cards.color_identity words → letters; its frame colour,
+--    so a gold or colourless frame adds none). Ranked by a shared
 --    commander, then shared cards, then likes. SECURITY DEFINER (one join,
 --    not 0152's policy per row), so every filter is stated here; it reads
 --    nothing of a deck that isn't public. Cookie-free callers (the page's
---    public client). A partial expression index makes the name match an
---    index lookup.
+--    public client, cached an hour: listSimilarDecks). A partial
+--    expression index makes the name match an index lookup.
+--
+-- 6. SCRYFALL LOG. scryfall_calls' CHECK (0143's list + 'deck_tokens',
+--    nothing dropped): a deck page view whose "Tokens & emblems" lookup
+--    reached Scryfall is logged on the signed-in viewer
+--    (lib/scryfall/rate-limit.ts — logged, never checked). Its grants and
+--    RLS are 0013's / 0097's.
 --
 -- Grants (new projects auto-grant nothing — CLAUDE.md): the table is the
 -- service role's alone (revoked from public, anon, authenticated);
--- clone_deck() is authenticated's and the service role's; deck_remix_credit()
+-- clone_deck(uuid, text, text, uuid[]) is authenticated's and the service role's; deck_remix_credit()
 -- and list_similar_decks() are anon's, authenticated's and the service
 -- role's (PUBLIC revoked). No other grant changes.
 --
@@ -124,7 +153,16 @@ create unique index if not exists notifications_deck_cloned_once_idx
 -- 2. clone_deck
 -- ===========================================================================
 
-create or replace function public.clone_deck(p_source_deck_id uuid, p_title text, p_slug text)
+-- A draft of this file shipped a three-argument clone_deck on preview
+-- branches; the four-argument one replaces it.
+drop function if exists public.clone_deck(uuid, text, text);
+
+create or replace function public.clone_deck(
+  p_source_deck_id uuid,
+  p_title text,
+  p_slug text,
+  p_masked_entry_ids uuid[] default '{}'::uuid[]
+)
 returns jsonb
 language plpgsql
 volatile
@@ -141,6 +179,7 @@ declare
   v_to_copy integer := 0;
   v_skipped integer := 0;
   v_copied integer := 0;
+  v_masked uuid[] := coalesce(p_masked_entry_ids, '{}'::uuid[]);
 begin
   if v_caller is null then
     raise exception 'not_authenticated: sign in to copy a deck'
@@ -216,14 +255,22 @@ begin
   )
   select v_new_id, s.board, s.quantity,
          (row_number() over (order by s.position, s.created_at, s.id) - 1)::integer,
-         s.scryfall_id, s.name, s.set_code, s.collector_number, s.type_line,
+         s.scryfall_id,
+         -- A kept printing whose card can't come along, masked for this
+         -- caller (strong language): as the page shows it to them.
+         case when s.masked then 'Private card' else s.name end,
+         s.set_code, s.collector_number,
+         case when s.masked then null else s.type_line end,
          s.mana_cost, s.mana_value, coalesce(s.color_identity, '{}'::text[]),
          s.rarity, s.image_url,
          case when s.keep_card then s.card_id end,
          s.source, s.featured_rank
   from (
     select e.*,
-           (c.id is not null and (c.visibility = 'public' or c.owner_id = v_caller)) as keep_card
+           (c.id is not null and (c.visibility = 'public' or c.owner_id = v_caller)) as keep_card,
+           (e.card_id is not null
+            and not (c.id is not null and (c.visibility = 'public' or c.owner_id = v_caller))
+            and e.id = any(v_masked)) as masked
     from public.deck_cards e
     left join public.cards c on c.id = e.card_id
     where e.deck_id = v_source.id
@@ -234,11 +281,13 @@ begin
          and coalesce(s.source not in ('creator', 'link', 'ai_generate', 'ai_remix'), true));
   get diagnostics v_copied = row_count;
 
-  insert into public.deck_remix_sources (deck_id, source_deck_id, source_owner_id)
-  values (v_new_id, v_source.id, v_source.owner_id);
-
-  -- The source's owner hears once per cloner and deck; never for their own.
+  -- Another owner's deck: the lineage ("Remixed from …") and the source's
+  -- owner hears once per cloner and deck. A duplicate of the caller's own
+  -- deck is neither (no credit to themselves, no notice).
   if v_source.owner_id <> v_caller then
+    insert into public.deck_remix_sources (deck_id, source_deck_id, source_owner_id)
+    values (v_new_id, v_source.id, v_source.owner_id);
+
     begin
       insert into public.notifications (recipient_id, actor_id, type, payload)
       values (
@@ -261,11 +310,11 @@ begin
 end;
 $$;
 
-comment on function public.clone_deck(uuid, text, text) is
-  'The caller''s PRIVATE copy of a deck they may open (public, unlisted by its id, or their own), with lineage and the source owner''s deck_cloned notice (0164, TODO DK5.16). A card the copy may not link is dropped; an entry with no printing whose card can''t come along is skipped; ≤ 500 rows.';
+comment on function public.clone_deck(uuid, text, text, uuid[]) is
+  'The caller''s PRIVATE copy of a deck they may open (public, unlisted by its id, or their own), with lineage and the source owner''s deck_cloned notice for another owner''s deck (0164, TODO DK5.16). A card the copy may not link is dropped; an entry with no printing whose card can''t come along is skipped; a kept printing the app masks for the caller is copied as "Private card"; ≤ 500 rows.';
 
-revoke all on function public.clone_deck(uuid, text, text) from public, anon;
-grant execute on function public.clone_deck(uuid, text, text) to authenticated, service_role;
+revoke all on function public.clone_deck(uuid, text, text, uuid[]) from public, anon;
+grant execute on function public.clone_deck(uuid, text, text, uuid[]) to authenticated, service_role;
 
 -- ===========================================================================
 -- 4. deck_remix_credit
@@ -353,31 +402,68 @@ as $$
      and e.card_id = k.card_key
     where e.board in ('main', 'commander') and e.quantity > 0
   ),
-  candidates as (
-    select h.deck_id, count(distinct h.card) as shared, bool_or(h.same_commander) as same_commander
+  -- Only public, non-empty decks are ever counted or listed.
+  public_hits as (
+    select h.deck_id, h.card, h.same_commander
     from hits h
     join public.decks d on d.id = h.deck_id
-    where d.id <> p_deck_id
-      and d.visibility = 'public'
-      and d.card_count > 0
-      and public.owner_is_creator(d.owner_id)
+    where d.visibility = 'public' and d.card_count > 0
+  ),
+  -- A staple: in more than 10 % of the public non-empty decks and in more
+  -- than 20 of them. It never counts as a shared card.
+  staples as (
+    select ph.card
+    from public_hits ph
+    cross join (
+      select count(*) as n from public.decks where visibility = 'public' and card_count > 0
+    ) t
+    group by ph.card, t.n
+    having count(distinct ph.deck_id) > greatest(20, t.n * 0.10)
+  ),
+  candidates as (
+    select h.deck_id,
+           count(distinct h.card) filter (where h.card not in (select card from staples)) as shared,
+           bool_or(h.same_commander) as same_commander
+    from public_hits h
+    where h.deck_id <> p_deck_id
     group by h.deck_id
   ),
-  -- Colour identity: the letters of the entries every visitor reads.
+  -- The "same commander or ≥ 4 shared" filter BEFORE any colour is read;
+  -- real creators only (owner_is_creator, once per shortlisted deck).
+  shortlist as (
+    select m.deck_id, m.shared, m.same_commander
+    from candidates m
+    join public.decks d on d.id = m.deck_id
+    where (m.same_commander or m.shared >= 4)
+      and public.owner_is_creator(d.owner_id)
+  ),
+  -- Colour identity: the letters of the entries every visitor reads; an
+  -- entry with none (a card added from the creator) takes its PUBLIC
+  -- card's own colours.
   colours as (
     select e.deck_id,
            coalesce(array_agg(distinct x order by x) filter (where x is not null), '{}'::text[]) as letters
     from public.deck_cards e
     left join public.cards c on c.id = e.card_id
-    left join lateral unnest(e.color_identity) as x on true
-    where e.deck_id in (select deck_id from candidates union all select id from source)
+    left join lateral unnest(
+      case
+        when cardinality(coalesce(e.color_identity, '{}'::text[])) > 0 then e.color_identity
+        when c.id is not null and c.visibility = 'public' then array(
+          select case w when 'white' then 'W' when 'blue' then 'U' when 'black' then 'B'
+                        when 'red' then 'R' when 'green' then 'G' end
+          from unnest(c.color_identity) as w
+        )
+        else '{}'::text[]
+      end
+    ) as x on true
+    where e.deck_id in (select deck_id from shortlist union all select id from source)
       and e.board in ('main', 'commander')
       and e.quantity > 0
       and (e.scryfall_id is not null or (c.id is not null and c.visibility = 'public'))
     group by e.deck_id
   )
   select d.*
-  from candidates m
+  from shortlist m
   join public.decks d on d.id = m.deck_id
   left join colours cc on cc.deck_id = m.deck_id
   left join colours sc on sc.deck_id = p_deck_id
@@ -388,7 +474,18 @@ as $$
 $$;
 
 comment on function public.list_similar_decks(uuid, integer) is
-  'Public decks like a PUBLIC deck (0164, TODO DK5.16): real creators'' public non-empty decks sharing its commander, or its colour identity and ≥ 4 cards (printings by name, public PipGlyph cards by id; no basics, no side boards). Nothing for a deck that isn''t public.';
+  'Public decks like a PUBLIC deck (0164, TODO DK5.16): real creators'' public non-empty decks sharing its commander, or its colour identity and ≥ 4 cards (printings by name, public PipGlyph cards by id; no basics, no side boards, no staple — a card in > 10 % and > 20 of the public decks). Nothing for a deck that isn''t public.';
 
 revoke all on function public.list_similar_decks(uuid, integer) from public;
 grant execute on function public.list_similar_decks(uuid, integer) to anon, authenticated, service_role;
+
+-- ===========================================================================
+-- 6. scryfall_calls: the deck page's tokens lookup
+-- ===========================================================================
+
+alter table public.scryfall_calls
+  drop constraint if exists scryfall_calls_action_check;
+
+alter table public.scryfall_calls
+  add constraint scryfall_calls_action_check
+  check (action in ('search', 'named', 'import_art', 'deck_import', 'deck_import_commit', 'deck_tokens'));

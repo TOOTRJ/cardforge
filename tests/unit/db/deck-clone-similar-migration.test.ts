@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SIMILAR_DECKS_MIN_SHARED } from "@/lib/decks/similar-decks";
+import {
+  SIMILAR_DECKS_MIN_SHARED,
+  SIMILAR_DECKS_STAPLE_MIN_DECKS,
+  SIMILAR_DECKS_STAPLE_SHARE,
+} from "@/lib/decks/similar-decks";
+import { SCRYFALL_LIMITS } from "@/lib/scryfall/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Migration 0164 (TODO DK5.16): clone a deck with "remixed from" credit, and
@@ -59,8 +64,10 @@ describe("clone_deck — the deck rules", () => {
     expect(body).toContain("v_caller uuid := auth.uid();");
     expect(body).toContain("if v_caller is null then");
     expect(body).toContain("d.visibility in ('public', 'unlisted') or d.owner_id = v_caller");
-    expect(flat).toContain("revoke all on function public.clone_deck(uuid, text, text) from public, anon;");
-    expect(flat).toContain("grant execute on function public.clone_deck(uuid, text, text) to authenticated, service_role;");
+    expect(flat).toContain("revoke all on function public.clone_deck(uuid, text, text, uuid[]) from public, anon;");
+    expect(flat).toContain("grant execute on function public.clone_deck(uuid, text, text, uuid[]) to authenticated, service_role;");
+    // The draft's three-argument function never survives beside it.
+    expect(flat).toContain("drop function if exists public.clone_deck(uuid, text, text);");
   });
 
   it("links a card only where the copy may: the caller's own or a public card", () => {
@@ -76,6 +83,15 @@ describe("clone_deck — the deck rules", () => {
     expect(body).toContain(
       "e.scryfall_id is not null or (c.id is not null and (c.visibility = 'public' or c.owner_id = v_caller)) or (e.card_id is null and coalesce(e.source not in ('creator', 'link', 'ai_generate', 'ai_remix'), true))",
     );
+  });
+
+  it("copies a kept printing the app masks for the caller as the page shows it — only where its card can't come along", () => {
+    expect(body).toContain("v_masked uuid[] := coalesce(p_masked_entry_ids, '{}'::uuid[]);");
+    expect(body).toContain(
+      "(e.card_id is not null and not (c.id is not null and (c.visibility = 'public' or c.owner_id = v_caller)) and e.id = any(v_masked)) as masked",
+    );
+    expect(body).toContain("case when s.masked then 'Private card' else s.name end");
+    expect(body).toContain("case when s.masked then null else s.type_line end");
   });
 
   it("holds the 500-entry cap before writing anything", () => {
@@ -98,6 +114,11 @@ describe("clone_deck — the deck rules", () => {
   it("writes the lineage and notifies the source's owner once per cloner and deck, never themselves, never failing the clone", () => {
     expect(body).toContain("insert into public.deck_remix_sources (deck_id, source_deck_id, source_owner_id)");
     expect(body).toContain("if v_source.owner_id <> v_caller then");
+    // A duplicate of the caller's own deck is credited to nobody: the
+    // lineage row sits inside the other-owner branch.
+    const branch = body.indexOf("if v_source.owner_id <> v_caller then");
+    expect(body.indexOf("insert into public.deck_remix_sources")).toBeGreaterThan(branch);
+    expect(body.match(/insert into public\.deck_remix_sources/g)).toHaveLength(1);
     expect(body).toContain("on conflict (actor_id, (payload ->> 'deckId')) where type = 'deck_cloned' do nothing;");
     expect(body).toContain("exception when others then raise warning");
     expect(flat).toContain(
@@ -148,7 +169,30 @@ describe("list_similar_decks — public decks only, by what every visitor reads"
     expect(body).toContain("where d.id = p_deck_id and d.visibility = 'public' and d.card_count > 0");
   });
   it("lists only other public, non-empty decks of real creators", () => {
-    expect(body).toContain("where d.id <> p_deck_id and d.visibility = 'public' and d.card_count > 0 and public.owner_is_creator(d.owner_id)");
+    expect(body).toContain("join public.decks d on d.id = h.deck_id where d.visibility = 'public' and d.card_count > 0");
+    expect(body).toContain("where h.deck_id <> p_deck_id");
+    expect(body).toContain("and public.owner_is_creator(d.owner_id)");
+    expect(body).toContain("from shortlist m join public.decks d on d.id = m.deck_id");
+  });
+  it("applies the commander / shared filter BEFORE any colour is read", () => {
+    expect(body).toContain(`where (m.same_commander or m.shared >= ${SIMILAR_DECKS_MIN_SHARED})`);
+    expect(body).toContain("where e.deck_id in (select deck_id from shortlist union all select id from source)");
+    expect(body.indexOf("shortlist as (")).toBeLessThan(body.indexOf("colours as ("));
+  });
+  it("never counts a staple — more than SIMILAR_DECKS_STAPLE_SHARE and SIMILAR_DECKS_STAPLE_MIN_DECKS of the public decks", () => {
+    expect(SIMILAR_DECKS_STAPLE_SHARE).toBe(0.1);
+    expect(body).toContain(
+      `having count(distinct ph.deck_id) > greatest(${SIMILAR_DECKS_STAPLE_MIN_DECKS}, t.n * ${SIMILAR_DECKS_STAPLE_SHARE.toFixed(2)})`,
+    );
+    expect(body).toContain("select count(*) as n from public.decks where visibility = 'public' and card_count > 0");
+    expect(body).toContain("count(distinct h.card) filter (where h.card not in (select card from staples)) as shared");
+    // A shared commander still counts, staple or not.
+    expect(body).toContain("bool_or(h.same_commander) as same_commander");
+  });
+  it("an entry with no letters (a card added from the creator) takes its PUBLIC card's colours", () => {
+    expect(body).toContain("when cardinality(coalesce(e.color_identity, '{}'::text[])) > 0 then e.color_identity");
+    expect(body).toContain("when c.id is not null and c.visibility = 'public' then array(");
+    expect(body).toContain("when 'white' then 'W' when 'blue' then 'U' when 'black' then 'B' when 'red' then 'R' when 'green' then 'G'");
   });
   it("matches a printing by its real card's name and a PipGlyph card only while public — never a hidden entry", () => {
     expect(body).toContain("(e.scryfall_id is not null or (c.id is not null and c.visibility = 'public'))");
@@ -180,4 +224,25 @@ describe("every function is SECURITY DEFINER with an empty search_path", () => {
       expect(head).toMatch(/set search_path = ''/);
     });
   }
+});
+
+describe("scryfall_calls: the deck page's tokens lookup is logged", () => {
+  const actions = (sql: string) => {
+    const all = [...sql.matchAll(/add constraint scryfall_calls_action_check\s+check \(action in \(([^)]*)\)\)/g)];
+    return [...(all.at(-1)?.[1] ?? "").matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  };
+  it("is 0143's list (the last to redefine it) plus deck_tokens — nothing dropped", () => {
+    const before = actions(strip(readFileSync(join(dir, "0143_deck_counts_and_counter_guards.sql"), "utf8")));
+    expect(before).toContain("deck_import_commit");
+    expect(actions(SQL)).toEqual([...before, "deck_tokens"]);
+  });
+  it("no migration between 0143 and this one redefined it", () => {
+    for (const f of readdirSync(dir).filter((name) => /^\d{4}_/.test(name))) {
+      const n = Number(f.slice(0, 4));
+      if (n > 143 && f !== FILE) expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("scryfall_calls_action_check");
+    }
+  });
+  it("names exactly the app's actions (lib/scryfall/rate-limit.ts)", () => {
+    expect(actions(SQL).sort()).toEqual(Object.keys(SCRYFALL_LIMITS).sort());
+  });
 });

@@ -77,6 +77,7 @@ import { DeckRemixCreditSlot } from "@/components/decks/deck-remix-credit";
 import { DeckTokensSection } from "@/components/decks/deck-tokens-section";
 import { SimilarDecksRow } from "@/components/decks/similar-decks-row";
 import { getDeckRemixCredit } from "@/lib/decks/remix-credit";
+import { cloneableEntryCount } from "@/lib/decks/clone";
 
 // ---------------------------------------------------------------------------
 // The deck page (TODO DK5.1) — ONE URL, read-only for visitors, the owner's
@@ -259,6 +260,8 @@ export default async function DeckDetailPage({
   const deckType = deckTypeByKey(deck.deck_type);
   const bracket = deck.format === "commander" ? commanderBracket(deck.bracket) : null;
   const hasCards = items.length > 0;
+  // "Copy deck" only when the copy would hold an entry (TODO DK5.16).
+  const canCopy = cloneableEntryCount(items) > 0;
   const usesCommander = formatHasCommander(deck.format);
   const hasMainboard = items.some((item) => item.entry.board === "main" && item.entry.quantity > 0);
 
@@ -446,8 +449,9 @@ export default async function DeckDetailPage({
               />
             ) : null}
             {exportMenu}
-            {/* Copy deck (TODO DK5.16): the viewer's private copy. */}
-            {hasCards ? (
+            {/* Copy deck (TODO DK5.16): the viewer's private copy — never
+                offered when it would be empty. */}
+            {canCopy ? (
               <CloneDeckButton
                 deckId={deck.id}
                 deckSlug={deck.slug}
@@ -594,7 +598,7 @@ export default async function DeckDetailPage({
           display only, never entries. Streams in (Scryfall, cached). */}
       {hasCards ? (
         <Suspense fallback={null}>
-          <DeckTokensSection items={shownItems} />
+          <DeckTokensSection items={shownItems} viewerId={user?.id ?? null} />
         </Suspense>
       ) : null}
 

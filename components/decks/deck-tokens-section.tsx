@@ -12,8 +12,15 @@ import { TOKEN_TEXT_NOTE, type DeckToken, type TokenSourceItem } from "@/lib/dec
 
 export const DECK_TOKENS_HEADING_ID = "deck-tokens-title";
 
-export async function DeckTokensSection({ items }: { items: readonly TokenSourceItem[] }) {
-  const { tokens, realCardsFailed } = await listDeckTokens(items);
+export async function DeckTokensSection({
+  items,
+  viewerId = null,
+}: {
+  items: readonly TokenSourceItem[];
+  /** The signed-in viewer (a lookup their view made is logged), else null. */
+  viewerId?: string | null;
+}) {
+  const { tokens, realCardsFailed } = await listDeckTokens(items, { viewerId });
   return <DeckTokensList tokens={tokens} realCardsFailed={realCardsFailed} />;
 }
 

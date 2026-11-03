@@ -93,7 +93,7 @@ export function CloneDeckButton({
             You&apos;ll get <span className="font-medium text-foreground">{cloneTitleOf(deckTitle)}</span>, a private
             deck with the same cards
             {isOwner ? "" : ", credited “remixed from” this one"}. Cards you can&apos;t add to a deck — someone
-            else&apos;s private card, or one that&apos;s no longer available — are left out. No card is made, so your
+            else&apos;s private or unlisted card, or one that&apos;s no longer available — are left out. No card is made, so your
             saved-card count doesn&apos;t change.
           </DialogDescription>
         </DialogHeader>

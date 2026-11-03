@@ -131,7 +131,12 @@ describe("deck page body (source)", () => {
     expect(row).not.toMatch(/next\/headers|createClient\(/);
     const queries = readFileSync(join(process.cwd(), "lib/decks/queries.ts"), "utf8");
     const similar = queries.slice(queries.indexOf("export async function listSimilarDecks"));
-    expect(similar.slice(0, similar.indexOf("\n}\n"))).toContain("createPublicClient()");
+    expect(similar.slice(0, similar.indexOf("\n}\n"))).toContain("similarDecksCache()(deckId, limit)");
+    // The read inside the data cache is cookie-free (a cookie read there
+    // throws, and would make the answer viewer-dependent).
+    const read = queries.slice(queries.indexOf("async function readSimilarDecks"));
+    expect(read.slice(0, read.indexOf("\n}\n"))).toContain("createPublicClient()");
+    expect(queries).toContain('unstable_cache(readSimilarDecks, ["similar-decks-v1"]');
   });
 
   it("keeps structured data for public decks only", () => {
