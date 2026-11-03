@@ -176,7 +176,11 @@ export default async function BillingPage() {
                 <span className="text-[11px] uppercase tracking-wider text-subtle">Current plan</span>
                 <span className="font-display text-2xl font-semibold text-foreground">
                   {plan.name}
-                  {comped ? <span className="ml-2 text-sm font-normal text-muted">(complimentary)</span> : null}
+                  {comped ? (
+                    <span className="ml-2 text-sm font-normal text-muted">
+                      {referralUntil ? "(free month)" : "(complimentary)"}
+                    </span>
+                  ) : null}
                 </span>
               </div>
             </div>
@@ -185,22 +189,28 @@ export default async function BillingPage() {
                 {live || delinquent
                   ? (endingBadgeLabel(planStatus) ?? STATUS_LABEL[status ?? ""] ?? status)
                   : comped
-                    ? "Complimentary"
+                    ? referralUntil
+                      ? "Free month"
+                      : "Complimentary"
                     : "Free plan"}
               </Badge>
               <span className="text-sm text-muted">{comped ? "No charge" : priceLine}</span>
             </div>
           </div>
 
-          <p className="text-sm leading-6 text-muted">
-            <PlanStatusLine
-              status={planStatus}
-              planName={plan.name}
-              priceLine={priceLine}
-              hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
-              compExpiresAt={referralUntil ?? profile?.comp_expires_at ?? null}
-            />
-          </p>
+          {/* A referral month is not the team's comp: it has its own line
+              (referralMonthUntil is set only when it is what gives Plus). */}
+          {referralUntil ? null : (
+            <p className="text-sm leading-6 text-muted">
+              <PlanStatusLine
+                status={planStatus}
+                planName={plan.name}
+                priceLine={priceLine}
+                hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
+                compExpiresAt={profile?.comp_expires_at ?? null}
+              />
+            </p>
+          )}
           {referralUntil ? (
             <p className="text-sm leading-6 text-muted">
               Your free month of Plus came from a referral and runs until <LocalDate iso={referralUntil} />. Its{" "}
