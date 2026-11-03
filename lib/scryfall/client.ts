@@ -263,6 +263,20 @@ export const scryfallCardSchema = z
       )
       .optional()
       .nullable(),
+    // The card's related objects (TODO DK5.16: the deck page's tokens) —
+    // the tokens and emblems it makes, meld pieces, combo pieces and the
+    // card itself. Only the fields the deck's token list reads.
+    all_parts: z
+      .array(
+        z.object({
+          id: z.string(),
+          component: z.string().optional().nullable(),
+          name: z.string(),
+          type_line: z.string().optional().nullable(),
+        }),
+      )
+      .optional()
+      .nullable(),
     scryfall_uri: z.string().url().optional().nullable(),
   })
   .passthrough();
