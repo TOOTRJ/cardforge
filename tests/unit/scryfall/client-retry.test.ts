@@ -116,6 +116,45 @@ describe("scryfallFetch retry behavior", () => {
   });
 });
 
+describe("getCardCollection's timeout (the deck page's tokens, TODO DK5.16)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("passes an abort signal and answers null once the budget is spent", async () => {
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = await freshClient();
+    const result = await client.getCardCollection([{ id: CARD_BODY.id }], { timeoutMs: 50 });
+    expect(result).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("waits for no retry past the budget", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, { status: 429, headers: { "Retry-After": "1" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = await freshClient();
+    const started = Date.now();
+    expect(await client.getCardCollection([{ id: CARD_BODY.id }], { timeoutMs: 200 })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it("sends no signal without a budget (every other caller, as before)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [], not_found: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = await freshClient();
+    await client.getCardCollection([{ id: CARD_BODY.id }]);
+    expect(fetchMock.mock.calls[0]![1].signal).toBeUndefined();
+  });
+});
+
 describe("endpoint-aware throttle gaps", () => {
   beforeEach(() => {
     vi.useFakeTimers();

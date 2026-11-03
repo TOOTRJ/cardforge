@@ -36,6 +36,14 @@ export const SCRYFALL_LIMITS = {
   // after its resolve is never the one refused — a reviewed list is lost
   // when the dialog closes.
   deck_import_commit: { perMinute: 20, perDay: 100 },
+  // One row per deck PAGE VIEW whose "Tokens & emblems" lookup reached
+  // Scryfall (TODO DK5.16, migration 0164: a cache miss — the answer is
+  // shared a day per deck's printings, lib/decks/deck-tokens-server.ts), on
+  // the signed-in viewer whose view made it (an anonymous view can't be
+  // logged: the table's user_id is required). LOGGED, NEVER CHECKED: a page
+  // view is never refused; the numbers are what the usage panels compare it
+  // with.
+  deck_tokens: { perMinute: 30, perDay: 500 },
 } as const;
 
 const LIMITS = SCRYFALL_LIMITS;

@@ -2533,6 +2533,19 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["decks"]["Row"][];
       };
+      // Migration 0164 (TODO DK5.16) — clone a deck, its credit, similar decks.
+      clone_deck: {
+        Args: { p_source_deck_id: string; p_title: string; p_slug: string; p_masked_entry_ids?: string[] };
+        Returns: Json;
+      };
+      deck_remix_credit: {
+        Args: { p_deck_id: string };
+        Returns: { source_slug: string | null; source_title: string | null; source_owner_username: string | null }[];
+      };
+      list_similar_decks: {
+        Args: { p_deck_id: string; p_limit?: number };
+        Returns: Database["public"]["Tables"]["decks"]["Row"][];
+      };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
         Returns: Json;

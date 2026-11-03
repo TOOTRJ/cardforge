@@ -2213,6 +2213,27 @@ Rules and gotchas:
   follow-up). The app shipped BEFORE 0151 (#679): `getDeckGuide` and
   `recordDeckView` fall back to main's calls on PGRST202 — remove both once
   0151 is on production and dev.
+  A deck is COPIED (TODO DK5.16, migration 0164) through ONE database call,
+  `clone_deck` (`cloneDeckAction`, `lib/decks/clone.ts`): a PRIVATE copy of
+  a deck the caller may open, never its description or cover, no card made;
+  each entry by the deck rules — a card that can't be linked loses its link,
+  an entry with no printing whose card can't come along (or is gone) is
+  SKIPPED, a kept printing the page masks for the caller (strong language)
+  is copied as "Private card" (`maskedCloneEntryIds`: SQL can't run the
+  detector) — ≤ 500 rows. "Copy deck" shows only when the copy would hold
+  an entry (`cloneableEntryCount`). Lineage is its own table,
+  `deck_remix_sources` (a deck id is its LINK: never a column on `decks`),
+  no API role's, read only through `deck_remix_credit` (the source named
+  while public or the viewer's own, else "another deck"); a copy of the
+  caller's OWN deck ("Duplicate") writes no lineage and no `deck_cloned`
+  (once per cloner and deck). "Similar decks" is `list_similar_decks`
+  (public decks only, real creators, the same commander or the same colours
+  and ≥ 4 shared cards that aren't STAPLES — in more than 10 % and 20 of the
+  public decks, `lib/decks/similar-decks.ts` — matched by what every visitor
+  reads), read cookie-free and cached an hour (`listSimilarDecks`). "Tokens &
+  emblems" (`lib/decks/deck-tokens*.ts`) is display only: Scryfall
+  `all_parts` through the shared client with a timeout, a success cached a
+  day and a failure minutes, logged as `deck_tokens` on a signed-in viewer.
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /
