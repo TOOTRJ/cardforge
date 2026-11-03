@@ -24,7 +24,9 @@ import type { PublicCreator } from "@/lib/creators/queries";
 // every other avatar.
 // ---------------------------------------------------------------------------
 
-const STRIP_SIZES = "(min-width: 1280px) 120px, (min-width: 768px) 16vw, 30vw";
+// The wide frame (TODO WD10): 3 columns from xl, 4 from 2xl — a strip card
+// is ~112 px at 1280 and never past ~135 px (1920 px and up).
+const STRIP_SIZES = "(min-width: 1280px) 140px, (min-width: 768px) 16vw, 30vw";
 
 export function CreatorCard({
   creator,

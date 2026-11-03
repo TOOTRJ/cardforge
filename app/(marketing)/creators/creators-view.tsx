@@ -65,7 +65,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
   const pages = creatorPageCount(result.total);
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       {landing ? (
         <JsonLd
           data={collectionPageJsonLd({
@@ -129,7 +129,7 @@ async function CreatorsDirectory({ sort, page, landing }: CreatorsViewParams & {
                 to its content, and a strip card drawn live (no stored render)
                 has a min-content wider than a phone — the page scrolled
                 sideways at 390 px. */}
-            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {result.creators.map((creator) => (
                 <li key={creator.id} className="flex min-w-0">
                   <CreatorCard creator={creator} profileOverrides={profileOverrides} />

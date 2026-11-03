@@ -81,7 +81,7 @@ function RoadmapEntry({ item }: { item: RoadmapItem }) {
 
 export default function RoadmapPage() {
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -121,7 +121,10 @@ export default function RoadmapPage() {
         }
       />
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+      {/* The wide frame (TODO WD10): Now | Next from lg, and Recently shipped
+          as a third column from 2xl, the two notes under the three. Below
+          2xl, shipped and the notes share the second row. */}
+      <div className="mt-10 grid gap-x-6 gap-y-10 lg:grid-cols-2 2xl:grid-cols-3 2xl:gap-x-8">
         {ROADMAP_COLUMNS.map((column) => (
           <section
             key={column.stage}
@@ -144,9 +147,7 @@ export default function RoadmapPage() {
             </ul>
           </section>
         ))}
-      </div>
 
-      <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section aria-labelledby="roadmap-shipped-heading" className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-col gap-1">
             <h2
@@ -170,7 +171,7 @@ export default function RoadmapPage() {
           </ul>
         </section>
 
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-4 2xl:col-span-3 2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-6">
           <SurfaceCard className="flex flex-col gap-4 p-5">
             <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
               What the labels mean

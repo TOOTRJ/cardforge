@@ -12,12 +12,12 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <PageContainer as="header" className="relative z-10 flex items-center justify-between py-6">
+      <PageContainer as="header" size="wide" className="relative z-10 flex items-center justify-between py-6">
         <Logo />
         <LogoutButton variant="ghost" size="sm" />
       </PageContainer>
 
-      <PageContainer as="main" id="main" className="relative z-10 flex flex-1 justify-center py-8">
+      <PageContainer as="main" id="main" size="wide" className="relative z-10 flex flex-1 justify-center py-8">
         <div className="w-full max-w-2xl">{children}</div>
       </PageContainer>
     </div>

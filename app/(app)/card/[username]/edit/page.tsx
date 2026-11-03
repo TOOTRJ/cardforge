@@ -124,7 +124,9 @@ export default async function EditCardPage({
   const previewCard = card.frame_preview === true;
 
   return (
-    <PageContainer className="py-10">
+    // The creator keeps the standard frame until its redesign (TODO WD7,
+    // owner decision D8; page-container-structure.test.ts lists it).
+    <PageContainer size="standard" className="py-10">
       <PageHeader
         eyebrow="Editing"
         title={card.title}

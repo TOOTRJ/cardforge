@@ -411,12 +411,14 @@ function TableView({
   const columnCount = COLUMNS.length + (ui.editing ? 1 : 0);
   return (
     // Scrolls sideways on a narrow screen — by keyboard too (a named,
-    // focusable region).
+    // focusable region). `relative`: the sr-only caption is absolutely
+    // positioned, and an absolute box whose containing block is OUTSIDE the
+    // scroller is not clipped by it — it widened the page at 320 px.
     <div
       role="region"
       aria-labelledby={captionId}
       tabIndex={0}
-      className="overflow-x-auto rounded-frame border border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
+      className="relative overflow-x-auto rounded-frame border border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
     >
       <table className="w-full min-w-[56rem] border-collapse text-left text-sm">
         <caption id={captionId} className="sr-only">

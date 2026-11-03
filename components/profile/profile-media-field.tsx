@@ -75,7 +75,9 @@ export function ProfileMediaField({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={cn("flex gap-4", isAvatar ? "items-center" : "flex-col")}>
+      {/* flex-wrap + min-w-0: at 320 px the buttons wrap under the avatar
+          instead of pushing the page sideways (TODO WD10). */}
+      <div className={cn("flex gap-4", isAvatar ? "flex-wrap items-center" : "flex-col")}>
         <div
           className={cn(
             "relative shrink-0 overflow-hidden border border-border/60 bg-background/40",
@@ -99,7 +101,7 @@ export function ProfileMediaField({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
             {label}
             {isDefaultProfileMedia(url, kind) ? (
@@ -131,6 +133,7 @@ export function ProfileMediaField({
               type="button"
               variant="ghost"
               size="sm"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-left"
               aria-expanded={open}
               onClick={() => setOpen((value) => !value)}
             >

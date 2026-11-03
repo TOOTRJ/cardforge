@@ -24,7 +24,7 @@ export default async function UnsubscribePage({
   const valid = isUnsubscribeToken(token) && list;
 
   return (
-    <PageContainer className="py-16">
+    <PageContainer size="wide" className="py-16">
       <SurfaceCard className="mx-auto flex max-w-xl flex-col gap-6 p-8">
         {valid ? (
           <>
