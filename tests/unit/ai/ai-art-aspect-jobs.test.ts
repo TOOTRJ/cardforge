@@ -187,7 +187,8 @@ describe("the single-card job paints for plan.frame_template", () => {
     await run();
     expect(s.shapes).toHaveLength(1);
     expect(size(s.shapes[0])).toBe(sizeOf(frame));
-    expect(s.order).toEqual(["create", "image"]);
+    // Paint first (#722): the card is created WITH its picture.
+    expect(s.order).toEqual(["image", "create"]);
   });
 
   it("the picture waits the card step's budget: the card is created, attached and baked in the same 180 s", async () => {
@@ -220,9 +221,11 @@ describe("the deck job picks each card's frame FIRST, then paints for it (owner 
     ["a saga", designed({ card_type: "enchantment", subtypes: ["Saga"], color_identity: ["green"], rules_text: "I — Draw a card.\nII, III — Create a 2/2 Bear.", power: null, toughness: null })],
     ["a walker", designed({ card_type: "planeswalker", supertype: "Legendary", subtypes: ["Veyra"], color_identity: ["blue"], rules_text: "+1: Draw a card.", loyalty: "4", power: null, toughness: null })],
     ["a creature", designed()],
-  ])("%s: saved on its frame, then painted in that frame's window", async (_name, card) => {
+  ])("%s: painted in its frame's window, then saved on that frame", async (_name, card) => {
     await deckStep(card);
-    expect(s.order).toEqual(["create", "image"]);
+    // Paint first (#722): the frame is resolved before the picture, and the
+    // card is created on it WITH the picture.
+    expect(s.order).toEqual(["image", "create"]);
     const template = (s.created[0]!.frame_style as { template?: string } | undefined)?.template ?? null;
     expect(template, "the step saves a frame").not.toBeNull();
     expect(size(s.shapes[0])).toBe(

@@ -59,6 +59,16 @@ vi.mock("@/lib/ai/credited-step", () => ({
   ) => body(),
 }));
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => null }));
+// Every frame published: the save's frame gate (#722, before the paint)
+// passes, as the card action's would.
+vi.mock("@/lib/cards/frame-reviews", async () => {
+  const { FRAME_TEMPLATE_VALUES } = await import("@/types/card");
+  const { frameComboKey } = await import("@/lib/cards/frame-reference-registry");
+  return {
+    getVerifiedFrameKeys: async () =>
+      FRAME_TEMPLATE_VALUES.flatMap((template) => ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template, colour))),
+  };
+});
 vi.mock("@/lib/ai/image-gen", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/image-gen")>()),
   generateImageWithFallbacks: async () => ({ ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" }),
