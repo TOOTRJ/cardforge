@@ -704,7 +704,9 @@ describe("what is the card's on the Back face tab", () => {
     const slot = other.parentElement!;
     expect(slot.className).toMatch(/(^| )absolute( |$)/);
     expect(slot.className).toMatch(/(^| )top-0( |$)/);
-    expect(slot.className).toMatch(/(^| )xl:static( |$)/);
+    // `creator-xl:` is the `xl:` viewport query on /create, the host's own
+    // width in the deck's edit drawer (DK5.18).
+    expect(slot.className).toMatch(/(^| )creator-xl:static( |$)/);
     // …and the column is its positioning box.
     expect(slot.closest("[data-testid='face-preview']")!.className).toMatch(/(^| )relative( |$)/);
   });

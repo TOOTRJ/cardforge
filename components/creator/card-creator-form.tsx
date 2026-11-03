@@ -54,6 +54,7 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { CREATOR_ASIDE_QUERY, useMediaQuery } from "@/components/creator/use-media-query";
 import { useStableValue } from "@/components/creator/use-stable-value";
 import { useCreatorScrollPadding } from "@/components/creator/use-scroll-padding";
+import type { CreatorHost } from "@/components/creator/creator-host";
 import { ShareTargets } from "@/components/cards/share-targets";
 import { DeleteCardDialog } from "@/components/creator/delete-card-dialog";
 import { CardGlossary } from "@/components/creator/card-glossary";
@@ -502,6 +503,14 @@ type CardCreatorFormProps = {
   /** "stepper" (shipped) or the lab's "canvas" — the centred live preview
    *  with clickable regions (lib/creator/lab-shared.ts). */
   layout?: CreatorLayout;
+  /** The creator hosted by another surface — the deck page's edit drawer
+   *  (TODO DK5.18, components/creator/creator-host.ts): a save hands control
+   *  back instead of navigating, the host owns Back. Null: its own page. */
+  host?: CreatorHost | null;
+  /** A NEW card's "Add to a deck" box starts on this deck (the drawer's
+   *  "＋ Create new card"): one of `myDecks`, else ignored. The save sends
+   *  it as the deck box would (`deck_id`). Create mode only. */
+  initialDeckId?: string | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -794,6 +803,8 @@ export function CardCreatorForm({
   isPaid = false,
   defaultFooterText = null,
   layout = "stepper",
+  host = null,
+  initialDeckId = null,
 }: CardCreatorFormProps) {
   // The real verified set: the AI dialog offers only these (AI jobs resolve
   // their frames on the server from the same set) — never an admin's
@@ -819,6 +830,16 @@ export function CardCreatorForm({
   const aiBusy = fillPhase !== null || ideasBusy;
   const guard = useUnsavedChangesGuard({
     enabled: Boolean(userId) && (guardArmed || aiBusy),
+    hosted: Boolean(host),
+  });
+  // Hosted (TODO DK5.18): the host asks through the guard before it closes
+  // or moves to another card.
+  const bindHostLeave = host?.bindLeave;
+  const guardAsk = guard.ask;
+  useEffect(() => {
+    if (!bindHostLeave) return;
+    bindHostLeave(guardAsk);
+    return () => bindHostLeave(null);
   });
   // Active step index into the dynamic `steps` list (see below). Clamped on
   // read so it stays valid when the visible steps shrink (e.g. a DFC is removed).
@@ -829,9 +850,10 @@ export function CardCreatorForm({
   // initializer threw one on every ?step= URL). Resolved against this
   // mode's step order (edit/remix have no Card step); visibleSteps clamps
   // the index if the step isn't visible for this card.
+  // (Hosted, the URL is the host's page: no ?step= of ours there.)
   const urlSearch = useSyncExternalStore(
     subscribeToNothing,
-    () => window.location.search,
+    () => (host ? "" : window.location.search),
     () => "",
   );
   const urlStepIndex = useMemo(() => {
@@ -996,8 +1018,14 @@ export function CardCreatorForm({
     if (defaultArtistCredit && !card && !base.artist_credit) {
       base.artist_credit = defaultArtistCredit;
     }
+    // A new card made from a deck (the drawer's "＋ Create new card", TODO
+    // DK5.18) starts with that deck picked in its "Add to a deck" box — a
+    // starting value, so an untouched form is still unchanged.
+    if (initialDeckId && mode === "create" && !card && !deckRemix && myDecks?.some((deck) => deck.id === initialDeckId)) {
+      base.deck_id = initialDeckId;
+    }
     return base;
-  }, [mode, card, gameSystems, initialTag, defaultArtistCredit, isPaid, defaultFooterText]);
+  }, [mode, card, gameSystems, initialTag, defaultArtistCredit, isPaid, defaultFooterText, initialDeckId, deckRemix, myDecks]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().
@@ -2017,10 +2045,13 @@ export function CardCreatorForm({
     shownFaceRef.current = editFace;
     const note = faceNoteRef.current;
     const bar = note?.previousElementSibling;
-    if (!note || !(bar instanceof HTMLElement) || typeof window.scrollBy !== "function") return;
+    // (Hosted, the host's box scrolls, not the page.)
+    const scroller: { scrollBy?: (options: ScrollToOptions) => void } = host?.scrollRoot ?? window;
+    if (!note || !(bar instanceof HTMLElement) || typeof scroller.scrollBy !== "function") return;
     const barBottom = bar.getBoundingClientRect().bottom;
     const top = note.getBoundingClientRect().top;
-    if (top < barBottom) window.scrollBy({ top: top - barBottom - 12, behavior: "auto" });
+    if (top < barBottom) scroller.scrollBy({ top: top - barBottom - 12, behavior: "auto" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on a face change only
   }, [editFace]);
 
   // ---- "Still needed" links (TODO 5.14) ----
@@ -4478,6 +4509,7 @@ export function CardCreatorForm({
         // saved at this point: a failed link request says so and still
         // moves on.
         let linkedHome: string | null = null;
+        let linked = false;
         if (deckRemix) {
           // Back to the deck dashboard so the progress ring ticks up.
           let linkResult: Awaited<ReturnType<typeof linkDeckCardAction>> | null =
@@ -4496,9 +4528,19 @@ export function CardCreatorForm({
               linkResult?.error ?? "Saved, but couldn't link it into the deck.",
             );
           } else {
+            linked = true;
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
           linkedHome = returnTo ?? `/deck/${deckRemix.deckSlug}`;
+        }
+
+        // Hosted (TODO DK5.18): the host takes it from here — where this
+        // page would go to the deck, the card or its editor. No share
+        // prompt: the maker stays at work in the deck.
+        if (host) {
+          host.onSaved({ cardId: result.cardId, slug: result.slug, mode, linked });
+          options.afterSave?.();
+          return;
         }
 
         if (options.afterSave) {
@@ -4618,12 +4660,20 @@ export function CardCreatorForm({
       // with unsent keystrokes, which keep their guard.
       // Opened from a deck (TODO DK5.5): back to it — unless keystrokes
       // made during the save are still unsent.
-      const returning = Boolean(returnTo) && !typedDuringSave;
+      // Hosted (TODO DK5.18) it always stays: the host keeps the card open.
+      const returning = !host && Boolean(returnTo) && !typedDuringSave;
       const staysInEditor =
         !options.afterSave &&
         !returning &&
-        !(intent === "save" && editSavedVisibility === "public");
+        (Boolean(host) || !(intent === "save" && editSavedVisibility === "public"));
       if (!(typedDuringSave && staysInEditor)) await guard.release();
+      if (host) {
+        // The host reads the saved row back (the keyed reset's fresh truth)
+        // and the deck's rows with it.
+        host.onSaved({ cardId: card.id, slug: result.slug, mode, linked: false });
+        options.afterSave?.();
+        return;
+      }
       if (options.afterSave) {
         options.afterSave();
         return;
@@ -4833,13 +4883,16 @@ export function CardCreatorForm({
   });
   // Which of the two live previews shows (TODO 3b.9): the aside from lg up,
   // the inline one below — null until the window is known (both mount).
-  const asideWide = useMediaQuery(CREATOR_ASIDE_QUERY);
+  // Hosted (TODO DK5.18), the host's box decides — its measured width, the
+  // `creator-lg` container query's twin.
+  const windowWide = useMediaQuery(CREATOR_ASIDE_QUERY);
+  const asideWide = host ? host.wide : windowWide;
   // A focused field never sits under the sticky Save bar or the Face switch
   // (TODO 3b.28, WCAG 2.2 "Focus Not Obscured"): the page's scroll padding
   // follows their measured heights while the creator is mounted.
   const [saveBarEl, setSaveBarEl] = useState<HTMLDivElement | null>(null);
   const [faceSwitchEl, setFaceSwitchEl] = useState<HTMLDivElement | null>(null);
-  useCreatorScrollPadding(saveBarEl, faceSwitchEl);
+  useCreatorScrollPadding(saveBarEl, faceSwitchEl, host?.scrollRoot ?? null);
   // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
   // Part 2 — ONE picture, two parts: where each part sits on it (the
   // profile's own rects, the frame-compare overrides included) and whether
@@ -4886,8 +4939,9 @@ export function CardCreatorForm({
       onChange={switchFace}
       panelId={facePanelId}
       noteId={faceSwitchNote ? faceNoteId : undefined}
-      // In view while the step scrolls, under the site header.
-      className="sticky top-[4.25rem] z-20"
+      // In view while the step scrolls, under the site header (hosted: at
+      // the top of the host's box — --creator-sticky-switch).
+      className="sticky top-[var(--creator-sticky-switch,4.25rem)] z-20"
       rootRef={setFaceSwitchEl}
       front={{
         name: watched.title,
@@ -5728,6 +5782,25 @@ export function CardCreatorForm({
 
     </>
   );
+  const onInvalidSave: Parameters<typeof handleSubmit>[1] = (formErrors) => {
+    // Client validation blocked the save — jump to the first errored step.
+    const first = firstErrorPath(formErrors);
+    // A saga row's chapter numbers are buttons, not a registered input:
+    // react-hook-form has nothing to focus there, and the focus stayed on
+    // Save with the message somewhere above it. The first such row's
+    // chapter group takes it (its step opened, scrolled to the middle of
+    // the view — clear of the sticky bars).
+    const sagaRow = first === "saga_chapters" ? sagaNumeralsErrorRows(formErrors)[0] : undefined;
+    if (sagaRow !== undefined) goToField(sagaNumeralsField(sagaRow));
+    else if (first) showField(first);
+  };
+  const formSubmit = handleSubmit((values) => runSubmit(values, "save"), onInvalidSave);
+  // The same save, then `afterSave` (the host's "Save & next").
+  const submitThen = (afterSave: () => void) => {
+    spendRemixRenameClear(getValues("title") ?? "");
+    void handleSubmit((values) => runSubmit(values, "save", { afterSave }), onInvalidSave)();
+  };
+
   const actionBar = (
     <>
           {/* Action bar — sticky across all tabs so saving never requires
@@ -5821,7 +5894,12 @@ export function CardCreatorForm({
                   · Delete. */}
               {/* Cancel is edit-only — create mode has Start over, and a
                   bail-out just means navigating away. */}
-              {isRevise && card ? (
+              {isRevise && card && host ? (
+                // Hosted: Cancel closes the drawer (asking first).
+                <Button type="button" variant="ghost" size="sm" onClick={host.onCancel}>
+                  Cancel
+                </Button>
+              ) : isRevise && card ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/go/card/${card.id}`}>Cancel</Link>
                 </Button>
@@ -5853,6 +5931,21 @@ export function CardCreatorForm({
                   )}
                 </Button>
               )}
+              {userId && host?.saveAndNext ? (
+                // Hosted (TODO DK5.18): save, then the host walks on to the
+                // next card — the deck's "Edit next".
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => submitThen(host.saveAndNext!.onNext)}
+                  disabled={isSubmitting || Boolean(saveDisabledReason)}
+                  title={saveDisabledReason ?? undefined}
+                >
+                  {host.saveAndNext.label}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </Button>
+              ) : null}
               {idx > 0 ? (
                 <Button
                   type="button"
@@ -5875,6 +5968,7 @@ export function CardCreatorForm({
                   cardId={card.id}
                   cardTitle={card.title}
                   redirectTo="/dashboard/cards"
+                  onDeleted={host ? host.onDeleted : undefined}
                   triggerLabel={null}
                   triggerSize="sm"
                 />
@@ -5952,22 +6046,6 @@ export function CardCreatorForm({
     spendRemixRenameClear(getValues("title") ?? "");
     return formSubmit(event);
   };
-
-  const formSubmit = handleSubmit(
-    (values) => runSubmit(values, "save"),
-    (formErrors) => {
-      // Client validation blocked the save — jump to the first errored step.
-      const first = firstErrorPath(formErrors);
-      // A saga row's chapter numbers are buttons, not a registered input:
-      // react-hook-form has nothing to focus there, and the focus stayed on
-      // Save with the message somewhere above it. The first such row's
-      // chapter group takes it (its step opened, scrolled to the middle of
-      // the view — clear of the sticky bars).
-      const sagaRow = first === "saga_chapters" ? sagaNumeralsErrorRows(formErrors)[0] : undefined;
-      if (sagaRow !== undefined) goToField(sagaNumeralsField(sagaRow));
-      else if (first) showField(first);
-    },
-  );
 
   if (layout === "canvas") {
     // ---- Lab: the canvas layout. The live card is the page; clicking a
@@ -6048,7 +6126,7 @@ export function CardCreatorForm({
         onInputCapture={closeImportBaseline}
         onChangeCapture={closeImportBaseline}
         onKeyDownCapture={closeImportBaseline}
-        className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
+        className="grid gap-8 creator-lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] creator-xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] creator-xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}
         <StepRail
@@ -6057,7 +6135,7 @@ export function CardCreatorForm({
           onStepSelect={goToIndex}
           isStepEnabled={() => true}
           icons={STEP_RAIL_ICONS}
-          className="hidden xl:sticky xl:top-24 xl:block xl:self-start"
+          className="hidden creator-xl:sticky creator-xl:top-[var(--creator-sticky-top,6rem)] creator-xl:block creator-xl:self-start"
         />
 
         {/* ----- Left: form ----- */}
@@ -6074,7 +6152,7 @@ export function CardCreatorForm({
               current={idx}
               onStepSelect={goToIndex}
               isStepEnabled={() => true}
-              className="xl:hidden"
+              className="creator-xl:hidden"
             />
 
             {/* Face tabs (TODO 5.14): ONE switch at the top of every step
@@ -6089,7 +6167,7 @@ export function CardCreatorForm({
                 render, hydration), as the CSS alone decides. */}
             {asideWide === true ? null : (
             <details
-              className="group/preview rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
+              className="group/preview rounded-lg border border-border/60 bg-elevated/30 creator-lg:hidden"
               open
             >
               {/* The bar folds the preview away; it never turns the card
@@ -6144,7 +6222,7 @@ export function CardCreatorForm({
             <details> preview above the step content). Mounted only where it
             shows, as the inline one (TODO 3b.9). ----- */}
         {asideWide === false ? null : (
-        <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+        <aside className="hidden creator-lg:sticky creator-lg:top-[var(--creator-sticky-top,6rem)] creator-lg:block creator-lg:self-start">
           <div className="flex flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Live preview

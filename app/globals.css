@@ -8,6 +8,40 @@
 /* Keyrune — same author, set symbols. `ss ss-{setcode}` classes. */
 @import "keyrune/css/keyrune.css";
 
+/* The creator's two breakpoints (TODO DK5.18). On its own page (/create,
+   /card/…/edit) they ARE `lg:` / `xl:` — the same window media queries, so
+   that page draws exactly as before. Inside a host that marks itself
+   `data-creator-host` (the deck's edit drawer: `container: creator /
+   inline-size`) they read the HOST's width instead: the two-column
+   arrangement (form + live preview) from 48rem of drawer, the step rail
+   from 76rem (the width /create gives it at a 1280 px window, which no
+   drawer reaches). The JS twin of `creator-lg` is CREATOR_ASIDE_QUERY on
+   the page and the drawer's measured `wide` in a host. */
+@custom-variant creator-lg {
+  &:where(:not([data-creator-host] *)) {
+    @media (width >= 64rem) {
+      @slot;
+    }
+  }
+  &:where([data-creator-host] *) {
+    @container creator (width >= 48rem) {
+      @slot;
+    }
+  }
+}
+@custom-variant creator-xl {
+  &:where(:not([data-creator-host] *)) {
+    @media (width >= 80rem) {
+      @slot;
+    }
+  }
+  &:where([data-creator-host] *) {
+    @container creator (width >= 76rem) {
+      @slot;
+    }
+  }
+}
+
 /* Mana font, woff2 override. The vendored mana.css above only declares
    eot/woff/ttf sources — the browser picks the 408 KB woff even though the
    package ships a 187 KB woff2 (copied to /public/fonts like the other card
@@ -652,6 +686,13 @@ body {
   outline: 2px solid var(--color-gold);
   outline-offset: 3px;
   transition: outline-color 600ms ease-out;
+}
+
+/* `[data-editing]`: the card open in the deck's edit drawer (TODO DK5.18),
+ * marked on the dimmed deck behind it for as long as the drawer is on it. */
+[data-deck-entry][data-editing] {
+  outline: 2px solid var(--color-primary-bright);
+  outline-offset: 3px;
 }
 
 @media (max-width: 767px) {

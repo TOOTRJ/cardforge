@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CheckSquare, ClipboardPaste, FileText, Pencil, Trash2 } from "lucide-react";
+import { CheckSquare, ClipboardPaste, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { ArrowDown, ChartColumn, X } from "lucide-react";
 import { DeckCardModal } from "@/components/decks/deck-card-modal";
 import { CURVE_FILTER_NOTICE_ID, useDeckCurveFilter } from "@/components/decks/deck-curve-filter";
 import { DeckGroupViews } from "@/components/decks/deck-card-views";
 import { EntryMenuButton, EntryStepper, MenuTrigger } from "@/components/decks/deck-entry-controls";
 import { DeckAddBox } from "@/components/decks/deck-add-box";
+import { DECK_CREATE_NEW_ID, isPlainClick, useDeckEditDrawer, type DeckInlineEdit } from "@/components/decks/deck-edit-drawer";
 import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
 import { DeckMobileBar } from "@/components/decks/deck-mobile-bar";
 // The bulk bar loads in a chunk of its own, when a selection starts.
@@ -115,6 +116,9 @@ type DeckCardListProps = {
   emptyState?: ReactNode;
   /** A commander deck with no commander yet: its slot (over the cards). */
   commanderSlot?: ReactNode;
+  /** The OWNER edits cards in a drawer over the deck (TODO DK5.18) — the
+   *  admin switch allows them. Left out: DK5.5's navigation, as on main. */
+  inlineEditor?: boolean;
 };
 
 export function DeckCardList(props: DeckCardListProps) {
@@ -152,6 +156,7 @@ function DeckCardArea({
   summary,
   emptyState,
   commanderSlot,
+  inlineEditor = false,
 }: DeckCardListProps) {
   const editor = useDeckEditor();
   const editing = Boolean(editor);
@@ -370,6 +375,16 @@ function DeckCardArea({
   const [preview] = useState(createPreviewStore);
   const wide = useMediaQuery(PREVIEW_PANE_QUERY) === true;
 
+  // ---- the edit drawer (TODO DK5.18; the owner, the switch on) -------------
+  // Inert otherwise: every Edit below keeps DK5.5's link, as on main.
+  const { inline, drawer } = useDeckEditDrawer({
+    enabled: inlineEditor && Boolean(editor),
+    deck: editor ? editor.deck : null,
+    groups,
+    allGroups,
+    listRef,
+  });
+
   // ---- menus: a row's "⋯" and the M key's -----------------------------------
   const hasCommander = summary ? formatHasCommander(summary.format) : true;
   const boardsFor = (current: DeckBoard | null) => {
@@ -399,7 +414,9 @@ function DeckCardArea({
     return [
       ...moveItems([row.id], row.board),
       { kind: "separator" },
-      { kind: "item", label: edit.label, icon: <Pencil className="h-3.5 w-3.5" />, href: edit.href },
+      inline
+        ? { kind: "item", label: edit.label, icon: <Pencil className="h-3.5 w-3.5" />, onSelect: () => inline.open(row.id) }
+        : { kind: "item", label: edit.label, icon: <Pencil className="h-3.5 w-3.5" />, href: edit.href },
       { kind: "item", label: "Select", icon: <CheckSquare className="h-3.5 w-3.5" />, onSelect: () => toggleSelected(row.id) },
       { kind: "separator" },
       { kind: "item", label: "Remove", icon: <Trash2 className="h-3.5 w-3.5" />, danger: true, onSelect: () => editor.remove([row.id]) },
@@ -635,7 +652,27 @@ function DeckCardArea({
         if (listRef.current?.contains(event.target as Node)) stopSelecting();
       }}
     >
-      {editing ? <DeckAddBox /> : null}
+      {editing && inline ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div className="min-w-0 flex-1">
+            <DeckAddBox />
+          </div>
+          {/* A new card of the owner's own, this deck picked (DK5.18). */}
+          <button
+            type="button"
+            id={DECK_CREATE_NEW_ID}
+            onClick={() => inline.open("new")}
+            onPointerEnter={inline.prefetch}
+            onFocus={inline.prefetch}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Create new card
+          </button>
+        </div>
+      ) : editing ? (
+        <DeckAddBox />
+      ) : null}
 
       {empty ? (
         emptyState
@@ -733,6 +770,8 @@ function DeckCardArea({
                   formatIssues={bar.formatIssues}
                   onGoToEntry={goToEntry}
                   editNext={bar.editNext}
+                  onEditNext={inline && editNextRow ? () => inline.open(editNextRow.id) : undefined}
+                  onEditIntent={inline?.prefetch}
                   unchanged={counts.imported}
                   canManage={canManage}
                   className={overPhoneBar}
@@ -756,6 +795,7 @@ function DeckCardArea({
                             row={row}
                             editor={editor}
                             menuItems={rowMenuItems(row)}
+                            inline={inline}
                             // Its menu open, the pane holds its card.
                             onMenuOpenChange={(open) => preview.hold(open)}
                           />
@@ -780,6 +820,8 @@ function DeckCardArea({
             if (!open) setSelectedId(null);
           }}
           preferProxy={showProxies}
+          onEdit={inline ? () => inline.open(selected.entry.id) : undefined}
+          onEditIntent={inline?.prefetch}
           cover={
             coverPicks && coverOwnerId
               ? { picks: coverPicks, shown: standsInFan(selected.entry, selected.card, coverOwnerId) }
@@ -811,6 +853,7 @@ function DeckCardArea({
           )}
         </>
       ) : null}
+      {drawer}
     </div>
   );
 }
@@ -821,11 +864,15 @@ function PaneActions({
   row,
   editor,
   menuItems,
+  inline = null,
   onMenuOpenChange,
 }: {
   row: ViewRow;
   editor: DeckEditor;
   menuItems: MenuItem[];
+  /** The edit drawer (DK5.18): Edit opens it; a modified click still
+   *  follows the link. Null: the link, as on main. */
+  inline?: DeckInlineEdit | null;
   onMenuOpenChange: (open: boolean) => void;
 }) {
   const edit = entryEditTarget(row.item, editor.deck.slug);
@@ -848,6 +895,17 @@ function PaneActions({
       </div>
       <Link
         href={edit.href}
+        onClick={
+          inline
+            ? (event) => {
+                if (!isPlainClick(event)) return;
+                event.preventDefault();
+                inline.open(row.id);
+              }
+            : undefined
+        }
+        onPointerEnter={inline?.prefetch}
+        onFocus={inline?.prefetch}
         className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <Pencil className="h-3.5 w-3.5" aria-hidden />

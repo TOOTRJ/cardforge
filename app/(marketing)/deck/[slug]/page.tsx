@@ -58,6 +58,7 @@ import {
 } from "@/lib/decks/deck-view";
 import { deckEntryAnchor } from "@/lib/decks/return-to";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { viewerUsesDeckInlineEditor } from "@/lib/decks/inline-editor";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
@@ -212,7 +213,7 @@ export default async function DeckDetailPage({
   const jobs = isOwner
     ? Promise.all([getLatestFailedDeckJob(deck.id), getActiveDeckJob(deck.id)]).catch(() => [null, null] as const)
     : null;
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, inlineEditor] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
@@ -221,6 +222,9 @@ export default async function DeckDetailPage({
     searchParams,
     // The owner's saved-card slots: the import's forecast (D2).
     isOwner ? getCardCapacity() : null,
+    // The owner edits cards in a drawer over the deck — while the admin
+    // switch allows them (TODO DK5.18); else DK5.5's way, as on main.
+    isOwner ? viewerUsesDeckInlineEditor().catch(() => false) : false,
   ]);
 
   // The rows as this viewer's list shows them: a private card's title never
@@ -496,6 +500,7 @@ export default async function DeckDetailPage({
               }}
               emptyState={<DeckStartDoors key="doors" commander={usesCommander} />}
               commanderSlot={usesCommander ? <CommanderSlot key="commander-slot" compact /> : null}
+              inlineEditor={inlineEditor}
             />
           ) : !hasCards ? (
             <EmptyState title="No cards yet" description="This deck is empty for now — check back soon." />

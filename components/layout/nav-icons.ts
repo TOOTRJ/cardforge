@@ -6,6 +6,7 @@ import {
   BookOpen,
   CreditCard,
   FlaskConical,
+  PanelRightOpen,
   FolderPlus,
   Frame,
   GalleryVerticalEnd,
@@ -66,6 +67,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/frame-requests": ListOrdered,
   "/admin/renders": RefreshCw,
   "/admin/creator-lab": FlaskConical,
+  "/admin/deck-editor": PanelRightOpen,
 };
 
 // The header panels' and the drawer's icons, keyed by the link's nav id
