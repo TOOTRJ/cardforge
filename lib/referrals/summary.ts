@@ -3,7 +3,7 @@ import { REFERRAL_LIFETIME_CAP, REFERRAL_MONTHLY_CAP, type ReferralStatus } from
 // ---------------------------------------------------------------------------
 // The referral dashboard's numbers, from the viewer's own rows — pure, so the
 // progress ("2 of 3 this month") is a unit test. "This month" is the UTC
-// calendar month, the same month claim_referral_reward() counts (0153).
+// calendar month, the same month claim_referral_reward() counts (0164).
 // ---------------------------------------------------------------------------
 
 export type ReferralRow = {

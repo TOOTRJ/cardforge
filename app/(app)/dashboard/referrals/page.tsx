@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 // ---------------------------------------------------------------------------
 // /dashboard/referrals — the viewer's referral link and the friends who used
-// it (lib/referrals/queries.ts: their own rows through 0153's column grant).
+// it (lib/referrals/queries.ts: their own rows through 0164's column grant).
 // A blocked referral reads "Not eligible"; the reason is the admins' alone.
 // ---------------------------------------------------------------------------
 

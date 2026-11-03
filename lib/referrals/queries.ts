@@ -7,7 +7,7 @@ import { buildReferralSummary, type ReferralRow, type ReferralSummary } from "@/
 
 // ---------------------------------------------------------------------------
 // The referral dashboard's one read (/dashboard/referrals) — the viewer's own
-// session, through 0153's RLS and COLUMN grant: the code (minted on first
+// session, through 0164's RLS and COLUMN grant: the code (minted on first
 // ask), the friends they referred (status and dates only — never a fraud
 // reason or a Stripe detail), and the referral that brought THEM, if any.
 // Usernames come from the public profile columns.
@@ -22,7 +22,7 @@ export type ReferralDashboard = {
   joinedThrough: { username: string | null; status: ReferralStatus } | null;
 };
 
-/** The columns 0153 grants a signed-in user — `select *` is refused. */
+/** The columns 0164 grants a signed-in user — `select *` is refused. */
 const REFERRAL_COLUMNS = "id, referrer_id, referee_id, status, signed_up_at, first_card_at, rewarded_at, referrer_reward";
 
 export async function getMyReferralDashboard(now: Date = new Date()): Promise<ReferralDashboard | null> {

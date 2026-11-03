@@ -11,7 +11,7 @@ const BLOCK_LABEL: Record<string, string> = {
   not_new: "Not a new account",
 };
 
-// Referral program numbers (0153's admin_referral_stats): the chain
+// Referral program numbers (0164's admin_referral_stats): the chain
 // signups → first card → rewarded, months granted on both sides, what was
 // held back and why, and the top referrers. Server component; the page
 // already runs as an admin.

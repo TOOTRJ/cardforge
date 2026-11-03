@@ -4,7 +4,7 @@ import { requireAdminClient } from "./users-queries";
 
 // ---------------------------------------------------------------------------
 // The admin Referrals panel's data (beside the Funnel panel on /admin/users):
-// 0153's admin_referral_stats() for the last 30 days and all time, parsed
+// 0164's admin_referral_stats() for the last 30 days and all time, parsed
 // defensively (it is jsonb) by parseReferralStats — pure, unit-tested.
 // ---------------------------------------------------------------------------
 
