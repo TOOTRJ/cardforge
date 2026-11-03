@@ -1601,7 +1601,10 @@ Rules and gotchas:
   COLOURS on the UI through `ColorPip` / `ColorPips`
   (`components/cards/color-pip.tsx`, TODO UI1: the card's own pips over
   `CardPip` / `manaGemSpec`, {C} for colourless, the five-way split disc
-  for multicolour — never a coloured dot; `color-pip-surfaces.test.ts`).
+  for multicolour — never a coloured dot; `color-pip-surfaces.test.ts`;
+  COSTS and symbols off the card — the cost picker, the rules toolbar,
+  `InlinePips`, the custom-pips manager — still draw mana-font's
+  `.ms-cost` look, a second look until they are moved too).
 - Sets (`card_sets` / `card_set_items` / `set_likes`, the `/sets` and
   `/set/[slug]` routes, the AI "set" job kind) were REMOVED on 2026-09-22 —
   app in #337, schema in migration 0105 (owner-confirmed; 8 sets from 5

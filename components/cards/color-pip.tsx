@@ -172,7 +172,7 @@ export function ColorPips({
   const name = label ?? colors.map(pipColorName).join(", ");
   return (
     <span
-      className={cn("inline-flex shrink-0 flex-wrap items-center gap-0.5 align-middle", className)}
+      className={cn("inline-flex shrink-0 flex-wrap items-center gap-1 align-middle", className)}
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": name })}
     >
       {colors.map((color, i) => (
