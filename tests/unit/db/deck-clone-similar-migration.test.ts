@@ -30,7 +30,7 @@ function functionBody(name: string): string {
 }
 
 describe("0164 — the file", () => {
-  it("exists, numbered after 0163 (open PR #722 claims it)", () => {
+  it("exists, numbered after 0163 (#722's, on main)", () => {
     expect(FILE).toBeDefined();
     expect(Number(FILE!.slice(0, 4))).toBeGreaterThan(163);
   });

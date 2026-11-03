@@ -1,6 +1,6 @@
 -- 0164 — Clone a deck with "remixed from" credit, and similar decks
--- (TODO DK5.16). NOTE: numbered after 0163, which open PR #722 claims; the
--- number is checked again (and renumbered if needed) at merge.
+-- (TODO DK5.16). NOTE: numbered after 0163 (#722, merged 2026-11-03); the
+-- number is checked again at merge and renumbered if another PR lands first.
 --
 -- 1. LINEAGE. public.deck_remix_sources — one row per CLONE: the deck it was
 --    copied from (ON DELETE SET NULL: the credit then reads "another deck")
