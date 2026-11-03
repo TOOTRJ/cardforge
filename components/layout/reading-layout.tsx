@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils";
 // ReadingLayout — a reading page inside the WIDE frame (TODO WD10 / WD6):
 // the text keeps its measure in the first column and the extra width goes to
 // a RAIL beside it (a call to action, related pages, "On this page"), never
-// to longer lines. Left-aligned with the frame, so the page's first word sits
-// under the logo as on every other page.
+// to longer lines. Below 2xl it is left-aligned with the frame, so the page's
+// first word sits under the logo as on every other page; from 2xl (1536 px)
+// the WHOLE group — nav, main and rail as one unit — is centred in the frame
+// (owner 2026-11-02: at 1920 px a left-aligned page left ~40 % of the screen
+// empty on the right). The measure never changes; only the free space moves.
 //
 //   main      "measure"  38rem — running text at READING_TEXT_CLASS (legal,
 //                         about, FAQ answers);
@@ -28,11 +31,14 @@ import { cn } from "@/lib/utils";
  *  <Measure> or a "measure" ReadingLayout. */
 export const READING_TEXT_CLASS = "text-base leading-7 sm:text-lg sm:leading-8";
 
+// `2xl:justify-center`: the tracks are capped (38 / 48rem, 14 / 18rem), so
+// the space left over in the frame is shared either side of the group — the
+// columns keep their widths, the grid is centred as one unit.
 const GRID = {
   measure:
-    "lg:grid lg:grid-cols-[minmax(0,38rem)_16rem] lg:gap-x-14 xl:gap-x-20 2xl:grid-cols-[minmax(0,38rem)_18rem] 2xl:gap-x-24",
+    "lg:grid lg:grid-cols-[minmax(0,38rem)_16rem] lg:gap-x-14 xl:gap-x-20 2xl:grid-cols-[minmax(0,38rem)_18rem] 2xl:gap-x-24 2xl:justify-center",
   column:
-    "lg:grid lg:grid-cols-[minmax(0,48rem)_16rem] lg:gap-x-12 xl:gap-x-16 2xl:grid-cols-[minmax(0,48rem)_18rem] 2xl:gap-x-20",
+    "lg:grid lg:grid-cols-[minmax(0,48rem)_16rem] lg:gap-x-12 xl:gap-x-16 2xl:grid-cols-[minmax(0,48rem)_18rem] 2xl:gap-x-20 2xl:justify-center",
 } as const;
 
 /** Three columns from 2xl: nav | main | rail (the DOM order stays main, rail,
