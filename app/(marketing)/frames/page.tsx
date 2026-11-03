@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight, Frame, MessageSquarePlus, PenTool } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { PageContainer } from "@/components/layout/page-container";
+import { CARD_GRID_CLASS } from "@/components/cards/card-grid";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -87,7 +89,7 @@ export default async function FramesPage() {
   const entries = galleryEntries(sections);
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <JsonLd
         data={collectionPageJsonLd({
           name: "Card frames on PipGlyph",
@@ -230,11 +232,15 @@ function FrameSection({
         </div>
         <p className="text-xs leading-5 text-subtle md:max-w-sm md:text-right">{copy.whereInCreator}</p>
       </div>
-      <ul className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5">
-        {section.entries.map((entry) => (
-          <FrameGalleryTile key={entry.template} entry={entry} example={examples[entry.template] ?? null} />
-        ))}
-      </ul>
+      {/* The card grid's columns (2 → 6 by the section's width, TODO WD10),
+          with room under each tile for its words. */}
+      <div className="@container">
+        <ul className={cn(CARD_GRID_CLASS, "gap-y-10 @xl:gap-y-10")}>
+          {section.entries.map((entry) => (
+            <FrameGalleryTile key={entry.template} entry={entry} example={examples[entry.template] ?? null} />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

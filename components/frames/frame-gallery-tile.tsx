@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
 import { CardTile } from "@/components/cards/card-tile";
 import { ManaPip } from "@/components/cards/mana-pip";
 import { FrameMasterPlaceholder } from "@/components/frames/frame-master-placeholder";
@@ -25,8 +26,9 @@ import type { FrameExample } from "@/lib/frames/frame-gallery-queries";
 // sit outside that link, so the frame's start link is never nested in it.
 // ---------------------------------------------------------------------------
 
-/** The tile picture's `sizes`: two columns on a phone up to five at 1280. */
-const TILE_SIZES = "(min-width: 1280px) 240px, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw";
+/** The tile picture's `sizes`: the card grid's in the wide frame (/frames,
+ *  TODO WD10). */
+const TILE_SIZES = CARD_GRID_SIZES;
 
 /** The colour dots' symbol per frame colour key; gold has no mana symbol of
  *  its own and is drawn as the deck tiles draw it. */

@@ -35,6 +35,8 @@ import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-butt
 import { ShareTargets } from "@/components/cards/share-targets";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
+import { ROW_GRID_CLASS, ROW_MAX, rowTileClass } from "@/components/gallery/card-row";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isFollowing } from "@/lib/follows/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
@@ -77,7 +79,7 @@ import {
   listPublicDecksContaining,
 } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
-import { DECK_NARROW_FRAME_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
+import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
 import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
@@ -174,10 +176,10 @@ export async function CardDetailContent({
       : Promise.resolve(0),
     listCommentsForCard(card.id, { limit: 50 }),
     getEntitlements(),
-    listMoreFromOwner(card.owner_id, card.id, 4),
+    listMoreFromOwner(card.owner_id, card.id, ROW_MAX),
     listRelatedCards(
       { cardId: card.id, ownerId: card.owner_id, cardType: card.card_type },
-      4,
+      ROW_MAX,
     ),
     // The owner's custom pip icons for the card preview.
     getPipOverrides(card.owner_id),
@@ -192,7 +194,7 @@ export async function CardDetailContent({
     // own rule — a count and the decks it stands for never disagree).
     countRemixesOfCard(card.id),
     countPublicDecksForCard(card.id),
-    listTopRemixesOfCard(card.id, 4),
+    listTopRemixesOfCard(card.id, ROW_MAX),
     // Provenance: the original card this was remixed from (if any).
     card.parent_card_id
       ? getRemixParentLink(card.parent_card_id)
@@ -263,9 +265,11 @@ export async function CardDetailContent({
   // then what you can DO with it (download, remix, add to deck — then like,
   // share), the numbers, the card as TEXT ("Card details"), its creator; below
   // the fold the decks it is in, its remixes, more cards, and the comments.
-  // From lg the card stays in view (sticky) beside that column.
+  // From lg the card stays in view (sticky) beside that column; from 2xl the
+  // creator's panel takes a column of its own beside the details (the wide
+  // frame, TODO WD10), and the rows below are the card grid's 2 → 6 strips.
   return (
-    <PageContainer className="py-6 sm:py-10">
+    <PageContainer size="wide" className="py-6 sm:py-10">
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -312,8 +316,10 @@ export async function CardDetailContent({
           </div>
         </div>
 
-        {/* A reading width for the column (its text and its strip). */}
-        <div className="flex min-w-0 max-w-2xl flex-col gap-6">
+        {/* A reading width for the column (its text and its strip); from 2xl
+            the creator's panel sits beside it, sticky, instead of under it. */}
+        <div className="flex min-w-0 max-w-2xl flex-col gap-6 2xl:grid 2xl:max-w-none 2xl:grid-cols-[minmax(0,42rem)_20rem] 2xl:items-start 2xl:gap-x-12">
+          <div className="flex min-w-0 flex-col gap-6">
           <header className="flex flex-col gap-2">
             {showVisibility ? (
               <Badge
@@ -373,7 +379,9 @@ export async function CardDetailContent({
               then the social row. On a phone the first row is a two-column
               grid of full-width buttons. */}
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            {/* On a phone a label wraps inside its button (never past the
+                column: "Remix into a deck" is wider than half of 320 px). */}
+            <div className="grid grid-cols-2 gap-2 max-sm:[&_a]:h-auto max-sm:[&_a]:min-h-10 max-sm:[&_a]:whitespace-normal max-sm:[&_a]:py-2 max-sm:[&_a]:text-center max-sm:[&_button]:h-auto max-sm:[&_button]:min-h-10 max-sm:[&_button]:whitespace-normal max-sm:[&_button]:py-2 max-sm:[&_button]:text-center sm:flex sm:flex-wrap sm:items-center">
               {isOwner ? (
                 <Button asChild className="w-full sm:w-auto">
                   <Link href={`/card/${card.slug}/edit`}>
@@ -485,7 +493,10 @@ export async function CardDetailContent({
             </ul>
           ) : null}
 
+          </div>
+
           {creatorProfile ? (
+            <div className="min-w-0 2xl:sticky 2xl:top-24">
             <CreatorFeature
               profile={creatorProfile}
               targetUserId={card.owner_id}
@@ -493,6 +504,7 @@ export async function CardDetailContent({
               initialFollowing={viewerFollows}
               requiresSignIn={!user}
             />
+            </div>
           ) : null}
         </div>
       </div>
@@ -683,7 +695,7 @@ function DecksWithCard({
               key={deck.id}
               deck={deck}
               art={art.get(deck.id)}
-              sizes={DECK_NARROW_FRAME_SIZES}
+              sizes={DECK_GRID_SIZES}
               likeRedirect={cardPath}
             />
           ))}
@@ -693,9 +705,9 @@ function DecksWithCard({
   );
 }
 
-/** A row of up to four card tiles — two columns on a phone, four from sm.
- *  The tiles keep BakedCardThumbnail's window-grid `sizes` (generous, never
- *  less than a tile here). */
+/** A one-row strip of up to ROW_MAX card tiles — the card grid's 2 → 6
+ *  columns by the strip's width, the tiles past the last column hidden
+ *  (components/gallery/card-row.tsx), in the wide frame's `sizes`. */
 function RelatedRow({
   title,
   viewAllHref,
@@ -723,10 +735,14 @@ function RelatedRow({
           </Link>
         ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
-        {cards.map((card) => (
-          <GalleryCardTile key={card.id} card={card} isAuthed={isAuthed} />
-        ))}
+      <div className="@container">
+        <div className={ROW_GRID_CLASS}>
+          {cards.slice(0, ROW_MAX).map((card, index) => (
+            <div key={card.id} className={cn("flex-col", rowTileClass(index))}>
+              <GalleryCardTile card={card} isAuthed={isAuthed} sizes={CARD_GRID_SIZES} />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

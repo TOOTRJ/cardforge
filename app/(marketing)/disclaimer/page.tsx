@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 export default function DisclaimerPage() {
   return (
     <LegalPageShell
+      current="/disclaimer"
       eyebrow="Legal"
       title="Disclaimer"
       description="What PipGlyph is — and what it isn't."

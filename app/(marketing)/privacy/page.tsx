@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <LegalPageShell
+      current="/privacy"
       eyebrow="Legal"
       title="Privacy"
       description="What we collect, why we collect it, and how to delete it."

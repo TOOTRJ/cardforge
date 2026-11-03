@@ -23,6 +23,7 @@ import {
   JsonLd,
 } from "@/components/seo/json-ld";
 import { PageContainer } from "@/components/layout/page-container";
+import { CardGrid, CARD_GRID_SIZES } from "@/components/cards/card-grid";
 
 type Params = { slug: string };
 
@@ -76,7 +77,7 @@ export default async function ChallengeDetailPage({
   const active = isActive(challenge);
 
   return (
-    <PageContainer className="py-16">
+    <PageContainer size="wide" className="py-16">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
@@ -183,11 +184,11 @@ export default async function ChallengeDetailPage({
             }
           />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <CardGrid>
             {entries.map((card) => (
-              <GalleryCardTile key={card.id} card={card} isAuthed={false} />
+              <GalleryCardTile key={card.id} card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
             ))}
-          </div>
+          </CardGrid>
         )}
       </section>
     </PageContainer>

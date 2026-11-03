@@ -4,10 +4,13 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { GuideCrossLinks } from "@/components/marketing/guide-cross-links";
+import { GUIDE_LINKS, GuideCrossLinks } from "@/components/marketing/guide-cross-links";
 import { AI_GENERATOR_FAQ } from "@/lib/content/faq";
 import { siteOpenGraph } from "@/lib/seo/share-metadata";
-import { PageContainer } from "@/components/layout/page-container";
+import { MEASURE_CLASS, PageContainer } from "@/components/layout/page-container";
+import { ReadingLayout } from "@/components/layout/reading-layout";
+import { cn } from "@/lib/utils";
+import { LandingRail } from "@/components/marketing/rail-cta";
 
 // ---------------------------------------------------------------------------
 // SEO landing: /ai-mtg-card-generator
@@ -68,8 +71,15 @@ export default function AiMtgCardGeneratorPage() {
     })),
   };
   return (
-    <PageContainer className="py-16">
-      <div className="max-w-4xl">
+    <PageContainer size="wide" className="py-16">
+      {/* The wide frame (TODO WD10): a 48rem column, each FAQ answer at the
+          reading measure (WD6), and the page's action + the other guides in
+          the rail beside it (phones keep the inline copies). */}
+      <ReadingLayout
+        railOnPhone="hidden"
+        railLabel="Start here"
+        rail={<LandingRail current="/ai-mtg-card-generator" links={GUIDE_LINKS} action={{ href: "/create", label: "Generate a card with AI" }} />}
+      >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
@@ -139,13 +149,13 @@ export default function AiMtgCardGeneratorPage() {
               <h3 className="font-display mb-2 text-lg font-semibold text-foreground">
                 {q}
               </h3>
-              <p className="text-sm leading-7 text-muted">{a}</p>
+              <p className={cn("text-base leading-7 text-muted", MEASURE_CLASS)}>{a}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <GuideCrossLinks current="/ai-mtg-card-generator" />
+      <GuideCrossLinks current="/ai-mtg-card-generator" className="lg:hidden" />
 
       <section
         aria-labelledby="cta-heading"
@@ -183,7 +193,7 @@ export default function AiMtgCardGeneratorPage() {
           </p>
         </div>
       </section>
-    </div>
+      </ReadingLayout>
     </PageContainer>
   );
 }

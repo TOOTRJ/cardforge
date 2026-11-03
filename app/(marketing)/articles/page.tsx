@@ -32,7 +32,7 @@ export default async function ArticlesIndexPage() {
   const articles = await listPublishedArticles();
 
   return (
-    <PageContainer className="py-16">
+    <PageContainer size="wide" className="py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -64,7 +64,7 @@ export default async function ArticlesIndexPage() {
         className="mt-8"
       />
 
-      <div className="mt-10 grid gap-5 lg:grid-cols-2">
+      <div className="mt-10 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
         {articles.map((article) => (
           <ArticleCard key={article.slug} article={article} />
         ))}

@@ -32,6 +32,8 @@ const PALETTE = [
 export default function PressPage() {
   return (
     <LegalPageShell
+      current="/press"
+      main="column"
       eyebrow="Press kit"
       title="PipGlyph brand assets"
       description="Everything you need to write about, link to, or feature PipGlyph — the Astral Rose mark in every variant, palette, type, and usage rules."

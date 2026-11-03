@@ -86,7 +86,7 @@ export default async function ArticleTagPage({
     `Every PipGlyph guide tagged “${found.label}” — custom MTG card design, in one place.`;
 
   return (
-    <PageContainer className="py-16">
+    <PageContainer size="wide" className="py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -122,7 +122,7 @@ export default async function ArticleTagPage({
         </div>
       ) : null}
 
-      <div className="mt-10 grid gap-5 lg:grid-cols-2">
+      <div className="mt-10 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
         {found.articles.map((article) => (
           <ArticleCard
             key={article.slug}

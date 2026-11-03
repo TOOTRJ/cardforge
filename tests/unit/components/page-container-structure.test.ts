@@ -19,6 +19,11 @@ import { describe, expect, it } from "vitest";
 //     LegalPageShell, the gallery's and decks' views…), or from its route
 //     group's layout — else it is listed in FRAMELESS_PAGES with the reason
 //     it draws none.
+//
+// TODO WD10 (owner 2026-10-30): EVERY page is on the wide frame — wide is
+// PageContainer's default, so a new page is wide unless it says otherwise,
+// and a third scan holds where `size="standard"` may still be said: the
+// creator alone (WD7 is on hold with its redesign).
 // ---------------------------------------------------------------------------
 
 const files: string[] = [];
@@ -66,6 +71,22 @@ const FRAMELESS_PAGES: Record<string, string> = {
 };
 
 const FRAME_OWNER = /<(?:PageContainer|DashboardShell|LegalPageShell)\b/;
+
+/** The only frames that may stay STANDARD (1280 px), and why. */
+const STANDARD_FRAMES_ALLOWED: Record<string, string> = {
+  "app/(app)/create/page.tsx": "the creator — WD7 (wider creator) is on hold with its redesign",
+  "app/(app)/card/[username]/edit/page.tsx": "the creator's edit mode — WD7",
+  "app/(marketing)/create-guest/page.tsx": "the signed-out creator — WD7",
+};
+
+/** Every place a source asks for a non-wide frame: a `size=` on
+ *  PageContainer other than "wide", or pageContainerClass("standard"). */
+function standardFrames(source: string): string[] {
+  return [
+    ...(source.match(/<PageContainer\b[^>]*\bsize=(?:"(?!wide")[^"]*"|\{[^}]*\})/g) ?? []),
+    ...(source.match(/pageContainerClass\(\s*"(?!wide")[^"]*"\s*\)/g) ?? []),
+  ];
+}
 
 /** The modules a source imports from app/ or components/, as file paths. */
 function importsOf(path: string): string[] {
@@ -120,6 +141,33 @@ describe("PageContainer is the one page frame (TODO WD1)", () => {
     // A page that gained a frame leaves the list.
     const stale = Object.keys(FRAMELESS_PAGES).filter((path) => !existsSync(path) || drawsFrame(path));
     expect(stale).toEqual([]);
+  });
+
+  it("PageContainer is wide unless a page says otherwise (TODO WD10)", () => {
+    const source = read("components/layout/page-container.tsx");
+    expect(source).toMatch(/export function PageContainer\(\{ size = "wide"/);
+    expect(source).toMatch(/export function pageContainerClass\(size: PageContainerSize = "wide"\)/);
+  });
+
+  it("only the creator asks for a non-wide frame (TODO WD10 — WD7 is on hold)", () => {
+    const offenders = files
+      .filter((path) => path !== "components/layout/page-container.tsx" && !(path in STANDARD_FRAMES_ALLOWED))
+      .flatMap((path) => standardFrames(read(path)).map((frame) => `${path}: ${frame}`));
+    expect(offenders).toEqual([]);
+    // An allowed file still asks for it (no stale entry).
+    for (const path of Object.keys(STANDARD_FRAMES_ALLOWED)) {
+      expect(standardFrames(read(path)), path).not.toEqual([]);
+    }
+  });
+
+  it("the non-wide scan finds every way of asking, and nothing wide", () => {
+    expect(standardFrames(`<PageContainer size="standard" className="py-10">`)).toHaveLength(1);
+    expect(standardFrames(`<PageContainer className="py-4" size="full">`)).toHaveLength(1);
+    expect(standardFrames(`<PageContainer size={size}>`)).toHaveLength(1);
+    expect(standardFrames(`pageContainerClass("standard")`)).toHaveLength(1);
+    expect(standardFrames(`<PageContainer size="wide" className="py-10">`)).toEqual([]);
+    expect(standardFrames(`<PageContainer className="py-10">`)).toEqual([]);
+    expect(standardFrames(`pageContainerClass("wide")`)).toEqual([]);
   });
 
   it("the site header and footer are always wide (owner decision D7)", () => {

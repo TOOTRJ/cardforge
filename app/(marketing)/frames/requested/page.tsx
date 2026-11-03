@@ -81,7 +81,7 @@ export default async function RequestedFramesPage() {
   const { frames, error } = await getRequestedFrames();
 
   return (
-    <PageContainer className="py-12 lg:py-16">
+    <PageContainer size="wide" className="py-12 lg:py-16">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -109,7 +109,9 @@ export default async function RequestedFramesPage() {
         }
       />
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      {/* The wide frame (TODO WD10): the ranked list keeps a 64rem column
+          (a row reads left to right), the notes beside it. */}
+      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,64rem)_20rem] xl:gap-12">
         <section aria-labelledby="requested-frames-heading" className="min-w-0">
           <h2 id="requested-frames-heading" className="sr-only">
             Frames, most requested first

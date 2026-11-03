@@ -6,7 +6,7 @@ import { PageContainer } from "@/components/layout/page-container";
 // soft navigation from a tile alike. The same frame and padding as the page.
 export default function CardDetailLoading() {
   return (
-    <PageContainer className="py-6 sm:py-10">
+    <PageContainer size="wide" className="py-6 sm:py-10">
       <CardDetailSkeleton />
     </PageContainer>
   );
