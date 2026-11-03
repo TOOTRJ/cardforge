@@ -407,7 +407,14 @@ function DeckCardArea({
     ];
   };
   // Dragging a card onto another board (TODO DK5.15): the menus' move.
-  const boardDrag = useBoardDrag({ editor, hasCommander, selection: { selecting: editing && selecting, ids: selectedIds } });
+  const boardDrag = useBoardDrag({
+    editor,
+    hasCommander,
+    selection: { selecting: editing && selecting, ids: selectedIds },
+    // The dropped card takes the focus (and the pane); the list re-renders
+    // and scrolls under the still pointer — that is no hover.
+    onDropped: preview.quietUntilMoved,
+  });
 
   // The M key on a card with no "⋯" of its own: a menu at the card.
   const [keyMenu, setKeyMenu] = useState<MenuRequest | null>(null);
@@ -467,10 +474,10 @@ function DeckCardArea({
       // the card those buttons act on.
       onFocus: () => preview.set(id),
       onPointerEnter: (event) => {
-        if (event.pointerType !== "touch") preview.rest(id);
+        if (event.pointerType !== "touch") preview.rest(id, { x: event.clientX, y: event.clientY });
       },
       onPointerMove: (event) => {
-        if (event.pointerType !== "touch") preview.rest(id);
+        if (event.pointerType !== "touch") preview.rest(id, { x: event.clientX, y: event.clientY });
       },
       onPointerLeave: () => preview.leave(id),
     };

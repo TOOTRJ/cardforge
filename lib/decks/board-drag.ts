@@ -1,3 +1,4 @@
+import { NONE_GROUP_BOARDS } from "@/lib/decks/deck-view";
 import { boardPhrase, moveTargets } from "@/lib/decks/entry-ops";
 import { isDeckBoard, type DeckBoard } from "@/types/deck";
 
@@ -40,12 +41,27 @@ export function boardOfGroup(groupKey: string): DeckBoard | null {
   return null;
 }
 
-/** A drop on `board` moves something: the board is one the menus offer in
- *  this format, and at least one dragged card is on another board. */
-export function canDropOn(board: DeckBoard | null, from: Iterable<DeckBoard>, hasCommander: boolean): board is DeckBoard {
-  if (!board || !moveTargets(hasCommander).includes(board)) return false;
-  for (const current of from) if (current !== board) return true;
-  return false;
+/** The boards whose cards a group SHOWS. Under Group by "None" the "Deck"
+ *  group stands for the mainboard but also shows the commander and the
+ *  companion — a card in it is already where a drop there would put it. */
+export function boardsShownIn(groupKey: string): readonly DeckBoard[] {
+  if (groupKey === "deck") return NONE_GROUP_BOARDS;
+  const board = boardOfGroup(groupKey);
+  return board ? [board] : [];
+}
+
+/** The cards a drop on a group moves: those on a board the group doesn't
+ *  show (`shown`, `boardsShownIn`) — a card dropped back where it is stays
+ *  there, whatever else it was dragged with. None when `board` isn't a
+ *  board the menus offer in this format. */
+export function movedByDrop(
+  held: readonly { id: string; board: DeckBoard }[],
+  board: DeckBoard | null,
+  shown: readonly DeckBoard[],
+  hasCommander: boolean,
+): string[] {
+  if (!board || !moveTargets(hasCommander).includes(board)) return [];
+  return held.filter((card) => card.board !== board && !shown.includes(card.board)).map((card) => card.id);
 }
 
 /** The drop zone's words while a card is held over it. */

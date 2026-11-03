@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { boardOfGroup, canDropOn, draggedIds, dragStartsFrom, dropHint } from "@/lib/decks/board-drag";
+import { boardOfGroup, boardsShownIn, draggedIds, dragStartsFrom, dropHint, movedByDrop } from "@/lib/decks/board-drag";
+import type { DeckBoard } from "@/types/deck";
 import { moveTargets } from "@/lib/decks/entry-ops";
 
 // ---------------------------------------------------------------------------
@@ -26,32 +27,48 @@ describe("boardOfGroup — the board a group of the page stands for", () => {
   });
 });
 
-describe("canDropOn — a drop moves something, onto a board the menus offer", () => {
+const held = (...boards: DeckBoard[]) => boards.map((board, i) => ({ id: `e${i}`, board }));
+
+describe("movedByDrop — a drop moves something, onto a board the menus offer", () => {
   it("a board the card is already on is no target; another board is", () => {
-    expect(canDropOn("main", ["main"], true)).toBe(false);
-    expect(canDropOn("side", ["main"], true)).toBe(true);
+    expect(movedByDrop(held("main"), "main", ["main"], true)).toEqual([]);
+    expect(movedByDrop(held("main"), "side", ["side"], true)).toEqual(["e0"]);
   });
 
-  it("a selection on two boards can drop on either (the other card moves)", () => {
-    expect(canDropOn("main", ["main", "side"], false)).toBe(true);
-    expect(canDropOn("side", ["main", "side"], false)).toBe(true);
+  it("a selection on two boards can drop on either: only the other card moves", () => {
+    expect(movedByDrop(held("main", "side"), "main", ["main"], false)).toEqual(["e1"]);
+    expect(movedByDrop(held("main", "side"), "side", ["side"], false)).toEqual(["e0"]);
   });
 
   it("the commander zone only where the format has one — exactly the menus' list", () => {
-    expect(canDropOn("commander", ["main"], true)).toBe(true);
-    expect(canDropOn("commander", ["main"], false)).toBe(false);
+    expect(movedByDrop(held("main"), "commander", ["commander"], true)).toEqual(["e0"]);
+    expect(movedByDrop(held("main"), "commander", ["commander"], false)).toEqual([]);
     for (const hasCommander of [true, false]) {
       for (const board of ["commander", "companion", "main", "side", "maybe"] as const) {
-        expect(canDropOn(board, ["maybe", "main"].filter((b) => b !== board) as never, hasCommander)).toBe(
-          moveTargets(hasCommander).includes(board),
-        );
+        const cards = held(...(["maybe", "main"].filter((b) => b !== board) as DeckBoard[]));
+        expect(movedByDrop(cards, board, [board], hasCommander).length > 0).toBe(moveTargets(hasCommander).includes(board));
       }
     }
   });
 
-  it("no board, or nothing held, is no target", () => {
-    expect(canDropOn(null, ["main"], true)).toBe(false);
-    expect(canDropOn("side", [], true)).toBe(false);
+  it("no board, or nothing held, moves nothing", () => {
+    expect(movedByDrop(held("main"), null, [], true)).toEqual([]);
+    expect(movedByDrop([], "side", ["side"], true)).toEqual([]);
+  });
+
+  it("Group by None's Deck group shows the commander and the companion: dropped back there they stay (#724 check)", () => {
+    expect(boardsShownIn("deck")).toEqual(["commander", "companion", "main"]);
+    const deck = boardsShownIn("deck");
+    expect(movedByDrop(held("commander"), boardOfGroup("deck"), deck, true)).toEqual([]);
+    expect(movedByDrop(held("companion"), boardOfGroup("deck"), deck, true)).toEqual([]);
+    // Dragged with a sideboard card, only the sideboard card moves.
+    expect(movedByDrop(held("commander", "side"), boardOfGroup("deck"), deck, true)).toEqual(["e1"]);
+  });
+
+  it("a type group shows the mainboard only: the commander dropped there moves to the Mainboard", () => {
+    expect(boardsShownIn("main-Creature")).toEqual(["main"]);
+    expect(movedByDrop(held("commander"), boardOfGroup("main-Creature"), boardsShownIn("main-Creature"), true)).toEqual(["e0"]);
+    expect(boardsShownIn("tokens")).toEqual([]);
   });
 });
 

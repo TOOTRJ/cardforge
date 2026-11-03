@@ -7,11 +7,12 @@ import type { DeckEditor } from "@/components/decks/use-deck-editor";
 import {
   BOARD_DRAG_QUERY,
   boardOfGroup,
-  canDropOn,
+  boardsShownIn,
   DECK_ENTRY_DRAG_TYPE,
   draggedIds,
   dragStartsFrom,
   dropHint,
+  movedByDrop,
 } from "@/lib/decks/board-drag";
 import { moveTargets } from "@/lib/decks/entry-ops";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ export type BoardDrag = {
   tray: ReactNode;
 };
 
-type Held = { ids: string[]; from: DeckBoard[] };
+type Held = { ids: string[]; cards: { id: string; board: DeckBoard }[] };
 
 const IDLE: DropZone = { props: {}, state: "idle", hint: null };
 
@@ -81,9 +82,12 @@ export function useBoardDrag({
   editor,
   hasCommander,
   selection,
+  onDropped,
 }: {
   editor: DeckEditor | null;
   hasCommander: boolean;
+  /** After a drop moved cards (the list re-renders under a still pointer). */
+  onDropped?: () => void;
   /** The owner's selection: a picked card carries the whole of it. */
   selection: { selecting: boolean; ids: readonly string[] };
 }): BoardDrag {
@@ -108,9 +112,11 @@ export function useBoardDrag({
     setOver(null);
   };
 
-  const boardsOf = (ids: readonly string[]): DeckBoard[] => {
+  const cardsOf = (ids: readonly string[]): Held["cards"] => {
     const wanted = new Set(ids);
-    return (editor?.items ?? []).filter((item) => wanted.has(item.entry.id)).map((item) => item.entry.board);
+    return (editor?.items ?? [])
+      .filter((item) => wanted.has(item.entry.id))
+      .map((item) => ({ id: item.entry.id, board: item.entry.board }));
   };
 
   const dragProps = (entryId: string, pending = false): DragSourceProps => {
@@ -131,8 +137,8 @@ export function useBoardDrag({
           return;
         }
         const ids = draggedIds(entryId, selection);
-        const from = boardsOf(ids);
-        if (from.length === 0) {
+        const cards = cardsOf(ids);
+        if (cards.length === 0) {
           event.preventDefault();
           return;
         }
@@ -154,20 +160,21 @@ export function useBoardDrag({
         if (startTimer.current !== null) window.clearTimeout(startTimer.current);
         startTimer.current = window.setTimeout(() => {
           startTimer.current = null;
-          setHeld({ ids, from });
+          setHeld({ ids, cards });
         }, 0);
       },
       onDragEnd: end,
     };
   };
 
-  const zoneFor = (key: string, board: DeckBoard | null): DropZone => {
-    if (!enabled || !held) return IDLE;
-    if (!canDropOn(board, held.from, hasCommander)) return IDLE;
+  const zoneFor = (key: string, board: DeckBoard | null, shown: readonly DeckBoard[]): DropZone => {
+    if (!enabled || !held || !board) return IDLE;
+    const moving = movedByDrop(held.cards, board, shown, hasCommander);
+    if (moving.length === 0) return IDLE;
     const state: DropState = over === key ? "over" : "target";
     return {
       state,
-      hint: state === "over" ? dropHint(board, held.ids.length) : null,
+      hint: state === "over" ? dropHint(board, moving.length) : null,
       props: {
         "data-drop-board": board,
         "data-drop-state": state,
@@ -185,22 +192,24 @@ export function useBoardDrag({
         onDrop: (event) => {
           event.preventDefault();
           event.stopPropagation();
-          const ids = held.ids;
           end();
           if (!editor) return;
+          const ids = moving;
           // The card's opener takes the focus in its new group (the menus'
           // move does the same).
           editor.holdFocusOn(ids[0]!);
           editor.move(ids, board);
+          onDropped?.();
         },
       },
     };
   };
 
-  const dropZone = (groupKey: string) => zoneFor(groupKey, boardOfGroup(groupKey));
+  const dropZone = (groupKey: string) => zoneFor(groupKey, boardOfGroup(groupKey), boardsShownIn(groupKey));
+  const trayZone = (key: string, board: DeckBoard) => zoneFor(key, board, [board]);
 
   const tray =
-    enabled && held ? <BoardDropTray boards={moveTargets(hasCommander)} count={held.ids.length} zoneFor={zoneFor} /> : null;
+    enabled && held ? <BoardDropTray boards={moveTargets(hasCommander)} count={held.ids.length} zoneFor={trayZone} /> : null;
 
   return { dragProps, dropZone, tray };
 }
