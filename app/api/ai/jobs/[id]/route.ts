@@ -28,8 +28,6 @@ export async function GET(
       { status: 404 },
     );
   }
-  // Server-only plan stays server-side (see the step route).
-  const { plan: _plan, ...payload } = job;
-  void _plan;
-  return NextResponse.json({ ok: true, job: payload }, { status: 200 });
+  // The owner's read holds no plan (migration 0162, lib/ai/job-privacy.ts).
+  return NextResponse.json({ ok: true, job }, { status: 200 });
 }

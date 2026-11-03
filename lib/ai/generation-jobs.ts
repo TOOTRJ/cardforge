@@ -149,6 +149,12 @@ import {
 } from "@/lib/ai/failure";
 import { DesignNotUsableError, designFreshly } from "@/lib/ai/design-variety";
 import { recentAiTitles } from "@/lib/ai/recent-designs";
+import {
+  OWNER_JOB_COLUMNS,
+  PENDING_BACK_STEP_LABEL,
+  PENDING_STEP_LABEL,
+  earnedStepLabel,
+} from "@/lib/ai/job-privacy";
 
 // ---------------------------------------------------------------------------
 // AI generation jobs — the batch pipeline behind deck generation, deck
@@ -262,6 +268,10 @@ export type GenerationJobRow = {
   error: string | null;
 };
 
+/** A job as its OWNER's session reads it (migration 0163): every column
+ *  but `plan`, which only the service role reads (lib/ai/job-privacy.ts). */
+export type GenerationJobView = Omit<GenerationJobRow, "plan">;
+
 /** Single-card job (migration 0061): the card text is designed at plan time
  *  (fast), the one step creates + paints it. Replaced the synchronous
  *  /api/ai/random-card request, which ran 60–90s and got cut + re-run at the
@@ -274,6 +284,10 @@ type CardJobPlan = {
   frame_template: string | null;
   /** Deck-aware design: the step adds the finished card to this deck. */
   deck_id?: string | null;
+  /** The step's designed label (its title), written when the step is done
+   *  (lib/ai/job-privacy.ts) — until then the step reads a placeholder.
+   *  Absent on plans made before it. */
+  step_labels?: Record<string, string>;
 };
 
 /** RETIRED 2026-09-16 (owner decision): the image-to-image "Remix with AI"
@@ -333,6 +347,10 @@ type CardFillJobPlan = {
     };
     brief?: string;
   };
+  /** Each step's designed label ("Title", "Front // Back", the back's
+   *  title), written when that step is done (lib/ai/job-privacy.ts) —
+   *  until then a placeholder. Absent on plans made before it. */
+  step_labels?: Record<string, string>;
 };
 
 /** The step key of a double-faced fill's BACK picture (PR 3). */
@@ -395,14 +413,14 @@ const GUIDE_STEP_KEY = "guide";
 
 export async function getGenerationJob(
   jobId: string,
-): Promise<GenerationJobRow | null> {
+): Promise<GenerationJobView | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("ai_generation_jobs")
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .eq("id", jobId)
     .maybeSingle();
-  return (data as unknown as GenerationJobRow) ?? null;
+  return (data as unknown as GenerationJobView) ?? null;
 }
 
 export type RunStepResult =
@@ -491,6 +509,12 @@ export async function runNextJobStep(
       refunded: outcome.refunded ?? null,
       refund_pending: outcome.refund_pending ?? null,
     };
+  }
+  // A step's designed title is its label once it is DONE — paid for — and
+  // never before (lib/ai/job-privacy.ts).
+  if (result.status === "done") {
+    const earned = earnedStepLabel(job.plan, result.key);
+    if (earned) result = { ...result, label: earned };
   }
   if (result.status === "failed") {
     console.warn(
@@ -886,7 +910,7 @@ export async function loadOwnedDeckContext(
 }
 
 export type CreateCardJobResult =
-  | { ok: true; job: GenerationJobRow }
+  | { ok: true; job: GenerationJobView }
   /** `code`: a station fill whose empty tier came back empty (no job,
    *  nothing charged), or the kind of a plan-time design failure
    *  (lib/ai/failure.ts) — nothing is reserved at plan time, so its message
@@ -1025,9 +1049,10 @@ export async function createCardGenerationJob(
     style: input.style?.trim() || null,
     frame_template: frameTemplate ?? null,
     deck_id: deckContext?.deck.id ?? null,
+    step_labels: { "card:0": card.title },
   };
   const steps: JobStep[] = [
-    { key: "card:0", label: card.title, status: "pending" },
+    { key: "card:0", label: PENDING_STEP_LABEL, status: "pending" },
   ];
 
   const supabase = await createClient();
@@ -1048,12 +1073,12 @@ export async function createCardGenerationJob(
       plan: plan as unknown as Json,
       steps: steps as unknown as Json,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
-  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+  return { ok: true, job: jobRow as unknown as GenerationJobView };
 }
 
 // ---------------------------------------------------------------------------
@@ -1356,13 +1381,18 @@ async function insertFillJob(
    *  front's. */
   backLabel?: string,
 ): Promise<CreateCardJobResult> {
+  // The labels are designed titles: the plan keeps them and each step takes
+  // its own once done — paid for (lib/ai/job-privacy.ts).
+  const stepLabels: Record<string, string> = { "fill:0": label };
+  if (backLabel) stepLabels[FILL_BACK_STEP_KEY] = backLabel;
+  const storedPlan: CardFillJobPlan = { ...plan, step_labels: stepLabels };
   const steps: JobStep[] = [
     {
       key: "fill:0",
-      label,
+      label: PENDING_STEP_LABEL,
       status: "pending",
     },
-    ...(backLabel ? [{ key: FILL_BACK_STEP_KEY, label: backLabel, status: "pending" as const }] : []),
+    ...(backLabel ? [{ key: FILL_BACK_STEP_KEY, label: PENDING_BACK_STEP_LABEL, status: "pending" as const }] : []),
   ];
 
   const supabase = await createClient();
@@ -1381,15 +1411,15 @@ async function insertFillJob(
         scope: input.scope ?? "create",
         claimed_at: null,
       },
-      plan: plan as unknown as Json,
+      plan: storedPlan as unknown as Json,
       steps: steps as unknown as Json,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
-  return { ok: true, job: jobRow as unknown as GenerationJobRow };
+  return { ok: true, job: jobRow as unknown as GenerationJobView };
 }
 
 /** A designed field over the pinned one (undefined = not designed). */
@@ -1961,7 +1991,7 @@ export type CreateDeckJobInput = {
 };
 
 export type CreateDeckJobResult =
-  | { ok: true; job: GenerationJobRow; deckSlug: string }
+  | { ok: true; job: GenerationJobView; deckSlug: string }
   | { ok: false; error: string };
 
 export async function createDeckGenerationJob(
@@ -2063,14 +2093,14 @@ export async function createDeckGenerationJob(
       steps: steps as unknown as Json,
       deck_id: deckId,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the generation job." };
   }
   return {
     ok: true,
-    job: jobRow as unknown as GenerationJobRow,
+    job: jobRow as unknown as GenerationJobView,
     deckSlug: deckSlug ?? "",
   };
 }
@@ -2236,14 +2266,14 @@ export async function createDeckRemixJob(
       steps: steps as unknown as Json,
       deck_id: created.deckId,
     })
-    .select("*")
+    .select(OWNER_JOB_COLUMNS)
     .single();
   if (insertError || !jobRow) {
     return { ok: false, error: "Couldn't persist the remix job." };
   }
   return {
     ok: true,
-    job: jobRow as unknown as GenerationJobRow,
+    job: jobRow as unknown as GenerationJobView,
     deckSlug: created.slug,
   };
 }

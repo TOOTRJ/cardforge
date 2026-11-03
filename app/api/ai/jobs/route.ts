@@ -24,6 +24,7 @@ import {
   createDeckGenerationJob,
   createDeckRemixJob,
 } from "@/lib/ai/generation-jobs";
+import { OWNER_JOB_COLUMNS } from "@/lib/ai/job-privacy";
 import {
   COLOR_IDENTITY_VALUES,
   DFC_ICON_FAMILY_VALUES,
@@ -259,7 +260,8 @@ export async function GET() {
   // sensible background resume for one, so they are never offered here.
   const { data } = await supabase
     .from("ai_generation_jobs")
-    .select("*")
+    // Never `plan`: no API role can read it (migration 0162).
+    .select(OWNER_JOB_COLUMNS)
     .eq("status", "generating")
     .neq("kind", "card_fill")
     .order("created_at", { ascending: false })
@@ -274,9 +276,7 @@ export async function GET() {
     );
   });
   if (!resumable) return NextResponse.json({ ok: true, job: null }, { status: 200 });
-  const { plan: _plan, ...payload } = resumable;
-  void _plan;
-  return NextResponse.json({ ok: true, job: payload }, { status: 200 });
+  return NextResponse.json({ ok: true, job: resumable }, { status: 200 });
 }
 
 /**

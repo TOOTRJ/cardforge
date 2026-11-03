@@ -127,6 +127,7 @@ const COLOURS = ["w", "u", "b", "r", "g", "c", "m"];
 const EVERY = FRAME_TEMPLATE_VALUES.flatMap((template) => COLOURS.map((colour) => frameComboKey(template as FrameTemplate, colour)));
 const designPrompts = () => s.prompts.filter((prompt) => prompt.includes("Fresh design #"));
 type StoredPlan = Record<string, unknown> & {
+  step_labels?: Record<string, string>;
   fields: Record<string, unknown> & { back_face?: Record<string, unknown> };
   frame_template: string | null;
   art_brief?: string;
@@ -167,7 +168,7 @@ async function runSteps() {
     const result = await runNextJobStep("job-1", step);
     expect(result.ok).toBe(true);
   }
-  return s.job.steps as Array<{ key: string; status: string; fill?: Record<string, unknown> & { back_face?: Record<string, unknown> }; spend_ref?: string | null }>;
+  return s.job.steps as Array<{ key: string; label?: string; status: string; fill?: Record<string, unknown> & { back_face?: Record<string, unknown> }; spend_ref?: string | null }>;
 }
 
 /** What each kind's FRONT step hands the creator (its text), art aside. */
@@ -254,6 +255,40 @@ describe("design → plan → two steps → what the creator is handed, per kind
     s.answers = [[structuredClone(DFC_DESIGNS.mdfc)]];
     await fill("mdfc");
     expect(plan().back_art!.face).toMatchObject({ template: "m15mdfclandback", card_type: "land", color_identity: ["blue"] });
+  });
+});
+
+describe("the designed titles wait for the paid steps (fix(ai), lib/ai/job-privacy.ts)", () => {
+  it("the stored steps name no title; each step takes its own once done", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    await fill("transform");
+    const row = s.inserted.at(-1)!;
+    const front = TRANSFORM.title;
+    const back = TRANSFORM.back_face!.title;
+    // What the owner's session can read before anything is charged: no
+    // designed title in a step (the plan holds them — a column no API
+    // role reads, migration 0163).
+    expect(row.steps).toEqual([
+      { key: "fill:0", label: "Your card", status: "pending" },
+      { key: "fill:1", label: "Back face", status: "pending" },
+    ]);
+    expect(JSON.stringify(row.steps)).not.toContain(front);
+    expect(JSON.stringify(row.steps)).not.toContain(back);
+    expect(plan().step_labels).toEqual({ "fill:0": `${front} // ${back}`, "fill:1": back });
+    expect(s.spend).not.toHaveBeenCalled();
+    const steps = await runSteps();
+    expect(steps.map((step) => step.label)).toEqual([`${front} // ${back}`, back]);
+  });
+
+  it("a step that fails — refunded, the text never handed over — keeps its placeholder", async () => {
+    s.answers = [[structuredClone(TRANSFORM)]];
+    await fill("transform", { want: WANT_ALL.filter((field) => field !== "art") });
+    s.spend.mockResolvedValue({ ok: false, reason: "insufficient_credits", balance: 0, message: "Out of credits." });
+    const row = s.inserted.at(-1)!;
+    s.job = { id: "job-1", owner_id: USER, kind: "card_fill", status: "generating", request: {}, deck_id: null, error: null, plan: row.plan, steps: structuredClone(row.steps as Array<Record<string, unknown>>) };
+    await runNextJobStep("job-1", "fill:0");
+    expect(s.job.steps[0]).toMatchObject({ status: "failed", label: "Your card" });
+    expect(s.job.steps[0]!.fill ?? null).toBeNull();
   });
 });
 

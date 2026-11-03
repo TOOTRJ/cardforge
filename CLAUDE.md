@@ -1551,7 +1551,12 @@ Rules and gotchas:
   SEXUAL categories alone and one 10 s cap, no retries — `persistGeneratedArt`:
   flagged → never stored, `art_blocked`, refunded once; fail open). AI batch jobs (deck/set/card) step through `patch_job_step`
   (atomic per-step write); the client runs a few steps in parallel, so never
-  reintroduce a whole-`steps`-array overwrite. Credit settlement (0106):
+  reintroduce a whole-`steps`-array overwrite. A job's text is designed at
+  PLAN time and paid for at its STEP, so its `plan` is server-only (0163:
+  no API role reads the column — an owner-session read names
+  `OWNER_JOB_COLUMNS`, never `*`) and a card / card_fill step's designed
+  title waits in `plan.step_labels` until the step is done
+  (`lib/ai/job-privacy.ts`). Credit settlement (0106):
   `patch_job_step` stamps `credit_ledger.settled_at` (via `settle_spend`) in
   the same transaction as a step's done-write and the sync idea routes call
   `settleSpend()`; the reconcile cron refunds every aged UNSETTLED `spend:`
