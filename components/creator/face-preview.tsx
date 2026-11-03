@@ -77,13 +77,13 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
   );
   const small = (
     <div
-      className={cn("relative flex", layout === "inline" ? "flex-col gap-1" : "items-center gap-2 xl:flex-col xl:items-stretch xl:gap-1.5")}
+      className={cn("relative flex", layout === "inline" ? "flex-col gap-1" : "items-center gap-2 creator-xl:flex-col creator-xl:items-stretch creator-xl:gap-1.5")}
       data-testid="face-preview-other"
       data-face={other}
     >
       <div
         aria-hidden
-        className={cn("pointer-events-none shrink-0", layout === "inline" ? "w-16" : "w-10 xl:w-[4.5rem]")}
+        className={cn("pointer-events-none shrink-0", layout === "inline" ? "w-16" : "w-10 creator-xl:w-[4.5rem]")}
       >
         <CardPreview {...deferredProps} face={other} onFaceChange={undefined} flipOnClick={false} hideFlipControl />
       </div>
@@ -127,12 +127,12 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
   // foot, the collector line, stays in view under that row.
   return (
     <div className={cn("relative flex flex-col gap-3", still)} data-testid="face-preview" data-face={face}>
-      <div className="flex min-h-14 items-center xl:min-h-0">{showing}</div>
-      <div className="flex flex-col items-center gap-3 xl:flex-row xl:items-end xl:justify-center">
-        <div className="w-full min-w-0 max-w-[min(24rem,calc((100svh_-_14.5rem)*5/7))] xl:max-w-sm xl:flex-1">
+      <div className="flex min-h-14 items-center creator-xl:min-h-0">{showing}</div>
+      <div className="flex flex-col items-center gap-3 creator-xl:flex-row creator-xl:items-end creator-xl:justify-center">
+        <div className="w-full min-w-0 max-w-[min(24rem,calc((100svh_-_14.5rem)*5/7))] creator-xl:max-w-sm creator-xl:flex-1">
           {large}
         </div>
-        <div className="absolute right-0 top-0 shrink-0 xl:static xl:w-[4.5rem]">{small}</div>
+        <div className="absolute right-0 top-0 shrink-0 creator-xl:static creator-xl:w-[4.5rem]">{small}</div>
       </div>
     </div>
   );

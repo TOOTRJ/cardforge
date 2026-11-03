@@ -17,6 +17,13 @@ const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
 
+/** The suite runs against a LOCAL Supabase (.env.e2e: 127.0.0.1:54321).
+ *  A spec that flips a site-wide setting runs only there — never against
+ *  the shared dev database other people test on. */
+const localSupabase = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/.test(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+);
+
 test.describe("public decks browse", () => {
   test("the landing offers search + browse-all; /decks/browse carries the format filters", async ({
     page,
@@ -202,5 +209,81 @@ test.describe("deck CRUD + import", () => {
 
     await expectImportedLands(page, title);
     await deleteDeck(page);
+  });
+
+  test("edits a card in the drawer over the deck — saved in place, Back closes it, full screen on a phone (TODO DK5.18)", async ({
+    page,
+  }) => {
+    // The admin switch (site_settings.deck_inline_editor) is SITE-WIDE: this
+    // case turns it on, so it runs only against a local Supabase — never
+    // the shared dev database, where it would change the deck page for
+    // everyone testing there. The e2e user is an admin: "Admins only" gives
+    // them the drawer (the specs run one at a time — workers: 1 — and the
+    // switch is put back to Off whatever happens).
+    test.skip(!localSupabase, "flips a site-wide switch: local Supabase only (NEXT_PUBLIC_SUPABASE_URL)");
+    await signIn(page);
+    const setSwitch = async (label: RegExp) => {
+      await page.goto("/admin/deck-editor");
+      const radio = page.getByRole("radio", { name: label });
+      await radio.check();
+      await expect(radio).toBeChecked();
+      // The write is done when the radios are live again.
+      await expect(radio).toBeEnabled({ timeout: 15_000 });
+      await page.waitForLoadState("networkidle");
+    };
+    await setSwitch(/^admins only/i);
+    try {
+      const title = `E2E Drawer ${Date.now()}`;
+      await page.goto("/dashboard/decks/new");
+      const dialog = page.getByRole("dialog", { name: "New deck" });
+      await dialog.getByRole("textbox", { name: "Deck name" }).fill(title);
+      await dialog.getByRole("radio", { name: "Modern" }).click();
+      await dialog.getByRole("textbox", { name: /paste a decklist/i }).fill("4 Mountain\n2 Island");
+      await dialog.getByRole("button", { name: /^create deck$/i }).click();
+      await page.waitForURL(/\/deck\/[^/?]+$/, { timeout: 60_000 });
+      await expectImportedLands(page, title);
+      await page.getByRole("radiogroup", { name: "View" }).getByRole("radio", { name: "List" }).click();
+
+      // Customize opens the drawer — no navigation, `?edit=` pushed.
+      await page.getByRole("button", { name: "More for Island" }).first().click();
+      await page.getByRole("menu", { name: "Island: actions" }).getByRole("menuitem", { name: "Customize" }).click();
+      const drawer = page.getByRole("dialog", { name: "Island" });
+      await expect(drawer).toBeVisible({ timeout: 30_000 });
+      await expect(page).toHaveURL(/\/deck\/[^/?]+\?edit=[0-9a-f-]+$/);
+      const name = drawer.locator("input[name='title']");
+      await expect(name).toHaveValue("Island", { timeout: 60_000 });
+      await name.fill("Island of Embers");
+      await drawer.getByRole("button", { name: /^save$/i }).click();
+      // Saved in place: the drawer stays, the row behind it (out of the
+      // accessibility tree while the modal is open) is the new card.
+      await expect(page.locator("[data-deck-entry][data-editing]")).toHaveAttribute(
+        "aria-label",
+        /^island of embers, 2 copies, edited$/i,
+        { timeout: 60_000 },
+      );
+      await expect(page.getByRole("dialog", { name: "Island of Embers" })).toBeVisible();
+
+      // Back closes it, in one press, and the focus is back on the row.
+      await page.goBack();
+      await expect(page.getByRole("dialog", { name: /island/i })).toHaveCount(0);
+      await expect(page).toHaveURL(/\/deck\/[^/?]+$/);
+      await expect(page.getByRole("button", { name: /^island of embers, 2 copies, edited$/i })).toBeFocused();
+
+      // A phone: full screen, the way back is the deck's name.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: /^mountain, 4 copies, imported$/i }).click();
+      await page.getByRole("dialog").getByRole("link", { name: "Customize" }).click();
+      const phone = page.getByRole("dialog", { name: "Mountain" });
+      await expect(phone).toBeVisible({ timeout: 30_000 });
+      const box = await phone.boundingBox();
+      expect(box?.width).toBe(390);
+      await phone.getByRole("button", { name: new RegExp(`back to ${title}`, "i") }).click();
+      await expect(page.getByRole("dialog", { name: "Mountain" })).toHaveCount(0);
+      await page.setViewportSize({ width: 1280, height: 720 });
+
+      await deleteDeck(page);
+    } finally {
+      await setSwitch(/^off/i);
+    }
   });
 });

@@ -56,6 +56,8 @@ export function DeckSummaryBar({
   formatIssues,
   onGoToEntry,
   editNext,
+  onEditNext,
+  onEditIntent,
   unchanged,
   canManage,
   className,
@@ -67,6 +69,11 @@ export function DeckSummaryBar({
   onGoToEntry?: (entryId: string) => void;
   /** The next unchanged import the Customize flow takes, or null. */
   editNext: { href: string; name: string } | null;
+  /** The deck's edit drawer (TODO DK5.18): "Edit next" opens it there (a
+   *  modified click still follows the link). Left out: the link, as on main. */
+  onEditNext?: () => void;
+  /** Fetch the drawer's chunk ahead (hover / focus on "Edit next"). */
+  onEditIntent?: () => void;
   /** Cards still as imported (the composition's Imported). */
   unchanged: number;
   canManage: boolean;
@@ -146,6 +153,17 @@ export function DeckSummaryBar({
         {canManage && editNext ? (
           <Link
             href={editNext.href}
+            onClick={
+              onEditNext
+                ? (event) => {
+                    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    onEditNext();
+                  }
+                : undefined
+            }
+            onPointerEnter={onEditIntent}
+            onFocus={onEditIntent}
             data-edit-next=""
             data-edit-next-name={editNext.name}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md text-xs font-medium text-primary-bright underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 sm:text-sm"

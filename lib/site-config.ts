@@ -280,6 +280,7 @@ export const siteConfig = {
     { label: "Frame requests", href: "/admin/frame-requests" },
     { label: "Re-bakes", href: "/admin/renders" },
     { label: "Creator lab", href: "/admin/creator-lab" },
+    { label: "Deck editor", href: "/admin/deck-editor" },
   ] as readonly NavItem[],
 
   // Four even columns (TODO NV2). The tool landing pages are under Create

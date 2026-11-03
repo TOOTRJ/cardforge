@@ -12,6 +12,10 @@
 // Browsers read the scroll padding for every scroll that brings an element
 // into view: a Tab to a field, `scrollIntoView` (the "still needed" links,
 // lib/creator/focus-field.ts) and a focus that scrolls.
+//
+// Hosted (the deck's edit drawer, TODO DK5.18) the HOST's box scrolls, not
+// the page: the padding goes on that box, and the switch sticks at its top
+// (no site header above it — `--creator-sticky-switch: 0`).
 
 import { useEffect } from "react";
 
@@ -20,25 +24,37 @@ const STICKY_TOP_REM = 4.25;
 /** Room between a focused field and the bar beside it. */
 const AIR_PX = 12;
 
-/** The page's scroll padding for bars of these heights (px). */
-export function creatorScrollPadding(input: { faceSwitchPx: number; saveBarPx: number }): { top: string; bottom: string } {
+/** The page's scroll padding for bars of these heights (px). `stickyTopRem`:
+ *  where the switch sticks (the site header's height on the page; 0 in a
+ *  host's own scroll box). */
+export function creatorScrollPadding(input: { faceSwitchPx: number; saveBarPx: number; stickyTopRem?: number }): { top: string; bottom: string } {
   return {
-    top: `calc(${STICKY_TOP_REM}rem + ${Math.ceil(input.faceSwitchPx) + AIR_PX}px)`,
+    top: `calc(${input.stickyTopRem ?? STICKY_TOP_REM}rem + ${Math.ceil(input.faceSwitchPx) + AIR_PX}px)`,
     bottom: `${Math.ceil(input.saveBarPx) + AIR_PX}px`,
   };
 }
 
-export function useCreatorScrollPadding(saveBar: HTMLElement | null, faceSwitch: HTMLElement | null) {
+/** Sets a scroll box's padding (the page's root, or a host's own box). */
+function writeScrollPadding(box: HTMLElement, padding: { top: string; bottom: string }) {
+  box.style.scrollPaddingTop = padding.top;
+  box.style.scrollPaddingBottom = padding.bottom;
+}
+
+export function useCreatorScrollPadding(
+  saveBar: HTMLElement | null,
+  faceSwitch: HTMLElement | null,
+  scrollRoot: HTMLElement | null = null,
+) {
   useEffect(() => {
-    const html = document.documentElement;
+    const html = scrollRoot ?? document.documentElement;
     const before = { top: html.style.scrollPaddingTop, bottom: html.style.scrollPaddingBottom };
     const apply = () => {
       const padding = creatorScrollPadding({
         faceSwitchPx: faceSwitch?.getBoundingClientRect().height ?? 0,
         saveBarPx: saveBar?.getBoundingClientRect().height ?? 0,
+        ...(scrollRoot ? { stickyTopRem: 0 } : {}),
       });
-      html.style.scrollPaddingTop = padding.top;
-      html.style.scrollPaddingBottom = padding.bottom;
+      writeScrollPadding(html, padding);
     };
     apply();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(apply) : null;
@@ -46,8 +62,7 @@ export function useCreatorScrollPadding(saveBar: HTMLElement | null, faceSwitch:
     if (faceSwitch) observer?.observe(faceSwitch);
     return () => {
       observer?.disconnect();
-      html.style.scrollPaddingTop = before.top;
-      html.style.scrollPaddingBottom = before.bottom;
+      writeScrollPadding(html, before);
     };
-  }, [saveBar, faceSwitch]);
+  }, [saveBar, faceSwitch, scrollRoot]);
 }

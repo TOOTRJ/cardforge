@@ -25,6 +25,9 @@ type DeleteCardDialogProps = {
   triggerLabel?: string | null;
   triggerVariant?: "ghost" | "outline" | "secondary";
   triggerSize?: "sm" | "md";
+  /** Deleted: the caller takes it from here instead of the redirect (the
+   *  deck's edit drawer closes, TODO DK5.18). */
+  onDeleted?: () => void;
 };
 
 export function DeleteCardDialog({
@@ -34,6 +37,7 @@ export function DeleteCardDialog({
   triggerLabel = "Delete card",
   triggerVariant = "outline",
   triggerSize = "md",
+  onDeleted,
 }: DeleteCardDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -45,6 +49,10 @@ export function DeleteCardDialog({
       if (result.ok) {
         toast.success(`Deleted ${cardTitle}.`);
         setOpen(false);
+        if (onDeleted) {
+          onDeleted();
+          return;
+        }
         router.replace(redirectTo);
         router.refresh();
       } else {

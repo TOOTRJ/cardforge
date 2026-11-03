@@ -90,6 +90,11 @@ type DeckCardModalProps = {
   /** The owner's cover picks (TODO DK6.4) and whether this entry can stand
    *  in the fan; null = no "Feature on cover" (a visitor). */
   cover?: { picks: readonly CoverPickRow[]; shown: boolean } | null;
+  /** The deck's edit drawer (TODO DK5.18): Edit opens it over the deck.
+   *  Left out: Edit is DK5.5's link, as on main. */
+  onEdit?: () => void;
+  /** Fetch the drawer's chunk ahead (hover / focus on Edit). */
+  onEditIntent?: () => void;
 };
 
 export function DeckCardModal({
@@ -100,6 +105,8 @@ export function DeckCardModal({
   onOpenChange,
   preferProxy,
   cover = null,
+  onEdit,
+  onEditIntent,
 }: DeckCardModalProps) {
   const { entry, card } = item;
   const status = deckEntryStatus(entry, card);
@@ -396,7 +403,19 @@ export function DeckCardModal({
                     too), one that's gone (D3) — or edit the one you made. */}
                 {edit ? (
                   <Button asChild size={card && !item.cardOwner ? "md" : "lg"} variant={card && !item.cardOwner ? "outline" : "primary"}>
-                    <Link href={edit.href} onClick={() => onOpenChange(false)}>
+                    <Link
+                      href={edit.href}
+                      onClick={(event) => {
+                        onOpenChange(false);
+                        // The deck's edit drawer (DK5.18): a plain click opens
+                        // it over the deck; a modified one follows the link.
+                        if (!onEdit || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                        event.preventDefault();
+                        onEdit();
+                      }}
+                      onPointerEnter={onEditIntent}
+                      onFocus={onEditIntent}
+                    >
                       {card && !item.cardOwner ? <Pencil className="h-4 w-4" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
                       {edit.label}
                     </Link>

@@ -31,11 +31,17 @@ type PendingLeave = { proceed: () => void };
 type UseUnsavedChangesGuardOptions = {
   /** True while the form has changes worth asking about. */
   enabled: boolean;
+  /** The creator is hosted (the deck's edit drawer, TODO DK5.18): the host
+   *  owns Back (its own history entry), so no sentinel is pushed and no
+   *  popstate is heard — two history owners doubled every Back press
+   *  (3b.7's bug). Links and a reload are still guarded, and the host asks
+   *  through `ask` before it closes. */
+  hosted?: boolean;
 };
 
 /** Registers the click / Back / beforeunload interceptors and returns the
  *  pending navigation (null when none) plus a way to clear it. */
-export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOptions) {
+export function useUnsavedChangesGuard({ enabled, hosted = false }: UseUnsavedChangesGuardOptions) {
   const router = useRouter();
   const [pending, setPending] = useState<PendingLeave | null>(null);
   const enabledRef = useRef(enabled);
@@ -89,12 +95,14 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
   // standing on.
   const sentinelArmedRef = useRef(false);
   useEffect(() => {
+    if (hosted) return;
     if (enabled && !sentinelArmedRef.current) {
       sentinelArmedRef.current = true;
       window.history.pushState({ pipglyphUnsavedGuard: true }, "", window.location.href);
     }
-  }, [enabled]);
+  }, [enabled, hosted]);
   useEffect(() => {
+    if (hosted) return;
     const handler = () => {
       if (!sentinelArmedRef.current) return;
       if (!enabledRef.current) {
@@ -118,11 +126,22 @@ export function useUnsavedChangesGuard({ enabled }: UseUnsavedChangesGuardOption
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
-  }, []);
+  }, [hosted]);
 
   return {
     pending,
     clearPending: () => setPending(null),
+    /** The host is about to close or move on: with changes, ask (the
+     *  dialog's "Leave" / a successful save then runs `proceed`) and say
+     *  so (true); without, run it now (false). */
+    ask: (proceed: () => void): boolean => {
+      if (enabledRef.current) {
+        setPending({ proceed });
+        return true;
+      }
+      proceed();
+      return false;
+    },
     /** Stop guarding — after a save, or on "Leave without saving" — and
      *  take the Back sentinel off the history (TODO 3b.7). Left in place it
      *  cost an extra Back press after every save and, after a create's
@@ -168,6 +187,11 @@ type UnsavedChangesDialogProps = {
   onSave: () => void;
   onLeave: () => void;
   onStay: () => void;
+  /** Where the focus goes when the dialog closes. The dialog has no trigger
+   *  (a link, Back or the host opened it), so Radix would hand the focus to
+   *  <body>; hosted (the deck's edit drawer, TODO DK5.18) the host puts it
+   *  back in the drawer. Absent: Radix's default, as on the full page. */
+  onCloseFocus?: () => void;
 };
 
 export function UnsavedChangesDialog({
@@ -180,11 +204,18 @@ export function UnsavedChangesDialog({
   onSave,
   onLeave,
   onStay,
+  onCloseFocus,
 }: UnsavedChangesDialogProps) {
+  const closeFocus = onCloseFocus
+    ? (event: Event) => {
+        event.preventDefault();
+        onCloseFocus();
+      }
+    : undefined;
   if (generating) {
     return (
       <Dialog open={open} onOpenChange={(next) => (next ? undefined : onStay())}>
-        <DialogContent size="sm">
+        <DialogContent size="sm" onCloseAutoFocus={closeFocus}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TriangleAlert className="h-4 w-4 text-gold-strong" aria-hidden />
@@ -216,7 +247,7 @@ export function UnsavedChangesDialog({
       // the navigation.
       onOpenChange={(next) => (next || saving ? undefined : onStay())}
     >
-      <DialogContent size="sm">
+      <DialogContent size="sm" onCloseAutoFocus={closeFocus}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4 text-gold-strong" aria-hidden />
