@@ -290,13 +290,13 @@ function ColorField({
       <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
         {label}
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <input
           type="color"
           name={`${name}_picker`}
           defaultValue={fallback}
           aria-label="Accent color picker"
-          className="h-10 w-12 cursor-pointer rounded-md border border-border bg-background/60 p-1"
+          className="h-10 w-12 shrink-0 cursor-pointer rounded-md border border-border bg-background/60 p-1"
           onChange={(e) => {
             const text = e.currentTarget.parentElement?.querySelector<HTMLInputElement>(
               `input[name="${name}"]`,
@@ -311,7 +311,7 @@ function ColorField({
           placeholder="#d8b26e"
           aria-invalid={error ? "true" : undefined}
           className={cn(
-            "h-10 flex-1 rounded-md border bg-background/60 px-3 font-mono text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "h-10 w-full min-w-0 flex-1 rounded-md border bg-background/60 px-3 font-mono text-sm text-foreground placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             error ? "border-danger/60" : "border-border",
           )}
         />
