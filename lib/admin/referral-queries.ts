@@ -24,6 +24,11 @@ export type ReferralStatsWindow = {
   capped: number;
   blocked: number;
   expired: number;
+  /** Qualified, not yet claimed (an email not confirmed yet; billing off). */
+  waiting: number;
+  /** Claimed with a side still owed — a grant the hourly sweep retries.
+   *  Counted over ALL rows, whatever the window. */
+  grantsOwed: number;
   blockReasons: Record<string, number>;
   monthsGranted: number;
   topReferrers: ReferralTopRow[];
@@ -47,6 +52,8 @@ export function parseReferralStats(raw: unknown): ReferralStatsWindow {
     capped: num(o.capped),
     blocked: num(o.blocked),
     expired: num(o.expired),
+    waiting: num(o.waiting),
+    grantsOwed: num(o.grantsOwed),
     blockReasons: reasons,
     monthsGranted: num(o.monthsGranted),
     topReferrers: top

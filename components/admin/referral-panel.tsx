@@ -9,6 +9,8 @@ const BLOCK_LABEL: Record<string, string> = {
   same_domain: "Same company domain (friend rewarded)",
   disposable_email: "Throwaway email",
   not_new: "Not a new account",
+  email_reused: "Email already used",
+  account_deleted: "Friend's account deleted",
 };
 
 // Referral program numbers (0164's admin_referral_stats): the chain
@@ -23,7 +25,8 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
     { label: "Rewarded (both sides)", d30: last30.rewarded, all: allTime.rewarded },
     { label: "Capped (friend only)", d30: last30.capped, all: allTime.capped },
     { label: "Blocked", d30: last30.blocked, all: allTime.blocked },
-    { label: "Expired (no card in 30 days)", d30: last30.expired, all: allTime.expired },
+    { label: "Expired (no card or no confirmed email in 30 days)", d30: last30.expired, all: allTime.expired },
+    { label: "Waiting (an email not confirmed yet)", d30: last30.waiting, all: allTime.waiting },
     { label: "Free months granted", d30: last30.monthsGranted, all: allTime.monthsGranted },
   ];
   const rate30 = activationRate(last30);
@@ -59,6 +62,12 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
               ))}
             </tbody>
           </table>
+          {allTime.grantsOwed > 0 ? (
+            <p className="mt-2 text-xs text-gold-strong">
+              {allTime.grantsOwed} free {allTime.grantsOwed === 1 ? "month is" : "months are"} still owed — the hourly
+              sweep retries them.
+            </p>
+          ) : null}
           {reasons.length > 0 ? (
             <p className="mt-2 text-xs text-muted">
               Blocked, all time: {reasons.map(([k, n]) => `${BLOCK_LABEL[k] ?? k} ${n}`).join(" · ")}

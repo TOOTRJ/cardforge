@@ -41,7 +41,14 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
     supabase.from("referrals").select(REFERRAL_COLUMNS).eq("referee_id", user.id).maybeSingle(),
   ]);
 
-  const ids = [...new Set([...(made ?? []).map((r) => r.referee_id), ...(mine ? [mine.referrer_id] : [])])];
+  // A friend whose account was deleted keeps the row (referee_id NULL, 0164).
+  const ids = [
+    ...new Set(
+      [...(made ?? []).map((r) => r.referee_id), ...(mine ? [mine.referrer_id] : [])].filter(
+        (id): id is string => typeof id === "string",
+      ),
+    ),
+  ];
   const names = new Map<string, string | null>();
   if (ids.length > 0) {
     const { data: profiles } = await supabase.from("profiles").select("id, username").in("id", ids);
@@ -52,12 +59,13 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
     .filter((r) => isReferralStatus(r.status))
     .map((r) => ({
       id: r.id,
-      username: names.get(r.referee_id) ?? null,
+      username: r.referee_id ? (names.get(r.referee_id) ?? null) : null,
+      accountDeleted: r.referee_id == null,
       status: r.status as ReferralStatus,
       signedUpAt: r.signed_up_at,
       firstCardAt: r.first_card_at,
       rewardedAt: r.rewarded_at,
-      reward: r.referrer_reward === "comp_month" || r.referrer_reward === "balance_credit" ? r.referrer_reward : null,
+      reward: r.referrer_reward === "plus_month" || r.referrer_reward === "balance_credit" ? r.referrer_reward : null,
     }));
 
   return {

@@ -56,7 +56,7 @@ export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   signed_up: "Signed up",
   first_card: "First card saved — pending",
   rewarded: "Rewarded",
-  capped: "Monthly limit reached",
+  capped: "Limit reached",
   blocked: "Not eligible",
   expired: "Expired",
 };

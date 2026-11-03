@@ -9,12 +9,14 @@ import { REFERRAL_LIFETIME_CAP, REFERRAL_MONTHLY_CAP, type ReferralStatus } from
 export type ReferralRow = {
   id: string;
   username: string | null;
+  /** The friend deleted their account (the row stays: 0164's SET NULL). */
+  accountDeleted?: boolean;
   status: ReferralStatus;
   signedUpAt: string;
   firstCardAt: string | null;
   rewardedAt: string | null;
   /** What the VIEWER (the referrer) got for it. */
-  reward: "comp_month" | "balance_credit" | null;
+  reward: "plus_month" | "balance_credit" | null;
 };
 
 export type ReferralSummary = {

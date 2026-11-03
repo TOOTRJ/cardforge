@@ -249,7 +249,7 @@ export default async function BillingPage() {
           <Link href="/dashboard/referrals" className="font-medium text-primary-bright hover:underline">
             Invite a friend
           </Link>{" "}
-          — you both get a free month when they save their first card.
+          — you both get a free month when they save their first card and you&apos;ve both confirmed your email.
         </p>
       </section>
 

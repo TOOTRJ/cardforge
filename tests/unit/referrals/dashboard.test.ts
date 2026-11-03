@@ -28,7 +28,7 @@ describe("buildReferralSummary", () => {
   it("counts joined, activated, months earned and this UTC month against the caps", () => {
     const rows = [
       row({}),
-      row({ status: "rewarded", firstCardAt: "2026-11-02T00:00:00Z", rewardedAt: "2026-11-02T00:00:00Z", reward: "comp_month" }),
+      row({ status: "rewarded", firstCardAt: "2026-11-02T00:00:00Z", rewardedAt: "2026-11-02T00:00:00Z", reward: "plus_month" }),
       row({ status: "rewarded", firstCardAt: "2026-10-31T23:00:00Z", rewardedAt: "2026-10-31T23:59:59Z", reward: "balance_credit" }),
       row({ status: "capped", firstCardAt: "2026-11-03T00:00:00Z", rewardedAt: "2026-11-03T00:00:00Z" }),
       row({ status: "blocked", firstCardAt: "2026-11-04T00:00:00Z" }),
@@ -87,5 +87,22 @@ describe("admin referral stats", () => {
     expect(html).toContain('href="/admin/users?u=d0000000-0000-4000-a000-000000000002"');
     expect(html).toContain("@dev_pro");
     expect(html).toContain("activation 30d: 50%");
+    expect(html).not.toContain("still owed");
+  });
+
+  it("shows the rows waiting on a confirmed email, the grants still owed, and the new block reasons", () => {
+    const w = parseReferralStats({
+      signedUp: 3,
+      waiting: "2",
+      grantsOwed: 1,
+      blocked: 2,
+      blockReasons: { email_reused: 1, account_deleted: 1 },
+    });
+    expect(w).toMatchObject({ waiting: 2, grantsOwed: 1 });
+    const html = renderToStaticMarkup(createElement(ReferralPanel, { summary: { last30: w, allTime: w } }));
+    expect(html).toContain("Waiting (an email not confirmed yet)");
+    expect(html).toContain("1 free month is still owed");
+    expect(html).toContain("Email already used 1");
+    expect(html).toContain("account deleted 1");
   });
 });

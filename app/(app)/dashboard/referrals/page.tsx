@@ -12,6 +12,7 @@ import { ReferralLinkBox } from "@/components/referrals/referral-link-box";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { MONTHLY_CREDITS } from "@/lib/billing/plans";
 import { getMyReferralDashboard } from "@/lib/referrals/queries";
 import {
   REFERRAL_ACTIVATION_WINDOW_DAYS,
@@ -41,9 +42,18 @@ const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "g
 };
 
 const REWARD_LABEL = {
-  comp_month: "A month of Plus",
+  plus_month: "A month of Plus",
   balance_credit: "A month off your bill",
 } as const;
+
+/** The reward cell when no month was recorded for the viewer. */
+function noRewardText(status: ReferralStatus): string {
+  if (status === "signed_up") return "Waiting for their first card";
+  // Claimed only once both emails are confirmed; the hourly sweep finishes it.
+  if (status === "first_card") return "Pending";
+  if (status === "capped") return "None — limit reached";
+  return "—";
+}
 
 export default async function ReferralsPage() {
   if (!isBillingEnabled()) notFound();
@@ -78,13 +88,15 @@ export default async function ReferralsPage() {
               <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
             </li>
             <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <span className="font-semibold text-foreground">3. You both get a free month.</span> On a paid plan, it comes off your next bill.
+              <span className="font-semibold text-foreground">3. You both get a free month</span> as soon as you&apos;ve
+              both confirmed your email. On a paid plan, it comes off your next bill.
             </li>
           </ol>
           <p className="text-xs leading-5 text-subtle">
             You can earn up to {summary.monthlyCap} free months a month and {summary.lifetimeCap} in all; past that your
-            friends still get theirs. New accounts only. One free month is a month of Plus — or, if you already pay for
-            a plan, one month of its price as credit on your next bill.
+            friends still get theirs. New accounts only, and one free month per email address. A free month is a month
+            of Plus with its {MONTHLY_CREDITS.plus} AI credits — or, if you already pay for a plan, one month of its price
+            as credit on your next bill.
           </p>
         </SurfaceCard>
       </section>
@@ -115,7 +127,7 @@ export default async function ReferralsPage() {
           <EmptyState
             icon={UserPlus}
             title="No one yet"
-            description="When someone signs up with your link, they show up here — and you'll get a notification."
+            description="When someone signs up with your link, they show up here. You'll get a notification when your free month arrives."
           />
         ) : (
           <SurfaceCard className="overflow-x-auto p-0">
@@ -136,6 +148,8 @@ export default async function ReferralsPage() {
                         <Link href={`/profile/${row.username}`} className="hover:underline">
                           @{row.username}
                         </Link>
+                      ) : row.accountDeleted ? (
+                        <span className="text-muted">A deleted account</span>
                       ) : (
                         "A new member"
                       )}
@@ -152,10 +166,8 @@ export default async function ReferralsPage() {
                           <Gift className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
                           {REWARD_LABEL[row.reward]}
                         </span>
-                      ) : row.status === "signed_up" ? (
-                        "Waiting for their first card"
                       ) : (
-                        "—"
+                        noRewardText(row.status)
                       )}
                     </td>
                   </tr>
@@ -171,9 +183,11 @@ export default async function ReferralsPage() {
           You joined through {joinedThrough.username ? `@${joinedThrough.username}` : "a friend"}&apos;s link
           {joinedThrough.status === "signed_up"
             ? " — save your first card to get your free month."
-            : joinedThrough.status === "rewarded" || joinedThrough.status === "capped"
-              ? " — your free month is on your account."
-              : "."}
+            : joinedThrough.status === "first_card"
+              ? " — your free month is on its way once both of you have confirmed your email."
+              : joinedThrough.status === "rewarded" || joinedThrough.status === "capped"
+                ? " — your free month is on your account."
+                : "."}
         </p>
       ) : null}
     </DashboardShell>
