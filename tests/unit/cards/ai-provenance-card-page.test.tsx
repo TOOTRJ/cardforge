@@ -53,7 +53,7 @@ const page = (card: typeof CARD) => {
   const provenance = aiProvenanceOf(card);
   return {
     tags: renderToStaticMarkup(<AiProvenanceTags provenance={provenance} />),
-    details: renderToStaticMarkup(<CardDetails card={card} inDecks={[]} aiProvenance={provenance} />),
+    details: renderToStaticMarkup(<CardDetails card={card} aiProvenance={provenance} />),
     jsonLd: buildCardJsonLd({ inDecks: [], card, username: "tester", ownerDisplay: "Tester", siteBase: "https://pipglyph.com" }) as {
       image: Record<string, unknown>;
     },
@@ -94,7 +94,7 @@ describe("the card page's AI provenance", () => {
   it("the page wires the tag into the header and the line into Card details", () => {
     const source = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
     expect(source).toContain("<AiProvenanceTags provenance={aiProvenance} />");
-    expect(source).toContain("<CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />");
+    expect(source).toContain("<CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />");
   });
 
   it("no renderer or bake reads it (page data, not card art)", () => {

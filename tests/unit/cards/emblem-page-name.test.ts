@@ -199,10 +199,12 @@ describe("an emblem's page", () => {
     expect(og.title).toBe("Kaito, Cunning Infiltrator Emblem · PipGlyph");
     expect(og.images[0].alt).toBe("Kaito, Cunning Infiltrator Emblem card preview");
     expect((meta.twitter as { title: string }).title).toBe("Kaito, Cunning Infiltrator Emblem · PipGlyph");
-    // Any other card: its title.
+    // Any other card: its title, then what it is and whose where it fits
+    // (lib/cards/card-meta.ts — the emblem's name above fills the budget).
     state.pageCard = { ...EMBLEM_ROW, card_type: "token", title: "Soldier", slug: "soldier" };
     const token = await generateMetadata({ params: Promise.resolve({ username: "tester", slug: "soldier" }) });
-    expect(token.title).toBe("Soldier");
+    expect(token.title).toBe("Soldier: custom MTG token by @tester");
+    expect((token.openGraph as { title: string }).title).toBe("Soldier · PipGlyph");
   });
 
   it("JSON-LD: the CreativeWork is '<walker> Emblem'; the image caption keeps the printed name", () => {

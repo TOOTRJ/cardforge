@@ -18,6 +18,7 @@ vi.mock("next/navigation", () => ({
 
 type Row = {
   [key: string]: unknown;
+  title: string;
   cost: string | null;
   card_type: string | null;
   supertype: string | null;
@@ -77,7 +78,7 @@ const TOKEN: Row = {
 };
 
 function details(card: Row): string {
-  return renderToStaticMarkup(<CardDetails card={card} inDecks={[]} />);
+  return renderToStaticMarkup(<CardDetails card={card} />);
 }
 
 function jsonLd(card: Row) {
@@ -91,15 +92,15 @@ function jsonLd(card: Row) {
 }
 
 describe("an emblem's card page names no rarity (CR 114)", () => {
-  it("Card details: type Emblem, no rarity row, colourless, no stats", () => {
+  it("Card details: type Emblem, no rarity, colourless, no stats", () => {
     const html = details(EMBLEM);
     expect(html).toContain(">Emblem<");
-    expect(html).not.toContain(">Rarity<");
+    expect(html).not.toContain(", rarity ");
     expect(html).not.toContain(">Common<");
     expect(html).toContain(">Colorless<");
-    expect(html).not.toContain(">Stats<");
+    expect(html).not.toContain("card-text-stats");
     // Any other card keeps its rarity row.
-    expect(details(TOKEN)).toContain(">Rarity<");
+    expect(details(TOKEN)).toContain(">Common<");
   });
 
   it("JSON-LD: no rarity in the caption or the keywords", () => {

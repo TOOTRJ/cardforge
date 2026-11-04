@@ -62,11 +62,11 @@ describe("collectorLineText", () => {
 
 describe("the Card details block and the CreativeWork", () => {
   it("carry the line when it is drawn, and nothing of it otherwise", () => {
-    const on = render(<CardDetails card={{ ...base, frame_style: { template: "m15", collector: "2015" } }} inDecks={[]} />).container;
+    const on = render(<CardDetails card={{ ...base, frame_style: { template: "m15", collector: "2015" } }} />).container;
     expect(on.textContent).toContain("Collector line");
     expect(on.textContent).toContain("DMU · 107/281 · Spanish");
     cleanup();
-    const off = render(<CardDetails card={{ ...base, frame_style: { template: "m15" } }} inDecks={[]} />).container;
+    const off = render(<CardDetails card={{ ...base, frame_style: { template: "m15" } }} />).container;
     expect(off.textContent).not.toContain("Collector line");
     expect(off.textContent).not.toContain("107/281");
 

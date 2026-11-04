@@ -5,12 +5,11 @@ import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
 import { cardPageFacesOf, cardPageName } from "@/lib/cards/emblem";
 import { cardTitleWithNickname } from "@/lib/cards/nickname";
-import { storedRulesTextWithSelfName } from "@/lib/cards/self-name";
+import { cardMetaDescription, cardPageTitle } from "@/lib/cards/card-meta";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
 // Canonical public card detail page (Phase 11 chunk 11).
@@ -74,12 +73,11 @@ export async function generateMetadata({
   // A card with a nickname (TODO 6.3) is titled "Name (Nickname)"
   // (cardTitleWithNickname: the name first, as the H1 and the canonical).
   const name = cardTitleWithNickname(cardPageName(card.title, card.card_type, cardPageFacesOf(card)), card.nickname);
-  const description =
-    // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
-    stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
-    // CARDNAME / ~ as the name the card prints (TODO 6.2).
-    storedRulesTextWithSelfName(card)?.trim() ||
-    "A custom trading card on PipGlyph.";
+  // The search result's words (TODO CP2b, lib/cards/card-meta.ts): what the
+  // card is and whose, then what it does — its type line, cost and rules,
+  // CARDNAME / ~ as the name it prints, then the flavour.
+  const title = cardPageTitle(name, card.card_type, username);
+  const description = cardMetaDescription(card, username);
 
   // The 1200×630 landscape composite (whole card + name + creator on a
   // branded canvas). The raw portrait render crops on X, letterboxes on
@@ -97,7 +95,7 @@ export async function generateMetadata({
     // Unlisted cards are reachable by link but shouldn't enter the index;
     // private renders only ever reach the owner, but belt-and-braces.
     robots: card.visibility !== "public" ? { index: false, follow: false } : undefined,
-    title: name,
+    title,
     description,
     openGraph: ogImageUrl
       ? {
