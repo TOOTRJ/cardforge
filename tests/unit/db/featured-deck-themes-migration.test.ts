@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { TRENDING_RANGE_RULES, TRENDING_WEIGHTS } from "@/lib/cards/trending";
 
 // ---------------------------------------------------------------------------
 // Migration *_featured_deck_themes.sql (0167; found by name so a renumber at
@@ -14,6 +15,10 @@ import { describe, expect, it } from "vitest";
 //     creator's deck (owner_is_creator);
 //   * Discover draws u as 0158's (bits + 0.5) / 2³² — never 0086's signed
 //     offset — and orders by -ln(u) / weight ascending.
+//   * trending by range is the gallery's (0166's list_trending_cards) over
+//     deck likes: the SAME range block (windows, half-lives, month for an
+//     unknown range), the like's weight, the owner's own like never, one
+//     deck per creator, ties ending on the newest DECK (never updated_at).
 // The behaviour itself (an empty, an admin's and an unlisted deck never
 // come up; the weighting; a resting theme hidden) was proven on the local
 // stack — see the PR.
@@ -78,9 +83,67 @@ describe("the featured deck themes migration", () => {
   });
 
   it("states the functions' grants", () => {
-    for (const signature of ["list_featured_deck_themes(integer, integer)", "list_discover_decks(text, integer)"]) {
+    for (const signature of [
+      "list_featured_deck_themes(integer, integer)",
+      "list_discover_decks(text, integer)",
+      "list_trending_decks_by_range(text, integer)",
+    ]) {
       expect(body).toContain(`revoke all on function public.${signature} from public;`);
       expect(body).toContain(`grant execute on function public.${signature} to anon, authenticated, service_role;`);
     }
+  });
+});
+
+describe("trending decks by range — the gallery's rules (0166)", () => {
+  const flat = (text: string) => text.replace(/\s+/g, " ").trim();
+  const cardsFile = readdirSync(dir).find((f) => /^\d{4}_trending_card_ranges\.sql$/.test(f));
+  const cardsSql = cardsFile ? readFileSync(join(dir, cardsFile), "utf8") : "";
+  /** A function's `cfg` CTE — the ranges' windows and half-lives. */
+  const cfgOf = (source: string) => {
+    const start = source.indexOf("with cfg as (");
+    return flat(source.slice(start, source.indexOf("),", source.indexOf("half_life_days", start))));
+  };
+  const deckFn = flat(fn("list_trending_decks_by_range"));
+
+  it("has the gallery's function to match", () => {
+    expect(cardsFile).toBeDefined();
+    expect(deckFn).not.toBe("");
+  });
+
+  it("reads the ranges exactly as the gallery does (month for anything else)", () => {
+    expect(cfgOf(cardsSql)).toContain("as half_life_days");
+    expect(cfgOf(fn("list_trending_decks_by_range"))).toBe(cfgOf(cardsSql));
+    expect(deckFn).toContain(
+      `when 'week' then now() - interval '${TRENDING_RANGE_RULES.week.windowDays} days' ` +
+        `when 'year' then now() - interval '${TRENDING_RANGE_RULES.year.windowDays} days' ` +
+        `when 'all' then '-infinity'::timestamptz ` +
+        `else now() - interval '${TRENDING_RANGE_RULES.month.windowDays} days'`,
+    );
+    expect(deckFn).toContain(
+      `when 'week' then ${TRENDING_RANGE_RULES.week.halfLifeDays}.0 ` +
+        `when 'year' then ${TRENDING_RANGE_RULES.year.halfLifeDays}.0 ` +
+        `when 'all' then null else ${TRENDING_RANGE_RULES.month.halfLifeDays}.0`,
+    );
+  });
+
+  it("scores a like as the gallery does, decayed by its age, never the owner's own", () => {
+    expect(deckFn).toContain(
+      `${TRENDING_WEIGHTS.like}.0 * case when cfg.half_life_days is null then 1.0 else power(0.5, greatest(extract(epoch from (now() - l.created_at)), 0) / 86400.0 / cfg.half_life_days) end`,
+    );
+    expect(deckFn).toContain("where l.created_at >= cfg.since and l.user_id <> d.owner_id");
+  });
+
+  it("ranks public, non-empty decks of real creators, one per creator, ending on the newest deck", () => {
+    expect(deckFn).toContain("and d.visibility = 'public' and d.card_count > 0");
+    expect(deckFn).toContain("where public.owner_is_creator(s.owner_id)");
+    expect(deckFn).toContain("partition by s.owner_id");
+    expect(deckFn).toContain("where b.creator_rank = 1");
+    expect(deckFn).toContain("order by b.score desc, b.likes desc, b.likes_count desc, b.created_at desc, b.id");
+    expect(deckFn).not.toContain("updated_at");
+    expect(deckFn).toContain("limit least(greatest(coalesce(p_limit, 8), 1), 24)");
+  });
+
+  it("is SECURITY INVOKER with an empty search_path", () => {
+    expect(deckFn).toMatch(/language sql stable security invoker set search_path = ''/);
   });
 });

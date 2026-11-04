@@ -1989,15 +1989,23 @@ Rules and gotchas:
   colours and the first three of the page's own fan, by the page's rules: a
   private card nowhere, another creator's only while public, thumbs only).
   Its title is its one link, stretched over it; the author and the heart are
-  siblings. Trending (DK8.2) is `list_trending_decks` (0149: the last 7
-  days' likes minus the owner's own, public, non-empty, real creators'
-  decks only — `owner_is_creator`), cookie-free on /decks and the gallery
-  (both stay ISR); /decks'
+  siblings. Trending decks follow the GALLERY's trending rules (owner
+  2026-11-04): `list_trending_decks_by_range` (0167) is 0166's
+  `list_trending_cards` over deck likes — the same ranges, windows and
+  half-lives (`lib/cards/trending.ts`; a test holds the two functions' range
+  block equal), the owner's own like never, public, non-empty, real
+  creators' decks only (`owner_is_creator`), one deck per creator, ties
+  ending on the newest DECK, no padding — read by `listTrendingDecksByRange`
+  (0149's `list_trending_decks` is no longer called), cookie-free on /decks
+  and the gallery (both stay ISR); /decks'
   controls live on /decks/browse alone (sort, ChipGroup formats, `?owner=`).
   /decks' top (owner 2026-11-03, 0167) is "Featured themed decks" (also on
-  the home page: admin THEMES in /admin/featured, `deck_themes` /
-  `deck_theme_decks` service-role only, read through ONE function,
-  `list_featured_deck_themes`) and trending as the gallery's hero block;
+  the home page, ABOVE its trending cards: admin THEMES in /admin/featured,
+  `deck_themes` / `deck_theme_decks` service-role only, read through ONE
+  function, `list_featured_deck_themes`) and trending as the gallery's hero
+  block with its Week / Month / Year / All time switch, opening on the
+  month (`TrendingDecksRanges`: the gallery's `TrendingRangeSwitch`, never a
+  second one; the gallery's plain decks row reads the week);
   its bottom is "Discover" (`list_discover_decks`: the gallery's weighted
   draw, 10+ cards ×3, likes / views damped, `lib/decks/discover.ts`) — never
   a list ordered by `updated_at` and called "newest" (every edit moves it).

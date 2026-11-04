@@ -12,6 +12,8 @@
 --        (seed 27, an admin's deck) and Empty Shell (no cards);
 --     3. Haunted season (RESTING): Hollow Crown Haunt — not on the pages
 --        until an admin presses "Go live".
+--   Trending (/decks, under the themes): likes at four ages (below), so
+--     Week / Month / Year / All time each show a different row.
 --   Discover (/decks bottom) — every public, non-empty deck of a real
 --     creator, shuffled per ISR bake; the 10+ card decks below (Ember Wyrm
 --     Tribal 12, Clockwork Cavalcade 14, Azure Tempo Lab 10, White Weenie
@@ -208,6 +210,33 @@ from (values
   ('b0000000-0000-4000-a000-000000040007'::uuid, 8)
 ) as v (id, views)
 where d.id = v.id and d.view_count < v.views;
+
+-- Likes at different ages, so each trending range ("Hot this week / month /
+-- year / all time", 0167's list_trending_decks_by_range — one deck per
+-- creator) shows a different row next to seed 27's week:
+--   week  — Cinderwing Dragonstorm, Artificer's Arsenal (seed 27);
+--   month — Cinderwing Dragonstorm, Ember Wyrm Tribal (8–10 days ago);
+--   year  — Clockwork Cavalcade (20–60 days ago), Ember Wyrm Tribal;
+--   all   — Clockwork Cavalcade, Gravebloom Grindhouse (400–600 days ago).
+-- Never the deck owner's own like (it would not count anyway).
+insert into public.deck_likes (user_id, deck_id, created_at)
+select l.user_id, l.deck_id, now() - l.age
+from (values
+  ('d0000000-0000-4000-a000-000000000001'::uuid, 'b0000000-0000-4000-a000-000000040001'::uuid, interval '8 days'),
+  ('d0000000-0000-4000-a000-000000000002'::uuid, 'b0000000-0000-4000-a000-000000040001'::uuid, interval '9 days'),
+  ('d0000000-0000-4000-a000-000000000003'::uuid, 'b0000000-0000-4000-a000-000000040001'::uuid, interval '10 days'),
+  ('d0000000-0000-4000-a000-000000000001'::uuid, 'b0000000-0000-4000-a000-000000040002'::uuid, interval '20 days'),
+  ('d0000000-0000-4000-a000-000000000003'::uuid, 'b0000000-0000-4000-a000-000000040002'::uuid, interval '30 days'),
+  ('d0000000-0000-4000-a000-000000000004'::uuid, 'b0000000-0000-4000-a000-000000040002'::uuid, interval '45 days'),
+  ('d0000000-0000-4000-a000-000000000005'::uuid, 'b0000000-0000-4000-a000-000000040002'::uuid, interval '60 days'),
+  ('d0000000-0000-4000-a000-000000000001'::uuid, 'b0000000-0000-4000-a000-000000040007'::uuid, interval '400 days'),
+  ('d0000000-0000-4000-a000-000000000002'::uuid, 'b0000000-0000-4000-a000-000000040007'::uuid, interval '450 days'),
+  ('d0000000-0000-4000-a000-000000000003'::uuid, 'b0000000-0000-4000-a000-000000040007'::uuid, interval '500 days'),
+  ('d0000000-0000-4000-a000-000000000005'::uuid, 'b0000000-0000-4000-a000-000000040007'::uuid, interval '600 days')
+) as l (user_id, deck_id, age)
+where exists (select 1 from auth.users where id = l.user_id)
+  and exists (select 1 from public.decks where id = l.deck_id)
+on conflict (user_id, deck_id) do nothing;
 
 -- The themes.
 insert into public.deck_themes (id, title, blurb, position, is_live)

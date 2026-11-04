@@ -53,9 +53,38 @@
 --    public read too. The weight is mirrored for tests in
 --    lib/decks/discover.ts (`deckDiscoverWeight`).
 --
+-- 3. TRENDING BY RANGE (owner request 2026-11-04: "Hot this week /
+--    month / year / all time", default the month, the gallery's rules).
+--    list_trending_decks_by_range(range, limit) is 0166's
+--    list_trending_cards over decks — the same ranges, windows, half-lives
+--    and like weight (lib/cards/trending.ts mirrors them; a unit test
+--    holds both functions to that one copy):
+--      score = Σ 3 · 0.5 ^ (age_days / half_life)   over the range's likes
+--    * a deck's only public engagement EVENT is a like (one row per liker,
+--      deck_likes' unique key) — deck feedback is private to its owner,
+--      and a deck has no comments or remixes;
+--    * the deck owner's own like never counts;
+--    * ranges: week = 7 days, half-life 3; month = 30 days, half-life 10;
+--      year = 365 days, half-life 90; all = every like, no decay; any
+--      other value reads as month (the default on /decks, as on /gallery);
+--    * PUBLIC, NON-EMPTY decks (card_count > 0) of a real creator
+--      (owner_is_creator) — 0149's trending pool;
+--    * a deck with no like in the range is not "hot": no padding;
+--    * ONE deck per creator (their best), as the gallery's one card;
+--    * ties: score, then people (likers in the range), then lifetime
+--      likes, then the NEWEST DECK (created_at — never updated_at, which
+--      every edit moves), then id.
+--    It returns ids and the range's like count (what the tiles print); the
+--    app reads the deck rows through the public client. SECURITY INVOKER:
+--    anon reads public decks and their likes, so every caller gets one
+--    answer. 0149's list_trending_decks stays for the deployment live
+--    while this lands (the app no longer calls it); dropping it is a
+--    follow-up. A new index on deck_likes(created_at) keeps the windows
+--    cheap.
+--
 -- Grants: the two tables — revoked from public, anon and authenticated
 -- (production auto-grants new public objects to the API roles; this takes
--- that back), everything to service_role. The two functions — public
+-- that back), everything to service_role. The three functions — public
 -- reads: PUBLIC revoked, EXECUTE to anon, authenticated and service_role.
 --
 -- Backward compatible: nothing old reads either table or function.
@@ -175,3 +204,81 @@ $$;
 
 revoke all on function public.list_discover_decks(text, integer) from public;
 grant execute on function public.list_discover_decks(text, integer) to anon, authenticated, service_role;
+
+-- ===========================================================================
+-- 3. Trending by range — "Hot this week / month / year / all time".
+-- ===========================================================================
+
+create index if not exists deck_likes_created_at_idx
+  on public.deck_likes (created_at);
+
+create or replace function public.list_trending_decks_by_range(
+  p_range text default 'month',
+  p_limit integer default 8
+)
+returns table (
+  deck_id uuid,
+  score double precision,
+  likes integer
+)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with cfg as (
+    select
+      case p_range
+        when 'week' then now() - interval '7 days'
+        when 'year' then now() - interval '365 days'
+        when 'all' then '-infinity'::timestamptz
+        else now() - interval '30 days'
+      end as since,
+      case p_range
+        when 'week' then 3.0
+        when 'year' then 90.0
+        when 'all' then null
+        else 10.0
+      end::double precision as half_life_days
+  ),
+  scored as (
+    select
+      d.id,
+      d.owner_id,
+      d.likes_count,
+      d.created_at,
+      sum(
+        3.0
+        * case
+            when cfg.half_life_days is null then 1.0
+            else power(0.5,
+              greatest(extract(epoch from (now() - l.created_at)), 0) / 86400.0 / cfg.half_life_days)
+          end
+      ) as score,
+      count(*)::integer as likes
+    from public.deck_likes l
+    join public.decks d on d.id = l.deck_id
+    cross join cfg
+    where l.created_at >= cfg.since
+      and l.user_id <> d.owner_id
+      and d.visibility = 'public'
+      and d.card_count > 0
+    group by d.id, d.owner_id, d.likes_count, d.created_at
+  ),
+  best_per_creator as (
+    select s.*, row_number() over (
+      partition by s.owner_id
+      order by s.score desc, s.likes desc, s.likes_count desc, s.created_at desc, s.id
+    ) as creator_rank
+    from scored s
+    where public.owner_is_creator(s.owner_id)
+  )
+  select b.id, b.score, b.likes
+  from best_per_creator b
+  where b.creator_rank = 1
+  order by b.score desc, b.likes desc, b.likes_count desc, b.created_at desc, b.id
+  limit least(greatest(coalesce(p_limit, 8), 1), 24);
+$$;
+
+revoke all on function public.list_trending_decks_by_range(text, integer) from public;
+grant execute on function public.list_trending_decks_by_range(text, integer) to anon, authenticated, service_role;

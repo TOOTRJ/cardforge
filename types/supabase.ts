@@ -2612,10 +2612,15 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["decks"]["Row"][];
       };
-      // Migration 0167 — /decks "Discover" and "Featured themed decks".
+      // Migration 0167 — /decks "Discover", "Featured themed decks" and
+      // trending by range ("Hot this week / month / year / all time").
       list_discover_decks: {
         Args: { p_seed?: string; p_limit?: number };
         Returns: Database["public"]["Tables"]["decks"]["Row"][];
+      };
+      list_trending_decks_by_range: {
+        Args: { p_range?: string; p_limit?: number };
+        Returns: { deck_id: string; score: number; likes: number }[];
       };
       list_featured_deck_themes: {
         Args: { p_themes?: number; p_decks?: number };

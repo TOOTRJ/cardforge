@@ -13,7 +13,7 @@ import {
   CommanderCardsSection,
   CommanderCardsSectionSkeleton,
 } from "@/components/decks/commander-row";
-import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
+import { DeckRowSkeleton, TrendingDecksRanges } from "@/components/decks/deck-row";
 import { FeaturedDeckThemes, FeaturedDeckThemesSkeleton } from "@/components/decks/featured-deck-themes";
 import {
   DeckGrid,
@@ -39,8 +39,9 @@ import { PageContainer } from "@/components/layout/page-container";
 //
 //   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
 //     on top, then "Featured themed decks" (the admin's themes, migration
-//     0167), "Trending now" (the week's most-liked decks, TODO DK8.2 — the
-//     gallery's glowing hero block), "Cards to build around" (public
+//     0167), "Trending now" (the gallery's glowing hero block and its Week /
+//     Month / Year / All time switch, opening on the month — the gallery's
+//     rules over deck likes, 0167), "Cards to build around" (public
 //     legendary creatures, a random sample per regeneration, DK8.4) and
 //     "Discover" (a weighted shuffle of non-empty decks, 0167 — it replaced
 //     "Newest public decks", which ordered by the last EDIT). Never reads
@@ -158,13 +159,7 @@ export function DecksLanding() {
       {configured ? (
         <div className="mt-10">
           <Suspense fallback={<DeckRowSkeleton variant="hero" />}>
-            <TrendingDecksRow
-              variant="hero"
-              heading="Hot this week"
-              description="Public decks picking up likes in the last 7 days."
-              href={`${DECKS_BROWSE_PATH}?sort=popular`}
-              hrefLabel="See the most liked"
-            />
+            <TrendingDecksRanges browseHref={`${DECKS_BROWSE_PATH}?sort=popular`} />
           </Suspense>
         </div>
       ) : null}

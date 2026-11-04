@@ -93,22 +93,9 @@ export default async function HomePage() {
       {/* The what's-new ribbon renders in AppShell, right under the header. */}
       <MarketingHero featured={featuredCards} />
 
-      {/* Proof before pitch: what the community forged THIS WEEK, right
-          under the hero — live rank badges + weekly stats, one row, with the
-          pulse line and the two doors out (forge one / see the gallery). */}
-      <PageContainer as="section" size="wide" className="pb-10 pt-4">
-        {isSupabaseConfigured() ? (
-          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
-            <HomeTrending />
-          </Suspense>
-        ) : (
-          <PlaceholderGallery />
-        )}
-      </PageContainer>
-
-      {/* The admin's featured themed decks (migration 0167) — the cards
-          above, in play. Cookie-free like the rest of the page; no live
-          theme: no section. */}
+      {/* The admin's featured themed decks (migration 0167), right under
+          the hero and above trending (owner 2026-11-04). Cookie-free like
+          the rest of the page; no live theme: no section. */}
       {isSupabaseConfigured() ? (
         // No skeleton: the page is prerendered (ISR), and a panel that may
         // turn out to have no theme must not flash in and out.
@@ -117,7 +104,7 @@ export default async function HomePage() {
             maxThemes={2}
             likeRedirect="/"
             frame={(section) => (
-              <PageContainer size="wide" className="pb-12">
+              <PageContainer size="wide" className="pb-6 pt-4">
                 {section}
               </PageContainer>
             )}
@@ -130,6 +117,19 @@ export default async function HomePage() {
           />
         </Suspense>
       ) : null}
+
+      {/* Proof before pitch: what the community forged THIS WEEK, right
+          under the featured decks — live rank badges + weekly stats, one row, with the
+          pulse line and the two doors out (forge one / see the gallery). */}
+      <PageContainer as="section" size="wide" className="pb-10 pt-4">
+        {isSupabaseConfigured() ? (
+          <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
+            <HomeTrending />
+          </Suspense>
+        ) : (
+          <PlaceholderGallery />
+        )}
+      </PageContainer>
 
       <FeatureGrid />
 
