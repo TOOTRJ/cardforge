@@ -20,9 +20,14 @@ import {
 // every panel is already loaded.
 // ---------------------------------------------------------------------------
 
+const TRENDING_DESCRIPTIONS = Object.fromEntries(
+  TRENDING_RANGES.map((range) => [range, TRENDING_RANGE_WORDS[range].description]),
+) as Record<TrendingRange, string>;
+
 export function TrendingRangeSwitch({
   headingId,
   eyebrow,
+  descriptions,
   panels,
   defaultRange,
 }: {
@@ -31,6 +36,9 @@ export function TrendingRangeSwitch({
   /** The section's eyebrow, rendered by the server (its classes live with
    *  the hero surface's). */
   eyebrow: ReactNode;
+  /** The line under the heading per range; the gallery's own words when
+   *  left out. /decks passes its own — a deck is ranked on likes alone. */
+  descriptions?: Record<TrendingRange, string>;
   panels: Record<TrendingRange, ReactNode>;
   defaultRange: TrendingRange;
 }) {
@@ -52,7 +60,9 @@ export function TrendingRangeSwitch({
             {TRENDING_RANGE_WORDS[range].heading}
           </h2>
           {/* Follows the tab: All time has no decay. */}
-          <p className="max-w-2xl text-sm text-muted">{TRENDING_RANGE_WORDS[range].description}</p>
+          <p className="max-w-2xl text-sm text-muted">
+            {(descriptions ?? TRENDING_DESCRIPTIONS)[range]}
+          </p>
         </div>
         <TabsList ariaLabel="Trending period" className="shrink-0 self-start md:self-auto">
           {TRENDING_RANGES.map((value) => (

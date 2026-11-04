@@ -122,12 +122,17 @@ describe("Trending decks — the gallery's hero and range switch", () => {
       "3 likes this month",
     ]);
     expect(listTrendingDecksByRange).toHaveBeenCalledWith({ limit: 4 });
+    // A deck is ranked on likes alone — never the gallery's "comments and remixes".
+    expect(within(section).getByText("Ranked by the community's likes — the most recent count most.")).toBeTruthy();
+    expect(section.textContent).not.toMatch(/comment|remix/i);
   });
 
   it("a month with nothing opens on the year, then all time — the gallery's order", async () => {
     await renderRanges({ week: ranked("week", 1), month: [], year: [], all: ranked("all", 4) });
     const section = screen.getByRole("region", { name: "Hottest of all time" });
     expect(within(section).getByRole("tab", { name: "All time" }).getAttribute("aria-selected")).toBe("true");
+    // All time has no decay, so its line doesn't say "recent".
+    expect(within(section).getByText("Ranked by every like from the community — old and new count the same.")).toBeTruthy();
   });
 
   it("an empty range says so and points at the decks", async () => {

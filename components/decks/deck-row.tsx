@@ -208,12 +208,21 @@ export async function TrendingDecksRanges({
             Trending now
           </span>
         }
-        description="Ranked by the community's likes — the most recent count most."
+        descriptions={DECK_TRENDING_DESCRIPTIONS}
         panels={panels}
       />
     </section>
   );
 }
+
+/** The line under the heading per range — the gallery's, for a deck's one
+ *  event (a like). All time has no decay, so it doesn't say "recent". */
+const DECK_TRENDING_DESCRIPTIONS: Record<TrendingRange, string> = {
+  week: "Ranked by the community's likes — the most recent count most.",
+  month: "Ranked by the community's likes — the most recent count most.",
+  year: "Ranked by the community's likes — the most recent count most.",
+  all: "Ranked by every like from the community — old and new count the same.",
+};
 
 /** One range's row: rank badges and the range's likes under each tile. */
 function RankedDeckRow({
