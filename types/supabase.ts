@@ -2463,6 +2463,17 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
+      // Migration 0166 — the trending score and ranking per range.
+      list_trending_cards: {
+        Args: { p_range?: string; p_limit?: number };
+        Returns: {
+          card_id: string;
+          score: number;
+          likes: number;
+          comments: number;
+          remixes: number;
+        }[];
+      };
       owner_is_admin: {
         Args: { p_owner_id: string };
         Returns: boolean;

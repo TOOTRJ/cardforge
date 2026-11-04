@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // BrowseSearchBox — the search entry point on the static landings (/gallery,
@@ -19,6 +20,7 @@ export function BrowseSearchBox({
   placeholder,
   label,
   browseLabel,
+  compact = false,
 }: {
   /** The dynamic sibling every search lands on, e.g. "/gallery/browse". */
   browsePath: string;
@@ -27,6 +29,9 @@ export function BrowseSearchBox({
   label: string;
   /** Label of the "see everything" button beside the field. */
   browseLabel: string;
+  /** A 40 px field with the button beside it at every width — for a header
+   *  row that shares its line with the page title (/gallery). */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [value, setValue] = useState("");
@@ -42,13 +47,13 @@ export function BrowseSearchBox({
   };
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className={cn("flex", compact ? "flex-row items-center gap-2" : "flex-col gap-3 sm:flex-row sm:items-center")}>
       <form
         action={browsePath}
         method="get"
         role="search"
         onSubmit={onSubmit}
-        className="relative flex-1"
+        className="relative min-w-0 flex-1"
       >
         <Search
           className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle"
@@ -61,7 +66,10 @@ export function BrowseSearchBox({
           type="search"
           placeholder={placeholder}
           aria-label={label}
-          className="h-11 w-full rounded-lg border border-border bg-surface pl-10 pr-10 text-sm text-foreground shadow-sm placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className={cn(
+            compact ? "h-10" : "h-11",
+            "w-full rounded-lg border border-border bg-surface pl-10 pr-10 text-sm text-foreground shadow-sm placeholder:text-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          )}
         />
         {isPending ? (
           <Loader2
@@ -73,7 +81,7 @@ export function BrowseSearchBox({
           Search
         </button>
       </form>
-      <Button asChild variant="outline" className="h-11">
+      <Button asChild variant="outline" className={cn("shrink-0", compact ? "h-10" : "h-11")}>
         <Link href={browsePath}>
           {browseLabel}
           <ArrowRight className="h-4 w-4" aria-hidden />
