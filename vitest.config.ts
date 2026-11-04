@@ -25,6 +25,15 @@ import path from "node:path";
 // runs without this variable. Nothing else may set it.
 const COVERAGE_SHARD = process.env.VITEST_COVERAGE_SHARD === "1";
 
+// v8 coverage makes instrumented code 5–8× slower (tests/stubs/coverage-flag.ts),
+// so heavy sharp / Satori tests that pass on a PR's uninstrumented shards ran
+// a few hundred ms past vitest's default 5 s on `main`'s coverage runs — a
+// different test each time (prepare-recipe, edge-contract, rules-no-clip) —
+// and `main` went red with nothing wrong. Under coverage the limit is 20 s; a
+// PR's shards keep the default, so a test that really got slower still fails
+// there first. A test's own `{ timeout }` still wins.
+const COVERAGE_RUN = process.argv.includes("--coverage");
+
 export default defineConfig({
   test: {
     environment: "node",
@@ -32,6 +41,7 @@ export default defineConfig({
     // and fail on a laptop. A test about the VIEWER's zone sets its own
     // (tests/unit/components/local-date.test.tsx).
     env: { TZ: "UTC" },
+    testTimeout: COVERAGE_RUN ? 20_000 : 5_000,
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     // Playwright tests live alongside but are NOT vitest-runnable; the
     // e2e runner picks them up via its own glob.
