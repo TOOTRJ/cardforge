@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { CardHeroPreview } from "@/components/cards/card-hero-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
+import type { PipOverrides } from "@/lib/pips/override";
+import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { frameTemplateOf } from "@/lib/cards/print-export";
@@ -471,7 +473,7 @@ export async function CardDetailContent({
               a crawler or answer engine reads none of it from an image — this
               block is what makes the page citable for "custom MTG {type}"
               queries. */}
-          <CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} />
+          <CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />
 
           {/* Discovery tags — under the details they describe. */}
           {card.tags.length > 0 ? (
@@ -1274,6 +1276,7 @@ export function CardDetails({
   card,
   inDecks,
   aiProvenance,
+  pipOverrides = null,
 }: {
   card: {
     cost: string | null;
@@ -1312,6 +1315,9 @@ export function CardDetails({
   /** What AI made of the card (TODO CP1): one row, absent for a card made
    *  by hand. */
   aiProvenance?: AiProvenance;
+  /** The owner's custom pip icons — the cost rows draw the pips the card
+   *  draws. */
+  pipOverrides?: PipOverrides | null;
 }) {
   const typeLine = buildTypeLine({
     supertype: card.supertype,
@@ -1319,7 +1325,6 @@ export function CardDetails({
     subtypes: card.subtypes ?? [],
     printedTypes: card.printed_types,
   });
-  const costWords = describeManaCost(card.cost);
   const colors = (card.color_identity ?? [])
     .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
     .join(", ");
@@ -1347,7 +1352,7 @@ export function CardDetails({
     // The nickname it prints in its title bar (TODO 6.3).
     ...(cardNickname(card.nickname) ? [["Nickname", cardNickname(card.nickname)] as [string, React.ReactNode]] : []),
     ["Type", typeLine],
-    ["Mana cost", card.cost ? `${card.cost} (${costWords})` : "None"],
+    ["Mana cost", card.cost?.trim() ? <CostPips key="cost" cost={card.cost} overrides={pipOverrides} /> : "None"],
     // An emblem has no rarity (CR 114): no row for its stored "common".
     ...(cardTypeHasRarity(card.card_type)
       ? [["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"] as [string, React.ReactNode]]
@@ -1391,7 +1396,7 @@ export function CardDetails({
     ? ((card.back_face as CardBackFace | null) ?? null)
     : null;
   const backRows: Array<[string, React.ReactNode]> = back
-    ? backFaceRows(back, card.color_identity, frontTemplate)
+    ? backFaceRows(back, card.color_identity, frontTemplate, pipOverrides)
     : [];
   return (
     <section aria-labelledby="card-details-heading" className="flex flex-col gap-2">
@@ -1425,6 +1430,25 @@ export function CardDetails({
   );
 }
 
+/** A cost row's pips: the card's own pip drawings (CardPip through
+ *  ManaCostGlyphs' `disc`, in the default "modern" style — the look UI1's
+ *  colour pips have, ColorPip) at a UI size, the owner's custom pips where
+ *  the card draws them. The pictures are decorative: the cost is said in
+ *  words beside them, for a screen reader and a crawler ("2 generic,
+ *  blue") — the text this row used to show. */
+const COST_DISC = { size: "18px", gap: "3px", px: 18 } as const;
+
+function CostPips({ cost, overrides }: { cost: string; overrides: PipOverrides | null }) {
+  return (
+    <span className="inline-flex items-center align-middle" data-testid="card-details-cost">
+      <span aria-hidden className="inline-flex py-0.5">
+        <ManaCostGlyphs cost={cost} disc={COST_DISC} overrides={overrides} className="flex-wrap gap-y-1" />
+      </span>
+      <span className="sr-only">{describeManaCost(cost) || cost}</span>
+    </span>
+  );
+}
+
 /** The back face's rows (TODO 5.3): its type line, mana cost (a modal
  *  back prints one; a transform back none), colour (its own, else the
  *  front's — the colour its body is drawn in, lib/cards/faces.ts
@@ -1434,6 +1458,7 @@ function backFaceRows(
   back: CardBackFace,
   frontColors: string[] | null,
   frontTemplate: string | null | undefined,
+  pipOverrides: PipOverrides | null,
 ): Array<[string, React.ReactNode]> {
   const typeLine = buildTypeLine({
     supertype: back.supertype,
@@ -1459,7 +1484,7 @@ function backFaceRows(
         ? `Defense ${back.defense}`
         : null;
   const rows: Array<[string, React.ReactNode]> = [["Type", typeLine]];
-  if (back.cost?.trim()) rows.push(["Mana cost", `${back.cost} (${describeManaCost(back.cost)})`]);
+  if (back.cost?.trim()) rows.push(["Mana cost", <CostPips key="cost" cost={back.cost} overrides={pipOverrides} />]);
   rows.push(["Color", colors || "Colorless"]);
   if (stats) rows.push(["Stats", stats]);
   if (back.artist_credit?.trim()) rows.push(["Art", back.artist_credit.trim()]);
