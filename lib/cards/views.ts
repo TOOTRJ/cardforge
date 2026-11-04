@@ -56,10 +56,16 @@ export function cardViewerHash(viewerId: string | null, headers: HeaderReader, s
 }
 
 /** A ping another site's page sent (a cross-site `sendBeacon` or form):
- *  never a view. The browser says so in `Sec-Fetch-Site`, or its `Origin`
- *  names another host than the one the ping reached. */
+ *  never a view. The browser's own `Sec-Fetch-Site` decides when it sends
+ *  one — "same-origin" / "same-site" is ours, whatever host the request URL
+ *  was built from (a deployment that builds it from an internal host would
+ *  otherwise drop every real ping, and the route answers 204 either way);
+ *  only a browser that sends none is judged by its `Origin` against the host
+ *  the ping reached. */
 export function isCrossSitePing(headers: HeaderReader, requestUrl: string): boolean {
-  if (headers.get("sec-fetch-site") === "cross-site") return true;
+  const site = headers.get("sec-fetch-site");
+  if (site === "same-origin" || site === "same-site") return false;
+  if (site === "cross-site") return true;
   const origin = headers.get("origin");
   if (!origin) return false;
   try {
