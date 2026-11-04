@@ -638,6 +638,47 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * The card page's phone action bar (TODO CP2b)
+ *
+ * `[data-card-action-bar]` is pinned to the bottom of a phone's screen
+ * (components/cards/card-page-grid.ts), so the page keeps that much scroll
+ * padding: a link or button reached by Tab — the Frame link, a tag, Follow,
+ * a deck — scrolls into view ABOVE the bar, never under it (WCAG 2.2 "Focus
+ * Not Obscured"; the creator's precedent, use-scroll-padding.ts). The bar is
+ * one row of 36 px buttons with 8 px above and below (or the home
+ * indicator's inset), plus room.
+ *
+ * `[data-card-action-row]` scrolls sideways inside the bar: while more of
+ * it is out of view its right edge fades out — a scroll-driven animation
+ * over its own scroll, so the fade leaves at the end and never shows on a
+ * row that fits (an inactive timeline applies nothing). A browser without
+ * scroll timelines shows the row as before.
+ * --------------------------------------------------------------------------- */
+
+@keyframes card-action-row-fade {
+  from,
+  95% {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+  to {
+    mask-image: none;
+  }
+}
+
+@media (max-width: 767px) {
+  html:has([data-card-action-bar]) {
+    scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  @supports (animation-timeline: scroll()) {
+    [data-card-action-row] {
+      animation: card-action-row-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * The owner's deck page (TODO DK5 part 2)
  *
  * `[data-flash]`: the card the owner came back to from the creator (TODO

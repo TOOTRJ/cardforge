@@ -16,6 +16,7 @@ vi.mock("next/navigation", () => ({
 // ---------------------------------------------------------------------------
 
 const CARD = {
+  title: "Archivist",
   cost: "{2}{U}",
   card_type: "creature",
   supertype: null,
@@ -35,15 +36,15 @@ const CARD = {
   updated_at: "2026-10-08T00:00:00Z",
 };
 
-const costCell = (html: string) => html.slice(html.indexOf('data-testid="card-details-cost"'), html.indexOf("Rarity"));
+const costCell = (html: string) => html.slice(html.indexOf('data-testid="card-details-cost"'), html.indexOf('data-testid="card-text-type"'));
 
 describe("Card details: the mana cost as pips", () => {
   it("draws the card's pips, hidden from assistive tech, and says the cost in words", () => {
-    const cell = costCell(renderToStaticMarkup(<CardDetails card={CARD} inDecks={[]} />));
+    const cell = costCell(renderToStaticMarkup(<CardDetails card={CARD} />));
     expect(cell).toContain('data-pip="2"');
     expect(cell).toContain('data-pip="u"');
     expect(cell).toContain('aria-hidden="true"');
-    expect(cell).toContain('<span class="sr-only">2 generic, blue</span>');
+    expect(cell).toContain('<span class="sr-only">Mana cost: 2 generic, blue</span>');
     // The codes are no longer printed as text (the hidden picture's own
     // label may still name them).
     expect(cell).not.toMatch(/>\{2\}\{U\}/);
@@ -53,15 +54,20 @@ describe("Card details: the mana cost as pips", () => {
 
   it("an owner's custom pip is drawn as on their card", () => {
     const html = renderToStaticMarkup(
-      <CardDetails card={CARD} inDecks={[]} pipOverrides={{ U: "https://example.com/blue.png" }} />,
+      <CardDetails card={CARD} pipOverrides={{ U: "https://example.com/blue.png" }} />,
     );
     expect(costCell(html)).toContain('src="https://example.com/blue.png"');
   });
 
-  it("a card with no cost still says None", () => {
-    const html = renderToStaticMarkup(<CardDetails card={{ ...CARD, cost: null }} inDecks={[]} />);
-    expect(html).toContain(">None<");
+  it("a card with no cost draws no pips and has no mana value", () => {
+    const html = renderToStaticMarkup(<CardDetails card={{ ...CARD, cost: null }} />);
     expect(html).not.toContain("card-details-cost");
+    expect(html).not.toContain("Mana value");
+  });
+
+  it("states the mana value beside the facts", () => {
+    const html = renderToStaticMarkup(<CardDetails card={CARD} />);
+    expect(html).toMatch(/>Mana value<\/dt><dd[^>]*>3</);
   });
 
   it("a back face's cost is drawn as pips too", () => {
@@ -77,12 +83,12 @@ describe("Card details: the mana cost as pips", () => {
             frame_style: { template: "m15dfcback" },
           },
         }}
-        inDecks={[]}
+       
       />,
     );
-    const back = html.slice(html.indexOf('data-testid="card-back-details"'));
+    const back = html.slice(html.indexOf('data-testid="card-back-details"'), html.indexOf('data-testid="card-facts"'));
     expect(html).toContain('data-testid="card-back-details"');
     expect(back).toContain('data-pip="g"');
-    expect(back).toContain('<span class="sr-only">1 generic, green</span>');
+    expect(back).toContain('<span class="sr-only">Mana cost: 1 generic, green</span>');
   });
 });

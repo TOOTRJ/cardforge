@@ -559,7 +559,10 @@ export function describeManaCost(cost: string | null | undefined): string {
     }
     const halves = token.split("/");
     let word: string;
-    if (halves.length === 2 && halves[1] === "P") {
+    if (halves.length === 3 && halves[2] === "P") {
+      // A two-colour Phyrexian symbol ({W/U/P}): either colour, or 2 life.
+      word = `${MANA_WORDS[halves[0]] ?? halves[0]} or ${MANA_WORDS[halves[1]] ?? halves[1]} or 2 life`;
+    } else if (halves.length === 2 && halves[1] === "P") {
       word = `${MANA_WORDS[halves[0]] ?? halves[0]} or 2 life`;
     } else if (halves.length === 2 && /^\d+$/.test(halves[0])) {
       word = `${halves[0]} generic or ${MANA_WORDS[halves[1]] ?? halves[1]}`;

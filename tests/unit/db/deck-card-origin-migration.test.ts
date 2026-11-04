@@ -147,7 +147,7 @@ describe("0144 — other creators' public cards (DK2.9, D3)", () => {
     );
   });
 
-  it("the card page reads that ONE list for both its \"In decks\" row and its JSON-LD isPartOf", () => {
+  it("the card page reads that ONE list for both its \"In decks\" list and its JSON-LD isPartOf", () => {
     const queries = readFileSync(join(process.cwd(), "lib/decks/queries.ts"), "utf8");
     const reader = /export const listPublicDecksContaining = cache\([\s\S]*?\n\);/.exec(queries)?.[0] ?? "";
     expect(reader).toContain('rpc("public_decks_containing_card"');
@@ -155,7 +155,7 @@ describe("0144 — other creators' public cards (DK2.9, D3)", () => {
     const page = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
     expect(page.match(/listPublicDecksContaining\(/g)).toHaveLength(1);
     expect(page).toContain("schema.isPartOf = inDecks.map(");
-    expect(page).toMatch(/<CardDetails card=\{card\} inDecks=\{inDecks\} aiProvenance=\{aiProvenance\}[^>]*\/>/);
+    expect(page).toContain("<InDecksList decks={inDecks} total={deckCount} />");
   });
 });
 

@@ -62,3 +62,20 @@ export async function listCommentsForCard(
     return [];
   }
 }
+
+/** How many comments a card has that the viewer can read (RLS decides, as
+ *  for the list) — the card page's count when its first page is full.
+ *  Null on any read error. */
+export async function countCommentsForCard(cardId: string): Promise<number | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { count, error } = await supabase
+      .from("card_comments")
+      .select("id", { count: "exact", head: true })
+      .eq("card_id", cardId);
+    return error ? null : (count ?? 0);
+  } catch {
+    return null;
+  }
+}

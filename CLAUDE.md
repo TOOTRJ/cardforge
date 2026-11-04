@@ -1285,8 +1285,10 @@ Rules and gotchas:
   the key only when it holds one, a new card's insert only then, and an
   edit sends it only when the field changed (`nicknameBaseline`, the
   footer's rule). `title` stays the card's name everywhere else (slug, H1,
-  canonical, decks, hubs, AI); the page `<title>` is "Name (Nickname)"
-  (`cardTitleWithNickname`), the JSON-LD `alternateName`, the line under
+  canonical, decks, hubs, AI); the page `<title>` is "Name (Nickname):
+  custom MTG <type> by @user" (`cardTitleWithNickname` inside
+  `cardPageTitle`, `lib/cards/card-meta.ts`: the handle, then the type,
+  dropped to fit 60 characters — never the name), the JSON-LD `alternateName`, the line under
   the H1 "Printed as" only where the frame prints it, else "Also known as"
   (`nicknamePageLine`); an idea or an AI fill that names a new card or a
   REMIX forgets the nickname of the card before it, and a remix renamed by

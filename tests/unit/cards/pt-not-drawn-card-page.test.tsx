@@ -46,19 +46,19 @@ const SUMMON = {
 };
 type Row = typeof SUMMON;
 
-const details = (card: Row) => renderToStaticMarkup(<CardDetails card={card} inDecks={[]} />);
+const details = (card: Row) => renderToStaticMarkup(<CardDetails card={card} />);
 
 describe("Card details: the stats row follows the frame", () => {
-  it("a saga creature: no Stats row, the type line still says Creature", () => {
+  it("a saga creature: no stats, the type line still says Creature", () => {
     const html = details(SUMMON);
     expect(html).toContain("Enchantment Creature — Saga Dragon");
-    expect(html).not.toContain(">Stats<");
+    expect(html).not.toContain("card-text-stats");
     expect(html).not.toContain("9/9");
   });
 
   it("the same card on a frame with the slot lists it", () => {
     const html = details({ ...SUMMON, layout: "normal", frame_style: { template: "nyx" } });
-    expect(html).toContain(">Stats<");
+    expect(html).toContain("card-text-stats");
     expect(html).toContain(">9/9<");
     // A row with no stored template is the default frame.
     expect(details({ ...SUMMON, layout: "normal", frame_style: {} })).toContain(">9/9<");

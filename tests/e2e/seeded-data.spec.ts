@@ -85,10 +85,11 @@ test.describe("seeded dev data renders", () => {
       await page.goto(path);
       await expect(page.getByText(line).first()).toBeVisible();
     }
-    // The Copy prints a bare "Token" (its "Card details" Type row).
+    // The Copy prints a bare "Token" (its "Card details" type line, then the
+    // rarity: "Token · Common").
     await page.goto("/card/dev_pro/copy-token");
     await expect(page.getByRole("heading", { name: "Copy", exact: true })).toBeVisible();
-    await expect(page.locator("dd").filter({ hasText: /^Token$/ })).toBeVisible();
+    await expect(page.getByTestId("card-text-type").locator(":scope > span").first()).toHaveText(/^Token$/);
   });
 
   test("the seeded public deck and challenges are browsable", async ({ page }) => {

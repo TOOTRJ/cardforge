@@ -15,35 +15,42 @@ describe("the card page's layout", () => {
     expect(loading).toMatch(/<PageContainer size="wide" className="py-6 sm:py-10">/);
   });
 
-  it("uses the wide frame's width as columns, never longer lines (TODO WD10)", () => {
-    // The details keep their 42rem measure; the creator's panel joins them
-    // as a column of its own from 2xl.
-    expect(page).toContain("2xl:grid-cols-[minmax(0,42rem)_20rem]");
+  it("uses the wide frame's width as columns, never longer lines (TODO WD10, CP2b)", () => {
+    // Three columns from xl — the card, the text at a reading measure, the
+    // rail — spread over the wide frame at 2xl.
+    const grid = readFileSync(join(process.cwd(), "components/cards/card-page-grid.ts"), "utf8");
+    expect(grid).toContain("xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,20rem)]");
+    expect(grid).toContain("2xl:grid-cols-[minmax(0,30rem)_minmax(0,44rem)_minmax(0,21rem)]");
     // The rows below the card are the card grid's one-row strips.
     expect(page).toMatch(/<div className=\{ROW_GRID_CLASS\}>[\s\S]{0,300}rowTileClass\(index\)/);
     expect(page).toContain("listMoreFromOwner(card.owner_id, card.id, ROW_MAX)");
   });
 
-  it("draws its loading skeleton in the same columns, so nothing shifts at 2xl", () => {
+  it("draws its loading skeleton in the page's own grid areas, so nothing shifts", () => {
     const skeleton = readFileSync(join(process.cwd(), "components/cards/card-detail-skeleton.tsx"), "utf8");
-    const infoColumn =
-      "flex min-w-0 max-w-2xl flex-col gap-6 2xl:grid 2xl:max-w-none 2xl:grid-cols-[minmax(0,42rem)_20rem] 2xl:items-start 2xl:gap-x-12";
-    expect(page).toContain(`className="${infoColumn}"`);
-    expect(skeleton).toContain(`className="${infoColumn}"`);
-    // The creator's panel: its own sticky column from 2xl in both.
-    expect(page).toContain('className="min-w-0 2xl:sticky 2xl:top-24"');
-    expect(skeleton).toContain('className="min-w-0 2xl:sticky 2xl:top-24"');
+    for (const source of [page, skeleton]) {
+      expect(source).toContain("<div className={CARD_PAGE_GRID}>");
+      for (const area of ["head", "hero", "actions", "text", "rail"]) expect(source).toContain(`AREA.${area})`);
+    }
+  });
+
+  it("pins the phone's action bar to the bottom of the screen, its buttons scrolling inside it", () => {
+    const grid = readFileSync(join(process.cwd(), "components/cards/card-page-grid.ts"), "utf8");
+    expect(grid).toMatch(/actions: cn\([\s\S]*max-md:sticky max-md:bottom-0/);
+    expect(page).toContain("max-md:overflow-x-auto");
   });
 
   it("keeps the text details, the JSON-LD and the breadcrumbs for every viewer", () => {
-    expect(page).toContain("<CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />");
+    expect(page).toContain("<CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />");
     expect(page).toMatch(/const jsonLd =\s*isShareable\s*\? buildCardJsonLd\(/);
     expect(page).toContain("breadcrumbJsonLd([");
     expect(page).toContain('<nav aria-label="Breadcrumb"');
+    // The type's hub between the gallery and the card, in both.
+    expect(page).toContain("{ name: TYPE_HUB_CRUMBS[typeHub], path: `/gallery/type/${typeHub}` }");
   });
 
-  it("orders the info column: title, actions, stats, details, creator", () => {
-    const order = ["<h1", "<DownloadModal", "<LikeButton", "<CardStats", "<CardDetails card", "<CreatorFeature"].map((s) =>
+  it("orders the page: title, card, actions, details, then the rail (creator, numbers)", () => {
+    const order = ["<h1", "<CardHeroPreview", "<DownloadModal", "<LikeButton", "<CardDetails card", "<CreatorFeature", "<CardStats"].map((s) =>
       page.indexOf(s),
     );
     expect(order.every((i) => i > 0)).toBe(true);

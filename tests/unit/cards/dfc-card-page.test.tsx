@@ -186,13 +186,13 @@ describe("JSON-LD of a double-faced card", () => {
 });
 
 describe("Card details of a double-faced card", () => {
-  const html = (card: Parameters<typeof CardDetails>[0]["card"]) => renderToStaticMarkup(<CardDetails card={card} inDecks={[]} />);
+  const html = (card: Parameters<typeof CardDetails>[0]["card"]) => renderToStaticMarkup(<CardDetails card={card} />);
 
   it("lists the back's type, colour, stats and artist under the front's rows", () => {
     const markup = html(DFC);
-    expect(markup).toContain("Back face — Elder Wolf");
+    expect(markup).toContain(">Elder Wolf<");
     expect(markup).toContain('data-testid="card-back-details"');
-    const backBlock = markup.slice(markup.indexOf("card-back-details"));
+    const backBlock = markup.slice(markup.indexOf("card-back-details"), markup.indexOf('data-testid="card-facts"'));
     expect(backBlock).toContain("Creature — Wolf");
     expect(backBlock).toContain("4/4");
     expect(backBlock).toContain("B. Back");
@@ -205,10 +205,10 @@ describe("Card details of a double-faced card", () => {
 
   it("a modal back with a cost lists it; a legacy back is not listed", () => {
     const modal = html({ ...DFC, back_face: { ...BACK, cost: "{3}{B}", card_type: "artifact", subtypes: ["Equipment"], power: null, toughness: null } });
-    const backBlock = modal.slice(modal.indexOf("card-back-details"));
+    const backBlock = modal.slice(modal.indexOf("card-back-details"), modal.indexOf('data-testid="card-facts"'));
     expect(backBlock).toContain("{3}{B}");
     expect(backBlock).toContain("Artifact — Equipment");
-    expect(backBlock).not.toContain("Stats");
+    expect(backBlock).not.toContain("card-text-stats");
     expect(html(LEGACY)).not.toContain("card-back-details");
   });
 
@@ -216,7 +216,7 @@ describe("Card details of a double-faced card", () => {
     const { color_identity: _own, ...noColour } = BACK;
     void _own;
     const markup = html({ ...DFC, color_identity: ["blue", "red"], back_face: noColour });
-    const backBlock = markup.slice(markup.indexOf("card-back-details"));
+    const backBlock = markup.slice(markup.indexOf("card-back-details"), markup.indexOf('data-testid="card-facts"'));
     expect(backBlock).toContain("Blue, Red");
     expect(backBlock).not.toContain("Colorless");
   });

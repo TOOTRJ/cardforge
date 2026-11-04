@@ -27,6 +27,7 @@ import {
   listTypeHubs,
   TYPE_HUB_MIN_CARDS,
 } from "@/lib/cards/hubs";
+import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
 // Sitemap
@@ -186,7 +187,7 @@ async function fetchCardAndProfileEntries(
     const supabase = createPublicClient();
     const { data: rows } = await supabase
       .from("cards")
-      .select("slug, owner_id, updated_at, visibility")
+      .select("id, slug, owner_id, updated_at, visibility, rendered_image_url")
       .eq("visibility", "public")
       .order("updated_at", { ascending: false })
       .limit(MAX_DYNAMIC_CARDS);
@@ -222,11 +223,19 @@ async function fetchCardAndProfileEntries(
       // canonical /card/[username]/[slug] URL, so they're omitted entirely.
       if (!username) continue;
       const updated = new Date(card.updated_at);
+      // The card's picture as an image entry (TODO CP2b): its stored bake
+      // through this site's /render-cdn path — the URL the page itself draws
+      // and Google Images can index — only while the row names the card's
+      // OWN object.
+      const bake = isStoredRenderUrl(card.rendered_image_url, { ownerId: card.owner_id, cardId: card.id })
+        ? toRenderCdnUrl(card.rendered_image_url)
+        : null;
       cards.push({
         url: `${baseUrl}/card/${username}/${card.slug}`,
         lastModified: updated,
         changeFrequency: "weekly",
         priority: 0.7,
+        ...(bake ? { images: [`${baseUrl}${bake}`] } : {}),
       });
       if (!newestByOwner.has(username)) newestByOwner.set(username, updated);
     }

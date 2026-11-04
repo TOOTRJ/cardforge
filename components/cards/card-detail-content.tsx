@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { tagSlug } from "@/lib/cards/tag-slug";
-import { isHubType } from "@/lib/cards/hubs";
+import { isHubType, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import {
   VISIBILITY_LABELS,
+  CARD_TYPE_LABELS,
   COLOR_IDENTITY_LABELS,
   RARITY_LABELS,
+  isColorIdentity,
   type CardType,
   type ColorIdentity,
   type Rarity,
@@ -25,7 +27,14 @@ import {
 import { CardHeroPreview } from "@/components/cards/card-hero-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import type { PipOverrides } from "@/lib/pips/override";
-import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { CardTextBlock, type CardTextFace } from "@/components/cards/card-text-block";
+import { ColorPips, pipColorOfIdentity, toPipColor, type PipColor } from "@/components/cards/color-pip";
+import { manaValueOfCost } from "@/lib/cards/mana-value";
+import { cardPageRulesText } from "@/lib/cards/page-rules-text";
+import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
+import { secondPartWordsOfCard } from "@/lib/creator/second-part";
+import { describeFrame } from "@/lib/creator/frame-resolve";
+import { frameAnchorId } from "@/lib/frames/frame-gallery";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { frameTemplateOf } from "@/lib/cards/print-export";
@@ -87,7 +96,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
-import { backRulesTextWithSelfName, storedRulesTextWithSelfName } from "@/lib/cards/self-name";
+import { backRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
@@ -95,7 +104,7 @@ import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize, RENDER_PRESETS } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
-import { listCommentsForCard } from "@/lib/cards/comments-queries";
+import { countCommentsForCard, listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -108,6 +117,7 @@ import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { aiProvenanceOf, aiProvenanceSentence, type AiProvenance } from "@/lib/cards/ai-provenance";
 import { AiProvenanceTags } from "@/components/cards/ai-provenance-tags";
 import { CardViewBeacon } from "@/components/cards/card-view-beacon";
+import { AREA, CARD_PAGE_GRID } from "@/components/cards/card-page-grid";
 import { likeStandingText, type LikeStanding } from "@/lib/cards/like-standing";
 
 // ---------------------------------------------------------------------------
@@ -176,7 +186,7 @@ export async function CardDetailContent({
     card.source_scryfall_id
       ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
       : Promise.resolve(0),
-    listCommentsForCard(card.id, { limit: 50 }),
+    listCommentsForCard(card.id, { limit: COMMENT_PAGE }),
     getEntitlements(),
     listMoreFromOwner(card.owner_id, card.id, ROW_MAX),
     listRelatedCards(
@@ -211,6 +221,10 @@ export async function CardDetailContent({
     listPublicDecksContaining(card.id),
     listPublicDeckTilesContaining(card.id),
   ]);
+  // The comments shown are the first COMMENT_PAGE; the count the stats and
+  // the structured data say is all of them.
+  const commentCount =
+    comments.length < COMMENT_PAGE ? comments.length : ((await countCommentsForCard(card.id)) ?? comments.length);
   const deckTileArt = await listDeckTileArt(deckTiles, { anonymous: true });
   // "Build a deck around this card" (TODO DK8.3): where the card may join
   // the viewer's new deck — a PUBLIC card (anyone's, D3), or their own.
@@ -247,6 +261,8 @@ export async function CardDetailContent({
           ownerDisplay:
             ownerProfile?.display_name || ownerProfile?.username || "Anonymous",
           siteBase,
+          engagement: { likes: likesCount, comments: commentCount },
+          basedOn: remixParent ? `${siteBase}${remixParent.path}` : null,
         })
       : null;
 
@@ -256,13 +272,29 @@ export async function CardDetailContent({
   // it says something (an unlisted link); a public card needs no label.
   const showVisibility = isOwner || card.visibility !== "public";
 
-  // The page, mobile first (TODO card page refactor, 2026-10-30): the card,
-  // then what you can DO with it (download, remix, add to deck — then like,
-  // share), the numbers, the card as TEXT ("Card details"), its creator; below
-  // the fold the decks it is in, its remixes, more cards, and the comments.
-  // From lg the card stays in view (sticky) beside that column; from 2xl the
-  // creator's panel takes a column of its own beside the details (the wide
-  // frame, TODO WD10), and the rows below are the card grid's 2 → 6 strips.
+  // The page (TODO CP2b, owner 2026-11-04 "All recommended"): ONE grid whose
+  // areas move with the width, in one DOM order — the title, the card, the
+  // actions, the card as text, then the side rail (the creator, the numbers,
+  // the decks):
+  //   phone   one column: title, card, text, rail; the actions a bar pinned
+  //           to the bottom of the screen while the card's section is in view
+  //   md      the card (280 px) beside the title, the actions and the text;
+  //           the rail under both
+  //   lg      the card (352 px) sticky beside them, the rail under the text
+  //   xl      three columns — the card, the text (a reading measure), the
+  //           rail — at 1366 px the default view shows all three at once
+  //   2xl     the same, spread over the wide frame (TODO WD10)
+  // Each column item starts at the top of its rows; the hero spans a last
+  // 1fr row, so its height never pushes the rows beside it apart.
+  // The breadcrumb names the card's type hub only where that hub is indexed:
+  // a PUBLIC card is one of the public cards it counts, and one is its whole
+  // threshold (TYPE_HUB_MIN_CARDS — raised, the crumb goes until it reads
+  // the hub's count). An unlisted or private card's page never points at a
+  // hub it may not be in.
+  const typeHub =
+    card.visibility === "public" && TYPE_HUB_MIN_CARDS <= 1 && card.card_type && isHubType(card.card_type)
+      ? card.card_type
+      : null;
   return (
     <PageContainer size="wide" className="py-6 sm:py-10">
       {/* One view ping when a visitor is shown a card they can open (TODO
@@ -275,24 +307,82 @@ export async function CardDetailContent({
         />
       ) : null}
       {/* Breadcrumbs only for indexable cards — unlisted pages are noindex,
-          so hierarchy signals there are wasted bytes. */}
+          so hierarchy signals there are wasted bytes. The type's hub sits
+          between the gallery and the card, in both. */}
       {card.visibility === "public" ? (
         <JsonLd
           data={breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Gallery", path: "/gallery" },
+            ...(typeHub ? [{ name: TYPE_HUB_CRUMBS[typeHub], path: `/gallery/type/${typeHub}` }] : []),
             { name: pageName, path: cardPath },
           ])}
         />
       ) : null}
-      <CardBreadcrumbs pageName={pageName} />
+      <CardBreadcrumbs pageName={pageName} typeHub={typeHub} />
 
-      {/* grid-cols-1 (not the implicit auto column) so the info column is
-          viewport-bound on mobile instead of spreading to max-content. */}
-      <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:gap-12">
-        <div className="lg:sticky lg:top-24 lg:self-start">
+      <div className={CARD_PAGE_GRID}>
+        <header className={cn("flex min-w-0 flex-col gap-2", AREA.head)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-gold-strong">
+              {cardEyebrow(card.card_type)}
+            </p>
+            {showVisibility ? (
+              <Badge
+                className="w-fit"
+                variant={card.visibility === "public" ? "primary" : "outline"}
+              >
+                {/* The moderation lock (0156) is the owner's to read; a
+                    locked card is private, so only its owner (or an admin)
+                    reaches this page. */}
+                {isOwner ? ownerVisibilityLabel(card) : VISIBILITY_LABELS[card.visibility]}
+              </Badge>
+            ) : null}
+          </div>
+          <h1 className="text-balance font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            {pageName}
+          </h1>
+          {/* The nickname (TODO 6.3): the name the card prints in its
+              title bar — the H1 stays the card's name; "Also known as"
+              on a frame that prints no nickname. */}
+          <NicknameLine nickname={card.nickname} frameStyle={card.frame_style} />
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
+            {ownerProfile?.username ? (
+              <>
+                by
+                <Link
+                  href={`/profile/${ownerProfile.username}`}
+                  className="font-mono text-foreground underline-offset-4 transition-colors hover:text-primary-bright hover:underline"
+                >
+                  @{ownerProfile.username}
+                </Link>
+                <span aria-hidden>·</span>
+              </>
+            ) : null}
+            <time dateTime={card.created_at}>{createdAt}</time>
+          </p>
+          <CardProvenance
+            remixParent={remixParent}
+            sourceScryfallId={card.source_scryfall_id}
+            otherRemixesCount={otherRemixesCount}
+          />
+          <AiProvenanceTags provenance={aiProvenance} />
+          {/* The moderation lock (0156): the owner is told why the card
+              stays private, and where to ask. */}
+          {isOwner && isModerationLocked(card) ? (
+            <p className="mt-1 rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-sm leading-6 text-foreground">
+              {MODERATION_LOCK_NOTE}{" "}
+              <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
+                Contact us
+              </Link>{" "}
+              if you have questions.
+            </p>
+          ) : null}
+        </header>
+
+        <div className={cn("min-w-0", AREA.hero)}>
           <div
-            className="mx-auto w-full max-w-sm lg:max-w-none"
+            className="mx-auto w-full max-w-sm md:max-w-none"
             // Matches the gallery / dashboard / profile thumbnails'
             // view-transition-name so chromium-class browsers can animate a
             // shared-element transition between the grid tile and this hero.
@@ -314,74 +404,20 @@ export async function CardDetailContent({
           </div>
         </div>
 
-        {/* A reading width for the column (its text and its strip); from 2xl
-            the creator's panel sits beside it, sticky, instead of under it. */}
-        <div className="flex min-w-0 max-w-2xl flex-col gap-6 2xl:grid 2xl:max-w-none 2xl:grid-cols-[minmax(0,42rem)_20rem] 2xl:items-start 2xl:gap-x-12">
-          <div className="flex min-w-0 flex-col gap-6">
-          <header className="flex flex-col gap-2">
-            {showVisibility ? (
-              <Badge
-                className="w-fit"
-                variant={card.visibility === "public" ? "primary" : "outline"}
-              >
-                {/* The moderation lock (0156) is the owner's to read; a
-                    locked card is private, so only its owner (or an admin)
-                    reaches this page. */}
-                {isOwner ? ownerVisibilityLabel(card) : VISIBILITY_LABELS[card.visibility]}
-              </Badge>
-            ) : null}
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              {pageName}
-            </h1>
-            {/* The nickname (TODO 6.3): the name the card prints in its
-                title bar — the H1 stays the card's name; "Also known as"
-                on a frame that prints no nickname. */}
-            <NicknameLine nickname={card.nickname} frameStyle={card.frame_style} />
-            <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
-              {ownerProfile?.username ? (
-                <>
-                  by
-                  <Link
-                    href={`/profile/${ownerProfile.username}`}
-                    className="font-mono text-foreground underline-offset-4 transition-colors hover:text-primary-bright hover:underline"
-                  >
-                    @{ownerProfile.username}
-                  </Link>
-                  <span aria-hidden>·</span>
-                </>
-              ) : null}
-              <time dateTime={card.created_at}>{createdAt}</time>
-            </p>
-            <CardProvenance
-              remixParent={remixParent}
-              sourceScryfallId={card.source_scryfall_id}
-              otherRemixesCount={otherRemixesCount}
-            />
-            <AiProvenanceTags provenance={aiProvenance} />
-          </header>
-
-          {/* The moderation lock (0156): the owner is told why the card
-              stays private, and where to ask. */}
-          {isOwner && isModerationLocked(card) ? (
-            <p className="rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-sm leading-6 text-foreground">
-              {MODERATION_LOCK_NOTE}{" "}
-              <Link href={MODERATION_CONTACT_HREF} className="font-medium text-primary-bright underline-offset-4 hover:underline">
-                Contact us
-              </Link>{" "}
-              if you have questions.
-            </p>
-          ) : null}
-
-          {/* The actions, in the order people reach for them: the card's
-              own (download, remix, add to deck — the owner's Edit first),
-              then the social row. On a phone the first row is a two-column
-              grid of full-width buttons. */}
-          <div className="flex flex-col gap-3">
-            {/* On a phone a label wraps inside its button (never past the
-                column: "Remix into a deck" is wider than half of 320 px). */}
-            <div className="grid grid-cols-2 gap-2 max-sm:[&_a]:h-auto max-sm:[&_a]:min-h-10 max-sm:[&_a]:whitespace-normal max-sm:[&_a]:py-2 max-sm:[&_a]:text-center max-sm:[&_button]:h-auto max-sm:[&_button]:min-h-10 max-sm:[&_button]:whitespace-normal max-sm:[&_button]:py-2 max-sm:[&_button]:text-center sm:flex sm:flex-wrap sm:items-center">
+        {/* ONE action row, in the order people reach for them: the card's
+            own (the owner's Edit, download, remix, add to deck), then like,
+            share and report. On a phone it is the bar pinned to the bottom
+            of the screen (its buttons scroll sideways inside it, never the
+            page). */}
+        <div className={cn("min-w-0", AREA.actions)} data-testid="card-actions" data-card-action-bar="">
+          {/* The phone's row scrolls sideways; its right edge fades while
+              there is more to it (globals.css `[data-card-action-row]`). */}
+          <div className="flex items-center gap-2 max-md:overflow-x-auto max-md:pb-0.5 md:flex-wrap" data-card-action-row="">
+            {/* Two groups that wrap as wholes: the card's own actions, then
+                the social ones. */}
+            <div className="flex items-center gap-2 max-md:shrink-0 md:flex-wrap">
               {isOwner ? (
-                <Button asChild className="w-full sm:w-auto">
+                <Button asChild>
                   <Link href={`/card/${card.slug}/edit`}>
                     <Pencil className="h-4 w-4" aria-hidden /> Edit card
                   </Link>
@@ -400,7 +436,7 @@ export async function CardDetailContent({
                 // and an element sent from this server component can arrive
                 // as a lazy reference Radix renders as nothing (a hydration
                 // error, 2026-11-02; download-modal.tsx).
-                trigger={{ variant: isOwner ? "outline" : "primary", className: "w-full sm:w-auto" }}
+                trigger={{ variant: isOwner ? "outline" : "primary" }}
               />
               {/* Another creator's card into one of your decks (TODO DK9.4,
                   owner decision D3): a PUBLIC one by "Add to deck"; one that
@@ -411,20 +447,17 @@ export async function CardDetailContent({
                 requiresSignIn={!user}
                 label={!isOwner && card.visibility !== "public" ? "Remix into a deck" : undefined}
                 unavailableReason={isModerationLocked(card) ? MODERATION_LOCKED_REMIX_MESSAGE : undefined}
-                className={cn("w-full sm:w-auto", isOwner && "col-span-2 sm:col-auto")}
               />
               {!isOwner && card.visibility === "public" ? (
-                <div className="col-span-2 sm:col-auto [&>*]:w-full sm:[&>*]:w-auto">
-                  <AddToDeckButton
-                    cardId={card.id}
-                    cardTitle={card.title}
-                    cardPath={cardPath}
-                    signedIn={isAuthed}
-                  />
-                </div>
+                <AddToDeckButton
+                  cardId={card.id}
+                  cardTitle={card.title}
+                  cardPath={cardPath}
+                  signedIn={isAuthed}
+                />
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 max-md:shrink-0 md:flex-wrap">
               <LikeButton
                 cardId={card.id}
                 cardSlug={card.slug}
@@ -445,35 +478,14 @@ export async function CardDetailContent({
               {user && !isOwner ? <ReportCardDialog cardId={card.id} /> : null}
             </div>
           </div>
+        </div>
 
-          {/* Share-traffic conversion: most anonymous visitors arrive from a
-              shared link — meet the "I could make one of these" moment with
-              the create CTA right under the card actions. */}
-          {!user ? (
-            <Link
-              href="/signup"
-              className="inline-flex w-fit items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15"
-            >
-              <Sparkles className="h-4 w-4 text-gold" aria-hidden />
-              Forge your own card — free
-            </Link>
-          ) : null}
-
-          <CardStats
-            views={card.view_count}
-            likes={likesCount}
-            remixes={remixCount}
-            decks={deckCount}
-            comments={comments.length}
-            trendingSignals={trendingSignals}
-            likeStanding={likeStanding}
-          />
-
-          {/* Card details as TEXT. The rendered preview shows all of this, but
-              a crawler or answer engine reads none of it from an image — this
-              block is what makes the page citable for "custom MTG {type}"
-              queries. */}
-          <CardDetails card={card} inDecks={inDecks} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />
+        <div className={cn("flex min-w-0 flex-col gap-5", AREA.text)}>
+          {/* Card details as TEXT. The rendered preview shows all of this,
+              but a crawler or answer engine reads none of it from an image —
+              this block is what makes the page citable for "custom MTG
+              {type}" queries. */}
+          <CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />
 
           {/* Discovery tags — under the details they describe. */}
           {card.tags.length > 0 ? (
@@ -490,11 +502,12 @@ export async function CardDetailContent({
               ))}
             </ul>
           ) : null}
+        </div>
 
-          </div>
-
+        {/* The side rail: who made it, how it is doing, where it is used —
+            and, for a visitor from a shared link, the way to make one. */}
+        <aside aria-label="About this card" className={cn("flex min-w-0 flex-col gap-4", AREA.rail)}>
           {creatorProfile ? (
-            <div className="min-w-0 2xl:sticky 2xl:top-24">
             <CreatorFeature
               profile={creatorProfile}
               targetUserId={card.owner_id}
@@ -502,9 +515,31 @@ export async function CardDetailContent({
               initialFollowing={viewerFollows}
               requiresSignIn={!user}
             />
-            </div>
           ) : null}
-        </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            <CardStats
+              views={card.view_count}
+              likes={likesCount}
+              remixes={remixCount}
+              decks={deckCount}
+              comments={commentCount}
+              trendingSignals={trendingSignals}
+              likeStanding={likeStanding}
+            />
+            {inDecks.length > 0 ? <InDecksList decks={inDecks} total={deckCount} /> : null}
+            {/* Share-traffic conversion: most anonymous visitors arrive from a
+                shared link — meet the "I could make one of these" moment. */}
+            {!user ? (
+              <Link
+                href="/signup"
+                className="inline-flex w-fit items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/15"
+              >
+                <Sparkles className="h-4 w-4 text-gold" aria-hidden />
+                Forge your own card — free
+              </Link>
+            ) : null}
+          </div>
+        </aside>
       </div>
 
       {/* Below the card: where it is used, what it became, more to look at —
@@ -534,11 +569,7 @@ export async function CardDetailContent({
         {relatedCards.length > 0 ? (
           <RelatedRow
             title="More like this"
-            viewAllHref={
-              card.card_type && isHubType(card.card_type)
-                ? `/gallery/type/${card.card_type}`
-                : "/gallery/browse"
-            }
+            viewAllHref={typeHub ? `/gallery/type/${typeHub}` : "/gallery/browse"}
             cards={relatedCards}
             isAuthed={isAuthed}
           />
@@ -560,14 +591,67 @@ export async function CardDetailContent({
   );
 }
 
+/** The breadcrumb's name for a type's hub page (/gallery/type/<type>). */
+/** The comments the page loads at once (the newest). */
+const COMMENT_PAGE = 50;
+
+const TYPE_HUB_CRUMBS: Record<CardType, string> = {
+  creature: "Creatures",
+  instant: "Instants",
+  sorcery: "Sorceries",
+  artifact: "Artifacts",
+  enchantment: "Enchantments",
+  land: "Lands",
+  planeswalker: "Planeswalkers",
+  battle: "Battles",
+  token: "Tokens",
+  emblem: "Emblems",
+  spell: "Spells",
+};
+
+/** The line over the H1: what the card is, in the words people search with. */
+function cardEyebrow(cardType: string | null): string {
+  if (!cardType || cardType === "spell") return "Custom MTG card";
+  const label = CARD_TYPE_LABELS[cardType as CardType];
+  return label ? `Custom MTG ${label.toLowerCase()}` : "Custom MTG card";
+}
+
+/** The rail's short list of the public decks the card is in — the same one
+ *  list as the JSON-LD isPartOf and the tiles below (0144 / 0149's rule),
+ *  its first few by name. */
+function InDecksList({ decks, total }: { decks: Array<{ slug: string; title: string }>; total: number }) {
+  const shown = decks.slice(0, 3);
+  return (
+    <section aria-labelledby="card-in-decks-heading" className="flex flex-col gap-1.5 text-sm">
+      <h2 id="card-in-decks-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
+        In decks
+      </h2>
+      <ul className="flex flex-col gap-1">
+        {shown.map((deck) => (
+          <li key={deck.slug} className="min-w-0 truncate">
+            <Link href={`/deck/${deck.slug}`} className="text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
+              {deck.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {total > shown.length ? (
+        <a href="#decks-with-card-heading" className="w-fit text-xs font-semibold text-primary-bright underline-offset-4 hover:underline">
+          All {total} decks
+        </a>
+      ) : null}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// CardBreadcrumbs — "Gallery › <card>", the visible twin of the breadcrumb
-// JSON-LD (Home › Gallery › card). The current page is named for a screen
-// reader and on a wide screen; a phone shows the way back alone (the H1
-// right below says the rest).
+// CardBreadcrumbs — "Gallery › Creatures › <card>", the visible twin of the
+// breadcrumb JSON-LD (Home › Gallery › type hub › card). The current page is
+// named for a screen reader and on a wide screen; a phone shows the way back
+// alone (the H1 right below says the rest).
 // ---------------------------------------------------------------------------
 
-function CardBreadcrumbs({ pageName }: { pageName: string }) {
+function CardBreadcrumbs({ pageName, typeHub }: { pageName: string; typeHub: CardType | null }) {
   return (
     <nav aria-label="Breadcrumb" className="mb-4 sm:mb-6">
       <ol className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
@@ -577,6 +661,14 @@ function CardBreadcrumbs({ pageName }: { pageName: string }) {
             Gallery
           </Link>
         </li>
+        {typeHub ? (
+          <li className="flex shrink-0 items-center gap-1.5 max-sm:hidden">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-subtle" aria-hidden />
+            <Link href={`/gallery/type/${typeHub}`} className="transition-colors hover:text-foreground">
+              {TYPE_HUB_CRUMBS[typeHub]}
+            </Link>
+          </li>
+        ) : null}
         <li className="flex min-w-0 items-center gap-1.5">
           <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-subtle sm:block" aria-hidden />
           <span aria-current="page" className="sr-only truncate text-foreground sm:not-sr-only">
@@ -587,6 +679,8 @@ function CardBreadcrumbs({ pageName }: { pageName: string }) {
     </nav>
   );
 }
+
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // CardProvenance — where the card came from: a remix of another PipGlyph
@@ -1046,6 +1140,8 @@ export function buildCardJsonLd({
   username,
   ownerDisplay,
   siteBase,
+  engagement,
+  basedOn,
 }: {
   inDecks: Array<{ slug: string; title: string }>;
   card: {
@@ -1057,6 +1153,8 @@ export function buildCardJsonLd({
     rendered_at: string | null;
     flavor_text: string | null;
     rules_text: string | null;
+    /** A walker / saga / station stored with its rows alone: `text`. */
+    face_content?: unknown;
     artist_credit: string | null;
     card_type: string | null;
     supertype: string | null;
@@ -1075,6 +1173,8 @@ export function buildCardJsonLd({
      *  as `hasPart` with its own ImageObject — the back's stored bake. */
     back_face?: unknown;
     rendered_back_image_url?: string | null;
+    /** The bake's 600 px thumbnail: the work's thumbnailUrl. */
+    rendered_thumb_url?: string | null;
     owner_id?: string;
     /** AI provenance (TODO CP1): the parts AI made. */
     ai_fields?: string[] | null;
@@ -1082,12 +1182,17 @@ export function buildCardJsonLd({
   username: string;
   ownerDisplay: string;
   siteBase: string;
+  /** The likes and comments the page shows (TODO CP2b): interactionStatistic. */
+  engagement?: { likes: number; comments: number };
+  /** The PipGlyph card it remixes (TODO CP2b): isBasedOn. (A Scryfall
+   *  source has no stable page URL of its own — only its uuid is stored.) */
+  basedOn?: string | null;
 }): Record<string, unknown> {
   const description =
     // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
     stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
-    // CARDNAME / ~ as the name the card prints (TODO 6.2).
-    storedRulesTextWithSelfName(card)?.trim() ||
+    // Its text or its rows, CARDNAME / ~ as the name the card prints (TODO 6.2).
+    cardPageRulesText({ ...card, rules_text: card.rules_text ?? null })?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";
   const truncatedDescription =
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
@@ -1185,6 +1290,23 @@ export function buildCardJsonLd({
     genre: "Fan-made custom Magic: The Gathering card",
   };
 
+  // The card's rules as words (TODO CP2b) — CARDNAME / ~ as the name it
+  // prints (TODO 6.2) — whatever the description led with.
+  const rulesText = cardPageRulesText({ ...card, rules_text: card.rules_text ?? null })?.trim();
+  if (rulesText) schema.text = rulesText;
+  const thumb =
+    card.id && card.owner_id && isStoredRenderUrl(card.rendered_thumb_url, { ownerId: card.owner_id, cardId: card.id })
+      ? toRenderCdnUrl(card.rendered_thumb_url)
+      : null;
+  if (thumb) schema.thumbnailUrl = `${siteBase}${thumb}`;
+  if (engagement) {
+    schema.commentCount = engagement.comments;
+    schema.interactionStatistic = [
+      { "@type": "InteractionCounter", interactionType: "https://schema.org/LikeAction", userInteractionCount: engagement.likes },
+      { "@type": "InteractionCounter", interactionType: "https://schema.org/CommentAction", userInteractionCount: engagement.comments },
+    ];
+  }
+  if (basedOn) schema.isBasedOn = basedOn;
   if (card.artist_credit?.trim()) {
     schema.contributor = {
       "@type": "Person",
@@ -1271,14 +1393,61 @@ export function collectorLineText(card: {
   return parts.length ? parts.join(" · ") : null;
 }
 
+/** One face's text, as its picture prints it — the front's from the row,
+ *  a back's from `back_face` (TODO CP2b). The stats follow the same rules
+ *  as the picture: the P/T only where the frame draws it and the type prints
+ *  one (lib/cards/pt-drawn.ts, printsPowerToughness: a Treasure token with a
+ *  stray P/T, a saga whose type says Creature, a station card with no tier
+ *  print none — the stored values are untouched). */
+function faceStats(
+  drawsPt: boolean,
+  face: {
+    card_type: string | null;
+    supertype: string | null;
+    subtypes: string[] | null;
+    power: string | null;
+    toughness: string | null;
+    loyalty: string | null;
+    defense: string | null;
+  },
+): CardTextFace["stats"] {
+  if (
+    drawsPt &&
+    printsPowerToughness({
+      cardType: face.card_type as CardType | null,
+      supertype: face.supertype,
+      subtypes: face.subtypes ?? [],
+      power: face.power,
+      toughness: face.toughness,
+    })
+  ) {
+    return { value: `${face.power ?? "?"}/${face.toughness ?? "?"}`, label: "Power and toughness" };
+  }
+  if (face.loyalty != null) return { value: `Loyalty ${face.loyalty}`, label: null };
+  if (face.defense != null) return { value: `Defense ${face.defense}`, label: null };
+  return null;
+}
+
+/** The colour words of a stored colour list ("Blue, Red"), and its pips. */
+function colorWords(colors: readonly string[]): string {
+  return colors.map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c).join(", ");
+}
+function colorPipsOf(colors: readonly string[]): PipColor[] {
+  const pips = colors.flatMap((c) => {
+    const pip = isColorIdentity(c) ? pipColorOfIdentity(c) : toPipColor(c);
+    return pip ? [pip] : [];
+  });
+  return pips.length > 0 ? pips : ["C"];
+}
+
 /** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
 export function CardDetails({
   card,
-  inDecks,
   aiProvenance,
   pipOverrides = null,
 }: {
   card: {
+    title: string;
     cost: string | null;
     card_type: string | null;
     supertype: string | null;
@@ -1297,9 +1466,10 @@ export function CardDetails({
     artist_credit: string | null;
     created_at: string;
     updated_at: string;
-    /** What a station card's tiers are read from (TODO 4.27a): with no tier
-     *  the picture shows no power / toughness, so the details list none. */
     rules_text?: string | null;
+    flavor_text?: string | null;
+    /** What a station card's tiers are read from (TODO 4.27a): with no tier
+     *  the picture shows no power / toughness, so the text lists none. */
     face_content?: unknown;
     /** The collector line (TODO 4.9b): its fields and the switch, shown
      *  only when the render draws the line. */
@@ -1307,186 +1477,174 @@ export function CardDetails({
     collector_number?: string | null;
     lang?: string | null;
     frame_style?: unknown;
-    /** The back face (TODO 5.3): with a body of its own, its facts are
-     *  listed under the front's. */
+    /** The back face (TODO 5.3): with a body of its own, its text is a
+     *  block of its own under the front's. */
     back_face?: unknown;
   };
-  inDecks: Array<{ slug: string; title: string }>;
   /** What AI made of the card (TODO CP1): one row, absent for a card made
    *  by hand. */
   aiProvenance?: AiProvenance;
-  /** The owner's custom pip icons — the cost rows draw the pips the card
-   *  draws. */
+  /** The owner's custom pip icons — the costs draw the pips the card draws. */
   pipOverrides?: PipOverrides | null;
 }) {
-  const typeLine = buildTypeLine({
-    supertype: card.supertype,
-    cardType: card.card_type as CardType | null,
-    subtypes: card.subtypes ?? [],
-    printedTypes: card.printed_types,
-  });
-  const colors = (card.color_identity ?? [])
-    .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
-    .join(", ");
-  // The stats the render prints (printsPowerToughness): a Treasure token
-  // carrying a stray P/T prints none, so its details list none (TODO 3b.15).
-  // And only on a frame that draws one (lib/cards/pt-drawn.ts): a saga whose
-  // type says Creature keeps its 9/9 in the row, the picture shows none, so
-  // the details list none either — the stored value is untouched. (So does
-  // a station card with no tier: its P/T is printed on a tier's plate.)
   const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
-  const stats = frontDrawsPowerToughness(frontTemplate, { rulesText: card.rules_text ?? null, faceContent: (card.face_content ?? null) as FaceContent | null }) && printsPowerToughness({
-    cardType: card.card_type as CardType | null,
-    supertype: card.supertype,
-    subtypes: card.subtypes ?? [],
-    power: card.power,
-    toughness: card.toughness,
-  })
-    ? `${card.power ?? "?"}/${card.toughness ?? "?"}`
-      : card.loyalty != null
-        ? `Loyalty ${card.loyalty}`
-        : card.defense != null
-          ? `Defense ${card.defense}`
-          : null;
-  const rows: Array<[string, React.ReactNode]> = [
-    // The nickname it prints in its title bar (TODO 6.3).
-    ...(cardNickname(card.nickname) ? [["Nickname", cardNickname(card.nickname)] as [string, React.ReactNode]] : []),
-    ["Type", typeLine],
-    ["Mana cost", card.cost?.trim() ? <CostPips key="cost" cost={card.cost} overrides={pipOverrides} /> : "None"],
-    // An emblem has no rarity (CR 114): no row for its stored "common".
-    ...(cardTypeHasRarity(card.card_type)
-      ? [["Rarity", card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : "—"] as [string, React.ReactNode]]
-      : []),
-    // The card's colour as the creator models it — its frame colour, which
-    // is not MTG's Commander colour identity (an imported Ajani, Nacatl
-    // Pariah is White, its identity R/W; TODO 1.2), so the row says "Color".
-    ["Color", colors || "Colorless"],
-  ];
-  if (stats) rows.push(["Stats", stats]);
+  const faceContent = (card.face_content ?? null) as FaceContent | null;
+  const front: CardTextFace = {
+    name: card.title,
+    cost: card.cost,
+    typeLine: buildTypeLine({
+      supertype: card.supertype,
+      cardType: card.card_type as CardType | null,
+      subtypes: card.subtypes ?? [],
+      printedTypes: card.printed_types,
+    }),
+    // An emblem has no rarity (CR 114): none for its stored "common".
+    rarity: cardTypeHasRarity(card.card_type) && card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : null,
+    // Its text or its rows, CARDNAME / ~ as the name the title bar prints
+    // (TODO 6.2) — the meta description's and the JSON-LD's one answer.
+    rulesText: cardPageRulesText({ ...card, rules_text: card.rules_text ?? null }),
+    flavorText: card.flavor_text ?? null,
+    stats: faceStats(frontDrawsPowerToughness(frontTemplate, { rulesText: card.rules_text ?? null, faceContent }), card),
+    artist: card.artist_credit?.trim() || null,
+  };
+
+  // The facts the text block doesn't hold. The card's colour is its frame
+  // colour as the creator models it — not MTG's Commander colour identity
+  // (an imported Ajani, Nacatl Pariah is White, its identity R/W; TODO
+  // 1.2), so the row says "Color".
+  const colors = card.color_identity ?? [];
+  const template = normalizeFrameTemplate(frontTemplate, { rulesText: card.rules_text ?? null });
+  const manaValue = card.cost?.trim() ? manaValueOfCost(card.cost) : null;
+  const rows: Array<[string, React.ReactNode]> = [];
+  // The nickname it prints in its title bar (TODO 6.3).
+  const nickname = cardNickname(card.nickname);
+  if (nickname) rows.push(["Nickname", nickname]);
+  if (manaValue != null) rows.push(["Mana value", String(manaValue)]);
+  rows.push([
+    "Color",
+    <span key="color" className="inline-flex items-center gap-2">
+      <ColorPips colors={colorPipsOf(colors)} size={16} decorative />
+      <span>{colorWords(colors) || "Colorless"}</span>
+    </span>,
+  ]);
+  rows.push([
+    "Frame",
+    <Link key="frame" href={`/frames#${frameAnchorId(template)}`} className="underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
+      {describeFrame(template)}
+    </Link>,
+  ]);
   if (card.layout && card.layout !== "normal") rows.push(["Layout", card.layout]);
   if (card.set_icon_code) rows.push(["Set symbol", card.set_icon_code.toUpperCase()]);
   // The collector line as printed (TODO 4.9b): "Set · Number · Language",
   // only when the render draws the line — in step with the image.
   const collector = collectorLineText(card);
   if (collector) rows.push(["Collector line", collector]);
-  if (card.artist_credit?.trim()) rows.push(["Art", card.artist_credit.trim()]);
   // How much of it AI made (TODO CP1) — nothing for a card made by hand.
   const aiLine = aiProvenance ? aiProvenanceSentence(aiProvenance) : null;
   if (aiLine) rows.push(["Made with AI", aiLine]);
-  rows.push(["Created", formatShortDate(card.created_at)]);
+  // The byline carries the day it was made; an edit since is a row.
   if (Date.parse(card.updated_at) - Date.parse(card.created_at) > 60_000) {
-    rows.push(["Updated", formatShortDate(card.updated_at)]);
+    rows.push(["Updated", <time key="updated" dateTime={card.updated_at}>{formatShortDate(card.updated_at)}</time>]);
   }
-  if (inDecks.length > 0) {
-    rows.push([
-      "In decks",
-      <span key="decks" className="flex flex-wrap gap-x-2 gap-y-1">
-        {inDecks.map((deck) => (
-          <Link key={deck.slug} href={`/deck/${deck.slug}`} className="underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
-            {deck.title}
-          </Link>
-        ))}
-      </span>,
-    ]);
-  }
-  // The back face with a body of its own (lib/cards/faces.ts): the facts
-  // its render shows, under the front's — never a legacy back's (the page
-  // flips to it, but the bake and the downloads are the front's).
+
+  // The back face with a body of its own (lib/cards/faces.ts): its text
+  // under the front's — never a legacy back's (the page flips to it, but
+  // the bake and the downloads are the front's). Its colour is its own,
+  // else the front's — the colour its body is drawn in (backPreviewData).
   const back = rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })
     ? ((card.back_face as CardBackFace | null) ?? null)
     : null;
-  const backRows: Array<[string, React.ReactNode]> = back
-    ? backFaceRows(back, card.color_identity, frontTemplate, pipOverrides)
-    : [];
+  const backFace: CardTextFace | null = back
+    ? {
+        name: back.title?.trim() || "Back face",
+        cost: back.cost ?? null,
+        typeLine: buildTypeLine({
+          supertype: back.supertype,
+          cardType: back.card_type ?? null,
+          subtypes: back.subtypes ?? [],
+          printedTypes: back.printed_types,
+        }),
+        rarity: null,
+        // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
+        rulesText: backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null) ?? null,
+        flavorText: back.flavor_text ?? null,
+        // Its body's own P/T slot (a land back body has none).
+        stats: faceStats(secondFaceDrawsPowerToughness(frontTemplate, back.frame_style?.template), {
+          card_type: back.card_type ?? null,
+          supertype: back.supertype ?? null,
+          subtypes: back.subtypes ?? null,
+          power: back.power ?? null,
+          toughness: back.toughness ?? null,
+          loyalty: back.loyalty ?? null,
+          defense: back.defense ?? null,
+        }),
+        artist: back.artist_credit?.trim() || null,
+        colorLine: colorWords(back.color_identity ?? colors) || "Colorless",
+      }
+    : null;
+
+  // A two-part card that is ONE picture — split, aftermath, adventure, flip,
+  // Prepare (templatePaintsSecondFace): the second part the frame draws is a
+  // block of its own in its words ("Right half"), in step with the picture —
+  // its name, cost, type line and rules (with ~ as its own name); never a
+  // flavour or an artist (no second part prints one), its P/T only where the
+  // frame draws one (flip).
+  const second =
+    !back && templatePaintsSecondFace(frontTemplate ?? undefined)
+      ? ((card.back_face as CardBackFace | null) ?? null)
+      : null;
+  const partWords = second ? secondPartWordsOfCard(card.card_type as CardType | null, frontTemplate) : null;
+  const secondPart: CardTextFace | null =
+    second && partWords && (second.title?.trim() || second.cost?.trim() || second.rules_text?.trim())
+      ? {
+          name: second.title?.trim() || partWords.second,
+          cost: second.cost ?? null,
+          typeLine: buildTypeLine({
+            supertype: second.supertype,
+            cardType: second.card_type ?? null,
+            subtypes: second.subtypes ?? [],
+            printedTypes: second.printed_types,
+          }),
+          rarity: null,
+          rulesText: backRulesTextWithSelfName(second, card.frame_style as { selfName?: string } | null) ?? null,
+          flavorText: null,
+          stats: faceStats(getFrameProfile(template).secondFace?.pt != null, {
+            card_type: second.card_type ?? null,
+            supertype: second.supertype ?? null,
+            subtypes: second.subtypes ?? null,
+            power: second.power ?? null,
+            toughness: second.toughness ?? null,
+            loyalty: null,
+            defense: null,
+          }),
+          artist: null,
+        }
+      : null;
+
   return (
-    <section aria-labelledby="card-details-heading" className="flex flex-col gap-2">
+    <section aria-labelledby="card-details-heading" className="flex flex-col gap-3">
       <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
         Card details
       </h2>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+      <CardTextBlock
+        face={front}
+        pipOverrides={pipOverrides}
+        label={back ? "Front face" : secondPart && partWords ? partWords.first : "Card text"}
+      />
+      {backFace ? (
+        <CardTextBlock face={backFace} pipOverrides={pipOverrides} label="Back face" testId="card-back-details" />
+      ) : null}
+      {secondPart && partWords ? (
+        <CardTextBlock face={secondPart} pipOverrides={pipOverrides} label={partWords.second} testId="card-second-part" />
+      ) : null}
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm" data-testid="card-facts">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
             <dt className="text-muted">{label}</dt>
-            <dd className="text-foreground">{value}</dd>
+            <dd className="min-w-0 text-foreground">{value}</dd>
           </div>
         ))}
       </dl>
-      {back ? (
-        <>
-          <h3 id="card-back-details-heading" className="mt-2 font-mono text-[11px] uppercase tracking-wider text-muted">
-            Back face{back.title?.trim() ? ` — ${back.title.trim()}` : ""}
-          </h3>
-          <dl aria-labelledby="card-back-details-heading" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm" data-testid="card-back-details">
-            {backRows.map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-muted">{label}</dt>
-                <dd className="text-foreground">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </>
-      ) : null}
     </section>
   );
-}
-
-/** A cost row's pips: the card's own pip drawings (CardPip through
- *  ManaCostGlyphs' `disc`, in the default "modern" style — the look UI1's
- *  colour pips have, ColorPip) at a UI size, the owner's custom pips where
- *  the card draws them. The pictures are decorative: the cost is said in
- *  words beside them, for a screen reader and a crawler ("2 generic,
- *  blue") — the text this row used to show. */
-const COST_DISC = { size: "18px", gap: "3px", px: 18 } as const;
-
-function CostPips({ cost, overrides }: { cost: string; overrides: PipOverrides | null }) {
-  return (
-    <span className="inline-flex items-center align-middle" data-testid="card-details-cost">
-      <span aria-hidden className="inline-flex py-0.5">
-        <ManaCostGlyphs cost={cost} disc={COST_DISC} overrides={overrides} className="flex-wrap gap-y-1" />
-      </span>
-      <span className="sr-only">{describeManaCost(cost) || cost}</span>
-    </span>
-  );
-}
-
-/** The back face's rows (TODO 5.3): its type line, mana cost (a modal
- *  back prints one; a transform back none), colour (its own, else the
- *  front's — the colour its body is drawn in, lib/cards/faces.ts
- *  backPreviewData), the stats its render prints and its artist — the same
- *  rules as the front's rows. */
-function backFaceRows(
-  back: CardBackFace,
-  frontColors: string[] | null,
-  frontTemplate: string | null | undefined,
-  pipOverrides: PipOverrides | null,
-): Array<[string, React.ReactNode]> {
-  const typeLine = buildTypeLine({
-    supertype: back.supertype,
-    cardType: back.card_type ?? null,
-    subtypes: back.subtypes ?? [],
-    printedTypes: back.printed_types,
-  });
-  const colors = (back.color_identity ?? frontColors ?? [])
-    .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
-    .join(", ");
-  // Its body's own P/T slot (a land back body has none).
-  const stats = secondFaceDrawsPowerToughness(frontTemplate, back.frame_style?.template) && printsPowerToughness({
-    cardType: back.card_type ?? null,
-    supertype: back.supertype,
-    subtypes: back.subtypes ?? [],
-    power: back.power,
-    toughness: back.toughness,
-  })
-    ? `${back.power ?? "?"}/${back.toughness ?? "?"}`
-    : back.loyalty != null
-      ? `Loyalty ${back.loyalty}`
-      : back.defense != null
-        ? `Defense ${back.defense}`
-        : null;
-  const rows: Array<[string, React.ReactNode]> = [["Type", typeLine]];
-  if (back.cost?.trim()) rows.push(["Mana cost", <CostPips key="cost" cost={back.cost} overrides={pipOverrides} />]);
-  rows.push(["Color", colors || "Colorless"]);
-  if (stats) rows.push(["Stats", stats]);
-  if (back.artist_credit?.trim()) rows.push(["Art", back.artist_credit.trim()]);
-  return rows;
 }
