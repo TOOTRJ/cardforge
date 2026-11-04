@@ -184,7 +184,7 @@ export function DecksLanding() {
             Explore community decks
           </h2>
           <p className="max-w-2xl text-sm leading-6 text-muted">
-            A fresh shuffle on every visit — full decks of 10 cards or more and the ones the community likes and views turn up more often, but every deck gets its turn.
+            A fresh shuffle every few minutes — full decks of 10 cards or more and the ones the community likes and views turn up more often, but every deck gets its turn.
           </p>
         </div>
         <div className="mt-6">

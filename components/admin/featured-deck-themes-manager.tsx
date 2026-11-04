@@ -9,7 +9,7 @@
 // longer a creator) is marked "Hidden" — it stays, and shows again once it
 // qualifies.
 
-import { useId, useState, useTransition } from "react";
+import { useId, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Eye, EyeOff, Loader2, Plus, Trash2, X } from "lucide-react";
@@ -158,6 +158,42 @@ function NewThemeForm({ pending, run }: { pending: boolean; run: Run }) {
   );
 }
 
+/** A theme's or a pick's row control. Off = `aria-disabled`, never
+ *  `disabled`: a reorder's buttons go off while its request runs, and a
+ *  disabled button drops the keyboard focus mid-reorder. Off, a press does
+ *  nothing (no action is called) and the focus stays where it was. */
+function RowAction({
+  off,
+  label,
+  onPress,
+  children,
+}: {
+  off: boolean;
+  label?: string;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      aria-disabled={off || undefined}
+      aria-label={label}
+      className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+      onClick={(event) => {
+        if (off) {
+          event.preventDefault();
+          return;
+        }
+        onPress();
+      }}
+    >
+      {children}
+    </Button>
+  );
+}
+
 function ThemeCard({
   theme,
   first,
@@ -256,31 +292,31 @@ function ThemeCard({
         )}
         {!editing ? (
           <div className="flex flex-wrap items-center gap-1">
-            <Button type="button" size="sm" variant="ghost" disabled={pending || first} aria-label={`Move ${theme.title} up`}
-              onClick={() => run(() => moveDeckThemeAction(theme.id, -1), "Theme moved.")}>
+            <RowAction off={pending || first} label={`Move ${theme.title} up`}
+              onPress={() => run(() => moveDeckThemeAction(theme.id, -1), "Theme moved.")}>
               <ArrowUp className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={pending || last} aria-label={`Move ${theme.title} down`}
-              onClick={() => run(() => moveDeckThemeAction(theme.id, 1), "Theme moved.")}>
+            </RowAction>
+            <RowAction off={pending || last} label={`Move ${theme.title} down`}
+              onPress={() => run(() => moveDeckThemeAction(theme.id, 1), "Theme moved.")}>
               <ArrowDown className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={pending}
-              onClick={() => run(() => setDeckThemeLiveAction(theme.id, !theme.isLive), theme.isLive ? "Theme resting." : "Theme live.")}>
+            </RowAction>
+            <RowAction off={pending}
+              onPress={() => run(() => setDeckThemeLiveAction(theme.id, !theme.isLive), theme.isLive ? "Theme resting." : "Theme live.")}>
               {theme.isLive ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
               {theme.isLive ? "Rest" : "Go live"}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setEditing(true)}>
+            </RowAction>
+            <RowAction off={pending} onPress={() => setEditing(true)}>
               Edit
-            </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={pending}
-              onClick={() => {
+            </RowAction>
+            <RowAction off={pending}
+              onPress={() => {
                 if (window.confirm(`Delete the theme "${theme.title}" and its picks? The decks themselves stay.`)) {
                   void run(() => deleteDeckThemeAction(theme.id), "Theme deleted.");
                 }
               }}>
               <Trash2 className="h-4 w-4" aria-hidden />
               Delete
-            </Button>
+            </RowAction>
           </div>
         ) : null}
       </div>
@@ -294,19 +330,18 @@ function ThemeCard({
                 {pick.title}
               </Link>
               {pick.hiddenReason ? <Badge variant="outline">Hidden: {pick.hiddenReason}</Badge> : null}
-              <Button type="button" size="sm" variant="ghost" disabled={pending || index === 0} aria-label={`Move ${pick.title} up`}
-                onClick={() => run(() => moveDeckInThemeAction(theme.id, pick.deckId, -1), "Deck moved.")}>
+              <RowAction off={pending || index === 0} label={`Move ${pick.title} up`}
+                onPress={() => run(() => moveDeckInThemeAction(theme.id, pick.deckId, -1), "Deck moved.")}>
                 <ArrowUp className="h-4 w-4" aria-hidden />
-              </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={pending || index === theme.picks.length - 1}
-                aria-label={`Move ${pick.title} down`}
-                onClick={() => run(() => moveDeckInThemeAction(theme.id, pick.deckId, 1), "Deck moved.")}>
+              </RowAction>
+              <RowAction off={pending || index === theme.picks.length - 1} label={`Move ${pick.title} down`}
+                onPress={() => run(() => moveDeckInThemeAction(theme.id, pick.deckId, 1), "Deck moved.")}>
                 <ArrowDown className="h-4 w-4" aria-hidden />
-              </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={pending} aria-label={`Remove ${pick.title} from ${theme.title}`}
-                onClick={() => run(() => removeDeckFromThemeAction(theme.id, pick.deckId), "Deck removed.")}>
+              </RowAction>
+              <RowAction off={pending} label={`Remove ${pick.title} from ${theme.title}`}
+                onPress={() => run(() => removeDeckFromThemeAction(theme.id, pick.deckId), "Deck removed.")}>
                 <X className="h-4 w-4" aria-hidden />
-              </Button>
+              </RowAction>
             </li>
           ))}
         </ol>
