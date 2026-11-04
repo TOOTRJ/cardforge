@@ -23,7 +23,8 @@ import {
 //                   (`supabaseHost`), so the script refuses to act through
 //                   an app on another database than its --target;
 //   purge-cards   → `cardIds` (≤100): purgeHiddenCards — the Next caches of
-//                   the list surfaces and each card's share image, and the
+//                   the list surfaces, every card page (ids alone name no
+//                   page: CARD_PAGE_ROUTE) and each card's share image, and the
 //                   CDN copies tagged card-<id> (share image + /render-cdn
 //                   bake). For --private-renders, after it removed renders;
 //   flagged-file  → `file` + `actions` (≤50): the rows that use a file the
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 
   if (body.op === "purge-cards") {
     const ids = [...new Set(body.cardIds.map((id) => id.toLowerCase()))];
-    await purgeHiddenCards(ids);
+    await purgeHiddenCards(ids.map((id) => ({ id })));
     return NextResponse.json({ ok: true, ...where, purged: ids.length });
   }
 

@@ -191,7 +191,14 @@ Rules and gotchas:
   (`lib/media/media-urls.ts`).
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
-  a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
+  a route dynamic. The CARD PAGE (`/card/<user>/<slug>`, TODO CP2a) is
+  `force-static` + ISR — `cookies()` is empty there, so every read runs as
+  an anonymous visitor — and a visitor with a session cookie is rewritten by
+  `proxy.ts` to its dynamic twin `app/(marketing)/card-member/…` (the same
+  module; the `/pricing-member` pattern; never the editor's `/card/<slug>/edit`).
+  Nothing on it may count or write per render: a view is the browser's
+  ping (`CardViewBeacon` → `POST /api/cards/[id]/view`, 0168 — once per
+  viewer, card and UTC day, never a crawler, a prefetch or the owner). `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
   credit grants/refunds, protected billing columns, is_admin-gated tooling,
   storage writes into the caller's own folder via
   `lib/media/user-storage.ts` (users have no storage write policy since

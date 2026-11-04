@@ -18,6 +18,8 @@ export type VisibilityPreflightRow = {
   id: string;
   owner_id: string;
   title: string;
+  /** The card's page (`/card/<owner>/<slug>`), refreshed by the change. */
+  slug?: string | null;
   back_face: unknown;
   rendered_image_url: string | null;
   /** The artwork rule (no art → no gallery; a double-faced back's too). */
@@ -49,6 +51,7 @@ const PREFLIGHT_COLUMNS: readonly string[] = [
   "id",
   "owner_id",
   "title",
+  "slug",
   "back_face",
   "rendered_image_url",
   "art_url",

@@ -27,7 +27,22 @@ import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 // The body lives in CardDetailContent — the ONE card detail view. Every
 // tile and link opens this page (no intercepting modal): one canonical URL
 // that reads the same on a soft navigation, a reload and to a crawler.
+//
+// STATIC for signed-out visitors (TODO CP2a): `force-static` makes
+// `cookies()` empty, so every read here — the cookie-bound clients included
+// — runs as an anonymous visitor and the page is cached and regenerated at
+// most every REVALIDATE seconds (and at once by revalidateCardPaths, a like
+// or a comment, which revalidate this path). A visitor with a session cookie
+// never gets this copy: proxy.ts rewrites them to the dynamic twin,
+// app/(marketing)/card-member/[username]/[slug], which renders THIS module
+// with their session (Edit, their like, Follow, their plan, an owner's
+// private card) — the /pricing → /pricing-member pattern, so no signed-in
+// visitor sees the anonymous buttons first. A view is counted by the
+// browser's ping (CardViewBeacon, migration 0168), never by a render.
 // ---------------------------------------------------------------------------
+
+export const dynamic = "force-static";
+export const revalidate = 300;
 
 type Params = { username: string; slug: string };
 

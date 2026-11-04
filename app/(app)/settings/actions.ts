@@ -13,6 +13,7 @@ import {
   type ProfileUpdateInput,
 } from "@/lib/auth/schemas";
 import { revalidateProfilePage } from "@/lib/profile/username";
+import { revalidateEveryCardPage } from "@/lib/cards/revalidate";
 
 export type ProfileActionState = ActionState<ProfileUpdateInput> & {
   success?: boolean;
@@ -161,6 +162,10 @@ export async function updateProfileAction(
   revalidatePath(`/profile/${parsed.data.username}`);
   if (before?.username && before.username !== parsed.data.username) {
     revalidatePath(`/profile/${before.username}`);
+    // The user's card pages are static for a signed-out visitor (TODO CP2a):
+    // under the old handle they must 404 now, not at the end of their ISR
+    // window. A rename can't list them cheaply, so every card page expires.
+    revalidateEveryCardPage();
   }
 
   return { status: "idle", success: true };

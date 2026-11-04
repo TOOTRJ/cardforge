@@ -100,6 +100,16 @@ describe("isCrossSitePing", () => {
     expect(isCrossSitePing(headers({}), url)).toBe(false);
   });
 
+  it("the browser's own same-origin / same-site answer wins over the request URL's host", () => {
+    // A request URL built from an internal host must not drop a real ping.
+    const internal = "http://10.0.0.7:3000/api/cards/x/view";
+    expect(isCrossSitePing(headers({ origin: "https://www.pipglyph.com", "sec-fetch-site": "same-origin" }), internal)).toBe(false);
+    expect(isCrossSitePing(headers({ origin: "https://pipglyph.com", "sec-fetch-site": "same-site" }), internal)).toBe(false);
+    // With no Sec-Fetch-Site, the Origin is still compared.
+    expect(isCrossSitePing(headers({ origin: "https://www.pipglyph.com" }), internal)).toBe(true);
+    expect(isCrossSitePing(headers({ origin: "https://www.pipglyph.com" }), url)).toBe(false);
+  });
+
   it("the route asks it before it counts", () => {
     const route = readFileSync(join(process.cwd(), "app/api/cards/[id]/view/route.ts"), "utf8");
     expect(route).toContain("if (isUuid(id) && !isCrossSitePing(request.headers, request.url)) {");

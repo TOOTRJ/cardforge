@@ -15,6 +15,9 @@ import { NextRequest, NextResponse } from "next/server";
 //     /faq to the help centre (/help);
 //   * a signed-in /pricing is rewritten to the dynamic pricing-member twin
 //     (server-rendered buttons, no anonymous flash); the internal path 308s;
+//   * a signed-in card page (/card/<user>/<slug>) is rewritten to the
+//     dynamic card-member twin, never the card editor (/card/<slug>/edit);
+//     anonymous card pages stay static; the internal path 308s (CP2a);
 //   * a redirect from updateSession is never clobbered.
 // ---------------------------------------------------------------------------
 
@@ -116,6 +119,37 @@ describe("proxy", () => {
     const response = await proxy(request("/pricing-member", "sb-abcdefgh-auth-token.0=eyJ"));
     expect(response.status).toBe(308);
     expect(locationOf(response)).toBe("http://localhost:3000/pricing");
+    expect(s.updateSession).not.toHaveBeenCalled();
+  });
+
+  it("rewrites a signed-in card page to the card-member twin (query intact); anonymous stays static", async () => {
+    const member = await proxy(request("/card/dev_pro/archivist-of-lost-hours?face=back", "sb-abcdefgh-auth-token.0=eyJ"));
+    expect(rewriteOf(member)).toBe("http://localhost:3000/card-member/dev_pro/archivist-of-lost-hours?face=back");
+    expect(member.status).toBe(200);
+
+    const anonymous = await proxy(request("/card/dev_pro/archivist-of-lost-hours"));
+    expect(rewriteOf(anonymous)).toBeNull();
+    expect(locationOf(anonymous)).toBeNull();
+  });
+
+  it("never rewrites the card editor, the legacy slug URL or a deeper path", async () => {
+    const cookie = "sb-abcdefgh-auth-token=eyJ";
+    for (const path of ["/card/archivist-of-lost-hours/edit", "/card/archivist-of-lost-hours", "/card/dev_pro/archivist/extra"]) {
+      expect(rewriteOf(await proxy(request(path, cookie))), path).toBeNull();
+    }
+  });
+
+  it("keeps a redirect from updateSession on a signed-in card page", async () => {
+    s.session = () => NextResponse.redirect("http://localhost:3000/login", 307);
+    const response = await proxy(request("/card/dev_pro/archivist-of-lost-hours", "sb-abcdefgh-auth-token=eyJ"));
+    expect(rewriteOf(response)).toBeNull();
+    expect(locationOf(response)).toBe("http://localhost:3000/login");
+  });
+
+  it("308s the internal /card-member path back to the card page", async () => {
+    const response = await proxy(request("/card-member/dev_pro/archivist-of-lost-hours?face=back", "sb-abcdefgh-auth-token=eyJ"));
+    expect(response.status).toBe(308);
+    expect(locationOf(response)).toBe("http://localhost:3000/card/dev_pro/archivist-of-lost-hours?face=back");
     expect(s.updateSession).not.toHaveBeenCalled();
   });
 
