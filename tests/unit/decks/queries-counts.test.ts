@@ -119,6 +119,7 @@ import {
   listPublicDecksContaining,
   listPublicDeckTilesContaining,
   listTrendingDecks,
+  listTrendingDecksByRange,
   publicDeckCountsForCards,
   countPublicDecksForCard,
   CARD_PAGE_DECKS_MAX,
@@ -513,27 +514,57 @@ describe("listPublicDeckTilesContaining", () => {
   });
 });
 
-// TODO DK8.2: "Trending now" is 0149's list_trending_decks (the week's
-// likes; real creators' non-empty decks only — no admin-owned deck, no
-// throwaway account's — proved on the local stack),
-// hydrated with owners, cookie-free; nothing to show (or no function yet)
-// lists none, and the row hides itself.
-describe("listTrendingDecks", () => {
-  it("asks the function for a row's worth, in its order, with owners", async () => {
-    s.rpcAnswer = { data: [deckRow("hot", 60, 20), deckRow("warm", 40, 0)], error: null };
+// "Trending now" is 0167's list_trending_decks_by_range — the gallery's
+// rules (0166) over deck likes: real creators' non-empty decks only, one
+// per creator, decayed by age (proved on the local stack). Each range is
+// one RPC, the decks of every range ONE read (public, non-empty again),
+// hydrated with owners, cookie-free; a range with nothing (or no function
+// yet) lists none, and the row hides itself.
+describe("listTrendingDecksByRange / listTrendingDecks", () => {
+  it("one RPC per range, ONE deck read for all of them, each range in its order with its likes", async () => {
+    s.rpcAnswer = {
+      data: [
+        { deck_id: "hot", score: 7.5, likes: 3 },
+        { deck_id: "warm", score: 2, likes: 1 },
+      ],
+      error: null,
+    };
+    s.rows.decks = [deckRow("warm", 40, 0), deckRow("hot", 60, 20)];
     s.rows.profiles = [{ id: "owner-1", username: "dev_pro", display_name: "Priya", avatar_url: null }];
-    const decks = await listTrendingDecks();
-    expect(s.rpcCalls).toEqual([["list_trending_decks", { p_limit: 4 }]]);
-    expect(decks.map((d) => d.id)).toEqual(["hot", "warm"]);
-    expect(decks[0].owner?.username).toBe("dev_pro");
+    const byRange = await listTrendingDecksByRange();
+    expect(s.rpcCalls).toEqual(
+      ["week", "month", "year", "all"].map((range) => ["list_trending_decks_by_range", { p_range: range, p_limit: 4 }]),
+    );
+    const deckReads = s.calls.filter((c) => c.table === "decks");
+    expect(deckReads).toHaveLength(1);
+    expect(hasOp(deckReads[0], "eq", "visibility", "public")).toBe(true);
+    expect(hasOp(deckReads[0], "gt", "card_count", 0)).toBe(true);
+    expect(byRange.month.map((d) => d.id)).toEqual(["hot", "warm"]);
+    expect(byRange.month[0].trending).toEqual({ range: "month", likes: 3, score: 7.5 });
+    expect(byRange.all[1].trending.range).toBe("all");
+    expect(byRange.month[0].owner?.username).toBe("dev_pro");
     expect(s.calls.some((c) => c.table === "deck_likes")).toBe(false);
   });
 
-  it("lists none on an error or an empty week", async () => {
+  it("a deck the second read no longer returns is dropped, never shown", async () => {
+    s.rpcAnswer = { data: [{ deck_id: "gone", score: 9, likes: 3 }, { deck_id: "hot", score: 3, likes: 1 }], error: null };
+    s.rows.decks = [deckRow("hot", 60, 20)];
+    expect((await listTrendingDecks(4, "month")).map((d) => d.id)).toEqual(["hot"]);
+  });
+
+  it("listTrendingDecks reads one range — the week by default (the gallery's plain row)", async () => {
+    s.rpcAnswer = { data: [], error: null };
+    await listTrendingDecks();
+    expect(s.rpcCalls).toEqual([["list_trending_decks_by_range", { p_range: "week", p_limit: 4 }]]);
+  });
+
+  it("lists none on an error or an empty range", async () => {
     s.rpcAnswer = { data: null, error: { code: "PGRST202", message: "Could not find the function" } };
     expect(await listTrendingDecks()).toEqual([]);
+    expect(Object.values(await listTrendingDecksByRange()).every((list) => list.length === 0)).toBe(true);
     s.rpcAnswer = { data: [], error: null };
     expect(await listTrendingDecks()).toEqual([]);
+    expect(s.calls.filter((c) => c.table === "decks")).toHaveLength(0);
   });
 });
 
