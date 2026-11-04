@@ -22,9 +22,12 @@
 --    and an owner's like of their own card counted. card_like_standing
 --    ranks PUBLIC cards by the likes OTHER people gave them, and says whether
 --    the place is shared; the page shows it only near the top
---    (lib/cards/like-standing.ts). No row for a card that isn't public or has
---    no like from anyone else. card_like_rank is dropped. likes_count (the
---    Like button's number) is unchanged.
+--    (lib/cards/like-standing.ts). Staff cards are left out as the gallery's
+--    trending and newest rows leave them (0091's owner_is_admin, owner
+--    2026-11-04): an admin's card has no place and takes none from anyone.
+--    No row for a card that isn't public, is an admin's, or has no like from
+--    anyone else. card_like_rank is dropped. likes_count (the Like button's
+--    number) is unchanged.
 --
 -- Grants are explicit (0097): card_views / card_view_salts and
 -- record_card_view are the service role's only; card_like_standing is public
@@ -139,6 +142,7 @@ as $$
            ))::integer as likes
     from public.cards c
     where c.id = p_card_id and c.visibility = 'public'
+      and not public.owner_is_admin(c.owner_id)
   ),
   -- Only a card with as many likes or more can stand above or beside it
   -- (an owner's like only ever lowers a rival's count).
@@ -152,6 +156,7 @@ as $$
     where c.visibility = 'public'
       and c.id <> me.id
       and c.likes_count >= me.likes
+      and not public.owner_is_admin(c.owner_id)
   )
   select (1 + count(r.likes) filter (where r.likes > me.likes))::integer as rank,
          count(r.likes) filter (where r.likes = me.likes) > 0 as tied,
@@ -163,7 +168,7 @@ as $$
 $$;
 
 comment on function public.card_like_standing(uuid) is
-  'A public card''s place among public cards by the likes other people gave it (0168): rank = 1 + the cards with more, tied = another card has as many, likes = its own (the owner''s like left out). No row for a card that isn''t public or has no such like.';
+  'A public card''s place among public cards by the likes other people gave it (0168): rank = 1 + the cards with more, tied = another card has as many, likes = its own (the owner''s like left out). Admin-owned cards are left out on both sides (owner_is_admin, as 0091''s rows). No row for a card that isn''t public, is an admin''s, or has no such like.';
 
 drop function if exists public.card_like_rank(uuid);
 

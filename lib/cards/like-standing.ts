@@ -2,7 +2,10 @@
 // The card page's "most-liked" line (TODO CP3, migration 0168). The database
 // ranks PUBLIC cards by the likes OTHER people gave them and says whether
 // the place is shared (card_like_standing: 1 + the cards with more, so ties
-// share the number); this decides whether the page says it at all and how.
+// share the number) — staff cards left out on both sides, as the gallery's
+// rows leave them (0091's owner_is_admin): an admin's card has no standing,
+// so its page shows no trophy. This decides whether the page says it at all
+// and how.
 // A rank means something only near the top: within the first
 // LIKE_RANK_SHOWN_TOP places and with LIKE_RANK_MIN_LIKES likes or more —
 // below that, most cards with a like or two would claim the same place. A
