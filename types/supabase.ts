@@ -1926,6 +1926,50 @@ export type Database = {
           },
         ];
       };
+      // Migration 0168 — the card view log: one row per (card, viewer, UTC
+      // day), written by record_card_view (service role). No API role reads it.
+      card_views: {
+        Row: {
+          card_id: string;
+          day: string;
+          viewer_key: string;
+        };
+        Insert: {
+          card_id: string;
+          day: string;
+          viewer_key: string;
+        };
+        Update: {
+          card_id?: string;
+          day?: string;
+          viewer_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "card_views_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Migration 0168 — today's salt for card_views keys (service role).
+      card_view_salts: {
+        Row: {
+          day: string;
+          salt: string;
+        };
+        Insert: {
+          day: string;
+          salt: string;
+        };
+        Update: {
+          day?: string;
+          salt?: string;
+        };
+        Relationships: [];
+      };
       // Migration 0151 — today's salt for deck_views keys (service role).
       deck_view_salts: {
         Row: {
@@ -2426,13 +2470,25 @@ export type Database = {
           generated_at: string | null;
         }[];
       };
+      // Migration 0168 — one view of a public / unlisted card per (card,
+      // viewer, UTC day), never the owner's; true when it counted. Service
+      // role only (lib/cards/views.ts).
+      record_card_view: {
+        Args: { p_card_id: string; p_viewer: string; p_viewer_id?: string };
+        Returns: boolean;
+      };
+      // 0042 / 0103 — the old counter (anon-callable, no dedupe); dropped by
+      // 0168. lib/cards/views.ts falls back to it on a database 0168 hasn't
+      // reached.
       increment_card_view: {
         Args: { p_card_id: string };
         Returns: undefined;
       };
-      card_like_rank: {
+      // Migration 0168 — a public card's place by the likes OTHER people gave
+      // it (no row when not public or no such like); replaces card_like_rank.
+      card_like_standing: {
         Args: { p_card_id: string };
-        Returns: number;
+        Returns: { rank: number; tied: boolean; likes: number }[];
       };
       increment_card_share: {
         Args: { p_card_id: string };
