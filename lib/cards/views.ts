@@ -21,9 +21,11 @@ import { createPublicClient } from "@/lib/supabase/public";
 // alone — no API caller can feed it keys).
 //
 // The viewer never leaves this server as itself: an HMAC under the server's
-// secret of the signed-in user's id, else of the visitor's network (an IPv4
-// address, an IPv6 /64) and user agent — the deck's key in a context of its
-// own. The database keys its row by a SHA-256 of (card, this value) under
+// secret of the signed-in user's id, else of the visitor's NETWORK alone (an
+// IPv4 address, an IPv6 /64) — never its user agent: the ping is an
+// unauthenticated POST, and a key that took the agent let one address count
+// again with every agent it made up, each a row kept 400 days. A household
+// behind one address is one signed-out viewer a day; signing in counts each. The database keys its row by a SHA-256 of (card, this value) under
 // the DAY's random salt, which it drops once the day is over. A visitor with
 // no readable address is not counted. Best-effort: a failure costs one
 // view, never the page.
@@ -48,9 +50,23 @@ export function cardViewerHash(viewerId: string | null, headers: HeaderReader, s
     const ip = ipAddress(headers) ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim();
     const network = clientNetworkOf(ip);
     if (!network) return null;
-    subject = `visitor\n${network}\n${headers.get("user-agent") ?? ""}`;
+    subject = `visitor\n${network}`;
   }
   return createHmac("sha256", secret).update(`${KEY_CONTEXT}\n${subject}`).digest("hex").slice(0, 32);
+}
+
+/** A ping another site's page sent (a cross-site `sendBeacon` or form):
+ *  never a view. The browser says so in `Sec-Fetch-Site`, or its `Origin`
+ *  names another host than the one the ping reached. */
+export function isCrossSitePing(headers: HeaderReader, requestUrl: string): boolean {
+  if (headers.get("sec-fetch-site") === "cross-site") return true;
+  const origin = headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== new URL(requestUrl).host;
+  } catch {
+    return true;
+  }
 }
 
 /** Count this request's view of a card, once per viewer and day. */
