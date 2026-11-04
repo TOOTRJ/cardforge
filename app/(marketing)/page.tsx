@@ -17,13 +17,15 @@ import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { countPublicCards, getCommunityPulse, listTrendingCards } from "@/lib/cards/queries";
+import { countPublicCards, getCommunityPulse, listTrendingCardsByRange } from "@/lib/cards/queries";
+import { TRENDING_RANGE_WORDS, type TrendingRange } from "@/lib/cards/trending";
 import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
 import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
+import { FeaturedDeckThemes } from "@/components/decks/featured-deck-themes";
 import { CardGrid, CARD_GRID_SIZES } from "@/components/cards/card-grid";
 
 // Self-canonical for the homepage. Other metadata (title, OG, etc.) is
@@ -91,8 +93,33 @@ export default async function HomePage() {
       {/* The what's-new ribbon renders in AppShell, right under the header. */}
       <MarketingHero featured={featuredCards} />
 
+      {/* The admin's featured themed decks (migration 0167), right under
+          the hero and above trending (owner 2026-11-04). Cookie-free like
+          the rest of the page; no live theme: no section. */}
+      {isSupabaseConfigured() ? (
+        // No skeleton: the page is prerendered (ISR), and a panel that may
+        // turn out to have no theme must not flash in and out.
+        <Suspense fallback={null}>
+          <FeaturedDeckThemes
+            maxThemes={2}
+            likeRedirect="/"
+            frame={(section) => (
+              <PageContainer size="wide" className="pb-6 pt-4">
+                {section}
+              </PageContainer>
+            )}
+            action={
+              <Link href="/decks" className="inline-flex items-center gap-1 text-sm font-medium text-primary-bright underline-offset-4 hover:underline">
+                All community decks
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            }
+          />
+        </Suspense>
+      ) : null}
+
       {/* Proof before pitch: what the community forged THIS WEEK, right
-          under the hero — live rank badges + weekly stats, one row, with the
+          under the featured decks — live rank badges + weekly stats, one row, with the
           pulse line and the two doors out (forge one / see the gallery). */}
       <PageContainer as="section" size="wide" className="pb-10 pt-4">
         {isSupabaseConfigured() ? (
@@ -317,23 +344,30 @@ async function HomeStats() {
   );
 }
 
+const HOME_TRENDING_RANGES: readonly TrendingRange[] = ["week", "month", "all"];
+
 async function HomeTrending() {
   // Anonymous mode keeps this page static: no viewer lookup, no cookie
   // read. isAuthed=false just means the tile hearts render the
   // signed-out hint — QuickLikeButton re-checks the session cookie at
   // click time, so signed-in users on the cached page still like fine.
-  const [trending, pulse] = await Promise.all([
-    listTrendingCards({ limit: ROW_MAX, anonymous: true }),
+  // This week's row; a quiet week falls back to the month, then all time
+  // (migration 0166 never pads a range with cards nobody engaged with), and
+  // the words follow the range shown.
+  const [byRange, pulse] = await Promise.all([
+    listTrendingCardsByRange({ ranges: HOME_TRENDING_RANGES, limit: ROW_MAX, anonymous: true }),
     getCommunityPulse(),
   ]);
-  if (trending.length === 0) return <PlaceholderGallery />;
+  const range = HOME_TRENDING_RANGES.find((r) => byRange[r].length > 0);
+  if (!range) return <PlaceholderGallery />;
+  const words = TRENDING_RANGE_WORDS[range];
   return (
     <TrendingCardsSection
-      cards={trending}
+      cards={byRange[range]}
       isAuthed={false}
       eyebrow="Trending now"
-      heading="What the community is forging this week"
-      description="Real cards from real creators — ranked by this week's likes, comments and remixes. Tap one to see it up close."
+      heading={words.homeHeading}
+      description={`Real cards from real creators — ${words.rankedBy}. Tap one to see it up close.`}
       variant="hero"
       action={VIEW_GALLERY_LINK}
       footer={<TrendingPulseFooter pulse={pulse} />}

@@ -30,6 +30,7 @@ import { featuredRankOf } from "@/lib/decks/featured";
 import { viaDeckLink } from "@/lib/decks/deck-link";
 import { SIMILAR_DECKS_CACHE_SECONDS, SIMILAR_DECKS_TAG } from "@/lib/decks/similar-decks";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { TRENDING_RANGES, type TrendingRange } from "@/lib/cards/trending";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 
 // ---------------------------------------------------------------------------
@@ -279,22 +280,137 @@ export async function listPublicDecks(
 /** How many decks a one-row strip fetches (the CSS shows 1–4 of them). */
 export const DECK_ROW_MAX = 4;
 
-/** "Trending now" (TODO DK8.2): public, non-empty decks of REAL CREATORS —
- *  no admin, at least one public card of their own (0149's
- *  `owner_is_creator`, the card page's anti-spam rule: a throwaway
- *  account's deck never trends, however liked) — ranked by their likes of
- *  the last 7 days (migration 0149's `list_trending_decks` — the owner's
- *  own like left out; ties by all-time likes, then the newest edit). Only
- *  decks liked this week: an empty answer hides the row. Cookie-free (the
- *  /decks and /gallery landings stay ISR); a database the function hasn't
- *  reached lists none. */
-export async function listTrendingDecks(limit = DECK_ROW_MAX): Promise<PublicDeckListing[]> {
+/** Why a deck is trending in its range (listTrendingDecksByRange): the
+ *  range's likes — one per person, the owner's own never (migration 0167). */
+export type DeckTrendingStats = { range: TrendingRange; likes: number; score: number };
+
+export type TrendingDeckListing = PublicDeckListing & { trending: DeckTrendingStats };
+
+/** "Trending now" — the gallery's rules over decks (migration 0167's
+ *  `list_trending_decks_by_range`, 0166's `list_trending_cards` with the
+ *  like as the one event): public, non-empty decks of REAL CREATORS (0149's
+ *  `owner_is_creator`), ranked by their likes in the range, each decayed by
+ *  its age (lib/cards/trending.ts: the same windows and half-lives), the
+ *  owner's own like never, ONE deck per creator, ties by people → lifetime
+ *  likes → the newest DECK → id. A deck with no like in the range is not
+ *  listed (no padding). Each range asked for is one RPC; the deck rows of
+ *  all of them are read in ONE select. Cookie-free (the /decks and
+ *  /gallery landings stay ISR); a range whose read fails — a database 0167
+ *  hasn't reached — comes back empty. */
+export async function listTrendingDecksByRange(
+  options: { ranges?: readonly TrendingRange[]; limit?: number } = {},
+): Promise<Record<TrendingRange, TrendingDeckListing[]>> {
+  const { ranges = TRENDING_RANGES, limit = DECK_ROW_MAX } = options;
+  const out = Object.fromEntries(TRENDING_RANGES.map((r) => [r, [] as TrendingDeckListing[]])) as Record<
+    TrendingRange,
+    TrendingDeckListing[]
+  >;
+  if (!isSupabaseConfigured()) return out;
+  try {
+    const supabase = createPublicClient();
+    const ranked = await Promise.all(
+      ranges.map(async (range) => {
+        const { data, error } = await supabase.rpc("list_trending_decks_by_range", {
+          p_range: range,
+          p_limit: limit,
+        });
+        return { range, rows: error || !Array.isArray(data) ? [] : data };
+      }),
+    );
+    const ids = Array.from(new Set(ranked.flatMap(({ rows }) => rows.map((r) => r.deck_id))));
+    if (ids.length === 0) return out;
+    // The function's rule again on the read (public, non-empty): a deck
+    // that changed between the two reads is dropped, never shown.
+    const { data: rows } = await supabase
+      .from("decks")
+      .select("*")
+      .in("id", ids)
+      .eq("visibility", "public")
+      .gt("card_count", 0);
+    const decks = await hydratePublicDecks(supabase, rows ?? [], null);
+    const byId = new Map(decks.map((deck) => [deck.id, deck]));
+    for (const { range, rows: rangeRows } of ranked) {
+      out[range] = rangeRows.flatMap((row) => {
+        const deck = byId.get(row.deck_id);
+        return deck ? [{ ...deck, trending: { range, likes: row.likes, score: row.score } }] : [];
+      });
+    }
+    return out;
+  } catch {
+    return out;
+  }
+}
+
+/** One range's trending decks — the gallery's plain decks row reads the
+ *  week. */
+export async function listTrendingDecks(
+  limit = DECK_ROW_MAX,
+  range: TrendingRange = "week",
+): Promise<TrendingDeckListing[]> {
+  return (await listTrendingDecksByRange({ ranges: [range], limit }))[range];
+}
+
+/** "Discover" on /decks (migration 0167's `list_discover_decks`): a
+ *  weighted shuffle of public, non-empty decks of real creators — a deck of
+ *  10+ cards and a liked or viewed one come up more often
+ *  (lib/decks/discover.ts). One shuffle per `seed`. Cookie-free (the
+ *  landing stays ISR); a database 0167 hasn't reached lists none. */
+export async function listDiscoverDecks(seed: string, limit = 24): Promise<PublicDeckListing[]> {
   if (!isSupabaseConfigured()) return [];
   try {
     const supabase = createPublicClient();
-    const { data, error } = await supabase.rpc("list_trending_decks", { p_limit: limit });
+    const { data, error } = await supabase.rpc("list_discover_decks", { p_seed: seed, p_limit: limit });
     if (error || !Array.isArray(data) || data.length === 0) return [];
     return await hydratePublicDecks(supabase, data, null);
+  } catch {
+    return [];
+  }
+}
+
+export type FeaturedDeckTheme = {
+  id: string;
+  title: string;
+  blurb: string | null;
+  decks: PublicDeckListing[];
+};
+
+/** "Featured themed decks" (/decks and the home page; migration 0167): the
+ *  admin's live themes in order, each with its decks a visitor may see —
+ *  public, non-empty, a real creator's — read through ONE function,
+ *  `list_featured_deck_themes` (the pick tables grant the API roles
+ *  nothing). The decks are then read as every public list reads them (the
+ *  public client, `visibility = public` again) and hydrated once for all
+ *  themes. A theme left with no deck is left out. Cookie-free. */
+export async function listFeaturedDeckThemes(
+  options: { themes?: number; decksPerTheme?: number } = {},
+): Promise<FeaturedDeckTheme[]> {
+  if (!isSupabaseConfigured()) return [];
+  const { themes = 3, decksPerTheme = DECK_ROW_MAX } = options;
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_featured_deck_themes", {
+      p_themes: themes,
+      p_decks: decksPerTheme,
+    });
+    if (error || !Array.isArray(data) || data.length === 0) return [];
+    const ids = Array.from(new Set(data.flatMap((row) => row.deck_ids ?? [])));
+    if (ids.length === 0) return [];
+    const { data: rows } = await supabase
+      .from("decks")
+      .select("*")
+      .in("id", ids)
+      .eq("visibility", "public")
+      .gt("card_count", 0);
+    const listed = await hydratePublicDecks(supabase, rows ?? [], null);
+    const byId = new Map(listed.map((deck) => [deck.id, deck]));
+    return data
+      .map((row) => ({
+        id: row.theme_id,
+        title: row.title,
+        blurb: row.blurb,
+        decks: (row.deck_ids ?? []).flatMap((id) => byId.get(id) ?? []),
+      }))
+      .filter((theme) => theme.decks.length > 0);
   } catch {
     return [];
   }

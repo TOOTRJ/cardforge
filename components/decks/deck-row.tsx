@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Flame } from "lucide-react";
+import { Flame, Heart } from "lucide-react";
 import {
   DeckGrid,
   DECK_ROW_SIZES,
@@ -9,8 +9,22 @@ import {
   deckRowTileClass,
   type DeckTileDeck,
 } from "@/components/decks/deck-tile";
+import { SECTION_EYEBROW_CLASS, TRENDING_HERO_SURFACE_CLASS } from "@/components/gallery/trending-cards-section";
+import { TrendingRangeSwitch } from "@/components/gallery/trending-range-switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listTrendingDecks, DECK_ROW_MAX } from "@/lib/decks/queries";
+import {
+  listTrendingDecks,
+  listTrendingDecksByRange,
+  DECK_ROW_MAX,
+  type DeckTrendingStats,
+  type TrendingDeckListing,
+} from "@/lib/decks/queries";
+import {
+  DEFAULT_TRENDING_RANGE,
+  TRENDING_RANGE_WORDS,
+  TRENDING_RANGES,
+  type TrendingRange,
+} from "@/lib/cards/trending";
 import { listDeckTileArt, type DeckTileArt } from "@/lib/decks/tile-art";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +33,11 @@ import { cn } from "@/lib/utils";
 // (components/gallery/card-row.tsx) with DeckTile: a header, then one row
 // whose tiles past the last column are hidden, never wrapped. Renders
 // nothing for an empty list, so a page never shows a header over nothing.
+// /decks' headline trending block is TrendingDecksRanges (owner 2026-11-03 /
+// 2026-11-04): the gallery's glowing surface (TRENDING_HERO_SURFACE_CLASS),
+// its Week / Month / Year / All time switch and its rules — never a copy of
+// any of them — with a rank badge on each tile; the gallery's own decks row
+// (TrendingDecksRow) stays plain and reads the week.
 // ---------------------------------------------------------------------------
 
 export function DeckRowSection({
@@ -49,7 +68,7 @@ export function DeckRowSection({
     <section aria-labelledby={`${id}-heading`}>
       <div className="mb-5 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
         <div className="flex flex-col gap-1">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary-bright">
+          <span className={cn(SECTION_EYEBROW_CLASS, "text-primary-bright")}>
             <Icon className="h-3.5 w-3.5" aria-hidden />
             {eyebrow}
           </span>
@@ -75,10 +94,22 @@ export function DeckRowSection({
   );
 }
 
-/** "Trending now" — the week's most-liked public decks of real creators
- *  (list_trending_decks, migration 0149: no admin-owned deck, no throwaway
- *  account's). Cookie-free reads only, so the /decks and /gallery
- *  landings that draw it stay ISR. Nothing liked this week: no row. */
+/** The trending hero's place badge — the gallery trending tile's look. Over the
+ *  tile's cover and click-through (no pointer events), so the tile's one
+ *  link still takes the click; read before the tile by a screen reader. */
+function RankBadge({ rank }: { rank: number }) {
+  return (
+    <span className="pointer-events-none absolute left-3 top-3 z-20 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-gold/50 bg-background/85 px-2 font-display text-xs font-semibold text-gold-strong shadow backdrop-blur">
+      <span className="sr-only">Trending rank </span>#{rank}
+    </span>
+  );
+}
+
+/** "Trending now" — one range's most-liked public decks of real creators
+ *  (listTrendingDecks: migration 0167's list_trending_decks_by_range, the
+ *  gallery's rules; the week by default — the gallery's plain decks row).
+ *  Cookie-free reads only, so the /decks and /gallery landings that draw it
+ *  stay ISR. Nothing liked in the range: no row. */
 export async function TrendingDecksRow({
   id = "trending-decks",
   eyebrow = "Trending now",
@@ -115,10 +146,126 @@ export async function TrendingDecksRow({
   );
 }
 
-/** The row's shape while it streams in. */
-export function DeckRowSkeleton() {
+/** The order /decks' switch opens in: the month (owner 2026-11-03, the
+ *  gallery's default), else the next range with decks, longer first — the
+ *  gallery's own order (GalleryTrending), so the hero is never an empty box
+ *  while another range has decks. */
+const OPENING_ORDER: readonly TrendingRange[] = [DEFAULT_TRENDING_RANGE, "year", "all", "week"];
+
+/** What an empty range says (the gallery's words are about cards). */
+const EMPTY_RANGE_WORDS: Record<TrendingRange, string> = {
+  week: "No deck has been liked this week yet.",
+  month: "No deck has been liked this month yet.",
+  year: "No deck has been liked this year yet.",
+  all: "No deck has been liked yet.",
+};
+
+/** /decks' headline trending block: the gallery's hero surface and its
+ *  Week / Month / Year / All time switch (TrendingRangeSwitch) over four
+ *  rows the SERVER renders — one cached read set at the ISR bake, so the
+ *  landing never reads searchParams. Nothing liked in any range: no block. */
+export async function TrendingDecksRanges({
+  id = "trending-decks",
+  likeRedirect,
+  browseHref,
+}: {
+  id?: string;
+  likeRedirect?: string;
+  /** Where an empty range points ("browse every deck"). */
+  browseHref: string;
+}) {
+  const byRange = await listTrendingDecksByRange({ limit: DECK_ROW_MAX });
+  const opening = OPENING_ORDER.find((range) => byRange[range].length > 0);
+  if (!opening) return null;
+  // ONE tile-art read for every deck the four rows show.
+  const unique = new Map<string, TrendingDeckListing>();
+  for (const range of TRENDING_RANGES) for (const deck of byRange[range]) unique.set(deck.id, deck);
+  const art = await listDeckTileArt(Array.from(unique.values()), { anonymous: true });
+  const panels = Object.fromEntries(
+    TRENDING_RANGES.map((range) => [
+      range,
+      byRange[range].length > 0 ? (
+        <RankedDeckRow decks={byRange[range]} art={art} likeRedirect={likeRedirect} />
+      ) : (
+        <p className="rounded-xl border border-dashed border-border/60 px-4 py-10 text-center text-sm text-muted">
+          {EMPTY_RANGE_WORDS[range]} Try a longer period, or{" "}
+          <Link href={browseHref} className="text-primary-bright underline-offset-4 hover:underline">
+            browse every deck
+          </Link>
+          .
+        </p>
+      ),
+    ]),
+  ) as Record<TrendingRange, React.ReactNode>;
   return (
-    <div>
+    <section aria-labelledby={`${id}-heading`} className={TRENDING_HERO_SURFACE_CLASS}>
+      <TrendingRangeSwitch
+        headingId={`${id}-heading`}
+        defaultRange={opening}
+        eyebrow={
+          <span className={cn(SECTION_EYEBROW_CLASS, "text-gold-strong")}>
+            <Flame className="h-3.5 w-3.5 animate-pulse motion-reduce:animate-none" aria-hidden />
+            Trending now
+          </span>
+        }
+        descriptions={DECK_TRENDING_DESCRIPTIONS}
+        panels={panels}
+      />
+    </section>
+  );
+}
+
+/** The line under the heading per range — the gallery's, for a deck's one
+ *  event (a like). All time has no decay, so it doesn't say "recent". */
+const DECK_TRENDING_DESCRIPTIONS: Record<TrendingRange, string> = {
+  week: "Ranked by the community's likes — the most recent count most.",
+  month: "Ranked by the community's likes — the most recent count most.",
+  year: "Ranked by the community's likes — the most recent count most.",
+  all: "Ranked by every like from the community — old and new count the same.",
+};
+
+/** One range's row: rank badges and the range's likes under each tile. */
+function RankedDeckRow({
+  decks,
+  art,
+  likeRedirect,
+}: {
+  decks: readonly TrendingDeckListing[];
+  art: ReadonlyMap<string, DeckTileArt>;
+  likeRedirect?: string;
+}) {
+  return (
+    <DeckGrid>
+      {decks.slice(0, DECK_ROW_MAX).map((deck, index) => (
+        <div key={deck.id} className={cn("relative flex min-w-0 flex-col gap-2", deckRowTileClass(index))}>
+          <RankBadge rank={index + 1} />
+          <DeckTile deck={deck} art={art.get(deck.id)} sizes={DECK_ROW_SIZES} likeRedirect={likeRedirect} />
+          <TrendingDeckStats stats={deck.trending} />
+        </div>
+      ))}
+    </DeckGrid>
+  );
+}
+
+/** "♥ 3 this month" — the gallery tile's stats line, a deck's one event. */
+function TrendingDeckStats({ stats }: { stats: DeckTrendingStats }) {
+  if (stats.likes <= 0) return null;
+  const period = TRENDING_RANGE_WORDS[stats.range].period;
+  const label = `${stats.likes} ${stats.likes === 1 ? "like" : "likes"} ${period}`;
+  return (
+    <span className="flex items-center gap-1 text-[11px] text-muted" title={label}>
+      <Heart className="h-3 w-3 text-gold" aria-hidden />
+      <span className="tabular-nums">{stats.likes}</span>
+      <span className="sr-only">{stats.likes === 1 ? "like" : "likes"}</span>
+      <span className="text-subtle">{period}</span>
+    </span>
+  );
+}
+
+/** The row's shape while it streams in. */
+export function DeckRowSkeleton({ variant = "plain" }: { variant?: "plain" | "hero" }) {
+  return (
+    <div className={cn(variant === "hero" && TRENDING_HERO_SURFACE_CLASS)}>
       <div className="mb-5 flex flex-col gap-2">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-56" />

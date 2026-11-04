@@ -5,6 +5,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FeaturedManager } from "@/components/admin/featured-manager";
 import { FeaturedCardsManager } from "@/components/admin/featured-cards-manager";
+import {
+  FeaturedDeckThemesManager,
+  type AdminDeckTheme,
+} from "@/components/admin/featured-deck-themes-manager";
 import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -30,8 +34,13 @@ export default async function AdminFeaturedPage() {
   // managers below would then offer to fill what is already filled.
   let creatorsFailed = !isAdminConfigured();
   let cardsFailed = !isAdminConfigured();
+  let deckThemes: AdminDeckTheme[] = [];
+  let deckThemesFailed = !isAdminConfigured();
   if (isAdminConfigured()) {
     const admin = createAdminClient();
+    const themesRead = await readDeckThemes(admin);
+    deckThemes = themesRead ?? [];
+    deckThemesFailed = themesRead === null;
     const { data, error } = await admin
       .from("profiles")
       .select("username, display_name")
@@ -103,6 +112,77 @@ export default async function AdminFeaturedPage() {
       <SurfaceCard className="mt-4 p-6">
         <FeaturedCardsManager slots={cardSlots} />
       </SurfaceCard>
+
+      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-subtle">
+        Featured themed decks
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        The &ldquo;Featured themed decks&rdquo; block at the top of /decks and on the home page —
+        make a theme, then paste deck page URLs into it.
+      </p>
+      {deckThemesFailed ? <AdminLoadError what="the featured deck themes" className="mt-4" /> : null}
+      <SurfaceCard className="mt-4 p-6">
+        <FeaturedDeckThemesManager themes={deckThemes} />
+      </SurfaceCard>
     </DashboardShell>
   );
+}
+
+/** The themes in their order, each with its picks and why a visitor can't
+ *  see a pick now (list_featured_deck_themes' rule: public, non-empty, a
+ *  real creator's — owner_is_creator asked once per owner). Null = a failed
+ *  read (never shown as "no themes"). */
+async function readDeckThemes(admin: ReturnType<typeof createAdminClient>): Promise<AdminDeckTheme[] | null> {
+  const { data: themes, error } = await admin
+    .from("deck_themes")
+    .select("id, title, blurb, is_live, position, created_at")
+    .order("position")
+    .order("created_at")
+    .order("id");
+  if (error) {
+    console.error("[admin/featured] deck themes read failed:", error.message);
+    return null;
+  }
+  if (!themes || themes.length === 0) return [];
+  const { data: picks, error: picksError } = await admin
+    .from("deck_theme_decks")
+    .select("theme_id, deck_id, position, created_at, decks(title, slug, visibility, card_count, owner_id)")
+    .in("theme_id", themes.map((theme) => theme.id))
+    .order("position")
+    .order("created_at")
+    .order("deck_id");
+  if (picksError) {
+    console.error("[admin/featured] deck theme picks read failed:", picksError.message);
+    return null;
+  }
+  type PickDeck = { title: string; slug: string; visibility: string; card_count: number; owner_id: string };
+  const rows = (picks ?? []).map((pick) => ({ ...pick, deck: pick.decks as unknown as PickDeck | null }));
+  const owners = Array.from(new Set(rows.flatMap((row) => (row.deck ? [row.deck.owner_id] : []))));
+  const creators = new Map<string, boolean>();
+  await Promise.all(
+    owners.map(async (owner) => {
+      const { data } = await admin.rpc("owner_is_creator", { p_owner_id: owner });
+      creators.set(owner, data === true);
+    }),
+  );
+  return themes.map((theme) => ({
+    id: theme.id,
+    title: theme.title,
+    blurb: theme.blurb,
+    isLive: theme.is_live,
+    picks: rows
+      .filter((row) => row.theme_id === theme.id && row.deck)
+      .map((row) => {
+        const deck = row.deck as PickDeck;
+        const hiddenReason =
+          deck.visibility !== "public"
+            ? deck.visibility
+            : deck.card_count <= 0
+              ? "no cards"
+              : creators.get(deck.owner_id)
+                ? null
+                : "maker not a creator";
+        return { deckId: row.deck_id, title: deck.title, slug: deck.slug, hiddenReason };
+      }),
+  }));
 }
