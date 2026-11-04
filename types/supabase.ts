@@ -2092,6 +2092,45 @@ export type Database = {
           },
         ];
       };
+      // Migration 0165 (TODO DK5.13) — a deck's change history: written ONLY
+      // by the deck_cards trigger; the deck owner reads it (RLS); no API
+      // role inserts, updates or deletes.
+      deck_entry_changes: {
+        Row: {
+          id: number;
+          deck_id: string;
+          entry_id: string;
+          op: "insert" | "update" | "delete";
+          before: Json | null;
+          after: Json | null;
+          actor_id: string | null;
+          tx: number;
+          changed_at: string;
+        };
+        Insert: {
+          id?: never;
+          deck_id: string;
+          entry_id: string;
+          op: "insert" | "update" | "delete";
+          before?: Json | null;
+          after?: Json | null;
+          actor_id?: string | null;
+          tx?: number;
+          changed_at?: string;
+        };
+        Update: {
+          id?: never;
+          deck_id?: string;
+          entry_id?: string;
+          op?: "insert" | "update" | "delete";
+          before?: Json | null;
+          after?: Json | null;
+          actor_id?: string | null;
+          tx?: number;
+          changed_at?: string;
+        };
+        Relationships: [];
+      };
       deck_likes: {
         Row: {
           created_at: string;
@@ -2343,6 +2382,24 @@ export type Database = {
       deck_likes_by_day: {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; likes: number }[];
+      };
+      // Migration 0165 — deck history retention (service role: the weekly
+      // prune cron): by plan, the 30-day grace once Pro ends, the per-deck
+      // cap. The rows deleted.
+      prune_deck_entry_changes: {
+        Args: { p_keep_days?: number; p_by_plan?: boolean; p_grace_days?: number; p_max_rows?: number };
+        Returns: number;
+      };
+      // Migration 0165 — "Restore this version" claims the deck under its
+      // entry lock: the newest change must still be p_head (null: an empty
+      // log) and no other restore may hold it.
+      claim_deck_restore: {
+        Args: { p_deck_id: string; p_head: number | null };
+        Returns: Json;
+      };
+      release_deck_restore: {
+        Args: { p_deck_id: string; p_token: string };
+        Returns: undefined;
       };
       // Migration 0156 — an admin clears a card's moderation lock (it stays
       // private) and its owner is notified; the owner's id, or null when the

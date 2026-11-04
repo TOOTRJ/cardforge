@@ -15,13 +15,21 @@ import { cn } from "@/lib/utils";
 //   Undo   the last change back (aria-disabled with nothing to undo: it
 //          stays reachable and says so);
 //   More   Select cards (the long press's non-gesture twin, WCAG 2.5.7),
-//          Import a decklist, Deck details.
+//          Import a decklist, Deck details — and Redo and Deck history
+//          (DK5.13; the history hands the focus back to More).
 //
 // It is a navigation landmark of four buttons, each 56 px tall; the page
 // leaves room under its last card for it (and the toasts rise above it —
 // app/globals.css). Hidden from 768 px, where the toolbar and the bars in
 // the page say all of it.
 // ---------------------------------------------------------------------------
+
+/** The phone bar's More button's mark (deckMoreButton finds it). */
+export const DECK_MORE_ATTR = "data-deck-more";
+
+/** The phone bar's More button — the opener of what its menu opens. */
+export const deckMoreButton = (): HTMLElement | null =>
+  typeof document === "undefined" ? null : document.querySelector<HTMLElement>(`[data-deck-mobile-bar] [${DECK_MORE_ATTR}]`);
 
 const ITEM =
   "flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md text-[11px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 aria-disabled:opacity-45 aria-disabled:hover:text-muted";
@@ -41,8 +49,10 @@ export function DeckMobileBar({
   moreItems: MenuItem[];
 }) {
   const [menu, setMenu] = useState<"view" | "more" | null>(null);
-  const button = (icon: ReactNode, label: string) => (
-    <button type="button" aria-haspopup="menu" className={ITEM}>
+  const button = (icon: ReactNode, label: string, more = false) => (
+    // More is marked: a dialog opened from its menu (the deck history)
+    // hands the focus back to it.
+    <button type="button" aria-haspopup="menu" className={ITEM} {...(more ? { [DECK_MORE_ATTR]: "" } : {})}>
       {icon}
       {label}
     </button>
@@ -85,7 +95,7 @@ export function DeckMobileBar({
           open={menu === "more"}
           onOpenChange={(open) => setMenu(open ? "more" : null)}
           side="top"
-          trigger={button(<MoreHorizontal className="h-5 w-5" aria-hidden />, "More")}
+          trigger={button(<MoreHorizontal className="h-5 w-5" aria-hidden />, "More", true)}
         />
       </div>
     </nav>
