@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -33,7 +35,7 @@ vi.mock("@/lib/supabase/public", () => ({
   }),
 }));
 
-import { cardViewerHash, recordCardView } from "@/lib/cards/views";
+import { cardViewerHash, isCrossSitePing, recordCardView } from "@/lib/cards/views";
 import { deckViewerHash } from "@/lib/decks/views";
 
 const SECRET = "sb_secret_test_only";
@@ -65,16 +67,42 @@ describe("cardViewerHash", () => {
     }
   });
 
-  it("a signed-in viewer is their account; a visitor is their network and agent; none = no key", () => {
+  it("a signed-in viewer is their account; a visitor is their network; none = no key", () => {
     const elsewhere = headers({ "user-agent": "Mozilla/5.0 (iPhone) Safari/605.1", "x-real-ip": "198.51.100.2" });
     expect(cardViewerHash(VIEWER, browser(), SECRET)).toBe(cardViewerHash(VIEWER, elsewhere, SECRET));
     expect(cardViewerHash(null, browser(), SECRET)).not.toBe(cardViewerHash(null, elsewhere, SECRET));
     expect(cardViewerHash(null, headers({ "user-agent": CHROME }), SECRET)).toBeNull();
   });
 
+  it("a visitor's made-up user agents are one viewer: the agent is never part of the key", () => {
+    const one = cardViewerHash(null, browser(), SECRET);
+    for (const agent of ["Mozilla/5.0 (X11; Linux) Firefox/131.0", `${CHROME} r=1`, `${CHROME} r=2`]) {
+      expect(cardViewerHash(null, headers({ "user-agent": agent, "x-real-ip": "203.0.113.7" }), SECRET)).toBe(one);
+    }
+  });
+
   it("is not the deck view's key for the same viewer (a context of its own)", () => {
     expect(cardViewerHash(VIEWER, browser(), SECRET)).not.toBe(deckViewerHash(VIEWER, browser(), SECRET));
     expect(cardViewerHash(null, browser(), SECRET)).not.toBe(deckViewerHash(null, browser(), SECRET));
+  });
+});
+
+describe("isCrossSitePing", () => {
+  const url = "https://www.pipglyph.com/api/cards/x/view";
+  it("is another site's page: Sec-Fetch-Site cross-site, or an Origin on another host", () => {
+    expect(isCrossSitePing(headers({ "sec-fetch-site": "cross-site" }), url)).toBe(true);
+    expect(isCrossSitePing(headers({ origin: "https://evil.example" }), url)).toBe(true);
+    expect(isCrossSitePing(headers({ origin: "null" }), url)).toBe(true);
+  });
+
+  it("is never our own page's ping, or one that names no origin", () => {
+    expect(isCrossSitePing(headers({ origin: "https://www.pipglyph.com", "sec-fetch-site": "same-origin" }), url)).toBe(false);
+    expect(isCrossSitePing(headers({}), url)).toBe(false);
+  });
+
+  it("the route asks it before it counts", () => {
+    const route = readFileSync(join(process.cwd(), "app/api/cards/[id]/view/route.ts"), "utf8");
+    expect(route).toContain("if (isUuid(id) && !isCrossSitePing(request.headers, request.url)) {");
   });
 });
 
