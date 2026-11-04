@@ -235,6 +235,7 @@ describe("every deck list draws DeckTile (no tile of its own)", () => {
     "app/(app)/dashboard/decks/page.tsx",
     "app/(marketing)/profile/[username]/page.tsx",
     "components/decks/deck-row.tsx",
+    "components/decks/featured-deck-themes.tsx",
     "components/cards/card-detail-content.tsx",
   ])("%s", (file) => {
     const source = read(file);

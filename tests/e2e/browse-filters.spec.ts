@@ -22,9 +22,14 @@ test.describe("browse search and filters", () => {
     await page.goto("/gallery");
     const hubs = page.getByRole("navigation", { name: /browse the gallery by type and tag/i });
     await expect(hubs).toBeVisible();
-    // The chips sit above the trending hero, not under the grid.
+    // The chips sit above the trending hero, not under the grid. The hero
+    // opens on the first range with cards (month, year, all time, week), so
+    // its heading is "Hot this …" or "Hottest of all time".
     const hubsBox = await hubs.boundingBox();
-    const heroBox = await page.getByRole("heading", { name: /hot this week/i }).boundingBox();
+    const heroHeading = page.getByRole("heading", { level: 2, name: /^hot(test)? (this|of all time)/i });
+    await expect(heroHeading).toBeVisible();
+    await expect(page.getByRole("tablist", { name: "Trending period" })).toBeVisible();
+    const heroBox = await heroHeading.boundingBox();
     expect(hubsBox && heroBox && hubsBox.y < heroBox.y).toBe(true);
     await expect(hubs.getByRole("link", { name: /^creature/i })).toHaveAttribute(
       "href",
