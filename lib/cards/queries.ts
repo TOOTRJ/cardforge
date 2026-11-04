@@ -32,6 +32,7 @@ import { lookupUsername } from "@/lib/profile/username";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { publicDeckCountsForCards } from "@/lib/decks/queries";
 import { typedForMatching } from "@/lib/validation/typed-forms";
+import type { LikeStanding } from "@/lib/cards/like-standing";
 
 // Composed shape: card + owner profile + like count + viewer's like state.
 // Used by the gallery and any "card tile" listing.
@@ -936,25 +937,27 @@ export async function getCardCanonicalPath(
 }
 
 /**
- * 1-based popularity rank of this card by total likes among all shareable
- * cards. Null if the card isn't shareable. Full-scan aggregate (see 0042).
+ * A public card's place among public cards by the likes other people gave it
+ * (migration 0168's card_like_standing: ties share a number and say so; the
+ * owner's own like left out). Null when the card isn't public, has no such
+ * like, or the read fails. Viewer-independent: the cookie-free client.
+ * Whether the page shows it is lib/cards/like-standing.ts's.
  */
-export async function getCardLikeRankOverall(
+export async function getCardLikeStanding(
   cardId: string,
-): Promise<number | null> {
+): Promise<LikeStanding | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("card_like_rank", {
+    const { data } = await createPublicClient().rpc("card_like_standing", {
       p_card_id: cardId,
     });
-    return typeof data === "number" ? data : null;
+    const row = Array.isArray(data) ? data[0] : null;
+    if (!row || typeof row.rank !== "number" || typeof row.likes !== "number") return null;
+    return { rank: row.rank, tied: row.tied === true, likes: row.likes };
   } catch {
     return null;
   }
 }
-
-
 
 /**
  * This card's 7-day engagement (excluding the owner's own), for the card
@@ -1016,21 +1019,6 @@ export async function getCardTrendingSignals(
     };
   } catch {
     return empty;
-  }
-}
-
-/**
- * Bump a card's lifetime view tally (best-effort, fire-and-forget). Uses the
- * public client + a SECURITY DEFINER RPC so it never touches auth/session —
- * safe to call from after(). Skip owner views at the call site.
- */
-export async function incrementCardView(cardId: string): Promise<void> {
-  if (!isSupabaseConfigured()) return;
-  try {
-    const supabase = createPublicClient();
-    await supabase.rpc("increment_card_view", { p_card_id: cardId });
-  } catch {
-    // best-effort — a missed view tick isn't worth surfacing
   }
 }
 

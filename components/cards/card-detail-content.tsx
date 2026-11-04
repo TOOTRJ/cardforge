@@ -11,7 +11,6 @@ import {
 } from "@/types/card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { after } from "next/server";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -54,12 +53,11 @@ import {
   countRemixesOfCard,
   getCardById,
   getCardByOwnerAndSlug,
-  getCardLikeRankOverall,
+  getCardLikeStanding,
   getCardTrendingSignals,
   getProfileByUsername,
   getRemixParentLink,
   hasUserLikedCard,
-  incrementCardView,
   listMoreFromOwner,
   listRelatedCards,
   listTopRemixesOfCard,
@@ -109,6 +107,8 @@ import { formatShortDate } from "@/lib/format/dates";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { aiProvenanceOf, aiProvenanceSentence, type AiProvenance } from "@/lib/cards/ai-provenance";
 import { AiProvenanceTags } from "@/components/cards/ai-provenance-tags";
+import { CardViewBeacon } from "@/components/cards/card-view-beacon";
+import { likeStandingText, type LikeStanding } from "@/lib/cards/like-standing";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the body of the public card page,
@@ -156,7 +156,7 @@ export async function CardDetailContent({
     publicDeckCount,
     topRemixes,
     remixParent,
-    overallRank,
+    likeStanding,
     trendingSignals,
     inDecks,
     deckTiles,
@@ -201,8 +201,8 @@ export async function CardDetailContent({
     card.parent_card_id
       ? getRemixParentLink(card.parent_card_id)
       : Promise.resolve(null),
-    // Popularity rank overall.
-    getCardLikeRankOverall(card.id),
+    // The "most-liked" standing among public cards (0168).
+    getCardLikeStanding(card.id),
     // 7-day velocity for the trending badge.
     getCardTrendingSignals(card.id, card.owner_id, card.created_at),
     // The public decks the card is in — ONE list (0144 / 0149's rule) for the
@@ -218,13 +218,6 @@ export async function CardDetailContent({
   // The stat counts every deck the list stands for (it shows the newest few);
   // unread (a database 0149 hasn't reached), the list's own length.
   const deckCount = publicDeckCount ?? inDecks.length;
-
-  // Bump the view tally after the response ships — never for the owner's own
-  // views, and never blocking render. Uses a public client + SECURITY DEFINER RPC, so it
-  // can't rotate the viewer's session (see incrementCardView).
-  if (!isOwner) {
-    after(() => incrementCardView(card.id));
-  }
 
   const ownerProfile = card.owner;
 
@@ -272,6 +265,9 @@ export async function CardDetailContent({
   // frame, TODO WD10), and the rows below are the card grid's 2 → 6 strips.
   return (
     <PageContainer size="wide" className="py-6 sm:py-10">
+      {/* One view ping when a visitor is shown a card they can open (TODO
+          CP4): counted once per viewer and day, never the owner's. */}
+      {isShareable && !isOwner ? <CardViewBeacon cardId={card.id} /> : null}
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -470,7 +466,7 @@ export async function CardDetailContent({
             decks={deckCount}
             comments={comments.length}
             trendingSignals={trendingSignals}
-            overallRank={overallRank}
+            likeStanding={likeStanding}
           />
 
           {/* Card details as TEXT. The rendered preview shows all of this, but
@@ -772,7 +768,7 @@ function CardStats({
   decks,
   comments,
   trendingSignals,
-  overallRank,
+  likeStanding,
 }: {
   views: number;
   likes: number;
@@ -785,7 +781,7 @@ function CardStats({
     remixes_7d: number;
     is_fresh: boolean;
   };
-  overallRank: number | null;
+  likeStanding: LikeStanding | null;
 }) {
   const stats: { label: string; value: number; href?: string }[] = [
     { label: views === 1 ? "View" : "Views", value: views },
@@ -801,7 +797,7 @@ function CardStats({
     trendingSignals.comments_7d +
     trendingSignals.remixes_7d;
   const isTrending = recentEngagement > 0;
-  const showRank = Boolean(overallRank && likes > 0);
+  const rankText = likeStandingText(likeStanding);
 
   return (
     <section aria-labelledby="card-stats-heading" className="flex flex-col gap-2">
@@ -842,7 +838,7 @@ function CardStats({
           );
         })}
       </dl>
-      {isTrending || showRank ? (
+      {isTrending || rankText ? (
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
           {isTrending ? (
             <span className="inline-flex items-center gap-1.5">
@@ -857,12 +853,10 @@ function CardStats({
               </span>
             </span>
           ) : null}
-          {showRank ? (
-            <span className="inline-flex items-center gap-1.5">
+          {rankText ? (
+            <span className="inline-flex items-center gap-1.5" data-testid="card-like-standing">
               <Trophy className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-              <span>
-                <span className="font-semibold text-foreground">#{overallRank}</span> most-liked card overall
-              </span>
+              <span className="font-semibold text-foreground">{rankText}</span>
             </span>
           ) : null}
         </p>
