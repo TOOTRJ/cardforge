@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, Compass, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Compass, Flame, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
@@ -12,10 +12,21 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { GalleryFilters } from "@/components/gallery/gallery-filters";
 import { FeaturedCreators } from "@/components/marketing/featured-creators";
 import {
-  TrendingCardsSection,
+  SECTION_EYEBROW_CLASS,
+  TRENDING_HERO_SURFACE_CLASS,
+  TrendingCardsRow,
   TrendingCardsSectionSkeleton,
 } from "@/components/gallery/trending-cards-section";
-import { listGalleryCards, listTrendingCards, type GalleryListSort } from "@/lib/cards/queries";
+import { TrendingRangeSwitch } from "@/components/gallery/trending-range-switch";
+import { listGalleryCards, listTrendingCardsByRange, type GalleryListSort } from "@/lib/cards/queries";
+import {
+  DEFAULT_TRENDING_RANGE,
+  isTrendingRange,
+  TRENDING_RANGE_WORDS,
+  TRENDING_RANGES,
+  type TrendingRange,
+} from "@/lib/cards/trending";
+import { cn } from "@/lib/utils";
 import { CardRowSection, CardRowSkeleton, ROW_MAX } from "@/components/gallery/card-row";
 import { DeckRowSkeleton, TrendingDecksRow } from "@/components/decks/deck-row";
 import { discoverSeedNow, normalizeDiscoverSeed } from "@/lib/cards/discover";
@@ -189,8 +200,8 @@ function buildHref(filters: ParsedFilters, nextPage: number): string {
   return query ? `${GALLERY_BROWSE_PATH}?${query}` : GALLERY_BROWSE_PATH;
 }
 
-const GALLERY_DESCRIPTION =
-  "Discover custom cards forged by the PipGlyph community. Browse by type or tag, search every public card, and click into any card to view, like, or remix.";
+/** The header's one line under the title. */
+const GALLERY_TAGLINE = "Custom cards forged by the PipGlyph community.";
 
 /** /gallery — the static landing. */
 export function GalleryLanding() {
@@ -199,44 +210,45 @@ export function GalleryLanding() {
   const filters = parseGalleryFilters({});
 
   return (
-    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
+    <PageContainer size="wide" className="pb-12 pt-4 sm:pt-6">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
           { name: "Gallery", path: "/gallery" },
         ])}
       />
-      <PageHeader
-        className="pb-6"
-        eyebrow="Public"
-        title="Community gallery"
-        description={GALLERY_DESCRIPTION}
-        actions={
-          <Button asChild>
-            <Link href="/create">Forge your own</Link>
-          </Button>
-        }
-      />
-
-      {/* Search + browse-by first: a search is a navigation to the browse
-          route, and the hub chips are the crawlable way in. */}
-      <div className="mt-6">
-        <BrowseSearchBox
-          browsePath={GALLERY_BROWSE_PATH}
-          placeholder="Search cards by name, rules, or flavor"
-          label="Search cards"
-          browseLabel="Browse all cards"
-        />
+      {/* ONE header row (owner 2026-11-03: more cards above the fold): the
+          title and the search share it from md; no eyebrow, and no "Forge
+          your own" — the site header carries Create. A search is a
+          navigation to the browse route. */}
+      <div className="flex flex-col gap-3 border-b border-gold/20 pb-4 md:flex-row md:items-center md:gap-8">
+        <div className="flex min-w-0 flex-col gap-0.5 md:shrink-0">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Community gallery
+          </h1>
+          <p className="text-sm text-muted">{GALLERY_TAGLINE}</p>
+        </div>
+        <div className="min-w-0 md:ml-auto md:w-full md:max-w-2xl">
+          <BrowseSearchBox
+            browsePath={GALLERY_BROWSE_PATH}
+            placeholder="Name, rules, flavor"
+            label="Search cards"
+            browseLabel="Browse all"
+            compact
+          />
+        </div>
       </div>
+      {/* Browse by type and tag — the crawlable way into the hubs, one
+          compact bar. */}
       {configured ? (
         <Suspense fallback={null}>
           <HubLinks placement="top" />
         </Suspense>
       ) : null}
 
-      {/* Trending hero (one row, never wraps). */}
+      {/* Trending hero (one row, never wraps; a range switch). */}
       {configured ? (
-        <div className="mt-10">
+        <div className="mt-5">
           <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
             <GalleryTrending />
           </Suspense>
@@ -381,23 +393,56 @@ function GalleryOffline() {
 }
 
 async function GalleryTrending() {
-  // Anonymous mode keeps the bare route ISR: no viewer lookup, no cookie
-  // read. isAuthed=false just means the tile hearts render the signed-out
-  // hint — QuickLikeButton re-checks the session cookie at click time, so
-  // signed-in users on the cached page still like fine.
-  const trending = await listTrendingCards({ limit: ROW_MAX, anonymous: true });
-  if (trending.length === 0) return null;
+  // Every range's row in ONE cached read set (four RPCs, one card read):
+  // the landing stays ISR and never reads searchParams, so the switch is a
+  // client island over rows the server already rendered. Anonymous mode
+  // keeps the route static — isAuthed=false only means the tile hearts
+  // render the signed-out hint; QuickLikeButton re-checks the session cookie
+  // at click time.
+  const byRange = await listTrendingCardsByRange({ limit: ROW_MAX, anonymous: true });
+  // Opens on the month (owner 2026-11-03); a month with nothing hot opens on
+  // the next range that has something, longer first, so the hero is never
+  // an empty box while the switch can show cards.
+  const opening = [DEFAULT_TRENDING_RANGE, "year", "all", "week"].find(
+    (range): range is TrendingRange => isTrendingRange(range) && byRange[range].length > 0,
+  );
+  if (!opening) return null;
+  const panels = Object.fromEntries(
+    TRENDING_RANGES.map((range) => [
+      range,
+      byRange[range].length > 0 ? (
+        <TrendingCardsRow
+          cards={byRange[range]}
+          isAuthed={false}
+          sizes={CARD_GRID_SIZES}
+          priority={range === opening}
+        />
+      ) : (
+        <p className="rounded-xl border border-dashed border-border/60 px-4 py-10 text-center text-sm text-muted">
+          {TRENDING_RANGE_WORDS[range].empty} Try a longer period, or browse{" "}
+          <Link href={`${GALLERY_BROWSE_PATH}?sort=newest`} className="text-primary-bright underline-offset-4 hover:underline">
+            the newest cards
+          </Link>
+          .
+        </p>
+      ),
+    ]),
+  ) as Record<TrendingRange, React.ReactNode>;
   return (
-    <TrendingCardsSection
-      cards={trending}
-      isAuthed={false}
-      sizes={CARD_GRID_SIZES}
-      eyebrow="Trending now"
-      heading="Hot this week"
-      description="Cards picking up steam — fresh likes, comments, and remixes from the last 7 days."
-      variant="hero"
-      priority
-    />
+    <section aria-labelledby="trending-heading" className={TRENDING_HERO_SURFACE_CLASS}>
+      <TrendingRangeSwitch
+        headingId="trending-heading"
+        defaultRange={opening}
+        eyebrow={
+          <span className={cn(SECTION_EYEBROW_CLASS, "text-gold-strong")}>
+            <Flame className="h-3.5 w-3.5 animate-pulse" aria-hidden />
+            Trending now
+          </span>
+        }
+        description="Ranked by likes, comments and remixes from the community — the most recent count most."
+        panels={panels}
+      />
+    </section>
   );
 }
 

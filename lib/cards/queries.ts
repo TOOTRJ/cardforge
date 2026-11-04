@@ -23,10 +23,8 @@ import type { Card as CardRow } from "@/types/supabase";
 import { buildCardPath } from "@/lib/cards/utils";
 import {
   TRENDING_FRESHNESS_WINDOW_DAYS,
-  TRENDING_WINDOW_DAYS,
-  sortTrending,
-  onePerCreator,
-  trendingScore,
+  TRENDING_RANGES,
+  type TrendingRange,
 } from "@/lib/cards/trending";
 import { narrowCard } from "@/lib/cards/narrow";
 import { isLegendaryCreature } from "@/lib/decks/first-card";
@@ -41,11 +39,13 @@ import { typedForMatching } from "@/lib/validation/typed-forms";
 // `liked_by_viewer` is `false` for anonymous viewers and for cards the
 // current user hasn't liked. The flag lets tile UIs render the heart in
 // the right state without a follow-up client fetch.
-/** Why a card is trending this week (listTrendingCards only). */
+/** Why a card is trending in its range (listTrendingCardsByRange only): the
+ *  range's counts — one per person, the owner's own never (migration 0166). */
 export type TrendingStats = {
-  likes7d: number;
-  comments7d: number;
-  remixes7d: number;
+  range: TrendingRange;
+  likes: number;
+  comments: number;
+  remixes: number;
   score: number;
 };
 
@@ -958,7 +958,7 @@ export async function getCardLikeRankOverall(
 
 /**
  * This card's 7-day trending signals (excluding the owner's own engagement),
- * for the velocity badge. Mirrors listTrendingCards' per-card aggregation but
+ * for the velocity badge. Mirrors the gallery's 7-day counts (migration 0166's list_trending_cards) but
  * scoped to a single card so it's cheap on the detail page.
  */
 export async function getCardTrendingSignals(
@@ -1070,174 +1070,60 @@ export const getProfileByUsername = cache(async (
 });
 
 // ---------------------------------------------------------------------------
-// Trending — 7-day windowed weighted velocity (see lib/cards/trending.ts).
-//
-// We aggregate signals client-side rather than in SQL because PostgREST
-// can't easily join four sources (cards, card_likes, card_comments, and
-// remix children) with a single ORDER BY on the derived score. Fetching
-// the candidate pool and scoring in-process mirrors how attachStats works.
-//
-// Candidate pool is capped at 500 most-recently-updated public cards —
-// anything older is overwhelmingly unlikely to be trending, and the cap
-// keeps memory bounded as the catalog grows.
+// Trending — ONE SQL function scores and ranks (migration 0166,
+// list_trending_cards; the rules in lib/cards/trending.ts). A range is one
+// RPC; the card rows of every range asked for are read in ONE select and
+// stamped through attachStats like every other card list.
 // ---------------------------------------------------------------------------
 
-const TRENDING_CANDIDATE_CAP = 500;
-
-export async function listTrendingCards(
-  options: { limit?: number; anonymous?: boolean } = {},
-): Promise<CardWithStats[]> {
-  if (!isSupabaseConfigured()) return [];
-  const { limit = 12, anonymous = false } = options;
-
+/** Each range's trending row, read together (the gallery's switch). A range
+ *  whose read fails comes back empty; the others still render. */
+export async function listTrendingCardsByRange(
+  options: { ranges?: readonly TrendingRange[]; limit?: number; anonymous?: boolean } = {},
+): Promise<Record<TrendingRange, CardWithStats[]>> {
+  const { ranges = TRENDING_RANGES, limit = 12, anonymous = false } = options;
+  const out = Object.fromEntries(TRENDING_RANGES.map((r) => [r, [] as CardWithStats[]])) as Record<
+    TrendingRange,
+    CardWithStats[]
+  >;
+  if (!isSupabaseConfigured()) return out;
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
-
-    // The pool is a SQL function (migration 0091) so admin-owned cards never
-    // enter the ranking — "Hot this week" is the community's showcase.
-    const { data: cardRows, error: cardErr } = await supabase.rpc(
-      "list_trending_pool",
-      { p_limit: TRENDING_CANDIDATE_CAP },
+    const ranked = await Promise.all(
+      ranges.map(async (range) => {
+        const { data, error } = await supabase.rpc("list_trending_cards", {
+          p_range: range,
+          p_limit: limit,
+        });
+        return { range, rows: error || !data ? [] : data };
+      }),
     );
-
-    if (cardErr || !cardRows || cardRows.length === 0) return [];
-
-    const cardIds = cardRows.map((c) => c.id);
-    const ownerByCardId = new Map(cardRows.map((c) => [c.id, c.owner_id]));
-    const ownerIds = Array.from(new Set(cardRows.map((c) => c.owner_id)));
-
-    const now = Date.now();
-    const windowStart = new Date(
-      now - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    const freshnessCutoffMs =
-      now - TRENDING_FRESHNESS_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-
-    // Viewer lookup is fire-and-forget so the trending score itself never
-    // depends on auth — anonymous visitors still get the same trending list.
-    // Anonymous mode (ISR pages) skips it without reading cookies.
-    const viewer = anonymous ? null : await getCurrentUser();
-
-    const [
-      allLikesResult,
-      recentLikesResult,
-      recentCommentsResult,
-      recentRemixesResult,
-      ownersResult,
-      viewerLikesResult,
-    ] = await Promise.all([
-      supabase.from("card_likes").select("card_id").in("card_id", cardIds),
-      supabase
-        .from("card_likes")
-        .select("card_id, user_id")
-        .in("card_id", cardIds)
-        .gte("created_at", windowStart),
-      supabase
-        .from("card_comments")
-        .select("card_id, author_id")
-        .in("card_id", cardIds)
-        .gte("created_at", windowStart),
-      supabase
-        .from("cards")
-        .select("parent_card_id, owner_id")
-        .in("parent_card_id", cardIds)
-        .gte("created_at", windowStart),
-      supabase
-        .from("profiles")
-        .select("id, username, display_name, avatar_url")
-        .in("id", ownerIds),
-      viewer
-        ? supabase
-            .from("card_likes")
-            .select("card_id")
-            .eq("user_id", viewer.id)
-            .in("card_id", cardIds)
-        : Promise.resolve({ data: [] as Array<{ card_id: string }> }),
-    ]);
-
-    const totalLikes = new Map<string, number>();
-    for (const row of allLikesResult.data ?? []) {
-      totalLikes.set(row.card_id, (totalLikes.get(row.card_id) ?? 0) + 1);
-    }
-
-    const viewerLiked = new Set<string>();
-    for (const row of viewerLikesResult.data ?? []) {
-      viewerLiked.add(row.card_id);
-    }
-
-    const recentLikes = new Map<string, number>();
-    for (const row of recentLikesResult.data ?? []) {
-      if (row.user_id === ownerByCardId.get(row.card_id)) continue;
-      recentLikes.set(row.card_id, (recentLikes.get(row.card_id) ?? 0) + 1);
-    }
-
-    const recentComments = new Map<string, number>();
-    for (const row of recentCommentsResult.data ?? []) {
-      if (row.author_id === ownerByCardId.get(row.card_id)) continue;
-      recentComments.set(
-        row.card_id,
-        (recentComments.get(row.card_id) ?? 0) + 1,
-      );
-    }
-
-    const recentRemixes = new Map<string, number>();
-    for (const row of recentRemixesResult.data ?? []) {
-      const parentId = row.parent_card_id;
-      if (!parentId) continue;
-      if (row.owner_id === ownerByCardId.get(parentId)) continue;
-      recentRemixes.set(parentId, (recentRemixes.get(parentId) ?? 0) + 1);
-    }
-
-    const ownerProfileById = new Map<string, CardWithOwner["owner"]>();
-    for (const row of ownersResult.data ?? []) {
-      ownerProfileById.set(row.id, {
-        username: row.username,
-        display_name: row.display_name,
-        avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
+    const ids = Array.from(new Set(ranked.flatMap(({ rows }) => rows.map((r) => r.card_id))));
+    if (ids.length === 0) return out;
+    const { data: cardRows } = await supabase.from("cards").select("*").in("id", ids);
+    const cards = await attachStats((cardRows ?? []) as CardRow[], "recent", { anonymous });
+    const byId = new Map(cards.map((card) => [card.id, card]));
+    for (const { range, rows } of ranked) {
+      out[range] = rows.flatMap((row) => {
+        const card = byId.get(row.card_id);
+        if (!card) return [];
+        return [
+          {
+            ...card,
+            trending: {
+              range,
+              likes: row.likes,
+              comments: row.comments,
+              remixes: row.remixes,
+              score: row.score,
+            },
+          },
+        ];
       });
     }
-
-    const scored = cardRows.map((row) => {
-      const signals = {
-        likes_7d: recentLikes.get(row.id) ?? 0,
-        comments_7d: recentComments.get(row.id) ?? 0,
-        remixes_7d: recentRemixes.get(row.id) ?? 0,
-        is_fresh: new Date(row.created_at).getTime() > freshnessCutoffMs,
-      };
-      return {
-        card: row,
-        score: trendingScore(signals),
-        likesTotal: totalLikes.get(row.id) ?? 0,
-        createdAt: row.created_at,
-        signals,
-      };
-    });
-
-    // One card per creator: dedupe AFTER ranking (so each creator's best
-    // card is the one that survives) and BEFORE the limit (so the row still
-    // fills up from the next creators down).
-    const ranked = onePerCreator(sortTrending(scored)).slice(0, limit);
-    // "In N decks" for the row's cards only, as attachStats gives every
-    // other list (one batched RPC, viewer-independent — migration 0149).
-    const deckCounts = await publicDeckCountsForCards(
-      supabase,
-      ranked.map(({ card }) => card.id),
-    );
-    return ranked.map(({ card, likesTotal, score, signals }) => ({
-      ...narrowCard(card),
-      owner: ownerProfileById.get(card.owner_id) ?? null,
-      likes_count: likesTotal,
-      liked_by_viewer: viewerLiked.has(card.id),
-      ...(deckCounts ? { public_deck_count: deckCounts.get(card.id) ?? 0 } : {}),
-      trending: {
-        likes7d: signals.likes_7d,
-        comments7d: signals.comments_7d,
-        remixes7d: signals.remixes_7d,
-        score,
-      },
-    }));
+    return out;
   } catch {
-    return [];
+    return out;
   }
 }
 
