@@ -39,34 +39,56 @@ export const TRENDING_RANGE_RULES: Record<
   all: { windowDays: null, halfLifeDays: null },
 };
 
-/** The words a range prints: the tab, the heading, the tiles' "this …". */
+/** The words a range prints: the tab, the heading, the tiles' "this …", the
+ *  gallery's line under the heading (decay is named only where there is
+ *  one), and the homepage row's heading and ranking phrase. */
 export const TRENDING_RANGE_WORDS: Record<
   TrendingRange,
-  { tab: string; heading: string; period: string; empty: string }
+  {
+    tab: string;
+    heading: string;
+    period: string;
+    empty: string;
+    description: string;
+    homeHeading: string;
+    rankedBy: string;
+  }
 > = {
   week: {
     tab: "Week",
     heading: "Hot this week",
     period: "this week",
     empty: "Nothing has heated up this week yet.",
+    description: "Ranked by likes, comments and remixes from the community — the most recent count most.",
+    homeHeading: "What the community is forging this week",
+    rankedBy: "ranked by this week's likes, comments and remixes",
   },
   month: {
     tab: "Month",
     heading: "Hot this month",
     period: "this month",
     empty: "Nothing has heated up this month yet.",
+    description: "Ranked by likes, comments and remixes from the community — the most recent count most.",
+    homeHeading: "What the community is forging this month",
+    rankedBy: "ranked by this month's likes, comments and remixes",
   },
   year: {
     tab: "Year",
     heading: "Hot this year",
     period: "this year",
     empty: "Nothing has heated up this year yet.",
+    description: "Ranked by likes, comments and remixes from the community — the most recent count most.",
+    homeHeading: "What the community is forging this year",
+    rankedBy: "ranked by this year's likes, comments and remixes",
   },
   all: {
     tab: "All time",
     heading: "Hottest of all time",
     period: "all time",
     empty: "No card has been liked, discussed or remixed yet.",
+    description: "Ranked by every like, comment and remix from the community — old and new count the same.",
+    homeHeading: "The community's most-loved cards",
+    rankedBy: "ranked by every like, comment and remix they have had",
   },
 };
 

@@ -54,6 +54,16 @@ describe("the trending ranges", () => {
     }
   });
 
+  it("only a decayed range says the recent count most; every homepage heading reads as a sentence", () => {
+    for (const range of ["week", "month", "year"] as const) {
+      expect(TRENDING_RANGE_WORDS[range].description).toMatch(/most recent count most/);
+      expect(TRENDING_RANGE_WORDS[range].homeHeading).toBe(`What the community is forging ${TRENDING_RANGE_WORDS[range].period}`);
+    }
+    expect(TRENDING_RANGE_WORDS.all.description).not.toMatch(/recent/);
+    expect(TRENDING_RANGE_WORDS.all.homeHeading).not.toMatch(/forging all time/);
+    expect(TRENDING_RANGE_WORDS.all.rankedBy).not.toMatch(/all time's/);
+  });
+
   it("isTrendingRange accepts the four and nothing else", () => {
     for (const range of TRENDING_RANGES) expect(isTrendingRange(range)).toBe(true);
     for (const other of ["day", "", null, undefined, 7, "Month"]) expect(isTrendingRange(other)).toBe(false);

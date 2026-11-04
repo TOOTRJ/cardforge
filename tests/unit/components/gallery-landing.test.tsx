@@ -59,6 +59,14 @@ describe("TrendingRangeSwitch", () => {
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Hottest of all time");
   });
 
+  it("the line under the heading follows the tab: decay only where there is one", () => {
+    renderSwitch();
+    expect(screen.getByText(/the most recent count most/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "All time" }));
+    expect(screen.queryByText(/the most recent count most/)).toBeNull();
+    expect(screen.getByText(/old and new count the same/)).toBeTruthy();
+  });
+
   it("is one tab stop; the arrow keys move along the tabs", () => {
     renderSwitch();
     const tabs = screen.getAllByRole("tab");
@@ -95,6 +103,8 @@ describe("the /gallery landing's source", () => {
     const hubs = read("components/cards/hub-links.tsx");
     expect(hubs).toMatch(/lg:grid-cols-2/);
     expect(hubs).toMatch(/overflow-x-auto[\s\S]*lg:flex-wrap/);
+    // Each chip list is named for its group ("Card types", "Popular tags").
+    expect(hubs).toMatch(/<ul\s+aria-label=\{label\}/);
   });
 
   it("reads every range in ONE call and opens on the month (the next range with cards when it has none)", () => {
