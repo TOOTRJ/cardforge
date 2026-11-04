@@ -4378,6 +4378,15 @@ Each step is its own PR. Check 1366, 1536, 1920 and 2560 px and a phone on every
 
 - [ ] **RF1 [P2 · L] Referral program — ON HOLD** (owner 2026-11-02: benched until every other task on this refactor list is done, with every billing / Stripe PR — BL1 / #726 — and the deck edit drawer, DK5.18 / #729) — Built and pushed as two open DRAFT PRs, kept as drafts so nothing is lost: TOOTRJ/cardforge#689 (schema, attribution, rewards; branch `claude/gifted-carson-gidclq-referrals`) and #691 (the Refer a friend page + admin stats; branch `claude/gifted-carson-gidclq-referrals-ui`, stacked on #689 — the two merge together). Each PR body opens with an "On hold" section listing the last round's items as done / half-done / not started, and records the owner's decisions: one regular Plus month with ONE 30-credit allotment (always Plus); a paying referrer — trialing too — gets a month of their plan's price as balance credit; both emails confirmed, no waiting hold; failed rewards retried by an hourly sweep; one email = one referral month ever, for friends AND referrers (normalized: +tag, Gmail dots, googlemail; kept as a keyed fingerprint that survives account deletion). On resume: merge `main` into both, renumber migration 0164 (taken by then) and union `notifications_type_check` with whatever landed, finish the listed items, a fresh independent full check, re-take the screenshots for the owner's OK, and set `REFERRAL_EMAIL_HASH_KEY` in Vercel before release.
 
+## Home page conversion (review 2026-11-03)
+
+Audit of the home page and research on turning visitors into sign-ups (owner
+request 2026-11-03). The ranked list of changes, the evidence and the numbers
+are in the owner's review page (claude.ai artifact "PipGlyph Home Conversion
+Review"). Only what the owner picks is listed here.
+
+- [ ] (draft PR 2026-11-04, `feat/home-all-time-stats`) **HM1 [P1 · S] All-time numbers on the home page** (owner 2026-11-04: "All-time") — "Live from the forge" says every public card and every real creator (`countPublicCreators`: /creators' total, never an admin), with "+N this week" as the small print when there is one; the stat strip shows four REAL counts (cards, creators, decks once there are 5, frame styles) — no "6 Mana identities" / "∞ Possibilities". Short forms round DOWN so "1.3K+" is always true. Public rows only, cookie-free (the page stays ISR); no migration. Files: `app/(marketing)/page.tsx · lib/marketing/home-stats.ts · lib/creators/queries.ts`.
+
 ## Billing audit follow-ups (2026-09-24)
 
 What's left from the 2026-09-22 billing audit (docs/BILLING.md §5–§9 record

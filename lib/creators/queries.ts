@@ -82,3 +82,22 @@ export const listPublicCreators = cache(
     }
   },
 );
+
+/** How many creators /creators lists — real creators with a public card
+ *  (0149's `owner_is_creator`; never an admin). The home page's number.
+ *  One row is read for the function's window total; 0 on any failure. */
+export const countPublicCreators = cache(async (): Promise<number> => {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("list_public_creators", {
+      p_sort: "cards",
+      p_limit: 1,
+      p_offset: 0,
+    });
+    if (error || !Array.isArray(data) || data.length === 0) return 0;
+    return Math.max(0, Number((data[0] as PublicCreatorRow).total) || 0);
+  } catch {
+    return 0;
+  }
+});
