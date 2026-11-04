@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 import { ArrowRight, Flame, Sparkles, Users } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
+import { CreateCtaLink } from "@/components/marketing/create-cta-link";
 import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
@@ -21,6 +22,12 @@ import { countPublicCards, getCommunityPulse, listTrendingCardsByRange } from "@
 import { TRENDING_RANGE_WORDS, type TrendingRange } from "@/lib/cards/trending";
 import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
+import { countPublicCreators } from "@/lib/creators/queries";
+import {
+  formatStatNumber,
+  homeStatBadges,
+  type HomeCounts,
+} from "@/lib/marketing/home-stats";
 import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
@@ -118,9 +125,10 @@ export default async function HomePage() {
         </Suspense>
       ) : null}
 
-      {/* Proof before pitch: what the community forged THIS WEEK, right
-          under the featured decks — live rank badges + weekly stats, one row, with the
-          pulse line and the two doors out (forge one / see the gallery). */}
+      {/* Proof before pitch: the trending row right under the featured
+          decks — live rank badges, one row, with the pulse line (all-time
+          numbers, owner 2026-11-03) and the two doors out (forge one / see
+          the gallery). */}
       <PageContainer as="section" size="wide" className="pb-10 pt-4">
         {isSupabaseConfigured() ? (
           <Suspense fallback={<TrendingCardsSectionSkeleton count={ROW_MAX} />}>
@@ -220,7 +228,7 @@ export default async function HomePage() {
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-3">
               <Button asChild size="lg">
-                <Link href="/create">Start your journey</Link>
+                <CreateCtaLink surface="home_final" />
               </Button>
               <Button asChild size="lg" variant="ghost">
                 <Link href="/gallery">Browse the gallery</Link>
@@ -307,39 +315,35 @@ async function LatestGuides() {
   );
 }
 
-async function HomeStats() {
-  const [cardCount, deckCount, verifiedFrameKeys] = await Promise.all([
+/** Every home-page number, read once per render (the stat strip and the
+ *  pulse line share it). Public rows only, cookie-free — the page stays ISR. */
+const readHomeCounts = cache(async (): Promise<HomeCounts> => {
+  const [cards, creators, decks, verifiedFrameKeys, pulse] = await Promise.all([
     countPublicCards(),
+    countPublicCreators(),
     countPublicDecks(),
     getVerifiedFrameKeysPublic(),
+    getCommunityPulse(),
   ]);
-  // Frames the creator actually offers today — the verified set, counted by
-  // template. (The catalogue on disk is bigger; only published frames are
-  // an honest number.)
-  const frameStyles = new Set(
-    verifiedFrameKeys.map((key) => key.split("/")[0]),
-  ).size;
-  // Friendly rounding: 1,234 → "1.2K+". Below 100 the raw number reads
-  // more honest than a padded "+".
-  const cards =
-    cardCount >= 1000
-      ? `${(cardCount / 1000).toFixed(1).replace(/\.0$/, "")}K+`
-      : `${cardCount}`;
-  // The decks badge waits for real inventory — "3 decks" undersells more
-  // than it informs. Until then the frame-styles badge holds the slot.
-  const showDecks = deckCount >= 5;
+  return {
+    cards,
+    creators,
+    decks,
+    // Frames the creator actually offers today — the verified set, counted
+    // by template. (The catalogue on disk is bigger; only published frames
+    // are an honest number.)
+    frameStyles: new Set(verifiedFrameKeys.map((key) => key.split("/")[0])).size,
+    cardsThisWeek: pulse.cardsThisWeek,
+  };
+});
+
+async function HomeStats() {
+  const badges = homeStatBadges(await readHomeCounts());
   return (
     <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-      <StatBadge value={cards} label="Cards forged" />
-      {showDecks ? (
-        <StatBadge value={`${deckCount}`} label="Decks built" />
-      ) : frameStyles > 0 ? (
-        <StatBadge value={`${frameStyles}`} label="Frame styles" />
-      ) : (
-        <StatBadge value="Free" label="Every frame" />
-      )}
-      <StatBadge value="6" label="Mana identities" />
-      <StatBadge value="∞" label="Possibilities" />
+      {badges.map((badge) => (
+        <StatBadge key={badge.label} value={badge.value} label={badge.label} />
+      ))}
     </div>
   );
 }
@@ -354,9 +358,9 @@ async function HomeTrending() {
   // This week's row; a quiet week falls back to the month, then all time
   // (migration 0166 never pads a range with cards nobody engaged with), and
   // the words follow the range shown.
-  const [byRange, pulse] = await Promise.all([
+  const [byRange, counts] = await Promise.all([
     listTrendingCardsByRange({ ranges: HOME_TRENDING_RANGES, limit: ROW_MAX, anonymous: true }),
-    getCommunityPulse(),
+    readHomeCounts(),
   ]);
   const range = HOME_TRENDING_RANGES.find((r) => byRange[r].length > 0);
   if (!range) return <PlaceholderGallery />;
@@ -370,7 +374,7 @@ async function HomeTrending() {
       description={`Real cards from real creators — ${words.rankedBy}. Tap one to see it up close.`}
       variant="hero"
       action={VIEW_GALLERY_LINK}
-      footer={<TrendingPulseFooter pulse={pulse} />}
+      footer={<TrendingPulseFooter counts={counts} />}
       sizes={CARD_GRID_SIZES}
       // First card images in the viewport — preload instead of lazy-load.
       priority
@@ -378,10 +382,11 @@ async function HomeTrending() {
   );
 }
 
-/** The conversion strip under the trending row: this week's activity, then
- *  the two doors — forge a card (free with an account) or browse. */
-function TrendingPulseFooter({ pulse }: { pulse: Awaited<ReturnType<typeof getCommunityPulse>> }) {
-  const hasPulse = pulse.cardsThisWeek > 0;
+/** The conversion strip under the trending row: everything the community
+ *  has forged (all time — owner 2026-11-03), this week's as the small print,
+ *  then the two doors — forge a card (free with an account) or browse. */
+function TrendingPulseFooter({ counts }: { counts: HomeCounts }) {
+  const hasCards = counts.cards > 0;
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-col gap-1">
@@ -389,18 +394,25 @@ function TrendingPulseFooter({ pulse }: { pulse: Awaited<ReturnType<typeof getCo
           <Flame className="h-3.5 w-3.5" aria-hidden />
           Live from the forge
         </span>
-        {hasPulse ? (
+        {hasCards ? (
           <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
             <span className="inline-flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-gold" aria-hidden />
-              <span className="font-semibold tabular-nums text-foreground">{pulse.cardsThisWeek}</span>
-              {pulse.cardsThisWeek === 1 ? "card" : "cards"} forged this week
+              <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.cards)}</span>
+              {counts.cards === 1 ? "card" : "cards"} forged
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
-              by <span className="font-semibold tabular-nums text-foreground">{pulse.creatorsThisWeek}</span>
-              {pulse.creatorsThisWeek === 1 ? "creator" : "creators"}
-            </span>
+            {counts.creators > 0 ? (
+              <span className="inline-flex items-center gap-1.5">
+                {/* No "by": the cards count every public card (admins'
+                    too), the creators count never an admin. */}
+                <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
+                <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
+                {counts.creators === 1 ? "creator" : "creators"}
+              </span>
+            ) : null}
+            {counts.cardsThisWeek > 0 ? (
+              <span className="tabular-nums">+{formatStatNumber(counts.cardsThisWeek)} this week</span>
+            ) : null}
           </p>
         ) : (
           <p className="text-sm text-muted">Every card here started as a blank frame. Yours can be next.</p>
@@ -408,10 +420,9 @@ function TrendingPulseFooter({ pulse }: { pulse: Awaited<ReturnType<typeof getCo
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild size="lg">
-          <Link href="/create">
-            Forge your own — free
+          <CreateCtaLink surface="home_pulse">
             <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+          </CreateCtaLink>
         </Button>
         <Button asChild size="lg" variant="ghost">
           <Link href="/gallery">See what&apos;s trending</Link>

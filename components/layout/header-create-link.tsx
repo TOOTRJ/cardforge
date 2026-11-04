@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
+import { rememberSignupSurface } from "@/lib/analytics/attribution";
 import { trackNavClick } from "./nav-click";
 
 /** "＋ Create a card" — the header's one start button, at every width (TODO
@@ -21,7 +22,14 @@ export function HeaderCreateLink({ isAuthed }: { isAuthed: boolean }) {
       size="sm"
       className={cn(isAuthed && "w-9 px-0 sm:w-auto sm:px-3")}
     >
-      <Link href={href} onClick={() => trackNavClick(id, "header", isAuthed)}>
+      <Link
+        href={href}
+        onClick={() => {
+          trackNavClick(id, "header", isAuthed);
+          // The signup that may follow names this button (owner 2026-11-04).
+          if (!isAuthed) rememberSignupSurface("header");
+        }}
+      >
         <Plus aria-hidden />
         {isAuthed ? (
           <span className="sr-only sm:not-sr-only">{label}</span>

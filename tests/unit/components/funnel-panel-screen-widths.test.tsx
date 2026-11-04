@@ -12,7 +12,7 @@ import { FunnelPanel } from "@/components/admin/funnel-panel";
 import { buildFunnel, buildScreenWidths, type FunnelSummary } from "@/lib/admin/funnel-queries";
 
 function summary(screenWidths: FunnelSummary["screenWidths"]): FunnelSummary {
-  return { windows: [buildFunnel({}, 7), buildFunnel({}, 30)], signupSources: [], trials: [], screenWidths };
+  return { windows: [buildFunnel({}, 7), buildFunnel({}, 30)], signupSources: [], signupSurfaces: [], trials: [], screenWidths };
 }
 
 function widthsBlock(): HTMLElement {

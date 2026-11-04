@@ -1210,33 +1210,28 @@ export async function hasUserLikedCard(
 export type CommunityPulse = {
   /** Public cards created in the last 7 days. */
   cardsThisWeek: number;
-  /** Distinct creators behind those cards. */
-  creatorsThisWeek: number;
 };
 
 /**
- * "Live from the forge" numbers for the landing page's trending block —
- * how much got made this week and by how many people. Cookie-free public
- * client so the homepage stays ISR; bounded read counted in JS.
+ * "Live from the forge"'s small print on the landing page — how many public
+ * cards were made this week. An exact head count (a row read would stop at
+ * PostgREST's 1000-row cap). Cookie-free public client so the homepage
+ * stays ISR.
  */
 export async function getCommunityPulse(): Promise<CommunityPulse> {
-  if (!isSupabaseConfigured()) return { cardsThisWeek: 0, creatorsThisWeek: 0 };
+  if (!isSupabaseConfigured()) return { cardsThisWeek: 0 };
   try {
     const supabase = createPublicClient();
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("cards")
-      .select("owner_id")
+      .select("id", { count: "exact", head: true })
       .eq("visibility", "public")
-      .gte("created_at", since)
-      .limit(2000);
-    if (error || !data) return { cardsThisWeek: 0, creatorsThisWeek: 0 };
-    return {
-      cardsThisWeek: data.length,
-      creatorsThisWeek: new Set(data.map((row) => row.owner_id)).size,
-    };
+      .gte("created_at", since);
+    if (error) return { cardsThisWeek: 0 };
+    return { cardsThisWeek: count ?? 0 };
   } catch {
-    return { cardsThisWeek: 0, creatorsThisWeek: 0 };
+    return { cardsThisWeek: 0 };
   }
 }
 

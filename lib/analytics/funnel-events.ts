@@ -62,6 +62,11 @@ export const CLIENT_FUNNEL_EVENTS = [
   // viewport's width bucket alone (lib/analytics/screen-width.ts) —
   // /api/events records it with no user id and no other prop.
   "screen_width",
+  // A home-page "Make a card — free" button (TODO HM2): `surface` is where
+  // it sat (lib/marketing/create-cta.ts). Its own event, never cta_click —
+  // the Storefront chain counts cta_click by event alone (0112), so a
+  // create click there would read as a pricing CTA.
+  "create_cta_click",
 ] as const;
 
 /** Where a nav_click's link sat. */

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { buildFunnel, groupSignupSources } from "@/lib/admin/funnel-queries";
+import { buildFunnel, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
 
 describe("buildFunnel", () => {
   it("chains rates inside the storefront, trial and out-of-credits sections and leaves counts elsewhere", () => {
@@ -77,5 +77,46 @@ describe("buildFunnel", () => {
   it("an empty window renders zeros with no rates (no division by zero)", () => {
     const w = buildFunnel({}, 7);
     expect(w.sections.flatMap((x) => x.steps).every((st) => st.n === 0 && st.rate === null)).toBe(true);
+  });
+});
+
+describe("groupSignupSurfaces", () => {
+  it("counts signups by the create button pressed last, none when there was no tracked button", () => {
+    expect(
+      groupSignupSurfaces([
+        { props: { surface: "home_hero", referrer: "reddit.com" } },
+        { props: { surface: "home_hero" } },
+        { props: { surface: "header" } },
+        { props: { utmSource: "discord" } },
+        { props: null },
+      ]),
+    ).toEqual([
+      { surface: "home_hero", n: 2 },
+      { surface: "none", n: 2 },
+      { surface: "header", n: 1 },
+    ]);
+  });
+});
+
+describe("the Storefront chain is billing moments alone (TODO HM2)", () => {
+  it("is exactly pricing view → CTA → checkout, and a home create click is counted apart", () => {
+    const w = buildFunnel({ cta_click: { n: 4, users: 4 }, create_cta_click: { n: 90, users: 60 } }, 7);
+    expect(w.sections.find((x) => x.title === "Storefront")!.steps.map((st) => st.key)).toEqual([
+      "pricing_view",
+      "cta_click",
+      "checkout_started",
+      "checkout_completed",
+    ]);
+    const home = w.sections.find((x) => x.title === "Home create buttons")!;
+    expect(home.steps).toEqual([expect.objectContaining({ key: "create_cta_click", n: 90, rate: null })]);
+  });
+
+  it("cta_click is sent only by the billing components (admin_funnel_counts groups by event alone)", async () => {
+    const { execSync } = await import("node:child_process");
+    const files = execSync(`grep -rl '"cta_click"' app components lib || true`, { encoding: "utf8" })
+      .split("\n")
+      .filter(Boolean)
+      .filter((f) => !f.startsWith("lib/analytics/") && !f.startsWith("lib/admin/") && f !== "app/api/events/route.ts");
+    for (const file of files) expect(file).toMatch(/^components\/billing\//);
   });
 });

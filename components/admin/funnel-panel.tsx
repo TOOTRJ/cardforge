@@ -4,6 +4,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { formatUtcDate } from "@/lib/format/dates";
 import type { FunnelSummary } from "@/lib/admin/funnel-queries";
+import { ctaSurfaceLabel } from "@/lib/marketing/create-cta";
 
 const OUTCOME_LABEL: Record<string, string> = {
   trial_converted: "Converted",
@@ -68,7 +69,8 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+        <div className="flex flex-col gap-4 rounded-lg border border-border/60 bg-background/40 p-3">
+          <div>
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Signups by source · 30d</h3>
           {summary.signupSources.length === 0 ? (
             <p className="text-sm text-muted">No signups recorded yet.</p>
@@ -82,6 +84,24 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
               ))}
             </ul>
           )}
+          </div>
+          <div>
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">
+              Signups by last create button pressed · 30d
+            </h3>
+            {summary.signupSurfaces.length === 0 ? (
+              <p className="text-sm text-muted">No signups recorded yet.</p>
+            ) : (
+              <ul className="divide-y divide-border/40 text-sm">
+                {summary.signupSurfaces.map((row) => (
+                  <li key={row.surface} className="flex items-center justify-between py-1">
+                    <span className="text-foreground">{ctaSurfaceLabel(row.surface)}</span>
+                    <span className="tabular-nums text-muted">{row.n}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
         <div className="rounded-lg border border-border/60 bg-background/40 p-3">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">
