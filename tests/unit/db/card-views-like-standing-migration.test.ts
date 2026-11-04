@@ -85,6 +85,22 @@ describe("0168: the like standing", () => {
     expect(body).not.toContain("unlisted");
   });
 
+  it("leaves admin-owned cards out on BOTH sides, through 0091's owner_is_admin (owner 2026-11-04)", () => {
+    // An admin's card has no place (no row: its page shows no trophy) and
+    // takes none from anyone: a real creator's card tied with another keeps
+    // its shared place under an admin's card with more likes. Checked on the
+    // local database in a rolled-back transaction (2026-11-04): A and B tied
+    // at #1 beside an admin's card with more likes, which had no row; with
+    // the flag off, the admin's card took #1 and A fell to a tied #2.
+    const body = fnBody("card_like_standing");
+    expect(body.match(/and not public\.owner_is_admin\(c\.owner_id\)/g)).toHaveLength(2);
+    expect(body).toMatch(/where c\.id = p_card_id and c\.visibility = 'public' and not public\.owner_is_admin\(c\.owner_id\)/);
+    expect(body).toMatch(/and c\.likes_count >= me\.likes and not public\.owner_is_admin\(c\.owner_id\)/);
+    // The one shared rule, never a restated predicate.
+    expect(body).not.toContain("is_admin from");
+    expect(body).not.toMatch(/profiles/);
+  });
+
   it("runs as the caller, readable by anyone; card_like_rank is gone", () => {
     const head = squash(SQL.slice(SQL.indexOf("create or replace function public.card_like_standing("), SQL.indexOf("$$", SQL.indexOf("card_like_standing("))));
     expect(head).not.toContain("security definer");
