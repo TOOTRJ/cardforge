@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cache, Suspense } from "react";
 import { ArrowRight, Flame, Sparkles, Users } from "lucide-react";
 import { MarketingHero } from "@/components/marketing/marketing-hero";
+import { CreateCtaLink } from "@/components/marketing/create-cta-link";
 import { listFeaturedHomeCards } from "@/lib/featured/queries";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
@@ -227,7 +228,7 @@ export default async function HomePage() {
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-3">
               <Button asChild size="lg">
-                <Link href="/create">Start your journey</Link>
+                <CreateCtaLink surface="home_final" />
               </Button>
               <Button asChild size="lg" variant="ghost">
                 <Link href="/gallery">Browse the gallery</Link>
@@ -402,8 +403,10 @@ function TrendingPulseFooter({ counts }: { counts: HomeCounts }) {
             </span>
             {counts.creators > 0 ? (
               <span className="inline-flex items-center gap-1.5">
+                {/* No "by": the cards count every public card (admins'
+                    too), the creators count never an admin. */}
                 <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
-                by <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
+                <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
                 {counts.creators === 1 ? "creator" : "creators"}
               </span>
             ) : null}
@@ -417,10 +420,9 @@ function TrendingPulseFooter({ counts }: { counts: HomeCounts }) {
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button asChild size="lg">
-          <Link href="/create">
-            Forge your own — free
+          <CreateCtaLink surface="home_pulse">
             <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+          </CreateCtaLink>
         </Button>
         <Button asChild size="lg" variant="ghost">
           <Link href="/gallery">See what&apos;s trending</Link>
