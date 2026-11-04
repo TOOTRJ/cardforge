@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { buildFunnel, groupSignupSources } from "@/lib/admin/funnel-queries";
+import { buildFunnel, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
 
 describe("buildFunnel", () => {
   it("chains rates inside the storefront, trial and out-of-credits sections and leaves counts elsewhere", () => {
@@ -77,5 +77,23 @@ describe("buildFunnel", () => {
   it("an empty window renders zeros with no rates (no division by zero)", () => {
     const w = buildFunnel({}, 7);
     expect(w.sections.flatMap((x) => x.steps).every((st) => st.n === 0 && st.rate === null)).toBe(true);
+  });
+});
+
+describe("groupSignupSurfaces", () => {
+  it("counts signups by the create button pressed last, none when there was no tracked button", () => {
+    expect(
+      groupSignupSurfaces([
+        { props: { surface: "home_hero", referrer: "reddit.com" } },
+        { props: { surface: "home_hero" } },
+        { props: { surface: "header" } },
+        { props: { utmSource: "discord" } },
+        { props: null },
+      ]),
+    ).toEqual([
+      { surface: "home_hero", n: 2 },
+      { surface: "none", n: 2 },
+      { surface: "header", n: 1 },
+    ]);
   });
 });

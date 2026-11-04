@@ -3,7 +3,7 @@ import "server-only";
 import { requireAdminClient } from "./users-queries";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { FunnelEvent } from "@/lib/analytics/funnel-events";
-import { attributionSource, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { attributionSource, attributionSurface, sanitizeAttribution } from "@/lib/analytics/attribution";
 import { SCREEN_WIDTH_BUCKETS, type ScreenWidthBucket } from "@/lib/analytics/screen-width";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,7 @@ export type FunnelStep = { key: FunnelEvent; label: string; n: number; users: nu
 export type FunnelSection = { title: string; steps: FunnelStep[] };
 export type FunnelWindow = { days: number; sections: FunnelSection[] };
 export type SignupSource = { source: string; n: number };
+export type SignupSurface = { surface: string; n: number };
 export type TrialEngagementRow = {
   userId: string;
   username: string | null;
@@ -35,6 +36,8 @@ export type FunnelSummary = {
   windows: FunnelWindow[];
   /** Signups by first-touch source, last 30 days. */
   signupSources: SignupSource[];
+  /** Signups by the create button pressed last ("none" = no tracked button). */
+  signupSurfaces: SignupSurface[];
   /** Trials started in the last 30 days and what they did in their 7 days. */
   trials: TrialEngagementRow[];
   /** Anonymous viewport-width buckets, last 30 days (TODO WD9); null when
@@ -106,18 +109,31 @@ export function buildFunnel(counts: FunnelCounts, days: number): FunnelWindow {
   return { days, sections };
 }
 
-/** Pure: group signup rows by first-touch source, biggest first. */
-export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): SignupSource[] {
+/** Pure: count signup rows by one attribution label, biggest first. */
+function groupSignupsBy(rows: Array<{ props: unknown }>, labelOf: (props: Record<string, unknown>) => string, limit: number) {
   const counts = new Map<string, number>();
   for (const row of rows) {
     const props = row.props && typeof row.props === "object" ? (row.props as Record<string, unknown>) : {};
-    const source = attributionSource(sanitizeAttribution(props));
-    counts.set(source, (counts.get(source) ?? 0) + 1);
+    const label = labelOf(props);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return [...counts.entries()]
-    .map(([source, n]) => ({ source, n }))
-    .sort((a, b) => b.n - a.n || a.source.localeCompare(b.source))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit);
+}
+
+/** Pure: group signup rows by first-touch source, biggest first. */
+export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): SignupSource[] {
+  return groupSignupsBy(rows, (props) => attributionSource(sanitizeAttribution(props)), limit).map(
+    ([source, n]) => ({ source, n }),
+  );
+}
+
+/** Pure: group signup rows by the create button pressed last, biggest first. */
+export function groupSignupSurfaces(rows: Array<{ props: unknown }>, limit = 8): SignupSurface[] {
+  return groupSignupsBy(rows, (props) => attributionSurface(sanitizeAttribution(props)), limit).map(
+    ([surface, n]) => ({ surface, n }),
+  );
 }
 
 /** Pure: every bucket in width order (empty ones too, so the table's shape
@@ -186,6 +202,7 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
   return {
     windows,
     signupSources: groupSignupSources((signups.data ?? []) as Array<{ props: unknown }>),
+    signupSurfaces: groupSignupSurfaces((signups.data ?? []) as Array<{ props: unknown }>),
     trials: (trials.data ?? []).map((row) => ({
       userId: row.user_id,
       username: row.username,

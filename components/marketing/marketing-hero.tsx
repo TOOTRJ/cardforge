@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { FileDown, Sparkles, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CreateCtaLink } from "@/components/marketing/create-cta-link";
 import { CompassStar } from "@/components/ui/compass-star";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { CardPreviewPlaceholder } from "@/components/cards/card-preview-placeholder";
@@ -86,7 +87,7 @@ export function MarketingHero({
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link href="/create">Start creating</Link>
+              <CreateCtaLink surface="home_hero" />
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href="/gallery">Explore the gallery</Link>

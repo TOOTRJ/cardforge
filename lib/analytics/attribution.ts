@@ -5,6 +5,9 @@
 // opens the site; the signup form posts them as hidden fields; the signup
 // action validates and records a `signup` funnel event. Nothing leaves the
 // browser until the user signs up, and the tab closing forgets it.
+// `surface` is the one LAST-touch field (owner 2026-11-04): the create
+// button the visitor pressed most recently before signing up
+// (`rememberSignupSurface`), so the funnel can say which button converts.
 // Client-safe; the server reuses the sanitizer.
 // ---------------------------------------------------------------------------
 
@@ -15,6 +18,8 @@ export type Attribution = {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  /** The create button pressed last before signing up (`CTA_SURFACES`). */
+  surface?: string;
 };
 
 /** Form field names the signup form posts (hidden inputs). */
@@ -23,6 +28,7 @@ export const ATTRIBUTION_FIELDS: Record<keyof Attribution, string> = {
   utmSource: "attr_utm_source",
   utmMedium: "attr_utm_medium",
   utmCampaign: "attr_utm_campaign",
+  surface: "attr_surface",
 };
 
 const MAX = 48;
@@ -34,7 +40,7 @@ function clean(value: unknown): string | undefined {
   return v && SAFE.test(v) ? v : undefined;
 }
 
-/** Keep only the four fields, lowercased, short, safe characters. */
+/** Keep only the five fields, lowercased, short, safe characters. */
 export function sanitizeAttribution(raw: Record<string, unknown> | null | undefined): Attribution {
   const out: Attribution = {};
   if (!raw) return out;
@@ -42,11 +48,40 @@ export function sanitizeAttribution(raw: Record<string, unknown> | null | undefi
   const utmSource = clean(raw.utmSource);
   const utmMedium = clean(raw.utmMedium);
   const utmCampaign = clean(raw.utmCampaign);
+  const surface = clean(raw.surface);
   if (referrer) out.referrer = referrer;
   if (utmSource) out.utmSource = utmSource;
   if (utmMedium) out.utmMedium = utmMedium;
   if (utmCampaign) out.utmCampaign = utmCampaign;
+  if (surface) out.surface = surface;
   return out;
+}
+
+/** The stored attribution with the button just pressed as its `surface` —
+ *  the first-touch fields kept as they were. Pure: the storage write is
+ *  `rememberSignupSurface`'s. */
+export function withSignupSurface(stored: Record<string, unknown> | null | undefined, surface: string): Attribution {
+  const next = sanitizeAttribution({ ...(stored ?? {}), surface });
+  if (!next.surface) delete next.surface;
+  return next;
+}
+
+/** Remember the create button a visitor pressed, for the signup that may
+ *  follow (sessionStorage, the same blob as the first touch; never a
+ *  cookie). Browser only; a storage failure loses the label, nothing else. */
+export function rememberSignupSurface(surface: string): void {
+  try {
+    const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+    const stored = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(withSignupSurface(stored, surface)));
+  } catch {
+    // Storage unavailable (private mode, blocked) — attribution is optional.
+  }
+}
+
+/** The button label the admin panel groups by. */
+export function attributionSurface(a: Attribution): string {
+  return a.surface ?? "none";
 }
 
 /** What a landing looks like: the referrer's host (external only) and the

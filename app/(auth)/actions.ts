@@ -216,7 +216,8 @@ export async function signupAction(
   }
 
   // Funnel: the signup with its first-touch attribution (hidden fields the
-  // form read from sessionStorage — referrer host + UTM, no cookie). Only
+  // form read from sessionStorage — referrer host + UTM, no cookie) and the
+  // create button pressed last before it (`surface`). Only
   // for a REAL new user: an already-registered address gets an obfuscated
   // user with no identities, and that must record nothing.
   const newUser = signUpData.user;
@@ -229,6 +230,7 @@ export async function signupAction(
         utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
         utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
         utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
+        surface: formData.get(ATTRIBUTION_FIELDS.surface),
       }),
     });
   }
