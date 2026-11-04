@@ -75,7 +75,8 @@ describe("POST /api/admin/storage-sweep", () => {
   it("purge-cards: the same purge as going private (purgeHiddenCards), each card once", async () => {
     const res = await post({ op: "purge-cards", cardIds: [CARD, CARD.toUpperCase()] });
     expect(await res.json()).toEqual({ ok: true, supabaseHost: "auth.pipglyph.com", vercel: true, purged: 1 });
-    expect(s.purge).toHaveBeenCalledWith([CARD]);
+    // Ids alone name no card page: purgeHiddenCards expires every one.
+    expect(s.purge).toHaveBeenCalledWith([{ id: CARD }]);
   });
 
   it("flagged-file: hands the file and the actions to the app's worker with the service-role client", async () => {

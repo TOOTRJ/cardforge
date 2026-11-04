@@ -53,6 +53,7 @@ import { CLEARED_RENDER_POINTERS, REBAKE_PENDING_RENDER, removeRenderObjects } f
 import {
   purgeHiddenCard,
   purgeHiddenCards,
+  revalidateCardPages,
   revalidateCardListSurfaces,
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
@@ -688,7 +689,9 @@ export async function createCardAction(
   }
 
   const ownerUsername = await getCurrentUsername();
-  revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
+  // The static card page waits for the bake (`cardPageAfterBake`): the call
+  // in after() below refreshes it in every outcome.
+  revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility, cardPageAfterBake: true });
   if (data.parent_card_id) {
     await revalidateParentCardPaths(data.parent_card_id);
   }
@@ -714,10 +717,10 @@ export async function createCardAction(
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility, afterBake: true });
     } catch (error) {
       console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
     }
+    revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility, afterBake: true });
   });
 
   if (options.redirectAfterCreate) {
@@ -1250,7 +1253,13 @@ export async function updateCardAction(
   }
 
   const ownerUsername = await getCurrentUsername();
-  revalidateCardPaths(row.slug, ownerUsername, { visibility: update.visibility ?? existing.visibility });
+  // The static card page waits for the bake (`cardPageAfterBake`): the call
+  // in after() below refreshes it in every outcome. A change of visibility
+  // purges it at once (purgeHiddenCard below).
+  revalidateCardPaths(row.slug, ownerUsername, {
+    visibility: update.visibility ?? existing.visibility,
+    cardPageAfterBake: true,
+  });
   // Also revalidate the previous slug if it changed — both the legacy
   // redirector and the canonical username-namespaced URL need busting so
   // the old URL stops resolving to stale data.
@@ -1281,19 +1290,21 @@ export async function updateCardAction(
   // of them — so `afterBake` adds the ISR'd list pages by their PAGE tag
   // (lib/cards/revalidate.ts), which is not skipped: a page built during
   // the bake swaps its live-preview tile for the thumb then, not at the end
-  // of its ISR window. Never rely on it for correctness.
+  // of its ISR window. The static card page was left out of the request's
+  // revalidation (`cardPageAfterBake`), so its path IS executed here — after
+  // the bake, failed or not. Never rely on it for correctness.
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, {
-        visibility: update.visibility ?? existing.visibility,
-        afterBake: true,
-      });
-      if (visibilityChanged) {
-        await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
-      }
     } catch (error) {
       console.error(`[update-card] deferred bake failed for ${row.id}:`, error);
+    }
+    revalidateCardPaths(row.slug, ownerUsername, {
+      visibility: update.visibility ?? existing.visibility,
+      afterBake: true,
+    });
+    if (visibilityChanged) {
+      await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
     }
   });
 
@@ -1587,12 +1598,18 @@ export async function updateCardsVisibilityAction(
     await removeRenderObjects(user.id, targetIds);
   }
 
-  // Revalidate the surfaces that show card lists. Per-card slug paths are
-  // skipped here — they'll refresh on next visit. Same posture as the
-  // single-card updateCardAction. Cards going private also lose their CDN
-  // share image right away.
-  if (goingPrivate) await purgeHiddenCards(targetIds);
-  else revalidateCardListSurfaces();
+  // Revalidate the surfaces that show card lists AND each card's static page
+  // (TODO CP2a: cached for a signed-out visitor — a card made private must
+  // leave it now, and a published one must not keep a cached 404). Cards
+  // going private also lose their CDN share image right away.
+  const ownerUsername = await getCurrentUsername();
+  const pages = targets.map((c) => ({ id: c.id, slug: c.slug, ownerUsername }));
+  if (goingPrivate) {
+    await purgeHiddenCards(pages);
+  } else {
+    revalidateCardListSurfaces();
+    revalidateCardPages(pages);
+  }
 
   if (!goingPrivate) {
     // A draft published from the library has no stored render (going private
@@ -1660,7 +1677,7 @@ export async function deleteCardsAction(
 
   const { data: existing, error: existingError } = await supabase
     .from("cards")
-    .select("id, owner_id")
+    .select("id, owner_id, slug")
     .in("id", ids);
   if (existingError) {
     return { ok: false, error: existingError.message };
@@ -1692,7 +1709,8 @@ export async function deleteCardsAction(
   // bucket (best-effort).
   await removeRenderObjects(user.id, ids);
 
-  await purgeHiddenCards(ids);
+  const ownerUsername = await getCurrentUsername();
+  await purgeHiddenCards(existing.map((c) => ({ id: c.id, slug: c.slug, ownerUsername })));
 
   return { ok: true, count: ids.length };
 }
