@@ -2155,6 +2155,27 @@ Rules and gotchas:
   thumb, never the HD PNG) and follows the focus at once but a pointer only
   once it RESTS (`HOVER_REST_MS`), holding while its menu is open — its
   buttons never act on a card the pointer only crossed.
+  Undo / redo and the change history (TODO DK5.13): the editor keeps ONE
+  stack (`lib/decks/undo-history.ts`) — every edit is recorded as its
+  REVERSE, and a reverse hands back its own reverse, which is the redo; the
+  toolbar's Undo · Redo (`deck-history-controls.tsx`), ⌘Z / ⇧⌘Z / Ctrl Y, a
+  removal's toast and the phone bar all run it. A new editor edit records
+  its reverse there, never a second stack. The SERVER's history is
+  `deck_entry_changes` (0165), written by ONE row trigger on `deck_cards`
+  (every write path, once; append-only for every API role; the owner reads
+  it through RLS) — never insert into it from code. The plan gate is
+  `historyAccessFor` on `getEntitlements` in `lib/decks/history-actions.ts`
+  (Pro full, Plus 30 days, free locked: session undo only); the weekly
+  prune cron calls `prune_deck_entry_changes` — an owner whose Pro ENDS
+  keeps the older rows 30 days more (owner 2026-11-02), from when Pro ended
+  as `deck_history_pro_ends` records it (a `profiles` trigger stamps the
+  write that ends it; a comp run out by the clock is its
+  `comp_expires_at`), never from "now"; a deck keeps at most its newest
+  `DECK_HISTORY_MAX_ROWS` (10,000). "Restore this version"
+  (`planRestore`) writes ONLY through the batch actions — removals, updates
+  and `restoreDeckEntriesAction` (D3 judged again) — never a direct insert,
+  after `claim_deck_restore` (the entry lock, the plan's head re-read, one
+  restore per deck at a time).
   The breakdown's charts (TODO DK7, free for everyone) are
   `computeDeckCharts` (`lib/decks/deck-charts.ts`, over `deckRowsOf`: the
   effective fields, the maybeboard never counted; its curve adds up to
@@ -2229,6 +2250,27 @@ Rules and gotchas:
   follow-up). The app shipped BEFORE 0151 (#679): `getDeckGuide` and
   `recordDeckView` fall back to main's calls on PGRST202 — remove both once
   0151 is on production and dev.
+  A deck is COPIED (TODO DK5.16, migration 0164) through ONE database call,
+  `clone_deck` (`cloneDeckAction`, `lib/decks/clone.ts`): a PRIVATE copy of
+  a deck the caller may open, never its description or cover, no card made;
+  each entry by the deck rules — a card that can't be linked loses its link,
+  an entry with no printing whose card can't come along (or is gone) is
+  SKIPPED, a kept printing the page masks for the caller (strong language)
+  is copied as "Private card" (`maskedCloneEntryIds`: SQL can't run the
+  detector) — ≤ 500 rows. "Copy deck" shows only when the copy would hold
+  an entry (`cloneableEntryCount`). Lineage is its own table,
+  `deck_remix_sources` (a deck id is its LINK: never a column on `decks`),
+  no API role's, read only through `deck_remix_credit` (the source named
+  while public or the viewer's own, else "another deck"); a copy of the
+  caller's OWN deck ("Duplicate") writes no lineage and no `deck_cloned`
+  (once per cloner and deck). "Similar decks" is `list_similar_decks`
+  (public decks only, real creators, the same commander or the same colours
+  and ≥ 4 shared cards that aren't STAPLES — in more than 10 % and 20 of the
+  public decks, `lib/decks/similar-decks.ts` — matched by what every visitor
+  reads), read cookie-free and cached an hour (`listSimilarDecks`). "Tokens &
+  emblems" (`lib/decks/deck-tokens*.ts`) is display only: Scryfall
+  `all_parts` through the shared client with a timeout, a success cached a
+  day and a failure minutes, logged as `deck_tokens` on a signed-in viewer.
 - A deck is started through ONE dialog (TODO DK4; the four-step wizard is
   gone): `NewDeckDialog` (`components/decks/new-deck-dialog.tsx`), opened
   from any page by `useNewDeck().openNewDeck({ format?, cardId? })` /

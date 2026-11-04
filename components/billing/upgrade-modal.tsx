@@ -40,6 +40,7 @@ export type UpgradeReason =
   | "deck_export"
   | "deck_guide"
   | "deck_activity"
+  | "deck_history"
   | "generic";
 
 const REASON_COPY: Record<UpgradeReason, { title: string; description: string }> =
@@ -106,6 +107,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       title: "See how your deck is doing",
       description:
         "Pro shows each of your decks' views and likes over the last 7, 30 or 90 days, against the period before — as charts and as a table.",
+    },
+    deck_history: {
+      title: "Every version of your deck",
+      description:
+        "Plus keeps the last 30 days of each deck's changes and Pro keeps them all — see what changed, when, and put the deck back the way it was in one click. If Pro ends, older history is kept 30 days. Undo and redo while you edit stay free.",
     },
     generic: {
       title: "Go premium",

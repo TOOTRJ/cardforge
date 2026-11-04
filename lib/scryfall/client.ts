@@ -85,12 +85,20 @@ async function scryfallFetch(
     /** Seconds Next's data cache may serve this answer for. Only the set
      *  lookup (getScryfallSet) passes one; every card call stays uncached. */
     revalidate?: number;
+    /** The whole call's budget, retries included (the throttle's wait
+     *  too): past it the request is aborted (a TimeoutError is thrown) and
+     *  no retry is waited for. Omitted = no limit, as before. */
+    timeoutMs?: number;
   },
 ): Promise<Response> {
+  const deadline = init?.timeoutMs ? Date.now() + init.timeoutMs : null;
+  const remaining = () => (deadline === null ? null : Math.max(1, deadline - Date.now()));
   for (let attempt = 0; ; attempt += 1) {
     await throttle(minGapFor(path));
+    const budget = remaining();
     const response = await fetch(`${BASE_URL}${path}`, {
       method: init?.method ?? "GET",
+      ...(budget !== null ? { signal: AbortSignal.timeout(budget) } : {}),
       body: init?.body,
       headers: {
         Accept: "application/json",
@@ -112,6 +120,8 @@ async function scryfallFetch(
         ? retryAfterSec * 1000
         : 500 * 2 ** attempt;
     if (waitMs > MAX_RETRY_WAIT_MS) return response;
+    const left = remaining();
+    if (left !== null && waitMs >= left) return response;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
 }
@@ -259,6 +269,20 @@ export const scryfallCardSchema = z
           // Reversible cards give each face its own layout.
           layout: z.string().optional().nullable(),
           image_uris: scryfallImageUrisSchema.optional().nullable(),
+        }),
+      )
+      .optional()
+      .nullable(),
+    // The card's related objects (TODO DK5.16: the deck page's tokens) —
+    // the tokens and emblems it makes, meld pieces, combo pieces and the
+    // card itself. Only the fields the deck's token list reads.
+    all_parts: z
+      .array(
+        z.object({
+          id: z.string(),
+          component: z.string().optional().nullable(),
+          name: z.string(),
+          type_line: z.string().optional().nullable(),
         }),
       )
       .optional()
@@ -593,14 +617,30 @@ export const SCRYFALL_COLLECTION_MAX = 75;
  */
 export async function getCardCollection(
   identifiers: ScryfallCollectionIdentifier[],
+  options?: {
+    /** The call's budget, retries included; past it the answer is null
+     *  (the deck page's tokens pass one — a page view never waits long). */
+    timeoutMs?: number;
+  },
 ): Promise<ScryfallCollectionResult | null> {
   if (identifiers.length === 0) return { cards: [], notFound: [] };
   if (identifiers.length > SCRYFALL_COLLECTION_MAX) return null;
 
-  const response = await scryfallFetch("/cards/collection", {
-    method: "POST",
-    body: JSON.stringify({ identifiers }),
-  });
+  let response: Response;
+  try {
+    response = await scryfallFetch("/cards/collection", {
+      method: "POST",
+      body: JSON.stringify({ identifiers }),
+      timeoutMs: options?.timeoutMs,
+    });
+  } catch (error) {
+    // Only a budget's abort is an answer ("no result"); anything else is
+    // thrown as it always was.
+    if (options?.timeoutMs && error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      return null;
+    }
+    throw error;
+  }
   if (!response.ok) return null;
   try {
     const body: unknown = await response.json();

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cronRouteGuard } from "@/lib/api/cron-auth";
 import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
+import { isBillingEnabled } from "@/lib/billing/flags";
+import { DECK_HISTORY_MAX_ROWS, DECK_HISTORY_PLUS_DAYS, DECK_HISTORY_PRO_GRACE_DAYS } from "@/lib/decks/deck-history";
 
 // ---------------------------------------------------------------------------
 // /api/cron/prune-funnel-events — weekly: drop funnel rows older than the
@@ -18,6 +20,15 @@ import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
 //
 // …and the AI receipts (migration 0162, lib/cards/ai-provenance-server.ts)
 // past 90 days: a creator's claim is checked against the last 30.
+//
+// …and the deck change history (migration 0165, TODO DK5.13): rows past
+// DECK_HISTORY_PLUS_DAYS of every deck whose owner isn't Pro (Pro keeps the
+// full history; an owner whose Pro ENDED keeps them DECK_HISTORY_PRO_GRACE_DAYS
+// more — owner 2026-11-02), every row of a deck that is gone, and every
+// deck's changes past its newest DECK_HISTORY_MAX_ROWS — by plan only while
+// billing is on (off, everyone is unlocked: only the orphans and the cap
+// go). The History view also never reads past the plan's window, so a row
+// a week from its prune is never shown.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -50,7 +61,19 @@ export async function GET(request: Request) {
   const receiptCutoff = new Date(Date.now() - AI_RECEIPT_RETENTION_DAYS * DAY_MS).toISOString();
   const receipts = await admin.from("card_ai_receipts").delete({ count: "exact" }).lt("created_at", receiptCutoff);
 
-  const failed = [error, views.error, salts.error, receipts.error].find(Boolean);
+  const history = await admin.rpc("prune_deck_entry_changes", {
+    p_keep_days: DECK_HISTORY_PLUS_DAYS,
+    p_by_plan: isBillingEnabled(),
+    p_grace_days: DECK_HISTORY_PRO_GRACE_DAYS,
+    p_max_rows: DECK_HISTORY_MAX_ROWS,
+  });
+
+  // A database 0165 has not reached yet (the app can deploy first): nothing
+  // to prune there, never a failed run.
+  const historyError =
+    history.error && !["PGRST202", "42883"].includes(history.error.code ?? "") ? history.error : null;
+
+  const failed = [error, views.error, salts.error, receipts.error, historyError].find(Boolean);
   if (failed) return NextResponse.json({ ok: false, error: failed.message }, { status: 500 });
   return NextResponse.json({
     ok: true,
@@ -59,5 +82,6 @@ export async function GET(request: Request) {
     deckViewsDeleted: views.count ?? 0,
     deckViewCutoff: viewCutoff,
     aiReceiptsDeleted: receipts.count ?? 0,
+    deckHistoryDeleted: history.data ?? 0,
   });
 }

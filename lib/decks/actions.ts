@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidateDeckPaths } from "@/lib/decks/revalidate";
+import { updateTag } from "next/cache";
+import { SIMILAR_DECKS_TAG } from "@/lib/decks/similar-decks";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -384,6 +386,11 @@ export async function updateDeckAction(
     // moved (revalidateDeckPaths announces it with the profile).
     revalidateDeckPaths(existing.slug, ownerUsername);
   }
+  // A public deck that leaves public view, or is renamed, drops out of (or
+  // changes on) other decks' cached "Similar decks" rows now, not in an hour.
+  if (existing.visibility === "public" && (update.visibility !== undefined && update.visibility !== "public" || existing.slug !== row.slug)) {
+    updateTag(SIMILAR_DECKS_TAG);
+  }
 
   return { ok: true, deckId: row.id, slug: row.slug };
 }
@@ -426,5 +433,6 @@ export async function deleteDeckAction(
 
   const ownerUsername = await getCurrentUsername();
   revalidateDeckPaths(existing.slug, ownerUsername);
+  if (existing.visibility === "public") updateTag(SIMILAR_DECKS_TAG);
   return { ok: true, deckId };
 }

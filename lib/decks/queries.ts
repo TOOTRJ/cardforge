@@ -1,5 +1,6 @@
 import { cache } from "react";
 import "server-only";
+import { unstable_cache } from "next/cache";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -27,6 +28,7 @@ import { IMPORT_FINGERPRINT_FIELDS } from "@/lib/cards/import-fingerprint";
 import { canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { featuredRankOf } from "@/lib/decks/featured";
 import { viaDeckLink } from "@/lib/decks/deck-link";
+import { SIMILAR_DECKS_CACHE_SECONDS, SIMILAR_DECKS_TAG } from "@/lib/decks/similar-decks";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { TRENDING_RANGES, type TrendingRange } from "@/lib/cards/trending";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
@@ -412,6 +414,45 @@ export async function listFeaturedDeckThemes(
   } catch {
     return [];
   }
+}
+
+/** "Similar decks" (TODO DK5.16) for a PUBLIC deck: real creators' public,
+ *  non-empty decks sharing its commander, or its colour identity and
+ *  SIMILAR_DECKS_MIN_SHARED cards that are not staples (migration 0164's
+ *  `list_similar_decks`, lib/decks/similar-decks.ts). Cookie-free — the
+ *  public client, no like read — so it adds nothing viewer-dependent to the
+ *  page, and the answer is held in Next's data cache for
+ *  SIMILAR_DECKS_CACHE_SECONDS per deck (tag SIMILAR_DECKS_TAG): the
+ *  function joins every public deck's entries, so one read an hour serves
+ *  every view. A failed read throws inside the cache (nothing is kept) and
+ *  lists none here; a deck that isn't public, an empty answer or a database
+ *  the function hasn't reached lists none (the row is hidden). */
+export async function listSimilarDecks(deckId: string, limit = DECK_ROW_MAX): Promise<PublicDeckListing[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    return await similarDecksCache()(deckId, limit);
+  } catch {
+    return [];
+  }
+}
+
+async function readSimilarDecks(deckId: string, limit: number): Promise<PublicDeckListing[]> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("list_similar_decks", { p_deck_id: deckId, p_limit: limit });
+  if (error) throw new Error(`list_similar_decks: ${error.message}`);
+  if (!Array.isArray(data) || data.length === 0) return [];
+  return await hydratePublicDecks(supabase, data, null);
+}
+
+// Built on first use: a test that mocks next/cache without unstable_cache
+// can still import this module.
+let similarDecksCached: typeof readSimilarDecks | null = null;
+function similarDecksCache(): typeof readSimilarDecks {
+  similarDecksCached ??= unstable_cache(readSimilarDecks, ["similar-decks-v1"], {
+    revalidate: SIMILAR_DECKS_CACHE_SECONDS,
+    tags: [SIMILAR_DECKS_TAG],
+  });
+  return similarDecksCached;
 }
 
 /** Public decks by one creator — the profile page's "Decks by X" section.
