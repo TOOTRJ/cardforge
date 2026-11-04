@@ -135,6 +135,8 @@ test("retired URLs 308 to living pages", async ({ request }) => {
     ["/set/anything-at-all", "/decks"],
     ["/set/anything/edit", "/decks"],
     ["/pricing-member", "/pricing"],
+    // The card page's signed-in twin (TODO CP2a) is reached by rewrite only.
+    ["/card-member/dev_pro/archivist-of-lost-hours", "/card/dev_pro/archivist-of-lost-hours"],
     // The guide tag hubs that became /learn categories (TODO NV4).
     ["/articles/tag/card-design", "/learn/design"],
     ["/articles/tag/reference", "/learn/reference"],

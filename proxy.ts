@@ -46,6 +46,14 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/pricing";
     return NextResponse.redirect(url, 308);
   }
+  // /card-member/<user>/<slug> is the internal, signed-in twin of the card
+  // page (see below); it is only ever reached by rewrite.
+  const cardMember = /^\/card-member\/([^/]+)\/([^/]+)\/?$/.exec(requestPath);
+  if (cardMember) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/card/${cardMember[1]}/${cardMember[2]}`;
+    return NextResponse.redirect(url, 308);
+  }
   // The sets feature was removed (PR #337, migration 0105) after months of
   // inbound links and indexed copy for /sets and /set/<slug>. Send that
   // equity to the nearest living collection surface instead of 404ing.
@@ -106,6 +114,27 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/pricing-member";
     const rewritten = NextResponse.rewrite(url, { request });
     // Preserve any auth cookies updateSession refreshed on this response.
+    for (const cookie of sessionResponse.cookies.getAll()) {
+      rewritten.cookies.set(cookie);
+    }
+    return rewritten;
+  }
+
+  // The card page (/card/<user>/<slug>) is static (ISR) for anonymous
+  // visitors (TODO CP2a); a visitor with a session cookie is rewritten to
+  // its dynamic twin, which renders their like, Follow, Edit and plan — and
+  // an owner's private card — into the HTML, as /pricing does. Never the
+  // card editor (/card/<slug>/edit, the (app) route the same shape names).
+  const cardPage = /^\/card\/([^/]+)\/([^/]+)\/?$/.exec(request.nextUrl.pathname);
+  if (
+    cardPage &&
+    cardPage[2] !== "edit" &&
+    request.cookies.getAll().some((c) => isSupabaseAuthCookieName(c.name)) &&
+    !sessionResponse.headers.has("location")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/card-member/${cardPage[1]}/${cardPage[2]}`;
+    const rewritten = NextResponse.rewrite(url, { request });
     for (const cookie of sessionResponse.cookies.getAll()) {
       rewritten.cookies.set(cookie);
     }
