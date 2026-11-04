@@ -178,3 +178,87 @@ describe("the page and the sitemap", () => {
     expect(sitemap).toContain("...(bake ? { images: [`${baseUrl}${bake}`] } : {}),");
   });
 });
+
+// ---------------------------------------------------------------------------
+// #739 review: the text block, the description and the JSON-LD agree with
+// the picture.
+// ---------------------------------------------------------------------------
+
+describe("a walker stored with its rows alone", () => {
+  const WALKER = {
+    ...CARD,
+    card_type: "planeswalker",
+    subtypes: ["Kesh"],
+    cost: "{3}{U}",
+    power: null,
+    toughness: null,
+    loyalty: "4",
+    rules_text: null,
+    flavor_text: null,
+    frame_style: { template: "m15pw" } as Record<string, unknown>,
+    face_content: { loyalty: { abilities: [{ cost: "+1", text: "Draw a card." }, { cost: "-3", text: "~ deals 3 damage to any target." }] } },
+  };
+
+  it("the description, the JSON-LD text and the text block all read the rows, ~ as the name", () => {
+    expect(cardMetaDescription(WALKER, "dev_pro")).toContain("+1: Draw a card.");
+    expect(cardMetaDescription(WALKER, "dev_pro")).toContain("Archivist of Lost Hours deals 3 damage");
+    const schema = buildCardJsonLd({ inDecks: [], card: WALKER, username: "dev_pro", ownerDisplay: "Dev Pro", siteBase: SITE });
+    expect(schema.text).toContain("+1: Draw a card.");
+    expect(renderToStaticMarkup(<CardDetails card={WALKER} />)).toContain("Draw a card.");
+  });
+});
+
+describe("a two-part card that is one picture", () => {
+  const SPLIT = {
+    ...CARD,
+    title: "Fire",
+    cost: "{1}{R}",
+    card_type: "instant",
+    subtypes: [],
+    power: null,
+    toughness: null,
+    rules_text: "Fire deals 2 damage divided as you choose among one or two targets.",
+    flavor_text: null,
+    frame_style: { template: "split" } as Record<string, unknown>,
+    back_face: { title: "Ice", cost: "{1}{U}", card_type: "instant", rules_text: "Tap target permanent.\nDraw a card." },
+  };
+
+  it("lists the second part as a block of its own, in its words, under the first", () => {
+    const html = renderToStaticMarkup(<CardDetails card={SPLIT} />);
+    const second = html.slice(html.indexOf('data-testid="card-second-part"'), html.indexOf('data-testid="card-facts"'));
+    expect(html).toContain('aria-label="Left half"');
+    expect(html).toMatch(/aria-label="Right half" data-testid="card-second-part"/);
+    expect(second).toContain(">Ice<");
+    expect(second).toContain("Tap target permanent.");
+    expect(second).toContain("Mana cost: 1 generic, blue");
+    expect(html.indexOf("Fire deals 2 damage")).toBeLessThan(html.indexOf('data-testid="card-second-part"'));
+  });
+
+  it("a one-part card has no second block, nor does a card whose frame draws none", () => {
+    expect(renderToStaticMarkup(<CardDetails card={CARD} />)).not.toContain("card-second-part");
+    const onM15 = { ...SPLIT, frame_style: { template: "m15" } };
+    expect(renderToStaticMarkup(<CardDetails card={onM15} />)).not.toContain("card-second-part");
+  });
+});
+
+describe("the page's counts, breadcrumb and phone bar", () => {
+  const source = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
+
+  it("counts every comment, not the first page", () => {
+    expect(source).toContain("comments.length < COMMENT_PAGE ? comments.length : ((await countCommentsForCard(card.id)) ?? comments.length)");
+    expect(source).toContain("engagement: { likes: likesCount, comments: commentCount }");
+    expect(source).toContain("comments={commentCount}");
+  });
+
+  it("names the type hub only for a public card (the hub's index threshold)", () => {
+    expect(source).toContain('card.visibility === "public" && TYPE_HUB_MIN_CARDS <= 1 && card.card_type && isHubType(card.card_type)');
+  });
+
+  it("keeps a focused control above the phone's pinned bar, and cues its sideways scroll", () => {
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    expect(source).toContain('data-card-action-bar=""');
+    expect(source).toContain('data-card-action-row=""');
+    expect(css).toMatch(/html:has\(\[data-card-action-bar\]\) \{\n\s+scroll-padding-bottom: calc\(4\.5rem \+ env\(safe-area-inset-bottom\)\);/);
+    expect(css).toContain("animation-timeline: scroll(self inline);");
+  });
+});

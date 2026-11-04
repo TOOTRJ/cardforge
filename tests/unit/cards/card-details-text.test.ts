@@ -10,6 +10,9 @@ describe("describeManaCost", () => {
     expect(describeManaCost("{2/G}{S}{X}")).toBe("2 generic or green, snow, X");
     expect(describeManaCost("{C}{C}")).toBe("2 colorless");
     expect(describeManaCost("{1}{1}{R}")).toBe("2 generic, red");
+    // A two-colour Phyrexian symbol is words too, never "W/U/P".
+    expect(describeManaCost("{W/U/P}{W/U/P}")).toBe("2 white or blue or 2 life");
+    expect(describeManaCost("{1}{G/U/P}")).toBe("1 generic, green or blue or 2 life");
   });
 
   it("returns an empty string for no cost and passes unknown symbols through", () => {

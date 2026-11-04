@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { tagSlug } from "@/lib/cards/tag-slug";
-import { isHubType } from "@/lib/cards/hubs";
+import { isHubType, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import {
   VISIBILITY_LABELS,
   CARD_TYPE_LABELS,
@@ -30,8 +30,9 @@ import type { PipOverrides } from "@/lib/pips/override";
 import { CardTextBlock, type CardTextFace } from "@/components/cards/card-text-block";
 import { ColorPips, pipColorOfIdentity, toPipColor, type PipColor } from "@/components/cards/color-pip";
 import { manaValueOfCost } from "@/lib/cards/mana-value";
-import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
-import { serializeStation } from "@/lib/cards/station";
+import { cardPageRulesText } from "@/lib/cards/page-rules-text";
+import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
+import { secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { frameAnchorId } from "@/lib/frames/frame-gallery";
 import { CardComments } from "@/components/cards/card-comments";
@@ -95,7 +96,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
-import { backRulesTextWithSelfName, storedRulesTextWithSelfName } from "@/lib/cards/self-name";
+import { backRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
@@ -103,7 +104,7 @@ import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize, RENDER_PRESETS } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
-import { listCommentsForCard } from "@/lib/cards/comments-queries";
+import { countCommentsForCard, listCommentsForCard } from "@/lib/cards/comments-queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -185,7 +186,7 @@ export async function CardDetailContent({
     card.source_scryfall_id
       ? countPublicRemixesBySource(card.source_scryfall_id, card.id)
       : Promise.resolve(0),
-    listCommentsForCard(card.id, { limit: 50 }),
+    listCommentsForCard(card.id, { limit: COMMENT_PAGE }),
     getEntitlements(),
     listMoreFromOwner(card.owner_id, card.id, ROW_MAX),
     listRelatedCards(
@@ -220,6 +221,10 @@ export async function CardDetailContent({
     listPublicDecksContaining(card.id),
     listPublicDeckTilesContaining(card.id),
   ]);
+  // The comments shown are the first COMMENT_PAGE; the count the stats and
+  // the structured data say is all of them.
+  const commentCount =
+    comments.length < COMMENT_PAGE ? comments.length : ((await countCommentsForCard(card.id)) ?? comments.length);
   const deckTileArt = await listDeckTileArt(deckTiles, { anonymous: true });
   // "Build a deck around this card" (TODO DK8.3): where the card may join
   // the viewer's new deck — a PUBLIC card (anyone's, D3), or their own.
@@ -256,7 +261,7 @@ export async function CardDetailContent({
           ownerDisplay:
             ownerProfile?.display_name || ownerProfile?.username || "Anonymous",
           siteBase,
-          engagement: { likes: likesCount, comments: comments.length },
+          engagement: { likes: likesCount, comments: commentCount },
           basedOn: remixParent ? `${siteBase}${remixParent.path}` : null,
         })
       : null;
@@ -281,7 +286,15 @@ export async function CardDetailContent({
   //   2xl     the same, spread over the wide frame (TODO WD10)
   // Each column item starts at the top of its rows; the hero spans a last
   // 1fr row, so its height never pushes the rows beside it apart.
-  const typeHub = card.card_type && isHubType(card.card_type) ? card.card_type : null;
+  // The breadcrumb names the card's type hub only where that hub is indexed:
+  // a PUBLIC card is one of the public cards it counts, and one is its whole
+  // threshold (TYPE_HUB_MIN_CARDS — raised, the crumb goes until it reads
+  // the hub's count). An unlisted or private card's page never points at a
+  // hub it may not be in.
+  const typeHub =
+    card.visibility === "public" && TYPE_HUB_MIN_CARDS <= 1 && card.card_type && isHubType(card.card_type)
+      ? card.card_type
+      : null;
   return (
     <PageContainer size="wide" className="py-6 sm:py-10">
       {/* One view ping when a visitor is shown a card they can open (TODO
@@ -396,8 +409,10 @@ export async function CardDetailContent({
             share and report. On a phone it is the bar pinned to the bottom
             of the screen (its buttons scroll sideways inside it, never the
             page). */}
-        <div className={cn("min-w-0", AREA.actions)} data-testid="card-actions">
-          <div className="flex items-center gap-2 max-md:overflow-x-auto max-md:pb-0.5 md:flex-wrap">
+        <div className={cn("min-w-0", AREA.actions)} data-testid="card-actions" data-card-action-bar="">
+          {/* The phone's row scrolls sideways; its right edge fades while
+              there is more to it (globals.css `[data-card-action-row]`). */}
+          <div className="flex items-center gap-2 max-md:overflow-x-auto max-md:pb-0.5 md:flex-wrap" data-card-action-row="">
             {/* Two groups that wrap as wholes: the card's own actions, then
                 the social ones. */}
             <div className="flex items-center gap-2 max-md:shrink-0 md:flex-wrap">
@@ -507,7 +522,7 @@ export async function CardDetailContent({
               likes={likesCount}
               remixes={remixCount}
               decks={deckCount}
-              comments={comments.length}
+              comments={commentCount}
               trendingSignals={trendingSignals}
               likeStanding={likeStanding}
             />
@@ -577,6 +592,9 @@ export async function CardDetailContent({
 }
 
 /** The breadcrumb's name for a type's hub page (/gallery/type/<type>). */
+/** The comments the page loads at once (the newest). */
+const COMMENT_PAGE = 50;
+
 const TYPE_HUB_CRUMBS: Record<CardType, string> = {
   creature: "Creatures",
   instant: "Instants",
@@ -1135,6 +1153,8 @@ export function buildCardJsonLd({
     rendered_at: string | null;
     flavor_text: string | null;
     rules_text: string | null;
+    /** A walker / saga / station stored with its rows alone: `text`. */
+    face_content?: unknown;
     artist_credit: string | null;
     card_type: string | null;
     supertype: string | null;
@@ -1171,8 +1191,8 @@ export function buildCardJsonLd({
   const description =
     // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
     stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
-    // CARDNAME / ~ as the name the card prints (TODO 6.2).
-    storedRulesTextWithSelfName(card)?.trim() ||
+    // Its text or its rows, CARDNAME / ~ as the name the card prints (TODO 6.2).
+    cardPageRulesText({ ...card, rules_text: card.rules_text ?? null })?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";
   const truncatedDescription =
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
@@ -1272,7 +1292,7 @@ export function buildCardJsonLd({
 
   // The card's rules as words (TODO CP2b) — CARDNAME / ~ as the name it
   // prints (TODO 6.2) — whatever the description led with.
-  const rulesText = storedRulesTextWithSelfName(card)?.trim();
+  const rulesText = cardPageRulesText({ ...card, rules_text: card.rules_text ?? null })?.trim();
   if (rulesText) schema.text = rulesText;
   const thumb =
     card.id && card.owner_id && isStoredRenderUrl(card.rendered_thumb_url, { ownerId: card.owner_id, cardId: card.id })
@@ -1408,17 +1428,6 @@ function faceStats(
   return null;
 }
 
-/** The rules a card's rows say when its `rules_text` is empty (a walker or
- *  saga stored with its rows alone): the rows as the plain text both
- *  renderers read back (lib/cards/face-content.ts). */
-function rulesTextOfRows(rulesText: string | null, faceContent: FaceContent | null): string | null {
-  if (rulesText?.trim()) return rulesText;
-  if (faceContent?.loyalty?.abilities?.length) return serializeLoyalty(faceContent.loyalty.abilities);
-  if (faceContent?.saga?.chapters?.length) return serializeSaga(faceContent.saga.intro, faceContent.saga.chapters);
-  if (faceContent?.station) return serializeStation(faceContent.station.intro, faceContent.station.tiers);
-  return rulesText;
-}
-
 /** The colour words of a stored colour list ("Blue, Red"), and its pips. */
 function colorWords(colors: readonly string[]): string {
   return colors.map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c).join(", ");
@@ -1480,7 +1489,6 @@ export function CardDetails({
 }) {
   const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
   const faceContent = (card.face_content ?? null) as FaceContent | null;
-  const rulesText = rulesTextOfRows(card.rules_text ?? null, faceContent);
   const front: CardTextFace = {
     name: card.title,
     cost: card.cost,
@@ -1492,8 +1500,9 @@ export function CardDetails({
     }),
     // An emblem has no rarity (CR 114): none for its stored "common".
     rarity: cardTypeHasRarity(card.card_type) && card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : null,
-    // CARDNAME / ~ as the name the title bar prints (TODO 6.2).
-    rulesText: storedRulesTextWithSelfName({ ...card, rules_text: rulesText }),
+    // Its text or its rows, CARDNAME / ~ as the name the title bar prints
+    // (TODO 6.2) — the meta description's and the JSON-LD's one answer.
+    rulesText: cardPageRulesText({ ...card, rules_text: card.rules_text ?? null }),
     flavorText: card.flavor_text ?? null,
     stats: faceStats(frontDrawsPowerToughness(frontTemplate, { rulesText: card.rules_text ?? null, faceContent }), card),
     artist: card.artist_credit?.trim() || null,
@@ -1574,14 +1583,59 @@ export function CardDetails({
       }
     : null;
 
+  // A two-part card that is ONE picture — split, aftermath, adventure, flip,
+  // Prepare (templatePaintsSecondFace): the second part the frame draws is a
+  // block of its own in its words ("Right half"), in step with the picture —
+  // its name, cost, type line and rules (with ~ as its own name); never a
+  // flavour or an artist (no second part prints one), its P/T only where the
+  // frame draws one (flip).
+  const second =
+    !back && templatePaintsSecondFace(frontTemplate ?? undefined)
+      ? ((card.back_face as CardBackFace | null) ?? null)
+      : null;
+  const partWords = second ? secondPartWordsOfCard(card.card_type as CardType | null, frontTemplate) : null;
+  const secondPart: CardTextFace | null =
+    second && partWords && (second.title?.trim() || second.cost?.trim() || second.rules_text?.trim())
+      ? {
+          name: second.title?.trim() || partWords.second,
+          cost: second.cost ?? null,
+          typeLine: buildTypeLine({
+            supertype: second.supertype,
+            cardType: second.card_type ?? null,
+            subtypes: second.subtypes ?? [],
+            printedTypes: second.printed_types,
+          }),
+          rarity: null,
+          rulesText: backRulesTextWithSelfName(second, card.frame_style as { selfName?: string } | null) ?? null,
+          flavorText: null,
+          stats: faceStats(getFrameProfile(template).secondFace?.pt != null, {
+            card_type: second.card_type ?? null,
+            supertype: second.supertype ?? null,
+            subtypes: second.subtypes ?? null,
+            power: second.power ?? null,
+            toughness: second.toughness ?? null,
+            loyalty: null,
+            defense: null,
+          }),
+          artist: null,
+        }
+      : null;
+
   return (
     <section aria-labelledby="card-details-heading" className="flex flex-col gap-3">
       <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
         Card details
       </h2>
-      <CardTextBlock face={front} pipOverrides={pipOverrides} label={back ? "Front face" : "Card text"} />
+      <CardTextBlock
+        face={front}
+        pipOverrides={pipOverrides}
+        label={back ? "Front face" : secondPart && partWords ? partWords.first : "Card text"}
+      />
       {backFace ? (
         <CardTextBlock face={backFace} pipOverrides={pipOverrides} label="Back face" testId="card-back-details" />
+      ) : null}
+      {secondPart && partWords ? (
+        <CardTextBlock face={secondPart} pipOverrides={pipOverrides} label={partWords.second} testId="card-second-part" />
       ) : null}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm" data-testid="card-facts">
         {rows.map(([label, value]) => (

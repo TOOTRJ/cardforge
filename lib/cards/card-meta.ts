@@ -1,7 +1,7 @@
 import { CARD_TYPE_LABELS, type CardType } from "@/types/card";
 import { buildTypeLine, describeManaCost } from "@/lib/cards/card-display";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
-import { storedRulesTextWithSelfName } from "@/lib/cards/self-name";
+import { cardPageRulesText } from "@/lib/cards/page-rules-text";
 
 // ---------------------------------------------------------------------------
 // The card page's <title> and meta description (TODO CP2b). A search result
@@ -58,6 +58,7 @@ export function cardMetaDescription(
     rules_text: string | null;
     flavor_text: string | null;
     frame_style?: unknown;
+    face_content?: unknown;
   },
   username: string,
 ): string {
@@ -70,9 +71,10 @@ export function cardMetaDescription(
   const cost = card.cost?.trim() ? describeManaCost(card.cost) : "";
   const head = [typeLine, cost].filter(Boolean).join(", ");
   const flat = (text: string | null | undefined) => (text ?? "").replace(/\s*\n+\s*/g, " ").trim();
-  // CARDNAME / ~ as the name the card prints (TODO 6.2); the flavour's
-  // upright `*…*` spans as plain words (layout v71).
-  const rules = flat(storedRulesTextWithSelfName(card));
+  // Its text or its rows (lib/cards/page-rules-text.ts), CARDNAME / ~ as the
+  // name the card prints (TODO 6.2); the flavour's upright `*…*` spans as
+  // plain words (layout v71).
+  const rules = flat(cardPageRulesText(card));
   const flavor = flat(stripFlavorMarkup(card.flavor_text ?? ""));
   const body = [head ? `${head}.` : "", rules, flavor]
     .filter(Boolean)
