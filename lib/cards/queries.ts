@@ -957,9 +957,12 @@ export async function getCardLikeRankOverall(
 
 
 /**
- * This card's 7-day trending signals (excluding the owner's own engagement),
- * for the velocity badge. Mirrors the gallery's 7-day counts (migration 0166's list_trending_cards) but
- * scoped to a single card so it's cheap on the detail page.
+ * This card's 7-day engagement (excluding the owner's own), for the card
+ * page's velocity badge. NOT the gallery's score (0166's
+ * list_trending_cards): this counts every comment message (not one per
+ * commenter) and every remix the viewer can read, with no decay — raw
+ * activity, three head counts on one card. Bringing it onto the gallery's
+ * rules is TODO DK8.7's follow-up (a distinct count needs an RPC).
  */
 export async function getCardTrendingSignals(
   cardId: string,

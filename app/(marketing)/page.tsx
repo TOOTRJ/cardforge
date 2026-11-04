@@ -360,14 +360,14 @@ async function HomeTrending() {
   ]);
   const range = HOME_TRENDING_RANGES.find((r) => byRange[r].length > 0);
   if (!range) return <PlaceholderGallery />;
-  const period = TRENDING_RANGE_WORDS[range].period;
+  const words = TRENDING_RANGE_WORDS[range];
   return (
     <TrendingCardsSection
       cards={byRange[range]}
       isAuthed={false}
       eyebrow="Trending now"
-      heading={`What the community is forging ${period}`}
-      description={`Real cards from real creators — ranked by ${range === "all" ? "their" : `${period}'s`} likes, comments and remixes. Tap one to see it up close.`}
+      heading={words.homeHeading}
+      description={`Real cards from real creators — ${words.rankedBy}. Tap one to see it up close.`}
       variant="hero"
       action={VIEW_GALLERY_LINK}
       footer={<TrendingPulseFooter pulse={pulse} />}

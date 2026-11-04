@@ -110,11 +110,13 @@ function CompactHubGroup({
 }) {
   return (
     <div className="flex min-w-0 items-start gap-2">
-      <span className="w-20 shrink-0 pt-2 font-mono text-[10px] uppercase tracking-wider text-subtle lg:w-auto">{label}</span>
+      {/* The visible label is decoration; the list carries the name. */}
+      <span aria-hidden="true" className="w-20 shrink-0 pt-2 font-mono text-[10px] uppercase tracking-wider text-subtle lg:w-auto">{label}</span>
       {/* Below lg: one line that scrolls in its own box (a fade on the end,
           padding so the last chip and every focus ring clear it). From lg:
           wraps. */}
       <ul
+        aria-label={label}
         className={cn(
           "flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-0.5 py-0.5 pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           "[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]",

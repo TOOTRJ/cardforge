@@ -23,7 +23,6 @@ import {
 export function TrendingRangeSwitch({
   headingId,
   eyebrow,
-  description,
   panels,
   defaultRange,
 }: {
@@ -32,7 +31,6 @@ export function TrendingRangeSwitch({
   /** The section's eyebrow, rendered by the server (its classes live with
    *  the hero surface's). */
   eyebrow: ReactNode;
-  description?: string;
   panels: Record<TrendingRange, ReactNode>;
   defaultRange: TrendingRange;
 }) {
@@ -53,7 +51,8 @@ export function TrendingRangeSwitch({
           >
             {TRENDING_RANGE_WORDS[range].heading}
           </h2>
-          {description ? <p className="max-w-2xl text-sm text-muted">{description}</p> : null}
+          {/* Follows the tab: All time has no decay. */}
+          <p className="max-w-2xl text-sm text-muted">{TRENDING_RANGE_WORDS[range].description}</p>
         </div>
         <TabsList ariaLabel="Trending period" className="shrink-0 self-start md:self-auto">
           {TRENDING_RANGES.map((value) => (

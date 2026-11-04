@@ -302,7 +302,7 @@ export function GalleryLanding() {
             Explore the gallery
           </h2>
           <p className="max-w-2xl text-sm leading-6 text-muted">
-            A fresh shuffle on every visit — cards the community views, likes, shares and remixes most turn up more often, but every card gets its turn.
+            A fresh shuffle every few minutes — cards the community views, likes, shares and remixes most turn up more often, but every card gets its turn.
           </p>
         </div>
       ) : null}
@@ -439,7 +439,6 @@ async function GalleryTrending() {
             Trending now
           </span>
         }
-        description="Ranked by likes, comments and remixes from the community — the most recent count most."
         panels={panels}
       />
     </section>
