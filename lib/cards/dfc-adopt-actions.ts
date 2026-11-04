@@ -148,16 +148,17 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   if (error || !row) return { ok: false, formError: error?.message ?? "Could not move the card." };
 
   const ownerUsername = await getCurrentUsername();
-  revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility });
+  revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility, cardPageAfterBake: true });
   // Both faces re-bake after the response through the one bake entry (5.3:
-  // the back is baked wherever the row has a back body).
+  // the back is baked wherever the row has a back body); the static card
+  // page is refreshed after it, in every outcome.
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility, afterBake: true });
     } catch (bakeError) {
       console.error(`[adopt-dfc] deferred bake failed for ${row.id}:`, bakeError);
     }
+    revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility, afterBake: true });
   });
 
   return { ok: true, cardId: row.id, slug: row.slug, frontBody: plan.frontBody, backBody };

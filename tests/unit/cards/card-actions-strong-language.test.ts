@@ -61,6 +61,7 @@ vi.mock("@/lib/cards/revalidate", () => ({
   purgeHiddenCard: vi.fn(),
   purgeHiddenCards: vi.fn(),
   revalidateCardListSurfaces: vi.fn(),
+  revalidateCardPages: vi.fn(),
   revalidateCardPaths: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));

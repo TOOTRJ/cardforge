@@ -27,6 +27,7 @@ const s = vi.hoisted(() => ({
   cardsError: null as null | { message: string },
   cardPages: [] as Array<[number, number]>,
   purged: [] as string[][],
+  purgedPages: [] as string[],
   afterTasks: [] as Array<() => unknown>,
   seq: [] as string[],
 }));
@@ -49,7 +50,7 @@ vi.mock("@/lib/supabase/admin", () => ({
                     s.seq.push("read:cards");
                     if (s.cardsError) return { data: null, error: s.cardsError };
                     // A server cap of 2 rows: the list must still be complete.
-                    return { data: s.cardIds.slice(from, Math.min(to + 1, from + 2)).map((id) => ({ id })), error: null };
+                    return { data: s.cardIds.slice(from, Math.min(to + 1, from + 2)).map((id) => ({ id, slug: `${id}-slug` })), error: null };
                   },
                 }),
               }),
@@ -89,11 +90,14 @@ vi.mock("@/lib/billing/entitlements", () => ({ getEntitlements: vi.fn() }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
 vi.mock("next/server", () => ({ after: (task: () => unknown) => void s.afterTasks.push(task) }));
 vi.mock("@/lib/cards/revalidate", () => ({
-  purgeHiddenCards: async (ids: string[]) => {
-    s.purged.push(ids);
+  purgeHiddenCards: async (cards: Array<{ id: string; slug?: string | null; ownerUsername?: string | null }>) => {
+    s.purged.push(cards.map((card) => card.id));
+    s.purgedPages.push(...cards.map((card) => `/card/${card.ownerUsername}/${card.slug}`));
     s.seq.push("purge");
   },
 }));
+// The handle, read before the account goes, names each card's static page.
+vi.mock("@/lib/profile/username", () => ({ lookupUsername: async () => "gone_user" }));
 
 import { deleteAccountAction } from "@/lib/account/actions";
 
@@ -118,6 +122,7 @@ beforeEach(() => {
   s.cardsError = null;
   s.cardPages = [];
   s.purged = [];
+  s.purgedPages = [];
   s.afterTasks = [];
   s.seq = [];
 });
@@ -189,6 +194,8 @@ describe("deleteAccountAction", () => {
     expect(s.purged).toEqual([]);
     await runAfterTasks();
     expect(s.purged).toEqual([["c1", "c2", "c3", "c4", "c5"]]);
+    // Each card's static page (TODO CP2a) by its path under the owner's handle.
+    expect(s.purgedPages).toEqual(["c1", "c2", "c3", "c4", "c5"].map((id) => `/card/gone_user/${id}-slug`));
     // Paged until an empty page, never trusting a short page to be the last.
     expect(s.cardPages.map(([from]) => from)).toEqual([0, 2, 4, 5]);
     expect(s.seq.at(-1)).toBe("purge");

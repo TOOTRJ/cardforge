@@ -55,9 +55,12 @@ export const BAKED_TILE_PAGE_ROUTES = [
  * (lib/cards/bake-core.ts REBAKE_PENDING_RENDER) — are rebuilt with the
  * thumb as soon as it exists, not at the end of their ISR window (measured
  * on a production build, 2026-10-09: /gallery showed the new thumb 4.9 s
- * after the save instead of 5 min). Only the ISR'd pages need it; the card
- * page, profiles and the dashboard render per request. Best effort:
- * correctness never depends on it (the live preview IS the saved card).
+ * after the save instead of 5 min). Only the ISR'd LIST pages; profiles and
+ * the dashboard render per request. The static card page is NOT one of them
+ * — by route it would expire every card's page on every save — it gets its
+ * own path once the bake is done (revalidateCardPaths `cardPageAfterBake`).
+ * Best effort: correctness never depends on it (the live preview IS the
+ * saved card).
  */
 function revalidateBakedTilePages() {
   for (const route of BAKED_TILE_PAGE_ROUTES) revalidatePath(route, "page");
@@ -78,6 +81,41 @@ export function revalidateCardListSurfaces(options: { afterBake?: boolean } = {}
   if (options.afterBake) revalidateBakedTilePages();
 }
 
+/**
+ * The card page's route as its file is named (TODO CP2a: `force-static` +
+ * ISR for a signed-out visitor). `revalidatePath(CARD_PAGE_ROUTE, "page")`
+ * expires EVERY card's page — for a change that can't name the pages it
+ * touches (a renamed handle, a card whose slug or owner is unknown). A card
+ * that can be named is revalidated by its own path (revalidateCardPages).
+ */
+export const CARD_PAGE_ROUTE = "/(marketing)/card/[username]/[slug]";
+
+/** A card whose static page a change must refresh: its id, and its slug and
+ *  owner's handle where known. */
+export type CardPageRef = { id: string; slug?: string | null; ownerUsername?: string | null };
+
+/** Expire every card's static page (a renamed handle: its cards' pages under
+ *  the old one must 404 now, not at the end of their ISR window). */
+export function revalidateEveryCardPage() {
+  revalidatePath(CARD_PAGE_ROUTE, "page");
+}
+
+/**
+ * Refresh the static page of each card — its canonical path and the legacy
+ * slug-only redirector. A card whose page can't be named (no slug, or no
+ * owner handle — a sweep that holds ids alone) expires every card page once
+ * instead: never a public page left up after its card went out of view.
+ */
+export function revalidateCardPages(cards: readonly CardPageRef[]) {
+  let unnamed = false;
+  for (const card of cards) {
+    if (card.slug) revalidatePath(`/card/${card.slug}`);
+    if (card.slug && card.ownerUsername) revalidatePath(`/card/${card.ownerUsername}/${card.slug}`);
+    else unnamed = true;
+  }
+  if (unnamed) revalidateEveryCardPage();
+}
+
 export function revalidateCardPaths(
   slug: string,
   ownerUsername?: string | null,
@@ -91,6 +129,14 @@ export function revalidateCardPaths(
      *  also rebuild the ISR'd list pages by their PAGE tag (the plain paths
      *  are skipped there — revalidateBakedTilePages). */
     afterBake?: boolean;
+    /** A save that bakes after the response: leave the static card page to
+     *  the call after the bake (`afterBake`). Next drops, in an after()
+     *  callback, a path the request already revalidated — so a page
+     *  revalidated now would be rebuilt with the live preview during the bake
+     *  and keep it for its whole ISR window. Left alone, a signed-out visitor
+     *  sees the card as it was for the seconds the bake takes, then the baked
+     *  card. The caller's after() must call again in every outcome. */
+    cardPageAfterBake?: boolean;
   } = {},
 ) {
   revalidateCardListSurfaces({ afterBake: options.afterBake });
@@ -100,7 +146,7 @@ export function revalidateCardPaths(
   if (ownerUsername) {
     revalidatePath(`/profile/${ownerUsername}`);
     // Canonical public detail URL (Phase 11 chunk 11).
-    revalidatePath(`/card/${ownerUsername}/${slug}`);
+    if (!options.cardPageAfterBake) revalidatePath(`/card/${ownerUsername}/${slug}`);
     if (options.visibility !== "private") {
       // Off the request path — IndexNow is best-effort and never delays a save.
       after(() =>
@@ -125,9 +171,13 @@ export async function purgeHiddenCard(
   await purgeCardCdnCache([card.id]);
 }
 
-/** Bulk form of purgeHiddenCard for the multi-select actions. */
-export async function purgeHiddenCards(cardIds: readonly string[]): Promise<void> {
+/** Bulk form of purgeHiddenCard for the multi-select actions, account
+ *  deletion and the storage sweep — each card's static page included
+ *  (revalidateCardPages: by its path where the ref names it). */
+export async function purgeHiddenCards(cards: readonly CardPageRef[]): Promise<void> {
   revalidateCardListSurfaces();
-  for (const id of cardIds) revalidatePath(`/api/cards/${id}/og`);
-  await purgeCardCdnCache(cardIds);
+  revalidateCardPages(cards);
+  const ids = cards.map((card) => card.id);
+  for (const id of ids) revalidatePath(`/api/cards/${id}/og`);
+  await purgeCardCdnCache(ids);
 }
