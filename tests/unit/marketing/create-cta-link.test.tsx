@@ -6,8 +6,9 @@ import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
 // The home page's ONE create button (owner 2026-11-04): the same words on
-// every home-page button that starts a card, each click a cta_click with its
-// surface, remembered for the signup that may follow.
+// every home-page button that starts a card, each click a create_cta_click
+// with its surface (never cta_click: that is the Storefront chain's), and a
+// visitor's remembered for the signup that may follow.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({ track: vi.fn(), remember: vi.fn() }));
@@ -35,8 +36,20 @@ describe("CreateCtaLink", () => {
     expect(link.getAttribute("href")).toBe("/create");
     expect(link.className).toBe("btn");
     fireEvent.click(link);
-    expect(s.track).toHaveBeenCalledWith("cta_click", { surface: "home_pulse", kind: "create", signedIn: false });
+    expect(s.track).toHaveBeenCalledWith("create_cta_click", { surface: "home_pulse", signedIn: false });
     expect(s.remember).toHaveBeenCalledWith("home_pulse");
+  });
+
+  it("remembers nothing for a signed-in member (no signup can follow), as the header", () => {
+    document.cookie = "sb-dev-auth-token=1; path=/";
+    try {
+      render(<CreateCtaLink surface="home_hero" />);
+      fireEvent.click(screen.getByRole("link", { name: CREATE_CTA_LABEL }));
+      expect(s.track).toHaveBeenCalledWith("create_cta_click", { surface: "home_hero", signedIn: true });
+      expect(s.remember).not.toHaveBeenCalled();
+    } finally {
+      document.cookie = "sb-dev-auth-token=; path=/; max-age=0";
+    }
   });
 
   it("is the home page's only way to start a card: no other words, no bare /create link", () => {

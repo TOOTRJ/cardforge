@@ -97,3 +97,26 @@ describe("groupSignupSurfaces", () => {
     ]);
   });
 });
+
+describe("the Storefront chain is billing moments alone (TODO HM2)", () => {
+  it("is exactly pricing view → CTA → checkout, and a home create click is counted apart", () => {
+    const w = buildFunnel({ cta_click: { n: 4, users: 4 }, create_cta_click: { n: 90, users: 60 } }, 7);
+    expect(w.sections.find((x) => x.title === "Storefront")!.steps.map((st) => st.key)).toEqual([
+      "pricing_view",
+      "cta_click",
+      "checkout_started",
+      "checkout_completed",
+    ]);
+    const home = w.sections.find((x) => x.title === "Home create buttons")!;
+    expect(home.steps).toEqual([expect.objectContaining({ key: "create_cta_click", n: 90, rate: null })]);
+  });
+
+  it("cta_click is sent only by the billing components (admin_funnel_counts groups by event alone)", async () => {
+    const { execSync } = await import("node:child_process");
+    const files = execSync(`grep -rl '"cta_click"' app components lib || true`, { encoding: "utf8" })
+      .split("\n")
+      .filter(Boolean)
+      .filter((f) => !f.startsWith("lib/analytics/") && !f.startsWith("lib/admin/") && f !== "app/api/events/route.ts");
+    for (const file of files) expect(file).toMatch(/^components\/billing\//);
+  });
+});

@@ -76,6 +76,7 @@ const LABEL: Record<FunnelEvent, string> = {
   deck_created: "Decks created",
   deck_card_customized: "Deck cards customized",
   deck_export_clicked: "Deck export clicks",
+  create_cta_click: "Home create-button clicks",
 };
 
 /** Each section is a chain: a step's rate is its count over the previous
@@ -89,9 +90,12 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Leaks", chain: ["checkout_expired", "trial_lapsed", "payment_failed"] },
   // Counts only: the deck plan's upgrade moments (TODO DK3.8).
   { title: "Decks", chain: ["deck_created", "deck_card_customized", "deck_export_clicked"] },
+  // Counts only: the home page's create buttons (TODO HM2) — never in the
+  // Storefront chain, whose steps are billing moments alone.
+  { title: "Home create buttons", chain: ["create_cta_click"] },
 ];
 
-/** Rates are chained inside a section except in the last three, which are
+/** Rates are chained inside the four sections named here; the rest are
  *  counts only. */
 const RATE_SECTIONS = new Set(["Activation", "Storefront", "Trials", "Out of credits"]);
 

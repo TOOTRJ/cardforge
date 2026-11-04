@@ -87,7 +87,7 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
           </div>
           <div>
             <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">
-              Signups by create button · 30d
+              Signups by last create button pressed · 30d
             </h3>
             {summary.signupSurfaces.length === 0 ? (
               <p className="text-sm text-muted">No signups recorded yet.</p>

@@ -7,9 +7,10 @@ import { CREATE_CTA_LABEL, type CtaSurface } from "@/lib/marketing/create-cta";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 
 /** A home-page "Make a card — free" link to /create. The page is static;
- *  this island reads nothing until the click, which records a cta_click
- *  with its surface and remembers the surface for the signup that may
- *  follow. `className` comes from `<Button asChild>`. */
+ *  this island reads nothing until the click, which records a
+ *  create_cta_click with its surface and, for a signed-out visitor,
+ *  remembers the surface for the signup that may follow. `className` comes
+ *  from `<Button asChild>`. */
 export function CreateCtaLink({
   surface,
   className,
@@ -25,8 +26,10 @@ export function CreateCtaLink({
       href="/create"
       className={className}
       onClick={() => {
-        trackFunnelEvent("cta_click", { surface, kind: "create", signedIn: hasSupabaseSessionCookie() });
-        rememberSignupSurface(surface);
+        const signedIn = hasSupabaseSessionCookie();
+        trackFunnelEvent("create_cta_click", { surface, signedIn });
+        // Only a visitor can sign up next — as the header's button.
+        if (!signedIn) rememberSignupSurface(surface);
       }}
     >
       {CREATE_CTA_LABEL}

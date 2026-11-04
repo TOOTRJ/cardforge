@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // The home page's ONE create button (owner 2026-11-04, after the home
 // conversion review): the same words on every button that starts a card,
-// and a name for each place it sits — the `surface` its cta_click carries
+// and a name for each place it sits — the `surface` its create_cta_click carries
 // and the signup that may follow remembers (lib/analytics/attribution.ts).
 // Plain module: a "use client" file's exported strings reach a server
 // component as references, not text.

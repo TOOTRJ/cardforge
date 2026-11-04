@@ -403,8 +403,10 @@ function TrendingPulseFooter({ counts }: { counts: HomeCounts }) {
             </span>
             {counts.creators > 0 ? (
               <span className="inline-flex items-center gap-1.5">
+                {/* No "by": the cards count every public card (admins'
+                    too), the creators count never an admin. */}
                 <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
-                by <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
+                <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
                 {counts.creators === 1 ? "creator" : "creators"}
               </span>
             ) : null}
