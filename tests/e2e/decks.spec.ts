@@ -25,8 +25,9 @@ test.describe("public decks browse", () => {
     // chips when there are public decks). The filter chips live on the
     // dynamic /decks/browse route, where a click actually re-queries.
     await page.goto("/decks");
+    // Exact: Discover's h2 "Explore community decks" also says it.
     await expect(
-      page.getByRole("heading", { name: /community decks/i }),
+      page.getByRole("heading", { level: 1, name: "Community decks", exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("searchbox", { name: "Search decks" })).toBeVisible();
     await page.getByRole("link", { name: /browse all decks/i }).click();

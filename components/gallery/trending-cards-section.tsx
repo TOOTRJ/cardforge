@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { buildCardPath, buildCardUrl } from "@/lib/cards/utils";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import type { CardWithStats } from "@/lib/cards/queries";
+import { TRENDING_RANGE_WORDS } from "@/lib/cards/trending";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 
 // ---------------------------------------------------------------------------
@@ -80,9 +81,6 @@ export function TrendingCardsSection({
 }: TrendingCardsSectionProps) {
   if (cards.length === 0) return null;
 
-  // Resolved once for the section so per-tile renders don't each pay the
-  // env-var lookup; falls back to localhost during local dev.
-  const siteBase = getSiteBaseUrl();
   const hero = variant === "hero";
 
   return (
@@ -114,40 +112,72 @@ export function TrendingCardsSection({
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      {/* ONE row, always: the grid's column count follows the row's own
-          width (its query container) and tiles past the last column are
-          hidden, never wrapped. */}
-      <div className="@container">
-        <div className={ROW_GRID_CLASS}>
-          {cards.map((card, index) => (
-            <TrendingTile
-              key={card.id}
-              card={card}
-              rank={hero ? index + 1 : null}
-              priority={priority}
-              siteBase={siteBase}
-              isAuthed={isAuthed}
-              className={rowTileClass(index)}
-              action={cardAction?.(card)}
-              sizes={sizes}
-            />
-          ))}
-        </div>
-      </div>
+      <TrendingCardsRow
+        cards={cards}
+        isAuthed={isAuthed}
+        ranked={hero}
+        priority={priority}
+        cardAction={cardAction}
+        sizes={sizes}
+      />
       {footer ? <div className="mt-6 border-t border-border/40 pt-5">{footer}</div> : null}
     </section>
   );
 }
 
+/** The row of tiles alone — ONE row, always: the grid's column count
+ *  follows the row's own width (its query container) and tiles past the last
+ *  column are hidden, never wrapped. Shared by the section above and the
+ *  gallery's range switch (`TrendingRangeSection`), which renders one per
+ *  range on the server and shows the picked one. */
+export function TrendingCardsRow({
+  cards,
+  isAuthed,
+  ranked = true,
+  priority = false,
+  cardAction,
+  sizes,
+}: {
+  cards: CardWithStats[];
+  isAuthed: boolean;
+  /** Rank badges + the range's stats on every tile (the hero look). */
+  ranked?: boolean;
+  priority?: boolean;
+  cardAction?: (card: CardWithStats) => React.ReactNode;
+  sizes?: string;
+}) {
+  // Resolved once for the row so per-tile renders don't each pay the
+  // env-var lookup; falls back to localhost during local dev.
+  const siteBase = getSiteBaseUrl();
+  return (
+    <div className="@container">
+      <div className={ROW_GRID_CLASS}>
+        {cards.map((card, index) => (
+          <TrendingTile
+            key={card.id}
+            card={card}
+            rank={ranked ? index + 1 : null}
+            priority={priority}
+            siteBase={siteBase}
+            isAuthed={isAuthed}
+            className={rowTileClass(index)}
+            action={cardAction?.(card)}
+            sizes={sizes}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TrendingStats({ stats }: { stats: NonNullable<CardWithStats["trending"]> }) {
+  const period = TRENDING_RANGE_WORDS[stats.range].period;
   const bits: Array<{ icon: typeof Heart; value: number; label: string }> = [
-    { icon: Heart, value: stats.likes7d, label: "likes this week" },
-    { icon: MessageCircle, value: stats.comments7d, label: "comments this week" },
-    { icon: Repeat2, value: stats.remixes7d, label: "remixes this week" },
+    { icon: Heart, value: stats.likes, label: `likes ${period}` },
+    { icon: MessageCircle, value: stats.comments, label: `people commenting ${period}` },
+    { icon: Repeat2, value: stats.remixes, label: `remixes ${period}` },
   ].filter((b) => b.value > 0);
-  if (bits.length === 0) {
-    return <span className="text-[11px] text-subtle">New this week</span>;
-  }
+  if (bits.length === 0) return null;
   return (
     <span className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
       {bits.map((b) => (
@@ -157,7 +187,7 @@ function TrendingStats({ stats }: { stats: NonNullable<CardWithStats["trending"]
           <span className="sr-only">{b.label}</span>
         </span>
       ))}
-      <span className="text-subtle">this week</span>
+      <span className="text-subtle">{period}</span>
     </span>
   );
 }

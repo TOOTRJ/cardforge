@@ -15,6 +15,9 @@ import { lookupUsername, type ProfileClient } from "@/lib/profile/username";
 export function revalidateDeckPaths(slug: string, ownerUsername?: string | null) {
   revalidatePath("/dashboard/decks");
   revalidatePath("/decks"); // public browse (live from PR 2 of the decks series)
+  // The home page draws "Featured themed decks" (0167): a featured deck made
+  // private, unlisted or deleted must leave it now, not at the next ISR bake.
+  revalidatePath("/");
   revalidatePath("/dashboard");
   revalidatePath(`/deck/${slug}`);
   revalidatePath(`/deck/${slug}/edit`);

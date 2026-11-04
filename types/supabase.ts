@@ -1954,6 +1954,74 @@ export type Database = {
           },
         ];
       };
+      // Migration 0167 — admin-curated "Featured themed decks" (service role
+      // only; visitors read list_featured_deck_themes).
+      deck_themes: {
+        Row: {
+          id: string;
+          title: string;
+          blurb: string | null;
+          position: number;
+          is_live: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          blurb?: string | null;
+          position?: number;
+          is_live?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          blurb?: string | null;
+          position?: number;
+          is_live?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      deck_theme_decks: {
+        Row: {
+          theme_id: string;
+          deck_id: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          theme_id: string;
+          deck_id: string;
+          position?: number;
+          created_at?: string;
+        };
+        Update: {
+          theme_id?: string;
+          deck_id?: string;
+          position?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deck_theme_decks_theme_id_fkey";
+            columns: ["theme_id"];
+            isOneToOne: false;
+            referencedRelation: "deck_themes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deck_theme_decks_deck_id_fkey";
+            columns: ["deck_id"];
+            isOneToOne: false;
+            referencedRelation: "decks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Migration 0168 — today's salt for card_views keys (service role).
       card_view_salts: {
         Row: {
@@ -2519,6 +2587,17 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: Database["public"]["Tables"]["cards"]["Row"][];
       };
+      // Migration 0166 — the trending score and ranking per range.
+      list_trending_cards: {
+        Args: { p_range?: string; p_limit?: number };
+        Returns: {
+          card_id: string;
+          score: number;
+          likes: number;
+          comments: number;
+          remixes: number;
+        }[];
+      };
       owner_is_admin: {
         Args: { p_owner_id: string };
         Returns: boolean;
@@ -2658,6 +2737,20 @@ export type Database = {
       list_similar_decks: {
         Args: { p_deck_id: string; p_limit?: number };
         Returns: Database["public"]["Tables"]["decks"]["Row"][];
+      };
+      // Migration 0167 — /decks "Discover", "Featured themed decks" and
+      // trending by range ("Hot this week / month / year / all time").
+      list_discover_decks: {
+        Args: { p_seed?: string; p_limit?: number };
+        Returns: Database["public"]["Tables"]["decks"]["Row"][];
+      };
+      list_trending_decks_by_range: {
+        Args: { p_range?: string; p_limit?: number };
+        Returns: { deck_id: string; score: number; likes: number }[];
+      };
+      list_featured_deck_themes: {
+        Args: { p_themes?: number; p_decks?: number };
+        Returns: { theme_id: string; title: string; blurb: string | null; deck_ids: string[] }[];
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };
