@@ -62,7 +62,9 @@ import {
 //     loses an annual plan the earlier one (only the previous month is
 //     backfilled; accepted — the next outage of that length is the alert);
 //     the monthly backstop catches up ONE missed month, never a run of them
-//     (a missed webhook is itself an incident).
+//     (a missed webhook is itself an incident), and an upgrade top-up inside
+//     the cycle re-anchors its 35-day clock (a renewal missed within days
+//     of such a top-up is caught a cycle later — accepted).
 // The same "paying invoice" rule holds at the WEBHOOK door:
 // grantCreditsForSync passes `base: "backstop"` for a monthly plan unless
 // the event paid (a cycle / first invoice, a trial converting) — a cancel

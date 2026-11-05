@@ -460,7 +460,12 @@ async function handleInvoicePaid(
       if (result.tier !== "free") tier = result.tier;
       try {
         const paid = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
-        const periodStart = invoice.lines?.data?.[0]?.period?.start ?? invoice.period_start ?? null;
+        // The month the invoice is FOR: the subscription's own current period
+        // (just read), else the first line's service period (a pending
+        // proration line can come first), never the invoice's `period_start`
+        // (the previous cycle on this API version).
+        const periodStart =
+          sub.items?.data?.[0]?.current_period_start ?? invoice.lines?.data?.[0]?.period?.start ?? null;
         await grantCreditsForSync(result, admin, {
           isCreationEvent: false,
           // The cycle's (or the first) invoice is what a monthly plan's
