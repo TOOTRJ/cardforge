@@ -21,6 +21,7 @@ import AxeBuilder from "@axe-core/playwright";
 const PAGES = [
   "/",
   "/login",
+  "/signup",
   "/gallery",
   "/decks",
   "/challenges",

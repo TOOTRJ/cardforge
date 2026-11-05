@@ -3,10 +3,11 @@ import Link from "next/link";
 import { AuthForm } from "@/components/auth/auth-form";
 import {
   AuthDivider,
-  GoogleSignInButton,
-} from "@/components/auth/google-sign-in-button";
+  OAuthSignInButtons,
+} from "@/components/auth/oauth-sign-in-button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { enabledOAuthProviders } from "@/lib/auth/oauth-providers";
 import { signupAction } from "@/app/(auth)/actions";
 import { GuestDraftField } from "@/components/analytics/guest-draft-field";
 import { AttributionFields } from "@/components/analytics/attribution-fields";
@@ -54,7 +55,10 @@ export default async function SignupPage({
 
       {configured ? (
         <div className="flex flex-col gap-4">
-          <GoogleSignInButton redirectTo={redirectTo} />
+          <OAuthSignInButtons
+            providers={enabledOAuthProviders()}
+            redirectTo={redirectTo}
+          />
           <AuthDivider label="or sign up with email" />
         </div>
       ) : null}

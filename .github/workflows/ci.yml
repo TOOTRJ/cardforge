@@ -728,6 +728,9 @@ jobs:
             # (lib/frames/frame-manifest.json) load from the dev project's
             # public bucket, like every Vercel preview (docs/FRAMES.md).
             echo "NEXT_PUBLIC_FRAME_ORIGIN=https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames"
+            # The Discord button renders (its provider stays off on this
+            # stack — the spec checks the buttons, never a sign-in).
+            echo "NEXT_PUBLIC_AUTH_DISCORD=1"
             echo "SUPABASE_E2E_USER_EMAIL=e2e@pipglyph.test"
             echo "SUPABASE_E2E_USER_PASSWORD=ci-$(openssl rand -hex 12)"
           } > .env.e2e
