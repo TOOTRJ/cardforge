@@ -136,6 +136,21 @@ describe("the card grid's columns", () => {
     ]);
   });
 
+  it("the gallery's trending decks row is the card rows' grid: more decks, each a card tile's width (DK8.9)", () => {
+    const row = readFileSync("components/decks/deck-row.tsx", "utf8");
+    expect(row).toMatch(/className=\{ROW_GRID_CLASS\}/);
+    expect(row).toMatch(/rowTileClass\(index\)/);
+    // vs the full deck row it replaced (1 / 2 / 3 / 4 across).
+    const decksBefore = (vw: number) => DECK_GRID.columns(FRAMES.wide(vw), vw);
+    const decksNow = (vw: number) => CARD_GRID.columns(FRAMES.wide(vw), vw);
+    for (const vw of WINDOWS) {
+      expect(decksNow(vw), `${vw}px`).toBeGreaterThan(decksBefore(vw));
+      expect(tile(CARD_GRID, FRAMES.wide, vw), `${vw}px`).toBeLessThan(tile(DECK_GRID, FRAMES.wide, vw));
+    }
+    const at = (vw: number) => `${decksBefore(vw)} × ${Math.round(tile(DECK_GRID, FRAMES.wide, vw))} → ${decksNow(vw)} × ${Math.round(tile(CARD_GRID, FRAMES.wide, vw))}`;
+    expect([390, 1366, 1920].map(at)).toEqual(["1 × 358 → 2 × 171", "3 × 421 → 4 × 311", "4 × 449 → 6 × 293"]);
+  });
+
   it("the deck grid is one column fewer at the card grid's first steps", () => {
     expect(DECK_GRID_CLASS.split(" ")).toEqual(
       expect.arrayContaining(["grid-cols-1", "@xl:grid-cols-2", "@4xl:grid-cols-3", "@min-[84rem]:grid-cols-4"]),
@@ -299,6 +314,8 @@ describe("every grid sits in a query container (source scan)", () => {
       // TODO WD10: the card page is on the wide frame — its strips are the
       // card grid's and its decks the deck grid's.
       ["components/cards/card-detail-content.tsx", /sizes=\{DECK_GRID_SIZES\}/],
+      // DK8.9: the gallery's trending decks row is the card rows' grid.
+      ["components/decks/deck-row.tsx", /sizes=\{CARD_GRID_SIZES\}/],
       ["components/cards/card-detail-content.tsx", /sizes=\{CARD_GRID_SIZES\}/],
     ];
     for (const [path, pattern] of expectations) expect(read(path), path).toMatch(pattern);

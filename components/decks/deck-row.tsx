@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Flame, Heart } from "lucide-react";
+import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
+import { ROW_GRID_CLASS, ROW_MAX, rowTileClass } from "@/components/gallery/card-row";
 import {
   DeckGrid,
   DECK_ROW_SIZES,
@@ -13,16 +15,16 @@ import { SECTION_EYEBROW_CLASS, TRENDING_HERO_SURFACE_CLASS } from "@/components
 import { TrendingRangeSwitch } from "@/components/gallery/trending-range-switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  listTrendingDecks,
   listTrendingDecksByRange,
   DECK_ROW_MAX,
   type DeckTrendingStats,
   type TrendingDeckListing,
 } from "@/lib/decks/queries";
 import {
-  DEFAULT_TRENDING_RANGE,
+  DEFAULT_DECK_TRENDING_RANGE,
   TRENDING_RANGE_WORDS,
   TRENDING_RANGES,
+  trendingOpeningOrder,
   type TrendingRange,
 } from "@/lib/cards/trending";
 import { listDeckTileArt, type DeckTileArt } from "@/lib/decks/tile-art";
@@ -36,8 +38,11 @@ import { cn } from "@/lib/utils";
 // /decks' headline trending block is TrendingDecksRanges (owner 2026-11-03 /
 // 2026-11-04): the gallery's glowing surface (TRENDING_HERO_SURFACE_CLASS),
 // its Week / Month / Year / All time switch and its rules — never a copy of
-// any of them — with a rank badge on each tile; the gallery's own decks row
-// (TrendingDecksRow) stays plain and reads the week.
+// any of them — with a rank badge on each tile. Both open on the YEAR (owner
+// 2026-11-05, DK8.9: DEFAULT_DECK_TRENDING_RANGE; the cards keep the month).
+// The gallery's own decks row (TrendingDecksRow) stays plain — no switch, no
+// glow — and COMPACT: the card rows' columns (2 – 6 across, ROW_GRID_CLASS)
+// of DeckTile size="compact".
 // ---------------------------------------------------------------------------
 
 export function DeckRowSection({
@@ -51,6 +56,7 @@ export function DeckRowSection({
   decks,
   art,
   likeRedirect,
+  compact = false,
 }: {
   id: string;
   icon: LucideIcon;
@@ -62,6 +68,9 @@ export function DeckRowSection({
   decks: readonly DeckTileDeck[];
   art: ReadonlyMap<string, DeckTileArt>;
   likeRedirect?: string;
+  /** The card rows' shape (DK8.9): 2 – 6 compact tiles across the wide
+   *  frame instead of 1 – 4 full ones. */
+  compact?: boolean;
 }) {
   if (decks.length === 0) return null;
   return (
@@ -83,14 +92,42 @@ export function DeckRowSection({
           </Link>
         ) : null}
       </div>
-      <DeckGrid>
-        {decks.slice(0, DECK_ROW_MAX).map((deck, index) => (
-          <div key={deck.id} className={cn("min-w-0 flex-col", deckRowTileClass(index))}>
-            <DeckTile deck={deck} art={art.get(deck.id)} sizes={DECK_ROW_SIZES} likeRedirect={likeRedirect} />
-          </div>
-        ))}
-      </DeckGrid>
+      {compact ? (
+        <CompactDeckGrid>
+          {decks.slice(0, ROW_MAX).map((deck, index) => (
+            <div key={deck.id} className={cn("min-w-0 flex-col", rowTileClass(index))}>
+              <DeckTile
+                deck={deck}
+                art={art.get(deck.id)}
+                size="compact"
+                sizes={CARD_GRID_SIZES}
+                likeRedirect={likeRedirect}
+              />
+            </div>
+          ))}
+        </CompactDeckGrid>
+      ) : (
+        <DeckGrid>
+          {decks.slice(0, DECK_ROW_MAX).map((deck, index) => (
+            <div key={deck.id} className={cn("min-w-0 flex-col", deckRowTileClass(index))}>
+              <DeckTile deck={deck} art={art.get(deck.id)} sizes={DECK_ROW_SIZES} likeRedirect={likeRedirect} />
+            </div>
+          ))}
+        </DeckGrid>
+      )}
     </section>
+  );
+}
+
+/** The card rows' grid (ROW_GRID_CLASS: 2 / 3 / 4 / 5 / 6 columns by the
+ *  row's width) in its own query container — the compact deck row. Its
+ *  tiles are a card tile's width, so their `sizes` are CARD_GRID_SIZES
+ *  (tests/unit/components/card-grid.test.ts). */
+function CompactDeckGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="@container">
+      <div className={ROW_GRID_CLASS}>{children}</div>
+    </div>
   );
 }
 
@@ -105,15 +142,18 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-/** "Trending now" — one range's most-liked public decks of real creators
- *  (listTrendingDecks: migration 0167's list_trending_decks_by_range, the
- *  gallery's rules; the week by default — the gallery's plain decks row).
- *  Cookie-free reads only, so the /decks and /gallery landings that draw it
- *  stay ISR. Nothing liked in the range: no row. */
+/** The gallery's "Trending decks" row — the most-liked public decks of real
+ *  creators (listTrendingDecksByRange: migration 0167's
+ *  list_trending_decks_by_range, the gallery's rules), COMPACT (DK8.9) and
+ *  opening on the YEAR (DEFAULT_DECK_TRENDING_RANGE), else the next range
+ *  with decks (trendingOpeningOrder) — so the row isn't empty while the
+ *  switch on /decks could show decks. The description is told which period
+ *  it ended up on. Cookie-free reads only, so the landing that draws it
+ *  stays ISR. Nothing liked in any range: no row. */
 export async function TrendingDecksRow({
   id = "trending-decks",
   eyebrow = "Trending now",
-  heading = "Most liked this week",
+  heading = "Trending decks",
   description,
   href,
   hrefLabel,
@@ -122,13 +162,16 @@ export async function TrendingDecksRow({
   id?: string;
   eyebrow?: string;
   heading?: string;
-  description?: string;
+  /** Told the period the row opened on ("this year"). */
+  description?: (period: string) => string;
   href?: string;
   hrefLabel?: string;
   likeRedirect?: string;
 }) {
-  const decks = await listTrendingDecks(DECK_ROW_MAX);
-  if (decks.length === 0) return null;
+  const byRange = await listTrendingDecksByRange({ limit: ROW_MAX });
+  const opening = trendingOpeningOrder(DEFAULT_DECK_TRENDING_RANGE).find((range) => byRange[range].length > 0);
+  if (!opening) return null;
+  const decks = byRange[opening];
   const art = await listDeckTileArt(decks, { anonymous: true });
   return (
     <DeckRowSection
@@ -136,21 +179,22 @@ export async function TrendingDecksRow({
       icon={Flame}
       eyebrow={eyebrow}
       heading={heading}
-      description={description}
+      description={description?.(TRENDING_RANGE_WORDS[opening].period)}
       href={href}
       hrefLabel={hrefLabel}
       decks={decks}
       art={art}
       likeRedirect={likeRedirect}
+      compact
     />
   );
 }
 
-/** The order /decks' switch opens in: the month (owner 2026-11-03, the
- *  gallery's default), else the next range with decks, longer first — the
- *  gallery's own order (GalleryTrending), so the hero is never an empty box
+/** The order /decks' switch opens in: the year (owner 2026-11-05 — a deck is
+ *  liked far less often than a card; the cards open on the month), else the
+ *  next range with decks, longer first — so the hero is never an empty box
  *  while another range has decks. */
-const OPENING_ORDER: readonly TrendingRange[] = [DEFAULT_TRENDING_RANGE, "year", "all", "week"];
+const OPENING_ORDER: readonly TrendingRange[] = trendingOpeningOrder(DEFAULT_DECK_TRENDING_RANGE);
 
 /** What an empty range says (the gallery's words are about cards). */
 const EMPTY_RANGE_WORDS: Record<TrendingRange, string> = {
@@ -262,19 +306,27 @@ function TrendingDeckStats({ stats }: { stats: DeckTrendingStats }) {
   );
 }
 
-/** The row's shape while it streams in. */
-export function DeckRowSkeleton({ variant = "plain" }: { variant?: "plain" | "hero" }) {
+/** The row's shape while it streams in. "compact" = the gallery's decks row. */
+export function DeckRowSkeleton({ variant = "plain" }: { variant?: "plain" | "hero" | "compact" }) {
   return (
     <div className={cn(variant === "hero" && TRENDING_HERO_SURFACE_CLASS)}>
       <div className="mb-5 flex flex-col gap-2">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-6 w-56" />
       </div>
-      <DeckGrid>
-        {Array.from({ length: DECK_ROW_MAX }).map((_, index) => (
-          <DeckTileSkeleton key={index} className={deckRowTileClass(index)} />
-        ))}
-      </DeckGrid>
+      {variant === "compact" ? (
+        <CompactDeckGrid>
+          {Array.from({ length: ROW_MAX }).map((_, index) => (
+            <DeckTileSkeleton key={index} size="compact" className={rowTileClass(index)} />
+          ))}
+        </CompactDeckGrid>
+      ) : (
+        <DeckGrid>
+          {Array.from({ length: DECK_ROW_MAX }).map((_, index) => (
+            <DeckTileSkeleton key={index} className={deckRowTileClass(index)} />
+          ))}
+        </DeckGrid>
+      )}
     </div>
   );
 }

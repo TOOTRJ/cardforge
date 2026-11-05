@@ -101,6 +101,7 @@ export function DeckTile({
   headingLevel = "h3",
   sizes = "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
   likeRedirect = "/decks",
+  size = "default",
 }: {
   deck: DeckTileDeck;
   /** listDeckTileArt's answer for this deck (colours + fan). */
@@ -114,7 +115,12 @@ export function DeckTile({
   sizes?: string;
   /** Where a signed-out heart returns after the login. */
   likeRedirect?: string;
+  /** "compact" = the same tile in less room (DK8.9: the gallery's trending
+   *  decks row, 2–6 across): smaller type and padding, the card line and the
+   *  views dropped — never a second tile design. */
+  size?: "default" | "compact";
 }) {
+  const compactTile = size === "compact";
   const cover = deckCoverOf(deck, art.colors);
   const pips = deckTilePips(art.colors);
   const Heading = headingLevel;
@@ -163,8 +169,13 @@ export function DeckTile({
         </span>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-1.5 px-4 pb-3 pt-3.5">
-        <Heading className="font-display text-base font-semibold leading-snug tracking-tight text-foreground [overflow-wrap:anywhere]">
+      <div className={cn("flex flex-1 flex-col gap-1.5", compactTile ? "px-3 pb-2 pt-2.5" : "px-4 pb-3 pt-3.5")}>
+        <Heading
+          className={cn(
+            "font-display font-semibold leading-snug tracking-tight text-foreground [overflow-wrap:anywhere]",
+            compactTile ? "line-clamp-2 text-sm" : "text-base",
+          )}
+        >
           <Link
             href={`/deck/${deck.slug}`}
             className="after:absolute after:inset-0 after:rounded-card after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary-bright/60 focus-visible:after:ring-inset"
@@ -172,7 +183,7 @@ export function DeckTile({
             {deck.title}
           </Link>
         </Heading>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+        <p className={cn("flex flex-wrap items-center gap-x-2 gap-y-1 text-muted", compactTile ? "text-[11px]" : "text-xs")}>
           <span>{deckTileFormatLine(deck)}</span>
           {pips ? (
             <span className="inline-flex items-center gap-0.5">
@@ -181,13 +192,18 @@ export function DeckTile({
             </span>
           ) : null}
         </p>
-        <p className="text-xs text-subtle">{deckTileCardLine(deck)}</p>
+        {compactTile ? null : <p className="text-xs text-subtle">{deckTileCardLine(deck)}</p>}
       </div>
 
       {/* Siblings of the stretched link, lifted over it. The strip itself
           lets a click through to the link under it (no dead band along the
           tile's foot); only the author link and the heart take their own. */}
-      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-2 border-t border-border/40 px-4 py-2.5 text-xs">
+      <div
+        className={cn(
+          "pointer-events-none relative z-10 flex items-center justify-between gap-2 border-t border-border/40 text-xs",
+          compactTile ? "px-3 py-2" : "px-4 py-2.5",
+        )}
+      >
         {owner ? (
           <span className="truncate text-muted">{deck.updated_at ? `Updated ${formatRelativeTime(deck.updated_at)}` : null}</span>
         ) : deck.owner?.username ? (
@@ -216,7 +232,9 @@ export function DeckTile({
               className="pointer-events-auto"
             />
           )}
-          <Stat icon={Eye} value={deck.view_count} label={deck.view_count === 1 ? "view" : "views"} />
+          {compactTile ? null : (
+            <Stat icon={Eye} value={deck.view_count} label={deck.view_count === 1 ? "view" : "views"} />
+          )}
         </div>
       </div>
     </SurfaceCard>
@@ -234,16 +252,19 @@ function Stat({ icon: Icon, value, label }: { icon: LucideIcon; value: number; l
 }
 
 /** A tile's shape while a list streams in. */
-export function DeckTileSkeleton({ className }: { className?: string }) {
+export function DeckTileSkeleton({ className, size = "default" }: { className?: string; size?: "default" | "compact" }) {
+  const compactTile = size === "compact";
   return (
     <SurfaceCard className={cn("flex flex-col gap-0 overflow-hidden p-0", className)}>
       <Skeleton className="aspect-video w-full rounded-none" />
-      <div className="flex flex-col gap-2 px-4 pb-3 pt-3.5">
+      <div className={cn("flex flex-col gap-2", compactTile ? "px-3 pb-2 pt-2.5" : "px-4 pb-3 pt-3.5")}>
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-3 w-1/2" />
-        <Skeleton className="h-3 w-3/5" />
+        {compactTile ? null : <Skeleton className="h-3 w-3/5" />}
       </div>
-      <div className="flex items-center justify-between border-t border-border/40 px-4 py-2.5">
+      <div
+        className={cn("flex items-center justify-between border-t border-border/40", compactTile ? "px-3 py-2" : "px-4 py-2.5")}
+      >
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-3 w-14" />
       </div>
