@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_DECK_TRENDING_RANGE,
   DEFAULT_TRENDING_RANGE,
   isTrendingRange,
   TRENDING_RANGE_RULES,
@@ -9,6 +10,7 @@ import {
   TRENDING_RANGES,
   TRENDING_WEIGHTS,
   trendingEventWeight,
+  trendingOpeningOrder,
 } from "@/lib/cards/trending";
 
 // ---------------------------------------------------------------------------
@@ -42,6 +44,21 @@ describe("the trending ranges", () => {
   it("are week, month, year and all time, month by default", () => {
     expect(TRENDING_RANGES).toEqual(["week", "month", "year", "all"]);
     expect(DEFAULT_TRENDING_RANGE).toBe("month");
+  });
+
+  it("decks open on the year while the cards keep the month (DK8.9)", () => {
+    expect(DEFAULT_DECK_TRENDING_RANGE).toBe("year");
+    expect(DEFAULT_TRENDING_RANGE).toBe("month");
+  });
+
+  it("a section opens on its default, then the next longer range, the week last", () => {
+    expect(trendingOpeningOrder(DEFAULT_TRENDING_RANGE)).toEqual(["month", "year", "all", "week"]);
+    expect(trendingOpeningOrder(DEFAULT_DECK_TRENDING_RANGE)).toEqual(["year", "all", "month", "week"]);
+    for (const range of TRENDING_RANGES) {
+      const order = trendingOpeningOrder(range);
+      expect(order[0]).toBe(range);
+      expect([...order].sort()).toEqual([...TRENDING_RANGES].sort());
+    }
   });
 
   it("each prints its own words", () => {

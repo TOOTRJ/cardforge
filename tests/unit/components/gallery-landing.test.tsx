@@ -95,23 +95,37 @@ describe("the /gallery landing's source", () => {
 
   it("puts the title and the search on one header row, with no Forge your own", () => {
     expect(landing).not.toMatch(/Forge your own|PageHeader/);
-    expect(landing).toMatch(/md:flex-row[\s\S]*<h1[\s\S]*Community gallery[\s\S]*<BrowseSearchBox[\s\S]*compact/);
+    // The row is the shared BrowseLandingHeader (/decks wears it too, DK8.9).
+    expect(landing).toMatch(/<BrowseLandingHeader[\s\S]*title="Community gallery"[\s\S]*browsePath=\{GALLERY_BROWSE_PATH\}/);
+    const header = read("components/browse/browse-landing-header.tsx");
+    expect(header).toMatch(/md:flex-row[\s\S]*<h1[\s\S]*<BrowseSearchBox[\s\S]*compact/);
+    expect(header).not.toMatch(/eyebrow/i);
   });
 
   it("draws the hubs as the compact bar", () => {
     expect(landing).toContain('<HubLinks placement="top" />');
     const hubs = read("components/cards/hub-links.tsx");
     expect(hubs).toMatch(/lg:grid-cols-2/);
-    expect(hubs).toMatch(/overflow-x-auto[\s\S]*lg:flex-wrap/);
+    // The bar's group is the shared CompactChipGroup (/decks' formats wear it).
+    expect(hubs).toContain("<CompactChipGroup");
+    const group = read("components/browse/compact-chip-group.tsx");
+    expect(group).toMatch(/overflow-x-auto[\s\S]*lg:flex-wrap/);
     // Each chip list is named for its group ("Card types", "Popular tags").
-    expect(hubs).toMatch(/<ul\s+aria-label=\{label\}/);
+    expect(group).toMatch(/<ul\s+aria-label=\{label\}/);
   });
 
   it("reads every range in ONE call and opens on the month (the next range with cards when it has none)", () => {
     expect(trending).toMatch(/listTrendingCardsByRange\(\{ limit: ROW_MAX, anonymous: true \}\)/);
-    expect(trending).toContain('[DEFAULT_TRENDING_RANGE, "year", "all", "week"].find(');
+    expect(trending).toContain("trendingOpeningOrder(DEFAULT_TRENDING_RANGE).find(");
     expect(trending).toMatch(/defaultRange=\{opening\}/);
     expect(trending).toMatch(/priority=\{range === opening\}/);
     expect(trending).toMatch(/aria-labelledby="trending-heading"[\s\S]*headingId="trending-heading"/);
+  });
+
+  it("the trending decks row is compact and opens on the year, not the cards' month (DK8.9)", () => {
+    expect(landing).toContain('<DeckRowSkeleton variant="compact" />');
+    expect(landing).toMatch(/<TrendingDecksRow[\s\S]*description=\{\(period\) =>/);
+    // Cards stay on the month.
+    expect(trending).not.toContain("DEFAULT_DECK_TRENDING_RANGE");
   });
 });

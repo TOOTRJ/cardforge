@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { HubLinks } from "@/components/cards/hub-links";
-import { BrowseSearchBox } from "@/components/browse/browse-search-box";
+import { BrowseLandingHeader } from "@/components/browse/browse-landing-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,9 +21,9 @@ import { TrendingRangeSwitch } from "@/components/gallery/trending-range-switch"
 import { listGalleryCards, listTrendingCardsByRange, type GalleryListSort } from "@/lib/cards/queries";
 import {
   DEFAULT_TRENDING_RANGE,
-  isTrendingRange,
   TRENDING_RANGE_WORDS,
   TRENDING_RANGES,
+  trendingOpeningOrder,
   type TrendingRange,
 } from "@/lib/cards/trending";
 import { cn } from "@/lib/utils";
@@ -217,27 +217,18 @@ export function GalleryLanding() {
           { name: "Gallery", path: "/gallery" },
         ])}
       />
-      {/* ONE header row (owner 2026-11-03: more cards above the fold): the
-          title and the search share it from md; no eyebrow, and no "Forge
-          your own" — the site header carries Create. A search is a
-          navigation to the browse route. */}
-      <div className="flex flex-col gap-3 border-b border-gold/20 pb-4 md:flex-row md:items-center md:gap-8">
-        <div className="flex min-w-0 flex-col gap-0.5 md:shrink-0">
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Community gallery
-          </h1>
-          <p className="text-sm text-muted">{GALLERY_TAGLINE}</p>
-        </div>
-        <div className="min-w-0 md:ml-auto md:w-full md:max-w-2xl">
-          <BrowseSearchBox
-            browsePath={GALLERY_BROWSE_PATH}
-            placeholder="Name, rules, flavor"
-            label="Search cards"
-            browseLabel="Browse all"
-            compact
-          />
-        </div>
-      </div>
+      {/* ONE header row (owner 2026-11-03: more cards above the fold; /decks
+          wears the same one, DK8.9): the title and the search share it from
+          md, no kicker line, no create button — the site header carries
+          Create. A search is a navigation to the browse route. */}
+      <BrowseLandingHeader
+        title="Community gallery"
+        tagline={GALLERY_TAGLINE}
+        browsePath={GALLERY_BROWSE_PATH}
+        placeholder="Name, rules, flavor"
+        label="Search cards"
+        browseLabel="Browse all"
+      />
       {/* Browse by type and tag — the crawlable way into the hubs, one
           compact bar. */}
       {configured ? (
@@ -274,16 +265,17 @@ export function GalleryLanding() {
       ) : null}
 
       {/* Trending decks (TODO DK8.3) — the /decks row, so the gallery leads
-          into the decks built from its cards. Hidden when no deck was liked
-          this week. */}
+          into the decks built from its cards. COMPACT and opening on the
+          year (DK8.9: the card rows' columns, smaller tiles). Hidden when no
+          deck was ever liked. */}
       {configured ? (
         <div className="mt-12">
-          <Suspense fallback={<DeckRowSkeleton />}>
+          <Suspense fallback={<DeckRowSkeleton variant="compact" />}>
             <TrendingDecksRow
               id="gallery-trending-decks"
               eyebrow="Community decks"
               heading="Trending decks"
-              description="The community's most-liked decks this week — custom cards in play."
+              description={(period) => `The community's most-liked decks ${period} — custom cards in play.`}
               href="/decks"
               hrefLabel="All community decks"
               likeRedirect="/gallery"
@@ -403,9 +395,7 @@ async function GalleryTrending() {
   // Opens on the month (owner 2026-11-03); a month with nothing hot opens on
   // the next range that has something, longer first, so the hero is never
   // an empty box while the switch can show cards.
-  const opening = [DEFAULT_TRENDING_RANGE, "year", "all", "week"].find(
-    (range): range is TrendingRange => isTrendingRange(range) && byRange[range].length > 0,
-  );
+  const opening = trendingOpeningOrder(DEFAULT_TRENDING_RANGE).find((range) => byRange[range].length > 0);
   if (!opening) return null;
   const panels = Object.fromEntries(
     TRENDING_RANGES.map((range) => [

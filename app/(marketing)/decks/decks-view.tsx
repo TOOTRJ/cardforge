@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Compass, Sparkles, X } from "lucide-re
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { BrowseSearchBox } from "@/components/browse/browse-search-box";
+import { BrowseLandingHeader } from "@/components/browse/browse-landing-header";
 import { DecksSearch } from "@/components/decks/decks-search";
 import { DeckFormatLinks } from "@/components/decks/deck-format-links";
 import { NewDeckButton } from "@/components/decks/new-deck-provider";
@@ -40,9 +40,10 @@ import { PageContainer } from "@/components/layout/page-container";
 //   - /decks (DecksLanding) → static/ISR. Search box + browse-by-format chips
 //     on top, then "Featured themed decks" (the admin's themes, migration
 //     0167), "Trending now" (the gallery's glowing hero block and its Week /
-//     Month / Year / All time switch, opening on the month — the gallery's
-//     rules over deck likes, 0167), "Cards to build around" (public
-//     legendary creatures, a random sample per regeneration, DK8.4) and
+//     Month / Year / All time switch, opening on the YEAR — the gallery's
+//     rules over deck likes, 0167; owner 2026-11-05), "Cards to build
+//     around" (public legendary creatures, a random sample per
+//     regeneration, DK8.4) and
 //     "Discover" (a weighted shuffle of non-empty decks, 0167 — it replaced
 //     "Newest public decks", which ordered by the last EDIT). Never reads
 //     searchParams, so it stays on the CDN.
@@ -105,52 +106,45 @@ export function decksBrowseHref(params: Partial<Omit<DecksViewParams, "page">> &
   return query ? `${DECKS_BROWSE_PATH}?${query}` : DECKS_BROWSE_PATH;
 }
 
-const DECKS_DESCRIPTION =
-  "MTG decks rebuilt with custom cards — Commander brews, Standard ladders, and kitchen-table classics customized by PipGlyph forgers. Open one to see the real cards side by side with their proxies.";
+/** The header's one line under the title. */
+const DECKS_TAGLINE = "MTG decks rebuilt with custom cards, real and proxy side by side.";
 
 /** /decks — the static landing. */
 export function DecksLanding() {
   const configured = isSupabaseConfigured();
 
   return (
-    <PageContainer size="wide" className="pb-12 pt-6 sm:pt-8">
+    <PageContainer size="wide" className="pb-12 pt-4 sm:pt-6">
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", path: "/" },
           { name: "Community decks", path: "/decks" },
         ])}
       />
-      <PageHeader
-        className="pb-6"
-        eyebrow="Public"
+      {/* The gallery's top (DK8.7 / DK8.9): ONE header row — the title and
+          the search from md, no kicker line, no create button (the site header
+          and the empty states carry it) — then the format chips on
+          the compact bar. A search is a navigation to the browse route, and
+          the chips are the crawlable way in. */}
+      <BrowseLandingHeader
         title="Community decks"
-        description={DECKS_DESCRIPTION}
-        actions={
-          <NewDeckButton>Build a deck</NewDeckButton>
-        }
+        tagline={DECKS_TAGLINE}
+        browsePath={DECKS_BROWSE_PATH}
+        placeholder="Search decks by name or description"
+        label="Search decks"
+        browseLabel="Browse all decks"
       />
-
-      {/* Search + browse-by first: a search is a navigation to the browse
-          route, and the format chips are the crawlable way in. */}
-      <div className="mt-6">
-        <BrowseSearchBox
-          browsePath={DECKS_BROWSE_PATH}
-          placeholder="Search decks by name or description"
-          label="Search decks"
-          browseLabel="Browse all decks"
-        />
-      </div>
       {configured ? (
         <Suspense fallback={null}>
           <DeckFormatLinks placement="top" />
         </Suspense>
       ) : null}
 
-      {/* The admin's featured themes, then the week's most-liked decks —
+      {/* The admin's featured themes, then the most-liked decks of the year —
           the two headline blocks, each its own glow — then the commanders
           to build around. Each hides itself when it has nothing to show. */}
       {configured ? (
-        <div className="mt-10">
+        <div className="mt-5">
           <Suspense fallback={<FeaturedDeckThemesSkeleton />}>
             <FeaturedDeckThemes />
           </Suspense>
