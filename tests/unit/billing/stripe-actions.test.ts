@@ -404,6 +404,10 @@ describe("createCheckoutSessionAction", () => {
   });
 
   it("fails TOWARD no trial when Stripe's history can't be read", async () => {
+    // In production the checkout refuses before this branch (the same list
+    // read fails first — see the "REFUSES to sell" case); the mock answers
+    // the checkout read and lets the trial read throw on its own, so the
+    // trial rule's failure mode is still pinned.
     s.historyThrows = true;
     const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
     expect(result.ok).toBe(true);

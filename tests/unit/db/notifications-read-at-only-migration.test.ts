@@ -28,8 +28,9 @@ describe("0173 — notifications: a user writes read_at alone", () => {
     expect(Number(FILE!.slice(0, 4))).toBeGreaterThan(172);
   });
 
-  it("takes the table-wide UPDATE (and the never-usable INSERT / TRUNCATE) back from authenticated", () => {
+  it("takes the table-wide UPDATE (and the never-usable INSERT / TRUNCATE) back from authenticated, and anon's writes", () => {
     expect(flat).toContain("revoke insert, truncate, update on table public.notifications from authenticated;");
+    expect(flat).toContain("revoke insert, update, delete, truncate on table public.notifications from anon;");
   });
 
   it("grants UPDATE on read_at only", () => {
@@ -45,9 +46,10 @@ describe("0173 — notifications: a user writes read_at alone", () => {
 });
 
 describe("the app's own user-side writes fit the grant", () => {
-  it("every non-admin update of notifications sets read_at and nothing else", () => {
-    // The two user-side writers: "mark read" / "Clear all" and the messages
-    // page. Anything else goes through the service role or a trigger.
+  it("every app update of notifications sets read_at and nothing else", () => {
+    // The user-side writer ("mark read" / "Clear all") and the admin inbox's
+    // (service role, so the grant never applies — held to the same shape).
+    // Anything else goes through a SECURITY DEFINER trigger.
     for (const file of ["lib/notifications/queries.ts", "lib/messages/actions.ts"]) {
       const src = readFileSync(join(process.cwd(), file), "utf8");
       // The update that follows a `.from("notifications")` chain.

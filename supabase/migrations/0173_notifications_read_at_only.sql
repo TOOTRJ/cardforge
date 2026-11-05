@@ -10,8 +10,10 @@
 -- eligibility record, 0111), or forge `payload.trialEnd` on a `trial_ending`
 -- row and suppress their own reminder (`handleTrialWillEnd`).
 --
--- The app's only user-side writes set `read_at` ("mark read" and "Clear
--- all" in lib/notifications/queries.ts, lib/messages/actions.ts). Every
+-- The app's only user-side write sets `read_at` ("mark read" / "Clear all",
+-- `markAllNotificationsSeen` in lib/notifications/queries.ts; a message
+-- thread's mark-read goes through mark_message_thread_read, 0070, SECURITY
+-- DEFINER, and the admin inbox writes through the service role). Every
 -- other write is a SECURITY DEFINER trigger or the service role. So:
 --
 -- 1. UPDATE is a COLUMN grant on `read_at` alone. PostgREST's PATCH of any
@@ -19,7 +21,9 @@
 --    to its recipient.
 -- 2. INSERT and TRUNCATE are taken back from `authenticated`: no policy ever
 --    allowed an insert (RLS refused it), and TRUNCATE bypasses RLS entirely —
---    unreachable through PostgREST, still wrong to hold.
+--    unreachable through PostgREST, still wrong to hold. `anon` loses its
+--    0097 table-wide INSERT / UPDATE / DELETE / TRUNCATE the same way (inert
+--    under RLS — auth.uid() is null — but wider than the signed-in role's).
 -- 3. SELECT, MAINTAIN, REFERENCES and TRIGGER stay as 0097 granted them.
 --
 -- The service role keeps its table-level access (0097). Local Docker stacks
@@ -29,4 +33,5 @@
 -- by default). Ships through a PR; never applied ad-hoc.
 
 revoke insert, truncate, update on table public.notifications from authenticated;
+revoke insert, update, delete, truncate on table public.notifications from anon;
 grant update (read_at) on table public.notifications to authenticated;
