@@ -161,11 +161,12 @@ export type FeaturedHomeCard = {
 };
 
 /** The home page hero's cards for the UTC day `now` falls in (TODO HM4,
- *  migration 0169): home_hero_pool() hands the pool's cards that pass the
- *  original-card guard (and the fallback slots' after them), and
- *  dailyHeroPair picks the day's two. Public-client read keeps the page ISR;
- *  a card with no drawable bake drops out, and an empty answer is the
- *  placeholder pair. */
+ *  migration 0169): home_hero_pool() hands the pool's cards the hero can
+ *  draw (public, baked) and the fallback slots' that pass the original-card
+ *  guard after them; dailyHeroPair re-sorts them by (source, ord) — never
+ *  trusting the transport's order — and picks the day's two. Public-client
+ *  read keeps the page ISR; a card with no drawable bake drops out, and an
+ *  empty answer is the placeholder pair. */
 export async function listFeaturedHomeCards(now: Date = new Date()): Promise<FeaturedHomeCard[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = createPublicClient();

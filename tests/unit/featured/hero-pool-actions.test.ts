@@ -50,15 +50,32 @@ describe("the hero pool actions", () => {
     expect(state.revalidated).toEqual([]);
   });
 
-  it("add a card by its page URL through featured_pool_add and purge the home page", async () => {
+  it("add any public card by its page URL (the shown check alone) and purge the home page", async () => {
     expect(await addHeroPoolCardAction({ cardUrl: "https://www.pipglyph.com/card/dev_artist/cinderwing-matriarch" })).toEqual({ ok: true });
-    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", { p_card_id: CARD, p_added_by: ADMIN });
+    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", {
+      p_card_id: CARD,
+      p_added_by: ADMIN,
+      p_original_only: false,
+    });
     expect(state.revalidated).toContain("/");
   });
 
-  it("add a suggestion by id", async () => {
+  it("add a suggestion by id through the full original-card guard", async () => {
     expect(await addHeroPoolCardAction({ cardId: CARD })).toEqual({ ok: true });
+    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", {
+      p_card_id: CARD,
+      p_added_by: ADMIN,
+      p_original_only: true,
+    });
     expect(state.revalidated).toContain("/");
+  });
+
+  it("refuse a target that isn't a string URL or id, without throwing", async () => {
+    for (const bad of [{ cardUrl: 42 }, { cardId: null }, {}, null, "card"]) {
+      const result = await addHeroPoolCardAction(bad as never);
+      expect(result.ok).toBe(false);
+    }
+    expect(state.stub!.rpc).not.toHaveBeenCalled();
   });
 
   it("say the guard's refusal and change nothing", async () => {

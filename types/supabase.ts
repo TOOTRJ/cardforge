@@ -2794,6 +2794,7 @@ export type Database = {
           title: string;
           username: string | null;
           refusal: string | null;
+          not_original: string | null;
         }[];
       };
       featured_pool_suggestions: {
@@ -2810,7 +2811,7 @@ export type Database = {
         }[];
       };
       featured_pool_add: {
-        Args: { p_card_id: string; p_added_by: string | null };
+        Args: { p_card_id: string; p_added_by: string | null; p_original_only: boolean };
         Returns: string;
       };
       claim_job_step: {

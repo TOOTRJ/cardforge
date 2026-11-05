@@ -7,12 +7,17 @@
 --     1. Cinderwing Matriarch (dev_artist, c…001)
 --     2. Archivist of Lost Hours (dev_pro, c…016)
 --     3. Thornback Behemoth (dev_artist, c…005)
---   In the pool, never shown (the guard; /admin/featured says why):
---     4. Cinderwing Broodling (dev_pro, c…017) — a remix of c…001;
+--     4. Cinderwing Broodling (dev_pro, c…017) — a remix of c…001: the pool
+--        takes any public card, so it rotates too, with a "Not original: a
+--        remix" note in /admin/featured (never in Suggestions);
+--   In the pool, never shown (/admin/featured says why):
 --     5. Void Tithe (dev_artist, c…014) — unlisted.
+--   Not in the pool: Apocalypse Praetor (proxy) (dev_pro) is the seeded
+--   IMPORT — unlisted, no render. Made public and baked, its URL is accepted
+--   by "Add to pool", and Suggestions never offer it.
 --
 -- The seeded cards carry no stored render (10_dev_data.sql), and the hero
--- draws the stored bake, so 1–3 read "no render yet" until their owner opens
+-- draws the stored bake, so 1–4 read "no render yet" until their owner opens
 -- and saves them (that bakes them). Until two are baked the hero shows what
 -- it has, then the fallback slots (featured_cards, empty here), then the
 -- placeholder pair. Runs after 41_*.sql (config.toml → [db.seed] sql_paths,
