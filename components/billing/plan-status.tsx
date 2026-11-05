@@ -35,7 +35,17 @@ export function PlanStatusLine({
 }) {
   switch (status.kind) {
     case "delinquent":
-      return (
+      // The dunning grace (lib/billing/dunning.ts): the perks stay on while
+      // Stripe retries the card, until the date; after it, they are paused.
+      return status.graceUntil ? (
+        <span className="text-danger">
+          {"Your last payment didn't go through. We'll retry your card automatically; your "}
+          {planName}
+          {" perks stay on until "}
+          <Strong><LocalDate iso={status.graceUntil} /></Strong>
+          {" — update your card before then to keep them."}
+        </span>
+      ) : (
         <span className="text-danger">
           Your last payment didn&apos;t go through, so paid perks are paused. Update your card to restore them.
         </span>

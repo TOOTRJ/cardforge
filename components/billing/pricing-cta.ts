@@ -70,9 +70,9 @@ export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta
   // Payment broken on an existing subscription: perks are off but a fresh
   // checkout would sell a SECOND subscription — the portal is the only
   // right button, on every paid card.
-  const delinquent =
-    !viewer.isPaid &&
-    DELINQUENT_SUBSCRIPTION_STATUSES.has(viewer.subscriptionStatus ?? "");
+  // (During the dunning grace the viewer is still `isPaid` — the perks are
+  // kept while Stripe retries — and the portal is still the only button.)
+  const delinquent = DELINQUENT_SUBSCRIPTION_STATUSES.has(viewer.subscriptionStatus ?? "");
   if (delinquent && viewer.hasBillingAccount) {
     return { kind: "portal", label: "Update payment to continue" };
   }

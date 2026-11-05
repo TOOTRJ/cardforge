@@ -15,6 +15,9 @@ const LABELS: Record<string, string> = {
   trial_grant: "Free-trial credits",
   pack_purchase: "Credit pack",
   refund: "Refund",
+  // A refunded / disputed pack's credits follow the money (0174).
+  pack_refund: "Credit pack refunded",
+  pack_refund_reversed: "Credit pack dispute won",
   // Spends — one per AiActionLabel
   generate_deck: "AI deck generation",
   generate_deck_cards: "AI deck generation",

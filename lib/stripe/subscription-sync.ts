@@ -157,25 +157,36 @@ type BillingSlice = {
   subscription_status: string | null;
   stripe_subscription_id: string | null;
   stripe_customer_id: string | null;
+  /** When the sync first saw the payment broken (0174); null = paying. */
+  payment_failed_at: string | null;
 };
 
 async function readBillingSlice(
   admin: AdminClient,
   userId: string,
 ): Promise<BillingSlice> {
-  const { data } = await admin
+  let { data, error } = await admin
     .from("profiles")
     .select(
-      "subscription_tier, subscription_status, stripe_subscription_id, stripe_customer_id",
+      "subscription_tier, subscription_status, stripe_subscription_id, stripe_customer_id, payment_failed_at",
     )
     .eq("id", userId)
     .maybeSingle();
+  if (error && isMissingDunningColumn(error)) {
+    // The code is live before migration 0174: read what the old schema holds.
+    ({ data, error } = await admin
+      .from("profiles")
+      .select("subscription_tier, subscription_status, stripe_subscription_id, stripe_customer_id")
+      .eq("id", userId)
+      .maybeSingle());
+  }
   const row = (data ?? {}) as Partial<BillingSlice>;
   return {
     subscription_tier: row.subscription_tier ?? null,
     subscription_status: row.subscription_status ?? null,
     stripe_subscription_id: row.stripe_subscription_id ?? null,
     stripe_customer_id: row.stripe_customer_id ?? null,
+    payment_failed_at: row.payment_failed_at ?? null,
   };
 }
 
@@ -194,6 +205,9 @@ export type SubscriptionSyncResult = {
   /** ISO date the synced subscription is set to stop (cancelled, still
    *  live) — null when it renews. What `subscription_ends_at` was written as. */
   endsAt?: string | null;
+  /** ISO instant the payment was first seen broken (past_due / unpaid) —
+   *  what `payment_failed_at` was written as; null while it pays. */
+  paymentFailedAt?: string | null;
 };
 
 const iso = (seconds: number | null | undefined): string | null =>
@@ -241,6 +255,14 @@ function isMissingEndingColumn(error: { code?: string; message?: string }): bool
   );
 }
 
+/** The same for 0174's `payment_failed_at`. */
+function isMissingDunningColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /payment_failed_at/.test(error.message ?? "")
+  );
+}
+
 /** Read one subscription by id — null when Stripe can't be read (no API in
  *  unit tests, a transient error, a restricted key). */
 async function retrieveSubscription(
@@ -258,6 +280,11 @@ async function retrieveSubscription(
  *  terminal status, but it never entitled anyone — only `canceled` ends a
  *  plan the profile may be showing. */
 const ENDED_STATUS = "canceled";
+
+/** The statuses that mean "the payment is broken" and anchor the dunning
+ *  grace: past_due (Stripe is retrying) and unpaid (it gave up). An
+ *  `incomplete` first payment never paid, so it anchors nothing. */
+const DUNNING_STATUSES: ReadonlySet<string> = new Set(["past_due", "unpaid"]);
 
 export type SyncOptions = {
   /**
@@ -440,6 +467,12 @@ export async function syncSubscriptionForUser(
   const ending = chosenDeleted
     ? { endsAt: null, byPeriodEnd: false, canceledAt: null }
     : await endingStateOf(chosen, stripe);
+  // The dunning grace's anchor (lib/billing/dunning.ts, 0174): the FIRST
+  // moment the sync sees the payment broken is kept through every later
+  // event of the same failure (Stripe retries the same invoice; each retry
+  // re-delivers past_due), and cleared the moment it pays or ends.
+  const broken = !chosenDeleted && DUNNING_STATUSES.has(status);
+  const paymentFailedAt = broken ? (previous.payment_failed_at ?? new Date().toISOString()) : null;
   const base = {
     subscription_tier: tier,
     subscription_status: status,
@@ -447,14 +480,24 @@ export async function syncSubscriptionForUser(
     current_period_end: periodEnd,
     cancel_at_period_end: ending.byPeriodEnd,
   };
+  const endingColumns = {
+    subscription_ends_at: live ? ending.endsAt : null,
+    subscription_canceled_at: live ? ending.canceledAt : null,
+  };
   let { error: writeError } = await admin
     .from("profiles")
-    .update({
-      ...base,
-      subscription_ends_at: live ? ending.endsAt : null,
-      subscription_canceled_at: live ? ending.canceledAt : null,
-    })
+    .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt })
     .eq("id", userId);
+  if (writeError && isMissingDunningColumn(writeError)) {
+    // The code is live before migration 0174: write what the schema holds.
+    console.error(
+      `[stripe] profiles.payment_failed_at is missing (migration 0174 not applied?) — synced ${userId} without it.`,
+    );
+    ({ error: writeError } = await admin
+      .from("profiles")
+      .update({ ...base, ...endingColumns })
+      .eq("id", userId));
+  }
   if (writeError && isMissingEndingColumn(writeError)) {
     // The code is live before migration 0135: write what the old schema
     // holds rather than failing every webhook until it lands.
@@ -478,6 +521,7 @@ export async function syncSubscriptionForUser(
     unresolvedPrice,
     source,
     endsAt: live ? ending.endsAt : null,
+    paymentFailedAt,
   };
 }
 

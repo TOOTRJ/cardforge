@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { formatMoney } from "@/lib/format/money";
+import { isDisputed } from "@/lib/admin/revenue-queries";
 import { formatUtcDate } from "@/lib/format/dates";
 import {
   REVENUE_ROW_CAP,
@@ -26,6 +27,24 @@ function totalsText(totals: CurrencyTotal[]): string {
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** "· refunded $6.00" / "· disputed (needs response)" / "· dispute won". */
+function moneyBackLabel(payment: RevenueEntry): string {
+  const parts: string[] = [];
+  if (payment.refundedCents > 0) {
+    parts.push(
+      `refunded ${formatMoney(payment.refundedCents, payment.currency)}${payment.refundedCents < payment.amountCents ? " (part)" : ""}`,
+    );
+  }
+  if (payment.disputeStatus) {
+    parts.push(
+      isDisputed(payment)
+        ? `disputed (${payment.disputeStatus.replace(/_/g, " ")})`
+        : `dispute ${payment.disputeStatus.replace(/_/g, " ")}`,
+    );
+  }
+  return parts.length ? ` · ${parts.join(" · ")}` : "";
+}
 
 function entryLabel(payment: RevenueEntry): string {
   if (payment.kind === "trial_start") {
@@ -76,7 +95,9 @@ export function RevenuePanel({ summary }: { summary: RevenueSummary }) {
         </dl>
       </div>
       <p className="text-xs text-muted">
-        Plans (paid invoices) and credit packs, before Stripe fees and refunds.
+        Plans (paid invoices) and credit packs, before Stripe fees; refunds are shown beside the totals, never subtracted
+        {summary.refunds.length > 0 ? ` (${totalsText(summary.refunds)} refunded so far)` : ""}
+        {summary.disputed > 0 ? `; ${plural(summary.disputed, "sale")} under dispute or lost` : ""}.
         {" "}$0 trial starts are listed but not counted
         {summary.trialStarts > 0 ? ` (${summary.trialStarts} so far)` : ""}.
         {multiCurrency ? " Each currency is totalled on its own." : ""}
@@ -114,7 +135,10 @@ export function RevenuePanel({ summary }: { summary: RevenueSummary }) {
                 <span className={counted ? "font-semibold text-foreground" : "text-subtle"}>
                   {formatMoney(payment.amountCents, payment.currency)}
                 </span>
-                <span className="text-xs text-muted">{entryLabel(payment)}</span>
+                <span className="text-xs text-muted">
+                  {entryLabel(payment)}
+                  {moneyBackLabel(payment) ? <span className="text-danger">{moneyBackLabel(payment)}</span> : null}
+                </span>
                 {payment.hostedInvoiceUrl ? (
                   <a
                     href={payment.hostedInvoiceUrl}

@@ -112,6 +112,7 @@ export default async function BillingPage() {
   const planStatus = planStatusOf({
     live,
     delinquent,
+    graceUntil: entitlements.dunningGraceUntil,
     comped: Boolean(comped),
     status,
     subscription: sub,

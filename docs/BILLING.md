@@ -12,7 +12,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. What the plan card says about the plan's future is ONE decision, `planStatusOf()` (`lib/billing/plan-status.ts`), drawn by `components/billing/plan-status.tsx` — see "A cancelled subscription" below. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
-| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all nine. |
+| Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` (+ `lib/stripe/charge-events.ts`) | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`, and since 0174 `charge.refunded`, `charge.dispute.{created,closed}`, `radar.early_fraud_warning.created`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all **thirteen**. |
 | Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
 | Credits | `lib/billing/credit-refill.ts` (monthly refill, cron + webhook), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Refill is idempotent per user per month; upgrades top up the difference against everything the month already granted. |
@@ -119,7 +119,7 @@ Gaps against the standard, in priority order:
 2. ~~**`invoice.paid`** is not handled.~~ **Done 2026-09-23** (§7): revenue log + resync + "Payment received" notification.
 3. ~~**`checkout.session.expired`** recovery.~~ **Done 2026-09-23** (§7): one reminder per user per 30 days, in-app + email.
 4. ~~**Scheduled downgrades**~~ **Done 2026-09-22** (§6), in the app rather than the portal: the portal's `schedule_at_period_end` only schedules between prices of the SAME product, so Pro → Plus (two products) could never use it.
-5. **Smart Retries / dunning emails**: confirm they are on in Dashboard → Settings → Billing → Subscriptions and emails (free; recovers a share of failed renewals).
+5. ~~**Smart Retries / dunning emails**~~ The app side is done (the dunning grace + the payment-failed notice, below): confirm Smart Retries are on in Dashboard → Settings → Billing → Subscriptions and emails; Stripe's own failed-payment email can stay OFF (the app sends one) or on (two emails).
 6. **Stripe Tax** is off (`automatic_tax` false). Fine while volume is tiny; revisit before EU/UK volume.
 7. **Test coverage for the hosted pieces**: nothing automated completes a real checkout. The Preview setup above plus a monthly manual run (or a Playwright job with the Stripe test card on the `dev` alias) closes that.
 
@@ -398,6 +398,66 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   `/api/events` records it ANONYMOUS even for a signed-in visitor (the
   session is never read; props = the bucket, nothing else). The panel's
   "Screen widths (last 30 days)" table reads one exact head count per bucket.
+
+## A failed renewal: the dunning grace and the payment-failed notice (2026-11-05, migration 0174)
+
+A renewal that fails flips the subscription to `past_due` at once, and Stripe's
+Smart Retries then try the card again for up to two weeks. Until this the app
+read `past_due` as "no perks": a soft decline the retry recovered two days
+later still cost the customer two days as Free (watermarked downloads, the
+50-card cap) with nobody told (audit 2026-11-05, P1-3).
+
+- **The grace.** `profiles.payment_failed_at` = when the sync first saw the
+  payment broken (`past_due` / `unpaid`), kept through every later event of
+  the same failure (Stripe retries the SAME invoice), cleared when it pays
+  or ends. A `past_due` subscription keeps its paid perks for
+  `DUNNING_GRACE_DAYS` (14) from that moment — ONE rule in two forms,
+  `lib/billing/dunning.ts` and `public.subscription_perks_on()` (read by
+  `card_capacity_for`, `owner_export_stamp`, `viewer_is_pro`), held
+  together by `tests/unit/billing/dunning.test.ts`. `unpaid` (retries
+  exhausted) and `incomplete` get no grace. No credits are granted during
+  it: the month's allotment lands with the invoice that finally pays.
+- **The notice.** `invoice.payment_failed` → after the sync, ONE
+  `payment_failed` notification + ONE "account" email (`paymentFailedEmail`)
+  per INVOICE (unique on `payload.invoiceId`: the retries dedupe), only when
+  the synced subscription is the user's live plan and now broken (a
+  secondary's failure beside a live Pro plan says nothing), naming the
+  amount, Stripe's next retry date, the grace's end and the billing page.
+- **What the user sees.** `/dashboard/billing`: "We'll retry your card
+  automatically; your Plus perks stay on until <date> — update your card
+  before then" (the plan card is still Plus; `Entitlements.dunningGraceUntil`
+  → `planStatusOf` `graceUntil`); past the grace, the old "paid perks are
+  paused" line. The storefront and the upgrade modal offer the portal
+  ("Update payment to continue") on every delinquent status, paid or not.
+  The account menu's "Pro · payment due" is unchanged.
+- **A database that hasn't run 0174** reads no grace (fails toward free);
+  the sync writes without the column until it lands (the 0135 pattern).
+
+## Refunds, disputes and fraud warnings (2026-11-05, migration 0174)
+
+Money going back now reaches the app (`lib/stripe/charge-events.ts`):
+
+| Event | Sale matched by the charge's payment intent (`billing_payments.payment_intent_id` — written from `invoice.payments` since 0174 — or `billing_pack_payments.payment_intent_id`) | Admins |
+|---|---|---|
+| `charge.refunded` | `refunded_cents` / `refunded_at` on the row; a PACK's credits follow the money: `reconcile_pack_withdrawal(session, withdrawn)` takes back the refunded share of the pack's credits, never below a zero balance (`clawed_credits` = what was really taken; ledger `pack_refund`, key `refund:pack:<session>:<total>`) | one `billing_alert` per (charge, amount) |
+| `charge.dispute.created` | `dispute_id` / `dispute_status` / `disputed_at`; a pack's credits are taken back while the dispute is open or lost (needs_response / under_review / lost) | one per (dispute, status): "Respond in Stripe" |
+| `charge.dispute.closed` | the status; won → the credits come back (`pack_refund_reversed`) | one per (dispute, status) |
+| `radar.early_fraud_warning.created` | nothing moves | one per warning: "expect a dispute; consider a refund now" |
+
+A charge that matches no sale (older rows have no payment intent; something
+paid outside the app) still alerts, as "unmatched". Access on a SUBSCRIPTION
+is never changed here: turn on Dashboard → Settings → Billing →
+Subscriptions → "cancel the subscription on a dispute" (owner step) if you
+want that. The Revenue panel labels refunded / disputed rows and shows the
+refunded total beside the gross totals (never subtracted); `disputed` counts
+sales under dispute or lost.
+
+**Owner steps (live; the sandbox endpoint was updated from this PR):**
+subscribe the four events on the live endpoint
+`we_1TrupnQFLEpCg9s2bSILz13V` (Workbench → Event destinations → the
+endpoint → Update → add `charge.refunded`, `charge.dispute.created`,
+`charge.dispute.closed`, `radar.early_fraud_warning.created`); confirm
+Smart Retries are on. Every endpoint now needs all **thirteen** events.
 
 ## A cancelled subscription (2026-10-07)
 

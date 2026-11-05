@@ -148,7 +148,12 @@ describe("planStatusOf", () => {
   });
 
   it("delinquent, comped, ended and free accounts", () => {
-    expect(planStatusOf({ ...base, live: false, delinquent: true, status: "past_due" }).kind).toBe("delinquent");
+    expect(planStatusOf({ ...base, live: false, delinquent: true, status: "past_due" })).toEqual({ kind: "delinquent", graceUntil: null });
+    // The dunning grace's end (0174) rides through to the card's copy.
+    expect(planStatusOf({ ...base, live: false, delinquent: true, graceUntil: "2026-11-19T00:00:00.000Z", status: "past_due" })).toEqual({
+      kind: "delinquent",
+      graceUntil: "2026-11-19T00:00:00.000Z",
+    });
     expect(planStatusOf({ ...base, live: false, comped: true, status: null, subscription: null }).kind).toBe("comped");
     expect(planStatusOf({ ...base, live: false, status: "canceled", subscription: null }).kind).toBe("ended");
     expect(planStatusOf({ ...base, live: false, status: null, subscription: null }).kind).toBe("free");

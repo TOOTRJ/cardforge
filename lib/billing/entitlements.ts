@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { CARD_CAPACITY, TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { planEndingOf, type PlanEnding } from "@/lib/billing/plan-ending";
+import { dunningGraceUntil, inDunningGrace } from "@/lib/billing/dunning";
 
 // The single server-side source of truth for what a user is allowed to do.
 // Reads the (React-cached) profile, which the Stripe webhook keeps in sync.
@@ -30,6 +31,9 @@ export type Entitlements = {
   /** The live subscription is cancelled and ends on a date (the profile's
    *  stored state, lib/billing/plan-ending.ts) — null when it renews. */
   planEnding: PlanEnding | null;
+  /** A past_due subscription keeps its perks until this instant (the dunning
+   *  grace, lib/billing/dunning.ts) — null when not in one. */
+  dunningGraceUntil: string | null;
 };
 
 type Perks = Pick<
@@ -93,6 +97,7 @@ const UNLOCKED: Entitlements = {
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
   planEnding: null,
+  dunningGraceUntil: null,
 };
 
 /** The billing-relevant slice of a profile row — shared by the viewer path
@@ -104,17 +109,23 @@ export type BillingProfileSlice = {
   is_admin: boolean | null;
   comp_tier: string | null;
   comp_expires_at: string | null;
+  /** When the sync first saw the payment broken (0174) — a reader that
+   *  leaves it out gives a past_due subscription no grace (fails toward free). */
+  payment_failed_at?: string | null;
 };
 
 /** Resolve which tier's perks actually apply for a profile row: subscription
- *  must be active/trialing, and an unexpired admin comp takes the HIGHER of
- *  the two (a comp can never demote a paying user). */
-export function effectiveTierForProfile(profile: BillingProfileSlice): PlanTier {
+ *  must be active/trialing — or past_due inside the 14-day dunning grace
+ *  (lib/billing/dunning.ts) — and an unexpired admin comp takes the HIGHER
+ *  of the two (a comp can never demote a paying user). */
+export function effectiveTierForProfile(profile: BillingProfileSlice, now: Date = new Date()): PlanTier {
   const tier = (profile.subscription_tier ?? "free") as PlanTier;
   const status = profile.subscription_status ?? null;
 
-  // Free is always active; paid tiers only grant perks while active/trialing.
-  const active = tier === "free" || (status ? ACTIVE_STATUSES.has(status) : false);
+  // Free is always active; paid tiers grant perks while active/trialing, and
+  // through the dunning grace while Stripe retries a failed renewal.
+  const active =
+    tier === "free" || (status ? ACTIVE_STATUSES.has(status) : false) || inDunningGrace(profile, now);
   const subscribedTier: PlanTier = active ? tier : "free";
 
   const compTier = (profile.comp_tier ?? null) as PlanTier | null;
@@ -160,6 +171,7 @@ export async function getEntitlements(): Promise<Entitlements> {
     currentPeriodEnd: profile?.current_period_end ?? null,
     cancelAtPeriodEnd: profile?.cancel_at_period_end ?? false,
     planEnding: planEndingOf(profile),
+    dunningGraceUntil: profile ? dunningGraceUntil(profile) : null,
     ...perks,
   };
 }
