@@ -64,6 +64,23 @@ describe("ChallengeWinnersEditor", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("A card can only take one place.");
   });
 
+  it("shows a winner that is no longer an entry, where it stands only, and can clear it", async () => {
+    const withStale = [...entries, { id: "z", title: "Gone Gnat", ownerUsername: "zed", likes: 0, stale: true }];
+    render(<ChallengeWinnersEditor challengeId="ch" entries={withStale} initial={["z", null, null]} />);
+    expect(select("1st place").value).toBe("z");
+    expect([...select("1st place").options].map((o) => o.textContent)).toContain("Gone Gnat · @zed · no longer an entry");
+    expect([...select("2nd place").options].map((o) => o.value)).not.toContain("z");
+    fireEvent.change(select("1st place"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /save winners/i }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith("ch", [null, null, null]));
+  });
+
+  it("can still clear stale winners when no entry is left", () => {
+    const stale = [{ id: "z", title: "Gone Gnat", ownerUsername: null, likes: 0, stale: true }];
+    render(<ChallengeWinnersEditor challengeId="ch" entries={stale} initial={["z", null, null]} />);
+    expect(select("1st place").value).toBe("z");
+  });
+
   it("says so when there is no entry to name", () => {
     render(<ChallengeWinnersEditor challengeId="ch" entries={[]} initial={[null, null, null]} />);
     expect(screen.getByText(/no public entries/i)).toBeTruthy();

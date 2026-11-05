@@ -23,6 +23,10 @@ export type WinnerEntryOption = {
   title: string;
   ownerUsername: string | null;
   likes: number;
+  /** A winner today whose card is no longer a public entry (gone private,
+   *  lost the tag) or past the list's length: listed so the picker SHOWS it
+   *  and can clear it — never a choice for an empty place. */
+  stale?: boolean;
 };
 
 export function ChallengeWinnersEditor({
@@ -42,8 +46,12 @@ export function ChallengeWinnersEditor({
   const [pending, startTransition] = useTransition();
   const changed = places.some((id, i) => id !== initial[i]);
 
-  if (entries.length === 0) {
-    return <p className="text-sm text-muted">No public entries — there is no one to name.</p>;
+  if (entries.length === 0 && !initial.some(Boolean)) {
+    return (
+      <p className="text-sm text-muted">
+        No public entries — there is no one to name.
+      </p>
+    );
   }
 
   const pick = (index: number, id: string | null) => {
@@ -51,7 +59,8 @@ export function ChallengeWinnersEditor({
     setPlaces((current) => {
       const next = [...current] as typeof current;
       // A card takes one place: picking it here empties the place it held.
-      for (let i = 0; i < next.length; i++) if (id && next[i] === id) next[i] = null;
+      for (let i = 0; i < next.length; i++)
+        if (id && next[i] === id) next[i] = null;
       next[index] = id;
       return next;
     });
@@ -76,7 +85,11 @@ export function ChallengeWinnersEditor({
         {WINNER_PLACES.map((place, index) => {
           const id = `${baseId}-${place}`;
           return (
-            <label key={place} htmlFor={id} className="flex min-w-0 flex-col gap-1.5">
+            <label
+              key={place}
+              htmlFor={id}
+              className="flex min-w-0 flex-col gap-1.5"
+            >
               <span className="text-xs font-semibold uppercase tracking-wider text-muted">
                 {placeLabel(place)}
               </span>
@@ -88,13 +101,18 @@ export function ChallengeWinnersEditor({
                 disabled={pending}
               >
                 <option value="">— None —</option>
-                {entries.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.title}
-                    {entry.ownerUsername ? ` · @${entry.ownerUsername}` : ""}
-                    {` · ${entry.likes} like${entry.likes === 1 ? "" : "s"}`}
-                  </option>
-                ))}
+                {entries.map((entry) =>
+                  // A stale winner is offered only where it stands today.
+                  entry.stale && places[index] !== entry.id ? null : (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.title}
+                      {entry.ownerUsername ? ` · @${entry.ownerUsername}` : ""}
+                      {entry.stale
+                        ? " · no longer an entry"
+                        : ` · ${entry.likes} like${entry.likes === 1 ? "" : "s"}`}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
           );
@@ -107,9 +125,15 @@ export function ChallengeWinnersEditor({
       ) : null}
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-subtle">
-          Entries are sorted by likes. Each newly named maker gets a notification.
+          Entries are sorted by likes. Each newly named maker gets a
+          notification.
         </p>
-        <Button type="button" size="sm" onClick={onSave} disabled={pending || !changed}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={onSave}
+          disabled={pending || !changed}
+        >
           <Trophy className="h-4 w-4" aria-hidden />
           Save winners
         </Button>

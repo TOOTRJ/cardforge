@@ -48,7 +48,12 @@ describe("0172 — the table", () => {
 
   it("states its grants (0097) and lets only an admin write", () => {
     expect(flat).toContain("revoke all on table public.challenge_winners from public, anon, authenticated;");
-    expect(flat).toContain("grant select on table public.challenge_winners to anon, authenticated;");
+    expect(flat).toContain(
+      "grant select (challenge_id, place, card_id, named_at) on table public.challenge_winners to anon, authenticated;",
+    );
+    // named_by would tell the anon key who the admins are (0074).
+    expect(flat).not.toMatch(/grant select on table public\.challenge_winners to anon/);
+    expect(flat).not.toMatch(/grant select \([^)]*named_by[^)]*\) on table public\.challenge_winners to (anon|authenticated)/);
     expect(flat).toContain("grant insert, update, delete on table public.challenge_winners to authenticated;");
     for (const op of ["insert", "update", "delete"]) {
       const policy = new RegExp(`create policy "[^"]+" on public\\.challenge_winners for ${op} [^;]*viewer_is_admin\\(\\)`);
@@ -73,6 +78,14 @@ describe("0172 — the guard", () => {
     expect(body).toContain("v_card.visibility <> 'public'");
     expect(body).toContain("not coalesce(v_challenge.tag = any (v_card.tags), false)");
   });
+  it("lets an update move a row's place only, keeping who named it and when", () => {
+    expect(body).toContain(
+      "if tg_op = 'UPDATE' then if new.card_id is distinct from old.card_id or new.challenge_id is distinct from old.challenge_id then raise exception 'winner_row_fixed'",
+    );
+    expect(body).toContain("new.named_at := old.named_at; new.named_by := old.named_by; return new;");
+    // The entry check is a NAMING check: it comes after the update's return.
+    expect(body.indexOf("return new;")).toBeLessThan(body.indexOf("v_card.visibility <> 'public'"));
+  });
   it("runs before every insert and update", () => {
     expect(flat).toContain(
       "create trigger challenge_winners_guard before insert or update on public.challenge_winners for each row execute function public.challenge_winners_guard();",
@@ -91,7 +104,7 @@ describe("0172 — the notification", () => {
   });
   it("names no actor, and goes when the card is un-named", () => {
     expect(body).toContain("v_owner, null, 'challenge_winner', new.card_id");
-    expect(body).toContain("if tg_op = 'DELETE' or (tg_op = 'UPDATE' and new.card_id is distinct from old.card_id) then delete from public.notifications");
+    expect(body).toContain("if tg_op = 'DELETE' then delete from public.notifications");
   });
   it("only rewrites the place when only the place moved (no second toast)", () => {
     expect(body).toContain("set payload = payload || jsonb_build_object('place', new.place)");

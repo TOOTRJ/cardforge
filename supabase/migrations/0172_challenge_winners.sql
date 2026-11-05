@@ -10,8 +10,9 @@
 --    Deleting the challenge or the card removes the row.
 --
 -- 2. The guard (BEFORE insert / update): the challenge has CLOSED
---    (ends_at <= now()) and the card is one of its entries — public and
---    wearing the challenge's tag, the entry rule of 0040. A winner whose card
+--    (ends_at <= now()) and a card being named is one of its entries —
+--    public and wearing the challenge's tag, the entry rule of 0040. An
+--    update may move a row's PLACE only (never its card or challenge). A winner whose card
 --    later stops being public stays in the table but is read by no one but an
 --    admin (the select policy), so it comes back if the card does.
 --
@@ -19,11 +20,14 @@
 --    the card page, both cookie-free); an admin reads every row and writes
 --    them (viewer_is_admin(), 0080 — never profiles.is_admin, unreadable to
 --    authenticated since 0074). Writes go through set_challenge_winners.
+--    The API roles read FOUR columns, never `named_by`: the admin who named a
+--    winner would otherwise tell the anon key who the admins are (0074 made
+--    that unreadable on purpose). `named_by` is the service role's alone.
 --
 -- 4. The notification (AFTER the write; it can never fail it): the card's
 --    owner gets ONE `challenge_winner` row per challenge and card — inserted
 --    when the card is named (the realtime toast), its payload's place
---    rewritten when only the place moves (an UPDATE raises no toast), and
+--    rewritten when the place moves (an UPDATE raises no toast), and
 --    deleted when the card is un-named (a mistake is not left saying it won).
 --    No actor: the line is about the card, not the admin who clicked.
 --
@@ -74,15 +78,28 @@ begin
   if v_challenge.ends_at > now() then
     raise exception 'challenge_not_closed' using errcode = 'P0001';
   end if;
+  if tg_op = 'UPDATE' then
+    -- A row is ONE card's win in ONE challenge: only its place may move (a
+    -- new card is a delete + an insert, as set_challenge_winners writes it,
+    -- so each maker's notification follows its own row). A winner that only
+    -- changes place keeps it even if its card has since gone private or lost
+    -- the tag (read by no visitor meanwhile — the select policy).
+    if new.card_id is distinct from old.card_id
+       or new.challenge_id is distinct from old.challenge_id then
+      raise exception 'winner_row_fixed' using errcode = 'P0001';
+    end if;
+    new.named_at := old.named_at;
+    new.named_by := old.named_by;
+    return new;
+  end if;
+  -- Only a card being NAMED must be an entry today.
   select c.visibility, c.tags into v_card from public.cards c where c.id = new.card_id;
   if not found or v_card.visibility <> 'public'
      or not coalesce(v_challenge.tag = any (v_card.tags), false) then
     raise exception 'not_a_challenge_entry' using errcode = 'P0001';
   end if;
-  if tg_op = 'INSERT' or new.card_id is distinct from old.card_id then
-    new.named_at := now();
-    new.named_by := auth.uid();
-  end if;
+  new.named_at := now();
+  new.named_by := auth.uid();
   return new;
 end;
 $$;
@@ -132,7 +149,9 @@ create policy "Admins can delete challenge winners"
   using (public.viewer_is_admin());
 
 revoke all on table public.challenge_winners from public, anon, authenticated;
-grant select on table public.challenge_winners to anon, authenticated;
+-- Column-level read: never `named_by` (see 3. above).
+grant select (challenge_id, place, card_id, named_at)
+  on table public.challenge_winners to anon, authenticated;
 grant insert, update, delete on table public.challenge_winners to authenticated;
 grant select, insert, update, delete on table public.challenge_winners to service_role;
 
@@ -170,21 +189,18 @@ declare
   v_challenge record;
 begin
   begin
-    -- The card that is no longer a winner here (un-named, or replaced in
-    -- its row): its line goes.
-    if tg_op = 'DELETE' or (tg_op = 'UPDATE' and new.card_id is distinct from old.card_id) then
+    -- The card that is no longer a winner here: its line goes.
+    if tg_op = 'DELETE' then
       delete from public.notifications
       where type = 'challenge_winner'
         and card_id = old.card_id
         and payload ->> 'challengeId' = old.challenge_id::text;
-    end if;
-    if tg_op = 'DELETE' then
       return old;
     end if;
 
-    select c.slug, c.title into v_challenge from public.challenges c where c.id = new.challenge_id;
-    if tg_op = 'UPDATE' and new.card_id = old.card_id then
-      -- Only the place moved: the line says the new place, no new toast.
+    if tg_op = 'UPDATE' then
+      -- Only the place moved (the guard allows nothing else): the line says
+      -- the new place, no new toast.
       update public.notifications
       set payload = payload || jsonb_build_object('place', new.place)
       where type = 'challenge_winner'
@@ -193,6 +209,7 @@ begin
       return new;
     end if;
 
+    select c.slug, c.title into v_challenge from public.challenges c where c.id = new.challenge_id;
     select owner_id into v_owner from public.cards where id = new.card_id;
     if v_owner is null then
       return new;

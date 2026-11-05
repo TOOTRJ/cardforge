@@ -181,7 +181,7 @@ export async function setChallengeWinnersAction(
   }
   const denied = await requireAdmin();
   if (denied) return { ok: false, error: denied };
-  if (!isUuid(challengeId) || places.length !== 3) {
+  if (!isUuid(challengeId) || !Array.isArray(places) || places.length !== 3) {
     return { ok: false, error: "That isn't a challenge's winners." };
   }
   const wanted = places.map((id) => (id ? id : null));

@@ -31,12 +31,20 @@ export function challengeWinAward(win: ChallengeWin): string {
 
 /** What the admin is told for each of set_challenge_winners' refusals. */
 const WINNER_ERRORS: Record<string, string> = {
-  challenge_not_closed: "Winners can only be named once the challenge has closed.",
+  challenge_not_closed:
+    "Winners can only be named once the challenge has closed.",
   not_a_challenge_entry:
     "That card is no longer an entry (it must be public and carry the challenge tag).",
   duplicate_winner: "A card can only take one place.",
   challenge_not_found: "That challenge no longer exists.",
   admin_required: "Admin access required.",
+  // Two admins saving at once: the deferred keys meet at commit.
+  challenge_winners_pkey:
+    "Someone else saved these winners just now. Reload the page and try again.",
+  challenge_winners_card_once:
+    "Someone else saved these winners just now. Reload the page and try again.",
+  winner_row_fixed:
+    "That winner can only change place. Reload the page and try again.",
 };
 
 export function winnerErrorMessage(message: string): string {
