@@ -22,6 +22,10 @@ describe("0175", () => {
     expect(Number(FILE!.slice(0, 4))).toBeGreaterThan(174);
   });
 
+  it("adds payment_failed_at itself (idempotent): the trigger body pins it, and 0174 may land in either order", () => {
+    expect(flat).toContain("alter table public.profiles add column if not exists payment_failed_at timestamptz;");
+  });
+
   it("adds billing_interval with its CHECK and pins it beside every other billing column", () => {
     expect(flat).toContain(
       "alter table public.profiles add column if not exists billing_interval text check (billing_interval is null or billing_interval in ('month', 'year'));",
@@ -36,7 +40,7 @@ describe("0175", () => {
 
   it("grant_credits locks the profile row BEFORE the idempotency check and keeps 0027's ACL", () => {
     const body = /create or replace function public\.grant_credits\([\s\S]*?\$\$;/.exec(flat)?.[0] ?? "";
-    const lock = body.indexOf("where id = p_user_id for update;");
+    const lock = body.indexOf("where id = p_user_id for no key update;");
     const check = body.indexOf("select 1 from public.credit_ledger where idempotency_key = p_idempotency_key");
     expect(lock).toBeGreaterThan(-1);
     expect(check).toBeGreaterThan(lock);

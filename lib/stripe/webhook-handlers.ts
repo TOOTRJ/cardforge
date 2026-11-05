@@ -183,6 +183,9 @@ async function handleSubscriptionEvent(
   // re-grant the primary's month.
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
+    // A trial converting is the one `updated` that pays (its invoice.paid
+    // grants too; both are idempotent on the month's key).
+    paid: opts.previous?.status === "trialing" && sub.status === "active",
   });
 }
 
@@ -455,7 +458,12 @@ async function handleInvoicePaid(
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
       try {
-        await grantCreditsForSync(result, admin, { isCreationEvent: false });
+        await grantCreditsForSync(result, admin, {
+          isCreationEvent: false,
+          // The cycle's (or the first) invoice is what a monthly plan's
+          // allotment is for; a proration or a $0 update invoice is not.
+          paid: invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create",
+        });
       } catch (error) {
         // Loud, never thrown (Stripe's retries stay as they were; the
         // subscription events and the daily cron grant the month too): an

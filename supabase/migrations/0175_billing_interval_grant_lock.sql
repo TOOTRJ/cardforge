@@ -26,6 +26,17 @@
 -- (`create or replace`). Ships through a PR; never applied ad-hoc.
 
 -- 1. billing_interval ---------------------------------------------------------
+-- 0174 (the dunning grace) is expected BEFORE this file and adds
+-- payment_failed_at, which the trigger body below pins; a plpgsql body that
+-- names a missing `new.` field is accepted at CREATE and fails at the first
+-- profile write, so the column is added here too (idempotent) and this file
+-- never depends on the order. Merge 0174's PR first all the same: applied
+-- AFTER this one, its older trigger body would drop the billing_interval pin
+-- (the sync then writes it unpinned — a user could not: the column is in no
+-- API grant).
+alter table public.profiles
+  add column if not exists payment_failed_at timestamptz;
+
 alter table public.profiles
   add column if not exists billing_interval text
     check (billing_interval is null or billing_interval in ('month', 'year'));
@@ -97,11 +108,12 @@ declare
   v_balance integer;
 begin
   -- Serialize every grant for this user: a concurrent call with the same
-  -- key waits here and then finds the ledger row (no 23505, no 500).
+  -- key waits here and then finds the ledger row (no 23505, no 500). NO KEY
+  -- UPDATE is the lock the old UPDATE took (never blocks a FK key share).
   select credits into v_balance
   from public.profiles
   where id = p_user_id
-  for update;
+  for no key update;
 
   if v_balance is null then
     return 0; -- no such profile; nothing granted

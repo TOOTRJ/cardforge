@@ -61,7 +61,7 @@ function stubAdmin(opts: {
         like: (_column: string, pattern: string) => {
           // The month's refill rows share the base key as a prefix — one LIKE;
           // the newest-grant read is a LIKE on the user prefix, ordered, limit 1.
-          if (pattern === `${creditRefillKey(USER, PERIOD)}%`) {
+          if (/^refill:[^:]+:\d{4}-\d{2}%$/.test(pattern)) {
             return Promise.resolve({
               data: opts.readError ? null : rows,
               error: opts.readError ? { message: opts.readError } : null,
@@ -69,6 +69,11 @@ function stubAdmin(opts: {
           }
           expect(pattern).toBe(`${creditRefillKey(USER, "")}%`);
           const chain = {
+            not: (_c: string, op: string, value: string) => {
+              // The upgrade rows are filtered in SQL, before the limit.
+              expect([op, value]).toEqual(["like", "%:upgrade:%"]);
+              return chain;
+            },
             order: () => chain,
             limit: () => chain,
             then: (resolve: (v: unknown) => void) =>
@@ -233,7 +238,8 @@ describe("grantMonthlyCreditsForPeriod", () => {
     const old = { created_at: new Date(now.getTime() - (MONTHLY_REFILL_BACKSTOP_DAYS + 1) * 86_400_000).toISOString(), idempotency_key: creditRefillKey(USER, "2025-12") };
     const missed = stubAdmin({ newest: old });
     expect(await grantMonthlyCreditsForPeriod(missed.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro });
-    expect(missed.grants[0]).toMatchObject({ p_idempotency_key: creditRefillKey(USER, PERIOD) });
+    // …under the MISSED month's key: the one after the newest grant's (2025-12 → 2026-01).
+    expect(missed.grants[0]).toMatchObject({ p_idempotency_key: creditRefillKey(USER, "2026-01") });
     // No grant ever (a row synced before the ledger): grants. A failed read: grants (idempotent).
     expect((await grantMonthlyCreditsForPeriod(stubAdmin({ newest: null }).admin, USER, "plus", PERIOD, { base: "backstop", now })).ok).toBe(true);
     const failed = stubAdmin({ newestError: "boom" });
@@ -244,6 +250,27 @@ describe("grantMonthlyCreditsForPeriod", () => {
     // "always" (the webhook, an annual plan) never reads the newest grant.
     const always = stubAdmin({ newest: recent });
     expect(await grantMonthlyCreditsForPeriod(always.admin, USER, "pro", PERIOD)).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro });
+  });
+
+  it("the backstop grants the MISSED month — the one after the newest grant's — never the current one over it", async () => {
+    // Paid Jan 31 (key 2026-01); the Feb 28 renewal's webhook was missed;
+    // the cron on Mar 8 is past the 35 days: February is owed, and March is
+    // left to the Mar 28 renewal.
+    const now = new Date("2026-03-08T06:00:00Z");
+    const jan = { created_at: "2026-01-31T20:00:00Z", idempotency_key: creditRefillKey(USER, "2026-01") };
+    const missed = stubAdmin({ newest: jan });
+    expect(await grantMonthlyCreditsForPeriod(missed.admin, USER, "plus", "2026-03", { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.plus });
+    expect(missed.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-02"));
+    // Two months missed: the earlier one first (the next run takes the next).
+    const dec = { created_at: "2025-12-05T20:00:00Z", idempotency_key: creditRefillKey(USER, "2025-12") };
+    const twice = stubAdmin({ newest: dec });
+    await grantMonthlyCreditsForPeriod(twice.admin, USER, "plus", "2026-03", { base: "backstop", now });
+    expect(twice.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-01"));
+    // The newest grant is last month: this month is the missed one.
+    const feb = { created_at: "2026-01-28T20:00:00Z", idempotency_key: creditRefillKey(USER, "2026-02") };
+    const current = stubAdmin({ newest: feb });
+    await grantMonthlyCreditsForPeriod(current.admin, USER, "plus", "2026-03", { base: "backstop", now });
+    expect(current.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-03"));
   });
 
   it("surfaces a grant RPC failure", async () => {
@@ -280,6 +307,7 @@ function stubSweepAdmin(opts: SweepStubOpts): {
         // newest base grant (the backstop read's .order().limit()).
         like: () => {
           const chain = {
+            not: () => chain,
             order: () => chain,
             limit: () => chain,
             then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),

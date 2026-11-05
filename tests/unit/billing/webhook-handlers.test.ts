@@ -55,13 +55,20 @@ function makeAdmin(
               };
             },
             // The month's refill rows (credit-refill.ts reads them with one
-            // LIKE on the base key prefix).
-            like: async () => ({
-              data: ledgerRow
-                ? [{ ...ledgerRow, idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
-                : [],
-              error: null,
-            }),
+            // LIKE on the base key prefix); the backstop's newest-grant read
+            // is the same LIKE, filtered and ordered, answering the same row.
+            like: () => {
+              const data = ledgerRow
+                ? [{ ...ledgerRow, created_at: new Date().toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
+                : [];
+              const chain = {
+                not: () => chain,
+                order: () => chain,
+                limit: () => chain,
+                then: (resolve: (v: unknown) => void) => resolve({ data, error: null }),
+              };
+              return chain;
+            },
           };
         },
         update(values: Record<string, unknown>) {
@@ -322,6 +329,32 @@ describe("handleStripeEvent", () => {
     expect(String(grant?.args.p_idempotency_key)).toMatch(
       /^refill:user-1:\d{4}-\d{2}:upgrade:pro$/,
     );
+  });
+
+  it("on subscription.updated that does NOT pay (a cancel click) on a MONTHLY plan: no base grant — the invoice's job (0175)", async () => {
+    // Paid Jan 31 (the month's row exists for THAT month); the click lands
+    // in a new month whose row is missing: the old code granted it here.
+    const { admin, rpcs } = makeAdmin({ ledgerRow: { delta: 100 } });
+    await run(
+      {
+        id: "evt_cancel_click",
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_1",
+            customer: "cus_1",
+            status: "active",
+            cancel_at_period_end: true,
+            items: { data: [{ price: { id: "price_pro", recurring: { interval: "month" } }, current_period_end: 1893456000 }] },
+          },
+          previous_attributes: { cancel_at_period_end: false },
+        },
+      },
+      admin,
+    );
+    // The month's row exists in this fake, so only a top-up could run — and
+    // the tier is unchanged: nothing is granted either way.
+    expect(rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
   });
 
   it("on subscription.updated (same tier, month already granted): no extra grant", async () => {
@@ -1085,7 +1118,7 @@ function makeChainAdmin(
   function chain(table: string, result: () => { data: unknown; error: unknown }) {
     const c: Record<string, unknown> = {};
     const self = () => c;
-    for (const m of ["eq", "neq", "like", "gte", "lte", "lt", "gt", "is", "in", "order", "limit", "select"]) c[m] = self;
+    for (const m of ["eq", "neq", "like", "not", "gte", "lte", "lt", "gt", "is", "in", "order", "limit", "select"]) c[m] = self;
     c.maybeSingle = async () => {
       const r = result();
       return { data: Array.isArray(r.data) ? (r.data[0] ?? null) : r.data, error: r.error };

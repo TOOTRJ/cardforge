@@ -518,7 +518,14 @@ export async function syncSubscriptionForUser(
 export async function grantCreditsForSync(
   result: SubscriptionSyncResult,
   admin: AdminClient,
-  opts: { isCreationEvent: boolean },
+  opts: {
+    isCreationEvent: boolean;
+    /** The sync was driven by a PAYING event — a cycle / first invoice
+     *  paid, a trial converting — which is what grants a MONTHLY plan's base
+     *  allotment. Any other sync (a cancel click, a resume, a portal change,
+     *  a proration) only backstops it (lib/billing/credit-refill.ts). */
+    paid?: boolean;
+  },
 ): Promise<void> {
   if (!result.subscriptionId || !isLiveStatus(result.status)) return;
   if (result.tier === "free") return;
@@ -532,11 +539,16 @@ export async function grantCreditsForSync(
     if (!trial.ok) throw new Error(`Trial credit grant failed for ${result.userId}: ${trial.error}`);
     return;
   }
+  // A monthly plan's base allotment belongs to the invoice that pays it
+  // (audit 2026-11-05, P2-1): a plan paid on Jan 31 whose owner clicked
+  // Cancel on Feb 2 used to get February's allotment on that click.
+  const base = result.billingInterval === "month" && !opts.isCreationEvent && !opts.paid ? "backstop" : "always";
   const granted = await grantMonthlyCreditsForPeriod(
     admin,
     result.userId,
     result.tier,
     currentCreditPeriod(),
+    { base },
   );
   if (!granted.ok) {
     throw new Error(`Credit grant failed for ${result.userId}: ${granted.error}`);
