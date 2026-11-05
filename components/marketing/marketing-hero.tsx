@@ -35,6 +35,29 @@ export type HeroFeaturedCard = {
   owner: { username: string; displayName: string | null };
 };
 
+/** The phone's hero card: at most 96 px wide (24vw on a narrow phone), the
+ *  first of the day's pair, tilted like the pair's second card. Its `sizes`
+ *  is that width; the pair below keeps its own. Lazy, never `priority`: it is
+ *  display:none from sm up, and a preload would fetch it on every desktop
+ *  (a lazy image in a hidden box is never fetched). */
+function PhoneHeroCard({ card }: { card: HeroFeaturedCard }) {
+  return (
+    <Link
+      href={`/card/${card.owner.username}/${card.slug}`}
+      className="mt-1 block w-[24vw] max-w-24 shrink-0 rotate-[4deg] sm:hidden"
+    >
+      <Image
+        src={card.imageUrl}
+        alt={card.title}
+        width={card.landscape ? 588 : 420}
+        height={card.landscape ? 420 : 588}
+        sizes="(max-width: 400px) 24vw, 96px"
+        className={`h-auto w-full ${cardCornersClass(card.landscape ?? false)} border border-gold/30 bg-[#101015] bg-clip-padding shadow-xl`}
+      />
+    </Link>
+  );
+}
+
 export function MarketingHero({
   featured = [],
 }: {
@@ -46,7 +69,7 @@ export function MarketingHero({
       <div className="absolute inset-0 bg-radial-glow" aria-hidden />
       <StarfieldBackdrop withGlyphs />
 
-      <PageContainer size="wide" className="relative grid gap-12 py-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-32">
+      <PageContainer size="wide" className="relative grid gap-12 pt-8 pb-24 sm:pt-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-32">
         <div className="flex flex-col items-start gap-6">
           {/* Eyebrow */}
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
@@ -70,28 +93,39 @@ export function MarketingHero({
             start — sign up in seconds and forge your first card.
           </p>
 
-          {/* WUBRG pip strip */}
-          <div className="flex items-center gap-2" aria-label="Supports all five Magic colors">
-            <span className="flex items-center gap-1.5 text-xl leading-none" aria-hidden>
-              {MANA_PIPS.map((pip) => (
-                <i
-                  key={pip.key}
-                  className={`ms ms-${pip.key} ms-cost ms-shadow`}
-                  title={pip.label}
-                />
-              ))}
-            </span>
-            <span className="ml-1 text-xs text-subtle">All five colors supported</span>
-          </div>
+          {/* A phone's first screen (TODO HM5): the first hero card, small,
+              beside the pip strip and the CTAs — the height they already
+              take, so the create button stays where it was. From sm up the
+              wrappers are `contents`: the strip and the CTAs are this
+              column's own items again, laid out exactly as before, and the
+              pair in the right-hand column is the hero's only picture. */}
+          <div className="flex w-full items-start justify-between gap-4 sm:contents">
+            <div className="flex min-w-0 flex-col items-start gap-6 sm:contents">
+              {/* WUBRG pip strip */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1" aria-label="Supports all five Magic colors">
+                <span className="flex items-center gap-1.5 text-xl leading-none" aria-hidden>
+                  {MANA_PIPS.map((pip) => (
+                    <i
+                      key={pip.key}
+                      className={`ms ms-${pip.key} ms-cost ms-shadow`}
+                      title={pip.label}
+                    />
+                  ))}
+                </span>
+                <span className="whitespace-nowrap text-xs text-subtle sm:ml-1">All five colors supported</span>
+              </div>
 
-          {/* CTAs */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button asChild size="lg">
-              <CreateCtaLink surface="home_hero" />
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/gallery">Explore the gallery</Link>
-            </Button>
+              {/* CTAs */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button asChild size="lg">
+                  <CreateCtaLink surface="home_hero" />
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/gallery">Explore the gallery</Link>
+                </Button>
+              </div>
+            </div>
+            {featured[0] ? <PhoneHeroCard card={featured[0]} /> : null}
           </div>
 
           {/* Micro-features — the precision promises */}
