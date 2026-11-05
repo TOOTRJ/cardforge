@@ -96,6 +96,12 @@ describe("pricingCtaFor", () => {
       expect(pricingCtaFor(delinquent, "free"), status).toEqual({ kind: "none" });
     }
   });
+
+  it("inside the dunning grace (isPaid still true, 0174) the portal is still the only button", () => {
+    const graced = signedIn({ isPaid: true, currentTier: "pro", hasSubscribed: true, hasBillingAccount: true, subscriptionStatus: "past_due" });
+    expect(pricingCtaFor(graced, "plus")).toEqual({ kind: "portal", label: "Update payment to continue" });
+    expect(pricingCtaFor(graced, "pro")).toEqual({ kind: "portal", label: "Update payment to continue" });
+  });
 });
 
 describe("pricingCtaFor — a cancelled (ending) subscription", () => {

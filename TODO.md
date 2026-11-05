@@ -4383,6 +4383,58 @@ Each step is its own PR. Check 1366, 1536, 1920 and 2560 px and a phone on every
 
 - [ ] **RF1 [P2 · L] Referral program — ON HOLD** (owner 2026-11-02: benched until every other task on this refactor list is done, with every billing / Stripe PR — BL1 / #726 — and the deck edit drawer, DK5.18 / #729) — Built and pushed as two open DRAFT PRs, kept as drafts so nothing is lost: TOOTRJ/cardforge#689 (schema, attribution, rewards; branch `claude/gifted-carson-gidclq-referrals`) and #691 (the Refer a friend page + admin stats; branch `claude/gifted-carson-gidclq-referrals-ui`, stacked on #689 — the two merge together). Each PR body opens with an "On hold" section listing the last round's items as done / half-done / not started, and records the owner's decisions: one regular Plus month with ONE 30-credit allotment (always Plus); a paying referrer — trialing too — gets a month of their plan's price as balance credit; both emails confirmed, no waiting hold; failed rewards retried by an hourly sweep; one email = one referral month ever, for friends AND referrers (normalized: +tag, Gmail dots, googlemail; kept as a keyed fingerprint that survives account deletion). On resume: merge `main` into both, renumber migration 0164 (taken by then) and union `notifications_type_check` with whatever landed, finish the listed items, a fresh independent full check, re-take the screenshots for the owner's OK, and set `REFERRAL_EMAIL_HASH_KEY` in Vercel before release.
 
+## Billing audit 2026-11-05 (Stripe, plans, comps, referrals)
+
+Full report: `docs/research/stripe-billing-audit-2026-11.md`. Owner approved
+the order 2026-11-05: Tier 1 on `main` first (three draft PRs, each with the
+full independent check and the owner's OK), then BL1 (#726) reshaped as
+month-unit comps, then RF1 (#689 / #691), then the trial items.
+
+- [ ] **BA1 [P1 · S] Tier 1 PR A — checkout refusal + notifications pin** — a failed Stripe
+  list falls through to a fresh checkout (an active subscriber sold a SECOND
+  subscription, charged at once); `authenticated` holds a table-wide UPDATE
+  on `notifications` so a user can forge a dated `trial_lapsed` row and buy at
+  the win-back discount. Fix: `findCheckoutSubscriptions` (one read, refuse
+  on failure), migration 0173 (`grant update (read_at)` only), the win-back
+  check re-reads the named subscription's customer.
+- [ ] **BA2 [P1 · M] Tier 1 PR B — dunning grace + refund / dispute events** — `past_due`
+  drops perks and credits on the FIRST failed charge, before Smart Retries;
+  keep perks 14 days from the failed invoice (owner 2026-11-05: my
+  recommendation) + a `payment_failed` notification / email to the portal's
+  card flow; subscribe `charge.refunded`, `charge.dispute.created/closed`,
+  `radar.early_fraud_warning.created` (live + sandbox), claw back a refunded
+  pack's unspent credits, mark the revenue rows, alert admins.
+- [ ] **BA3 [P2 · M] Tier 1 PR C — credit keying, races, comp retry** — calendar-month
+  keys hand out two allotments for one payment (Jan 31 + Feb 1 cron) and an
+  annual plan's credits rest on the cron alone with no backfill; `grant_credits`
+  exists→update→insert races the webhook (23505 pages admins); `ensureStripeCustomer`
+  can mint two customers; two admins' comp saves double-credit; a comp's Stripe
+  write is best-effort with no retry (the held trial still charges).
+- [ ] **BA4 [P2 · M] BL1 reshaped: comps in MONTH units only, the same mechanism as the
+  referral free month** (owner 2026-11-05, answers 3–4) — investigate one shared
+  "granted months" mechanism before building; the app creates the no-switch
+  portal configuration itself; explain the design to the owner first.
+- [ ] **BA5 [P2 · L] RF1 resumed: referral program** (owner 2026-11-05, answers 1–2 + the
+  addition) — a free MONTH of Plus with its normal 30 credits; the referrer keeps a
+  month, rewarded when the friend saves a first card; an ADMIN SWITCH turns the
+  reward on / off and the reward KIND is configurable (a month today, credits or
+  something else later); users see their referral stats. Fix the review's P1
+  (unconfirmed-email squatting: record nothing until the email is confirmed),
+  cap the friend's side, credits when the period starts, migration renumbered,
+  the notification CHECK unioned.
+- [ ] **BA6 [P2 · M] Trial conversion + compliance** — Stripe's own trial-ending email ON
+  (Dashboard), Checkout `consent_collection` + the "after 7 days you'll be charged
+  $6/month until you cancel" line, portal cancellation reasons stored on the
+  profile, the 3-day reminder as a usage recap; the win-back coupon is 20 % off the
+  whole YEAR on annual and re-claimable; the delete-account-then-re-trial loophole;
+  a win-back sequence for cancelled payers; the no-card REVERSE-TRIAL experiment
+  (owner 2026-11-05: yes — explain it first).
+- [ ] **BA7 [P3 · S] Nice to have** — pricing page "$0 today · $6/mo from <date> · cancel
+  anytime"; `invoice.upcoming`, `payment_action_required`, `pending_update_*`,
+  `payment_method.*` events; prune `stripe_events`; raise the list limit; classic vs
+  flexible billing mode decided explicitly; Stripe Tax threshold monitoring; a CI
+  sandbox.
+
 ## Home page conversion (review 2026-11-03)
 
 Audit of the home page and research on turning visitors into sign-ups (owner
@@ -4536,7 +4588,7 @@ the evidence.
 ### Deferred by owner decision (2026-09-14) — do not implement yet
 
 - [x] **Email delivery for admin → user messages.** Done 2026-09-17 (`feat/onboarding-email`): branded team-message email gated by the user's "Account & team messages" preference (default on), plus the daily activity digest and the newsletter — `docs/EMAIL.md`. Owner steps: `RESEND_API_KEY` + verified `EMAIL_FROM` in Vercel.
-- [ ] (remaining, 2026-10-08: `charge.dispute.created` (an admin alert) and `invoice.upcoming` (the annual-renewal heads-up), each with its handler and email — History: partly 2026-09-23 — #362 added `customer.subscription.trial_will_end` with its reminder, and #363 took `invoice.paid` after all (the revenue log); the text below predates both) **Optional Stripe webhook events for subscriber UX.** The six events the webhook handles today (`checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`) are all that correctness needs. Add these only together with a handler + email: `customer.subscription.trial_will_end` (3-day "your trial ends, card on file?" reminder), `charge.dispute.created` (admin alert so a dispute is answered inside Stripe's window), `invoice.upcoming` (annual-renewal heads-up). `invoice.paid` is NOT needed — `customer.subscription.updated` already carries the renewed period.
+- [ ] (remaining, 2026-11-05: `invoice.upcoming` (the annual-renewal heads-up) only — `charge.dispute.created` / `.closed`, `charge.refunded` and `radar.early_fraud_warning.created` are handled since migration 0174 (BA2: admin `billing_alert` rows, a refunded pack's credits follow the money) — History: partly 2026-09-23 — #362 added `customer.subscription.trial_will_end` with its reminder, and #363 took `invoice.paid` after all (the revenue log); the text below predates both) **Optional Stripe webhook events for subscriber UX.** The six events the webhook handles today (`checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`) are all that correctness needs. Add these only together with a handler + email: `customer.subscription.trial_will_end` (3-day "your trial ends, card on file?" reminder), `charge.dispute.created` (admin alert so a dispute is answered inside Stripe's window), `invoice.upcoming` (annual-renewal heads-up). `invoice.paid` is NOT needed — `customer.subscription.updated` already carries the renewed period.
 - [x] (fixed 2026-09-21 — dup — same fix) Saving a frame layout override never marks cards with no frame_style.template stale, though they render on that template — `lib/cards/frame-profile-override-actions.ts`:54
 - [x] (fixed 2026-09-21 — revalidateChallengeSurfaces purges /challenges/[slug]) Challenge admin actions never revalidate /challenges/[slug], so 'Close now' / feature toggles leave the detail page stale — `lib/challenges/actions.ts`:51
 - [x] (fixed 2026-09-21 — suffix candidates trim trailing hyphens (decks and cards)) Slug truncation can produce a trailing/double hyphen, failing the decks_slug_format CHECK with a raw Postgres error — `lib/decks/actions.ts`:124

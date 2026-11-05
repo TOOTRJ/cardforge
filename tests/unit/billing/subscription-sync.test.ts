@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  findCheckoutSubscriptions,
   findDelinquentSubscription,
   findLiveSubscription,
   grantCreditsForSync,
@@ -756,5 +757,81 @@ describe("grantCreditsForSync — a monthly plan's base allotment is the paying 
       await grantCreditsForSync({ ...monthly(), billingInterval }, admin, { isCreationEvent: false });
       expect(rpcs.find((r) => r.fn === "grant_credits")?.args, String(billingInterval)).toMatchObject({ p_amount: MONTHLY_CREDITS.pro });
     }
+  });
+});
+
+describe("the dunning stamp (0174: profiles.payment_failed_at)", () => {
+  const pastDue = (extra: Record<string, unknown> = {}) =>
+    sub("sub_pd", "past_due", { id: "price_pro" }, { created: 1, cancel_at_period_end: false, ...extra });
+
+  it("is written the first time the sync sees the payment broken, and KEPT on later events of the same failure", async () => {
+    const first = makeAdmin({ subscription_status: "active", payment_failed_at: null });
+    await syncSubscriptionForUser(first.admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
+    const stamped = first.updates[0].payment_failed_at;
+    expect(typeof stamped).toBe("string");
+    expect(Math.abs(new Date(stamped as string).getTime() - Date.now())).toBeLessThan(5_000);
+    expect(first.updates[0]).toMatchObject({ subscription_status: "past_due", subscription_tier: "pro" });
+
+    // Stripe retries the same invoice: every retry re-delivers past_due; the
+    // first stamp stays (the grace is counted from the FIRST failure).
+    const later = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z" });
+    await syncSubscriptionForUser(later.admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
+    expect(later.updates[0].payment_failed_at).toBe("2026-11-01T00:00:00.000Z");
+  });
+
+  it("is cleared when the subscription pays again or ends", async () => {
+    const paid = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z" });
+    const active = sub("sub_pd", "active", { id: "price_pro" }, { created: 1, cancel_at_period_end: false });
+    await syncSubscriptionForUser(paid.admin, makeStripe([active]), "user-1", { eventSub: active });
+    expect(paid.updates[0]).toMatchObject({ subscription_status: "active", payment_failed_at: null });
+
+    const ended = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z", stripe_subscription_id: "sub_pd" });
+    const canceled = sub("sub_pd", "canceled", { id: "price_pro" }, { created: 1 });
+    await syncSubscriptionForUser(ended.admin, makeStripe([canceled]), "user-1", { eventSub: canceled, eventDeleted: true });
+    expect(ended.updates[0]).toMatchObject({ subscription_status: "canceled", payment_failed_at: null });
+  });
+
+  it("unpaid anchors the stamp too; incomplete never does", async () => {
+    const unpaid = makeAdmin({ subscription_status: "active", payment_failed_at: null });
+    const u = sub("sub_u", "unpaid", { id: "price_plus" }, { created: 1 });
+    await syncSubscriptionForUser(unpaid.admin, makeStripe([u]), "user-1", { eventSub: u });
+    expect(typeof unpaid.updates[0].payment_failed_at).toBe("string");
+
+    const incomplete = makeAdmin({ subscription_status: "active", payment_failed_at: null });
+    const i = sub("sub_i", "incomplete", { id: "price_plus" }, { created: 1 });
+    await syncSubscriptionForUser(incomplete.admin, makeStripe([i]), "user-1", { eventSub: i });
+    expect(incomplete.updates[0].payment_failed_at).toBeNull();
+  });
+
+  it("a TRIAL whose first charge declines gets no stamp (no grace: it never paid), for the whole dunning run", async () => {
+    const fromTrial = makeAdmin({ subscription_status: "trialing", payment_failed_at: null });
+    await syncSubscriptionForUser(fromTrial.admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
+    expect(fromTrial.updates[0]).toMatchObject({ subscription_status: "past_due", payment_failed_at: null });
+    // The retry's event: the profile is past_due with no stamp — still none.
+    const retry = makeAdmin({ subscription_status: "past_due", payment_failed_at: null });
+    await syncSubscriptionForUser(retry.admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
+    expect(retry.updates[0].payment_failed_at).toBeNull();
+  });
+
+  it("the result carries the stamp for the payment-failed notice", async () => {
+    const { admin } = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z" });
+    const result = await syncSubscriptionForUser(admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
+    expect(result.paymentFailedAt).toBe("2026-11-01T00:00:00.000Z");
+  });
+});
+
+describe("findCheckoutSubscriptions", () => {
+  it("answers the live AND the delinquent subscription from one list; an empty list is two nulls", async () => {
+    const trial = sub("sub_trial", "trialing", { id: "price_plus" }, { created: 1 });
+    const pro = sub("sub_pro", "active", { id: "price_pro" }, { created: 2 });
+    const unpaid = sub("sub_unpaid", "unpaid", { id: "price_plus" }, { created: 3 });
+    const found = await findCheckoutSubscriptions(makeStripe([trial, pro, unpaid]), "cus_1");
+    expect(found?.live?.id).toBe("sub_pro");
+    expect(found?.delinquent?.id).toBe("sub_unpaid");
+    expect(await findCheckoutSubscriptions(makeStripe([]), "cus_1")).toEqual({ live: null, delinquent: null });
+  });
+
+  it("is NULL — not 'nothing found' — when the list can't be read (the checkout action refuses on it)", async () => {
+    expect(await findCheckoutSubscriptions(makeStripe(null), "cus_1")).toBeNull();
   });
 });

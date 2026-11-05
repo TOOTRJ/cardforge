@@ -66,8 +66,12 @@ modules import them) — a blind overwrite breaks the typecheck.
    subscribe to: `checkout.session.completed`,
    `checkout.session.async_payment_succeeded` (delayed payment methods —
    without it a bank-debit credit pack is paid for and never delivered),
-   `customer.subscription.created`, `customer.subscription.updated`,
-   `customer.subscription.deleted`, `invoice.payment_failed`. Keep the
+   `checkout.session.expired`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`,
+   `customer.subscription.trial_will_end`, `invoice.paid`,
+   `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`,
+   `charge.dispute.closed`, `radar.early_fraud_warning.created` (all
+   thirteen — docs/BILLING.md §1). Keep the
    endpoint's **API version** aligned with the SDK (`2026-05-27.dahlia`).
    Copy the signing secret (`whsec_…`).
    (Credit refills are cron-driven, not webhook-driven — see §6.)

@@ -28,7 +28,7 @@ import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import {
   customerIdOf,
-  findDelinquentSubscription,
+  findCheckoutSubscriptions,
   findLiveSubscription,
   isLiveStatus,
   resolveSubscriptionTier,
@@ -175,20 +175,45 @@ const MIN_TRIAL_CARRY_SECONDS = 48 * 60 * 60 + 15 * 60;
  * Win-back eligibility: a `trial_lapsed` notification (written by the
  * webhook when a trial ended unconverted) within the offer window. The
  * checkout action applies the coupon itself — the email never carries a
- * code, so nothing can be shared or forged.
+ * code, so nothing can be shared. Since 0173 a user can change nothing but
+ * `read_at` on a notification, so the row itself can't be forged; the
+ * subscription it names is still checked against the buyer's own customer
+ * (belt and braces: a row the service role wrote for the wrong user, or a
+ * database that hasn't run 0173, buys no discount). A failed read answers
+ * false — full price, never a discount on a guess.
  */
-async function hasRecentLapsedTrial(userId: string): Promise<boolean> {
+async function hasRecentLapsedTrial(
+  stripe: Stripe,
+  userId: string,
+  customerId: string,
+): Promise<boolean> {
   if (!isAdminConfigured()) return false;
   const since = new Date(Date.now() - TRIAL_WINBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data } = await createAdminClient()
     .from("notifications")
-    .select("id")
+    .select("id, payload")
     .eq("recipient_id", userId)
     .eq("type", "trial_lapsed")
     .gte("created_at", since)
     .limit(1)
     .maybeSingle();
-  return Boolean(data);
+  if (!data) return false;
+  const payload = (data as { payload?: unknown }).payload;
+  const subscriptionId =
+    payload && typeof payload === "object" && typeof (payload as { subscriptionId?: unknown }).subscriptionId === "string"
+      ? (payload as { subscriptionId: string }).subscriptionId
+      : null;
+  if (!subscriptionId) return false;
+  try {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    return customerIdOf(sub.customer) === customerId;
+  } catch (error) {
+    console.error(
+      "[stripe] Win-back eligibility check failed (selling at full price):",
+      error instanceof Error ? error.message : error,
+    );
+    return false;
+  }
 }
 
 /**
@@ -382,20 +407,29 @@ export async function createCheckoutSessionAction(
       // switches price in place; a no-card trial is superseded: a fresh
       // checkout collects payment now, and the webhook cancels the trial
       // once the new subscription is paid (handleSupersededSubscription).
-      const live = await findLiveSubscription(stripe, customer.customerId);
-      if (!live) {
+      // ONE read of the customer's list answers both questions — and when
+      // that read FAILS, nothing is sold: "no subscription found" because
+      // nothing could be read is not "no subscription" (an active Pro
+      // subscriber clicking Switch during a Stripe hiccup was charged for a
+      // second plan at once — audit 2026-11-05, P1-2).
+      const found = await findCheckoutSubscriptions(stripe, customer.customerId);
+      if (!found) {
+        console.error("[stripe] Checkout refused: the customer's subscriptions couldn't be read", {
+          userId: customer.userId,
+        });
+        return { ok: false, error: "Couldn't check your plan with Stripe. Try again in a moment." };
+      }
+      const { live, delinquent } = found;
+      if (!live && delinquent) {
         // A subscription whose payment failed still exists: selling a second
         // one bills twice once Stripe's retry succeeds. The portal is where
         // the card gets fixed (and where Stripe reactivates the plan).
-        const delinquent = await findDelinquentSubscription(stripe, customer.customerId);
-        if (delinquent) {
-          const portal = await stripe.billingPortal.sessions.create({
-            customer: customer.customerId,
-            return_url: `${base}/dashboard/billing`,
-          });
-          if (!portal.url) return { ok: false, error: "Couldn't open the billing portal." };
-          return { ok: true, url: portal.url };
-        }
+        const portal = await stripe.billingPortal.sessions.create({
+          customer: customer.customerId,
+          return_url: `${base}/dashboard/billing`,
+        });
+        if (!portal.url) return { ok: false, error: "Couldn't open the billing portal." };
+        return { ok: true, url: portal.url };
       }
       let supersedes: string | null = null;
       // A plan switch DURING the trial keeps the rest of the trial on the
@@ -478,7 +512,10 @@ export async function createCheckoutSessionAction(
       // Never on a comp hold: the first invoice is the hold's $0 one, and a
       // once-off coupon would be spent on it.
       const winback =
-        !live && !withTrial && heldTrialEnd == null && (await hasRecentLapsedTrial(customer.userId));
+        !live &&
+        !withTrial &&
+        heldTrialEnd == null &&
+        (await hasRecentLapsedTrial(stripe, customer.userId, customer.customerId));
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",

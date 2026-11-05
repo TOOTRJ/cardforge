@@ -36,6 +36,10 @@ export type RevenueEntry = {
   paidAt: string;
   invoiceNumber: string | null;
   hostedInvoiceUrl: string | null;
+  /** Money given back on this sale (0174: a refund, by the webhook). */
+  refundedCents: number;
+  /** Stripe's dispute status when one is or was open on this sale. */
+  disputeStatus: string | null;
 };
 
 /** Money taken in one currency. */
@@ -45,6 +49,11 @@ export type RevenueSummary = {
   /** One entry per currency (USD first), payments with money taken only. */
   last30Days: CurrencyTotal[];
   allTime: CurrencyTotal[];
+  /** Money given back (refunds) per currency, all time — shown beside the
+   *  gross totals, never subtracted from them (0174). */
+  refunds: CurrencyTotal[];
+  /** Sales with a dispute open or lost, all time. */
+  disputed: number;
   /** Payments with money taken, across currencies. */
   last30DaysCount: number;
   allTimeCount: number;
@@ -72,6 +81,9 @@ export type PaymentRow = {
   paid_at: string;
   invoice_number: string | null;
   hosted_invoice_url: string | null;
+  /** 0174 — absent on a database that hasn't run it. */
+  refunded_cents?: number | null;
+  dispute_status?: string | null;
 };
 
 export type PackPaymentRow = {
@@ -82,7 +94,12 @@ export type PackPaymentRow = {
   pack: string | null;
   credits: number;
   paid_at: string;
+  refunded_cents?: number | null;
+  dispute_status?: string | null;
 };
+
+/** A dispute the network has (or kept) the money for. */
+const DISPUTE_OPEN_OR_LOST: ReadonlySet<string> = new Set(["needs_response", "under_review", "lost"]);
 
 /** The ledger's pack grants: `pack:<checkout session id>` (older ones: an event id). */
 export type PackGrantRow = { idempotency_key: string | null };
@@ -112,6 +129,8 @@ export function revenueEntries(payments: PaymentRow[], packs: PackPaymentRow[]):
       paidAt: row.paid_at,
       invoiceNumber: row.invoice_number,
       hostedInvoiceUrl: row.hosted_invoice_url,
+      refundedCents: Math.max(0, row.refunded_cents ?? 0),
+      disputeStatus: row.dispute_status ?? null,
     })),
     ...packs.map((row) => ({
       id: row.checkout_session_id,
@@ -128,6 +147,8 @@ export function revenueEntries(payments: PaymentRow[], packs: PackPaymentRow[]):
       paidAt: row.paid_at,
       invoiceNumber: null,
       hostedInvoiceUrl: null,
+      refundedCents: Math.max(0, row.refunded_cents ?? 0),
+      disputeStatus: row.dispute_status ?? null,
     })),
   ];
   return entries.sort(
@@ -140,12 +161,17 @@ export function isMoneyTaken(entry: RevenueEntry): boolean {
   return (entry.kind === "invoice" || entry.kind === "pack") && entry.amountCents > 0;
 }
 
-function addTo(totals: Map<string, CurrencyTotal>, entry: RevenueEntry) {
+function addTo(totals: Map<string, CurrencyTotal>, entry: RevenueEntry, cents = entry.amountCents) {
   const currency = entry.currency.toLowerCase();
   const total = totals.get(currency) ?? { currency, cents: 0, count: 0 };
-  total.cents += entry.amountCents;
+  total.cents += cents;
   total.count += 1;
   totals.set(currency, total);
+}
+
+/** The sale has a dispute the network holds or kept the money for. */
+export function isDisputed(entry: Pick<RevenueEntry, "disputeStatus">): boolean {
+  return entry.disputeStatus != null && DISPUTE_OPEN_OR_LOST.has(entry.disputeStatus);
 }
 
 function ordered(totals: Map<string, CurrencyTotal>): CurrencyTotal[] {
@@ -169,12 +195,16 @@ export function summarizeRevenue(
   const entries = revenueEntries(input.payments, input.packs);
   const last30 = new Map<string, CurrencyTotal>();
   const allTime = new Map<string, CurrencyTotal>();
+  const refunds = new Map<string, CurrencyTotal>();
   let trialStarts = 0;
+  let disputed = 0;
   for (const entry of entries) {
     if (entry.kind === "trial_start") trialStarts += 1;
+    if (isDisputed(entry)) disputed += 1;
     if (!isMoneyTaken(entry)) continue;
     addTo(allTime, entry);
     if (new Date(entry.paidAt).getTime() >= since) addTo(last30, entry);
+    if (entry.refundedCents > 0) addTo(refunds, entry, entry.refundedCents);
   }
   const capped = input.capped ?? false;
   let unpricedPackSales: number | null = null;
@@ -188,6 +218,8 @@ export function summarizeRevenue(
     allTime: ordered(allTime),
     last30DaysCount: count(last30),
     allTimeCount: count(allTime),
+    refunds: ordered(refunds),
+    disputed,
     trialStarts,
     allTimeCapped: capped,
     unpricedPackSales,
@@ -205,13 +237,13 @@ export async function getRevenueSummary(): Promise<RevenueSummary | null> {
     admin
       .from("billing_payments")
       .select(
-        "invoice_id, user_id, amount_cents, currency, billing_reason, tier, billing_interval, paid_at, invoice_number, hosted_invoice_url",
+        "invoice_id, user_id, amount_cents, currency, billing_reason, tier, billing_interval, paid_at, invoice_number, hosted_invoice_url, refunded_cents, dispute_status",
       )
       .order("paid_at", { ascending: false })
       .limit(REVENUE_ROW_CAP),
     admin
       .from("billing_pack_payments")
-      .select("checkout_session_id, user_id, amount_cents, currency, pack, credits, paid_at")
+      .select("checkout_session_id, user_id, amount_cents, currency, pack, credits, paid_at, refunded_cents, dispute_status")
       .order("paid_at", { ascending: false })
       .limit(REVENUE_ROW_CAP),
     admin

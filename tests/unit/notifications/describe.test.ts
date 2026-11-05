@@ -319,6 +319,42 @@ describe("describeNotification — deck likes and cards added to decks", () => {
     });
   });
 
+  it("payment_failed (0174): the amount, the retry, the grace, and the billing page", () => {
+    const base = { actor: null, card: null, threadId: null, type: "payment_failed" };
+    expect(
+      describeNotification(
+        { ...base, payload: { invoiceId: "in_1", amountCents: 1500, currency: "usd", tier: "pro", nextAttemptAt: "2026-11-08T12:00:00Z", graceUntil: "2026-11-19T12:00:00Z" } },
+        { isAdmin: false },
+      ),
+    ).toEqual({
+      subject: "Your Pro payment",
+      body: "of $15 didn't go through — we'll try your card again on Nov 8, 2026; your Pro perks stay on until Nov 19, 2026. Update your card to be safe.",
+      href: "/dashboard/billing",
+    });
+    expect(describeNotification({ ...base, payload: { invoiceId: "in_2", amountCents: 600 } }, { isAdmin: false }).body).toBe(
+      "of $6 didn't go through — we'll retry your card automatically; your plan perks are paused until it's paid. Update your card to restore them.",
+    );
+  });
+
+  it("billing_alert (0174, admins): refund / dispute / outcome / fraud warning, linking the account", () => {
+    const base = { actor: null, card: null, threadId: null, type: "billing_alert" };
+    const user = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    expect(
+      describeNotification({ ...base, payload: { alert: "refund", amountCents: 400, currency: "usd", userId: user, saleKind: "pack", creditsDelta: -15 } }, { isAdmin: true }),
+    ).toEqual({ subject: "Refund", body: "of $4 on a credit pack. 15 unspent credits taken back.", href: `/admin/users?u=${user}` });
+    expect(
+      describeNotification({ ...base, payload: { alert: "dispute", amountCents: 1500, userId: user, saleKind: "invoice", disputeReason: "fraudulent" } }, { isAdmin: true }),
+    ).toEqual({ subject: "Dispute opened", body: "on $15 (a plan invoice) — fraudulent. Respond in Stripe.", href: `/admin/users?u=${user}` });
+    expect(
+      describeNotification({ ...base, payload: { alert: "dispute_closed", disputeStatus: "won", amountCents: 800, userId: user, saleKind: "pack", creditsDelta: 30 } }, { isAdmin: true }).body,
+    ).toBe("won — $8 on a credit pack. 30 credits given back.");
+    expect(describeNotification({ ...base, payload: { alert: "fraud_warning", amountCents: 800, saleKind: null } }, { isAdmin: true })).toEqual({
+      subject: "Early fraud warning",
+      body: "from the card network on $8 (an unmatched charge) (no account matched — see Stripe). Expect a dispute; consider a refund now.",
+      href: "/admin/users",
+    });
+  });
+
   it("deck_cloned (TODO DK5.16, 0164): who copied which of your decks, linking YOUR deck (the copy starts private)", () => {
     expect(
       describeNotification({ type: "deck_cloned", actor, card: null, threadId: null, payload: deckPayload }, { isAdmin: false }),

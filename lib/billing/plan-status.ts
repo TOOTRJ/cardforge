@@ -7,7 +7,8 @@ import type { PendingChangeSummary } from "@/lib/billing/subscription-details";
 // "Renews on …" used to be decided before (or without) asking whether the
 // customer had cancelled.
 //
-//   delinquent      payment broken — perks paused
+//   delinquent      payment broken — perks kept through the dunning grace,
+//                   then paused (lib/billing/dunning.ts)
 //   trial_ending    a CANCELLED trial: it ends, nothing is charged
 //   stale           Stripe says the subscription is already OVER while the
 //                   profile still says live (a missed webhook) — never "renews"
@@ -22,7 +23,7 @@ import type { PendingChangeSummary } from "@/lib/billing/subscription-details";
 // ---------------------------------------------------------------------------
 
 export type PlanStatus =
-  | { kind: "delinquent" }
+  | { kind: "delinquent"; graceUntil: string | null }
   | { kind: "trial_ending"; endsAt: string }
   | { kind: "stale" }
   | { kind: "ending"; endsAt: string; billedBeforeAt?: string }
@@ -38,6 +39,9 @@ export type PlanStatusInput = {
   /** A subscription Stripe still bills (active / trialing). */
   live: boolean;
   delinquent: boolean;
+  /** The dunning grace's end (Entitlements.dunningGraceUntil) — the perks
+   *  are kept until then while Stripe retries the card; null = no grace. */
+  graceUntil?: string | null;
   comped: boolean;
   /** `profiles.subscription_status`. */
   status: string | null;
@@ -66,7 +70,7 @@ const PERIOD_END_SLACK_MS = 60_000;
 
 export function planStatusOf(input: PlanStatusInput): PlanStatus {
   const { live, delinquent, comped, status, subscription: sub, profile } = input;
-  if (delinquent) return { kind: "delinquent" };
+  if (delinquent) return { kind: "delinquent", graceUntil: input.graceUntil ?? null };
   if (live) {
     // The profile says live, Stripe says it is over: the page must not
     // promise a renewal on the strength of a row a webhook never updated.

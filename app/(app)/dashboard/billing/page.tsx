@@ -112,6 +112,7 @@ export default async function BillingPage() {
   const planStatus = planStatusOf({
     live,
     delinquent,
+    graceUntil: entitlements.dunningGraceUntil,
     comped: Boolean(comped),
     status,
     subscription: sub,
@@ -238,7 +239,9 @@ export default async function BillingPage() {
             ? "Your plan is set to end. To stay on it, resume it above. Picking another plan here also keeps you subscribed: an upgrade applies right away (Stripe shows the prorated difference before you confirm) and renews; a downgrade resumes your plan and starts the lower one at the end of the period you've paid for."
             : live
             ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
-            : entitlements.isPaid
+            : delinquent
+              ? "Your plan's last payment didn't go through. Update your card to keep it — the buttons below open the billing portal, never a second subscription."
+              : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
               : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
         </p>

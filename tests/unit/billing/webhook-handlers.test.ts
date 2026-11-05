@@ -17,6 +17,18 @@ vi.mock("@/lib/email/send", () => ({
 vi.mock("@/lib/email/preferences", () => ({
   getRecipientFor: async () => email.recipient,
 }));
+// Money going back: the handlers live in lib/stripe/charge-events.ts (their
+// own tests); here only that the webhook dispatches each event to them.
+const chargeEvents = vi.hoisted(() => ({
+  refunded: vi.fn(),
+  dispute: vi.fn(),
+  fraud: vi.fn(),
+}));
+vi.mock("@/lib/stripe/charge-events", () => ({
+  handleChargeRefunded: (...args: unknown[]) => chargeEvents.refunded(...args),
+  handleDispute: (...args: unknown[]) => chargeEvents.dispute(...args),
+  handleEarlyFraudWarning: (...args: unknown[]) => chargeEvents.fraud(...args),
+}));
 
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
 import { MONTHLY_CREDITS, TRIAL_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
@@ -79,9 +91,13 @@ function makeAdmin(
         },
         update(values: Record<string, unknown>) {
           return {
-            eq: async (...key: unknown[]) => {
+            eq: (...key: unknown[]) => {
               updates.push({ table, values, key });
-              return { error: null };
+              // Awaited directly, or filtered further (`.is()`, the dunning
+              // stamp of the payment_failed fallback) and then awaited.
+              return Object.assign(Promise.resolve({ error: null }), {
+                is: async () => ({ error: null }),
+              });
             },
           };
         },
@@ -1125,7 +1141,7 @@ describe("handleStripeEvent — trial_will_end", () => {
 type Rows = Record<string, Array<Record<string, unknown>>>;
 function makeChainAdmin(
   rows: Rows,
-  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string } = {},
+  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string; noPaymentIntentColumn?: boolean } = {},
 ) {
   const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
   const upserts: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
@@ -1160,6 +1176,11 @@ function makeChainAdmin(
         },
         upsert: (row: Record<string, unknown>, o: unknown) => {
           upserts.push({ table, row, opts: o });
+          // A database that hasn't run 0174: PostgREST's schema cache
+          // refuses the column BEFORE any FK check.
+          if (opts.noPaymentIntentColumn && "payment_intent_id" in row) {
+            return chain(table, () => ({ data: null, error: { code: "PGRST204", message: "Could not find the 'payment_intent_id' column of 'billing_payments' in the schema cache" } }));
+          }
           if (opts.missingUser && row.user_id === opts.missingUser) {
             return chain(table, () => ({ data: null, error: { code: "23503", message: "violates foreign key constraint" } }));
           }
@@ -1211,6 +1232,9 @@ describe("handleStripeEvent — invoice.paid", () => {
     period_start: 1790130000,
     period_end: 1792722000,
     lines: { data: [{ period: { start: 1790130400, end: 1792722400 } }] },
+    // API 2025-03+: the payment intent is under `payments` (what a refund
+    // or dispute is matched by, 0174).
+    payments: { data: [{ payment: { type: "payment_intent", payment_intent: "pi_in_1" } }] },
     parent: { type: "subscription_details", subscription_details: { subscription: "sub_1", metadata: { supabase_user_id: "user-1" } } },
     ...extra,
   });
@@ -1241,6 +1265,7 @@ describe("handleStripeEvent — invoice.paid", () => {
           paid_at: "2026-09-23T02:27:30.000Z",
           invoice_number: "ABC-0002",
           hosted_invoice_url: "https://invoice.stripe.com/i/x",
+          payment_intent_id: "pi_in_1",
         },
         opts: { onConflict: "invoice_id" },
       },
@@ -1304,6 +1329,18 @@ describe("handleStripeEvent — invoice.paid", () => {
 
     const failing = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] }, { upsertError: "disk full" });
     await expect(handleStripeEvent(event(invoice()), { admin: failing.admin, stripe: invoiceStripe })).rejects.toThrow(/billing_payments write failed/);
+  });
+
+  it("on a database that hasn't run 0174 the row is written without payment_intent_id — a deleted buyer still lands unlinked", async () => {
+    const { admin, upserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] }, { noPaymentIntentColumn: true });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(upserts.map((u) => "payment_intent_id" in u.row)).toEqual([true, false]);
+    expect(upserts[1].row).toMatchObject({ invoice_id: "in_1", user_id: "user-1" });
+
+    // Pre-0174 AND the buyer is gone: PGRST204 first, then 23503 on the retry, then unlinked.
+    const gone = makeChainAdmin({ profiles: [], notifications: [], credit_ledger: [] }, { noPaymentIntentColumn: true, missingUser: "user-1" });
+    await handleStripeEvent(event(invoice()), { admin: gone.admin, stripe: invoiceStripe });
+    expect(gone.upserts.map((u) => [("payment_intent_id" in u.row), u.row.user_id])).toEqual([[true, "user-1"], [false, "user-1"], [false, null]]);
   });
 
   it("logs the payment unlinked when the buyer's account is gone (FK 23503), never 500s on every retry", async () => {
@@ -1827,3 +1864,159 @@ describe("handleStripeEvent — pack sales in the revenue log", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// invoice.payment_failed → ONE payment_failed notification + email per
+// invoice (0174), naming the dunning grace; charge.* / radar.* dispatched to
+// lib/stripe/charge-events.ts.
+// ---------------------------------------------------------------------------
+describe("handleStripeEvent — payment failed and money going back", () => {
+  function makeDunningAdmin(opts: { alreadyNotified?: boolean; stamp?: string | null } = {}) {
+    const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
+    const updates: Array<{ table: string; values: Record<string, unknown> }> = [];
+    const admin = {
+      from(table: string) {
+        return {
+          select() {
+            const chain = {
+              eq: () => chain,
+              limit: () => chain,
+              maybeSingle: async () =>
+                table === "profiles"
+                  ? {
+                      data: {
+                        id: "user-1",
+                        subscription_tier: "pro",
+                        subscription_status: "past_due",
+                        stripe_subscription_id: "sub_pd",
+                        stripe_customer_id: "cus_1",
+                        payment_failed_at: opts.stamp ?? null,
+                      },
+                      error: null,
+                    }
+                  : { data: opts.alreadyNotified ? { id: "n_pf" } : null, error: null },
+              like: async () => ({ data: [], error: null }),
+            };
+            return chain;
+          },
+          update(values: Record<string, unknown>) {
+            return {
+              eq: async () => {
+                updates.push({ table, values });
+                return { error: null };
+              },
+            };
+          },
+          insert: async (row: Record<string, unknown>) => {
+            inserts.push({ table, row });
+            return { error: null };
+          },
+          upsert: async () => ({ error: null }),
+        };
+      },
+      rpc: async () => ({ data: 0, error: null }),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { admin: admin as any, inserts, updates };
+  }
+  const pastDue = {
+    id: "sub_pd",
+    customer: "cus_1",
+    status: "past_due",
+    created: 1,
+    cancel_at_period_end: false,
+    items: { data: [{ id: "si_pd", price: { id: "price_pro", recurring: { interval: "month" } }, current_period_end: 1893456000 }] },
+  };
+  const failedInvoice = {
+    id: "in_fail",
+    customer: "cus_1",
+    amount_due: 1500,
+    currency: "usd",
+    attempt_count: 1,
+    billing_reason: "subscription_cycle",
+    next_payment_attempt: 1_790_300_000,
+    hosted_invoice_url: "https://invoice.stripe.com/i/fail",
+    parent: { subscription_details: { subscription: "sub_pd" } },
+  };
+
+  it("tells the user ONCE per failed invoice, with the grace end, and sends the email", async () => {
+    const stamp = "2026-11-05T12:00:00.000Z";
+    const { admin, inserts, updates } = makeDunningAdmin({ stamp });
+    await handleStripeEvent(
+      { id: "evt_pf", type: "invoice.payment_failed", data: { object: failedInvoice } } as never,
+      { admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+    );
+    // The sync stamped the failure (kept from the profile) and wrote past_due.
+    expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_status: "past_due", payment_failed_at: stamp });
+    const notice = inserts.find((i) => i.table === "notifications");
+    expect(notice?.row).toMatchObject({
+      recipient_id: "user-1",
+      type: "payment_failed",
+      payload: {
+        invoiceId: "in_fail",
+        amountCents: 1500,
+        currency: "usd",
+        attempt: 1,
+        tier: "pro",
+        interval: "month",
+        nextAttemptAt: new Date(1_790_300_000 * 1000).toISOString(),
+        graceUntil: "2026-11-19T12:00:00.000Z",
+        hostedInvoiceUrl: "https://invoice.stripe.com/i/fail",
+      },
+    });
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [message, options] = email.send.mock.calls[0] as [{ subject: string; html: string }, { idempotencyKey: string }];
+    expect(message.subject).toBe("Your PipGlyph Pro payment didn't go through");
+    expect(message.html).toContain("November 19, 2026");
+    expect(options.idempotencyKey).toBe("payment-failed:in_fail");
+
+    // Stripe's retry re-delivers the same invoice: told already.
+    const again = makeDunningAdmin({ stamp, alreadyNotified: true });
+    email.send.mockClear();
+    await handleStripeEvent(
+      { id: "evt_pf_2", type: "invoice.payment_failed", data: { object: { ...failedInvoice, attempt_count: 2 } } } as never,
+      { admin: again.admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+    );
+    expect(again.inserts.filter((i) => i.table === "notifications")).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("says nothing for a $0 invoice, a non-subscription invoice, or a secondary subscription beside a live plan", async () => {
+    const zero = makeDunningAdmin();
+    await handleStripeEvent(
+      { id: "evt_pf_0", type: "invoice.payment_failed", data: { object: { ...failedInvoice, amount_due: 0 } } } as never,
+      { admin: zero.admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+    );
+    const notices = (rows: Array<{ table: string }>) => rows.filter((i) => i.table === "notifications");
+    expect(notices(zero.inserts)).toEqual([]);
+
+    const pack = makeDunningAdmin();
+    await handleStripeEvent(
+      { id: "evt_pf_m", type: "invoice.payment_failed", data: { object: { ...failedInvoice, billing_reason: "manual" } } } as never,
+      { admin: pack.admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+    );
+    expect(notices(pack.inserts)).toEqual([]);
+
+    const secondary = makeDunningAdmin();
+    const pro = { ...pastDue, id: "sub_live", status: "active", created: 2 };
+    await handleStripeEvent(
+      { id: "evt_pf_s", type: "invoice.payment_failed", data: { object: failedInvoice } } as never,
+      { admin: secondary.admin, stripe: makeStripeWithSubs([pastDue, pro]).stripe },
+    );
+    expect(notices(secondary.inserts)).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("dispatches refunds, disputes (opened and closed) and early fraud warnings", async () => {
+    const { admin } = makeDunningAdmin();
+    const stripe = makeStripeWithSubs([]).stripe;
+    const deps = { admin, stripe };
+    await handleStripeEvent({ id: "e1", created: 11, type: "charge.refunded", data: { object: { id: "ch_1" } } } as never, deps);
+    expect(chargeEvents.refunded).toHaveBeenCalledWith({ id: "ch_1" }, deps, 11);
+    await handleStripeEvent({ id: "e2", created: 12, type: "charge.dispute.created", data: { object: { id: "dp_1" } } } as never, deps);
+    expect(chargeEvents.dispute).toHaveBeenCalledWith({ id: "dp_1" }, deps, { closed: false, eventCreated: 12 });
+    await handleStripeEvent({ id: "e3", created: 13, type: "charge.dispute.closed", data: { object: { id: "dp_1" } } } as never, deps);
+    expect(chargeEvents.dispute).toHaveBeenCalledWith({ id: "dp_1" }, deps, { closed: true, eventCreated: 13 });
+    await handleStripeEvent({ id: "e4", type: "radar.early_fraud_warning.created", data: { object: { id: "issfr_1" } } } as never, deps);
+    expect(chargeEvents.fraud).toHaveBeenCalledWith({ id: "issfr_1" }, deps);
+  });
+});
