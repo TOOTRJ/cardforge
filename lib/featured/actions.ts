@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isUuid } from "@/lib/ids";
 import { heroRefusalLabel } from "@/lib/featured/hero-rotation";
+import { parseCardPageUrl } from "@/lib/featured/card-url";
 
 export type FeaturedActionResult = { ok: true } | { ok: false; error: string };
 
@@ -57,8 +58,8 @@ export async function setFeaturedAction(
 }
 
 /** Admin: set or clear a homepage hero slot from a pasted card-page URL
- *  (/card/{username}/{slug}, absolute or relative). The card must be PUBLIC
- *  and have a baked render — the hero shows the stored image. */
+ *  (/card/{username}/{slug}: a bare path or this site's own URL). The card
+ *  must be PUBLIC and have a baked render — the hero shows the stored image. */
 export async function setFeaturedCardAction(
   slot: 1 | 2,
   cardUrl: string | null,
@@ -80,22 +81,15 @@ export async function setFeaturedCardAction(
     return { ok: true };
   }
 
-  // Accept absolute or relative card URLs; extract /card/{username}/{slug}.
-  const match = cardUrl
-    .trim()
-    .match(/\/card\/([a-z0-9_]+)\/([a-z0-9-]+)\/?(?:[?#]|$)/i);
-  if (!match) {
-    return {
-      ok: false,
-      error: "Paste a card page URL, e.g. /card/username/card-slug.",
-    };
-  }
-  const [, username, slug] = match;
+  // A bare /card/{username}/{slug} path or this site's own URL of one.
+  const page = parseCardPageUrl(cardUrl);
+  if (!page.ok) return { ok: false, error: page.error };
+  const { username, slug } = page;
 
   const { data: owner } = await admin
     .from("profiles")
     .select("id")
-    .eq("username", username.toLowerCase())
+    .eq("username", username)
     .maybeSingle();
   if (!owner) return { ok: false, error: `No user named @${username}.` };
 
@@ -103,7 +97,7 @@ export async function setFeaturedCardAction(
     .from("cards")
     .select("id, visibility, rendered_image_url")
     .eq("owner_id", owner.id)
-    .eq("slug", slug.toLowerCase())
+    .eq("slug", slug)
     .maybeSingle();
   if (!card) return { ok: false, error: "No card at that URL." };
   if (card.visibility !== "public") {
@@ -179,24 +173,20 @@ export async function addHeroPoolCardAction(
     if (!isUuid(target.cardId)) return { ok: false, error: "Unknown card." };
     cardId = target.cardId;
   } else {
-    const match = target.cardUrl
-      .trim()
-      .match(/\/card\/([a-z0-9_]+)\/([a-z0-9-]+)\/?(?:[?#]|$)/i);
-    if (!match) {
-      return { ok: false, error: "Paste a card page URL, e.g. /card/username/card-slug." };
-    }
-    const [, username, slug] = match;
+    const page = parseCardPageUrl(target.cardUrl);
+    if (!page.ok) return { ok: false, error: page.error };
+    const { username, slug } = page;
     const { data: owner } = await admin
       .from("profiles")
       .select("id")
-      .eq("username", username.toLowerCase())
+      .eq("username", username)
       .maybeSingle();
     if (!owner) return { ok: false, error: `No user named @${username}.` };
     const { data: card } = await admin
       .from("cards")
       .select("id")
       .eq("owner_id", owner.id)
-      .eq("slug", slug.toLowerCase())
+      .eq("slug", slug)
       .maybeSingle();
     if (!card) return { ok: false, error: "No card at that URL." };
     cardId = card.id;
