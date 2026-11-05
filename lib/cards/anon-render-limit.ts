@@ -9,6 +9,13 @@ import type { RateLimitDenied } from "@/lib/api/responses";
 // ---------------------------------------------------------------------------
 // The limiter on ANONYMOUS live card renders (TODO 7.8).
 //
+// NOT CALLED since downloads became signed-in only (owner 2026-11-04,
+// PR #754): /api/cards/[id]/png answers a signed-out caller 401 before any
+// render, so `checkAnonLiveRenderLimit` and 0125's counter have no caller.
+// `clientNetworkOf` is still read by the card and deck view counts. What
+// follows describes the limiter as it worked while anonymous downloads were
+// allowed; removing the dead half is a cleanup for later.
+//
 // /api/cards/[id]/png serves a free viewer the stored bake (a few ms of
 // sharp) whenever it can, and renders LIVE (a Satori render, ~1 s of CPU)
 // when it can't:

@@ -59,8 +59,8 @@ function overrideKeyOf(face: CardPreviewData): string {
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG (or JPEG) of a card
 //
-// Visibility mirrors /api/cards/[id]/pdf and /og (public/unlisted readable
-// by anyone with the link, private owner-only), but the BYTES vary by the
+// Visibility mirrors /api/cards/[id]/pdf (public/unlisted readable by any
+// SIGNED-IN viewer with the link, private owner-only), but the BYTES vary by the
 // viewer's plan (resolution clamp + brand mark), so every response is
 // `private, must-revalidate` with an ETag — never shared-cached at the CDN.
 // Returns the rendered card image with Content-Disposition: attachment so

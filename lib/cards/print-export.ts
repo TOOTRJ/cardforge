@@ -98,7 +98,7 @@ export function printTurnsPortrait(bleed: PrintBleed | BleedInches): boolean {
  * same gate as the clean HD download and the bleed — a print-shop file is
  * what Plus sells, and a free 800 ppi render would have to carry the
  * watermark anyway. `false` would give free viewers a watermarked 800 ppi
- * PNG (a live render, rate-limited when signed out). The ONE switch: the
+ * PNG (a live render; downloads are signed-in only). The ONE switch: the
  * route and the modal both read it.
  */
 export const PRINT_800_PPI_PAID_ONLY = true;
