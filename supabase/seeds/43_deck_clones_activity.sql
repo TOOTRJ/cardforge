@@ -8,15 +8,14 @@
 --   * "Cinderwing, Borrowed" (dev_free, private) — a copy made 2 days ago;
 --   * "Dragonstorm, Again" (dev_artist, private) — a copy made 9 days ago.
 --
--- Plus the case the count must NOT include: "Cinderwing, My Own Copy"
--- (dev_pro, private) — dev_pro's own copy of their own deck. clone_deck()
--- writes no lineage for it; the row here is the worst case (a lineage row
--- the owner made), and deck_clones_by_day() leaves it out.
+-- The ages are taken from the seed's run time (now() once), so they hold on a
+-- freshly seeded database; on the persistent dev database they drift with the
+-- days since it ran and fall out of the 30-day span.
 --
 -- Runs after seed 37 (filename order) and touches none of its rows. Never
 -- against production. Idempotent: fixed ids + ON CONFLICT DO NOTHING. No
 -- credential in here (the repo is public). Rows whose accounts or decks are
--- missing are skipped. Deck ids …021–…023.
+-- missing are skipped. Deck ids …021–…022.
 -- ---------------------------------------------------------------------------
 
 do $guard$
@@ -36,9 +35,7 @@ from (values
   ('b0000000-0000-4000-a000-000000000021'::uuid, 'd0000000-0000-4000-a000-000000000003'::uuid,
      'Cinderwing, Borrowed', 'cinderwing-borrowed'),
   ('b0000000-0000-4000-a000-000000000022'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid,
-     'Dragonstorm, Again', 'dragonstorm-again'),
-  ('b0000000-0000-4000-a000-000000000023'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid,
-     'Cinderwing, My Own Copy', 'cinderwing-my-own-copy')
+     'Dragonstorm, Again', 'dragonstorm-again')
 ) as v (id, owner_id, title, slug)
 where exists (select 1 from public.profiles p where p.id = v.owner_id)
   and exists (select 1 from public.decks where id = 'b0000000-0000-4000-a000-000000000001')
@@ -49,8 +46,7 @@ select v.deck_id, 'b0000000-0000-4000-a000-000000000001'::uuid,
        'd0000000-0000-4000-a000-000000000002'::uuid, now() - v.age
 from (values
   ('b0000000-0000-4000-a000-000000000021'::uuid, interval '2 days'),
-  ('b0000000-0000-4000-a000-000000000022'::uuid, interval '9 days'),
-  ('b0000000-0000-4000-a000-000000000023'::uuid, interval '4 days')
+  ('b0000000-0000-4000-a000-000000000022'::uuid, interval '9 days')
 ) as v (deck_id, age)
 where exists (select 1 from public.decks where id = v.deck_id)
   and exists (select 1 from public.decks where id = 'b0000000-0000-4000-a000-000000000001')

@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   calls: [] as Array<[string, number]>,
   upgrade: [] as unknown[][],
   empty: false,
+  noClones: false,
 }));
 
 function rows(days: number, countOf: (i: number) => number): DayCount[] {
@@ -40,7 +41,7 @@ vi.mock("@/lib/decks/activity-actions", () => ({
         state.empty
           ? { views: [], likes: [], clones: [] }
           : { views: rows(span, (i) => (i < days ? 1 : 2)), likes: rows(span, (i) => (i === span - 1 ? 3 : 0)),
-              clones: rows(span, (i) => (i === span - 2 ? 2 : 0)),
+              clones: state.noClones ? null : rows(span, (i) => (i === span - 2 ? 2 : 0)),
             },
         days,
         TODAY,
@@ -59,6 +60,7 @@ beforeEach(() => {
   state.calls = [];
   state.upgrade = [];
   state.empty = false;
+  state.noClones = false;
 });
 afterEach(cleanup);
 
@@ -80,6 +82,15 @@ describe("owner on Pro", () => {
     expect(within(clonesTile).getByText("2")).toBeTruthy();
     expect(within(clonesTile).getByText("None in the previous 30 days.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Clones", level: 3 })).toBeTruthy();
+  });
+
+  it("draws no Clones tile or chart where the database can't count them yet", async () => {
+    state.noClones = true;
+    render(<DeckActivityPanel deckId={DECK} canView isPrivate={false} />);
+    await screen.findByText("Views", { selector: "dt" });
+    expect(screen.queryByText("Clones", { selector: "dt" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Clones", level: 3 })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Likes", level: 3 })).toBeTruthy();
   });
 
   it("has a table twin per chart, shown by the Table switch", async () => {

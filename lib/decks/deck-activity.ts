@@ -61,7 +61,8 @@ export type DeckActivity = {
   today: string;
   views: ActivitySeries;
   likes: ActivitySeries;
-  clones: ActivitySeries;
+  /** null on a database without 0171: no series is drawn, never a false 0. */
+  clones: ActivitySeries | null;
 };
 
 const DAY_MS = 86_400_000;
@@ -165,9 +166,14 @@ export function buildActivitySeries(
   };
 }
 
-/** All three series for a period, from the functions' raw rows. */
+/** The series a deck's activity has, in the order they are drawn. */
+export function activitySeriesOf(activity: DeckActivity): ActivitySeries[] {
+  return ACTIVITY_METRICS.flatMap((metric) => activity[metric] ?? []);
+}
+
+/** All three series for a period, from the functions' raw rows (clones: null where 0171 isn't). */
 export function buildDeckActivity(
-  input: { views: readonly DayCount[]; likes: readonly DayCount[]; clones: readonly DayCount[] },
+  input: { views: readonly DayCount[]; likes: readonly DayCount[]; clones: readonly DayCount[] | null },
   days: ActivityPeriod,
   today: string,
 ): DeckActivity {
@@ -176,7 +182,7 @@ export function buildDeckActivity(
     today,
     views: buildActivitySeries("views", input.views, days, today),
     likes: buildActivitySeries("likes", input.likes, days, today),
-    clones: buildActivitySeries("clones", input.clones, days, today),
+    clones: input.clones ? buildActivitySeries("clones", input.clones, days, today) : null,
   };
 }
 

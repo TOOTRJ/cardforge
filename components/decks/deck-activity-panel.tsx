@@ -11,7 +11,7 @@ import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { getDeckActivityAction } from "@/lib/decks/activity-actions";
 import {
   ACTIVITY_METRIC_LABELS,
-  ACTIVITY_METRICS,
+  activitySeriesOf,
   ACTIVITY_PERIODS,
   activityChangeLabel,
   activityChangeSentence,
@@ -109,9 +109,8 @@ function ActivityBody({ deckId, isPrivate }: { deckId: string; isPrivate: boolea
   const activity = load.state === "ready" ? load.activity : null;
   // A period switch keeps the last numbers on screen until the new ones land.
   const stale = activity !== null && activity.days !== days;
-  const nothingYet =
-    activity !== null &&
-    ACTIVITY_METRICS.every((metric) => activity[metric].total === 0 && activity[metric].previousTotal === 0);
+  const series = activity ? activitySeriesOf(activity) : [];
+  const nothingYet = activity !== null && series.every((s) => s.total === 0 && s.previousTotal === 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -143,18 +142,18 @@ function ActivityBody({ deckId, isPrivate }: { deckId: string; isPrivate: boolea
           {nothingYet ? (
             <p className="rounded-md border border-dashed border-border px-4 py-3 text-sm leading-6 text-muted">
               {isPrivate
-                ? "This deck is private, so only you can open it — views count once it's unlisted or public. Likes and clones show up here as people give them."
+                ? "This deck is private, so only you can open it — views and clones count once it's unlisted or public. Likes show up here as people give them."
                 : `No views, likes or clones in the last ${activity.days * 2} days yet. Share the deck's link and they'll show up here, one view per person a day.`}
             </p>
           ) : null}
           <dl className="grid grid-cols-2 gap-3 sm:max-w-xl sm:grid-cols-3">
-            {ACTIVITY_METRICS.map((metric) => (
-              <StatTile key={metric} series={activity[metric]} />
+            {series.map((s) => (
+              <StatTile key={s.metric} series={s} />
             ))}
           </dl>
           <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-            {ACTIVITY_METRICS.map((metric) => (
-              <SeriesChart key={metric} series={activity[metric]} />
+            {series.map((s) => (
+              <SeriesChart key={s.metric} series={s} />
             ))}
           </div>
           <p className="text-xs leading-5 text-subtle">

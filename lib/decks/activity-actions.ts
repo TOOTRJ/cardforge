@@ -32,7 +32,8 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 // and dev.
 // Clones (0171, DK7.4a) have no such fallback — deck_remix_sources is the
 // service role's alone — so on a database without deck_clones_by_day the
-// clones series is empty (the views and likes still draw). Remove that
+// clones series is left out (null: no tile, no chart — never a false 0; the
+// views and likes still draw). Remove that
 // branch once 0171 is on production and dev.
 // ---------------------------------------------------------------------------
 
@@ -94,7 +95,7 @@ export async function getDeckActivityAction(deckId: string, days: number): Promi
       {
         views: (views.data ?? []).map((row) => ({ day: row.day, count: row.views })),
         likes: likeRows,
-        clones: clones.error ? [] : (clones.data ?? []).map((row) => ({ day: row.day, count: row.clones })),
+        clones: clones.error ? null : (clones.data ?? []).map((row) => ({ day: row.day, count: row.clones })),
       },
       days,
       today,
