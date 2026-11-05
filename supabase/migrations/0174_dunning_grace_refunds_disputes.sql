@@ -303,6 +303,7 @@ alter table public.billing_pack_payments
   add column if not exists refunded_cents integer not null default 0 check (refunded_cents >= 0),
   add column if not exists refunded_at timestamptz,
   add column if not exists clawed_credits integer not null default 0 check (clawed_credits >= 0),
+  add column if not exists reconcile_seq integer not null default 0,
   add column if not exists dispute_id text,
   add column if not exists dispute_status text,
   add column if not exists disputed_cents integer not null default 0 check (disputed_cents >= 0),
@@ -323,10 +324,11 @@ comment on column public.billing_pack_payments.clawed_credits is
 -- target drops (a dispute won). Returns what moved this call. Reconciles to
 -- the TARGET, so a call that found the balance short of it (the user had
 -- spent the credits) takes the rest from credits earned later, on any later
--- event for the session — the shortfall stays owed. The claw-back rows are
--- keyed `refund:pack:<session>:<clawed total>`, the give-backs
--- `refund:pack:<session>:back:<target>` (distinct namespaces: a claw to 15,
--- then to 30, then a give-back to 15 must not collide).
+-- event for the session — the shortfall stays owed. Every ledger row the
+-- function writes is keyed `refund:pack:<session>:<reconcile_seq>` — a
+-- per-row counter bumped inside the lock, so no two writes for one session
+-- (a claw to 15, to 30, a give-back to 0, a later claw to 30 again) can ever
+-- share a key; the direction is the reason, the target is the row's state.
 create or replace function public.reconcile_pack_withdrawal(
   p_session text,
   p_withdrawn_cents integer
@@ -343,6 +345,7 @@ declare
   v_balance integer;
   v_take integer;
   v_after integer;
+  v_seq integer;
 begin
   select * into v_row
   from public.billing_pack_payments
@@ -374,10 +377,13 @@ begin
     if v_take > 0 then
       update public.profiles set credits = credits - v_take where id = v_row.user_id
         returning credits into v_after;
+      update public.billing_pack_payments
+        set reconcile_seq = reconcile_seq + 1
+        where checkout_session_id = p_session
+        returning reconcile_seq into v_seq;
       insert into public.credit_ledger (user_id, delta, reason, balance_after, idempotency_key)
       values (v_row.user_id, -v_take, 'pack_refund', v_after,
-              'refund:pack:' || p_session || ':' || (v_row.clawed_credits + v_take))
-      on conflict do nothing;
+              'refund:pack:' || p_session || ':' || v_seq);
     end if;
     update public.billing_pack_payments
       set clawed_credits = clawed_credits + v_take
@@ -391,10 +397,13 @@ begin
       update public.profiles set credits = credits + v_take where id = v_row.user_id
         returning credits into v_after;
       if v_after is not null then
+        update public.billing_pack_payments
+          set reconcile_seq = reconcile_seq + 1
+          where checkout_session_id = p_session
+          returning reconcile_seq into v_seq;
         insert into public.credit_ledger (user_id, delta, reason, balance_after, idempotency_key)
         values (v_row.user_id, v_take, 'pack_refund_reversed', v_after,
-                'refund:pack:' || p_session || ':back:' || v_target)
-        on conflict do nothing;
+                'refund:pack:' || p_session || ':' || v_seq);
       end if;
     end if;
     update public.billing_pack_payments

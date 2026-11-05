@@ -70,6 +70,7 @@ type Sale = {
   userId: string | null;
   amountCents: number;
   disputeStatus: string | null;
+  disputeId: string | null;
   disputedCents: number;
   disputedAt: string | null;
 };
@@ -87,7 +88,7 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
   if (!paymentIntentId) return null;
   const { data: pack, error: packError } = await admin
     .from("billing_pack_payments")
-    .select("checkout_session_id, user_id, amount_cents, dispute_status, disputed_cents, disputed_at")
+    .select("checkout_session_id, user_id, amount_cents, dispute_status, dispute_id, disputed_cents, disputed_at")
     .eq("payment_intent_id", paymentIntentId)
     .limit(1)
     .maybeSingle();
@@ -99,13 +100,14 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
       userId: pack.user_id,
       amountCents: pack.amount_cents,
       disputeStatus: pack.dispute_status ?? null,
+      disputeId: pack.dispute_id ?? null,
       disputedCents: pack.disputed_cents ?? 0,
       disputedAt: pack.disputed_at ?? null,
     };
   }
   const { data: invoice, error: invoiceError } = await admin
     .from("billing_payments")
-    .select("invoice_id, user_id, amount_cents, dispute_status, disputed_cents, disputed_at")
+    .select("invoice_id, user_id, amount_cents, dispute_status, dispute_id, disputed_cents, disputed_at")
     .eq("payment_intent_id", paymentIntentId)
     .limit(1)
     .maybeSingle();
@@ -117,6 +119,7 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
       userId: invoice.user_id,
       amountCents: invoice.amount_cents,
       disputeStatus: invoice.dispute_status ?? null,
+      disputeId: invoice.dispute_id ?? null,
       disputedCents: invoice.disputed_cents ?? 0,
       disputedAt: invoice.disputed_at ?? null,
     };
@@ -238,9 +241,12 @@ export async function handleDispute(
   paymentIntentId = paymentIntentId ?? idOf(charge?.payment_intent);
   const sale = await findSale(paymentIntentId, admin);
   const live = dispute.status ?? null;
-  // A row already in a final status never goes back to an open one.
+  // A row already in a final status for THIS dispute never goes back to an
+  // open one (a second dispute on the same charge — Stripe: "extremely
+  // rare" — is a new id and is judged afresh).
+  const sameDispute = sale?.disputeId === dispute.id;
   const status =
-    sale?.disputeStatus && DISPUTE_CLOSED.has(sale.disputeStatus) && live && !DISPUTE_CLOSED.has(live)
+    sameDispute && sale?.disputeStatus && DISPUTE_CLOSED.has(sale.disputeStatus) && live && !DISPUTE_CLOSED.has(live)
       ? sale.disputeStatus
       : live;
   const at = new Date((opts.eventCreated ?? dispute.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();
@@ -253,7 +259,7 @@ export async function handleDispute(
         dispute_id: dispute.id,
         dispute_status: status,
         disputed_cents: disputedCents,
-        ...(sale.disputedAt ? {} : { disputed_at: at }),
+        ...(sale.disputedAt && sameDispute ? {} : { disputed_at: at }),
       },
       admin,
     );

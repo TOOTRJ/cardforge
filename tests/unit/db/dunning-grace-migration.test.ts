@@ -109,9 +109,12 @@ describe("0174 — refunds and disputes", () => {
     expect(body).toContain("v_take := least(v_delta, greatest(v_balance, 0));");
     expect(body).toContain("'pack_refund'");
     expect(body).toContain("'pack_refund_reversed'");
-    expect(body).toContain("'refund:pack:' || p_session || ':' || (v_row.clawed_credits + v_take)");
-    // A give-back's key is its own namespace: a claw to 15, then 30, then a give-back to 15 never collide.
-    expect(body).toContain("'refund:pack:' || p_session || ':back:' || v_target");
+    // Every ledger row is keyed by a per-row counter bumped inside the lock:
+    // no two writes for one session can share a key, whatever the targets.
+    expect(flat).toContain("reconcile_seq integer not null default 0");
+    expect((body.match(/set reconcile_seq = reconcile_seq \+ 1 where checkout_session_id = p_session returning reconcile_seq into v_seq;/g) ?? []).length).toBe(2);
+    expect((body.match(/'refund:pack:' \|\| p_session \|\| ':' \|\| v_seq/g) ?? []).length).toBe(2);
+    expect(body).not.toContain("on conflict do nothing");
     expect(flat).toContain("revoke all on function public.reconcile_pack_withdrawal(text, integer) from public, anon, authenticated;");
     expect(flat).toContain("grant execute on function public.reconcile_pack_withdrawal(text, integer) to service_role;");
   });

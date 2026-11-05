@@ -1092,7 +1092,7 @@ describe("handleStripeEvent — trial_will_end", () => {
 type Rows = Record<string, Array<Record<string, unknown>>>;
 function makeChainAdmin(
   rows: Rows,
-  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string } = {},
+  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string; noPaymentIntentColumn?: boolean } = {},
 ) {
   const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
   const upserts: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
@@ -1127,6 +1127,11 @@ function makeChainAdmin(
         },
         upsert: (row: Record<string, unknown>, o: unknown) => {
           upserts.push({ table, row, opts: o });
+          // A database that hasn't run 0174: PostgREST's schema cache
+          // refuses the column BEFORE any FK check.
+          if (opts.noPaymentIntentColumn && "payment_intent_id" in row) {
+            return chain(table, () => ({ data: null, error: { code: "PGRST204", message: "Could not find the 'payment_intent_id' column of 'billing_payments' in the schema cache" } }));
+          }
           if (opts.missingUser && row.user_id === opts.missingUser) {
             return chain(table, () => ({ data: null, error: { code: "23503", message: "violates foreign key constraint" } }));
           }
@@ -1270,6 +1275,18 @@ describe("handleStripeEvent — invoice.paid", () => {
 
     const failing = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] }, { upsertError: "disk full" });
     await expect(handleStripeEvent(event(invoice()), { admin: failing.admin, stripe: invoiceStripe })).rejects.toThrow(/billing_payments write failed/);
+  });
+
+  it("on a database that hasn't run 0174 the row is written without payment_intent_id — a deleted buyer still lands unlinked", async () => {
+    const { admin, upserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] }, { noPaymentIntentColumn: true });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(upserts.map((u) => "payment_intent_id" in u.row)).toEqual([true, false]);
+    expect(upserts[1].row).toMatchObject({ invoice_id: "in_1", user_id: "user-1" });
+
+    // Pre-0174 AND the buyer is gone: PGRST204 first, then 23503 on the retry, then unlinked.
+    const gone = makeChainAdmin({ profiles: [], notifications: [], credit_ledger: [] }, { noPaymentIntentColumn: true, missingUser: "user-1" });
+    await handleStripeEvent(event(invoice()), { admin: gone.admin, stripe: invoiceStripe });
+    expect(gone.upserts.map((u) => [("payment_intent_id" in u.row), u.row.user_id])).toEqual([[true, "user-1"], [false, "user-1"], [false, null]]);
   });
 
   it("logs the payment unlinked when the buyer's account is gone (FK 23503), never 500s on every retry", async () => {

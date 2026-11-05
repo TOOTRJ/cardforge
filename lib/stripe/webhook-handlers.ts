@@ -534,16 +534,23 @@ async function handleInvoicePaid(
   if (userGone) ({ error } = await write(null));
   // The code is live before migration 0174 (no payment_intent_id column):
   // write the row without it rather than failing every invoice until it lands.
+  let gone = userGone;
   if (error && isMissingPaymentIntentColumn(error)) {
     console.error(`[stripe] billing_payments.payment_intent_id is missing (migration 0174 not applied?) — ${invoice.id} logged without it.`);
-    ({ error } = await write(userGone ? null : userId, { withPaymentIntent: false }));
+    ({ error } = await write(gone ? null : userId, { withPaymentIntent: false }));
+    // The schema-cache error came BEFORE the FK check: a deleted buyer shows
+    // only now.
+    if (error?.code === "23503") {
+      gone = true;
+      ({ error } = await write(null, { withPaymentIntent: false }));
+    }
   }
   if (error) {
     throw new Error(`billing_payments write failed for ${invoice.id}: ${error.message}`);
   }
 
   // A deleted buyer is owed nothing (their ledger FK is what failed).
-  if (grantError && !userGone) {
+  if (grantError && !gone) {
     await notifyAdminsCreditRefillFailed(admin, {
       source: "invoice",
       dedupeKey: invoiceAlertDedupeKey(invoice.id),
@@ -556,7 +563,7 @@ async function handleInvoicePaid(
   if (amountCents <= 0) return;
   await recordFunnelEvent(admin, {
     event: "payment_received",
-    userId: userGone ? null : userId,
+    userId: gone ? null : userId,
     props: {
       amountCents,
       tier: tier ?? undefined,
@@ -564,7 +571,7 @@ async function handleInvoicePaid(
       billingReason: invoice.billing_reason ?? undefined,
     },
   });
-  if (userGone) return;
+  if (gone) return;
   const { data: existing } = await admin
     .from("notifications")
     .select("id")

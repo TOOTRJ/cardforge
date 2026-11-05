@@ -409,6 +409,7 @@ export type Database = {
           refunded_cents: number;
           refunded_at: string | null;
           clawed_credits: number;
+          reconcile_seq: number;
           dispute_id: string | null;
           dispute_status: string | null;
           disputed_cents: number;
@@ -442,6 +443,7 @@ export type Database = {
           refunded_cents?: number;
           refunded_at?: string | null;
           clawed_credits?: number;
+          reconcile_seq?: number;
           dispute_id?: string | null;
           dispute_status?: string | null;
           disputed_cents?: number;

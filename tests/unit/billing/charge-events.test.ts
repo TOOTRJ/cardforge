@@ -101,6 +101,7 @@ const PACK = {
   user_id: "user-1",
   amount_cents: 800,
   dispute_status: null,
+  dispute_id: null,
   disputed_cents: 0,
   disputed_at: null,
 };
@@ -200,7 +201,7 @@ describe("charge.dispute.created / closed", () => {
     });
 
     const won = makeAdmin({
-      packByIntent: { pi_1: { ...PACK, dispute_status: "needs_response", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+      packByIntent: { pi_1: { ...PACK, dispute_status: "needs_response", dispute_id: "dp_1", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
       reconcile: { credits_delta: 30, clawed_total: 0, target: 0 },
     });
     const wonDispute = { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "won" };
@@ -218,7 +219,7 @@ describe("charge.dispute.created / closed", () => {
   it("reads Stripe's CURRENT dispute, never the event's snapshot: a late `created` after `closed` reopens nothing", async () => {
     // The event says needs_response; Stripe says the dispute was won.
     const { admin, updates, rpcs, inserts } = makeAdmin({
-      packByIntent: { pi_1: { ...PACK, dispute_status: "won", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+      packByIntent: { pi_1: { ...PACK, dispute_status: "won", dispute_id: "dp_1", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
       reconcile: { credits_delta: 0, clawed_total: 0, target: 0 },
     });
     const stale = { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "needs_response" };
@@ -233,11 +234,22 @@ describe("charge.dispute.created / closed", () => {
 
     // Stripe can't be read AND the row is already final: the row's status wins over the stale event.
     const unread = makeAdmin({
-      packByIntent: { pi_1: { ...PACK, dispute_status: "won", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+      packByIntent: { pi_1: { ...PACK, dispute_status: "won", dispute_id: "dp_1", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
     });
     await handleDispute(stale as never, { admin: unread.admin, stripe: stripeWith(null, null) }, { closed: false });
     expect(unread.updates[0].values).toMatchObject({ dispute_status: "won" });
     expect(unread.rpcs[0].args).toMatchObject({ p_withdrawn_cents: 0 });
+
+    // A SECOND dispute on the same charge (a new id) is judged afresh: open, clawing.
+    const second = makeAdmin({
+      packByIntent: { pi_1: { ...PACK, dispute_status: "won", dispute_id: "dp_1", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+      reconcile: { credits_delta: -30, clawed_total: 30, target: 30 },
+    });
+    const fresh = { ...stale, id: "dp_2" };
+    await handleDispute(fresh as never, { admin: second.admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1" }, fresh) }, { closed: false });
+    expect(second.updates[0].values).toMatchObject({ dispute_id: "dp_2", dispute_status: "needs_response" });
+    expect(second.updates[0].values).toHaveProperty("disputed_at");
+    expect(second.rpcs[0].args).toMatchObject({ p_withdrawn_cents: 800 });
   });
 
   it("lost keeps the money withdrawn; a charge Stripe can't read falls back to the event alone", async () => {
