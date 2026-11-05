@@ -1150,6 +1150,8 @@ export type Database = {
           // Migration 0135 — when a cancelled subscription stops.
           subscription_ends_at: string | null;
           subscription_canceled_at: string | null;
+          // Migration 0175 — the live plan's billing interval.
+          billing_interval: string | null;
           credits: number;
           is_admin: boolean;
           // Columns added by migration 0060 — folded in here until the
@@ -1189,6 +1191,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          billing_interval?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -1225,6 +1228,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          billing_interval?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;

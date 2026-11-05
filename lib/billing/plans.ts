@@ -317,6 +317,13 @@ export function currentCreditPeriod(now: Date = new Date()): string {
   return `${year}-${month}`;
 }
 
+/** The calendar month before `now`'s, e.g. "2026-05" for a June date (UTC) —
+ *  what the cron backfills for an annual plan it missed. */
+export function previousCreditPeriod(now: Date = new Date()): string {
+  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return currentCreditPeriod(new Date(first.getTime() - 1));
+}
+
 /** Idempotency key for a user's monthly subscription refill. */
 export function creditRefillKey(userId: string, period: string): string {
   return `refill:${userId}:${period}`;

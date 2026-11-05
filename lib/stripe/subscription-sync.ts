@@ -194,6 +194,9 @@ export type SubscriptionSyncResult = {
   /** ISO date the synced subscription is set to stop (cancelled, still
    *  live) — null when it renews. What `subscription_ends_at` was written as. */
   endsAt?: string | null;
+  /** The live subscription's billing interval (0175) — what
+   *  `billing_interval` was written as; null when nothing is live. */
+  billingInterval?: "month" | "year" | null;
 };
 
 const iso = (seconds: number | null | undefined): string | null =>
@@ -238,6 +241,14 @@ function isMissingEndingColumn(error: { code?: string; message?: string }): bool
   return (
     (error.code === "PGRST204" || error.code === "42703") &&
     /subscription_(ends|canceled)_at/.test(error.message ?? "")
+  );
+}
+
+/** The same for 0175's `billing_interval`. */
+function isMissingIntervalColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /billing_interval/.test(error.message ?? "")
   );
 }
 
@@ -447,14 +458,29 @@ export async function syncSubscriptionForUser(
     current_period_end: periodEnd,
     cancel_at_period_end: ending.byPeriodEnd,
   };
+  const endingColumns = {
+    subscription_ends_at: live ? ending.endsAt : null,
+    subscription_canceled_at: live ? ending.canceledAt : null,
+  };
+  // The plan's interval (0175): what the refill cron reads to tell a
+  // monthly plan (the invoice grants) from an annual one (the cron grants).
+  const rawInterval = chosenDeleted ? null : (item?.price?.recurring?.interval ?? null);
+  const billingInterval: "month" | "year" | null =
+    live && (rawInterval === "month" || rawInterval === "year") ? rawInterval : null;
   let { error: writeError } = await admin
     .from("profiles")
-    .update({
-      ...base,
-      subscription_ends_at: live ? ending.endsAt : null,
-      subscription_canceled_at: live ? ending.canceledAt : null,
-    })
+    .update({ ...base, ...endingColumns, billing_interval: billingInterval })
     .eq("id", userId);
+  if (writeError && isMissingIntervalColumn(writeError)) {
+    // The code is live before migration 0175: write what the schema holds.
+    console.error(
+      `[stripe] profiles.billing_interval is missing (migration 0175 not applied?) — synced ${userId} without it.`,
+    );
+    ({ error: writeError } = await admin
+      .from("profiles")
+      .update({ ...base, ...endingColumns })
+      .eq("id", userId));
+  }
   if (writeError && isMissingEndingColumn(writeError)) {
     // The code is live before migration 0135: write what the old schema
     // holds rather than failing every webhook until it lands.
@@ -478,6 +504,7 @@ export async function syncSubscriptionForUser(
     unresolvedPrice,
     source,
     endsAt: live ? ending.endsAt : null,
+    billingInterval,
   };
 }
 

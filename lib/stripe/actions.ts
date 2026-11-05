@@ -127,19 +127,44 @@ async function ensureStripeCustomer(): Promise<
   });
 
   const admin = createAdminClient();
+  // Link it only where no customer is linked yet: two checkouts opened at
+  // once both minted a customer and the second overwrote the first, whose
+  // subscription then paid for an orphan (audit 2026-11-05, P2-7). The
+  // loser re-reads the winner's id and lets its own customer go.
   const { data, error } = await admin
     .from("profiles")
     .update({ stripe_customer_id: customer.id })
     .eq("id", user.id)
+    .is("stripe_customer_id", null)
     .select("stripe_customer_id")
-    .single();
-  // Verify the write actually landed (a trigger revert reports no error) so
-  // this failure mode can never be silent again.
-  if (error || data?.stripe_customer_id !== customer.id) {
-    return { ok: false, error: "Couldn't link your billing account. Try again." };
+    .maybeSingle();
+  if (!error && data?.stripe_customer_id === customer.id) {
+    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
   }
-
-  return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
+  // Nothing landed: another request linked a customer first (use theirs),
+  // or the write was reverted / failed (refuse — a trigger revert reports
+  // no error, so the re-read is what proves the link, never the update).
+  const { data: current } = await admin
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const linked = current?.stripe_customer_id ?? null;
+  if (linked && linked !== customer.id) {
+    try {
+      await stripe.customers.del(customer.id);
+    } catch (deleteError) {
+      console.warn(
+        `[stripe] Orphan customer ${customer.id} for ${user.id} could not be deleted:`,
+        deleteError instanceof Error ? deleteError.message : deleteError,
+      );
+    }
+    return { ok: true, customerId: linked, userId: user.id, hasSubscribedBefore, comp };
+  }
+  if (linked === customer.id) {
+    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
+  }
+  return { ok: false, error: "Couldn't link your billing account. Try again." };
 }
 
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below

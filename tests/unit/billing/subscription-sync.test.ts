@@ -680,3 +680,29 @@ describe("findLiveSubscription", () => {
     expect(await findLiveSubscription(makeStripe(null), "cus_1")).toBeNull();
   });
 });
+
+describe("the plan's interval (0175: profiles.billing_interval)", () => {
+  it("is written from the live price's interval and cleared when the subscription ends", async () => {
+    const yearly = sub("sub_y", "active", { id: "price_pro", recurring: { interval: "year" } } as never, { created: 1, cancel_at_period_end: false });
+    const a = makeAdmin();
+    const result = await syncSubscriptionForUser(a.admin, makeStripe([yearly]), "user-1", { eventSub: yearly });
+    expect(a.updates[0]).toMatchObject({ subscription_status: "active", billing_interval: "year" });
+    expect(result.billingInterval).toBe("year");
+
+    const monthly = sub("sub_m", "active", { id: "price_plus", recurring: { interval: "month" } } as never, { created: 1, cancel_at_period_end: false });
+    const b = makeAdmin();
+    await syncSubscriptionForUser(b.admin, makeStripe([monthly]), "user-1", { eventSub: monthly });
+    expect(b.updates[0]).toMatchObject({ billing_interval: "month" });
+
+    const ended = makeAdmin({ stripe_subscription_id: "sub_m" });
+    const canceled = sub("sub_m", "canceled", { id: "price_plus", recurring: { interval: "month" } } as never, { created: 1 });
+    await syncSubscriptionForUser(ended.admin, makeStripe([canceled]), "user-1", { eventSub: canceled, eventDeleted: true });
+    expect(ended.updates[0]).toMatchObject({ subscription_status: "canceled", billing_interval: null });
+
+    // A price with no recurring block (the mock's plain prices): null, never a guess.
+    const bare = sub("sub_b", "active", { id: "price_plus" }, { created: 1, cancel_at_period_end: false });
+    const c = makeAdmin();
+    await syncSubscriptionForUser(c.admin, makeStripe([bare]), "user-1", { eventSub: bare });
+    expect(c.updates[0]).toMatchObject({ billing_interval: null });
+  });
+});

@@ -5,6 +5,7 @@ import {
   MONTHLY_CREDITS,
   creditRefillKey,
   creditUpgradeKey,
+  previousCreditPeriod,
   type PlanTier,
   TRIAL_CREDITS,
 } from "@/lib/billing/plans";
@@ -38,7 +39,29 @@ import {
 // sweep still walks every profile (an unexpired admin comp on a free account
 // is owed its tier), but `refillTierFor` answers null for plain free
 // accounts and MONTHLY_CREDITS.free is 0, so nothing is granted to them.
+//
+// WHO grants the base allotment (billing audit 2026-11-05, P2-1; migration
+// 0175 `profiles.billing_interval`): the calendar-month key handed out two
+// allotments for one payment when a monthly plan paid on Jan 31 (the
+// invoice's grant, key 2026-01) and the cron ran on Feb 1 (no base row for
+// 2026-02 yet → a second 100). So:
+//   • a MONTHLY plan's base allotment is the paying invoice's (the webhook's
+//     subscription / invoice.paid sync): the cron grants it only as a
+//     BACKSTOP, when the user's newest base grant is older than
+//     MONTHLY_REFILL_BACKSTOP_DAYS (a missed webhook) — otherwise the month's
+//     payment simply hasn't happened yet. Upgrade top-ups are still
+//     backfilled by the cron whenever the month has its base row.
+//   • an ANNUAL plan (one payment a year) is the cron's: every calendar
+//     month, plus the PREVIOUS month when it has no base row and the plan
+//     already ran then (a cron outage spanning a month used to lose it).
+//   • an unknown interval (a row synced before 0175, a comp on a free
+//     account) keeps the old rule: every calendar month.
 // ---------------------------------------------------------------------------
+
+/** A monthly plan whose newest base grant is older than this is missing a
+ *  payment's grant (the webhook was missed): the cron grants it. Longer than
+ *  any monthly period, so a plan paid on the 31st is never granted twice. */
+export const MONTHLY_REFILL_BACKSTOP_DAYS = 35;
 
 /** The service-role client (grant_credits is service-role only). Exported so
  *  unit tests can cast a minimal stub to it. */
@@ -69,7 +92,52 @@ export type RefillProfileRow = {
   comp_expires_at?: string | null;
   is_admin: boolean | null;
   created_at: string | null;
+  /** The live plan's interval (0175): "month" | "year"; null = unknown. */
+  billing_interval?: string | null;
+  /** When the live plan's current period ends — bounds the annual backfill. */
+  current_period_end?: string | null;
 };
+
+/** Which periods the sweep grants a profile, and how (see the header). */
+export type RefillPlan = {
+  /** The current calendar month: always granted ("always"), or only as the
+   *  backstop for a missed payment ("backstop"). */
+  current: "always" | "backstop";
+  /** The previous calendar month, backfilled (annual plans only). */
+  backfillPrevious: boolean;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How the sweep grants this profile `tier` in `period`. A comp's allotment
+ * (the owed tier comes from the comp, not the subscription) is the cron's
+ * every month, whatever the subscription's interval.
+ */
+export function refillPlanFor(
+  profile: RefillProfileRow,
+  tier: PlanTier,
+  now: Date = new Date(),
+): RefillPlan {
+  const comp = activeCompTier(profile, now);
+  const subscribed: PlanTier | null =
+    profile.subscription_status === "active" &&
+    (profile.subscription_tier === "plus" || profile.subscription_tier === "pro")
+      ? profile.subscription_tier
+      : null;
+  const fromComp = comp != null && (!subscribed || TIER_RANK[comp] > TIER_RANK[subscribed]) && comp === tier;
+  if (fromComp || !subscribed) return { current: "always", backfillPrevious: false };
+  if (profile.billing_interval === "month") return { current: "backstop", backfillPrevious: false };
+  if (profile.billing_interval === "year") {
+    // The previous month is owed only when the plan already ran then: its
+    // start (the period end minus a year) must fall before that month's end.
+    const periodEnd = profile.current_period_end ? new Date(profile.current_period_end) : null;
+    const start = periodEnd && !Number.isNaN(periodEnd.getTime()) ? periodEnd.getTime() - 365 * DAY_MS : null;
+    const prevMonthEnd = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) - 1;
+    return { current: "always", backfillPrevious: start != null && start < prevMonthEnd };
+  }
+  return { current: "always", backfillPrevious: false };
+}
 
 const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
 
@@ -132,7 +200,9 @@ export async function refillActiveSubscribers(
   for (let from = 0; ; from += REFILL_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("profiles")
-      .select("id, subscription_tier, subscription_status, comp_tier, comp_expires_at, is_admin, created_at")
+      .select(
+        "id, subscription_tier, subscription_status, comp_tier, comp_expires_at, is_admin, created_at, billing_interval, current_period_end",
+      )
       .order("id", { ascending: true })
       .range(from, from + REFILL_PAGE_SIZE - 1);
     if (error) {
@@ -142,12 +212,23 @@ export async function refillActiveSubscribers(
     for (const profile of (page ?? []) as RefillProfileRow[]) {
       const tier = refillTierFor(profile, period);
       if (!tier) continue;
-      const result = await grantMonthlyCreditsForPeriod(admin, profile.id, tier, period);
-      if (!result.ok) {
-        failed += 1;
-        console.error(`[refill-credits] grant failed for user ${profile.id} (${tier}, ${period}): ${result.error}`);
-        opts.onGrantFailed?.(profile.id, result.error);
-      } else granted += 1;
+      const plan = refillPlanFor(profile, tier);
+      const periods: Array<{ period: string; base: "always" | "backstop" }> = [
+        ...(plan.backfillPrevious ? [{ period: previousCreditPeriod(), base: "always" as const }] : []),
+        { period, base: plan.current },
+      ];
+      let failedThis = false;
+      for (const { period: p, base } of periods) {
+        const result = await grantMonthlyCreditsForPeriod(admin, profile.id, tier, p, { base });
+        if (!result.ok) {
+          failedThis = true;
+          console.error(`[refill-credits] grant failed for user ${profile.id} (${tier}, ${p}): ${result.error}`);
+          opts.onGrantFailed?.(profile.id, result.error);
+          break;
+        }
+      }
+      if (failedThis) failed += 1;
+      else granted += 1;
     }
     processed += page?.length ?? 0;
     if ((page?.length ?? 0) < REFILL_PAGE_SIZE) break;
@@ -177,17 +258,40 @@ async function readMonthRefills(
   };
 }
 
+/** When the user's newest base refill grant landed (any period, the trial
+ *  tranche included), or null when there is none or the read failed. */
+async function newestBaseGrantAt(admin: CreditGrantClient, userId: string): Promise<Date | null> {
+  const { data, error } = await admin
+    .from("credit_ledger")
+    .select("created_at, idempotency_key")
+    .like("idempotency_key", `${creditRefillKey(userId, "")}%`)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error || !data) return null;
+  const row = (data as Array<{ created_at: string | null; idempotency_key: string | null }>).find(
+    (r) => r.idempotency_key != null && !r.idempotency_key.includes(":upgrade:"),
+  );
+  const at = row?.created_at ? new Date(row.created_at) : null;
+  return at && !Number.isNaN(at.getTime()) ? at : null;
+}
+
 /**
  * Grant the user's monthly allotment for `tier` in `period` (idempotent), or
  * top up the shortfall after a mid-month upgrade. `granted` is what this call
  * ASKED grant_credits for — an already-used idempotency key silently no-ops
  * inside the RPC, so treat the number as intent, not a ledger delta.
+ *
+ * `base: "backstop"` (the cron on a MONTHLY plan): the month's base
+ * allotment is the paying invoice's; it is granted here only when the user's
+ * newest base grant is older than MONTHLY_REFILL_BACKSTOP_DAYS (a missed
+ * webhook). Top-ups on a month that has its base row run either way.
  */
 export async function grantMonthlyCreditsForPeriod(
   admin: CreditGrantClient,
   userId: string,
   tier: PlanTier,
   period: string,
+  opts: { base?: "always" | "backstop"; now?: Date } = {},
 ): Promise<MonthlyGrantResult> {
 
   const amount = MONTHLY_CREDITS[tier] ?? 0;
@@ -210,6 +314,19 @@ export async function grantMonthlyCreditsForPeriod(
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true, granted: shortfall };
+  }
+
+  // The cron on a monthly plan: the payment's own grant is what fills the
+  // month. A base grant inside the last MONTHLY_REFILL_BACKSTOP_DAYS means
+  // this period's payment hasn't happened yet — granting now would be the
+  // second allotment for one invoice. (A failed read of the newest grant
+  // answers null and falls through to the grant: idempotent on the key.)
+  if (opts.base === "backstop") {
+    const newest = await newestBaseGrantAt(admin, userId);
+    const now = opts.now ?? new Date();
+    if (newest && now.getTime() - newest.getTime() < MONTHLY_REFILL_BACKSTOP_DAYS * DAY_MS) {
+      return { ok: true, granted: 0 };
+    }
   }
 
   // No base grant yet this month — or the ledger read failed, in which case

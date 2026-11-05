@@ -25,6 +25,12 @@ const s = vi.hoisted(() => ({
   adminConfigured: true,
   stripeConfigured: true,
   linkedId: "cus_new",
+  /** What the conditional link write answers (null = no row matched:
+   *  another request linked first, or the write was reverted). */
+  linkWrite: "cus_new" as string | null,
+  /** What the re-read of the profile's customer answers. */
+  linkRead: null as string | null,
+  customersDel: vi.fn(),
   lapsedTrial: false,
   live: null as null | {
     id: string;
@@ -69,20 +75,30 @@ vi.mock("@/lib/supabase/admin", () => ({
         s.funnelInserts.push(row);
         return { select: () => ({ single: async () => ({ data: { id: "fe_1" }, error: null }) }) };
       },
+      // The conditional customer link: UPDATE … WHERE stripe_customer_id IS NULL.
       update: () => ({
         eq: () => ({
-          select: () => ({
-            single: async () => ({ data: { stripe_customer_id: s.linkedId }, error: null }),
+          is: () => ({
+            select: () => ({
+              maybeSingle: async () => ({
+                data: s.linkWrite ? { stripe_customer_id: s.linkWrite } : null,
+                error: null,
+              }),
+            }),
           }),
         }),
       }),
-      // The win-back eligibility read (a recent trial_lapsed notification).
-      select: () => {
+      // The win-back eligibility read (a recent trial_lapsed notification),
+      // and the profile re-read after a link write that landed nothing.
+      select: (columns?: string) => {
         const chain = {
           eq: () => chain,
           gte: () => chain,
           limit: () => chain,
-          maybeSingle: async () => ({ data: s.lapsedTrial ? { id: "n_lapsed" } : null, error: null }),
+          maybeSingle: async () =>
+            columns === "stripe_customer_id"
+              ? { data: { stripe_customer_id: s.linkRead }, error: null }
+              : { data: s.lapsedTrial ? { id: "n_lapsed" } : null, error: null },
         };
         return chain;
       },
@@ -98,7 +114,7 @@ vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://test.local" })
 vi.mock("@/lib/stripe/client", () => ({
   isStripeConfigured: () => s.stripeConfigured,
   getStripe: () => ({
-    customers: { create: s.customersCreate },
+    customers: { create: s.customersCreate, del: s.customersDel },
     // The catalog answers by lookup key ("pro_monthly" → "price_pro_monthly"),
     // the same ids the mocked env mapping below produces.
     prices: {
@@ -164,6 +180,9 @@ beforeEach(() => {
   s.adminConfigured = true;
   s.stripeConfigured = true;
   s.linkedId = "cus_new";
+  s.linkWrite = "cus_new";
+  s.linkRead = null;
+  s.customersDel.mockReset().mockResolvedValue({});
   s.live = null;
   s.lapsedTrial = false;
   s.funnelInserts = [];
@@ -761,12 +780,23 @@ describe("createCheckoutSessionAction", () => {
     expect(checkoutParams().customer).toBe("cus_new");
 
     s.checkoutCreate.mockClear();
-    s.linkedId = "cus_stale"; // the protect_billing_columns trigger reverted the write
+    s.linkWrite = null; // nothing landed (a trigger revert reports no error)…
+    s.linkRead = null; // …and the re-read shows no customer either: refuse
     expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({
       ok: false,
       error: "Couldn't link your billing account. Try again.",
     });
     expect(s.checkoutCreate).not.toHaveBeenCalled();
+    expect(s.customersDel).not.toHaveBeenCalled();
+
+    // Two checkouts at once (audit 2026-11-05, P2-7): the other request's
+    // customer was linked first — use it and let the freshly minted one go.
+    s.linkWrite = null;
+    s.linkRead = "cus_first";
+    const raced = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(raced.ok).toBe(true);
+    expect(checkoutParams().customer).toBe("cus_first");
+    expect(s.customersDel).toHaveBeenCalledWith("cus_new");
 
     s.adminConfigured = false; // can't link → can't mint
     expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({

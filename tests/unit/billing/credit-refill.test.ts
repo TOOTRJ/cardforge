@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MONTHLY_REFILL_BACKSTOP_DAYS,
   REFILL_PAGE_SIZE,
   grantMonthlyCreditsForPeriod,
   grantTrialCreditsForPeriod,
   refillActiveSubscribers,
+  refillPlanFor,
   refillTierFor,
   type CreditGrantClient,
   type RefillProfileRow,
@@ -13,6 +15,7 @@ import {
   MONTHLY_CREDITS,
   creditRefillKey,
   creditUpgradeKey,
+  previousCreditPeriod,
   TRIAL_CREDITS,
 } from "@/lib/billing/plans";
 
@@ -44,6 +47,9 @@ function stubAdmin(opts: {
   rows?: LedgerRow[];
   readError?: string;
   grantError?: string;
+  /** The user's newest base grant, any period (the backstop read). */
+  newest?: { created_at: string; idempotency_key: string } | null;
+  newestError?: string;
 }): { admin: CreditGrantClient; grants: GrantCall[] } {
   const grants: GrantCall[] = [];
   const rows: LedgerRow[] =
@@ -52,13 +58,26 @@ function stubAdmin(opts: {
   const admin = {
     from: () => ({
       select: () => ({
-        // The month's refill rows share the base key as a prefix — one LIKE.
-        like: async (_column: string, pattern: string) => {
-          expect(pattern).toBe(`${creditRefillKey(USER, PERIOD)}%`);
-          return {
-            data: opts.readError ? null : rows,
-            error: opts.readError ? { message: opts.readError } : null,
+        like: (_column: string, pattern: string) => {
+          // The month's refill rows share the base key as a prefix — one LIKE;
+          // the newest-grant read is a LIKE on the user prefix, ordered, limit 1.
+          if (pattern === `${creditRefillKey(USER, PERIOD)}%`) {
+            return Promise.resolve({
+              data: opts.readError ? null : rows,
+              error: opts.readError ? { message: opts.readError } : null,
+            });
+          }
+          expect(pattern).toBe(`${creditRefillKey(USER, "")}%`);
+          const chain = {
+            order: () => chain,
+            limit: () => chain,
+            then: (resolve: (v: unknown) => void) =>
+              resolve({
+                data: opts.newestError ? null : opts.newest ? [opts.newest] : [],
+                error: opts.newestError ? { message: opts.newestError } : null,
+              }),
           };
+          return chain;
         },
       }),
     }),
@@ -203,6 +222,30 @@ describe("grantMonthlyCreditsForPeriod", () => {
     });
   });
 
+  it("as the cron's BACKSTOP on a monthly plan: grants nothing while the newest base grant is recent, grants after 35 days or with no grant at all", async () => {
+    const now = new Date("2026-02-01T06:00:00Z");
+    const recent = { created_at: "2026-01-31T20:00:00Z", idempotency_key: creditRefillKey(USER, "2026-01") };
+    // Paid on Jan 31 (the invoice granted); the cron on Feb 1 grants nothing.
+    const waiting = stubAdmin({ newest: recent });
+    expect(await grantMonthlyCreditsForPeriod(waiting.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: 0 });
+    expect(waiting.grants).toEqual([]);
+    // The webhook was missed: the newest grant is 36 days old → the backstop grants.
+    const old = { created_at: new Date(now.getTime() - (MONTHLY_REFILL_BACKSTOP_DAYS + 1) * 86_400_000).toISOString(), idempotency_key: creditRefillKey(USER, "2025-12") };
+    const missed = stubAdmin({ newest: old });
+    expect(await grantMonthlyCreditsForPeriod(missed.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro });
+    expect(missed.grants[0]).toMatchObject({ p_idempotency_key: creditRefillKey(USER, PERIOD) });
+    // No grant ever (a row synced before the ledger): grants. A failed read: grants (idempotent).
+    expect((await grantMonthlyCreditsForPeriod(stubAdmin({ newest: null }).admin, USER, "plus", PERIOD, { base: "backstop", now })).ok).toBe(true);
+    const failed = stubAdmin({ newestError: "boom" });
+    expect(await grantMonthlyCreditsForPeriod(failed.admin, USER, "plus", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.plus });
+    // A month that HAS its base row still tops up an upgrade under the backstop.
+    const topUp = stubAdmin({ baseRow: { delta: MONTHLY_CREDITS.plus }, newest: recent });
+    expect(await grantMonthlyCreditsForPeriod(topUp.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
+    // "always" (the webhook, an annual plan) never reads the newest grant.
+    const always = stubAdmin({ newest: recent });
+    expect(await grantMonthlyCreditsForPeriod(always.admin, USER, "pro", PERIOD)).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro });
+  });
+
   it("surfaces a grant RPC failure", async () => {
     const { admin } = stubAdmin({ baseRow: null, grantError: "boom" });
     const result = await grantMonthlyCreditsForPeriod(admin, USER, "pro", PERIOD);
@@ -233,8 +276,16 @@ function stubSweepAdmin(opts: SweepStubOpts): {
   const admin = {
     from: (table: string) => ({
       select: () => ({
-        // ledger path: .like() — no refill rows yet this month
-        like: async () => ({ data: [], error: null }),
+        // ledger path: .like() — no refill rows yet this month, and no
+        // newest base grant (the backstop read's .order().limit()).
+        like: () => {
+          const chain = {
+            order: () => chain,
+            limit: () => chain,
+            then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
+          };
+          return chain;
+        },
         // profiles path: .order().range()
         order: () => ({
           range: async (from: number, to: number) => {
@@ -339,6 +390,33 @@ describe("refillTierFor", () => {
   });
 });
 
+describe("refillPlanFor — who grants the base allotment (0175)", () => {
+  const now = new Date("2026-03-01T06:00:00Z");
+  const base = { id: "u", subscription_tier: "pro", subscription_status: "active", is_admin: false, created_at: "2026-01-01T00:00:00Z" };
+
+  it("a monthly plan: the invoice grants; the cron is the backstop", () => {
+    expect(refillPlanFor({ ...base, billing_interval: "month" }, "pro", now)).toEqual({ current: "backstop", backfillPrevious: false });
+  });
+
+  it("an annual plan: every calendar month, and the previous month when the plan already ran then", () => {
+    // Started Jan 15 (period ends Jan 15 next year): February is owed.
+    expect(refillPlanFor({ ...base, billing_interval: "year", current_period_end: "2027-01-15T00:00:00Z" }, "pro", now)).toEqual({ current: "always", backfillPrevious: true });
+    // Bought on Mar 1: February was before the plan — never backfilled.
+    expect(refillPlanFor({ ...base, billing_interval: "year", current_period_end: "2027-03-01T00:00:00Z" }, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
+    // No period end known: no backfill.
+    expect(refillPlanFor({ ...base, billing_interval: "year" }, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
+  });
+
+  it("an unknown interval (pre-0175 row) keeps the old rule; a comp's allotment is always the cron's", () => {
+    expect(refillPlanFor({ ...base, billing_interval: null }, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
+    const comped = { ...base, subscription_tier: "plus", billing_interval: "month", comp_tier: "pro", comp_expires_at: "2027-01-01T00:00:00Z" };
+    expect(refillPlanFor(comped, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
+    // The comp below the plan: the plan's own rule.
+    expect(refillPlanFor({ ...comped, comp_tier: "plus", subscription_tier: "pro" }, "pro", now)).toEqual({ current: "backstop", backfillPrevious: false });
+    expect(refillPlanFor({ ...base, subscription_status: null, subscription_tier: "free", comp_tier: "plus", comp_expires_at: null }, "plus", now)).toEqual({ current: "always", backfillPrevious: false });
+  });
+});
+
 describe("refillActiveSubscribers", () => {
   it("pages past the 1000-row PostgREST cap and grants to every subscriber", async () => {
     // 2 full pages + a partial third — the un-paginated query saw only 1000.
@@ -390,6 +468,21 @@ describe("refillActiveSubscribers", () => {
 
     expect(result).toEqual({ ok: true, processed: 5, granted: 0, failed: 0 });
     expect(grants).toEqual([]);
+  });
+
+  it("an annual plan that already ran last month is granted last month too; a monthly plan with no grant ever is granted by the backstop", async () => {
+    const subscribers = [
+      { id: "annual", subscription_tier: "pro", subscription_status: "active", is_admin: false, created_at: "2025-06-01T00:00:00Z", billing_interval: "year", current_period_end: "2026-06-01T00:00:00Z" },
+      { id: "monthly", subscription_tier: "plus", subscription_status: "active", is_admin: false, created_at: "2026-01-01T00:00:00Z", billing_interval: "month" },
+    ];
+    const { admin, grants } = stubSweepAdmin({ subscribers });
+    const result = await refillActiveSubscribers(admin, PERIOD);
+    expect(result).toEqual({ ok: true, processed: 2, granted: 2, failed: 0 });
+    expect(grants.map((g) => g.p_idempotency_key)).toEqual([
+      creditRefillKey("annual", previousCreditPeriod()),
+      creditRefillKey("annual", PERIOD),
+      creditRefillKey("monthly", PERIOD),
+    ]);
   });
 
   it("aborts with the stats-so-far error when a page read fails", async () => {
