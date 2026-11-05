@@ -51,6 +51,11 @@ describe("0169_featured_pool", () => {
     expect(guard).not.toMatch(/title|printed_types|rules_text|subtypes|nickname/);
   });
 
+  it("names the lasting reasons before the ones the card's owner can change", () => {
+    const codes = [...body("home_hero_refusal").matchAll(/then '([a-z_]+)'/g)].map((m) => m[1]);
+    expect(codes).toEqual(["from_real_card", "remix", "not_creator", "not_public", "no_render"]);
+  });
+
   it("applies the guard when a card is added and on every visitor read (pool and fallback slots)", () => {
     expect(body("featured_pool_add")).toMatch(/home_hero_refusal\(v_card\)/);
     expect(body("home_hero_pool").match(/home_hero_refusal\(c\) is null/g)).toHaveLength(2);

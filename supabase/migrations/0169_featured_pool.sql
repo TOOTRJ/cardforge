@@ -18,15 +18,16 @@
 -- 2. THE ORIGINAL-CARD GUARD — home_hero_refusal(card): ONE rule, read when
 --    a card is ADDED (featured_pool_add) and again whenever the page READS
 --    the pool (home_hero_pool), so a card that later stops qualifying drops
---    out by itself. NULL = the card may be on the hero; else the reason:
---      not_public     — visibility is not 'public' (unlisted never shows);
---      no_render      — no stored bake (the hero draws the stored image);
+--    out by itself. NULL = the card may be on the hero; else the FIRST reason, the
+--    lasting ones before those its owner can change:
 --      from_real_card — started from a real printing: source_scryfall_id
 --                       (imports and remixes of a printing, since 0016) or
 --                       import_scryfall_id (0144) is set;
 --      remix          — parent_card_id is set (feature the parent instead);
 --      not_creator    — the owner is no real creator (0149's
---                       owner_is_creator: never an admin's card).
+--                       owner_is_creator: never an admin's card);
+--      not_public     — visibility is not 'public' (unlisted never shows);
+--      no_render      — no stored bake (the hero draws the stored image).
 --    It reads ONLY those columns — never a title, printed_types or any
 --    other text: no automatic rule can tell a fan card from an original, so
 --    that judgment is the admin's, and the guard only refuses what it can
@@ -95,11 +96,11 @@ security invoker
 set search_path = ''
 as $$
   select case
-    when c.visibility is distinct from 'public' then 'not_public'
-    when c.rendered_image_url is null then 'no_render'
     when c.source_scryfall_id is not null or c.import_scryfall_id is not null then 'from_real_card'
     when c.parent_card_id is not null then 'remix'
     when not public.owner_is_creator(c.owner_id) then 'not_creator'
+    when c.visibility is distinct from 'public' then 'not_public'
+    when c.rendered_image_url is null then 'no_render'
     else null
   end;
 $$;
