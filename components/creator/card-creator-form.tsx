@@ -2021,8 +2021,9 @@ export function CardCreatorForm({
   // an import does: its frame, colour pair and part colour stand (the same
   // settling an import runs), and its tags keep following only if the guest
   // never touched them.
+  const guestDraftRole = mode === "create" && !deckRemix && !card ? guestDraft : null;
   const guestDraftControls = useGuestDraft({
-    role: mode === "create" && !deckRemix && !card ? guestDraft : null,
+    role: guestDraftRole,
     userId,
     form: methods,
     defaults,
@@ -5181,13 +5182,19 @@ export function CardCreatorForm({
         : {})}
     >
       {readOnly ? <GuestGate /> : null}
-      {guestDraftControls.restored ? (
-        <GuestDraftRestoredNotice
-          signedIn={Boolean(userId)}
-          uploads={localPictureWaiting ? guestUploads : "idle"}
-          onRetry={guestDraftControls.retryUploads}
-          className="mb-6"
-        />
+      {guestDraftRole ? (
+        // A live region announces what CHANGES in it, so it is here, empty,
+        // before the kept card is read back — then the note fills it.
+        <div role="status" data-testid="guest-draft-status">
+          {guestDraftControls.restored ? (
+            <GuestDraftRestoredNotice
+              signedIn={Boolean(userId)}
+              uploads={localPictureWaiting ? guestUploads : "idle"}
+              onRetry={guestDraftControls.retryUploads}
+              className="mb-6"
+            />
+          ) : null}
+        </div>
       ) : null}
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />

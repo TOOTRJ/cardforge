@@ -7,12 +7,16 @@
 //     (`pictures.keep`, never uploaded), the card is written to the draft as
 //     it changes (debounced, and at once when the page is hidden or the save
 //     gate opens), and a draft already there is put back on load. Only this
-//     role ever WRITES the draft.
+//     role ever WRITES the draft — and only what changed since this tab's
+//     last write, over the record this tab last wrote or put back: a tab
+//     left open while the card was claimed, saved or rewritten in another
+//     tab writes nothing more (the store's `guard`).
 //   * "restore" — the signed-in creator at /create (a plain new card): a
 //     draft there is CLAIMED for this account and put back, its pictures
 //     uploaded through the normal upload paths (art: start → PUT → finish;
 //     a land icon / watermark: the watermark action — prepareUploadBytes,
-//     the rate limit, the user's own folder). It is never written again:
+//     the rate limit, the user's own folder; once per picture in this tab's
+//     session — a second visit reuses the address). It is never written again:
 //     the stored draft keeps its `blob:` pictures and none of the account's
 //     URLs, and goes when the card saves (the form's own createCardAction),
 //     on Start over, or at sign-out.
@@ -31,6 +35,7 @@ import { parseTags } from "@/lib/creator/card-fields";
 import {
   blobUrlPaths,
   createGuestDraftStore,
+  type ReadGuestDraft,
   draftPictures,
   guestPictureKindOf,
   restoredDraftValues,
@@ -42,12 +47,35 @@ import { cardArtFileProblem } from "@/lib/cards/art-upload-limits";
 import { watermarkFileProblem } from "@/lib/cards/watermark-upload-limits";
 import { uploadCardArtFile } from "@/lib/cards/art-upload-client";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
+import { randomId } from "@/lib/ids";
 import type { GuestPictures } from "@/components/creator/guest-pictures";
 
 export type GuestDraftRole = "guest" | "restore";
 
 /** How long the form rests before its card is written to the draft. */
 const WRITE_DELAY_MS = 500;
+
+// A restored picture's upload, remembered for this tab's session: the same
+// kept picture is uploaded once, not on every visit to /create before Save.
+// Keyed by the account, the draft's revision and the picture's field.
+const UPLOADED_KEY = "pipglyph:guest-card-uploads";
+const uploadedKey = (userId: string, rev: string, path: string) => `${userId}|${rev}|${path}`;
+function readUploaded(): Record<string, string> {
+  try {
+    const raw = window.sessionStorage.getItem(UPLOADED_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+function rememberUploaded(key: string, url: string) {
+  try {
+    window.sessionStorage.setItem(UPLOADED_KEY, JSON.stringify({ ...readUploaded(), [key]: url }));
+  } catch {
+    // not remembered: the next visit uploads it again
+  }
+}
 
 export type GuestPictureUploads = "idle" | "uploading" | "failed";
 
@@ -118,6 +146,7 @@ export function useGuestDraft({
     setLocalPictureUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
   }, []);
   const releaseFile = useCallback((url: string) => {
+    if (!files.current.has(url)) return;
     files.current.delete(url);
     setLocalPictureUrls((prev) => prev.filter((u) => u !== url));
     try {
@@ -141,13 +170,39 @@ export function useGuestDraft({
     [],
   );
 
+  // The record this tab last wrote or put back (null: none), and what it
+  // held: a write goes over that record only, and only with something new.
+  const expected = useRef<string | null>(null);
+  const lastWritten = useRef<string | null>(null);
+  // The record was claimed, cleared or rewritten elsewhere: this tab's card
+  // is no longer the kept one, and it writes nothing more.
+  const stale = useRef(false);
+  const snapshotKey = useCallback(
+    () => JSON.stringify({ values: getValues(), tags: latest.current.tags.snapshot() }),
+    [getValues],
+  );
+
+  // A picture the guest replaced or removed is let go at once.
+  const releaseUnused = useCallback(() => {
+    const inUse = new Set(blobUrlPaths(getValues()).map(({ url }) => url));
+    for (const url of [...files.current.keys()]) if (!inUse.has(url)) releaseFile(url);
+  }, [getValues, releaseFile]);
+
   const write = useCallback(async () => {
-    if (!writes || !ready.current) return;
+    if (!writes || !ready.current || stale.current) return;
+    releaseUnused();
     if (!dirty.current) {
-      // An untouched form (a fresh guest page, Start over) holds no card.
-      await store.clear();
+      // An untouched form (a fresh guest page, Start over) holds no card:
+      // this tab's own record goes; another tab's stays.
+      if (expected.current === null && lastWritten.current === null) return;
+      const cleared = await store.clear({ expected: expected.current });
+      if (!cleared) stale.current = true;
+      expected.current = null;
+      lastWritten.current = null;
       return;
     }
+    const key = snapshotKey();
+    if (key === lastWritten.current) return;
     const { values, pictures } = draftPictures(getValues(), files.current);
     const draft: GuestDraft = {
       values,
@@ -156,8 +211,14 @@ export function useGuestDraft({
       base: latest.current.defaults,
       claimedBy: null,
     };
-    await store.write(draft);
-  }, [writes, getValues, store]);
+    const rev = randomId();
+    const result = await store.write(draft, { guard: { expected: expected.current }, rev });
+    if (result === "stale") stale.current = true;
+    else if (result) {
+      expected.current = rev;
+      lastWritten.current = key;
+    }
+  }, [writes, getValues, store, releaseUnused, snapshotKey]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flush = useCallback(async () => {
@@ -203,6 +264,8 @@ export function useGuestDraft({
       clearTimeout(timer.current);
       timer.current = null;
     }
+    expected.current = null;
+    lastWritten.current = null;
     await store.clear();
   }, [store]);
 
@@ -218,6 +281,7 @@ export function useGuestDraft({
   // One run at a time: a Retry while one is in flight would upload the same
   // picture twice and orphan the first object.
   const uploading = useRef(false);
+  const restoredRev = useRef<string | null>(null);
   const uploadKept = useCallback(async () => {
     if (uploading.current) return;
     const waiting = blobUrlPaths(getValues());
@@ -227,6 +291,16 @@ export function useGuestDraft({
     let failed = false;
     try {
       for (const { path, url } of waiting) {
+        const rev = restoredRev.current;
+        const memoKey = userId && rev ? uploadedKey(userId, rev, path) : null;
+        const earlier = memoKey ? readUploaded()[memoKey] : undefined;
+        if (earlier) {
+          if (getValues(path as FieldPath<FormValues>) === url) {
+            setValue(path as FieldPath<FormValues>, earlier as never, { shouldDirty: true });
+            releaseFile(url);
+          }
+          continue;
+        }
         const kept = files.current.get(url);
         if (!kept) {
           setValue(path as FieldPath<FormValues>, "" as never, { shouldDirty: true });
@@ -252,6 +326,7 @@ export function useGuestDraft({
         }
         // Only where the field still holds this picture (the maker may have
         // replaced or removed it meanwhile).
+        if (memoKey) rememberUploaded(memoKey, result.publicUrl);
         if (getValues(path as FieldPath<FormValues>) === url) {
           setValue(path as FieldPath<FormValues>, result.publicUrl as never, { shouldDirty: true });
           releaseFile(url);
@@ -261,7 +336,7 @@ export function useGuestDraft({
       uploading.current = false;
     }
     setUploads(failed ? "failed" : "idle");
-  }, [getValues, setValue, setUploads, releaseFile]);
+  }, [userId, getValues, setValue, setUploads, releaseFile]);
 
   // ---- Put a kept card back, once ----
   const tried = useRef(false);
@@ -272,13 +347,16 @@ export function useGuestDraft({
     let cancelled = false;
     void (async () => {
       const viewer = role === "restore" ? userId : null;
-      let draft: GuestDraft | null = null;
+      let draft: ReadGuestDraft | null = null;
       try {
         draft = await store.read(viewer);
       } catch {
         draft = null;
       }
       if (cancelled) return;
+      // The maker typed before the read came back: their card replaces the
+      // kept one, as this tab's own.
+      if (draft && dirty.current && role === "guest") expected.current = draft.rev;
       if (draft && !dirty.current) {
         try {
           // Claimed first: from here it is this account's, and no guest or
@@ -301,6 +379,10 @@ export function useGuestDraft({
           latest.current.onRestored();
           restoredRef.current = true;
           setRestored(true);
+          restoredRev.current = draft.rev;
+          // The guest's tab carries on over the record it put back.
+          expected.current = draft.rev;
+          lastWritten.current = snapshotKey();
           if (role === "restore") void uploadKept();
         } catch (error) {
           // A draft this version can't read: never a broken creator.
@@ -315,7 +397,7 @@ export function useGuestDraft({
       // StrictMode's second run must try again (the first was cancelled).
       tried.current = false;
     };
-  }, [role, userId, store, reset, holdFile, uploadKept]);
+  }, [role, userId, store, reset, holdFile, uploadKept, snapshotKey]);
 
   const pictures = useMemo<GuestPictures | null>(
     () =>

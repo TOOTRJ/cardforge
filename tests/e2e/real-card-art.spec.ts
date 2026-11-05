@@ -130,12 +130,24 @@ test.describe("Use art from a real card (TODO 1.15)", () => {
     );
   });
 
-  test("a guest sees the button disabled", async ({ page }) => {
+  // The guest creator (TODO HM3): the button opens the sign-up dialog, never
+  // the picker or an import.
+  test("a guest's button opens the sign-up dialog", async ({ page }) => {
+    const importArtBodies: unknown[] = [];
+    await page.route("**/api/scryfall/import-art**", (route) => {
+      importArtBodies.push(route.request().postDataJSON());
+      return route.abort();
+    });
     await page.goto("/create");
     const identity = stepButton(page, /^identity$/i);
     if (await identity.count()) await identity.click();
     const button = page.getByRole("button", { name: /^use art from a real card$/i });
-    await expect(button).toBeDisabled();
-    await expect(button).toHaveAttribute("title", "Sign in to use art from real cards.");
+    await expect(button).toBeEnabled();
+    await button.click();
+    const gate = page.getByTestId("guest-save-gate");
+    await expect(gate).toBeVisible();
+    await expect(gate.getByRole("heading", { name: /real-card art needs a free account/i })).toBeVisible();
+    await expect(page.getByLabel("Search a card by name")).toHaveCount(0);
+    expect(importArtBodies).toEqual([]);
   });
 });

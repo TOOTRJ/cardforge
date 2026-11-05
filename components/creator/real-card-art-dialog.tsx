@@ -69,7 +69,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
-const SIGN_IN_HINT = "Sign in to use art from real cards.";
+const SIGN_IN_HINT = "sign in to use art from real cards";
 
 /** One /api/scryfall/search result, as far as this dialog reads it. */
 type ArtSearchResult = {

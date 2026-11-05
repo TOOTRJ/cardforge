@@ -1,5 +1,6 @@
 import type { FormValues } from "@/lib/creator/form-types";
 import { DEFAULT_POST_AUTH_PATH, safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // A signed-out visitor's card (TODO HM3, owner 2026-11-04): the guest
@@ -22,6 +23,11 @@ import { DEFAULT_POST_AUTH_PATH, safeRedirectPath } from "@/lib/auth/safe-redire
 //     it, and the signed-in creator that puts it back CLAIMS it for that
 //     account — a claimed draft is never offered to a guest or to another
 //     account (and another account's /create removes it).
+//   * One tab never overwrites another's: every write stamps a revision
+//     (`rev`), and the guest creator writes — or clears — only while the
+//     stored record is still the one it last wrote or put back. A guest tab
+//     left open while the card was claimed, saved (cleared) or rewritten
+//     elsewhere never brings it back (`write` / `clear` with `expected`).
 //   * It holds only what a guest can set: its pictures as `blob:` URLs,
 //     never a storage URL, a deck, an import's id or a set icon upload
 //     (`guestDraftValues`, on the way in and on the way out).
@@ -110,7 +116,14 @@ export type GuestDraft = {
   claimedBy: string | null;
 };
 
-type StoredGuestDraft = GuestDraft & { v: number; savedAt: number };
+type StoredGuestDraft = GuestDraft & { v: number; savedAt: number; rev?: string | null };
+
+/** The draft as read back, with the revision it was stored under. */
+export type ReadGuestDraft = GuestDraft & { rev: string | null };
+
+/** A guarded write or clear: go ahead only while the stored record is still
+ *  revision `expected` (null = nothing stored) and claimed by no one. */
+export type GuestDraftGuard = { expected: string | null };
 
 // ---------------------------------------------------------------------------
 // What a draft may hold. The guest creator can't upload, import, link a
@@ -455,13 +468,20 @@ export type GuestDraftStore = {
   /** The kept draft, or null. One claimed by another account than `viewer`
    *  (a user id; null = a guest) is never returned, and is removed; so is a
    *  stale or unreadable one. */
-  read(viewer: string | null): Promise<GuestDraft | null>;
+  read(viewer: string | null): Promise<ReadGuestDraft | null>;
   /** Mark the kept draft as `userId`'s: never offered to anyone else. */
   claim(userId: string): Promise<void>;
-  /** Keep it. "values-only" when the pictures couldn't be kept; false when
-   *  nothing could. */
-  write(draft: GuestDraft): Promise<"kept" | "values-only" | false>;
-  clear(): Promise<void>;
+  /** Keep it, under revision `rev` (a fresh one when omitted). "values-only"
+   *  when the pictures couldn't be kept; false when nothing could; "stale"
+   *  when `guard` refused (the stored record is claimed, or no longer the
+   *  one this tab expected — cleared or rewritten elsewhere). */
+  write(
+    draft: GuestDraft,
+    options?: { guard?: GuestDraftGuard; rev?: string },
+  ): Promise<"kept" | "values-only" | false | "stale">;
+  /** Forget it. With `guard`, only while the stored record is still the
+   *  expected one (true = cleared or nothing there). */
+  clear(guard?: GuestDraftGuard): Promise<boolean>;
 };
 
 export function createGuestDraftStore(
@@ -484,7 +504,12 @@ export function createGuestDraftStore(
     }
     setWaiting(null);
   };
-  const readRaw = async (): Promise<{ draft: GuestDraft; backend: GuestDraftBackend; savedAt: number } | null> => {
+  const readRaw = async (): Promise<{
+    draft: GuestDraft;
+    backend: GuestDraftBackend;
+    savedAt: number;
+    rev: string | null;
+  } | null> => {
     for (const backend of backends()) {
       let raw: unknown;
       try {
@@ -494,7 +519,10 @@ export function createGuestDraftStore(
       }
       if (raw == null) continue;
       const draft = guestDraftFromStored(raw, now());
-      if (draft) return { draft, backend, savedAt: (raw as StoredGuestDraft).savedAt };
+      if (draft) {
+        const { savedAt, rev } = raw as StoredGuestDraft;
+        return { draft, backend, savedAt, rev: typeof rev === "string" && rev ? rev : null };
+      }
       try {
         await backend.delete();
       } catch {
@@ -503,11 +531,17 @@ export function createGuestDraftStore(
     }
     return null;
   };
+  // Is the stored record still the one a tab expects, and nobody's?
+  const unchanged = async (guard: GuestDraftGuard): Promise<boolean> => {
+    const found = await readRaw();
+    if (found?.draft.claimedBy) return false;
+    return (found?.rev ?? null) === guard.expected;
+  };
   return {
     async read(viewer) {
       const found = await readRaw();
       if (!found) return null;
-      if (draftOfferedTo(found.draft, viewer)) return found.draft;
+      if (draftOfferedTo(found.draft, viewer)) return { ...found.draft, rev: found.rev };
       // Another account's card: never offered, and gone from this browser
       // once someone else is at it (its owner signed out — or never did).
       await clearAll();
@@ -516,7 +550,13 @@ export function createGuestDraftStore(
     async claim(userId) {
       const found = await readRaw();
       if (!found || found.draft.claimedBy === userId) return;
-      const record: StoredGuestDraft = { ...found.draft, claimedBy: userId, v: GUEST_DRAFT_VERSION, savedAt: found.savedAt };
+      const record: StoredGuestDraft = {
+        ...found.draft,
+        claimedBy: userId,
+        v: GUEST_DRAFT_VERSION,
+        savedAt: found.savedAt,
+        rev: found.rev,
+      };
       try {
         await found.backend.put(record);
       } catch {
@@ -527,7 +567,8 @@ export function createGuestDraftStore(
       // Nothing waits for a sign-up any more (the onboarding pickup).
       setWaiting(null);
     },
-    async write(draft) {
+    async write(draft, options = {}) {
+      if (options.guard && !(await unchanged(options.guard))) return "stale";
       const savedAt = now();
       const record: StoredGuestDraft = {
         ...draft,
@@ -535,6 +576,7 @@ export function createGuestDraftStore(
         base: draft.base ? guestDraftValues(draft.base) : null,
         v: GUEST_DRAFT_VERSION,
         savedAt,
+        rev: options.rev ?? randomId(),
       };
       for (const backend of backends()) {
         try {
@@ -551,11 +593,15 @@ export function createGuestDraftStore(
       }
       return false;
     },
-    clear: clearAll,
+    async clear(guard) {
+      if (guard && !(await unchanged(guard))) return false;
+      await clearAll();
+      return true;
+    },
   };
 }
 
 /** Forget this browser's guest card — every sign-out, account deletion. */
-export function forgetGuestCard(): Promise<void> {
-  return createGuestDraftStore().clear();
+export async function forgetGuestCard(): Promise<void> {
+  await createGuestDraftStore().clear();
 }

@@ -411,3 +411,61 @@ describe("a draft follows the person (P1: claimed at restore)", () => {
     expect(guestCardWaiting(NOW + 1)).toBe(false);
   });
 });
+
+describe("one tab never overwrites another's card (a guarded write / clear)", () => {
+  const draft = (title: string): GuestDraft => ({
+    values: values({ title, art_url: "", watermark: undefined } as unknown as Partial<FormValues>),
+    pictures: [],
+    tags: { following: false, base: [] },
+    base: null,
+    claimedBy: null,
+  });
+  const setup = () => {
+    const idb = memoryBackend();
+    return { idb, store: createGuestDraftStore({ backends: () => [idb], now: () => NOW }) };
+  };
+
+  it("writes over the record the tab expects, and stamps the revision it was given", async () => {
+    const { store } = setup();
+    expect(await store.write(draft("One"), { guard: { expected: null }, rev: "r1" })).toBe("kept");
+    expect(await store.write(draft("Two"), { guard: { expected: "r1" }, rev: "r2" })).toBe("kept");
+    const read = await store.read(null);
+    expect(read?.values.title).toBe("Two");
+    expect(read?.rev).toBe("r2");
+  });
+
+  it("refuses when the record was cleared after the tab's write (the card was saved)", async () => {
+    const { store, idb } = setup();
+    await store.write(draft("One"), { guard: { expected: null }, rev: "r1" });
+    await store.clear();
+    expect(await store.write(draft("One"), { guard: { expected: "r1" }, rev: "r2" })).toBe("stale");
+    expect(idb.record()).toBeNull();
+    expect(guestCardWaiting(NOW + 1)).toBe(false);
+  });
+
+  it("refuses when the record was claimed — even the revision the tab wrote", async () => {
+    const { store } = setup();
+    await store.write(draft("One"), { guard: { expected: null }, rev: "r1" });
+    await store.claim("user-a");
+    expect(await store.write(draft("One"), { guard: { expected: "r1" }, rev: "r2" })).toBe("stale");
+    expect((await store.read("user-a"))?.claimedBy).toBe("user-a");
+  });
+
+  it("refuses when another tab rewrote it, and over a card it never saw", async () => {
+    const { store } = setup();
+    await store.write(draft("One"), { guard: { expected: null }, rev: "r1" });
+    await store.write(draft("Other tab"), { rev: "r9" });
+    expect(await store.write(draft("One"), { guard: { expected: "r1" }, rev: "r2" })).toBe("stale");
+    expect(await store.write(draft("Fresh tab"), { guard: { expected: null }, rev: "r3" })).toBe("stale");
+    expect((await store.read(null))?.values.title).toBe("Other tab");
+  });
+
+  it("a guarded clear removes only the expected record", async () => {
+    const { store, idb } = setup();
+    await store.write(draft("Other tab"), { rev: "r9" });
+    expect(await store.clear({ expected: "r1" })).toBe(false);
+    expect(idb.record()).not.toBeNull();
+    expect(await store.clear({ expected: "r9" })).toBe(true);
+    expect(idb.record()).toBeNull();
+  });
+});

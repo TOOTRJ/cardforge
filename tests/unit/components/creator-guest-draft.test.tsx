@@ -55,41 +55,42 @@ vi.mock("@/components/cards/card-preview", () => ({
     return <div data-testid="card-preview" />;
   },
 }));
-// The kept card, as the browser would hand it back: a stand-in store (the
-// storage itself is tests/unit/creator/guest-draft.test.ts).
-// It keeps the store's rules: a draft claimed by one account is offered to
-// no one else, and removed when they look.
+// The kept card, as the browser would hand it back: the REAL store over one
+// in-memory record (the storage itself is tests/unit/creator/guest-draft.test.ts),
+// so its rules hold here — a claimed draft is offered to no one else, and a
+// guarded write or clear goes over the record a tab expects only.
+// `kept.draft` is the stored draft (a test may seed it), `kept.writes` the
+// drafts written (a claim is not a write), `kept.cleared` the removals.
 const kept = vi.hoisted(() => ({
   draft: null as GuestDraft | null,
+  rev: null as string | null,
   writes: [] as GuestDraft[],
   cleared: 0,
+  // The same browser's store, as another tab would open it.
+  otherTab: null as null | (() => import("@/lib/creator/guest-draft").GuestDraftStore),
 }));
 vi.mock("@/lib/creator/guest-draft", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/creator/guest-draft")>();
-  return {
-    ...real,
-    createGuestDraftStore: () => ({
-      read: async (viewer: string | null) => {
-        if (!kept.draft) return null;
-        if (real.draftOfferedTo(kept.draft, viewer)) return kept.draft;
-        kept.draft = null;
-        return null;
-      },
-      claim: async (userId: string) => {
-        if (kept.draft) kept.draft = { ...kept.draft, claimedBy: userId };
-      },
-      write: async (draft: GuestDraft) => {
-        const stored = { ...draft, values: real.guestDraftValues(draft.values) };
-        kept.writes.push(stored);
-        kept.draft = stored;
-        return "kept" as const;
-      },
-      clear: async () => {
-        kept.cleared += 1;
-        kept.draft = null;
-      },
-    }),
+  const backend: import("@/lib/creator/guest-draft").GuestDraftBackend = {
+    keepsPictures: true,
+    get: async () =>
+      kept.draft ? { ...kept.draft, v: real.GUEST_DRAFT_VERSION, savedAt: Date.now() - 1, rev: kept.rev } : null,
+    put: async (record) => {
+      const { rev, ...rest } = record;
+      const draft: GuestDraft = { values: rest.values, pictures: rest.pictures, tags: rest.tags, base: rest.base, claimedBy: rest.claimedBy };
+      if (!(kept.draft && draft.claimedBy && rev === kept.rev)) kept.writes.push(draft);
+      kept.draft = draft;
+      kept.rev = rev ?? null;
+    },
+    delete: async () => {
+      kept.cleared += 1;
+      kept.draft = null;
+      kept.rev = null;
+    },
   };
+  const store = () => real.createGuestDraftStore({ backends: () => [backend] });
+  kept.otherTab = store;
+  return { ...real, createGuestDraftStore: store };
 });
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
@@ -103,9 +104,15 @@ const STORED_ART = `https://example.supabase.co/storage/v1/object/public/card-ar
 beforeEach(() => {
   window.history.replaceState({}, "", "/create?step=identity");
   kept.draft = null;
+  kept.rev = null;
   kept.writes = [];
   kept.cleared = 0;
   preview.last = null;
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    // no session storage here
+  }
   actions.createCardAction.mockResolvedValue({ ok: true, cardId: "card-1", slug: "ember-wyrm" });
   // The signed-in creator's own reads (capacity, pips…) answer nothing.
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: false }), { status: 200 })));
@@ -456,6 +463,144 @@ describe("a guest's card follows the person, not the browser (HM3)", () => {
     }
     expect(kept.draft).toBe(written);
     expect(kept.cleared).toBe(0);
+  });
+});
+
+// Leaving the page or switching away flushes the guest's card at once.
+async function leaveTab() {
+  const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+  Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+  await act(async () => {
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("pagehide"));
+  });
+  if (visibility) Object.defineProperty(document, "visibilityState", visibility);
+  else delete (document as { visibilityState?: unknown }).visibilityState;
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+  });
+}
+const rest = () =>
+  act(async () => {
+    await new Promise((r) => setTimeout(r, 700));
+  });
+
+describe("a guest tab left open never brings the card back (HM3)", () => {
+  // The guest's tab (A) wrote the card; the maker signed up in another tab.
+  async function guestTab() {
+    guest();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm" } });
+    });
+    await waitFor(() => expect(kept.writes.at(-1)?.values.title).toBe("Ember Wyrm"), { timeout: 3000 });
+  }
+
+  it("the card was saved in the other tab: switching back, closing, even typing writes nothing", async () => {
+    await guestTab();
+    const writes = kept.writes.length;
+    // Tab B, signed in: puts it back (claims it) and saves it (clears it).
+    const other = kept.otherTab!();
+    expect((await other.read(USER))?.values.title).toBe("Ember Wyrm");
+    await other.claim(USER);
+    await other.clear();
+    expect(kept.draft).toBeNull();
+    // Back in tab A.
+    await leaveTab();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm II" } });
+    });
+    await rest();
+    cleanup();
+    expect(kept.writes.length).toBe(writes);
+    expect(kept.draft).toBeNull();
+    // The next /create — a guest, or another account — finds nothing.
+    expect(await kept.otherTab!().read(null)).toBeNull();
+    expect(await kept.otherTab!().read("another-user")).toBeNull();
+  });
+
+  it("the card was claimed in the other tab: the guest tab never takes it back unclaimed", async () => {
+    await guestTab();
+    const other = kept.otherTab!();
+    await other.read(USER);
+    await other.claim(USER);
+    await leaveTab();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm II" } });
+    });
+    await rest();
+    cleanup();
+    expect(kept.draft?.claimedBy).toBe(USER);
+    expect(kept.draft?.values.title).toBe("Ember Wyrm");
+    expect(await kept.otherTab!().read(null)).toBeNull();
+  });
+
+  it("another guest tab wrote a newer card: the old tab never replaces it", async () => {
+    await guestTab();
+    const newer = { ...kept.draft!, values: { ...kept.draft!.values, title: "Newer Wyrm" } };
+    await kept.otherTab!().write(newer);
+    await leaveTab();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm II" } });
+    });
+    await rest();
+    cleanup();
+    expect(kept.draft?.values.title).toBe("Newer Wyrm");
+  });
+
+  it("leaving the page with nothing changed writes nothing", async () => {
+    await guestTab();
+    await rest();
+    const writes = kept.writes.length;
+    await leaveTab();
+    cleanup();
+    expect(kept.writes.length).toBe(writes);
+  });
+
+  it("the card's own tab carries on writing — Start over clears only its own card", async () => {
+    await guestTab();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm II" } });
+    });
+    await waitFor(() => expect(kept.draft?.values.title).toBe("Ember Wyrm II"), { timeout: 3000 });
+    cleanup();
+    // Reloaded: "Welcome back", and it carries on over the card it put back.
+    guest();
+    await waitFor(() => expect(title().value).toBe("Ember Wyrm II"));
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm III" } });
+    });
+    await waitFor(() => expect(kept.draft?.values.title).toBe("Ember Wyrm III"), { timeout: 3000 });
+  });
+});
+
+describe("a guest's pictures (HM3)", () => {
+  it("a replaced picture is let go at once", async () => {
+    let n = 0;
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => `blob:https://pipglyph.test/p${++n}`), revokeObjectURL }));
+    const { container } = guest();
+    const input = () => container.querySelector('input[type="file"][accept*="image/png"]') as HTMLInputElement;
+    for (const name of ["one.png", "two.png"]) {
+      await act(async () => {
+        fireEvent.change(input(), { target: { files: [new File(["png"], name, { type: "image/png" })] } });
+      });
+      await waitFor(() => expect(preview.last?.artUrl).toBe(`blob:https://pipglyph.test/p${n}`));
+    }
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:https://pipglyph.test/p1"), { timeout: 3000 });
+    expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:https://pipglyph.test/p2");
+  });
+
+  it("a restored picture uploads once: a second visit before Save reuses it", async () => {
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:https://pipglyph.test/restored"), revokeObjectURL: vi.fn() }));
+    uploads.uploadCardArtFile.mockResolvedValue({ ok: true, publicUrl: STORED_ART });
+    kept.draft = await draftWithPicture();
+    for (let visit = 0; visit < 2; visit += 1) {
+      signedIn();
+      await waitFor(() => expect(save().disabled).toBe(false));
+      expect(preview.last?.artUrl).toBe(STORED_ART);
+      cleanup();
+    }
+    expect(uploads.uploadCardArtFile).toHaveBeenCalledTimes(1);
   });
 });
 

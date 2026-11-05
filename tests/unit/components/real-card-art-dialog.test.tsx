@@ -624,7 +624,7 @@ describe("guests", () => {
     const button = screen.getByRole("button", { name: /use art from a real card/i });
     expect(button.hasAttribute("disabled")).toBe(false);
     expect(chipOff(button)).toBe(true);
-    expect(button.getAttribute("aria-label")).toBe("Use art from a real card — Sign in to use art from real cards.");
+    expect(button.getAttribute("aria-label")).toBe("Use art from a real card — sign in to use art from real cards");
     fireEvent.click(button);
     expect(screen.queryByLabelText("Search a card by name")).toBeNull();
     expect(mock).not.toHaveBeenCalled();

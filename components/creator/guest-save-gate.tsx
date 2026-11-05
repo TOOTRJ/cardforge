@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -127,65 +127,54 @@ export function GuestDraftRestoredNotice({
   onRetry: () => void;
   className?: string;
 }) {
-  // A live region announces what CHANGES in it: mounted empty, then filled
-  // (a region born with its text is read by no screen reader).
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setShown(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  // The card is what the maker came back for: where the note is out of
-  // sight (a phone, under the start options), bring it into view once.
+  // Drawn inside the creator's status region, which is mounted empty before
+  // the card comes back (a region born with its text is read by no screen
+  // reader). The card is what the maker came back for: where the note is
+  // out of sight (a phone, under the start options), bring it into view once.
   const note = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!shown) return;
     const el = note.current;
     if (!el || typeof el.scrollIntoView !== "function") return;
     const { top, bottom } = el.getBoundingClientRect();
     if (top < 0 || bottom > window.innerHeight)
       el.scrollIntoView({ block: "center" });
-  }, [shown]);
+  }, []);
   return (
     <div
       ref={note}
-      role="status"
       data-testid="guest-draft-restored"
       className={cn(
         "flex flex-wrap items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground",
         className,
       )}
     >
-      {shown ? (
-        <>
-          <p className="min-w-0 flex-1">
-            {signedIn ? (
-              <>
-                <span className="font-semibold text-accent">
-                  Your card is back.
-                </span>{" "}
-                It&apos;s the one you started before signing in — check it over
-                and press Save to keep it.
-              </>
-            ) : (
-              <>
-                <span className="font-semibold text-accent">Welcome back.</span>{" "}
-                Your card was kept in this browser — carry on, and sign up when
-                you save.
-              </>
-            )}
-          </p>
-          {uploads === "uploading" ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              Uploading your picture…
-            </span>
-          ) : uploads === "failed" ? (
-            <Button type="button" size="sm" variant="outline" onClick={onRetry}>
-              <RotateCcw className="h-4 w-4" aria-hidden />
-              Retry the upload
-            </Button>
-          ) : null}
-        </>
+      <p className="min-w-0 flex-1">
+        {signedIn ? (
+          <>
+            <span className="font-semibold text-accent">
+              Your card is back.
+            </span>{" "}
+            It&apos;s the one you started before signing in — check it over and
+            press Save to keep it.
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-accent">Welcome back.</span>{" "}
+            Your card was kept in this browser — carry on, and sign up when you
+            save.
+          </>
+        )}
+      </p>
+      {uploads === "uploading" ? (
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          Uploading your picture…
+        </span>
+      ) : uploads === "failed" ? (
+        <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+          <RotateCcw className="h-4 w-4" aria-hidden />
+          Retry the upload
+        </Button>
       ) : null}
     </div>
   );
