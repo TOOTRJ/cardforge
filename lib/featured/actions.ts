@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { USERNAME_MAX, USERNAME_MIN, USERNAME_PATTERN } from "@/lib/auth/usernames";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -151,14 +152,27 @@ function revalidateHeroPool() {
   revalidatePath("/admin/featured");
 }
 
-/** Admin: add a card to the hero's pool, by its card page URL or its id (a
- *  suggestion's button). */
+// What the pool's add takes from the browser: a card page URL (the admin's
+// paste) or a card id (a suggestion's button) — parsed, never assumed.
+const heroPoolTargetSchema = z.union([
+  z.object({ cardUrl: z.string().max(2048) }),
+  z.object({ cardId: z.string().max(64) }),
+]);
+
+/** Admin: add a card to the hero's pool. By its card page URL (resolved
+ *  here to the card's id): ANY public card with a stored bake, whoever made
+ *  it. By id (a suggestion's button): only a card that passes the full
+ *  original-card guard — a client-sent id never takes the URL's wider door.
+ *  featured_pool_add decides either way. */
 export async function addHeroPoolCardAction(
-  target: { cardUrl: string } | { cardId: string },
+  input: { cardUrl: string } | { cardId: string },
 ): Promise<HeroPoolActionResult> {
   const gate = await requireAdminWriter();
   if ("error" in gate) return { ok: false, error: gate.error as string };
   const { admin, profileId } = gate;
+  const parsed = heroPoolTargetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Unknown card." };
+  const target = parsed.data;
 
   let cardId: string;
   if ("cardId" in target) {
@@ -191,6 +205,7 @@ export async function addHeroPoolCardAction(
   const { data, error } = await admin.rpc("featured_pool_add", {
     p_card_id: cardId,
     p_added_by: profileId,
+    p_original_only: "cardId" in target,
   });
   if (error) {
     console.warn("addHeroPoolCardAction: featured_pool_add failed", error.message);

@@ -120,10 +120,10 @@ export default async function AdminFeaturedPage() {
       </h2>
       <p className="mt-1 text-sm text-muted">
         The home page hero shows two cards from this pool each day (UTC), the
-        same two for every visitor, a new pair at midnight. Original cards only:
-        a card made from a real card, a remix, a card that isn&apos;t public or
-        baked, or an admin&apos;s card is held back. Changes show on the home
-        page at once.
+        same two for every visitor, a new pair at midnight. Paste any public
+        card&apos;s URL to add it; it shows while it stays public with a
+        render. Suggestions offer only original cards. Changes show on the
+        home page at once.
       </p>
       {heroFailed ? <AdminLoadError what="the hero pool" className="mt-4" /> : null}
       <SurfaceCard className="mt-4 p-6">
@@ -134,8 +134,9 @@ export default async function AdminFeaturedPage() {
         Fallback hero cards
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Used only while the pool has fewer than two cards on the hero — the same
-        checks apply. With neither, the home page shows its placeholder pair.
+        Used only while the pool has fewer than two cards on the hero — with the
+        original-card checks (public, baked, not made from a real card, not a
+        remix, a creator&apos;s). With neither, the home page shows its placeholder pair.
       </p>
       {cardsFailed ? <AdminLoadError what="the featured cards" className="mt-4" /> : null}
       <SurfaceCard className="mt-4 p-6">
@@ -226,7 +227,10 @@ type HeroPoolRead = {
 
 /** The pool, its suggestions and the next two days' pairs — every answer the
  *  database's (featured_pool_admin_list / _suggestions / home_hero_pool), the
- *  pairs picked by the home page's own dailyHeroPair. null = a read failed. */
+ *  pairs picked by the home page's own dailyHeroPair. A card the database
+ *  lets through but the HOME PAGE drops says why too: home_hero_pool leaves
+ *  out an owner with no handle, and the app a render that isn't one of our
+ *  stored bakes (featuredImageOf). null = a read failed. */
 async function readHeroPool(admin: ReturnType<typeof createAdminClient>): Promise<HeroPoolRead | null> {
   const [listRes, suggestRes, shownRes] = await Promise.all([
     admin.rpc("featured_pool_admin_list"),
@@ -240,12 +244,19 @@ async function readHeroPool(admin: ReturnType<typeof createAdminClient>): Promis
     }
   }
   const rows = listRes.data ?? [];
+  const read = shownRes.data ?? [];
+  const keyOf = (r: { source: string; card_id: string }) => `${r.source}:${r.card_id}`;
+  const inRead = new Set(read.map(keyOf));
+  const drawable = new Set(read.filter((r) => featuredImageOf(r)).map(keyOf));
+  const refusalOf = (r: (typeof rows)[number]) =>
+    r.refusal ??
+    (!inRead.has(keyOf(r)) ? "no_handle" : !drawable.has(keyOf(r)) ? "render_not_drawable" : null);
   const slotRefusals: [string | null, string | null] = [null, null];
   for (const r of rows) {
-    if (r.source === "fallback" && (r.slot === 1 || r.slot === 2)) slotRefusals[r.slot - 1] = r.refusal;
+    if (r.source === "fallback" && (r.slot === 1 || r.slot === 2)) slotRefusals[r.slot - 1] = refusalOf(r);
   }
-  const shown = (shownRes.data ?? [])
-    .filter((r) => featuredImageOf(r))
+  const shown = read
+    .filter((r) => drawable.has(keyOf(r)))
     .map((r) => ({ ...r, id: r.card_id }));
   const now = Date.now();
   const days: HeroDayPair[] = [
@@ -260,7 +271,8 @@ async function readHeroPool(admin: ReturnType<typeof createAdminClient>): Promis
         title: r.title,
         slug: r.slug,
         ownerUsername: r.username,
-        refusal: r.refusal,
+        refusal: refusalOf(r),
+        notOriginal: r.not_original,
       })),
     suggestions: (suggestRes.data ?? []).map((r) => ({
       cardId: r.card_id,

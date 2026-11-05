@@ -1,26 +1,32 @@
 "use client";
 
 // The home hero's pool (TODO HM4, migration 0169): the cards the hero rotates
-// through, two a day. Add by card URL or from the suggestions; the database's
-// original-card guard decides, and a pool card it keeps off the hero says
-// why. Every change purges the home page at once.
+// through, two a day. A pasted card URL adds any public card with
+// a render; a suggestion (original cards only) adds through the full guard.
+// A pool card the hero can't draw says why, and one that isn't an original
+// carries a note — information only. Every change purges the home page at
+// once.
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Star, X } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import { addHeroPoolCardAction, removeHeroPoolCardAction } from "@/lib/featured/actions";
-import { heroRefusalLabel } from "@/lib/featured/hero-rotation";
+import { heroRefusalLabel, notOriginalLabel } from "@/lib/featured/hero-rotation";
 
 export type AdminHeroPoolCard = {
   cardId: string;
   title: string;
   slug: string;
   ownerUsername: string | null;
-  /** home_hero_refusal's code; null = it rotates on the hero. */
+  /** Why the hero can't draw it (home_hero_shown_refusal's code, or the
+   *  page's own); null = it rotates on the hero. */
   refusal: string | null;
+  /** The original-card guard's first reason — a note, never a block. */
+  notOriginal: string | null;
 };
 
 export type AdminHeroSuggestion = {
@@ -57,7 +63,7 @@ export function HeroPoolManager({
       setBusyId(null);
       if (!result.ok) {
         if ("cardUrl" in target) setError(result.error);
-        else toast.error(result.error);
+        else adminErrorToast("hero pool add", result.error);
         return;
       }
       setError(null);
@@ -72,7 +78,7 @@ export function HeroPoolManager({
       const result = await removeHeroPoolCardAction(cardId);
       setBusyId(null);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("hero pool remove", result.error);
         return;
       }
       toast.success("Removed from the pool.");
@@ -137,6 +143,11 @@ export function HeroPoolManager({
                       Not on the hero: {heroRefusalLabel(card.refusal)}
                     </p>
                   ) : null}
+                  {card.notOriginal ? (
+                    <p className="text-xs text-subtle">
+                      Not original: {notOriginalLabel(card.notOriginal)}
+                    </p>
+                  ) : null}
                 </div>
                 <Button
                   type="button"
@@ -187,7 +198,11 @@ export function HeroPoolManager({
             <p role="alert" className="w-full text-xs text-danger">
               {error}
             </p>
-          ) : null}
+          ) : (
+            <p className="w-full text-xs text-muted">
+              Any public card with a render, whoever made it — imports and remixes included.
+            </p>
+          )}
         </form>
       </div>
 

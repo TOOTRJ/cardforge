@@ -1,6 +1,8 @@
 -- 0169_featured_pool.sql — the home page's hero cards rotate daily from an
--- admin-picked POOL of original cards (TODO HM4, owner 2026-11-04: "Go:
--- pool only").
+-- admin-picked POOL (TODO HM4, owner 2026-11-04: "Go: pool only"; and "I
+-- want the original card checks to work for suggestions but the admin should
+-- be able to add any public card they want to the list by pasting in the
+-- public URL").
 --
 -- Why: the hero read 0053's two fixed featured_cards slots, which went
 -- unchanged on production from 16 and 22 September — and one held another
@@ -15,47 +17,67 @@
 --    writes and reads it through the service role behind its is_admin
 --    check. Deleting a card (or the admin's profile) cascades / clears.
 --
--- 2. THE ORIGINAL-CARD GUARD — home_hero_refusal(card): ONE rule, read when
---    a card is ADDED (featured_pool_add) and again whenever the page READS
---    the pool (home_hero_pool), so a card that later stops qualifying drops
---    out by itself. NULL = the card may be on the hero; else the FIRST reason, the
---    lasting ones before those its owner can change:
---      from_real_card — started from a real printing: source_scryfall_id
---                       (imports and remixes of a printing, since 0016) or
---                       import_scryfall_id (0144) is set;
---      remix          — parent_card_id is set (feature the parent instead);
+-- 2. TWO CHECKS, read only from columns — never a title, printed_types or
+--    any other text (no automatic rule can tell a fan card from an
+--    original, so that judgment is the admin's):
+--    home_hero_shown_refusal(card) — may the hero DRAW it? NULL = yes, else:
+--      not_public — visibility is not 'public' (unlisted, private, and a
+--                   moderation hide, which sets it private);
+--      no_render  — no stored bake (the hero draws the stored image; an
+--                   edit clears it until the re-bake).
+--    home_hero_refusal(card) — the ORIGINAL-CARD guard: the first of
+--      from_real_card — source_scryfall_id (imports and remixes of a
+--                       printing, since 0016) or import_scryfall_id (0144);
+--      remix          — parent_card_id is set;
 --      not_creator    — the owner is no real creator (0149's
---                       owner_is_creator: never an admin's card);
---      not_public     — visibility is not 'public' (unlisted never shows);
---      no_render      — no stored bake (the hero draws the stored image).
---    It reads ONLY those columns — never a title, printed_types or any
---    other text: no automatic rule can tell a fan card from an original, so
---    that judgment is the admin's, and the guard only refuses what it can
---    know.
+--                       owner_is_creator: an admin, or no public card);
+--    then the shown check. It narrows what is OFFERED, not what a card is:
+--    each reason can be undone (parent_card_id is cleared when the parent
+--    is deleted — 0003's on delete set null; an owner can clear
+--    source_scryfall_id on an edit, and a card imported before 0144 has no
+--    import_scryfall_id), so the admin's click is the real gate.
+--    Where each applies:
+--      the POOL          — the shown check alone, at the add (by the card
+--                          page's URL, resolved on the server) and at every
+--                          read: an admin may put ANY public card on the
+--                          hero, and it leaves by itself once it isn't
+--                          public or loses its bake;
+--      SUGGESTIONS       — the full guard (and their "Add" button: an add by
+--                          id passes the full guard, never the shown check);
+--      the FALLBACK pair — the full guard at every read (it took a fan card
+--                          of another company's character off the hero with
+--                          no one acting; never relax it).
 --
 -- 3. home_hero_pool() — the visitor's ONE read (the home page, ISR, public
---    client): the pool's cards that pass the guard, oldest-added first
---    (source 'pool', ord 1…), then 0053's two slots' cards that pass it
---    (source 'fallback', ord = slot), each with the fields the hero draws
---    and its owner's handle. The app picks the day's pair (lib/featured/
---    hero-rotation.ts): with two or more pool cards, positions (2d, 2d+1)
---    mod N for the UTC day number d — the same pair all day, every pool card
---    on equal days; with fewer, the pool's card(s) then the fallback slots.
---    SECURITY DEFINER (the pool grants the API roles nothing), empty
---    search_path; it hands out only public cards' public fields.
+--    client): the pool's cards that pass the shown check, oldest-added first
+--    (source 'pool', ord 1…, by added_at then card_id), then 0053's two
+--    slots' cards that pass the full guard (source 'fallback', ord = slot),
+--    each with the fields the hero draws and its owner's handle. The app
+--    sorts them again by (source, ord) and picks the day's pair
+--    (lib/featured/hero-rotation.ts): with two or more pool cards, positions
+--    (2d, 2d+1) mod N for the UTC day number d — every pool card on equal
+--    days, and the same pair all day while N is stable (a card added,
+--    removed or leaving this read reshuffles it at the next regeneration);
+--    with fewer, the pool's card(s) then the fallback slots. SECURITY DEFINER (the pool
+--    grants the API roles nothing), empty search_path; it hands out only
+--    public cards' public fields.
 --
 -- 4. Admin reads and the write — service role only:
---    featured_pool_admin_list() (every pool row, then the two fallback
---    slots, each with its refusal — the page says why a card isn't shown), featured_pool_suggestions(limit)
---    (recent most-liked cards that pass the guard and aren't in the pool —
---    the last 120 days, likes then newest, at most 24) and
---    featured_pool_add(card, admin) ('added' / 'already' / 'missing' / a
---    refusal — the guard decides, never the app).
+--    featured_pool_admin_list() (every pool row with its shown check and,
+--    for information only, the original guard's first reason; then the two
+--    fallback slots with the full guard — the page says why a card isn't
+--    shown), featured_pool_suggestions(limit) (recent most-liked cards that
+--    pass the full guard and aren't in the pool — the last 120 days, likes
+--    then newest, at most 24) and featured_pool_add(card, admin,
+--    original_only) ('added' / 'already' / 'missing' / a refusal — the
+--    check decides, never the app: original_only = the full guard, for a
+--    suggestion's button; false = the shown check, for a pasted URL).
 --
 -- Grants: featured_pool — revoked from public, anon and authenticated
 -- (production auto-grants new public objects to the API roles; this takes
 -- that back), everything to service_role. home_hero_pool — PUBLIC revoked,
 -- EXECUTE to anon, authenticated and service_role. home_hero_refusal,
+-- home_hero_shown_refusal, home_hero_original_refusal,
 -- featured_pool_admin_list, featured_pool_suggestions and featured_pool_add
 -- — revoked from PUBLIC, anon and authenticated (a new database grants the
 -- API roles EXECUTE by default), EXECUTE to service_role alone.
@@ -85,10 +107,29 @@ revoke all on table public.featured_pool from public, anon, authenticated;
 grant select, insert, update, delete on table public.featured_pool to service_role;
 
 -- ===========================================================================
--- 2. The guard
+-- 2. The checks
 -- ===========================================================================
 
-create or replace function public.home_hero_refusal(c public.cards)
+-- Can the hero draw it? The pool's check.
+create or replace function public.home_hero_shown_refusal(c public.cards)
+returns text
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select case
+    when c.visibility is distinct from 'public' then 'not_public'
+    when c.rendered_image_url is null then 'no_render'
+    else null
+  end;
+$$;
+
+revoke all on function public.home_hero_shown_refusal(public.cards) from public, anon, authenticated;
+grant execute on function public.home_hero_shown_refusal(public.cards) to service_role;
+
+-- Is it an original? The first reason it isn't; NULL = none of the three.
+create or replace function public.home_hero_original_refusal(c public.cards)
 returns text
 language sql
 stable
@@ -99,10 +140,22 @@ as $$
     when c.source_scryfall_id is not null or c.import_scryfall_id is not null then 'from_real_card'
     when c.parent_card_id is not null then 'remix'
     when not public.owner_is_creator(c.owner_id) then 'not_creator'
-    when c.visibility is distinct from 'public' then 'not_public'
-    when c.rendered_image_url is null then 'no_render'
     else null
   end;
+$$;
+
+revoke all on function public.home_hero_original_refusal(public.cards) from public, anon, authenticated;
+grant execute on function public.home_hero_original_refusal(public.cards) to service_role;
+
+-- The full guard: suggestions, their add, and the fallback pair.
+create or replace function public.home_hero_refusal(c public.cards)
+returns text
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce(public.home_hero_original_refusal(c), public.home_hero_shown_refusal(c));
 $$;
 
 revoke all on function public.home_hero_refusal(public.cards) from public, anon, authenticated;
@@ -135,7 +188,7 @@ as $$
       (row_number() over (order by fp.added_at, fp.card_id))::integer as rn
     from public.featured_pool fp
     join public.cards c on c.id = fp.card_id
-    where public.home_hero_refusal(c) is null
+    where public.home_hero_shown_refusal(c) is null
     union all
     select c.*, 'fallback'::text as src, fc.slot as rn
     from public.featured_cards fc
@@ -166,7 +219,8 @@ returns table (
   slug text,
   title text,
   username text,
-  refusal text
+  refusal text,
+  not_original text
 )
 language sql
 stable
@@ -174,13 +228,13 @@ security invoker
 set search_path = ''
 as $$
   select fp.card_id, 'pool'::text, null::integer, fp.added_at, c.slug, c.title,
-    p.username, public.home_hero_refusal(c)
+    p.username, public.home_hero_shown_refusal(c), public.home_hero_original_refusal(c)
   from public.featured_pool fp
   join public.cards c on c.id = fp.card_id
   left join public.profiles p on p.id = c.owner_id
   union all
   select fc.card_id, 'fallback'::text, fc.slot, fc.created_at, c.slug, c.title,
-    p.username, public.home_hero_refusal(c)
+    p.username, public.home_hero_refusal(c), null::text
   from public.featured_cards fc
   join public.cards c on c.id = fc.card_id
   left join public.profiles p on p.id = c.owner_id
@@ -222,7 +276,11 @@ $$;
 revoke all on function public.featured_pool_suggestions(integer) from public, anon, authenticated;
 grant execute on function public.featured_pool_suggestions(integer) to service_role;
 
-create or replace function public.featured_pool_add(p_card_id uuid, p_added_by uuid)
+create or replace function public.featured_pool_add(
+  p_card_id uuid,
+  p_added_by uuid,
+  p_original_only boolean
+)
 returns text
 language plpgsql
 volatile
@@ -237,7 +295,10 @@ begin
   if not found then
     return 'missing';
   end if;
-  v_refusal := public.home_hero_refusal(v_card);
+  v_refusal := case when p_original_only is false
+    then public.home_hero_shown_refusal(v_card)
+    else public.home_hero_refusal(v_card)
+  end;
   if v_refusal is not null then
     return v_refusal;
   end if;
@@ -251,5 +312,5 @@ begin
 end;
 $$;
 
-revoke all on function public.featured_pool_add(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.featured_pool_add(uuid, uuid) to service_role;
+revoke all on function public.featured_pool_add(uuid, uuid, boolean) from public, anon, authenticated;
+grant execute on function public.featured_pool_add(uuid, uuid, boolean) to service_role;
