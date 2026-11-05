@@ -552,16 +552,9 @@ export function isUnconvertedTrial(sub: SubscriptionLike): boolean {
   return sub.ended_at <= trialEnd + 60;
 }
 
-/** The customer's newest subscription whose payment is broken (past_due,
- *  unpaid, incomplete) — the checkout action sends such a customer to the
- *  portal to fix the card instead of selling them a second subscription
- *  that would bill twice once Stripe's retry on the old invoice succeeds. */
-export async function findDelinquentSubscription(
-  stripe: Stripe,
-  customerId: string,
-): Promise<Stripe.Subscription | null> {
-  const subs = await listCustomerSubscriptions(stripe, customerId);
-  if (!subs) return null;
+/** The newest subscription in `subs` whose payment is broken (past_due,
+ *  unpaid, incomplete). */
+function delinquentSubscriptionIn(subs: Stripe.Subscription[]): Stripe.Subscription | null {
   return (
     subs
       .filter((sub) => DELINQUENT_SUBSCRIPTION_STATUSES.has(sub.status))
@@ -569,17 +562,59 @@ export async function findDelinquentSubscription(
   );
 }
 
-/** The customer's live subscription (if any) — what the checkout action
- *  consults before starting a SECOND subscription. */
+/** The live (primary) subscription in `subs`: the same pick the sync makes —
+ *  live, highest tier, newest. */
+async function liveSubscriptionIn(
+  subs: Stripe.Subscription[],
+  stripe: Stripe,
+): Promise<Stripe.Subscription | null> {
+  const tiers = new Map<string, PlanTier | null>();
+  for (const sub of subs) {
+    if (isLiveStatus(sub.status)) tiers.set(sub.id, await resolveSubscriptionTier(sub, stripe));
+  }
+  return pickPrimarySubscription(subs, (sub) => tiers.get(sub.id) ?? null);
+}
+
+/** The customer's newest subscription whose payment is broken (past_due,
+ *  unpaid, incomplete) — the checkout action sends such a customer to the
+ *  portal to fix the card instead of selling them a second subscription
+ *  that would bill twice once Stripe's retry on the old invoice succeeds.
+ *  `null` for "none" AND for "the list could not be read": a caller that
+ *  must tell the two apart uses findCheckoutSubscriptions. */
+export async function findDelinquentSubscription(
+  stripe: Stripe,
+  customerId: string,
+): Promise<Stripe.Subscription | null> {
+  const subs = await listCustomerSubscriptions(stripe, customerId);
+  if (!subs) return null;
+  return delinquentSubscriptionIn(subs);
+}
+
+/** The customer's live subscription (if any). `null` for "none" AND for
+ *  "the list could not be read" — fine for a read that only ADDS something
+ *  (the admin page, a pack's subscriber discount), never for one that
+ *  decides whether to SELL (findCheckoutSubscriptions). */
 export async function findLiveSubscription(
   stripe: Stripe,
   customerId: string,
 ): Promise<Stripe.Subscription | null> {
   const subs = await listCustomerSubscriptions(stripe, customerId);
   if (!subs) return null;
-  const tiers = new Map<string, PlanTier | null>();
-  for (const sub of subs) {
-    if (isLiveStatus(sub.status)) tiers.set(sub.id, await resolveSubscriptionTier(sub, stripe));
-  }
-  return pickPrimarySubscription(subs, (sub) => tiers.get(sub.id) ?? null);
+  return liveSubscriptionIn(subs, stripe);
+}
+
+/** What the checkout action must know before it may start a subscription,
+ *  from ONE read of the customer's list: their live subscription and their
+ *  newest delinquent one. `null` = the list could NOT be read (a transient
+ *  Stripe error, a restricted key) and the caller must REFUSE: reading
+ *  "nothing found" as "no subscription" when nothing could be read is how an
+ *  active subscriber was sold a second subscription, charged at once
+ *  (billing audit 2026-11-05, P1-2). An empty list answers both as null. */
+export async function findCheckoutSubscriptions(
+  stripe: Stripe,
+  customerId: string,
+): Promise<{ live: Stripe.Subscription | null; delinquent: Stripe.Subscription | null } | null> {
+  const subs = await listCustomerSubscriptions(stripe, customerId);
+  if (!subs) return null;
+  return { live: await liveSubscriptionIn(subs, stripe), delinquent: delinquentSubscriptionIn(subs) };
 }

@@ -39,6 +39,12 @@ const s = vi.hoisted(() => ({
     };
   },
   delinquent: null as null | { id: string; status: string },
+  // The checkout action's ONE read of the customer's list: null = unreadable.
+  listUnreadable: false,
+  // What the trial_lapsed row names, and whose subscription that is.
+  lapsedSubscriptionId: "sub_lapsed",
+  lapsedSubscriptionCustomer: "cus_1",
+  lapsedRetrieveThrows: false,
   history: [] as Array<{ id: string; status?: string }>,
   historyThrows: false,
   checkoutThrows: false,
@@ -82,7 +88,10 @@ vi.mock("@/lib/supabase/admin", () => ({
           eq: () => chain,
           gte: () => chain,
           limit: () => chain,
-          maybeSingle: async () => ({ data: s.lapsedTrial ? { id: "n_lapsed" } : null, error: null }),
+          maybeSingle: async () => ({
+            data: s.lapsedTrial ? { id: "n_lapsed", payload: { subscriptionId: s.lapsedSubscriptionId } } : null,
+            error: null,
+          }),
         };
         return chain;
       },
@@ -125,8 +134,8 @@ vi.mock("@/lib/stripe/config", () => ({
   priceIdForPack: (pack: string) => `price_pack_${pack}`,
 }));
 vi.mock("@/lib/stripe/subscription-sync", () => ({
+  findCheckoutSubscriptions: async () => (s.listUnreadable ? null : { live: s.live, delinquent: s.delinquent }),
   findLiveSubscription: async () => s.live,
-  findDelinquentSubscription: async () => s.delinquent,
   customerIdOf: (customer: string | { id: string } | null | undefined) =>
     !customer ? null : typeof customer === "string" ? customer : customer.id,
   isLiveStatus: (status: string | null | undefined) => status === "active" || status === "trialing",
@@ -170,6 +179,10 @@ beforeEach(() => {
   s.revalidated = [];
   s.syncSubscription.mockReset().mockResolvedValue({});
   s.delinquent = null;
+  s.listUnreadable = false;
+  s.lapsedSubscriptionId = "sub_lapsed";
+  s.lapsedSubscriptionCustomer = "cus_1";
+  s.lapsedRetrieveThrows = false;
   s.history = [];
   s.historyThrows = false;
   s.checkoutThrows = false;
@@ -178,7 +191,14 @@ beforeEach(() => {
     return { data: s.history };
   });
   s.subscriptionsUpdate.mockReset().mockResolvedValue({});
-  s.subscriptionsRetrieve.mockReset().mockImplementation(async () => s.live);
+  s.subscriptionsRetrieve.mockReset().mockImplementation(async (id: string) => {
+    // The win-back check reads the subscription the trial_lapsed row names.
+    if (id === s.lapsedSubscriptionId) {
+      if (s.lapsedRetrieveThrows) throw new Error("stripe down");
+      return { id, customer: s.lapsedSubscriptionCustomer };
+    }
+    return s.live;
+  });
   s.scheduleCreate.mockReset().mockResolvedValue({
     id: "sub_sched_1",
     phases: [
@@ -711,6 +731,52 @@ describe("createCheckoutSessionAction", () => {
         },
       },
     });
+  });
+
+  it("REFUSES to sell when the customer's subscription list can't be read (audit 2026-11-05 P1-2)", async () => {
+    // An active Pro subscriber clicks "Switch to Plus" during a Stripe
+    // hiccup: "nothing found" because nothing could be read used to fall
+    // through to a fresh checkout — a second subscription, charged at once.
+    s.listUnreadable = true;
+    s.live = null;
+    s.delinquent = null;
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result).toEqual({ ok: false, error: "Couldn't check your plan with Stripe. Try again in a moment." });
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+    expect(s.portalCreate).not.toHaveBeenCalled();
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
+    expect(s.funnelInserts).toEqual([]);
+  });
+
+  it("the win-back discount needs a trial_lapsed row naming the buyer's OWN subscription (audit 2026-11-05 P1-1)", async () => {
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.lapsedTrial = true;
+    // Another customer's subscription in the payload: full price.
+    s.lapsedSubscriptionCustomer = "cus_someone_else";
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(checkoutParams().allow_promotion_codes).toBe(true);
+
+    // Stripe can't be read: full price, never a discount on a guess.
+    s.checkoutCreate.mockClear();
+    s.lapsedSubscriptionCustomer = "cus_1";
+    s.lapsedRetrieveThrows = true;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+
+    // A row with no subscription in it (nothing the webhook writes): full price.
+    s.checkoutCreate.mockClear();
+    s.lapsedRetrieveThrows = false;
+    s.lapsedSubscriptionId = "";
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+
+    // The buyer's own lapsed trial: the discount.
+    s.checkoutCreate.mockClear();
+    s.lapsedSubscriptionId = "sub_lapsed";
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams().discounts).toEqual([{ coupon: TRIAL_WINBACK_COUPON_ID }]);
+    expect(s.subscriptionsRetrieve).toHaveBeenCalledWith("sub_lapsed");
   });
 
   it("sends a past-due customer to the portal to fix the card — never a second subscription", async () => {
