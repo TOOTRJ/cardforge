@@ -3,10 +3,11 @@ import Link from "next/link";
 import { AuthForm } from "@/components/auth/auth-form";
 import {
   AuthDivider,
-  GoogleSignInButton,
-} from "@/components/auth/google-sign-in-button";
+  OAuthSignInButtons,
+} from "@/components/auth/oauth-sign-in-button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { enabledOAuthProviders } from "@/lib/auth/oauth-providers";
 import { loginAction } from "@/app/(auth)/actions";
 import type { LoginInput } from "@/lib/auth/schemas";
 
@@ -94,9 +95,45 @@ export default async function LoginPage({
         </div>
       ) : null}
 
+      {/* A provider's refusal, from /auth/callback: calm words, and none
+          that says whether an account exists. */}
+      {error === "oauth-cancelled" ? (
+        <div
+          role="status"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+        >
+          Sign-in was cancelled, so nothing changed. Try again whenever you
+          like, or sign in with email below.
+        </div>
+      ) : null}
+
+      {error === "oauth-verify-email" ? (
+        <div
+          role="status"
+          className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-foreground"
+        >
+          That sign-in needs a verified email. Verify your email with the
+          provider (check your inbox for a confirmation link), then try again
+          — or sign in with email below.
+        </div>
+      ) : null}
+
+      {error === "oauth-failed" ? (
+        <div
+          role="alert"
+          className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground"
+        >
+          We couldn&apos;t finish that sign-in. Please try again, or sign in
+          with email below.
+        </div>
+      ) : null}
+
       {configured ? (
         <div className="flex flex-col gap-4">
-          <GoogleSignInButton redirectTo={redirectTo} />
+          <OAuthSignInButtons
+            providers={enabledOAuthProviders()}
+            redirectTo={redirectTo}
+          />
           <AuthDivider label="or sign in with email" />
         </div>
       ) : null}

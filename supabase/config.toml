@@ -360,6 +360,22 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# Discord sign-in (TODO HM6; owner setup: docs/AUTH.md). OFF here, so CI's
+# local stack and every preview branch, which inherits this block, run without
+# it. `enabled` must stay a literal: "env(…)" fails the CLI's config parse
+# whenever the variable is unset. Turn it on locally by exporting
+# SUPABASE_AUTH_EXTERNAL_DISCORD_ENABLED=true (the CLI's own override) with the
+# two values below in supabase/.env (git-ignored), then `supabase stop && supabase start`.
+# NEVER write a client id or secret into this file: the repository is public.
+[auth.external.discord]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+email_optional = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

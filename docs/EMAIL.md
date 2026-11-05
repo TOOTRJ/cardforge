@@ -30,7 +30,7 @@ Supabase Auth sends these itself. Two things make them PipGlyph's:
    token hash server-side on a button press, so the link works in any
    browser or device (the default `?code=` PKCE link only works in the
    browser that requested it) and survives mail scanners that prefetch URLs.
-   `/auth/callback` remains for Google OAuth.
+   `/auth/callback` remains for Google and Discord sign-in (`docs/AUTH.md`).
 
 ### Production setup (owner, one time)
 

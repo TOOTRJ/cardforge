@@ -152,6 +152,8 @@ Other scoping, on purpose:
   rm NAME preview` removes the WHOLE record when one record spans several
   scopes — it took Production's key with it and had to be re-added. Split a
   multi-scope variable by adding the new scopes first, then removing.
+- **`NEXT_PUBLIC_AUTH_DISCORD`:** `1` only in a scope whose Supabase project
+  has Discord enabled — the button shows nowhere else (`docs/AUTH.md`).
 - Previews sit behind **Vercel Authentication** (Deployment Protection →
   Standard). They also carry `X-Robots-Tag: noindex` automatically.
 - A preview knows its own URL: `lib/site-url.ts` prefers `VERCEL_BRANCH_URL` /

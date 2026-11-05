@@ -156,6 +156,11 @@ Rules and gotchas:
   checks the password first). `/reset-password` accepts only a session from a
   RECENT recovery link (`lib/auth/recovery-session.ts`, JWT `amr`); a plain
   signed-in session changes its password in Settings with the current one.
+  OAuth (Google, Discord — TODO HM6, `docs/AUTH.md`): ONE button
+  (`components/auth/oauth-sign-in-button.tsx`), ONE provider list
+  (`enabledOAuthProviders()`; Discord only where `NEXT_PUBLIC_AUTH_DISCORD=1`),
+  ONE callback (`/auth/callback`; a provider's refusal → a calm `/login`
+  message, `lib/auth/oauth-callback-error.ts`).
 - Email: ONE shell, `lib/email/layout.ts` (dependency-free; BRAND hexes).
   Supabase auth templates are GENERATED from it
   (`npm run email:build-auth-templates` → `supabase/templates/`, never
