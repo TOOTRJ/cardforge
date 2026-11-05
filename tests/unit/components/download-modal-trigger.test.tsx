@@ -90,3 +90,39 @@ describe("DownloadModal's trigger button", () => {
     expect(button.getAttribute("aria-haspopup")).toBe("dialog");
   });
 });
+
+describe("DownloadModal for a signed-out visitor (owner 2026-11-04)", () => {
+  it("is a link to sign in that comes back to the card — same look, no dialog", async () => {
+    render(
+      <DownloadModal cardId="c1" cardSlug="grizzly" signInReturnTo="/card/dev_pro/grizzly" trigger={{ variant: "primary" }} />,
+    );
+    expect(screen.queryByRole("button", { name: "Download" })).toBeNull();
+    const link = screen.getByRole("link", { name: "Download" });
+    expect(link.getAttribute("href")).toBe("/login?redirectTo=%2Fcard%2Fdev_pro%2Fgrizzly");
+    expect(link.className).toContain("bg-primary");
+    expect([...link.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent)).toEqual([" Download"]);
+    await act(async () => {
+      fireEvent.click(link);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("the card page gives it the card's path while no one is signed in", () => {
+    const page = readFileSync(join(root, "components/cards/card-detail-content.tsx"), "utf8");
+    expect(jsxPropsOf(page, "DownloadModal")).toMatch(/signInReturnTo=\{isAuthed \? undefined : cardPath\}/);
+  });
+});
+
+describe("DownloadModal's first tab (owner 2026-11-04: Image, not the PDF)", () => {
+  it.each([
+    ["a free viewer", false],
+    ["a paid viewer", true],
+  ] as const)("opens on Image for %s", async (_label, isPaid) => {
+    render(<DownloadModal cardId="c1" cardSlug="grizzly" isPaid={isPaid} canBatch={isPaid} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    });
+    const selected = screen.getAllByRole("tab").filter((tab) => tab.getAttribute("aria-selected") === "true");
+    expect(selected.map((tab) => tab.textContent?.trim())).toEqual([expect.stringMatching(/^Image/)]);
+  });
+});

@@ -69,6 +69,7 @@
 // ---------------------------------------------------------------------------
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Crown,
   Download,
@@ -189,9 +190,14 @@ type DownloadModalProps = {
    *  an element (it renders nothing), so whether the server drew the button
    *  was a race and hydration failed (the card page, 2026-11-02). */
   trigger?: DownloadTriggerProps;
-  /** Tab to open first. Defaults to "single" since one card on one page
-   *  is the most common pick (free users always start on Image). */
+  /** Tab to open first. Image unless said (owner 2026-11-04 — it was the
+   *  PDF); free users always start on Image, the one format they can use. */
   defaultTab?: DownloadTab;
+  /** Set for a SIGNED-OUT visitor (owner 2026-11-04: downloads are a
+   *  signed-in viewer's, as a deck is): the button is a link to sign in
+   *  that comes back to this path, and no dialog opens. The png / pdf
+   *  routes answer such a caller 401 all the same. */
+  signInReturnTo?: string;
   /** Viewer entitlement. PDF needs a paid plan; sheets need Pro. Defaults to
    *  the free experience. */
   isPaid?: boolean;
@@ -237,17 +243,31 @@ function sheetPaperOf(settings: PrintSelectionSettings): SheetPaperLayout {
   return settings.layout === "sheet-a4" ? "sheet-a4" : "sheet-letter";
 }
 
-export function DownloadModal({
+export function DownloadModal({ signInReturnTo, ...props }: DownloadModalProps) {
+  if (signInReturnTo !== undefined) {
+    const { trigger } = props;
+    return (
+      <Button asChild variant={trigger?.variant ?? "outline"} size={trigger?.size} className={trigger?.className}>
+        <Link href={`/login?redirectTo=${encodeURIComponent(signInReturnTo)}`}>
+          <Download className="h-4 w-4" aria-hidden />{` ${trigger?.label ?? "Download"}`}
+        </Link>
+      </Button>
+    );
+  }
+  return <DownloadDialog {...props} />;
+}
+
+function DownloadDialog({
   cardId,
   cardSlug,
   trigger,
-  defaultTab = "single",
+  defaultTab = "png",
   isPaid = false,
   canBatch = false,
   downloadDiffersFromGallery = false,
   frameTemplate,
   hasBackFace = false,
-}: DownloadModalProps) {
+}: Omit<DownloadModalProps, "signInReturnTo">) {
   const upgrade = useUpgradeModal();
   // Every file of this modal is drawn live (TODO 6.30): one download at a
   // time, its progress and its failure said in the modal's one live region.

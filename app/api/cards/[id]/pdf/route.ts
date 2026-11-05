@@ -122,7 +122,16 @@ export async function GET(
   // back or both — a sheet carries both by default.
   const faces = parsePdfFaces(params2, layout === "card" ? "card" : "sheet");
 
-  // Fetch the card row (RLS applies — anon can read public/unlisted).
+  // A download is a signed-in viewer's (owner 2026-11-04, as a deck is).
+  const viewer = await getCurrentUser();
+  if (!viewer) {
+    return NextResponse.json(
+      { error: "Sign in to download cards.", code: "SIGN_IN_REQUIRED" },
+      { status: 401 },
+    );
+  }
+
+  // Fetch the card row (RLS applies).
   let card: Awaited<ReturnType<typeof fetchCard>>;
   try {
     card = await fetchCard(id);
@@ -136,8 +145,7 @@ export async function GET(
 
   // For private cards: require the current user to be the owner.
   if (card.visibility === "private") {
-    const user = await getCurrentUser();
-    if (!user || user.id !== card.owner_id) {
+    if (viewer.id !== card.owner_id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
@@ -239,10 +247,8 @@ export async function GET(
   // PDFs are entitlement-scoped downloads — never shared-cache them.
   const cacheControl = "private, no-store";
 
-  // Funnel: a download (and, once per user, first_download) — signed-in
-  // viewers only; anonymous downloads of public cards aren't attributed.
-  const viewer = await getCurrentUser();
-  if (viewer && isAdminConfigured()) {
+  // Funnel: a download (and, once per user, first_download).
+  if (isAdminConfigured()) {
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",

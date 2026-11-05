@@ -176,7 +176,7 @@ const SHARING_FAQ: FaqEntry[] = [
   {
     id: "share-with-your-playgroup",
     q: "How do I share a card with my playgroup?",
-    a: "Publish the card as public or unlisted, then share its page URL (pipglyph.com/card/your-username/card-name). The link unfurls with a rendered image of the card on Discord, X, and other platforms. Your playgroup can also download the PNG straight from the card page, and you can hand them a print-ready PDF.",
+    a: "Publish the card as public or unlisted, then share its page URL (pipglyph.com/card/your-username/card-name). The link unfurls with a rendered image of the card on Discord, X, and other platforms. With a free account, your playgroup can also download the PNG straight from the card page, and you can hand them a print-ready PDF.",
   },
   {
     id: "unpublish-a-card",

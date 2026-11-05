@@ -22,7 +22,7 @@ const ID = "33333333-3333-4333-8333-333333333333";
 const state = vi.hoisted(() => ({
   render: vi.fn(),
   batch: true,
-  // A free viewer (signed out, or signed in on the free plan) — PDF is Plus+.
+  // A free viewer (signed in on the free plan) — PDF is Plus+.
   paid: true,
   viewer: null as { id: string } | null,
 }));
@@ -96,7 +96,8 @@ beforeEach(async () => {
   state.render.mockImplementation(async () => png);
   state.batch = true;
   state.paid = true;
-  state.viewer = null;
+  // Downloads are a signed-in viewer's (owner 2026-11-04).
+  state.viewer = { id: "viewer-1" };
 });
 
 describe("card PDF download", () => {
@@ -177,26 +178,36 @@ describe("single-card sheets with the print options (TODO 6.15)", () => {
     expect((await get("layout=card&bleed=1")).status).toBe(200);
   });
 
+  const EVERY_OPTION = [
+    "layout=card",
+    "layout=card&bleed=1",
+    "layout=sheet&paper=letter",
+    "layout=sheet&paper=a4&bleed=1",
+    "layout=sheet&paper=letter&gap=sixteenth&marks=lines&size=mm&bleed=1",
+    "sheet=true&bleed=1",
+  ];
+
   // Every print option this route takes stays behind the paid gate: a free
-  // viewer — signed out, or signed in on the free plan — gets 403
-  // UPGRADE_REQUIRED before anything renders, whatever the options say.
-  it.each([
-    ["signed out", null],
-    ["signed in, free plan", { id: "free-viewer" }],
-  ] as const)("%s: every PDF option answers 403 UPGRADE_REQUIRED, and nothing renders", async (_label, viewer) => {
+  // viewer gets 403 UPGRADE_REQUIRED before anything renders, whatever the
+  // options say.
+  it("signed in, free plan: every PDF option answers 403 UPGRADE_REQUIRED, and nothing renders", async () => {
     state.paid = false;
-    state.viewer = viewer;
-    for (const query of [
-      "layout=card",
-      "layout=card&bleed=1",
-      "layout=sheet&paper=letter",
-      "layout=sheet&paper=a4&bleed=1",
-      "layout=sheet&paper=letter&gap=sixteenth&marks=lines&size=mm&bleed=1",
-      "sheet=true&bleed=1",
-    ]) {
+    for (const query of EVERY_OPTION) {
       const res = await get(query);
       expect(res.status, query).toBe(403);
       expect((await res.json()).code, query).toBe("UPGRADE_REQUIRED");
+    }
+    expect(state.render).not.toHaveBeenCalled();
+  });
+
+  // …and a download is a signed-in viewer's (owner 2026-11-04): signed out,
+  // every option answers 401 SIGN_IN_REQUIRED — whatever the plan check says.
+  it("signed out: every PDF option answers 401 SIGN_IN_REQUIRED, and nothing renders", async () => {
+    state.viewer = null;
+    for (const query of EVERY_OPTION) {
+      const res = await get(query);
+      expect(res.status, query).toBe(401);
+      expect((await res.json()).code, query).toBe("SIGN_IN_REQUIRED");
     }
     expect(state.render).not.toHaveBeenCalled();
   });

@@ -22,11 +22,9 @@ import sharp from "sharp";
 // quality 92, 4:4:4, sRGB, no metadata, named <slug>.jpg — with its own ETag.
 // No or any other `format` is the PNG, ETag included, exactly as before.
 //
-// Anonymous live renders (TODO 7.8): a SIGNED-OUT caller's live renders —
-// a Square/JPEG that can't be squared from the bake, or any download with no
-// servable bake — are capped per network (lib/cards/anon-render-limit.ts,
-// migration 0125 modelled by tests/stubs/anon-render-db.ts): over it, 429 +
-// Retry-After. Signed-in viewers, stored-bake serves and 304s never count.
+// Signed in only (owner 2026-11-04): a caller with no session answers 401
+// SIGN_IN_REQUIRED before any lookup or render — whatever it asks for.
+// Every other test downloads as a signed-in (free unless said) viewer.
 //
 // PRINT (TODO 6.1a / 6.1b): `?ppi=800` and/or `?bleed=1` render live through
 // lib/render/card-print.ts — always square, PNG only (a JPEG → 400), never
@@ -103,17 +101,12 @@ import { GET } from "@/app/api/cards/[id]/png/route";
 import { NextRequest } from "next/server";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
-import { anonRenderDb } from "@/tests/stubs/anon-render-db";
-import { ANON_LIVE_RENDER_LIMITS } from "@/lib/cards/anon-render-limit";
 import { CARD_JPEG_QUALITY } from "@/lib/render/card-jpeg";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { createHash } from "node:crypto";
 
 let storedPng: Buffer;
 let livePng: Buffer;
-let limiter: ReturnType<typeof anonRenderDb>;
-// The limiter's clock: fixed, so no run straddles a minute boundary.
-const NOW = Date.parse("2026-09-29T12:00:30Z");
 
 // A card whose only look pending below v22 is the v22 opt-in (no sweep since
 // changed it), read with `select("*")` as the route does.
@@ -163,10 +156,8 @@ beforeEach(async () => {
   );
   state.render.mockReset();
   state.activity.mockReset();
-  state.viewer = null;
-  vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_test_only");
-  limiter = anonRenderDb({ now: () => NOW });
-  state.admin = limiter.client;
+  state.viewer = { id: "viewer-1" };
+  state.admin = {};
   // A fresh Response per call: a body can only be read once.
   state.render.mockImplementation(async () => new Response(new Uint8Array(livePng)));
   state.print.mockReset();
@@ -546,79 +537,21 @@ describe("JPEG download (TODO 6.18)", () => {
   });
 });
 
-describe("anonymous live renders are rate-limited (TODO 7.8)", () => {
-  const LIMIT = ANON_LIVE_RENDER_LIMITS.perMinute;
-  const ip = (address: string) => ({ "x-real-ip": address });
-
-  it("a signed-out caller's live Square renders stop at the limit: 429 + Retry-After, no render", async () => {
+describe("signed in only (owner 2026-11-04)", () => {
+  it("a signed-out caller answers 401 SIGN_IN_REQUIRED for every kind of download — nothing read, nothing rendered", async () => {
+    state.viewer = null;
     state.card = card({ layout_version: 30, frame_style: { template: "fullartland" } });
-    for (let i = 0; i < LIMIT; i += 1) {
-      expect((await download("default", ip("203.0.113.7"), "square")).status).toBe(200);
-    }
-    expect(state.render).toHaveBeenCalledTimes(LIMIT);
-    const over = await download("default", ip("203.0.113.7"), "square");
-    expect(over.status).toBe(429);
-    // 12:00:30 → the next minute window opens in 30 s.
-    expect(over.headers.get("retry-after")).toBe("30");
-    expect(await over.json()).toMatchObject({ ok: false, error: expect.stringMatching(/sign in/i) });
-    expect(state.render).toHaveBeenCalledTimes(LIMIT);
-    // Another network has its own count.
-    expect((await download("default", ip("198.51.100.1"), "square")).status).toBe(200);
-  });
-
-  it("the JPEG's live path counts against the same limit", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "fullartland" } });
-    for (let i = 0; i < LIMIT; i += 1) {
-      const res = await download("default", ip("203.0.113.7"), "square", i % 2 ? "jpeg" : undefined);
-      expect(res.status).toBe(200);
-    }
-    expect((await download("default", ip("203.0.113.7"), undefined, "jpeg")).status).toBe(429);
-    expect((await download("default", ip("203.0.113.7"), "square")).status).toBe(429);
-  });
-
-  it("a download with no servable bake (a sweep window) is a live render too, and counts", async () => {
-    state.card = card({ layout_version: null });
-    for (let i = 0; i < LIMIT; i += 1) {
-      expect((await download("default", ip("203.0.113.7"), "round")).status).toBe(200);
-    }
-    expect((await download("default", ip("203.0.113.7"), "round")).status).toBe(429);
-  });
-
-  it("signed-in viewers are never limited, free or paid", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "fullartland" } });
-    state.viewer = { id: "viewer-1" };
-    for (let i = 0; i < LIMIT + 5; i += 1) {
-      expect((await download("default", ip("203.0.113.7"), "square", i % 2 ? "jpeg" : undefined)).status).toBe(200);
-    }
-    state.paid = true;
-    for (let i = 0; i < LIMIT + 5; i += 1) {
-      expect((await download("hd", ip("203.0.113.7"), "round")).status).toBe(200);
-    }
-    expect(state.render).toHaveBeenCalledTimes(2 * (LIMIT + 5));
-    expect(limiter.calls).toHaveLength(0);
-  });
-
-  it("stored-bake serves are never counted: an m15 Square or JPEG, a Rounded art-to-edge card", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
-    for (let i = 0; i < LIMIT + 5; i += 1) {
-      expect((await download("default", ip("203.0.113.7"), "square", i % 2 ? "jpeg" : undefined)).status).toBe(200);
-    }
-    state.card = card({ layout_version: 30, frame_style: { template: "fullartland" } });
-    for (let i = 0; i < LIMIT + 5; i += 1) {
-      expect((await download("default", ip("203.0.113.7"), "round")).status).toBe(200);
+    for (const query of ["preset=default", "preset=hd&corners=round", "corners=square&format=jpeg", "ppi=800&bleed=1", "faces=both"]) {
+      const res = await GET(new NextRequest(`http://localhost/api/cards/${ID}/png?${query}`), {
+        params: Promise.resolve({ id: ID }),
+      });
+      expect(res.status, query).toBe(401);
+      expect(await res.json(), query).toEqual({ error: "Sign in to download cards.", code: "SIGN_IN_REQUIRED" });
     }
     expect(state.render).not.toHaveBeenCalled();
-    expect(limiter.calls).toHaveLength(0);
-  });
-
-  it("a cached download (304) is never limited", async () => {
-    state.card = card({ layout_version: 30, frame_style: { template: "fullartland" } });
-    let tag = "";
-    for (let i = 0; i < LIMIT; i += 1) {
-      tag = (await download("default", ip("203.0.113.7"), "square")).headers.get("etag")!;
-    }
-    expect((await download("default", ip("203.0.113.7"), "square")).status).toBe(429);
-    expect((await download("default", { ...ip("203.0.113.7"), "if-none-match": tag }, "square")).status).toBe(304);
+    expect(state.print).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(state.activity).not.toHaveBeenCalled();
   });
 });
 

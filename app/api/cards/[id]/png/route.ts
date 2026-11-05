@@ -32,8 +32,6 @@ import {
   parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
 } from "@/lib/cards/print-export";
-import { checkAnonLiveRenderLimit, type AnonRenderLimitResult } from "@/lib/cards/anon-render-limit";
-import { rateLimitedResponse } from "@/lib/api/responses";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -61,8 +59,8 @@ function overrideKeyOf(face: CardPreviewData): string {
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG (or JPEG) of a card
 //
-// Visibility mirrors /api/cards/[id]/pdf and /og (public/unlisted readable
-// by anyone with the link, private owner-only), but the BYTES vary by the
+// Visibility mirrors /api/cards/[id]/pdf (public/unlisted readable by any
+// SIGNED-IN viewer with the link, private owner-only), but the BYTES vary by the
 // viewer's plan (resolution clamp + brand mark), so every response is
 // `private, must-revalidate` with an ETag — never shared-cached at the CDN.
 // Returns the rendered card image with Content-Disposition: attachment so
@@ -157,10 +155,11 @@ function overrideKeyOf(face: CardPreviewData): string {
 // viewer's is a live square render. The file is <slug>-square.png. A JPEG
 // follows the same tier rules on the same square bytes.
 //
-// A SIGNED-OUT caller's live renders are rate-limited per network (TODO 7.8,
-// lib/cards/anon-render-limit.ts): over the limit a live render answers 429 +
-// Retry-After. Stored-bake serves, 304s and signed-in viewers are never
-// counted.
+// Downloads are for SIGNED-IN viewers (owner 2026-11-04, as a deck is): a
+// caller with no session answers 401 SIGN_IN_REQUIRED before any lookup, so
+// the anonymous live-render limiter (TODO 7.8) no longer has a caller here.
+// A card's PICTURE stays public — the stored bake, /render-cdn and the OG
+// image are display, not downloads.
 // ---------------------------------------------------------------------------
 
 type RouteParams = { id: string };
@@ -229,10 +228,15 @@ export async function GET(
         parseCornersParam(request.nextUrl.searchParams.get("corners")),
       );
 
-  // The signed-in viewer, asked at most once: a private card's owner check,
-  // a live render's anonymous limiter, and the funnel.
-  let viewerLookup: ReturnType<typeof getCurrentUser> | undefined;
-  const currentViewer = () => (viewerLookup ??= getCurrentUser());
+  // A download is a signed-in viewer's (owner 2026-11-04): the card page's
+  // Download button sends a signed-out visitor to sign in instead.
+  const viewer = await getCurrentUser();
+  if (!viewer) {
+    return NextResponse.json(
+      { error: "Sign in to download cards.", code: "SIGN_IN_REQUIRED" },
+      { status: 401 },
+    );
+  }
 
   let card: Awaited<ReturnType<typeof fetchCard>>;
   try {
@@ -246,8 +250,7 @@ export async function GET(
   }
 
   if (card.visibility === "private") {
-    const user = await currentViewer();
-    if (!user || user.id !== card.owner_id) {
+    if (viewer.id !== card.owner_id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
@@ -411,14 +414,6 @@ export async function GET(
       const fitted = await fitStoredRender(stored, preset, isLandscapeRender(data));
       return new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
     }
-    // A live render costs a Satori pass: a signed-out caller gets a
-    // limited number of them (TODO 7.8) — counted per render, so a
-    // both-faces download of two live renders is two. Signed-in viewers
-    // never count.
-    if (!(await currentViewer())) {
-      const limit = await checkAnonLiveRenderLimit(request);
-      if (!limit.ok) throw new RateLimited(limit);
-    }
     if (printMode) {
       // Square, the art at full resolution (lib/render/card-print.ts).
       return new Uint8Array(
@@ -452,7 +447,6 @@ export async function GET(
     }
     bytes = format === "jpeg" ? new Uint8Array(await encodeCardJpeg(pngBytes)) : pngBytes;
   } catch (err) {
-    if (err instanceof RateLimited) return rateLimitedResponse(err.denied);
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
       { error: `Render failed: ${detail}` },
@@ -460,10 +454,8 @@ export async function GET(
     );
   }
 
-  // Funnel: a download (and, once per user, first_download) — signed-in
-  // viewers only; anonymous downloads of public cards aren't attributed.
-  const viewer = await currentViewer();
-  if (viewer && isAdminConfigured()) {
+  // Funnel: a download (and, once per user, first_download).
+  if (isAdminConfigured()) {
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
@@ -501,14 +493,6 @@ export async function GET(
       ETag: etag,
     },
   });
-}
-
-/** The anonymous limiter's refusal, thrown out of a face render so the one
- *  response path answers it (429 + Retry-After) — never a 500. */
-class RateLimited extends Error {
-  constructor(readonly denied: Extract<AnonRenderLimitResult, { ok: false }>) {
-    super(denied.message);
-  }
 }
 
 async function fetchCard(id: string) {
