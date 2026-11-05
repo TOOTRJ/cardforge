@@ -23,32 +23,46 @@ export function orderHeroRows<T extends HeroPoolRow>(rows: readonly T[]): T[] {
 }
 
 /**
- * The day's hero cards, at most two:
- *  - two or more pool cards → positions (2d, 2d+1) mod N of the pool, in its
- *    order, for the UTC day number d: a new pair at midnight, and every pool
- *    card on the hero equally often (N odd included: the two positions never
- *    meet once N > 2). "The same pair all day" holds only while N is stable:
- *    adding or removing a pool card, or a pooled card leaving the read (it
- *    stops being public, or loses its render — an edit clears it until the
- *    re-bake), reshuffles the pair at the page's next regeneration;
+ * The day's hero cards, at most two, never two by the same maker (owner
+ * 2026-11-04; `username` is the maker — every row home_hero_pool hands out
+ * has one, and a handle is one account's):
+ *  - two or more pool cards → position 2d mod N of the pool, in its order,
+ *    for the UTC day number d, then the next card after it (2d+1, 2d+2… mod
+ *    N) by ANOTHER maker: a new pair at midnight, and while no maker has two
+ *    pool cards every pool card is on the hero equally often (N odd
+ *    included). A maker's second pool card is skipped while their first is
+ *    shown, so a pool where makers repeat is no longer drawn evenly. No other
+ *    maker in the pool → the first fallback slot's card by another maker,
+ *    else that one card alone. "The same pair all day" holds only while N is
+ *    stable: adding or removing a pool card, or a pooled card leaving the
+ *    read (it stops being public, or loses its render — an edit clears it
+ *    until the re-bake), reshuffles the pair at the page's next regeneration;
  *  - fewer → the pool's card (if any), then the fallback slots' in slot
- *    order, the same card never twice.
+ *    order, the same card or the same maker never twice.
  */
-export function dailyHeroPair<T extends HeroPoolRow & { id: string }>(
+export function dailyHeroPair<T extends HeroPoolRow & { id: string; username: string }>(
   rows: readonly T[],
   now: Date,
 ): T[] {
   const ordered = orderHeroRows(rows);
   const pool = ordered.filter((r) => r.source === "pool");
+  const out: T[] = [];
   if (pool.length >= 2) {
     const n = pool.length;
     const start = (2 * utcDayNumber(now)) % n;
-    return [pool[start], pool[(start + 1) % n]];
+    out.push(pool[start]);
+    for (let step = 1; step < n; step++) {
+      const next = pool[(start + step) % n];
+      if (next.username !== out[0].username) return [out[0], next];
+    }
+  } else {
+    out.push(...pool);
   }
-  const out: T[] = [...pool];
   for (const r of ordered) {
     if (out.length >= 2) break;
-    if (r.source === "fallback" && !out.some((o) => o.id === r.id)) out.push(r);
+    if (r.source === "fallback" && !out.some((o) => o.id === r.id || o.username === r.username)) {
+      out.push(r);
+    }
   }
   return out;
 }

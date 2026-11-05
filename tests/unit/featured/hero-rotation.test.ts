@@ -11,15 +11,24 @@ import {
 // ---------------------------------------------------------------------------
 // The home hero's daily pair (TODO HM4, migration 0169): the same two cards
 // all UTC day, a new pair at midnight, every pool card equally often, and the
-// fallback slots only while the pool has fewer than two.
+// fallback slots only while the pool has fewer than two — and never two
+// cards by the same maker (owner 2026-11-04).
 // ---------------------------------------------------------------------------
 
 const DAY = 86_400_000;
 const START = Date.UTC(2026, 0, 1);
 const pool = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ id: `p${i}`, source: "pool" as const, ord: i + 1 }));
+  Array.from({ length: n }, (_, i) => ({
+    id: `p${i}`,
+    source: "pool" as const,
+    ord: i + 1,
+    username: `maker_p${i}`,
+  }));
 const fallback = (...ids: string[]) =>
-  ids.map((id, i) => ({ id, source: "fallback" as const, ord: i + 1 }));
+  ids.map((id, i) => ({ id, source: "fallback" as const, ord: i + 1, username: `maker_${id}` }));
+/** Pool cards by the makers given, in pool order. */
+const poolBy = (...makers: string[]) =>
+  makers.map((username, i) => ({ id: `p${i}`, source: "pool" as const, ord: i + 1, username }));
 const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
 const day = (d: number) => new Date(START + d * DAY + 12 * 3_600_000);
 
@@ -72,9 +81,60 @@ describe("dailyHeroPair", () => {
 
   it("tops a pool of one up with a fallback card that isn't it", () => {
     expect(ids(dailyHeroPair([...pool(1), ...fallback("f1", "f2")], day(0)))).toEqual(["p0", "f1"]);
-    const same = [{ id: "x", source: "pool" as const, ord: 1 }, ...fallback("x", "f2")];
+    const same = [{ id: "x", source: "pool" as const, ord: 1, username: "maker_x" }, ...fallback("x", "f2")];
     expect(ids(dailyHeroPair(same, day(0)))).toEqual(["x", "f2"]);
-    expect(ids(dailyHeroPair([{ id: "x", source: "pool", ord: 1 }, { id: "x", source: "fallback", ord: 1 }], day(0)))).toEqual(["x"]);
+    expect(
+      ids(
+        dailyHeroPair(
+          [
+            { id: "x", source: "pool", ord: 1, username: "maker_x" },
+            { id: "x", source: "fallback", ord: 1, username: "maker_x" },
+          ],
+          day(0),
+        ),
+      ),
+    ).toEqual(["x"]);
+  });
+
+  it("never shows two cards by the same maker, whatever the pool", () => {
+    const pools = [
+      poolBy("a", "a"),
+      poolBy("a", "a", "b"),
+      poolBy("a", "b", "a", "b"),
+      poolBy("a", "a", "a", "b", "c", "c"),
+      poolBy("a", "b", "b", "b", "b"),
+    ];
+    for (const p of pools) {
+      for (const rows of [p, [...p, ...fallback("f1", "f2")]]) {
+        for (let d = 0; d < 40; d++) {
+          const makers = dailyHeroPair(rows, day(d)).map((r) => r.username);
+          expect(new Set(makers).size).toBe(makers.length);
+        }
+      }
+    }
+  });
+
+  it("pairs the day's first pool card with the next one by another maker", () => {
+    const rows = poolBy("a", "a", "a", "b");
+    for (let d = 0; d < 20; d++) {
+      const pair = dailyHeroPair(rows, day(d));
+      expect(pair).toHaveLength(2);
+      expect(pair[0].id).toBe(`p${(2 * utcDayNumber(day(d))) % 4}`);
+      expect(pair.map((r) => r.username).sort()).toEqual(["a", "b"]);
+    }
+  });
+
+  it("tops up a one-maker pool with a fallback card by someone else, else shows one card", () => {
+    const fb = [
+      { id: "f1", source: "fallback" as const, ord: 1, username: "a" },
+      { id: "f2", source: "fallback" as const, ord: 2, username: "z" },
+    ];
+    expect(dailyHeroPair([...poolBy("a", "a"), ...fb], day(0)).map((r) => r.username)).toEqual(["a", "z"]);
+    expect(dailyHeroPair(poolBy("a", "a", "a"), day(0))).toHaveLength(1);
+    expect(dailyHeroPair([...poolBy("a"), fb[0]], day(0))).toHaveLength(1);
+    expect(ids(dailyHeroPair([...poolBy("a"), ...fb], day(0)))).toEqual(["p0", "f2"]);
+    const twoSlotsOneMaker = fb.map((r) => ({ ...r, username: "q" }));
+    expect(ids(dailyHeroPair(twoSlotsOneMaker, day(0)))).toEqual(["f1"]);
   });
 
   it("falls back to the slots in slot order with an empty pool, else nothing (the placeholder)", () => {
