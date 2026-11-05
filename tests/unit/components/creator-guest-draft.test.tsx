@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { GameSystem } from "@/types/card";
+import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { guestAuthHref, type GuestDraft } from "@/lib/creator/guest-draft";
 
@@ -57,6 +57,8 @@ vi.mock("@/components/cards/card-preview", () => ({
 }));
 // The kept card, as the browser would hand it back: a stand-in store (the
 // storage itself is tests/unit/creator/guest-draft.test.ts).
+// It keeps the store's rules: a draft claimed by one account is offered to
+// no one else, and removed when they look.
 const kept = vi.hoisted(() => ({
   draft: null as GuestDraft | null,
   writes: [] as GuestDraft[],
@@ -67,10 +69,19 @@ vi.mock("@/lib/creator/guest-draft", async (importOriginal) => {
   return {
     ...real,
     createGuestDraftStore: () => ({
-      read: async () => kept.draft,
+      read: async (viewer: string | null) => {
+        if (!kept.draft) return null;
+        if (real.draftOfferedTo(kept.draft, viewer)) return kept.draft;
+        kept.draft = null;
+        return null;
+      },
+      claim: async (userId: string) => {
+        if (kept.draft) kept.draft = { ...kept.draft, claimedBy: userId };
+      },
       write: async (draft: GuestDraft) => {
-        kept.writes.push(draft);
-        kept.draft = draft;
+        const stored = { ...draft, values: real.guestDraftValues(draft.values) };
+        kept.writes.push(stored);
+        kept.draft = stored;
         return "kept" as const;
       },
       clear: async () => {
@@ -194,114 +205,294 @@ describe("the guest creator (HM3)", () => {
 });
 
 // A draft as this version of the guest creator writes it: the form's own values.
-async function guestWrittenDraft(): Promise<GuestDraft> {
+async function guestWrittenDraft(name = "Ember Wyrm"): Promise<GuestDraft> {
   guest();
   await act(async () => {
-    fireEvent.change(title(), { target: { value: "Ember Wyrm" } });
+    fireEvent.change(title(), { target: { value: name } });
   });
-  await waitFor(() => expect(kept.writes.at(-1)?.values.title).toBe("Ember Wyrm"), { timeout: 3000 });
+  await waitFor(() => expect(kept.writes.at(-1)?.values.title).toBe(name), { timeout: 3000 });
   cleanup();
   kept.writes = [];
   return kept.draft!;
 }
 
+const picture = () => ({ path: "art_url", blob: new Blob(["png"], { type: "image/png" }), name: "wyrm.png" });
+const save = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
+
+// A guest's card with its picture kept, written by the guest creator.
+async function draftWithPicture(): Promise<GuestDraft> {
+  const written = await guestWrittenDraft();
+  return {
+    ...written,
+    values: { ...written.values, art_url: "blob:https://pipglyph.test/old-page" },
+    pictures: [picture()],
+  };
+}
+
 describe("the signed-in creator puts a guest's card back (HM3)", () => {
-  const draft = (extra: Partial<GuestDraft> = {}): GuestDraft => ({
-    values: {
-      ...({} as GuestDraft["values"]),
-      title: "Ember Wyrm",
-      card_type: "creature",
-      cost: "{3}{R}",
-      color_identity: ["red"],
-      rules_text: "Flying",
-      power: "4",
-      toughness: "4",
-      rarity: "rare",
-      artist_credit: "A. Guest",
-      art_url: STORED_ART,
-      art_position: { x: 0.5, y: 0.5, scale: 1 },
-      tags_text: "dragons",
-      visibility: "public",
-      frame_style: { template: "m15", finish: "regular" },
-    } as GuestDraft["values"],
-    pictures: [],
-    tags: { following: false, base: [] },
-    ...extra,
+  beforeEach(() => {
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:https://pipglyph.test/restored"), revokeObjectURL: vi.fn() }));
+    uploads.uploadCardArtFile.mockResolvedValue({ ok: true, publicUrl: STORED_ART });
   });
 
-  it("restores it, says so, and saves it through createCardAction — then forgets it", async () => {
-    // A draft written by this version of the creator: the guest form's own values.
-    guest();
-    await act(async () => {
-      fireEvent.change(title(), { target: { value: "Ember Wyrm" } });
-    });
-    await waitFor(() => expect(kept.writes.at(-1)?.values.title).toBe("Ember Wyrm"), { timeout: 3000 });
-    cleanup();
-    kept.draft = { ...kept.writes.at(-1)!, values: { ...kept.writes.at(-1)!.values, art_url: STORED_ART } };
-
+  it("restores it, claims it, saves it through createCardAction — then forgets it", async () => {
+    kept.draft = await draftWithPicture();
     signedIn();
     await waitFor(() => expect(title().value).toBe("Ember Wyrm"));
-    expect(screen.getByTestId("guest-draft-restored").textContent).toMatch(/Your card is back/);
-    const save = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
+    expect(kept.draft?.claimedBy).toBe(USER);
+    await waitFor(() => expect(screen.getByTestId("guest-draft-restored").textContent).toMatch(/Your card is back/));
     await waitFor(() => expect(save().disabled).toBe(false));
     await click(save());
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     const [payload, options] = actions.createCardAction.mock.calls[0]!;
     expect((payload as { title: string }).title).toBe("Ember Wyrm");
+    expect((payload as { art_url: string }).art_url).toBe(STORED_ART);
     expect(options).toEqual({ guestDraft: true });
     await waitFor(() => expect(kept.cleared).toBeGreaterThan(0));
+    // Saved: no longer "a guest's card" — a second save carries no guestDraft.
+    await waitFor(() => expect(screen.queryByTestId("guest-draft-restored")).toBeNull());
+  });
+
+  it("never writes the draft once signed in — not the account's URLs, not a deck", async () => {
+    kept.draft = await draftWithPicture();
+    signedIn();
+    await waitFor(() => expect(uploads.uploadCardArtFile).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm, Renamed" } });
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    expect(kept.writes).toEqual([]);
+    // The stored draft still holds the guest's picture, never the upload.
+    expect(kept.draft?.values.art_url).toBe("blob:https://pipglyph.test/old-page");
+  });
+
+  it("puts back no storage URL and no deck a draft names", async () => {
+    const written = await guestWrittenDraft();
+    // A record written before the rules, or by hand: another account's art and deck.
+    kept.draft = {
+      ...written,
+      values: { ...written.values, art_url: "https://x.supabase.co/storage/v1/object/public/card-art/user-a/a.png", deck_id: "deck-a" },
+    };
+    signedIn();
+    await waitFor(() => expect(title().value).toBe("Ember Wyrm"));
+    expect(preview.last?.artUrl ?? null).toBeNull();
+    expect(uploads.uploadCardArtFile).not.toHaveBeenCalled();
+  });
+
+  it("a field the guest never set takes this viewer's default; a challenge's tag survives", async () => {
+    const written = await draftWithPicture();
+    // The guest's own tags, and tags still following the card's text.
+    const cases = [
+      { tags: { following: false, base: [] }, tags_text: "dragons", want: ["dragons", "weekly-challenge"] },
+      { tags: { following: true, base: [] }, tags_text: "", want: ["weekly-challenge"] },
+    ];
+    for (const c of cases) {
+      kept.draft = { ...written, tags: c.tags, values: { ...written.values, tags_text: c.tags_text } };
+      actions.createCardAction.mockClear();
+      window.history.replaceState({}, "", "/create?step=identity");
+      render(
+        <CardCreatorForm
+          mode="create"
+          userId={USER}
+          ownerUsername="tester"
+          gameSystems={GAME_SYSTEMS}
+          aiConfigured
+          verifiedFrameKeys={VERIFIED}
+          guestDraft="restore"
+          isPaid
+          defaultFooterText="Made by Kesh"
+          defaultArtistCredit="Kesh"
+          initialTag="weekly-challenge"
+        />,
+      );
+      await waitFor(() => expect(title().value).toBe("Ember Wyrm"));
+      // The save's payload: the paid viewer's footer (never the guest's ""),
+      // their artist credit, the challenge's tag.
+      await waitFor(() => expect(save().disabled).toBe(false));
+      await click(save());
+      await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+      const payload = actions.createCardAction.mock.calls[0]![0] as { footer_text: string; artist_credit: string; tags: string[] };
+      expect(payload.footer_text).toBe("Made by Kesh");
+      expect(payload.artist_credit).toBe("Kesh");
+      expect(payload.tags).toEqual(expect.arrayContaining(c.want));
+      cleanup();
+    }
+  });
+
+  it("a refused save keeps the card waiting — a failure, and the card limit", async () => {
+    kept.draft = await draftWithPicture();
+    actions.createCardAction.mockResolvedValueOnce({ ok: false, error: "Something went wrong." });
+    signedIn();
+    await waitFor(() => expect(save().disabled).toBe(false));
+    await click(save());
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    actions.createCardAction.mockResolvedValueOnce({ ok: false, error: "You've reached your card limit.", code: "CARD_CAPACITY" });
+    await click(save());
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(2));
+    expect(actions.createCardAction.mock.calls[1]![1]).toEqual({ guestDraft: true });
+    expect(kept.cleared).toBe(0);
+    expect(kept.draft?.values.title).toBe("Ember Wyrm");
+    expect(screen.getByTestId("guest-draft-restored")).toBeTruthy();
   });
 
   it("uploads a kept picture through the normal art upload before Save can run", async () => {
-    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:https://pipglyph.test/restored") }));
     let finish: (value: unknown) => void = () => {};
     uploads.uploadCardArtFile.mockImplementation(() => new Promise((resolve) => (finish = resolve)));
-    const written = await guestWrittenDraft();
-    kept.draft = draft({
-      values: { ...written.values, art_url: "blob:https://pipglyph.test/old-page" },
-      pictures: [{ path: "art_url", blob: new Blob(["png"], { type: "image/png" }), name: "wyrm.png" }],
-    });
+    kept.draft = await draftWithPicture();
     signedIn();
     await waitFor(() => expect(uploads.uploadCardArtFile).toHaveBeenCalledTimes(1));
     const sent = uploads.uploadCardArtFile.mock.calls[0]![0] as File;
     expect(sent.name).toBe("wyrm.png");
     expect(sent.type).toBe("image/png");
     // Waiting for the upload: Save says why and stays off.
-    const save = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
     expect(save().disabled).toBe(true);
     expect(screen.getByText(/Your picture is uploading to your account/)).toBeTruthy();
     await act(async () => {
       finish({ ok: true, publicUrl: STORED_ART });
     });
     await waitFor(() => expect(save().disabled).toBe(false));
+    // The page's copy of the picture is freed once it is uploaded.
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:https://pipglyph.test/restored");
     await click(save());
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect((actions.createCardAction.mock.calls[0]![0] as { art_url: string }).art_url).toBe(STORED_ART);
   });
 
   it("a failed upload keeps the picture and offers a retry", async () => {
-    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:https://pipglyph.test/restored") }));
     uploads.uploadCardArtFile.mockResolvedValue({ ok: false, error: "You're uploading too fast." });
-    const written = await guestWrittenDraft();
-    kept.draft = draft({
-      values: { ...written.values, art_url: "blob:https://pipglyph.test/old-page" },
-      pictures: [{ path: "art_url", blob: new Blob(["png"], { type: "image/png" }), name: "wyrm.png" }],
-    });
+    kept.draft = await draftWithPicture();
     signedIn();
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You're uploading too fast."));
-    expect(screen.getByRole("button", { name: /Retry the upload/ })).toBeTruthy();
-    expect((screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement).disabled).toBe(true);
+    await screen.findByRole("button", { name: /Retry the upload/ });
+    expect(save().disabled).toBe(true);
     uploads.uploadCardArtFile.mockResolvedValue({ ok: true, publicUrl: STORED_ART });
     await click(screen.getByRole("button", { name: /Retry the upload/ }));
-    await waitFor(() => expect((screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement).disabled).toBe(false));
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(uploads.uploadCardArtFile).toHaveBeenCalledTimes(2);
   });
+});
 
-  it("never restores outside a plain new card", async () => {
-    kept.draft = draft();
-    signedIn(null);
+describe("a guest's card follows the person, not the browser (HM3)", () => {
+  it("another account is never offered a claimed card, and it is removed", async () => {
+    const written = await guestWrittenDraft();
+    kept.draft = { ...written, claimedBy: "someone-else" };
+    signedIn();
+    await act(async () => {});
     await act(async () => {});
     expect(title().value).toBe("");
     expect(screen.queryByTestId("guest-draft-restored")).toBeNull();
+    expect(kept.draft).toBeNull();
+  });
+
+  it("a later guest on this browser is never offered it", async () => {
+    const written = await guestWrittenDraft();
+    kept.draft = { ...written, claimedBy: USER };
+    guest();
+    await act(async () => {});
+    await act(async () => {});
+    expect(title().value).toBe("");
+    expect(screen.queryByTestId("guest-draft-restored")).toBeNull();
+  });
+
+  it("an edit and a remix never restore one, nor touch it", async () => {
+    const written = await guestWrittenDraft();
+    kept.draft = written;
+    const card = {
+      id: "22222222-2222-4222-8222-222222222222",
+      owner_id: USER,
+      title: "Kesh, Emberforge Warden",
+      slug: "kesh",
+      game_system_id: GAME,
+      cost: "{2}{R}{R}",
+      color_identity: ["red"],
+      supertype: "Legendary",
+      card_type: "creature",
+      subtypes: ["Dwarf"],
+      tags: [],
+      rarity: "rare",
+      rules_text: "Haste",
+      flavor_text: null,
+      power: "3",
+      toughness: "4",
+      loyalty: null,
+      defense: null,
+      artist_credit: null,
+      art_url: "https://example.com/art.png",
+      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      frame_style: { finish: "regular", template: "m15" },
+      visibility: "public",
+      back_face: null,
+      back_card_id: null,
+      source_scryfall_id: null,
+      set_icon_url: null,
+      set_icon_code: null,
+      face_content: null,
+      watermark: null,
+      footer_text: null,
+      updated_at: "2026-09-29T10:00:00.000Z",
+    } as unknown as Card;
+    for (const mode of ["edit", "remix"] as const) {
+      window.history.replaceState({}, "", "/create?step=identity");
+      render(
+        <CardCreatorForm
+          mode={mode}
+          card={card}
+          userId={USER}
+          ownerUsername="tester"
+          gameSystems={GAME_SYSTEMS}
+          aiConfigured
+          verifiedFrameKeys={VERIFIED}
+          guestDraft="restore"
+        />,
+      );
+      await act(async () => {});
+      await act(async () => {});
+      expect(title().value).toMatch(/^Kesh, Emberforge Warden/);
+      expect(screen.queryByTestId("guest-draft-restored")).toBeNull();
+      cleanup();
+    }
+    expect(kept.draft).toBe(written);
     expect(kept.cleared).toBe(0);
+  });
+});
+
+describe("the guest creator's account-only controls open the sign-up dialog (HM3)", () => {
+  it("real-card art", async () => {
+    guest();
+    const button = screen.getByTestId("real-card-art-front");
+    expect(button.hasAttribute("disabled")).toBe(false);
+    await click(button);
+    await screen.findByTestId("guest-save-gate");
+    expect(funnel.trackFunnelEvent).toHaveBeenCalledWith("guest_save_gate", { reason: "real-card-art" });
+  });
+
+  it("custom pips", async () => {
+    window.history.replaceState({}, "", "/create?step=text");
+    guest();
+    await click(screen.getByRole("button", { name: "Customize pips" }));
+    await screen.findByTestId("guest-save-gate");
+    expect(funnel.trackFunnelEvent).toHaveBeenCalledWith("guest_save_gate", { reason: "pips" });
+  });
+
+  it("a set icon upload", async () => {
+    window.history.replaceState({}, "", "/create?step=seticon");
+    guest();
+    const button = screen.getByRole("button", { name: "Upload your own" });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    await click(button);
+    await screen.findByTestId("guest-save-gate");
+    expect(funnel.trackFunnelEvent).toHaveBeenCalledWith("guest_save_gate", { reason: "set-icon" });
+  });
+
+  it("a Scryfall import (the command palette's event)", async () => {
+    guest();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("cardforge:open-scryfall"));
+    });
+    await screen.findByTestId("guest-save-gate");
+    expect(funnel.trackFunnelEvent).toHaveBeenCalledWith("guest_save_gate", { reason: "import" });
   });
 });

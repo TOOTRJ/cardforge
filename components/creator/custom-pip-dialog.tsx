@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { CustomPipsManager } from "@/components/creator/custom-pips-manager";
 import type { PipOverrides } from "@/lib/pips/override";
+import { useGuestGate } from "@/components/creator/guest-pictures";
 
 // ---------------------------------------------------------------------------
 // CustomPipDialog — the "Customize pips" button that sits next to the mana
@@ -18,14 +19,25 @@ import type { PipOverrides } from "@/lib/pips/override";
 // untouched (only its icons change once an override exists).
 // ---------------------------------------------------------------------------
 
+const TRIGGER_CLASS =
+  "inline-flex items-center gap-1.5 self-start rounded-md border border-border/40 bg-elevated/60 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground";
+
 export function CustomPipDialog({ overrides }: { overrides: PipOverrides }) {
+  // Custom pips are kept with an account: the guest creator's button opens
+  // its sign-up dialog instead (TODO HM3).
+  const gate = useGuestGate();
+  if (gate) {
+    return (
+      <button type="button" onClick={() => gate("pips")} className={TRIGGER_CLASS}>
+        <Palette className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
+        Customize pips
+      </button>
+    );
+  }
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 self-start rounded-md border border-border/40 bg-elevated/60 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
-        >
+        <button type="button" className={TRIGGER_CLASS}>
           <Palette className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
           Customize pips
         </button>

@@ -253,7 +253,7 @@ import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
 import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
 import { useGuestDraft, type GuestDraftRole, type GuestPictureUploads } from "@/components/creator/use-guest-draft";
-import { GuestPicturesProvider } from "@/components/creator/guest-pictures";
+import { GuestGateProvider, GuestPicturesProvider } from "@/components/creator/guest-pictures";
 import {
   GUEST_PICTURE_FAILED_REASON,
   GUEST_PICTURE_UPLOADING_REASON,
@@ -923,6 +923,12 @@ export function CardCreatorForm({
     openFillRef.current = openFill;
     openSaveGateRef.current = openSaveGate;
   });
+  // The guest creator's account-only controls open the same dialog
+  // (components/creator/guest-pictures.tsx); null when signed in.
+  const guestGate = useMemo(
+    () => (guestEditing ? (reason: GuestSaveGateReason) => openSaveGateRef.current(reason) : null),
+    [guestEditing],
+  );
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
   // to make the card their own before publishing.
@@ -984,7 +990,14 @@ export function CardCreatorForm({
   // — no payload, just a signal to perform a UI action.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const openScryfall = () => setScryfallOpen(true);
+    const openScryfall = () => {
+      if (!userId) {
+        // Imports belong to an account: the guest's sign-up dialog (TODO HM3).
+        if (guestEditing) openSaveGateRef.current("import");
+        return;
+      }
+      setScryfallOpen(true);
+    };
     const generateRandom = () => openFillRef.current(FILL_PRESETS.all);
     const openIdeas = () => {
       if (!userId) {
@@ -2010,10 +2023,14 @@ export function CardCreatorForm({
   // never touched them.
   const guestDraftControls = useGuestDraft({
     role: mode === "create" && !deckRemix && !card ? guestDraft : null,
+    userId,
     form: methods,
+    defaults,
     isDirty,
     tags: autoTags,
     setUploads: setGuestUploads,
+    // A challenge's tag survives the guest's own tags, as it does an AI fill's.
+    finishValues: initialTag ? (values) => ({ ...values, tags_text: mergeTag(values.tags_text, initialTag) }) : undefined,
     onRestored: () => {
       settleTokenTextFollow();
       markPairTouched();
@@ -4519,7 +4536,7 @@ export function CardCreatorForm({
           return;
         }
         // Saved: a guest's card no longer waits in the browser.
-        if (mode === "create") void guestDraftControls.clear();
+        if (mode === "create" && guestDraftControls.restored) void guestDraftControls.clear();
         // Kept private for the strong language in its text — by this form
         // (the note on the Publish step) or by the server: ONE toast says so.
         const languageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
@@ -6078,6 +6095,7 @@ export function CardCreatorForm({
     return (
       <FormProvider {...methods}>
         <GuestPicturesProvider value={guestDraftControls.pictures}>
+        <GuestGateProvider value={guestGate}>
         <BorrowedWordSeedsProvider value={borrowedSeeds}>
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
         <form
@@ -6134,6 +6152,7 @@ export function CardCreatorForm({
         </form>
         </BackIsOwnFaceContext.Provider>
         </BorrowedWordSeedsProvider>
+        </GuestGateProvider>
         </GuestPicturesProvider>
       </FormProvider>
     );
@@ -6142,6 +6161,7 @@ export function CardCreatorForm({
   return (
     <FormProvider {...methods}>
       <GuestPicturesProvider value={guestDraftControls.pictures}>
+      <GuestGateProvider value={guestGate}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
       <form
@@ -6281,6 +6301,7 @@ export function CardCreatorForm({
       </form>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
+      </GuestGateProvider>
       </GuestPicturesProvider>
     </FormProvider>
   );

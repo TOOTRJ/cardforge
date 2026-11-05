@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import type { GuestPictureKind } from "@/lib/creator/guest-draft";
+import type { GuestSaveGateReason } from "@/components/creator/guest-save-gate";
 
 // ---------------------------------------------------------------------------
 // A guest's pictures (TODO HM3): in the signed-out creator a picked card
@@ -29,3 +30,21 @@ export function useGuestPictures(): GuestPictures | null {
 
 /** What the uploaders say once a guest's picture is kept. */
 export const GUEST_PICTURE_KEPT_MESSAGE = "Picture added — it uploads to your account when you save.";
+
+// ---------------------------------------------------------------------------
+// The guest creator's account-only controls (TODO HM3): an import from
+// Scryfall, a real card's art, a set icon upload and custom pips belong to an
+// account, so in the signed-out creator they OPEN the sign-up dialog (the
+// card waits in the browser meanwhile) — never a disabled button whose
+// reason a keyboard can't reach. Null outside the guest creator.
+// ---------------------------------------------------------------------------
+
+export type GuestGate = (reason: GuestSaveGateReason) => void;
+
+const GuestGateContext = createContext<GuestGate | null>(null);
+
+export const GuestGateProvider = GuestGateContext.Provider;
+
+export function useGuestGate(): GuestGate | null {
+  return useContext(GuestGateContext);
+}

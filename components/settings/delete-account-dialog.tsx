@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { deleteAccountAction } from "@/lib/account/actions";
+import { forgetGuestCard } from "@/lib/creator/guest-draft";
 
 export function DeleteAccountDialog() {
   const [open, setOpen] = useState(false);
@@ -27,6 +28,8 @@ export function DeleteAccountDialog() {
     startTransition(async () => {
       const result = await deleteAccountAction({ confirm });
       if (result.ok) {
+        // A guest card kept in this browser goes with the account (TODO HM3).
+        await forgetGuestCard();
         toast.success("Your account has been deleted.");
         // Full reload → middleware re-evaluates with the cleared session.
         window.location.href = "/";

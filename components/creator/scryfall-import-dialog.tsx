@@ -122,8 +122,11 @@ export type ScryfallImportPayload = {
 };
 
 type ScryfallImportDialogProps = {
-  /** Whether the user is signed in. Disables the trigger if not. */
+  /** Whether the user is signed in. A signed-out trigger opens the guest
+   *  creator's sign-up dialog (`onGuestGate`), else stays off with its
+   *  reason in its name (aria-disabled: reachable by keyboard). */
   signedIn: boolean;
+  onGuestGate?: () => void;
   /** Called when the user commits to a starting-point. Parent merges the
    *  patch into the form state and optionally consumes `importedArtUrl`. */
   onImport: (payload: ScryfallImportPayload) => unknown;
@@ -162,6 +165,7 @@ export function ScryfallImportDialog({
   open: controlledOpen,
   onOpenChange,
   hideTrigger,
+  onGuestGate,
 }: ScryfallImportDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -185,20 +189,25 @@ export function ScryfallImportDialog({
         setOpen(next);
       }}
     >
-      {renderTrigger ? (
+      {renderTrigger && signedIn ? (
         <DialogTrigger asChild>
-          <Button
-            type="button"
-            variant={triggerVariant}
-            disabled={!signedIn}
-            title={
-              signedIn ? undefined : "Sign in to search and import real cards."
-            }
-          >
+          <Button type="button" variant={triggerVariant}>
             <Search className="h-4 w-4" aria-hidden />
             {triggerLabel}
           </Button>
         </DialogTrigger>
+      ) : renderTrigger ? (
+        <Button
+          type="button"
+          variant={triggerVariant}
+          onClick={onGuestGate}
+          aria-disabled={onGuestGate ? undefined : true}
+          className={onGuestGate ? undefined : "opacity-60"}
+        >
+          <Search className="h-4 w-4" aria-hidden />
+          {triggerLabel}
+          {onGuestGate ? null : <span className="sr-only"> — sign in to search and import real cards</span>}
+        </Button>
       ) : null}
       <DialogContent
         size="lg"

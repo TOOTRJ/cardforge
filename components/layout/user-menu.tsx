@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Coins, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
+import { forgetGuestCard } from "@/lib/creator/guest-draft";
 import { useLiveCredits } from "@/components/billing/credits-bus";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { formatCredits, isUnlimitedCredits } from "@/lib/billing/plans";
@@ -117,7 +118,8 @@ export function UserMenu({
         </nav>
       ) : null}
       <div className="my-1 h-px bg-border/60" />
-      <form action={logoutAction}>
+      {/* A guest card kept in this browser goes with the session (TODO HM3). */}
+      <form action={logoutAction} onSubmit={() => void forgetGuestCard()}>
         <button
           type="submit"
           className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm text-muted transition-colors hover:bg-elevated hover:text-foreground focus-visible:bg-elevated focus-visible:outline-none"

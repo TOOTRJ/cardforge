@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   blobUrlPaths,
+  guestDraftValues,
+  mergeDraftValues,
   createGuestDraftStore,
   draftPictures,
   GUEST_DRAFT_TTL_MS,
@@ -126,6 +128,8 @@ describe("the pictures inside the values", () => {
       values: values(),
       pictures: [{ path: "art_url", blob: art, name: "wyrm.png" }],
       tags: { following: true, base: [] },
+      base: null,
+      claimedBy: null,
     };
     let n = 0;
     const { values: restored, urls } = restoredDraftValues(draft, () => `blob:https://pipglyph.test/new-${++n}`);
@@ -181,13 +185,15 @@ describe("the store", () => {
       { path: "watermark.url", blob: mark, name: "mark.webp" },
     ],
     tags: { following: true, base: [] },
+    base: null,
+    claimedBy: null,
   };
 
   it("keeps the pictures in IndexedDB and reads the draft back", async () => {
     const idb = memoryBackend();
     const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
     expect(await store.write(draft)).toBe("kept");
-    const back = await store.read();
+    const back = await store.read(null);
     expect(back?.values.title).toBe("Ember Wyrm");
     expect(back?.pictures.map((p) => p.path)).toEqual(["art_url", "watermark.url"]);
     expect(guestCardWaiting(NOW + 1)).toBe(true);
@@ -207,7 +213,7 @@ describe("the store", () => {
     expect(raw.values.art_url).toBe("");
     expect(raw.values.watermark.url).toBe("");
     expect(raw.values.title).toBe("Ember Wyrm");
-    expect((await store.read())?.values.title).toBe("Ember Wyrm");
+    expect((await store.read(null))?.values.title).toBe("Ember Wyrm");
   });
 
   it("says false when nothing can keep it, and never throws", async () => {
@@ -216,14 +222,14 @@ describe("the store", () => {
       now: () => NOW,
     });
     expect(await store.write(draft)).toBe(false);
-    expect(await store.read()).toBeNull();
+    expect(await store.read(null)).toBeNull();
   });
 
   it("removes a stale draft when it reads one", async () => {
     const idb = memoryBackend();
     idb.set({ v: GUEST_DRAFT_VERSION, savedAt: NOW - GUEST_DRAFT_TTL_MS - 1, values: values(), pictures: [], tags: {} });
     const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
-    expect(await store.read()).toBeNull();
+    expect(await store.read(null)).toBeNull();
     expect(idb.record()).toBeNull();
   });
 
@@ -276,5 +282,132 @@ describe("the live preview draws the page's own pictures, nothing else", () => {
   it("never lets a listed outside https URL through", () => {
     const card = { artUrl: "https://evil.test/a.png" };
     expect(drawableCardMedia(card as unknown as CardPreviewData, ["https://evil.test/a.png"]).artUrl).toBeNull();
+  });
+});
+
+describe("what a draft may hold (P1: only what a guest can set)", () => {
+  const stored = values({
+    deck_id: "deck-of-someone",
+    source_scryfall_id: "scry-1",
+    set_icon_url: "https://x.supabase.co/storage/v1/object/public/set-covers/a/icon.png",
+    art_url: "https://x.supabase.co/storage/v1/object/public/card-art/user-a/art.png",
+    back_face: { art_url: "blob:https://pipglyph.test/back" },
+  } as Partial<FormValues>);
+
+  it("drops a deck, an import's id, a set icon upload and every storage URL", () => {
+    const out = guestDraftValues(stored) as unknown as Record<string, unknown>;
+    expect(out).not.toHaveProperty("deck_id");
+    expect(out).not.toHaveProperty("source_scryfall_id");
+    expect(out).not.toHaveProperty("set_icon_url");
+    expect(out).not.toHaveProperty("art_url");
+    expect((out.back_face as { art_url: string }).art_url).toBe("blob:https://pipglyph.test/back");
+    expect(out.title).toBe("Ember Wyrm");
+  });
+
+  it("drops a custom watermark whose picture isn't kept; a built-in one stays", () => {
+    const custom = guestDraftValues(
+      values({ watermark: { kind: "custom", key: "", url: "https://x.test/m.png", size: "normal", opacity: null } } as Partial<FormValues>),
+    ) as unknown as Record<string, unknown>;
+    expect(custom).not.toHaveProperty("watermark");
+    const builtIn = guestDraftValues(
+      values({ watermark: { kind: "mana", key: "r", url: "", size: "large", opacity: null } } as Partial<FormValues>),
+    );
+    expect(builtIn.watermark).toEqual({ kind: "mana", key: "r", url: "", size: "large", opacity: null });
+  });
+
+  it("the store never writes one: a storage URL or a deck is gone from the record", async () => {
+    const idb = memoryBackend();
+    const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+    await store.write({ values: stored, pictures: [], tags: { following: false, base: [] }, base: null, claimedBy: null });
+    const record = idb.record() as { values: Record<string, unknown> };
+    expect(record.values).not.toHaveProperty("deck_id");
+    expect(record.values).not.toHaveProperty("art_url");
+  });
+});
+
+describe("a restored card over the viewer's defaults (P2)", () => {
+  const defaults = {
+    title: "",
+    footer_text: "Made by Kesh",
+    artist_credit: "Kesh",
+    tags_text: "",
+    watermark: { kind: "", key: "", url: "", size: "normal", opacity: null },
+    nickname: "",
+    printed_types: null,
+    station_pt_tier: null,
+  } as unknown as FormValues;
+  const guestBase = { ...defaults, footer_text: "", artist_credit: "" } as FormValues;
+
+  it("a field the draft lacks (added since) takes the default — never undefined", () => {
+    const out = mergeDraftValues(defaults, { title: "Ember Wyrm" } as FormValues, guestBase);
+    expect(out.footer_text).toBe("Made by Kesh");
+    expect(out.watermark).toEqual(defaults.watermark);
+    expect(out.title).toBe("Ember Wyrm");
+  });
+
+  it("a field the guest never set takes the viewer's default; one they set is theirs", () => {
+    const draft = { ...guestBase, title: "Ember Wyrm", artist_credit: "A. Guest" } as FormValues;
+    const out = mergeDraftValues(defaults, draft, guestBase);
+    expect(out.footer_text).toBe("Made by Kesh");
+    expect(out.artist_credit).toBe("A. Guest");
+  });
+
+  it("a value of another shape, nested too, is the default's", () => {
+    const draft = { ...guestBase, title: 7, watermark: { ...defaults.watermark, size: 3 } } as unknown as FormValues;
+    const out = mergeDraftValues(defaults, draft, null);
+    expect(out.title).toBe("");
+    expect(out.watermark.size).toBe("normal");
+  });
+
+  it("null and an optional key the defaults leave out are kept", () => {
+    const draft = { ...guestBase, printed_types: "Legendary Creature", saga_creature_text: "Flying" } as FormValues;
+    const out = mergeDraftValues(defaults, draft, guestBase);
+    expect(out.printed_types).toBe("Legendary Creature");
+    expect(out.saga_creature_text).toBe("Flying");
+  });
+});
+
+describe("a draft follows the person (P1: claimed at restore)", () => {
+  const draft: GuestDraft = {
+    values: values({ art_url: "", watermark: undefined } as unknown as Partial<FormValues>),
+    pictures: [],
+    tags: { following: false, base: [] },
+    base: null,
+    claimedBy: null,
+  };
+
+  it("once claimed, only its account is offered it", async () => {
+    const idb = memoryBackend();
+    const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+    await store.write(draft);
+    await store.claim("user-a");
+    expect((await store.read("user-a"))?.claimedBy).toBe("user-a");
+    expect(guestCardWaiting(NOW + 1)).toBe(false);
+  });
+
+  it("a later guest is never offered it, and it is removed", async () => {
+    const idb = memoryBackend();
+    const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+    await store.write(draft);
+    await store.claim("user-a");
+    expect(await store.read(null)).toBeNull();
+    expect(idb.record()).toBeNull();
+  });
+
+  it("another account is never offered it, and it is removed", async () => {
+    const idb = memoryBackend();
+    const store = createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+    await store.write(draft);
+    await store.claim("user-a");
+    expect(await store.read("user-b")).toBeNull();
+    expect(idb.record()).toBeNull();
+  });
+
+  it("this tab's copy, once claimed, says no card waits", async () => {
+    const store = createGuestDraftStore({ backends: () => [sessionStorageBackend()], now: () => NOW });
+    await store.write(draft);
+    await store.claim("user-a");
+    localStorage.clear();
+    expect(guestCardWaiting(NOW + 1)).toBe(false);
   });
 });

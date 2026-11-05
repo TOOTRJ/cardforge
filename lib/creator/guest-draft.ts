@@ -1,5 +1,5 @@
 import type { FormValues } from "@/lib/creator/form-types";
-import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { DEFAULT_POST_AUTH_PATH, safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 // ---------------------------------------------------------------------------
 // A signed-out visitor's card (TODO HM3, owner 2026-11-04): the guest
@@ -16,7 +16,15 @@ import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 //   * Where IndexedDB is missing or refuses, the values alone go to this
 //     tab's sessionStorage (no pictures): a draft that survives a sign-in in
 //     the same tab, never a broken creator.
-//   * Never the URL. Kept GUEST_DRAFT_TTL_MS; cleared once the card saves.
+//   * Never the URL. Kept GUEST_DRAFT_TTL_MS; cleared once the card saves,
+//     and by every sign-out (`forgetGuestCard`).
+//   * It follows the PERSON, not the browser: only the guest creator writes
+//     it, and the signed-in creator that puts it back CLAIMS it for that
+//     account — a claimed draft is never offered to a guest or to another
+//     account (and another account's /create removes it).
+//   * It holds only what a guest can set: its pictures as `blob:` URLs,
+//     never a storage URL, a deck, an import's id or a set icon upload
+//     (`guestDraftValues`, on the way in and on the way out).
 //   * A small localStorage flag says one is waiting — the synchronous answer
 //     the onboarding wizard and the signup form read
 //     (`guestCardWaiting`), never the draft itself.
@@ -26,7 +34,7 @@ import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 // ---------------------------------------------------------------------------
 
 /** Bumped when FormValues changes in a way an older draft can't be read as. */
-export const GUEST_DRAFT_VERSION = 1;
+export const GUEST_DRAFT_VERSION = 2;
 
 /** A week: past it the visitor has moved on (and Safari's own script-storage
  *  limit is seven days of no visit). */
@@ -62,7 +70,7 @@ export function guestAuthHref(kind: "signup" | "login"): string {
  * this browser. A `next` someone asked for is kept.
  */
 export function onboardingFinishPath(next: string, cardWaiting: boolean): string {
-  return next === "/dashboard" && cardWaiting ? GUEST_DRAFT_RETURN_PATH : next;
+  return next === DEFAULT_POST_AUTH_PATH && cardWaiting ? GUEST_DRAFT_RETURN_PATH : next;
 }
 
 const DB_NAME = "pipglyph";
@@ -94,9 +102,102 @@ export type GuestDraft = {
   values: FormValues;
   pictures: GuestPicture[];
   tags: GuestDraftTags;
+  /** The guest form's own starting values: a field still holding its value
+   *  here was never set by the guest, and takes the signed-in viewer's
+   *  default instead (their footer, artist credit…). null = unknown. */
+  base: FormValues | null;
+  /** The account that put it back (null = not yet claimed). */
+  claimedBy: string | null;
 };
 
 type StoredGuestDraft = GuestDraft & { v: number; savedAt: number };
+
+// ---------------------------------------------------------------------------
+// What a draft may hold. The guest creator can't upload, import, link a
+// deck or pick a set icon file, so none of that is kept or put back — a
+// value there is another account's (a draft written before it was
+// claimed, or a hand-edited record) and the viewer's default stands.
+// ---------------------------------------------------------------------------
+
+/** Fields a guest never sets: never kept, never restored. */
+const NEVER_KEPT_FIELDS = ["deck_id", "source_scryfall_id", "set_icon_url", "slug", "game_system_id"] as const;
+
+const isUrlKey = (key: string) => key === "url" || key.endsWith("_url");
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value) && !(value instanceof Blob);
+}
+
+/**
+ * The values as a draft may hold them: the never-kept fields dropped, every
+ * picture field that isn't a `blob:` URL dropped, and a custom watermark /
+ * land icon with no kept picture dropped whole. A dropped field restores
+ * as the viewer's default.
+ */
+export function guestDraftValues(values: FormValues): FormValues {
+  const clean = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(clean);
+    if (!isPlainObject(node)) return node;
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (isUrlKey(key) && typeof value === "string" && value !== "" && !isBlobUrl(value)) continue;
+      if (isPlainObject(value) && value.kind === "custom" && !isBlobUrl(value.url)) continue;
+      out[key] = clean(value);
+    }
+    return out;
+  };
+  const out = clean(values) as Record<string, unknown>;
+  for (const key of NEVER_KEPT_FIELDS) delete out[key];
+  return out as FormValues;
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) if (!sameValue(a[key], b[key])) return false;
+    return true;
+  }
+  return false;
+}
+
+function sameKind(a: unknown, b: unknown): boolean {
+  if (a === null || b === null || a === undefined) return true;
+  if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b);
+  if (isPlainObject(a) || isPlainObject(b)) return isPlainObject(a) && isPlainObject(b);
+  return typeof a === typeof b;
+}
+
+/**
+ * The draft's values laid over the viewer's own defaults (the form this
+ * build starts with), key by key and into nested objects:
+ *   * a key the draft lacks (a field added since it was written) — default;
+ *   * a value of another shape than the default's — default;
+ *   * a value the guest never changed from the guest form's own start
+ *     (`base`) — the viewer's default (a paid viewer's footer, their artist
+ *     credit), never the guest's empty one;
+ *   * else the guest's value. A key only the draft has (an optional field
+ *     the defaults leave out) is kept.
+ */
+export function mergeDraftValues(defaults: FormValues, values: FormValues, base: FormValues | null): FormValues {
+  const merge = (d: unknown, v: unknown, b: unknown): unknown => {
+    if (v === undefined) return d;
+    if (b !== undefined && d !== undefined && sameValue(v, b)) return d;
+    if (!sameKind(d, v)) return d;
+    if (isPlainObject(d) && isPlainObject(v)) {
+      const out: Record<string, unknown> = {};
+      const bo = isPlainObject(b) ? b : {};
+      for (const key of new Set([...Object.keys(d), ...Object.keys(v)])) {
+        const next = merge(d[key], v[key], bo[key]);
+        if (next !== undefined) out[key] = next;
+      }
+      return out;
+    }
+    return v;
+  };
+  return merge(defaults, values, base ?? undefined) as FormValues;
+}
 
 // ---------------------------------------------------------------------------
 // Pure parts: the record's shape, and the pictures inside the values.
@@ -174,8 +275,10 @@ function withoutPictures(values: FormValues, pictures: readonly GuestPicture[]):
 export function restoredDraftValues(
   draft: GuestDraft,
   urlFor: (blob: Blob) => string,
+  defaults?: FormValues,
 ): { values: FormValues; urls: Map<string, GuestPicture> } {
-  let values = draft.values;
+  const kept = guestDraftValues(draft.values);
+  let values = defaults ? mergeDraftValues(defaults, kept, draft.base ? guestDraftValues(draft.base) : null) : kept;
   for (const { path } of blobUrlPaths(values)) values = withValueAt(values, path, "");
   const urls = new Map<string, GuestPicture>();
   for (const picture of draft.pictures) {
@@ -215,7 +318,15 @@ export function guestDraftFromStored(raw: unknown, now: number = Date.now()): Gu
       following: tags?.following === true,
       base: Array.isArray(tags?.base) ? tags.base.filter((t): t is string => typeof t === "string") : [],
     },
+    base: isPlainObject(value.base) ? (value.base as FormValues) : null,
+    claimedBy: typeof value.claimedBy === "string" && value.claimedBy ? value.claimedBy : null,
   };
+}
+
+/** May `viewer` (a user id; null = a guest) be offered this draft? Only an
+ *  unclaimed one, or the viewer's own. */
+export function draftOfferedTo(draft: Pick<GuestDraft, "claimedBy">, viewer: string | null): boolean {
+  return draft.claimedBy === null || draft.claimedBy === viewer;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,16 +444,20 @@ export function guestCardWaiting(now: number = Date.now()): boolean {
   try {
     const raw = webStorage("session")?.getItem(SESSION_KEY);
     if (!raw) return false;
-    const savedAt = (JSON.parse(raw) as { savedAt?: unknown }).savedAt;
-    return typeof savedAt === "number" && fresh(savedAt);
+    const { savedAt, claimedBy } = JSON.parse(raw) as { savedAt?: unknown; claimedBy?: unknown };
+    return typeof savedAt === "number" && fresh(savedAt) && !claimedBy;
   } catch {
     return false;
   }
 }
 
 export type GuestDraftStore = {
-  /** The kept draft, or null. A stale or unreadable one is removed. */
-  read(): Promise<GuestDraft | null>;
+  /** The kept draft, or null. One claimed by another account than `viewer`
+   *  (a user id; null = a guest) is never returned, and is removed; so is a
+   *  stale or unreadable one. */
+  read(viewer: string | null): Promise<GuestDraft | null>;
+  /** Mark the kept draft as `userId`'s: never offered to anyone else. */
+  claim(userId: string): Promise<void>;
   /** Keep it. "values-only" when the pictures couldn't be kept; false when
    *  nothing could. */
   write(draft: GuestDraft): Promise<"kept" | "values-only" | false>;
@@ -369,29 +484,58 @@ export function createGuestDraftStore(
     }
     setWaiting(null);
   };
-  return {
-    async read() {
-      for (const backend of backends()) {
-        let raw: unknown;
-        try {
-          raw = await backend.get();
-        } catch {
-          continue;
-        }
-        if (raw == null) continue;
-        const draft = guestDraftFromStored(raw, now());
-        if (draft) return draft;
-        try {
-          await backend.delete();
-        } catch {
-          // a stale record that can't be removed is still never read
-        }
+  const readRaw = async (): Promise<{ draft: GuestDraft; backend: GuestDraftBackend; savedAt: number } | null> => {
+    for (const backend of backends()) {
+      let raw: unknown;
+      try {
+        raw = await backend.get();
+      } catch {
+        continue;
       }
+      if (raw == null) continue;
+      const draft = guestDraftFromStored(raw, now());
+      if (draft) return { draft, backend, savedAt: (raw as StoredGuestDraft).savedAt };
+      try {
+        await backend.delete();
+      } catch {
+        // a stale record that can't be removed is still never read
+      }
+    }
+    return null;
+  };
+  return {
+    async read(viewer) {
+      const found = await readRaw();
+      if (!found) return null;
+      if (draftOfferedTo(found.draft, viewer)) return found.draft;
+      // Another account's card: never offered, and gone from this browser
+      // once someone else is at it (its owner signed out — or never did).
+      await clearAll();
       return null;
+    },
+    async claim(userId) {
+      const found = await readRaw();
+      if (!found || found.draft.claimedBy === userId) return;
+      const record: StoredGuestDraft = { ...found.draft, claimedBy: userId, v: GUEST_DRAFT_VERSION, savedAt: found.savedAt };
+      try {
+        await found.backend.put(record);
+      } catch {
+        // can't mark it: remove it rather than leave it for anyone
+        await clearAll();
+        return;
+      }
+      // Nothing waits for a sign-up any more (the onboarding pickup).
+      setWaiting(null);
     },
     async write(draft) {
       const savedAt = now();
-      const record: StoredGuestDraft = { ...draft, v: GUEST_DRAFT_VERSION, savedAt };
+      const record: StoredGuestDraft = {
+        ...draft,
+        values: guestDraftValues(draft.values),
+        base: draft.base ? guestDraftValues(draft.base) : null,
+        v: GUEST_DRAFT_VERSION,
+        savedAt,
+      };
       for (const backend of backends()) {
         try {
           await backend.put(
@@ -409,4 +553,9 @@ export function createGuestDraftStore(
     },
     clear: clearAll,
   };
+}
+
+/** Forget this browser's guest card — every sign-out, account deletion. */
+export function forgetGuestCard(): Promise<void> {
+  return createGuestDraftStore().clear();
 }

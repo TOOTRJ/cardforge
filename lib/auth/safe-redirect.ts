@@ -6,7 +6,7 @@
 // all import it (they used to carry three regexes, one of them weaker).
 const SAFE_REDIRECT = /^\/(?![\/\\])[^\s\\]*$/;
 
-const DEFAULT_POST_AUTH_PATH = "/dashboard";
+export const DEFAULT_POST_AUTH_PATH = "/dashboard";
 
 export function safeRedirectPath(
   value: unknown,

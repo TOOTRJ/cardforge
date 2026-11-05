@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import type { FrameStyle, Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 import { CollectorSwitches } from "@/components/creator/panels/collector-panel";
+import { useGuestGate } from "@/components/creator/guest-pictures";
 
 // A curated set of recognizable Keyrune set-symbol codes (same list as the
 // picker). The full Keyrune library has hundreds; these cover popular
@@ -80,6 +81,7 @@ export function SetIconPanel({
   onFilledFromPrinting?: FilledFromPrinting;
 }) {
   const { control, setValue } = useFormContext<FormValues>();
+  const gate = useGuestGate();
   const iconUrl = useWatch({ control, name: "set_icon_url" }) ?? "";
   const iconCode = useWatch({ control, name: "set_icon_code" }) ?? "";
   const rarity = (useWatch({ control, name: "rarity" }) || null) as
@@ -206,9 +208,15 @@ export function SetIconPanel({
             />
             <button
               type="button"
-              disabled={!userId || uploading}
-              onClick={() => inputRef.current?.click()}
-              className="inline-flex h-9 items-center rounded-md border border-border bg-elevated/50 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-60"
+              disabled={uploading}
+              // Signed out: the guest creator's sign-up dialog (TODO HM3),
+              // else off with its reason in its name (aria-disabled).
+              onClick={
+                userId ? () => inputRef.current?.click() : gate ? () => gate("set-icon") : undefined
+              }
+              aria-disabled={!userId && !gate ? true : undefined}
+              aria-label={!userId && !gate ? "Upload your own — sign in to upload an icon" : undefined}
+              className="inline-flex h-9 items-center rounded-md border border-border bg-elevated/50 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-60 aria-disabled:opacity-60"
             >
               {uploading ? "Uploading…" : "Upload your own"}
             </button>

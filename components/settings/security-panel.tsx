@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { forgetGuestCard } from "@/lib/creator/guest-draft";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -136,6 +137,8 @@ export function SecurityPanel({ email, providers, emailJustChanged }: SecurityPa
 
       <form
         action={signOutEverywhereAction}
+        // A guest card kept in this browser goes with the session (TODO HM3).
+        onSubmit={() => void forgetGuestCard()}
         className="flex flex-wrap items-center justify-between gap-3 pt-6"
       >
         <SectionHeading

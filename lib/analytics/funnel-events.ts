@@ -67,9 +67,10 @@ export const CLIENT_FUNNEL_EVENTS = [
   // the Storefront chain counts cta_click by event alone (0112), so a
   // create click there would read as a pricing CTA.
   "create_cta_click",
-  // A signed-out visitor pressed Save (or an AI button) in the guest
-  // creator and was asked to sign up (TODO HM3): `reason` is "save" or
-  // "ai". Anonymous — a guest has no id.
+  // A signed-out visitor pressed Save (or an AI button, or another
+  // account-only control) in the guest creator and was asked to sign up
+  // (TODO HM3): `reason` is "save", "ai", "import", "real-card-art",
+  // "set-icon" or "pips". Anonymous — a guest has no id.
   "guest_save_gate",
 ] as const;
 
