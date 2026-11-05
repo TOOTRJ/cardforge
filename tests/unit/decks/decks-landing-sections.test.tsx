@@ -12,8 +12,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 //     nothing at all when no theme has a deck;
 //   * "Trending now" right under it, as the gallery's glowing hero block
 //     with its Week / Month / Year / All time switch (owner 2026-11-04),
-//     opening on the month — else the next range with decks, in the
-//     gallery's order — a rank badge over each tile that leaves its one
+//     opening on the YEAR (owner 2026-11-05, DK8.9; the cards keep the
+//     month) — else the next range with decks (all time, month, week) — a rank badge over each tile that leaves its one
 //     link alone, and the range's likes under it;
 //   * "Discover" in place of "Newest public decks" (which ordered by the
 //     last EDIT, decks.updated_at);
@@ -45,7 +45,7 @@ vi.mock("@/lib/decks/queries", () => ({
 vi.mock("@/lib/decks/tile-art", () => ({ listDeckTileArt: vi.fn() }));
 
 import { FeaturedDeckThemesSection } from "@/components/decks/featured-deck-themes";
-import { DeckRowSection, TrendingDecksRanges } from "@/components/decks/deck-row";
+import { DeckRowSection, TrendingDecksRanges, TrendingDecksRow } from "@/components/decks/deck-row";
 import { listTrendingDecksByRange } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import type { FeaturedDeckTheme, PublicDeckListing, TrendingDeckListing } from "@/lib/decks/queries";
@@ -107,19 +107,19 @@ async function renderRanges(byRange: Record<TrendingRange, TrendingDeckListing[]
 }
 
 describe("Trending decks — the gallery's hero and range switch", () => {
-  it("opens on the month in the gallery's glow, ranked tiles with the month's likes", async () => {
-    await renderRanges({ week: ranked("week", 1), month: ranked("month", 2, 3), year: [], all: ranked("all", 4) });
-    const section = screen.getByRole("region", { name: "Hot this month" });
+  it("opens on the year in the gallery's glow, ranked tiles with the year's likes", async () => {
+    await renderRanges({ week: ranked("week", 1), month: ranked("month", 4), year: ranked("year", 2, 3), all: ranked("all", 5) });
+    const section = screen.getByRole("region", { name: "Hot this year" });
     expect(section.className).toContain("border-gold/35");
-    expect(within(section).getByRole("tab", { name: "Month" }).getAttribute("aria-selected")).toBe("true");
+    expect(within(section).getByRole("tab", { name: "Year" }).getAttribute("aria-selected")).toBe("true");
     expect(within(section).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Week", "Month", "Year", "All time"]);
     expect(within(section).getAllByRole("link", { name: /^Deck/ }).map((a) => a.textContent)).toEqual(["Deck 2", "Deck 3"]);
     expect(within(section).getByText("#1").textContent).toBe("Trending rank #1");
     // The badge is no control: the tile's title stays its one link.
     expect(within(section).getByText("#1").closest("a")).toBeNull();
-    expect(within(section).getAllByTitle(/likes? this month$/).map((el) => el.getAttribute("title"))).toEqual([
-      "2 likes this month",
-      "3 likes this month",
+    expect(within(section).getAllByTitle(/likes? this year$/).map((el) => el.getAttribute("title"))).toEqual([
+      "2 likes this year",
+      "3 likes this year",
     ]);
     expect(listTrendingDecksByRange).toHaveBeenCalledWith({ limit: 4 });
     // A deck is ranked on likes alone — never the gallery's "comments and remixes".
@@ -127,17 +127,25 @@ describe("Trending decks — the gallery's hero and range switch", () => {
     expect(section.textContent).not.toMatch(/comment|remix/i);
   });
 
-  it("a month with nothing opens on the year, then all time — the gallery's order", async () => {
-    await renderRanges({ week: ranked("week", 1), month: [], year: [], all: ranked("all", 4) });
+  it("a year with nothing opens on all time, then the month, then the week", async () => {
+    await renderRanges({ week: ranked("week", 1), month: ranked("month", 2), year: [], all: ranked("all", 4) });
     const section = screen.getByRole("region", { name: "Hottest of all time" });
     expect(within(section).getByRole("tab", { name: "All time" }).getAttribute("aria-selected")).toBe("true");
     // All time has no decay, so its line doesn't say "recent".
     expect(within(section).getByText("Ranked by every like from the community — old and new count the same.")).toBeTruthy();
   });
 
+  it("with nothing in the year or all time it falls back to the month, then the week", async () => {
+    await renderRanges({ week: ranked("week", 1), month: ranked("month", 2), year: [], all: [] });
+    expect(screen.getByRole("region", { name: "Hot this month" })).toBeTruthy();
+    cleanup();
+    await renderRanges({ week: ranked("week", 1), month: [], year: [], all: [] });
+    expect(screen.getByRole("region", { name: "Hot this week" })).toBeTruthy();
+  });
+
   it("an empty range says so and points at the decks", async () => {
-    await renderRanges({ week: [], month: ranked("month", 2), year: [], all: [] });
-    const section = screen.getByRole("region", { name: "Hot this month" });
+    await renderRanges({ week: [], month: ranked("month", 2), year: ranked("year", 2), all: [] });
+    const section = screen.getByRole("region", { name: "Hot this year" });
     fireEvent.click(within(section).getByRole("tab", { name: "Week" }));
     expect(within(section).getByRole("heading", { level: 2 }).textContent).toBe("Hot this week");
     expect(await within(section).findByText(/No deck has been liked this week yet\./)).toBeTruthy();
@@ -160,6 +168,70 @@ describe("Trending decks — the gallery's hero and range switch", () => {
   });
 });
 
+describe("the gallery's trending decks row (DK8.9)", () => {
+  async function renderRow(byRange: Record<TrendingRange, TrendingDeckListing[]>) {
+    vi.mocked(listTrendingDecksByRange).mockResolvedValue(byRange);
+    vi.mocked(listDeckTileArt).mockResolvedValue(new Map());
+    const tree = await TrendingDecksRow({
+      id: "gallery-trending-decks",
+      heading: "Trending decks",
+      description: (period) => `The community's most-liked decks ${period}.`,
+    });
+    return tree ? render(tree) : null;
+  }
+
+  it("reads up to six decks and opens on the year, the description naming it", async () => {
+    await renderRow({
+      week: ranked("week", 1),
+      month: ranked("month", 2),
+      year: ranked("year", 3, 4, 5, 6, 7, 8),
+      all: ranked("all", 9),
+    });
+    expect(listTrendingDecksByRange).toHaveBeenCalledWith({ limit: 6 });
+    const section = screen.getByRole("region", { name: "Trending decks" });
+    expect(within(section).getAllByRole("link", { name: /^Deck/ }).map((a) => a.textContent)).toEqual([
+      "Deck 3",
+      "Deck 4",
+      "Deck 5",
+      "Deck 6",
+      "Deck 7",
+      "Deck 8",
+    ]);
+    expect(within(section).getByText("The community's most-liked decks this year.")).toBeTruthy();
+    // Plain: no switch, no glow, no rank badge.
+    expect(within(section).queryByRole("tablist")).toBeNull();
+    expect(section.className).not.toContain("border-gold/35");
+  });
+
+  it("draws the card rows' grid of compact tiles: no card line, no views", async () => {
+    await renderRow({ week: [], month: [], year: ranked("year", 1), all: [] });
+    const section = screen.getByRole("region", { name: "Trending decks" });
+    expect(section.innerHTML).toContain("grid-cols-2");
+    expect(section.innerHTML).toContain("@min-[100rem]:grid-cols-6");
+    expect(within(section).queryByText(/made on PipGlyph|No cards yet/)).toBeNull();
+    expect(within(section).queryByText("views")).toBeNull();
+    expect(within(section).queryByText("view")).toBeNull();
+    // The heart and the author stay.
+    expect(within(section).getByRole("button", { name: /like/i })).toBeTruthy();
+    expect(within(section).getByRole("link", { name: "@storm_griffin" })).toBeTruthy();
+  });
+
+  it("a year with nothing falls back to all time, then the month, then the week", async () => {
+    await renderRow({ week: ranked("week", 1), month: ranked("month", 2), year: [], all: ranked("all", 3) });
+    expect(screen.getByText("The community's most-liked decks all time.")).toBeTruthy();
+    cleanup();
+    await renderRow({ week: ranked("week", 1), month: ranked("month", 2), year: [], all: [] });
+    expect(screen.getByText("The community's most-liked decks this month.")).toBeTruthy();
+    cleanup();
+    await renderRow({ week: ranked("week", 1), month: [], year: [], all: [] });
+    expect(screen.getByText("The community's most-liked decks this week.")).toBeTruthy();
+  });
+
+  it("no deck liked in any range: no row", async () => {
+    expect(await renderRow({ week: [], month: [], year: [], all: [] })).toBeNull();
+  });
+});
+
 describe("the landing's structure", () => {
   const read = (file: string) => readFileSync(join(process.cwd(), file), "utf8");
   const code = (file: string) =>
@@ -179,6 +251,20 @@ describe("the landing's structure", () => {
     );
     expect(order.every((at) => at > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("the top is the gallery's: one header row, no eyebrow or Build a deck button, the compact format bar (DK8.9)", () => {
+    const source = landing();
+    // Everything above the format bar: the header row alone.
+    const top = source.slice(source.indexOf("<JsonLd"), source.indexOf("<DeckFormatLinks"));
+    expect(source).toMatch(/<BrowseLandingHeader[\s\S]*title="Community decks"[\s\S]*browsePath=\{DECKS_BROWSE_PATH\}/);
+    expect(top).not.toMatch(/PageHeader|eyebrow|NewDeckButton/);
+    expect(source).toContain('<DeckFormatLinks placement="top" />');
+    const links = code("components/decks/deck-format-links.tsx");
+    expect(links).toContain("<CompactChipGroup");
+    // The very pieces the gallery draws — never a copy of them.
+    expect(code("components/cards/hub-links.tsx")).toContain("<CompactChipGroup");
+    expect(code("app/(marketing)/gallery/gallery-view.tsx")).toContain("<BrowseLandingHeader");
   });
 
   it("Newest public decks is gone (it ordered by the last edit)", () => {

@@ -18,8 +18,24 @@
 export const TRENDING_RANGES = ["week", "month", "year", "all"] as const;
 export type TrendingRange = (typeof TRENDING_RANGES)[number];
 
-/** The gallery's default (owner 2026-11-03). */
+/** The CARDS' default (owner 2026-11-03): the gallery and the home page open
+ *  on the month. */
 export const DEFAULT_TRENDING_RANGE: TrendingRange = "month";
+
+/** The DECKS' default (owner 2026-11-05, DK8.9): a deck is liked far less
+ *  often than a card is, so a deck section opens on the year — /decks' hero
+ *  and the gallery's decks row. The cards' default above does not move. */
+export const DEFAULT_DECK_TRENDING_RANGE: TrendingRange = "year";
+
+/** The order a trending section opens in: its default, else the next range
+ *  with something in it — longer periods first, the week last — so the
+ *  section is never an empty box while another range has entries. Cards
+ *  (month): month, year, all time, week. Decks (year): year, all time,
+ *  month, week. */
+export function trendingOpeningOrder(defaultRange: TrendingRange): TrendingRange[] {
+  const rest: TrendingRange[] = ["year", "all", "month", "week"];
+  return [defaultRange, ...rest.filter((range) => range !== defaultRange)];
+}
 
 /** Mirror of 0166's weights (unchanged from the in-app score it replaced). */
 export const TRENDING_WEIGHTS = {

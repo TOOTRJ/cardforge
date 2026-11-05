@@ -137,6 +137,22 @@ describe("DeckTile", () => {
     expect(within(tile).getAllByRole("link")).toHaveLength(2);
   });
 
+  it("size=\"compact\" (the gallery's decks row) is the same tile with the card line and the views dropped", () => {
+    const { rerender } = render(<DeckTile deck={deck()} art={art} />);
+    const full = screen.getByRole("article");
+    expect(within(full).getByText(deckTileCardLine(deck()))).toBeTruthy();
+    expect(within(full).getByText("views")).toBeTruthy();
+    rerender(<DeckTile deck={deck()} art={art} size="compact" />);
+    const tile = screen.getByRole("article");
+    // Still one stretched link, the author and the heart as siblings.
+    expect(within(tile).getAllByRole("link")).toHaveLength(2);
+    expect(within(tile).getByRole("link", { name: "Ness" }).className).toContain("after:inset-0");
+    expect(within(tile).getByRole("button", { name: /like/i })).toBeTruthy();
+    expect(within(tile).queryByText(deckTileCardLine(deck()))).toBeNull();
+    expect(within(tile).queryByText("views")).toBeNull();
+    expect(within(tile).getByRole("heading", { level: 3 }).className).toContain("text-sm");
+  });
+
   it("the footer strip lets a click through to the stretched link; only the author and the heart take their own", () => {
     render(<DeckTile deck={deck()} art={art} />);
     const tile = screen.getByRole("article");

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CompactChipGroup } from "@/components/browse/compact-chip-group";
 import { cn } from "@/lib/utils";
 import { isIndexableTagHub, listTagHubs, listTypeHubs, TYPE_HUB_COPY } from "@/lib/cards/hubs";
 import { CARD_TYPE_LABELS } from "@/types/card";
@@ -53,8 +54,8 @@ export async function HubLinks({
           typeChips.length > 0 && tagChips.length > 0 && "lg:grid-cols-2",
         )}
       >
-        {typeChips.length > 0 ? <CompactHubGroup label="Card types" chips={typeChips} /> : null}
-        {tagChips.length > 0 ? <CompactHubGroup label="Popular tags" chips={tagChips} /> : null}
+        {typeChips.length > 0 ? <CompactChipGroup label="Card types" chips={typeChips} /> : null}
+        {tagChips.length > 0 ? <CompactChipGroup label="Popular tags" chips={tagChips} /> : null}
       </nav>
     );
   }
@@ -96,42 +97,3 @@ export async function HubLinks({
 
 const HUB_CHIP_CLASS =
   "inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-elevated/50 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-gold/40 hover:text-foreground";
-
-/** The compact bar's chip: 28 px tall (WCAG 2.5.8's 24 px with room). */
-const COMPACT_CHIP_CLASS =
-  "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border/60 bg-elevated/50 px-2.5 text-[11px] font-medium text-muted transition-colors hover:border-gold/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50";
-
-function CompactHubGroup({
-  label,
-  chips,
-}: {
-  label: string;
-  chips: Array<{ key: string; href: string; label: string; count: number; title?: string }>;
-}) {
-  return (
-    <div className="flex min-w-0 items-start gap-2">
-      {/* The visible label is decoration; the list carries the name. */}
-      <span aria-hidden="true" className="w-20 shrink-0 pt-2 font-mono text-[10px] uppercase tracking-wider text-subtle lg:w-auto">{label}</span>
-      {/* Below lg: one line that scrolls in its own box (a fade on the end,
-          padding so the last chip and every focus ring clear it). From lg:
-          wraps. */}
-      <ul
-        aria-label={label}
-        className={cn(
-          "flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-0.5 py-0.5 pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          "[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]",
-          "lg:flex-wrap lg:overflow-visible lg:pr-0.5 lg:[mask-image:none]",
-        )}
-      >
-        {chips.map((chip) => (
-          <li key={chip.key} className="shrink-0">
-            <Link href={chip.href} className={COMPACT_CHIP_CLASS} title={chip.title}>
-              {chip.label}
-              <span className="text-subtle">{chip.count}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
