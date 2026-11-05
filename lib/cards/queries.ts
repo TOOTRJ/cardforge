@@ -88,6 +88,9 @@ export type PublicCardListOptions = {
   colorIdentity?: ColorIdentity;
   /** Only cards that are themselves remixes of another card. */
   remixesOnly?: boolean;
+  /** Only these cards (a challenge's winners, TODO NV12) — still filtered by
+   *  visibility like every other option. */
+  ids?: readonly string[];
   /** Viewer-independent mode for static/ISR pages: uses the cookie-free
    *  public client and skips the viewer's like-state lookup
    *  (`liked_by_viewer` is always false). Anonymous RLS visibility is
@@ -402,8 +405,10 @@ export async function listPublicCardsRich(
     tag,
     colorIdentity,
     remixesOnly = false,
+    ids,
     anonymous = false,
   } = options;
+  if (ids && ids.length === 0) return [];
 
   try {
     const supabase = anonymous ? createPublicClient() : await createClient();
@@ -442,6 +447,9 @@ export async function listPublicCardsRich(
     }
     if (tag) {
       query = query.contains("tags", [tag]);
+    }
+    if (ids) {
+      query = query.in("id", [...ids]);
     }
     if (remixesOnly) {
       query = query.not("parent_card_id", "is", null);

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Hash } from "lucide-react";
+import { ArrowRight, Hash, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,8 +12,10 @@ import {
   daysLeft,
   getChallengeBySlug,
   isActive,
+  listChallengeWinners,
   type Challenge,
 } from "@/lib/challenges/queries";
+import { placeLabel } from "@/lib/challenges/winners-shared";
 import { listPublicCardsRich } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
 import { getSiteBaseUrl } from "@/lib/site-url";
@@ -75,6 +77,9 @@ export default async function ChallengeDetailPage({
     anonymous: true,
   });
   const active = isActive(challenge);
+  // A closed challenge's 1st / 2nd / 3rd (TODO NV12, 0172) — named by an
+  // admin once it closed; only cards still public are read.
+  const winners = active ? [] : await listChallengeWinners(challenge.id);
 
   return (
     <PageContainer size="wide" className="py-16">
@@ -150,6 +155,29 @@ export default async function ChallengeDetailPage({
           )}
         </div>
       </SurfaceCard>
+
+      {winners.length > 0 ? (
+        <section aria-labelledby="winners-heading" className="mt-12">
+          <h2
+            id="winners-heading"
+            className="mb-6 flex items-center gap-2 font-display text-2xl font-semibold text-foreground"
+          >
+            <Trophy className="h-5 w-5 text-gold-strong" aria-hidden />
+            Winners
+          </h2>
+          <CardGrid role="list">
+            {winners.map(({ place, card }) => (
+              <div key={card.id} role="listitem" className="flex min-w-0 flex-col gap-2">
+                <Badge variant={place === 1 ? "gold" : "outline"} className="self-start gap-1">
+                  <Trophy className="h-3 w-3" aria-hidden />
+                  {placeLabel(place)}
+                </Badge>
+                <GalleryCardTile card={card} isAuthed={false} sizes={CARD_GRID_SIZES} />
+              </div>
+            ))}
+          </CardGrid>
+        </section>
+      ) : null}
 
       {/* Entries */}
       <section aria-labelledby="entries-heading" className="mt-12">

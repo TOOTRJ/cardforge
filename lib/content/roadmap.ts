@@ -98,21 +98,21 @@ export const ROADMAP_COLUMNS: readonly RoadmapColumn[] = [
         status: "exploring",
         todo: "Profile page",
       },
-      {
-        id: "challenge-winners",
-        title: "Challenge winners",
-        summary:
-          "A showcase of each design challenge's winning cards and their makers, once a challenge can name its winners.",
-        status: "exploring",
-        todo: "NV12",
-        href: "/challenges",
-      },
     ],
   },
 ];
 
 /** Recently shipped — newest first (by the PR that shipped it), a handful at most. */
 export const ROADMAP_SHIPPED: readonly RoadmapItem[] = [
+  {
+    id: "challenge-winners",
+    title: "Challenge winners",
+    summary:
+      "A closed design challenge names its 1st, 2nd and 3rd place cards on its page, and each winning card says so on its own.",
+    status: "shipped",
+    todo: "NV12",
+    href: "/challenges",
+  },
   {
     id: "deck-activity",
     title: "Deck activity (Pro)",

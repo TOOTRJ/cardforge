@@ -63,13 +63,11 @@ describe("the roadmap data", () => {
         ["article-scheduler", "building"],
         ["deck-ai", "building"],
       ],
-      [
-        ["profile-links", "exploring"],
-        ["challenge-winners", "exploring"],
-      ],
+      [["profile-links", "exploring"]],
     ]);
     // Newest first, by the PR that shipped each.
     expect(ROADMAP_SHIPPED.map((item) => item.id)).toEqual([
+      "challenge-winners",
       "deck-activity",
       "lore-series",
       "frame-gallery",

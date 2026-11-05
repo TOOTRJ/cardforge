@@ -53,6 +53,8 @@ import { SocialIcon } from "@/components/profile/social-icon";
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { listCardChallengeWins } from "@/lib/challenges/queries";
+import { challengeWinAward, placeLabel, type ChallengeWin } from "@/lib/challenges/winners-shared";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { PageContainer } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils";
@@ -170,6 +172,7 @@ export async function CardDetailContent({
     trendingSignals,
     inDecks,
     deckTiles,
+    challengeWins,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
     // scopes the anon client to shareable cards) — and only the owner's own
@@ -220,6 +223,8 @@ export async function CardDetailContent({
     // tiles (the same list hydrated: cache()-deduped, one RPC).
     listPublicDecksContaining(card.id),
     listPublicDeckTilesContaining(card.id),
+    // The design challenges the card placed in (TODO NV12, 0172).
+    listCardChallengeWins(card.id),
   ]);
   // The comments shown are the first COMMENT_PAGE; the count the stats and
   // the structured data say is all of them.
@@ -263,6 +268,7 @@ export async function CardDetailContent({
           siteBase,
           engagement: { likes: likesCount, comments: commentCount },
           basedOn: remixParent ? `${siteBase}${remixParent.path}` : null,
+          awards: challengeWins.map(challengeWinAward),
         })
       : null;
 
@@ -367,6 +373,7 @@ export async function CardDetailContent({
             otherRemixesCount={otherRemixesCount}
           />
           <AiProvenanceTags provenance={aiProvenance} />
+          <ChallengeWinTags wins={challengeWins} />
           {/* The moderation lock (0156): the owner is told why the card
               stays private, and where to ask. */}
           {isOwner && isModerationLocked(card) ? (
@@ -613,6 +620,26 @@ const TYPE_HUB_CRUMBS: Record<CardType, string> = {
 };
 
 /** The line over the H1: what the card is, in the words people search with. */
+/** The design challenges the card placed in (TODO NV12): one badge each,
+ *  linking the challenge. */
+function ChallengeWinTags({ wins }: { wins: ChallengeWin[] }) {
+  if (wins.length === 0) return null;
+  return (
+    <ul aria-label="Challenge wins" className="flex flex-wrap gap-2 pt-1" data-testid="challenge-wins">
+      {wins.map((win) => (
+        <li key={win.challenge.slug}>
+          <Link href={`/challenges/${win.challenge.slug}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50">
+            <Badge variant={win.place === 1 ? "gold" : "outline"} className="gap-1.5 hover:border-border-strong">
+              <Trophy className="h-3.5 w-3.5" aria-hidden />
+              {placeLabel(win.place)} · {win.challenge.title}
+            </Badge>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function cardEyebrow(cardType: string | null): string {
   if (!cardType || cardType === "spell") return "Custom MTG card";
   const label = CARD_TYPE_LABELS[cardType as CardType];
@@ -1145,6 +1172,7 @@ export function buildCardJsonLd({
   siteBase,
   engagement,
   basedOn,
+  awards = [],
 }: {
   inDecks: Array<{ slug: string; title: string }>;
   card: {
@@ -1190,6 +1218,8 @@ export function buildCardJsonLd({
   /** The PipGlyph card it remixes (TODO CP2b): isBasedOn. (A Scryfall
    *  source has no stable page URL of its own — only its uuid is stored.) */
   basedOn?: string | null;
+  /** Its design-challenge places (TODO NV12): award, as the page says them. */
+  awards?: readonly string[];
 }): Record<string, unknown> {
   const description =
     // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
@@ -1297,6 +1327,7 @@ export function buildCardJsonLd({
   // prints (TODO 6.2) — whatever the description led with.
   const rulesText = cardPageRulesText({ ...card, rules_text: card.rules_text ?? null })?.trim();
   if (rulesText) schema.text = rulesText;
+  if (awards.length > 0) schema.award = awards.length === 1 ? awards[0] : [...awards];
   const thumb =
     card.id && card.owner_id && isStoredRenderUrl(card.rendered_thumb_url, { ownerId: card.owner_id, cardId: card.id })
       ? toRenderCdnUrl(card.rendered_thumb_url)

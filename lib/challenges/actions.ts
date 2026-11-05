@@ -8,6 +8,9 @@ import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { CHALLENGE_NAV_TAG } from "@/lib/challenges/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { slugify } from "@/lib/validation/card";
+import { isUuid } from "@/lib/ids";
+import { revalidateCardPages, type CardPageRef } from "@/lib/cards/revalidate";
+import { winnerErrorMessage } from "@/lib/challenges/winners-shared";
 
 // ---------------------------------------------------------------------------
 // Challenge admin writes. RLS already restricts writes to profiles.is_admin;
@@ -157,4 +160,79 @@ export async function closeChallengeAction(
   }
   revalidateChallengeSurfaces();
   return { ok: true, slug: data.slug };
+}
+
+export type ChallengeWinnersResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Name a CLOSED challenge's winners (TODO NV12, migration 0172): the three
+ * places as wanted, `null` = an empty place, in ONE call of
+ * set_challenge_winners (its guard refuses an open challenge and a card that
+ * isn't a public entry; its trigger notifies each newly named maker). The
+ * challenge pages and the static page of every card that gained or lost a
+ * place are refreshed.
+ */
+export async function setChallengeWinnersAction(
+  challengeId: string,
+  places: readonly (string | null)[],
+): Promise<ChallengeWinnersResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "Supabase is not configured." };
+  }
+  const denied = await requireAdmin();
+  if (denied) return { ok: false, error: denied };
+  if (!isUuid(challengeId) || places.length !== 3) {
+    return { ok: false, error: "That isn't a challenge's winners." };
+  }
+  const wanted = places.map((id) => (id ? id : null));
+  if (wanted.some((id) => id !== null && !isUuid(id))) {
+    return { ok: false, error: "That isn't one of the challenge's entries." };
+  }
+  const named = wanted.filter((id): id is string => id !== null);
+  if (new Set(named).size !== named.length) {
+    return { ok: false, error: winnerErrorMessage("duplicate_winner") };
+  }
+
+  const supabase = await createClient();
+  const { data: before } = await supabase
+    .from("challenge_winners")
+    .select("card_id")
+    .eq("challenge_id", challengeId);
+  const { error } = await supabase.rpc("set_challenge_winners", {
+    p_challenge_id: challengeId,
+    p_first: wanted[0],
+    p_second: wanted[1],
+    p_third: wanted[2],
+  });
+  if (error) return { ok: false, error: winnerErrorMessage(error.message) };
+
+  revalidateChallengeSurfaces();
+  const touched = [...new Set([...(before ?? []).map((row) => row.card_id), ...named])];
+  revalidateCardPages(await cardPageRefs(supabase, touched));
+  return { ok: true };
+}
+
+/** Each card's id, slug and owner's handle, for its static page. */
+async function cardPageRefs(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  ids: readonly string[],
+): Promise<CardPageRef[]> {
+  if (ids.length === 0) return [];
+  const { data: cards } = await supabase.from("cards").select("id, slug, owner_id").in("id", [...ids]);
+  const ownerIds = [...new Set((cards ?? []).map((card) => card.owner_id))];
+  const { data: owners } = ownerIds.length
+    ? await supabase.from("profiles").select("id, username").in("id", ownerIds)
+    : { data: [] };
+  const handles = new Map((owners ?? []).map((owner) => [owner.id, owner.username]));
+  const found = new Set((cards ?? []).map((card) => card.id));
+  return [
+    ...(cards ?? []).map((card) => ({
+      id: card.id,
+      slug: card.slug,
+      ownerUsername: handles.get(card.owner_id) ?? null,
+    })),
+    // A card the admin can't read any more (made private since): no name,
+    // so every card page expires once rather than one staying stale.
+    ...ids.filter((id) => !found.has(id)).map((id) => ({ id })),
+  ];
 }
