@@ -93,9 +93,9 @@ configure it as code instead:
 
 1. Set the two values as secrets of the dev branch (its ref is
    `[remotes.dev]`'s `project_id`). Put them in a git-ignored file such as
-   `supabase/.env.discord` (`SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID=…`,
-   `SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET=…`) — never on the command line,
-   where they stay in the shell's history — then:
+   `supabase/.env.discord` (`DISCORD_CLIENT_ID=…`, `DISCORD_SECRET=…`; the
+   CLI refuses a secret whose name starts with `SUPABASE_`) — never on the
+   command line, where they stay in the shell's history — then:
 
    ```bash
    supabase secrets set --project-ref <dev branch ref> --env-file supabase/.env.discord
@@ -103,16 +103,18 @@ configure it as code instead:
 
    and delete the file.
 
-2. A PR adds, under `[remotes.dev]` in `supabase/config.toml`:
+2. `supabase/config.toml` turns it on for the dev branch alone (done
+   2026-11-04, with the secrets set):
 
    ```toml
    [remotes.dev.auth.external.discord]
    enabled = true
-   client_id = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID)"
-   secret = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET)"
+   client_id = "env(DISCORD_CLIENT_ID)"
+   secret = "env(DISCORD_SECRET)"
    ```
 
-   Merged, the dev branch picks it up through the `dev` git branch.
+   The dev branch picks a change to it up through the `dev` git branch. A new
+   Client Secret is a `supabase secrets set` again, no PR.
 3. Vercel → **Preview** (and Development, for local) →
    `NEXT_PUBLIC_AUTH_DISCORD` = `1` → redeploy the preview.
 
