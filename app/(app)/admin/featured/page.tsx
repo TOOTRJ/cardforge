@@ -6,6 +6,14 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { FeaturedManager } from "@/components/admin/featured-manager";
 import { FeaturedCardsManager } from "@/components/admin/featured-cards-manager";
 import {
+  HeroPoolManager,
+  type AdminHeroPoolCard,
+  type AdminHeroSuggestion,
+  type HeroDayPair,
+} from "@/components/admin/hero-pool-manager";
+import { dailyHeroPair } from "@/lib/featured/hero-rotation";
+import { featuredImageOf } from "@/lib/featured/queries";
+import {
   FeaturedDeckThemesManager,
   type AdminDeckTheme,
 } from "@/components/admin/featured-deck-themes-manager";
@@ -34,10 +42,16 @@ export default async function AdminFeaturedPage() {
   // managers below would then offer to fill what is already filled.
   let creatorsFailed = !isAdminConfigured();
   let cardsFailed = !isAdminConfigured();
+  let hero: HeroPoolRead = { pool: [], suggestions: [], days: [], slotRefusals: [null, null] };
+  let heroFailed = !isAdminConfigured();
   let deckThemes: AdminDeckTheme[] = [];
   let deckThemesFailed = !isAdminConfigured();
   if (isAdminConfigured()) {
     const admin = createAdminClient();
+    const heroRead = await readHeroPool(admin);
+    hero = heroRead ?? hero;
+    heroFailed = heroRead === null;
+
     const themesRead = await readDeckThemes(admin);
     deckThemes = themesRead ?? [];
     deckThemesFailed = themesRead === null;
@@ -102,15 +116,31 @@ export default async function AdminFeaturedPage() {
       </SurfaceCard>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-subtle">
-        Homepage featured cards
+        Homepage hero pool
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Replace the landing-page hero&apos;s example cards with real ones —
-        paste a card page URL per slot.
+        The home page hero shows two cards from this pool each day (UTC), the
+        same two for every visitor, a new pair at midnight. Paste any public
+        card&apos;s URL to add it; it shows while it stays public with a
+        render. Suggestions offer only original cards. Changes show on the
+        home page at once.
+      </p>
+      {heroFailed ? <AdminLoadError what="the hero pool" className="mt-4" /> : null}
+      <SurfaceCard className="mt-4 p-6">
+        <HeroPoolManager pool={hero.pool} suggestions={hero.suggestions} days={hero.days} />
+      </SurfaceCard>
+
+      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-subtle">
+        Fallback hero cards
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        Used only while the pool has fewer than two cards on the hero — with the
+        original-card checks (public, baked, not made from a real card, not a
+        remix, a creator&apos;s). With neither, the home page shows its placeholder pair.
       </p>
       {cardsFailed ? <AdminLoadError what="the featured cards" className="mt-4" /> : null}
       <SurfaceCard className="mt-4 p-6">
-        <FeaturedCardsManager slots={cardSlots} />
+        <FeaturedCardsManager slots={cardSlots} refusals={hero.slotRefusals} />
       </SurfaceCard>
 
       <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-subtle">
@@ -185,4 +215,74 @@ async function readDeckThemes(admin: ReturnType<typeof createAdminClient>): Prom
         return { deckId: row.deck_id, title: deck.title, slug: deck.slug, hiddenReason };
       }),
   }));
+}
+
+type HeroPoolRead = {
+  pool: AdminHeroPoolCard[];
+  suggestions: AdminHeroSuggestion[];
+  days: HeroDayPair[];
+  /** The fallback slots' guard answers (index 0 = slot 1); null = shown. */
+  slotRefusals: [string | null, string | null];
+};
+
+/** The pool, its suggestions and the next two days' pairs — every answer the
+ *  database's (featured_pool_admin_list / _suggestions / home_hero_pool), the
+ *  pairs picked by the home page's own dailyHeroPair. A card the database
+ *  lets through but the HOME PAGE drops says why too: home_hero_pool leaves
+ *  out an owner with no handle, and the app a render that isn't one of our
+ *  stored bakes (featuredImageOf). null = a read failed. */
+async function readHeroPool(admin: ReturnType<typeof createAdminClient>): Promise<HeroPoolRead | null> {
+  const [listRes, suggestRes, shownRes] = await Promise.all([
+    admin.rpc("featured_pool_admin_list"),
+    admin.rpc("featured_pool_suggestions", { p_limit: 12 }),
+    admin.rpc("home_hero_pool"),
+  ]);
+  for (const res of [listRes, suggestRes, shownRes]) {
+    if (res.error) {
+      console.error("[admin/featured] hero pool read failed:", res.error.message);
+      return null;
+    }
+  }
+  const rows = listRes.data ?? [];
+  const read = shownRes.data ?? [];
+  const keyOf = (r: { source: string; card_id: string }) => `${r.source}:${r.card_id}`;
+  const inRead = new Set(read.map(keyOf));
+  const drawable = new Set(read.filter((r) => featuredImageOf(r)).map(keyOf));
+  const refusalOf = (r: (typeof rows)[number]) =>
+    r.refusal ??
+    (!inRead.has(keyOf(r)) ? "no_handle" : !drawable.has(keyOf(r)) ? "render_not_drawable" : null);
+  const slotRefusals: [string | null, string | null] = [null, null];
+  for (const r of rows) {
+    if (r.source === "fallback" && (r.slot === 1 || r.slot === 2)) slotRefusals[r.slot - 1] = refusalOf(r);
+  }
+  const shown = read
+    .filter((r) => drawable.has(keyOf(r)))
+    .map((r) => ({ ...r, id: r.card_id }));
+  const now = Date.now();
+  const days: HeroDayPair[] = [
+    { label: "On the hero today", at: new Date(now) },
+    { label: "Tomorrow (from 00:00 UTC)", at: new Date(now + 86_400_000) },
+  ].map((d) => ({ label: d.label, titles: dailyHeroPair(shown, d.at).map((r) => r.title) }));
+  return {
+    pool: rows
+      .filter((r) => r.source === "pool")
+      .map((r) => ({
+        cardId: r.card_id,
+        title: r.title,
+        slug: r.slug,
+        ownerUsername: r.username,
+        refusal: refusalOf(r),
+        notOriginal: r.not_original,
+      })),
+    suggestions: (suggestRes.data ?? []).map((r) => ({
+      cardId: r.card_id,
+      title: r.title,
+      slug: r.slug,
+      ownerUsername: r.username,
+      likes: r.likes_count,
+      thumbUrl: featuredImageOf(r),
+    })),
+    days,
+    slotRefusals,
+  };
 }

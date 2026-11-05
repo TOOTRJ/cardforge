@@ -580,6 +580,21 @@ export type Database = {
           },
         ];
       };
+      // Migration 0169 — service role only (the hero reads home_hero_pool).
+      featured_pool: {
+        Row: { card_id: string; added_at: string; added_by: string | null };
+        Insert: { card_id: string; added_at?: string; added_by?: string | null };
+        Update: { card_id?: string; added_at?: string; added_by?: string | null };
+        Relationships: [
+          {
+            foreignKeyName: "featured_pool_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: true;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       featured_cards: {
         Row: {
           card_id: string;
@@ -2751,6 +2766,53 @@ export type Database = {
       list_featured_deck_themes: {
         Args: { p_themes?: number; p_decks?: number };
         Returns: { theme_id: string; title: string; blurb: string | null; deck_ids: string[] }[];
+      };
+      // Migration 0169 — the home hero's pool (hand-extended).
+      home_hero_pool: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          card_id: string;
+          source: "pool" | "fallback";
+          ord: number;
+          slug: string;
+          title: string;
+          frame_style: Json;
+          rendered_image_url: string | null;
+          rendered_thumb_url: string | null;
+          username: string;
+          display_name: string | null;
+        }[];
+      };
+      featured_pool_admin_list: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          card_id: string;
+          source: "pool" | "fallback";
+          slot: number | null;
+          added_at: string;
+          slug: string;
+          title: string;
+          username: string | null;
+          refusal: string | null;
+          not_original: string | null;
+        }[];
+      };
+      featured_pool_suggestions: {
+        Args: { p_limit?: number };
+        Returns: {
+          card_id: string;
+          slug: string;
+          title: string;
+          username: string;
+          likes_count: number;
+          created_at: string;
+          rendered_thumb_url: string | null;
+          rendered_image_url: string | null;
+        }[];
+      };
+      featured_pool_add: {
+        Args: { p_card_id: string; p_added_by: string | null; p_original_only: boolean };
+        Returns: string;
       };
       claim_job_step: {
         Args: { p_job_id: string; p_step_key: string | null };

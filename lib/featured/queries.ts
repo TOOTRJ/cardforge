@@ -9,6 +9,7 @@ import {
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { dailyHeroPair } from "@/lib/featured/hero-rotation";
 
 // ---------------------------------------------------------------------------
 // Featured creators — admin-curated via profiles.featured_at (0052). Reads
@@ -151,7 +152,6 @@ export async function listFeaturedCreators(
 }
 
 export type FeaturedHomeCard = {
-  slot: number;
   slug: string;
   title: string;
   imageUrl: string;
@@ -160,66 +160,29 @@ export type FeaturedHomeCard = {
   owner: { username: string; displayName: string | null };
 };
 
-/** The admin-curated homepage hero cards (0053). Public-client read keeps
- *  the homepage static; a featured card that later goes non-public (or
- *  loses its render) silently drops out — the hero falls back to the
- *  placeholder pair. */
-export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
+/** The home page hero's cards for the UTC day `now` falls in (TODO HM4,
+ *  migration 0169): home_hero_pool() hands the pool's cards the hero can
+ *  draw (public, baked) and the fallback slots' that pass the original-card
+ *  guard after them; dailyHeroPair re-sorts them by (source, ord) — never
+ *  trusting the transport's order — and picks the day's two. Public-client
+ *  read keeps the page ISR; a card with no drawable bake drops out, and an
+ *  empty answer is the placeholder pair. */
+export async function listFeaturedHomeCards(now: Date = new Date()): Promise<FeaturedHomeCard[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = createPublicClient();
-  const { data } = await supabase
-    .from("featured_cards")
-    .select(
-      "slot, cards(slug, title, visibility, frame_style, rendered_image_url, rendered_thumb_url, owner_id)",
-    )
-    .order("slot", { ascending: true });
-  if (!data || data.length === 0) return [];
-
-  const rows = data
-    .map((r) => ({ slot: r.slot, card: r.cards as unknown as {
-      slug: string;
-      title: string;
-      visibility: string;
-      frame_style?: unknown;
-      rendered_image_url: string | null;
-      rendered_thumb_url?: string | null;
-      owner_id: string;
-    } | null }))
-    .filter(
-      (r) =>
-        r.card &&
-        r.card.visibility === "public" &&
-        Boolean(featuredImageOf(r.card)),
-    ) as { slot: number; card: NonNullable<{
-      slug: string;
-      title: string;
-      visibility: string;
-      frame_style?: unknown;
-      rendered_image_url: string | null;
-      rendered_thumb_url?: string | null;
-      owner_id: string;
-    }> }[];
-  if (rows.length === 0) return [];
-
-  const ownerIds = [...new Set(rows.map((r) => r.card.owner_id))];
-  const { data: owners } = await supabase
-    .from("profiles")
-    .select("id, username, display_name")
-    .in("id", ownerIds);
-  const byId = new Map((owners ?? []).map((o) => [o.id, o]));
-
-  return rows
-    .map((r) => {
-      const owner = byId.get(r.card.owner_id);
-      if (!owner?.username) return null;
-      return {
-        slot: r.slot,
-        slug: r.card.slug,
-        title: r.card.title,
-        imageUrl: featuredImageOf(r.card) as string,
-        landscape: isLandscapeFrame(r.card.frame_style),
-        owner: { username: owner.username, displayName: owner.display_name },
-      };
-    })
-    .filter((r): r is FeaturedHomeCard => r !== null);
+  const { data, error } = await supabase.rpc("home_hero_pool");
+  if (error) {
+    console.warn("listFeaturedHomeCards: home_hero_pool failed", error.message);
+    return [];
+  }
+  const rows = (data ?? [])
+    .map((r) => ({ ...r, id: r.card_id, imageUrl: featuredImageOf(r) }))
+    .filter((r): r is typeof r & { imageUrl: string } => Boolean(r.imageUrl));
+  return dailyHeroPair(rows, now).map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    imageUrl: r.imageUrl,
+    landscape: isLandscapeFrame(r.frame_style),
+    owner: { username: r.username, displayName: r.display_name },
+  }));
 }
