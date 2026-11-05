@@ -6,7 +6,7 @@ import { chainClient, type ChainAnswer } from "@/tests/stubs/supabase-chain";
 // server's: signed in, the plan is Pro (an admin / billing off counts — the
 // entitlements say "pro"; Plus does not), the deck is the caller's. Then ONE
 // read of twice the period from each database function (0151's views, 0154's
-// likes), built into the period and the one before.
+// likes, 0171's clones), built into the period and the one before.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -58,6 +58,7 @@ describe("getDeckActivityAction", () => {
     state.rpc = {
       deck_views_by_day: { data: [{ day: today, views: 4 }], error: null },
       deck_likes_by_day: { data: [{ day: today, likes: 2 }], error: null },
+      deck_clones_by_day: { data: [{ day: today, clones: 3 }], error: null },
     };
     const result = await getDeckActivityAction(DECK, 7);
     expect(result.ok).toBe(true);
@@ -66,8 +67,10 @@ describe("getDeckActivityAction", () => {
     expect(result.activity.views.total).toBe(4);
     expect(result.activity.likes.total).toBe(2);
     expect(result.activity.likes.change).toEqual({ kind: "new" });
+    expect(result.activity.clones?.total).toBe(3);
     expect(stub.rpc).toHaveBeenCalledWith("deck_views_by_day", { p_deck_id: DECK, p_days: 14 });
     expect(stub.rpc).toHaveBeenCalledWith("deck_likes_by_day", { p_deck_id: DECK, p_days: 14 });
+    expect(stub.rpc).toHaveBeenCalledWith("deck_clones_by_day", { p_deck_id: DECK, p_days: 14 });
   });
 
   it("refuses a free or Plus plan before any read", async () => {
@@ -108,6 +111,25 @@ describe("getDeckActivityAction", () => {
     expect(result.ok && result.activity.likes.total).toBe(2);
     const likesRead = stub.forTable("deck_likes")[0];
     expect(likesRead?.calls.some((c) => c.method === "eq" && c.args[0] === "deck_id" && c.args[1] === DECK)).toBe(true);
+  });
+
+  it("draws views and likes with no clones series on a database 0171 hasn't reached", async () => {
+    db();
+    state.rpc = {
+      deck_views_by_day: { data: [{ day: new Date().toISOString().slice(0, 10), views: 1 }], error: null },
+      deck_clones_by_day: { data: null, error: { code: "PGRST202", message: "no function" } } as ChainAnswer,
+    };
+    const result = await getDeckActivityAction(DECK, 7);
+    expect(result.ok && result.activity.views.total).toBe(1);
+    // No series at all: a false "0 clones" would read as a real zero.
+    expect(result.ok && result.activity.clones).toBeNull();
+  });
+
+  it("says it failed when the clones function errors for another reason", async () => {
+    db();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    state.rpc = { deck_clones_by_day: { data: null, error: { message: "boom" } } as ChainAnswer };
+    expect(await getDeckActivityAction(DECK, 7)).toEqual({ ok: false, error: "failed" });
   });
 
   it("says it failed when a function errors", async () => {

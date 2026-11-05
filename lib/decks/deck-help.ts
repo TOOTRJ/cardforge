@@ -65,7 +65,8 @@ export type BreakdownHelpKey =
   | "sampleHand"
   | "activity"
   | "views"
-  | "likes";
+  | "likes"
+  | "clones";
 
 /** What each part of the breakdown, the playtest and the activity reads. */
 export const BREAKDOWN_HELP: Record<BreakdownHelpKey, { title: string; body: string }> = {
@@ -103,7 +104,7 @@ export const BREAKDOWN_HELP: Record<BreakdownHelpKey, { title: string; body: str
   },
   activity: {
     title: "Deck activity",
-    body: "Views and likes of this deck over the period you pick, against the period before. A view is counted once per person a day; your own visits, search crawlers and page prefetches aren't counted.",
+    body: "Views, likes and clones of this deck over the period you pick, against the period before. A view is counted once per person a day; your own visits, search crawlers and page prefetches aren't counted. Copies you make of your own deck aren't clones here.",
   },
   views: {
     title: "Views",
@@ -112,5 +113,9 @@ export const BREAKDOWN_HELP: Record<BreakdownHelpKey, { title: string; body: str
   likes: {
     title: "Likes",
     body: "Likes the deck holds, on the day each was given. A like taken back is gone from the count.",
+  },
+  clones: {
+    title: "Clones",
+    body: "Copies other people made of the deck with Copy deck, on the day each was made. A copy its maker deleted is gone from the count; your own copies of your own deck never count.",
   },
 };

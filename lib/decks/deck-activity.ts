@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
-// Deck activity (TODO DK7.4, Pro): a deck's views and likes over the last
-// 7 / 30 / 90 days, for its OWNER — pure, over the per-day rows the database
-// hands out (0151's deck_views_by_day, 0154's deck_likes_by_day: every UTC
-// day of a span, oldest first, zeros included).
+// Deck activity (TODO DK7.4 / DK7.4a, Pro): a deck's views, likes and clones
+// over the last 7 / 30 / 90 days, for its OWNER — pure, over the per-day rows
+// the database hands out (0151's deck_views_by_day, 0154's deck_likes_by_day,
+// 0171's deck_clones_by_day: every UTC day of a span, oldest first, zeros
+// included).
 //
 // The action asks for TWICE the period so one read gives both the period
 // and the one before it: the last `days` rows are "this period", the
@@ -15,7 +16,9 @@
 // the last ending today — 91 days would leave a 1-day stub, so the first bar
 // of 90 covers 6 days). The table twin lists the same bars.
 //
-// Clones are not counted: "Clone deck" is DK5.16 and nothing records one yet.
+// Clones are counted like likes: the clones the deck HOLDS (a copy its maker
+// deleted is gone), on the UTC day each was made, never the owner's own copy
+// of their own deck — all in deck_clones_by_day, which this file only draws.
 // ---------------------------------------------------------------------------
 
 export const ACTIVITY_PERIODS = [7, 30, 90] as const;
@@ -26,8 +29,8 @@ export function isActivityPeriod(value: unknown): value is ActivityPeriod {
   return typeof value === "number" && (ACTIVITY_PERIODS as readonly number[]).includes(value);
 }
 
-export type ActivityMetric = "views" | "likes";
-export const ACTIVITY_METRICS: readonly ActivityMetric[] = ["views", "likes"];
+export type ActivityMetric = "views" | "likes" | "clones";
+export const ACTIVITY_METRICS: readonly ActivityMetric[] = ["views", "likes", "clones"];
 
 /** One row as the database returns it: a UTC day (YYYY-MM-DD) and its count. */
 export type DayCount = { day: string; count: number };
@@ -58,6 +61,8 @@ export type DeckActivity = {
   today: string;
   views: ActivitySeries;
   likes: ActivitySeries;
+  /** null on a database without 0171: no series is drawn, never a false 0. */
+  clones: ActivitySeries | null;
 };
 
 const DAY_MS = 86_400_000;
@@ -161,9 +166,14 @@ export function buildActivitySeries(
   };
 }
 
-/** Both series for a period, from the two functions' raw rows. */
+/** The series a deck's activity has, in the order they are drawn. */
+export function activitySeriesOf(activity: DeckActivity): ActivitySeries[] {
+  return ACTIVITY_METRICS.flatMap((metric) => activity[metric] ?? []);
+}
+
+/** All three series for a period, from the functions' raw rows (clones: null where 0171 isn't). */
 export function buildDeckActivity(
-  input: { views: readonly DayCount[]; likes: readonly DayCount[] },
+  input: { views: readonly DayCount[]; likes: readonly DayCount[]; clones: readonly DayCount[] | null },
   days: ActivityPeriod,
   today: string,
 ): DeckActivity {
@@ -172,6 +182,7 @@ export function buildDeckActivity(
     today,
     views: buildActivitySeries("views", input.views, days, today),
     likes: buildActivitySeries("likes", input.likes, days, today),
+    clones: input.clones ? buildActivitySeries("clones", input.clones, days, today) : null,
   };
 }
 
@@ -191,6 +202,7 @@ export function bucketLabel(bucket: ActivityBucket): string {
 export const ACTIVITY_METRIC_LABELS: Record<ActivityMetric, { title: string; one: string; many: string }> = {
   views: { title: "Views", one: "view", many: "views" },
   likes: { title: "Likes", one: "like", many: "likes" },
+  clones: { title: "Clones", one: "clone", many: "clones" },
 };
 
 export function countNoun(metric: ActivityMetric, count: number): string {

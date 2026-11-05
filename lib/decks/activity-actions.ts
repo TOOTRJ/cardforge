@@ -30,6 +30,11 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 // owner can read anyway (0151's policy), by their UTC day — capped at
 // LIKES_FALLBACK_CAP rows. Remove the fallback once 0154 is on production
 // and dev.
+// Clones (0171, DK7.4a) have no such fallback — deck_remix_sources is the
+// service role's alone — so on a database without deck_clones_by_day the
+// clones series is left out (null: no tile, no chart — never a false 0; the
+// views and likes still draw). Remove that
+// branch once 0171 is on production and dev.
 // ---------------------------------------------------------------------------
 
 const LIKES_FALLBACK_CAP = 5000;
@@ -56,9 +61,10 @@ export async function getDeckActivityAction(deckId: string, days: number): Promi
 
   const span = activityReadDays(days);
   const today = utcDay(new Date());
-  const [views, likes] = await Promise.all([
+  const [views, likes, clones] = await Promise.all([
     supabase.rpc("deck_views_by_day", { p_deck_id: deckId, p_days: span }),
     supabase.rpc("deck_likes_by_day", { p_deck_id: deckId, p_days: span }),
+    supabase.rpc("deck_clones_by_day", { p_deck_id: deckId, p_days: span }),
   ]);
   let likeRows: DayCount[] | null = likes.error
     ? null
@@ -75,8 +81,11 @@ export async function getDeckActivityAction(deckId: string, days: number): Promi
       likeRows = (fallback.data ?? []).map((row) => ({ day: utcDay(new Date(row.created_at)), count: 1 }));
     }
   }
-  if (views.error || !likeRows) {
-    console.error("[deck-activity] read failed", views.error?.message ?? likes.error?.message);
+  if (views.error || !likeRows || (clones.error && !isMissingFunction(clones.error))) {
+    console.error(
+      "[deck-activity] read failed",
+      views.error?.message ?? likes.error?.message ?? clones.error?.message,
+    );
     return { ok: false, error: "failed" };
   }
 
@@ -86,6 +95,7 @@ export async function getDeckActivityAction(deckId: string, days: number): Promi
       {
         views: (views.data ?? []).map((row) => ({ day: row.day, count: row.views })),
         likes: likeRows,
+        clones: clones.error ? null : (clones.data ?? []).map((row) => ({ day: row.day, count: row.clones })),
       },
       days,
       today,

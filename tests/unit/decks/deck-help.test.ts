@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { countsTowardDeckStats, computeDeckAnalytics } from "@/lib/decks/analytics";
 import { deckLibraryOf } from "@/lib/decks/deck-charts";
 import { BOARD_HELP, BREAKDOWN_HELP, TOTAL_MANA_VALUE_ARTICLE_SLUG, TOTAL_MANA_VALUE_HELP } from "@/lib/decks/deck-help";
+import { ACTIVITY_METRIC_LABELS, ACTIVITY_METRICS } from "@/lib/decks/deck-activity";
 import { validateDeck } from "@/lib/decks/format-rules";
 import { getArticle } from "@/lib/content/articles";
 import { DECK_BOARD_VALUES, type DeckBoard, type DeckCardEntry } from "@/types/deck";
@@ -102,5 +103,19 @@ describe("the breakdown's help", () => {
       expect(help.body.length, key).toBeGreaterThan(40);
       expect(help.body, key).not.toMatch(/mulligan/i);
     }
+  });
+});
+
+describe("the deck activity help", () => {
+  it("has a box for every series the panel draws, titled as its tile", () => {
+    for (const metric of ACTIVITY_METRICS) {
+      expect(BREAKDOWN_HELP[metric].title).toBe(ACTIVITY_METRIC_LABELS[metric].title);
+    }
+  });
+
+  it("names every series, and says an own copy is never a clone", () => {
+    const activity = BREAKDOWN_HELP.activity.body.toLowerCase();
+    for (const metric of ACTIVITY_METRICS) expect(activity).toContain(ACTIVITY_METRIC_LABELS[metric].many);
+    expect(BREAKDOWN_HELP.clones.body).toMatch(/own copies of your own deck never count/);
   });
 });
