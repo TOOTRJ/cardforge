@@ -39,22 +39,25 @@ export type HeroFeaturedCard = {
  *  first of the day's pair, tilted like the pair's second card. Its `sizes`
  *  is that width; the pair below keeps its own. Lazy, never `priority`: it is
  *  display:none from sm up, and a preload would fetch it on every desktop
- *  (a lazy image in a hidden box is never fetched). */
+ *  (a lazy image in a hidden box is never fetched). DECORATIVE: the pair
+ *  below links the same card with its name, so this copy is no link, has an
+ *  empty alt and is aria-hidden — never a second stop for a keyboard or a
+ *  screen reader. */
 function PhoneHeroCard({ card }: { card: HeroFeaturedCard }) {
   return (
-    <Link
-      href={`/card/${card.owner.username}/${card.slug}`}
-      className="mt-1 block w-[24vw] max-w-24 shrink-0 rotate-[4deg] sm:hidden"
+    <div
+      aria-hidden
+      className="mt-1 w-[24vw] max-w-24 shrink-0 rotate-[4deg] sm:hidden"
     >
       <Image
         src={card.imageUrl}
-        alt={card.title}
+        alt=""
         width={card.landscape ? 588 : 420}
         height={card.landscape ? 420 : 588}
         sizes="(max-width: 400px) 24vw, 96px"
         className={`h-auto w-full ${cardCornersClass(card.landscape ?? false)} border border-gold/30 bg-[#101015] bg-clip-padding shadow-xl`}
       />
-    </Link>
+    </div>
   );
 }
 
