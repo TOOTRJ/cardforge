@@ -252,6 +252,17 @@ import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/sav
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
 import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
+import { useGuestDraft, type GuestDraftRole, type GuestPictureUploads } from "@/components/creator/use-guest-draft";
+import { GuestPicturesProvider } from "@/components/creator/guest-pictures";
+import {
+  GUEST_PICTURE_FAILED_REASON,
+  GUEST_PICTURE_UPLOADING_REASON,
+  GuestDraftRestoredNotice,
+  GuestSaveGate,
+  type GuestSaveGateReason,
+} from "@/components/creator/guest-save-gate";
+import { blobUrlPaths } from "@/lib/creator/guest-draft";
+import { trackFunnelEvent } from "@/lib/analytics/funnel-client";
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
@@ -502,6 +513,11 @@ type CardCreatorFormProps = {
   /** "stepper" (shipped) or the lab's "canvas" — the centred live preview
    *  with clickable regions (lib/creator/lab-shared.ts). */
   layout?: CreatorLayout;
+  /** A guest's card (TODO HM3, components/creator/use-guest-draft.ts):
+   *  "guest" = the signed-out creator, which keeps the card in this browser
+   *  and asks for an account at Save; "restore" = the signed-in plain
+   *  create, which puts such a card back. Absent everywhere else. */
+  guestDraft?: GuestDraftRole | null;
 };
 
 // Step membership + field→step routing now live in lib/creator/steps.ts (pure
@@ -794,6 +810,7 @@ export function CardCreatorForm({
   isPaid = false,
   defaultFooterText = null,
   layout = "stepper",
+  guestDraft = null,
 }: CardCreatorFormProps) {
   // The real verified set: the AI dialog offers only these (AI jobs resolve
   // their frames on the server from the same set) — never an admin's
@@ -802,6 +819,18 @@ export function CardCreatorForm({
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const confirmSpend = useCreditConfirm();
+  // A signed-out visitor building a card (TODO HM3; readOnly below).
+  const guestEditing = !userId && guestDraft === "guest";
+  // The guest creator's "save needs an account" dialog — Save, or an AI
+  // button (credits belong to an account). The card is written to this
+  // browser before it opens.
+  const [saveGate, setSaveGate] = useState<GuestSaveGateReason | null>(null);
+  const flushGuestDraftRef = useRef<() => Promise<void>>(async () => {});
+  const openSaveGate = (reason: GuestSaveGateReason) => {
+    trackFunnelEvent("guest_save_gate", { reason });
+    void flushGuestDraftRef.current();
+    setSaveGate(reason);
+  };
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   // Why the unsaved-changes dialog's save didn't happen (shown in the
@@ -877,7 +906,8 @@ export function CardCreatorForm({
   const fillOpenerRef = useRef<HTMLElement | null>(null);
   const openFill = (fields: CardFillField[]) => {
     if (!userId) {
-      toast.error("Sign in to generate with AI.");
+      if (guestEditing) openSaveGate("ai");
+      else toast.error("Sign in to generate with AI.");
       return;
     }
     fillOpenerRef.current =
@@ -888,8 +918,10 @@ export function CardCreatorForm({
     setAiFillOpen(true);
   };
   const openFillRef = useRef(openFill);
+  const openSaveGateRef = useRef(openSaveGate);
   useEffect(() => {
     openFillRef.current = openFill;
+    openSaveGateRef.current = openSaveGate;
   });
   // Tracks the source card when the user seeds the form from Scryfall.
   // Surfaces as a chip near the save bar so the user remembers they need
@@ -956,7 +988,8 @@ export function CardCreatorForm({
     const generateRandom = () => openFillRef.current(FILL_PRESETS.all);
     const openIdeas = () => {
       if (!userId) {
-        toast.error("Sign in to use the idea generator.");
+        if (guestEditing) openSaveGateRef.current("ai");
+        else toast.error("Sign in to use the idea generator.");
         return;
       }
       setIdeasOpen(true);
@@ -976,7 +1009,7 @@ export function CardCreatorForm({
       window.removeEventListener(CARDFORGE_EVENTS.openIdeas, openIdeas);
       window.removeEventListener(CARDFORGE_EVENTS.scrollToForm, scrollToForm);
     };
-  }, [userId]);
+  }, [userId, guestEditing]);
 
   const defaults = useMemo(() => {
     const viewer = { paid: isPaid, footerText: defaultFooterText };
@@ -1116,10 +1149,12 @@ export function CardCreatorForm({
     };
   }, [closeImportBaseline]);
 
-  // Signed-out visitors may LOOK at the creator (every step, the live
-  // preview) but not use it (owner decision 2026-09-16): the panels are
-  // inert under a sign-up gate, and nothing they see is theirs to lose.
-  const readOnly = !userId;
+  // Signed-out visitors MAKE a card in the guest creator (TODO HM3, owner
+  // 2026-11-04 — it reversed 2026-09-16's look-only creator): every step and
+  // the live preview work, the card waits in this browser, and Save asks for
+  // an account. Anywhere else a signed-out form is read-only: the panels are
+  // inert under the sign-up gate.
+  const readOnly = !userId && !guestEditing;
 
   // Revise = edit or remix of an existing card. The Card step is gone and
   // the structural fields are read-only (LockedSummary); the submit path
@@ -1240,6 +1275,10 @@ export function CardCreatorForm({
   // (/create?deckCard=): it starts from the printing it copies, and its
   // "unchanged" baseline (the reset after the import) must not move.
   const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix);
+
+  // A restored guest card's picture uploads (TODO HM3; the hook is below,
+  // after the follows it settles) — read by Save's reason here.
+  const [guestUploads, setGuestUploads] = useState<GuestPictureUploads>("idle");
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -1482,9 +1521,16 @@ export function CardCreatorForm({
     : isRemix
       ? !hasMeaningfulChange(Object.keys(dirtyFields), "remix")
       : false;
+  // A restored guest card's pictures upload first (TODO HM3): a `blob:` URL
+  // is this page's own and never reaches the save.
+  const localPictureWaiting = Boolean(userId) && blobUrlPaths(watched).length > 0;
   const saveDisabledReason =
     saveNeeds.length > 0
       ? saveNeedsSentence(saveNeeds)
+      : localPictureWaiting
+        ? guestUploads === "failed"
+          ? GUEST_PICTURE_FAILED_REASON
+          : GUEST_PICTURE_UPLOADING_REASON
       : deckRemix && remixSource && !isDirty
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
@@ -1956,6 +2002,27 @@ export function CardCreatorForm({
     // the card before it is remembered.
     forgetBorrowedWords();
   };
+
+  // A guest's card (TODO HM3): kept in this browser while a visitor signs
+  // up, put back in the signed-in creator. A restored card arrived whole, as
+  // an import does: its frame, colour pair and part colour stand (the same
+  // settling an import runs), and its tags keep following only if the guest
+  // never touched them.
+  const guestDraftControls = useGuestDraft({
+    role: mode === "create" && !deckRemix && !card ? guestDraft : null,
+    form: methods,
+    isDirty,
+    tags: autoTags,
+    setUploads: setGuestUploads,
+    onRestored: () => {
+      settleTokenTextFollow();
+      markPairTouched();
+      partColorFollow.noteImport();
+    },
+  });
+  useEffect(() => {
+    flushGuestDraftRef.current = guestDraftControls.flush;
+  });
 
   // Name follows the subtypes: a printed token is named after them
   // ("Soldier") unless it has a proper name, so an empty title — or the one
@@ -4438,7 +4505,11 @@ export function CardCreatorForm({
       if (mode === "create" || isRemix) {
         let result: Awaited<ReturnType<typeof createCardAction>>;
         try {
-          result = await createCardAction(payload);
+          // (A card a guest built carries the funnel's `guestDraft` — TODO
+          // HM3; the payload is the same.)
+          result = guestDraftControls.restored
+            ? await createCardAction(payload, { guestDraft: true })
+            : await createCardAction(payload);
         } catch (error) {
           failRequest(error);
           return;
@@ -4447,6 +4518,8 @@ export function CardCreatorForm({
           handleUpgradeOrError(result);
           return;
         }
+        // Saved: a guest's card no longer waits in the browser.
+        if (mode === "create") void guestDraftControls.clear();
         // Kept private for the strong language in its text — by this form
         // (the note on the Publish step) or by the server: ONE toast says so.
         const languageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
@@ -4725,6 +4798,11 @@ export function CardCreatorForm({
   // in a field the card doesn't draw re-renders the form, not the preview.
   const previewProps = useStableValue({
     staticInEditor: true,
+    // A guest's pictures, held by this page (TODO HM3) — the key only while
+    // there are some.
+    ...(guestDraftControls.localPictureUrls.length > 0
+      ? { localPictureUrls: guestDraftControls.localPictureUrls }
+      : {}),
     pipOverrides,
     profileOverrides,
     title: watched.title,
@@ -5060,7 +5138,7 @@ export function CardCreatorForm({
   // every step. Never for a guest, nor an admin's frame preview (a test card
   // never joins a deck — the save skips its deck_id too).
   const deckBox =
-    readOnly || previewSave || (isEdit && card?.frame_preview === true) ? null : (
+    !userId || previewSave || (isEdit && card?.frame_preview === true) ? null : (
       <CreatorDeckBox
         mode={mode}
         cardId={isEdit ? (card?.id ?? null) : null}
@@ -5086,6 +5164,14 @@ export function CardCreatorForm({
         : {})}
     >
       {readOnly ? <GuestGate /> : null}
+      {guestDraftControls.restored ? (
+        <GuestDraftRestoredNotice
+          signedIn={Boolean(userId)}
+          uploads={localPictureWaiting ? guestUploads : "idle"}
+          onRetry={guestDraftControls.retryUploads}
+          className="mb-6"
+        />
+      ) : null}
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
       ) : null}
@@ -5361,7 +5447,7 @@ export function CardCreatorForm({
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"
-                      disabled={!userId || !aiConfigured || fillPhase !== null}
+                      disabled={(!userId && !guestEditing) || !aiConfigured || fillPhase !== null}
                       onClick={() => openFill(FILL_PRESETS.artAndTitle)}
                     />
                   }
@@ -5500,7 +5586,7 @@ export function CardCreatorForm({
                           ? `Generate rules, flavor & ${statsLabel.toLowerCase()} with AI`
                           : "Generate rules & flavor with AI"
                       }
-                      disabled={!userId || !aiConfigured || fillPhase !== null}
+                      disabled={(!userId && !guestEditing) || !aiConfigured || fillPhase !== null}
                       onClick={() =>
                         openFill(
                           hasStats
@@ -5564,6 +5650,15 @@ export function CardCreatorForm({
   );
   const dialogs = (
     <>
+          {/* A guest's Save / AI press: an account saves the card (TODO HM3). */}
+          {guestEditing ? (
+            <GuestSaveGate
+              reason={saveGate}
+              onOpenChange={(open) => {
+                if (!open) setSaveGate(null);
+              }}
+            />
+          ) : null}
           {/* Controlled Scryfall import dialog. Rendered once; opened by:
               - the Identity-tab inline trigger (above)
               - the start-with hero on /create (cardforge:open-scryfall)
@@ -5826,7 +5921,14 @@ export function CardCreatorForm({
                   <Link href={`/go/card/${card.id}`}>Cancel</Link>
                 </Button>
               ) : null}
-              {!userId ? (
+              {guestEditing ? (
+                // A guest's Save asks for an account; the card waits in this
+                // browser and comes back after sign-up (TODO HM3).
+                <Button type="button" size="sm" onClick={() => openSaveGate("save")} data-testid="guest-save">
+                  <Save className="h-4 w-4" aria-hidden />
+                  Save
+                </Button>
+              ) : !userId ? (
                 <Button asChild size="sm">
                   <Link href="/signup?redirectTo=/create" data-no-guard>
                     <Lock className="h-4 w-4" aria-hidden />
@@ -5975,6 +6077,7 @@ export function CardCreatorForm({
     // form state, panels, dialogs, save rules and AI as the stepper.
     return (
       <FormProvider {...methods}>
+        <GuestPicturesProvider value={guestDraftControls.pictures}>
         <BorrowedWordSeedsProvider value={borrowedSeeds}>
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
         <form
@@ -6031,12 +6134,14 @@ export function CardCreatorForm({
         </form>
         </BackIsOwnFaceContext.Provider>
         </BorrowedWordSeedsProvider>
+        </GuestPicturesProvider>
       </FormProvider>
     );
   }
 
   return (
     <FormProvider {...methods}>
+      <GuestPicturesProvider value={guestDraftControls.pictures}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
       <form
@@ -6176,6 +6281,7 @@ export function CardCreatorForm({
       </form>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
+      </GuestPicturesProvider>
     </FormProvider>
   );
 }

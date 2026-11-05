@@ -8,6 +8,7 @@ import {
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { signupAction } from "@/app/(auth)/actions";
+import { GuestDraftField } from "@/components/analytics/guest-draft-field";
 import { AttributionFields } from "@/components/analytics/attribution-fields";
 import type { SignupInput } from "@/lib/auth/schemas";
 
@@ -60,7 +61,12 @@ export default async function SignupPage({
 
       <AuthForm<SignupInput>
         action={signupAction}
-        extraFields={<AttributionFields />}
+        extraFields={
+          <>
+            <AttributionFields />
+            <GuestDraftField />
+          </>
+        }
         redirectTo={redirectTo}
         submitLabel="Create account"
         pendingLabel="Creating account…"

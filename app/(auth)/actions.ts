@@ -11,6 +11,7 @@ import { isRecoverySession } from "@/lib/auth/recovery-session";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { GUEST_DRAFT_FIELD } from "@/lib/creator/guest-draft";
 import { EMAIL_LINK_COPY, parseEmailLinkType } from "@/lib/auth/email-links";
 import {
   fieldErrorsFromZod,
@@ -217,7 +218,8 @@ export async function signupAction(
 
   // Funnel: the signup with its first-touch attribution (hidden fields the
   // form read from sessionStorage — referrer host + UTM, no cookie) and the
-  // create button pressed last before it (`surface`). Only
+  // create button pressed last before it (`surface`), and whether a guest's
+  // card came along (`guestDraft`, TODO HM3). Only
   // for a REAL new user: an already-registered address gets an obfuscated
   // user with no identities, and that must record nothing.
   const newUser = signUpData.user;
@@ -225,13 +227,17 @@ export async function signupAction(
     await recordFunnelEvent(createAdminClient(), {
       event: "signup",
       userId: newUser.id,
-      props: sanitizeAttribution({
-        referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
-        utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
-        utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
-        utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
-        surface: formData.get(ATTRIBUTION_FIELDS.surface),
-      }),
+      props: {
+        ...sanitizeAttribution({
+          referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
+          utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
+          utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
+          utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
+          surface: formData.get(ATTRIBUTION_FIELDS.surface),
+        }),
+        // A card built in the guest creator waits in the browser (TODO HM3).
+        ...(formData.get(GUEST_DRAFT_FIELD) === "1" ? { guestDraft: true } : {}),
+      },
     });
   }
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState, useSyncExternalStore, useTransition } from "react";
 import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resendConfirmationAction } from "@/app/(auth)/actions";
 import { cn } from "@/lib/utils";
 import type { ActionState } from "@/lib/auth/schemas";
+import { guestCardWaiting } from "@/lib/creator/guest-draft";
 
 type AuthField = {
   name: string;
@@ -61,6 +62,7 @@ export function AuthForm<T extends Record<string, unknown>>({
               <span className="font-medium text-foreground">{sentTo}</span>. Open
               it to finish creating your account — it works on any device.
             </p>
+            <GuestCardInboxNote />
           </div>
         </div>
         <ResendConfirmation email={sentTo} />
@@ -172,5 +174,20 @@ function ResendConfirmation({ email, compact }: { email: string; compact?: boole
         </span>
       </div>
     </div>
+  );
+}
+
+// A card built in the guest creator waits in THIS browser (TODO HM3): the
+// confirmation link brings it back only when it opens here. Storage is read
+// on the client only (the server snapshot is "none"), never in a state set
+// by an effect.
+const subscribeToNothing = () => () => {};
+function GuestCardInboxNote() {
+  const waiting = useSyncExternalStore(subscribeToNothing, () => guestCardWaiting(), () => false);
+  if (!waiting) return null;
+  return (
+    <p className="text-muted" data-testid="guest-card-inbox-note">
+      Your card is kept in this browser — open the link here to pick it up after you confirm.
+    </p>
   );
 }

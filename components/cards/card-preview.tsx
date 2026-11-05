@@ -316,6 +316,10 @@ type CardPreviewProps = CardPreviewData & {
    *  click nor the corner button): the creator's Face tabs (TODO 5.14) are
    *  the one switch, and `face` follows them. */
   hideFlipControl?: boolean;
+  /** `blob:` URLs of pictures the page itself holds (a guest's picks in the
+   *  signed-out creator, TODO HM3) — drawn although no stored row may hold
+   *  one (lib/cards/drawable-media.ts). The creator's live preview only. */
+  localPictureUrls?: readonly string[];
 };
 
 // Which face a text is set in is decided by ONE resolver both renderers read
@@ -405,7 +409,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
   // the name the title bar prints, before anything reads the text — the
   // bake's twin (CardImage). The very same props for a card without one.
   const drawable = withSelfNames(
-    drawableCardMedia(rawProps),
+    drawableCardMedia(rawProps, rawProps.localPictureUrls),
     resolveFrameProfile(
       normalizeFrameTemplate(rawProps.frameStyle?.template, { rulesText: rawProps.rulesText, flavorText: rawProps.flavorText }),
       rawProps.profileOverrides,

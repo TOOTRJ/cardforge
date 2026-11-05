@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
+import { GUEST_PICTURE_KEPT_MESSAGE, useGuestPictures } from "@/components/creator/guest-pictures";
 import { WATERMARK_INK } from "@/lib/cards/watermark";
 import type { FormValues, WatermarkFormValues } from "@/lib/creator/form-types";
 
@@ -40,6 +41,9 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
   const { control } = useFormContext<FormValues>();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  // A guest's icon is kept in the browser until sign-in (TODO HM3).
+  const guestPictures = useGuestPictures();
+  const canPick = Boolean(userId) || guestPictures !== null;
 
   return (
     <Controller
@@ -52,6 +56,14 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
 
         const onFilePicked = async (file: File | undefined) => {
           if (!file) return;
+          if (!userId && guestPictures) {
+            const url = guestPictures.keep(file, "watermark");
+            if (fileRef.current) fileRef.current.value = "";
+            if (!url) return;
+            field.onChange({ kind: "custom", key: "", url, size: "large", opacity: null });
+            toast.success(GUEST_PICTURE_KEPT_MESSAGE);
+            return;
+          }
           setUploading(true);
           try {
             const formData = new FormData();
@@ -136,8 +148,8 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!userId || uploading}
-                  title={userId ? undefined : "Sign in to upload an icon."}
+                  disabled={!canPick || uploading}
+                  title={canPick ? undefined : "Sign in to upload an icon."}
                   onClick={() => fileRef.current?.click()}
                 >
                   {uploading ? (

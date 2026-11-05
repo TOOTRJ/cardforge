@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { guestCardWaiting, onboardingFinishPath } from "@/lib/creator/guest-draft";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Stepper } from "@/components/ui/stepper";
@@ -117,7 +118,9 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
         setError(result.error);
         return;
       }
-      router.push(next);
+      // A card built in the guest creator waits in this browser: finish
+      // on /create, where it comes back (TODO HM3).
+      router.push(onboardingFinishPath(next, guestCardWaiting()));
       router.refresh();
     });
 

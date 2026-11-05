@@ -42,6 +42,7 @@ import {
 import { uploadCardArtFile } from "@/lib/cards/art-upload-client";
 import { CARD_ART_MAX_LABEL, CARD_ART_MIME_TYPES, cardArtFileProblem } from "@/lib/cards/art-upload-limits";
 import { cn, clamp } from "@/lib/utils";
+import { GUEST_PICTURE_KEPT_MESSAGE, useGuestPictures } from "@/components/creator/guest-pictures";
 import type { ArtPosition } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -145,6 +146,9 @@ export function ArtUploader({
   heading = "Artwork",
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // A guest's pick is kept in the browser until sign-in (TODO HM3).
+  const guestPictures = useGuestPictures();
+  const canPick = Boolean(userId) || guestPictures !== null;
   // The window a NEW picture is fitted to — read when its upload finishes
   // (a ref: the upload callback must not change with every render).
   const artWindowRef = useRef(artWindow);
@@ -219,7 +223,15 @@ export function ArtUploader({
   const handleFile = useCallback(
     async (file: File) => {
       if (!userId) {
-        toast.error("You need to be signed in to upload artwork.");
+        if (!guestPictures) {
+          toast.error("You need to be signed in to upload artwork.");
+          return;
+        }
+        const url = guestPictures.keep(file, "art");
+        if (!url) return;
+        onArtChange({ artUrl: url, artPosition: fitArtToWindow(artWindowRef.current, null) });
+        toast.success(GUEST_PICTURE_KEPT_MESSAGE);
+        if (inputRef.current) inputRef.current.value = "";
         return;
       }
       // One upload at a time. The Button + picker are disabled while
@@ -270,7 +282,7 @@ export function ArtUploader({
         }
       }
     },
-    [userId, onArtChange],
+    [userId, guestPictures, onArtChange],
   );
 
   // ---- Paste-from-clipboard ---------------------------------------------
@@ -474,7 +486,7 @@ export function ArtUploader({
   // ---- Misc handlers -----------------------------------------------------
 
   const openPicker = () => {
-    if (uploading || !userId) return;
+    if (uploading || !canPick) return;
     inputRef.current?.click();
   };
 
@@ -698,7 +710,7 @@ export function ArtUploader({
           variant={artUrl ? "outline" : "primary"}
           data-field-anchor={fieldAnchor}
           onClick={openPicker}
-          disabled={uploading || !userId}
+          disabled={uploading || !canPick}
         >
           {uploading ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -799,7 +811,7 @@ export function ArtUploader({
           window at this zoom. It may look soft in print (300 ppi is sharp).
         </p>
       ) : null}
-      {!userId ? (
+      {!canPick ? (
         <p className="text-xs text-subtle">Sign in to upload artwork.</p>
       ) : null}
     </div>

@@ -274,6 +274,9 @@ export default async function CreatePage({
           mode={remixParent ? "remix" : "create"}
           card={remixParent}
           userId={user.id}
+          // A plain new card puts back one a guest built before signing in
+          // (TODO HM3) — never a deck proxy, a remix or a frame preview.
+          guestDraft={!deckRemix && !remixParent && !framePreview ? "restore" : null}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
           myDecks={myDecks.map((deck) => ({

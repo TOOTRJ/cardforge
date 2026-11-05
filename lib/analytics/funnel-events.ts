@@ -67,6 +67,10 @@ export const CLIENT_FUNNEL_EVENTS = [
   // the Storefront chain counts cta_click by event alone (0112), so a
   // create click there would read as a pricing CTA.
   "create_cta_click",
+  // A signed-out visitor pressed Save (or an AI button) in the guest
+  // creator and was asked to sign up (TODO HM3): `reason` is "save" or
+  // "ai". Anonymous — a guest has no id.
+  "guest_save_gate",
 ] as const;
 
 /** Where a nav_click's link sat. */
@@ -104,6 +108,8 @@ const PROP_KEYS = new Set([
   "referrer", "utmSource", "utmMedium", "utmCampaign",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
   "item", "bucket",
+  // TODO HM3: the signup row and card_saved when a guest's card came along.
+  "guestDraft",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;
