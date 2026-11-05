@@ -1894,7 +1894,16 @@ describe("handleStripeEvent — payment failed and money going back", () => {
                       error: null,
                     }
                   : { data: opts.alreadyNotified ? { id: "n_pf" } : null, error: null },
-              like: async () => ({ data: [], error: null }),
+              // The month's refill rows and the backstop's newest-grant read
+              // (0175: .like().order().limit(), awaited as a thenable).
+              like: () => {
+                const ledger = {
+                  order: () => ledger,
+                  limit: () => ledger,
+                  then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
+                };
+                return ledger;
+              },
             };
             return chain;
           },
