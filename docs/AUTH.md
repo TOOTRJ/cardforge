@@ -23,22 +23,19 @@ owner sets up per environment. Email + password is documented in
   (Discord: the account's username; Google: the full name), cut to 64. Only a
   Google account picture is kept as the avatar; a Discord account gets a
   built-in avatar + banner (0095). Then onboarding, as for an email signup.
-- **Same email as an existing account.** Supabase links identities
-  automatically: when the provider says the email is VERIFIED and one account
-  already has it, the Discord (or Google) identity is added to THAT account —
-  the visitor signs in to it, no new profile is made, and any unconfirmed
-  identities on that account are removed (Supabase's protection against
-  pre-account takeover). When the provider's email is NOT verified, GoTrue
-  will not sign it in: it sends the address a confirmation email and returns
-  `provider_email_needs_verification`, which the login page explains. We
-  build no account linking of our own.
+- **Same email as an existing account.** Supabase's automatic identity
+  linking applies (its "Identity Linking" guide): a provider account with a
+  VERIFIED email signs in to the existing account — no second profile is
+  made. A provider email that isn't verified is not signed in; the login page
+  asks the visitor to verify it with the provider first. We build no account
+  linking of our own.
 - **A provider's refusal** comes back to `/auth/callback` as `?error=…` (and
   `error_code` for GoTrue's own refusals) instead of a code
   (`lib/auth/oauth-callback-error.ts`): a visitor who presses Cancel on
   Discord's screen (`access_denied`) lands on `/login?error=oauth-cancelled`
   ("Sign-in was cancelled, so nothing changed…"), an unverified provider email
-  on `oauth-verify-email`, anything else on `oauth-failed` (logged as a
-  warning with GoTrue's `error` / `error_code`). The redirect is kept, so a
+  on `oauth-verify-email`, anything else on `oauth-failed` (logged on the
+  server). The redirect is kept, so a
   retry lands where the visitor was going. No message says whether a
   PipGlyph account exists.
 
@@ -65,11 +62,10 @@ production.
    public.
 3. **OAuth2 → Redirects** → add, one per Supabase project that will offer
    Discord (Discord allows ten):
-   - Production: the **Callback URL** shown in Supabase Dashboard →
-     Authentication → Sign In / Providers → Discord. Copy that one exactly — it
-     is `https://zkwkisxoqdhdchqyjwdc.supabase.co/auth/v1/callback`, or the
-     custom auth domain's `/auth/v1/callback` if one is active.
-   - The shared dev branch: `https://znipzaxgpaiandwiqabn.supabase.co/auth/v1/callback`
+   - Production, and the shared dev branch: each project's **Callback URL**
+     as its Supabase Dashboard shows it (Authentication → Sign In / Providers
+     → Discord). Copy it exactly — it reflects a custom auth domain if one is
+     active.
    - Local Docker stack (optional): `http://127.0.0.1:54321/auth/v1/callback`
 
 ### 2. Production
@@ -92,11 +88,17 @@ use the persistent `dev` branch. `supabase/config.toml` syncs to it, so a
 dashboard toggle there would be overwritten by the next config change —
 configure it as code instead:
 
-1. Set the two values as secrets of the dev branch (never in a file in git):
+1. Set the two values as secrets of the dev branch (its ref is
+   `[remotes.dev]`'s `project_id`). Put them in a git-ignored file such as
+   `supabase/.env.discord` (`SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID=…`,
+   `SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET=…`) — never on the command line,
+   where they stay in the shell's history — then:
 
    ```bash
-   supabase secrets set --project-ref znipzaxgpaiandwiqabn SUPABASE_AUTH_EXTERNAL_DISCORD_CLIENT_ID=<client id> SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET=<client secret>
+   supabase secrets set --project-ref <dev branch ref> --env-file supabase/.env.discord
    ```
+
+   and delete the file.
 
 2. A PR adds, under `[remotes.dev]` in `supabase/config.toml`:
 
