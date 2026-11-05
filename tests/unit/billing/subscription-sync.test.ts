@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  findCheckoutSubscriptions,
   findDelinquentSubscription,
   findLiveSubscription,
   grantCreditsForSync,
@@ -738,5 +739,21 @@ describe("the dunning stamp (0174: profiles.payment_failed_at)", () => {
     const { admin } = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z" });
     const result = await syncSubscriptionForUser(admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });
     expect(result.paymentFailedAt).toBe("2026-11-01T00:00:00.000Z");
+  });
+});
+
+describe("findCheckoutSubscriptions", () => {
+  it("answers the live AND the delinquent subscription from one list; an empty list is two nulls", async () => {
+    const trial = sub("sub_trial", "trialing", { id: "price_plus" }, { created: 1 });
+    const pro = sub("sub_pro", "active", { id: "price_pro" }, { created: 2 });
+    const unpaid = sub("sub_unpaid", "unpaid", { id: "price_plus" }, { created: 3 });
+    const found = await findCheckoutSubscriptions(makeStripe([trial, pro, unpaid]), "cus_1");
+    expect(found?.live?.id).toBe("sub_pro");
+    expect(found?.delinquent?.id).toBe("sub_unpaid");
+    expect(await findCheckoutSubscriptions(makeStripe([]), "cus_1")).toEqual({ live: null, delinquent: null });
+  });
+
+  it("is NULL — not 'nothing found' — when the list can't be read (the checkout action refuses on it)", async () => {
+    expect(await findCheckoutSubscriptions(makeStripe(null), "cus_1")).toBeNull();
   });
 });

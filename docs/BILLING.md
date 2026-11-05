@@ -11,7 +11,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_mini`, `pack_small`, `pack_large`; coupon `SUBSCRIBER_PACKS_20` for subscriber pack pricing) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. What the plan card says about the plan's future is ONE decision, `planStatusOf()` (`lib/billing/plan-status.ts`), drawn by `components/billing/plan-status.tsx` — see "A cancelled subscription" below. |
-| Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
+| Checkout / portal | `lib/stripe/actions.ts` (server actions) | Before anything is sold the customer's subscription list is read ONCE (`findCheckoutSubscriptions`); if Stripe can't answer, the checkout is REFUSED ("Couldn't check your plan with Stripe. Try again in a moment.") — never a second subscription on a guess (audit 2026-11-05). New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` (+ `lib/stripe/charge-events.ts`) | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`, and since 0174 `charge.refunded`, `charge.dispute.{created,closed}`, `radar.early_fraud_warning.created`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all **thirteen**. |
 | Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
@@ -41,10 +41,11 @@ only — nothing needs them configured:
 | `STRIPE_PRICE_PRO_ANNUAL` | `price_1UIfqsQFLEpCg9s2GV5FMI1y` |
 | `STRIPE_PRICE_PACK_SMALL` | `price_1UIfquQFLEpCg9s2rxx8DiRf` |
 | `STRIPE_PRICE_PACK_LARGE` | `price_1UIfqwQFLEpCg9s2DHwy42kY` |
+| `STRIPE_PRICE_PACK_MINI` | `price_1UJKTAQFLEpCg9s24jZ8YiXl` (added 2026-09-24, §8) |
 
 Sandbox webhook endpoint `we_1UIfs5QFLEpCg9s2TgN3OiCm` → the `dev` branch
 alias (`https://cardforge-git-dev-orderoftheredjester.vercel.app/api/stripe/webhook`,
-API version `2026-05-27.dahlia`, the same six events as production). Its
+API version `2026-05-27.dahlia`, the same nine events as production). Its
 signing secret is what Preview's `STRIPE_WEBHOOK_SECRET` holds. Preview
 deployments sit behind Vercel Deployment Protection, which answers 401 to
 anything without a Vercel session — including Stripe. The endpoint URL
@@ -81,7 +82,10 @@ charge (past-due path).
 ## 4. What the sandbox verified on 2026-09-22
 
 Run through the Stripe API against the sandbox (no app in the loop), i.e. the
-Stripe-side assumptions the code relies on:
+Stripe-side assumptions the code relies on. **Historical:** the trial has
+required a card since 2026-09-24 (§9) — Checkout no longer sends
+`payment_method_collection: if_required`; the no-card lines below describe
+the parameters of the day.
 
 - The exact `checkout.sessions.create` parameters the app sends for a
   first-time subscription (7-day trial, `payment_method_collection:
@@ -328,7 +332,12 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
   `trialWinbackEmail`. Coupon `TRIAL_WINBACK_20` (same id on live and sandbox,
   `percent_off 20`, `duration once`, restricted to the Plus/Pro products) is
   applied by `createCheckoutSessionAction` when a `trial_lapsed` notification
-  exists within `TRIAL_WINBACK_WINDOW_DAYS` (30) — server-side, never a code
+  exists within `TRIAL_WINBACK_WINDOW_DAYS` (30) AND the subscription it names
+  belongs to the buyer's own Stripe customer (re-read from Stripe; a failed
+  read sells at full price). A user can change nothing but `read_at` on a
+  notification (migration 0173: a column grant, audit 2026-11-05 — before it
+  a table-wide UPDATE let a user rewrite one of their own rows into a dated
+  `trial_lapsed` row and buy at the discount) — server-side, never a code
   (Stripe won't combine `discounts` with `allow_promotion_codes`, so the
   promo-code box is off for that session); a missing coupon logs and sells
   at full price.
