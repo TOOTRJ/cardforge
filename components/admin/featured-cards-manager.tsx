@@ -1,8 +1,9 @@
 "use client";
 
-// Homepage hero card slots — paste a card page URL per slot; the hero swaps
-// its placeholder pair for the real cards (and falls back to placeholders
-// when both slots are empty).
+// Homepage hero FALLBACK slots — paste a card page URL per slot. Since 0169
+// the hero rotates through the pool (hero-pool-manager.tsx) and reads these
+// only while it has fewer than two cards on the hero; the same original-card
+// guard applies, and a slot card it holds back says why.
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { Loader2, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { setFeaturedCardAction } from "@/lib/featured/actions";
+import { heroRefusalLabel } from "@/lib/featured/hero-rotation";
 
 type SlotInfo = {
   slot: number;
@@ -20,9 +22,12 @@ type SlotInfo = {
 
 export function FeaturedCardsManager({
   slots,
+  refusals = [null, null],
 }: {
   /** Current slot contents, index 0 = slot 1, index 1 = slot 2. */
   slots: [SlotInfo, SlotInfo];
+  /** The hero's original-card guard on each slot's card (0169); null = shown. */
+  refusals?: [string | null, string | null];
 }) {
   const router = useRouter();
   const [urls, setUrls] = useState<[string, string]>(["", ""]);
@@ -71,11 +76,18 @@ export function FeaturedCardsManager({
             {current ? (
               <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-elevated/30 px-4 py-3">
                 <Star className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-                <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-                  {current.title}{" "}
-                  <span className="text-subtle">
-                    — /card/{current.ownerUsername}/{current.slug}
+                <span className="min-w-0 flex-1 text-sm text-foreground">
+                  <span className="block truncate">
+                    {current.title}{" "}
+                    <span className="text-subtle">
+                      — /card/{current.ownerUsername}/{current.slug}
+                    </span>
                   </span>
+                  {refusals[slot - 1] ? (
+                    <span className="block text-xs text-gold-strong">
+                      Not on the hero: {heroRefusalLabel(refusals[slot - 1] as string)}
+                    </span>
+                  ) : null}
                 </span>
                 <Button
                   type="button"
@@ -139,8 +151,8 @@ export function FeaturedCardsManager({
         );
       })}
       <p className="text-[11px] text-subtle">
-        Cards must be public with a baked render. With both slots empty, the
-        homepage shows its standard placeholder pair.
+        Cards must be public with a baked render. With the pool short and both
+        slots empty, the homepage shows its standard placeholder pair.
       </p>
     </div>
   );
