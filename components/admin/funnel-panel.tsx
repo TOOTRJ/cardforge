@@ -101,6 +101,20 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
                 ))}
               </ul>
             )}
+            {/* A guest's card through sign-up (TODO HM3). */}
+            <h3 className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-subtle">
+              Guest creator cards · 30d
+            </h3>
+            <ul className="divide-y divide-border/40 text-sm" data-testid="funnel-guest-card">
+              <li className="flex items-center justify-between py-1">
+                <span className="text-foreground">Signups with a guest card waiting</span>
+                <span className="tabular-nums text-muted">{summary.guestCard.signups}</span>
+              </li>
+              <li className="flex items-center justify-between py-1">
+                <span className="text-foreground">First cards saved from a guest card</span>
+                <span className="tabular-nums text-muted">{summary.guestCard.firstCardsSaved ?? "—"}</span>
+              </li>
+            </ul>
           </div>
         </div>
         <div className="rounded-lg border border-border/60 bg-background/40 p-3">

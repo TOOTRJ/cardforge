@@ -14,6 +14,12 @@ import {
   uploadRateLimitFailure,
   type UploadLimitFields,
 } from "@/lib/media/upload-rate-limit";
+import {
+  WATERMARK_MAX_BYTES,
+  WATERMARK_MIME_TYPES,
+  WATERMARK_TOO_LARGE_MESSAGE,
+  WATERMARK_TYPE_MESSAGE,
+} from "@/lib/cards/watermark-upload-limits";
 
 // ---------------------------------------------------------------------------
 // Custom design-watermark upload — a near-copy of upload-art-server.ts with
@@ -25,9 +31,9 @@ import {
 // fetches the public URL like art.
 // ---------------------------------------------------------------------------
 
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = WATERMARK_MAX_BYTES;
 const ALLOWED_FORMATS = new Set(["png", "webp"]);
-const ALLOWED_DECLARED_MIME_TYPES = new Set(["image/png", "image/webp"]);
+const ALLOWED_DECLARED_MIME_TYPES = new Set<string>(WATERMARK_MIME_TYPES);
 
 export type UploadWatermarkResult =
   | { ok: true; publicUrl: string }
@@ -57,12 +63,12 @@ export async function uploadWatermarkServerAction(
   if (file.type && !ALLOWED_DECLARED_MIME_TYPES.has(file.type)) {
     return {
       ok: false,
-      error: "Watermarks must be PNG or WebP (transparency required).",
+      error: WATERMARK_TYPE_MESSAGE,
     };
   }
   if (file.size === 0) return { ok: false, error: "Empty file." };
   if (file.size > MAX_BYTES) {
-    return { ok: false, error: "Watermark images must be 2 MB or smaller." };
+    return { ok: false, error: WATERMARK_TOO_LARGE_MESSAGE };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -80,7 +86,7 @@ export async function uploadWatermarkServerAction(
   if (!format || !ALLOWED_FORMATS.has(format)) {
     return {
       ok: false,
-      error: "Watermarks must be PNG or WebP (transparency required).",
+      error: WATERMARK_TYPE_MESSAGE,
     };
   }
 

@@ -159,7 +159,9 @@ describe("the pip overrides keep only the owner's own stored pips", () => {
 // refactor that goes back to the raw column fails here.
 describe("the surfaces that draw a picture column", () => {
   const SURFACES: [string, RegExp][] = [
-    ["components/cards/card-preview.tsx", /drawableCardMedia\(rawProps\)/],
+    // The page's own blob: pictures (a guest's kept art, TODO HM3) are the
+    // one exception, and only those the page names.
+    ["components/cards/card-preview.tsx", /drawableCardMedia\(rawProps, rawProps\.localPictureUrls\)/],
     ["components/cards/set-symbol.tsx", /drawableMediaUrl\("set-icon", iconUrl\)/],
     // The row goes through the guard, then through the front face's twin
     // (TODO 5.0a: frontPreviewData is the identity for a single-faced row).

@@ -53,6 +53,7 @@ import { SecondPartIdentityFields } from "@/components/creator/panels/second-par
 import { neverDrawnSecondPartUnits, secondPartShown } from "@/lib/creator/second-part-fields";
 import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { chipOff } from "../helpers/chip";
 
 afterEach(() => {
   cleanup();
@@ -615,12 +616,15 @@ describe("an aborted search stays quiet when fetch itself rejects", () => {
 });
 
 describe("guests", () => {
-  it("the button is disabled with the sign-in hint and opens nothing", () => {
+  // Off with no guest dialog mounted (the guest creator's dialog is its own
+  // test, creator-guest-draft): reachable, its reason in its name, inert.
+  it("the button is aria-disabled with the sign-in hint in its name and opens nothing", () => {
     const mock = stubRoutes();
     renderButton("front", { signedIn: false });
     const button = screen.getByRole("button", { name: /use art from a real card/i });
-    expect(button.hasAttribute("disabled")).toBe(true);
-    expect(button.getAttribute("title")).toBe("Sign in to use art from real cards.");
+    expect(button.hasAttribute("disabled")).toBe(false);
+    expect(chipOff(button)).toBe(true);
+    expect(button.getAttribute("aria-label")).toBe("Use art from a real card — sign in to use art from real cards");
     fireEvent.click(button);
     expect(screen.queryByLabelText("Search a card by name")).toBeNull();
     expect(mock).not.toHaveBeenCalled();
@@ -663,12 +667,12 @@ describe("in the Art panel", () => {
     );
   }
 
-  it("a guest's Art block shows the buttons disabled", () => {
+  it("a guest's Art block shows the buttons off (aria-disabled, inert)", () => {
     stubRoutes();
     render(<PanelHarness userId={null} />);
     const buttons = screen.getAllByRole("button", { name: /use art from a real card/i });
     expect(buttons).toHaveLength(2);
-    for (const button of buttons) expect(button.hasAttribute("disabled")).toBe(true);
+    for (const button of buttons) expect(chipOff(button)).toBe(true);
   });
 
   it("a two-faced card with no second-face editor (an imported DFC) gets a Back face art row; its art lands on the back", async () => {

@@ -26,20 +26,28 @@ function drawablePips(pips: PipOverrides | null | undefined): PipOverrides | nul
   return kept;
 }
 
-export function drawableCardMedia<T extends CardPreviewData>(card: T): T {
+/**
+ * `local`: the `blob:` URLs of pictures THIS page holds — a guest's picks in
+ * the signed-out creator (TODO HM3), kept in the browser until sign-in. Only
+ * the creator's live preview passes them; a blob: URL is the document's own
+ * and never reaches a stored row or the bake (the save uploads it first).
+ */
+export function drawableCardMedia<T extends CardPreviewData>(card: T, local?: readonly string[]): T {
+  const drawable = (kind: Parameters<typeof drawableMediaUrl>[0], url: string | null | undefined) =>
+    url && local?.includes(url) && url.startsWith("blob:") ? url : drawableMediaUrl(kind, url);
   const watermark =
-    card.watermark?.kind === "custom" && !drawableMediaUrl("watermark", card.watermark.url)
+    card.watermark?.kind === "custom" && !drawable("watermark", card.watermark.url)
       ? null
       : card.watermark;
   return {
     ...card,
-    artUrl: drawableMediaUrl("card-art", card.artUrl),
+    artUrl: drawable("card-art", card.artUrl),
     setIconUrl: drawableMediaUrl("set-icon", card.setIconUrl),
     watermark,
     backFace: card.backFace
-      ? { ...card.backFace, art_url: drawableMediaUrl("card-art", card.backFace.art_url) ?? undefined }
+      ? { ...card.backFace, art_url: drawable("card-art", card.backFace.art_url) ?? undefined }
       : card.backFace,
     pipOverrides: drawablePips(card.pipOverrides),
-    backCard: card.backCard ? drawableCardMedia(card.backCard) : card.backCard,
+    backCard: card.backCard ? drawableCardMedia(card.backCard, local) : card.backCard,
   };
 }

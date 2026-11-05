@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -10,6 +10,7 @@ import { getFantasyGameSystem } from "@/lib/cards/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
+import { guestAuthHref } from "@/lib/creator/guest-draft";
 
 // ---------------------------------------------------------------------------
 // The GUEST card creator — served at /create for signed-out visitors.
@@ -17,11 +18,13 @@ import { PageContainer } from "@/components/layout/page-container";
 // proxy.ts rewrites anonymous /create requests here (and 308s the old
 // /preview URL and this internal path to /create), so the creator has ONE
 // public URL: signed-in visitors get app/(app)/create, everyone else this
-// page. It renders the full creator READ-ONLY (owner decision 2026-09-16):
-// every step and the live preview are visible behind a sign-up gate, the
-// panels are inert, and the action bar offers "Sign up free to forge"
-// instead of Save. It reads only seeded reference data through the
-// cookie-free public client, so it stays ISR.
+// page. A guest MAKES a card here (TODO HM3, owner 2026-11-04 — it reversed
+// 2026-09-16's read-only creator): every step and the live preview work,
+// pictures stay in the browser, the card waits in this browser
+// (lib/creator/guest-draft.ts) and Save asks for an account — the
+// signed-in /create puts the card back, ready to save. AI, Scryfall imports
+// and custom pips need an account. It reads only seeded reference data
+// through the cookie-free public client, so it stays ISR.
 // ---------------------------------------------------------------------------
 
 // ISR: the guest creator only reads seeded reference data (game system +
@@ -31,12 +34,12 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "Create a Custom MTG Card — Free Card Creator",
   description:
-    "Design custom MTG-style cards in PipGlyph's free card creator. Sign up in seconds, then build any card type, pick mana costs, write oracle text, add art and watch the live preview.",
+    "Design custom MTG-style cards in PipGlyph's free card creator — no account needed to start. Build any card type, pick mana costs, write oracle text, add art and watch the live preview, then sign up free to save.",
   alternates: { canonical: "/create" },
   openGraph: {
     title: "The Free MTG Card Creator | PipGlyph",
     description:
-      "Design custom Magic: The Gathering cards in minutes. Live preview, visual mana pip builder, every card type, AI that writes and paints. Free with an account.",
+      "Design custom Magic: The Gathering cards in minutes. Live preview, visual mana pip builder, every card type, AI that writes and paints. Start now — sign up free when you save.",
   },
 };
 
@@ -62,25 +65,24 @@ export default async function PreviewPage() {
     <PageContainer size="standard" className="py-10">
       {/* Guest banner */}
       <div className="mb-6 flex items-center gap-3 rounded-frame border border-accent/30 bg-accent/10 px-4 py-3">
-        <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+        <Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden />
         <p className="text-sm text-foreground">
-          <span className="font-semibold text-accent">Just looking?</span>{" "}
-          Browse every step of the creator here.{" "}
+          <span className="font-semibold text-accent">No account needed to start.</span>{" "}
+          Your card waits in this browser while you make it —{" "}
           <Link
-            href="/signup?redirectTo=/create"
+            href={guestAuthHref("signup")}
             className="font-medium text-primary-bright underline-offset-2 hover:underline"
           >
-            Create a free account
+            sign up free
           </Link>{" "}
-          to start designing — it takes seconds, and your cards save,
-          publish and share from any device.
+          when you save, and it saves, publishes and shares from any device.
         </p>
       </div>
 
       <PageHeader
-        eyebrow="Free to join"
+        eyebrow="Free card creator"
         title="Forge a custom card"
-        description="Every card type — creatures, instants, planeswalkers, sagas — with three decades of frames, a live preview and AI that writes and paints on demand. Free with an account; sign up in seconds to start."
+        description="Every card type — creatures, instants, planeswalkers, sagas — with three decades of frames and a live preview. Start right here; sign up free when you save, and AI that writes and paints comes with your account."
         actions={
           <Button asChild variant="ghost">
             <Link href="/">
@@ -97,6 +99,7 @@ export default async function PreviewPage() {
           gameSystems={[gameSystem]}
           verifiedFrameKeys={verifiedFrameKeys}
           aiConfigured={isDesignAiConfigured()}
+          guestDraft="guest"
         />
       </div>
     </PageContainer>

@@ -7,7 +7,8 @@
 // is a plain new card alone — an edit never rewrites a stored card's tags, a
 // remix starts from its parent's, and a deck-card proxy (/create?deckCard=)
 // starts from the printing it copies, whose "unchanged" baseline must not
-// move under it. `restart` is Start over's. `following` is false once the
+// move under it. `restart` is Start over's; `snapshot` / `adopt` carry the
+// follow through a guest's draft (TODO HM3). `following` is false once the
 // follow has ended (the Tags helper stops promising to fill the field).
 //
 // The field's CURRENT value is read with getValues, never the render's
@@ -24,7 +25,15 @@ import { NEW_AUTO_TAGS_FOLLOW, stepAutoTagsFollow, type AutoTagsFollow } from "@
 export function useAutoTagsFollow(
   form: Pick<UseFormReturn<FormValues>, "control" | "setValue" | "getValues">,
   enabled: boolean,
-): { restart: () => void; following: boolean } {
+): {
+  restart: () => void;
+  following: boolean;
+  /** Where the follow stands — kept with a guest's draft (TODO HM3). */
+  snapshot: () => { following: boolean; base: string[] };
+  /** Take up a kept state for the Tags text a restore is about to write:
+   *  still following from the kept base, or ended. */
+  adopt: (kept: { following: boolean; base: string[] }, tagsText: string) => void;
+} {
   const { control, setValue, getValues } = form;
   const [rulesText, subtypesText, cardType, tagsText, hasBackFace, backRules, backSubtypes] = useWatch({
     control,
@@ -57,5 +66,13 @@ export function useAutoTagsFollow(
     follow.current = NEW_AUTO_TAGS_FOLLOW;
     setFollowing(true);
   }, []);
-  return { restart, following: enabled && following };
+  const snapshot = useCallback(
+    () => ({ following: follow.current.following, base: [...follow.current.base] }),
+    [],
+  );
+  const adopt = useCallback((kept: { following: boolean; base: string[] }, tagsText: string) => {
+    follow.current = { following: kept.following, seen: tagsText, base: [...kept.base] };
+    setFollowing(kept.following);
+  }, []);
+  return { restart, following: enabled && following, snapshot, adopt };
 }

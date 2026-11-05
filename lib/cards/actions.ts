@@ -282,6 +282,12 @@ export type CreateCardOptions = {
    * their entries' source anyway).
    */
   deckEntry?: DeckEntryOrigin;
+  /**
+   * The creator restored this card from a guest's draft (TODO HM3): the
+   * funnel's card_saved / first_card_saved carry `guestDraft`. Analytics
+   * only — it changes nothing about the save.
+   */
+  guestDraft?: boolean;
 };
 
 
@@ -702,7 +708,11 @@ export async function createCardAction(
     await recordActivity(createAdminClient(), {
       userId: user.id,
       kind: "card_saved",
-      props: { visibility: insert.visibility, kind: data.parent_card_id ? "remix" : "new" },
+      props: {
+        visibility: insert.visibility,
+        kind: data.parent_card_id ? "remix" : "new",
+        ...(options.guestDraft === true ? { guestDraft: true } : {}),
+      },
     });
   }
 

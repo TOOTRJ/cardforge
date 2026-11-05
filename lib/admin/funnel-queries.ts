@@ -38,6 +38,10 @@ export type FunnelSummary = {
   signupSources: SignupSource[];
   /** Signups by the create button pressed last ("none" = no tracked button). */
   signupSurfaces: SignupSurface[];
+  /** A guest's card through sign-up (TODO HM3), last 30 days: signups made
+   *  while one waited in the browser, and first cards saved from one. Null
+   *  counts where the read failed. */
+  guestCard: { signups: number; firstCardsSaved: number | null };
   /** Trials started in the last 30 days and what they did in their 7 days. */
   trials: TrialEngagementRow[];
   /** Anonymous viewport-width buckets, last 30 days (TODO WD9); null when
@@ -77,6 +81,7 @@ const LABEL: Record<FunnelEvent, string> = {
   deck_card_customized: "Deck cards customized",
   deck_export_clicked: "Deck export clicks",
   create_cta_click: "Home create-button clicks",
+  guest_save_gate: "Guest creator: asked to sign up",
 };
 
 /** Each section is a chain: a step's rate is its count over the previous
@@ -93,6 +98,8 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   // Counts only: the home page's create buttons (TODO HM2) — never in the
   // Storefront chain, whose steps are billing moments alone.
   { title: "Home create buttons", chain: ["create_cta_click"] },
+  // Counts only: a guest's Save or AI press that asked for a sign-up (TODO HM3).
+  { title: "Guest creator", chain: ["guest_save_gate"] },
 ];
 
 /** Rates are chained inside the four sections named here; the rest are
@@ -131,6 +138,14 @@ export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): 
   return groupSignupsBy(rows, (props) => attributionSource(sanitizeAttribution(props)), limit).map(
     ([source, n]) => ({ source, n }),
   );
+}
+
+/** Pure: how many signup rows say a guest's card waited (TODO HM3). */
+export function countGuestDraftSignups(rows: Array<{ props: unknown }>): number {
+  return rows.filter((row) => {
+    const props = row.props && typeof row.props === "object" ? (row.props as Record<string, unknown>) : {};
+    return props.guestDraft === true;
+  }).length;
 }
 
 /** Pure: group signup rows by the create button pressed last, biggest first. */
@@ -196,17 +211,28 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     windows.push(buildFunnel(counts, days));
   }
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [signups, trials, screenWidths] = await Promise.all([
+  const [signups, trials, screenWidths, guestFirstSaves] = await Promise.all([
     admin.from("funnel_events").select("props").eq("event", "signup").gte("created_at", since30).limit(5000),
     admin.rpc("admin_trial_engagement", { p_since: since30 }),
     readScreenWidths(admin, since30),
+    admin
+      .from("funnel_events")
+      .select("id", { count: "exact", head: true })
+      .eq("event", "first_card_saved")
+      .contains("props", { guestDraft: true })
+      .gte("created_at", since30),
   ]);
+  if (guestFirstSaves.error) console.warn("getFunnelSummary: guest first saves", guestFirstSaves.error.message);
   if (signups.error) console.warn("getFunnelSummary: signups", signups.error.message);
   if (trials.error) console.warn("getFunnelSummary: trials", trials.error.message);
   return {
     windows,
     signupSources: groupSignupSources((signups.data ?? []) as Array<{ props: unknown }>),
     signupSurfaces: groupSignupSurfaces((signups.data ?? []) as Array<{ props: unknown }>),
+    guestCard: {
+      signups: countGuestDraftSignups((signups.data ?? []) as Array<{ props: unknown }>),
+      firstCardsSaved: guestFirstSaves.error ? null : (guestFirstSaves.count ?? 0),
+    },
     trials: (trials.data ?? []).map((row) => ({
       userId: row.user_id,
       username: row.username,

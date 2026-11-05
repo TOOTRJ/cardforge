@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
+import { GUEST_PICTURE_KEPT_MESSAGE, useGuestPictures } from "@/components/creator/guest-pictures";
 import {
   WATERMARK_PRESETS,
   watermarkOpacity,
@@ -44,8 +45,24 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
   // there's a whole text box to fill — offer the toggle on land frames.
   const isLandish = hidesCost(template);
 
+  // A guest's mark is kept in the browser until sign-in (TODO HM3).
+  const guestPictures = useGuestPictures();
+  const canPick = Boolean(userId) || guestPictures !== null;
+
   const onFilePicked = async (file: File | undefined) => {
     if (!file) return;
+    if (!userId && guestPictures) {
+      const url = guestPictures.keep(file, "watermark");
+      if (fileRef.current) fileRef.current.value = "";
+      if (!url) return;
+      setValue(
+        "watermark",
+        { kind: "custom", key: "", url, size: "normal", opacity: null },
+        { shouldDirty: true },
+      );
+      toast.success(GUEST_PICTURE_KEPT_MESSAGE);
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -164,8 +181,8 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!userId || uploading}
-                  title={userId ? undefined : "Sign in to upload a watermark."}
+                  disabled={!canPick || uploading}
+                  title={canPick ? undefined : "Sign in to upload a watermark."}
                   onClick={() => fileRef.current?.click()}
                 >
                   {uploading ? (

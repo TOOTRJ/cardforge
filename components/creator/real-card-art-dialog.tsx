@@ -11,6 +11,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { ImageDown, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useGuestGate } from "@/components/creator/guest-pictures";
 import { ChipGroup } from "@/components/ui/chip-group";
 import {
   Dialog,
@@ -68,7 +69,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
-const SIGN_IN_HINT = "Sign in to use art from real cards.";
+const SIGN_IN_HINT = "sign in to use art from real cards";
 
 /** One /api/scryfall/search result, as far as this dialog reads it. */
 type ArtSearchResult = {
@@ -119,28 +120,30 @@ export function RealCardArtButton({
   const { control, setValue } = useFormContext<FormValues>();
   const template = useWatch({ control, name: "frame_style.template" });
   const [open, setOpen] = useState(false);
+  // The guest creator: the button opens its sign-up dialog (TODO HM3).
+  const gate = useGuestGate();
   const label = "Use art from a real card";
+  // The kind's own word for its second part ("the right half", "the back
+  // face" — lib/creator/second-part.ts, TODO 5.14).
+  const name = target === "back" ? `${label} for ${secondPartWordsOfCard(null, template).phrase}` : label;
+  // Off (signed out, no guest dialog): reachable, its reason in its name —
+  // aria-disabled, never `disabled`, and no click.
+  const off = !signedIn && !gate;
   return (
     <>
-      {/* A disabled button takes no pointer events: the wrapper carries the
-          sign-in hint's tooltip. */}
-      <span title={signedIn ? undefined : SIGN_IN_HINT} className="inline-flex">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen(true)}
-          disabled={!signedIn}
-          title={signedIn ? undefined : SIGN_IN_HINT}
-          // The kind's own word for its second part ("the right half", "the
-          // back face" — lib/creator/second-part.ts, TODO 5.14).
-          aria-label={target === "back" ? `${label} for ${secondPartWordsOfCard(null, template).phrase}` : undefined}
-          data-testid={`real-card-art-${target}`}
-        >
-          <ImageDown className="h-4 w-4" aria-hidden />
-          {label}
-        </Button>
-      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={signedIn ? () => setOpen(true) : gate ? () => gate("real-card-art") : undefined}
+        aria-disabled={off ? true : undefined}
+        className={off ? "opacity-60" : undefined}
+        aria-label={off ? `${name} — ${SIGN_IN_HINT}` : target === "back" ? name : undefined}
+        data-testid={`real-card-art-${target}`}
+      >
+        <ImageDown className="h-4 w-4" aria-hidden />
+        {label}
+      </Button>
       {signedIn ? (
         <RealCardArtDialog
           open={open}
