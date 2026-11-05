@@ -744,6 +744,12 @@ describe("grantCreditsForSync — a monthly plan's base allotment is the paying 
     }
   });
 
+  it("a paying invoice is granted under ITS OWN month's key (a Feb 28 renewal paid on the Mar 5 retry is February's)", async () => {
+    const { admin, rpcs } = makeAdmin();
+    await grantCreditsForSync(monthly(), admin, { isCreationEvent: false, paid: true, period: "2026-02" });
+    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_idempotency_key: creditRefillKey("user-1", "2026-02") });
+  });
+
   it("an annual or unknown interval grants on any sync, as before", async () => {
     for (const billingInterval of ["year", null] as const) {
       const { admin, rpcs } = makeAdmin({ __newest: { ...recent, idempotency_key: "refill:user-1:2026-01" } });

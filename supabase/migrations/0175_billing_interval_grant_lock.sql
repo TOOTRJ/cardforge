@@ -32,8 +32,10 @@
 -- profile write, so the column is added here too (idempotent) and this file
 -- never depends on the order. Merge 0174's PR first all the same: applied
 -- AFTER this one, its older trigger body would drop the billing_interval pin
--- (the sync then writes it unpinned — a user could not: the column is in no
--- API grant).
+-- — and `authenticated` holds table-level UPDATE on profiles (0097), so a
+-- user could then write it (a monthly subscriber setting 'year' turns the
+-- cron's backstop off until the next sync). The guard is the merge order
+-- (#758 → #759 → #760); the pins are re-stated here either way.
 alter table public.profiles
   add column if not exists payment_failed_at timestamptz;
 

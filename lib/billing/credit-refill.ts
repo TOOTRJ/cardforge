@@ -60,11 +60,15 @@ import {
 //     before 0175 can still see the Jan 31 / Feb 1 early grant until its
 //     next Stripe event (accepted); a cron outage spanning TWO whole months
 //     loses an annual plan the earlier one (only the previous month is
-//     backfilled; accepted — the next outage of that length is the alert).
+//     backfilled; accepted — the next outage of that length is the alert);
+//     the monthly backstop catches up ONE missed month, never a run of them
+//     (a missed webhook is itself an incident).
 // The same "paying invoice" rule holds at the WEBHOOK door:
 // grantCreditsForSync passes `base: "backstop"` for a monthly plan unless
 // the event paid (a cycle / first invoice, a trial converting) — a cancel
-// click on Feb 2 after a Jan 31 payment used to grant February.
+// click on Feb 2 after a Jan 31 payment used to grant February — and a
+// paying invoice is granted under ITS OWN period's month, never "now": a
+// renewal that failed on Feb 28 and paid on the Mar 5 retry is February's.
 // ---------------------------------------------------------------------------
 
 /** A monthly plan whose newest base grant is older than this is missing a
@@ -267,10 +271,12 @@ async function readMonthRefills(
   };
 }
 
-/** The user's newest BASE refill grant (any period, the trial tranche
- *  included; never an upgrade top-up — filtered in SQL, before the limit),
- *  or null when there is none or the read failed. */
-async function newestBaseGrant(
+/** The user's newest refill grant of any kind — the base allotment, the
+ *  trial tranche, an upgrade top-up (a same-month trial conversion is a
+ *  top-up, and it is the payment that anchors the next renewal) — as WHEN
+ *  it landed and WHICH month it was for (the key's period, the same prefix
+ *  on every refill key); null when there is none or the read failed. */
+async function newestRefillGrant(
   admin: CreditGrantClient,
   userId: string,
 ): Promise<{ at: Date; period: string } | null> {
@@ -279,16 +285,21 @@ async function newestBaseGrant(
     .from("credit_ledger")
     .select("created_at, idempotency_key")
     .like("idempotency_key", `${prefix}%`)
-    .not("idempotency_key", "like", "%:upgrade:%")
     .order("created_at", { ascending: false })
     .limit(1);
   if (error || !data) return null;
   const row = (data as Array<{ created_at: string | null; idempotency_key: string | null }>)[0];
   const at = row?.created_at ? new Date(row.created_at) : null;
   if (!at || Number.isNaN(at.getTime()) || !row?.idempotency_key) return null;
-  const period = row.idempotency_key.slice(prefix.length);
+  const period = row.idempotency_key.slice(prefix.length, prefix.length + 7);
   return /^\d{4}-\d{2}$/.test(period) ? { at, period } : null;
 }
+
+/** A newest grant older than this is no longer a missed PAYMENT of a
+ *  running plan but an older plan's (a lapsed subscriber coming back): the
+ *  backstop then grants the current month — which the creation event's
+ *  grant dedupes — never a "missed" month that was never owed. */
+const MISSED_MONTH_LOOKBACK_DAYS = 2 * MONTHLY_REFILL_BACKSTOP_DAYS;
 
 /** The calendar month after "YYYY-MM". */
 function nextPeriod(period: string): string {
@@ -344,16 +355,18 @@ export async function grantMonthlyCreditsForPeriod(
   // answers null and falls through to the grant: idempotent on the key.)
   let grantKey = baseKey;
   if (opts.base === "backstop") {
-    const newest = await newestBaseGrant(admin, userId);
+    const newest = await newestRefillGrant(admin, userId);
     const now = opts.now ?? new Date();
-    if (newest && now.getTime() - newest.at.getTime() < MONTHLY_REFILL_BACKSTOP_DAYS * DAY_MS) {
+    const age = newest ? now.getTime() - newest.at.getTime() : Infinity;
+    if (age < MONTHLY_REFILL_BACKSTOP_DAYS * DAY_MS) {
       return { ok: true, granted: 0 };
     }
     // The missed payment's month is the one AFTER the newest grant's (a plan
     // paid on Jan 31 whose Feb 28 renewal was missed is owed February, found
-    // on Mar 7 — granting it under March would leave the Mar 28 renewal
-    // nothing to grant). Never past the current month.
-    if (newest && newest.period < period) {
+    // on Mar 8 — granting it under March would leave the Mar 28 renewal
+    // nothing to grant). Never past the current month, and only while the
+    // newest grant is recent enough to be a running plan's.
+    if (newest && newest.period < period && age < MISSED_MONTH_LOOKBACK_DAYS * DAY_MS) {
       const missed = nextPeriod(newest.period);
       grantKey = creditRefillKey(userId, missed < period ? missed : period);
     }

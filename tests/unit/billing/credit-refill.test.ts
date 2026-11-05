@@ -29,6 +29,7 @@ import {
 
 const USER = "00000000-0000-0000-0000-000000000001";
 const PERIOD = "2026-07";
+const hoursAgoFrom = (from: Date, h: number) => new Date(from.getTime() - h * 3_600_000).toISOString();
 
 type GrantCall = {
   p_user_id: string;
@@ -69,11 +70,6 @@ function stubAdmin(opts: {
           }
           expect(pattern).toBe(`${creditRefillKey(USER, "")}%`);
           const chain = {
-            not: (_c: string, op: string, value: string) => {
-              // The upgrade rows are filtered in SQL, before the limit.
-              expect([op, value]).toEqual(["like", "%:upgrade:%"]);
-              return chain;
-            },
             order: () => chain,
             limit: () => chain,
             then: (resolve: (v: unknown) => void) =>
@@ -244,12 +240,25 @@ describe("grantMonthlyCreditsForPeriod", () => {
     expect((await grantMonthlyCreditsForPeriod(stubAdmin({ newest: null }).admin, USER, "plus", PERIOD, { base: "backstop", now })).ok).toBe(true);
     const failed = stubAdmin({ newestError: "boom" });
     expect(await grantMonthlyCreditsForPeriod(failed.admin, USER, "plus", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.plus });
+    // A same-month trial conversion is a TOP-UP under an upgrade key — the
+    // payment that anchors the next renewal: it counts as the newest grant.
+    const converted = stubAdmin({ newest: { created_at: hoursAgoFrom(now, 30 * 24), idempotency_key: creditUpgradeKey(USER, "2026-01", "pro") } });
+    expect(await grantMonthlyCreditsForPeriod(converted.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: 0 });
+    expect(converted.grants).toEqual([]);
     // A month that HAS its base row still tops up an upgrade under the backstop.
     const topUp = stubAdmin({ baseRow: { delta: MONTHLY_CREDITS.plus }, newest: recent });
     expect(await grantMonthlyCreditsForPeriod(topUp.admin, USER, "pro", PERIOD, { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
     // "always" (the webhook, an annual plan) never reads the newest grant.
     const always = stubAdmin({ newest: recent });
     expect(await grantMonthlyCreditsForPeriod(always.admin, USER, "pro", PERIOD)).toEqual({ ok: true, granted: MONTHLY_CREDITS.pro });
+  });
+
+  it("a lapsed subscriber coming back (newest grant months old) is granted the CURRENT month, which the creation grant dedupes — never a month that was never owed", async () => {
+    const now = new Date("2026-03-20T06:00:00Z");
+    const oldPlan = { created_at: "2025-10-05T20:00:00Z", idempotency_key: creditRefillKey(USER, "2025-10") };
+    const back = stubAdmin({ newest: oldPlan });
+    await grantMonthlyCreditsForPeriod(back.admin, USER, "plus", "2026-03", { base: "backstop", now });
+    expect(back.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-03"));
   });
 
   it("the backstop grants the MISSED month — the one after the newest grant's — never the current one over it", async () => {
@@ -261,10 +270,11 @@ describe("grantMonthlyCreditsForPeriod", () => {
     const missed = stubAdmin({ newest: jan });
     expect(await grantMonthlyCreditsForPeriod(missed.admin, USER, "plus", "2026-03", { base: "backstop", now })).toEqual({ ok: true, granted: MONTHLY_CREDITS.plus });
     expect(missed.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-02"));
-    // Two months missed: the earlier one first (the next run takes the next).
+    // Two months missed inside the look-back (Dec 5 paid; Jan and Feb
+    // renewals missed; Feb 10): the earlier one is caught up.
     const dec = { created_at: "2025-12-05T20:00:00Z", idempotency_key: creditRefillKey(USER, "2025-12") };
     const twice = stubAdmin({ newest: dec });
-    await grantMonthlyCreditsForPeriod(twice.admin, USER, "plus", "2026-03", { base: "backstop", now });
+    await grantMonthlyCreditsForPeriod(twice.admin, USER, "plus", "2026-02", { base: "backstop", now: new Date("2026-02-10T06:00:00Z") });
     expect(twice.grants[0].p_idempotency_key).toBe(creditRefillKey(USER, "2026-01"));
     // The newest grant is last month: this month is the missed one.
     const feb = { created_at: "2026-01-28T20:00:00Z", idempotency_key: creditRefillKey(USER, "2026-02") };

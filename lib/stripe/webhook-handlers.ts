@@ -32,6 +32,7 @@ import {
   TRIAL_WINBACK_WINDOW_DAYS,
   type PackKey,
   type PlanTier,
+  currentCreditPeriod,
 } from "@/lib/billing/plans";
 
 // All entitlement/credit writes happen here, via the service-role admin client
@@ -458,11 +459,18 @@ async function handleInvoicePaid(
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
       try {
+        const paid = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
+        const periodStart = invoice.lines?.data?.[0]?.period?.start ?? invoice.period_start ?? null;
         await grantCreditsForSync(result, admin, {
           isCreationEvent: false,
           // The cycle's (or the first) invoice is what a monthly plan's
-          // allotment is for; a proration or a $0 update invoice is not.
-          paid: invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create",
+          // allotment is for; a proration or a $0 update invoice is not —
+          // and it is the month the invoice is FOR (a retry that pays on
+          // Mar 5 for a Feb 28 renewal is February's).
+          paid,
+          ...(paid && typeof periodStart === "number"
+            ? { period: currentCreditPeriod(new Date(periodStart * 1000)) }
+            : {}),
         });
       } catch (error) {
         // Loud, never thrown (Stripe's retries stay as they were; the

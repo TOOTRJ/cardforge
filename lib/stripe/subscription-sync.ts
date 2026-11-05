@@ -525,6 +525,10 @@ export async function grantCreditsForSync(
      *  allotment. Any other sync (a cancel click, a resume, a portal change,
      *  a proration) only backstops it (lib/billing/credit-refill.ts). */
     paid?: boolean;
+    /** The calendar month the paying invoice is FOR (its line's period
+     *  start) — a renewal that failed on Feb 28 and paid on the Mar 5 retry
+     *  is February's allotment, never March's. Default: this month. */
+    period?: string;
   },
 ): Promise<void> {
   if (!result.subscriptionId || !isLiveStatus(result.status)) return;
@@ -547,7 +551,7 @@ export async function grantCreditsForSync(
     admin,
     result.userId,
     result.tier,
-    currentCreditPeriod(),
+    opts.period ?? currentCreditPeriod(),
     { base },
   );
   if (!granted.ok) {
