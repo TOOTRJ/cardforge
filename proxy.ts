@@ -96,6 +96,22 @@ export async function proxy(request: NextRequest) {
 
   const sessionResponse = await updateSession(request);
 
+  // A session cookie is only a HINT: an expired or revoked session still
+  // leaves one behind, and updateSession then answers /create (a protected
+  // path) with the login redirect — a signed-out visitor pressing "Make a
+  // card" landed on /login instead of the guest creator (HM3). Serve the guest
+  // creator then, carrying whatever cookies updateSession set (it clears a
+  // dead session's).
+  if (requestPath === "/create" && isLoginRedirect(sessionResponse, request)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/create-guest";
+    const rewritten = NextResponse.rewrite(url, { request });
+    for (const cookie of sessionResponse.cookies.getAll()) {
+      rewritten.cookies.set(cookie);
+    }
+    return rewritten;
+  }
+
   // /pricing is a static (ISR) storefront for anonymous visitors. A visitor
   // with a session cookie is rewritten to the dynamic pricing-member route,
   // which resolves their plan on the server and renders their real buttons
@@ -181,6 +197,13 @@ export async function proxy(request: NextRequest) {
   }
 
   return sessionResponse;
+}
+
+/** Is this updateSession's redirect to the sign-in page (no live session)? */
+function isLoginRedirect(response: Response, request: NextRequest): boolean {
+  const location = response.headers.get("location");
+  if (!location) return false;
+  return new URL(location, request.nextUrl.origin).pathname === "/login";
 }
 
 export const config = {

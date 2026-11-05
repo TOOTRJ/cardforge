@@ -69,6 +69,29 @@ describe("proxy", () => {
     expect(s.updateSession).toHaveBeenCalledTimes(1);
   });
 
+  it("serves the guest creator, not /login, when the session cookie is a dead session's", async () => {
+    // An expired / revoked session leaves its cookie behind: updateSession
+    // finds no user on the protected /create and answers with the login
+    // redirect, which a signed-out "Make a card" press used to land on.
+    s.session = () => {
+      const redirect = NextResponse.redirect("http://localhost:3000/login?redirectTo=%2Fcreate");
+      redirect.cookies.set("sb-abcdefgh-auth-token", "", { maxAge: 0 });
+      return redirect;
+    };
+    const response = await proxy(request("/create", "sb-abcdefgh-auth-token=stale"));
+    expect(rewriteOf(response)).toBe("http://localhost:3000/create-guest");
+    expect(locationOf(response)).toBeNull();
+    // The cleared session cookie still reaches the browser.
+    expect(response.headers.get("set-cookie")).toContain("sb-abcdefgh-auth-token=;");
+  });
+
+  it("keeps updateSession's other redirects on /create (never turns them into the guest page)", async () => {
+    s.session = () => NextResponse.redirect("http://localhost:3000/onboarding");
+    const response = await proxy(request("/create", "sb-abcdefgh-auth-token=live"));
+    expect(locationOf(response)).toBe("http://localhost:3000/onboarding");
+    expect(rewriteOf(response)).toBeNull();
+  });
+
   it("308s landing requests carrying a real filter param to the visible browse sibling, query intact", async () => {
     const gallery = await proxy(request("/gallery?type=creature&page=2"));
     expect(gallery.status).toBe(308);

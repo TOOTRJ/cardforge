@@ -9,9 +9,10 @@ import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 // protected. Personal libraries live under /dashboard and are covered by
 // the /dashboard prefix.
 // /create: proxy.ts rewrites COOKIE-LESS visitors to the guest creator before
-// this runs, so the no-cookie fast path below never sees /create; keeping it
-// protected here means a visitor whose cookie no longer holds a valid
-// session still gets the proper /login?redirectTo=/create redirect.
+// this runs, so the no-cookie fast path below never sees /create; a visitor
+// whose cookie no longer holds a valid session gets the login redirect here,
+// which proxy.ts turns into the guest creator too (carrying this response's
+// cookies: the dead session's clears).
 //
 // Every signed-in-only route is listed so a signed-out visitor keeps their
 // destination (`/login?redirectTo=…`). The (app) layout's own bare
@@ -101,7 +102,16 @@ export async function updateSession(request: NextRequest) {
   const isProtected = isProtectedPath(path);
   const isAuthPage = pathMatches(path, AUTH_REDIRECT_PREFIXES);
 
-  if (!user && isProtected) return loginRedirect(request);
+  if (!user && isProtected) {
+    // Carry the cookies getUser() set — a dead session's clears — or the
+    // stale cookie outlives the redirect and every protected page pays a
+    // getUser() round trip for it until a public page happens to clear it.
+    const redirect = loginRedirect(request);
+    for (const cookie of response.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    return redirect;
+  }
 
   if (user && isAuthPage) {
     // Already signed in: go where the login link was headed, not always the
