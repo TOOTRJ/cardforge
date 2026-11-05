@@ -6,6 +6,8 @@ import {
   mergeDraftValues,
   createGuestDraftStore,
   draftPictures,
+  forgetGuestCard,
+  GUEST_CARD_UPLOADS_KEY,
   GUEST_DRAFT_TTL_MS,
   GUEST_DRAFT_VERSION,
   guestAuthHref,
@@ -48,14 +50,20 @@ function memoryBackend(opts: { keepsPictures?: boolean; failPut?: boolean } = {}
   const backend: GuestDraftBackend & { record: () => unknown; set: (r: unknown) => void } = {
     keepsPictures: opts.keepsPictures ?? true,
     get: async () => record,
-    put: async (r) => {
-      if (opts.failPut) throw new Error("QuotaExceededError");
-      // IndexedDB keeps a Blob as a Blob; a shallow copy does too.
-      record = JSON.parse(JSON.stringify({ ...(r as object), pictures: [] }));
-      (record as { pictures: unknown }).pictures = (r as { pictures: unknown[] }).pictures.map((p) => ({ ...(p as object) }));
-    },
     delete: async () => {
       record = null;
+    },
+    // One step, as IndexedDB's readwrite transaction: a write that fails
+    // (the quota) fails after deciding, and leaves the record as it was.
+    update: async (decide) => {
+      const next = decide(record);
+      if (next === "delete") record = null;
+      else if (next) {
+        if (opts.failPut) throw new Error("QuotaExceededError");
+        // IndexedDB keeps a Blob as a Blob; a shallow copy does too.
+        record = JSON.parse(JSON.stringify({ ...next, pictures: [] }));
+        (record as { pictures: unknown }).pictures = next.pictures.map((p) => ({ ...p }));
+      }
     },
     record: () => record,
     set: (r) => {
@@ -467,5 +475,81 @@ describe("one tab never overwrites another's card (a guarded write / clear)", ()
     expect(idb.record()).not.toBeNull();
     expect(await store.clear({ expected: "r9" })).toBe(true);
     expect(idb.record()).toBeNull();
+  });
+});
+
+describe("the check and the write are one step (no tab comes between them)", () => {
+  const draft = (title: string): GuestDraft => ({
+    values: values({ title, art_url: "", watermark: undefined } as unknown as Partial<FormValues>),
+    pictures: [],
+    tags: { following: false, base: [] },
+    base: null,
+    claimedBy: null,
+  });
+  // Every call waits a turn first, as two tabs' storage calls interleave.
+  function slowBackend() {
+    const inner = memoryBackend();
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+    const backend: GuestDraftBackend & { record: () => unknown } = {
+      keepsPictures: true,
+      get: async () => (await tick(), inner.get()),
+      delete: async () => (await tick(), inner.delete()),
+      update: async (decide) => (await tick(), inner.update(decide)),
+      record: inner.record,
+    };
+    return backend;
+  }
+
+  it("a claim from a signed-in tab is never undone by a guest tab's write racing it", async () => {
+    for (const claimFirst of [true, false]) {
+      const idb = slowBackend();
+      const tab = () => createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+      await tab().write(draft("Ember Wyrm"), { guard: { expected: null }, rev: "r1" });
+      const guestWrite = () => tab().write(draft("Ember Wyrm II"), { guard: { expected: "r1" }, rev: "r2" });
+      const claim = () => tab().claim("user-a");
+      await Promise.all(claimFirst ? [claim(), guestWrite()] : [guestWrite(), claim()]);
+      expect((idb.record() as { claimedBy: string | null }).claimedBy).toBe("user-a");
+    }
+  });
+
+  it("two guest tabs that put back the same card: one write wins, the other is told", async () => {
+    const idb = slowBackend();
+    const tab = () => createGuestDraftStore({ backends: () => [idb], now: () => NOW });
+    await tab().write(draft("Ember Wyrm"), { guard: { expected: null }, rev: "r1" });
+    const results = await Promise.all([
+      tab().write(draft("Tab A"), { guard: { expected: "r1" }, rev: "ra" }),
+      tab().write(draft("Tab B"), { guard: { expected: "r1" }, rev: "rb" }),
+    ]);
+    expect([...results].sort()).toEqual(["kept", "stale"]);
+  });
+
+  it("after a fallback, the tab reads and guards the copy it wrote — never the older one", async () => {
+    const opts = { failPut: false };
+    const idb = memoryBackend(opts);
+    const store = createGuestDraftStore({ backends: () => [idb, sessionStorageBackend()], now: () => NOW });
+    expect(await store.write(draft("One"), { guard: { expected: null }, rev: "r1" })).toBe("kept");
+    opts.failPut = true;
+    expect(await store.write(draft("Two"), { guard: { expected: "r1" }, rev: "r2" })).toBe("kept");
+    expect(idb.record()).toBeNull();
+    expect(await store.write(draft("Three"), { guard: { expected: "r2" }, rev: "r3" })).toBe("kept");
+    expect((await store.read(null))?.values.title).toBe("Three");
+  });
+});
+
+describe("forgetGuestCard (every sign-out)", () => {
+  it("removes the card and this tab's note of its uploaded pictures", async () => {
+    sessionStorage.setItem(GUEST_CARD_UPLOADS_KEY, JSON.stringify({ "user-a|r1|art_url": "https://x/card-art/user-a/a.png" }));
+    const store = createGuestDraftStore({ backends: () => [sessionStorageBackend()], now: () => NOW });
+    await store.write({
+      values: values({ art_url: "", watermark: undefined } as unknown as Partial<FormValues>),
+      pictures: [],
+      tags: { following: false, base: [] },
+      base: null,
+      claimedBy: null,
+    });
+    expect(sessionStorage.getItem("pipglyph:guest-card-draft")).not.toBeNull();
+    await forgetGuestCard();
+    expect(sessionStorage.getItem(GUEST_CARD_UPLOADS_KEY)).toBeNull();
+    expect(sessionStorage.getItem("pipglyph:guest-card-draft")).toBeNull();
   });
 });

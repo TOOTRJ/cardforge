@@ -252,11 +252,12 @@ import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/sav
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
 import { useAutoTagsFollow } from "@/components/creator/use-auto-tags";
-import { useGuestDraft, type GuestDraftRole, type GuestPictureUploads } from "@/components/creator/use-guest-draft";
+import { useGuestDraft, type GuestCardKept, type GuestDraftRole, type GuestPictureUploads } from "@/components/creator/use-guest-draft";
 import { GuestGateProvider, GuestPicturesProvider } from "@/components/creator/guest-pictures";
 import {
   GUEST_PICTURE_FAILED_REASON,
   GUEST_PICTURE_UPLOADING_REASON,
+  GuestCardStaleNote,
   GuestDraftRestoredNotice,
   GuestSaveGate,
   type GuestSaveGateReason,
@@ -561,6 +562,10 @@ const STEP_RAIL_ICONS: Record<string, React.ReactNode> = {
 const SAVE_REQUEST_FAILED =
   "The save didn't go through. Your card is still here — try Save again; if it keeps failing, copy your text and reload the page.";
 
+/** How long the guest's sign-up dialog waits for the card's write before it
+ *  opens anyway (TODO HM3). */
+const GATE_FLUSH_WAIT_MS = 400;
+
 /** Structural equality of two form-value snapshots (plain JSON-like data:
  *  strings, numbers, booleans, arrays, objects). */
 function sameFormState(a: unknown, b: unknown): boolean {
@@ -823,13 +828,20 @@ export function CardCreatorForm({
   const guestEditing = !userId && guestDraft === "guest";
   // The guest creator's "save needs an account" dialog — Save, or an AI
   // button (credits belong to an account). The card is written to this
-  // browser before it opens.
+  // browser before it opens, and the dialog says whether it was kept (a
+  // write that takes too long reads as kept: it is still on its way).
   const [saveGate, setSaveGate] = useState<GuestSaveGateReason | null>(null);
-  const flushGuestDraftRef = useRef<() => Promise<void>>(async () => {});
+  const [saveGateKept, setSaveGateKept] = useState<GuestCardKept>("kept");
+  const flushGuestDraftRef = useRef<() => Promise<GuestCardKept>>(async () => "kept");
   const openSaveGate = (reason: GuestSaveGateReason) => {
     trackFunnelEvent("guest_save_gate", { reason });
-    void flushGuestDraftRef.current();
-    setSaveGate(reason);
+    void Promise.race([
+      flushGuestDraftRef.current().catch((): GuestCardKept => "not-kept"),
+      new Promise<GuestCardKept>((resolve) => setTimeout(() => resolve("kept"), GATE_FLUSH_WAIT_MS)),
+    ]).then((kept) => {
+      setSaveGateKept(kept);
+      setSaveGate(reason);
+    });
   };
   const [isSubmitting, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -5186,7 +5198,8 @@ export function CardCreatorForm({
         // A live region announces what CHANGES in it, so it is here, empty,
         // before the kept card is read back — then the note fills it.
         <div role="status" data-testid="guest-draft-status">
-          {guestDraftControls.restored ? (
+          {guestDraftControls.stale ? <GuestCardStaleNote className="mb-6" /> : null}
+          {guestDraftControls.restored && !guestDraftControls.stale ? (
             <GuestDraftRestoredNotice
               signedIn={Boolean(userId)}
               uploads={localPictureWaiting ? guestUploads : "idle"}
@@ -5678,6 +5691,7 @@ export function CardCreatorForm({
           {guestEditing ? (
             <GuestSaveGate
               reason={saveGate}
+              kept={saveGateKept}
               onOpenChange={(open) => {
                 if (!open) setSaveGate(null);
               }}

@@ -66,6 +66,8 @@ const kept = vi.hoisted(() => ({
   rev: null as string | null,
   writes: [] as GuestDraft[],
   cleared: 0,
+  // This browser refuses storage (a private window, blocked site data).
+  refuse: false,
   // The same browser's store, as another tab would open it.
   otherTab: null as null | (() => import("@/lib/creator/guest-draft").GuestDraftStore),
 }));
@@ -75,12 +77,23 @@ vi.mock("@/lib/creator/guest-draft", async (importOriginal) => {
     keepsPictures: true,
     get: async () =>
       kept.draft ? { ...kept.draft, v: real.GUEST_DRAFT_VERSION, savedAt: Date.now() - 1, rev: kept.rev } : null,
-    put: async (record) => {
-      const { rev, ...rest } = record;
-      const draft: GuestDraft = { values: rest.values, pictures: rest.pictures, tags: rest.tags, base: rest.base, claimedBy: rest.claimedBy };
-      if (!(kept.draft && draft.claimedBy && rev === kept.rev)) kept.writes.push(draft);
-      kept.draft = draft;
-      kept.rev = rev ?? null;
+    update: async (decide) => {
+      if (kept.refuse) throw new Error("SecurityError");
+      const next = decide(
+        kept.draft ? { ...kept.draft, v: real.GUEST_DRAFT_VERSION, savedAt: Date.now() - 1, rev: kept.rev } : null,
+      );
+      if (next === "delete") {
+        kept.cleared += 1;
+        kept.draft = null;
+        kept.rev = null;
+      } else if (next) {
+        const { rev, ...rest } = next;
+        const draft: GuestDraft = { values: rest.values, pictures: rest.pictures, tags: rest.tags, base: rest.base, claimedBy: rest.claimedBy };
+        // A claim marks the same record; anything else is a write.
+        if (!(kept.draft && draft.claimedBy && rev === kept.rev)) kept.writes.push(draft);
+        kept.draft = draft;
+        kept.rev = rev ?? null;
+      }
     },
     delete: async () => {
       kept.cleared += 1;
@@ -107,6 +120,7 @@ beforeEach(() => {
   kept.rev = null;
   kept.writes = [];
   kept.cleared = 0;
+  kept.refuse = false;
   preview.last = null;
   try {
     window.sessionStorage.clear();
@@ -179,6 +193,8 @@ describe("the guest creator (HM3)", () => {
     await click(screen.getByTestId("guest-save"));
     const gate = await screen.findByTestId("guest-save-gate");
     expect(funnel.trackFunnelEvent).toHaveBeenCalledWith("guest_save_gate", { reason: "save" });
+    expect(gate.textContent).toMatch(/Your card waits in this browser while you sign up/);
+    expect(gate.textContent).toMatch(/Open the confirmation email in this browser/);
     expect(kept.writes.at(-1)?.values.title).toBe("Ember Wyrm");
     const signup = Array.from(gate.querySelectorAll("a")).find((a) => a.textContent?.includes("Create a free account"));
     expect(signup?.getAttribute("href")).toBe(guestAuthHref("signup"));
@@ -545,6 +561,34 @@ describe("a guest tab left open never brings the card back (HM3)", () => {
     await rest();
     cleanup();
     expect(kept.draft?.values.title).toBe("Newer Wyrm");
+  });
+
+  it("Save in the stale tab says the card won't be kept here, and the creator says so too", async () => {
+    await guestTab();
+    await kept.otherTab!().write({ ...kept.draft!, values: { ...kept.draft!.values, title: "Newer Wyrm" } });
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm II" } });
+    });
+    await click(screen.getByTestId("guest-save"));
+    const gate = await screen.findByTestId("guest-save-gate");
+    expect(gate.textContent).toMatch(/Another tab has taken over this card, so what's here won't be kept/);
+    expect(gate.textContent).not.toMatch(/Your card waits/);
+    expect(gate.textContent).not.toMatch(/Open the confirmation email/);
+    const note = await screen.findByTestId("guest-card-stale");
+    expect(note.closest('[role="status"]')).not.toBeNull();
+    expect(kept.draft?.values.title).toBe("Newer Wyrm");
+  });
+
+  it("Save says so when this browser won't keep the card at all", async () => {
+    kept.refuse = true;
+    guest();
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm" } });
+    });
+    await click(screen.getByTestId("guest-save"));
+    const gate = await screen.findByTestId("guest-save-gate");
+    expect(gate.textContent).toMatch(/This browser won't keep the card/);
+    expect(gate.textContent).not.toMatch(/Your card waits/);
   });
 
   it("leaving the page with nothing changed writes nothing", async () => {

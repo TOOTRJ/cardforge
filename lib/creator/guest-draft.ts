@@ -351,8 +351,12 @@ export type GuestDraftBackend = {
   /** True when this backend keeps Blobs (the pictures). */
   keepsPictures: boolean;
   get(): Promise<unknown>;
-  put(record: StoredGuestDraft): Promise<void>;
   delete(): Promise<void>;
+  /** Read the record, decide, and write — ONE step no other tab can come
+   *  between (IndexedDB: one readwrite transaction, which tabs queue for;
+   *  sessionStorage: one tab's, synchronous). `decide` is synchronous: the
+   *  record to put, "delete", or null to leave it. */
+  update(decide: (current: unknown) => StoredGuestDraft | "delete" | null): Promise<void>;
 };
 
 function openDb(): Promise<IDBDatabase> {
@@ -386,6 +390,35 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   }
 }
 
+async function updateRecord(decide: (current: unknown) => StoredGuestDraft | "delete" | null): Promise<void> {
+  const db = await openDb();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      const store = tx.objectStore(DB_STORE);
+      const request = store.get(DB_KEY);
+      // Decided and written inside the transaction that read it.
+      request.onsuccess = () => {
+        let next: StoredGuestDraft | "delete" | null;
+        try {
+          next = decide(request.result);
+        } catch (error) {
+          tx.abort();
+          reject(error);
+          return;
+        }
+        if (next === "delete") store.delete(DB_KEY);
+        else if (next) store.put(next, DB_KEY);
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error ?? new Error("aborted"));
+    });
+  } finally {
+    db.close();
+  }
+}
+
 export function indexedDbBackend(): GuestDraftBackend | null {
   try {
     if (typeof indexedDB === "undefined" || !indexedDB) return null;
@@ -395,12 +428,10 @@ export function indexedDbBackend(): GuestDraftBackend | null {
   return {
     keepsPictures: true,
     get: () => withStore("readonly", (store) => store.get(DB_KEY)),
-    put: async (record) => {
-      await withStore("readwrite", (store) => store.put(record, DB_KEY));
-    },
     delete: async () => {
       await withStore("readwrite", (store) => store.delete(DB_KEY));
     },
+    update: updateRecord,
   };
 }
 
@@ -422,11 +453,14 @@ export function sessionStorageBackend(): GuestDraftBackend | null {
       const raw = store.getItem(SESSION_KEY);
       return raw ? (JSON.parse(raw) as unknown) : null;
     },
-    put: async (record) => {
-      store.setItem(SESSION_KEY, JSON.stringify({ ...record, pictures: [] }));
-    },
     delete: async () => {
       store.removeItem(SESSION_KEY);
+    },
+    update: async (decide) => {
+      const raw = store.getItem(SESSION_KEY);
+      const next = decide(raw ? (JSON.parse(raw) as unknown) : null);
+      if (next === "delete") store.removeItem(SESSION_KEY);
+      else if (next) store.setItem(SESSION_KEY, JSON.stringify({ ...next, pictures: [] }));
     },
   };
 }
@@ -490,9 +524,17 @@ export function createGuestDraftStore(
     now?: () => number;
   } = {},
 ): GuestDraftStore {
-  const backends = () => (deps.backends ?? (() => [indexedDbBackend(), sessionStorageBackend()]))().filter(
+  const all = () => (deps.backends ?? (() => [indexedDbBackend(), sessionStorageBackend()]))().filter(
     (b): b is GuestDraftBackend => b !== null,
   );
+  // The backend this tab last wrote to comes first: once a write fell back
+  // (IndexedDB refused it), the tab reads and guards the copy it wrote, not
+  // an older record left in the one that refused.
+  let primary = 0;
+  const backends = (list = all()) => {
+    const first = list[primary];
+    return first ? [first, ...list.filter((_, i) => i !== primary)] : list;
+  };
   const now = deps.now ?? Date.now;
   const clearAll = async () => {
     for (const backend of backends()) {
@@ -531,12 +573,17 @@ export function createGuestDraftStore(
     }
     return null;
   };
-  // Is the stored record still the one a tab expects, and nobody's?
-  const unchanged = async (guard: GuestDraftGuard): Promise<boolean> => {
-    const found = await readRaw();
-    if (found?.draft.claimedBy) return false;
-    return (found?.rev ?? null) === guard.expected;
+  // Is this stored record (raw) still the one a tab expects, and nobody's?
+  // Read from the raw record, not the parsed draft: a tab may write over its
+  // OWN record once that has expired.
+  const revOf = (raw: unknown): string | null => {
+    const rev = raw && typeof raw === "object" ? (raw as StoredGuestDraft).rev : null;
+    return typeof rev === "string" && rev ? rev : null;
   };
+  const claimedIn = (raw: unknown) =>
+    Boolean(raw && typeof raw === "object" && (raw as StoredGuestDraft).claimedBy);
+  const passes = (raw: unknown, guard: GuestDraftGuard) =>
+    !claimedIn(raw) && (raw == null ? null : revOf(raw)) === guard.expected;
   return {
     async read(viewer) {
       const found = await readRaw();
@@ -548,27 +595,30 @@ export function createGuestDraftStore(
       return null;
     },
     async claim(userId) {
-      const found = await readRaw();
-      if (!found || found.draft.claimedBy === userId) return;
-      const record: StoredGuestDraft = {
-        ...found.draft,
-        claimedBy: userId,
-        v: GUEST_DRAFT_VERSION,
-        savedAt: found.savedAt,
-        rev: found.rev,
-      };
-      try {
-        await found.backend.put(record);
-      } catch {
-        // can't mark it: remove it rather than leave it for anyone
-        await clearAll();
+      // Marked in the same step that reads it: a guest tab's write can't
+      // land between the two and leave it unclaimed.
+      for (const backend of backends()) {
+        let found = false;
+        try {
+          await backend.update((raw) => {
+            if (!guestDraftFromStored(raw, now())) return null;
+            found = true;
+            const record = raw as StoredGuestDraft;
+            return record.claimedBy === userId ? null : { ...record, claimedBy: userId };
+          });
+        } catch {
+          if (!found) continue;
+          // can't mark it: remove it rather than leave it for anyone
+          await clearAll();
+          return;
+        }
+        if (!found) continue;
+        // Nothing waits for a sign-up any more (the onboarding pickup).
+        setWaiting(null);
         return;
       }
-      // Nothing waits for a sign-up any more (the onboarding pickup).
-      setWaiting(null);
     },
     async write(draft, options = {}) {
-      if (options.guard && !(await unchanged(options.guard))) return "stale";
       const savedAt = now();
       const record: StoredGuestDraft = {
         ...draft,
@@ -578,30 +628,86 @@ export function createGuestDraftStore(
         savedAt,
         rev: options.rev ?? randomId(),
       };
-      for (const backend of backends()) {
+      const list = all();
+      // The guard is judged once, by the first backend that reads a record:
+      // one that fails to write after it passed leaves the next to write.
+      let guard = options.guard;
+      for (const backend of backends(list)) {
+        const stored = backend.keepsPictures
+          ? record
+          : { ...record, values: withoutPictures(record.values, record.pictures), pictures: [] };
+        const verdict: { put?: boolean; stale?: boolean } = {};
         try {
-          await backend.put(
-            backend.keepsPictures
-              ? record
-              : { ...record, values: withoutPictures(record.values, record.pictures), pictures: [] },
-          );
-          setWaiting(savedAt);
-          return backend.keepsPictures || draft.pictures.length === 0 ? "kept" : "values-only";
+          await backend.update((raw) => {
+            if (guard && !passes(raw, guard)) {
+              verdict.stale = true;
+              return null;
+            }
+            verdict.put = true;
+            return stored;
+          });
         } catch {
-          // try the next one
+          if (verdict.put) guard = undefined;
+          continue;
         }
+        if (verdict.stale) return "stale";
+        const at = list.indexOf(backend);
+        if (at !== primary) {
+          // Fell back (or back again): this backend is the tab's copy now,
+          // and the one before it holds nothing older to read first.
+          for (const other of list) {
+            if (other === backend) continue;
+            try {
+              await other.delete();
+            } catch {
+              // read after this one, so never in the way
+            }
+          }
+          primary = at;
+        }
+        setWaiting(savedAt);
+        return backend.keepsPictures || draft.pictures.length === 0 ? "kept" : "values-only";
       }
       return false;
     },
     async clear(guard) {
-      if (guard && !(await unchanged(guard))) return false;
-      await clearAll();
+      if (!guard) {
+        await clearAll();
+        return true;
+      }
+      // Removed in the step that checks it is still this tab's.
+      for (const backend of backends()) {
+        const verdict: { found?: boolean; mine?: boolean } = {};
+        try {
+          await backend.update((raw) => {
+            if (raw == null) return null;
+            verdict.found = true;
+            verdict.mine = passes(raw, guard);
+            return verdict.mine ? "delete" : null;
+          });
+        } catch {
+          continue;
+        }
+        if (!verdict.found) continue;
+        if (verdict.mine) setWaiting(null);
+        return Boolean(verdict.mine);
+      }
       return true;
     },
   };
 }
 
-/** Forget this browser's guest card — every sign-out, account deletion. */
+/** This tab's record of a restored card's uploaded pictures (the
+ *  signed-in creator's: use-guest-draft), so a picture uploads once. */
+export const GUEST_CARD_UPLOADS_KEY = "pipglyph:guest-card-uploads";
+
+/** Forget this browser's guest card — every sign-out, account deletion —
+ *  and this tab's note of its uploaded pictures (the account's addresses). */
 export async function forgetGuestCard(): Promise<void> {
+  try {
+    webStorage("session")?.removeItem(GUEST_CARD_UPLOADS_KEY);
+  } catch {
+    // nothing kept here
+  }
   await createGuestDraftStore().clear();
 }

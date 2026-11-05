@@ -35,6 +35,7 @@ import { parseTags } from "@/lib/creator/card-fields";
 import {
   blobUrlPaths,
   createGuestDraftStore,
+  GUEST_CARD_UPLOADS_KEY,
   type ReadGuestDraft,
   draftPictures,
   guestPictureKindOf,
@@ -58,11 +59,10 @@ const WRITE_DELAY_MS = 500;
 // A restored picture's upload, remembered for this tab's session: the same
 // kept picture is uploaded once, not on every visit to /create before Save.
 // Keyed by the account, the draft's revision and the picture's field.
-const UPLOADED_KEY = "pipglyph:guest-card-uploads";
 const uploadedKey = (userId: string, rev: string, path: string) => `${userId}|${rev}|${path}`;
 function readUploaded(): Record<string, string> {
   try {
-    const raw = window.sessionStorage.getItem(UPLOADED_KEY);
+    const raw = window.sessionStorage.getItem(GUEST_CARD_UPLOADS_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, string>) : {};
   } catch {
@@ -71,13 +71,18 @@ function readUploaded(): Record<string, string> {
 }
 function rememberUploaded(key: string, url: string) {
   try {
-    window.sessionStorage.setItem(UPLOADED_KEY, JSON.stringify({ ...readUploaded(), [key]: url }));
+    window.sessionStorage.setItem(GUEST_CARD_UPLOADS_KEY, JSON.stringify({ ...readUploaded(), [key]: url }));
   } catch {
     // not remembered: the next visit uploads it again
   }
 }
 
 export type GuestPictureUploads = "idle" | "uploading" | "failed";
+
+/** Where the guest's card stands after a write: kept here (its pictures
+ *  too, or its values only), taken over by another tab ("not-here"), or not
+ *  kept at all (this browser refuses storage). */
+export type GuestCardKept = "kept" | "values-only" | "not-here" | "not-kept";
 
 export type GuestDraftControls = {
   /** The guest creator's picture keeper (null when signed in). */
@@ -88,8 +93,10 @@ export type GuestDraftControls = {
    *  started over): the notice, and the save's `guestDraft` funnel prop. */
   restored: boolean;
   retryUploads: () => void;
-  /** Write the card now (the save gate, leaving the page). */
-  flush: () => Promise<void>;
+  /** Write the card now (the save gate, leaving the page): what became of it. */
+  flush: () => Promise<GuestCardKept>;
+  /** Another tab has taken over the kept card: this tab's isn't kept. */
+  stale: boolean;
   /** Forget the kept card (a save went through). */
   clear: () => Promise<void>;
 };
@@ -177,6 +184,13 @@ export function useGuestDraft({
   // The record was claimed, cleared or rewritten elsewhere: this tab's card
   // is no longer the kept one, and it writes nothing more.
   const stale = useRef(false);
+  const [staleShown, setStaleShown] = useState(false);
+  const goneStale = useCallback(() => {
+    stale.current = true;
+    setStaleShown(true);
+  }, []);
+  // What the last write did, for a flush with nothing new to write.
+  const lastKept = useRef<GuestCardKept>("kept");
   const snapshotKey = useCallback(
     () => JSON.stringify({ values: getValues(), tags: latest.current.tags.snapshot() }),
     [getValues],
@@ -188,21 +202,25 @@ export function useGuestDraft({
     for (const url of [...files.current.keys()]) if (!inUse.has(url)) releaseFile(url);
   }, [getValues, releaseFile]);
 
-  const write = useCallback(async () => {
-    if (!writes || !ready.current || stale.current) return;
+  const writeNow = useCallback(async (): Promise<GuestCardKept> => {
+    if (stale.current) return "not-here";
+    if (!writes || !ready.current) return "kept";
     releaseUnused();
     if (!dirty.current) {
       // An untouched form (a fresh guest page, Start over) holds no card:
       // this tab's own record goes; another tab's stays.
-      if (expected.current === null && lastWritten.current === null) return;
+      if (expected.current === null && lastWritten.current === null) return "kept";
       const cleared = await store.clear({ expected: expected.current });
-      if (!cleared) stale.current = true;
       expected.current = null;
       lastWritten.current = null;
-      return;
+      if (!cleared) {
+        goneStale();
+        return "not-here";
+      }
+      return "kept";
     }
     const key = snapshotKey();
-    if (key === lastWritten.current) return;
+    if (key === lastWritten.current) return lastKept.current;
     const { values, pictures } = draftPictures(getValues(), files.current);
     const draft: GuestDraft = {
       values,
@@ -213,12 +231,24 @@ export function useGuestDraft({
     };
     const rev = randomId();
     const result = await store.write(draft, { guard: { expected: expected.current }, rev });
-    if (result === "stale") stale.current = true;
-    else if (result) {
-      expected.current = rev;
-      lastWritten.current = key;
+    if (result === "stale") {
+      goneStale();
+      return "not-here";
     }
-  }, [writes, getValues, store, releaseUnused, snapshotKey]);
+    if (!result) return (lastKept.current = "not-kept");
+    expected.current = rev;
+    lastWritten.current = key;
+    return (lastKept.current = result);
+  }, [writes, getValues, store, releaseUnused, snapshotKey, goneStale]);
+  // One write at a time: two at once (the debounce and a flush) would both
+  // go over the same revision, and the second would read the first as
+  // another tab's.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const write = useCallback((): Promise<GuestCardKept> => {
+    const next = queue.current.then(writeNow, writeNow);
+    queue.current = next;
+    return next;
+  }, [writeNow]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flush = useCallback(async () => {
@@ -226,7 +256,7 @@ export function useGuestDraft({
       clearTimeout(timer.current);
       timer.current = null;
     }
-    await write();
+    return write();
   }, [write]);
 
   useEffect(() => {
@@ -430,6 +460,7 @@ export function useGuestDraft({
     restored,
     retryUploads: () => void uploadKept(),
     flush,
+    stale: staleShown,
     clear,
   };
 }
