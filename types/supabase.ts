@@ -2495,6 +2495,13 @@ export type Database = {
         Args: { p_deck_id: string; p_days?: number };
         Returns: { day: string; likes: number }[];
       };
+      // Migration 0171 — the caller's OWN deck's clones per UTC day they were
+      // made (never the owner's own copy), oldest first, zeros included; no
+      // rows for anyone else's deck.
+      deck_clones_by_day: {
+        Args: { p_deck_id: string; p_days?: number };
+        Returns: { day: string; clones: number }[];
+      };
       // Migration 0165 — deck history retention (service role: the weekly
       // prune cron): by plan, the 30-day grace once Pro ends, the per-deck
       // cap. The rows deleted.

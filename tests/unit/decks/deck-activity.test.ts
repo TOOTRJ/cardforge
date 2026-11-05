@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVITY_METRICS,
   activityChange,
   activityChangeLabel,
   activityChangeSentence,
@@ -8,6 +9,7 @@ import {
   bucketLabel,
   buildActivitySeries,
   buildDeckActivity,
+  countNoun,
   isActivityPeriod,
   type DayCount,
 } from "@/lib/decks/deck-activity";
@@ -98,11 +100,24 @@ describe("buildActivitySeries", () => {
     expect(series.buckets.reduce((sum, b) => sum + b.count, 0)).toBe(series.total);
   });
 
-  it("builds both series from the two functions' rows", () => {
-    const activity = buildDeckActivity({ views: span(14, () => 1), likes: [] }, 7, TODAY);
+  it("builds all three series from the functions' rows", () => {
+    const activity = buildDeckActivity(
+      { views: span(14, () => 1), likes: [], clones: [{ day: TODAY, count: 2 }] },
+      7,
+      TODAY,
+    );
     expect(activity.views.total).toBe(7);
     expect(activity.likes.total).toBe(0);
     expect(activity.likes.change).toEqual({ kind: "none" });
+    expect(activity.clones.metric).toBe("clones");
+    expect(activity.clones.total).toBe(2);
+    expect(activity.clones.change).toEqual({ kind: "new" });
+  });
+
+  it("names the clones series and its noun", () => {
+    expect(ACTIVITY_METRICS).toEqual(["views", "likes", "clones"]);
+    expect(countNoun("clones", 1)).toBe("1 clone");
+    expect(countNoun("clones", 3)).toBe("3 clones");
   });
 });
 

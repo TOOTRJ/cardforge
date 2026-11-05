@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Deck activity (TODO DK7.4) — the OWNER's views and likes over 7 / 30 / 90
+// Deck activity (TODO DK7.4 / DK7.4a) — the OWNER's views, likes and clones over 7 / 30 / 90
 // days, Pro. Mounted only on the owner's page (DeckActivitySlot); a visitor
 // never gets it. The numbers come from getDeckActivityAction, which checks
 // the plan itself — `canView` only picks what is drawn first:
@@ -71,7 +71,7 @@ export function DeckActivityPanel({
           <ChartHelp help={BREAKDOWN_HELP.activity} />
         </div>
         <p className="max-w-2xl text-sm leading-6 text-muted">
-          How many people opened this deck and liked it, day by day, against the period before.
+          How many people opened, liked and copied this deck, day by day, against the period before.
         </p>
       </div>
       {canView ? <ActivityBody deckId={deckId} isPrivate={isPrivate} /> : <LockedPreview />}
@@ -143,23 +143,24 @@ function ActivityBody({ deckId, isPrivate }: { deckId: string; isPrivate: boolea
           {nothingYet ? (
             <p className="rounded-md border border-dashed border-border px-4 py-3 text-sm leading-6 text-muted">
               {isPrivate
-                ? "This deck is private, so only you can open it — views count once it's unlisted or public. Likes show up here as people give them."
-                : `No views or likes in the last ${activity.days * 2} days yet. Share the deck's link and they'll show up here, one view per person a day.`}
+                ? "This deck is private, so only you can open it — views count once it's unlisted or public. Likes and clones show up here as people give them."
+                : `No views, likes or clones in the last ${activity.days * 2} days yet. Share the deck's link and they'll show up here, one view per person a day.`}
             </p>
           ) : null}
-          <dl className="grid grid-cols-2 gap-3 sm:max-w-md">
+          <dl className="grid grid-cols-2 gap-3 sm:max-w-xl sm:grid-cols-3">
             {ACTIVITY_METRICS.map((metric) => (
               <StatTile key={metric} series={activity[metric]} />
             ))}
           </dl>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
             {ACTIVITY_METRICS.map((metric) => (
               <SeriesChart key={metric} series={activity[metric]} />
             ))}
           </div>
           <p className="text-xs leading-5 text-subtle">
             A view counts once per person per day, never your own. Likes count on the day they were given; a removed
-            like leaves the count.
+            like leaves the count. A clone is someone else&rsquo;s copy of this deck, counted on the day it was made;
+            your own copies never count.
           </p>
         </div>
       ) : load.state === "loading" ? (
@@ -286,8 +287,8 @@ function LockedPreview() {
   return (
     <div className="relative min-h-72 overflow-hidden rounded-card border border-border/70 bg-surface/80 p-4 sm:p-5">
       <div aria-hidden className="pointer-events-none select-none opacity-50 blur-[2px]">
-        <div className="mb-4 grid max-w-md grid-cols-2 gap-3">
-          {["Views", "Likes"].map((label) => (
+        <div className="mb-4 grid max-w-xl grid-cols-3 gap-3">
+          {["Views", "Likes", "Clones"].map((label) => (
             <div key={label} className="rounded-card border border-border/70 px-4 py-3">
               <div className="text-xs text-muted">{label}</div>
               <div className="font-mono text-2xl font-semibold text-foreground">··</div>
@@ -306,7 +307,7 @@ function LockedPreview() {
         <div className="flex max-w-md flex-col items-center gap-3 rounded-card border border-border bg-elevated/95 px-5 py-4 text-center shadow-lg">
           <Lock aria-hidden className="h-5 w-5 text-gold-strong" />
           <p className="text-sm leading-6 text-foreground">
-            See this deck&rsquo;s views and likes over 7, 30 or 90 days, against the period before.
+            See this deck&rsquo;s views, likes and clones over 7, 30 or 90 days, against the period before.
           </p>
           <p className="text-xs leading-5 text-muted">Deck activity is part of Pro. The chart behind this is a sample.</p>
           <Button size="sm" onClick={() => upgrade.open("deck_activity", "deck_activity")}>

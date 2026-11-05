@@ -7,7 +7,7 @@ import { dynamicReady } from "@/tests/stubs/next-dynamic";
 import { addDays, buildDeckActivity, type ActivityPeriod, type DayCount } from "@/lib/decks/deck-activity";
 
 // ---------------------------------------------------------------------------
-// The deck activity panel (TODO DK7.4): the OWNER's views and likes, Pro.
+// The deck activity panel (TODO DK7.4 / DK7.4a): the OWNER's views, likes and clones, Pro.
 //   * owner on Pro: the period switch, totals with their change, a chart per
 //     series and its table twin (in the page for a screen reader, shown by
 //     the card's "Table" switch);
@@ -38,8 +38,10 @@ vi.mock("@/lib/decks/activity-actions", () => ({
       ok: true,
       activity: buildDeckActivity(
         state.empty
-          ? { views: [], likes: [] }
-          : { views: rows(span, (i) => (i < days ? 1 : 2)), likes: rows(span, (i) => (i === span - 1 ? 3 : 0)) },
+          ? { views: [], likes: [], clones: [] }
+          : { views: rows(span, (i) => (i < days ? 1 : 2)), likes: rows(span, (i) => (i === span - 1 ? 3 : 0)),
+              clones: rows(span, (i) => (i === span - 2 ? 2 : 0)),
+            },
         days,
         TODAY,
       ),
@@ -74,6 +76,10 @@ describe("owner on Pro", () => {
     expect(within(likesTile).getByText("None in the previous 30 days.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Views", level: 3 })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Likes", level: 3 })).toBeTruthy();
+    const clonesTile = screen.getByText("Clones", { selector: "dt" }).parentElement!;
+    expect(within(clonesTile).getByText("2")).toBeTruthy();
+    expect(within(clonesTile).getByText("None in the previous 30 days.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Clones", level: 3 })).toBeTruthy();
   });
 
   it("has a table twin per chart, shown by the Table switch", async () => {
@@ -86,6 +92,11 @@ describe("owner on Pro", () => {
     const likes = screen.getByRole("table", { name: "Likes per day, last 30 days" });
     const lastRow = within(likes).getAllByRole("row").at(-1)!;
     expect(within(lastRow).getByText("3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show clones as a table" }));
+    const clones = screen.getByRole("table", { name: "Clones per day, last 30 days" });
+    const rowsOf = within(clones).getAllByRole("row");
+    expect(rowsOf).toHaveLength(31);
+    expect(within(rowsOf.at(-2)!).getByText("2")).toBeTruthy();
   });
 
   it("reads again on a period switch; 90 days draws weeks", async () => {
@@ -102,8 +113,9 @@ describe("owner on Pro", () => {
   it("says so when a new deck has nothing yet", async () => {
     state.empty = true;
     render(<DeckActivityPanel deckId={DECK} canView isPrivate={false} />);
-    expect(await screen.findByText(/No views or likes in the last 60 days yet/)).toBeTruthy();
+    expect(await screen.findByText(/No views, likes or clones in the last 60 days yet/)).toBeTruthy();
     expect(screen.getByText("No views in these 30 days.")).toBeTruthy();
+    expect(screen.getByText("No clones in these 30 days.")).toBeTruthy();
   });
 
   it("explains a private deck's missing views", async () => {

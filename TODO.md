@@ -4311,7 +4311,7 @@ Free core, Pro insights.
 - [x] **DK7.2 [P2 · M] Draw odds and sample hand** (done 2026-10-29/30, #674; the curve counts main deck + commander only, owner 2026-10-29) — Lands by turn, chance to draw a card; an opening hand with mulligan using custom card images.
 - [x] **DK7.3 [P3 · S] Keyword frequency** (done 2026-10-29/30, #674; the curve counts main deck + commander only, owner 2026-10-29) — Across rules text, which custom cards make interesting.
 - [x] (done 2026-10-30, #704 — views and likes; clones are DK7.4a) **DK7.4 [P3 · M] Deck activity (Pro)** — Views, likes and clones over time; needs a deck view log. Files: `supabase/migrations (new)`.
-- [ ] **DK7.4a [P3 · S] Clones in deck activity** (found 2026-11-04) — #704 left clones out because nothing recorded one; DK5.16 (#728) now does (0164 `deck_remix_sources.source_deck_id`). Add a clones-per-day series to the owner's activity chart, counted like the likes (never the owner's own copy). Files: `lib/decks/deck-activity.ts · lib/decks/activity-actions.ts`.
+- [x] (done 2026-11-05, migration 0171) **DK7.4a [P3 · S] Clones in deck activity** (found 2026-11-04) — #704 left clones out because nothing recorded one; DK5.16 (#728) now does (0164 `deck_remix_sources.source_deck_id`). Add a clones-per-day series to the owner's activity chart, counted like the likes (never the owner's own copy). Files: `lib/decks/deck-activity.ts · lib/decks/activity-actions.ts`.
 
 ### DK8 — Community decks, trending, cross-links
 
