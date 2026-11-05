@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { CreditGrantClient } from "@/lib/billing/credit-refill";
+import type { Json } from "@/types/supabase";
 
 // ---------------------------------------------------------------------------
 // Loud subscription credit-grant failures (2026-10-18). A failed grant used
@@ -73,6 +74,19 @@ export async function notifyAdminsCreditRefillFailed(
   admin: CreditGrantClient,
   payload: CreditRefillFailedPayload,
 ): Promise<number> {
+  return notifyAdminsOnce(admin, { type: CREDIT_REFILL_FAILED, payload });
+}
+
+/**
+ * The ONE "tell every admin once" write: a `type` whose rows are deduped on
+ * (`payload.dedupeKey`, recipient) by a unique partial index — 0140's for
+ * credit_refill_failed, 0174's for billing_alert. Never throws.
+ */
+export async function notifyAdminsOnce(
+  admin: CreditGrantClient,
+  alert: { type: string; payload: { dedupeKey: string } & Record<string, Json | undefined> },
+): Promise<number> {
+  const { type, payload } = alert;
   try {
     const { data: admins, error: adminError } = await admin
       .from("profiles")
@@ -88,7 +102,7 @@ export async function notifyAdminsCreditRefillFailed(
     const { data: existing, error: existingError } = await admin
       .from("notifications")
       .select("recipient_id")
-      .eq("type", CREDIT_REFILL_FAILED)
+      .eq("type", type)
       .eq("payload->>dedupeKey", payload.dedupeKey);
     if (existingError) {
       // The unique index still refuses a duplicate: insert for everyone.
@@ -104,12 +118,12 @@ export async function notifyAdminsCreditRefillFailed(
       recipients.map((recipientId) => ({
         recipient_id: recipientId,
         actor_id: null,
-        type: CREDIT_REFILL_FAILED,
-        payload,
+        type,
+        payload: payload as Json,
       })),
     );
     if (insertError) {
-      // 23505: a concurrent run alerted first (0140's unique index).
+      // 23505: a concurrent run alerted first (the unique index).
       if ((insertError as { code?: string }).code === "23505") return 0;
       console.error("[credit-alerts] admin alert failed:", insertError.message);
       return 0;

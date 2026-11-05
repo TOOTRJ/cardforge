@@ -275,6 +275,57 @@ export function describeNotification(
         href: "/dashboard/billing",
       };
     }
+    case "payment_failed": {
+      // A renewal that didn't go through (0174): the perks stay on through
+      // the dunning grace; the fix is the card on the billing page.
+      const amount = num(payload.amountCents);
+      const money = amount != null ? formatMoney(amount, str(payload.currency) ?? "usd") : "Your payment";
+      const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
+      const grace = str(payload.graceUntil);
+      const next = str(payload.nextAttemptAt);
+      return {
+        subject: `Your ${plan} payment`,
+        body: `of ${money} didn't go through — ${next ? `we'll try your card again on ${formatShortDate(next)}` : "we'll retry your card automatically"}; your ${plan} perks ${grace ? `stay on until ${formatShortDate(grace)}` : "are paused until it's paid"}. Update your card${grace ? " to be safe" : " to restore them"}.`,
+        href: "/dashboard/billing",
+      };
+    }
+    case "billing_alert": {
+      // Admin-only: money going back (lib/stripe/charge-events.ts).
+      const alert = str(payload.alert);
+      const amount = num(payload.amountCents);
+      const money = amount != null ? formatMoney(amount, str(payload.currency) ?? "usd") : "a payment";
+      const userId = str(payload.userId);
+      const href = isUuid(userId) ? `/admin/users?u=${userId}` : "/admin/users";
+      const sale =
+        str(payload.saleKind) === "pack" ? "a credit pack" : str(payload.saleKind) === "invoice" ? "a plan invoice" : "an unmatched charge";
+      const credits = num(payload.creditsDelta) ?? 0;
+      const creditsNote =
+        credits < 0 ? ` ${-credits} unspent credits taken back.` : credits > 0 ? ` ${credits} credits given back.` : "";
+      const who = isUuid(userId) ? "" : " (no account matched — see Stripe)";
+      if (alert === "refund") {
+        return { subject: "Refund", body: `of ${money} on ${sale}${who}.${creditsNote}`, href };
+      }
+      if (alert === "dispute_closed") {
+        const status = str(payload.disputeStatus) ?? "closed";
+        return {
+          subject: "Dispute closed",
+          body: `${status === "won" ? "won" : status === "lost" ? "LOST" : status} — ${money} on ${sale}${who}.${creditsNote}`,
+          href,
+        };
+      }
+      if (alert === "fraud_warning") {
+        return {
+          subject: "Early fraud warning",
+          body: `from the card network on ${money} (${sale})${who}${str(payload.disputeReason) ? ` — ${str(payload.disputeReason)}` : ""}. Expect a dispute; consider a refund now.`,
+          href,
+        };
+      }
+      return {
+        subject: "Dispute opened",
+        body: `on ${money} (${sale})${who}${str(payload.disputeReason) ? ` — ${str(payload.disputeReason)}` : ""}. Respond in Stripe.${creditsNote}`,
+        href,
+      };
+    }
     case "trial_lapsed": {
       const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
       const pct = num(payload.discountPct) ?? 20;

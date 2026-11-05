@@ -120,6 +120,68 @@ export function teamMessageEmail(
   };
 }
 
+// --- Payment failed (account list) --------------------------------------------------
+
+export type PaymentFailedEmailInput = {
+  /** "Plus" | "Pro" — null when the plan isn't known. */
+  plan: string | null;
+  /** "$6.00". */
+  amountLabel: string;
+  /** ISO instant the dunning grace ends (perks kept until then) — null when
+   *  the database doesn't know it yet. */
+  graceUntil: string | null;
+  /** ISO instant of Stripe's next automatic retry, or null (no more retries). */
+  nextAttemptAt: string | null;
+  hostedInvoiceUrl: string | null;
+};
+
+/** A renewal that didn't go through (lib/stripe/webhook-handlers.ts
+ *  handlePaymentFailed): what failed, that the card is retried, that the
+ *  perks stay on until the grace ends, and where to update the card. Dates
+ *  are UTC with the time (a server-built string cannot know the reader's
+ *  zone — docs/BILLING.md "billing dates in the viewer's time zone"). */
+export function paymentFailedEmail(recipient: Recipient, input: PaymentFailedEmailInput): OutgoingEmail {
+  const site = getSiteBaseUrl();
+  const f = footer("account", recipient, "You're receiving this because a payment for your PipGlyph plan didn't go through.");
+  const plan = input.plan ? escapeHtml(input.plan) : "plan";
+  const amount = escapeHtml(input.amountLabel);
+  const cta = { label: "Update your card", url: `${site}/dashboard/billing` };
+  const grace = input.graceUntil ? `${formatDateIn(input.graceUntil, "long", "UTC")} (${formatUtcTime(input.graceUntil)})` : null;
+  const retry = input.nextAttemptAt
+    ? `We'll try your card again on ${formatDateIn(input.nextAttemptAt, "long", "UTC")}.`
+    : "We'll try your card again automatically over the next two weeks.";
+  const paragraphs = [
+    `The <strong>${amount}</strong> payment for your <strong>${plan}</strong> plan didn't go through. ${retry}`,
+    grace
+      ? `Your ${plan} perks stay on until <strong>${escapeHtml(grace)}</strong>. If the card hasn't been charged by then, your account goes back to the free plan — your cards and decks are kept.`
+      : `Your ${plan} perks are paused until the payment goes through; your cards and decks are kept.`,
+    `To fix it now, update your card on the billing page${input.hostedInvoiceUrl ? `, or ${emailLink(input.hostedInvoiceUrl, "pay the invoice")} directly` : ""}. Nothing else changes.`,
+  ];
+  const heading = `Your ${input.plan ?? "plan"} payment didn't go through`;
+  return {
+    to: recipient.email,
+    subject: `Your PipGlyph ${input.plan ?? "plan"} payment didn't go through`,
+    headers: f.headers,
+    html: renderEmailLayout({
+      siteUrl: site,
+      preheader: grace ? `Your perks stay on until ${formatDateIn(input.graceUntil!, "long", "UTC")} — update your card.` : "Your perks are paused — update your card to restore them.",
+      heading,
+      paragraphs,
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+      settingsUrl: f.settingsUrl,
+    }),
+    text: renderEmailText({
+      heading,
+      lines: paragraphs.map((p) => p.replace(/<[^>]+>/g, "")),
+      cta,
+      footerNote: f.footerNote,
+      unsubscribeUrl: f.unsubscribeUrl,
+    }),
+  };
+}
+
 // --- Trial ending (account list) ---------------------------------------------------
 
 export function trialEndingEmail(

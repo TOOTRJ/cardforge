@@ -333,6 +333,14 @@ export type Database = {
           paid_at: string;
           invoice_number: string | null;
           hosted_invoice_url: string | null;
+          // Migration 0174 — refunds and disputes.
+          payment_intent_id: string | null;
+          refunded_cents: number;
+          refunded_at: string | null;
+          dispute_id: string | null;
+          dispute_status: string | null;
+          disputed_cents: number;
+          disputed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -350,6 +358,13 @@ export type Database = {
           paid_at: string;
           invoice_number?: string | null;
           hosted_invoice_url?: string | null;
+          payment_intent_id?: string | null;
+          refunded_cents?: number;
+          refunded_at?: string | null;
+          dispute_id?: string | null;
+          dispute_status?: string | null;
+          disputed_cents?: number;
+          disputed_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -367,6 +382,13 @@ export type Database = {
           paid_at?: string;
           invoice_number?: string | null;
           hosted_invoice_url?: string | null;
+          payment_intent_id?: string | null;
+          refunded_cents?: number;
+          refunded_at?: string | null;
+          dispute_id?: string | null;
+          dispute_status?: string | null;
+          disputed_cents?: number;
+          disputed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -383,6 +405,15 @@ export type Database = {
           currency: string;
           discount: string | null;
           paid_at: string;
+          // Migration 0174 — refunds and disputes.
+          refunded_cents: number;
+          refunded_at: string | null;
+          clawed_credits: number;
+          reconcile_seq: number;
+          dispute_id: string | null;
+          dispute_status: string | null;
+          disputed_cents: number;
+          disputed_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -409,6 +440,14 @@ export type Database = {
           currency?: string;
           discount?: string | null;
           paid_at?: string;
+          refunded_cents?: number;
+          refunded_at?: string | null;
+          clawed_credits?: number;
+          reconcile_seq?: number;
+          dispute_id?: string | null;
+          dispute_status?: string | null;
+          disputed_cents?: number;
+          disputed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -1150,6 +1189,8 @@ export type Database = {
           // Migration 0135 — when a cancelled subscription stops.
           subscription_ends_at: string | null;
           subscription_canceled_at: string | null;
+          // Migration 0174 — when the sync first saw the payment broken.
+          payment_failed_at: string | null;
           credits: number;
           is_admin: boolean;
           // Columns added by migration 0060 — folded in here until the
@@ -1189,6 +1230,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          payment_failed_at?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -1225,6 +1267,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          payment_failed_at?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -2800,6 +2843,11 @@ export type Database = {
         Args: { p_source_deck_id: string; p_title: string; p_slug: string; p_masked_entry_ids?: string[] };
         Returns: Json;
       };
+      // Migration 0174 — a refunded / disputed pack's credits follow the money.
+      reconcile_pack_withdrawal: {
+        Args: { p_session: string; p_withdrawn_cents: number };
+        Returns: { user_id: string | null; credits_delta: number; clawed_total: number; target: number }[];
+      };
       deck_remix_credit: {
         Args: { p_deck_id: string };
         Returns: { source_slug: string | null; source_title: string | null; source_owner_username: string | null }[];
@@ -2910,6 +2958,7 @@ export type Database = {
           cancel_at_period_end?: boolean | null;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          payment_failed_at?: string | null;
         }[];
       };
       // Migration 0112 — funnel instrumentation.
@@ -3002,6 +3051,7 @@ export type Database = {
           // Migration 0135 (absent until it is applied).
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          payment_failed_at?: string | null;
         }[];
       };
       owner_export_stamp: {

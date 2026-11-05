@@ -37,6 +37,26 @@ describe("effectiveTierForProfile", () => {
     }
   });
 
+  it("keeps a past_due subscription's perks through the 14-day dunning grace, then drops them (0174)", () => {
+    const now = new Date("2026-11-05T12:00:00Z");
+    const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
+    expect(
+      effectiveTierForProfile(profile({ subscription_tier: "pro", subscription_status: "past_due", payment_failed_at: daysAgo(2) }), now),
+    ).toBe("pro");
+    expect(
+      effectiveTierForProfile(profile({ subscription_tier: "plus", subscription_status: "past_due", payment_failed_at: daysAgo(13.9) }), now),
+    ).toBe("plus");
+    expect(
+      effectiveTierForProfile(profile({ subscription_tier: "pro", subscription_status: "past_due", payment_failed_at: daysAgo(14.1) }), now),
+    ).toBe("free");
+    // No stamp (a reader that left the column out, or a pre-0174 row): free.
+    expect(effectiveTierForProfile(profile({ subscription_tier: "pro", subscription_status: "past_due" }), now)).toBe("free");
+    // unpaid = the retries are exhausted: no grace.
+    expect(
+      effectiveTierForProfile(profile({ subscription_tier: "pro", subscription_status: "unpaid", payment_failed_at: daysAgo(1) }), now),
+    ).toBe("free");
+  });
+
   it("applies an unexpired comp, ignores an expired one", () => {
     expect(effectiveTierForProfile(profile({ comp_tier: "pro", comp_expires_at: future }))).toBe("pro");
     expect(effectiveTierForProfile(profile({ comp_tier: "pro", comp_expires_at: null }))).toBe("pro");

@@ -168,6 +168,19 @@ describe("summarizeRevenue", () => {
     expect(summary.trialStarts).toBe(1);
   });
 
+  it("refunds sit beside the gross totals (never subtracted) and disputes are counted; rows carry both (0174)", () => {
+    const payments = [row("a", 1, 1500, "u1", { refunded_cents: 1500, dispute_status: null }), row("b", 2, 600, "u1", { dispute_status: "won" })];
+    const packs = [pack("cs_1", 1, 800, { refunded_cents: 400 }), pack("cs_2", 3, 2400, { dispute_status: "needs_response" })];
+    const summary = summarize({ payments, packs });
+    expect(summary.allTime).toEqual([{ currency: "usd", cents: 1500 + 600 + 800 + 2400, count: 4 }]);
+    expect(summary.refunds).toEqual([{ currency: "usd", cents: 1900, count: 2 }]);
+    expect(summary.disputed).toBe(1);
+    expect(summary.recent.find((p) => p.id === "a")).toMatchObject({ refundedCents: 1500, disputeStatus: null });
+    expect(summary.recent.find((p) => p.id === "cs_2")).toMatchObject({ refundedCents: 0, disputeStatus: "needs_response" });
+    // A row from a database that hasn't run 0174 reads as nothing back.
+    expect(summarize({ payments: [row("c", 1, 600)], packs: [] }).recent[0]).toMatchObject({ refundedCents: 0, disputeStatus: null });
+  });
+
   it("caps the recent list across both logs", () => {
     const payments = Array.from({ length: 10 }, (_, i) => row(`i${i}`, i * 2, 100));
     const packs = Array.from({ length: 10 }, (_, i) => pack(`p${i}`, i * 2 + 1, 100));

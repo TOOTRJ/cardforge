@@ -12,9 +12,12 @@ import {
   resolveSubscriptionTier,
   subscriptionHasPaymentMethod,
   syncSubscriptionForUser,
+  type SubscriptionSyncResult,
 } from "./subscription-sync";
 import { tierForPrice } from "./config";
-import { checkoutReminderEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
+import { checkoutReminderEmail, paymentFailedEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
+import { dunningGraceUntil } from "@/lib/billing/dunning";
+import { handleChargeRefunded, handleDispute, handleEarlyFraudWarning } from "./charge-events";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { formatMoney } from "@/lib/format/money";
@@ -97,6 +100,24 @@ async function resolveSubscriptionUserId(
   return metaUserId;
 }
 
+/** PostgREST / Postgres "no such column" for 0174's payment_intent_id. */
+function isMissingPaymentIntentColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /payment_intent_id/.test(error.message ?? "")
+  );
+}
+
+/** The payment intent that paid an invoice (API 2025-03+: `payments`, a
+ *  list of InvoicePayments, replaces the invoice's own `payment_intent`). */
+function invoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  for (const payment of invoice.payments?.data ?? []) {
+    const ref = payment.payment?.payment_intent ?? null;
+    if (ref) return typeof ref === "string" ? ref : ref.id;
+  }
+  return null;
+}
+
 /** The subscription an invoice bills, if any (API 2025-03+ nests it under
  *  `parent.subscription_details`; a pack purchase invoice has none). */
 function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
@@ -114,10 +135,10 @@ async function handleSubscriptionEvent(
     /** `event.data.previous_attributes` on an updated event — what changed. */
     previous?: Partial<Stripe.Subscription> | null;
   },
-): Promise<void> {
+): Promise<{ userId: string; result: SubscriptionSyncResult } | null> {
   const { admin, stripe } = deps;
   const userId = await resolveSubscriptionUserId(sub, admin);
-  if (!userId) return;
+  if (!userId) return null;
 
   const result = await syncSubscriptionForUser(admin, stripe, userId, {
     eventSub: sub,
@@ -146,7 +167,7 @@ async function handleSubscriptionEvent(
         cancelFeedback: sub.cancellation_details?.feedback ?? undefined,
       },
     });
-    return;
+    return { userId, result };
   }
   if (opts.isCreationEvent) {
     await recordFunnelEvent(admin, {
@@ -184,6 +205,7 @@ async function handleSubscriptionEvent(
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
   });
+  return { userId, result };
 }
 
 const TIER_NAME: Record<string, string> = { plus: "Plus", pro: "Pro" };
@@ -481,7 +503,7 @@ async function handleInvoicePaid(
   const periodStart = line?.period?.start ?? invoice.period_start ?? null;
   const periodEnd = line?.period?.end ?? invoice.period_end ?? null;
   const paidAt = invoice.status_transitions?.paid_at ?? invoice.created;
-  const write = (rowUserId: string | null) =>
+  const write = (rowUserId: string | null, opts: { withPaymentIntent?: boolean } = {}) =>
     admin.from("billing_payments").upsert(
     {
       invoice_id: invoice.id,
@@ -498,6 +520,8 @@ async function handleInvoicePaid(
       paid_at: new Date(paidAt * 1000).toISOString(),
       invoice_number: invoice.number ?? null,
       hosted_invoice_url: invoice.hosted_invoice_url ?? null,
+      // What a refund or dispute is matched by (lib/stripe/charge-events.ts).
+      ...(opts.withPaymentIntent === false ? {} : { payment_intent_id: invoicePaymentIntentId(invoice) }),
     },
     { onConflict: "invoice_id" },
   );
@@ -508,12 +532,25 @@ async function handleInvoicePaid(
   // never 500 on every Stripe retry. Nobody is left to notify.
   const userGone = error?.code === "23503";
   if (userGone) ({ error } = await write(null));
+  // The code is live before migration 0174 (no payment_intent_id column):
+  // write the row without it rather than failing every invoice until it lands.
+  let gone = userGone;
+  if (error && isMissingPaymentIntentColumn(error)) {
+    console.error(`[stripe] billing_payments.payment_intent_id is missing (migration 0174 not applied?) — ${invoice.id} logged without it.`);
+    ({ error } = await write(gone ? null : userId, { withPaymentIntent: false }));
+    // The schema-cache error came BEFORE the FK check: a deleted buyer shows
+    // only now.
+    if (error?.code === "23503") {
+      gone = true;
+      ({ error } = await write(null, { withPaymentIntent: false }));
+    }
+  }
   if (error) {
     throw new Error(`billing_payments write failed for ${invoice.id}: ${error.message}`);
   }
 
   // A deleted buyer is owed nothing (their ledger FK is what failed).
-  if (grantError && !userGone) {
+  if (grantError && !gone) {
     await notifyAdminsCreditRefillFailed(admin, {
       source: "invoice",
       dedupeKey: invoiceAlertDedupeKey(invoice.id),
@@ -526,7 +563,7 @@ async function handleInvoicePaid(
   if (amountCents <= 0) return;
   await recordFunnelEvent(admin, {
     event: "payment_received",
-    userId: userGone ? null : userId,
+    userId: gone ? null : userId,
     props: {
       amountCents,
       tier: tier ?? undefined,
@@ -534,7 +571,7 @@ async function handleInvoicePaid(
       billingReason: invoice.billing_reason ?? undefined,
     },
   });
-  if (userGone) return;
+  if (gone) return;
   const { data: existing } = await admin
     .from("notifications")
     .select("id")
@@ -794,6 +831,122 @@ async function recordPackPayment(
   }
 }
 
+// invoice.payment_failed — a renewal (or a plan switch's invoice) that
+// didn't go through. ONE `payment_failed` notification + ONE "account" email
+// per INVOICE (Stripe retries the same invoice: later attempts dedupe on
+// payload.invoiceId — 0174's unique index — so one failed renewal is one
+// message, not one per retry), only when the subscription is really the
+// user's live plan and now broken (the sync's answer: a secondary
+// subscription's failure next to a live Pro plan says nothing). The copy
+// names the dunning grace (lib/billing/dunning.ts): the perks stay on until
+// then, the card is retried, update it on the billing page. The notification
+// insert is durable (a failure throws → Stripe retries); the email is best
+// effort, idempotent at the provider per invoice.
+async function handlePaymentFailed(
+  invoice: Stripe.Invoice,
+  state: {
+    synced: { userId: string; result: SubscriptionSyncResult } | null;
+    syncRan: boolean;
+    failedSub: Stripe.Subscription | null;
+    customerId: string;
+  },
+  deps: { admin: AdminClient; stripe: Stripe },
+): Promise<void> {
+  const { admin, stripe } = deps;
+  const amountCents = Math.max(0, invoice.amount_due ?? 0);
+  if (amountCents <= 0) return;
+  if (!(invoice.billing_reason ?? "").startsWith("subscription")) return;
+  let userId: string | null;
+  let graceUntil: string | null = null;
+  if (state.synced) {
+    const { result } = state.synced;
+    // The synced primary is live (a secondary's failure) — nothing to say.
+    if (!DELINQUENT_FOR_NOTICE.has(result.status ?? "")) return;
+    userId = state.synced.userId;
+    graceUntil = dunningGraceUntil({
+      subscription_status: result.status,
+      payment_failed_at: result.paymentFailedAt ?? null,
+    });
+  } else if (!state.syncRan) {
+    // The fallback wrote past_due by customer id: tell that customer, with
+    // the grace its stamp gives (none on a database without the column).
+    userId = await findUserIdByCustomer(state.customerId, admin);
+    if (userId) {
+      const { data } = await admin.from("profiles").select("payment_failed_at").eq("id", userId).maybeSingle();
+      graceUntil = dunningGraceUntil({
+        subscription_status: "past_due",
+        payment_failed_at: (data as { payment_failed_at?: string | null } | null)?.payment_failed_at ?? null,
+      });
+    }
+  } else {
+    return;
+  }
+  if (!userId) return;
+
+  const { data: existing } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("type", "payment_failed")
+    .eq("payload->>invoiceId", invoice.id)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  const price = state.failedSub?.items?.data?.[0]?.price ?? null;
+  const tier = state.failedSub ? await resolveSubscriptionTier(state.failedSub, stripe) : null;
+  const interval = price?.recurring?.interval ?? null;
+  const nextAttemptAt =
+    typeof invoice.next_payment_attempt === "number"
+      ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+      : null;
+  const payload = {
+    invoiceId: invoice.id,
+    amountCents,
+    currency: invoice.currency ?? "usd",
+    attempt: typeof invoice.attempt_count === "number" ? invoice.attempt_count : null,
+    tier,
+    interval,
+    nextAttemptAt,
+    graceUntil,
+    hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+  };
+  const { error } = await admin.from("notifications").insert({
+    recipient_id: userId,
+    actor_id: null,
+    type: "payment_failed",
+    payload,
+  });
+  if (error) {
+    // 23505: the unique index saw a concurrent delivery first — told already.
+    if ((error as { code?: string }).code === "23505") return;
+    throw new Error(`payment_failed notification failed for ${userId}: ${error.message}`);
+  }
+
+  if (!isEmailConfigured()) return;
+  try {
+    const recipient = await getRecipientFor(admin, userId, "account");
+    if (!recipient) return;
+    await sendEmail(
+      paymentFailedEmail(recipient, {
+        plan: TIER_NAME[tier ?? ""] ?? null,
+        amountLabel: formatMoney(amountCents, payload.currency),
+        graceUntil,
+        nextAttemptAt,
+        hostedInvoiceUrl: payload.hostedInvoiceUrl,
+      }),
+      { idempotencyKey: `payment-failed:${invoice.id}` },
+    );
+  } catch (error) {
+    console.warn(
+      "[stripe] payment-failed email failed:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
+/** The synced statuses a failed invoice is worth a word about. */
+const DELINQUENT_FOR_NOTICE: ReadonlySet<string> = new Set(["past_due", "unpaid"]);
+
 export async function handleStripeEvent(
   event: Stripe.Event,
   deps: { admin: AdminClient; stripe: Stripe },
@@ -891,24 +1044,47 @@ export async function handleStripeEvent(
       // the primary's live state wins; without it, the old customer-keyed
       // write is the fallback.
       const subscriptionId = invoiceSubscriptionId(invoice);
-      let synced = false;
+      let synced: { userId: string; result: SubscriptionSyncResult } | null = null;
+      let failedSub: Stripe.Subscription | null = null;
+      let syncRan = false;
       if (subscriptionId) {
         try {
-          const sub = await stripe.subscriptions.retrieve(subscriptionId);
-          await handleSubscriptionEvent(sub, deps, { deleted: false, isCreationEvent: false });
-          synced = true;
+          failedSub = await stripe.subscriptions.retrieve(subscriptionId);
+          synced = await handleSubscriptionEvent(failedSub, deps, { deleted: false, isCreationEvent: false });
+          syncRan = true;
         } catch {
-          synced = false;
+          syncRan = false;
         }
       }
-      if (!synced) {
+      if (!syncRan) {
         await admin
           .from("profiles")
           .update({ subscription_status: "past_due" })
           .eq("stripe_customer_id", customerId);
+        // The dunning grace's anchor (0174), where none is set yet — a
+        // database without the column answers an error, which is ignored.
+        await admin
+          .from("profiles")
+          .update({ payment_failed_at: new Date().toISOString() })
+          .eq("stripe_customer_id", customerId)
+          .is("payment_failed_at", null);
       }
+      await handlePaymentFailed(invoice, { synced, syncRan, failedSub, customerId }, deps);
       break;
     }
+    // Money going back (lib/stripe/charge-events.ts, migration 0174).
+    case "charge.refunded":
+      await handleChargeRefunded(event.data.object as Stripe.Charge, deps, event.created);
+      break;
+    case "charge.dispute.created":
+      await handleDispute(event.data.object as Stripe.Dispute, deps, { closed: false, eventCreated: event.created });
+      break;
+    case "charge.dispute.closed":
+      await handleDispute(event.data.object as Stripe.Dispute, deps, { closed: true, eventCreated: event.created });
+      break;
+    case "radar.early_fraud_warning.created":
+      await handleEarlyFraudWarning(event.data.object as Stripe.Radar.EarlyFraudWarning, deps);
+      break;
     default:
       break;
   }

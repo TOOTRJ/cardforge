@@ -169,7 +169,11 @@ describe("billing plan card", () => {
       renderCard(status);
       return screen.getByTestId("line").textContent ?? "";
     };
-    expect(text({ kind: "delinquent" })).toMatch(/payment didn't go through, so paid perks are paused/);
+    expect(text({ kind: "delinquent", graceUntil: null })).toMatch(/payment didn't go through, so paid perks are paused/);
+    // Inside the dunning grace (0174) the perks are kept until the date.
+    expect(text({ kind: "delinquent", graceUntil: "2026-11-19T02:31:04.000Z" })).toMatch(
+      /We'll retry your card automatically; your Plus perks stay on until .*November 1[89], 2026.* — update your card before then/,
+    );
     expect(text({ kind: "comped" })).toMatch(/Courtesy of the PipGlyph team — no renewal, no card needed\./);
     expect(text({ kind: "ended" })).toMatch(/^Your previous plan has ended\. You're on the free plan/);
     expect(text({ kind: "free" })).toMatch(/^Every tool is yours for free/);

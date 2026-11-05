@@ -4,6 +4,7 @@ import {
   activityDigestEmail,
   checkoutReminderEmail,
   newsletterEmail,
+  paymentFailedEmail,
   teamMessageEmail,
   trialEndingEmail,
   trialWinbackEmail,
@@ -113,6 +114,28 @@ describe("email builders", () => {
     expect(ends.html).toContain("nothing is charged");
     expect(ends.html).toContain("To keep Plus, add a card before the date");
     expect(ends.headers?.["List-Unsubscribe"]).toContain("list=account");
+  });
+
+  it("payment-failed email: the amount, the retry date, the grace in UTC, and the billing page (0174)", () => {
+    const graced = paymentFailedEmail(recipient, {
+      plan: "Pro",
+      amountLabel: "$15",
+      graceUntil: "2026-11-19T02:31:04Z",
+      nextAttemptAt: "2026-11-08T12:00:00Z",
+      hostedInvoiceUrl: "https://invoice.stripe.com/i/x",
+    });
+    expect(graced.subject).toBe("Your PipGlyph Pro payment didn't go through");
+    expect(graced.html).toContain("The <strong>$15</strong> payment for your <strong>Pro</strong> plan didn't go through.");
+    expect(graced.html).toContain("try your card again on November 8, 2026");
+    expect(graced.html).toContain("Pro perks stay on until <strong>November 19, 2026 (2:31 AM UTC)</strong>");
+    expect(graced.html).toContain("/dashboard/billing");
+    expect(graced.html).toContain("https://invoice.stripe.com/i/x");
+    expect(graced.text).not.toContain("<strong>");
+    expect(graced.headers?.["List-Unsubscribe"]).toContain("list=account");
+
+    const noGrace = paymentFailedEmail(recipient, { plan: null, amountLabel: "$6", graceUntil: null, nextAttemptAt: null, hostedInvoiceUrl: null });
+    expect(noGrace.html).toContain("try your card again automatically over the next two weeks");
+    expect(noGrace.html).toContain("Your plan perks are paused until the payment goes through");
   });
 
   it("checkout reminder: trial copy only while eligible, 'nothing was charged' always, packs count the credits", () => {
