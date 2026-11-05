@@ -205,6 +205,9 @@ export type SubscriptionSyncResult = {
   /** ISO date the synced subscription is set to stop (cancelled, still
    *  live) — null when it renews. What `subscription_ends_at` was written as. */
   endsAt?: string | null;
+  /** The live subscription's billing interval (0175) — what
+   *  `billing_interval` was written as; null when nothing is live. */
+  billingInterval?: "month" | "year" | null;
   /** ISO instant the payment was first seen broken (past_due / unpaid) —
    *  what `payment_failed_at` was written as; null while it pays. */
   paymentFailedAt?: string | null;
@@ -252,6 +255,14 @@ function isMissingEndingColumn(error: { code?: string; message?: string }): bool
   return (
     (error.code === "PGRST204" || error.code === "42703") &&
     /subscription_(ends|canceled)_at/.test(error.message ?? "")
+  );
+}
+
+/** The same for 0175's `billing_interval`. */
+function isMissingIntervalColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /billing_interval/.test(error.message ?? "")
   );
 }
 
@@ -491,10 +502,25 @@ export async function syncSubscriptionForUser(
     subscription_ends_at: live ? ending.endsAt : null,
     subscription_canceled_at: live ? ending.canceledAt : null,
   };
+  // The plan's interval (0175): what the refill cron reads to tell a
+  // monthly plan (the invoice grants) from an annual one (the cron grants).
+  const rawInterval = chosenDeleted ? null : (item?.price?.recurring?.interval ?? null);
+  const billingInterval: "month" | "year" | null =
+    live && (rawInterval === "month" || rawInterval === "year") ? rawInterval : null;
   let { error: writeError } = await admin
     .from("profiles")
-    .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt })
+    .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt, billing_interval: billingInterval })
     .eq("id", userId);
+  if (writeError && isMissingIntervalColumn(writeError)) {
+    // The code is live before migration 0175: write what the schema holds.
+    console.error(
+      `[stripe] profiles.billing_interval is missing (migration 0175 not applied?) — synced ${userId} without it.`,
+    );
+    ({ error: writeError } = await admin
+      .from("profiles")
+      .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt })
+      .eq("id", userId));
+  }
   if (writeError && isMissingDunningColumn(writeError)) {
     // The code is live before migration 0174: write what the schema holds.
     console.error(
@@ -528,6 +554,7 @@ export async function syncSubscriptionForUser(
     unresolvedPrice,
     source,
     endsAt: live ? ending.endsAt : null,
+    billingInterval,
     paymentFailedAt,
   };
 }
@@ -542,7 +569,18 @@ export async function syncSubscriptionForUser(
 export async function grantCreditsForSync(
   result: SubscriptionSyncResult,
   admin: AdminClient,
-  opts: { isCreationEvent: boolean },
+  opts: {
+    isCreationEvent: boolean;
+    /** The sync was driven by a PAYING event — a cycle / first invoice
+     *  paid, a trial converting — which is what grants a MONTHLY plan's base
+     *  allotment. Any other sync (a cancel click, a resume, a portal change,
+     *  a proration) only backstops it (lib/billing/credit-refill.ts). */
+    paid?: boolean;
+    /** The calendar month the paying invoice is FOR (its line's period
+     *  start) — a renewal that failed on Feb 28 and paid on the Mar 5 retry
+     *  is February's allotment, never March's. Default: this month. */
+    period?: string;
+  },
 ): Promise<void> {
   if (!result.subscriptionId || !isLiveStatus(result.status)) return;
   if (result.tier === "free") return;
@@ -556,11 +594,16 @@ export async function grantCreditsForSync(
     if (!trial.ok) throw new Error(`Trial credit grant failed for ${result.userId}: ${trial.error}`);
     return;
   }
+  // A monthly plan's base allotment belongs to the invoice that pays it
+  // (audit 2026-11-05, P2-1): a plan paid on Jan 31 whose owner clicked
+  // Cancel on Feb 2 used to get February's allotment on that click.
+  const base = result.billingInterval === "month" && !opts.isCreationEvent && !opts.paid ? "backstop" : "always";
   const granted = await grantMonthlyCreditsForPeriod(
     admin,
     result.userId,
     result.tier,
-    currentCreditPeriod(),
+    opts.period ?? currentCreditPeriod(),
+    { base },
   );
   if (!granted.ok) {
     throw new Error(`Credit grant failed for ${result.userId}: ${granted.error}`);

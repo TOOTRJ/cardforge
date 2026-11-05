@@ -44,9 +44,12 @@ function makeAdmin(
     /** The credit_ledger row under this month's base refill key — null (the
      *  default) means the month hasn't granted yet (base-grant path). */
     ledgerRow?: { delta: number } | null;
+    /** The user's newest refill row of any month (the backstop's read);
+     *  defaults to this month's row when one is given. */
+    newestRow?: { created_at: string; idempotency_key: string } | null;
   } = {},
 ) {
-  const { customerLookupHit = true, ledgerRow = null } = opts;
+  const { customerLookupHit = true, ledgerRow = null, newestRow } = opts;
   const updates: Array<{
     table: string;
     values: Record<string, unknown>;
@@ -67,13 +70,23 @@ function makeAdmin(
               };
             },
             // The month's refill rows (credit-refill.ts reads them with one
-            // LIKE on the base key prefix).
-            like: async () => ({
-              data: ledgerRow
-                ? [{ ...ledgerRow, idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
-                : [],
-              error: null,
-            }),
+            // LIKE on the base key prefix); the backstop's newest-grant read
+            // is the same LIKE, filtered and ordered, answering the same row.
+            like: (_column: string, pattern: string) => {
+              const monthRow = ledgerRow
+                ? [{ ...ledgerRow, created_at: new Date().toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
+                : [];
+              // The month's rows (a prefix ending in the period) vs the
+              // newest row of any month (the bare user prefix).
+              const isMonthRead = /\d{4}-\d{2}%$/.test(pattern);
+              const data = isMonthRead ? monthRow : newestRow === undefined ? monthRow : newestRow ? [newestRow] : [];
+              const chain = {
+                order: () => chain,
+                limit: () => chain,
+                then: (resolve: (v: unknown) => void) => resolve({ data, error: null }),
+              };
+              return chain;
+            },
           };
         },
         update(values: Record<string, unknown>) {
@@ -338,6 +351,42 @@ describe("handleStripeEvent", () => {
     expect(String(grant?.args.p_idempotency_key)).toMatch(
       /^refill:user-1:\d{4}-\d{2}:upgrade:pro$/,
     );
+  });
+
+  it("on subscription.updated that does NOT pay (a cancel click) on a MONTHLY plan: no base grant — the invoice's job (0175)", async () => {
+    const cancelClick = {
+      id: "evt_cancel_click",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          id: "sub_1",
+          customer: "cus_1",
+          status: "active",
+          cancel_at_period_end: true,
+          items: { data: [{ price: { id: "price_pro", recurring: { interval: "month" } }, current_period_end: 1893456000 }] },
+        },
+        previous_attributes: { cancel_at_period_end: false },
+      },
+    };
+    // Paid 4 days ago under LAST month's key; this month has no row yet (the
+    // Jan 31 / Feb 2 shape): the old code granted this month on the click.
+    const lastMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1) - 1);
+    const recent = makeAdmin({
+      ledgerRow: null,
+      newestRow: { created_at: new Date(Date.now() - 4 * 86_400_000).toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod(lastMonth)) },
+    });
+    await run(cancelClick, recent.admin);
+    expect(recent.rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
+
+    // The mirror: the newest grant is 36 days old — a renewal's webhook was
+    // missed — so the click's sync backstops the MISSED month.
+    const missed = makeAdmin({
+      ledgerRow: null,
+      newestRow: { created_at: new Date(Date.now() - 36 * 86_400_000).toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod(lastMonth)) },
+    });
+    await run(cancelClick, missed.admin);
+    const grant = missed.rpcs.find((r) => r.fn === "grant_credits");
+    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro, p_idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) });
   });
 
   it("on subscription.updated (same tier, month already granted): no extra grant", async () => {
@@ -1101,7 +1150,7 @@ function makeChainAdmin(
   function chain(table: string, result: () => { data: unknown; error: unknown }) {
     const c: Record<string, unknown> = {};
     const self = () => c;
-    for (const m of ["eq", "neq", "like", "gte", "lte", "lt", "gt", "is", "in", "order", "limit", "select"]) c[m] = self;
+    for (const m of ["eq", "neq", "like", "not", "gte", "lte", "lt", "gt", "is", "in", "order", "limit", "select"]) c[m] = self;
     c.maybeSingle = async () => {
       const r = result();
       return { data: Array.isArray(r.data) ? (r.data[0] ?? null) : r.data, error: r.error };
@@ -1223,7 +1272,12 @@ describe("handleStripeEvent — invoice.paid", () => {
     ]);
     expect(retrieve).toHaveBeenCalledWith("sub_1");
     expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
-    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_user_id: "user-1", p_amount: MONTHLY_CREDITS.pro });
+    // The invoice is FOR the month its line's period starts in (0175), never "now".
+    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({
+      p_user_id: "user-1",
+      p_amount: MONTHLY_CREDITS.pro,
+      p_idempotency_key: creditRefillKey("user-1", currentCreditPeriod(new Date(1790130400 * 1000))),
+    });
     expect(funnel(inserts)).toEqual([
       { event: "payment_received", user_id: "user-1", props: { amountCents: 1500, tier: "pro", interval: "month", billingReason: "subscription_cycle" }, source: "server" },
     ]);
@@ -1840,7 +1894,16 @@ describe("handleStripeEvent — payment failed and money going back", () => {
                       error: null,
                     }
                   : { data: opts.alreadyNotified ? { id: "n_pf" } : null, error: null },
-              like: async () => ({ data: [], error: null }),
+              // The month's refill rows and the backstop's newest-grant read
+              // (0175: .like().order().limit(), awaited as a thenable).
+              like: () => {
+                const ledger = {
+                  order: () => ledger,
+                  limit: () => ledger,
+                  then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
+                };
+                return ledger;
+              },
             };
             return chain;
           },

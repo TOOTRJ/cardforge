@@ -1189,6 +1189,8 @@ export type Database = {
           // Migration 0135 — when a cancelled subscription stops.
           subscription_ends_at: string | null;
           subscription_canceled_at: string | null;
+          // Migration 0175 — the live plan's billing interval.
+          billing_interval: string | null;
           // Migration 0174 — when the sync first saw the payment broken.
           payment_failed_at: string | null;
           credits: number;
@@ -1230,6 +1232,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          billing_interval?: string | null;
           payment_failed_at?: string | null;
           credits?: number;
           is_admin?: boolean;
@@ -1267,6 +1270,7 @@ export type Database = {
           cancel_at_period_end?: boolean;
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
+          billing_interval?: string | null;
           payment_failed_at?: string | null;
           credits?: number;
           is_admin?: boolean;
