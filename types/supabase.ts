@@ -581,6 +581,48 @@ export type Database = {
         ];
       };
       // Migration 0169 — service role only (the hero reads home_hero_pool).
+      /** 0172 (TODO NV12) — a closed challenge's 1st / 2nd / 3rd. Public
+       *  read where the card is public; admin writes through
+       *  set_challenge_winners. */
+      challenge_winners: {
+        Row: {
+          challenge_id: string;
+          place: number;
+          card_id: string;
+          named_at: string;
+          named_by: string | null;
+        };
+        Insert: {
+          challenge_id: string;
+          place: number;
+          card_id: string;
+          named_at?: string;
+          named_by?: string | null;
+        };
+        Update: {
+          challenge_id?: string;
+          place?: number;
+          card_id?: string;
+          named_at?: string;
+          named_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "challenge_winners_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: false;
+            referencedRelation: "challenges";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "challenge_winners_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       featured_pool: {
         Row: { card_id: string; added_at: string; added_by: string | null };
         Insert: { card_id: string; added_at?: string; added_by?: string | null };
@@ -2692,6 +2734,12 @@ export type Database = {
       };
       /** 0150 — the owner's cover picks, replaced: the entry ids in rank
        *  order (at most five, '{}' clears). Returns how many are picked. */
+      /** 0172 (TODO NV12) — the admin's one write of a closed challenge's
+       *  three places (null = empty). */
+      set_challenge_winners: {
+        Args: { p_challenge_id: string; p_first: string | null; p_second: string | null; p_third: string | null };
+        Returns: undefined;
+      };
       set_deck_featured_entries: {
         Args: { p_deck_id: string; p_entry_ids: string[] };
         Returns: number;

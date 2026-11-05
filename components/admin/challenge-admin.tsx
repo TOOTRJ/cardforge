@@ -15,7 +15,22 @@ import {
   createChallengeAction,
   setChallengeFeaturedAction,
 } from "@/lib/challenges/actions";
-import { daysLeft, isActive, isUpcoming, type Challenge } from "@/lib/challenges/shared";
+import {
+  daysLeft,
+  isActive,
+  isUpcoming,
+  type Challenge,
+} from "@/lib/challenges/shared";
+import {
+  ChallengeWinnersEditor,
+  type WinnerEntryOption,
+} from "@/components/admin/challenge-winners-editor";
+
+/** A closed challenge's winners picker: its entries and today's places. */
+export type ChallengeWinnersPick = {
+  entries: WinnerEntryOption[];
+  initial: [string | null, string | null, string | null];
+};
 
 // ---------------------------------------------------------------------------
 // ChallengeAdmin — the /admin/challenges surface: a create form plus the
@@ -23,7 +38,14 @@ import { daysLeft, isActive, isUpcoming, type Challenge } from "@/lib/challenges
 // via router.refresh() after each action (same pattern as custom pips).
 // ---------------------------------------------------------------------------
 
-export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
+export function ChallengeAdmin({
+  challenges,
+  winners = {},
+}: {
+  challenges: Challenge[];
+  /** By challenge id — the closed challenges the page read entries for. */
+  winners?: Record<string, ChallengeWinnersPick>;
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
@@ -100,8 +122,7 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
                 autoComplete="off"
                 onChange={(e) => {
                   if (tagTouched) return;
-                  const tagInput =
-                    formRef.current?.elements.namedItem("tag");
+                  const tagInput = formRef.current?.elements.namedItem("tag");
                   if (tagInput instanceof HTMLInputElement) {
                     tagInput.value = e.target.value
                       .toLowerCase()
@@ -177,67 +198,77 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
         {challenges.map((challenge) => {
           const active = isActive(challenge);
           const upcoming = isUpcoming(challenge);
+          const pick = winners[challenge.id];
           return (
-            <SurfaceCard
-              key={challenge.id}
-              className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex min-w-0 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/challenges/${challenge.slug}`}
-                    className="font-display text-base font-semibold text-foreground hover:underline"
-                  >
-                    {challenge.title}
-                  </Link>
-                  {active ? (
-                    <Badge variant="gold">
-                      {daysLeft(challenge)}d left
-                    </Badge>
-                  ) : upcoming ? (
-                    <Badge variant="primary">Upcoming</Badge>
-                  ) : (
-                    <Badge variant="outline">Closed</Badge>
-                  )}
-                  {challenge.featured ? (
-                    <Badge variant="accent">Featured</Badge>
-                  ) : null}
+            <SurfaceCard key={challenge.id} className="flex flex-col gap-4 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/challenges/${challenge.slug}`}
+                      className="font-display text-base font-semibold text-foreground hover:underline"
+                    >
+                      {challenge.title}
+                    </Link>
+                    {active ? (
+                      <Badge variant="gold">{daysLeft(challenge)}d left</Badge>
+                    ) : upcoming ? (
+                      <Badge variant="primary">Upcoming</Badge>
+                    ) : (
+                      <Badge variant="outline">Closed</Badge>
+                    )}
+                    {challenge.featured ? (
+                      <Badge variant="accent">Featured</Badge>
+                    ) : null}
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs text-subtle">
+                    <Hash className="h-3 w-3" aria-hidden />
+                    {challenge.tag}
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-xs text-subtle">
-                  <Hash className="h-3 w-3" aria-hidden />
-                  {challenge.tag}
-                </span>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => onToggleFeatured(challenge)}
-                >
-                  {challenge.featured ? (
-                    <>
-                      <StarOff className="h-4 w-4" aria-hidden /> Unfeature
-                    </>
-                  ) : (
-                    <>
-                      <Star className="h-4 w-4" aria-hidden /> Feature
-                    </>
-                  )}
-                </Button>
-                {active ? (
+                <div className="flex shrink-0 items-center gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     disabled={pending}
-                    onClick={() => onClose(challenge)}
+                    onClick={() => onToggleFeatured(challenge)}
                   >
-                    <TimerOff className="h-4 w-4" aria-hidden /> Close now
+                    {challenge.featured ? (
+                      <>
+                        <StarOff className="h-4 w-4" aria-hidden /> Unfeature
+                      </>
+                    ) : (
+                      <>
+                        <Star className="h-4 w-4" aria-hidden /> Feature
+                      </>
+                    )}
                   </Button>
-                ) : null}
+                  {active ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => onClose(challenge)}
+                    >
+                      <TimerOff className="h-4 w-4" aria-hidden /> Close now
+                    </Button>
+                  ) : null}
+                </div>
               </div>
+              {pick ? (
+                <section
+                  aria-label={`Winners of ${challenge.title}`}
+                  className="border-t border-border/60 pt-4"
+                >
+                  <ChallengeWinnersEditor
+                    challengeId={challenge.id}
+                    entries={pick.entries}
+                    initial={pick.initial}
+                  />
+                </section>
+              ) : null}
             </SurfaceCard>
           );
         })}

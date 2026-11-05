@@ -305,6 +305,20 @@ describe("describeNotification — deck likes and cards added to decks", () => {
     });
   });
 
+  it("challenge_winner (TODO NV12, 0172): your card's place in which challenge, linking the challenge", () => {
+    const payload = { challengeId: "c", slug: "tiny-titans", title: "Tiny Titans", place: 1 };
+    expect(describeNotification({ type: "challenge_winner", actor: null, card, threadId: null, payload }, { isAdmin: false })).toEqual({
+      subject: "Your card Storm Crow",
+      body: 'won 1st place in the "Tiny Titans" design challenge.',
+      href: "/challenges/tiny-titans",
+    });
+    expect(describeNotification({ type: "challenge_winner", actor: null, card: null, threadId: null, payload: {} }, { isAdmin: false })).toEqual({
+      subject: "Your card",
+      body: "is a winner in the design challenge.",
+      href: "/challenges",
+    });
+  });
+
   it("deck_cloned (TODO DK5.16, 0164): who copied which of your decks, linking YOUR deck (the copy starts private)", () => {
     expect(
       describeNotification({ type: "deck_cloned", actor, card: null, threadId: null, payload: deckPayload }, { isAdmin: false }),

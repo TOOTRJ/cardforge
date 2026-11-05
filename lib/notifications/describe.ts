@@ -152,6 +152,21 @@ export function describeNotification(
         href: slug ? `/deck/${slug}` : "/dashboard/decks",
       };
     }
+    case "challenge_winner": {
+      // Your card placed in a closed design challenge (TODO NV12, 0172) —
+      // ONE row per challenge and card, its place kept current by the
+      // database. The line is about the card; an admin's click has no actor.
+      const title = str(payload.title);
+      const slug = str(payload.slug);
+      const place = num(payload.place);
+      const ordinal = place === 1 ? "1st" : place === 2 ? "2nd" : place === 3 ? "3rd" : null;
+      const won = ordinal ? `won ${ordinal} place` : "is a winner";
+      return {
+        subject: item.card?.title ? `Your card ${item.card.title}` : "Your card",
+        body: `${won} in the ${title ? `"${title}" ` : ""}design challenge.`,
+        href: slug ? `/challenges/${slug}` : "/challenges",
+      };
+    }
     case "deck_cloned": {
       // Someone copied your deck into their own (TODO DK5.16, 0164) — once
       // per copier and deck. The payload names YOUR deck; the copy starts

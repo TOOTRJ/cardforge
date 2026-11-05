@@ -138,9 +138,10 @@ describe("the notification CHECK", () => {
     expect(kinds(SQL)).toEqual([...before, "deck_cloned"]);
   });
   it("no migration between 0161 and this one redefined it", () => {
+    const self = Number(FILE!.slice(0, 4));
     for (const f of readdirSync(dir).filter((name) => /^\d{4}_/.test(name))) {
       const n = Number(f.slice(0, 4));
-      if (n > 161 && f !== FILE) expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("notifications_type_check");
+      if (n > 161 && n < self) expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("notifications_type_check");
     }
   });
   it("has its copy in lib/notifications/describe.ts", () => {

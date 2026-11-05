@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Trophy,
   UserPlus,
 } from "lucide-react";
 import { describeNotification } from "@/lib/notifications/describe";
@@ -46,6 +47,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   deck_like: Heart,
   deck_card_added: Layers,
   deck_cloned: Copy,
+  challenge_winner: Trophy,
   moderation_unhidden: ShieldCheck,
 };
 

@@ -4,6 +4,12 @@ import "server-only";
 
 import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { listPublicCardsRich, type CardWithStats } from "@/lib/cards/queries";
+import {
+  isWinnerPlace,
+  type ChallengeWin,
+  type WinnerPlace,
+} from "@/lib/challenges/winners-shared";
 
 // ---------------------------------------------------------------------------
 // Challenge reads (Community Phase 1). Challenges are admin-authored rows;
@@ -140,3 +146,65 @@ export async function getCurrentChallenge(): Promise<Challenge | null> {
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Winners (TODO NV12, migration 0172). Cookie-free reads: a winner row is
+// readable only while its card is public (0172's select policy), so a card
+// that left view drops off both pages by itself.
+// ---------------------------------------------------------------------------
+
+export type ChallengeWinner = { place: WinnerPlace; card: CardWithStats };
+
+/** A challenge's winners, 1st first, each with the card its tile draws. */
+export async function listChallengeWinners(challengeId: string): Promise<ChallengeWinner[]> {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("challenge_winners")
+      .select("place, card_id")
+      .eq("challenge_id", challengeId)
+      .order("place", { ascending: true });
+    if (error || !data || data.length === 0) return [];
+    const cards = await listPublicCardsRich({
+      ids: data.map((row) => row.card_id),
+      limit: data.length,
+      anonymous: true,
+    });
+    const byId = new Map(cards.map((card) => [card.id, card]));
+    return data.flatMap((row) => {
+      const card = byId.get(row.card_id);
+      return card && isWinnerPlace(row.place) ? [{ place: row.place, card }] : [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** The challenges a card placed in, best place first, then newest. */
+export const listCardChallengeWins = cache(async (cardId: string): Promise<ChallengeWin[]> => {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("challenge_winners")
+      .select("place, challenges(slug, title, ends_at)")
+      .eq("card_id", cardId);
+    if (error || !data) return [];
+    return data
+      .flatMap((row) => {
+        const challenge = row.challenges as { slug: string; title: string; ends_at: string } | null;
+        return challenge && isWinnerPlace(row.place) ? [{ place: row.place, challenge }] : [];
+      })
+      .sort(
+        (a, b) =>
+          a.place - b.place || Date.parse(b.challenge.ends_at) - Date.parse(a.challenge.ends_at),
+      )
+      .map(({ place, challenge }) => ({
+        place,
+        challenge: { slug: challenge.slug, title: challenge.title },
+      }));
+  } catch {
+    return [];
+  }
+});
