@@ -143,7 +143,8 @@ beforeEach(async () => {
   state.render.mockImplementation(async (card: Rendered) => (card.dfc?.role === "back" ? back : front));
   state.card = dfcCard();
   state.activity.mockReset();
-  state.viewer = null;
+  // Downloads are a signed-in viewer's (owner 2026-11-04).
+  state.viewer = { id: "viewer-1" };
 });
 
 describe("card PDF faces (TODO 5.3)", () => {

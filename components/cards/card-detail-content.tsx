@@ -431,6 +431,9 @@ export async function CardDetailContent({
                 downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
                 frameTemplate={frameTemplateOf(card.frame_style)}
                 hasBackFace={hasBackFace}
+                // Downloads are a signed-in viewer's: a visitor's button
+                // signs in and comes back here.
+                signInReturnTo={isAuthed ? undefined : cardPath}
                 // The trigger's look as PROPS — never a <Button> element: the
                 // modal puts its trigger under Radix's `DialogTrigger asChild`,
                 // and an element sent from this server component can arrive

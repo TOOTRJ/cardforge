@@ -47,8 +47,6 @@ const state = vi.hoisted(() => ({
   fetched: [] as string[],
   /** Card row lookups (a refused request must make none). */
   lookups: 0,
-  /** The anonymous live-render limiter, one call per live render. */
-  limit: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -81,7 +79,6 @@ vi.mock("@/lib/render/card-image", async (orig) => ({
   renderCardImage: state.render,
 }));
 vi.mock("@/lib/render/card-print", () => ({ renderCardPrint: state.print }));
-vi.mock("@/lib/cards/anon-render-limit", () => ({ checkAnonLiveRenderLimit: (...args: unknown[]) => state.limit(...args) }));
 
 import { GET } from "@/app/api/cards/[id]/png/route";
 import { NextRequest } from "next/server";
@@ -210,12 +207,11 @@ beforeEach(async () => {
     sharp({ create: { width: 2000, height: 2800, channels: 3, background: "#00ff00" } }).png().toBuffer(),
   );
   state.activity.mockReset();
-  state.viewer = null;
+  // Downloads are a signed-in viewer's (owner 2026-11-04): free unless said.
+  state.viewer = { id: "viewer-1" };
   state.paid = false;
   state.card = dfcCard();
   state.lookups = 0;
-  state.limit.mockReset();
-  state.limit.mockResolvedValue({ ok: true });
 });
 
 async function centre(res: Response): Promise<number[]> {
@@ -558,26 +554,11 @@ describe("both faces in one PNG (TODO 5.3c)", () => {
     });
   });
 
-  it("a signed-out viewer's live renders are counted one per face; a refusal answers 429 + Retry-After, not a 500", async () => {
-    // A pending correction: neither bake serves, both faces render live.
-    state.card = dfcCard({ layout_version: null });
+  it("a signed-out viewer's both-faces download answers 401 before any lookup", async () => {
+    state.viewer = null;
     const res = await download("preset=default&corners=round&faces=both");
-    expect(res.status).toBe(200);
-    expect(state.limit).toHaveBeenCalledTimes(2);
-    expect(state.render).toHaveBeenCalledTimes(2);
-    state.limit.mockReset();
-    state.limit
-      .mockResolvedValueOnce({ ok: true })
-      .mockResolvedValueOnce({ ok: false, retryAfterSeconds: 42, message: "Too many card downloads." });
-    const refused = await download("preset=default&corners=round&faces=both");
-    expect(refused.status).toBe(429);
-    expect(refused.headers.get("retry-after")).toBe("42");
-    expect(await refused.json()).toEqual({ ok: false, error: "Too many card downloads." });
-    // A signed-in viewer is never counted.
-    state.limit.mockReset();
-    state.limit.mockResolvedValue({ ok: false, retryAfterSeconds: 1, message: "no" });
-    state.viewer = { id: "viewer-1" };
-    expect((await download("preset=default&corners=round&faces=both")).status).toBe(200);
-    expect(state.limit).not.toHaveBeenCalled();
+    expect(res.status).toBe(401);
+    expect(state.lookups).toBe(0);
+    expect(state.render).not.toHaveBeenCalled();
   });
 });
