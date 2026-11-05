@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { called, chainClient } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
@@ -29,6 +29,9 @@ import { addHeroPoolCardAction, removeHeroPoolCardAction } from "@/lib/featured/
 let answer: string;
 
 beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://pipglyph.com");
+  vi.stubEnv("VERCEL_BRANCH_URL", "");
+  vi.stubEnv("VERCEL_URL", "");
   state.profile = { id: ADMIN, is_admin: true };
   state.revalidated = [];
   answer = "added";
@@ -38,6 +41,10 @@ beforeEach(() => {
     return {};
   });
   state.stub.rpc.mockImplementation(async () => ({ data: answer, error: null }));
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("the hero pool actions", () => {
@@ -96,6 +103,44 @@ describe("the hero pool actions", () => {
     expect((await addHeroPoolCardAction({ cardUrl: "/deck/ember-wyrm" })).ok).toBe(false);
     expect((await addHeroPoolCardAction({ cardId: "not-a-uuid" })).ok).toBe(false);
     expect(state.stub!.rpc).not.toHaveBeenCalled();
+  });
+
+  it("resolve a mixed-case URL with a query and a hash to the lower-cased handle and slug", async () => {
+    const url = "https://WWW.PipGlyph.com/card/Dev_Artist/Cinderwing-Matriarch?via=x#art";
+    expect(await addHeroPoolCardAction({ cardUrl: url })).toEqual({ ok: true });
+    const eqs = (table: string) =>
+      state.stub!.forTable(table).flatMap((e) => e.calls.filter((c) => c.method === "eq").map((c) => c.args));
+    expect(eqs("profiles")).toContainEqual(["username", "dev_artist"]);
+    expect(eqs("cards")).toContainEqual(["slug", "cinderwing-matriarch"]);
+    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", expect.objectContaining({ p_original_only: false }));
+  });
+
+  it("take the URL when both keys are sent: it is resolved here, and the id is dropped", async () => {
+    const other = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const both = { cardUrl: "/card/dev_artist/cinderwing-matriarch", cardId: other };
+    expect(await addHeroPoolCardAction(both as never)).toEqual({ ok: true });
+    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", {
+      p_card_id: CARD,
+      p_added_by: ADMIN,
+      p_original_only: false,
+    });
+  });
+
+  it("refuse another host's URL before any read", async () => {
+    const result = await addHeroPoolCardAction({
+      cardUrl: "https://cardforge-git-main-tootrj.vercel.app/card/dev_artist/cinderwing-matriarch",
+    });
+    expect(result).toEqual({ ok: false, error: "Paste a pipglyph.com card URL, e.g. /card/username/card-slug." });
+    expect(state.stub!.log).toEqual([]);
+    expect(state.stub!.rpc).not.toHaveBeenCalled();
+  });
+
+  it("say the shown check's refusal for a URL add", async () => {
+    answer = "not_public";
+    const result = await addHeroPoolCardAction({ cardUrl: "/card/dev_artist/void-tithe" });
+    expect(result).toEqual({ ok: false, error: "Not public — only public cards can be on the hero." });
+    expect(state.stub!.rpc).toHaveBeenCalledWith("featured_pool_add", expect.objectContaining({ p_original_only: false }));
+    expect(state.revalidated).toEqual([]);
   });
 
   it("remove a card and purge the home page", async () => {
