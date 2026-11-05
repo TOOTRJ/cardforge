@@ -100,6 +100,14 @@ async function resolveSubscriptionUserId(
   return metaUserId;
 }
 
+/** PostgREST / Postgres "no such column" for 0174's payment_intent_id. */
+function isMissingPaymentIntentColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /payment_intent_id/.test(error.message ?? "")
+  );
+}
+
 /** The payment intent that paid an invoice (API 2025-03+: `payments`, a
  *  list of InvoicePayments, replaces the invoice's own `payment_intent`). */
 function invoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
@@ -495,7 +503,7 @@ async function handleInvoicePaid(
   const periodStart = line?.period?.start ?? invoice.period_start ?? null;
   const periodEnd = line?.period?.end ?? invoice.period_end ?? null;
   const paidAt = invoice.status_transitions?.paid_at ?? invoice.created;
-  const write = (rowUserId: string | null) =>
+  const write = (rowUserId: string | null, opts: { withPaymentIntent?: boolean } = {}) =>
     admin.from("billing_payments").upsert(
     {
       invoice_id: invoice.id,
@@ -513,7 +521,7 @@ async function handleInvoicePaid(
       invoice_number: invoice.number ?? null,
       hosted_invoice_url: invoice.hosted_invoice_url ?? null,
       // What a refund or dispute is matched by (lib/stripe/charge-events.ts).
-      payment_intent_id: invoicePaymentIntentId(invoice),
+      ...(opts.withPaymentIntent === false ? {} : { payment_intent_id: invoicePaymentIntentId(invoice) }),
     },
     { onConflict: "invoice_id" },
   );
@@ -524,6 +532,12 @@ async function handleInvoicePaid(
   // never 500 on every Stripe retry. Nobody is left to notify.
   const userGone = error?.code === "23503";
   if (userGone) ({ error } = await write(null));
+  // The code is live before migration 0174 (no payment_intent_id column):
+  // write the row without it rather than failing every invoice until it lands.
+  if (error && isMissingPaymentIntentColumn(error)) {
+    console.error(`[stripe] billing_payments.payment_intent_id is missing (migration 0174 not applied?) — ${invoice.id} logged without it.`);
+    ({ error } = await write(userGone ? null : userId, { withPaymentIntent: false }));
+  }
   if (error) {
     throw new Error(`billing_payments write failed for ${invoice.id}: ${error.message}`);
   }
@@ -847,8 +861,16 @@ async function handlePaymentFailed(
       payment_failed_at: result.paymentFailedAt ?? null,
     });
   } else if (!state.syncRan) {
-    // The fallback wrote past_due by customer id: tell that customer.
+    // The fallback wrote past_due by customer id: tell that customer, with
+    // the grace its stamp gives (none on a database without the column).
     userId = await findUserIdByCustomer(state.customerId, admin);
+    if (userId) {
+      const { data } = await admin.from("profiles").select("payment_failed_at").eq("id", userId).maybeSingle();
+      graceUntil = dunningGraceUntil({
+        subscription_status: "past_due",
+        payment_failed_at: (data as { payment_failed_at?: string | null } | null)?.payment_failed_at ?? null,
+      });
+    }
   } else {
     return;
   }
@@ -1032,6 +1054,13 @@ export async function handleStripeEvent(
           .from("profiles")
           .update({ subscription_status: "past_due" })
           .eq("stripe_customer_id", customerId);
+        // The dunning grace's anchor (0174), where none is set yet — a
+        // database without the column answers an error, which is ignored.
+        await admin
+          .from("profiles")
+          .update({ payment_failed_at: new Date().toISOString() })
+          .eq("stripe_customer_id", customerId)
+          .is("payment_failed_at", null);
       }
       await handlePaymentFailed(invoice, { synced, syncRan, failedSub, customerId }, deps);
       break;

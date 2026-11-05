@@ -416,7 +416,9 @@ later still cost the customer two days as Free (watermarked downloads, the
   `card_capacity_for`, `owner_export_stamp`, `viewer_is_pro`), held
   together by `tests/unit/billing/dunning.test.ts`. `unpaid` (retries
   exhausted) and `incomplete` get no grace. No credits are granted during
-  it: the month's allotment lands with the invoice that finally pays.
+  it: the month's allotment lands with the invoice that finally pays. A TRIAL
+  whose first charge declines gets no grace (it never paid): the stamp stays
+  null for that dunning run and the perks end with the trial.
 - **The notice.** `invoice.payment_failed` → after the sync, ONE
   `payment_failed` notification + ONE "account" email (`paymentFailedEmail`)
   per INVOICE (unique on `payload.invoiceId`: the retries dedupe), only when
@@ -440,12 +442,15 @@ Money going back now reaches the app (`lib/stripe/charge-events.ts`):
 | Event | Sale matched by the charge's payment intent (`billing_payments.payment_intent_id` — written from `invoice.payments` since 0174 — or `billing_pack_payments.payment_intent_id`) | Admins |
 |---|---|---|
 | `charge.refunded` | `refunded_cents` / `refunded_at` on the row; a PACK's credits follow the money: `reconcile_pack_withdrawal(session, withdrawn)` takes back the refunded share of the pack's credits, never below a zero balance (`clawed_credits` = what was really taken; ledger `pack_refund`, key `refund:pack:<session>:<total>`) | one `billing_alert` per (charge, amount) |
-| `charge.dispute.created` | `dispute_id` / `dispute_status` / `disputed_at`; a pack's credits are taken back while the dispute is open or lost (needs_response / under_review / lost) | one per (dispute, status): "Respond in Stripe" |
+| `charge.dispute.created` | `dispute_id` / `dispute_status` / `disputed_cents` / `disputed_at` (the dispute is re-read from Stripe — never the event's snapshot — and a row in a final status never goes back to an open one); a pack's credits are taken back while the dispute is open or lost (needs_response / under_review / lost) | one per (dispute, status): "Respond in Stripe" |
 | `charge.dispute.closed` | the status; won → the credits come back (`pack_refund_reversed`) | one per (dispute, status) |
 | `radar.early_fraud_warning.created` | nothing moves | one per warning: "expect a dispute; consider a refund now" |
 
 A charge that matches no sale (older rows have no payment intent; something
-paid outside the app) still alerts, as "unmatched". Access on a SUBSCRIPTION
+paid outside the app) still alerts, as "unmatched". The claw-back reconciles
+to a TARGET: when the balance could not cover it (the credits were spent)
+the shortfall stays owed and any later event for the session takes it from
+credits earned since. Access on a SUBSCRIPTION
 is never changed here: turn on Dashboard → Settings → Billing →
 Subscriptions → "cancel the subscription on a dispute" (owner step) if you
 want that. The Revenue panel labels refunded / disputed rows and shows the

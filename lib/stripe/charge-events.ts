@@ -64,9 +64,20 @@ export type BillingAlertPayload = {
 /** Dispute statuses while which the network has the money (or keeps it). */
 const DISPUTE_WITHDRAWN: ReadonlySet<string> = new Set(["needs_response", "under_review", "lost"]);
 
-type Sale =
-  | { kind: "pack"; id: string; userId: string | null; amountCents: number; disputeStatus: string | null }
-  | { kind: "invoice"; id: string; userId: string | null; amountCents: number; disputeStatus: string | null };
+type Sale = {
+  kind: "pack" | "invoice";
+  id: string;
+  userId: string | null;
+  amountCents: number;
+  disputeStatus: string | null;
+  disputedCents: number;
+  disputedAt: string | null;
+};
+
+/** Dispute statuses that are final: a row in one never goes back to an open
+ *  one (a late or redelivered `created` after `closed` — Stripe's events
+ *  arrive in any order). */
+const DISPUTE_CLOSED: ReadonlySet<string> = new Set(["won", "lost", "warning_closed"]);
 
 const idOf = (ref: string | { id: string } | null | undefined): string | null =>
   !ref ? null : typeof ref === "string" ? ref : ref.id;
@@ -76,7 +87,7 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
   if (!paymentIntentId) return null;
   const { data: pack, error: packError } = await admin
     .from("billing_pack_payments")
-    .select("checkout_session_id, user_id, amount_cents, dispute_status")
+    .select("checkout_session_id, user_id, amount_cents, dispute_status, disputed_cents, disputed_at")
     .eq("payment_intent_id", paymentIntentId)
     .limit(1)
     .maybeSingle();
@@ -88,11 +99,13 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
       userId: pack.user_id,
       amountCents: pack.amount_cents,
       disputeStatus: pack.dispute_status ?? null,
+      disputedCents: pack.disputed_cents ?? 0,
+      disputedAt: pack.disputed_at ?? null,
     };
   }
   const { data: invoice, error: invoiceError } = await admin
     .from("billing_payments")
-    .select("invoice_id, user_id, amount_cents, dispute_status")
+    .select("invoice_id, user_id, amount_cents, dispute_status, disputed_cents, disputed_at")
     .eq("payment_intent_id", paymentIntentId)
     .limit(1)
     .maybeSingle();
@@ -104,6 +117,8 @@ async function findSale(paymentIntentId: string | null, admin: AdminClient): Pro
       userId: invoice.user_id,
       amountCents: invoice.amount_cents,
       disputeStatus: invoice.dispute_status ?? null,
+      disputedCents: invoice.disputed_cents ?? 0,
+      disputedAt: invoice.disputed_at ?? null,
     };
   }
   return null;
@@ -114,6 +129,7 @@ type SaleMark = {
   refunded_at?: string;
   dispute_id?: string;
   dispute_status?: string | null;
+  disputed_cents?: number;
   disputed_at?: string;
 };
 
@@ -171,7 +187,7 @@ export async function handleChargeRefunded(
     await markSale(sale, { refunded_cents: amountRefunded, refunded_at: at }, admin);
     creditsDelta = await reconcilePackCredits(
       sale,
-      withdrawnFor({ amountRefunded, disputeStatus: sale.disputeStatus, disputeAmount: sale.amountCents }),
+      withdrawnFor({ amountRefunded, disputeStatus: sale.disputeStatus, disputeAmount: sale.disputedCents }),
       admin,
     );
   }
@@ -194,11 +210,21 @@ export async function handleChargeRefunded(
 }
 
 export async function handleDispute(
-  dispute: Stripe.Dispute,
+  eventDispute: Stripe.Dispute,
   deps: { admin: AdminClient; stripe: Stripe },
   opts: { closed: boolean; eventCreated?: number },
 ): Promise<void> {
   const { admin, stripe } = deps;
+  // Stripe's CURRENT dispute, never the event's snapshot (events arrive in
+  // any order: a redelivered `created` after `closed` would reopen it and
+  // claw the credits back with nothing left to restore them). The event's
+  // copy stands only when the read fails.
+  let dispute = eventDispute;
+  try {
+    dispute = await stripe.disputes.retrieve(eventDispute.id);
+  } catch {
+    dispute = eventDispute;
+  }
   const chargeId = idOf(dispute.charge) ?? "";
   let paymentIntentId = idOf(dispute.payment_intent);
   // The charge's refund state and customer (the dispute carries neither): a
@@ -211,13 +237,24 @@ export async function handleDispute(
   }
   paymentIntentId = paymentIntentId ?? idOf(charge?.payment_intent);
   const sale = await findSale(paymentIntentId, admin);
-  const status = dispute.status ?? null;
+  const live = dispute.status ?? null;
+  // A row already in a final status never goes back to an open one.
+  const status =
+    sale?.disputeStatus && DISPUTE_CLOSED.has(sale.disputeStatus) && live && !DISPUTE_CLOSED.has(live)
+      ? sale.disputeStatus
+      : live;
   const at = new Date((opts.eventCreated ?? dispute.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();
+  const disputedCents = Math.max(0, dispute.amount ?? 0);
   let creditsDelta = 0;
   if (sale) {
     await markSale(
       sale,
-      { dispute_id: dispute.id, dispute_status: status, ...(opts.closed ? {} : { disputed_at: at }) },
+      {
+        dispute_id: dispute.id,
+        dispute_status: status,
+        disputed_cents: disputedCents,
+        ...(sale.disputedAt ? {} : { disputed_at: at }),
+      },
       admin,
     );
     creditsDelta = await reconcilePackCredits(
@@ -225,7 +262,7 @@ export async function handleDispute(
       withdrawnFor({
         amountRefunded: Math.max(0, charge?.amount_refunded ?? 0),
         disputeStatus: status,
-        disputeAmount: Math.max(0, dispute.amount ?? 0),
+        disputeAmount: disputedCents,
       }),
       admin,
     );
@@ -234,10 +271,10 @@ export async function handleDispute(
     type: BILLING_ALERT,
     payload: {
       dedupeKey: `dispute:${dispute.id}:${status ?? "unknown"}`,
-      alert: opts.closed ? "dispute_closed" : "dispute",
+      alert: opts.closed || (status != null && DISPUTE_CLOSED.has(status)) ? "dispute_closed" : "dispute",
       chargeId,
       paymentIntentId,
-      amountCents: Math.max(0, dispute.amount ?? 0),
+      amountCents: disputedCents,
       currency: dispute.currency ?? "usd",
       userId: sale?.userId ?? (await findUserIdByCustomer(customerIdOf(charge?.customer ?? undefined), admin)),
       saleKind: sale?.kind ?? null,

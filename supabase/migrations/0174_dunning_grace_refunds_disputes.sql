@@ -292,6 +292,7 @@ alter table public.billing_payments
   add column if not exists refunded_at timestamptz,
   add column if not exists dispute_id text,
   add column if not exists dispute_status text,
+  add column if not exists disputed_cents integer not null default 0 check (disputed_cents >= 0),
   add column if not exists disputed_at timestamptz;
 
 create index if not exists billing_payments_payment_intent_idx
@@ -304,6 +305,7 @@ alter table public.billing_pack_payments
   add column if not exists clawed_credits integer not null default 0 check (clawed_credits >= 0),
   add column if not exists dispute_id text,
   add column if not exists dispute_status text,
+  add column if not exists disputed_cents integer not null default 0 check (disputed_cents >= 0),
   add column if not exists disputed_at timestamptz;
 
 create index if not exists billing_pack_payments_payment_intent_idx
@@ -318,7 +320,13 @@ comment on column public.billing_pack_payments.clawed_credits is
 -- the pack's credits × withdrawn ÷ paid (a pack sold for $0 with anything
 -- withdrawn counts as whole). Claws back the shortfall against what was
 -- taken before, never below a zero balance; gives back the surplus when the
--- target drops (a dispute won). Returns what moved this call.
+-- target drops (a dispute won). Returns what moved this call. Reconciles to
+-- the TARGET, so a call that found the balance short of it (the user had
+-- spent the credits) takes the rest from credits earned later, on any later
+-- event for the session — the shortfall stays owed. The claw-back rows are
+-- keyed `refund:pack:<session>:<clawed total>`, the give-backs
+-- `refund:pack:<session>:back:<target>` (distinct namespaces: a claw to 15,
+-- then to 30, then a give-back to 15 must not collide).
 create or replace function public.reconcile_pack_withdrawal(
   p_session text,
   p_withdrawn_cents integer
@@ -385,7 +393,7 @@ begin
       if v_after is not null then
         insert into public.credit_ledger (user_id, delta, reason, balance_after, idempotency_key)
         values (v_row.user_id, v_take, 'pack_refund_reversed', v_after,
-                'refund:pack:' || p_session || ':' || v_target)
+                'refund:pack:' || p_session || ':back:' || v_target)
         on conflict do nothing;
       end if;
     end if;
@@ -401,7 +409,7 @@ end;
 $$;
 
 comment on function public.reconcile_pack_withdrawal(text, integer) is
-  'Claws back (or gives back) the share of a credit pack''s credits that a refund or dispute withdrew — see 0174. Service role only; idempotent per (session, withdrawn amount).';
+  'Claws back (or gives back) the share of a credit pack''s credits that a refund or dispute withdrew — see 0174. Service role only; reconciles to the target (a shortfall the balance could not cover stays owed to later events).';
 
 revoke all on function public.reconcile_pack_withdrawal(text, integer) from public, anon, authenticated;
 grant execute on function public.reconcile_pack_withdrawal(text, integer) to service_role;

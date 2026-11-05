@@ -339,6 +339,7 @@ export type Database = {
           refunded_at: string | null;
           dispute_id: string | null;
           dispute_status: string | null;
+          disputed_cents: number;
           disputed_at: string | null;
           created_at: string;
         };
@@ -362,6 +363,7 @@ export type Database = {
           refunded_at?: string | null;
           dispute_id?: string | null;
           dispute_status?: string | null;
+          disputed_cents?: number;
           disputed_at?: string | null;
           created_at?: string;
         };
@@ -385,6 +387,7 @@ export type Database = {
           refunded_at?: string | null;
           dispute_id?: string | null;
           dispute_status?: string | null;
+          disputed_cents?: number;
           disputed_at?: string | null;
           created_at?: string;
         };
@@ -408,6 +411,7 @@ export type Database = {
           clawed_credits: number;
           dispute_id: string | null;
           dispute_status: string | null;
+          disputed_cents: number;
           disputed_at: string | null;
           created_at: string;
         };
@@ -440,6 +444,7 @@ export type Database = {
           clawed_credits?: number;
           dispute_id?: string | null;
           dispute_status?: string | null;
+          disputed_cents?: number;
           disputed_at?: string | null;
           created_at?: string;
         };

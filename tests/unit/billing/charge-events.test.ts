@@ -77,12 +77,20 @@ function makeAdmin(opts: {
   return { admin: admin as any, updates, inserts, rpcs };
 }
 
-const stripeWith = (charge: Row | null) =>
+/** A Stripe whose charge and dispute reads answer what the test scripts
+ *  (null = the read fails and the event's copy stands). */
+const stripeWith = (charge: Row | null, dispute: Row | null = null) =>
   ({
     charges: {
       retrieve: vi.fn(async () => {
         if (!charge) throw new Error("no api");
         return charge;
+      }),
+    },
+    disputes: {
+      retrieve: vi.fn(async () => {
+        if (!dispute) throw new Error("no api");
+        return dispute;
       }),
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,6 +101,8 @@ const PACK = {
   user_id: "user-1",
   amount_cents: 800,
   dispute_status: null,
+  disputed_cents: 0,
+  disputed_at: null,
 };
 
 describe("charge.refunded", () => {
@@ -133,7 +143,7 @@ describe("charge.refunded", () => {
 
   it("a refunded invoice: the row is marked, no credits move, admins are told", async () => {
     const { admin, updates, inserts, rpcs } = makeAdmin({
-      invoiceByIntent: { pi_2: { invoice_id: "in_1", user_id: "user-2", amount_cents: 1500, dispute_status: null } },
+      invoiceByIntent: { pi_2: { invoice_id: "in_1", user_id: "user-2", amount_cents: 1500, dispute_status: null, disputed_cents: 0, disputed_at: null } },
     });
     await handleChargeRefunded({ id: "ch_2", payment_intent: "pi_2", amount_refunded: 1500, currency: "usd" } as never, { admin });
     expect(updates[0]).toMatchObject({ table: "billing_payments", key: ["invoice_id", "in_1"], values: { refunded_cents: 1500 } });
@@ -153,6 +163,14 @@ describe("charge.refunded", () => {
     expect(zero.inserts).toEqual([]);
   });
 
+  it("a refund on a pack under a PARTIAL dispute counts the dispute's own amount, not the whole pack", async () => {
+    const { admin, rpcs } = makeAdmin({
+      packByIntent: { pi_1: { ...PACK, dispute_status: "needs_response", disputed_cents: 300 } },
+    });
+    await handleChargeRefunded({ id: "ch_1", payment_intent: "pi_1", amount_refunded: 100 } as never, { admin });
+    expect(rpcs).toEqual([{ fn: "reconcile_pack_withdrawal", args: { p_session: "cs_pack", p_withdrawn_cents: 300 } }]);
+  });
+
   it("admins already told for this (charge, amount) are not told again; a larger refund is a new key", async () => {
     const { admin, inserts } = makeAdmin({ admins: ["admin-1", "admin-2"], alerted: ["admin-1"] });
     await handleChargeRefunded({ id: "ch_5", payment_intent: "pi_x", amount_refunded: 300 } as never, { admin });
@@ -166,14 +184,15 @@ describe("charge.dispute.created / closed", () => {
       packByIntent: { pi_1: PACK },
       reconcile: { credits_delta: -30, clawed_total: 30, target: 30 },
     });
+    const openDispute = { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "needs_response", reason: "fraudulent", created: 1 };
     await handleDispute(
-      { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "needs_response", reason: "fraudulent", created: 1 } as never,
-      { admin: opened.admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1", customer: "cus_1" }) },
+      openDispute as never,
+      { admin: opened.admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1", customer: "cus_1" }, openDispute) },
       { closed: false, eventCreated: 1_790_000_000 },
     );
     expect(opened.updates[0]).toMatchObject({
       table: "billing_pack_payments",
-      values: { dispute_id: "dp_1", dispute_status: "needs_response", disputed_at: new Date(1_790_000_000 * 1000).toISOString() },
+      values: { dispute_id: "dp_1", dispute_status: "needs_response", disputed_cents: 800, disputed_at: new Date(1_790_000_000 * 1000).toISOString() },
     });
     expect(opened.rpcs).toEqual([{ fn: "reconcile_pack_withdrawal", args: { p_session: "cs_pack", p_withdrawn_cents: 800 } }]);
     expect(opened.inserts[0].rows[0]).toMatchObject({
@@ -181,25 +200,51 @@ describe("charge.dispute.created / closed", () => {
     });
 
     const won = makeAdmin({
-      packByIntent: { pi_1: { ...PACK, dispute_status: "needs_response" } },
+      packByIntent: { pi_1: { ...PACK, dispute_status: "needs_response", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
       reconcile: { credits_delta: 30, clawed_total: 0, target: 0 },
     });
+    const wonDispute = { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "won" };
     await handleDispute(
-      { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "won" } as never,
-      { admin: won.admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1" }) },
+      wonDispute as never,
+      { admin: won.admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1" }, wonDispute) },
       { closed: true },
     );
-    // Won: nothing withdrawn → the target is 0, the credits come back; disputed_at untouched.
-    expect(won.updates[0].values).toEqual({ dispute_id: "dp_1", dispute_status: "won" });
+    // Won: nothing withdrawn → the target is 0, the credits come back; disputed_at (already set) untouched.
+    expect(won.updates[0].values).toEqual({ dispute_id: "dp_1", dispute_status: "won", disputed_cents: 800 });
     expect(won.rpcs).toEqual([{ fn: "reconcile_pack_withdrawal", args: { p_session: "cs_pack", p_withdrawn_cents: 0 } }]);
     expect(won.inserts[0].rows[0]).toMatchObject({ payload: { dedupeKey: "dispute:dp_1:won", alert: "dispute_closed", creditsDelta: 30 } });
+  });
+
+  it("reads Stripe's CURRENT dispute, never the event's snapshot: a late `created` after `closed` reopens nothing", async () => {
+    // The event says needs_response; Stripe says the dispute was won.
+    const { admin, updates, rpcs, inserts } = makeAdmin({
+      packByIntent: { pi_1: { ...PACK, dispute_status: "won", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+      reconcile: { credits_delta: 0, clawed_total: 0, target: 0 },
+    });
+    const stale = { id: "dp_1", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "needs_response" };
+    await handleDispute(
+      stale as never,
+      { admin, stripe: stripeWith({ id: "ch_1", amount_refunded: 0, payment_intent: "pi_1" }, { ...stale, status: "won" }) },
+      { closed: false },
+    );
+    expect(updates[0].values).toMatchObject({ dispute_status: "won" });
+    expect(rpcs).toEqual([{ fn: "reconcile_pack_withdrawal", args: { p_session: "cs_pack", p_withdrawn_cents: 0 } }]);
+    expect(inserts[0].rows[0]).toMatchObject({ payload: { dedupeKey: "dispute:dp_1:won", alert: "dispute_closed" } });
+
+    // Stripe can't be read AND the row is already final: the row's status wins over the stale event.
+    const unread = makeAdmin({
+      packByIntent: { pi_1: { ...PACK, dispute_status: "won", disputed_cents: 800, disputed_at: "2026-11-01T00:00:00.000Z" } },
+    });
+    await handleDispute(stale as never, { admin: unread.admin, stripe: stripeWith(null, null) }, { closed: false });
+    expect(unread.updates[0].values).toMatchObject({ dispute_status: "won" });
+    expect(unread.rpcs[0].args).toMatchObject({ p_withdrawn_cents: 0 });
   });
 
   it("lost keeps the money withdrawn; a charge Stripe can't read falls back to the event alone", async () => {
     const lost = makeAdmin({ packByIntent: { pi_1: PACK }, reconcile: { credits_delta: 0, clawed_total: 30, target: 30 } });
     await handleDispute(
       { id: "dp_2", charge: "ch_1", payment_intent: "pi_1", amount: 800, currency: "usd", status: "lost" } as never,
-      { admin: lost.admin, stripe: stripeWith(null) },
+      { admin: lost.admin, stripe: stripeWith(null, null) },
       { closed: true },
     );
     expect(lost.rpcs).toEqual([{ fn: "reconcile_pack_withdrawal", args: { p_session: "cs_pack", p_withdrawn_cents: 800 } }]);
@@ -208,11 +253,12 @@ describe("charge.dispute.created / closed", () => {
 
   it("a dispute on an invoice marks the row and alerts; access is Stripe's dispute setting, not ours", async () => {
     const { admin, updates, rpcs, inserts } = makeAdmin({
-      invoiceByIntent: { pi_9: { invoice_id: "in_9", user_id: "user-9", amount_cents: 600, dispute_status: null } },
+      invoiceByIntent: { pi_9: { invoice_id: "in_9", user_id: "user-9", amount_cents: 600, dispute_status: null, disputed_cents: 0, disputed_at: null } },
     });
+    const review = { id: "dp_9", charge: "ch_9", payment_intent: null, amount: 600, currency: "usd", status: "under_review" };
     await handleDispute(
-      { id: "dp_9", charge: "ch_9", payment_intent: null, amount: 600, currency: "usd", status: "under_review" } as never,
-      { admin, stripe: stripeWith({ id: "ch_9", amount_refunded: 0, payment_intent: "pi_9" }) },
+      review as never,
+      { admin, stripe: stripeWith({ id: "ch_9", amount_refunded: 0, payment_intent: "pi_9" }, review) },
       { closed: false },
     );
     expect(updates[0]).toMatchObject({ table: "billing_payments", key: ["invoice_id", "in_9"], values: { dispute_status: "under_review" } });

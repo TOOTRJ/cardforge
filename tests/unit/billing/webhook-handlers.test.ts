@@ -78,9 +78,13 @@ function makeAdmin(
         },
         update(values: Record<string, unknown>) {
           return {
-            eq: async (...key: unknown[]) => {
+            eq: (...key: unknown[]) => {
               updates.push({ table, values, key });
-              return { error: null };
+              // Awaited directly, or filtered further (`.is()`, the dunning
+              // stamp of the payment_failed fallback) and then awaited.
+              return Object.assign(Promise.resolve({ error: null }), {
+                is: async () => ({ error: null }),
+              });
             },
           };
         },

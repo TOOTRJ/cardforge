@@ -470,9 +470,16 @@ export async function syncSubscriptionForUser(
   // The dunning grace's anchor (lib/billing/dunning.ts, 0174): the FIRST
   // moment the sync sees the payment broken is kept through every later
   // event of the same failure (Stripe retries the same invoice; each retry
-  // re-delivers past_due), and cleared the moment it pays or ends.
+  // re-delivers past_due), and cleared the moment it pays or ends. A TRIAL
+  // whose first charge declines gets no grace (it never paid; the perks
+  // were the trial's) — the stamp stays null for that whole dunning run.
   const broken = !chosenDeleted && DUNNING_STATUSES.has(status);
-  const paymentFailedAt = broken ? (previous.payment_failed_at ?? new Date().toISOString()) : null;
+  const fromTrial =
+    previous.subscription_status === "trialing" ||
+    (DUNNING_STATUSES.has(previous.subscription_status ?? "") && previous.payment_failed_at == null);
+  const paymentFailedAt = broken
+    ? (previous.payment_failed_at ?? (fromTrial ? null : new Date().toISOString()))
+    : null;
   const base = {
     subscription_tier: tier,
     subscription_status: status,

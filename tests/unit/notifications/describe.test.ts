@@ -332,7 +332,7 @@ describe("describeNotification — deck likes and cards added to decks", () => {
       href: "/dashboard/billing",
     });
     expect(describeNotification({ ...base, payload: { invoiceId: "in_2", amountCents: 600 } }, { isAdmin: false }).body).toBe(
-      "of $6 didn't go through — we'll retry your card automatically; your plan perks stay on while we retry. Update your card to be safe.",
+      "of $6 didn't go through — we'll retry your card automatically; your plan perks are paused until it's paid. Update your card to restore them.",
     );
   });
 

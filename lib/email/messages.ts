@@ -154,7 +154,7 @@ export function paymentFailedEmail(recipient: Recipient, input: PaymentFailedEma
     `The <strong>${amount}</strong> payment for your <strong>${plan}</strong> plan didn't go through. ${retry}`,
     grace
       ? `Your ${plan} perks stay on until <strong>${escapeHtml(grace)}</strong>. If the card hasn't been charged by then, your account goes back to the free plan — your cards and decks are kept.`
-      : `Your ${plan} perks stay on while we retry. If the card can't be charged, your account goes back to the free plan — your cards and decks are kept.`,
+      : `Your ${plan} perks are paused until the payment goes through; your cards and decks are kept.`,
     `To fix it now, update your card on the billing page${input.hostedInvoiceUrl ? `, or ${emailLink(input.hostedInvoiceUrl, "pay the invoice")} directly` : ""}. Nothing else changes.`,
   ];
   const heading = `Your ${input.plan ?? "plan"} payment didn't go through`;
@@ -164,7 +164,7 @@ export function paymentFailedEmail(recipient: Recipient, input: PaymentFailedEma
     headers: f.headers,
     html: renderEmailLayout({
       siteUrl: site,
-      preheader: grace ? `Your perks stay on until ${formatDateIn(input.graceUntil!, "long", "UTC")} — update your card.` : "Update your card to keep your plan.",
+      preheader: grace ? `Your perks stay on until ${formatDateIn(input.graceUntil!, "long", "UTC")} — update your card.` : "Your perks are paused — update your card to restore them.",
       heading,
       paragraphs,
       cta,

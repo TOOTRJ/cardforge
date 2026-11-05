@@ -135,7 +135,7 @@ describe("email builders", () => {
 
     const noGrace = paymentFailedEmail(recipient, { plan: null, amountLabel: "$6", graceUntil: null, nextAttemptAt: null, hostedInvoiceUrl: null });
     expect(noGrace.html).toContain("try your card again automatically over the next two weeks");
-    expect(noGrace.html).toContain("Your plan perks stay on while we retry.");
+    expect(noGrace.html).toContain("Your plan perks are paused until the payment goes through");
   });
 
   it("checkout reminder: trial copy only while eligible, 'nothing was charged' always, packs count the credits", () => {

@@ -285,7 +285,7 @@ export function describeNotification(
       const next = str(payload.nextAttemptAt);
       return {
         subject: `Your ${plan} payment`,
-        body: `of ${money} didn't go through — ${next ? `we'll try your card again on ${formatShortDate(next)}` : "we'll retry your card automatically"}; your ${plan} perks stay on${grace ? ` until ${formatShortDate(grace)}` : " while we retry"}. Update your card to be safe.`,
+        body: `of ${money} didn't go through — ${next ? `we'll try your card again on ${formatShortDate(next)}` : "we'll retry your card automatically"}; your ${plan} perks ${grace ? `stay on until ${formatShortDate(grace)}` : "are paused until it's paid"}. Update your card${grace ? " to be safe" : " to restore them"}.`,
         href: "/dashboard/billing",
       };
     }
