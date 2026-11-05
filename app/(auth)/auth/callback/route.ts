@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const redirectTo = safeRedirectPath(searchParams.get("redirectTo"));
 
-  // GoTrue sends a provider's refusal back here instead of a code — the
+  // An OAuth provider's refusal comes back here instead of a code — the
   // visitor pressed Cancel on the provider's screen, or the provider's email
-  // isn't verified. Never exchange anything then; the login page says it
-  // calmly (and in words that name no account).
+  // isn't verified. The login page says it calmly (in words that name no
+  // account) and keeps the redirect, so a retry goes where they were going.
   const providerError = oauthCallbackErrorOf(searchParams);
   if (providerError) {
     if (providerError !== "oauth-cancelled") {
@@ -22,10 +22,17 @@ export async function GET(request: NextRequest) {
         searchParams.get("error_code"),
       );
     }
-    return NextResponse.redirect(loginWithError(origin, providerError, redirectTo));
+    const url = loginWithError(origin, providerError);
+    if (redirectTo !== DEFAULT_POST_AUTH_PATH) url.searchParams.set("redirectTo", redirectTo);
+    return NextResponse.redirect(url);
   }
 
-  if (code && isSupabaseConfigured()) {
+  // Any other `error` (an expired or used email link: `otp_expired`) is never
+  // exchanged, and falls through with a failed exchange to the email-link
+  // message — WITHOUT the redirect: a reset link's /reset-password must not
+  // follow a plain password sign-in.
+  const linkError = searchParams.has("error") || searchParams.has("error_code");
+  if (code && !linkError && isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -37,14 +44,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(loginWithError(origin, "auth-callback-failed", redirectTo));
+  return NextResponse.redirect(loginWithError(origin, "auth-callback-failed"));
 }
 
-// Back to the login page with the error and — so a retry lands where the
-// visitor was going — the redirect, unless it is the default.
-function loginWithError(origin: string, error: string, redirectTo: string): URL {
+function loginWithError(origin: string, error: string): URL {
   const url = new URL("/login", origin);
   url.searchParams.set("error", error);
-  if (redirectTo !== DEFAULT_POST_AUTH_PATH) url.searchParams.set("redirectTo", redirectTo);
   return url;
 }

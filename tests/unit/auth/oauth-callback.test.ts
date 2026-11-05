@@ -72,11 +72,28 @@ describe("/auth/callback", () => {
     expect(url.href).toBe(`${ORIGIN}/create`);
   });
 
-  it("a failed exchange is the old 'auth-callback-failed'", async () => {
+  it("a failed exchange is the old 'auth-callback-failed', with no redirect", async () => {
     s.exchange.mockResolvedValue({ error: new Error("bad code") });
-    const url = await land("code=abc");
+    const url = await land("code=abc&redirectTo=%2Freset-password");
     expect(url.pathname).toBe("/login");
     expect(url.searchParams.get("error")).toBe("auth-callback-failed");
+    expect(url.searchParams.has("redirectTo")).toBe(false);
+  });
+
+  // Supabase's default email links (reset, signup confirm, email change) land
+  // here too: an expired or used one is NOT an OAuth refusal.
+  it.each([
+    ["an expired reset link", "redirectTo=%2Freset-password&error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired"],
+    ["a used confirmation link", "error=access_denied&error_code=flow_state_not_found"],
+    ["a link error beside a code", "code=abc&redirectTo=%2Freset-password&error=access_denied&error_code=otp_expired"],
+  ])("%s keeps the email-link message, no redirect, no warning", async (_name, query) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const url = await land(query);
+    expect(url.pathname).toBe("/login");
+    expect(url.searchParams.get("error")).toBe("auth-callback-failed");
+    expect(url.searchParams.has("redirectTo")).toBe(false);
+    expect(s.exchange).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("no code and no error is 'auth-callback-failed'", async () => {
@@ -90,10 +107,17 @@ describe("oauthCallbackErrorOf", () => {
   it("reads GoTrue's answers", () => {
     expect(of("code=abc")).toBeNull();
     expect(of("error=access_denied")).toBe("oauth-cancelled");
-    // GoTrue's OWN access_denied (e.g. signups disabled) carries a code.
-    expect(of("error=access_denied&error_code=signup_disabled")).toBe("oauth-failed");
     expect(of("error_code=provider_email_needs_verification")).toBe("oauth-verify-email");
     expect(of("error=invalid_request")).toBe("oauth-failed");
+    expect(of("error=server_error&error_code=bad_oauth_state")).toBe("oauth-failed");
+    expect(of("error=access_denied&error_code=provider_disabled")).toBe("oauth-failed");
+  });
+  it("leaves every other GoTrue code to the email-link path", () => {
+    // An email link's access_denied always carries a code.
+    expect(of("error=access_denied&error_code=otp_expired")).toBeNull();
+    expect(of("error=access_denied&error_code=flow_state_not_found")).toBeNull();
+    expect(of("error=access_denied&error_code=signup_disabled")).toBeNull();
+    expect(of("error_code=otp_expired")).toBeNull();
   });
   it("names only its own codes", () => {
     expect(isOAuthCallbackError("oauth-cancelled")).toBe(true);

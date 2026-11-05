@@ -37,7 +37,10 @@ owner sets up per environment. Email + password is documented in
   on `oauth-verify-email`, anything else on `oauth-failed` (logged on the
   server). The redirect is kept, so a
   retry lands where the visitor was going. No message says whether a
-  PipGlyph account exists.
+  PipGlyph account exists. The callback is also where Supabase's default email
+  links land (reset, signup confirmation, email change): an expired or used
+  one (`error_code=otp_expired`…) is not an OAuth refusal and keeps the old
+  "That sign-in link didn't work" message, without the redirect.
 
 ## The Discord switch: `NEXT_PUBLIC_AUTH_DISCORD`
 
