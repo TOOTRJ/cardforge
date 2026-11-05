@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,13 +51,15 @@ export function GuestSaveGate({
               : "Your card waits in this browser while you sign up — it comes back in the creator, ready to save, publish and share from any device."}
           </DialogDescription>
         </DialogHeader>
-        <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
-          <span>
-            Free forever, with {SIGNUP_CREDITS} AI credits to start. Open the confirmation email in this
-            browser to pick up where you left off.
-          </span>
-        </p>
+        <div className="px-5 py-4">
+          <p className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
+            <span>
+              Free forever, with {SIGNUP_CREDITS} AI credits to start. Open the confirmation email in this
+              browser to pick up where you left off.
+            </span>
+          </p>
+        </div>
         <DialogFooter className="gap-2 sm:justify-start">
           <Button asChild>
             <Link href={guestAuthHref("signup")} data-no-guard>
@@ -88,8 +91,18 @@ export function GuestDraftRestoredNotice({
   onRetry: () => void;
   className?: string;
 }) {
+  // The card is what the maker came back for: where the note is out of
+  // sight (a phone, under the start options), bring it into view once.
+  const note = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = note.current;
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    const { top, bottom } = el.getBoundingClientRect();
+    if (top < 0 || bottom > window.innerHeight) el.scrollIntoView({ block: "center" });
+  }, []);
   return (
     <div
+      ref={note}
       role="status"
       data-testid="guest-draft-restored"
       className={cn(
@@ -100,12 +113,14 @@ export function GuestDraftRestoredNotice({
       <p className="min-w-0 flex-1">
         {signedIn ? (
           <>
-            <span className="font-semibold text-accent">Your card is back.</span> It&apos;s the one you
+            <span className="font-semibold text-accent">Your card is back.</span>{" "}
+            It&apos;s the one you
             started before signing in — check it over and press Save to keep it.
           </>
         ) : (
           <>
-            <span className="font-semibold text-accent">Welcome back.</span> Your card was kept in this
+            <span className="font-semibold text-accent">Welcome back.</span>{" "}
+            Your card was kept in this
             browser — carry on, and sign up when you save.
           </>
         )}
