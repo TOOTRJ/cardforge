@@ -479,3 +479,13 @@ additional_redirect_urls = [
   "http://localhost:3000/**",
   "https://*-orderoftheredjester.vercel.app/**",
 ]
+
+[remotes.dev.auth.external.discord]
+# Discord on the shared dev branch (docs/AUTH.md "Previews and the shared dev
+# branch"): the two values are SECRETS of the dev branch, set with
+# `supabase secrets set --project-ref <dev ref> --env-file …` — a secret's name
+# may not start with SUPABASE_, so these are not the local stack's names above.
+# NEVER write a client id or secret into this file: the repository is public.
+enabled = true
+client_id = "env(DISCORD_CLIENT_ID)"
+secret = "env(DISCORD_SECRET)"
