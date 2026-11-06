@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 import {
   CAPACITY_WARN_AT,
+  CAPACITY_WARN_FRACTION,
+  capacityTone,
+  capacityUpgradeLink,
+  capacityWarnFrom,
   describeCapacity,
   describeUsage,
   overCapacity,
@@ -85,6 +89,26 @@ describe("describeCapacity", () => {
     });
     expect(describeCapacity(free(50), 25)?.message).toContain("can't add 25 cards");
   });
+  it("names the plan that lifts the cap, with its number, and never threatens the cards", () => {
+    const full = describeCapacity(free(50), 1)?.message ?? "";
+    expect(full).toContain("Your cards are safe");
+    expect(full).toContain(`move to Plus (${CARD_CAPACITY.plus} cards)`);
+    expect(full).not.toMatch(/will fail|lose|deleted/);
+    const plusFull = describeCapacity({ used: CARD_CAPACITY.plus, cap: CARD_CAPACITY.plus, tier: "plus" }, 1)?.message ?? "";
+    expect(plusFull).toContain("move to Pro (unlimited cards)");
+    // The soft warning says where the room is.
+    expect(describeCapacity(free(45), 1)?.message).toContain(`Plus holds ${CARD_CAPACITY.plus}.`);
+  });
+  it("warns from 80 % of the cap, or the last few slots on a tiny cap (whichever comes first)", () => {
+    expect(CAPACITY_WARN_FRACTION).toBe(0.8);
+    expect(capacityWarnFrom(CARD_CAPACITY.free)).toBe(40);
+    expect(capacityWarnFrom(CARD_CAPACITY.plus)).toBe(400);
+    expect(capacityWarnFrom(10)).toBe(10 - CAPACITY_WARN_AT);
+    expect(describeCapacity(free(38), 1)).toBeNull();
+    expect(describeCapacity(free(39), 1)?.tone).toBe("warning");
+    expect(describeCapacity({ used: 399, cap: CARD_CAPACITY.plus, tier: "plus" }, 1)?.tone).toBe("warning");
+    expect(describeCapacity({ used: 300, cap: CARD_CAPACITY.plus, tier: "plus" }, 1)).toBeNull();
+  });
   it("remainingCapacity never goes negative for over-cap accounts", () => {
     expect(remainingCapacity(free(60))).toBe(0);
     expect(remainingCapacity({ used: 1, cap: CARD_CAPACITY_UNLIMITED, tier: "pro" })).toBeNull();
@@ -93,9 +117,22 @@ describe("describeCapacity", () => {
 
 describe("describeUsage", () => {
   it("is the always-on meter, toned by how close the cap is", () => {
-    expect(describeUsage(free(10))).toMatchObject({ tone: "info", message: "10 of 50 card slots used on Free." });
+    expect(describeUsage(free(10))).toMatchObject({ tone: "info", message: "10 of 50 cards saved on Free." });
+    expect(describeUsage(free(39))?.tone).toBe("info");
+    expect(describeUsage(free(40))).toMatchObject({ tone: "warning" });
+    expect(describeUsage(free(40))?.message).toContain("40 of 50 cards saved on Free — 10 left. Nothing is ever deleted at 50");
     expect(describeUsage(free(47))?.tone).toBe("warning");
-    expect(describeUsage(free(50))?.tone).toBe("danger");
+    expect(describeUsage(free(50))).toMatchObject({ tone: "danger" });
+    expect(describeUsage(free(50))?.message).toContain("Your Free library is full — 50 of 50 cards saved. They're safe");
     expect(describeUsage({ used: 3, cap: CARD_CAPACITY_UNLIMITED, tier: "pro" })).toBeNull();
+    for (const used of [0, 39, 40, 50, 60]) expect(describeUsage(free(used))?.tone).toBe(capacityTone(free(used)));
+  });
+});
+
+describe("capacityUpgradeLink", () => {
+  it("names the plan that lifts the cap with its number — Free to the storefront, Plus to its billing page, Pro none", () => {
+    expect(capacityUpgradeLink("free")).toEqual({ href: "/pricing", label: `Plus holds ${CARD_CAPACITY.plus} cards`, planName: "Plus" });
+    expect(capacityUpgradeLink("plus")).toEqual({ href: "/dashboard/billing#plans", label: "Pro holds them all", planName: "Pro" });
+    expect(capacityUpgradeLink("pro")).toBeNull();
   });
 });

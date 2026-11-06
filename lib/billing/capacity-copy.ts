@@ -1,4 +1,10 @@
-import { CARD_CAPACITY_UNLIMITED, type PlanTier } from "@/lib/billing/plans";
+import {
+  CARD_CAPACITY,
+  CARD_CAPACITY_UNLIMITED,
+  capacityWord,
+  nextCapacityTier,
+  type PlanTier,
+} from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Saved-card capacity, as words. Client-safe (no server imports) so the
@@ -15,10 +21,55 @@ export type CardCapacity = {
   tier: PlanTier;
 };
 
-/** Soft warning once this few slots remain. */
+/** Soft warning once this few slots remain — the floor of the rule below
+ *  (an admin override of 10 still warns on the last 5). */
 export const CAPACITY_WARN_AT = 5;
 
+/** …and from this share of the cap (owner 2026-11-06, the research's "amber
+ *  from 80 %"): 40 of 50 on Free, 400 of 500 on Plus. */
+export const CAPACITY_WARN_FRACTION = 0.8;
+
+/** The saved count from which the meter turns amber: whichever comes first
+ *  of 80 % of the cap and the last CAPACITY_WARN_AT slots. */
+export function capacityWarnFrom(cap: number): number {
+  return Math.min(Math.ceil(cap * CAPACITY_WARN_FRACTION), Math.max(0, cap - CAPACITY_WARN_AT));
+}
+
+/** The meter's tone for a count: full or over = danger, near = warning. */
+export function capacityTone(capacity: CardCapacity): CapacityMessage["tone"] {
+  const remaining = remainingCapacity(capacity);
+  if (remaining === null) return "info";
+  if (remaining === 0) return "danger";
+  return capacity.used >= capacityWarnFrom(capacity.cap) ? "warning" : "info";
+}
+
 const TIER_NAME: Record<PlanTier, string> = { free: "Free", plus: "Plus", pro: "Pro" };
+
+/** The plan that lifts a tier's cap, as the meter's link: a Free account is
+ *  sent to the storefront, a Plus account (whose /pricing redirects to its
+ *  billing page) straight to the plan grid there. null on an unlimited
+ *  tier. ONE answer for My Cards, the dashboard panel and the creator. */
+export function capacityUpgradeLink(tier: PlanTier): { href: string; label: string; planName: string } | null {
+  const next = nextCapacityTier(tier);
+  if (!next) return null;
+  const planName = TIER_NAME[next];
+  return {
+    href: tier === "free" ? "/pricing" : "/dashboard/billing#plans",
+    label:
+      CARD_CAPACITY[next] === CARD_CAPACITY_UNLIMITED
+        ? `${planName} holds them all`
+        : `${planName} holds ${capacityWord(next)} cards`,
+    planName,
+  };
+}
+
+/** "move to Plus (500 cards)" / "move to Pro (unlimited)" — the way out,
+ *  as a clause. */
+function moveUp(tier: PlanTier): string {
+  const next = nextCapacityTier(tier);
+  if (!next) return "move to a plan with space";
+  return `move to ${TIER_NAME[next]} (${capacityWord(next)} cards)`;
+}
 
 export function remainingCapacity(capacity: CardCapacity): number | null {
   if (capacity.cap === CARD_CAPACITY_UNLIMITED) return null;
@@ -62,32 +113,35 @@ export function describeCapacity(
       tone: "danger",
       message: `You have ${capacity.used.toLocaleString("en-US")} cards — ${over.toLocaleString("en-US")} over your ${plan} plan's ${cap}-card limit. They're safe, but ${
         adding <= 1 ? "saving this card" : `adding ${adding} cards`
-      } needs room: delete ${room} card${over + adding === 1 ? "" : "s"}, or move to a plan with space.`,
+      } needs room: delete ${room} card${over + adding === 1 ? "" : "s"}, or ${moveUp(capacity.tier)}.`,
     };
   }
   if (remaining === 0) {
+    // The soft cap in words: the cards are safe, only this save needs room.
     return {
       tone: "danger",
       message:
         adding <= 1
-          ? `Your ${plan} plan's ${cap}-card limit is full — saving this card will fail until you delete a card or upgrade.`
-          : `Your ${plan} plan's ${cap}-card limit is full — this can't add ${adding} cards until you delete some or upgrade.`,
+          ? `Your ${plan} plan's ${cap}-card limit is full. Your cards are safe — saving this one needs room: delete a card, or ${moveUp(capacity.tier)}.`
+          : `Your ${plan} plan's ${cap}-card limit is full. Your cards are safe — this can't add ${adding} cards until you delete some, or ${moveUp(capacity.tier)}.`,
     };
   }
   if (adding > remaining) {
     return {
       tone: "danger",
-      message: `Adding ${adding} cards would take you over your ${plan} plan's ${cap}-card limit — you have ${slots(remaining)} left. Generate ${remaining} or fewer, delete cards, or upgrade.`,
+      message: `Adding ${adding} cards would take you over your ${plan} plan's ${cap}-card limit — you have ${slots(remaining)} left. Generate ${remaining} or fewer, delete cards, or ${moveUp(capacity.tier)}.`,
     };
   }
-  if (remaining - adding <= CAPACITY_WARN_AT) {
+  if (capacity.used + adding >= capacityWarnFrom(capacity.cap)) {
     const after = remaining - adding;
+    const next = nextCapacityTier(capacity.tier);
+    const holds = next ? ` ${TIER_NAME[next]} holds ${capacityWord(next)}.` : "";
     return {
       tone: "warning",
       message:
         after === 0
-          ? `This uses the last of your ${cap} card slots on ${plan}.`
-          : `${slots(after)} left on your ${plan} plan after this (${capacity.used + adding} of ${cap}).`,
+          ? `This uses the last of your ${cap} card slots on ${plan}.${holds}`
+          : `${slots(after)} left on your ${plan} plan after this (${capacity.used + adding} of ${cap}).${holds}`,
     };
   }
   return null;
@@ -107,11 +161,17 @@ export function describeUsage(capacity: CardCapacity | null): CapacityMessage | 
       message: `You have ${capacity.used.toLocaleString("en-US")} cards, ${over.toLocaleString("en-US")} over the ${plan} plan's ${cap}-card limit. They're safe — new saves need room or a plan with space.`,
     };
   }
-  const message = `${capacity.used.toLocaleString("en-US")} of ${cap} card slots used on ${plan}.`;
-  return {
-    tone: remaining === 0 ? "danger" : remaining <= CAPACITY_WARN_AT ? "warning" : "info",
-    message,
-  };
+  const tone = capacityTone(capacity);
+  const used = capacity.used.toLocaleString("en-US");
+  const next = nextCapacityTier(capacity.tier);
+  const holds = next ? `${TIER_NAME[next]} holds ${capacityWord(next)}.` : "";
+  const message =
+    tone === "danger"
+      ? `Your ${plan} library is full — ${used} of ${cap} cards saved. They're safe to view, edit and download; the next save needs room, or ${moveUp(capacity.tier)}.`
+      : tone === "warning"
+        ? `${used} of ${cap} cards saved on ${plan} — ${remaining.toLocaleString("en-US")} left. Nothing is ever deleted at ${cap}; new saves past it need ${next ? TIER_NAME[next] : "a plan with space"}. ${holds}`.trim()
+        : `${used} of ${cap} cards saved on ${plan}.`;
+  return { tone, message };
 }
 
 /**

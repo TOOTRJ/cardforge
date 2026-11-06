@@ -16,7 +16,7 @@ import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { StarfieldBackdrop } from "@/components/ui/starfield-backdrop";
 import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
-import { PLANS } from "@/lib/billing/plans";
+import { PLANS, capacityHoldsLine, savedCardsLine } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { countPublicCards, getCommunityPulse, listTrendingCardsByRange } from "@/lib/cards/queries";
 import { TRENDING_RANGE_WORDS, type TrendingRange } from "@/lib/cards/trending";
@@ -167,10 +167,11 @@ export default async function HomePage() {
               Upgrade when you need more
             </h2>
             <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
-              The card maker is free forever — every frame, every card type,
-              every AI tool, with 5 AI credits to start. Plans add
-              monthly credits, watermark-free hi-res downloads, and Pro&apos;s
-              deck-aware AI design.
+              {capacityHoldsLine()} The card maker is free forever — every
+              frame, every card type, every AI tool, with 5 AI credits to
+              start. Plans add room for more saved cards, monthly credits,
+              watermark-free hi-res downloads, and Pro&apos;s deck-aware AI
+              design.
             </p>
           </div>
           <div className="grid w-full gap-4 sm:grid-cols-3">
@@ -191,6 +192,9 @@ export default async function HomePage() {
                   <span className="text-sm font-normal text-muted">
                     {plan.priceUsd === 0 ? "" : "/mo"}
                   </span>
+                </span>
+                <span className="text-sm font-semibold leading-5 text-gold-strong">
+                  {savedCardsLine(plan.tier)}
                 </span>
                 <span className="text-xs leading-5 text-muted">
                   {plan.tagline}

@@ -3,7 +3,7 @@ import { Layers } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { CAPACITY_WARN_AT, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
+import { capacityTone, capacityUpgradeLink, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { planForTier } from "@/lib/billing/plans";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { PlanBadgeLabel } from "@/components/dashboard/plan-ending-notice";
@@ -25,13 +25,11 @@ export async function CardsSummaryCard() {
   const plan = planForTier(capacity.tier);
   const cap = capacity.cap.toLocaleString("en-US");
   const used = capacity.used.toLocaleString("en-US");
-  const tone: "default" | "warning" | "danger" = unlimited
-    ? "default"
-    : remaining === 0
-      ? "danger"
-      : remaining <= CAPACITY_WARN_AT
-        ? "warning"
-        : "default";
+  // The meter's tone is the shared rule (amber from 80 % of the cap, the
+  // same as My Cards' line and the creator's notice).
+  const meterTone = capacityTone(capacity);
+  const tone: "default" | "warning" | "danger" = meterTone === "info" ? "default" : meterTone;
+  const upgrade = capacityUpgradeLink(capacity.tier);
   const pct = unlimited ? 0 : Math.min(100, Math.round((capacity.used / capacity.cap) * 100));
   // Over the cap — a lapsed Plus/Pro plan keeps every card (the capacity
   // trigger only blocks inserts): say so plainly instead of "50 of 50".
@@ -41,8 +39,8 @@ export async function CardsSummaryCard() {
     : over > 0
       ? `You have ${used} cards, ${over.toLocaleString("en-US")} over the ${plan.name} plan's ${cap}-card limit. They're safe — but new saves need room or a plan with space.`
       : remaining === 0
-        ? `You've used all ${cap} card slots on ${plan.name}. Delete a card or upgrade to save more.`
-        : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit.`;
+        ? `Your ${plan.name} library is full — all ${cap} cards saved. They're safe to view, edit and download; the next save needs room${upgrade ? `, or ${upgrade.planName}` : ""}.`
+        : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit. Nothing is ever deleted at ${cap}${upgrade ? ` — ${upgrade.label}` : ""}.`;
 
   return (
     <SurfaceCard
@@ -130,11 +128,11 @@ export async function CardsSummaryCard() {
         >
           Manage cards →
         </Link>
-        {unlimited ? null : (
-          <Link href="/pricing" className="text-primary-bright underline-offset-4 hover:underline">
-            Upgrade for more room →
+        {upgrade ? (
+          <Link href={upgrade.href} className="text-primary-bright underline-offset-4 hover:underline">
+            {upgrade.label} →
           </Link>
-        )}
+        ) : null}
       </div>
     </SurfaceCard>
   );

@@ -33,12 +33,59 @@ export const CARD_CAPACITY: Record<PlanTier, number> = {
  *  once, on Free ("Everything in Free" carries it up). */
 export const UNLIMITED_DECKS_LINE = "Unlimited decks — public, unlisted or private";
 
-/** "Up to 50 saved cards" / "Unlimited saved cards" — a plan's card line,
- *  from CARD_CAPACITY (the plan cards, the billing page's free-plan copy). */
+// ---------------------------------------------------------------------------
+// Saved-card capacity is THE paid benefit (owner finding 2026-11-06: users
+// convert to save more cards, not for the AI —
+// docs/research/card-capacity-conversion-2026-11.md). Every surface that
+// names a paid plan leads with it, in words built here from CARD_CAPACITY —
+// never a literal number in a component, so a cap that changes in this
+// table (and in migration 0104) can't leave a page quoting the old one.
+// The cap is SOFT: nothing is ever deleted, every card stays viewable,
+// editable and downloadable; only NEW saves are gated (the Evernote /
+// Trello rule, never Dropbox's deletion clause) — the copy says so.
+// ---------------------------------------------------------------------------
+
+/** A cap as words: "50", "500" or "unlimited". */
+export function capacityWord(tier: PlanTier): string {
+  const cap = CARD_CAPACITY[tier];
+  return cap === CARD_CAPACITY_UNLIMITED ? "unlimited" : cap.toLocaleString("en-US");
+}
+
+/** The tier that lifts a tier's cap — Free → Plus, Plus → Pro, Pro none. */
+export function nextCapacityTier(tier: PlanTier): PaidTier | null {
+  if (tier === "free") return "plus";
+  if (tier === "plus") return "pro";
+  return null;
+}
+
+/** "Up to 50 saved cards" / "Up to 500 saved cards — 10× the room on Free"
+ *  / "Unlimited saved cards — keep every card you make": a plan's FIRST
+ *  feature line, from CARD_CAPACITY (the plan cards, the home page's plan
+ *  tiles, the Settings summary). */
 export function savedCardsLine(tier: PlanTier): string {
   const cap = CARD_CAPACITY[tier];
-  return cap === CARD_CAPACITY_UNLIMITED ? "Unlimited saved cards" : `Up to ${cap.toLocaleString("en-US")} saved cards`;
+  if (cap === CARD_CAPACITY_UNLIMITED) return "Unlimited saved cards — keep every card you make";
+  const line = `Up to ${cap.toLocaleString("en-US")} saved cards`;
+  const ratio = cap / CARD_CAPACITY.free;
+  // The multiple over Free, where it is a whole number worth saying.
+  return tier !== "free" && Number.isInteger(ratio) && ratio > 1 ? `${line} — ${ratio}× the room on Free` : line;
 }
+
+/** The pricing page's capacity hero line: "Free holds 50 cards. Plus holds
+ *  500. Pro holds them all." */
+export function capacityHoldsLine(): string {
+  return `Free holds ${capacityWord("free")} cards. Plus holds ${capacityWord("plus")}. Pro holds them all.`;
+}
+
+/** The one-sentence pitch every other surface uses: "Save up to 500 cards
+ *  on Plus, unlimited on Pro." */
+export function capacityPitch(): string {
+  return `Save up to ${capacityWord("plus")} cards on Plus, unlimited on Pro.`;
+}
+
+/** The soft-cap promise, said wherever a limit is named. */
+export const CARDS_ARE_SAFE =
+  "Your cards are never deleted — every one stays yours to view, edit and download.";
 
 export type PaidTier = "plus" | "pro";
 export type PackKey = "mini" | "small" | "large";
@@ -229,11 +276,13 @@ export const PLANS: PlanDisplay[] = [
     name: "Free",
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
+    // Capacity FIRST on every plan (owner 2026-11-06): it is the one line
+    // people pay for, and plan-capacity-headline.test.ts holds the order.
     features: [
+      savedCardsLine("free"),
       "5 AI credits at sign-up (no monthly refill — packs and plans add more)",
       "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
-      savedCardsLine("free"),
       UNLIMITED_DECKS_LINE,
       "Community gallery & sharing",
     ],
@@ -243,12 +292,12 @@ export const PLANS: PlanDisplay[] = [
     name: "Plus",
     priceUsd: 6,
     annualUsd: 60,
-    tagline: "For regular creators who want clean, hi-res cards.",
+    tagline: `Room for ${capacityWord("plus")} cards, downloaded clean and hi-res.`,
     featured: true,
     features: [
+      savedCardsLine("plus"),
       "30 AI credits every month",
       ...PLUS_PRINT_PERKS,
-      savedCardsLine("plus"),
       "Everything in Free",
     ],
     comingSoon: PAID_COMING_SOON,
@@ -258,7 +307,7 @@ export const PLANS: PlanDisplay[] = [
     name: "Pro",
     priceUsd: 15,
     annualUsd: 150,
-    tagline: "For power users who design for their decks and print them.",
+    tagline: "Unlimited cards, print sheets and deck-aware AI.",
     // Every AI tool is open to every tier and credits are the limiter; the
     // ONLY tier-gated AI features are the deck-aware ones (owner decision,
     // 2026-09-15). Never list perks that aren't shipped (the old "priority
@@ -266,10 +315,10 @@ export const PLANS: PlanDisplay[] = [
     // paused: AI deck building is (TODO DK1, lib/ai/deck-ai-pause.ts), so the
     // tagline and the credits line no longer sell a whole AI deck.
     features: [
+      savedCardsLine("pro"),
       "100 AI credits every month",
       "AI cards & ideas designed for a specific deck",
       ...PRO_PRINT_PERKS,
-      savedCardsLine("pro"),
       "Everything in Plus",
     ],
     comingSoon: PRO_COMING_SOON,

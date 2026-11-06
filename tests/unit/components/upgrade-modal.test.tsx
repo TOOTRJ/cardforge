@@ -33,6 +33,7 @@ vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => true }));
 
 import { UpgradeModal } from "@/components/billing/upgrade-modal";
+import { CARD_CAPACITY } from "@/lib/billing/plans";
 
 const freeUser = { id: "u1", username: "dev_free", isPaid: false, tier: "free", hasSubscribed: false };
 const proSubscriber = {
@@ -96,6 +97,19 @@ describe("UpgradeModal — out of credits", () => {
     expect(screen.queryByText(/\$\d+(\.\d\d)? for subscribers/)).toBeNull();
     expect(screen.getByText(/subscriber discount starts once your trial converts/)).toBeTruthy();
     expect(screen.getByText(/\$8 one-time/)).toBeTruthy();
+  });
+
+  it("the capacity reason keeps the cards safe and names the caps from the table (owner 2026-11-06)", async () => {
+    s.me = freeUser;
+    render(<UpgradeModal open reason="capacity" onOpenChange={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Your library is full" })).toBeTruthy();
+    const description = screen.getByText(/Your cards are never deleted/).textContent ?? "";
+    expect(description).toContain(`Plus holds ${CARD_CAPACITY.plus} cards, Pro holds them all`);
+    expect(description).not.toMatch(/forge is full|lose/);
+    // Each plan row's subline (its tagline) leads with the cap.
+    expect(screen.getByText(`Room for ${CARD_CAPACITY.plus} cards, downloaded clean and hi-res.`)).toBeTruthy();
+    expect(screen.getByText(/^Unlimited cards, print sheets/)).toBeTruthy();
   });
 
   it("other reasons show no packs", async () => {

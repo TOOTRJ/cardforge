@@ -68,7 +68,7 @@ describe("credit refill keys", () => {
     expect(SIGNUP_CREDITS).toBe(5);
     expect(MONTHLY_CREDITS.free).toBe(0);
     expect(MONTHLY_CREDITS.plus).toBeGreaterThan(0);
-    expect(PLANS[0].features[0]).toMatch(/5 AI credits at sign-up/);
+    expect(PLANS[0].features.some((line) => /5 AI credits at sign-up/.test(line))).toBe(true);
   });
 
   it("three packs, impulse → value, with the subscriber price cents-exact", () => {
