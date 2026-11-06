@@ -65,6 +65,10 @@ const s = vi.hoisted(() => ({
   syncSubscription: vi.fn(),
   revalidated: [] as string[],
   customersCreate: vi.fn(),
+  customersSearch: vi.fn(),
+  /** Subscription history of OTHER Stripe customers under the same email. */
+  otherHistory: [] as Array<{ id: string; status?: string }>,
+  lapsedRedeemed: false,
   checkoutCreate: vi.fn(),
   portalCreate: vi.fn(),
 }));
@@ -106,7 +110,9 @@ vi.mock("@/lib/supabase/admin", () => ({
             columns === "stripe_customer_id"
               ? { data: { stripe_customer_id: s.linkRead }, error: null }
               : {
-                  data: s.lapsedTrial ? { id: "n_lapsed", payload: { subscriptionId: s.lapsedSubscriptionId } } : null,
+                  data: s.lapsedTrial
+                    ? { id: "n_lapsed", payload: { subscriptionId: s.lapsedSubscriptionId, ...(s.lapsedRedeemed ? { redeemedAt: "2026-11-01T00:00:00Z" } : {}) } }
+                    : null,
                   error: null,
                 },
         };
@@ -124,7 +130,7 @@ vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://test.local" })
 vi.mock("@/lib/stripe/client", () => ({
   isStripeConfigured: () => s.stripeConfigured,
   getStripe: () => ({
-    customers: { create: s.customersCreate, del: s.customersDel },
+    customers: { create: s.customersCreate, del: s.customersDel, search: s.customersSearch },
     // The catalog answers by lookup key ("pro_monthly" → "price_pro_monthly"),
     // the same ids the mocked env mapping below produces.
     prices: {
@@ -207,10 +213,15 @@ beforeEach(() => {
   s.history = [];
   s.historyThrows = false;
   s.checkoutThrows = false;
-  s.subscriptionsList.mockReset().mockImplementation(async () => {
+  s.subscriptionsList.mockReset().mockImplementation(async (params?: { customer?: string }) => {
     if (s.historyThrows) throw new Error("stripe down");
+    // Another Stripe customer under the same email (the per-email check).
+    if (params?.customer && params.customer !== "cus_1" && params.customer !== s.linkWrite) return { data: s.otherHistory };
     return { data: s.history };
   });
+  s.otherHistory = [];
+  s.lapsedRedeemed = false;
+  s.customersSearch.mockReset().mockResolvedValue({ data: [] });
   s.subscriptionsUpdate.mockReset().mockResolvedValue({});
   s.subscriptionsRetrieve.mockReset().mockImplementation(async (id: string) => {
     // The win-back check reads the subscription the trial_lapsed row names.
@@ -277,6 +288,14 @@ describe("createCheckoutSessionAction", () => {
     // Card required: Checkout's default collection, never `if_required`.
     expect(params).not.toHaveProperty("payment_method_collection");
     expect(params.metadata).toMatchObject({ discount: "none" });
+    // The card networks' trial terms, under Checkout's button (BA6): the end
+    // date, what is charged from then, how to cancel.
+    expect(params.custom_text).toEqual({
+      // The LENGTH, never a date: Checkout's summary prints the date in the buyer's zone.
+      submit: { message: "Your free trial lasts 7 days and ends on the date in the order summary. From then, Pro is $15 a month, charged to this card until you cancel. Cancel any time before then on your billing page and nothing is charged." },
+    });
+    // One trial per EMAIL: every Stripe customer under the address was asked.
+    expect(s.customersSearch).toHaveBeenCalledWith({ query: 'email:"x@example.test"', limit: 20 });
     // Funnel: the click became a checkout_started row, and its id rides in the
     // session metadata so the webhook can tie completion back to it.
     expect(s.funnelInserts).toEqual([
@@ -292,6 +311,51 @@ describe("createCheckoutSessionAction", () => {
     expect(params.line_items).toEqual([{ price: "price_plus_annual", quantity: 1 }]);
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");
     expect(params).not.toHaveProperty("payment_method_collection");
+    // No free period → no trial terms under the button.
+    expect(params).not.toHaveProperty("custom_text");
+  });
+
+  it("one trial per EMAIL (audit 2026-11-05 P3): a deleted account's old Stripe customer under the same address denies the trial; Stripe's word match is narrowed to the exact address", async () => {
+    s.customersSearch.mockResolvedValue({
+      data: [
+        { id: "cus_old", email: "X@example.test" },
+        { id: "cus_1", email: "x@example.test" },
+        // Stripe's exact match is a WORD match: these come back too and must not count.
+        { id: "cus_near", email: "a.x@example.test" },
+        { id: "cus_gone", email: "x@example.test", deleted: true },
+      ],
+    });
+    s.otherHistory = [{ id: "sub_from_deleted_account", status: "canceled" }];
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(checkoutParams().subscription_data).not.toHaveProperty("trial_period_days");
+    expect(checkoutParams()).not.toHaveProperty("custom_text");
+    const asked = s.subscriptionsList.mock.calls.map((c) => c[0]?.customer);
+    expect(asked).toContain("cus_old");
+    expect(asked).not.toContain("cus_near");
+    expect(asked).not.toContain("cus_gone");
+    // The customer's own id is asked once (the first read), never again from the search.
+    expect(asked.filter((c) => c === "cus_1")).toHaveLength(1);
+
+    // A near-miss alone (a.x@…) denies nothing — the first-timer keeps the trial.
+    s.checkoutCreate.mockClear();
+    s.subscriptionsList.mockClear();
+    s.customersSearch.mockResolvedValue({ data: [{ id: "cus_near", email: "a.x@example.test" }] });
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
+    expect(s.subscriptionsList.mock.calls.map((c) => c[0]?.customer)).toEqual(["cus_1"]);
+
+    // The address is lowercased and a double quote escaped in Stripe's documented shape.
+    s.checkoutCreate.mockClear();
+    s.customersSearch.mockResolvedValue({ data: [] });
+    s.user = { id: USER, email: 'O"Brien@Example.test' };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(s.customersSearch).toHaveBeenLastCalledWith({ query: 'email:"o\\"brien@example.test"', limit: 20 });
+    expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
+
+    s.checkoutCreate.mockClear();
+    s.customersSearch.mockRejectedValue(new Error("search down"));
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(checkoutParams().subscription_data).not.toHaveProperty("trial_period_days");
   });
 
   it("one trial per account: a lapsed Plus trial gets no Pro trial either — the history query asks Stripe for EVERY status", async () => {
@@ -388,6 +452,16 @@ describe("createCheckoutSessionAction", () => {
     s.profile = { stripe_customer_id: "cus_1" };
     await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
     expect((checkoutParams().subscription_data as { metadata: Record<string, string> }).metadata).toEqual({ supabase_user_id: USER });
+  });
+
+  it("the terms line says 'complimentary period' only when the COMP sets the end — a comp shorter than the 7-day trial leaves a plain trial (check P3-2)", async () => {
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 2 * 86_400_000).toISOString() };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your free trial lasts 7 days and ends on the date in the order summary\./);
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 40 * 86_400_000).toISOString() };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your complimentary period lasts 40 days and ends on the date in the order summary\./);
   });
 
   it("a comp that ends BEFORE the 7-day trial: the trial's end wins (Math.max)", async () => {
@@ -536,6 +610,22 @@ describe("createCheckoutSessionAction", () => {
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     expect(checkoutParams()).not.toHaveProperty("discounts");
     expect(checkoutParams().allow_promotion_codes).toBe(true);
+  });
+
+  it("win-back: MONTHLY plans only (a `once` coupon on a year took 20 % off the year), and a row already redeemed is spent (BA6)", async () => {
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.history = [{ id: "sub_old_trial", status: "canceled" }];
+    s.lapsedTrial = true;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro", period: "annual" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(checkoutParams().metadata?.discount).toBe("none");
+    expect(checkoutParams().allow_promotion_codes).toBe(true);
+
+    s.checkoutCreate.mockClear();
+    s.lapsedRedeemed = true;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(checkoutParams()).not.toHaveProperty("discounts");
+    expect(checkoutParams().metadata?.discount).toBe("none");
   });
 
   it("win-back: a missing coupon sells at full price instead of failing", async () => {

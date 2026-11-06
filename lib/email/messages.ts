@@ -578,32 +578,41 @@ export function trialWinbackEmail(
     priceLabel: string | null;
     /** "$12 for the first month" — null when unknown. */
     discountedPriceLabel: string | null;
+    /** A trial that never converted (default), or a payer who cancelled. */
+    reason?: "trial" | "cancelled";
   },
 ): OutgoingEmail {
   const site = getSiteBaseUrl();
+  const cancelled = input.reason === "cancelled";
   const f = footer(
     "account",
     recipient,
-    "You're receiving this because your PipGlyph free trial ended.",
+    cancelled
+      ? "You're receiving this because your PipGlyph plan ended."
+      : "You're receiving this because your PipGlyph free trial ended.",
   );
   const date = formatDateIn(input.expiresAt, "long", "UTC");
   const plan = escapeHtml(input.plan);
   const cta = { label: `Come back to ${input.plan}`, url: `${site}/dashboard/billing#plans` };
   const offer = input.discountedPriceLabel
-    ? `<strong>${input.discountPct}% off your first month</strong> — ${escapeHtml(input.discountedPriceLabel)}${input.priceLabel ? ` instead of ${escapeHtml(input.priceLabel)}` : ""}`
-    : `<strong>${input.discountPct}% off your first month</strong>`;
+    ? `<strong>${input.discountPct}% off your first month${cancelled ? " back" : ""}</strong> — ${escapeHtml(input.discountedPriceLabel)}${input.priceLabel ? ` instead of ${escapeHtml(input.priceLabel)}` : ""}`
+    : `<strong>${input.discountPct}% off your first month${cancelled ? " back" : ""}</strong>`;
   const paragraphs = [
-    `Your free ${plan} trial has ended and nothing was charged. Every card you made is still yours, and you're back on the free plan.`,
-    `If ${plan} wasn't quite right yet, here's ${offer}. It's applied automatically when you subscribe before <strong>${date}</strong> — no code to enter.`,
+    cancelled
+      ? `Your ${plan} plan has ended. Every card you made is still yours, and you're back on the free plan.`
+      : `Your free ${plan} trial has ended and nothing was charged. Every card you made is still yours, and you're back on the free plan.`,
+    `If ${plan} wasn't quite right ${cancelled ? "this time" : "yet"}, here's ${offer} on the monthly plan. It's applied automatically when you subscribe before <strong>${date}</strong> — no code to enter.`,
     `${plan} means monthly AI credits, clean hi-res downloads and print-ready PDFs — and you can cancel any time.`,
   ];
   return {
     to: recipient.email,
-    subject: `${input.discountPct}% off your first month of PipGlyph ${input.plan}`,
+    subject: `${input.discountPct}% off your first month${cancelled ? " back" : ""} of PipGlyph ${input.plan}`,
     headers: f.headers,
     html: renderEmailLayout({
       siteUrl: site,
-      preheader: `Your trial ended — come back by ${date} for ${input.discountPct}% off.`,
+      preheader: cancelled
+        ? `Your plan ended — come back by ${date} for ${input.discountPct}% off.`
+        : `Your trial ended — come back by ${date} for ${input.discountPct}% off.`,
       heading: `Come back to ${plan} for ${input.discountPct}% off`,
       paragraphs,
       cta,

@@ -1851,7 +1851,13 @@ Rules and gotchas:
   (≥48 h left, Stripe's minimum). A trial that ends unconverted
   (`isUnconvertedTrial`) gets ONE `trial_lapsed` notification + win-back
   email (0111); checkout applies coupon `TRIAL_WINBACK_COUPON_ID` for 30
-  days from that row, never a client-supplied code. Active plans:
+  days from that row (MONTHLY plans only, once — the paying checkout stamps
+  the row `redeemedAt`; a cancelled PAYER gets the same one offer, `reason:
+  "cancelled"`, one win-back per account ever), never a client-supplied
+  code. One trial per EMAIL: `isTrialEligible` asks every Stripe customer
+  under the address (a deleted account's customer keeps its history), and
+  every free-period Checkout carries the trial terms under its button
+  (`trialTermsLine`, `custom_text.submit`). Active plans:
   an UPGRADE switches in place through the portal confirm flow (prorated,
   charged now); a DOWNGRADE (`isPlanDowngrade` in `lib/billing/plan-change.ts`: lower tier, or
   annual → monthly) is scheduled for the end of the paid period with a subscription
