@@ -40,6 +40,7 @@ const s = vi.hoisted(() => ({
     cancel_at?: number | null;
     schedule?: string | null;
     default_payment_method?: string | null;
+    metadata?: Record<string, string>;
     items: {
       data: Array<{ id?: string; price: { id: string; recurring?: { interval: string } } }>;
     };
@@ -492,6 +493,30 @@ describe("createCheckoutSessionAction", () => {
       },
     });
     expect(s.checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it("a PAYING plan under free days (trialing + pipglyph_hold_from = active): a DOWNGRADE is scheduled for the free days' end, an upgrade switches now through the portal (0176)", async () => {
+    const held = {
+      id: "sub_held",
+      status: "trialing",
+      trial_end: Math.floor(Date.now() / 1000) + 40 * 24 * 60 * 60,
+      default_payment_method: "pm_1",
+      metadata: { pipglyph_hold_from: "active" },
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    s.live = held;
+    const down = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(down).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=scheduled" });
+    expect(s.scheduleCreate).toHaveBeenCalledWith({ from_subscription: "sub_held" });
+    expect(s.portalCreate).not.toHaveBeenCalled();
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+
+    s.scheduleCreate.mockClear();
+    s.live = { ...held, items: { data: [{ id: "si_1", price: { id: "price_plus_monthly", recurring: { interval: "month" } } }] } };
+    const up = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(up).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({ flow_data: { type: "subscription_update_confirm" } });
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
   });
 
   it("win-back: a trial that lapsed within 30 days buys its first month with the coupon applied server-side (no promo-code box)", async () => {

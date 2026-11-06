@@ -447,6 +447,20 @@ export async function createCheckoutSessionAction(
           return { ok: false, error: "You're already on that plan." };
         }
         if (live.status === "trialing" && (await subscriptionHasPaymentMethod(live, stripe))) {
+          // A PAYING plan under free days (lib/billing/free-days.ts) reads
+          // trialing: a DOWNGRADE is scheduled for the free days' end like an
+          // active plan's for its period end — the portal would apply it at
+          // once and take paid-for perks away (Pro paid through Dec 5,
+          // downgraded today). An upgrade still switches now (continue_trial:
+          // the new price lands when the free days end).
+          if (isHeldPayingPlan(live)) {
+            const currentTier = await resolveSubscriptionTier(live, stripe);
+            const currentInterval = live.items.data[0]?.price?.recurring?.interval ?? null;
+            const target = { tier: input.tier, period: input.period ?? "monthly" };
+            if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
+              return await scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
+            }
+          }
           return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         if (live.status === "active") {

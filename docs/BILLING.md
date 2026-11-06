@@ -835,6 +835,20 @@ overlay the admin typed by hand, #688's balance credit and #726's coupon:
   older than 10 minutes (a crash) is marked failed first. A plan under a
   subscription SCHEDULE (a pending downgrade) is refused with the way out
   (release it on the billing page); Stripe would refuse the update anyway.
+- **Plan changes and cancels during free days** (the owner's question,
+  2026-11-05). No plan + an overlay: buying the overlay's tier or a lower
+  one is not charged before the days end (`compHoldsCheckoutUntil`); a
+  HIGHER tier is bought now (the days below it are swallowed — perks are
+  the higher of the two, the grant's extra credits are 0, no reminder);
+  there is nothing to cancel — the days run out and the 7-day / 1-day
+  reminders say so. A held PAYING plan: cancel → the plan ends when the
+  free days end, nothing charged, every perk kept until then (no lapsed
+  trial, no win-back); DOWNGRADE → scheduled for the free days' end
+  (`scheduleDowngrade` on the trialing subscription — the portal would have
+  applied it at once and taken paid-for perks away); UPGRADE → the portal's
+  confirm (`continue_trial`): the higher tier from now, its first charge
+  when the free days end — the remaining paid time and the days are
+  upgraded for nothing (accepted: bounded, and the user is upgrading).
 - **Revoke** (`adminRevokeFreeDaysAction` → `revokeFreeDays`, the NEWEST
   applied grant only; `planRevoke`): the overlay shrinks by the grant's days
   (cleared when no other live grant remains — or when that end is now or

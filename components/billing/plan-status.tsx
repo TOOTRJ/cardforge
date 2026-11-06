@@ -63,6 +63,17 @@ export function PlanStatusLine({
     // holding an entity (&apos;) lost its edge spaces in the Next build
     // ("October 23, 2026and won't renew").
     case "trial_ending":
+      if (heldByComp) {
+        // A paying plan under free days (the trial Stripe reports is paid
+        // time plus the days): it ends when they do.
+        return (
+          <>
+            {"You cancelled your plan. It ends on "}
+            <Strong><LocalDate iso={status.endsAt} format="stampYear" /></Strong>
+            {`, when your free days end, and you won't be charged — you keep every ${planName} perk until then; afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
+          </>
+        );
+      }
       return (
         <>
           {"You cancelled your free trial. It ends on "}
