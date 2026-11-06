@@ -87,8 +87,12 @@ export async function grantPlanCreditsOnce(
     return grantPlanCreditsOnceTwoStep(admin, userId, tier);
   }
   if (error) return { ok: false, error: error.message };
-  const granted = typeof data === "number" && Number.isFinite(data) ? data : 0;
-  return { ok: true, granted };
+  // The function answers the credits it granted; anything else is a fault to
+  // alert on (the webhook's grant alert), never a silent "0 granted".
+  if (typeof data !== "number" || !Number.isFinite(data)) {
+    return { ok: false, error: `grant_plan_credits_once answered without a number (${String(data)})` };
+  }
+  return { ok: true, granted: data };
 }
 
 /**

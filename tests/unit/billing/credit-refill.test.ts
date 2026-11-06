@@ -105,6 +105,11 @@ describe("grantPlanCreditsOnce — one SQL statement under the row lock (0181)",
     expect(grants).toEqual([{ p_user_id: USER, p_amount: 60, p_reason: PLAN_CREDITS_REASON, p_idempotency_key: planCreditsKey(USER, "pro") }]);
   });
 
+  it("an answer that is not a number is a fault (reported), never 'nothing granted'", async () => {
+    const { admin } = stubAdmin({ once: { data: null as unknown as number } });
+    expect(await grantPlanCreditsOnce(admin, USER, "plus")).toEqual({ ok: false, error: "grant_plan_credits_once answered without a number (null)" });
+  });
+
   it("any other failure of the function is reported, never retried in two steps", async () => {
     const { admin, grants, reads } = stubAdmin({ once: { error: { code: "42501", message: "permission denied" } } });
     expect(await grantPlanCreditsOnce(admin, USER, "pro")).toEqual({ ok: false, error: "permission denied" });
