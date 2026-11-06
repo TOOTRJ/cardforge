@@ -5856,6 +5856,9 @@ export function CardCreatorForm({
               imageUrl={`${window.location.origin}/api/cards/${postSaveShare.cardId}/og`}
               heading="Your card is live"
               description={`“${postSaveShare.title}” is published. Share it while the forge is still warm — the buttons only prefill; nothing posts without you.`}
+              // The moment of pride shows the thing made (TODO SG2): the
+              // card's share image, live-rendered until the bake lands.
+              picture={{ src: `${window.location.origin}/api/cards/${postSaveShare.cardId}/og`, alt: `${postSaveShare.title}, your new card` }}
             />
           ) : null}
 

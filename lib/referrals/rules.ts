@@ -7,13 +7,6 @@
 // (lib/referrals/settings.ts); the constants here are its defaults.
 // ---------------------------------------------------------------------------
 
-/** DEFAULT caps (lib/referrals/settings.ts — an admin changes the live
- *  ones): rewarded referrals a referrer earns their reward for per UTC
- *  calendar month, and ever. Past them the referral is "capped": the
- *  friend still gets theirs (the friends cap, in the settings, caps the
- *  friend too). */
-export const REFERRAL_MONTHLY_CAP = 3;
-export const REFERRAL_LIFETIME_CAP = 12;
 /** Both emails must be confirmed before either side is rewarded (owner
  *  2026-11-02). A first card whose emails are still unconfirmed this many
  *  days later expires. There is NO hold after the friend qualifies (owner
@@ -24,8 +17,12 @@ export const REFERRAL_CONFIRM_WINDOW_DAYS = 30;
 export const REFERRAL_GRANT_MAX_ATTEMPTS = 5;
 /** Rows the retry sweep reads per run, per kind. */
 export const REFERRAL_SWEEP_BATCH = 100;
-/** The first card must come within this many days of the signup. */
+/** DEFAULT activation window (the settings' `activation.windowDays` is the
+ *  live value): the friend's cards must be saved within this many days of
+ *  the signup. */
 export const REFERRAL_ACTIVATION_WINDOW_DAYS = 30;
+/** DEFAULT cards a friend must save (the settings' `activation.cardsRequired`). */
+export const REFERRAL_ACTIVATION_CARDS = 5;
 /** A referral claimed after signup (the Google sign-in path claims it at
  *  onboarding) counts only for an account this young with no saved card. */
 export const REFERRAL_CLAIM_WINDOW_DAYS = 7;
@@ -47,13 +44,17 @@ export function referralLink(baseUrl: string, code: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/?${REFERRAL_PARAM}=${code}`;
 }
 
-export type ReferralStatus = "signed_up" | "first_card" | "rewarded" | "capped" | "blocked" | "expired";
+/** `first_card` is 0177's name for the qualified-not-claimed state; 0180
+ *  writes `cards_saved` (the friend saved the required cards) — both read
+ *  the same way. */
+export type ReferralStatus = "signed_up" | "first_card" | "cards_saved" | "rewarded" | "capped" | "blocked" | "expired";
 
 /** What the referrer's dashboard says about each friend. Never a fraud
  *  reason: a blocked referral reads "Not eligible". */
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   signed_up: "Signed up",
-  first_card: "First card saved",
+  first_card: "Cards saved",
+  cards_saved: "Cards saved",
   rewarded: "Rewarded",
   capped: "Limit reached",
   blocked: "Not eligible",

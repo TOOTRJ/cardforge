@@ -2,19 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { adminSaveReferralSettingsAction } from "@/lib/admin/referral-settings-actions";
-import { rewardPhrase, type ReferralSettings, type RewardSpec } from "@/lib/referrals/settings";
+import {
+  MAX_REWARD_DAYS,
+  friendRewardPhrase,
+  rewardStepPhrase,
+  type ReferralSettings,
+  type RewardStep,
+} from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
-// The referral program's settings (owner 2026-11-05): ON / OFF, what the
-// friend and the referrer get — free 30 days of a tier (lib/billing/free-days.ts),
-// AI credits, or nothing — and the caps. Saved whole through
-// adminSaveReferralSettingsAction; a confirm step names what changes.
-// Rewards already given are untouched (the settings are read at grant time).
+// The referral program's settings, v2 (owner 2026-11-06): ON / OFF, the
+// activation bar (cards within a window; the card on file is the rule, not
+// a setting), what the friend gets (days banked), the referrer's LADDER by
+// qualified-referral count with its tail, and the friends-per-month cap.
+// Saved whole through adminSaveReferralSettingsAction; a confirm step names
+// what changes. Rewards already given are untouched (the settings are read
+// at grant time).
 // ---------------------------------------------------------------------------
 
 const inputClass =
@@ -24,72 +32,44 @@ function Label({ children }: { children: React.ReactNode }) {
   return <span className="text-[11px] font-medium uppercase tracking-wide text-subtle">{children}</span>;
 }
 
-function RewardFields({
-  label,
-  value,
-  onChange,
-  allowOwn,
-}: {
-  label: string;
-  value: RewardSpec;
-  onChange: (next: RewardSpec) => void;
-  /** The referrer's side may say "their own plan's tier". */
-  allowOwn: boolean;
-}) {
-  const kind = value.kind;
+const clampInt = (value: string, min: number, max: number, fallback: number) => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+};
+
+function StepFields({ label, value, onChange }: { label: string; value: RewardStep; onChange: (next: RewardStep) => void }) {
   return (
-    <fieldset className="flex flex-wrap items-end gap-3">
+    <fieldset className="flex flex-wrap items-end gap-2">
       <legend className="sr-only">{label}</legend>
       <label className="flex flex-col gap-1">
         <Label>{label}</Label>
         <select
-          value={kind}
-          className={`${inputClass} w-36`}
+          value={value.kind}
+          className={`${inputClass} w-32`}
           onChange={(e) => {
-            const next = e.target.value as RewardSpec["kind"];
-            onChange(
-              next === "free_days"
-                ? { kind: "free_days", tier: allowOwn ? "own" : "plus", units: 1 }
-                : next === "credits"
-                  ? { kind: "credits", amount: 20 }
-                  : { kind: "none" },
-            );
+            const next = e.target.value as RewardStep["kind"];
+            onChange(next === "days" ? { kind: "days", days: 7 } : next === "credits" ? { kind: "credits", amount: 5 } : { kind: "none" });
           }}
         >
-          <option value="free_days">Free days</option>
+          <option value="days">Free days</option>
           <option value="credits">AI credits</option>
           <option value="none">Nothing</option>
         </select>
       </label>
-      {value.kind === "free_days" ? (
-        <>
-          <label className="flex flex-col gap-1">
-            <Label>Plan</Label>
-            <select
-              value={value.tier}
-              className={`${inputClass} w-32`}
-              onChange={(e) => onChange({ ...value, tier: e.target.value as "plus" | "pro" | "own" })}
-            >
-              {allowOwn ? <option value="own">Their own plan</option> : null}
-              <option value="plus">Plus</option>
-              <option value="pro">Pro</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <Label>Length</Label>
-            <select
-              value={String(value.units)}
-              className={`${inputClass} w-40`}
-              onChange={(e) => onChange({ ...value, units: Number(e.target.value) })}
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={String(n)}>
-                  {n * 30} days
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
+      {value.kind === "days" ? (
+        <label className="flex flex-col gap-1">
+          <Label>Days</Label>
+          <input
+            type="number"
+            min={1}
+            max={MAX_REWARD_DAYS}
+            step={1}
+            value={value.days}
+            className={`${inputClass} w-24`}
+            onChange={(e) => onChange({ kind: "days", days: clampInt(e.target.value, 1, MAX_REWARD_DAYS, 7) })}
+          />
+        </label>
       ) : value.kind === "credits" ? (
         <label className="flex flex-col gap-1">
           <Label>Credits</Label>
@@ -99,8 +79,8 @@ function RewardFields({
             max={1000}
             step={1}
             value={value.amount}
-            className={`${inputClass} w-28`}
-            onChange={(e) => onChange({ kind: "credits", amount: Math.max(1, Math.min(1000, Math.floor(Number(e.target.value) || 1))) })}
+            className={`${inputClass} w-24`}
+            onChange={(e) => onChange({ kind: "credits", amount: clampInt(e.target.value, 1, 1000, 5) })}
           />
         </label>
       ) : null}
@@ -117,9 +97,10 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
   function save() {
     const summary = [
       `Program: ${draft.enabled ? "ON" : "OFF"}`,
-      `Friend gets: ${rewardPhrase(draft.friend)}`,
-      `Referrer gets: ${rewardPhrase(draft.referrer, { ownTierWord: "their own plan" })}`,
-      `Caps: ${draft.caps.perMonth} rewards a month, ${draft.caps.lifetime} ever, ${draft.caps.friendsPerMonth} rewarded friends a month`,
+      `Qualifies: ${draft.activation.cardsRequired} cards within ${draft.activation.windowDays} days + a card on file`,
+      `Friend gets: ${friendRewardPhrase(draft)}`,
+      `Ladder: ${draft.ladder.map((s, i) => `${i + 1}: ${rewardStepPhrase(s)}`).join(", ")}; then ${rewardStepPhrase(draft.tail)} each`,
+      `Cap: ${draft.caps.friendsPerMonth} rewarded friends a month`,
     ].join("\n");
     if (!window.confirm(`Save these referral settings?\n\n${summary}\n\nRewards already given are not changed.`)) return;
     startTransition(async () => {
@@ -131,6 +112,10 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
       toast.success("Referral settings saved.", { description: summary.replace(/\n/g, " · ") });
       router.refresh();
     });
+  }
+
+  function setStep(index: number, step: RewardStep) {
+    setDraft({ ...draft, ladder: draft.ladder.map((s, i) => (i === index ? step : s)) });
   }
 
   return (
@@ -154,37 +139,101 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
         </label>
       </div>
       <p className="text-xs leading-5 text-muted">
-        What each side gets when a referred friend saves their first card — changed here, never with a deploy. Free days
-        are the same mechanism as a comp: added to a paying plan&apos;s time, a perks overlay otherwise, with the plan&apos;s
-        normal AI credits. OFF pauses new signups and rewards (a friend who qualifies meanwhile waits, up to 30 days);
-        what was already given stays. A cap of 0 pauses that side: 0 referrer rewards a month means referrers earn
-        nothing, 0 rewarded friends a month means nobody is rewarded.
+        A referral qualifies when the friend has saved the cards below within the window AND started a plan with a card
+        on file (their banked days make it free). Rewards are DAYS INTO THE BANK (tier-less, no AI credits; the user
+        applies them with a card on file) or AI credits at once — changed here, never with a deploy. The referrer climbs
+        the ladder by qualified referral; past its last step every further referral earns the tail. OFF pauses new
+        signups and rewards (a friend who qualifies meanwhile waits, up to 30 days); what was already given stays. A
+        friends cap of 0 means nobody is rewarded.
       </p>
-      <RewardFields label="Friend gets" value={draft.friend} onChange={(friend) => setDraft({ ...draft, friend })} allowOwn={false} />
-      <RewardFields label="Referrer gets" value={draft.referrer} onChange={(referrer) => setDraft({ ...draft, referrer })} allowOwn />
+
       <div className="flex flex-wrap items-end gap-3">
-        {(
-          [
-            ["perMonth", "Referrer rewards a month"],
-            ["lifetime", "Referrer rewards ever"],
-            ["friendsPerMonth", "Rewarded friends a month"],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="flex flex-col gap-1">
-            <Label>{label}</Label>
-            <input
-              type="number"
-              min={0}
-              max={key === "lifetime" ? 1000 : 100}
-              step={1}
-              value={draft.caps[key]}
-              className={`${inputClass} w-28`}
-              onChange={(e) =>
-                setDraft({ ...draft, caps: { ...draft.caps, [key]: Math.max(0, Math.floor(Number(e.target.value) || 0)) } })
-              }
-            />
-          </label>
-        ))}
+        <label className="flex flex-col gap-1">
+          <Label>Cards to save</Label>
+          <input
+            type="number"
+            min={1}
+            max={50}
+            step={1}
+            value={draft.activation.cardsRequired}
+            className={`${inputClass} w-24`}
+            onChange={(e) => setDraft({ ...draft, activation: { ...draft.activation, cardsRequired: clampInt(e.target.value, 1, 50, 5) } })}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <Label>Within (days)</Label>
+          <input
+            type="number"
+            min={7}
+            max={365}
+            step={1}
+            value={draft.activation.windowDays}
+            className={`${inputClass} w-24`}
+            onChange={(e) => setDraft({ ...draft, activation: { ...draft.activation, windowDays: clampInt(e.target.value, 7, 365, 30) } })}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <Label>Friend gets (days)</Label>
+          <input
+            type="number"
+            min={0}
+            max={MAX_REWARD_DAYS}
+            step={1}
+            value={draft.friend.days}
+            className={`${inputClass} w-24`}
+            onChange={(e) => setDraft({ ...draft, friend: { days: clampInt(e.target.value, 0, MAX_REWARD_DAYS, 7) } })}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <Label>Rewarded friends a month</Label>
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            step={1}
+            value={draft.caps.friendsPerMonth}
+            className={`${inputClass} w-28`}
+            onChange={(e) => setDraft({ ...draft, caps: { friendsPerMonth: clampInt(e.target.value, 0, 1000, 5) } })}
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-subtle">The referrer&apos;s ladder</h4>
+        <ol className="flex flex-col gap-2">
+          {draft.ladder.map((step, i) => (
+            <li key={i} className="flex flex-wrap items-end gap-2">
+              <span className="w-24 pb-2 text-sm tabular-nums text-muted">{`Referral ${i + 1}`}</span>
+              <StepFields label={`Referral ${i + 1} reward`} value={step} onChange={(next) => setStep(i, next)} />
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                aria-label={`Remove referral ${i + 1} from the ladder`}
+                onClick={() => setDraft({ ...draft, ladder: draft.ladder.filter((_, j) => j !== i) })}
+              >
+                <X aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ol>
+        <div className="flex flex-wrap items-end gap-3">
+          {draft.ladder.length < 50 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setDraft({ ...draft, ladder: [...draft.ladder, { kind: "days", days: 7 }] })}
+            >
+              <Plus aria-hidden />
+              Add a step
+            </Button>
+          ) : null}
+          <StepFields label="Every further referral" value={draft.tail} onChange={(tail) => setDraft({ ...draft, tail })} />
+        </div>
+      </div>
+
+      <div>
         <Button type="submit" size="sm" variant="secondary" disabled={pending || !dirty}>
           {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
           Save settings

@@ -28,6 +28,7 @@ import {
   PLAN_CREDITS_ONCE,
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   SIGNUP_CREDITS,
+  capacityPitch,
   formatCredits,
   planForTier,
   planCreditsOnceFor,
@@ -241,14 +242,15 @@ export default async function BillingPage() {
             </p>
           ) : null}
 
+          {/* Saved cards first: the plan's headline number (owner 2026-11-06). */}
           <dl className="grid gap-3 sm:grid-cols-3">
+            <Stat
+              label="Saved cards"
+              value={capacity === CARD_CAPACITY_UNLIMITED ? "Unlimited" : `Up to ${capacity.toLocaleString("en-US")}`}
+            />
             <Stat
               label={planCredits > 0 ? "Plan credits" : "AI credits"}
               value={planCredits > 0 ? `${planCredits} with your first payment` : `${SIGNUP_CREDITS} to start`}
-            />
-            <Stat
-              label="Saved cards"
-              value={capacity === CARD_CAPACITY_UNLIMITED ? "Unlimited" : `Up to ${capacity}`}
             />
             <Stat
               label="Downloads"
@@ -326,6 +328,11 @@ export default async function BillingPage() {
         <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
           {live ? "Change plan" : entitlements.isPaid ? "Plans" : "Upgrade"}
         </h2>
+        {/* The cap is the headline on every plan surface (owner 2026-11-06);
+            the trial line below it is PR 3's and stays as it is. */}
+        {!entitlements.isPaid && !delinquent ? (
+          <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-foreground">{capacityPitch()}</p>
+        ) : null}
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
           {live && ending
             ? "Your plan is set to end. To stay on it, resume it above. Picking another plan here also keeps you subscribed: an upgrade applies right away (Stripe shows the prorated difference before you confirm) and renews; a downgrade resumes your plan and starts the lower one at the end of the period you've paid for."

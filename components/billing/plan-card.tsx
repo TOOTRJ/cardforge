@@ -1,4 +1,4 @@
-import { Check, Sparkles } from "lucide-react";
+import { Check, Layers, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
@@ -64,16 +64,30 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta, currentEn
         ) : null}
       </div>
 
+      {/* The FIRST feature is the saved-card cap (lib/billing/plans.ts puts
+          it there on every plan): drawn as the headline line, gold and
+          bold, so the one benefit people pay for is the first thing read. */}
       <ul className="flex flex-col gap-2.5">
-        {plan.features.map((feature) => (
-          <li
-            key={feature}
-            className="flex items-start gap-2.5 text-sm leading-6 text-foreground"
-          >
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
-            <span>{feature}</span>
-          </li>
-        ))}
+        {plan.features.map((feature, index) =>
+          index === 0 ? (
+            <li
+              key={feature}
+              data-plan-headline
+              className="flex items-start gap-2.5 rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-sm font-semibold leading-6 text-foreground"
+            >
+              <Layers className="mt-0.5 h-4 w-4 shrink-0 text-gold-strong" aria-hidden />
+              <span>{feature}</span>
+            </li>
+          ) : (
+            <li
+              key={feature}
+              className="flex items-start gap-2.5 text-sm leading-6 text-foreground"
+            >
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
+              <span>{feature}</span>
+            </li>
+          ),
+        )}
       </ul>
 
       {plan.comingSoon?.length ? (

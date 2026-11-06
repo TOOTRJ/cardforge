@@ -18,6 +18,7 @@ import { ResumePlanButton } from "./resume-plan-button";
 import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
 import {
+  CARDS_ARE_SAFE,
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   PLANS,
   PRINT_PERK_COPY,
@@ -25,6 +26,7 @@ import {
   FREE_PERIOD_CREDITS,
   PLAN_CREDITS_ONCE,
   SIGNUP_BANK_DAYS,
+  capacityHoldsLine,
   type PaidTier,
 } from "@/lib/billing/plans";
 import { LocalDate } from "@/components/ui/local-date";
@@ -57,10 +59,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       description:
         "Original premium frames are part of a paid plan. Every MTG-style frame and finish stays free.",
     },
+    // The owner's rule (2026-11-06): the plan's full limit while the plan
+    // is active, then the soft cap — nothing is deleted when it ends.
     capacity: {
-      title: "Card limit reached",
-      description:
-        "Your forge is full. Upgrade for a much bigger library — up to unlimited saved cards on Pro.",
+      title: "Your library is full",
+      description: `${capacityHoldsLine()} ${CARDS_ARE_SAFE}`,
     },
     // The print perks are said from ONE source (TODO 6.26,
     // lib/billing/plans.ts PRINT_PERK_COPY) — the plan cards list the same.

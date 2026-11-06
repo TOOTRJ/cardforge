@@ -25,7 +25,7 @@ test.describe("pricing page", () => {
     await page.goto("/pricing");
 
     await expect(
-      page.getByRole("heading", { name: /legendary tools/i }),
+      page.getByRole("heading", { name: /save more cards/i }),
     ).toBeVisible();
 
     for (const name of ["Free", "Plus", "Pro"]) {
@@ -77,7 +77,7 @@ test.describe("pricing page — signed in", () => {
     expect(html).not.toContain("Get started free");
 
     await page.goto("/pricing");
-    await expect(page.getByText("Your current plan")).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /start pro with your free days/i })).toBeVisible();
     // No Stripe customer → nothing to manage: the portal button must not
@@ -129,7 +129,7 @@ test.describe("pricing page — signed in", () => {
     await expect(page.getByRole("banner").getByRole("link", { name: /^pricing$/i })).toHaveCount(0);
     // The plan grid is here instead — Pro is the current plan, and the
     // account is never offered a portal it doesn't have.
-    await expect(page.getByText("Your current plan")).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /manage plan/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();
   });

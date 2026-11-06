@@ -61,10 +61,11 @@ describe("credit periods and the one-time rule", () => {
   it("Free gets 5 credits once at signup (the profiles.credits default); plan credits are one-time", () => {
     expect(SIGNUP_CREDITS).toBe(5);
     // One-time plan credits (owner 2026-11-06): 60 on Plus, 120 on Pro, nothing recurring.
+    // Capacity is features[0] on every plan (#772); the credits line follows it.
     expect(PLAN_CREDITS_ONCE).toEqual({ plus: 60, pro: 120 });
-    expect(PLANS[0].features[0]).toMatch(/5 AI credits to start/);
-    expect(PLANS[1].features[0]).toBe("60 AI credits with your first payment");
-    expect(PLANS[2].features[0]).toBe("120 AI credits with your first payment");
+    expect(PLANS[0].features[1]).toMatch(/5 AI credits to start/);
+    expect(PLANS[1].features[1]).toBe("60 AI credits with your first payment");
+    expect(PLANS[2].features[1]).toBe("120 AI credits with your first payment");
     for (const plan of PLANS) expect(plan.features.join(" ")).not.toMatch(/every month|a month|monthly/);
   });
 
