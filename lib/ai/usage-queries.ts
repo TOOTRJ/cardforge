@@ -3,7 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getEntitlements } from "@/lib/billing/entitlements";
-import { MONTHLY_CREDITS, type PlanTier } from "@/lib/billing/plans";
+import { planCreditsOnceFor, type PlanTier } from "@/lib/billing/plans";
 import { PER_DAY_LIMIT, PER_MINUTE_LIMIT } from "@/lib/ai/rate-limit";
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ export async function getAiUsageSnapshot(): Promise<AiUsageSnapshot> {
 }
 
 // ---------------------------------------------------------------------------
-// Credit snapshot (Phase B) — current balance, the plan's monthly allotment,
+// Credit snapshot (Phase B) — current balance, the plan's one-time credits,
 // and a 30-day spend trend for the usage panel.
 // ---------------------------------------------------------------------------
 
@@ -91,7 +91,8 @@ export type CreditSnapshot = {
   balance: number;
   tier: PlanTier;
   isPaid: boolean;
-  monthlyAllotment: number;
+  /** The tier's one-time plan credits (0 on free) — never a refill. */
+  planCredits: number;
   /** Credits spent per day, last 30 days, ascending (gaps filled client-side). */
   daily: DailyCount[];
 };
@@ -128,7 +129,7 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
     // panel (lib/cards/capacity.ts) and every gate already treat them.
     tier: entitlements.effectiveTier,
     isPaid: entitlements.isPaid,
-    monthlyAllotment: MONTHLY_CREDITS[entitlements.effectiveTier] ?? 0,
+    planCredits: planCreditsOnceFor(entitlements.effectiveTier),
     daily: [],
   };
   if (!isSupabaseConfigured()) return base;

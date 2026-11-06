@@ -1,5 +1,5 @@
 // Human labels for credit_ledger.reason. The raw column is an audit string:
-// "admin_grant: <note the admin typed>", "subscription_refill", "refund",
+// "admin_grant: <note the admin typed>", "plan_credits_once", "refund",
 // "pack_purchase", or — for spends — the AI action label the caller passed
 // to consume_credits (lib/ai/rate-limit.ts AiActionLabel). The ledger on
 // /dashboard/usage used to print it verbatim, which showed users the admin's
@@ -11,7 +11,10 @@ const LABELS: Record<string, string> = {
   // Grants
   admin_grant: "Credits added by the PipGlyph team",
   signup_grant: "Welcome credits",
+  // Plan credits were monthly until 2026-11-06; since then one-time.
   subscription_refill: "Monthly plan credits",
+  plan_credits_once: "Plan credits",
+  free_period_bonus: "Free-period credits",
   // A free-days grant's allotment (0176: comps, referral rewards).
   plan_grant: "Complimentary plan credits",
   trial_grant: "Free-trial credits",

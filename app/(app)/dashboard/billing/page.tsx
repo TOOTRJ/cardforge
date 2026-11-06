@@ -24,12 +24,13 @@ import { DELINQUENT_SUBSCRIPTION_STATUSES, billingViewerFromProfile } from "@/li
 import { isEndingStatus, planStatusOf } from "@/lib/billing/plan-status";
 import {
   CARD_CAPACITY_UNLIMITED,
-  MONTHLY_CREDITS,
+  FREE_PERIOD_CREDITS,
+  PLAN_CREDITS_ONCE,
   PACK_SUBSCRIBER_DISCOUNT_PCT,
   SIGNUP_CREDITS,
   formatCredits,
   planForTier,
-  TRIAL_CREDITS,
+  planCreditsOnceFor,
 } from "@/lib/billing/plans";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
@@ -171,7 +172,9 @@ export default async function BillingPage() {
       : " — your subscription keeps its own billing dates."
     : null;
   const capacity = entitlements.cardCapacity;
-  const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
+  // One-time plan credits (owner 2026-11-06): the tier's stock with the
+  // first paid invoice — never a monthly figure.
+  const planCredits = planCreditsOnceFor(entitlements.effectiveTier);
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
   // hasn't paid yet) — the checkout action applies the same rule.
   const packDiscount = live && status === "active";
@@ -240,8 +243,8 @@ export default async function BillingPage() {
 
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat
-              label={monthlyCredits > 0 ? "AI credits a month" : "AI credits"}
-              value={monthlyCredits > 0 ? String(monthlyCredits) : `${SIGNUP_CREDITS} at sign-up`}
+              label={planCredits > 0 ? "Plan credits" : "AI credits"}
+              value={planCredits > 0 ? `${planCredits} with your first payment` : `${SIGNUP_CREDITS} to start`}
             />
             <Stat
               label="Saved cards"
@@ -333,8 +336,8 @@ export default async function BillingPage() {
               : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
               : bank.banked > 0
-                ? `Start a plan with your ${bank.banked} banked free day${bank.banked === 1 ? "" : "s"}: they're its free time, with ${TRIAL_CREDITS} AI credits to try. Nothing is charged until the days end — cancel anytime before then — and your plan's full monthly credits arrive with your first payment.`
-                : "Start a plan with the free days you've banked — nothing is charged until they end, cancel anytime before then. Your plan's full monthly credits arrive with your first payment."}
+                ? `Start a plan with your ${bank.banked} banked free day${bank.banked === 1 ? "" : "s"}: they're its free time, with ${FREE_PERIOD_CREDITS} AI credits to try. Nothing is charged until the days end — cancel anytime before then — and your plan's credits (${PLAN_CREDITS_ONCE.plus} on Plus, ${PLAN_CREDITS_ONCE.pro} on Pro) land with your first payment.`
+                : `Start a plan with the free days you've banked — nothing is charged until they end, cancel anytime before then. Your plan's credits (${PLAN_CREDITS_ONCE.plus} on Plus, ${PLAN_CREDITS_ONCE.pro} on Pro) land with your first payment.`}
         </p>
         <PricingPlans initialViewer={gridViewer} surface="billing" />
       </section>
@@ -363,13 +366,13 @@ export default async function BillingPage() {
           </div>
           <dl className="grid gap-3 sm:grid-cols-3">
             <Stat label="Used this month" value={String(creditsUsed)} />
-            <Stat label="Monthly refill" value={monthlyCredits > 0 ? String(monthlyCredits) : "None"} />
+            <Stat label="Plan credits" value={planCredits > 0 ? `${planCredits}, one-time` : "None"} />
             <Stat label="Purchased credits" value="never expire" />
           </dl>
           <div className="flex flex-col gap-2 border-t border-border/50 pt-4">
             <h3 className="font-display text-base font-semibold text-foreground">Need a top-up?</h3>
             <p className="text-sm leading-6 text-muted">
-              Buy credits any time — on any plan. Purchased credits never expire and stack with any plan credits.
+              Buy credits any time — on any plan. Purchased credits never expire and add to whatever you have.
               {packDiscount
                 ? ` As a subscriber you pay ${PACK_SUBSCRIBER_DISCOUNT_PCT}% less — the discount is applied at checkout.`
                 : ` Plus and Pro members pay ${PACK_SUBSCRIBER_DISCOUNT_PCT}% less.`}

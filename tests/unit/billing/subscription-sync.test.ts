@@ -9,7 +9,7 @@ import {
   syncSubscriptionForUser,
   type SubscriptionLike,
 } from "@/lib/stripe/subscription-sync";
-import { MONTHLY_CREDITS, TRIAL_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
+import { FREE_PERIOD_CREDITS, PLAN_CREDITS_ONCE } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // Stubs. The admin stub records profile writes; the stripe stub serves a
@@ -30,23 +30,12 @@ function makeAdmin(profile: Record<string, unknown> = {}) {
                   data: table === "profiles" ? { id: "user-1", ...profile } : null,
                   error: null,
                 }),
-                // The trial tranche's once-per-account ledger read.
-                eq: () => ({ limit: async () => ({ data: [], error: null }) }),
+                // The free-period credits' once-per-account ledger read.
+                in: () => ({ limit: async () => ({ data: profile.__freePeriodEarlier ? [{ id: "l_1" }] : [], error: null }) }),
               };
             },
-            // No refill rows this month (credit-refill.ts's LIKE read); the
-            // backstop's newest-grant read is the same LIKE, filtered and
-            // ordered — it answers `newest` when the test sets one.
-            like: () => {
-              const chain = {
-                not: () => chain,
-                order: () => chain,
-                limit: () => chain,
-                then: (resolve: (v: unknown) => void) =>
-                  resolve({ data: profile.__newest ? [profile.__newest] : [], error: null }),
-              };
-              return chain;
-            },
+            // The account's plan-once rows (credit-refill.ts's LIKE read).
+            like: async () => ({ data: (profile.__planRows as unknown[] | undefined) ?? [], error: null }),
           };
         },
         update(values: Record<string, unknown>) {
@@ -484,7 +473,7 @@ describe("syncSubscriptionForUser — event order", () => {
     expect(updates[0]).toMatchObject({ subscription_tier: "plus", subscription_status: "trialing" });
   });
 
-  it("trial: a late `created` (trialing) event after the trial converted writes active, and grants the month — not a second trial tranche", async () => {
+  it("trial: a late `created` (trialing) event after the trial converted writes active, and grants nothing — the paid invoice grants the plan's credits", async () => {
     const { admin, updates, rpcs } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
     const converted = sub("sub_1", "active", PLUS, { trial_end: PERIOD_END - 30 * 86400 });
     const result = await syncSubscriptionForUser(admin, stripeNow(converted).stripe, "user-1", {
@@ -492,8 +481,7 @@ describe("syncSubscriptionForUser — event order", () => {
     });
     expect(updates[0]).toMatchObject({ subscription_status: "active" });
     await grantCreditsForSync(result, admin, { isCreationEvent: true });
-    expect(rpcs).toHaveLength(1);
-    expect(rpcs[0].args).toMatchObject({ p_amount: MONTHLY_CREDITS.plus, p_reason: "subscription_refill" });
+    expect(rpcs).toHaveLength(0);
   });
 
   it("trial: a late `updated` event from before the trial was cancelled stores the cancellation (ends at the trial end)", async () => {
@@ -633,15 +621,23 @@ describe("syncSubscriptionForUser — event order", () => {
   });
 });
 
-describe("grantCreditsForSync", () => {
-  it("grants the synced tier's month, skips trials that aren't being created, skips lapsed", async () => {
+describe("grantCreditsForSync (one-time credits, owner 2026-11-06)", () => {
+  it("a PAID invoice on a live plan grants the tier's one-time stock; an unpaid sync, a trial not being created, and a lapsed plan grant nothing", async () => {
     const { admin, rpcs } = makeAdmin();
     await grantCreditsForSync(
       { userId: "user-1", subscriptionId: "sub_1", tier: "pro", status: "active", unresolvedPrice: false, source: "primary" },
       admin,
-      { isCreationEvent: false },
+      { isCreationEvent: false, paid: true },
     );
-    expect(rpcs[0]?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro, p_reason: "subscription_refill" });
+    expect(rpcs[0]?.args).toMatchObject({ p_amount: PLAN_CREDITS_ONCE.pro, p_reason: "plan_credits_once", p_idempotency_key: "plan-once:user-1:pro" });
+
+    const unpaid = makeAdmin();
+    await grantCreditsForSync(
+      { userId: "user-1", subscriptionId: "sub_1", tier: "pro", status: "active", unresolvedPrice: false, source: "primary" },
+      unpaid.admin,
+      { isCreationEvent: true },
+    );
+    expect(unpaid.rpcs).toHaveLength(0);
 
     const trial = makeAdmin();
     await grantCreditsForSync(
@@ -660,7 +656,7 @@ describe("grantCreditsForSync", () => {
     expect(lapsed.rpcs).toHaveLength(0);
   });
 
-  it("a trial being CREATED gets the trial tranche under the month's base key — not the full allotment", async () => {
+  it("a free period being CREATED (the checkout applied the bank) gets the free-period credits, once per account — an old trial tranche counts as served", async () => {
     const { admin, rpcs } = makeAdmin();
     await grantCreditsForSync(
       { userId: "user-1", subscriptionId: "sub_1", tier: "pro", status: "trialing", unresolvedPrice: false, source: "primary" },
@@ -668,8 +664,27 @@ describe("grantCreditsForSync", () => {
       { isCreationEvent: true },
     );
     expect(rpcs).toHaveLength(1);
-    expect(rpcs[0].args).toMatchObject({ p_amount: TRIAL_CREDITS, p_reason: "trial_grant" });
-    expect(String(rpcs[0].args.p_idempotency_key)).toMatch(/^refill:user-1:\d{4}-\d{2}$/);
+    expect(rpcs[0].args).toMatchObject({ p_amount: FREE_PERIOD_CREDITS, p_reason: "free_period_bonus", p_idempotency_key: "free-period:user-1" });
+    const served = makeAdmin({ __freePeriodEarlier: true });
+    await grantCreditsForSync(
+      { userId: "user-1", subscriptionId: "sub_1", tier: "pro", status: "trialing", unresolvedPrice: false, source: "primary" },
+      served.admin,
+      { isCreationEvent: true },
+    );
+    expect(served.rpcs).toHaveLength(0);
+  });
+
+  it("Pro after Plus grants the DIFFERENCE; the same tier twice, or a downgrade, nothing", async () => {
+    const afterPlus = makeAdmin({ __planRows: [{ delta: 60, idempotency_key: "plan-once:user-1:plus" }] });
+    const pro = { userId: "user-1", subscriptionId: "sub_1", tier: "pro" as const, status: "active", unresolvedPrice: false, source: "primary" as const };
+    await grantCreditsForSync(pro, afterPlus.admin, { isCreationEvent: false, paid: true });
+    expect(afterPlus.rpcs[0]?.args).toMatchObject({ p_amount: 60, p_idempotency_key: "plan-once:user-1:pro" });
+    const again = makeAdmin({ __planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
+    await grantCreditsForSync(pro, again.admin, { isCreationEvent: false, paid: true });
+    expect(again.rpcs).toHaveLength(0);
+    const down = makeAdmin({ __planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
+    await grantCreditsForSync({ ...pro, tier: "plus" }, down.admin, { isCreationEvent: false, paid: true });
+    expect(down.rpcs).toHaveLength(0);
   });
 });
 
@@ -718,47 +733,6 @@ describe("the plan's interval (0175: profiles.billing_interval)", () => {
     const c = makeAdmin();
     await syncSubscriptionForUser(c.admin, makeStripe([bare]), "user-1", { eventSub: bare });
     expect(c.updates[0]).toMatchObject({ billing_interval: null });
-  });
-});
-
-describe("grantCreditsForSync — a monthly plan's base allotment is the paying event's (0175)", () => {
-  const monthly = (userId = "user-1") => ({
-    userId,
-    subscriptionId: "sub_m",
-    tier: "pro" as const,
-    status: "active",
-    unresolvedPrice: false,
-    source: "primary" as const,
-    billingInterval: "month" as const,
-  });
-  const recent = { created_at: new Date(Date.now() - 86_400_000).toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) };
-
-  it("a non-paying sync (a cancel click, a resume) backstops only: nothing while the newest grant is recent", async () => {
-    const { admin, rpcs } = makeAdmin({ __newest: { ...recent, idempotency_key: "refill:user-1:2026-01" } });
-    await grantCreditsForSync(monthly(), admin, { isCreationEvent: false });
-    expect(rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
-  });
-
-  it("a paying sync (the cycle invoice, a trial converting, the creation) grants the month", async () => {
-    for (const opts of [{ isCreationEvent: false, paid: true }, { isCreationEvent: true }]) {
-      const { admin, rpcs } = makeAdmin({ __newest: { ...recent, idempotency_key: "refill:user-1:2026-01" } });
-      await grantCreditsForSync(monthly(), admin, opts);
-      expect(rpcs.find((r) => r.fn === "grant_credits")?.args, JSON.stringify(opts)).toMatchObject({ p_amount: MONTHLY_CREDITS.pro });
-    }
-  });
-
-  it("a paying invoice is granted under ITS OWN month's key (a Feb 28 renewal paid on the Mar 5 retry is February's)", async () => {
-    const { admin, rpcs } = makeAdmin();
-    await grantCreditsForSync(monthly(), admin, { isCreationEvent: false, paid: true, period: "2026-02" });
-    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_idempotency_key: creditRefillKey("user-1", "2026-02") });
-  });
-
-  it("an annual or unknown interval grants on any sync, as before", async () => {
-    for (const billingInterval of ["year", null] as const) {
-      const { admin, rpcs } = makeAdmin({ __newest: { ...recent, idempotency_key: "refill:user-1:2026-01" } });
-      await grantCreditsForSync({ ...monthly(), billingInterval }, admin, { isCreationEvent: false });
-      expect(rpcs.find((r) => r.fn === "grant_credits")?.args, String(billingInterval)).toMatchObject({ p_amount: MONTHLY_CREDITS.pro });
-    }
   });
 });
 

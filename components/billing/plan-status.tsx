@@ -183,13 +183,13 @@ export function PlanStatusLine({
     case "ended":
       return (
         <>
-          {`Your previous plan has ended. You're on the free plan: every tool, up to ${CARD_CAPACITY.free} saved cards, unlimited decks, and the credits you have left — Free doesn't refill; a pack tops you up any time and a plan refills every month. Every card and deck you made stays yours.`}
+          {`Your previous plan has ended. You're on the free plan: every tool, up to ${CARD_CAPACITY.free} saved cards, unlimited decks, and the credits you have left — a pack tops you up any time, and a plan brings its own credits with its first payment. Every card and deck you made stays yours.`}
         </>
       );
     default:
       return (
         <>
-          {`Every tool is yours for free: all frames, the gallery, unlimited decks, ${SIGNUP_CREDITS} AI credits to start and up to ${CARD_CAPACITY.free} saved cards. Free doesn't refill — a credit pack tops you up any time, and plans add monthly credits, clean hi-res downloads and more room.`}
+          {`Every tool is yours for free: all frames, the gallery, unlimited decks, ${SIGNUP_CREDITS} AI credits to start and up to ${CARD_CAPACITY.free} saved cards. A credit pack tops you up any time, and plans bring a stock of credits with the first payment, clean hi-res downloads and more room.`}
         </>
       );
   }

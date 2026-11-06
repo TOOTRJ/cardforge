@@ -37,7 +37,7 @@ import {
   TRIAL_WINBACK_WINDOW_DAYS,
   type PackKey,
   type PlanTier,
-  currentCreditPeriod,
+
 } from "@/lib/billing/plans";
 
 // All entitlement/credit writes happen here, via the service-role admin client
@@ -204,14 +204,12 @@ async function handleSubscriptionEvent(
     }
   }
 
-  // The one-grant-per-trial rule keys on the CREATED event of the synced
+  // The free-period credits key on the CREATED event of the synced
   // subscription — a created event for a secondary subscription must not
-  // re-grant the primary's month.
+  // grant them again. The plan's one-time credits are the PAID invoice's
+  // (handleInvoicePaid), never a subscription event's.
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
-    // A trial converting is the one `updated` that pays (its invoice.paid
-    // grants too; both are idempotent on the month's key).
-    paid: opts.previous?.status === "trialing" && sub.status === "active",
   });
   return { userId, result };
 }
@@ -518,24 +516,17 @@ async function handleInvoicePaid(
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
       try {
-        const paid = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
-        // The month the invoice is FOR: the subscription's own current period
-        // (just read), else the first line's service period (a pending
-        // proration line can come first), never the invoice's `period_start`
-        // (the previous cycle on this API version).
-        const periodStart =
-          sub.items?.data?.[0]?.current_period_start ?? invoice.lines?.data?.[0]?.period?.start ?? null;
-        await grantCreditsForSync(result, admin, {
-          isCreationEvent: false,
-          // The cycle's (or the first) invoice is what a monthly plan's
-          // allotment is for; a proration or a $0 update invoice is not —
-          // and it is the month the invoice is FOR (a retry that pays on
-          // Mar 5 for a Feb 28 renewal is February's).
-          paid,
-          ...(paid && typeof periodStart === "number"
-            ? { period: currentCreditPeriod(new Date(periodStart * 1000)) }
-            : {}),
-        });
+        // MONEY TAKEN on a subscription invoice (owner 2026-11-06): the
+        // plan's one-time credits land with the first paid invoice of a tier
+        // — a $0 trial-start invoice or a 100 %-off coupon grants nothing; an
+        // upgrade's proration invoice (subscription_update) is a payment on
+        // the new tier and grants its difference.
+        const paid =
+          (invoice.amount_paid ?? 0) > 0 &&
+          (invoice.billing_reason === "subscription_cycle" ||
+            invoice.billing_reason === "subscription_create" ||
+            invoice.billing_reason === "subscription_update");
+        await grantCreditsForSync(result, admin, { isCreationEvent: false, paid });
       } catch (error) {
         // Loud, never thrown (Stripe's retries stay as they were; the
         // subscription events and the daily cron grant the month too): an

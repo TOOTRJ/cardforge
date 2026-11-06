@@ -42,9 +42,9 @@ describe("freeDaysAllotmentsDue", () => {
     expect(freeDaysAllotmentsDue(two, at("2027-01-01T00:00:00Z"))).toEqual([0]);
   });
 
-  it("an open-ended (staff) grant: every 30 days since credits_from", () => {
+  it("an open-ended (staff) grant gets no automatic allotment (owner 2026-11-06: an admin grants by hand)", () => {
     const staff = { ...base, units: null, credits_from: "2026-11-01T00:00:00Z", ends_at: null };
-    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([0, 1, 2, 3]);
+    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([]);
   });
 
   it("pending, failed, revoked and below-plan grants owe nothing", () => {

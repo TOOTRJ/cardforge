@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currentCreditPeriod } from "@/lib/billing/plans";
-import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
 import { grantFreeDaysCredits } from "@/lib/billing/free-days-credits";
 import { releaseStaleReservations } from "@/lib/billing/day-bank";
 import {
@@ -13,20 +12,16 @@ import {
 import { cronRouteGuard } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
-// /api/cron/refill-credits — the monthly AI-credit allotment of every paid
-// account: an active Plus / Pro subscription, and — a second sweep — every
-// free-days grant's allotment per 30 days (lib/billing/free-days-credits.ts,
-// migration 0176: comps and referral rewards). Free does NOT refill (owner
-// decision 2026-09-24: SIGNUP_CREDITS once).
+// /api/cron/refill-credits — since owner 2026-11-06 PLAN CREDITS ARE
+// ONE-TIME (lib/billing/credit-refill.ts: the paid invoice grants them, the
+// bank's first application the free-period credits), so no subscriber is
+// refilled here any more. What the daily run still does: the allotments of
+// the DATED free-days grants given before that date (comps as overlays,
+// lib/billing/free-days-credits.ts — they run out on their own dates), and
+// the days bank's stale reservations.
 //
-// Cron-driven so BOTH monthly and annual plans get a monthly allotment. Runs
-// daily (see vercel.json); the per-user-per-month idempotency key means only
-// the first successful run each calendar month actually grants — later runs
-// (and the same-month grant on subscription.created) are no-ops. That also makes
-// the job self-healing: if one day's run fails, the next day catches up — and
-// via the shared credit-refill helper it also backfills the mid-month upgrade
-// top-up if the webhook missed the tier change. The sweep itself (pagination,
-// trialing exclusion, per-user grants) lives in lib/billing/credit-refill.ts.
+// Runs daily (see vercel.json); every grant is keyed, so a rerun grants
+// nothing twice and a missed day is caught up the next.
 //
 // Failures are LOUD (2026-10-18): each failed grant is logged with its user
 // id, every admin gets ONE `credit_refill_failed` notification per UTC day
@@ -53,11 +48,7 @@ export async function GET(request: Request) {
   const now = new Date();
 
   const failures: Array<{ userId: string; error: string }> = [];
-  const result = await refillActiveSubscribers(admin, period, {
-    onGrantFailed: (userId, error) => failures.push({ userId, error }),
-  });
-  // The free-days grants' allotments — its own page read; a failed one is
-  // reported like a failed subscriber page (the subscribers' sweep stands).
+  // The old dated free-days grants' allotments, until they run out.
   const grants = await grantFreeDaysCredits(admin, {
     now,
     onGrantFailed: (userId, error) => failures.push({ userId, error }),
@@ -66,16 +57,16 @@ export async function GET(request: Request) {
   // goes back to the bank (the hourly referral sweep does the same).
   const bankReleased = await releaseStaleReservations(admin, now);
 
-  const failed = (result.ok ? result.failed : failures.length) + (grants.ok ? grants.failed : 0);
-  const pageError = !result.ok ? result.error : !grants.ok ? `plan_grants: ${grants.error}` : null;
-  if (!result.ok || !grants.ok || failed > 0) {
+  const failed = grants.ok ? grants.failed : failures.length;
+  const pageError = !grants.ok ? `plan_grants: ${grants.error}` : null;
+  if (!grants.ok || failed > 0) {
     await notifyAdminsCreditRefillFailed(admin, {
       source: "cron",
       dedupeKey: cronAlertDedupeKey(now),
       period,
       day: now.toISOString().slice(0, 10),
-      processed: result.ok ? result.processed : null,
-      granted: result.ok ? result.granted : null,
+      processed: grants.ok ? grants.processed : null,
+      granted: grants.ok ? grants.granted : null,
       failed,
       pageError: pageError ? cutError(pageError) : null,
       userIds: failures.slice(0, ALERT_USER_IDS_MAX).map((f) => f.userId),
@@ -83,7 +74,7 @@ export async function GET(request: Request) {
     });
   }
 
-  if (!result.ok || !grants.ok) {
+  if (!grants.ok) {
     return NextResponse.json({ ok: false, period, failed, error: pageError }, { status: 500 });
   }
 
@@ -91,8 +82,9 @@ export async function GET(request: Request) {
     {
       ok: failed === 0,
       period,
-      processed: result.processed,
-      granted: result.granted,
+      // No subscriber sweep since 2026-11-06 (plan credits are one-time).
+      processed: 0,
+      granted: 0,
       failed,
       grants: { processed: grants.processed, granted: grants.granted, failed: grants.failed },
       bankReleased,

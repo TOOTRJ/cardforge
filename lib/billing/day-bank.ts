@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 import { grantFreeDays } from "@/lib/billing/free-days-apply";
+import { grantFreePeriodCredits } from "@/lib/billing/credit-refill";
 import { SIGNUP_BANK_DAYS, type PaidTier } from "@/lib/billing/plans";
 import { MAX_FREE_DAYS_EXACT, MIN_ADMIN_BANK_DAYS } from "@/lib/billing/free-days";
 
@@ -419,7 +420,7 @@ export async function settleCheckoutBank(
 }
 
 export type ApplyBankResult =
-  | { ok: true; days: number; holdEndsAt: string | null; note: string }
+  | { ok: true; days: number; holdEndsAt: string | null; note: string; creditsGranted: number }
   | { ok: false; error: string; code?: "nothing_banked" | "no_live_plan" | "refused" };
 
 /**
@@ -468,5 +469,10 @@ export async function applyBankToPlan(
     return { ok: false, error: granted.error, code: noPlan ? "no_live_plan" : "refused" };
   }
   await settleBankBatch(admin, reserved.batchId, { kind: "applied", via: "plan_hold", ref: granted.grantId }, now);
-  return { ok: true, days, holdEndsAt: granted.holdEndsAt, note: granted.note };
+  // The free-period credits, once per account (owner 2026-11-06): the first
+  // application on a live plan is the account's first free period when no
+  // checkout started one. Best effort — the days are applied either way.
+  const bonus = await grantFreePeriodCredits(admin, input.userId);
+  if (!bonus.ok) console.error(`[day-bank] free-period credits for ${input.userId} failed: ${bonus.error}`);
+  return { ok: true, days, holdEndsAt: granted.holdEndsAt, note: granted.note, creditsGranted: bonus.ok ? bonus.granted : 0 };
 }
