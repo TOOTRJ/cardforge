@@ -59,7 +59,7 @@ export function PricingContent({
         </p>
         <PricingCapacityMeter capacity={capacity} />
         <p className="text-base leading-7 text-muted">
-          {CARDS_ARE_SAFE} The card maker is free forever: every frame, every
+          {CARDS_ARE_SAFE}{" "}The card maker is free forever: every frame, every
           finish, every card type, and every AI tool, with 5 AI credits to get
           you started (Free doesn&apos;t refill). Plans add their card limit,
           monthly credits, watermark-free hi-res downloads, and Pro&apos;s

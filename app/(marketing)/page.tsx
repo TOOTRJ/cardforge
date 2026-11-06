@@ -167,7 +167,7 @@ export default async function HomePage() {
               Upgrade when you need more
             </h2>
             <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
-              {capacityHoldsLine()} The card maker is free forever — every
+              {capacityHoldsLine()}{" "}The card maker is free forever — every
               frame, every card type, every AI tool, with 5 AI credits to
               start. Plans add room for more saved cards, monthly credits,
               watermark-free hi-res downloads, and Pro&apos;s deck-aware AI
