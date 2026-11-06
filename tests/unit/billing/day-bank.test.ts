@@ -147,7 +147,7 @@ describe("prepareCheckoutBank — a fresh checkout's free period", () => {
         if (!ids) return { data: [] }; // the signup revoke (by reference)
         return { data: rows.filter((r) => ids.includes(r.id)).map((r) => ({ days: r.days })) };
       }
-      if (called(calls, "select")) return { data: rows.map((r) => ({ id: r.id, days: r.days })) };
+      if (called(calls, "select")) return { data: rows }; // readBank (status) and reserveBank (id, days)
       return {};
     });
     const out = await prepareCheckoutBank(stub.client as never, USER, { signupEligible: false, now: NOW });
