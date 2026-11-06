@@ -1,103 +1,131 @@
 import { z } from "zod";
-import { REFERRAL_LIFETIME_CAP, REFERRAL_MONTHLY_CAP } from "@/lib/referrals/rules";
 
 // ---------------------------------------------------------------------------
-// The referral program's SETTINGS (owner 2026-11-05): an admin switch, and
-// what each side is rewarded with — changeable without a deploy. ONE
-// `site_settings` row, key `referrals` (0177 seeds the default; readable by
+// The referral program's SETTINGS, v2 (owner 2026-11-06): an admin switch,
+// the activation bar, what the friend gets, the referrer's LADDER, and the
+// friends cap — changeable without a deploy. ONE `site_settings` row, key
+// `referrals` (0177 seeded v1; 0180 rewrites it to this shape; readable by
 // everyone like every site setting; written by an admin through
 // lib/admin/referral-settings-actions.ts). Client-safe: the dashboard copy
 // and the server read the same parse.
 //
-//   enabled   false = the Refer-a-friend page says the program is paused and
-//             its link is hidden, a signup through a link records nothing,
-//             and a friend's first card rewards nobody (the row is settled
-//             `blocked` / `program_off`). Rewards already given stay.
-//   friend    what the referred FRIEND gets at their first saved card;
-//   referrer  what the REFERRER gets for it;
-//             kind "free_days": N units of 30 free days of a tier
-//               (lib/billing/free-days.ts — on a paying plan the days are
-//               added to the paid time; "own" = the referrer's own paid tier,
-//               Plus for a free account); "credits": N AI credits, once;
-//               "none": nothing (the side still records and counts).
-//   caps      perMonth / lifetime: rewarded referrals a referrer earns their
-//             reward for (a UTC month / ever); friendsPerMonth: friends a
-//             referrer can bring a reward to in a month — past it the friend
-//             gets nothing either (the independent check's P2: N confirmable
-//             inboxes must not mint N rewards).
+//   enabled     false = the Refer-a-friend page says the program is paused
+//               and its link is hidden, a signup through a link records
+//               nothing, and a qualified friend rewards nobody until it is
+//               on again (the row waits). Rewards already given stay.
+//   activation  what a friend must do for the referral to QUALIFY: save
+//               `cardsRequired` cards within `windowDays` of signing up AND
+//               start a plan with a card on file (their first checkout —
+//               lib/referrals/server.ts; the card is the fraud bar).
+//   friend      days BANKED for the friend when the referral qualifies
+//               (lib/billing/day-bank.ts: applied with their first checkout
+//               when that is the qualifying moment, else waiting in their
+//               bank). 0 = nothing.
+//   ladder      the referrer's reward per QUALIFIED referral, by count:
+//               step 1 for the first, step 2 for the second … — days into
+//               their bank, AI credits at once, or nothing. Past the ladder
+//               every further referral earns `tail`.
+//   caps        friendsPerMonth: friends a referrer can bring a reward to in
+//               a UTC month — past it neither side is rewarded (N confirmable
+//               inboxes must not mint N rewards). Referrals themselves are
+//               unlimited (owner 2026-11-06).
 // ---------------------------------------------------------------------------
 
 export const REFERRAL_SETTINGS_KEY = "referrals";
 
-/** The friend's reward tier: a fixed tier. The referrer's: "own" as well. */
-const tierSchema = z.enum(["plus", "pro"]);
+export const MAX_REWARD_DAYS = 730;
 
-const freeDaysSchema = z.object({
-  kind: z.literal("free_days"),
-  tier: z.enum(["plus", "pro", "own"]),
-  /** 30-day units, 1 … 12. */
-  units: z.number().int().min(1).max(12),
-});
-const creditsSchema = z.object({ kind: z.literal("credits"), amount: z.number().int().min(1).max(1000) });
-const noneSchema = z.object({ kind: z.literal("none") });
+const daysStepSchema = z.object({ kind: z.literal("days"), days: z.number().int().min(1).max(MAX_REWARD_DAYS) });
+const creditsStepSchema = z.object({ kind: z.literal("credits"), amount: z.number().int().min(1).max(1000) });
+const noneStepSchema = z.object({ kind: z.literal("none") });
 
-export const rewardSpecSchema = z.discriminatedUnion("kind", [freeDaysSchema, creditsSchema, noneSchema]);
-export type RewardSpec = z.infer<typeof rewardSpecSchema>;
+export const rewardStepSchema = z.discriminatedUnion("kind", [daysStepSchema, creditsStepSchema, noneStepSchema]);
+export type RewardStep = z.infer<typeof rewardStepSchema>;
 
 export const referralSettingsSchema = z.object({
   enabled: z.boolean(),
-  friend: rewardSpecSchema,
-  referrer: rewardSpecSchema,
+  activation: z.object({
+    cardsRequired: z.number().int().min(1).max(50),
+    windowDays: z.number().int().min(7).max(365),
+  }),
+  friend: z.object({ days: z.number().int().min(0).max(MAX_REWARD_DAYS) }),
+  ladder: z.array(rewardStepSchema).max(50),
+  tail: rewardStepSchema,
   caps: z.object({
-    perMonth: z.number().int().min(0).max(100),
-    lifetime: z.number().int().min(0).max(1000),
-    friendsPerMonth: z.number().int().min(0).max(100),
+    friendsPerMonth: z.number().int().min(0).max(1000),
   }),
 });
 export type ReferralSettings = z.infer<typeof referralSettingsSchema>;
 
+/** The owner's ladder (2026-11-06): days and credits alternate, the big
+ *  prizes at nine and ten; every referral past ten earns seven days. */
+export const DEFAULT_REFERRAL_LADDER: RewardStep[] = [
+  { kind: "days", days: 7 },
+  { kind: "credits", amount: 5 },
+  { kind: "days", days: 7 },
+  { kind: "credits", amount: 10 },
+  { kind: "days", days: 14 },
+  { kind: "credits", amount: 20 },
+  { kind: "days", days: 21 },
+  { kind: "credits", amount: 50 },
+  { kind: "days", days: 21 },
+  { kind: "days", days: 30 },
+];
+
 export const DEFAULT_REFERRAL_SETTINGS: ReferralSettings = {
   enabled: true,
-  friend: { kind: "free_days", tier: "plus", units: 1 },
-  referrer: { kind: "free_days", tier: "own", units: 1 },
-  caps: { perMonth: REFERRAL_MONTHLY_CAP, lifetime: REFERRAL_LIFETIME_CAP, friendsPerMonth: 5 },
+  activation: { cardsRequired: 5, windowDays: 30 },
+  friend: { days: 7 },
+  ladder: DEFAULT_REFERRAL_LADDER,
+  tail: { kind: "days", days: 7 },
+  caps: { friendsPerMonth: 5 },
 };
 
 /** The stored row's value, with the defaults for anything missing or
- *  malformed (a hand-edited row never turns the program into a crash). */
+ *  malformed (a hand-edited row — or 0177's v1 shape — never turns the
+ *  program into a crash). A v1 row keeps its switch and its friends cap. */
 export function parseReferralSettings(value: unknown): ReferralSettings {
   const whole = referralSettingsSchema.safeParse(value);
   if (whole.success) return whole.data;
   const o = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const side = (v: unknown, fallback: RewardSpec): RewardSpec => {
-    const r = rewardSpecSchema.safeParse(v);
-    return r.success ? r.data : fallback;
-  };
-  const caps = referralSettingsSchema.shape.caps.safeParse(o.caps);
+  const activation = referralSettingsSchema.shape.activation.safeParse(o.activation);
+  const friend = referralSettingsSchema.shape.friend.safeParse(o.friend);
+  const ladder = referralSettingsSchema.shape.ladder.safeParse(o.ladder);
+  const tail = rewardStepSchema.safeParse(o.tail);
+  const caps = o.caps && typeof o.caps === "object" ? (o.caps as Record<string, unknown>) : {};
+  const friendsPerMonth = z.number().int().min(0).max(1000).safeParse(caps.friendsPerMonth);
   return {
     enabled: typeof o.enabled === "boolean" ? o.enabled : DEFAULT_REFERRAL_SETTINGS.enabled,
-    friend: side(o.friend, DEFAULT_REFERRAL_SETTINGS.friend),
-    referrer: side(o.referrer, DEFAULT_REFERRAL_SETTINGS.referrer),
-    caps: caps.success ? caps.data : DEFAULT_REFERRAL_SETTINGS.caps,
+    activation: activation.success ? activation.data : DEFAULT_REFERRAL_SETTINGS.activation,
+    friend: friend.success ? friend.data : DEFAULT_REFERRAL_SETTINGS.friend,
+    ladder: ladder.success ? ladder.data : DEFAULT_REFERRAL_SETTINGS.ladder,
+    tail: tail.success ? tail.data : DEFAULT_REFERRAL_SETTINGS.tail,
+    caps: { friendsPerMonth: friendsPerMonth.success ? friendsPerMonth.data : DEFAULT_REFERRAL_SETTINGS.caps.friendsPerMonth },
   };
 }
 
 export type { z };
-export const REWARD_TIER_VALUES = tierSchema.options;
 
-/** "30 free days of Plus", "20 AI credits", "nothing" — one phrase for the
- *  dashboard, the link box, the admin form and the notifications. `own`
- *  reads as "your plan" (the referrer's own tier). */
-export function rewardPhrase(spec: RewardSpec, opts: { ownTierWord?: string } = {}): string {
-  switch (spec.kind) {
-    case "free_days": {
-      const days = spec.units * 30;
-      const tier = spec.tier === "own" ? (opts.ownTierWord ?? "your plan") : spec.tier === "pro" ? "Pro" : "Plus";
-      return `${days} free days of ${tier}`;
-    }
+/** The referrer's reward for their N-th qualified referral (1-based): the
+ *  ladder's step, else the tail. */
+export function ladderRewardFor(settings: Pick<ReferralSettings, "ladder" | "tail">, step: number): RewardStep {
+  if (!Number.isInteger(step) || step < 1) return { kind: "none" };
+  return settings.ladder[step - 1] ?? settings.tail;
+}
+
+/** "7 free days", "5 AI credits", "nothing" — one phrase for every surface. */
+export function rewardStepPhrase(step: RewardStep): string {
+  switch (step.kind) {
+    case "days":
+      return `${step.days} free day${step.days === 1 ? "" : "s"}`;
     case "credits":
-      return `${spec.amount} AI credit${spec.amount === 1 ? "" : "s"}`;
+      return `${step.amount} AI credit${step.amount === 1 ? "" : "s"}`;
     default:
       return "nothing";
   }
+}
+
+/** What the FRIEND gets, in words ("7 free days"; "nothing" at 0). */
+export function friendRewardPhrase(settings: Pick<ReferralSettings, "friend">): string {
+  return settings.friend.days > 0 ? rewardStepPhrase({ kind: "days", days: settings.friend.days }) : "nothing";
 }
