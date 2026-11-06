@@ -98,14 +98,17 @@ export default async function ReferralsPage() {
             <>
               <ol className="grid gap-3 text-sm text-muted sm:grid-cols-3">
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">1. Share your link.</span> A friend opens it and creates an account.
+                  <span className="font-semibold text-foreground">1. Share your link.</span> Your friend opens it and creates a
+                  PipGlyph account, then confirms their email.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
+                  <span className="font-semibold text-foreground">2. Your friend saves their first card</span> within{" "}
+                  {REFERRAL_ACTIVATION_WINDOW_DAYS} days of joining. That first saved card is what earns the reward — signing up
+                  alone doesn&apos;t.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">3. You both get your reward</span>
-                  {` as soon as you've both confirmed your email: ${friendGets} for them, ${youGet} for you.`}
+                  {` the moment that first card is saved, as long as both of you have confirmed your email: ${friendGets} for them, ${youGet} for you. Nothing to do on your side.`}
                 </li>
               </ol>
               <p className="text-xs leading-5 text-subtle">
