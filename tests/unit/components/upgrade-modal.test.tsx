@@ -33,6 +33,7 @@ vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 vi.mock("@/lib/supabase/session-cookie", () => ({ hasSupabaseSessionCookie: () => true }));
 
 import { UpgradeModal } from "@/components/billing/upgrade-modal";
+import { CARD_CAPACITY } from "@/lib/billing/plans";
 
 const freeUser = { id: "u1", username: "dev_free", isPaid: false, tier: "free", hasSubscribed: false };
 const proSubscriber = {
@@ -64,16 +65,16 @@ function orderOf(...labels: RegExp[]): number[] {
 }
 
 describe("UpgradeModal — out of credits", () => {
-  it("free account: says the 5 starter credits don't refill, lists plans first, then all three packs", async () => {
+  it("free account: says what the 5 starter credits are and what a plan brings, lists plans first, then all three packs", async () => {
     s.me = freeUser;
     render(<UpgradeModal open reason="credits" onOpenChange={() => {}} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
-    expect(screen.getByText(/Free accounts get 5 credits to start and don't refill/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
+    expect(screen.getByText(/Free accounts get 5 credits to start\. A pack tops you up any time, and a plan brings 60 \(Plus\) or 120 \(Pro\) credits with its first payment/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /buy 10 credits/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /buy 30 credits/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /buy 100 credits/i })).toBeTruthy();
     expect(screen.queryByText(/for subscribers/)).toBeNull();
-    const [plans, packs] = orderOf(/Try Pro free/, /Buy 10 credits/);
+    const [plans, packs] = orderOf(/Start Pro with your free days/, /Buy 10 credits/);
     expect(plans).toBeLessThan(packs);
   });
 
@@ -81,7 +82,7 @@ describe("UpgradeModal — out of credits", () => {
     s.me = proSubscriber;
     render(<UpgradeModal open reason="credits" onOpenChange={() => {}} />);
     await waitFor(() => expect(screen.getByText("Your current plan")).toBeTruthy());
-    expect(screen.getByText(/Your plan refills every month — top up any time with a pack, 20% off for subscribers/)).toBeTruthy();
+    expect(screen.getByText(/Top up any time with a pack, 20% off for subscribers — purchased credits never expire/)).toBeTruthy();
     // The three pack price lines carry the subscriber price.
     expect(screen.getAllByText(/\$\d+(\.\d\d)? for subscribers/)).toHaveLength(3);
     expect(screen.getByText(/\$6\.40/)).toBeTruthy();
@@ -98,10 +99,24 @@ describe("UpgradeModal — out of credits", () => {
     expect(screen.getByText(/\$8 one-time/)).toBeTruthy();
   });
 
+  it("the capacity reason keeps the cards safe and names the caps from the table (owner 2026-11-06)", async () => {
+    s.me = freeUser;
+    render(<UpgradeModal open reason="capacity" onOpenChange={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Your library is full" })).toBeTruthy();
+    const description = screen.getByText(/While a Plus or Pro plan is active/).textContent ?? "";
+    expect(description).toContain(`your account has the plan's full card limit: Plus holds ${CARD_CAPACITY.plus} saved cards, Pro holds them all`);
+    expect(description).toContain("Nothing is ever deleted: when a plan ends your cards stay");
+    expect(description).not.toMatch(/forge is full|lose|keep every card/);
+    // Each plan row's subline (its tagline) leads with the cap.
+    expect(screen.getByText(`Room for ${CARD_CAPACITY.plus} cards, downloaded clean and hi-res.`)).toBeTruthy();
+    expect(screen.getByText(/^Unlimited cards, print sheets/)).toBeTruthy();
+  });
+
   it("other reasons show no packs", async () => {
     s.me = freeUser;
     render(<UpgradeModal open reason="hi_res_export" onOpenChange={() => {}} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
     expect(screen.queryByRole("button", { name: /buy 10 credits/i })).toBeNull();
   });
 

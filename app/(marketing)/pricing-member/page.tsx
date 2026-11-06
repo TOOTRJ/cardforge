@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { capacityWord } from "@/lib/billing/plans";
+import { getCardCapacity } from "@/lib/cards/capacity";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { ANONYMOUS_BILLING_VIEWER, billingViewerFromProfile } from "@/lib/billing/viewer";
 import { PricingContent } from "../pricing/pricing-content";
@@ -13,7 +15,7 @@ import { PricingContent } from "../pricing/pricing-content";
 // the visible URL stays /pricing and a direct hit on this path 308s there.
 // Reading the session here keeps the anonymous page on the CDN while every
 // signed-in visitor gets their own buttons in the server HTML: "Your current
-// plan", "Try Plus free for 7 days", "Switch to Pro", "Update payment" —
+// plan", "Start Plus with your free days", "Switch to Pro", "Update payment" —
 // never the anonymous storefront first.
 // ---------------------------------------------------------------------------
 
@@ -23,8 +25,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   robots: { index: false, follow: true },
-  description:
-    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits to start. Upgrade for monthly credits, watermark-free hi-res downloads and deck-aware AI — first-time subscribers get a 7-day free trial, cancel anytime. Monthly or annual.",
+  description: `Design custom MTG-style cards for free, with up to ${capacityWord("free")} saved cards and 5 AI credits to start. While a Plus or Pro plan is active you have its full card limit — ${capacityWord("plus")} on Plus, unlimited on Pro — with a stock of AI credits, watermark-free hi-res downloads and deck-aware AI. Every new account banks 7 free days to start a plan with, cancel anytime. Monthly or annual.`,
 };
 
 export default async function PricingMemberPage() {
@@ -34,7 +35,12 @@ export default async function PricingMemberPage() {
     // A stale cookie without a session: the anonymous storefront, resolved.
     return <PricingContent initialViewer={{ ...ANONYMOUS_BILLING_VIEWER, loaded: true }} />;
   }
-  const [profile, entitlements] = await Promise.all([getCurrentProfile(), getEntitlements()]);
+  const [profile, entitlements, capacity] = await Promise.all([
+    getCurrentProfile(),
+    getEntitlements(),
+    // The viewer's own meter under the headline (the research's "48 of 50").
+    getCardCapacity(),
+  ]);
   const viewer = billingViewerFromProfile(
     profile
       ? {
@@ -49,5 +55,5 @@ export default async function PricingMemberPage() {
   // billing page (owner decision 2026-09-22 — the storefront is hidden once
   // a user is Plus or Pro).
   if (viewer.isPaid) redirect("/dashboard/billing");
-  return <PricingContent initialViewer={viewer} />;
+  return <PricingContent initialViewer={viewer} capacity={capacity} />;
 }

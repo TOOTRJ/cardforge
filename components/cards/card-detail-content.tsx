@@ -43,6 +43,7 @@ import { RemixButton } from "@/components/cards/remix-button";
 import { AddToDeckButton } from "@/components/cards/add-to-deck-button";
 import { BuildDeckAroundButton } from "@/components/decks/build-deck-around-button";
 import { ShareTargets } from "@/components/cards/share-targets";
+import { ReferralLandingNote } from "@/components/referrals/referral-landing-note";
 import { ReportCardDialog } from "@/components/cards/report-card-dialog";
 import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { CARD_GRID_SIZES } from "@/components/cards/card-grid";
@@ -491,6 +492,10 @@ export async function CardDetailContent({
         </div>
 
         <div className={cn("flex min-w-0 flex-col gap-5", AREA.text)}>
+          {/* A visitor who came through a friend's share link (`?ref=`) is
+              told what the link gets them — a client island, nothing for
+              anyone else (TODO SG1). */}
+          <ReferralLandingNote />
           {/* Card details as TEXT. The rendered preview shows all of this,
               but a crawler or answer engine reads none of it from an image —
               this block is what makes the page citable for "custom MTG

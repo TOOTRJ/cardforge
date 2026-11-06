@@ -11,7 +11,7 @@ import { LEDGER_REASON_LABELS, describeLedgerReason } from "@/lib/billing/ledger
 // printed as "Subscription refill" for months.
 // ---------------------------------------------------------------------------
 
-const GRANT_REASONS = ["admin_grant", "signup_grant", "subscription_refill", "pack_purchase", "refund"];
+const GRANT_REASONS = ["admin_grant", "signup_grant", "subscription_refill", "plan_credits_once", "free_period_bonus", "trial_grant", "plan_grant", "referral_credits", "pack_purchase", "refund"];
 
 function aiActionLabels(): string[] {
   const source = readFileSync(join(process.cwd(), "lib/ai/rate-limit.ts"), "utf8");

@@ -87,7 +87,7 @@ export default function AboutPage() {
         <li>Profiles, a following feed, notifications, and light/dark themes</li>
         <li>
           A free plan with 5 AI credits to start, and Plus and Pro plans for
-          monthly credits, clean downloads and a bigger card library — see{" "}
+          a stock of credits, clean downloads and a bigger card library — see{" "}
           <Link href="/pricing">pricing</Link>
         </li>
       </ul>

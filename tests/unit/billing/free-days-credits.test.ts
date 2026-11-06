@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chainClient, called, type ChainAnswer } from "@/tests/stubs/supabase-chain";
+import { grantCreditsForGrant } from "@/lib/billing/free-days-credits";
 import {
   GRANT_SWEEP_LOOKBACK_DAYS,
   GRANT_SWEEP_PAGE_SIZE,
@@ -41,9 +42,9 @@ describe("freeDaysAllotmentsDue", () => {
     expect(freeDaysAllotmentsDue(two, at("2027-01-01T00:00:00Z"))).toEqual([0]);
   });
 
-  it("an open-ended (staff) grant: every 30 days since credits_from", () => {
+  it("an open-ended (staff) grant gets no automatic allotment (owner 2026-11-06: an admin grants by hand)", () => {
     const staff = { ...base, units: null, credits_from: "2026-11-01T00:00:00Z", ends_at: null };
-    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([0, 1, 2, 3]);
+    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([]);
   });
 
   it("pending, failed, revoked and below-plan grants owe nothing", () => {
@@ -55,6 +56,26 @@ describe("freeDaysAllotmentsDue", () => {
 
   it("the key", () => {
     expect(planGrantCreditKey("g1", 2)).toBe("grant:g1:2");
+  });
+});
+
+describe("grantCreditsForGrant — one grant, at apply time", () => {
+  const grant = { id: "g1", user_id: "u1", tier: "plus", units: 1, credits_from: "2026-11-20T00:00:00Z", ends_at: "2026-12-20T00:00:00Z", applied_as: "overlay", status: "applied" } as const;
+  it("a thrown client error is a plain { ok: false }, never a throw", async () => {
+    const s = chainClient(() => ({ data: [] }));
+    s.rpc.mockRejectedValueOnce(new Error("socket hang up"));
+    expect(await grantCreditsForGrant(s.client as never, grant, at("2026-11-20T00:00:01Z"))).toEqual({ ok: false, error: "socket hang up" });
+  });
+  it("reads the overlay's allotment from the plan state the writer hands it — the profile row is NOT read", async () => {
+    const s = chainClient((table) => (table === "profiles" ? { data: { subscription_status: "active", subscription_tier: "plus" } } : { data: [] }));
+    s.rpc.mockResolvedValue({ data: 130, error: null });
+    // Stripe says past_due (the profile's `active` copy lags the webhook): the full allotment.
+    const r = await grantCreditsForGrant(s.client as never, grant, at("2026-11-20T00:00:01Z"), { subscription_status: "past_due", subscription_tier: "plus" });
+    expect(r).toEqual({ ok: true, granted: 1 });
+    expect(s.forTable("profiles")).toHaveLength(0);
+    expect(s.rpc).toHaveBeenCalledWith("grant_credits", expect.objectContaining({ p_amount: 30, p_idempotency_key: "grant:g1:0" }));
+    // Nothing due yet → nothing read, nothing granted.
+    expect(await grantCreditsForGrant(s.client as never, grant, at("2026-11-19T00:00:00Z"))).toEqual({ ok: true, granted: 0 });
   });
 });
 
@@ -88,7 +109,7 @@ describe("grantFreeDaysCredits — the sweep", () => {
   const plus = { id: "g1", user_id: "u1", tier: "plus", units: 2, credits_from: "2026-11-20T00:00:00Z", ends_at: "2027-01-19T00:00:00Z", applied_as: "overlay", status: "applied" };
   const pro = { id: "g2", user_id: "u2", tier: "pro", units: 1, credits_from: "2026-12-01T00:00:00Z", ends_at: "2026-12-31T00:00:00Z", applied_as: "subscription_hold", status: "applied" };
 
-  it("grants the missing allotments only (the ledger keys already held are skipped), the tier's monthly credits each", async () => {
+  it("grants the missing allotments only (the ledger keys already held are skipped), the legacy tier allotment each", async () => {
     const s = stub([plus, pro], { g1: ["grant:g1:0"] });
     const result = await grantFreeDaysCredits(s.client as never, { now });
     expect(result).toEqual({ ok: true, processed: 2, granted: 2, failed: 0 });

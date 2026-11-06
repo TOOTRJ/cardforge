@@ -45,8 +45,8 @@ const DECK_NUMBER = /\b\d+ (?:(?:private|unlisted|public)(?: or unlisted)? )?dec
 describe("the plan cards", () => {
   it("say each tier's saved cards from CARD_CAPACITY", () => {
     expect(savedCardsLine("free")).toBe(`Up to ${CARD_CAPACITY.free} saved cards`);
-    expect(savedCardsLine("plus")).toBe(`Up to ${CARD_CAPACITY.plus} saved cards`);
-    expect(savedCardsLine("pro")).toBe("Unlimited saved cards");
+    expect(savedCardsLine("plus")).toBe(`Up to ${CARD_CAPACITY.plus} saved cards while Plus is active`);
+    expect(savedCardsLine("pro")).toBe("Unlimited saved cards while Pro is active");
     for (const tier of TIERS) expect(planForTier(tier).features, tier).toContain(savedCardsLine(tier));
     expect(CARD_CAPACITY.pro).toBe(CARD_CAPACITY_UNLIMITED);
   });

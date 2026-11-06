@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Gift, UserPlus } from "lucide-react";
+import { Check, Gift, UserPlus } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LocalDate } from "@/components/ui/local-date";
 import { ReferralLinkBox } from "@/components/referrals/referral-link-box";
@@ -13,46 +14,40 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getMyReferralDashboard } from "@/lib/referrals/queries";
-import { rewardPhrase } from "@/lib/referrals/settings";
+import { friendRewardPhrase, ladderRewardFor, rewardStepPhrase } from "@/lib/referrals/settings";
 import type { ReferralRow } from "@/lib/referrals/summary";
-import {
-  REFERRAL_ACTIVATION_WINDOW_DAYS,
-  REFERRAL_STATUS_LABELS,
-  type ReferralStatus,
-} from "@/lib/referrals/rules";
+import { REFERRAL_STATUS_LABELS, type ReferralStatus } from "@/lib/referrals/rules";
 
 export const metadata: Metadata = {
   title: "Refer a friend",
-  description: "Share your referral link: a friend who saves their first card earns you both a reward.",
+  description: "Share your referral link: a friend who saves their first cards and starts a plan earns you both free days.",
   robots: { index: false, follow: false },
 };
 
 // ---------------------------------------------------------------------------
-// /dashboard/referrals — the viewer's referral link and the friends who used
-// it (lib/referrals/queries.ts: their own rows through 0164's column grant).
-// A blocked referral reads "Not eligible"; the reason is the admins' alone.
+// /dashboard/referrals (v2, owner 2026-11-06) — the viewer's referral link,
+// the ladder they climb, their days bank, and the friends who used the link
+// (lib/referrals/queries.ts: their own rows through the column grant). A
+// blocked referral reads "Not eligible"; the reason is the admins' alone.
 // ---------------------------------------------------------------------------
 
 const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "gold" | "outline" | "danger"> = {
   signed_up: "outline",
   first_card: "primary",
+  cards_saved: "primary",
   rewarded: "gold",
   capped: "default",
   blocked: "default",
   expired: "default",
 };
 
-const REWARD_LABEL = {
-  free_days: "Free days",
-  credits: "AI credits",
-} as const;
-
-/** The reward cell when no month was recorded for the viewer. */
-function noRewardText(status: ReferralStatus): string {
-  if (status === "signed_up") return "Waiting for their first card";
-  // Claimed only once both emails are confirmed; the hourly sweep finishes it.
-  if (status === "first_card") return "Pending — waiting on a confirmed email";
-  if (status === "capped") return "None for you — they still got theirs";
+/** The reward cell when nothing was recorded for the viewer. */
+function noRewardText(status: ReferralStatus, cardOnFile: boolean): string {
+  if (status === "signed_up") return "Waiting for their cards";
+  if (status === "first_card" || status === "cards_saved") {
+    return cardOnFile ? "Pending — waiting on a confirmed email" : "Cards saved — waiting for a plan with a card on file";
+  }
+  if (status === "capped") return "None — this month's limit of rewarded friends was reached";
   return "—";
 }
 
@@ -64,11 +59,10 @@ export default async function ReferralsPage() {
 
   const dashboard = await getMyReferralDashboard();
   if (!dashboard) redirect("/login");
-  const { link, rows, summary, joinedThrough, settings } = dashboard;
-  // What each side gets — the settings' words (lib/referrals/settings.ts).
-  const friendGets = rewardPhrase(settings.friend);
-  const youGet = rewardPhrase(settings.referrer, { ownTierWord: "your plan (Plus on the free plan)" });
-  const freeDays = settings.friend.kind === "free_days" || settings.referrer.kind === "free_days";
+  const { link, rows, summary, joinedThrough, settings, bank } = dashboard;
+  const friendGets = friendRewardPhrase(settings);
+  const firstStep = rewardStepPhrase(ladderRewardFor(settings, 1));
+  const { cardsRequired, windowDays } = settings.activation;
 
   return (
     <DashboardShell readable>
@@ -77,7 +71,7 @@ export default async function ReferralsPage() {
         title="Refer a friend"
         description={
           settings.enabled
-            ? `Give a friend ${friendGets} — and get ${youGet} yourself when they save their first card.`
+            ? `Give a friend ${friendGets} toward a plan — and earn ${firstStep} for your first referral, more for each one after.`
             : "The referral program is paused right now."
         }
       />
@@ -96,31 +90,89 @@ export default async function ReferralsPage() {
           )}
           {settings.enabled ? (
             <>
-              <ol className="grid gap-3 text-sm text-muted sm:grid-cols-3">
+              <ol className="grid gap-3 text-sm text-muted sm:grid-cols-2">
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">1. Share your link.</span> Your friend opens it and creates a
-                  PipGlyph account, then confirms their email.
+                  <span className="font-semibold text-foreground">1. Share your link.</span> A friend opens it and creates
+                  an account.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">2. Your friend saves their first card</span>
-                  {` within ${REFERRAL_ACTIVATION_WINDOW_DAYS} days of joining. That first saved card is what earns the reward — signing up alone doesn't.`}
+                  <span className="font-semibold text-foreground">{`2. They save ${cardsRequired} cards`}</span>
+                  {` within ${windowDays} days of signing up.`}
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">3. You both get your reward</span>
-                  {` the moment that first card is saved, as long as both of you have confirmed your email: ${friendGets} for them, ${youGet} for you. Nothing to do on your side.`}
+                  <span className="font-semibold text-foreground">3. They start a plan with a card on file.</span> Their
+                  banked days make it free — they can cancel any time before the days end and nothing is charged.
+                </li>
+                <li className="rounded-lg border border-border/60 bg-background/40 p-3">
+                  <span className="font-semibold text-foreground">4. You both get your reward</span>
+                  {` once you've both confirmed your email: ${friendGets} in their bank, and your next step on the ladder below.`}
                 </li>
               </ol>
               <p className="text-xs leading-5 text-subtle">
-                You can earn up to {summary.monthlyCap} rewards a month and {summary.lifetimeCap} in all; past that your friends
-                still get theirs. New accounts only, and one reward per email address.
-                {freeDays
-                  ? " Free days come with the plan's normal AI credits; on a paid plan they are added to the time you've paid for, so your next charge moves out by the same days."
-                  : ""}
+                Banked days are a plan&apos;s free time: your first checkout applies them all, and days earned later are
+                applied from your billing page whenever you like — a card on file is needed, and the plan bills at its
+                usual price when the days end unless you cancel. Up to {summary.friendsPerMonth} rewarded friends a
+                month; past that, the extra friends that month earn nobody a reward. New accounts only, and one reward
+                per email address.
               </p>
             </>
           ) : null}
         </SurfaceCard>
       </section>
+
+      {settings.enabled ? (
+        <section className="mt-6" aria-labelledby="referral-ladder">
+          <SurfaceCard className="flex flex-col gap-4 p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="referral-ladder" className="font-display text-lg font-semibold text-foreground">
+                Your ladder
+              </h2>
+              <p className="text-sm text-muted">
+                {summary.rewardsEarned === 0
+                  ? `Your first referral earns ${firstStep}.`
+                  : summary.pastLadder
+                    ? `${summary.rewardsEarned} referrals rewarded — every further one earns ${summary.nextRewardPhrase}.`
+                    : `${summary.rewardsEarned} rewarded — next: ${summary.nextRewardPhrase}.`}
+              </p>
+            </div>
+            <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Rewards by referral">
+              {settings.ladder.map((step, i) => {
+                const n = i + 1;
+                const earned = n <= summary.rewardsEarned;
+                const next = n === summary.rewardsEarned + 1;
+                return (
+                  <li
+                    key={n}
+                    className={`flex items-center gap-2 rounded-lg border p-2.5 text-sm ${
+                      earned
+                        ? "border-gold-strong/50 bg-gold-strong/10 text-foreground"
+                        : next
+                          ? "border-primary-bright/50 bg-primary/10 text-foreground"
+                          : "border-border/60 bg-background/40 text-muted"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                        earned ? "bg-gold-strong text-background" : "bg-surface text-subtle"
+                      }`}
+                      aria-hidden
+                    >
+                      {earned ? <Check className="h-3.5 w-3.5" /> : n}
+                    </span>
+                    <span>
+                      <span className="sr-only">{`Referral ${n}${earned ? ", earned" : next ? ", next" : ""}: `}</span>
+                      {rewardStepPhrase(step)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="text-xs text-subtle">
+              {`Past referral ${settings.ladder.length}, every further one earns ${rewardStepPhrase(settings.tail)}.`}
+            </p>
+          </SurfaceCard>
+        </section>
+      ) : null}
 
       <section className="mt-6" aria-labelledby="referral-stats">
         <h2 id="referral-stats" className="sr-only">
@@ -128,16 +180,31 @@ export default async function ReferralsPage() {
         </h2>
         <dl className="grid gap-3 sm:grid-cols-4">
           <Stat label="Friends joined" value={String(summary.joined)} />
-          <Stat label="Saved a first card" value={String(summary.activated)} />
-          <Stat label="Rewards earned" value={`${summary.rewardsEarned} of ${summary.lifetimeCap}`} />
-          <Stat label="This month" value={`${summary.thisMonth} of ${summary.monthlyCap}`} />
+          <Stat label="Saved their cards" value={String(summary.cardsSaved)} />
+          <Stat label="Started a plan" value={String(summary.cardOnFile)} />
+          <Stat label="Rewarded this month" value={`${summary.friendsThisMonth} of ${summary.friendsPerMonth}`} />
         </dl>
-        {summary.lifetimeReached ? (
-          <p className="mt-3 text-sm text-muted">
-            You&apos;ve earned every reward the program gives — thank you! Friends who join with your link still get
-            theirs.
-          </p>
-        ) : null}
+      </section>
+
+      <section className="mt-6" aria-labelledby="referral-bank">
+        <SurfaceCard className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <div className="flex items-center gap-3">
+            <Gift className="h-5 w-5 text-gold-strong" aria-hidden />
+            <div>
+              <h2 id="referral-bank" className="text-sm font-semibold text-foreground">
+                Banked free days
+              </h2>
+              <p className="text-sm text-muted">
+                {bank.banked > 0
+                  ? `${bank.banked} day${bank.banked === 1 ? "" : "s"} waiting${bank.reserved > 0 ? ` (${bank.reserved} being applied)` : ""}.`
+                  : "Nothing banked right now — rewards land here."}
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/dashboard/billing#banked-days">{bank.banked > 0 ? "Apply them on your billing page" : "Your billing page"}</Link>
+          </Button>
+        </SurfaceCard>
       </section>
 
       <section className="mt-6" aria-labelledby="referral-list">
@@ -200,11 +267,13 @@ export default async function ReferralsPage() {
         <p className="mt-6 text-sm text-muted">
           You joined through {joinedThrough.username ? `@${joinedThrough.username}` : "a friend"}&apos;s link
           {joinedThrough.status === "signed_up"
-            ? ` — save your first card to get ${friendGets}.`
-            : joinedThrough.status === "first_card"
-              ? " — your reward is on its way once both of you have confirmed your email."
+            ? ` — save ${cardsRequired} cards and start a plan with a card on file to get ${friendGets}.`
+            : joinedThrough.status === "first_card" || joinedThrough.status === "cards_saved"
+              ? joinedThrough.cardOnFile
+                ? " — your reward is on its way once both of you have confirmed your email."
+                : ` — your cards are saved; start a plan with a card on file to get ${friendGets}.`
               : joinedThrough.rewarded === true
-                ? " — your reward is on your account."
+                ? " — your free days are in your bank."
                 : joinedThrough.rewarded == null && (joinedThrough.status === "rewarded" || joinedThrough.status === "capped" || joinedThrough.status === "blocked")
                   ? " — your reward is on its way."
                   : "."}
@@ -215,13 +284,15 @@ export default async function ReferralsPage() {
 }
 
 function RewardText({ row }: { row: ReferralRow }) {
-  return row.reward ? (
+  if (!row.reward) return <>{noRewardText(row.status, row.cardOnFileAt != null)}</>;
+  const label =
+    row.reward === "credits" ? "AI credits" : row.reward === "banked_days" ? "Free days (banked)" : "Free days";
+  return (
     <span className="inline-flex items-center gap-1.5 text-foreground">
       <Gift className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
-      {REWARD_LABEL[row.reward]}
+      {label}
+      {row.ladderStep != null ? <span className="text-subtle">{` · referral #${row.ladderStep}`}</span> : null}
     </span>
-  ) : (
-    <>{noRewardText(row.status)}</>
   );
 }
 

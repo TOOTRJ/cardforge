@@ -20,11 +20,11 @@ import { inputClass } from "@/components/ui/field-classes";
 
 /** The share text names what the FRIEND gets (the settings' words). */
 const shareText = (friendGets: string) =>
-  `I make custom Magic cards on PipGlyph — join with my link and you get ${friendGets} when you save your first card.`;
+  `I make custom Magic cards on PipGlyph — join with my link and you get ${friendGets} toward a plan once you've saved your first cards and started one.`;
 
 const noop = () => () => {};
 
-export function ReferralLinkBox({ link, friendGets = "30 free days of Plus" }: { link: string; friendGets?: string }) {
+export function ReferralLinkBox({ link, friendGets = "7 free days" }: { link: string; friendGets?: string }) {
   const SHARE_TEXT = shareText(friendGets);
   const [copied, setCopied] = useState(false);
   const [messageCopied, setMessageCopied] = useState(false);

@@ -214,8 +214,8 @@ export async function logAiCall(
 // Credits meter the operations with real marginal cost — AI card/art
 // generation. Cheap text-assistant actions stay governed by the windowed
 // rate limit above (cost 0), so free users can keep using them. Paid tiers get
-// a monthly credit allotment (granted by the daily refill cron and on the
-// Stripe subscription webhook — lib/billing/credit-refill.ts); everyone can
+// a one-time credit stock with their first paid invoice (the Stripe webhook —
+// lib/billing/credit-refill.ts); everyone can
 // buy consumable top-up packs. Spending goes through the atomic consume_credits
 // RPC (which row-locks the profile), so concurrent generations can't
 // double-spend the balance; background jobs reserve a credit per step and

@@ -42,6 +42,19 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     expect(comp({ tier: null })).toBe("ended your complimentary plan access.");
   });
 
+  it("banked days (0179): the admin's comp lands in the bank — the user applies them; a revoke says so", () => {
+    const d = (payload: Record<string, unknown>) => describeNotification({ type: "banked_days", actor, card: null, threadId: null, payload }, { isAdmin: false });
+    expect(d({ days: 14, note: "thanks for the report" })).toEqual({
+      subject: "PipGlyph team",
+      body: "banked 14 free days for you (thanks for the report) — start a plan and they're its free period, or apply them to the plan you have, any time from your billing page.",
+      href: "/dashboard/billing#banked-days",
+    });
+    expect(d({ days: 1 }).body).toMatch(/^banked 1 free day for you — /);
+    expect(d({ days: 7, revoked: 1, note: "given by mistake" }).body).toBe("took back 7 free days from your bank (given by mistake).");
+    expect(d({ days: 7, revoked: 1 }).body).toBe("took back 7 free days from your bank.");
+    expect(d({ days: 30 }).body).not.toMatch(/month/);
+  });
+
   it("free 30 days (0176): the days and their end; a hold on a plan names the moved charge, on a trial the longer trial", () => {
     const comp = (payload: Record<string, unknown>) =>
       describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
@@ -65,25 +78,31 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     // referral_signup is sent ONLY when a qualified friend earned the
     // referrer no reward — never a fraud reason, never a promise.
     expect(d("referral_signup", { referralId: "r1", outcome: "not_eligible" })).toMatchObject({
-      body: "joined PipGlyph with your referral link and saved their first card. This referral isn't eligible for a reward.",
+      body: "joined PipGlyph with your referral link and qualified (cards saved, a plan started). This referral isn't eligible for a reward.",
       href: "/dashboard/referrals",
     });
-    expect(d("referral_signup", { referralId: "r1", outcome: "capped_month" }).body).toBe(
-      "joined PipGlyph with your referral link and saved their first card. You've reached this month's referral limit, so this one adds no reward for you — they still get theirs.",
-    );
-    expect(d("referral_signup", { referralId: "r1", outcome: "capped_lifetime" }).body).toContain("every reward the program gives");
     expect(d("referral_signup", { referralId: "r1", outcome: "capped_friends" }).body).toContain("no reward on either side");
+    // v2 (0180): days into the bank, the referrer's ladder step named.
+    expect(d("referral_reward", { side: "referrer", reward: "banked_days", days: 7, step: 3 })).toMatchObject({
+      body: "saved their first cards and started a plan — referral #3 — 7 free days are in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!",
+      href: "/dashboard/referrals",
+    });
+    expect(d("referral_reward", { side: "referee", reward: "banked_days", days: 7 })).toMatchObject({
+      body: "invited you to PipGlyph — 7 free days are in your bank for saving your first cards and starting a plan. They're your plan's free time; apply them any time from your billing page.",
+      href: "/dashboard/billing#banked-days",
+    });
+    expect(d("referral_reward", { side: "referrer", reward: "credits", credits: 5, step: 2 }).body).toBe(
+      "saved their first cards and started a plan — referral #2 — you've earned 5 AI credits. Thanks for spreading the word!",
+    );
+    // The 0177 shapes still read.
     expect(d("referral_reward", { side: "referrer", reward: "free_days", tier: "pro", days: 30, until: "2027-01-04T09:00:00Z", holdEndsAt: "2027-01-04T09:00:00Z" }).body).toBe(
       "saved their first card — you've earned 30 free days of Pro (until Jan 4, 2027) — added to the time you've paid for. Thanks for spreading the word!",
-    );
-    expect(d("referral_reward", { side: "referrer", reward: "credits", credits: 20 }).body).toBe(
-      "saved their first card — you've earned 20 AI credits. Thanks for spreading the word!",
     );
     expect(d("referral_reward", { side: "referee", reward: "free_days", tier: "plus", days: 30, until: "2026-12-01T12:00:00Z" })).toMatchObject({
       body: "invited you to PipGlyph — you've earned 30 free days of Plus (until Dec 1, 2026) for saving your first card.",
       href: "/dashboard/billing",
     });
-    for (const body of [d("referral_signup", { outcome: "capped_month" }).body, d("referral_reward", { side: "referee", reward: "free_days", days: 30 }).body]) {
+    for (const body of [d("referral_signup", { outcome: "capped_friends" }).body, d("referral_reward", { side: "referee", reward: "banked_days", days: 30 }).body]) {
       expect(body).not.toMatch(/free month/);
     }
   });
@@ -199,7 +218,7 @@ describe("describeNotification — deck generated", () => {
     });
   });
 
-  it("payment received: renewals name the plan and the refill, first payments and plan changes say thanks", () => {
+  it("payment received: renewals name the plan and the charge (credits are one-time), first payments and plan changes say thanks", () => {
     const base = { actor: null, card: null, threadId: null, type: "payment_received" };
     const renewal = describeNotification(
       { ...base, payload: { invoiceId: "in_1", amountCents: 1500, currency: "usd", tier: "pro", billingReason: "subscription_cycle" } },
@@ -207,7 +226,7 @@ describe("describeNotification — deck generated", () => {
     );
     expect(renewal).toEqual({
       subject: "Your Pro plan",
-      body: "renewed — $15 charged; your monthly AI credits are refilled.",
+      body: "renewed — $15 charged.",
       href: "/dashboard/billing",
     });
     expect(
@@ -228,7 +247,7 @@ describe("describeNotification — deck generated", () => {
       describeNotification({ ...base, payload: { kind: "subscription", tier: "pro", trialEligible: true } }, { isAdmin: false }),
     ).toEqual({
       subject: "Your Pro checkout",
-      body: "wasn't finished — your 7-day free trial is still waiting; nothing is charged until it ends, cancel anytime.",
+      body: "wasn't finished — your banked free days are still waiting; nothing is charged until they end, cancel anytime.",
       href: "/dashboard/billing#plans",
     });
     expect(
@@ -328,7 +347,7 @@ describe("describeNotification — deck generated", () => {
       ),
     ).toEqual({
       subject: "Credit grant failed",
-      body: "on a paid invoice (in_1) — boom. The daily refill retries it; check the account's credits.",
+      body: "on a paid invoice (in_1) — boom. Plan credits are one-time: run scripts/grant-plan-credits-once.mjs (keyed — it grants nothing twice), never a hand grant, which the next paid invoice would double.",
       href: `/admin/users?u=${userId}`,
     });
     expect(

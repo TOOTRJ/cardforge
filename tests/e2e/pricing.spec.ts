@@ -25,7 +25,7 @@ test.describe("pricing page", () => {
     await page.goto("/pricing");
 
     await expect(
-      page.getByRole("heading", { name: /legendary tools/i }),
+      page.getByRole("heading", { name: /save more cards/i }),
     ).toBeVisible();
 
     for (const name of ["Free", "Plus", "Pro"]) {
@@ -71,21 +71,21 @@ test.describe("pricing page — signed in", () => {
     // buttons (proxy.ts → pricing-member): no anonymous storefront first, no
     // text swap after hydration.
     const html = await (await page.request.get("/pricing")).text();
-    expect(html).toContain("Try Plus free for 7 days");
+    expect(html).toContain("Start Plus with your free days");
     expect(html).toContain("Your current plan");
-    expect(html).not.toContain("Start free — 7-day trial");
+    expect(html).not.toContain("Start free — 7 free days");
     expect(html).not.toContain("Get started free");
 
     await page.goto("/pricing");
-    await expect(page.getByText("Your current plan")).toBeVisible();
-    await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /try pro free for 7 days/i })).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /start pro with your free days/i })).toBeVisible();
     // No Stripe customer → nothing to manage: the portal button must not
     // appear (it could only fail).
     await expect(page.getByRole("button", { name: /manage plan/i })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /get started free/i })).toHaveCount(0);
 
-    await page.getByRole("button", { name: /try plus free for 7 days/i }).click();
+    await page.getByRole("button", { name: /start plus with your free days/i }).click();
     await expect(page.getByText(/billing isn't available right now/i).first()).toBeVisible();
 
     await page.getByRole("button", { name: /buy 30 credits/i }).click();
@@ -129,9 +129,9 @@ test.describe("pricing page — signed in", () => {
     await expect(page.getByRole("banner").getByRole("link", { name: /^pricing$/i })).toHaveCount(0);
     // The plan grid is here instead — Pro is the current plan, and the
     // account is never offered a portal it doesn't have.
-    await expect(page.getByText("Your current plan")).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /manage plan/i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();
   });
 });
 
@@ -152,10 +152,10 @@ test.describe("billing page", () => {
     // stay in the HTML) carries a "Free plan" line too.
     await expect(page.getByRole("main").getByText("Free plan", { exact: true })).toBeVisible();
     // Free doesn't refill (2026-09-24): the plan card states the one-time starter credits.
-    await expect(page.getByText("5 at sign-up", { exact: true })).toBeVisible();
+    await expect(page.getByText("5 to start", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 10 credits/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 30 credits/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();
     // No billing account yet → nothing to open in the portal.
     await expect(page.getByRole("button", { name: /open the stripe portal|update payment method|cancel plan/i })).toHaveCount(0);
     // Without a Stripe customer there is nothing to show — and on the local

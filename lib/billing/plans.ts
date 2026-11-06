@@ -33,12 +33,79 @@ export const CARD_CAPACITY: Record<PlanTier, number> = {
  *  once, on Free ("Everything in Free" carries it up). */
 export const UNLIMITED_DECKS_LINE = "Unlimited decks — public, unlisted or private";
 
-/** "Up to 50 saved cards" / "Unlimited saved cards" — a plan's card line,
- *  from CARD_CAPACITY (the plan cards, the billing page's free-plan copy). */
+// ---------------------------------------------------------------------------
+// Saved-card capacity is THE paid benefit (owner finding 2026-11-06: users
+// convert to save more cards, not for the AI —
+// docs/research/card-capacity-conversion-2026-11.md). Every surface that
+// names a paid plan leads with it, in words built here from CARD_CAPACITY —
+// never a literal number in a component, so a cap that changes in this
+// table (and in migration 0104) can't leave a page quoting the old one.
+// THE RULE, in the owner's words (2026-11-06): "while a Plus or Pro plan is
+// active the user's account has full access to the plan's card limit" —
+// the cap is the plan's for as long as the plan runs, never a permanent
+// promise. The cap is SOFT: nothing is ever deleted; when a plan ends the
+// cards stay (viewable, editable, downloadable) and saving a NEW one needs
+// room under the current plan's cap (the Evernote / Trello rule, never
+// Dropbox's deletion clause) — the copy says both.
+// ---------------------------------------------------------------------------
+
+/** A cap as words: "50", "500" or "unlimited". */
+export function capacityWord(tier: PlanTier): string {
+  const cap = CARD_CAPACITY[tier];
+  return cap === CARD_CAPACITY_UNLIMITED ? "unlimited" : cap.toLocaleString("en-US");
+}
+
+/** The tier that lifts a tier's cap — Free → Plus, Plus → Pro, Pro none. */
+export function nextCapacityTier(tier: PlanTier): PaidTier | null {
+  if (tier === "free") return "plus";
+  if (tier === "plus") return "pro";
+  return null;
+}
+
+const TIER_LABEL: Record<PlanTier, string> = { free: "Free", plus: "Plus", pro: "Pro" };
+
+/** The rule as a clause, for a paid tier: "while Plus is active you have its
+ *  full limit of 500 saved cards" / "while Pro is active there is no limit". */
+export function planLimitClause(tier: PaidTier): string {
+  const cap = CARD_CAPACITY[tier];
+  return cap === CARD_CAPACITY_UNLIMITED
+    ? `while ${TIER_LABEL[tier]} is active there is no limit`
+    : `while ${TIER_LABEL[tier]} is active you have its full limit of ${cap.toLocaleString("en-US")} saved cards`;
+}
+
+/** "Up to 50 saved cards" / "Up to 500 saved cards while Plus is active" /
+ *  "Unlimited saved cards while Pro is active": a plan's FIRST feature
+ *  line, from CARD_CAPACITY (the plan cards, the home page's plan tiles,
+ *  the Settings summary). */
 export function savedCardsLine(tier: PlanTier): string {
   const cap = CARD_CAPACITY[tier];
-  return cap === CARD_CAPACITY_UNLIMITED ? "Unlimited saved cards" : `Up to ${cap.toLocaleString("en-US")} saved cards`;
+  const line = cap === CARD_CAPACITY_UNLIMITED ? "Unlimited saved cards" : `Up to ${cap.toLocaleString("en-US")} saved cards`;
+  return tier === "free" ? line : `${line} while ${TIER_LABEL[tier]} is active`;
 }
+
+/** The pricing page's capacity line, the rule in the owner's words: "While
+ *  a Plus or Pro plan is active, your account has the plan's full card
+ *  limit: Plus holds 500 saved cards, Pro holds them all. Free holds 50." */
+export function capacityHoldsLine(): string {
+  return `While a Plus or Pro plan is active, your account has the plan's full card limit: Plus holds ${capacityWord("plus")} saved cards, Pro holds them all. Free holds ${capacityWord("free")}.`;
+}
+
+/** The numbers alone, for an eyebrow: "Free holds 50 cards · Plus 500 ·
+ *  Pro unlimited". */
+export function capacityFactsLine(): string {
+  return `Free holds ${capacityWord("free")} cards · Plus ${capacityWord("plus")} · Pro ${capacityWord("pro")}`;
+}
+
+/** The one-sentence pitch the billing page uses: "Your plan's full card
+ *  limit while it's active — up to 500 saved cards on Plus, unlimited on
+ *  Pro." */
+export function capacityPitch(): string {
+  return `Your plan's full card limit while it's active — up to ${capacityWord("plus")} saved cards on Plus, unlimited on Pro.`;
+}
+
+/** The soft-cap fact, said wherever a limit is named. */
+export const CARDS_ARE_SAFE =
+  "Nothing is ever deleted: when a plan ends your cards stay — viewable, editable, downloadable — and saving a new one needs room under your current plan's cap.";
 
 export type PaidTier = "plus" | "pro";
 export type PackKey = "mini" | "small" | "large";
@@ -51,12 +118,17 @@ export type BillingPeriod = "monthly" | "annual";
 // networks' notice. Card-required trials convert at 2–3× the no-card rate and
 // stop throwaway accounts burning AI credits. Legacy no-card trials that
 // still exist keep their own terms (cancel at day 7 without a card).
-export const TRIAL_DAYS = 7;
+/** The days every new account banks at signup (migration 0179,
+ *  lib/billing/day-bank.ts): the first checkout's free period. Client-safe. */
+export const SIGNUP_BANK_DAYS = 7;
+/** The legacy name of the same number (the "7-day trial" before the bank). */
+export const TRIAL_DAYS = SIGNUP_BANK_DAYS;
 
-/** Credits granted when a trial STARTS — a taste, not the full allotment.
- *  The plan's full monthly credits land with the first payment (the
- *  month-wide shortfall logic in credit-refill.ts tops this up). */
-export const TRIAL_CREDITS = 25;
+/** The credits a FREE PERIOD brings, once per account (owner 2026-11-06):
+ *  the first checkout's banked days, or the first "Apply banked days"
+ *  (lib/billing/credit-refill.ts `grantFreePeriodCredits`). The old trial
+ *  tranche was 25. */
+export const FREE_PERIOD_CREDITS = 10;
 
 /** A trial that ends without converting gets one win-back offer: this much
  *  off the first month, applied automatically by the checkout action within
@@ -67,21 +139,22 @@ export const TRIAL_WINBACK_DISCOUNT_PCT = 20;
 export const TRIAL_WINBACK_COUPON_ID = "TRIAL_WINBACK_20";
 export const TRIAL_WINBACK_WINDOW_DAYS = 30;
 
-// Monthly credit allotment per tier. Plus/Pro refill monthly (the daily cron
-// + the subscription webhook). FREE DOES NOT REFILL (owner decision
-// 2026-09-24, reversing 2026-09-15): a new account gets SIGNUP_CREDITS once,
-// via the profiles.credits default, and after that only a pack or a plan adds
-// credits — the out-of-credits moment is where the upgrade modal and packs
-// sell, and with a monthly free refill it almost never happened (one account
-// ever ran dry). Every surface that used to say "5 a month" now says "5 to
-// start"; keep them in step with this table.
-// Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
-// measured) under ~40% of net revenue. Tune in tandem with prices below.
-export const MONTHLY_CREDITS: Record<PlanTier, number> = {
-  free: 0,
-  plus: 30,
-  pro: 100,
+// PLAN CREDITS ARE ONE-TIME (owner decision 2026-11-06, replacing the monthly
+// allotment of 30 / 100): a tier's stock lands ONCE per account with the
+// FIRST PAID invoice of a plan on that tier (lib/billing/credit-refill.ts
+// `grantPlanCreditsOnce`; Pro after Plus grants the difference). Nothing
+// refills — not monthly, not yearly; packs are the way to more. FREE gets
+// SIGNUP_CREDITS once (the profiles.credits default). Every surface says
+// "with your first payment" / "to start", never "a month".
+export const PLAN_CREDITS_ONCE: Record<PaidTier, number> = {
+  plus: 60,
+  pro: 120,
 };
+
+/** The one-time plan credits of a tier, 0 for free. */
+export function planCreditsOnceFor(tier: PlanTier): number {
+  return tier === "plus" || tier === "pro" ? PLAN_CREDITS_ONCE[tier] : 0;
+}
 
 /** Credits every new account starts with — the `profiles.credits` column
  *  default (migration 0027; the signup trigger writes the matching ledger
@@ -89,7 +162,7 @@ export const MONTHLY_CREDITS: Record<PlanTier, number> = {
 export const SIGNUP_CREDITS = 5;
 
 // Consumable top-up packs (one-time Stripe `payment` checkout). Purchased
-// credits never expire (unlike a plan's monthly allotment). Keys double as
+// credits never expire. Keys double as
 // Stripe lookup keys (`pack_<key>`, lib/stripe/prices.ts) and product
 // metadata (`pack: <key>`) on BOTH the live and sandbox catalogs.
 export const CREDIT_PACKS: Record<
@@ -229,11 +302,13 @@ export const PLANS: PlanDisplay[] = [
     name: "Free",
     priceUsd: 0,
     tagline: "Design and share custom cards, forever free.",
+    // Capacity FIRST on every plan (owner 2026-11-06): it is the one line
+    // people pay for, and plan-capacity-headline.test.ts holds the order.
     features: [
-      "5 AI credits at sign-up (no monthly refill — packs and plans add more)",
+      savedCardsLine("free"),
+      `${SIGNUP_CREDITS} AI credits to start — packs add more, and never expire`,
       "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
-      savedCardsLine("free"),
       UNLIMITED_DECKS_LINE,
       "Community gallery & sharing",
     ],
@@ -243,12 +318,12 @@ export const PLANS: PlanDisplay[] = [
     name: "Plus",
     priceUsd: 6,
     annualUsd: 60,
-    tagline: "For regular creators who want clean, hi-res cards.",
+    tagline: `Room for ${capacityWord("plus")} cards, downloaded clean and hi-res.`,
     featured: true,
     features: [
-      "30 AI credits every month",
-      ...PLUS_PRINT_PERKS,
       savedCardsLine("plus"),
+      `${PLAN_CREDITS_ONCE.plus} AI credits with your first payment`,
+      ...PLUS_PRINT_PERKS,
       "Everything in Free",
     ],
     comingSoon: PAID_COMING_SOON,
@@ -258,7 +333,7 @@ export const PLANS: PlanDisplay[] = [
     name: "Pro",
     priceUsd: 15,
     annualUsd: 150,
-    tagline: "For power users who design for their decks and print them.",
+    tagline: "Unlimited cards, print sheets and deck-aware AI.",
     // Every AI tool is open to every tier and credits are the limiter; the
     // ONLY tier-gated AI features are the deck-aware ones (owner decision,
     // 2026-09-15). Never list perks that aren't shipped (the old "priority
@@ -266,10 +341,10 @@ export const PLANS: PlanDisplay[] = [
     // paused: AI deck building is (TODO DK1, lib/ai/deck-ai-pause.ts), so the
     // tagline and the credits line no longer sell a whole AI deck.
     features: [
-      "100 AI credits every month",
+      savedCardsLine("pro"),
+      `${PLAN_CREDITS_ONCE.pro} AI credits with your first payment`,
       "AI cards & ideas designed for a specific deck",
       ...PRO_PRINT_PERKS,
-      savedCardsLine("pro"),
       "Everything in Plus",
     ],
     comingSoon: PRO_COMING_SOON,
@@ -282,14 +357,14 @@ export function planForTier(tier: PlanTier): PlanDisplay {
 
 /** True for the "unlimited" sentinel that admin/billing-off entitlements
  *  carry (Number.MAX_SAFE_INTEGER). */
-/** "Running low" = at or under a fifth of the plan's monthly allotment (min 1):
- *  Free (no refill) → ≤1, Plus 30 → ≤6, Pro 100 → ≤20. The old flat `≤ 5`
- *  equalled Free's then-monthly refill, so every free user saw the red
- *  warning permanently. */
-const LOW_CREDIT_FRACTION = 0.2;
-export function isLowCredits(balance: number, monthlyAllotment: number): boolean {
+/** "Running low": ≤ LOW_CREDITS_PAID on a paid plan, ≤ LOW_CREDITS_FREE on
+ *  free (a free account's 5 starter credits would read "low" from the start
+ *  at 3). Fixed numbers since credits are one-time (owner 2026-11-06). */
+export const LOW_CREDITS_PAID = 3;
+export const LOW_CREDITS_FREE = 1;
+export function isLowCredits(balance: number, isPaid: boolean): boolean {
   if (isUnlimitedCredits(balance)) return false;
-  return balance <= Math.max(1, Math.floor(monthlyAllotment * LOW_CREDIT_FRACTION));
+  return balance <= (isPaid ? LOW_CREDITS_PAID : LOW_CREDITS_FREE);
 }
 
 /** The "unlimited" sentinel admin / billing-off entitlements carry
@@ -305,9 +380,10 @@ export function formatCredits(credits: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Monthly credit refills (cron-driven, so monthly AND annual plans both get a
-// monthly allotment). Refills are idempotent per user per calendar month via a
-// synthetic key stored in credit_ledger.idempotency_key.
+// The calendar month, kept for the refill cron's run label and alert payload
+// (`app/api/cron/refill-credits`). The monthly refill it once keyed
+// (`refill:<user>:<period>`) ended 2026-11-06 — plan credits are one-time
+// (lib/billing/credit-refill.ts); the ledger's older `refill:` rows stay.
 // ---------------------------------------------------------------------------
 
 /** Calendar-month key, e.g. "2026-06" (UTC). */
@@ -315,27 +391,4 @@ export function currentCreditPeriod(now: Date = new Date()): string {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
-}
-
-/** The calendar month before `now`'s, e.g. "2026-05" for a June date (UTC) —
- *  what the cron backfills for an annual plan it missed. */
-export function previousCreditPeriod(now: Date = new Date()): string {
-  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  return currentCreditPeriod(new Date(first.getTime() - 1));
-}
-
-/** Idempotency key for a user's monthly subscription refill. */
-export function creditRefillKey(userId: string, period: string): string {
-  return `refill:${userId}:${period}`;
-}
-
-/** Idempotency key for the mid-month top-up when a user upgrades tiers after
- *  this month's refill already granted. Keyed per TIER so a re-upgrade in the
- *  same month (plus → pro → plus → pro) can never double-grant the delta. */
-export function creditUpgradeKey(
-  userId: string,
-  period: string,
-  tier: PlanTier,
-): string {
-  return `refill:${userId}:${period}:upgrade:${tier}`;
 }

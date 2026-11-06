@@ -8,7 +8,8 @@ import { planEndingText, type PlanEnding } from "@/lib/billing/plan-ending";
 import {
   formatCredits,
   planForTier,
-  MONTHLY_CREDITS,
+  planCreditsOnceFor,
+  savedCardsLine,
   type PlanTier,
 } from "@/lib/billing/plans";
 
@@ -113,6 +114,13 @@ export function BillingPanel({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 px-4 py-3">
+        {/* The cap first: the plan's headline number (owner 2026-11-06). */}
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wider text-subtle">
+            Saved cards
+          </span>
+          <span className="text-sm font-semibold text-foreground">{savedCardsLine(tier)}</span>
+        </div>
         <div className="flex flex-col">
           <span className="text-[11px] uppercase tracking-wider text-subtle">
             AI credits
@@ -122,7 +130,7 @@ export function BillingPanel({
               {formatCredits(credits)}
             </span>
             <span className="text-xs text-muted">
-              · {MONTHLY_CREDITS[tier]}/mo on {plan.name}
+              {planCreditsOnceFor(tier) > 0 ? `· ${planCreditsOnceFor(tier)} one-time on ${plan.name}` : `· ${plan.name}`}
             </span>
           </span>
         </div>

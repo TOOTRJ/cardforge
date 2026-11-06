@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
 import {
+  capacityUpgradeLink,
   describeCapacity,
   describeUsage,
   type CardCapacity,
@@ -12,6 +13,9 @@ import { cn } from "@/lib/utils";
 // user: before creating a card (creator), before an AI batch (deck wizard,
 // in-deck AI panel) and as the usage line on My Cards. Pure presentation;
 // the copy comes from lib/billing/capacity-copy so every surface agrees.
+// The way out is always the PLAN THAT LIFTS THE CAP, named with its number
+// ("Plus holds 500 cards"), never a bare "Upgrade" (owner 2026-11-06: the
+// cap is what sells a plan — capacityUpgradeLink).
 // ---------------------------------------------------------------------------
 
 const TONE_CLASS = {
@@ -43,7 +47,8 @@ export function CapacityNotice({
     variant === "usage" ? describeUsage(capacity) : describeCapacity(capacity, adding);
   if (!notice) return null;
   const Icon = TONE_ICON[notice.tone];
-  const showActions = notice.tone !== "info";
+  const upgrade = capacity ? capacityUpgradeLink(capacity.tier) : null;
+  const showManage = notice.tone !== "info";
   return (
     <div
       role={notice.tone === "danger" ? "alert" : "status"}
@@ -55,14 +60,18 @@ export function CapacityNotice({
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 leading-6">{notice.message}</span>
-      {showActions ? (
+      {showManage || upgrade ? (
         <span className="flex shrink-0 items-center gap-3 text-xs font-semibold">
-          <Link href="/dashboard/cards" className="underline-offset-2 hover:underline">
-            Manage cards
-          </Link>
-          <Link href="/pricing" className="text-primary-bright underline-offset-2 hover:underline">
-            Upgrade
-          </Link>
+          {showManage ? (
+            <Link href="/dashboard/cards" className="underline-offset-2 hover:underline">
+              Manage cards
+            </Link>
+          ) : null}
+          {upgrade ? (
+            <Link href={upgrade.href} className="text-primary-bright underline-offset-2 hover:underline">
+              {upgrade.label} →
+            </Link>
+          ) : null}
         </span>
       ) : null}
     </div>

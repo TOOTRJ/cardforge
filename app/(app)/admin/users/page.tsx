@@ -18,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import {
   BillingHealthPanel,
   CardLimitForm,
-  FreeDaysForm,
+  BankDaysForm,
+  BankEntriesList,
+  StaffAccessForm,
   GrantCreditsForm,
   PlanGrantsList,
   ResyncSubscriptionButton,
@@ -28,6 +30,8 @@ import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { getRevenueSummary } from "@/lib/admin/revenue-queries";
 import { FunnelPanel } from "@/components/admin/funnel-panel";
 import { getFunnelSummary } from "@/lib/admin/funnel-queries";
+import { CreditGrantsPanel } from "@/components/admin/credit-grants-panel";
+import { getCreditGrantStats } from "@/lib/admin/credit-grant-stats";
 import { ReferralPanel } from "@/components/admin/referral-panel";
 import { getReferralStats } from "@/lib/admin/referral-queries";
 import { readReferralSettings } from "@/lib/referrals/settings-server";
@@ -61,6 +65,7 @@ import { isUuid } from "@/lib/ids";
 import { planEndingAdminLabel, planEndingOf } from "@/lib/billing/plan-ending";
 import { cancellationStats } from "@/lib/admin/user-cancellation";
 import { listPlanGrants } from "@/lib/billing/plan-grants";
+import { listBankEntriesForAdmin } from "@/lib/billing/day-bank";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -100,12 +105,13 @@ export default async function AdminUsersPage({
     );
   }
 
-  const [page, revenue, funnel, referrals, referralSettings] = await Promise.all([
+  const [page, revenue, funnel, referrals, referralSettings, creditGrants] = await Promise.all([
     listAdminUsers(params),
     getRevenueSummary(),
     getFunnelSummary(),
     getReferralStats(),
     readReferralSettings(createAdminClient()),
+    getCreditGrantStats(),
   ]);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
@@ -130,6 +136,12 @@ export default async function AdminUsersPage({
       {referrals ? (
         <div className="mt-6">
           <ReferralPanel summary={referrals} settings={referralSettings} />
+        </div>
+      ) : null}
+
+      {creditGrants ? (
+        <div className="mt-6">
+          <CreditGrantsPanel stats={creditGrants} />
         </div>
       ) : null}
 
@@ -412,7 +424,7 @@ function PlanBadges({ user }: { user: AdminUserRow }) {
 
 async function UserDetail({ userId, backHref }: { userId: string; backHref: string }) {
   const admin = createAdminClient();
-  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList, grants] =
+  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList, grants, bank] =
     await Promise.all([
       admin
         .from("profiles")
@@ -432,6 +444,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
         .limit(12),
       listThreadsForUser(userId),
       listPlanGrants(admin, userId),
+      listBankEntriesForAdmin(admin, userId),
     ]);
 
   if (ledgerError) console.error("[admin/users] credit ledger read failed:", ledgerError.message);
@@ -560,7 +573,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <section className="flex flex-col gap-3">
               <SectionTitle
                 title="Subscription"
-                hint="Rewrites tier/status/period from the customer's live Stripe subscriptions (the webhook's own sync) and grants any monthly credits the tier is owed. Use it when Stripe and the profile disagree."
+                hint="Rewrites tier/status/period from the customer's live Stripe subscriptions (the webhook's own sync) (plan credits are one-time: a resync grants none — the paid invoice does). Use it when Stripe and the profile disagree."
               />
               <div>
                 <ResyncSubscriptionButton
@@ -578,15 +591,30 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             </section>
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle
-                title="Free days (comp)"
-                hint="Whole 30-day units of a plan with its normal AI credits, exact to the second. On a live, renewing Stripe plan or trial the days are ADDED to the time paid for (the next charge moves out by them; nothing is credited or refunded). With no live plan they are a perks overlay from now (or from a cancelled plan's end). Below the plan they pay for: recorded, no change. 'No end' is for staff accounts with no Stripe plan. Revoke takes the newest grant back."
+                title="Bank free days (comp)"
+                hint="A comp is banked days (owner 2026-11-06): tier-less, no AI credits (grant those above). Their first checkout applies the whole bank as its free period — card required, billed when the days end unless they cancel; after that the days wait until they press Apply on their billing page (added to a live plan's time). At least 2 days. Revoke takes back days still banked."
               />
-              <FreeDaysForm
-                userId={user.id}
-                hasLiveSubscription={["trialing", "active", "past_due", "unpaid"].includes(user.subscription_status ?? "")}
-              />
-              <PlanGrantsList rows={grants.rows} loadError={grants.loadError} />
+              <BankDaysForm userId={user.id} />
+              <BankEntriesList rows={bank.rows} loadError={bank.loadError} />
             </section>
+            {["trialing", "active", "past_due", "unpaid"].includes(user.subscription_status ?? "") ? null : (
+              <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
+                <SectionTitle
+                  title="Staff access (no end)"
+                  hint="The one comp that is not banked days: a plan with no end and no Stripe account, for staff. It brings no automatic credits (grant those above). Revoke it below."
+                />
+                <StaffAccessForm userId={user.id} />
+              </section>
+            )}
+            {grants.rows.length > 0 || grants.loadError ? (
+              <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
+                <SectionTitle
+                  title="Plan grants"
+                  hint="Banked days applied to a plan (the next charge moved), staff access, and the dated comps given before 2026-11-06 (they run out on their date). Revoke takes the newest applied one back — the Stripe hold moves back; applied banked days are NOT returned to the bank (bank them again if they should be)."
+                />
+                <PlanGrantsList rows={grants.rows} loadError={grants.loadError} />
+              </section>
+            ) : null}
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle
                 title="Card limit override"

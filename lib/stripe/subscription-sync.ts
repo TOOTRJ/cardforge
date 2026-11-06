@@ -3,12 +3,12 @@ import "server-only";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import {
-  currentCreditPeriod,
+
   DELINQUENT_SUBSCRIPTION_STATUSES,
   TIER_RANK,
   type PlanTier,
 } from "@/lib/billing/plans";
-import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
+import { grantFreePeriodCredits, grantPlanCreditsOnce } from "@/lib/billing/credit-refill";
 import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import {
   endsByPeriodEnd,
@@ -139,10 +139,13 @@ async function listCustomerSubscriptions(
   customerId: string,
 ): Promise<Stripe.Subscription[] | null> {
   try {
+    // Stripe's page maximum. A customer with more subscriptions than one
+    // page holds (years of monthly trials and cancels) had the live one
+    // outside the newest 20 (audit 2026-11-05, nice-to-have).
     const list = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
-      limit: 20,
+      limit: 100,
     });
     return list.data;
   } catch {
@@ -566,10 +569,15 @@ export async function syncSubscriptionForUser(
 }
 
 /**
- * Grant this month's allotment for the synced state (idempotent per user per
- * month; mid-month upgrades top up the delta — lib/billing/credit-refill.ts).
- * A TRIAL gets exactly one grant, at creation: `isCreationEvent` must only
- * be true for the subscription.created event of the synced subscription.
+ * The credits a synced state earns (lib/billing/credit-refill.ts, owner
+ * 2026-11-06 — one-time, never a refill):
+ *   • a subscription CREATED `trialing` (the checkout applied the bank):
+ *     the free-period credits, once per account — `isCreationEvent` must only
+ *     be true for the subscription.created event of the synced subscription;
+ *   • a PAID invoice (`paid`: money taken) on a live Plus / Pro plan: the
+ *     tier's one-time stock, once per account and tier (Pro after Plus the
+ *     difference). Any other sync — a cancel click, a portal change, a
+ *     proration, the admin's resync — grants nothing.
  * Throws on RPC failure so a webhook 500s and Stripe retries.
  */
 export async function grantCreditsForSync(
@@ -577,42 +585,23 @@ export async function grantCreditsForSync(
   admin: AdminClient,
   opts: {
     isCreationEvent: boolean;
-    /** The sync was driven by a PAYING event — a cycle / first invoice
-     *  paid, a trial converting — which is what grants a MONTHLY plan's base
-     *  allotment. Any other sync (a cancel click, a resume, a portal change,
-     *  a proration) only backstops it (lib/billing/credit-refill.ts). */
+    /** The sync was driven by a PAID invoice — `invoice.paid` with
+     *  `amount_paid > 0` on a subscription invoice. */
     paid?: boolean;
-    /** The calendar month the paying invoice is FOR (its line's period
-     *  start) — a renewal that failed on Feb 28 and paid on the Mar 5 retry
-     *  is February's allotment, never March's. Default: this month. */
-    period?: string;
   },
 ): Promise<void> {
   if (!result.subscriptionId || !isLiveStatus(result.status)) return;
   if (result.tier === "free") return;
-  // A trial gets ONE tranche (TRIAL_CREDITS) when it starts and nothing more
-  // until it pays — no updated event, no cron, no mid-trial plan switch
-  // changes that (owner decision 2026-09-24: the full allotment is what the
-  // first payment buys).
   if (result.status === "trialing") {
     if (!opts.isCreationEvent) return;
-    const trial = await grantTrialCreditsForPeriod(admin, result.userId, currentCreditPeriod());
-    if (!trial.ok) throw new Error(`Trial credit grant failed for ${result.userId}: ${trial.error}`);
+    const bonus = await grantFreePeriodCredits(admin, result.userId);
+    if (!bonus.ok) throw new Error(`Free-period credit grant failed for ${result.userId}: ${bonus.error}`);
     return;
   }
-  // A monthly plan's base allotment belongs to the invoice that pays it
-  // (audit 2026-11-05, P2-1): a plan paid on Jan 31 whose owner clicked
-  // Cancel on Feb 2 used to get February's allotment on that click.
-  const base = result.billingInterval === "month" && !opts.isCreationEvent && !opts.paid ? "backstop" : "always";
-  const granted = await grantMonthlyCreditsForPeriod(
-    admin,
-    result.userId,
-    result.tier,
-    opts.period ?? currentCreditPeriod(),
-    { base },
-  );
+  if (!opts.paid) return;
+  const granted = await grantPlanCreditsOnce(admin, result.userId, result.tier);
   if (!granted.ok) {
-    throw new Error(`Credit grant failed for ${result.userId}: ${granted.error}`);
+    throw new Error(`Plan credit grant failed for ${result.userId}: ${granted.error}`);
   }
 }
 

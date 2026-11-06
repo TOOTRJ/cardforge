@@ -964,6 +964,9 @@ values
   ('f3000000-0000-4000-a000-000000000009', 'card_saved', 'd0000000-0000-4000-a000-000000000004', '{"visibility": "public"}', 'server', now() - interval '11 days'),
   ('f3000000-0000-4000-a000-00000000000a', 'ai_generation', 'd0000000-0000-4000-a000-000000000004', '{"kind": "card"}', 'server', now() - interval '11 days'),
   ('f3000000-0000-4000-a000-00000000000b', 'download', 'd0000000-0000-4000-a000-000000000004', '{"format": "pdf"}', 'server', now() - interval '9 days'),
-  ('f3000000-0000-4000-a000-00000000000c', 'trial_lapsed', 'd0000000-0000-4000-a000-000000000004', '{"tier": "pro", "subscriptionId": "sub_dev_artist_trial"}', 'server', now() - interval '5 days')
+  ('f3000000-0000-4000-a000-00000000000c', 'trial_lapsed', 'd0000000-0000-4000-a000-000000000004', '{"tier": "pro", "subscriptionId": "sub_dev_artist_trial"}', 'server', now() - interval '5 days'),
+  -- Ended plans with the portal's reason (the Funnel panel's "Cancellations by reason").
+  ('f3000000-0000-4000-a000-00000000000d', 'subscription_cancelled', 'd0000000-0000-4000-a000-000000000003', '{"tier": "plus", "interval": "month", "subscriptionId": "sub_dev_free_old", "cancelReason": "cancellation_requested", "cancelFeedback": "too_expensive"}', 'server', now() - interval '8 days'),
+  ('f3000000-0000-4000-a000-00000000000e', 'subscription_cancelled', 'd0000000-0000-4000-a000-000000000005', '{"tier": "plus", "interval": "month", "subscriptionId": "sub_dev_new_old", "cancelReason": "cancellation_requested", "cancelFeedback": "unused"}', 'server', now() - interval '3 days')
 on conflict (id) do nothing;
 

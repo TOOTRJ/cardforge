@@ -354,7 +354,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
     description:
       "Generating cards and ideas with AI in the creator, what a credit buys, refunds, and how plans and credit packs add more.",
     intro:
-      "The creator's AI drafts a whole card and paints its art, brainstorms ideas, or fills just the fields you pick. It runs on credits: every account starts with some, Plus and Pro add more each month, and packs top you up.",
+      "The creator's AI drafts a whole card and paints its art, brainstorms ideas, or fills just the fields you pick. It runs on credits: every account starts with some, Plus and Pro bring a one-time stock with the first payment, and packs top you up.",
     howTo: {
       id: "use-ai-credits",
       title: "Use AI credits",
@@ -362,7 +362,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
       steps: [
         {
           title: "Check your balance",
-          body: "Signed in, your credits show in the site header. A new account starts with 5; Plus adds 30 a month and Pro 100.",
+          body: "Signed in, your credits show in the site header. A new account starts with 5; Plus comes with 60 and Pro with 120, once, with the first payment — nothing refills monthly.",
         },
         {
           title: "Pick a tool",
@@ -382,7 +382,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Top up",
-          body: "Out of credits? A pack of 10, 30 or 100 never expires, and Plus and Pro members pay 20% less for packs. Or choose a plan that adds credits every month.",
+          body: "Out of credits? A pack of 10, 30 or 100 never expires, and Plus and Pro members pay 20% less for packs. A plan brings its own stock of credits with its first payment.",
         },
       ],
       tip: DECK_AI_PAUSED_MESSAGE,

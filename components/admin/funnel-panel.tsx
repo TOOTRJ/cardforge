@@ -86,6 +86,21 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
           )}
           </div>
           <div>
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Cancellations by reason · 30d</h3>
+            {summary.cancelReasons.length === 0 ? (
+              <p className="text-sm text-muted">No plan ended in the last 30 days.</p>
+            ) : (
+              <ul className="divide-y divide-border/40 text-sm">
+                {summary.cancelReasons.map((row) => (
+                  <li key={row.reason} className="flex items-center justify-between py-1">
+                    <span className="text-foreground">{row.label}</span>
+                    <span className="tabular-nums text-muted">{row.n}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
             <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">
               Signups by last create button pressed · 30d
             </h3>

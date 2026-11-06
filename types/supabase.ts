@@ -469,6 +469,8 @@ export type Database = {
           starts_at: string;
           ends_at: string | null;
           credits_from: string;
+          days: number | null;
+          grants_credits: boolean;
           status: string;
           stripe_error: string | null;
           revoked_at: string | null;
@@ -490,6 +492,8 @@ export type Database = {
           starts_at: string;
           ends_at?: string | null;
           credits_from: string;
+          days?: number | null;
+          grants_credits?: boolean;
           status?: string;
           stripe_error?: string | null;
           revoked_at?: string | null;
@@ -511,6 +515,8 @@ export type Database = {
           starts_at?: string;
           ends_at?: string | null;
           credits_from?: string;
+          days?: number | null;
+          grants_credits?: boolean;
           status?: string;
           stripe_error?: string | null;
           revoked_at?: string | null;
@@ -533,6 +539,61 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      // Migration 0179 — the days bank.
+      day_bank_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          days: number;
+          source: string;
+          reference: string | null;
+          note: string | null;
+          status: string;
+          batch_id: string | null;
+          reserved_at: string | null;
+          applied_at: string | null;
+          applied_via: string | null;
+          applied_ref: string | null;
+          revoked_at: string | null;
+          revoke_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          days: number;
+          source: string;
+          reference?: string | null;
+          note?: string | null;
+          status?: string;
+          batch_id?: string | null;
+          reserved_at?: string | null;
+          applied_at?: string | null;
+          applied_via?: string | null;
+          applied_ref?: string | null;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          days?: number;
+          source?: string;
+          reference?: string | null;
+          note?: string | null;
+          status?: string;
+          batch_id?: string | null;
+          reserved_at?: string | null;
+          applied_at?: string | null;
+          applied_via?: string | null;
+          applied_ref?: string | null;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       // Migration 0177 — referrals.
       referral_codes: {
@@ -557,6 +618,9 @@ export type Database = {
           block_reason: string | null;
           signed_up_at: string;
           first_card_at: string | null;
+          cards_saved_at: string | null;
+          card_on_file_at: string | null;
+          ladder_step: number | null;
           rewarded_at: string | null;
           referrer_reward: string | null;
           referee_reward: string | null;
@@ -574,6 +638,9 @@ export type Database = {
           block_reason?: string | null;
           signed_up_at?: string;
           first_card_at?: string | null;
+          cards_saved_at?: string | null;
+          card_on_file_at?: string | null;
+          ladder_step?: number | null;
           rewarded_at?: string | null;
           referrer_reward?: string | null;
           referee_reward?: string | null;
@@ -591,6 +658,9 @@ export type Database = {
           block_reason?: string | null;
           signed_up_at?: string;
           first_card_at?: string | null;
+          cards_saved_at?: string | null;
+          card_on_file_at?: string | null;
+          ladder_step?: number | null;
           rewarded_at?: string | null;
           referrer_reward?: string | null;
           referee_reward?: string | null;
@@ -3196,6 +3266,19 @@ export type Database = {
         Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null; p_block_reason?: string | null };
         /** 'rewarded' | 'capped_month' | 'capped_lifetime' | 'capped_friends' | 'blocked', or null. */
         Returns: string | null;
+      };
+      referrals_awaiting_plan: {
+        Args: { p_limit?: number | null };
+        Returns: Array<Database["public"]["Tables"]["referrals"]["Row"]>;
+      };
+      referrals_stranded_signups: {
+        Args: { p_cards: number; p_since: string; p_until: string; p_limit?: number | null };
+        Returns: Array<{ id: string; referee_id: string | null }>;
+      };
+      claim_referral_reward_v2: {
+        Args: { p_referral_id: string; p_friends_cap?: number | null; p_block_reason?: string | null };
+        /** One row — 'rewarded' (with the referrer's ladder step), 'capped_friends' or 'blocked' — or none. */
+        Returns: Array<{ outcome: string; step: number | null }>;
       };
       normalize_referral_email: {
         Args: { p_email: string | null };

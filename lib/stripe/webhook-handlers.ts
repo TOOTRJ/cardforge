@@ -15,6 +15,8 @@ import {
   type SubscriptionSyncResult,
 } from "./subscription-sync";
 import { ACCOUNT_DELETED_CANCEL_COMMENT } from "./cancel-comment";
+import { settleCheckoutBank } from "@/lib/billing/day-bank";
+import { advanceReferral } from "@/lib/referrals/server";
 import { tierForPrice } from "./config";
 import { checkoutReminderEmail, paymentFailedEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { dunningGraceUntil } from "@/lib/billing/dunning";
@@ -36,7 +38,7 @@ import {
   TRIAL_WINBACK_WINDOW_DAYS,
   type PackKey,
   type PlanTier,
-  currentCreditPeriod,
+
 } from "@/lib/billing/plans";
 
 // All entitlement/credit writes happen here, via the service-role admin client
@@ -51,14 +53,14 @@ import {
 // from the price/product (not only the env ids), and refuses to demote an
 // active subscriber whose price it cannot map.
 //
-// Credit refills are cron-driven (see app/api/cron/refill-credits) so monthly
-// AND annual plans both get a monthly allotment. We additionally grant the
-// FIRST month immediately on subscription create/update — deduped against the
-// cron via the same per-user-per-month key — so a new subscriber gets credits
-// without waiting for the next cron tick. Mid-month upgrades get the tier
-// delta topped up via lib/billing/credit-refill (shared with the cron).
-// Trials are the exception: one grant at creation, no refills until the
-// first payment (grantCreditsForSync — the cron skips trialing too).
+// Plan credits are ONE-TIME (owner 2026-11-06, lib/billing/credit-refill.ts):
+// the tier's stock lands with the FIRST PAID invoice (`invoice.paid` below,
+// money taken, keyed per account and tier — a retry or a later invoice
+// grants nothing twice), and the free-period 10 with the subscription the
+// checkout created `trialing` (grantCreditsForSync). No cron grants a
+// subscriber anything any more, so a paid invoice whose grant could not run
+// alerts the admins (`credit_refill_failed`): the next chance would be the
+// next paid invoice, a month or a year away.
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -178,6 +180,14 @@ async function handleSubscriptionEvent(
       userId,
       props: { tier, interval: interval ?? undefined, subscriptionId: sub.id },
     });
+    // A card on file — the referral program's second bar (0180): a friend
+    // whose cards are saved qualifies with this subscription. Best effort,
+    // never fails the sync (the hourly sweep finishes what this misses).
+    try {
+      await advanceReferral(admin, userId, { stripe });
+    } catch (error) {
+      console.error(`[referrals] advance after subscription ${sub.id} failed:`, error instanceof Error ? error.message : error);
+    }
   } else if (opts.previous) {
     // What an updated event changed: a trial converting, or a plan switch.
     // A paying plan coming off a free-days hold converts no trial.
@@ -203,14 +213,12 @@ async function handleSubscriptionEvent(
     }
   }
 
-  // The one-grant-per-trial rule keys on the CREATED event of the synced
+  // The free-period credits key on the CREATED event of the synced
   // subscription — a created event for a secondary subscription must not
-  // re-grant the primary's month.
+  // grant them again. The plan's one-time credits are the PAID invoice's
+  // (handleInvoicePaid), never a subscription event's.
   await grantCreditsForSync(result, admin, {
     isCreationEvent: opts.isCreationEvent && result.subscriptionId === sub.id,
-    // A trial converting is the one `updated` that pays (its invoice.paid
-    // grants too; both are idempotent on the month's key).
-    paid: opts.previous?.status === "trialing" && sub.status === "active",
   });
   return { userId, result };
 }
@@ -502,6 +510,16 @@ async function handleInvoicePaid(
   let tier: PlanTier | null = null;
   let interval: string | null = null;
   let grantError: string | null = null;
+  // MONEY TAKEN on a subscription invoice (owner 2026-11-06): the plan's
+  // one-time credits land with the first paid invoice of a tier — a $0
+  // trial-start invoice or a 100 %-off coupon grants nothing; an upgrade's
+  // proration invoice (subscription_update) is a payment on the new tier
+  // and grants its difference.
+  const paid =
+    (invoice.amount_paid ?? 0) > 0 &&
+    (invoice.billing_reason === "subscription_cycle" ||
+      invoice.billing_reason === "subscription_create" ||
+      invoice.billing_reason === "subscription_update");
   if (subscriptionId) {
     let sub: Stripe.Subscription | null = null;
     try {
@@ -517,38 +535,21 @@ async function handleInvoicePaid(
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
       try {
-        const paid = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
-        // The month the invoice is FOR: the subscription's own current period
-        // (just read), else the first line's service period (a pending
-        // proration line can come first), never the invoice's `period_start`
-        // (the previous cycle on this API version).
-        const periodStart =
-          sub.items?.data?.[0]?.current_period_start ?? invoice.lines?.data?.[0]?.period?.start ?? null;
-        await grantCreditsForSync(result, admin, {
-          isCreationEvent: false,
-          // The cycle's (or the first) invoice is what a monthly plan's
-          // allotment is for; a proration or a $0 update invoice is not —
-          // and it is the month the invoice is FOR (a retry that pays on
-          // Mar 5 for a Feb 28 renewal is February's).
-          paid,
-          ...(paid && typeof periodStart === "number"
-            ? { period: currentCreditPeriod(new Date(periodStart * 1000)) }
-            : {}),
-        });
+        await grantCreditsForSync(result, admin, { isCreationEvent: false, paid });
       } catch (error) {
-        // Loud, never thrown (Stripe's retries stay as they were; the
-        // subscription events and the daily cron grant the month too): an
-        // error log, and the admins alerted once per invoice after the
-        // revenue row below.
+        // Loud, never thrown (Stripe's retries stay as they were): an error
+        // log, and the admins alerted once per invoice after the revenue row
+        // below — nothing else grants a plan's stock (independent check).
         grantError = error instanceof Error ? error.message : String(error);
         console.error(`[stripe] invoice.paid credit grant failed for ${invoice.id} (user ${userId}): ${grantError}`);
       }
     } catch (error) {
       // The subscription events carry the sync; the row still gets written.
-      console.warn(
-        `[stripe] invoice.paid resync skipped for ${subscriptionId}:`,
-        error instanceof Error ? error.message : error,
-      );
+      // On a PAID invoice the grant never ran either, and no cron would
+      // catch it up: the same alert (independent check 2026-11-06).
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[stripe] invoice.paid resync skipped for ${subscriptionId}:`, message);
+      if (paid) grantError = `the subscription could not be read or synced, so the plan credits were not granted — ${message}`;
     }
     // Synced to free (or the sync failed): the invoice's own price names
     // the tier it billed, if the subscription could be read.
@@ -1044,6 +1045,8 @@ export async function handleStripeEvent(
       await handleCheckoutPaid(session, admin, event.created);
       await handleSupersededSubscription(session, stripe);
       await markWinbackRedeemed(session, admin);
+      // The days bank (0179): the days this session applied are spent.
+      await settleCheckoutBank(admin, session, "completed");
       await recordFunnelEvent(admin, {
         event: "checkout_completed",
         userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
@@ -1094,6 +1097,8 @@ export async function handleStripeEvent(
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
+      // The days bank (0179): the days it held go back to the bank.
+      await settleCheckoutBank(admin, session, "expired");
       await handleCheckoutExpired(session, deps);
       await recordFunnelEvent(admin, {
         event: "checkout_expired",

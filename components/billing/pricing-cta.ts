@@ -1,6 +1,6 @@
 import {
   DELINQUENT_SUBSCRIPTION_STATUSES,
-  TRIAL_DAYS,
+  SIGNUP_BANK_DAYS,
   type PlanTier,
 } from "@/lib/billing/plans";
 import type { BillingViewer } from "@/lib/billing/viewer";
@@ -63,9 +63,10 @@ export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta
 
   const name = PAID_NAME[tier];
   if (!viewer.isSignedIn) {
-    // The anonymous storefront leads with the trial — signup is its first
-    // step; checkout re-validates eligibility server-side either way.
-    return { kind: "signup", label: `Start free — ${TRIAL_DAYS}-day trial` };
+    // The anonymous storefront leads with the free days every new account
+    // banks (0179) — signup is its first step; checkout re-validates
+    // eligibility server-side either way.
+    return { kind: "signup", label: `Start free — ${SIGNUP_BANK_DAYS} free days` };
   }
   // Payment broken on an existing subscription: perks are off but a fresh
   // checkout would sell a SECOND subscription — the portal is the only
@@ -83,11 +84,12 @@ export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta
     return { kind: "checkout", label: `Switch to ${name}` };
   }
   // Free, lapsed, canceled, comped or admin: a fresh subscription. Only an
-  // account that has NEVER subscribed is promised the trial.
+  // account that has NEVER subscribed is promised its free days (the
+  // signup days, plus whatever the bank holds — the checkout applies them all).
   return {
     kind: "checkout",
     label: viewer.hasSubscribed
       ? `Choose ${name}`
-      : `Try ${name} free for ${TRIAL_DAYS} days`,
+      : `Start ${name} with your free days`,
   };
 }

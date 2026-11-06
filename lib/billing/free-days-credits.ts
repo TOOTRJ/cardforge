@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { MONTHLY_CREDITS, type PaidTier } from "@/lib/billing/plans";
+import type { PaidTier } from "@/lib/billing/plans";
 import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +11,13 @@ import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 // `grant:<id>:<k>` (reason `plan_grant`). The daily refill cron runs this
 // sweep after the subscribers' one; `grant_credits` dedupes on the key, so
 // a rerun grants nothing twice and a missed day is caught up the next.
+//
+// The FIRST allotment is also granted the moment the grant is applied
+// (`grantCreditsForGrant`, called by lib/billing/free-days-apply.ts): a
+// referral's free days turned the plan badge to Plus at once while the 30
+// credits waited for the 06:00 UTC cron — "Remaining 4 · Monthly allotment
+// 30" for up to a day (owner, production, 2026-11-06). The cron stays the
+// catch-up for later allotments and for a grant whose first call failed.
 //
 // It replaces the calendar-month rule a comp had before (an unexpired comp
 // was "owed its tier every month" by lib/billing/credit-refill.ts — a
@@ -29,6 +36,14 @@ import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 
 export type CreditGrantClient = ReturnType<typeof createAdminClient>;
 
+/** The allotment a DATED free-days grant made before 2026-11-06 keeps
+ *  receiving per 30-day unit until it runs out (the monthly numbers of the
+ *  time). Plan credits themselves are one-time now (lib/billing/plans.ts
+ *  PLAN_CREDITS_ONCE); nothing new is granted on this table — an admin
+ *  comp is banked days with no credits, and STAFF "no end" access gets no
+ *  automatic credits (owner 2026-11-06: an admin grants by hand). */
+export const LEGACY_FREE_DAYS_ALLOTMENT: Record<PaidTier, number> = { plus: 30, pro: 100 };
+
 /** The columns the sweep reads. */
 export type PlanGrantCreditRow = {
   id: string;
@@ -39,6 +54,8 @@ export type PlanGrantCreditRow = {
   ends_at: string | null;
   applied_as: string;
   status: string;
+  /** False: a days-bank application (0179) — no allotments of its own. */
+  grants_credits?: boolean | null;
 };
 
 export const GRANT_SWEEP_PAGE_SIZE = 500;
@@ -58,10 +75,13 @@ export function planGrantCreditKey(grantId: string, k: number): string {
  * grant's end. Pure; the caller subtracts what the ledger already holds.
  */
 export function freeDaysAllotmentsDue(
-  grant: Pick<PlanGrantCreditRow, "units" | "credits_from" | "ends_at" | "status" | "applied_as">,
+  grant: Pick<PlanGrantCreditRow, "units" | "credits_from" | "ends_at" | "status" | "applied_as" | "grants_credits">,
   now: Date = new Date(),
 ): number[] {
   if (grant.status !== "applied") return [];
+  if (grant.grants_credits === false) return [];
+  // Open-ended (staff) access: nothing automatic (owner 2026-11-06).
+  if (grant.units == null) return [];
   if (grant.applied_as !== "overlay" && grant.applied_as !== "subscription_hold") return [];
   const from = Date.parse(grant.credits_from);
   if (!Number.isFinite(from)) return [];
@@ -101,7 +121,7 @@ export async function grantFreeDaysCredits(
   for (let from = 0; ; from += GRANT_SWEEP_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("plan_grants")
-      .select("id, user_id, tier, units, credits_from, ends_at, applied_as, status")
+      .select("id, user_id, tier, units, credits_from, ends_at, applied_as, status, grants_credits")
       .eq("status", "applied")
       .in("applied_as", ["overlay", "subscription_hold"])
       .or(`ends_at.is.null,ends_at.gte.${cutoff}`)
@@ -128,6 +148,30 @@ export async function grantFreeDaysCredits(
   return { ok: true, processed, granted, failed };
 }
 
+/**
+ * ONE grant's due allotments, now — what the sweep does per row, callable
+ * the moment a grant is applied so its first credits land at once. Never
+ * throws: a failure is the caller's warning and the cron's catch-up.
+ */
+export async function grantCreditsForGrant(
+  admin: CreditGrantClient,
+  grant: PlanGrantCreditRow,
+  now: Date = new Date(),
+  /** The plan state the WRITER just read from Stripe (status + tier): the
+   *  overlay's allotment reads it instead of the profile row, which a
+   *  webhook may not have synced yet (an `active` copy of a plan Stripe
+   *  already holds past due would have docked the allotment). */
+  planState?: OverlayPlanState,
+): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
+  const due = freeDaysAllotmentsDue(grant, now);
+  if (due.length === 0) return { ok: true, granted: 0 };
+  try {
+    return await grantDueAllotments(admin, grant, due, planState);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 /** The allotment an OVERLAY grant adds on top of a running ACTIVE plan: the
  *  difference between the two tiers' credits (the plan's own allotment is
  *  the subscribers' sweep's / the invoice's), nothing when the plan's tier
@@ -135,31 +179,38 @@ export async function grantFreeDaysCredits(
  *  higher of the two"). A comp converted by 0176 on a paying plan, or a
  *  past-due plan that recovers, lands here; a hold never does (its plan
  *  reads `trialing`). */
+export type OverlayPlanState = { subscription_status?: string | null; subscription_tier?: string | null } | null;
+
 export function overlayAllotmentOver(
   grantTier: PaidTier,
-  profile: { subscription_status?: string | null; subscription_tier?: string | null } | null,
+  profile: OverlayPlanState,
 ): number {
-  const own = MONTHLY_CREDITS[grantTier] ?? 0;
+  const own = LEGACY_FREE_DAYS_ALLOTMENT[grantTier] ?? 0;
   if (profile?.subscription_status !== "active") return own;
   const paid = profile.subscription_tier === "plus" || profile.subscription_tier === "pro" ? profile.subscription_tier : null;
   if (!paid) return own;
-  return Math.max(0, own - (MONTHLY_CREDITS[paid] ?? 0));
+  return Math.max(0, own - (LEGACY_FREE_DAYS_ALLOTMENT[paid] ?? 0));
 }
 
 async function grantDueAllotments(
   admin: CreditGrantClient,
   grant: PlanGrantCreditRow,
   due: number[],
+  planState?: OverlayPlanState,
 ): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
-  let amount = MONTHLY_CREDITS[grant.tier as PaidTier] ?? 0;
+  let amount = LEGACY_FREE_DAYS_ALLOTMENT[grant.tier as PaidTier] ?? 0;
   if (amount > 0 && grant.applied_as === "overlay") {
-    const { data: profile, error } = await admin
-      .from("profiles")
-      .select("subscription_status, subscription_tier")
-      .eq("id", grant.user_id)
-      .maybeSingle();
-    if (error) return { ok: false, error: error.message };
-    amount = overlayAllotmentOver(grant.tier as PaidTier, profile as { subscription_status?: string | null; subscription_tier?: string | null } | null);
+    let state: OverlayPlanState = planState ?? null;
+    if (planState === undefined) {
+      const { data: profile, error } = await admin
+        .from("profiles")
+        .select("subscription_status, subscription_tier")
+        .eq("id", grant.user_id)
+        .maybeSingle();
+      if (error) return { ok: false, error: error.message };
+      state = profile as OverlayPlanState;
+    }
+    amount = overlayAllotmentOver(grant.tier as PaidTier, state);
   }
   if (amount <= 0) return { ok: true, granted: 0 };
   // One read of what the ledger already holds for this grant; a failed read

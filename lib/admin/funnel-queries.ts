@@ -19,6 +19,9 @@ export type FunnelSection = { title: string; steps: FunnelStep[] };
 export type FunnelWindow = { days: number; sections: FunnelSection[] };
 export type SignupSource = { source: string; n: number };
 export type SignupSurface = { surface: string; n: number };
+/** One row of "Cancellations by reason": the portal's feedback choice when
+ *  the customer gave one, else Stripe's cancellation reason. */
+export type CancelReasonRow = { reason: string; label: string; n: number };
 export type TrialEngagementRow = {
   userId: string;
   username: string | null;
@@ -38,6 +41,9 @@ export type FunnelSummary = {
   signupSources: SignupSource[];
   /** Signups by the create button pressed last ("none" = no tracked button). */
   signupSurfaces: SignupSurface[];
+  /** Plans that ended in the last 30 days, by the reason the customer gave
+   *  in the portal (or Stripe's own reason), biggest first. */
+  cancelReasons: CancelReasonRow[];
   /** A guest's card through sign-up (TODO HM3), last 30 days: signups made
    *  while one waited in the browser, and first cards saved from one. Null
    *  counts where the read failed. */
@@ -71,6 +77,7 @@ const LABEL: Record<FunnelEvent, string> = {
   subscription_changed: "Plan changes",
   subscription_cancelled: "Cancellations (plan ended)",
   subscription_resumed: "Cancellations undone (resumed)",
+  bank_days_applied: "Banked days applied",
   payment_received: "Payments received",
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",
@@ -138,6 +145,43 @@ export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): 
   return groupSignupsBy(rows, (props) => attributionSource(sanitizeAttribution(props)), limit).map(
     ([source, n]) => ({ source, n }),
   );
+}
+
+/** The portal's feedback options (`cancellation_details.feedback`) and
+ *  Stripe's own reasons (`cancellation_details.reason`), in the customer's
+ *  words. An unknown value prints as it came. */
+const CANCEL_REASON_LABEL: Record<string, string> = {
+  too_expensive: "Too expensive",
+  missing_features: "Missing features",
+  switched_service: "Switched to another service",
+  unused: "Didn't use it enough",
+  customer_service: "Customer service",
+  too_complex: "Too complex",
+  low_quality: "Quality not good enough",
+  other: "Other",
+  cancellation_requested: "Cancelled, no reason given",
+  payment_disputed: "Payment disputed",
+  payment_failed: "Payment failed (retries exhausted)",
+  none: "No reason recorded",
+};
+
+/** Pure: `subscription_cancelled` rows grouped by the customer's reason —
+ *  the portal's feedback when given, else Stripe's reason — biggest first,
+ *  ties alphabetical. Stripe audit 2026-11-05: the portal has asked the
+ *  question since 2026-09; this is where the answers show. */
+export function groupCancelReasons(rows: Array<{ props: unknown }>, limit = 10): CancelReasonRow[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const props = row.props && typeof row.props === "object" ? (row.props as Record<string, unknown>) : {};
+    const feedback = typeof props.cancelFeedback === "string" && props.cancelFeedback ? props.cancelFeedback : null;
+    const reason = typeof props.cancelReason === "string" && props.cancelReason ? props.cancelReason : null;
+    const key = feedback ?? reason ?? "none";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([reason, n]) => ({ reason, label: CANCEL_REASON_LABEL[reason] ?? reason, n }));
 }
 
 /** Pure: how many signup rows say a guest's card waited (TODO HM3). */
@@ -211,7 +255,7 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     windows.push(buildFunnel(counts, days));
   }
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [signups, trials, screenWidths, guestFirstSaves] = await Promise.all([
+  const [signups, trials, screenWidths, guestFirstSaves, cancellations] = await Promise.all([
     admin.from("funnel_events").select("props").eq("event", "signup").gte("created_at", since30).limit(5000),
     admin.rpc("admin_trial_engagement", { p_since: since30 }),
     readScreenWidths(admin, since30),
@@ -221,7 +265,9 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
       .eq("event", "first_card_saved")
       .contains("props", { guestDraft: true })
       .gte("created_at", since30),
+    admin.from("funnel_events").select("props").eq("event", "subscription_cancelled").gte("created_at", since30).limit(5000),
   ]);
+  if (cancellations.error) console.warn("getFunnelSummary: cancellations", cancellations.error.message);
   if (guestFirstSaves.error) console.warn("getFunnelSummary: guest first saves", guestFirstSaves.error.message);
   if (signups.error) console.warn("getFunnelSummary: signups", signups.error.message);
   if (trials.error) console.warn("getFunnelSummary: trials", trials.error.message);
@@ -229,6 +275,7 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     windows,
     signupSources: groupSignupSources((signups.data ?? []) as Array<{ props: unknown }>),
     signupSurfaces: groupSignupSurfaces((signups.data ?? []) as Array<{ props: unknown }>),
+    cancelReasons: groupCancelReasons((cancellations.data ?? []) as Array<{ props: unknown }>),
     guestCard: {
       signups: countGuestDraftSignups((signups.data ?? []) as Array<{ props: unknown }>),
       firstCardsSaved: guestFirstSaves.error ? null : (guestFirstSaves.count ?? 0),

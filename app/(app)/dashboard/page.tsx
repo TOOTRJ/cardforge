@@ -156,7 +156,7 @@ export default async function DashboardPage() {
         </Suspense>
       ) : null}
 
-      {/* AI credits — remaining balance, used this month, monthly allotment.
+      {/* AI credits — remaining balance, used this month, the plan's one-time stock.
           Independent data, so it streams in behind its own skeleton. */}
       <Suspense fallback={<CreditsSummarySkeleton />}>
         <CreditsSummaryCard />
