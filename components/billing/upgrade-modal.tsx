@@ -25,7 +25,7 @@ import {
   SIGNUP_CREDITS,
   TRIAL_CREDITS,
   TRIAL_DAYS,
-  capacityWord,
+  capacityHoldsLine,
   type PaidTier,
 } from "@/lib/billing/plans";
 import { LocalDate } from "@/components/ui/local-date";
@@ -58,11 +58,11 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       description:
         "Original premium frames are part of a paid plan. Every MTG-style frame and finish stays free.",
     },
-    // The soft cap (owner 2026-11-06): nothing is deleted, only the next
-    // save needs room — and the way out is the cap, with its numbers.
+    // The owner's rule (2026-11-06): the plan's full limit while the plan
+    // is active, then the soft cap — nothing is deleted when it ends.
     capacity: {
       title: "Your library is full",
-      description: `${CARDS_ARE_SAFE} To save the next one, move up: Plus holds ${capacityWord("plus")} cards, Pro holds them all.`,
+      description: `${capacityHoldsLine()} ${CARDS_ARE_SAFE}`,
     },
     // The print perks are said from ONE source (TODO 6.26,
     // lib/billing/plans.ts PRINT_PERK_COPY) — the plan cards list the same.

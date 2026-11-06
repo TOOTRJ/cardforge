@@ -5,7 +5,7 @@ import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { siteConfig } from "@/lib/site-config";
 import type { BillingViewer } from "@/lib/billing/viewer";
-import { capacityHoldsLine, capacityPitch, planForTier } from "@/lib/billing/plans";
+import { CARDS_ARE_SAFE, capacityFactsLine, capacityHoldsLine, planForTier } from "@/lib/billing/plans";
 import { capacityTone, capacityUpgradeLink, type CardCapacity } from "@/lib/billing/capacity-copy";
 import { PageContainer } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils";
@@ -22,11 +22,13 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 // The headline is the saved-card cap (owner finding 2026-11-06: people pay
-// to save more cards — docs/research/card-capacity-conversion-2026-11.md):
-// "Keep every card you make." over "Free holds 50 cards. Plus holds 500.
-// Pro holds them all.", every number from CARD_CAPACITY. A signed-in
-// visitor (the member twin passes `capacity`) sees their own meter under
-// it — the decision is made here, so the number is here.
+// to save more cards — docs/research/card-capacity-conversion-2026-11.md),
+// in the owner's rule: "while a Plus or Pro plan is active the account has
+// the plan's full card limit" — never a permanent promise. "Save more
+// cards." over that rule with its numbers (every one from CARD_CAPACITY),
+// then the soft-cap fact. A signed-in visitor (the member twin passes
+// `capacity`) sees their own meter under it — the decision is made here,
+// so the number is here.
 export function PricingContent({
   initialViewer,
   capacity = null,
@@ -44,26 +46,25 @@ export function PricingContent({
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gold-strong">
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          {capacityPitch()}
+          {capacityFactsLine()}
         </span>
         <h1 className="font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          Keep every card{" "}
+          Save{" "}
           <span className="bg-linear-to-r from-gold-strong to-primary-bright bg-clip-text text-transparent">
-            you make.
+            more cards.
           </span>
         </h1>
-        <p className="font-display text-lg font-semibold leading-7 text-foreground sm:text-xl">
+        <p className="text-lg font-semibold leading-7 text-foreground">
           {capacityHoldsLine()}
         </p>
         <PricingCapacityMeter capacity={capacity} />
         <p className="text-base leading-7 text-muted">
-          Every card you save stays yours — nothing is ever deleted, and a full
-          library can still be viewed, edited and downloaded. The card maker
-          is free forever: every frame, every finish, every card type, and
-          every AI tool, with 5 AI credits to get you started (Free
-          doesn&apos;t refill). Plans add room for more cards, monthly credits,
-          watermark-free hi-res downloads, and Pro&apos;s deck-aware AI. You
-          only ever pay for our technology, never for MTG-style rendering.
+          {CARDS_ARE_SAFE} The card maker is free forever: every frame, every
+          finish, every card type, and every AI tool, with 5 AI credits to get
+          you started (Free doesn&apos;t refill). Plans add their card limit,
+          monthly credits, watermark-free hi-res downloads, and Pro&apos;s
+          deck-aware AI. You only ever pay for our technology, never for
+          MTG-style rendering.
         </p>
         <p className="text-sm font-medium text-gold-strong">
           First time subscribing? Try any plan free for 7 days — 25 AI credits to play with, nothing charged until day 7, cancel anytime. Your plan&apos;s full monthly credits arrive with your first payment.

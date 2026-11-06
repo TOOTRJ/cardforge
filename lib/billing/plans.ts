@@ -40,9 +40,13 @@ export const UNLIMITED_DECKS_LINE = "Unlimited decks — public, unlisted or pri
 // names a paid plan leads with it, in words built here from CARD_CAPACITY —
 // never a literal number in a component, so a cap that changes in this
 // table (and in migration 0104) can't leave a page quoting the old one.
-// The cap is SOFT: nothing is ever deleted, every card stays viewable,
-// editable and downloadable; only NEW saves are gated (the Evernote /
-// Trello rule, never Dropbox's deletion clause) — the copy says so.
+// THE RULE, in the owner's words (2026-11-06): "while a Plus or Pro plan is
+// active the user's account has full access to the plan's card limit" —
+// the cap is the plan's for as long as the plan runs, never a permanent
+// promise. The cap is SOFT: nothing is ever deleted; when a plan ends the
+// cards stay (viewable, editable, downloadable) and saving a NEW one needs
+// room under the current plan's cap (the Evernote / Trello rule, never
+// Dropbox's deletion clause) — the copy says both.
 // ---------------------------------------------------------------------------
 
 /** A cap as words: "50", "500" or "unlimited". */
@@ -58,34 +62,50 @@ export function nextCapacityTier(tier: PlanTier): PaidTier | null {
   return null;
 }
 
-/** "Up to 50 saved cards" / "Up to 500 saved cards — 10× the room on Free"
- *  / "Unlimited saved cards — keep every card you make": a plan's FIRST
- *  feature line, from CARD_CAPACITY (the plan cards, the home page's plan
- *  tiles, the Settings summary). */
+const TIER_LABEL: Record<PlanTier, string> = { free: "Free", plus: "Plus", pro: "Pro" };
+
+/** The rule as a clause, for a paid tier: "while Plus is active you have its
+ *  full limit of 500 saved cards" / "while Pro is active there is no limit". */
+export function planLimitClause(tier: PaidTier): string {
+  const cap = CARD_CAPACITY[tier];
+  return cap === CARD_CAPACITY_UNLIMITED
+    ? `while ${TIER_LABEL[tier]} is active there is no limit`
+    : `while ${TIER_LABEL[tier]} is active you have its full limit of ${cap.toLocaleString("en-US")} saved cards`;
+}
+
+/** "Up to 50 saved cards" / "Up to 500 saved cards while Plus is active" /
+ *  "Unlimited saved cards while Pro is active": a plan's FIRST feature
+ *  line, from CARD_CAPACITY (the plan cards, the home page's plan tiles,
+ *  the Settings summary). */
 export function savedCardsLine(tier: PlanTier): string {
   const cap = CARD_CAPACITY[tier];
-  if (cap === CARD_CAPACITY_UNLIMITED) return "Unlimited saved cards — keep every card you make";
-  const line = `Up to ${cap.toLocaleString("en-US")} saved cards`;
-  const ratio = cap / CARD_CAPACITY.free;
-  // The multiple over Free, where it is a whole number worth saying.
-  return tier !== "free" && Number.isInteger(ratio) && ratio > 1 ? `${line} — ${ratio}× the room on Free` : line;
+  const line = cap === CARD_CAPACITY_UNLIMITED ? "Unlimited saved cards" : `Up to ${cap.toLocaleString("en-US")} saved cards`;
+  return tier === "free" ? line : `${line} while ${TIER_LABEL[tier]} is active`;
 }
 
-/** The pricing page's capacity hero line: "Free holds 50 cards. Plus holds
- *  500. Pro holds them all." */
+/** The pricing page's capacity line, the rule in the owner's words: "While
+ *  a Plus or Pro plan is active, your account has the plan's full card
+ *  limit: Plus holds 500 saved cards, Pro holds them all. Free holds 50." */
 export function capacityHoldsLine(): string {
-  return `Free holds ${capacityWord("free")} cards. Plus holds ${capacityWord("plus")}. Pro holds them all.`;
+  return `While a Plus or Pro plan is active, your account has the plan's full card limit: Plus holds ${capacityWord("plus")} saved cards, Pro holds them all. Free holds ${capacityWord("free")}.`;
 }
 
-/** The one-sentence pitch every other surface uses: "Save up to 500 cards
- *  on Plus, unlimited on Pro." */
+/** The numbers alone, for an eyebrow: "Free holds 50 cards · Plus 500 ·
+ *  Pro unlimited". */
+export function capacityFactsLine(): string {
+  return `Free holds ${capacityWord("free")} cards · Plus ${capacityWord("plus")} · Pro ${capacityWord("pro")}`;
+}
+
+/** The one-sentence pitch the billing page uses: "Your plan's full card
+ *  limit while it's active — up to 500 saved cards on Plus, unlimited on
+ *  Pro." */
 export function capacityPitch(): string {
-  return `Save up to ${capacityWord("plus")} cards on Plus, unlimited on Pro.`;
+  return `Your plan's full card limit while it's active — up to ${capacityWord("plus")} saved cards on Plus, unlimited on Pro.`;
 }
 
-/** The soft-cap promise, said wherever a limit is named. */
+/** The soft-cap fact, said wherever a limit is named. */
 export const CARDS_ARE_SAFE =
-  "Your cards are never deleted — every one stays yours to view, edit and download.";
+  "Nothing is ever deleted: when a plan ends your cards stay — viewable, editable, downloadable — and saving a new one needs room under your current plan's cap.";
 
 export type PaidTier = "plus" | "pro";
 export type PackKey = "mini" | "small" | "large";

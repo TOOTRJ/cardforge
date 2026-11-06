@@ -104,9 +104,10 @@ describe("UpgradeModal — out of credits", () => {
     render(<UpgradeModal open reason="capacity" onOpenChange={() => {}} />);
     await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Your library is full" })).toBeTruthy();
-    const description = screen.getByText(/Your cards are never deleted/).textContent ?? "";
-    expect(description).toContain(`Plus holds ${CARD_CAPACITY.plus} cards, Pro holds them all`);
-    expect(description).not.toMatch(/forge is full|lose/);
+    const description = screen.getByText(/While a Plus or Pro plan is active/).textContent ?? "";
+    expect(description).toContain(`your account has the plan's full card limit: Plus holds ${CARD_CAPACITY.plus} saved cards, Pro holds them all`);
+    expect(description).toContain("Nothing is ever deleted: when a plan ends your cards stay");
+    expect(description).not.toMatch(/forge is full|lose|keep every card/);
     // Each plan row's subline (its tagline) leads with the cap.
     expect(screen.getByText(`Room for ${CARD_CAPACITY.plus} cards, downloaded clean and hi-res.`)).toBeTruthy();
     expect(screen.getByText(/^Unlimited cards, print sheets/)).toBeTruthy();

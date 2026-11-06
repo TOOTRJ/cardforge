@@ -11,9 +11,11 @@ import type { ReactNode } from "react";
 // docs/research/card-capacity-conversion-2026-11.md). This test holds every
 // surface that names a paid plan to leading with the cap, in words built
 // from CARD_CAPACITY — the plan cards, the pricing hero, the home page's
-// tiles, the upgrade modal, the capacity notice — and to the soft-cap
-// promise (nothing is deleted; the way out is the plan that lifts the cap,
-// named with its number).
+// tiles, the upgrade modal, the capacity notice — in the OWNER'S RULE
+// ("while a Plus or Pro plan is active the account has the plan's full
+// card limit": the cap is the plan's while it runs, never a permanent
+// promise) and to the soft-cap fact (nothing is deleted; when a plan ends
+// the cards stay and a new save needs room under the current cap).
 // ---------------------------------------------------------------------------
 
 vi.mock("next/link", () => ({
@@ -29,11 +31,13 @@ import {
   CARD_CAPACITY_UNLIMITED,
   CARDS_ARE_SAFE,
   PLANS,
+  capacityFactsLine,
   capacityHoldsLine,
   capacityPitch,
   capacityWord,
   nextCapacityTier,
   planForTier,
+  planLimitClause,
   savedCardsLine,
   type PlanTier,
 } from "@/lib/billing/plans";
@@ -61,11 +65,14 @@ describe("the plan catalog leads with the cap", () => {
     }
   });
 
-  it("says the Plus multiple over Free, and never a number not in the table", () => {
-    const ratio = CARD_CAPACITY.plus / CARD_CAPACITY.free;
-    expect(Number.isInteger(ratio)).toBe(true);
-    expect(savedCardsLine("plus")).toContain(`${ratio}× the room on Free`);
-    expect(savedCardsLine("free")).not.toContain("×");
+  it("says a paid plan's cap is the plan's WHILE IT IS ACTIVE (owner 2026-11-06), never a permanent promise", () => {
+    expect(savedCardsLine("plus")).toBe(`Up to ${CARD_CAPACITY.plus} saved cards while Plus is active`);
+    expect(savedCardsLine("pro")).toBe("Unlimited saved cards while Pro is active");
+    expect(savedCardsLine("free")).toBe(`Up to ${CARD_CAPACITY.free} saved cards`);
+    expect(planLimitClause("plus")).toBe(`while Plus is active you have its full limit of ${CARD_CAPACITY.plus} saved cards`);
+    expect(planLimitClause("pro")).toBe("while Pro is active there is no limit");
+    const all = [savedCardsLine("plus"), savedCardsLine("pro"), capacityHoldsLine(), capacityPitch(), CARDS_ARE_SAFE].join("\n");
+    expect(all).not.toMatch(/keep every card|forever|for good|permanent/i);
   });
 
   it("paid taglines name the cap", () => {
@@ -74,16 +81,22 @@ describe("the plan catalog leads with the cap", () => {
     expect(capacityWord("pro")).toBe("unlimited");
   });
 
-  it("builds the hero lines from the table, and knows which plan lifts each cap", () => {
+  it("builds the hero lines from the table in the owner's words, and knows which plan lifts each cap", () => {
     expect(capacityHoldsLine()).toBe(
-      `Free holds ${CARD_CAPACITY.free} cards. Plus holds ${CARD_CAPACITY.plus}. Pro holds them all.`,
+      `While a Plus or Pro plan is active, your account has the plan's full card limit: Plus holds ${CARD_CAPACITY.plus} saved cards, Pro holds them all. Free holds ${CARD_CAPACITY.free}.`,
     );
-    expect(capacityPitch()).toBe(`Save up to ${CARD_CAPACITY.plus} cards on Plus, unlimited on Pro.`);
+    expect(capacityFactsLine()).toBe(`Free holds ${CARD_CAPACITY.free} cards · Plus ${CARD_CAPACITY.plus} · Pro unlimited`);
+    expect(capacityPitch()).toBe(
+      `Your plan's full card limit while it's active — up to ${CARD_CAPACITY.plus} saved cards on Plus, unlimited on Pro.`,
+    );
     expect(nextCapacityTier("free")).toBe("plus");
     expect(nextCapacityTier("plus")).toBe("pro");
     expect(nextCapacityTier("pro")).toBeNull();
-    expect(CARDS_ARE_SAFE).toMatch(/never deleted/);
-    expect(CARDS_ARE_SAFE).toMatch(/view, edit and download/);
+    // The soft cap: nothing deleted, the cards stay when a plan ends, a new
+    // save needs room under the current cap.
+    expect(CARDS_ARE_SAFE).toMatch(/^Nothing is ever deleted/);
+    expect(CARDS_ARE_SAFE).toMatch(/when a plan ends your cards stay/);
+    expect(CARDS_ARE_SAFE).toMatch(/room under your current plan's cap/);
   });
 });
 
@@ -125,7 +138,7 @@ describe("the capacity notice", () => {
     render(<CapacityNotice capacity={{ used: CARD_CAPACITY.free, cap: CARD_CAPACITY.free, tier: "free" }} adding={1} />);
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("Your cards are safe");
-    expect(alert.textContent).toContain(`move to Plus (${CARD_CAPACITY.plus} cards)`);
+    expect(alert.textContent).toContain(`move up: while Plus is active you have its full limit of ${CARD_CAPACITY.plus} saved cards`);
     expect(alert.textContent).not.toMatch(/will fail/);
   });
 });

@@ -25,7 +25,7 @@ test.describe("pricing page", () => {
     await page.goto("/pricing");
 
     await expect(
-      page.getByRole("heading", { name: /keep every card you make/i }),
+      page.getByRole("heading", { name: /save more cards/i }),
     ).toBeVisible();
 
     for (const name of ["Free", "Plus", "Pro"]) {

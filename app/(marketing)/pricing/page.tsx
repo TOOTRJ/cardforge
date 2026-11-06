@@ -7,7 +7,7 @@ import { PricingContent } from "./pricing-content";
 export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
-  description: `Design custom MTG-style cards for free and keep up to ${capacityWord("free")} of them. Plus holds ${capacityWord("plus")} saved cards, Pro unlimited — with monthly AI credits, watermark-free hi-res downloads and deck-aware AI. First-time subscribers get a 7-day free trial, cancel anytime. Monthly or annual.`,
+  description: `Design custom MTG-style cards for free, with up to ${capacityWord("free")} saved cards. While a Plus or Pro plan is active you have its full card limit — ${capacityWord("plus")} on Plus, unlimited on Pro — with monthly AI credits, watermark-free hi-res downloads and deck-aware AI. First-time subscribers get a 7-day free trial, cancel anytime. Monthly or annual.`,
 };
 
 // ISR: this is the ANONYMOUS storefront — identical for every signed-out

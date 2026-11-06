@@ -4,7 +4,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { capacityTone, capacityUpgradeLink, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
-import { planForTier } from "@/lib/billing/plans";
+import { nextCapacityTier, planForTier, planLimitClause } from "@/lib/billing/plans";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { PlanBadgeLabel } from "@/components/dashboard/plan-ending-notice";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,10 @@ export async function CardsSummaryCard() {
   const meterTone = capacityTone(capacity);
   const tone: "default" | "warning" | "danger" = meterTone === "info" ? "default" : meterTone;
   const upgrade = capacityUpgradeLink(capacity.tier);
+  // The owner's rule, as the way out: "while Plus is active you have its
+  // full limit of 500 saved cards".
+  const next = nextCapacityTier(capacity.tier);
+  const rule = next ? planLimitClause(next) : null;
   const pct = unlimited ? 0 : Math.min(100, Math.round((capacity.used / capacity.cap) * 100));
   // Over the cap — a lapsed Plus/Pro plan keeps every card (the capacity
   // trigger only blocks inserts): say so plainly instead of "50 of 50".
@@ -39,8 +43,8 @@ export async function CardsSummaryCard() {
     : over > 0
       ? `You have ${used} cards, ${over.toLocaleString("en-US")} over the ${plan.name} plan's ${cap}-card limit. They're safe — but new saves need room or a plan with space.`
       : remaining === 0
-        ? `Your ${plan.name} library is full — all ${cap} cards saved. They're safe to view, edit and download; the next save needs room${upgrade ? `, or ${upgrade.planName}` : ""}.`
-        : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit. Nothing is ever deleted at ${cap}${upgrade ? ` — ${upgrade.label}` : ""}.`;
+        ? `Your ${plan.name} library is full — all ${cap} cards saved. They're safe to view, edit and download; the next save needs room${rule ? `, or move up: ${rule}` : ""}.`
+        : `${remaining.toLocaleString("en-US")} more card${remaining === 1 ? "" : "s"} before you reach the ${plan.name} plan's ${cap}-card limit. Nothing is ever deleted at ${cap}${rule ? ` — ${rule}` : ""}.`;
 
   return (
     <SurfaceCard

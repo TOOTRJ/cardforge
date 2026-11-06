@@ -92,12 +92,13 @@ describe("describeCapacity", () => {
   it("names the plan that lifts the cap, with its number, and never threatens the cards", () => {
     const full = describeCapacity(free(50), 1)?.message ?? "";
     expect(full).toContain("Your cards are safe");
-    expect(full).toContain(`move to Plus (${CARD_CAPACITY.plus} cards)`);
+    // The owner's rule (2026-11-06): the plan's full limit while it is active.
+    expect(full).toContain(`move up: while Plus is active you have its full limit of ${CARD_CAPACITY.plus} saved cards`);
     expect(full).not.toMatch(/will fail|lose|deleted/);
     const plusFull = describeCapacity({ used: CARD_CAPACITY.plus, cap: CARD_CAPACITY.plus, tier: "plus" }, 1)?.message ?? "";
-    expect(plusFull).toContain("move to Pro (unlimited cards)");
-    // The soft warning says where the room is.
-    expect(describeCapacity(free(45), 1)?.message).toContain(`Plus holds ${CARD_CAPACITY.plus}.`);
+    expect(plusFull).toContain("move up: while Pro is active there is no limit");
+    // The soft warning says the same rule.
+    expect(describeCapacity(free(45), 1)?.message).toContain(`While Plus is active you have its full limit of ${CARD_CAPACITY.plus} saved cards.`);
   });
   it("warns from 80 % of the cap, or the last few slots on a tiny cap (whichever comes first)", () => {
     expect(CAPACITY_WARN_FRACTION).toBe(0.8);
@@ -120,10 +121,13 @@ describe("describeUsage", () => {
     expect(describeUsage(free(10))).toMatchObject({ tone: "info", message: "10 of 50 cards saved on Free." });
     expect(describeUsage(free(39))?.tone).toBe("info");
     expect(describeUsage(free(40))).toMatchObject({ tone: "warning" });
-    expect(describeUsage(free(40))?.message).toContain("40 of 50 cards saved on Free — 10 left. Nothing is ever deleted at 50");
+    expect(describeUsage(free(40))?.message).toBe(
+      "40 of 50 cards saved on Free — 10 left. Nothing is ever deleted at 50. While Plus is active you have its full limit of 500 saved cards.",
+    );
     expect(describeUsage(free(47))?.tone).toBe("warning");
     expect(describeUsage(free(50))).toMatchObject({ tone: "danger" });
     expect(describeUsage(free(50))?.message).toContain("Your Free library is full — 50 of 50 cards saved. They're safe");
+    expect(describeUsage(free(50))?.message).toContain("move up: while Plus is active you have its full limit of 500 saved cards");
     expect(describeUsage({ used: 3, cap: CARD_CAPACITY_UNLIMITED, tier: "pro" })).toBeNull();
     for (const used of [0, 39, 40, 50, 60]) expect(describeUsage(free(used))?.tone).toBe(capacityTone(free(used)));
   });

@@ -3,6 +3,7 @@ import {
   CARD_CAPACITY_UNLIMITED,
   capacityWord,
   nextCapacityTier,
+  planLimitClause,
   type PlanTier,
 } from "@/lib/billing/plans";
 
@@ -63,12 +64,21 @@ export function capacityUpgradeLink(tier: PlanTier): { href: string; label: stri
   };
 }
 
-/** "move to Plus (500 cards)" / "move to Pro (unlimited)" — the way out,
- *  as a clause. */
+/** The way out, in the owner's rule: "move up: while Plus is active you
+ *  have its full limit of 500 saved cards". */
 function moveUp(tier: PlanTier): string {
   const next = nextCapacityTier(tier);
   if (!next) return "move to a plan with space";
-  return `move to ${TIER_NAME[next]} (${capacityWord(next)} cards)`;
+  return `move up: ${planLimitClause(next)}`;
+}
+
+/** The same rule as a sentence of its own: "While Plus is active you have
+ *  its full limit of 500 saved cards." — "" on an unlimited tier. */
+function limitSentence(tier: PlanTier): string {
+  const next = nextCapacityTier(tier);
+  if (!next) return "";
+  const clause = planLimitClause(next);
+  return ` ${clause[0].toUpperCase()}${clause.slice(1)}.`;
 }
 
 export function remainingCapacity(capacity: CardCapacity): number | null {
@@ -134,8 +144,7 @@ export function describeCapacity(
   }
   if (capacity.used + adding >= capacityWarnFrom(capacity.cap)) {
     const after = remaining - adding;
-    const next = nextCapacityTier(capacity.tier);
-    const holds = next ? ` ${TIER_NAME[next]} holds ${capacityWord(next)}.` : "";
+    const holds = limitSentence(capacity.tier);
     return {
       tone: "warning",
       message:
@@ -163,13 +172,11 @@ export function describeUsage(capacity: CardCapacity | null): CapacityMessage | 
   }
   const tone = capacityTone(capacity);
   const used = capacity.used.toLocaleString("en-US");
-  const next = nextCapacityTier(capacity.tier);
-  const holds = next ? `${TIER_NAME[next]} holds ${capacityWord(next)}.` : "";
   const message =
     tone === "danger"
       ? `Your ${plan} library is full — ${used} of ${cap} cards saved. They're safe to view, edit and download; the next save needs room, or ${moveUp(capacity.tier)}.`
       : tone === "warning"
-        ? `${used} of ${cap} cards saved on ${plan} — ${remaining.toLocaleString("en-US")} left. Nothing is ever deleted at ${cap}; new saves past it need ${next ? TIER_NAME[next] : "a plan with space"}. ${holds}`.trim()
+        ? `${used} of ${cap} cards saved on ${plan} — ${remaining.toLocaleString("en-US")} left. Nothing is ever deleted at ${cap}.${limitSentence(capacity.tier)}`
         : `${used} of ${cap} cards saved on ${plan}.`;
   return { tone, message };
 }
