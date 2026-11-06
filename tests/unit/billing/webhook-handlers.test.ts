@@ -61,13 +61,19 @@ function makeAdmin(
       return {
         select() {
           return {
+            // A second .eq / .limit (the win-back's "one offer per account"
+            // read) chains onto the same answer: the row found means the
+            // offer was already made, so these tests never insert one.
             eq() {
-              return {
+              const chain = {
+                eq: () => chain,
+                limit: () => chain,
                 maybeSingle: async () => ({
                   data: customerLookupHit ? { id: "user-1" } : null,
                   error: null,
                 }),
               };
+              return chain;
             },
             // The month's refill rows (credit-refill.ts reads them with one
             // LIKE on the base key prefix); the backstop's newest-grant read
@@ -1615,7 +1621,7 @@ describe("handleStripeEvent — trial win-back", () => {
       recipient_id: "user-1",
       actor_id: null,
       type: "trial_lapsed",
-      payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20 },
+      payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20, reason: "trial" },
     });
     expect(typeof (notes(inserts)[0].row.payload as { expiresAt: unknown }).expiresAt).toBe("string");
     expect(email.send).toHaveBeenCalledTimes(1);
@@ -1626,22 +1632,53 @@ describe("handleStripeEvent — trial win-back", () => {
     expect(options).toEqual({ idempotencyKey: "trial-winback:sub_trial" });
   });
 
-  it("a paid subscription that ends (or a trial that converted first) gets no offer; a repeat delivery adds nothing", async () => {
+  it("a PAYER whose plan ends gets the same ONE offer, reason 'cancelled' (BA6, owner 2026-11-05) — and the funnel row keeps Stripe's reason + feedback", async () => {
     const paid = makeChainAdmin({ profiles: [profile], notifications: [] });
     await handleStripeEvent(event(deleted({ trial_end: 1_790_735_200, ended_at: 1_793_400_000, cancellation_details: { reason: "cancellation_requested", feedback: "too_expensive" } })), { admin: paid.admin, stripe: noApiStripe });
-    expect(notes(paid.inserts)).toEqual([]);
-    // …but a paid cancellation IS a funnel row, with Stripe's reason + feedback.
+    expect(notes(paid.inserts)).toHaveLength(1);
+    expect(notes(paid.inserts)[0].row).toMatchObject({ type: "trial_lapsed", payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20, reason: "cancelled" } });
     expect(funnel(paid.inserts)).toEqual([
       { event: "subscription_cancelled", user_id: "user-1", props: { tier: "pro", interval: "month", subscriptionId: "sub_trial", cancelReason: "cancellation_requested", cancelFeedback: "too_expensive" }, source: "server" },
     ]);
+    expect(email.send).toHaveBeenCalledTimes(1);
+    const [message] = email.send.mock.calls[0];
+    expect(message.subject).toBe("20% off your first month back of PipGlyph Pro");
+    expect(message.html).toContain("$12 for the first month");
+    expect(message.html).not.toMatch(/trial ended/i);
+
+    // A plan that never had a trial at all: the same offer, once.
+    email.send.mockClear();
     const never = makeChainAdmin({ profiles: [profile], notifications: [] });
     await handleStripeEvent(event(deleted({ trial_end: null })), { admin: never.admin, stripe: noApiStripe });
-    expect(notes(never.inserts)).toEqual([]);
-    expect(email.send).not.toHaveBeenCalled();
+    expect(notes(never.inserts)).toHaveLength(1);
+    expect(notes(never.inserts)[0].row).toMatchObject({ payload: { reason: "cancelled" } });
+  });
 
+  it("ONE win-back per ACCOUNT ever: a trial_lapsed row for the user — whatever subscription it names — means no second offer (a monthly cancel-and-return loop never buys at a discount twice)", async () => {
     const again = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1" }] });
     await handleStripeEvent(event(deleted()), { admin: again.admin, stripe: noApiStripe });
     expect(notes(again.inserts)).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+    const other = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_other", payload: { subscriptionId: "sub_earlier" } }] });
+    await handleStripeEvent(event(deleted({ id: "sub_second", ended_at: 1_793_400_000 })), { admin: other.admin, stripe: noApiStripe });
+    expect(notes(other.inserts)).toEqual([]);
+  });
+
+  it("the checkout that pays with the coupon stamps the trial_lapsed row redeemed (checkout.session.completed, metadata.discount = trial_winback)", async () => {
+    const { admin, updates } = makeChainAdmin({
+      profiles: [profile],
+      notifications: [{ id: "n_1", payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20 } }],
+    });
+    const session = { id: "cs_wb", mode: "subscription", payment_status: "paid", client_reference_id: "user-1", metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "pro", period: "monthly", discount: "trial_winback" } };
+    await handleStripeEvent({ id: "evt_wb", type: "checkout.session.completed", data: { object: session } } as never, { admin, stripe: noApiStripe });
+    const stamp = updates.find((u) => u.table === "notifications");
+    expect(stamp?.values).toMatchObject({ payload: { subscriptionId: "sub_trial", tier: "pro", discountPct: 20, redeemedSessionId: "cs_wb" } });
+    expect(typeof (stamp?.values as { payload: { redeemedAt: unknown } }).payload.redeemedAt).toBe("string");
+
+    // A full-price checkout stamps nothing.
+    const plain = makeChainAdmin({ profiles: [profile], notifications: [{ id: "n_1", payload: { subscriptionId: "sub_trial" } }] });
+    await handleStripeEvent({ id: "evt_fp", type: "checkout.session.completed", data: { object: { ...session, id: "cs_fp", metadata: { ...session.metadata, discount: "none" } } } } as never, { admin: plain.admin, stripe: noApiStripe });
+    expect(plain.updates.find((u) => u.table === "notifications")).toBeUndefined();
   });
 });
 

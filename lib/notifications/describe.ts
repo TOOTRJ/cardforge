@@ -386,12 +386,15 @@ export function describeNotification(
       };
     }
     case "trial_lapsed": {
+      // A trial that never converted, or (BA6) a payer whose plan ended:
+      // one win-back offer per account, monthly plans only.
       const plan = TIER_LABEL[str(payload.tier) ?? ""] ?? "plan";
       const pct = num(payload.discountPct) ?? 20;
       const expires = str(payload.expiresAt);
+      const cancelled = str(payload.reason) === "cancelled";
       return {
-        subject: `Your ${plan} trial`,
-        body: `ended — come back${expires ? ` by ${formatShortDate(expires)}` : " within 30 days"} for ${pct}% off your first month; the discount is applied automatically at checkout.`,
+        subject: cancelled ? `Your ${plan} plan` : `Your ${plan} trial`,
+        body: `ended — come back${expires ? ` by ${formatShortDate(expires)}` : " within 30 days"} for ${pct}% off your first month${cancelled ? " back" : ""} on a monthly plan; the discount is applied automatically at checkout.`,
         href: "/dashboard/billing#plans",
       };
     }

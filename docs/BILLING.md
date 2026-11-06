@@ -342,6 +342,34 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
   promo-code box is off for that session); a missing coupon logs and sells
   at full price.
 
+### Trial conversion follow-ups (2026-11-06, audit BA6)
+
+- **The trial terms on Checkout** (`trialTermsLine`, `custom_text.submit`):
+  every session that starts a free period — the 7-day trial, a comp hold, a
+  carried trial — says under its button when it ends (UTC), what is charged
+  from then ("Plus is $6 a month, charged to this card until you cancel")
+  and that cancelling before then on the billing page charges nothing. The
+  card networks' required notice; Stripe's own trial-ending email (an owner
+  Dashboard setting) is the other half.
+- **One trial per EMAIL** (`isTrialEligible`): besides the customer's own
+  history, every Stripe customer under the account's email is asked (a
+  deleted account's customer is never deleted and keeps its history), so
+  delete-and-re-sign-up no longer mints a second trial. A "+tag" variant is
+  a different address to Stripe; the required card is the other guard.
+- **The win-back coupon is MONTHLY only and single-use**: `duration: once`
+  on an annual price took 20 % off the whole year while the offer said
+  "first month" — the checkout action applies it to monthly plans only and
+  the email prices the monthly plan; and the checkout that pays with it
+  stamps the `trial_lapsed` row `redeemedAt` (`markWinbackRedeemed`, on
+  `checkout.session.completed`), which `hasRecentLapsedTrial` reads as spent.
+- **A win-back for cancelled payers** (owner 2026-11-05): a plan that ended
+  and left no other live plan gets the same ONE offer — notification
+  `trial_lapsed` with `reason: "cancelled"` ("Your Plus plan ended — come
+  back by … for 20 % off your first month back") and the reworded email.
+  ONE win-back per ACCOUNT, ever (a `trial_lapsed` row for the user, any
+  subscription, any time, means no second offer): a payer cancelling every
+  month cannot buy every month at a discount.
+
 ## 10. Funnel instrumentation (2026-09-24)
 
 First-party, no vendor dependency, no cookie (owner decision 2026-09-24):

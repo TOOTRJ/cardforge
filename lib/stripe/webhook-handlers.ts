@@ -152,10 +152,11 @@ async function handleSubscriptionEvent(
   if (opts.deleted) {
     // No credit grant on cancellation. A trial that ended without ever
     // paying — and left the customer with no other live plan — gets the
-    // one win-back offer.
+    // one win-back offer; so does a PAYER whose plan ended (owner 2026-11-05,
+    // BA6), once per account ever.
     const lapsedTrial = isUnconvertedTrial(sub);
-    if (lapsedTrial && result.tier === "free") {
-      await handleTrialLapsed(sub, userId, deps);
+    if (result.tier === "free") {
+      await handleTrialLapsed(sub, userId, deps, lapsedTrial ? "trial" : "cancelled");
     }
     await recordFunnelEvent(admin, {
       event: lapsedTrial ? "trial_lapsed" : "subscription_cancelled",
@@ -367,35 +368,39 @@ async function handleTrialWillEnd(
   }
 }
 
-// A trial ended without converting (customer.subscription.deleted with
-// ended_at at/before trial_end) and the customer holds no other live plan:
-// ONE trial_lapsed notification + ONE win-back email — 20% off the first
-// month, applied automatically by the checkout action for 30 days (it reads
-// this notification as the eligibility record). Once per subscription; the
-// insert is durable (throws → Stripe retries), the email best effort.
+// A plan ended and the customer holds no other live plan — a trial that
+// never converted (customer.subscription.deleted with ended_at at/before
+// trial_end), or a PAYER who cancelled (BA6, owner 2026-11-05): ONE
+// trial_lapsed notification + ONE win-back email — 20% off the first month
+// (back), applied automatically by the checkout action for 30 days on a
+// MONTHLY plan (it reads this notification as the eligibility record, and
+// the checkout that spends it stamps `redeemedAt`). ONE win-back per
+// ACCOUNT, ever: a row of this kind for the user — any subscription, any
+// time — means no second offer (a payer cancelling every month must not
+// buy every month at a discount). The insert is durable (throws → Stripe
+// retries), the email best effort.
 async function handleTrialLapsed(
   sub: Stripe.Subscription,
   userId: string,
   deps: { admin: AdminClient; stripe: Stripe },
+  reason: "trial" | "cancelled" = "trial",
 ): Promise<void> {
   const { admin, stripe } = deps;
   const { data: existing } = await admin
     .from("notifications")
     .select("id")
     .eq("type", "trial_lapsed")
-    .eq("payload->>subscriptionId", sub.id)
+    .eq("recipient_id", userId)
     .limit(1)
     .maybeSingle();
   if (existing) return;
   const tier = await resolveSubscriptionTier(sub, stripe);
-  const price = sub.items?.data?.[0]?.price ?? null;
-  const interval = price?.recurring?.interval ?? null;
   const expiresAt = new Date(Date.now() + TRIAL_WINBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await admin.from("notifications").insert({
     recipient_id: userId,
     actor_id: null,
     type: "trial_lapsed",
-    payload: { subscriptionId: sub.id, tier, discountPct: TRIAL_WINBACK_DISCOUNT_PCT, expiresAt },
+    payload: { subscriptionId: sub.id, tier, discountPct: TRIAL_WINBACK_DISCOUNT_PCT, expiresAt, reason },
   });
   if (error) {
     throw new Error(`trial_lapsed notification failed for ${userId}: ${error.message}`);
@@ -406,18 +411,20 @@ async function handleTrialLapsed(
     const recipient = await getRecipientFor(admin, userId, "account");
     if (!recipient) return;
     const plan = PLANS.find((p) => p.tier === tier);
-    const fullUsd = plan && plan.tier !== "free"
-      ? interval === "year" ? plan.annualUsd ?? null : plan.priceUsd
-      : null;
+    const monthlyUsd = plan && plan.tier !== "free" ? plan.priceUsd : null;
     await sendEmail(
       trialWinbackEmail(recipient, {
         plan: TIER_NAME[tier ?? ""] ?? "PipGlyph",
         discountPct: TRIAL_WINBACK_DISCOUNT_PCT,
         expiresAt,
-        priceLabel: fullUsd != null ? `$${fullUsd} / ${interval === "year" ? "year" : "month"}` : null,
+        reason,
+        // The offer is the MONTHLY plan's first month, whatever interval the
+        // old plan had (the coupon is `once`; on a year it would take 20 %
+        // of the year — the checkout applies it to monthly plans only).
+        priceLabel: monthlyUsd != null ? `$${monthlyUsd} / month` : null,
         discountedPriceLabel:
-          fullUsd != null
-            ? `$${(Math.round(fullUsd * (100 - TRIAL_WINBACK_DISCOUNT_PCT)) / 100).toFixed(2).replace(/\.00$/, "")} for the first ${interval === "year" ? "year" : "month"}`
+          monthlyUsd != null
+            ? `$${(Math.round(monthlyUsd * (100 - TRIAL_WINBACK_DISCOUNT_PCT)) / 100).toFixed(2).replace(/\.00$/, "")} for the first month`
             : null,
       }),
       { idempotencyKey: `trial-winback:${sub.id}` },
@@ -762,6 +769,35 @@ async function handleSupersededSubscription(
   }
 }
 
+// A subscription checkout that paid with the win-back coupon spends the
+// offer: the user's trial_lapsed row is stamped `redeemedAt`, and the
+// checkout action no longer applies the coupon for it (audit 2026-11-05
+// P3: cancel + resubscribe inside the window bought at the discount twice).
+// Best effort: a missed stamp is at worst a second discounted month.
+async function markWinbackRedeemed(session: Stripe.Checkout.Session, admin: AdminClient): Promise<void> {
+  if (session.mode !== "subscription" || session.metadata?.discount !== "trial_winback") return;
+  const userId = session.client_reference_id ?? session.metadata?.supabase_user_id ?? null;
+  if (!userId) return;
+  try {
+    const { data: rows } = await admin
+      .from("notifications")
+      .select("id, payload")
+      .eq("type", "trial_lapsed")
+      .eq("recipient_id", userId)
+      .limit(5);
+    for (const row of (rows ?? []) as Array<{ id: string; payload: Record<string, unknown> | null }>) {
+      const payload = row.payload ?? {};
+      if (payload.redeemedAt) continue;
+      await admin
+        .from("notifications")
+        .update({ payload: { ...payload, redeemedAt: new Date().toISOString(), redeemedSessionId: session.id } })
+        .eq("id", row.id);
+    }
+  } catch (error) {
+    console.warn("[stripe] win-back redeemed stamp failed:", error instanceof Error ? error.message : error);
+  }
+}
+
 // Grant a one-time pack purchase. Runs for BOTH checkout.session.completed
 // and checkout.session.async_payment_succeeded: for cards `completed` arrives
 // already paid; for async/delayed methods (some bank debits, vouchers)
@@ -984,6 +1020,7 @@ export async function handleStripeEvent(
       const session = event.data.object as Stripe.Checkout.Session;
       await handleCheckoutPaid(session, admin, event.created);
       await handleSupersededSubscription(session, stripe);
+      await markWinbackRedeemed(session, admin);
       await recordFunnelEvent(admin, {
         event: "checkout_completed",
         userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
