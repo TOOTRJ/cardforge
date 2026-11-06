@@ -12,8 +12,8 @@ import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/dates";
-import { FREE_DAYS_UNIT_DAYS } from "@/lib/billing/free-days";
-import { MAX_BANK_DAYS_APPLIED, MIN_ADMIN_BANK_DAYS, type BankEntryDetail } from "@/lib/billing/day-bank";
+import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAYS_EXACT, MIN_ADMIN_BANK_DAYS } from "@/lib/billing/free-days";
+import type { BankEntryDetail } from "@/lib/billing/day-bank";
 import type { PlanGrantRow } from "@/lib/billing/plan-grants";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,8 +132,8 @@ export function BankDaysForm({ userId }: { userId: string }) {
 
   function submit() {
     const parsed = Number(days);
-    if (!Number.isInteger(parsed) || parsed < MIN_ADMIN_BANK_DAYS || parsed > MAX_BANK_DAYS_APPLIED) {
-      toast.error(`Enter a whole number of days from ${MIN_ADMIN_BANK_DAYS} to ${MAX_BANK_DAYS_APPLIED}.`);
+    if (!Number.isInteger(parsed) || parsed < MIN_ADMIN_BANK_DAYS || parsed > MAX_FREE_DAYS_EXACT) {
+      toast.error(`Enter a whole number of days from ${MIN_ADMIN_BANK_DAYS} to ${MAX_FREE_DAYS_EXACT}.`);
       return;
     }
     startTransition(async () => {
@@ -165,7 +165,7 @@ export function BankDaysForm({ userId }: { userId: string }) {
           type="number"
           inputMode="numeric"
           min={MIN_ADMIN_BANK_DAYS}
-          max={MAX_BANK_DAYS_APPLIED}
+          max={MAX_FREE_DAYS_EXACT}
           step={1}
           value={days}
           onChange={(e) => setDays(e.target.value)}

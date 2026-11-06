@@ -65,6 +65,10 @@ export const MAX_FREE_DAY_UNITS = 12;
 export type GrantSource = "comp" | "referral_friend" | "referral_referrer" | "promo" | "day_bank";
 /** An exact length (the days bank, lib/billing/day-bank.ts): 1 … 730 days. */
 export const MAX_FREE_DAYS_EXACT = 730;
+/** An admin's comp is banked days (owner 2026-11-06): at least two (Stripe's
+ *  48 h minimum for a free period on a plan). Client-safe: the admin form
+ *  reads it (lib/billing/day-bank.ts is server-only). */
+export const MIN_ADMIN_BANK_DAYS = 2;
 export type GrantAppliedAs = "overlay" | "subscription_hold" | "below_plan";
 
 export type FreeDaysProfile = {

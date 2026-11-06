@@ -6,6 +6,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 import { grantFreeDays } from "@/lib/billing/free-days-apply";
 import type { PaidTier } from "@/lib/billing/plans";
+import { MAX_FREE_DAYS_EXACT, MIN_ADMIN_BANK_DAYS } from "@/lib/billing/free-days";
 
 // ---------------------------------------------------------------------------
 // The DAYS BANK (owner 2026-11-06; migration 0179; docs/BILLING.md "The days
@@ -54,7 +55,7 @@ export const MIN_BANK_DAYS_AT_CHECKOUT = 1;
  *  sessions expire after 24 h). */
 export const BANK_RESERVATION_MAX_AGE_MS = 25 * 60 * 60 * 1000;
 /** Stripe allows at most 730 days of free time ahead. */
-export const MAX_BANK_DAYS_APPLIED = 730;
+export const MAX_BANK_DAYS_APPLIED = MAX_FREE_DAYS_EXACT;
 
 export type BankSource = "signup" | "referral_friend" | "referral_step" | "admin" | "promo";
 export type BankEntryStatus = "banked" | "reserved" | "applied" | "revoked";
@@ -80,9 +81,7 @@ export function signupBankReference(userId: string): string {
   return `signup:${userId}`;
 }
 
-/** An admin's comp is banked days (owner 2026-11-06): at least two (Stripe's
- *  48 h minimum for a free period on a plan), at most the bank's 730. */
-export const MIN_ADMIN_BANK_DAYS = 2;
+export { MIN_ADMIN_BANK_DAYS };
 
 /** The admin's bank entry for a user, keyed by the form's request id (a
  *  double submit finds the entry it made). */
