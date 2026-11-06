@@ -338,9 +338,18 @@ export type PlanGrantFacts = {
   id: string;
   tier: PaidTier;
   units: number | null;
+  /** An exact length (a days-bank application, 0179) — beside units. */
+  days?: number | null;
   ends_at: string | null;
   status: string;
 };
+
+/** A grant's length in seconds: exact days, or 30-day units; null = no end. */
+export function grantSecondsOf(grant: Pick<PlanGrantFacts, "units" | "days">): number | null {
+  if (grant.days != null) return grant.days * 86_400;
+  if (grant.units != null) return grant.units * FREE_DAYS_UNIT_SECONDS;
+  return null;
+}
 
 /** The Stripe trial to move back: its new end ("now": it ends and charges
  *  at once) and the metadata value to write ("" once it is back on its own
@@ -408,10 +417,11 @@ export function planRevoke(input: {
       }
     }
   };
+  const grantSeconds = grantSecondsOf(grant);
   if (!current) {
     overlay = { comp_tier: paidTier(profile.comp_tier), comp_expires_at: profile.comp_expires_at ?? null };
-    if (grant.units != null) moveTrialBack(grant.units * FREE_DAYS_UNIT_SECONDS);
-  } else if (grant.units == null || current.endSec == null) {
+    if (grantSeconds != null) moveTrialBack(grantSeconds);
+  } else if (grantSeconds == null || current.endSec == null) {
     // An open-ended grant (or an overlay with no end, which only such a
     // grant makes): what the other live grants give, else nothing.
     overlay =
@@ -419,7 +429,7 @@ export function planRevoke(input: {
         ? { comp_tier: othersTier, comp_expires_at: othersEnd == null ? null : isoOf(othersEnd) }
         : { comp_tier: null, comp_expires_at: null };
   } else {
-    const seconds = grant.units * FREE_DAYS_UNIT_SECONDS;
+    const seconds = grantSeconds;
     const newEnd = current.endSec - seconds;
     // The overlay stands for the grants: with no other live grant it goes
     // (a hold's overlay reached to the END of the paid period plus the

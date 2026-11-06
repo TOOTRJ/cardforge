@@ -30,6 +30,7 @@ vi.mock("@/lib/billing/credit-refill", () => ({
 }));
 // The free-days grants' sweep (0176) runs after the subscribers' one; its
 // own business is tests/unit/billing/free-days-credits.test.ts.
+vi.mock("@/lib/billing/day-bank", () => ({ releaseStaleReservations: async () => 0 }));
 vi.mock("@/lib/billing/free-days-credits", () => ({
   grantFreeDaysCredits: async () => ({ ok: true, processed: 0, granted: 0, failed: 0 }),
 }));
@@ -72,6 +73,7 @@ describe("GET /api/cron/refill-credits", () => {
       granted: 3,
       failed: 0,
       grants: { processed: 0, granted: 0, failed: 0 },
+      bankReleased: 0,
     });
     expect(alert.insertCalls).toEqual([]);
   });
@@ -94,6 +96,7 @@ describe("GET /api/cron/refill-credits", () => {
       granted: 5,
       failed: 2,
       grants: { processed: 0, granted: 0, failed: 0 },
+      bankReleased: 0,
     });
     expect(alert.notifications).toEqual(
       ["admin-1", "admin-2"].map((recipient) => ({

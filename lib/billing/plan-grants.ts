@@ -37,6 +37,8 @@ export type PlanGrantRow = {
   id: string;
   tier: "plus" | "pro";
   units: number | null;
+  /** An exact length (a days-bank application). */
+  days: number | null;
   source: GrantSource;
   note: string | null;
   appliedAs: GrantAppliedAs;
@@ -55,7 +57,7 @@ export async function listPlanGrants(
   const { data, error } = await admin
     .from("plan_grants")
     .select(
-      "id, tier, units, source, note, applied_as, starts_at, ends_at, status, stripe_error, created_at, granted_by:profiles!plan_grants_granted_by_fkey(username)",
+      "id, tier, units, days, source, note, applied_as, starts_at, ends_at, status, stripe_error, created_at, granted_by:profiles!plan_grants_granted_by_fkey(username)",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -84,6 +86,7 @@ export async function listPlanGrants(
       id: row.id,
       tier: row.tier,
       units: row.units,
+    days: (row as { days?: number | null }).days ?? null,
       source: row.source,
       note: row.note,
       appliedAs: row.applied_as,

@@ -331,7 +331,7 @@ export async function revokeFreeDays(
 ): Promise<RevokeFreeDaysResult> {
   const { data: grantRow, error: grantError } = await admin
     .from("plan_grants")
-    .select("id, user_id, tier, units, ends_at, status")
+    .select("id, user_id, tier, units, days, ends_at, status")
     .eq("id", input.grantId)
     .maybeSingle();
   if (grantError || !grantRow) return { ok: false, error: "No grant with that id." };
@@ -340,7 +340,7 @@ export async function revokeFreeDays(
 
   const { data: siblings } = await admin
     .from("plan_grants")
-    .select("id, user_id, tier, units, ends_at, status")
+    .select("id, user_id, tier, units, days, ends_at, status")
     .eq("user_id", grant.user_id)
     .eq("status", "applied")
     .order("created_at", { ascending: false });

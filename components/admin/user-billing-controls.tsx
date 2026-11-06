@@ -237,7 +237,11 @@ export function PlanGrantsList({ rows, loadError }: { rows: PlanGrantRow[]; load
         <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-foreground">
-              {row.units == null ? `${TIER_NAME[row.tier]}, no end (staff)` : `${row.units * FREE_DAYS_UNIT_DAYS} days of ${TIER_NAME[row.tier]}`}
+              {row.days != null
+                ? `${row.days} day${row.days === 1 ? "" : "s"} of ${TIER_NAME[row.tier]} (banked days)`
+                : row.units == null
+                  ? `${TIER_NAME[row.tier]}, no end (staff)`
+                  : `${row.units * FREE_DAYS_UNIT_DAYS} days of ${TIER_NAME[row.tier]}`}
               <span className="text-subtle"> · {SOURCE_LABEL[row.source]} · {APPLIED_AS_LABEL[row.appliedAs]}</span>
             </span>
             <span className="text-xs text-subtle">

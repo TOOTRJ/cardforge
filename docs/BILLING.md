@@ -876,18 +876,33 @@ out on or already has.
 
 - **The first checkout applies the whole bank** as the free period before
   the first charge — card required (Checkout collects it), Stripe
-  `trial_end` = now + days, `missing_payment_method: cancel`; the plan bills
-  by itself when the days end. `createCheckoutSessionAction` →
-  `prepareCheckoutBank`: the signup entry is made (or REVOKED) under the
-  rule the trial had — never subscribed on this account, no Stripe history
-  under the email (`isTrialEligible`) — then every banked day is RESERVED
-  under a batch (`bank_batch` in the session metadata). An account that
-  trialled before and EARNED days checks them out as a free period all the
-  same. Under `MIN_BANK_DAYS_AT_CHECKOUT` (2 — Stripe's 48 h minimum) the
-  days wait. `checkout.session.completed` spends the batch (`applied`, via
-  `checkout`), `checkout.session.expired` returns it; a session that could
-  not be created returns it at once; a reservation nothing settled is
-  released after 25 h (`releaseStaleReservations`, the referral sweep).
+  `trial_period_days` = the days (whole days from the moment the checkout
+  completes — never a `trial_end` instant a slow checkout eats into),
+  `missing_payment_method: cancel`; the plan bills by itself when the days
+  end. `createCheckoutSessionAction` → `prepareCheckoutBank`: the signup
+  entry is made (or REVOKED) under the rule the trial had — never
+  subscribed on this account, no Stripe history under the email
+  (`isTrialEligible`, now TRI-STATE: a Stripe read that fails answers
+  "unknown" and the checkout REFUSES with "Couldn't check your free days…"
+  — never a verdict, since a revoked signup entry is for good) — then every
+  banked day is RESERVED under a batch (`bank_batch` in the session
+  metadata; the session id is stamped on the batch's rows once Stripe made
+  it, `stampBankBatchSession`). An account that trialled before and EARNED
+  days checks them out as a free period all the same. A comp that already
+  holds the first charge PAST the bank's end leaves the days banked
+  (`skipIfEndsBefore`: the user applies them on top later); one that ends
+  inside the bank holds nothing (the bank is the free period). A single
+  banked day checks out (`MIN_BANK_DAYS_AT_CHECKOUT` = 1: `trial_period_days`
+  has no 48 h floor). Before reserving, `reclaimOpenCheckouts` expires every
+  OPEN Checkout session the user backed out of and returns its days (an
+  abandoned session held them up to 24 h and the next click sold without
+  the free period). `checkout.session.completed` spends the batch
+  (`applied`, via `checkout`; it also takes rows the sweep put back to
+  `banked` with their batch kept — Stripe retries an event for days),
+  `checkout.session.expired` returns it; a session that could not be
+  created returns it at once; a reservation nothing settled is released
+  after 25 h (`releaseStaleReservations`: the daily refill cron, and the
+  hourly referral sweep once PR 2 lands).
 - **Days earned later wait in the bank** and the user applies them by hand
   (the billing page's "Apply N banked days", `applyBankedDaysAction` →
   `applyBankToPlan`): on a LIVE plan — a free period or paid time — the days

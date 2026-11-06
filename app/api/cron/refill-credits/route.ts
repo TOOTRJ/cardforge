@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { currentCreditPeriod } from "@/lib/billing/plans";
 import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
 import { grantFreeDaysCredits } from "@/lib/billing/free-days-credits";
+import { releaseStaleReservations } from "@/lib/billing/day-bank";
 import {
   ALERT_USER_IDS_MAX,
   cronAlertDedupeKey,
@@ -61,6 +62,9 @@ export async function GET(request: Request) {
     now,
     onGrantFailed: (userId, error) => failures.push({ userId, error }),
   });
+  // The days bank (0179): a Checkout reservation nothing settled in a day
+  // goes back to the bank (the hourly referral sweep does the same).
+  const bankReleased = await releaseStaleReservations(admin, now);
 
   const failed = (result.ok ? result.failed : failures.length) + (grants.ok ? grants.failed : 0);
   const pageError = !result.ok ? result.error : !grants.ok ? `plan_grants: ${grants.error}` : null;
@@ -91,6 +95,7 @@ export async function GET(request: Request) {
       granted: result.granted,
       failed,
       grants: { processed: grants.processed, granted: grants.granted, failed: grants.failed },
+      bankReleased,
     },
     { status: failed > 0 ? 500 : 200 },
   );

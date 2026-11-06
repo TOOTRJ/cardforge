@@ -23,12 +23,14 @@ import {
   settleBankBatch,
   settleCheckoutBank,
   signupBankReference,
+  reclaimOpenCheckouts,
+  stampBankBatchSession,
 } from "@/lib/billing/day-bank";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const NOW = new Date("2026-11-10T15:14:00Z");
 
-type Row = { id: string; days: number; source: string; status: string; created_at: string; applied_at: string | null; reference?: string };
+type Row = { id: string; days: number; source: string; status: string; created_at: string; applied_at: string | null; reference?: string; batch_id?: string; applied_ref?: string };
 
 function db(rows: Row[], opts: { insertCode?: string; updateError?: string } = {}) {
   return chainClient((table, calls): ChainAnswer => {
@@ -40,14 +42,21 @@ function db(rows: Row[], opts: { insertCode?: string; updateError?: string } = {
     if (called(calls, "update")) {
       if (opts.updateError) return { error: { message: opts.updateError } };
       const status = calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1];
+      const statuses = calls.find((c) => c.method === "in" && c.args[0] === "status")?.args[1] as string[] | undefined;
       const batch = calls.find((c) => c.method === "eq" && c.args[0] === "batch_id")?.args[1];
-      const hit = rows.filter((r) => (status ? r.status === status : true) && (batch ? (r as { batch_id?: string }).batch_id === batch : true));
+      const hit = rows.filter(
+        (r) =>
+          (status ? r.status === status : true) &&
+          (statuses ? statuses.includes(r.status) : true) &&
+          (batch ? (r as { batch_id?: string }).batch_id === batch : true),
+      );
       return { data: hit.map((r) => ({ days: r.days, id: r.id })) };
     }
     if (called(calls, "select")) {
       const byRef = calls.find((c) => c.method === "eq" && c.args[0] === "reference")?.args[1];
       if (byRef) return { data: rows.find((r) => r.reference === byRef) ?? null };
-      return { data: rows };
+      const status = calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1];
+      return { data: status ? rows.filter((r) => r.status === status) : rows };
     }
     return {};
   });
@@ -106,10 +115,19 @@ describe("prepareCheckoutBank — a fresh checkout's free period", () => {
     expect(revoke.calls.find((c) => c.method === "eq" && c.args[0] === "reference")?.args[1]).toBe(signupBankReference(USER));
   });
 
-  it(`under ${MIN_BANK_DAYS_AT_CHECKOUT} banked days (Stripe's 48 h minimum) nothing is reserved — the day waits`, async () => {
+  it(`a single banked day checks out (MIN_BANK_DAYS_AT_CHECKOUT is ${MIN_BANK_DAYS_AT_CHECKOUT}: trial_period_days has no 48 h floor)`, async () => {
+    expect(MIN_BANK_DAYS_AT_CHECKOUT).toBe(1);
     const stub = db([banked(1)]);
-    expect(await prepareCheckoutBank(stub.client as never, USER, { signupEligible: false, now: NOW })).toBeNull();
+    expect(await prepareCheckoutBank(stub.client as never, USER, { signupEligible: false, now: NOW })).toMatchObject({ days: 1 });
+  });
+
+  it("a comp that already holds the first charge PAST the bank's end leaves the days banked (check P1-3); one that ends inside it spends them", async () => {
+    const stub = db([banked(7)]);
+    const compEnd = Math.floor(NOW.getTime() / 1000) + 30 * 86_400;
+    expect(await prepareCheckoutBank(stub.client as never, USER, { signupEligible: false, now: NOW, skipIfEndsBefore: compEnd })).toBeNull();
     expect(stub.forTable("day_bank_entries").some((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status: string }).status === "reserved")).toBe(false);
+    const inside = db([banked(7)]);
+    expect(await prepareCheckoutBank(inside.client as never, USER, { signupEligible: false, now: NOW, skipIfEndsBefore: Math.floor(NOW.getTime() / 1000) + 3 * 86_400 })).toMatchObject({ days: 7 });
   });
 
   it("nothing banked: null, nothing written but the signup decision", async () => {
@@ -125,11 +143,14 @@ describe("settling", () => {
     const applied = done.forTable("day_bank_entries").find((e) => called(e.calls, "update"))!;
     expect(payloadOf(applied.calls, "update")).toMatchObject({ status: "applied", applied_via: "checkout", applied_ref: "cs_1" });
     expect(applied.calls.find((c) => c.method === "eq" && c.args[0] === "batch_id")?.args[1]).toBe("bb_1");
-    expect(applied.calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1]).toBe("reserved");
+    // "Applied" also takes a row the stale sweep put back to `banked` with its
+    // batch kept (P3-4): a late completed event still spends it.
+    expect(applied.calls.find((c) => c.method === "in" && c.args[0] === "status")?.args[1]).toEqual(["reserved", "banked"]);
 
     const back = db(rows);
     await settleCheckoutBank(back.client as never, { id: "cs_1", mode: "subscription", metadata: { bank_batch: "bb_1" } }, "expired");
     expect(payloadOf(back.forTable("day_bank_entries")[0].calls, "update")).toEqual({ status: "banked", batch_id: null, reserved_at: null });
+    expect(back.forTable("day_bank_entries")[0].calls.find((c) => c.method === "in" && c.args[0] === "status")?.args[1]).toEqual(["reserved"]);
 
     // A pack session, or one with no batch: nothing.
     const none = db(rows);
@@ -138,12 +159,54 @@ describe("settling", () => {
     expect(none.forTable("day_bank_entries")).toHaveLength(0);
   });
 
-  it("a stale reservation (older than a Checkout's life) goes back to the bank", async () => {
+  it("a stale reservation (older than a Checkout's life) goes back to the bank — its batch kept for a late completed event", async () => {
     const stub = db([banked(7, { status: "reserved", batch_id: "bb_old" } as Partial<Row>)]);
     expect(await releaseStaleReservations(stub.client as never, NOW)).toBe(1);
     const sweep = stub.forTable("day_bank_entries")[0];
-    expect(payloadOf(sweep.calls, "update")).toEqual({ status: "banked", batch_id: null, reserved_at: null });
+    expect(payloadOf(sweep.calls, "update")).toEqual({ status: "banked", reserved_at: null });
     expect(sweep.calls.find((c) => c.method === "lt")?.args).toEqual(["reserved_at", new Date(NOW.getTime() - 25 * 3_600_000).toISOString()]);
+  });
+});
+
+describe("an abandoned Checkout's days (check P1-2)", () => {
+  it("stampBankBatchSession writes the session onto the reserved batch", async () => {
+    const stub = db([]);
+    await stampBankBatchSession(stub.client as never, "bb_1", "cs_open");
+    const write = stub.forTable("day_bank_entries")[0];
+    expect(payloadOf(write.calls, "update")).toEqual({ applied_ref: "cs_open" });
+    expect(write.calls.find((c) => c.method === "eq" && c.args[0] === "batch_id")?.args[1]).toBe("bb_1");
+    expect(write.calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1]).toBe("reserved");
+  });
+
+  it("an OPEN session is expired at Stripe and its days go back; a COMPLETE one is left to its webhook; an EXPIRED one just returns the days", async () => {
+    const sessions = { cs_open: "open", cs_done: "complete", cs_gone: "expired" } as Record<string, string>;
+    const expire = vi.fn(async () => ({}));
+    const stripe = { checkout: { sessions: { retrieve: async (id: string) => ({ id, status: sessions[id] }), expire } } };
+    const rows = [
+      { ...banked(7, { status: "reserved" }), batch_id: "bb_a", applied_ref: "cs_open" },
+      { ...banked(3, { status: "reserved" }), batch_id: "bb_b", applied_ref: "cs_done" },
+      { ...banked(2, { status: "reserved" }), batch_id: "bb_c", applied_ref: "cs_gone" },
+    ];
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (table !== "day_bank_entries") return {};
+      if (called(calls, "select") && !called(calls, "update")) return { data: rows.map((r) => ({ batch_id: r.batch_id, applied_ref: r.applied_ref })) };
+      const batch = calls.find((c) => c.method === "eq" && c.args[0] === "batch_id")?.args[1];
+      return { data: rows.filter((r) => r.batch_id === batch).map((r) => ({ days: r.days })) };
+    });
+    expect(await reclaimOpenCheckouts(stub.client as never, stripe as never, USER, NOW)).toBe(2);
+    expect(expire).toHaveBeenCalledTimes(1);
+    expect(expire).toHaveBeenCalledWith("cs_open");
+    const released = stub.forTable("day_bank_entries").filter((e) => called(e.calls, "update")).map((e) => e.calls.find((c) => c.method === "eq" && c.args[0] === "batch_id")?.args[1]);
+    expect(released.sort()).toEqual(["bb_a", "bb_c"]);
+  });
+
+  it("a Stripe read that fails still returns the days (the session, if open, dies on its own within a day)", async () => {
+    const stripe = { checkout: { sessions: { retrieve: async () => { throw new Error("down"); }, expire: vi.fn() } } };
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (called(calls, "select") && !called(calls, "update")) return { data: [{ batch_id: "bb_a", applied_ref: "cs_open" }] };
+      return { data: [{ days: 7 }] };
+    });
+    expect(await reclaimOpenCheckouts(stub.client as never, stripe as never, USER, NOW)).toBe(1);
   });
 });
 
@@ -173,6 +236,15 @@ describe("applyBankToPlan — the user's own click", () => {
     const out = await applyBankToPlan(db([]).client as never, { userId: USER, tier: "plus" }, { now: NOW });
     expect(out).toMatchObject({ ok: false, code: "nothing_banked" });
     expect(freeDays.grantFreeDays).not.toHaveBeenCalled();
+  });
+
+  it("a grant that THROWS hands the days back and fails plainly (never a batch stuck reserved)", async () => {
+    const stub = db([banked(7)]);
+    freeDays.grantFreeDays.mockRejectedValue(new Error("stripe down"));
+    const out = await applyBankToPlan(stub.client as never, { userId: USER, tier: "plus" }, { now: NOW });
+    expect(out).toEqual({ ok: false, error: "stripe down", code: "refused" });
+    const back = stub.forTable("day_bank_entries").find((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status: string }).status === "banked");
+    expect(back).toBeTruthy();
   });
 
   it("settleBankBatch reports a failed write without throwing", async () => {

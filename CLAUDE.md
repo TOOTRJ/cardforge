@@ -1852,8 +1852,15 @@ Rules and gotchas:
   entry is revoked) and RESERVED every banked day under a batch
   (`bank_batch` in the session metadata: `checkout.session.completed`
   spends it, `.expired` returns it, a session that can't be created returns
-  it at once, a stale reservation is released after 25 h). Under
-  `MIN_BANK_DAYS_AT_CHECKOUT` (2, Stripe's 48 h) the days wait. Days earned
+  it at once, an abandoned OPEN session is expired and reclaimed by the next
+  checkout — `reclaimOpenCheckouts`, the session stamped on the batch — and
+  a stale reservation is released after 25 h by the refill cron, its batch
+  kept for a late completed event). `isTrialEligible` is TRI-STATE: an
+  unreadable Stripe history REFUSES the checkout, never revokes the signup
+  days. The bank goes to Stripe as `trial_period_days` (whole days from
+  completion; one banked day checks out, `MIN_BANK_DAYS_AT_CHECKOUT` = 1),
+  and a comp that holds the first charge past the bank's end leaves the days
+  banked (`skipIfEndsBefore`). Days earned
   later are applied by the USER (`applyBankedDaysAction` → `applyBankToPlan`:
   a HOLD on a live plan only — `grantFreeDays` with `days`, `grantsCredits:
   false`, `holdOnly` — never an overlay; no live plan → /pricing). The bank

@@ -46,9 +46,10 @@ type UserClient = Awaited<ReturnType<typeof createClient>>;
 
 /** What a new account starts with (the 7-day trial, as a bank). */
 export const SIGNUP_BANK_DAYS = 7;
-/** Stripe's minimum for a Checkout `trial_end` is 48 h: under this many
- *  banked days a checkout applies nothing and the days wait. */
-export const MIN_BANK_DAYS_AT_CHECKOUT = 2;
+/** A checkout applies the bank as `trial_period_days` (whole days from the
+ *  moment it completes; Stripe's floor is one day) — a single banked day
+ *  checks out. */
+export const MIN_BANK_DAYS_AT_CHECKOUT = 1;
 /** A reservation older than this with no settlement is released (Checkout
  *  sessions expire after 24 h). */
 export const BANK_RESERVATION_MAX_AGE_MS = 25 * 60 * 60 * 1000;
@@ -186,11 +187,15 @@ export async function settleBankBatch(
     outcome.kind === "applied"
       ? { status: "applied", applied_at: now.toISOString(), applied_via: outcome.via, applied_ref: outcome.ref }
       : { status: "banked", batch_id: null, reserved_at: null };
+  // "Applied" also takes rows a stale-reservation release put back to
+  // `banked` with their batch kept (independent check P3-4): a Checkout
+  // completed after the release — Stripe retries an event up to three days
+  // — must still spend what it applied, never leave it to be applied twice.
   const { data, error } = await admin
     .from("day_bank_entries")
     .update(patch)
     .eq("batch_id", batchId)
-    .eq("status", "reserved")
+    .in("status", outcome.kind === "applied" ? ["reserved", "banked"] : ["reserved"])
     .select("days");
   if (error) {
     console.error(`[day-bank] batch ${batchId} → ${outcome.kind} failed: ${error.message}`);
@@ -203,9 +208,11 @@ export async function settleBankBatch(
  *  expiry event was lost): back to banked after BANK_RESERVATION_MAX_AGE_MS. */
 export async function releaseStaleReservations(admin: AdminClient, now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - BANK_RESERVATION_MAX_AGE_MS).toISOString();
+  // The batch stays on the row: a late `completed` for its session still
+  // finds and spends it (settleBankBatch takes banked rows by batch).
   const { data, error } = await admin
     .from("day_bank_entries")
-    .update({ status: "banked", batch_id: null, reserved_at: null })
+    .update({ status: "banked", reserved_at: null })
     .eq("status", "reserved")
     .lt("reserved_at", cutoff)
     .select("id");
@@ -216,23 +223,78 @@ export async function releaseStaleReservations(admin: AdminClient, now: Date = n
   return data?.length ?? 0;
 }
 
+/** The Checkout session a batch waits on, stamped once Stripe made it, so
+ *  a later checkout can expire a session the user backed out of (below). */
+export async function stampBankBatchSession(admin: AdminClient, batchId: string, sessionId: string): Promise<void> {
+  const { error } = await admin
+    .from("day_bank_entries")
+    .update({ applied_ref: sessionId })
+    .eq("batch_id", batchId)
+    .eq("status", "reserved");
+  if (error) console.warn(`[day-bank] batch ${batchId}: session stamp failed: ${error.message}`);
+}
+
+/**
+ * A Checkout the user backed out of keeps its session OPEN for 24 h, and
+ * the days it reserved with it (independent check P1-2): the next checkout
+ * would have sold WITHOUT the free period. Every reserved batch of the user
+ * that names a session is expired at Stripe (an already-complete or expired
+ * session is left alone — its webhook settles it) and its days go back to
+ * the bank before the new checkout reserves afresh. Returns the batches
+ * reclaimed.
+ */
+export async function reclaimOpenCheckouts(admin: AdminClient, stripe: Pick<Stripe, "checkout">, userId: string, now: Date = new Date()): Promise<number> {
+  const { data, error } = await admin
+    .from("day_bank_entries")
+    .select("batch_id, applied_ref")
+    .eq("user_id", userId)
+    .eq("status", "reserved")
+    .not("applied_ref", "is", null);
+  if (error || !data) return 0;
+  const batches = new Map<string, string>();
+  for (const row of data as Array<{ batch_id: string | null; applied_ref: string | null }>) {
+    if (row.batch_id && row.applied_ref) batches.set(row.batch_id, row.applied_ref);
+  }
+  let reclaimed = 0;
+  for (const [batchId, sessionId] of batches) {
+    let released = true;
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.status === "open") await stripe.checkout.sessions.expire(sessionId);
+      else if (session.status === "complete") released = false; // its webhook spends the batch
+    } catch (error) {
+      console.warn(`[day-bank] batch ${batchId}: could not expire ${sessionId}:`, error instanceof Error ? error.message : error);
+    }
+    if (!released) continue;
+    const settled = await settleBankBatch(admin, batchId, { kind: "banked" }, now);
+    if (settled.ok) reclaimed += 1;
+  }
+  return reclaimed;
+}
+
 /**
  * What a fresh checkout applies (lib/stripe/actions.ts): the signup entry
- * is made or revoked by the one-free-period rule the caller judged, then
+ * is made or revoked by the one-free-period rule the caller judged (made
+ * when owed, revoked only on an AFFIRMATIVE "already had one" — a check
+ * that could not run refuses the checkout instead, never revokes), then
  * every banked day is reserved under a batch — when there are at least
  * MIN_BANK_DAYS_AT_CHECKOUT of them. Null = the checkout starts no free
- * period (nothing banked, or too few days: they wait).
+ * period from the bank: nothing banked, too few days, or a comp already
+ * holds the first charge past the bank's end (`skipIfEndsBefore`: the days
+ * stay banked and the user applies them on top later — never spent for
+ * nothing, independent check P1-3).
  */
 export async function prepareCheckoutBank(
   admin: AdminClient,
   userId: string,
-  opts: { signupEligible: boolean; now?: Date },
+  opts: { signupEligible: boolean; now?: Date; skipIfEndsBefore?: number | null },
 ): Promise<{ batchId: string; days: number } | null> {
   const now = opts.now ?? new Date();
   if (opts.signupEligible) await ensureSignupBankEntry(admin, userId);
   else await revokeSignupBankEntry(admin, userId, "not owed: the account's email already had a free period", now);
   const bank = await readBank(admin, userId);
   if (bank.banked < MIN_BANK_DAYS_AT_CHECKOUT) return null;
+  if (opts.skipIfEndsBefore != null && Math.floor(now.getTime() / 1000) + bank.banked * 86_400 <= opts.skipIfEndsBefore) return null;
   const reserved = await reserveBank(admin, userId, now);
   if (!reserved.ok || reserved.days < MIN_BANK_DAYS_AT_CHECKOUT) {
     if (reserved.ok) await settleBankBatch(admin, reserved.batchId, { kind: "banked" }, now);
@@ -277,22 +339,30 @@ export async function applyBankToPlan(
   if (!reserved.ok) return { ok: false, error: reserved.error };
   if (reserved.days < 1) return { ok: false, error: "You have no banked days to apply.", code: "nothing_banked" };
   const days = Math.min(reserved.days, MAX_BANK_DAYS_APPLIED);
-  const granted = await grantFreeDays(
-    admin,
-    {
-      userId: input.userId,
-      tier: input.tier,
-      units: null,
-      days,
-      grantsCredits: false,
-      holdOnly: true,
-      source: "day_bank",
-      grantedBy: null,
-      note: null,
-      reference: `day-bank:${reserved.batchId}`,
-    },
-    { now, ...(deps.stripe ? { stripe: deps.stripe } : {}) },
-  );
+  let granted: Awaited<ReturnType<typeof grantFreeDays>>;
+  try {
+    granted = await grantFreeDays(
+      admin,
+      {
+        userId: input.userId,
+        tier: input.tier,
+        units: null,
+        days,
+        grantsCredits: false,
+        holdOnly: true,
+        source: "day_bank",
+        grantedBy: null,
+        note: null,
+        reference: `day-bank:${reserved.batchId}`,
+      },
+      { now, ...(deps.stripe ? { stripe: deps.stripe } : {}) },
+    );
+  } catch (error) {
+    // A thrown client or network error: the days go back, the click fails
+    // plainly (never a batch stuck `reserved`).
+    await settleBankBatch(admin, reserved.batchId, { kind: "banked" }, now);
+    return { ok: false, error: error instanceof Error ? error.message : "Couldn't apply the days. Try again.", code: "refused" };
+  }
   if (!granted.ok) {
     await settleBankBatch(admin, reserved.batchId, { kind: "banked" }, now);
     const noPlan = /no live plan|needs a live plan|start a plan/i.test(granted.error);
