@@ -13,13 +13,14 @@ import {
   resolveSubscriptionTier,
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
-import { applyCompToSubscription } from "@/lib/billing/comp-stripe-apply";
-import { compEndDateError } from "@/lib/billing/comp-stripe";
+import { grantFreeDays, revokeFreeDays } from "@/lib/billing/free-days-apply";
+import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAY_UNITS } from "@/lib/billing/free-days";
 
-// Admin user tools — grant credits, comp a plan, raise the saved-card cap.
-// Every write goes through the service-role client because the target columns
-// (credits via grant_credits, comp_tier/comp_expires_at/card_limit_override)
-// are pinned by the protect_billing_columns trigger (migration 0060).
+// Admin user tools — grant credits, give free days (a comp), raise the
+// saved-card cap. Every write goes through the service-role client because
+// the target columns (credits via grant_credits, comp_tier/comp_expires_at/
+// card_limit_override, plan_grants) are pinned by the protect_billing_columns
+// trigger (migration 0060) or service-role only (0176).
 
 type ActionError = { ok: false; error: string };
 
@@ -149,118 +150,120 @@ export async function adminGrantCreditsAction(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Comp a plan
+// Free days (a comp) — migration 0176, lib/billing/free-days.ts
 // ---------------------------------------------------------------------------
 
-const setCompTierSchema = z
-  .object({
-    userId: z.string().uuid("Invalid user id."),
-    tier: z.enum(["plus", "pro"]).nullable(),
-    expiresAt: z
-      .string()
-      .datetime({ offset: true, message: "Invalid expiry date." })
-      .nullable(),
-  })
-  .refine(
-    (v) =>
-      v.tier == null ||
-      v.expiresAt == null ||
-      new Date(v.expiresAt) > new Date(),
-    { message: "Expiry must be in the future.", path: ["expiresAt"] },
-  );
+const grantFreeDaysSchema = z.object({
+  userId: z.string().uuid("Invalid user id."),
+  tier: z.enum(["plus", "pro"]),
+  /** 30-day units; null = no end (staff accounts only). */
+  units: z
+    .number()
+    .int("Free days come in 30-day units.")
+    .min(1, "At least one 30-day unit.")
+    .max(MAX_FREE_DAY_UNITS, `At most ${MAX_FREE_DAY_UNITS} units (${MAX_FREE_DAY_UNITS * FREE_DAYS_UNIT_DAYS} days).`)
+    .nullable(),
+  note: z.string().trim().max(500, "Keep the note under 500 characters.").nullable(),
+});
 
-export type AdminSetCompTierResult =
+export type AdminGrantFreeDaysResult =
   | {
       ok: true;
-      /** What the comp did to a live Stripe subscription, in one line for the
-       *  admin (lib/billing/comp-stripe.ts) — null when there is none. */
-      stripeNote?: string | null;
+      /** The free days' end (ISO); null for an open-ended grant. */
+      endsAt: string | null;
+      /** What happened on Stripe / to the overlay, one line (UTC). */
+      stripeNote: string;
+      warning?: string;
     }
   | ActionError;
 
-export async function adminSetCompTierAction(input: {
+/**
+ * Give a user `units` × 30 free days of `tier` (owner 2026-11-05: comps are
+ * free 30 days, added to the time paid for on a live plan). The grant is a
+ * `plan_grants` row; lib/billing/free-days-apply.ts decides and writes
+ * (Stripe `trial_end` on a live, renewing plan; the perks overlay otherwise).
+ * The user is told; the toast carries the Stripe line.
+ */
+export async function adminGrantFreeDaysAction(input: {
   userId: string;
-  tier: "plus" | "pro" | null;
-  expiresAt: string | null;
-}): Promise<AdminSetCompTierResult> {
+  tier: "plus" | "pro";
+  units: number | null;
+  note: string | null;
+}): Promise<AdminGrantFreeDaysResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
 
-  const parsed = setCompTierSchema.safeParse(input);
+  const parsed = grantFreeDaysSchema.safeParse(input);
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input.",
-    };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { userId, tier, expiresAt } = parsed.data;
-
+  const { userId, tier, units, note } = parsed.data;
   const { admin } = gate;
-  const { data: target } = await admin
-    .from("profiles")
-    .select("id, subscription_status")
-    .eq("id", userId)
-    .maybeSingle();
-  if (!target) {
-    return { ok: false, error: "No user with that id." };
-  }
-  // A trialing or paying user's comp needs an end date (owner answer 2,
-  // 2026-10-30): Stripe can't hold a trial open-ended, and an open-ended
-  // balance credit has no amount. "No expiry" stays for free users.
-  const endDateError = compEndDateError({
-    subscriptionStatus: (target as { subscription_status?: string | null }).subscription_status ?? null,
+
+  const result = await grantFreeDays(admin, {
+    userId,
     tier,
-    expiresAt,
+    units,
+    source: "comp",
+    grantedBy: gate.adminId,
+    note: note || null,
   });
-  if (endDateError) return { ok: false, error: endDateError };
+  if (!result.ok) return result;
 
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      comp_tier: tier,
-      // Clearing the tier always clears the expiry with it.
-      comp_expires_at: tier == null ? null : expiresAt,
-    })
-    .eq("id", userId);
-  if (error) {
-    console.warn("adminSetCompTierAction: update error", error.message);
-    return { ok: false, error: "Couldn't update the comp tier." };
-  }
-
-  // A comp month is FREE and the month after it is charged normally (owner,
-  // 2026-10-30): a card-backed trial is held until the comp ends, and put
-  // back when the comp is cleared or shortened; an ACTIVE plan gets the comp
-  // period's price on its Stripe balance (clawed back, unspent part only,
-  // when shortened or cleared). Best effort — the comp row above is what
-  // grants the perks.
-  const stripeOutcome = await applyCompToSubscription(admin, userId, {
-    tier,
-    expiresAt: tier == null ? null : expiresAt,
-  });
-
-  await notifyUser(admin, {
+  // Below the plan they pay for: recorded, nothing changed — nothing to tell.
+  if (result.plan.kind !== "below_plan") {
+    await notifyUser(admin, {
     recipientId: userId,
     actorId: gate.adminId,
     type: "comp_plan",
     payload: {
       tier,
-      expiresAt: tier == null ? null : expiresAt,
-      // The trial's new end, so the copy can say when the first charge
-      // lands — only when the comp HOLDS the trial: a release must never say
-      // "your trial now runs until" today.
-      ...(stripeOutcome.change?.kind === "set_trial_end" &&
-      stripeOutcome.change.reason === "comp_holds_trial" &&
-      stripeOutcome.trialEnd
-        ? { trialEnd: stripeOutcome.trialEnd }
-        : {}),
-      // A paying user's comp period credited to their Stripe balance.
-      ...(tier != null && stripeOutcome.credit && stripeOutcome.credit.postedCents > 0
-        ? { creditCents: stripeOutcome.credit.postedCents, currency: stripeOutcome.credit.currency }
-        : {}),
+      days: units == null ? null : units * FREE_DAYS_UNIT_DAYS,
+      expiresAt: result.endsAt,
+      // A hold: the next charge moved — the copy says the days are added to
+      // the time paid for (never "your trial").
+      ...(result.holdEndsAt ? { holdEndsAt: result.holdEndsAt, was: result.plan.kind === "hold" ? result.plan.was : null } : {}),
     },
-  });
+    });
+  }
 
-  return { ok: true, stripeNote: stripeOutcome.note };
+  return {
+    ok: true,
+    endsAt: result.endsAt,
+    stripeNote: result.note,
+    ...(result.warning ? { warning: result.warning } : {}),
+  };
+}
+
+export type AdminRevokeFreeDaysResult = { ok: true; note: string; warning?: string } | ActionError;
+
+/** Take back a user's NEWEST free-days grant: the overlay shrinks by its
+ *  days, a Stripe trial held at its end moves back (never before the end it
+ *  had before any hold; "now" when that has passed — charged at once). */
+export async function adminRevokeFreeDaysAction(input: { grantId: string }): Promise<AdminRevokeFreeDaysResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  const parsed = z.object({ grantId: z.string().uuid("Invalid grant id.") }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  const { admin } = gate;
+
+  const { data: grant } = await admin.from("plan_grants").select("user_id").eq("id", parsed.data.grantId).maybeSingle();
+  const result = await revokeFreeDays(admin, { grantId: parsed.data.grantId, revokedBy: gate.adminId });
+  if (!result.ok) return result;
+
+  const userId = (grant as { user_id?: string } | null)?.user_id;
+  if (userId) {
+    await notifyUser(admin, {
+      recipientId: userId,
+      actorId: gate.adminId,
+      type: "comp_plan",
+      payload:
+        result.overlay.comp_tier == null
+          ? { tier: null }
+          : { tier: result.overlay.comp_tier, expiresAt: result.overlay.comp_expires_at, revoked: 1 },
+    });
+  }
+  return { ok: true, note: result.note, ...(result.warning ? { warning: result.warning } : {}) };
 }
 
 // ---------------------------------------------------------------------------

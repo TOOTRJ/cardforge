@@ -408,11 +408,10 @@ export function compEndingEmail(recipient: Recipient, input: CompEndingEmailInpu
     const opening = goesBack
       ? `Your complimentary ${plan} ends on <strong>${date}</strong>${at}, and you go back to ${paid}${price ? ` (${price})` : ""}.`
       : `Your complimentary ${plan} period ends on <strong>${date}</strong>${at}.`;
-    // The next charge can fall INSIDE the comp (the balance credit then
-    // reduces it): a date is named only when it is after the comp's end.
+    // A date is named only when the next charge is after the comp's end.
     const charge = next
-      ? `Your next invoice, on <strong>${next}</strong>, is charged as usual${price ? ` (${price})` : ""}, less any comp credit still on your balance.`
-      : `Invoices after ${date} are charged as usual${price ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;
+      ? `Your next invoice, on <strong>${next}</strong>, is charged as usual${price ? ` (${price})` : ""}.`
+      : `Invoices after ${date} are charged as usual${price ? ` (${price})` : ""}.`;
     paragraphs = [
       `${opening} ${charge}`,
       goesBack

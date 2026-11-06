@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currentCreditPeriod } from "@/lib/billing/plans";
 import { refillActiveSubscribers } from "@/lib/billing/credit-refill";
+import { grantFreeDaysCredits } from "@/lib/billing/free-days-credits";
 import {
   ALERT_USER_IDS_MAX,
   cronAlertDedupeKey,
@@ -12,8 +13,10 @@ import { cronRouteGuard } from "@/lib/api/cron-auth";
 
 // ---------------------------------------------------------------------------
 // /api/cron/refill-credits — the monthly AI-credit allotment of every paid
-// account: an active Plus / Pro subscription, or an unexpired admin comp.
-// Free does NOT refill (owner decision 2026-09-24: SIGNUP_CREDITS once).
+// account: an active Plus / Pro subscription, and — a second sweep — every
+// free-days grant's allotment per 30 days (lib/billing/free-days-credits.ts,
+// migration 0176: comps and referral rewards). Free does NOT refill (owner
+// decision 2026-09-24: SIGNUP_CREDITS once).
 //
 // Cron-driven so BOTH monthly and annual plans get a monthly allotment. Runs
 // daily (see vercel.json); the per-user-per-month idempotency key means only
@@ -52,9 +55,16 @@ export async function GET(request: Request) {
   const result = await refillActiveSubscribers(admin, period, {
     onGrantFailed: (userId, error) => failures.push({ userId, error }),
   });
+  // The free-days grants' allotments — its own page read; a failed one is
+  // reported like a failed subscriber page (the subscribers' sweep stands).
+  const grants = await grantFreeDaysCredits(admin, {
+    now,
+    onGrantFailed: (userId, error) => failures.push({ userId, error }),
+  });
 
-  const failed = result.ok ? result.failed : failures.length;
-  if (!result.ok || failed > 0) {
+  const failed = (result.ok ? result.failed : failures.length) + (grants.ok ? grants.failed : 0);
+  const pageError = !result.ok ? result.error : !grants.ok ? `plan_grants: ${grants.error}` : null;
+  if (!result.ok || !grants.ok || failed > 0) {
     await notifyAdminsCreditRefillFailed(admin, {
       source: "cron",
       dedupeKey: cronAlertDedupeKey(now),
@@ -63,14 +73,14 @@ export async function GET(request: Request) {
       processed: result.ok ? result.processed : null,
       granted: result.ok ? result.granted : null,
       failed,
-      pageError: result.ok ? null : cutError(result.error),
+      pageError: pageError ? cutError(pageError) : null,
       userIds: failures.slice(0, ALERT_USER_IDS_MAX).map((f) => f.userId),
       error: failures[0] ? cutError(failures[0].error) : null,
     });
   }
 
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, period, failed, error: result.error }, { status: 500 });
+  if (!result.ok || !grants.ok) {
+    return NextResponse.json({ ok: false, period, failed, error: pageError }, { status: 500 });
   }
 
   return NextResponse.json(
@@ -80,6 +90,7 @@ export async function GET(request: Request) {
       processed: result.processed,
       granted: result.granted,
       failed,
+      grants: { processed: grants.processed, granted: grants.granted, failed: grants.failed },
     },
     { status: failed > 0 ? 500 : 200 },
   );

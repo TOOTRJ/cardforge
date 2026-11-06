@@ -40,6 +40,7 @@ const s = vi.hoisted(() => ({
     cancel_at?: number | null;
     schedule?: string | null;
     default_payment_method?: string | null;
+    metadata?: Record<string, string>;
     items: {
       data: Array<{ id?: string; price: { id: string; recurring?: { interval: string } } }>;
     };
@@ -174,7 +175,8 @@ import {
 } from "@/lib/stripe/actions";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { clearPriceCache } from "@/lib/stripe/prices";
-import { TRIAL_END_BEFORE_COMP_KEY, compTrialChangeFor } from "@/lib/billing/comp-stripe";
+import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { planRevoke } from "@/lib/billing/free-days";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const checkoutParams = () => s.checkoutCreate.mock.calls[0]?.[0] as Record<string, unknown> & {
@@ -337,7 +339,7 @@ describe("createCheckoutSessionAction", () => {
     expect(params.subscription_data).not.toHaveProperty("trial_end");
   });
 
-  it("a comp hold names the trial end it would have had WITHOUT the comp, so clearing the comp releases it (finding 1)", async () => {
+  it("a comp hold names the trial end it would have had WITHOUT the comp, so revoking the free days releases it (finding 1)", async () => {
     const compEnd = new Date(Date.now() + 30 * 86_400_000).toISOString();
     const compEndSec = Math.floor(Date.parse(compEnd) / 1000);
     const nowSec = () => Math.floor(Date.now() / 1000);
@@ -354,13 +356,16 @@ describe("createCheckoutSessionAction", () => {
     expect(own).toBeGreaterThanOrEqual(before);
     expect(own).toBeLessThanOrEqual(nowSec());
     expect(data.metadata.supabase_user_id).toBe(USER);
-    // The subscription Stripe creates from it, then the admin clears the comp:
-    let sub = { status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
-    expect(compTrialChangeFor({ sub, subscribedTier: "plus", comp: { tier: null, expiresAt: null } })).toEqual({
-      kind: "set_trial_end",
-      trialEnd: "now",
-      beforeComp: "",
-      reason: "comp_released_trial",
+    // The subscription Stripe creates from it, then the admin REVOKES the
+    // 30-day grant behind the comp (lib/billing/free-days.ts): the trial goes
+    // back to its own end — the checkout itself, which has passed — so it
+    // ends NOW and charges.
+    const grant = { id: "g1", tier: "plus" as const, units: 1, ends_at: compEnd, status: "applied" };
+    let sub = { id: "sub_new", status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
+    expect(planRevoke({ grant, profile: s.profile, sub, otherGrants: [] })).toEqual({
+      kind: "revoke",
+      overlay: { comp_tier: null, comp_expires_at: null },
+      trial: { subscriptionId: "sub_new", trialEnd: "now", beforeComp: "" },
     });
 
     // Trial-eligible: the hold's own end is the 7-day trial's — clearing the
@@ -372,10 +377,10 @@ describe("createCheckoutSessionAction", () => {
     data = checkoutParams().subscription_data as { trial_end: number; metadata: Record<string, string> };
     const trialDaysEnd = Number(data.metadata[TRIAL_END_BEFORE_COMP_KEY]);
     expect(Math.abs(trialDaysEnd - (nowSec() + TRIAL_DAYS * 86_400))).toBeLessThanOrEqual(5);
-    sub = { status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
-    expect(compTrialChangeFor({ sub, subscribedTier: "plus", comp: { tier: null, expiresAt: null } })).toMatchObject({
-      kind: "set_trial_end",
-      trialEnd: trialDaysEnd,
+    sub = { id: "sub_new", status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
+    expect(planRevoke({ grant, profile: s.profile, sub, otherGrants: [] })).toMatchObject({
+      kind: "revoke",
+      trial: { subscriptionId: "sub_new", trialEnd: trialDaysEnd, beforeComp: "" },
     });
 
     // No comp: no hold, no metadata key.
@@ -488,6 +493,30 @@ describe("createCheckoutSessionAction", () => {
       },
     });
     expect(s.checkoutCreate).not.toHaveBeenCalled();
+  });
+
+  it("a PAYING plan under free days (trialing + pipglyph_hold_from = active): a DOWNGRADE is scheduled for the free days' end, an upgrade switches now through the portal (0176)", async () => {
+    const held = {
+      id: "sub_held",
+      status: "trialing",
+      trial_end: Math.floor(Date.now() / 1000) + 40 * 24 * 60 * 60,
+      default_payment_method: "pm_1",
+      metadata: { pipglyph_hold_from: "active" },
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    s.live = held;
+    const down = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(down).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=scheduled" });
+    expect(s.scheduleCreate).toHaveBeenCalledWith({ from_subscription: "sub_held" });
+    expect(s.portalCreate).not.toHaveBeenCalled();
+    expect(s.checkoutCreate).not.toHaveBeenCalled();
+
+    s.scheduleCreate.mockClear();
+    s.live = { ...held, items: { data: [{ id: "si_1", price: { id: "price_plus_monthly", recurring: { interval: "month" } } }] } };
+    const up = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(up).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.portalCreate.mock.calls[0]?.[0]).toMatchObject({ flow_data: { type: "subscription_update_confirm" } });
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
   });
 
   it("win-back: a trial that lapsed within 30 days buys its first month with the coupon applied server-side (no promo-code box)", async () => {
@@ -918,6 +947,12 @@ describe("createCheckoutSessionAction", () => {
     await createCheckoutSessionAction({ kind: "pack", pack: "large" });
     expect(checkoutParams()).not.toHaveProperty("discounts");
     expect(checkoutParams().metadata).toMatchObject({ discount: "none" });
+
+    // A PAYING plan under a free-days hold reads trialing (lib/billing/free-days.ts): still a subscriber.
+    s.checkoutCreate.mockClear();
+    s.live = { id: "sub_held", status: "trialing", metadata: { pipglyph_hold_from: "active" }, items: { data: [{ id: "si_1", price: { id: "price_plus_monthly" } }] } };
+    await createCheckoutSessionAction({ kind: "pack", pack: "large" });
+    expect(checkoutParams().metadata).toMatchObject({ discount: "subscriber" });
   });
 
   it("a missing coupon never blocks a sale: the pack is sold at full price and the failure logged", async () => {

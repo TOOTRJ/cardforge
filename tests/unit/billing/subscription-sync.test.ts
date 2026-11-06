@@ -813,6 +813,13 @@ describe("the dunning stamp (0174: profiles.payment_failed_at)", () => {
     expect(retry.updates[0].payment_failed_at).toBeNull();
   });
 
+  it("a PAYING plan under a free-days hold (Stripe `trialing`, metadata pipglyph_hold_from = active) whose renewal declines after the days IS stamped — a payer's grace (0176)", async () => {
+    const held = makeAdmin({ subscription_status: "trialing", payment_failed_at: null });
+    const declined = { ...pastDue(), metadata: { pipglyph_hold_from: "active" } };
+    await syncSubscriptionForUser(held.admin, makeStripe([declined]), "user-1", { eventSub: declined });
+    expect(typeof held.updates[0].payment_failed_at).toBe("string");
+  });
+
   it("the result carries the stamp for the payment-failed notice", async () => {
     const { admin } = makeAdmin({ payment_failed_at: "2026-11-01T00:00:00.000Z" });
     const result = await syncSubscriptionForUser(admin, makeStripe([pastDue()]), "user-1", { eventSub: pastDue() });

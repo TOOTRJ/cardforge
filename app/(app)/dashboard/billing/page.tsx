@@ -13,7 +13,8 @@ import { ManageBillingButton } from "@/components/billing/manage-billing-button"
 import { PlanActions, PlanStatusLine, endingBadgeLabel } from "@/components/billing/plan-status";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
-import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { readOwnHoldGrant } from "@/lib/billing/plan-grants";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -95,9 +96,23 @@ export default async function BillingPage() {
   const delinquent = !live && status != null && DELINQUENT_SUBSCRIPTION_STATUSES.has(status);
   const comped =
     entitlements.isPaid && !live && !delinquent && (profile?.comp_tier != null || profile?.is_admin);
-  // An admin comp over a LIVE subscription (lib/billing/comp-stripe.ts):
-  // the perks follow the comp; a trial is held until it ends.
+  // Free days over a LIVE subscription (lib/billing/free-days.ts): the perks
+  // follow the comp, and the plan's next charge was moved out by the days
+  // (the subscription reads `trialing` until then).
   const liveComp = live && profile ? compOverLiveSubscription(profile) : null;
+  const heldByComp =
+    liveComp != null &&
+    liveCompChargeLine({
+      status,
+      compExpiresAt: liveComp.expiresAt,
+      stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
+    }) === "held";
+  // A hold on a PAYING plan whose start is still ahead (the plan is paid
+  // through then): the viewer's own grant row. Applied: the free days run
+  // from that start. Revoked: Stripe still reads `trialing` until that
+  // start, where the plan simply renews — never "your free trial".
+  const hold = status === "trialing" ? await readOwnHoldGrant(await createClient()) : null;
+  const paidThrough = hold?.status === "revoked" && !heldByComp ? hold.startsAt : null;
   const sub = stripeDetails?.subscription ?? null;
   const priceLine = sub?.amountCents != null && sub.interval
     ? `${formatMoney(sub.amountCents, sub.currency)} / ${sub.interval}`
@@ -109,7 +124,7 @@ export default async function BillingPage() {
   // live answer first (cancel_at, cancel_at_period_end, a schedule that ends
   // in a cancellation), the webhook-written profile flag when Stripe is
   // unreachable. A scheduled downgrade is not a cancellation.
-  const planStatus = planStatusOf({
+  const stripeStatus = planStatusOf({
     live,
     delinquent,
     graceUntil: entitlements.dunningGraceUntil,
@@ -122,6 +137,8 @@ export default async function BillingPage() {
       endsAt: profile?.subscription_ends_at ?? null,
     },
   });
+  const planStatus =
+    stripeStatus.kind === "trial" && paidThrough ? { kind: "renews" as const, renewsAt: paidThrough } : stripeStatus;
   const ending = isEndingStatus(planStatus);
   // The plan grid below reads the same fact (the profile flag can lag the
   // live read until the next webhook event).
@@ -129,18 +146,9 @@ export default async function BillingPage() {
   // What a comp over a live plan means for the next charge
   // (lib/billing/comp-stripe.ts `liveCompChargeLine`).
   const liveCompLine = liveComp
-    ? {
-        trial_held: " — your trial runs at least that long, so nothing is charged before then.",
-        balance_credit: " — the comp period's price goes on your billing balance and comes off your next invoices.",
-        own_dates: " — your subscription keeps its own billing dates.",
-      }[
-        liveCompChargeLine({
-          status,
-          ending,
-          compExpiresAt: liveComp.expiresAt,
-          stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
-        })
-      ]
+    ? heldByComp
+      ? " — nothing is charged before then; your plan then continues at its usual price."
+      : " — your subscription keeps its own billing dates."
     : null;
   const capacity = entitlements.cardCapacity;
   const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
@@ -178,7 +186,7 @@ export default async function BillingPage() {
             <div className="flex flex-col items-end gap-1">
               <Badge variant={entitlements.isPaid ? "primary" : "outline"}>
                 {live || delinquent
-                  ? (endingBadgeLabel(planStatus) ?? STATUS_LABEL[status ?? ""] ?? status)
+                  ? (endingBadgeLabel(planStatus) ?? (heldByComp ? "Free days" : STATUS_LABEL[status ?? ""] ?? status))
                   : comped
                     ? "Complimentary"
                     : "Free plan"}
@@ -194,6 +202,8 @@ export default async function BillingPage() {
               priceLine={priceLine}
               hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
               compExpiresAt={profile?.comp_expires_at ?? null}
+              heldByComp={heldByComp}
+              heldFrom={hold?.status === "applied" ? hold.startsAt : null}
             />
           </p>
           {liveComp ? (
@@ -201,7 +211,7 @@ export default async function BillingPage() {
               {planForTier(liveComp.tier).name} is complimentary
               {liveComp.expiresAt ? (
                 <>
-                  {" "}until <LocalDate iso={liveComp.expiresAt} />
+                  {" "}until <LocalDate iso={liveComp.expiresAt} format="stampYear" />
                 </>
               ) : null}
               {liveCompLine}

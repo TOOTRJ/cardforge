@@ -21,6 +21,7 @@ import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
   compHoldsCheckoutUntil,
+  isHeldPayingPlan,
   type CompFacts,
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
@@ -446,6 +447,20 @@ export async function createCheckoutSessionAction(
           return { ok: false, error: "You're already on that plan." };
         }
         if (live.status === "trialing" && (await subscriptionHasPaymentMethod(live, stripe))) {
+          // A PAYING plan under free days (lib/billing/free-days.ts) reads
+          // trialing: a DOWNGRADE is scheduled for the free days' end like an
+          // active plan's for its period end — the portal would apply it at
+          // once and take paid-for perks away (Pro paid through Dec 5,
+          // downgraded today). An upgrade still switches now (continue_trial:
+          // the new price lands when the free days end).
+          if (isHeldPayingPlan(live)) {
+            const currentTier = await resolveSubscriptionTier(live, stripe);
+            const currentInterval = live.items.data[0]?.price?.recurring?.interval ?? null;
+            const target = { tier: input.tier, period: input.period ?? "monthly" };
+            if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
+              return await scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
+            }
+          }
           return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         if (live.status === "active") {
@@ -500,7 +515,7 @@ export async function createCheckoutSessionAction(
           ? null
           : Math.max(compHold, withTrial ? trialDaysEnd : 0, carryTrialEnd ?? 0);
       // The trial end the subscription would have had WITHOUT the comp —
-      // what clearing or shortening the comp puts back (compTrialChangeFor
+      // what revoking the free days puts back (lib/billing/free-days.ts planRevoke
       // reads it): the 7-day trial's end, a carried trial's end, or — no
       // trial at all — the checkout itself (cleared → charged at once).
       // Also what tells a cancel during the hold from a lapsed trial
@@ -624,7 +639,8 @@ export async function createCheckoutSessionAction(
     // never a code the client could supply. The webhook grants by
     // pack_credits, so the discount changes the price and nothing else.
     const live = await findLiveSubscription(stripe, customer.customerId);
-    const subscriberDiscount = live?.status === "active";
+    // A paying plan under a free-days hold reads `trialing` (lib/billing/free-days.ts).
+    const subscriberDiscount = live?.status === "active" || isHeldPayingPlan(live);
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       customer: customer.customerId,

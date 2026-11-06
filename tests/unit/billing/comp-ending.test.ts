@@ -332,7 +332,7 @@ describe("sendCompEndingReminders — the daily run", () => {
       nextChargeAt: iso(nowSec + 20 * DAY),
     });
     expect(h.sendEmail.mock.calls[0][0].text).toMatch(
-      /Your next invoice, on .+, is charged as usual \(\$6 \/ month\), less any comp credit still on your balance\./,
+      /Your next invoice, on .+, is charged as usual \(\$6 \/ month\)\./,
     );
   });
 
@@ -421,15 +421,15 @@ describe("the copy (bell + email)", () => {
   });
   it("paying: the next invoice as usual; plan_ending: nothing more is charged", () => {
     expect(bell({ kind: "paying", tier: "pro", subscribedTier: "pro", expiresAt: IN_5D, nextChargeAt: IN_5D, priceLabel: "$15 / month" }).body).toMatch(
-      /your next invoice, on .+, is charged as usual \(\$15 \/ month\), less any comp credit still on your balance\./,
+      /your next invoice, on .+, is charged as usual \(\$15 \/ month\)\./,
     );
     // The next charge falls inside the comp: no date is promised.
     expect(bell({ kind: "paying", tier: "pro", subscribedTier: "pro", expiresAt: IN_5D, nextChargeAt: null, priceLabel: "$15 / month" }).body).toMatch(
-      /invoices after that are charged as usual \(\$15 \/ month\); any comp credit still on your balance comes off first\./,
+      /invoices after that are charged as usual \(\$15 \/ month\)\./,
     );
     // Comped above the plan: back to Plus.
     expect(bell({ kind: "paying", tier: "pro", subscribedTier: "plus", expiresAt: IN_5D, nextChargeAt: null, priceLabel: "$6 / month" }).body).toMatch(
-      /; you go back to Plus \(\$6 \/ month\); invoices after that are charged as usual;/,
+      /; you go back to Plus \(\$6 \/ month\); invoices after that are charged as usual\./,
     );
     expect(bell({ kind: "plan_ending", tier: "plus", expiresAt: IN_5D, planEndsAt: IN_5D }).body).toMatch(/nothing more is charged/);
   });

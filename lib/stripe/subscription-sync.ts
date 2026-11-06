@@ -9,7 +9,7 @@ import {
   type PlanTier,
 } from "@/lib/billing/plans";
 import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
-import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import {
   endsByPeriodEnd,
   subscriptionEndsAt,
@@ -485,9 +485,15 @@ export async function syncSubscriptionForUser(
   // whose first charge declines gets no grace (it never paid; the perks
   // were the trial's) — the stamp stays null for that whole dunning run.
   const broken = !chosenDeleted && DUNNING_STATUSES.has(status);
+  // A PAYING plan under a free-days hold read `trialing` on Stripe until
+  // the days ended (lib/billing/free-days.ts): its declined renewal after
+  // them is a payer's, with the grace. The hold's metadata says so (the
+  // status is past_due by now, so the key alone is read).
+  const heldPayer = !chosenDeleted && chosen.metadata?.[HOLD_FROM_KEY] === "active";
   const fromTrial =
-    previous.subscription_status === "trialing" ||
-    (DUNNING_STATUSES.has(previous.subscription_status ?? "") && previous.payment_failed_at == null);
+    !heldPayer &&
+    (previous.subscription_status === "trialing" ||
+      (DUNNING_STATUSES.has(previous.subscription_status ?? "") && previous.payment_failed_at == null));
   const paymentFailedAt = broken
     ? (previous.payment_failed_at ?? (fromTrial ? null : new Date().toISOString()))
     : null;
@@ -640,6 +646,8 @@ export async function subscriptionHasPaymentMethod(
  *  `trial_lapsed` row or win-back offer. */
 export function isUnconvertedTrial(sub: SubscriptionLike): boolean {
   if (typeof sub.trial_end !== "number" || typeof sub.ended_at !== "number") return false;
+  // A paying plan held by free days was never a trial (lib/billing/free-days.ts).
+  if (sub.metadata?.[HOLD_FROM_KEY] === "active") return false;
   const rawBefore = sub.metadata?.[TRIAL_END_BEFORE_COMP_KEY];
   const before = rawBefore ? Number(rawBefore) : NaN;
   const trialEnd = Number.isFinite(before) && before > 0 ? Math.min(before, sub.trial_end) : sub.trial_end;

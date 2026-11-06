@@ -28,6 +28,11 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/billing/credit-refill", () => ({
   refillActiveSubscribers: (...args: Parameters<Sweep>) => state.sweep(...args),
 }));
+// The free-days grants' sweep (0176) runs after the subscribers' one; its
+// own business is tests/unit/billing/free-days-credits.test.ts.
+vi.mock("@/lib/billing/free-days-credits", () => ({
+  grantFreeDaysCredits: async () => ({ ok: true, processed: 0, granted: 0, failed: 0 }),
+}));
 
 import { GET } from "@/app/api/cron/refill-credits/route";
 import { currentCreditPeriod } from "@/lib/billing/plans";
@@ -60,7 +65,14 @@ describe("GET /api/cron/refill-credits", () => {
     state.sweep = vi.fn(async () => ({ ok: true, processed: 12, granted: 3, failed: 0 }));
     const res = await get();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, period: currentCreditPeriod(), processed: 12, granted: 3, failed: 0 });
+    expect(await res.json()).toEqual({
+      ok: true,
+      period: currentCreditPeriod(),
+      processed: 12,
+      granted: 3,
+      failed: 0,
+      grants: { processed: 0, granted: 0, failed: 0 },
+    });
     expect(alert.insertCalls).toEqual([]);
   });
 
@@ -75,7 +87,14 @@ describe("GET /api/cron/refill-credits", () => {
 
     const res = await get();
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ ok: false, period: "2026-10", processed: 40, granted: 5, failed: 2 });
+    expect(await res.json()).toEqual({
+      ok: false,
+      period: "2026-10",
+      processed: 40,
+      granted: 5,
+      failed: 2,
+      grants: { processed: 0, granted: 0, failed: 0 },
+    });
     expect(alert.notifications).toEqual(
       ["admin-1", "admin-2"].map((recipient) => ({
         recipient_id: recipient,

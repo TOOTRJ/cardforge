@@ -1,6 +1,6 @@
 import "server-only";
 
-import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { TRIAL_END_BEFORE_COMP_KEY, isHeldPayingPlan } from "@/lib/billing/comp-stripe";
 import { isCompHeldTrial, type CompEndingSub } from "@/lib/billing/comp-ending";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
@@ -178,7 +178,8 @@ async function handleSubscriptionEvent(
     });
   } else if (opts.previous) {
     // What an updated event changed: a trial converting, or a plan switch.
-    if (opts.previous.status === "trialing" && sub.status === "active") {
+    // A paying plan coming off a free-days hold converts no trial.
+    if (opts.previous.status === "trialing" && sub.status === "active" && !isHeldPayingPlan(opts.previous)) {
       await recordFunnelEvent(admin, {
         event: "trial_converted",
         userId,
@@ -310,6 +311,11 @@ async function handleTrialWillEnd(
     compHoldingTrial(admin, userId, sub),
   ]);
   const compHold = heldBy != null;
+  // A PAYING plan under free days (lib/billing/free-days.ts) is reminded as
+  // a complimentary period ending — never as "your trial": with no comp
+  // holding it any more (revoked: the trial is back on the paid period's
+  // end, which simply renews), there is nothing to remind of.
+  if (!compHold && isHeldPayingPlan(sub)) return;
   const price = sub.items?.data?.[0]?.price ?? null;
   const interval = price?.recurring?.interval ?? null;
   const payload = {

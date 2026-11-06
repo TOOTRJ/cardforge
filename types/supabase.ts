@@ -452,6 +452,85 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0176 — free 30 days (comps, referral rewards).
+      plan_grants: {
+        Row: {
+          id: string;
+          user_id: string;
+          tier: string;
+          units: number | null;
+          source: string;
+          granted_by: string | null;
+          note: string | null;
+          applied_as: string;
+          stripe_subscription_id: string | null;
+          held_from: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          credits_from: string;
+          status: string;
+          stripe_error: string | null;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          tier: string;
+          units?: number | null;
+          source: string;
+          granted_by?: string | null;
+          note?: string | null;
+          applied_as: string;
+          stripe_subscription_id?: string | null;
+          held_from?: string | null;
+          starts_at: string;
+          ends_at?: string | null;
+          credits_from: string;
+          status?: string;
+          stripe_error?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          tier?: string;
+          units?: number | null;
+          source?: string;
+          granted_by?: string | null;
+          note?: string | null;
+          applied_as?: string;
+          stripe_subscription_id?: string | null;
+          held_from?: string | null;
+          starts_at?: string;
+          ends_at?: string | null;
+          credits_from?: string;
+          status?: string;
+          stripe_error?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_grants_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "plan_grants_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       comment_reports: {
         Row: {
           comment_id: string;

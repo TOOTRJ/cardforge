@@ -303,7 +303,7 @@ type SweepStubOpts = {
   failPageRead?: number;
 };
 
-function stubSweepAdmin(opts: SweepStubOpts): {
+function stubSweepAdmin(opts: SweepStubOpts & { heldBeforeStart?: string[] }): {
   admin: CreditGrantClient;
   grants: GrantCall[];
   pageReads: Array<[number, number]>;
@@ -313,6 +313,17 @@ function stubSweepAdmin(opts: SweepStubOpts): {
   const admin = {
     from: (table: string) => ({
       select: () => ({
+        // plan_grants path (the paid time before a hold): .in().eq().eq().gt().limit()
+        in: () => {
+          const chain = {
+            eq: () => chain,
+            gt: () => chain,
+            limit: () => chain,
+            then: (resolve: (v: unknown) => void) =>
+              resolve({ data: (opts.heldBeforeStart ?? []).map((user_id) => ({ user_id })), error: null }),
+          };
+          return chain;
+        },
         // ledger path: .like() — no refill rows yet this month, and no
         // newest base grant (the backstop read's .order().limit()).
         like: () => {
@@ -387,30 +398,33 @@ describe("refillTierFor", () => {
     ).toBe("plus");
   });
 
-  it("owes an unexpired admin comp its tier — the higher of comp and live plan", () => {
-    const now = new Date("2026-07-15T00:00:00Z");
-    // Comped Pro on a free account.
-    expect(refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: null }, PERIOD, now)).toBe("pro");
-    // Comped Pro on a lapsed Plus subscription.
+  it("a plan HELD by free days that have not started (Stripe reads trialing; the time until the hold is paid) is owed its tier; a plain trial is not", () => {
+    const held = { ...base, subscription_tier: "pro", subscription_status: "trialing" };
+    expect(refillTierFor(held, PERIOD, { heldBeforeStart: true })).toBe("pro");
+    expect(refillTierFor(held, PERIOD, { heldBeforeStart: false })).toBeNull();
+    expect(refillTierFor(held, PERIOD)).toBeNull();
+    // The plan rule reads the interval as for an active plan.
+    expect(refillPlanFor({ ...held, billing_interval: "year", current_period_end: "2027-01-15T00:00:00Z" }, "pro", new Date("2026-03-01T06:00:00Z"))).toEqual({ current: "always", backfillPrevious: true });
+    expect(refillPlanFor({ ...held, billing_interval: "month" }, "pro")).toEqual({ current: "backstop", backfillPrevious: false });
+  });
+
+  it("a comp (the perks overlay) is NOT owed here since 0176 — its grant's own allotments are (lib/billing/free-days-credits.ts)", () => {
+    // Comped Pro on a free account: nothing from this sweep.
+    expect(refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: null } as RefillProfileRow, PERIOD)).toBeNull();
+    // Comped Pro on a lapsed Plus subscription: nothing either.
     expect(
       refillTierFor(
-        { ...base, subscription_tier: "plus", subscription_status: "canceled", comp_tier: "pro", comp_expires_at: "2026-12-31T00:00:00Z" },
+        { ...base, subscription_tier: "plus", subscription_status: "canceled", comp_tier: "pro", comp_expires_at: "2026-12-31T00:00:00Z" } as RefillProfileRow,
         PERIOD,
-        now,
       ),
-    ).toBe("pro");
-    // Comped Plus never demotes an active Pro.
-    expect(
-      refillTierFor(
-        { ...base, subscription_tier: "pro", subscription_status: "active", comp_tier: "plus", comp_expires_at: null },
-        PERIOD,
-        now,
-      ),
-    ).toBe("pro");
-    // An expired comp is no comp — and a free account is owed nothing.
-    expect(
-      refillTierFor({ ...base, comp_tier: "pro", comp_expires_at: "2026-07-01T00:00:00Z" }, PERIOD, now),
     ).toBeNull();
+    // An active Pro stays Pro whatever the overlay says.
+    expect(
+      refillTierFor(
+        { ...base, subscription_tier: "pro", subscription_status: "active", comp_tier: "plus", comp_expires_at: null } as RefillProfileRow,
+        PERIOD,
+      ),
+    ).toBe("pro");
   });
 
   it("skips trials (single grant at creation) and admins; a paid subscriber who signed up this month still gets their tier", () => {
@@ -445,13 +459,12 @@ describe("refillPlanFor — who grants the base allotment (0175)", () => {
     expect(refillPlanFor({ ...base, billing_interval: "year" }, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
   });
 
-  it("an unknown interval (pre-0175 row) keeps the old rule; a comp's allotment is always the cron's", () => {
+  it("an unknown interval (pre-0175 row) keeps the old rule; a comp overlay changes nothing here (0176)", () => {
     expect(refillPlanFor({ ...base, billing_interval: null }, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
-    const comped = { ...base, subscription_tier: "plus", billing_interval: "month", comp_tier: "pro", comp_expires_at: "2027-01-01T00:00:00Z" };
-    expect(refillPlanFor(comped, "pro", now)).toEqual({ current: "always", backfillPrevious: false });
-    // The comp below the plan: the plan's own rule.
-    expect(refillPlanFor({ ...comped, comp_tier: "plus", subscription_tier: "pro" }, "pro", now)).toEqual({ current: "backstop", backfillPrevious: false });
-    expect(refillPlanFor({ ...base, subscription_status: null, subscription_tier: "free", comp_tier: "plus", comp_expires_at: null }, "plus", now)).toEqual({ current: "always", backfillPrevious: false });
+    // A monthly Plus payer comped Pro: the plan's own rule (the comp's
+    // credits are its grant's, lib/billing/free-days-credits.ts).
+    const comped = { ...base, subscription_tier: "plus", billing_interval: "month", comp_tier: "pro", comp_expires_at: "2027-01-01T00:00:00Z" } as RefillProfileRow;
+    expect(refillPlanFor(comped, "plus", now)).toEqual({ current: "backstop", backfillPrevious: false });
   });
 });
 

@@ -1092,6 +1092,17 @@ describe("handleStripeEvent — trial_will_end", () => {
       expect(inserts).toHaveLength(0);
     });
 
+    it("a PAYING plan under free days whose hold was revoked (metadata pipglyph_hold_from = active, no comp holding it): no trial reminder — it simply renews", async () => {
+      subscriptions.retrieve.mockResolvedValue({ ...trialSub(), metadata: { pipglyph_hold_from: "active" } });
+      const { admin, inserts } = makeTrialAdmin();
+      await handleStripeEvent(
+        { id: "evt_twe", type: "customer.subscription.trial_will_end", created: HELD_END - 3 * 86_400, data: { object: trialSub() } } as never,
+        { admin, stripe: trialStripe },
+      );
+      expect(inserts).toHaveLength(0);
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
     it("fired the usual 3 days ahead with a live trial matching the event: reminded", async () => {
       subscriptions.retrieve.mockResolvedValue(trialSub());
       const { admin, inserts } = makeTrialAdmin();

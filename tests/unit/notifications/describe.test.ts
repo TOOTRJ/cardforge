@@ -34,15 +34,29 @@ describe("describeNotification — one copy source for bell, page and toast", ()
   });
 
   it("describes comp plans, including removal", () => {
-    expect(
-      describeNotification(
-        { type: "comp_plan", actor, card: null, threadId: null, payload: { tier: "pro", expiresAt: "2026-12-01T12:00:00Z" } },
-        { isAdmin: false },
-      ).body,
-    ).toMatch(/^gave you Pro plan access until Dec 1, 2026 — enjoy\.$/);
-    expect(
-      describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload: { tier: null } }, { isAdmin: false }).body,
-    ).toBe("ended your complimentary plan access.");
+    const comp = (payload: Record<string, unknown>) =>
+      describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
+    // The legacy shape (a comp set before 0176) and an open-ended grant.
+    expect(comp({ tier: "pro", expiresAt: "2026-12-01T12:00:00Z" })).toMatch(/^gave you Pro plan access until Dec 1, 2026 — enjoy\.$/);
+    expect(comp({ tier: "pro", days: null, expiresAt: null })).toBe("gave you Pro plan access — enjoy.");
+    expect(comp({ tier: null })).toBe("ended your complimentary plan access.");
+  });
+
+  it("free 30 days (0176): the days and their end; a hold on a plan names the moved charge, on a trial the longer trial", () => {
+    const comp = (payload: Record<string, unknown>) =>
+      describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
+    expect(comp({ tier: "plus", days: 30, expiresAt: "2026-12-10T15:14:00Z" })).toMatch(/^gave you 30 free days of Plus — until Dec 10, 2026 — enjoy\.$/);
+    expect(comp({ tier: "pro", days: 60, expiresAt: "2027-01-04T09:00:00Z", holdEndsAt: "2027-01-04T09:00:00Z", was: "active" })).toMatch(
+      /^gave you 60 free days of Pro — until Jan 4, 2027 — enjoy\. They're added to the time you've paid for: your next charge moves to Jan 4, 2027\.$/,
+    );
+    expect(comp({ tier: "pro", days: 30, expiresAt: "2026-12-12T00:00:00Z", holdEndsAt: "2026-12-12T00:00:00Z", was: "trialing" })).toMatch(
+      /^gave you 30 free days of Pro — until Dec 1[12], 2026 — enjoy\. Your free trial now runs until Dec 1[12], 2026; nothing is charged before then\.$/,
+    );
+    expect(comp({ tier: "plus", expiresAt: "2026-12-20T00:00:00Z", revoked: 1 })).toMatch(/^shortened your complimentary Plus access — it now ends Dec (19|20), 2026\.$/);
+    // Never "a free month".
+    for (const payload of [{ tier: "plus", days: 30, expiresAt: "2026-12-10T15:14:00Z" }, { tier: "pro", days: 30, holdEndsAt: "2026-12-12T00:00:00Z", was: "active" }]) {
+      expect(comp(payload)).not.toMatch(/month/);
+    }
   });
 
   it("describes card limit overrides and resets", () => {
