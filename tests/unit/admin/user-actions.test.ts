@@ -13,7 +13,7 @@ const TARGET = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const REQUEST = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 const state = vi.hoisted(() => ({
-  profile: null as null | { id: string; is_admin: boolean },
+  profile: null as null | { id: string; is_admin: boolean; username?: string },
   configured: true,
   client: null as unknown,
 }));
@@ -85,7 +85,7 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
   stub.forTable("notifications").map((e) => payloadOf(e.calls, "insert"))[0];
 
 beforeEach(() => {
-  state.profile = { id: ADMIN, is_admin: true };
+  state.profile = { id: ADMIN, is_admin: true, username: "dev_admin" };
   state.configured = true;
   bank.bankDays.mockReset().mockImplementation(async (_admin: unknown, input: { days: number }) => ({ ok: true, entryId: "e1", created: true, days: input.days }));
   bank.readBank.mockReset().mockResolvedValue({ banked: 7, reserved: 0, entries: [] });
@@ -185,7 +185,7 @@ describe("adminBankDaysAction — the comp since owner 2026-11-06", () => {
       days: 14,
       source: "admin",
       reference: `admin:${REQUEST}`,
-      note: `thanks for the bug report (by ${ADMIN})`,
+      note: "thanks for the bug report (by @dev_admin)",
     });
     expect(notification(stub)).toEqual({
       recipient_id: TARGET,

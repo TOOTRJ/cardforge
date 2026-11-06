@@ -29,7 +29,7 @@ type ActionError = { ok: false; error: string };
 /** Shared gate: caller must be an is_admin profile AND the service-role
  *  client must be configured. Returns the admin client, or an error result. */
 async function requireAdmin(): Promise<
-  | { ok: true; admin: ReturnType<typeof createAdminClient>; adminId: string }
+  | { ok: true; admin: ReturnType<typeof createAdminClient>; adminId: string; adminName: string }
   | ActionError
 > {
   const profile = await getCurrentProfile();
@@ -37,7 +37,7 @@ async function requireAdmin(): Promise<
   if (!isAdminConfigured()) {
     return { ok: false, error: "Admin client isn't configured." };
   }
-  return { ok: true, admin: createAdminClient(), adminId: profile.id };
+  return { ok: true, admin: createAdminClient(), adminId: profile.id, adminName: profile.username ? `@${profile.username}` : profile.id };
 }
 
 /**
@@ -233,7 +233,7 @@ export async function adminBankDaysAction(input: {
     days,
     source: "admin",
     reference: adminBankReference(requestId),
-    note: note ? `${note} (by ${gate.adminId})` : `by ${gate.adminId}`,
+    note: note ? `${note} (by ${gate.adminName})` : `by ${gate.adminName}`,
   });
   if (!banked.ok) return { ok: false, error: banked.error };
   if (banked.created) {
@@ -258,7 +258,7 @@ export async function adminRevokeBankedDaysAction(input: { entryId: string; reas
     .object({ entryId: z.string().uuid("Invalid entry id."), reason: z.string().trim().max(200).nullable() })
     .safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  const result = await revokeBankedEntry(gate.admin, parsed.data.entryId, parsed.data.reason || `revoked by ${gate.adminId}`);
+  const result = await revokeBankedEntry(gate.admin, parsed.data.entryId, parsed.data.reason || `revoked by ${gate.adminName}`);
   if (!result.ok) return result;
   await notifyUser(gate.admin, {
     recipientId: result.userId,
